@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MUTATINGCOPYCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MUTATINGCOPYCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPYCONSTRUCTORMUTATESARGUMENT_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPYCONSTRUCTORMUTATESARGUMENT_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,10 +17,10 @@ namespace clang::tidy::bugprone {
 /// in copy constructors and copy assignment operators.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/mutating-copy.html
-class MutatingCopyCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/copy-constructor-mutates-argument.html
+class CopyConstructorMutatesArgumentCheck : public ClangTidyCheck {
 public:
-  MutatingCopyCheck(StringRef Name, ClangTidyContext *Context)
+  CopyConstructorMutatesArgumentCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
@@ -31,4 +31,4 @@ public:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MUTATINGCOPYCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_COPYCONSTRUCTORMUTATESARGUMENT_H

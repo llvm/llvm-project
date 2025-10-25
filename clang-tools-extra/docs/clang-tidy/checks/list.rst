@@ -90,6 +90,7 @@ Clang-Tidy Checks
    :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
+   :doc:`bugprone-copy-constructor-mutates-argument <bugprone/bugprone-copy-constructor-mutates-argument>`,
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
    :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,
@@ -117,7 +118,6 @@ Clang-Tidy Checks
    :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast>`,
    :doc:`bugprone-move-forwarding-reference <bugprone/move-forwarding-reference>`, "Yes"
-   :doc:`bugprone-mutatinb-copy <bugprone/mutating-copy>`,
    :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
    :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,
@@ -458,7 +458,7 @@ Check aliases
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
    :doc:`cert-oop54-cpp <cert/oop54-cpp>`, :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
-   :doc:`cert-oop58-cpp <cert/oop58-cpp>`, :doc:`bugprone-mutating-copy <bugprone/mutating-copy>`,
+   :doc:`cert-oop58-cpp <cert/oop58-cpp>`, :doc:`bugprone-copy-constructor-mutates-argument <bugprone/copy-constructor-mutates-argument>`,
    :doc:`cert-pos44-c <cert/pos44-c>`, :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`cert-pos47-c <cert/pos47-c>`, :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
    :doc:`cert-sig30-c <cert/sig30-c>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,

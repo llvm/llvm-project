@@ -1,10 +1,10 @@
-.. title:: clang-tidy - cert-mutating-copy
+.. title:: clang-tidy - cert-oop58-cpp
 .. meta::
-   :http-equiv=refresh: 5;URL=../bugprone/mutating-copy.html
+   :http-equiv=refresh: 5;URL=../bugprone/bugprone-copy-constructor-mutates-argument.html
 
 cert-oop58-cpp
 ==============
 
 The `cert-oop58-cpp` check is an alias, please see
-:doc:`bugprone-mutating-copy <../bugprone/mutating-copy>`
+:doc:`bugprone-copy-constructor-mutates-argument <../bugprone/bugprone-copy-constructor-mutates-argument>`
 for more information.
