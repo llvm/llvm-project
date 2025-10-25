@@ -70,6 +70,16 @@ public:
 
   int getValue() const { return Value; }
   bool operator==(const CtorTester &RHS) const { return Value == RHS.Value; }
+
+  // Return the number of live CtorTester objects, excluding the empty and
+  // tombstone keys.
+  static size_t getNumConstructed() {
+    return std::count_if(Constructed.begin(), Constructed.end(),
+                         [](const CtorTester *Obj) {
+                           int V = Obj->getValue();
+                           return V != -1 && V != -2;
+                         });
+  }
 };
 
 std::set<CtorTester *> CtorTester::Constructed;
@@ -1029,6 +1039,66 @@ TEST(SmallDenseMapCustomTest, InitSize) {
     SmallDenseMap<int *, int> Map = {{&A, 1}, {&B, 2}, {&C, 3}};
     EXPECT_EQ(ElemSize * 8U, Map.getMemorySize());
   }
+}
+
+TEST(DenseMapCustomTest, KeyDtor) {
+  // This test relies on CtorTester being non-trivially destructible.
+  static_assert(!std::is_trivially_destructible_v<CtorTester>,
+                "CtorTester must not be trivially destructible");
+
+  // Test that keys are destructed on scope exit.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<CtorTester, int, CtorTesterMapInfo> Map;
+    Map.try_emplace(CtorTester(0), 1);
+    Map.try_emplace(CtorTester(1), 2);
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+
+  // Test that keys are destructed on erase and shrink_and_clear.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<CtorTester, int, CtorTesterMapInfo> Map;
+    Map.try_emplace(CtorTester(0), 1);
+    Map.try_emplace(CtorTester(1), 2);
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+    Map.erase(CtorTester(1));
+    EXPECT_EQ(1u, CtorTester::getNumConstructed());
+    Map.shrink_and_clear();
+    EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+}
+
+TEST(DenseMapCustomTest, ValueDtor) {
+  // This test relies on CtorTester being non-trivially destructible.
+  static_assert(!std::is_trivially_destructible_v<CtorTester>,
+                "CtorTester must not be trivially destructible");
+
+  // Test that values are destructed on scope exit.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<int, CtorTester> Map;
+    Map.try_emplace(0, CtorTester(1));
+    Map.try_emplace(1, CtorTester(2));
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+
+  // Test that values are destructed on erase and shrink_and_clear.
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  {
+    DenseMap<int, CtorTester> Map;
+    Map.try_emplace(0, CtorTester(1));
+    Map.try_emplace(1, CtorTester(2));
+    EXPECT_EQ(2u, CtorTester::getNumConstructed());
+    Map.erase(1);
+    EXPECT_EQ(1u, CtorTester::getNumConstructed());
+    Map.shrink_and_clear();
+    EXPECT_EQ(0u, CtorTester::getNumConstructed());
+  }
+  EXPECT_EQ(0u, CtorTester::getNumConstructed());
 }
 
 } // namespace

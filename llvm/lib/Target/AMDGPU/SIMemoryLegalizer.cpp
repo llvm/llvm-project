@@ -640,7 +640,7 @@ public:
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
-  virtual bool handleCooperativeAtomic(MachineInstr &MI) const override;
+  bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,

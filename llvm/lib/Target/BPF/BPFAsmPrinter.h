@@ -32,7 +32,7 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
   MCSymbol *getJTPublicSymbol(unsigned JTI);
-  virtual void emitJumpTableInfo() override;
+  void emitJumpTableInfo() override;
 
   static char ID;
 

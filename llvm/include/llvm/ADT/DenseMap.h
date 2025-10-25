@@ -353,6 +353,12 @@ protected:
   DenseMapBase() = default;
 
   void destroyAll() {
+    // No need to iterate through the buckets if both KeyT and ValueT are
+    // trivially destructible.
+    if constexpr (std::is_trivially_destructible_v<KeyT> &&
+                  std::is_trivially_destructible_v<ValueT>)
+      return;
+
     if (getNumBuckets() == 0) // Nothing to do.
       return;
 
@@ -767,37 +773,6 @@ public:
     return *this;
   }
 
-  void copyFrom(const DenseMap &other) {
-    this->destroyAll();
-    deallocateBuckets();
-    if (allocateBuckets(other.NumBuckets)) {
-      this->BaseT::copyFrom(other);
-    } else {
-      NumEntries = 0;
-      NumTombstones = 0;
-    }
-  }
-
-  void grow(unsigned AtLeast) {
-    unsigned OldNumBuckets = NumBuckets;
-    BucketT *OldBuckets = Buckets;
-
-    allocateBuckets(std::max<unsigned>(
-        64, static_cast<unsigned>(NextPowerOf2(AtLeast - 1))));
-    assert(Buckets);
-    if (!OldBuckets) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    this->moveFromOldBuckets(
-        llvm::make_range(OldBuckets, OldBuckets + OldNumBuckets));
-
-    // Free the old table.
-    deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
-                      alignof(BucketT));
-  }
-
   void shrink_and_clear() {
     unsigned OldNumBuckets = NumBuckets;
     unsigned OldNumEntries = NumEntries;
@@ -854,6 +829,37 @@ private:
       NumEntries = 0;
       NumTombstones = 0;
     }
+  }
+
+  void copyFrom(const DenseMap &other) {
+    this->destroyAll();
+    deallocateBuckets();
+    if (allocateBuckets(other.NumBuckets)) {
+      this->BaseT::copyFrom(other);
+    } else {
+      NumEntries = 0;
+      NumTombstones = 0;
+    }
+  }
+
+  void grow(unsigned AtLeast) {
+    unsigned OldNumBuckets = NumBuckets;
+    BucketT *OldBuckets = Buckets;
+
+    allocateBuckets(std::max<unsigned>(
+        64, static_cast<unsigned>(NextPowerOf2(AtLeast - 1))));
+    assert(Buckets);
+    if (!OldBuckets) {
+      this->BaseT::initEmpty();
+      return;
+    }
+
+    this->moveFromOldBuckets(
+        llvm::make_range(OldBuckets, OldBuckets + OldNumBuckets));
+
+    // Free the old table.
+    deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
+                      alignof(BucketT));
   }
 };
 
@@ -1007,65 +1013,6 @@ public:
     return *this;
   }
 
-  void copyFrom(const SmallDenseMap &other) {
-    this->destroyAll();
-    deallocateBuckets();
-    allocateBuckets(other.getNumBuckets());
-    this->BaseT::copyFrom(other);
-  }
-
-  void init(unsigned InitNumEntries) {
-    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
-    allocateBuckets(InitBuckets);
-    this->BaseT::initEmpty();
-  }
-
-  void grow(unsigned AtLeast) {
-    if (AtLeast > InlineBuckets)
-      AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
-
-    if (Small) {
-      // First move the inline buckets into a temporary storage.
-      AlignedCharArrayUnion<BucketT[InlineBuckets]> TmpStorage;
-      BucketT *TmpBegin = reinterpret_cast<BucketT *>(&TmpStorage);
-      BucketT *TmpEnd = TmpBegin;
-
-      // Loop over the buckets, moving non-empty, non-tombstones into the
-      // temporary storage. Have the loop move the TmpEnd forward as it goes.
-      const KeyT EmptyKey = this->getEmptyKey();
-      const KeyT TombstoneKey = this->getTombstoneKey();
-      for (BucketT &B : inlineBuckets()) {
-        if (!KeyInfoT::isEqual(B.getFirst(), EmptyKey) &&
-            !KeyInfoT::isEqual(B.getFirst(), TombstoneKey)) {
-          assert(size_t(TmpEnd - TmpBegin) < InlineBuckets &&
-                 "Too many inline buckets!");
-          ::new (&TmpEnd->getFirst()) KeyT(std::move(B.getFirst()));
-          ::new (&TmpEnd->getSecond()) ValueT(std::move(B.getSecond()));
-          ++TmpEnd;
-          B.getSecond().~ValueT();
-        }
-        B.getFirst().~KeyT();
-      }
-
-      // AtLeast == InlineBuckets can happen if there are many tombstones,
-      // and grow() is used to remove them. Usually we always switch to the
-      // large rep here.
-      allocateBuckets(AtLeast);
-      this->moveFromOldBuckets(llvm::make_range(TmpBegin, TmpEnd));
-      return;
-    }
-
-    LargeRep OldRep = std::move(*getLargeRep());
-    getLargeRep()->~LargeRep();
-    allocateBuckets(AtLeast);
-
-    this->moveFromOldBuckets(OldRep.buckets());
-
-    // Free the old table.
-    deallocate_buffer(OldRep.Buckets, sizeof(BucketT) * OldRep.NumBuckets,
-                      alignof(BucketT));
-  }
-
   void shrink_and_clear() {
     unsigned OldSize = this->size();
     this->destroyAll();
@@ -1161,6 +1108,65 @@ private:
           allocate_buffer(sizeof(BucketT) * Num, alignof(BucketT)));
       new (getLargeRep()) LargeRep{NewBuckets, Num};
     }
+  }
+
+  void init(unsigned InitNumEntries) {
+    auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
+    allocateBuckets(InitBuckets);
+    this->BaseT::initEmpty();
+  }
+
+  void copyFrom(const SmallDenseMap &other) {
+    this->destroyAll();
+    deallocateBuckets();
+    allocateBuckets(other.getNumBuckets());
+    this->BaseT::copyFrom(other);
+  }
+
+  void grow(unsigned AtLeast) {
+    if (AtLeast > InlineBuckets)
+      AtLeast = std::max<unsigned>(64, NextPowerOf2(AtLeast - 1));
+
+    if (Small) {
+      // First move the inline buckets into a temporary storage.
+      AlignedCharArrayUnion<BucketT[InlineBuckets]> TmpStorage;
+      BucketT *TmpBegin = reinterpret_cast<BucketT *>(&TmpStorage);
+      BucketT *TmpEnd = TmpBegin;
+
+      // Loop over the buckets, moving non-empty, non-tombstones into the
+      // temporary storage. Have the loop move the TmpEnd forward as it goes.
+      const KeyT EmptyKey = this->getEmptyKey();
+      const KeyT TombstoneKey = this->getTombstoneKey();
+      for (BucketT &B : inlineBuckets()) {
+        if (!KeyInfoT::isEqual(B.getFirst(), EmptyKey) &&
+            !KeyInfoT::isEqual(B.getFirst(), TombstoneKey)) {
+          assert(size_t(TmpEnd - TmpBegin) < InlineBuckets &&
+                 "Too many inline buckets!");
+          ::new (&TmpEnd->getFirst()) KeyT(std::move(B.getFirst()));
+          ::new (&TmpEnd->getSecond()) ValueT(std::move(B.getSecond()));
+          ++TmpEnd;
+          B.getSecond().~ValueT();
+        }
+        B.getFirst().~KeyT();
+      }
+
+      // AtLeast == InlineBuckets can happen if there are many tombstones,
+      // and grow() is used to remove them. Usually we always switch to the
+      // large rep here.
+      allocateBuckets(AtLeast);
+      this->moveFromOldBuckets(llvm::make_range(TmpBegin, TmpEnd));
+      return;
+    }
+
+    LargeRep OldRep = std::move(*getLargeRep());
+    getLargeRep()->~LargeRep();
+    allocateBuckets(AtLeast);
+
+    this->moveFromOldBuckets(OldRep.buckets());
+
+    // Free the old table.
+    deallocate_buffer(OldRep.Buckets, sizeof(BucketT) * OldRep.NumBuckets,
+                      alignof(BucketT));
   }
 };
 

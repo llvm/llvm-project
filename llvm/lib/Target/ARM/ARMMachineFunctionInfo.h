@@ -312,7 +312,7 @@ struct ARMFunctionInfo final : public yaml::MachineFunctionInfo {
   ARMFunctionInfo(const llvm::ARMFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~ARMFunctionInfo() = default;
+  ~ARMFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<ARMFunctionInfo> {

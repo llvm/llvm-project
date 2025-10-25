@@ -71,6 +71,7 @@ CodeGen/Hexagon/autohvx/interleave.ll
 CodeGen/Hexagon/loop-idiom/hexagon-memmove1.ll
 CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
 CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
+CodeGen/Hexagon/masked_gather.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/RISCV/zmmul.ll
 CodeGen/WebAssembly/memory-interleave.ll
@@ -331,6 +332,10 @@ Instrumentation/MemorySanitizer/AArch64/arm64-vshift.ll
 Instrumentation/MemorySanitizer/AArch64/module-flags-aarch64.ll
 Instrumentation/MemorySanitizer/AArch64/neon_vst_float.ll
 Instrumentation/MemorySanitizer/AArch64/qshrn.ll
+Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount-mini.ll
+Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount.ll
+Instrumentation/MemorySanitizer/AArch64/sme2-intrinsics-add-mini.ll
+Instrumentation/MemorySanitizer/AArch64/sme2-intrinsics-add.ll
 Instrumentation/MemorySanitizer/AArch64/vararg.ll
 Instrumentation/MemorySanitizer/AArch64/vararg_shadow.ll
 Instrumentation/MemorySanitizer/abs-vector.ll
