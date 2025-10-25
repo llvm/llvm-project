@@ -85,10 +85,11 @@ public:
       return E;
     }
 
+    /// XXX: This should return Path instead of std::string
     /// Path is the absolute, symlink-resolved path for the file pointed by FID
     /// in SM. Edit is generated from Replacements.
     /// Fails if cannot figure out absolute path for FID.
-    static llvm::Expected<std::pair<Path, Edit>>
+    static llvm::Expected<std::pair<std::string, Edit>>
     fileEdit(const SourceManager &SM, FileID FID,
              tooling::Replacements Replacements);
 
