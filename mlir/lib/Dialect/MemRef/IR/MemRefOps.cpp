@@ -3039,6 +3039,15 @@ void SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
 /// For ViewLikeOpInterface.
 Value SubViewOp::getViewSource() { return getSource(); }
 
+bool SubViewOp::isSameStart() {
+  // TODO: we can recognize simple constant operands.
+  if (!getOffsets().empty())
+    return false;
+  ArrayRef<int64_t> staticOffsets = getStaticOffsets();
+  return llvm::all_of(staticOffsets,
+                      [](int64_t offset) { return offset == 0; });
+}
+
 /// Return true if `t1` and `t2` have equal offsets (both dynamic or of same
 /// static value).
 static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
@@ -3677,6 +3686,13 @@ LogicalResult ViewOp::verify() {
 }
 
 Value ViewOp::getViewSource() { return getSource(); }
+
+bool ViewOp::isSameStart() {
+  IntegerAttr offsetAttr;
+  if (matchPattern(getByteShift(), m_Constant(&offsetAttr)))
+    return offsetAttr.getValue().isZero();
+  return false;
+}
 
 OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
   MemRefType sourceMemrefType = getSource().getType();

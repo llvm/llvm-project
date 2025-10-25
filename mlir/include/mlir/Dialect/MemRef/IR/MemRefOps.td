@@ -2288,7 +2288,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
-  let extraClassDeclaration = extraBaseClassDeclaration # [{
+  let extraClassDeclaration = extraBaseClassDeclaration#[{
     /// Returns the type of the base memref operand.
     MemRefType getSourceType() {
       return ::llvm::cast<MemRefType>(getSource().getType());
@@ -2350,6 +2350,10 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     /// If the shape of `value` cannot be rank-reduced to `desiredShape`, fail.
     static FailureOr<Value> rankReduceIfNeeded(
       OpBuilder &b, Location loc, Value value, ArrayRef<int64_t> desiredShape);
+
+    /// Return true iff the input and the resulting views start
+    /// at the same address.
+    bool isSameStart();
   }];
 
   let hasCanonicalizer = 1;
@@ -2459,6 +2463,10 @@ def MemRef_ViewOp : MemRef_Op<"view", [
     operand_range getDynamicSizes() {
       return {getSizes().begin(), getSizes().end()};
     }
+
+    /// Return true iff the input and the resulting views start
+    /// at the same address.
+    bool isSameStart();
   }];
 
   let assemblyFormat = [{
