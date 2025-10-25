@@ -239,7 +239,8 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
 static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
-                           const ModuleSummaryIndex *ImportSummary) {
+                           const ModuleSummaryIndex *ImportSummary,
+                           const DenseSet<StringRef> &BitcodeLibFuncs) {
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
@@ -283,14 +284,23 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     TLII->disableAllFunctions();
 
   TargetLibraryInfo TLI(*TLII);
-  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs);
-       I != E; ++I) {
+  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
+       ++I) {
     LibFunc F = static_cast<LibFunc>(I);
-    GlobalValue *Val = Mod.getNamedValue(TLI.getName(F));
+    StringRef Name = TLI.getName(F);
+    GlobalValue *Val = Mod.getNamedValue(Name);
+
+    // LibFuncs present in the current TU can always be referenced.
+    if (Val && !Val->isDeclaration())
+      continue;
+
+    // LibFuncs not implemented in bitcode can always be referenced.
+    if (!BitcodeLibFuncs.contains(Name))
+      continue;
+
     // TODO: Non-lto functions should not be disabled, nor should functions that
     // are somewhere in a ThinLTO link (just not imported in this module).
-    if (!Val || Val->isDeclaration())
-      TLII->setUnavailable(F);
+    TLII->setUnavailable(F);
   }
 
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -402,9 +412,12 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   // analysis in the case of a ThinLTO build where this might be an empty
   // regular LTO combined module, with a large combined index from ThinLTO.
   if (!isEmptyModule(Mod)) {
+    DenseSet<StringRef> BitcodeLibFuncsSet;
+    for (const char *F : BitcodeLibFuncs)
+      BitcodeLibFuncsSet.insert(F);
     // FIXME: Plumb the combined index into the new pass manager.
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
+                   ImportSummary, BitcodeLibFuncsSet);
   }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
