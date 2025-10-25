@@ -132,9 +132,20 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     // `BoundsSafetyCheckUseOfCountAttrPtr`
     //
     // * When the pointee type is always an incomplete type (e.g.
-    // `void`) the attribute is disallowed by this method because we know the
-    // type can never be completed so there's no reason to allow it.
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+    // `void` in strict C mode) the attribute is disallowed by this method
+    // because we know the type can never be completed so there's no reason
+    // to allow it.
+    //
+    // Exception: In GNU mode, void has an implicit size of 1 byte for pointer
+    // arithmetic. Therefore, counted_by on void* is allowed as a GNU extension
+    // and behaves equivalently to sized_by (treating the count as bytes).
+    bool IsVoidPtrInGNUMode = PointeeTy->isVoidType() && getLangOpts().GNUMode;
+    if (IsVoidPtrInGNUMode) {
+      // Emit a warning that this is a GNU extension
+      Diag(FD->getBeginLoc(), diag::ext_gnu_counted_by_void_ptr) << Kind;
+    } else {
+      InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+    }
   } else if (PointeeTy->isSizelessType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
   } else if (PointeeTy->isFunctionType()) {
@@ -270,6 +281,11 @@ GetCountedByAttrOnIncompletePointee(QualType Ty, NamedDecl **ND) {
   }
 
   if (!PointeeTy->isIncompleteType(ND))
+    return {};
+
+  // If counted_by is on void*, it was already validated at declaration time
+  // as a GNU extension. No need to re-check GNU mode here.
+  if (PointeeTy->isVoidType())
     return {};
 
   return {CATy, PointeeTy};
