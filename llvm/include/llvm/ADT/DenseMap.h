@@ -418,9 +418,16 @@ protected:
     }
   }
 
-  template <typename OtherBaseT>
-  void copyFrom(
-      const DenseMapBase<OtherBaseT, KeyT, ValueT, KeyInfoT, BucketT> &other) {
+  void copyFrom(const DerivedT &other) {
+    this->destroyAll();
+    derived().deallocateBuckets();
+    setNumEntries(0);
+    setNumTombstones(0);
+    if (!derived().allocateBuckets(other.getNumBuckets())) {
+      // The bucket list is empty.  No work to do.
+      return;
+    }
+
     assert(&other != this);
     assert(getNumBuckets() == other.getNumBuckets());
 
@@ -725,7 +732,7 @@ public:
 
   DenseMap(const DenseMap &other) : BaseT() {
     init(0);
-    copyFrom(other);
+    this->copyFrom(other);
   }
 
   DenseMap(DenseMap &&other) : BaseT() {
@@ -761,7 +768,7 @@ public:
 
   DenseMap &operator=(const DenseMap &other) {
     if (&other != this)
-      copyFrom(other);
+      this->copyFrom(other);
     return *this;
   }
 
@@ -831,17 +838,6 @@ private:
     }
   }
 
-  void copyFrom(const DenseMap &other) {
-    this->destroyAll();
-    deallocateBuckets();
-    if (allocateBuckets(other.NumBuckets)) {
-      this->BaseT::copyFrom(other);
-    } else {
-      NumEntries = 0;
-      NumTombstones = 0;
-    }
-  }
-
   void grow(unsigned AtLeast) {
     unsigned OldNumBuckets = NumBuckets;
     BucketT *OldBuckets = Buckets;
@@ -902,7 +898,7 @@ public:
 
   SmallDenseMap(const SmallDenseMap &other) : BaseT() {
     init(0);
-    copyFrom(other);
+    this->copyFrom(other);
   }
 
   SmallDenseMap(SmallDenseMap &&other) : BaseT() {
@@ -1001,7 +997,7 @@ public:
 
   SmallDenseMap &operator=(const SmallDenseMap &other) {
     if (&other != this)
-      copyFrom(other);
+      this->copyFrom(other);
     return *this;
   }
 
@@ -1099,7 +1095,7 @@ private:
     getLargeRep()->~LargeRep();
   }
 
-  void allocateBuckets(unsigned Num) {
+  bool allocateBuckets(unsigned Num) {
     if (Num <= InlineBuckets) {
       Small = true;
     } else {
@@ -1108,19 +1104,13 @@ private:
           allocate_buffer(sizeof(BucketT) * Num, alignof(BucketT)));
       new (getLargeRep()) LargeRep{NewBuckets, Num};
     }
+    return true;
   }
 
   void init(unsigned InitNumEntries) {
     auto InitBuckets = BaseT::getMinBucketToReserveForEntries(InitNumEntries);
     allocateBuckets(InitBuckets);
     this->BaseT::initEmpty();
-  }
-
-  void copyFrom(const SmallDenseMap &other) {
-    this->destroyAll();
-    deallocateBuckets();
-    allocateBuckets(other.getNumBuckets());
-    this->BaseT::copyFrom(other);
   }
 
   void grow(unsigned AtLeast) {
