@@ -5587,7 +5587,7 @@ public:
   const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
   void setIndexExpr(Expr* E) { SubExprs[INDEX] = E; }
 
-  SourceLocation getBeginLoc() const { return getRangeExpr()->getExprLoc(); }
+  SourceLocation getBeginLoc() const { return getRangeExpr()->getBeginLoc(); }
   SourceLocation getEndLoc() const { return getRangeExpr()->getEndLoc(); }
 
   child_range children() {
@@ -5603,6 +5603,51 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXExpansionInitListSelectExprClass;
+  }
+};
+
+class CXXDestructuringExpansionSelectExpr : public Expr {
+  friend class ASTStmtReader;
+
+  DecompositionDecl* Decomposition;
+  Expr* Index;
+
+public:
+  CXXDestructuringExpansionSelectExpr(EmptyShell Empty);
+  CXXDestructuringExpansionSelectExpr(const ASTContext &C,
+                                      DecompositionDecl *Decomposition,
+                                      Expr *Index);
+
+  DecompositionDecl *getDecompositionDecl() {
+    return cast<DecompositionDecl>(Decomposition);
+  }
+
+  const DecompositionDecl *getDecompositionDecl() const {
+    return cast<DecompositionDecl>(Decomposition);
+  }
+
+  void setDecompositionDecl(DecompositionDecl *E) { Decomposition = E; }
+
+  Expr *getIndexExpr() { return Index; }
+  const Expr *getIndexExpr() const { return Index; }
+  void setIndexExpr(Expr* E) { Index = E; }
+
+  SourceLocation getBeginLoc() const { return Decomposition->getBeginLoc(); }
+  SourceLocation getEndLoc() const { return Decomposition->getEndLoc(); }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(&Index),
+                       reinterpret_cast<Stmt **>(&Index + 1));
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+            reinterpret_cast<Stmt **>(const_cast<Expr **>(&Index)),
+            reinterpret_cast<Stmt **>(const_cast<Expr **>(&Index + 1)));
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXDestructuringExpansionSelectExprClass;
   }
 };
 

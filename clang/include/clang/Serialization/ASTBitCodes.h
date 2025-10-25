@@ -1842,6 +1842,9 @@ enum StmtCode {
   /// A CXXIteratingExpansionStmt.
   STMT_CXX_ITERATING_EXPANSION,
 
+  /// A CXXDestructuringExpansionStmt.
+  STMT_CXX_DESTRUCTURING_EXPANSION,
+
   /// A CXXDependentExpansionStmt,
   STMT_CXX_DEPENDENT_EXPANSION,
 
@@ -1941,6 +1944,7 @@ enum StmtCode {
   EXPR_REQUIRES,                          // RequiresExpr
   EXPR_CXX_EXPANSION_INIT_LIST,           // CXXExpansionInitListExpr
   EXPR_CXX_EXPANSION_INIT_LIST_SELECT,    // CXXExpansionInitListSelectExpr
+  EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT, // CXXDestructuringExpansionSelectExpr
 
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr

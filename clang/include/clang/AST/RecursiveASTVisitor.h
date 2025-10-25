@@ -3126,10 +3126,12 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
 
 DEF_TRAVERSE_STMT(CXXEnumeratingExpansionStmt, {})
 DEF_TRAVERSE_STMT(CXXIteratingExpansionStmt, {})
+DEF_TRAVERSE_STMT(CXXDestructuringExpansionStmt, {})
 DEF_TRAVERSE_STMT(CXXDependentExpansionStmt, {})
 DEF_TRAVERSE_STMT(CXXExpansionInstantiationStmt, {})
 DEF_TRAVERSE_STMT(CXXExpansionInitListExpr, {})
 DEF_TRAVERSE_STMT(CXXExpansionInitListSelectExpr, {})
+DEF_TRAVERSE_STMT(CXXDestructuringExpansionSelectExpr, {})
 
 // These literals (all of them) do not need any action.
 DEF_TRAVERSE_STMT(IntegerLiteral, {})

@@ -19063,6 +19063,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::HLSLOutArgExprClass:
   case Expr::CXXExpansionInitListExprClass:
   case Expr::CXXExpansionInitListSelectExprClass:
+  case Expr::CXXDestructuringExpansionSelectExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::InitListExprClass: {

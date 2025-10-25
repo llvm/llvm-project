@@ -15698,6 +15698,10 @@ public:
   BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
                                       Expr *Idx);
 
+  ExprResult
+  BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
+                                                 Expr *Idx);
+
   StmtResult BuildNonEnumeratingCXXExpansionStmt(
       ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
       Expr *ExpansionInitializer, SourceLocation ForLoc,

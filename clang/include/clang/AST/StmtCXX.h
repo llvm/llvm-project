@@ -646,7 +646,7 @@ public:
   }
 
   const_child_range children() const {
-    // See CXXIteratingExpansion statement for an explansion of this terrible
+    // See CXXIteratingExpansion statement for an explanation of this terrible
     // hack.
     Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
     unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) + 1;
@@ -744,6 +744,48 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXIteratingExpansionStmtClass;
+  }
+};
+
+/// Represents an expansion statement whose expansion-initializer is dependent.
+class CXXDestructuringExpansionStmt : public CXXExpansionStmt {
+  friend class ASTStmtReader;
+
+  Stmt* DecompositionDeclStmt;
+
+public:
+  CXXDestructuringExpansionStmt(EmptyShell Empty);
+  CXXDestructuringExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
+                            DeclStmt *ExpansionVar, Stmt *DecompositionDeclStmt,
+                            SourceLocation ForLoc, SourceLocation LParenLoc,
+                            SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+  Stmt *getDecompositionDeclStmt() { return DecompositionDeclStmt; }
+  const Stmt *getDecompositionDeclStmt() const { return DecompositionDeclStmt; }
+  void setDecompositionDeclStmt(Stmt* S) { DecompositionDeclStmt = S; }
+
+  DecompositionDecl* getDecompositionDecl();
+  const DecompositionDecl* getDecompositionDecl() const {
+    return const_cast<CXXDestructuringExpansionStmt *>(this)->getDecompositionDecl();
+  }
+
+  child_range children() {
+    const_child_range CCR =
+        const_cast<const CXXDestructuringExpansionStmt *>(this)->children();
+    return child_range(cast_away_const(CCR.begin()),
+                       cast_away_const(CCR.end()));
+  }
+
+  const_child_range children() const {
+    // See CXXIteratingExpansion statement for an explanation of this terrible
+    // hack.
+    Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
+    unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) + 1;
+    return const_child_range(FirstParentSubStmt, FirstParentSubStmt + Count);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXDestructuringExpansionStmtClass;
   }
 };
 

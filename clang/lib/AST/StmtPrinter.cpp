@@ -472,6 +472,11 @@ void StmtPrinter::VisitCXXIteratingExpansionStmt(
   VisitCXXExpansionStmt(Node);
 }
 
+void StmtPrinter::VisitCXXDestructuringExpansionStmt(
+    CXXDestructuringExpansionStmt *Node) {
+  VisitCXXExpansionStmt(Node);
+}
+
 void StmtPrinter::VisitCXXDependentExpansionStmt(
     CXXDependentExpansionStmt *Node) {
   VisitCXXExpansionStmt(Node, Node->getExpansionInitializer());
@@ -492,6 +497,11 @@ void StmtPrinter::VisitCXXExpansionInitListExpr(
 void StmtPrinter::VisitCXXExpansionInitListSelectExpr(
     CXXExpansionInitListSelectExpr *Node) {
   PrintExpr(Node->getRangeExpr());
+}
+
+void StmtPrinter::VisitCXXDestructuringExpansionSelectExpr(
+    CXXDestructuringExpansionSelectExpr *Node) {
+  PrintExpr(Node->getDecompositionDecl()->getInit());
 }
 
 void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {

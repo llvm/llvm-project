@@ -4947,6 +4947,7 @@ recurse:
   case Expr::PackIndexingExprClass:
   case Expr::CXXExpansionInitListSelectExprClass:
   case Expr::CXXExpansionInitListExprClass:
+  case Expr::CXXDestructuringExpansionSelectExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:

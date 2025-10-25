@@ -378,6 +378,11 @@ void StmtProfiler::VisitCXXIteratingExpansionStmt(
   VisitCXXExpansionStmt(S);
 }
 
+void StmtProfiler::VisitCXXDestructuringExpansionStmt(
+    const CXXDestructuringExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+}
+
 void StmtProfiler::VisitCXXDependentExpansionStmt(
     const CXXDependentExpansionStmt *S) {
   VisitCXXExpansionStmt(S);
@@ -2424,6 +2429,12 @@ void StmtProfiler::VisitCXXExpansionInitListExpr(
 void StmtProfiler::VisitCXXExpansionInitListSelectExpr(
     const CXXExpansionInitListSelectExpr *E) {
   VisitExpr(E);
+}
+
+void StmtProfiler::VisitCXXDestructuringExpansionSelectExpr(
+    const CXXDestructuringExpansionSelectExpr *E) {
+  VisitExpr(E);
+  VisitDecl(E->getDecompositionDecl());
 }
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }

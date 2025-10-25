@@ -218,6 +218,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::RequiresExprClass:
   case Expr::CXXExpansionInitListExprClass:
   case Expr::CXXExpansionInitListSelectExprClass:
+  case Expr::CXXDestructuringExpansionSelectExprClass:
     return Cl::CL_PRValue;
 
   case Expr::EmbedExprClass:

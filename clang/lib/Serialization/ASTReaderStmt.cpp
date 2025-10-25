@@ -1764,6 +1764,12 @@ void ASTStmtReader::VisitCXXIteratingExpansionStmt(
   S->setEndVarStmt(cast<DeclStmt>(Record.readSubStmt()));
 }
 
+void ASTStmtReader::VisitCXXDestructuringExpansionStmt(
+    CXXDestructuringExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+  S->setDecompositionDeclStmt(Record.readSubStmt());
+}
+
 void ASTStmtReader::VisitCXXDependentExpansionStmt(
     CXXDependentExpansionStmt *S) {
   VisitCXXExpansionStmt(S);
@@ -1784,6 +1790,13 @@ void ASTStmtReader::VisitCXXExpansionInitListSelectExpr(
     CXXExpansionInitListSelectExpr *E) {
   VisitExpr(E);
   E->setRangeExpr(cast<CXXExpansionInitListExpr>(Record.readSubExpr()));
+  E->setIndexExpr(Record.readSubExpr());
+}
+
+void ASTStmtReader::VisitCXXDestructuringExpansionSelectExpr(
+    CXXDestructuringExpansionSelectExpr *E) {
+  VisitExpr(E);
+  E->setDecompositionDecl(cast<DecompositionDecl>(Record.readDeclRef()));
   E->setIndexExpr(Record.readSubExpr());
 }
 
@@ -3631,6 +3644,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) CXXIteratingExpansionStmt(Empty);
       break;
 
+    case STMT_CXX_DESTRUCTURING_EXPANSION:
+      S = new (Context) CXXDestructuringExpansionStmt(Empty);
+      break;
+
     case STMT_CXX_DEPENDENT_EXPANSION:
       S = new (Context) CXXDependentExpansionStmt(Empty);
       break;
@@ -4526,6 +4543,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_CXX_EXPANSION_INIT_LIST_SELECT:
       S = new (Context) CXXExpansionInitListSelectExpr(Empty);
+      break;
+
+    case EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT:
+      S = new (Context) CXXDestructuringExpansionSelectExpr(Empty);
       break;
 
     case STMT_OPENACC_COMPUTE_CONSTRUCT: {

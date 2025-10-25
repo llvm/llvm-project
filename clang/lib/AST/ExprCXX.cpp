@@ -2050,12 +2050,6 @@ CXXExpansionInitListExpr::CreateEmpty(const ASTContext &C, EmptyShell Empty,
   return new (Mem) CXXExpansionInitListExpr(Empty, NumExprs);
 }
 
-bool CXXExpansionInitListExpr::containsPackExpansion() const {
-  return llvm::any_of(getExprs(), [](const Expr* E) {
-    return isa<PackExpansionExpr>(E);
-  });
-}
-
 CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(EmptyShell Empty)
     : Expr(CXXExpansionInitListSelectExprClass, Empty) {
 }
@@ -2067,4 +2061,22 @@ CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(
   setDependence(ExprDependence::TypeValueInstantiation);
   SubExprs[RANGE] = Range;
   SubExprs[INDEX] = Idx;
+}
+
+bool CXXExpansionInitListExpr::containsPackExpansion() const {
+  return llvm::any_of(getExprs(), [](const Expr* E) {
+    return isa<PackExpansionExpr>(E);
+  });
+}
+
+CXXDestructuringExpansionSelectExpr::CXXDestructuringExpansionSelectExpr(
+    EmptyShell Empty)
+    : Expr(CXXDestructuringExpansionSelectExprClass, Empty) {}
+
+CXXDestructuringExpansionSelectExpr::CXXDestructuringExpansionSelectExpr(
+    const ASTContext &C, DecompositionDecl *Decomposition, Expr *Index)
+    : Expr(CXXDestructuringExpansionSelectExprClass, C.DependentTy, VK_PRValue,
+           OK_Ordinary),
+      Decomposition(Decomposition), Index(Index) {
+  setDependence(ExprDependence::TypeValueInstantiation);
 }

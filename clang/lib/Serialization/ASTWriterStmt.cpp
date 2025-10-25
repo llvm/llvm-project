@@ -1742,12 +1742,20 @@ void ASTStmtWriter::VisitCXXIteratingExpansionStmt(
   Code = serialization::STMT_CXX_ITERATING_EXPANSION;
 }
 
+void ASTStmtWriter::VisitCXXDestructuringExpansionStmt(
+    CXXDestructuringExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+  Record.AddStmt(S->getDecompositionDeclStmt());
+  Code = serialization::STMT_CXX_DESTRUCTURING_EXPANSION;
+}
+
 void ASTStmtWriter::VisitCXXDependentExpansionStmt(
     CXXDependentExpansionStmt *S) {
   VisitCXXExpansionStmt(S);
   Record.AddStmt(S->getExpansionInitializer());
   Code = serialization::STMT_CXX_DEPENDENT_EXPANSION;
 }
+
 void ASTStmtWriter::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
   VisitExpr(E);
   Record.push_back(E->getNumExprs());
@@ -1764,6 +1772,14 @@ void ASTStmtWriter::VisitCXXExpansionInitListSelectExpr(
   Record.AddStmt(E->getRangeExpr());
   Record.AddStmt(E->getIndexExpr());
   Code = serialization::EXPR_CXX_EXPANSION_INIT_LIST_SELECT;
+}
+
+void ASTStmtWriter::VisitCXXDestructuringExpansionSelectExpr(
+    CXXDestructuringExpansionSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddDeclRef(E->getDecompositionDecl());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_DESTRUCTURING_EXPANSION_SELECT;
 }
 
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {

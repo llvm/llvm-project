@@ -178,6 +178,9 @@ bool CXXExpansionStmt::hasDependentSize() const {
            End->isTypeDependent() || End->isValueDependent();
   }
 
+  if (isa<CXXDestructuringExpansionStmt>(this))
+    return false;
+
   if (isa<CXXDependentExpansionStmt>(this))
     return true;
 
@@ -196,6 +199,22 @@ CXXIteratingExpansionStmt::CXXIteratingExpansionStmt(
   SubStmts[BEGIN] = Begin;
   SubStmts[END] = End;
   SubStmts[RANGE] = Range;
+}
+
+CXXDestructuringExpansionStmt::CXXDestructuringExpansionStmt(EmptyShell Empty)
+    : CXXExpansionStmt(CXXDestructuringExpansionStmtClass, Empty) {}
+
+CXXDestructuringExpansionStmt::CXXDestructuringExpansionStmt(
+    ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
+    Stmt *DecompositionDeclStmt, SourceLocation ForLoc,
+    SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation RParenLoc)
+    : CXXExpansionStmt(CXXDestructuringExpansionStmtClass, ESD, Init, ExpansionVar,
+                       ForLoc, LParenLoc, ColonLoc, RParenLoc),
+      DecompositionDeclStmt(DecompositionDeclStmt) {}
+
+DecompositionDecl* CXXDestructuringExpansionStmt::getDecompositionDecl() {
+  return cast<DecompositionDecl>(
+      cast<DeclStmt>(DecompositionDeclStmt)->getSingleDecl());
 }
 
 CXXDependentExpansionStmt::CXXDependentExpansionStmt(EmptyShell Empty)

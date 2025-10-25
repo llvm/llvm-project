@@ -9387,6 +9387,31 @@ StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmt(
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformCXXDestructuringExpansionStmt(
+    CXXDestructuringExpansionStmt *S) {
+  TransformCXXExpansionStmtResult Common =
+      TransformCXXExpansionStmtCommonParts(S);
+  if (!Common.isValid())
+    return StmtError();
+
+  StmtResult DecompositionDeclStmt =
+      getDerived().TransformStmt(S->getDecompositionDeclStmt());
+  if (DecompositionDeclStmt.isInvalid())
+    return StmtError();
+
+  auto *Expansion = new (SemaRef.Context) CXXDestructuringExpansionStmt(
+      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
+      DecompositionDeclStmt.get(), S->getForLoc(), S->getLParenLoc(),
+      S->getColonLoc(), S->getRParenLoc());
+
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  return SemaRef.FinishCXXExpansionStmt(Expansion, Body.get());
+}
+
+template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListExpr(
     CXXExpansionInitListExpr *E) {
   bool ArgChanged = false;
@@ -9450,6 +9475,22 @@ ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListSelectExpr(
           Range.getAs<CXXExpansionInitListExpr>(), Idx.get());
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformCXXDestructuringExpansionSelectExpr(
+    CXXDestructuringExpansionSelectExpr *E) {
+  Decl *DD = getDerived().TransformDecl(
+      E->getDecompositionDecl()->getLocation(), E->getDecompositionDecl());
+  ExprResult Idx = getDerived().TransformExpr(E->getIndexExpr());
+  if (!DD || Idx.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && DD == E->getDecompositionDecl() &&
+      Idx.get() == E->getIndexExpr())
+    return E;
+
+  return SemaRef.BuildCXXDestructuringExpansionSelectExpr(
+      cast<DecompositionDecl>(DD), Idx.get());
+}
 
 template<typename Derived>
 StmtResult

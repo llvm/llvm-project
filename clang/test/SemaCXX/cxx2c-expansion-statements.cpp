@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -verify
 namespace std {
 template <typename T>
 struct initializer_list {
@@ -13,7 +13,7 @@ struct S {
   constexpr S(int x) : x{x} {}
 };
 
-void g(int);
+void g(int); // #g
 template <int n> constexpr int tg() { return n; }
 
 void f1() {
@@ -213,8 +213,8 @@ struct Private {
   friend constexpr int friend_func();
 
 private:
-  constexpr const int* begin() const { return integers.begin(); } // expected-note 3 {{declared private here}}
-  constexpr const int* end() const { return integers.end(); } // expected-note 1 {{declared private here}}
+  constexpr const int* begin() const { return integers.begin(); } // expected-note 2 {{declared private here}}
+  constexpr const int* end() const { return integers.end(); } // expected-note 2 {{declared private here}}
 
 public:
   static constexpr int member_func() {
@@ -229,8 +229,8 @@ struct Protected {
   friend constexpr int friend_func();
 
 protected:
-  constexpr const int* begin() const { return integers.begin(); } // expected-note 3 {{declared protected here}}
-  constexpr const int* end() const { return integers.end(); } // expected-note 1 {{declared protected here}}
+  constexpr const int* begin() const { return integers.begin(); } // expected-note 2 {{declared protected here}}
+  constexpr const int* end() const { return integers.end(); } // expected-note 2 {{declared protected here}}
 
 public:
   static constexpr int member_func() {
@@ -243,10 +243,10 @@ public:
 
 void access_control() {
   static constexpr Private p1;
-  template for (auto x : p1) g(x); // expected-error 3 {{'begin' is a private member of 'Private'}} expected-error 1 {{'end' is a private member of 'Private'}}
+  template for (auto x : p1) g(x); // expected-error 2 {{'begin' is a private member of 'Private'}} expected-error 2 {{'end' is a private member of 'Private'}}
 
   static constexpr Protected p2;
-  template for (auto x : p2) g(x); // expected-error 3 {{'begin' is a protected member of 'Protected'}} expected-error 1 {{'end' is a protected member of 'Protected'}}
+  template for (auto x : p2) g(x); // expected-error 2 {{'begin' is a protected member of 'Protected'}} expected-error 2 {{'end' is a protected member of 'Protected'}}
 }
 
 constexpr int friend_func() {
@@ -366,3 +366,201 @@ constexpr int adl_both_test() {
 }
 
 static_assert(adl_both_test() == 15);
+
+struct A {};
+struct B { int x = 1; };
+struct C { int a = 1, b = 2, c = 3; };
+struct D {
+  int a = 1;
+  int* b = nullptr;
+  const char* c = "3";
+};
+
+struct Nested {
+  A a;
+  B b;
+  C c;
+};
+
+struct PrivateDestructurable {
+  friend void destructurable_friend();
+private:
+  int a, b; // expected-note 4 {{declared private here}}
+};
+
+struct ProtectedDestructurable {
+  friend void destructurable_friend();
+protected:
+  int a, b; // expected-note 4 {{declared protected here}}
+};
+
+void destructuring() {
+  static constexpr A a;
+  static constexpr B b;
+  static constexpr C c;
+  static constexpr D d;
+
+  template for (auto x : a) static_assert(false, "not expanded");
+  template for (constexpr auto x : a) static_assert(false, "not expanded");
+
+  template for (auto x : b) g(x);
+  template for (constexpr auto x : b) g(x);
+
+  template for (auto x : c) g(x);
+  template for (constexpr auto x : c) g(x);
+
+  template for (auto x : d) { // expected-note 2 {{in instantiation of expansion statement requested here}}
+    // expected-note@#g {{candidate function not viable: no known conversion from 'int *' to 'int' for 1st argument}}
+    // expected-note@#g {{candidate function not viable: no known conversion from 'const char *' to 'int' for 1st argument}}
+    g(x); // expected-error 2 {{no matching function for call to 'g'}}
+
+  }
+
+  template for (constexpr auto x : d) { // expected-note 2 {{in instantiation of expansion statement requested here}}
+    // expected-note@#g {{candidate function not viable: no known conversion from 'int *const' to 'int' for 1st argument}}
+    // expected-note@#g {{candidate function not viable: no known conversion from 'const char *const' to 'int' for 1st argument}}
+    g(x); // expected-error 2 {{no matching function for call to 'g'}}
+  }
+}
+
+constexpr int array() {
+  static constexpr int x[4]{1, 2, 3, 4};
+  int sum = 0;
+  template for (auto y : x) sum += y;
+  template for (constexpr auto y : x) sum += y;
+  return sum;
+}
+
+static_assert(array() == 20);
+
+void array_too_big() {
+  int ok[32];
+  int too_big[33];
+
+  template for (auto x : ok) {}
+  template for (auto x : too_big) {} // expected-error {{expansion size 33 exceeds maximum configured size 32}} \
+                                        expected-note {{use -fexpansion-limit=N to adjust this limit}}
+}
+
+template <auto v>
+constexpr int destructure() {
+  int sum = 0;
+  template for (auto x : v) sum += x;
+  template for (constexpr auto x : v) sum += x;
+  return sum;
+}
+
+static_assert(destructure<B{10}>() == 20);
+static_assert(destructure<C{}>() == 12);
+static_assert(destructure<C{3, 4, 5}>() == 24);
+
+constexpr int nested() {
+  static constexpr Nested n;
+  int sum = 0;
+  template for (constexpr auto x : n) {
+    static constexpr auto val = x;
+    template for (auto y : val) {
+      sum += y;
+    }
+  }
+  template for (constexpr auto x : n) {
+    static constexpr auto val = x;
+    template for (constexpr auto y : val) {
+      sum += y;
+    }
+  }
+  return sum;
+}
+
+static_assert(nested() == 14);
+
+void access_control_destructurable() {
+  template for (auto x : PrivateDestructurable()) {} // expected-error 2 {{cannot bind private member 'a' of 'PrivateDestructurable'}} \
+                                                        expected-error 2 {{cannot bind private member 'b' of 'PrivateDestructurable'}}
+
+  template for (auto x : ProtectedDestructurable()) {} // expected-error 2 {{cannot bind protected member 'a' of 'ProtectedDestructurable'}} \
+                                                          expected-error 2 {{cannot bind protected member 'b' of 'ProtectedDestructurable'}}
+}
+
+void destructurable_friend() {
+  template for (auto x : PrivateDestructurable()) {}
+  template for (auto x : ProtectedDestructurable()) {}
+}
+
+struct Placeholder {
+  A get_value() const { return {}; }
+  __declspec(property(get = get_value)) A a;
+};
+
+void placeholder() {
+  template for (auto x: Placeholder().a) {}
+}
+
+union Union { int a; long b;};
+
+struct MemberPtr {
+  void f() {}
+};
+
+void overload_set(int); // expected-note 2 {{possible target for call}}
+void overload_set(long); // expected-note 2 {{possible target for call}}
+
+void invalid_types() {
+  template for (auto x : void()) {} // expected-error {{cannot expand expression of type 'void'}}
+  template for (auto x : 1) {} // expected-error {{cannot expand expression of type 'int'}}
+  template for (auto x : 1.f) {} // expected-error {{cannot expand expression of type 'float'}}
+  template for (auto x : 'c') {} // expected-error {{cannot expand expression of type 'char'}}
+  template for (auto x : invalid_types) {} // expected-error {{cannot expand expression of type 'void ()'}}
+  template for (auto x : &invalid_types) {} // expected-error {{cannot expand expression of type 'void (*)()'}}
+  template for (auto x : &MemberPtr::f) {} // expected-error {{cannot expand expression of type 'void (MemberPtr::*)()'}}
+  template for (auto x : overload_set) {} // expected-error{{reference to overloaded function could not be resolved; did you mean to call it?}}
+  template for (auto x : &overload_set) {} // expected-error{{reference to overloaded function could not be resolved; did you mean to call it?}}
+  template for (auto x : nullptr) {} // expected-error {{cannot expand expression of type 'std::nullptr_t'}}
+  template for (auto x : __builtin_strlen) {} // expected-error {{builtin functions must be directly called}}
+  template for (auto x : Union()) {} // expected-error {{cannot expand expression of type 'Union'}}
+  template for (auto x : (char*)nullptr) {} // expected-error {{cannot expand expression of type 'char *'}}
+  template for (auto x : []{}) {} // expected-error {{cannot expand lambda closure type}}
+  template for (auto x : [x=3]{}) {} // expected-error {{cannot expand lambda closure type}}
+}
+
+struct BeginOnly {
+  int x{1};
+  constexpr const int* begin() const { return nullptr; }
+};
+
+struct EndOnly {
+  int x{2};
+  constexpr const int* end() const { return nullptr; }
+};
+
+namespace adl1 {
+struct BeginOnly {
+  int x{3};
+};
+constexpr const int* begin(const BeginOnly&) { return nullptr; }
+}
+
+namespace adl2 {
+struct EndOnly {
+  int x{4};
+};
+constexpr const int* end(const EndOnly&) { return nullptr; }
+}
+
+constexpr int unpaired_begin_end() {
+  static constexpr BeginOnly b1;
+  static constexpr EndOnly e1;
+  static constexpr adl1::BeginOnly b2;
+  static constexpr adl2::EndOnly e2;
+  int sum = 0;
+
+  template for (auto x : b1) sum += x;
+  template for (auto x : e1) sum += x;
+
+  template for (auto x : b2) sum += x;
+  template for (auto x : e2) sum += x;
+
+  return sum;
+}
+
+static_assert(unpaired_begin_end() == 10);
