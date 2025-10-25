@@ -282,3 +282,22 @@ static_assert(__is_same_as(int, helper<int>));
 
 
 } // namespace GH138018
+
+namespace GH163837 {
+
+template<int N>
+void f();
+
+template<class>
+struct X {
+    using type = decltype([](auto) {
+        f<[]{
+            int result = 0;
+            return result;
+        }()>();
+    }(0));
+};
+
+X<void> l;
+
+} // namespace GH163837
