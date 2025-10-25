@@ -15,6 +15,7 @@
 #ifndef UNWIND_ASSEMBLY_H
 #define UNWIND_ASSEMBLY_H
 
+// clang-format off
 #if defined(__linux__) && defined(__CET__)
 #include <cet.h>
 #define _LIBUNWIND_CET_ENDBR _CET_ENDBR
@@ -131,6 +132,10 @@
 #define SYMBOL_NAME(name) GLUE(__USER_LABEL_PREFIX__, name)
 
 #if defined(__APPLE__)
+
+#if (defined(__aarch64__) || defined(__arm64__) || defined(__arm64e__))
+#define _LIBUNWIND_TRACE_RET_INJECT 1
+#endif
 
 #define SYMBOL_IS_FUNC(name)
 #define HIDDEN_SYMBOL(name) .private_extern name
