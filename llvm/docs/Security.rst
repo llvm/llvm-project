@@ -51,7 +51,7 @@ username for an individual isn't available, the brackets will be empty.
 * Nikhil Gupta (Nvidia) []
 * Oliver Hunt (Apple) [@ojhunt]
 * Peter Smith (ARM) [@smithp35]
-* Pietro Albini (Ferrous Systems; Rust) [@pietroalbini]
+* Pietro Albini (Oxide Computer Company; Rust) [@pietroalbini]
 * Serge Guelton (Mozilla) [@serge-sans-paille]
 * Sergey Zverev (Intel) [@offsake]
 * Shayne Hiet-Block (Microsoft) [@GreatKeeper]
