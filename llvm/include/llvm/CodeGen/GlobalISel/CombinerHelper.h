@@ -640,7 +640,8 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
-  bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  bool matchOrShiftToFunnelShift(MachineInstr &MI, bool AllowScalarConstants,
+                                 BuildFnTy &MatchInfo) const;
   bool matchFunnelShiftToRotate(MachineInstr &MI) const;
   void applyFunnelShiftToRotate(MachineInstr &MI) const;
   bool matchRotateOutOfRange(MachineInstr &MI) const;
