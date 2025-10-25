@@ -58,8 +58,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createRaiseMemrefToAffine();
 /// Apply normalization transformations to affine loop-like ops. If
 /// `promoteSingleIter` is true, single iteration loops are promoted (i.e., the
 /// loop is replaced by its loop body).
-std::unique_ptr<OperationPass<func::FuncOp>>
-createAffineLoopNormalizePass(bool promoteSingleIter = false);
+std::unique_ptr<OperationPass<func::FuncOp>> createAffineLoopNormalizePass();
 
 /// Performs packing (or explicit copying) of accessed memref regions into
 /// buffers in the specified faster memory space through either pointwise copies

@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s -affine-loop-normalize -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -affine-loop-normalize='promote-single-iter=1' -split-input-file | FileCheck %s --check-prefix=PROMOTE-SINGLE-ITER
 
 // Normalize steps to 1 and lower bounds to 0.
 
@@ -34,26 +33,6 @@ func.func @relative_bounds(%arg: index) {
   }
   return
 }
-
-// -----
-
-// Check that single iteration loop is removed and its body is promoted to the
-// parent block.
-
-// CHECK-LABEL: func @promote_single_iter_loop
-// PROMOTE-SINGLE-ITER-LABEL: func @promote_single_iter_loop
-func.func @promote_single_iter_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
-  affine.for %i = 0 to 1 {
-    %1 = affine.load %in[%i] : memref<1xf32>
-    affine.store %1, %out[%i] : memref<1xf32>
-  }
-  return
-}
-
-// PROMOTE-SINGLE-ITER-NEXT: arith.constant
-// PROMOTE-SINGLE-ITER-NEXT: affine.load
-// PROMOTE-SINGLE-ITER-NEXT: affine.store
-// PROMOTE-SINGLE-ITER-NEXT: return
 
 // -----
 
