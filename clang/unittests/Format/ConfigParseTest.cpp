@@ -1150,6 +1150,28 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BLS_Block);
   CHECK_PARSE("Cpp11BracedListStyle: true", Cpp11BracedListStyle,
               FormatStyle::BLS_AlignFirstComment);
+
+  const FormatStyle::IntegerLiteralSeparatorStyle
+      ExpectedIntegerLiteralSeparatorStyle{/*Binary=*/2,
+                                           /*BinaryMinDigit=*/5,
+                                           /*BinaryMaxDigitNoSeparator=*/2,
+                                           /*Decimal=*/6,
+                                           /*DecimalMinDigit=*/6,
+                                           /*DecimalMaxDigitNoSeparator=*/3,
+                                           /*Hex=*/4,
+                                           /*HexMinDigit=*/2,
+                                           /*HexMaxDigitNoSeparator=*/1};
+  CHECK_PARSE("IntegerLiteralSeparator:\n"
+              "  Binary: 2\n"
+              "  BinaryMinDigits: 5\n"
+              "  BinaryMaxDigitsNoSeparator: 2\n"
+              "  Decimal: 6\n"
+              "  DecimalMinDigits: 6\n"
+              "  DecimalMaxDigitsNoSeparator: 3\n"
+              "  Hex: 4\n"
+              "  HexMinDigits: 2\n"
+              "  HexMaxDigitsNoSeparator: 1",
+              IntegerLiteralSeparator, ExpectedIntegerLiteralSeparatorStyle);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
