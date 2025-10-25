@@ -1206,7 +1206,7 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __reset_internal_buffer(); }
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __deallocate_buffer_if_long(); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
     return __self_view(typename __self_view::__assume_valid(), data(), size());
@@ -2259,11 +2259,15 @@ private:
     return __long(__buffer, __capacity);
   }
 
-  // Deallocate the long buffer if it exists and clear the short buffer so we are an empty string
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __reset_internal_buffer() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __deallocate_buffer_if_long() {
     __annotate_delete();
     if (__is_long())
       __alloc_traits::deallocate(__alloc_, __get_long_pointer(), __get_long_cap());
+  }
+
+  // Deallocate the long buffer if it exists and clear the short buffer so we are an empty string
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __reset_internal_buffer() {
+    __deallocate_buffer_if_long();
     __rep_.__s = __short();
   }
 
