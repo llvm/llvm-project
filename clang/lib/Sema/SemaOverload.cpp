@@ -1825,15 +1825,24 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
     return ICS;
   }
 
-  if (S.getLangOpts().HLSL && ToType->isHLSLAttributedResourceType() &&
-      FromType->isHLSLAttributedResourceType()) {
-    auto *ToResType = cast<HLSLAttributedResourceType>(ToType);
-    auto *FromResType = cast<HLSLAttributedResourceType>(FromType);
-    if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
-                                         FromResType->getWrappedType()) &&
-        S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
-                                         FromResType->getContainedType()) &&
-        ToResType->getAttrs() == FromResType->getAttrs()) {
+  const Type *FromTy = FromType->getUnqualifiedDesugaredType();
+  if (S.getLangOpts().HLSL && FromTy->isHLSLAttributedResourceType()) {
+    bool CanConvert = false;
+    const Type *ToTy = ToType->getUnqualifiedDesugaredType();
+    if (ToTy->isHLSLAttributedResourceType()) {
+      auto *ToResType = cast<HLSLAttributedResourceType>(ToTy);
+      auto *FromResType = cast<HLSLAttributedResourceType>(FromTy);
+      if (S.Context.hasSameUnqualifiedType(ToResType->getWrappedType(),
+                                          FromResType->getWrappedType()) &&
+          S.Context.hasSameUnqualifiedType(ToResType->getContainedType(),
+                                          FromResType->getContainedType()) &&
+          ToResType->getAttrs() == FromResType->getAttrs())
+        CanConvert = true;
+    }
+    else if (ToTy->isHLSLResourceType()) {
+      CanConvert = true;
+    }
+    if (CanConvert) {
       ICS.setStandard();
       ICS.Standard.setAsIdentityConversion();
       ICS.Standard.setFromType(FromType);
