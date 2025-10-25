@@ -1427,12 +1427,10 @@ module attributes {transform.with_named_sequence} {
 func.func @pack_with_dynamic_dims(
     %src: tensor<?x?xf32>, 
     %dest: tensor<?x?x16x2xf32>) -> tensor<?x?x16x2xf32> {
-
   %pack = linalg.pack %src 
     inner_dims_pos = [1, 0]
     inner_tiles = [16, 2]
     into %dest : tensor<?x?xf32> -> tensor<?x?x16x2xf32>
-
   return %pack : tensor<?x?x16x2xf32>
 }
 
@@ -1492,14 +1490,11 @@ module attributes {transform.with_named_sequence} {
 func.func @pack_with_dynamic_dims_and_dynamic_inner_tile(
     %src: tensor<?x?xf32>,
     %dest: tensor<?x?x?x2xf32>) -> tensor<?x?x?x2xf32> {
-
   %c16 = arith.constant 16 : index
-
   %pack = linalg.pack %src
     inner_dims_pos = [1, 0]
     inner_tiles = [%c16, 2]
     into %dest : tensor<?x?xf32> -> tensor<?x?x?x2xf32>
-
   return %pack : tensor<?x?x?x2xf32>
 }
 

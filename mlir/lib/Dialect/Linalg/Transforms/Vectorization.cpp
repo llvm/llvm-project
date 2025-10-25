@@ -1861,7 +1861,7 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   if (writeVectorSizes.empty()) {
     if (ShapedType::isDynamicShape(destShape))
       return rewriter.notifyMatchFailure(packOp,
-                                         "Unable to infer vector sizes!");
+                                         "unable to infer vector sizes");
 
     writeVectorSizes = destShape;
     useInBoundsInsteadOfMasking = true;

@@ -172,19 +172,14 @@ namespace mlir {
 namespace linalg {
 
 SmallVector<int64_t> getPackInverseDestPerm(PackOp packOp,
-                                            PackingMetadata &pMetadata) {
+                                            PackingMetadata &metadata) {
 
   int64_t packedRank = packOp.getDestType().getRank();
   ArrayRef<int64_t> innerDimPos = packOp.getInnerDimsPos();
   ArrayRef<int64_t> outerPerm = packOp.getOuterDimsPerm();
   SmallVector<int64_t> packInvDestPerm =
-      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, pMetadata);
+      computePackUnPackPerm(packedRank, innerDimPos, outerPerm, metadata);
   return packInvDestPerm;
-}
-
-SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp) {
-  PackingMetadata metadata;
-  return getUnPackInverseSrcPerm(unpackOp, metadata);
 }
 
 SmallVector<int64_t> getUnPackInverseSrcPerm(UnPackOp unpackOp,
