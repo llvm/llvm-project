@@ -1,7 +1,7 @@
-; RUN: opt -mtriple=amdgcn -passes="expand-fp<O0>" %s -S -o /dev/null
-; RUN: opt -mtriple=amdgcn -passes="expand-fp<O1>" %s -S -o /dev/null
-; RUN: opt -mtriple=amdgcn -passes="expand-fp<O2>" %s -S -o /dev/null
-; RUN: opt -mtriple=amdgcn -passes="expand-fp<O3>" %s -S -o /dev/null
+; RUN: opt -mtriple=amdgcn -passes="require<runtime-libcall-info>,expand-fp<O0>" -disable-output %s
+; RUN: opt -mtriple=amdgcn -passes="require<runtime-libcall-info>,expand-fp<O1>" -disable-output %s
+; RUN: opt -mtriple=amdgcn -passes="require<runtime-libcall-info>,expand-fp<O2>" -disable-output %s
+; RUN: opt -mtriple=amdgcn -passes="require<runtime-libcall-info>,expand-fp<O3>" -disable-output %s
 
 ; RUN: not opt -mtriple=amdgcn -passes="expand-fp<O4>" %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=TOO-LARGE %s
 ; TOO-LARGE: {{.*}}invalid optimization level for expand-fp pass: 4
