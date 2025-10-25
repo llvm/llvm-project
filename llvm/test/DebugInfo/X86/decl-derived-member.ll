@@ -88,11 +88,11 @@ entry:
   ret void
 }
 
-attributes #0 = { inlinehint nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { inlinehint uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { inlinehint nounwind uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" }
+attributes #1 = { inlinehint uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" }
 attributes #2 = { nounwind }
 attributes #3 = { nounwind readnone }
-attributes #4 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #4 = { "frame-pointer"="all" "stack-protector-buffer-size"="8" }
 
 !llvm.dbg.cu = !{!8}
 !llvm.module.flags = !{!12, !13}

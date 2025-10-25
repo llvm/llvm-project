@@ -73,7 +73,7 @@ entry:
   ret i32 0, !dbg !29
 }
 
-attributes #0 = { norecurse nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind "frame-pointer"="none" "no-jump-tables"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

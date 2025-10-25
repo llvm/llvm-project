@@ -59,8 +59,8 @@ entry:
   ret void, !dbg !22
 }
 
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" }
+attributes #1 = { nounwind uwtable "frame-pointer"="all" "stack-protector-buffer-size"="8" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!16, !17}
