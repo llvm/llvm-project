@@ -74,13 +74,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI unique_lock& operator=(unique_lock&& __u) _NOEXCEPT {
-    if (__owns_)
-      __m_->unlock();
-
-    __m_        = __u.__m_;
-    __owns_     = __u.__owns_;
-    __u.__m_    = nullptr;
-    __u.__owns_ = false;
+    unique_lock{std::move(__u)}.swap(*this);
     return *this;
   }
 
