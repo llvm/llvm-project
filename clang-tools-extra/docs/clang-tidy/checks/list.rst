@@ -103,7 +103,7 @@ Clang-Tidy Checks
    :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes"
    :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
    :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,
-   :doc:`bugprone-inconsistent-ifelse-braces <bugprone/inconsistent-ifelse-braces>`,
+   :doc:`bugprone-inconsistent-ifelse-braces <bugprone/inconsistent-ifelse-braces>`, "Yes"
    :doc:`bugprone-incorrect-enable-if <bugprone/incorrect-enable-if>`, "Yes"
    :doc:`bugprone-incorrect-enable-shared-from-this <bugprone/incorrect-enable-shared-from-this>`, "Yes"
    :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,

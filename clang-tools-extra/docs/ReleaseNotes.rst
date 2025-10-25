@@ -187,7 +187,8 @@ New checks
 - New :doc:`bugprone-inconsistent-ifelse-braces
   <clang-tidy/checks/bugprone/inconsistent-ifelse-braces>` check.
 
-  FIXME: Write a short description.
+  Detects ``if``/``else`` statements where one branch uses braces and the other
+  does not.
 
 - New :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
