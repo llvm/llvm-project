@@ -71,6 +71,7 @@ CodeGen/Hexagon/autohvx/interleave.ll
 CodeGen/Hexagon/loop-idiom/hexagon-memmove1.ll
 CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
 CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
+CodeGen/Hexagon/masked_gather.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/RISCV/zmmul.ll
 CodeGen/WebAssembly/memory-interleave.ll
