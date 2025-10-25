@@ -20,6 +20,7 @@
 
 #include <__libunwind_config.h>
 
+// clang-format off
 // Platform specific configuration defines.
 #ifdef __APPLE__
   #if defined(FOR_DYLD)
