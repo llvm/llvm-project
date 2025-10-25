@@ -661,7 +661,7 @@ bool DependencyScanningAction::runInvocation(
   // Create a compiler instance to handle the actual work.
   auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
   ScanInstanceStorage.emplace(std::move(Invocation), std::move(PCHContainerOps),
-                              ModCache.get());
+                              std::move(ModCache));
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
 
   assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
