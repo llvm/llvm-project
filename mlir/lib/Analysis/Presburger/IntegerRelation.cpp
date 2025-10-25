@@ -1111,15 +1111,28 @@ unsigned IntegerRelation::gaussianEliminateVars(unsigned posStart,
   return posLimit - posStart;
 }
 
+static std::optional<unsigned>
+findEqualityWithNonZeroAfterRow(IntegerRelation &rel, unsigned fromRow,
+                                unsigned colIdx) {
+  assert(fromRow < rel.getNumVars() && colIdx < rel.getNumCols() &&
+         "position out of bounds");
+  for (unsigned rowIdx = fromRow; rowIdx < rel.getNumEqualities(); ++rowIdx) {
+    if (rel.atEq(rowIdx, colIdx) != 0)
+      return rowIdx;
+  }
+  return std::nullopt;
+}
+
 bool IntegerRelation::gaussianEliminate() {
   gcdTightenInequalities();
   unsigned firstVar = 0, vars = getNumVars();
   unsigned nowDone, eqs;
   std::optional<unsigned> pivotRow;
   for (nowDone = 0, eqs = getNumEqualities(); nowDone < eqs; ++nowDone) {
-    // Finds the first non-empty column.
+    // Finds the first non-empty column that we haven't dealt with.
     for (; firstVar < vars; ++firstVar) {
-      if ((pivotRow = findConstraintWithNonZeroAt(firstVar, /*isEq=*/true)))
+      if ((pivotRow =
+               findEqualityWithNonZeroAfterRow(*this, nowDone, firstVar)))
         break;
     }
     // The matrix has been normalized to row echelon form.
@@ -1142,6 +1155,10 @@ bool IntegerRelation::gaussianEliminate() {
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
+
+    // The column is finished. Tell the next iteration to start at the next
+    // column.
+    firstVar++;
   }
 
   // No redundant rows.
