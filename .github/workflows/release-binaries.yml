@@ -166,7 +166,7 @@ jobs:
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*|windows-2022)
-            build_runs_on="${{ inputs.runs-on }}"
+            build_runs_on="depot-${{ inputs.runs-on }}"
             test_runs_on=$build_runs_on
             ;;
           macos-13)
