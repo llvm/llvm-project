@@ -21406,6 +21406,69 @@ environment <floatenv>` *except* for the rounding mode.
 This intrinsic is not supported on all targets. Some targets may not support
 all rounding modes.
 
+'``llvm.arbitrary.fp.convert``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type> @llvm.arbitrary.fp.convert(
+          <type> <value>, metadata <result interpretation>,
+          metadata <input interpretation>, metadata <rounding mode>,
+          i32 <saturation>)
+
+Overview:
+"""""""""
+
+The ``llvm.arbitrary.fp.convert`` intrinsic performs conversions
+between values whose interpretation differs from their representation
+in LLVM IR. The intrinsic is overloaded on both its return type and first
+argument. Metadata operands describe how the raw bits should be interpreted
+before and after the conversion.
+
+Arguments:
+""""""""""
+
+``value``
+  The value to convert. Its interpretation is described by ``input
+  interpretation``.
+
+``result interpretation``
+  A metadata string that describes the type of the result. The string
+  can be ``"none"`` (no conversion needed), ``"signed"`` or ``"unsigned"`` (for
+  integer types), or any target-specific string for floating-point formats.
+  For example ``"spv.E4M3EXT"`` and ``"spv.E5M2EXT"`` stand for FP8 SPIR-V formats.
+  Using ``"none"`` indicates the converted bits already have the desired LLVM IR type.
+
+``input interpretation``
+  Mirrors ``result interpretation`` but applies to the first argument. The
+  interpretation is target-specific and describes how to interpret the raw bits
+  of the input value.
+
+``rounding mode``
+  A metadata string. The permitted strings match those accepted by
+  :ref:`llvm.fptrunc.round <int_fptrunc_round>` (for example,
+  ``"round.tonearest"`` or ``"round.towardzero"``). The string ``"none"`` may be
+  used to indicate that the default rounding behaviour of the conversion should
+  be used.
+
+``saturation``
+  An integer constant (0 or 1) indicating whether saturation should be applied
+  to the conversion. When set to 1, values outside the representable range of
+  the result type are clamped to the minimum or maximum representable value
+  instead of wrapping. When set to 0, no saturation is applied.
+
+Semantics:
+""""""""""
+
+The intrinsic interprets the first argument according to ``input
+interpretation``, applies the requested rounding mode and saturation behavior,
+and produces a value whose type is described by ``result interpretation``.
+When saturation is enabled, values that exceed the representable range of the target
+format are clamped to the minimum or maximum representable value of that format.
+
 Convergence Intrinsics
 ----------------------
 
