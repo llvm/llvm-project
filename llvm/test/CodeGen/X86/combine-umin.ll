@@ -89,27 +89,27 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
 ; SSE41-LABEL: test_v16i8_demandedbits:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    andps %xmm1, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm2, %xmm3
-; SSE41-NEXT:    movdqa %xmm3, %xmm0
+; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: test_v16i8_demandedbits:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    andps %xmm1, %xmm0
-; SSE42-NEXT:    pblendvb %xmm0, %xmm2, %xmm3
-; SSE42-NEXT:    movdqa %xmm3, %xmm0
+; SSE42-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: test_v16i8_demandedbits:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
+; AVX1OR2-NEXT:    vpblendvb %xmm0, %xmm3, %xmm2, %xmm0
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512F-LABEL: test_v16i8_demandedbits:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX512F-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
+; AVX512F-NEXT:    vpblendvb %xmm0, %xmm3, %xmm2, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_v16i8_demandedbits:
