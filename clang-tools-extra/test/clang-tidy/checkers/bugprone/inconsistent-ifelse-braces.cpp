@@ -1,6 +1,7 @@
 // RUN: %check_clang_tidy %s bugprone-inconsistent-ifelse-braces %t
 
 bool cond(const char *) { return false; }
+
 void do_something(const char *) {}
 
 // Positive tests.
@@ -68,14 +69,14 @@ void f() {
 
   if (cond("if3.2")) {
   } else if (cond("if3.2")) {
-  } else do_something("elseif-same-line");
+  } else do_something("else-same-line");
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: <message> [bugprone-inconsistent-ifelse-braces]
-  // CHECK-FIXES: } else { do_something("elseif-same-line");
+  // CHECK-FIXES: } else { do_something("else-same-line");
   // CHECK-FIXES: }
 
   if (cond("if4-outer"))
     if (cond("if4-inner"))
-      do_something("nested-if-single-line");
+      do_something("if-single-line");
     else {
     }
   else {
@@ -88,7 +89,7 @@ void f() {
   // CHECK-FIXES: } else {
 
   if (cond("if5"))
-      do_something("noelse-single-line");
+      do_something("if-single-line");
   else if (cond("if5")) {
   }
   // CHECK-MESSAGES: :[[@LINE-4]]:19: warning: <message> [bugprone-inconsistent-ifelse-braces]
@@ -97,7 +98,7 @@ void f() {
 
   if (cond("if5.1")) {
   } else if (cond("if5.1"))
-      do_something("noelse-single-line");
+      do_something("elseif-single-line");
   // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: <message> [bugprone-inconsistent-ifelse-braces]
   // CHECK-FIXES: } else if (cond("if5.1")) {
   // CHECK-FIXES: }
@@ -105,4 +106,18 @@ void f() {
 
 // Negative tests.
 void g() {
+  if (cond("if0")) {
+    do_something("if-single-line");
+  } else if (cond("if0")) {
+    do_something("elseif-single-line");
+  } else {
+    do_something("else-single-line");
+  }
+
+  if (cond("if1"))
+    do_something("if-single-line");
+  else if (cond("if1"))
+    do_something("elseif-single-line");
+  else
+    do_something("else-single-line");
 }
