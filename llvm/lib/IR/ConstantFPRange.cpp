@@ -57,6 +57,12 @@ ConstantFPRange::ConstantFPRange(const APFloat &Value)
   }
 }
 
+ConstantFPRange::ConstantFPRange(const ConstantFPRange &Other) = default;
+ConstantFPRange::ConstantFPRange(ConstantFPRange &&Other) = default;
+ConstantFPRange &
+ConstantFPRange::operator=(const ConstantFPRange &Other) = default;
+ConstantFPRange &ConstantFPRange::operator=(ConstantFPRange &&Other) = default;
+
 // We treat that -0 is less than 0 here.
 static APFloat::cmpResult strictCompare(const APFloat &LHS,
                                         const APFloat &RHS) {
