@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -14,7 +13,8 @@
 
 namespace clang::tidy::bugprone {
 
-/// FIXME: Write a short description.
+/// Detects `if`/`else` statements where one branch uses braces and the other
+/// does not.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/inconsistent-ifelse-braces.html

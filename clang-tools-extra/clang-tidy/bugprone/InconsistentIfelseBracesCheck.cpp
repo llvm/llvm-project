@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -47,10 +46,6 @@ void InconsistentIfelseBracesCheck::check(
   const auto *MatchedIf = Result.Nodes.getNodeAs<IfStmt>("if_stmt");
   if (!shouldHaveBraces(MatchedIf))
     return;
-
-  // TODO: Test behavior with macros. This might be the reason why
-  // readability-braces-around-statements defines a findRParenLoc() function
-  // rather than using IfStmt/WhileStmt::getRParenLoc().
   checkIfStmt(Result, MatchedIf);
 }
 
@@ -62,17 +57,15 @@ void InconsistentIfelseBracesCheck::checkIfStmt(
     // it, then we need to check the inner IfStmt.
     checkStmt(Result, If->getThen(), If->getRParenLoc(), If->getElseLoc());
     if (shouldHaveBraces(NestedIf))
-      return checkIfStmt(Result, NestedIf);
-  }
-
-  if (!isa<CompoundStmt>(Then))
+      checkIfStmt(Result, NestedIf);
+  } else if (!isa<CompoundStmt>(Then)) {
     checkStmt(Result, If->getThen(), If->getRParenLoc(), If->getElseLoc());
+  }
 
   if (const Stmt *const Else = If->getElse()) {
     if (const auto *NestedIf = dyn_cast<const IfStmt>(Else))
-      return checkIfStmt(Result, NestedIf);
-
-    if (!isa<CompoundStmt>(Else))
+      checkIfStmt(Result, NestedIf);
+    else if (!isa<CompoundStmt>(Else))
       checkStmt(Result, If->getElse(), If->getElseLoc());
   }
 }
@@ -92,4 +85,5 @@ void InconsistentIfelseBracesCheck::checkStmt(
     }
   }
 }
+
 } // namespace clang::tidy::bugprone
