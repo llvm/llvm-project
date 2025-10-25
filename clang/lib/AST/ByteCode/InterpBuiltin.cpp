@@ -3320,6 +3320,65 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_x86_byteshift(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned ID,
+    llvm::function_ref<APInt(const Pointer &, unsigned Lane, unsigned I,
+                             unsigned Shift)>
+        Fn) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Shift = ImmAPS.getZExtValue() & 0xff;
+
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  if (!Src.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned NumElems = Src.getNumElems();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
+
+  for (unsigned Lane = 0; Lane != NumElems; Lane += 16) {
+    for (unsigned I = 0; I != 16; ++I) {
+      unsigned Base = Lane + I;
+      APSInt Result = APSInt(Fn(Src, Lane, I, Shift));
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(Base) = static_cast<T>(Result); });
+    }
+  }
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_ia32_shuffle_generic(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::pair<unsigned, unsigned>(unsigned, unsigned)>
+        GetSourceIndex) {
+
+  assert(Call->getNumArgs() == 3);
+  unsigned ShuffleMask = popToAPSInt(S, Call->getArg(2)).getZExtValue();
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
+    const Pointer &Src = (SrcVecIdx == 0) ? A : B;
+    TYPE_SWITCH(ElemT, { Dst.elem<T>(DstIdx) = Src.elem<T>(SrcIdx); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -4250,6 +4309,42 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
 
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 4;
+          unsigned NumSelectableElems = NumElemPerLane / 2;
+          unsigned BitsPerElem = 2;
+          unsigned IndexMask = 0x3;
+          unsigned MaskBits = 8;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned ElemInLane = DstIdx % NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+          return std::pair<unsigned, unsigned>{SrcIdx, LaneOffset + Index};
+        });
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 2;
+          unsigned NumSelectableElems = NumElemPerLane / 2;
+          unsigned BitsPerElem = 1;
+          unsigned IndexMask = 0x1;
+          unsigned MaskBits = 8;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned ElemInLane = DstIdx % NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+          return std::pair<unsigned, unsigned>{SrcIdx, LaneOffset + Index};
+        });
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512:
@@ -4389,6 +4484,39 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift:
+    // These SLLDQ intrinsics always operate on byte elements (8 bits).
+    // The lane width is hardcoded to 16 to match the SIMD register size,
+    // but the algorithm processes one byte per iteration,
+    // so APInt(8, ...) is correct and intentional.
+    return interp__builtin_x86_byteshift(
+        S, OpPC, Call, BuiltinID,
+        [](const Pointer &Src, unsigned Lane, unsigned I, unsigned Shift) {
+          if (I < Shift) {
+            return APInt(8, 0);
+          }
+          return APInt(8, Src.elem<uint8_t>(Lane + I - Shift));
+        });
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift:
+    // These SRLDQ intrinsics always operate on byte elements (8 bits).
+    // The lane width is hardcoded to 16 to match the SIMD register size,
+    // but the algorithm processes one byte per iteration,
+    // so APInt(8, ...) is correct and intentional.
+    return interp__builtin_x86_byteshift(
+        S, OpPC, Call, BuiltinID,
+        [](const Pointer &Src, unsigned Lane, unsigned I, unsigned Shift) {
+          if (I + Shift < 16) {
+            return APInt(8, Src.elem<uint8_t>(Lane + I + Shift));
+          }
+
+          return APInt(8, 0);
+        });
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

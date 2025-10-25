@@ -64,8 +64,9 @@ namespace llvm {
 /// The `RadixTree` takes ownership of the `KeyType` and `T` objects
 /// inserted into it. When an element is removed or the tree is destroyed,
 /// these objects will be destructed.
-/// However, if `KeyType` is a reference-like type, e.g. StringRef or range,
-/// User must guarantee that destination has lifetime longer than the tree.
+/// However, if `KeyType` is a reference-like type, e.g., StringRef or range,
+/// the user must guarantee that the referenced data has a lifetime longer than
+/// the tree.
 template <typename KeyType, typename T> class RadixTree {
 public:
   using key_type = KeyType;
@@ -82,8 +83,8 @@ private:
 
   /// Represents an internal node in the Radix Tree.
   struct Node {
-    KeyConstIteratorRangeType Key = {KeyConstIteratorType{},
-                                     KeyConstIteratorType{}};
+    KeyConstIteratorRangeType Key{KeyConstIteratorType{},
+                                  KeyConstIteratorType{}};
     std::vector<Node> Children;
 
     /// An iterator to the value associated with this node.
@@ -126,7 +127,7 @@ private:
 
     size_t countNodes() const {
       size_t R = 1;
-      for (const auto &C : Children)
+      for (const Node &C : Children)
         R += C.countNodes();
       return R;
     }
@@ -210,7 +211,8 @@ private:
       : public iterator_facade_base<IteratorImpl<MappedType>,
                                     std::forward_iterator_tag, MappedType> {
     const Node *Curr = nullptr;
-    KeyConstIteratorRangeType Query{};
+    KeyConstIteratorRangeType Query{KeyConstIteratorType{},
+                                    KeyConstIteratorType{}};
 
     void findNextValid() {
       while (Curr && Curr->Value == typename ContainerType::iterator())
@@ -245,7 +247,7 @@ private:
     }
 
   public:
-    IteratorImpl() : Query{{}, {}} {}
+    IteratorImpl() = default;
 
     MappedType &operator*() const { return *Curr->Value; }
 
@@ -306,16 +308,19 @@ public:
   ///         indicating whether the insertion took place.
   template <typename... Ts>
   std::pair<iterator, bool> emplace(key_type &&Key, Ts &&...Args) {
-    const value_type &NewValue =
-        KeyValuePairs.emplace_front(std::move(Key), T(std::move(Args)...));
+    // We want to make new `Node` to refer key in the container, not the one
+    // from the argument.
+    // FIXME: Determine that we need a new node, before expanding
+    // `KeyValuePairs`.
+    const value_type &NewValue = KeyValuePairs.emplace_front(
+        std::move(Key), T(std::forward<Ts>(Args)...));
     Node &Node = findOrCreate(NewValue.first);
     bool HasValue = Node.Value != typename ContainerType::iterator();
-    if (!HasValue) {
+    if (!HasValue)
       Node.Value = KeyValuePairs.begin();
-    } else {
+    else
       KeyValuePairs.pop_front();
-    }
-    return std::make_pair(Node.Value, !HasValue);
+    return {Node.Value, !HasValue};
   }
 
   ///
