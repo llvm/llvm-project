@@ -154,6 +154,17 @@ public:
     setNumTombstones(0);
   }
 
+  void shrink_and_clear() {
+    auto [Reallocate, NewNumBuckets] = derived().planShrinkAndClear();
+    destroyAll();
+    if (!Reallocate) {
+      initEmpty();
+      return;
+    }
+    derived().deallocateBuckets();
+    derived().init(NewNumBuckets);
+  }
+
   /// Return true if the specified key is in the map, false otherwise.
   [[nodiscard]] bool contains(const_arg_type_t<KeyT> Val) const {
     return doFind(Val) != nullptr;
@@ -532,8 +543,6 @@ private:
 
   void grow(unsigned AtLeast) { derived().grow(AtLeast); }
 
-  void shrink_and_clear() { derived().shrink_and_clear(); }
-
   template <typename LookupKeyT>
   BucketT *findBucketForInsertion(const LookupKeyT &Lookup,
                                   BucketT *TheBucket) {
@@ -773,25 +782,6 @@ public:
     return *this;
   }
 
-  void shrink_and_clear() {
-    unsigned OldNumBuckets = NumBuckets;
-    unsigned OldNumEntries = NumEntries;
-    this->destroyAll();
-
-    // Reduce the number of buckets.
-    unsigned NewNumBuckets = 0;
-    if (OldNumEntries)
-      NewNumBuckets = std::max(64, 1 << (Log2_32_Ceil(OldNumEntries) + 1));
-    if (NewNumBuckets == NumBuckets) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    deallocate_buffer(Buckets, sizeof(BucketT) * OldNumBuckets,
-                      alignof(BucketT));
-    init(NewNumBuckets);
-  }
-
 private:
   unsigned getNumEntries() const { return NumEntries; }
 
@@ -860,6 +850,15 @@ private:
     // Free the old table.
     deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
                       alignof(BucketT));
+  }
+
+  std::pair<bool, unsigned> planShrinkAndClear() const {
+    unsigned NewNumBuckets = 0;
+    if (NumEntries)
+      NewNumBuckets = std::max(64u, 1u << (Log2_32_Ceil(NumEntries) + 1));
+    if (NewNumBuckets == NumBuckets)
+      return {false, 0};          // Reuse
+    return {true, NewNumBuckets}; // Reallocate
   }
 };
 
@@ -1013,27 +1012,6 @@ public:
     return *this;
   }
 
-  void shrink_and_clear() {
-    unsigned OldSize = this->size();
-    this->destroyAll();
-
-    // Reduce the number of buckets.
-    unsigned NewNumBuckets = 0;
-    if (OldSize) {
-      NewNumBuckets = 1 << (Log2_32_Ceil(OldSize) + 1);
-      if (NewNumBuckets > InlineBuckets && NewNumBuckets < 64u)
-        NewNumBuckets = 64;
-    }
-    if ((Small && NewNumBuckets <= InlineBuckets) ||
-        (!Small && NewNumBuckets == getLargeRep()->NumBuckets)) {
-      this->BaseT::initEmpty();
-      return;
-    }
-
-    deallocateBuckets();
-    init(NewNumBuckets);
-  }
-
 private:
   unsigned getNumEntries() const { return NumEntries; }
 
@@ -1167,6 +1145,20 @@ private:
     // Free the old table.
     deallocate_buffer(OldRep.Buckets, sizeof(BucketT) * OldRep.NumBuckets,
                       alignof(BucketT));
+  }
+
+  std::pair<bool, unsigned> planShrinkAndClear() const {
+    unsigned NewNumBuckets = 0;
+    if (this->size()) {
+      NewNumBuckets = 1u << (Log2_32_Ceil(this->size()) + 1);
+      if (NewNumBuckets > InlineBuckets)
+        NewNumBuckets = std::max(64u, NewNumBuckets);
+    }
+    bool Reuse = Small ? NewNumBuckets <= InlineBuckets
+                       : NewNumBuckets == getLargeRep()->NumBuckets;
+    if (Reuse)
+      return {false, 0};          // Reuse
+    return {true, NewNumBuckets}; // Reallocate
   }
 };
 
