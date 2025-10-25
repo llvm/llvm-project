@@ -136,6 +136,10 @@ const RegisterInfo *ABISysV_riscv::GetRegisterInfoArray(uint32_t &count) {
 // Static Functions
 //------------------------------------------------------------------
 
+static inline size_t DeriveRegSizeInBytes(bool is_rv64) {
+  return is_rv64 ? 8 : 4;
+}
+
 ABISP
 ABISysV_riscv::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
   llvm::Triple::ArchType machine = arch.GetTriple().getArch();
@@ -151,14 +155,14 @@ ABISysV_riscv::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
 }
 
 static inline size_t AugmentArgSize(bool is_rv64, size_t size_in_bytes) {
-  size_t word_size = is_rv64 ? 8 : 4;
+  size_t word_size = DeriveRegSizeInBytes(is_rv64);
   return llvm::alignTo(size_in_bytes, word_size);
 }
 
 static size_t
 TotalArgsSizeInWords(bool is_rv64,
                      const llvm::ArrayRef<ABI::CallArgument> &args) {
-  size_t reg_size = is_rv64 ? 8 : 4;
+  size_t reg_size = DeriveRegSizeInBytes(is_rv64);
   size_t word_size = reg_size;
   size_t total_size = 0;
   for (const auto &arg : args)
@@ -275,7 +279,7 @@ bool ABISysV_riscv::PrepareTrivialCall(
   if (!process)
     return false;
 
-  size_t reg_size = m_is_rv64 ? 8 : 4;
+  size_t reg_size = DeriveRegSizeInBytes(m_is_rv64);
   size_t word_size = reg_size;
   // Push host data onto target.
   for (const auto &arg : args) {
@@ -397,7 +401,7 @@ Status ABISysV_riscv::SetReturnValueObject(StackFrameSP &frame_sp,
     return result;
   }
 
-  size_t reg_size = m_is_rv64 ? 8 : 4;
+  size_t reg_size = DeriveRegSizeInBytes(m_is_rv64);
   if (num_bytes <= 2 * reg_size) {
     offset_t offset = 0;
     uint64_t raw_value = data.GetMaxU64(&offset, num_bytes);
@@ -490,9 +494,11 @@ static bool SetSizedFloat(Scalar &scalar, uint64_t raw_value,
 static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
                                           const RegisterContextSP &reg_ctx,
                                           llvm::Triple::ArchType machine,
-                                          uint32_t type_flags,
+                                          const CompilerType &compiler_type,
                                           uint32_t byte_size) {
   Value value;
+  value.SetCompilerType(compiler_type);
+
   ValueObjectSP return_valobj_sp;
   auto reg_info_a0 =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
@@ -545,11 +551,11 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
     return return_valobj_sp;
   }
 
-  if (type_flags & eTypeIsInteger) {
-    const bool is_signed = (type_flags & eTypeIsSigned) != 0;
+  if (compiler_type.IsInteger()) {
+    const bool is_signed = compiler_type.IsSigned();
     if (!SetSizedInteger(value.GetScalar(), raw_value, byte_size, is_signed))
       return return_valobj_sp;
-  } else if (type_flags & eTypeIsFloat) {
+  } else if (compiler_type.IsFloat()) {
     if (!SetSizedFloat(value.GetScalar(), raw_value, byte_size))
       return return_valobj_sp;
   } else
@@ -564,7 +570,7 @@ static ValueObjectSP GetValObjFromIntRegs(Thread &thread,
 static ValueObjectSP
 GetValObjFromFPRegs(Thread &thread, const RegisterContextSP &reg_ctx,
                     llvm::Triple::ArchType machine, uint32_t arch_fp_flags,
-                    uint32_t type_flags, uint32_t byte_size) {
+                    CompilerType &compiler_type, uint32_t byte_size) {
   auto reg_info_fa0 = reg_ctx->GetRegisterInfoByName("fa0");
   bool use_fp_regs = false;
   ValueObjectSP return_valobj_sp;
@@ -572,8 +578,8 @@ GetValObjFromFPRegs(Thread &thread, const RegisterContextSP &reg_ctx,
   switch (arch_fp_flags) {
   // fp return value in integer registers a0 and possibly a1
   case ArchSpec::eRISCV_float_abi_soft:
-    return_valobj_sp =
-        GetValObjFromIntRegs(thread, reg_ctx, machine, type_flags, byte_size);
+    return_valobj_sp = GetValObjFromIntRegs(thread, reg_ctx, machine,
+                                            compiler_type, byte_size);
     return return_valobj_sp;
   // fp return value in fp register fa0 (only float)
   case ArchSpec::eRISCV_float_abi_single:
@@ -602,7 +608,102 @@ GetValObjFromFPRegs(Thread &thread, const RegisterContextSP &reg_ctx,
                                           value, ConstString(""));
   }
   // we should never reach this, but if we do, use the integer registers
-  return GetValObjFromIntRegs(thread, reg_ctx, machine, type_flags, byte_size);
+  return GetValObjFromIntRegs(thread, reg_ctx, machine, compiler_type,
+                              byte_size);
+}
+
+static DataExtractor CopyReturnValueToBuffer(ExecutionContext &exe_ctx,
+                                             RegisterValue &a0_reg_value,
+                                             RegisterValue &a1_reg_value,
+                                             const size_t xlen_byte_size,
+                                             const uint32_t byte_size) {
+
+  DataExtractor a0_extractor;
+  DataExtractor a1_extractor;
+
+  // RISC-V ABI states:
+  // "Aggregates whose total size is no more than XLEN bits
+  // are passed in a register, with the fields laid out as though
+  // they were passed in memory."
+  if (byte_size <= xlen_byte_size) {
+    // value is stored only in a0
+    a0_reg_value.GetData(a0_extractor);
+    // shrink data to the size of the return value
+    return DataExtractor{a0_extractor, /*offset=*/0, byte_size};
+  }
+
+  // "Aggregates whose total size is no more than 2×XLEN bits
+  // are passed in a pair of registers;"
+  if (byte_size <= 2 * xlen_byte_size) {
+    // value is stored in a0 and a1 consecutively
+    a0_reg_value.GetData(a0_extractor);
+    a1_reg_value.GetData(a1_extractor);
+    a0_extractor.Append(a1_extractor);
+    // shrink data to the size of the return value
+    return DataExtractor{a0_extractor, /*offset=*/0, byte_size};
+  }
+
+  // "Aggregates larger than 2×XLEN bits are passed by reference
+  // and are replaced in the argument list with the address"
+  const lldb::addr_t value_addr =
+      a1_reg_value.GetAsUInt64(LLDB_INVALID_ADDRESS, nullptr);
+
+  if (value_addr == LLDB_INVALID_ADDRESS)
+    return DataExtractor{};
+
+  Status error;
+  WritableDataBufferSP data_sp(new DataBufferHeap(byte_size, 0));
+  if (exe_ctx.GetProcessRef().ReadMemory(value_addr, data_sp->GetBytes(),
+                                         byte_size, error) != byte_size ||
+      error.Fail())
+    return DataExtractor{};
+
+  DataExtractor data;
+  data.SetData(data_sp);
+  return data;
+}
+
+static ValueObjectSP GetAggregateObj(Thread &thread, RegisterContextSP reg_ctx,
+                                     const CompilerType &compiler_type,
+                                     const size_t xlen_byte_size,
+                                     const uint32_t byte_size) {
+  const RegisterInfo *a0_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
+
+  const RegisterInfo *a1_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG2);
+
+  if (!a0_reg_info || !a1_reg_info)
+    return ValueObjectSP{};
+
+  RegisterValue a0_reg_value;
+  RegisterValue a1_reg_value;
+
+  if (!reg_ctx->ReadRegister(a0_reg_info, a0_reg_value) ||
+      !reg_ctx->ReadRegister(a1_reg_info, a1_reg_value))
+    return ValueObjectSP{};
+
+  if (a0_reg_value.GetType() == RegisterValue::Type::eTypeInvalid ||
+      a1_reg_value.GetType() == RegisterValue::Type::eTypeInvalid)
+    return ValueObjectSP{};
+
+  ExecutionContext exe_ctx(thread.shared_from_this());
+  DataExtractor data = CopyReturnValueToBuffer(
+      exe_ctx, a0_reg_value, a1_reg_value, xlen_byte_size, byte_size);
+
+  if (data.GetByteSize() != byte_size)
+    return ValueObjectSP{};
+
+  const ByteOrder byte_order = exe_ctx.GetProcessRef().GetByteOrder();
+  const uint32_t address_byte_size =
+      exe_ctx.GetProcessRef().GetAddressByteSize();
+  data.SetByteOrder(byte_order);
+  data.SetAddressByteSize(address_byte_size);
+
+  ValueObjectSP return_valobj_sp =
+      ValueObjectConstResult::Create(thread.GetStackFrameAtIndex(0).get(),
+                                     compiler_type, ConstString(""), data);
+  return return_valobj_sp;
 }
 
 ValueObjectSP
@@ -617,23 +718,21 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
   if (!reg_ctx)
     return return_valobj_sp;
 
-  Value value;
-  value.SetCompilerType(compiler_type);
-
-  const uint32_t type_flags = compiler_type.GetTypeInfo();
   const size_t byte_size =
       llvm::expectedToOptional(compiler_type.GetByteSize(&thread)).value_or(0);
   const ArchSpec arch = thread.GetProcess()->GetTarget().GetArchitecture();
   const llvm::Triple::ArchType machine = arch.GetMachine();
 
   // Integer return type.
-  if (type_flags & eTypeIsInteger) {
-    return_valobj_sp =
-        GetValObjFromIntRegs(thread, reg_ctx, machine, type_flags, byte_size);
+  if (compiler_type.IsInteger()) {
+    return_valobj_sp = GetValObjFromIntRegs(thread, reg_ctx, machine,
+                                            compiler_type, byte_size);
     return return_valobj_sp;
   }
   // Pointer return type.
-  else if (type_flags & eTypeIsPointer) {
+  if (compiler_type.IsPointerType()) {
+    Value value;
+    value.SetCompilerType(compiler_type);
     auto reg_info_a0 = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
                                                 LLDB_REGNUM_GENERIC_ARG1);
     value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0);
@@ -642,7 +741,7 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
                                           value, ConstString(""));
   }
   // Floating point return type.
-  else if (type_flags & eTypeIsFloat) {
+  if (compiler_type.IsFloat()) {
     uint32_t float_count = 0;
     bool is_complex = false;
 
@@ -651,58 +750,16 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
       const uint32_t arch_fp_flags =
           arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
       return_valobj_sp = GetValObjFromFPRegs(
-          thread, reg_ctx, machine, arch_fp_flags, type_flags, byte_size);
+          thread, reg_ctx, machine, arch_fp_flags, compiler_type, byte_size);
       return return_valobj_sp;
     }
   }
-  // Unsupported return type.
-  return return_valobj_sp;
-}
+  // Aggregate return type
+  if (compiler_type.IsAggregateType()) {
+    size_t xlen_byte_size = DeriveRegSizeInBytes(m_is_rv64);
 
-ValueObjectSP
-ABISysV_riscv::GetReturnValueObjectImpl(lldb_private::Thread &thread,
-                                        llvm::Type &type) const {
-  Value value;
-  ValueObjectSP return_valobj_sp;
-
-  auto reg_ctx = thread.GetRegisterContext();
-  if (!reg_ctx)
-    return return_valobj_sp;
-
-  uint32_t type_flags = 0;
-  if (type.isIntegerTy())
-    type_flags = eTypeIsInteger;
-  else if (type.isVoidTy())
-    type_flags = eTypeIsPointer;
-  else if (type.isFloatTy())
-    type_flags = eTypeIsFloat;
-
-  const uint32_t byte_size = type.getPrimitiveSizeInBits() / CHAR_BIT;
-  const ArchSpec arch = thread.GetProcess()->GetTarget().GetArchitecture();
-  const llvm::Triple::ArchType machine = arch.GetMachine();
-
-  // Integer return type.
-  if (type_flags & eTypeIsInteger) {
-    return_valobj_sp =
-        GetValObjFromIntRegs(thread, reg_ctx, machine, type_flags, byte_size);
-    return return_valobj_sp;
-  }
-  // Pointer return type.
-  else if (type_flags & eTypeIsPointer) {
-    auto reg_info_a0 = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
-                                                LLDB_REGNUM_GENERIC_ARG1);
-    value.GetScalar() = reg_ctx->ReadRegisterAsUnsigned(reg_info_a0, 0);
-    value.SetValueType(Value::ValueType::Scalar);
-    return ValueObjectConstResult::Create(thread.GetStackFrameAtIndex(0).get(),
-                                          value, ConstString(""));
-  }
-  // Floating point return type.
-  else if (type_flags & eTypeIsFloat) {
-    const uint32_t arch_fp_flags =
-        arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
-    return_valobj_sp = GetValObjFromFPRegs(
-        thread, reg_ctx, machine, arch_fp_flags, type_flags, byte_size);
-    return return_valobj_sp;
+    return GetAggregateObj(thread, reg_ctx, compiler_type, xlen_byte_size,
+                           byte_size);
   }
   // Unsupported return type.
   return return_valobj_sp;
@@ -748,9 +805,7 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   // Define the CFA as the current frame pointer value.
   row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
 
-  int reg_size = 4;
-  if (m_is_rv64)
-    reg_size = 8;
+  int reg_size = DeriveRegSizeInBytes(m_is_rv64);
 
   // Assume the ra reg (return pc) and caller's frame pointer 
   // have been spilled to stack already.
