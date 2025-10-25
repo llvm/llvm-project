@@ -672,8 +672,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::updateOneNode(
                       << (UpdateToFullSet ? ", full-set" : "") << "] " << &FS
                       << "\n");
     // Callers of this function may need updating.
-    for (auto &CallerID : Callers[Callee])
-      WorkList.insert(CallerID);
+    WorkList.insert_range(Callers[Callee]);
 
     ++FS.UpdateCount;
   }
@@ -1049,9 +1048,7 @@ PreservedAnalyses StackSafetyPrinterPass::run(Function &F,
 
 char StackSafetyInfoWrapperPass::ID = 0;
 
-StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {
-  initializeStackSafetyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {}
 
 void StackSafetyInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
@@ -1092,10 +1089,7 @@ PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
 char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
 StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass()
-    : ModulePass(ID) {
-  initializeStackSafetyGlobalInfoWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 StackSafetyGlobalInfoWrapperPass::~StackSafetyGlobalInfoWrapperPass() = default;
 
@@ -1142,7 +1136,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     if (!AreStatisticsEnabled())
       return;
     for (auto &GVS : Index)
-      for (auto &GV : GVS.second.SummaryList)
+      for (auto &GV : GVS.second.getSummaryList())
         if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get()))
           Stat += FS->paramAccesses().size();
   };
@@ -1153,7 +1147,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
 
   // Convert the ModuleSummaryIndex to a FunctionMap
   for (auto &GVS : Index) {
-    for (auto &GV : GVS.second.SummaryList) {
+    for (auto &GV : GVS.second.getSummaryList()) {
       FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get());
       if (!FS || FS->paramAccesses().empty())
         continue;

@@ -269,7 +269,8 @@ qc.ext x27, x6, 31, 41
 qc.ext x27, x6, 31, 1
 
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.extdu x1, 8, 8, 8
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -289,7 +290,8 @@ qc.extdu x1, x8, 8, 78
 qc.extdu x1, x8, 8, 8
 
 
-# CHECK: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.extd x13, 21, 10, 15
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
@@ -396,6 +398,10 @@ qc.extdur x9, x19
 # CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
 qc.extdur x0, x19, x29
 
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
+qc.extdur x9, x31, x29
+
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
 qc.extdur x9, x19, x0
@@ -406,21 +412,25 @@ qc.extdur x9, x19, x29
 
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
-qc.extdr x12, x31, 30
+qc.extdr x12, x29, 30
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
-qc.extdr x12, x31
+qc.extdr x12, x29
 
 # CHECK-PLUS: :[[@LINE+2]]:10: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
-qc.extdr x0, x31, x30
+qc.extdr x0, x29, x30
+
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
+qc.extdr x12, x31, x30
 
 # CHECK-PLUS: :[[@LINE+2]]:20: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
-qc.extdr x12, x31, x0
+qc.extdr x12, x29, x0
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
-qc.extdr x12, x31, x30
+qc.extdr x12, x29, x30
 
 
 # CHECK-PLUS: :[[@LINE+2]]:22: error: register must be a GPR excluding zero (x0)
@@ -433,6 +443,10 @@ qc.extdupr x13, x23
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.extdupr x0, x23, x3
+
+# CHECK-PLUS: :[[@LINE+2]]:17: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:17: error: invalid operand for instruction
+qc.extdupr x13, x31, x3
 
 # CHECK-PLUS: :[[@LINE+2]]:22: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:22: error: invalid operand for instruction
@@ -453,6 +467,10 @@ qc.extduprh x18, x8
 # CHECK-MINUS: :[[@LINE+1]]:13: error: invalid operand for instruction
 qc.extduprh x0, x8, x9
 
+# CHECK-PLUS: :[[@LINE+2]]:18: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:18: error: invalid operand for instruction
+qc.extduprh x18, x31, x9
+
 # CHECK-PLUS: :[[@LINE+2]]:22: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:22: error: invalid operand for instruction
 qc.extduprh x18, x8, x0
@@ -472,6 +490,10 @@ qc.extdpr x1, x4
 # CHECK-MINUS: :[[@LINE+1]]:11: error: invalid operand for instruction
 qc.extdpr x0, x4, x15
 
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
+qc.extdpr x1, x31, x15
+
 # CHECK-PLUS: :[[@LINE+2]]:19: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:19: error: invalid operand for instruction
 qc.extdpr x1, x4, x0
@@ -490,6 +512,10 @@ qc.extdprh x6, x24
 # CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.extdprh x0, x24, x25
+
+# CHECK-PLUS: :[[@LINE+2]]:16: error: register must be a GPR excluding t6 (x31)
+# CHECK-MINUS: :[[@LINE+1]]:16: error: invalid operand for instruction
+qc.extdprh x6, x31, x25
 
 # CHECK-PLUS: :[[@LINE+2]]:21: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction

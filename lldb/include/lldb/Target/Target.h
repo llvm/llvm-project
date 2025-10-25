@@ -18,6 +18,7 @@
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
@@ -117,6 +118,8 @@ public:
   void SetDisableSTDIO(bool b);
 
   llvm::StringRef GetLaunchWorkingDirectory() const;
+
+  bool GetParallelModuleLoad() const;
 
   const char *GetDisassemblyFlavor() const;
 
@@ -510,9 +513,9 @@ private:
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
 
-  ///< During expression evaluation, any SymbolContext in this list will be
-  ///< used for symbol/function lookup before any other context (except for
-  ///< the module corresponding to the current frame).
+  /// During expression evaluation, any SymbolContext in this list will be
+  /// used for symbol/function lookup before any other context (except for
+  /// the module corresponding to the current frame).
   SymbolContextList m_preferred_lookup_contexts;
 };
 
@@ -596,6 +599,17 @@ public:
   static void SetDefaultArchitecture(const ArchSpec &arch);
 
   bool IsDummyTarget() const { return m_is_dummy_target; }
+
+  /// Get the globally unique ID for this target.
+  ///
+  /// This ID is unique across all debugger instances and all targets,
+  /// within the same lldb process. The ID is assigned
+  /// during target construction and remains constant for the target's lifetime.
+  /// The first target created (typically the dummy target) gets ID 1.
+  ///
+  /// \return
+  ///     The globally unique ID for this target.
+  lldb::user_id_t GetGloballyUniqueID() const { return m_target_unique_id; }
 
   const std::string &GetLabel() const { return m_label; }
 
@@ -721,7 +735,7 @@ public:
   lldb::BreakpointSP CreateBreakpoint(lldb::addr_t load_addr, bool internal,
                                       bool request_hardware);
 
-  // Use this to create a breakpoint from a load address and a module file spec
+  // Use this to create a breakpoint from a file address and a module file spec
   lldb::BreakpointSP CreateAddressInModuleBreakpoint(lldb::addr_t file_addr,
                                                      bool internal,
                                                      const FileSpec &file_spec,
@@ -750,8 +764,8 @@ public:
       const FileSpecList *containingModules,
       const FileSpecList *containingSourceFiles, const char *func_name,
       lldb::FunctionNameType func_name_type_mask, lldb::LanguageType language,
-      lldb::addr_t offset, LazyBool skip_prologue, bool internal,
-      bool request_hardware);
+      lldb::addr_t offset, bool offset_is_insn_count, LazyBool skip_prologue,
+      bool internal, bool request_hardware);
 
   lldb::BreakpointSP
   CreateExceptionBreakpoint(enum lldb::LanguageType language, bool catch_bp,
@@ -1091,7 +1105,7 @@ public:
 
   Architecture *GetArchitecturePlugin() const { return m_arch.GetPlugin(); }
 
-  Debugger &GetDebugger() { return m_debugger; }
+  Debugger &GetDebugger() const { return m_debugger; }
 
   size_t ReadMemoryFromFileCache(const Address &addr, void *dst, size_t dst_len,
                                  Status &error);
@@ -1108,10 +1122,16 @@ public:
   // 2 - if there is a process, then read from memory
   // 3 - if there is no process, then read from the file cache
   //
+  // If did_read_live_memory is provided, will indicate if the read was from
+  // live memory, or from file contents. A caller which needs to treat these two
+  // sources differently should use this argument to disambiguate where the data
+  // was read from.
+  //
   // The method is virtual for mocking in the unit tests.
   virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
                             Status &error, bool force_live_memory = false,
-                            lldb::addr_t *load_addr_ptr = nullptr);
+                            lldb::addr_t *load_addr_ptr = nullptr,
+                            bool *did_read_live_memory = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
@@ -1155,6 +1175,11 @@ public:
                                      bool is_signed, Scalar &scalar,
                                      Status &error,
                                      bool force_live_memory = false);
+
+  int64_t ReadSignedIntegerFromMemory(const Address &addr,
+                                      size_t integer_byte_size,
+                                      int64_t fail_value, Status &error,
+                                      bool force_live_memory = false);
 
   uint64_t ReadUnsignedIntegerFromMemory(const Address &addr,
                                          size_t integer_byte_size,
@@ -1321,13 +1346,21 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
+  llvm::Expected<lldb::DisassemblerSP>
+  ReadInstructions(const Address &start_addr, uint32_t count,
+                   const char *flavor_string = nullptr);
+
   // Target Stop Hooks
   class StopHook : public UserID {
   public:
     StopHook(const StopHook &rhs);
     virtual ~StopHook() = default;
 
-    enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    enum class StopHookKind : uint32_t {
+      CommandBased = 0,
+      ScriptBased,
+      CodeBased,
+    };
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
@@ -1368,6 +1401,18 @@ public:
 
     bool GetAutoContinue() const { return m_auto_continue; }
 
+    void SetRunAtInitialStop(bool at_initial_stop) {
+      m_at_initial_stop = at_initial_stop;
+    }
+
+    bool GetRunAtInitialStop() const { return m_at_initial_stop; }
+
+    void SetSuppressOutput(bool suppress_output) {
+      m_suppress_output = suppress_output;
+    }
+
+    bool GetSuppressOutput() const { return m_suppress_output; }
+
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
     virtual void GetSubclassDescription(Stream &s,
                                         lldb::DescriptionLevel level) const = 0;
@@ -1378,6 +1423,8 @@ public:
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
+    bool m_at_initial_stop = true;
+    bool m_suppress_output = false;
 
     StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
   };
@@ -1397,8 +1444,8 @@ public:
 
   private:
     StringList m_commands;
-    // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
-    // and fill it with commands, and SetSpecifier to set the specifier shared
+    // Use CreateStopHook to make a new empty stop hook. Use SetActionFromString
+    // to fill it with commands, and SetSpecifier to set the specifier shared
     // pointer (can be null, that will match anything.)
     StopHookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
         : StopHook(target_sp, uid) {}
@@ -1424,19 +1471,56 @@ public:
     StructuredDataImpl m_extra_args;
     lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
-    /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
-    /// and fill it with commands, and SetSpecifier to set the specifier shared
-    /// pointer (can be null, that will match anything.)
+    /// Use CreateStopHook to make a new empty stop hook. Use SetScriptCallback
+    /// to set the script to execute, and SetSpecifier to set the specifier
+    /// shared pointer (can be null, that will match anything.)
     StopHookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
         : StopHook(target_sp, uid) {}
     friend class Target;
   };
 
+  class StopHookCoded : public StopHook {
+  public:
+    ~StopHookCoded() override = default;
+
+    using HandleStopCallback = StopHookResult(ExecutionContext &exc_ctx,
+                                              lldb::StreamSP output);
+
+    void SetCallback(llvm::StringRef name, HandleStopCallback *callback) {
+      m_name = name;
+      m_callback = callback;
+    }
+
+    StopHookResult HandleStop(ExecutionContext &exc_ctx,
+                              lldb::StreamSP output) override {
+      return m_callback(exc_ctx, output);
+    }
+
+    void GetSubclassDescription(Stream &s,
+                                lldb::DescriptionLevel level) const override {
+      s.Indent();
+      s.Printf("%s (built-in)\n", m_name.c_str());
+    }
+
+  private:
+    std::string m_name;
+    HandleStopCallback *m_callback;
+
+    /// Use CreateStopHook to make a new empty stop hook. Use SetCallback to set
+    /// the callback to execute, and SetSpecifier to set the specifier shared
+    /// pointer (can be null, that will match anything.)
+    StopHookCoded(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : StopHook(target_sp, uid) {}
+    friend class Target;
+  };
+
+  void RegisterInternalStopHooks();
+
   typedef std::shared_ptr<StopHook> StopHookSP;
 
   /// Add an empty stop hook to the Target's stop hook list, and returns a
-  /// shared pointer to it in new_hook. Returns the id of the new hook.
-  StopHookSP CreateStopHook(StopHook::StopHookKind kind);
+  /// shared pointer to the new hook.
+  StopHookSP CreateStopHook(StopHook::StopHookKind kind, bool internal = false);
 
   /// If you tried to create a stop hook, and that failed, call this to
   /// remove the stop hook, as it will also reset the stop hook counter.
@@ -1444,9 +1528,9 @@ public:
 
   // Runs the stop hooks that have been registered for this target.
   // Returns true if the stop hooks cause the target to resume.
-  bool RunStopHooks();
-
-  size_t GetStopHookSize();
+  // Pass at_initial_stop if this is the stop where lldb gains
+  // control over the process for the first time.
+  bool RunStopHooks(bool at_initial_stop = false);
 
   bool SetSuppresStopHooks(bool suppress) {
     bool old_value = m_suppress_stop_hooks;
@@ -1466,19 +1550,7 @@ public:
 
   void SetAllStopHooksActiveState(bool active_state);
 
-  size_t GetNumStopHooks() const { return m_stop_hooks.size(); }
-
-  StopHookSP GetStopHookAtIndex(size_t index) {
-    if (index >= GetNumStopHooks())
-      return StopHookSP();
-    StopHookCollection::iterator pos = m_stop_hooks.begin();
-
-    while (index > 0) {
-      pos++;
-      index--;
-    }
-    return (*pos).second;
-  }
+  const std::vector<StopHookSP> GetStopHooks(bool internal = false) const;
 
   lldb::PlatformSP GetPlatform() { return m_platform_sp; }
 
@@ -1618,12 +1690,16 @@ protected:
   typedef std::map<lldb::user_id_t, StopHookSP> StopHookCollection;
   StopHookCollection m_stop_hooks;
   lldb::user_id_t m_stop_hook_next_id;
+  std::vector<StopHookSP> m_internal_stop_hooks;
   uint32_t m_latest_stop_hook_id; /// This records the last natural stop at
                                   /// which we ran a stop-hook.
   bool m_valid;
   bool m_suppress_stop_hooks; /// Used to not run stop hooks for expressions
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
+  lldb::user_id_t m_target_unique_id =
+      LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; /// The globally unique ID
+                                              /// assigned to this target
   /// An optional \a lldb_private::Trace object containing processor trace
   /// information of this target.
   lldb::TraceSP m_trace_sp;

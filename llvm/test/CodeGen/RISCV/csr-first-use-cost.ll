@@ -9,7 +9,7 @@ define fastcc void @Perl_sv_setnv(i8 %c, ptr %.str.54.3682) nounwind {
 ; ZERO-COST-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; ZERO-COST-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; ZERO-COST-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; ZERO-COST-NEXT:    andi a0, a0, 255
+; ZERO-COST-NEXT:    zext.b a0, a0
 ; ZERO-COST-NEXT:    li a2, 2
 ; ZERO-COST-NEXT:    blt a2, a0, .LBB0_3
 ; ZERO-COST-NEXT:  # %bb.1: # %entry
@@ -49,7 +49,7 @@ define fastcc void @Perl_sv_setnv(i8 %c, ptr %.str.54.3682) nounwind {
 ; DEFAULT-COST-NEXT:    addi sp, sp, -32
 ; DEFAULT-COST-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; DEFAULT-COST-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; DEFAULT-COST-NEXT:    andi a0, a0, 255
+; DEFAULT-COST-NEXT:    zext.b a0, a0
 ; DEFAULT-COST-NEXT:    li a2, 2
 ; DEFAULT-COST-NEXT:    blt a2, a0, .LBB0_3
 ; DEFAULT-COST-NEXT:  # %bb.1: # %entry

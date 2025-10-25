@@ -29,6 +29,10 @@ namespace Fortran::tools {
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/3);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/4);
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
+    // ieee_denorm exception support is nonstandard.
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/3);
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/4);
+    targetCharacteristics.set_hasSubnormalExceptionSupport(/*kind=*/8);
   }
 
   if (targetTriple.isARM() || targetTriple.isAArch64()) {
@@ -89,6 +93,10 @@ namespace Fortran::tools {
 
   if (targetTriple.isOSWindows())
     targetCharacteristics.set_isOSWindows(true);
+
+  // Currently the integer kind happens to be the same as the byte size
+  targetCharacteristics.set_integerKindForPointer(
+      targetTriple.getArchPointerBitWidth() / 8);
 
   // TODO: use target machine data layout to set-up the target characteristics
   // type size and alignment info.

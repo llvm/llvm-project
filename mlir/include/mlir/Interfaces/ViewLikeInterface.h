@@ -45,6 +45,28 @@ unsigned getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
 
 namespace mlir {
 
+/// Result for slice bounds verification;
+struct SliceBoundsVerificationResult {
+  /// If set to "true", the slice bounds verification was successful.
+  bool isValid;
+  /// An error message that can be printed during op verification.
+  std::string errorMessage;
+};
+
+/// Verify that the offsets/sizes/strides-style access into the given shape
+/// is in-bounds. Only static values are verified. If `generateErrorMessage`
+/// is set to "true", an error message is produced that can be printed by the
+///  op verifier.
+SliceBoundsVerificationResult
+verifyInBoundsSlice(ArrayRef<int64_t> shape, ArrayRef<int64_t> staticOffsets,
+                    ArrayRef<int64_t> staticSizes,
+                    ArrayRef<int64_t> staticStrides,
+                    bool generateErrorMessage = false);
+SliceBoundsVerificationResult verifyInBoundsSlice(
+    ArrayRef<int64_t> shape, ArrayRef<OpFoldResult> mixedOffsets,
+    ArrayRef<OpFoldResult> mixedSizes, ArrayRef<OpFoldResult> mixedStrides,
+    bool generateErrorMessage = false);
+
 /// Pattern to rewrite dynamic offsets/sizes/strides of view/slice-like ops as
 /// constant arguments. This pattern assumes that the op has a suitable builder
 /// that takes a result type, a "source" operand and mixed offsets, sizes and
@@ -72,14 +94,23 @@ public:
         failed(foldDynamicIndexList(mixedStrides)))
       return failure();
 
-    // Create the new op in canonical form.
+    // Pattern does not apply if the produced op would not verify.
+    SliceBoundsVerificationResult sliceResult = verifyInBoundsSlice(
+        cast<ShapedType>(op.getSource().getType()).getShape(), mixedOffsets,
+        mixedSizes, mixedStrides);
+    if (!sliceResult.isValid)
+      return failure();
+
+    // Compute the new result type.
     auto resultType =
         ResultTypeFn()(op, mixedOffsets, mixedSizes, mixedStrides);
     if (!resultType)
       return failure();
+
+    // Create the new op in canonical form.
     auto newOp =
-        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
-                                mixedOffsets, mixedSizes, mixedStrides);
+        OpType::create(rewriter, op.getLoc(), resultType, op.getSource(),
+                       mixedOffsets, mixedSizes, mixedStrides);
     CastOpFunc()(rewriter, op, newOp);
 
     return success();
@@ -198,6 +229,22 @@ LogicalResult verifyListOfOperandsOrIntegers(Operation *op, StringRef name,
                                              unsigned expectedNumElements,
                                              ArrayRef<int64_t> attr,
                                              ValueRange values);
+
+namespace OpTrait {
+/// This trai indicates that pointer-like objects (such as memrefs) returned
+/// from this operation will never alias with each other. This provides a
+/// guarantee to optimization passes that accesses through different results
+/// of this operation can be safely reordered, as they will never reference
+/// overlapping memory locations.
+///
+/// Operations with this trait take multiple pointer-like operands
+/// and return the same operands with additional non-aliasing guarantees.
+/// If the access to the results of this operation aliases at runtime, the
+/// behavior of such access is undefined.
+template <typename ConcreteType>
+class DistinctObjectsTrait
+    : public TraitBase<ConcreteType, DistinctObjectsTrait> {};
+} // namespace OpTrait
 
 } // namespace mlir
 

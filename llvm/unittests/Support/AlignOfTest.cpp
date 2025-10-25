@@ -30,7 +30,7 @@ namespace {
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunknown-pragmas"
 #pragma clang diagnostic ignored "-Winaccessible-base"
-#elif ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
+#elif defined(__GNUC__)
 // Pragma based warning suppression was introduced in GGC 4.2.  Additionally
 // this warning is "enabled by default".  The warning still appears if -Wall is
 // suppressed.  Apparently GCC suppresses it when -w is specifed, which is odd.

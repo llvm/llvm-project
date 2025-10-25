@@ -21,9 +21,9 @@ define i8 @test_udiv_i8(i8 %arg1, i8 %arg2) nounwind {
 ;
 ; GISEL-X86-LABEL: test_udiv_i8:
 ; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; GISEL-X86-NEXT:    movzbl %al, %eax
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    divb %cl
 ; GISEL-X86-NEXT:    retl
   %ret = udiv i8 %arg1, %arg2
@@ -48,8 +48,8 @@ define i16 @test_udiv_i16(i16 %arg1, i16 %arg2) nounwind {
 ;
 ; GISEL-X86-LABEL: test_udiv_i16:
 ; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; GISEL-X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GISEL-X86-NEXT:    xorl %edx, %edx
 ; GISEL-X86-NEXT:    divw %cx

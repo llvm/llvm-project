@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test(S s) {
+TEST_CONSTEXPR_CXX20 void test(S& s) {
   typename S::size_type old_cap = s.capacity();
   S s0                          = s;
   s.shrink_to_fit();
@@ -63,7 +63,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 #if TEST_STD_VER >= 23
   { // Make sure shrink_to_fit never increases capacity
-    // See: https://github.com/llvm/llvm-project/issues/95161
+    // See: https://llvm.org/PR95161
     std::basic_string<char, std::char_traits<char>, increasing_allocator<char>> s{
         "String does not fit in the internal buffer"};
     std::size_t capacity = s.capacity();

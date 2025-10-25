@@ -1,0 +1,587 @@
+# RUN: llc -mattr=+sve -aarch64-stack-hazard-in-non-streaming -aarch64-split-sve-objects -aarch64-streaming-hazard-size=1024 -mtriple=aarch64-none-linux-gnu -run-pass=prologepilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve -aarch64-stack-hazard-in-non-streaming -aarch64-split-sve-objects -aarch64-streaming-hazard-size=1024 -start-before=prologepilog %s -o - | FileCheck %s --check-prefix=ASM
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+sve -aarch64-stack-hazard-in-non-streaming -aarch64-split-sve-objects -aarch64-streaming-hazard-size=1024 -start-before=prologepilog %s -filetype=obj -o %t
+# RUN: llvm-objdump --dwarf=frames %t | FileCheck %s --check-prefix=UNWINDINFO
+# RUN: rm -rf %t
+#
+# Test allocation and deallocation of SVE objects on the stack with
+# split-sve-objects (and hazard padding) enabled. This also tests using a
+# combination of scalable and non-scalable offsets to access the SVE on the
+# stack.
+#
+# With split-sve-objects (which implies hazard padding) the SVE area is split
+# into PPR and ZPR areas with (fixed-size) hazard padding between them. The PPR
+# area holds all scalable predicate callee saves and locals, and the ZPR area
+# holds all scalable vector callee saves and locals. Additionally, any FPR
+# callee save is promoted to a ZPR callee save (to avoid needing additional
+# hazard padding in the callee save area).
+#
+#     +-------------+
+#     | stack arg   |
+#     +-------------+ <- SP before call
+#     | Callee Saves|
+#     | Frame record|       (if available)
+#     |-------------| <- FP (if available)
+#     |  PPR area   |
+#     |-------------|
+#     |/////////////| hazard padding
+#     |-------------|
+#     |  ZPR area   |
+#     +-------------+
+#     |     :       |
+#     | Stack objs  |
+#     |     :       |
+#     +-------------+ <- SP after call and frame-setup
+#
+--- |
+
+  define void @test_allocate_split_sve() uwtable { entry: unreachable }
+  define void @test_allocate_split_sve_realigned() uwtable { entry: unreachable }
+  define void @test_address_split_sve() uwtable { entry: unreachable }
+  define void @test_address_split_sve_fp() uwtable { entry: unreachable }
+  define aarch64_sve_vector_pcs void @save_restore_ppr_zpr() uwtable { entry: unreachable }
+
+...
+---
+# +----------+
+# |scratchreg|  // x29 is used as scratch reg.
+# |----------|
+# | %stack.0 |  // scalable predicate of n * 12 bytes, aligned to 16 bytes
+# |          |  // to be materialized with 1*ADDVL (<=> n * 16 bytes)
+# |----------|
+# |//////////|  // hazard padding (1024 bytes) -- part of PPR locals area
+# |//////////|  // Note: This is currently not included in the "stackSize"
+# +----------+
+# | %stack.0 |  // scalable SVE object of n * 18 bytes, aligned to 16 bytes,
+# |          |  // to be materialized with 2*ADDVL (<=> 2 * n * 16 bytes)
+# +----------+
+# |//////////|  // hazard padding (1024 bytes)
+# |----------|
+# | %stack.1 |  // not scalable
+# +----------+ <- SP
+
+# CHECK-LABEL: name: test_allocate_split_sve
+# CHECK:       stackSize: 1056
+
+# CHECK:      bb.0.entry:
+# CHECK:      liveins: $z0, $p0, $fp
+# CHECK:      early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.4)
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1040
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -2, implicit $vg
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22
+#
+# CHECK-NEXT: $x8 = ADDXri $sp, 1040, 0
+# CHECK-NEXT: $x8 = ADDPL_XXI $x8, 7, implicit $vg
+# CHECK-NEXT: STR_ZXI $z0, killed $x8, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+# CHECK-NEXT: $x8 = ADDXri $sp, 2064, 0
+# CHECK-NEXT: STR_PXI $p0, killed $x8, 18 :: (store (<vscale x 1 x s16>) into %stack.1)
+#
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 2, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 1056
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.4)
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
+# CHECK-NEXT: RET_ReallyLR
+
+# ASM-LABEL: test_allocate_split_sve:
+# ASM:       str x29, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  .cfi_def_cfa_offset 1040
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
+# ASM-NEXT:  sub sp, sp, #1040
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #-2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
+#
+# ASM:	     addvl sp, sp, #2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  .cfi_def_cfa wsp, 1056
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  ldr x29, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w29
+
+# UNWINDINFO:      DW_CFA_def_cfa_offset: +16
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
+# UNWINDINFO:      DW_CFA_def_cfa_offset: +1040
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +1040, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit24, DW_OP_mul, DW_OP_plus
+#
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO:      DW_CFA_def_cfa_expression: DW_OP_breg31 +1056, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO:      DW_CFA_def_cfa: reg31 +1056
+# UNWINDINFO:      DW_CFA_def_cfa_offset: +16
+# UNWINDINFO:      DW_CFA_def_cfa_offset: +0
+# UNWINDINFO-NEXT: DW_CFA_restore: reg29
+
+name:            test_allocate_split_sve
+stack:
+  - { id: 0, stack-id: scalable-vector, size: 18, alignment: 2 }
+  - { id: 1, stack-id: scalable-vector, size: 12, alignment: 2 }
+  - { id: 2, stack-id: default, size: 16, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $z0, $p0
+    STR_ZXI $z0, %stack.0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+    STR_PXI $p0, %stack.1, 0 :: (store (<vscale x 1 x s16>) into %stack.1)
+    RET_ReallyLR
+...
+---
+
+# Stack realignment is not supported with split-sve-objects, so we fallback to
+# the default hazard padding implementation. This does not prevent hazards
+# between ZPRs and PPRs (TODO: support this case).
+#
+# +----------+
+# |  lr, fp  |  // frame record
+# |----------|
+# |//////////|  // hazard padding (1024 bytes)
+# |----------|
+# | %stack.0 |  // scalable predicate of n * 12 bytes, aligned to 16 bytes
+# |          |  // to be materialized with 1*ADDVL (<=> n * 16 bytes)
+# +----------+
+# | %stack.0 |  // scalable SVE object of n * 18 bytes, aligned to 16 bytes,
+# |          |  // to be materialized with 2*ADDVL (<=> 2 * n * 16 bytes)
+# +----------+
+# |//////////|  // hazard padding (1024 bytes)
+# |----------|
+# | %stack.1 |  // not scalable
+# +----------+ <- SP
+
+name:            test_allocate_split_sve_realigned
+stack:
+  - { id: 0, stack-id: scalable-vector, size: 18, alignment: 2 }
+  - { id: 1, stack-id: scalable-vector, size: 12, alignment: 2 }
+  - { id: 2, stack-id: default, size: 16, alignment: 32 }
+body:             |
+  bb.0.entry:
+    liveins: $z0, $p0
+    STR_ZXI $z0, %stack.0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+    STR_PXI $p0, %stack.1, 0 :: (store (<vscale x 1 x s16>) into %stack.1)
+    RET_ReallyLR
+
+# CHECK-LABEL: name: test_allocate_split_sve_realigned
+# CHECK:       stackSize: 2080
+
+# CHECK:      bb.0.entry:
+# CHECK:      liveins: $z0, $p0, $lr
+# CHECK:      $sp = frame-setup SUBXri $sp, 1040, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1040
+# CHECK-NEXT: frame-setup STRXui killed $fp, $sp, 128 :: (store (s64) into %stack.5)
+# CHECK-NEXT: frame-setup STRXui killed $lr, $sp, 129 :: (store (s64) into %stack.4)
+# CHECK-NEXT: $fp = frame-setup ADDXri $sp, 1024, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -8
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
+# CHECK-NEXT: $[[TMP:x[0-9]+]] = frame-setup SUBXri $sp, 1040, 0
+# CHECK-NEXT: $[[TMP]] = frame-setup ADDVL_XXI $[[TMP]], -2, implicit $vg
+# CHECK-NEXT: $sp = frame-setup ANDXri killed $x9, 7930
+#
+# CHECK-NEXT: $x8 = SUBXri $fp, 1024, 0
+# CHECK-NEXT: $x8 = ADDPL_XXI $x8, -1, implicit $vg
+# CHECK-NEXT: STR_ZXI $z0, killed $x8, -1 :: (store (<vscale x 1 x s128>) into %stack.0)
+# CHECK-NEXT: $x8 = SUBXri $fp, 1024, 0
+# CHECK-NEXT: STR_PXI $p0, killed $x8, -15 :: (store (<vscale x 1 x s16>) into %stack.1)
+#
+# CHECK-NEXT: $sp = frame-destroy SUBXri $fp, 1024, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 1040
+# CHECK-NEXT: $lr = frame-destroy LDRXui $sp, 129 :: (load (s64) from %stack.4)
+# CHECK-NEXT: $fp = frame-destroy LDRXui $sp, 128 :: (load (s64) from %stack.5)
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w30
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
+# CHECK-NEXT: RET_ReallyLR
+
+# ASM-LABEL: test_allocate_split_sve_realigned
+# ASM:	     sub sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 1040
+# ASM-NEXT:  str x29, [sp, #1024]
+# ASM-NEXT:  str x30, [sp, #1032]
+# ASM-NEXT:  add x29, sp, #1024
+# ASM-NEXT:  .cfi_def_cfa w29, 16
+# ASM-NEXT:  .cfi_offset w30, -8
+# ASM-NEXT:  .cfi_offset w29, -16
+#
+# ASM:       sub sp, x29, #1024
+# ASM-NEXT:  .cfi_def_cfa wsp, 1040
+# ASM-NEXT:  ldr x30, [sp, #1032]
+# ASM-NEXT:  ldr x29, [sp, #1024]
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w30
+# ASM-NEXT:  .cfi_restore w29
+
+# UNWINDINFO:       DW_CFA_def_cfa_offset: +1040
+# UNWINDINFO:       DW_CFA_def_cfa: reg29 +16
+# UNWINDINFO-NEXT:  DW_CFA_offset: reg30 -8
+# UNWINDINFO-NEXT:  DW_CFA_offset: reg29 -16
+#
+# UNWINDINFO:       DW_CFA_def_cfa: reg31 +1040
+# UNWINDINFO:       DW_CFA_def_cfa_offset: +0
+# UNWINDINFO-NEXT:  DW_CFA_restore: reg30
+# UNWINDINFO-NEXT:  DW_CFA_restore: reg29
+...
+---
+
+# +----------+
+# |scratchreg|  // x29 is used as scratch reg.
+# +----------+
+# | %stack.2 |  // scalable predicate @ SP + 2064b + 46 scalable bytes
+# |----------|
+# |//////////|  // hazard padding (1024 bytes) -- part of PPR locals area
+# |//////////|  // Note: This is currently not included in the "stackSize"
+# |----------|
+# | %stack.0 |  // scalable vector @ SP + 1040b + 16 scalable bytes
+# | %stack.1 |  // scalable vector @ SP + 1040b
+# +----------+
+# |//////////|  // hazard padding (1024 bytes)
+# |----------|
+# | %stack.3 |  // not scalable
+# +----------+ <- SP
+
+# CHECK-LABEL: name: test_address_split_sve
+# CHECK:       stackSize: 1056
+
+# CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
+# CHECK-NEXT: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.5)
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1040
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -2, implicit $vg
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22
+#
+# CHECK-NEXT: $[[TMP:x[0-9]+]] = ADDXri $sp, 1040, 0
+# CHECK-NEXT: STR_ZXI $z0, killed $[[TMP]], 1
+# CHECK-NEXT: $[[TMP:x[0-9]+]] = ADDXri $sp, 1040, 0
+# CHECK-NEXT: STR_ZXI $z1, killed $[[TMP]], 0
+# CHECK-NEXT: $[[TMP:x[0-9]+]] = ADDXri $sp, 2064, 0
+# CHECK-NEXT: STR_PXI $p0, killed $[[TMP]], 23
+#
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 2, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 1056
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.5)
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
+# CHECK-NEXT: RET_ReallyLR
+
+# ASM-LABEL: test_address_split_sve
+# ASM:       str x29, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  .cfi_def_cfa_offset 1040
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
+# ASM-NEXT:  sub sp, sp, #1040
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #-2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 2080 + 24 * VG
+#
+# ASM:       addvl sp, sp, #2
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 2080 + 8 * VG
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0xa0, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1056 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  .cfi_def_cfa wsp, 1056
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  ldr x29, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w29
+
+# UNWINDINFO: DW_CFA_def_cfa_offset: +16
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
+# UNWINDINFO: DW_CFA_def_cfa_offset: +1040
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +1040, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit24, DW_OP_mul, DW_OP_plus
+#
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +2080, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +1056, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa: reg31 +1056
+# UNWINDINFO: DW_CFA_def_cfa_offset: +16
+# UNWINDINFO: DW_CFA_def_cfa_offset: +0
+# UNWINDINFO-NEXT: DW_CFA_restore: reg29
+
+name:            test_address_split_sve
+frameInfo:
+  maxAlignment:  16
+stack:
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 1, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 2, stack-id: scalable-vector, size:  2, alignment: 2 }
+  - { id: 3, stack-id: default, size: 16, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $z0, $z1, $p0
+
+    STR_ZXI $z0, %stack.0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+    STR_ZXI $z1, %stack.1, 0 :: (store (<vscale x 1 x s128>) into %stack.1)
+    STR_PXI $p0, %stack.2, 0 :: (store (<vscale x 1 x s16>) into %stack.2)
+
+    RET_ReallyLR
+...
+---
+# +----------+
+# |  lr, fp  |  // frame record
+# +----------+ <- FP
+# | %stack.2 |  // scalable predicate @ FP - 2 scalable bytes
+# |----------|
+# |//////////|  // hazard padding (1024 bytes) -- part of PPR locals area
+# |//////////|  // Note: This is currently not included in the "stackSize"
+# |----------|
+# | %stack.0 |  // scalable vector @ FP - 1024b - 32 scalable bytes
+# | %stack.1 |  // scalable vector @ FP - 1024b - 48 scalable bytes
+# +----------+
+# |//////////|  // hazard padding (1024 bytes)
+# |----------|
+# | %stack.3 |  // not scalable
+# +----------+ <- SP
+
+# CHECK-LABEL: name: test_address_split_sve_fp
+# CHECK:       stackSize: 1056
+#
+# CHECK:      bb.0.entry:
+# CHECK-NEXT: liveins:
+# CHECK-NEXT: {{  $}}
+# CHECK-NEXT: early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store (s64) into %stack.6), (store (s64) into %stack.5)
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: $fp = frame-setup ADDXri $sp, 0, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -8
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1040, 0
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -2, implicit $vg
+#
+# CHECK-NEXT: $[[TMP:x[0-9]+]] = SUBXri $fp, 1024, 0
+# CHECK-NEXT: STR_ZXI $z0, killed $[[TMP]], -2
+# CHECK-NEXT: $[[TMP:x[0-9]+]] = SUBXri $fp, 1024, 0
+# CHECK-NEXT: STR_ZXI $z1, killed $[[TMP]], -3
+# CHECK-NEXT: STR_PXI $p0, $fp, -1
+#
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 2, implicit $vg
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1040, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
+# CHECK-NEXT: early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2 :: (load (s64) from %stack.6), (load (s64) from %stack.5)
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w30
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
+# CHECK-NEXT: RET_ReallyLR
+
+# ASM-LABEL: test_address_split_sve_fp
+# ASM:       stp x29, x30, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  mov x29, sp
+# ASM-NEXT:  .cfi_def_cfa w29, 16
+# ASM-NEXT:  .cfi_offset w30, -8
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  sub sp, sp, #1040
+# ASM-NEXT:  addvl sp, sp, #-2
+#
+# ASM:       addvl sp, sp, #2
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  add sp, sp, #1040
+# ASM-NEXT:  .cfi_def_cfa wsp, 16
+# ASM-NEXT:  ldp x29, x30, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w30
+# ASM-NEXT:  .cfi_restore w29
+
+# UNWINDINFO:      DW_CFA_def_cfa_offset: +16
+# UNWINDINFO:      DW_CFA_def_cfa: reg29 +16
+# UNWINDINFO-NEXT: DW_CFA_offset: reg30 -8
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
+#
+# UNWINDINFO:      DW_CFA_def_cfa: reg31 +16
+# UNWINDINFO:      DW_CFA_def_cfa_offset: +0
+# UNWINDINFO-NEXT: DW_CFA_restore: reg30
+# UNWINDINFO-NEXT: DW_CFA_restore: reg29
+
+name:            test_address_split_sve_fp
+frameInfo:
+  maxAlignment:  16
+  isFrameAddressTaken: true
+stack:
+  - { id: 0, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 1, stack-id: scalable-vector, size: 16, alignment: 8 }
+  - { id: 2, stack-id: scalable-vector, size:  2, alignment: 2 }
+  - { id: 3, stack-id: default, size: 16, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $z0, $z1, $p0
+
+    STR_ZXI $z0, %stack.0, 0 :: (store (<vscale x 1 x s128>) into %stack.0)
+    STR_ZXI $z1, %stack.1, 0 :: (store (<vscale x 1 x s128>) into %stack.1)
+    STR_PXI $p0, %stack.2, 0 :: (store (<vscale x 1 x s16>) into %stack.2)
+
+    RET_ReallyLR
+...
+---
+# CHECK-LABEL: name: save_restore_ppr_zpr
+# CHECK: early-clobber $sp = frame-setup STRXpre killed $fp, $sp, -16 :: (store (s64) into %stack.8)
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1, implicit $vg
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: frame-setup STR_PXI killed $p6, $sp, 5 :: (store (s16) into %stack.7)
+# CHECK-NEXT: frame-setup STR_PXI killed $p5, $sp, 6 :: (store (s16) into %stack.6)
+# CHECK-NEXT: frame-setup STR_PXI killed $p4, $sp, 7 :: (store (s16) into %stack.5)
+#
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1024, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+#
+# CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -3, implicit $vg
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22
+# CHECK-NEXT: frame-setup STR_ZXI killed $z10, $sp, 0 :: (store (s128) into %stack.4)
+# CHECK-NEXT: frame-setup STR_ZXI killed $z9, $sp, 1 :: (store (s128) into %stack.3)
+# CHECK-NEXT: frame-setup STR_ZXI killed $z8, $sp, 2 :: (store (s128) into %stack.2)
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 1056, 0
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x0a, 0x8f, 0xb0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22
+#
+#
+# CHECK: $sp = frame-destroy ADDXri $sp, 1056, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22
+# CHECK-NEXT: $z10 = frame-destroy LDR_ZXI $sp, 0 :: (load (s128) from %stack.4)
+# CHECK-NEXT: $z9 = frame-destroy LDR_ZXI $sp, 1 :: (load (s128) from %stack.3)
+# CHECK-NEXT: $z8 = frame-destroy LDR_ZXI $sp, 2 :: (load (s128) from %stack.2)
+#
+# CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 1024, 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22
+#
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 3, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z8
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z9
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $z10
+# CHECK-NEXT: $p6 = frame-destroy LDR_PXI $sp, 5 :: (load (s16) from %stack.7)
+# CHECK-NEXT: $p5 = frame-destroy LDR_PXI $sp, 6 :: (load (s16) from %stack.6)
+# CHECK-NEXT: $p4 = frame-destroy LDR_PXI $sp, 7 :: (load (s16) from %stack.5)
+# CHECK-NEXT: $sp = frame-destroy ADDVL_XXI $sp, 1, implicit $vg
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa $wsp, 16
+# CHECK-NEXT: early-clobber $sp, $fp = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.8)
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION def_cfa_offset 0
+# CHECK-NEXT: frame-destroy CFI_INSTRUCTION restore $w29
+# CHECK-NEXT: RET_ReallyLR
+
+# ASM-LABEL: save_restore_ppr_zpr:
+# ASM:       str x29, [sp, #-16]!
+# ASM-NEXT:  .cfi_def_cfa_offset 16
+# ASM-NEXT:  .cfi_offset w29, -16
+# ASM-NEXT:  addvl sp, sp, #-1
+# ASM-NEXT:  .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+# ASM-NEXT:  str p6, [sp, #5, mul vl]
+# ASM-NEXT:  str p5, [sp, #6, mul vl]
+# ASM-NEXT:  str p4, [sp, #7, mul vl]
+# ASM-NEXT:  sub sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 1040 + 8 * VG
+# ASM-NEXT:  addvl sp, sp, #-3
+# ASM-NEXT:  .cfi_escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 1040 + 32 * VG
+# ASM-NEXT:  str z10, [sp]
+# ASM-NEXT:  str z9, [sp, #1, mul vl]
+# ASM-NEXT:  str z8, [sp, #2, mul vl]
+# ASM-NEXT:  .cfi_escape 0x10, 0x48, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d8  @ cfa - 16 * VG - 1040
+# ASM-NEXT:  .cfi_escape 0x10, 0x49, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d9  @ cfa - 24 * VG - 1040
+# ASM-NEXT:  .cfi_escape 0x10, 0x4a, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x11, 0xf0, 0x77, 0x22 // $d10  @ cfa - 32 * VG - 1040
+# ASM-NEXT:  sub sp, sp, #1056
+# ASM-NEXT:  .cfi_escape 0x0f, 0x0a, 0x8f, 0xb0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 2096 + 32 * VG
+#
+# ASM:       add sp, sp, #1056
+# ASM-NEXT:  .cfi_escape 0x0f, 0x0a, 0x8f, 0x90, 0x08, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 1040 + 32 * VG
+# ASM-NEXT:  ldr z10, [sp]
+# ASM-NEXT:  ldr z9, [sp, #1, mul vl]
+# ASM-NEXT:  ldr z8, [sp, #2, mul vl]
+# ASM-NEXT:  add sp, sp, #1024
+# ASM-NEXT:  .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x20, 0x1e, 0x22 // sp + 16 + 32 * VG
+# ASM-NEXT:  addvl   sp, sp, #3
+# ASM-NEXT:  .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+# ASM-NEXT:  .cfi_restore z8
+# ASM-NEXT:  .cfi_restore z9
+# ASM-NEXT:  .cfi_restore z10
+# ASM-NEXT:  ldr p6, [sp, #5, mul vl]
+# ASM-NEXT:  ldr p5, [sp, #6, mul vl]
+# ASM-NEXT:  ldr p4, [sp, #7, mul vl]
+# ASM-NEXT:  addvl sp, sp, #1
+# ASM-NEXT:  .cfi_def_cfa wsp, 16
+# ASM-NEXT:  ldr x29, [sp], #16
+# ASM-NEXT:  .cfi_def_cfa_offset 0
+# ASM-NEXT:  .cfi_restore w29
+
+# UNWINDINFO: DW_CFA_def_cfa_offset: +16
+# UNWINDINFO-NEXT: DW_CFA_offset: reg29 -16
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +16, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +1040, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +1040, DW_OP_bregx 0x2e +0, DW_OP_consts +32, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_expression: reg72 DW_OP_bregx 0x2e +0, DW_OP_consts -16, DW_OP_mul, DW_OP_plus, DW_OP_consts -1040, DW_OP_plus
+# UNWINDINFO: DW_CFA_expression: reg73 DW_OP_bregx 0x2e +0, DW_OP_consts -24, DW_OP_mul, DW_OP_plus, DW_OP_consts -1040, DW_OP_plus
+# UNWINDINFO: DW_CFA_expression: reg74 DW_OP_bregx 0x2e +0, DW_OP_consts -32, DW_OP_mul, DW_OP_plus, DW_OP_consts -1040, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +2096, DW_OP_bregx 0x2e +0, DW_OP_consts +32, DW_OP_mul, DW_OP_plus
+#
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +1040, DW_OP_bregx 0x2e +0, DW_OP_consts +32, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +16, DW_OP_bregx 0x2e +0, DW_OP_consts +32, DW_OP_mul, DW_OP_plus
+# UNWINDINFO: DW_CFA_def_cfa_expression: DW_OP_breg31 +16, DW_OP_bregx 0x2e +0, DW_OP_lit8, DW_OP_mul, DW_OP_plus
+# UNWINDINFO-NEXT: DW_CFA_restore_extended: reg104
+# UNWINDINFO-NEXT: DW_CFA_restore_extended: reg105
+# UNWINDINFO-NEXT: DW_CFA_restore_extended: reg106
+# UNWINDINFO: DW_CFA_def_cfa: reg31 +16
+# UNWINDINFO: DW_CFA_def_cfa_offset: +0
+# UNWINDINFO-NEXT: DW_CFA_restore: reg29
+
+name: save_restore_ppr_zpr
+stack:
+  - { id: 0, stack-id: default, size: 32, alignment: 16 }
+body:             |
+  bb.0.entry:
+
+    $p4 = IMPLICIT_DEF
+    $p5 = IMPLICIT_DEF
+    $p6 = IMPLICIT_DEF
+    $z8 = IMPLICIT_DEF
+    $z9 = IMPLICIT_DEF
+    $z10 = IMPLICIT_DEF
+
+    RET_ReallyLR

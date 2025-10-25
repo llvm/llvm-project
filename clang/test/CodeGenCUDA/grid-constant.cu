@@ -19,13 +19,9 @@ void foo() {
   tkernel_const<S><<<1,1>>>({});
   tkernel<const S><<<1,1>>>(1, {});
 }
-//.
-//.
-// CHECK: [[META0:![0-9]+]] = !{ptr @_Z6kernel1Sii, !"grid_constant", [[META1:![0-9]+]]}
-// CHECK: [[META1]] = !{i32 1, i32 3}
-// CHECK: [[META2:![0-9]+]] = !{ptr @_Z13tkernel_constIK1SEvT_, !"grid_constant", [[META3:![0-9]+]]}
-// CHECK: [[META3]] = !{i32 1}
-// CHECK: [[META4:![0-9]+]] = !{ptr @_Z13tkernel_constI1SEvT_, !"grid_constant", [[META3]]}
-// CHECK: [[META5:![0-9]+]] = !{ptr @_Z7tkernelIK1SEviT_, !"grid_constant", [[META6:![0-9]+]]}
-// CHECK: [[META6]] = !{i32 2}
-//.
+
+// CHECK: define dso_local ptx_kernel void @_Z6kernel1Sii(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %gc_arg1, i32 noundef %arg2, i32 noundef "nvvm.grid_constant" %gc_arg3)
+// CHECK: define ptx_kernel void @_Z13tkernel_constIK1SEvT_(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
+// CHECK: define ptx_kernel void @_Z13tkernel_constI1SEvT_(ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
+// CHECK: define ptx_kernel void @_Z7tkernelIK1SEviT_(i32 noundef %dummy, ptr noundef byval(%struct.S) align 1 "nvvm.grid_constant" %arg)
+

@@ -99,7 +99,7 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp, core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file), m_uuids() {}
 
 // Destructor
 ProcessElfCore::~ProcessElfCore() {
@@ -176,6 +176,17 @@ Status ProcessElfCore::DoLoadCore() {
     return error;
   }
 
+  // Even if the architecture is set in the target, we need to override it to
+  // match the core file which is always single arch.
+  ArchSpec arch(m_core_module_sp->GetArchitecture());
+
+  ArchSpec target_arch = GetTarget().GetArchitecture();
+  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
+  target_arch.MergeFrom(core_arch);
+  GetTarget().SetArchitecture(target_arch, /*set_platform*/ true);
+
+  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
+
   SetCanJIT(false);
 
   m_thread_data_valid = true;
@@ -216,23 +227,12 @@ Status ProcessElfCore::DoLoadCore() {
     m_core_tag_ranges.Sort();
   }
 
-  // Even if the architecture is set in the target, we need to override it to
-  // match the core file which is always single arch.
-  ArchSpec arch(m_core_module_sp->GetArchitecture());
-
-  ArchSpec target_arch = GetTarget().GetArchitecture();
-  ArchSpec core_arch(m_core_module_sp->GetArchitecture());
-  target_arch.MergeFrom(core_arch);
-  GetTarget().SetArchitecture(target_arch);
-
-  SetUnixSignals(UnixSignals::Create(GetArchitecture()));
-
   // Ensure we found at least one thread that was stopped on a signal.
   bool siginfo_signal_found = false;
   bool prstatus_signal_found = false;
   // Check we found a signal in a SIGINFO note.
   for (const auto &thread_data : m_thread_data) {
-    if (thread_data.siginfo.si_signo != 0)
+    if (!thread_data.siginfo_bytes.empty() || thread_data.signo != 0)
       siginfo_signal_found = true;
     if (thread_data.prstatus_sig != 0)
       prstatus_signal_found = true;
@@ -242,10 +242,10 @@ Status ProcessElfCore::DoLoadCore() {
     // PRSTATUS note.
     if (prstatus_signal_found) {
       for (auto &thread_data : m_thread_data)
-        thread_data.siginfo.si_signo = thread_data.prstatus_sig;
+        thread_data.signo = thread_data.prstatus_sig;
     } else if (m_thread_data.size() > 0) {
       // If all else fails force the first thread to be SIGSTOP
-      m_thread_data.begin()->siginfo.si_signo =
+      m_thread_data.begin()->signo =
           GetUnixSignals()->GetSignalNumberFromName("SIGSTOP");
     }
   }
@@ -257,12 +257,12 @@ Status ProcessElfCore::DoLoadCore() {
   // the main executable using data we found in the core file notes.
   lldb::ModuleSP exe_module_sp = GetTarget().GetExecutableModule();
   if (!exe_module_sp) {
-    // The first entry in the NT_FILE might be our executable
     if (!m_nt_file_entries.empty()) {
+      llvm::StringRef executable_path = GetMainExecutablePath();
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetUUID() = m_nt_file_entries[0].uuid;
-      exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
+      exe_module_spec.GetUUID() = FindModuleUUID(executable_path);
+      exe_module_spec.GetFileSpec().SetFile(executable_path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp =
@@ -277,20 +277,43 @@ Status ProcessElfCore::DoLoadCore() {
 
 void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
   Log *log = GetLog(LLDBLog::Process);
+  m_uuids.clear();
   for (NT_FILE_Entry &entry : m_nt_file_entries) {
-    entry.uuid = FindBuidIdInCoreMemory(entry.start);
-    if (log && entry.uuid.IsValid())
-      LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
-                __FUNCTION__, entry.start, entry.uuid.GetAsString().c_str(),
-                entry.path.c_str());
+    UUID uuid = FindBuidIdInCoreMemory(entry.start);
+    if (uuid.IsValid()) {
+      // Assert that either the path is not in the map or the UUID matches
+      assert(m_uuids.count(entry.path) == 0 || m_uuids[entry.path] == uuid);
+      m_uuids[entry.path] = uuid;
+      if (log)
+        LLDB_LOGF(log, "%s found UUID @ %16.16" PRIx64 ": %s \"%s\"",
+                  __FUNCTION__, entry.start, uuid.GetAsString().c_str(),
+                  entry.path.c_str());
+    }
   }
 }
 
+llvm::StringRef ProcessElfCore::GetMainExecutablePath() {
+  if (m_nt_file_entries.empty())
+    return "";
+
+  // The first entry in the NT_FILE might be our executable
+  llvm::StringRef executable_path = m_nt_file_entries[0].path;
+  // Prefer the NT_FILE entry matching m_executable_name as main executable.
+  for (const NT_FILE_Entry &file_entry : m_nt_file_entries)
+    if (llvm::StringRef(file_entry.path).ends_with("/" + m_executable_name)) {
+      executable_path = file_entry.path;
+      break;
+    }
+  return executable_path;
+}
+
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
-  // Returns the gnu uuid from matched NT_FILE entry
-  for (NT_FILE_Entry &entry : m_nt_file_entries)
-    if (path == entry.path)
-      return entry.uuid;
+  // Lookup the UUID for the given path in the map.
+  // Note that this could be called by multiple threads so make sure
+  // we access the map in a thread safe way (i.e. don't use operator[]).
+  auto it = m_uuids.find(std::string(path));
+  if (it != m_uuids.end())
+    return it->second;
   return UUID();
 }
 
@@ -506,7 +529,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   else
     offset += 16;
 
-  thread_data.siginfo.si_signo = data.GetU32(&offset); // pr_cursig
+  thread_data.signo = data.GetU32(&offset); // pr_cursig
   thread_data.tid = data.GetU32(&offset);   // pr_pid
   if (lp64)
     offset += 4;
@@ -589,7 +612,7 @@ static void ParseOpenBSDProcInfo(ThreadData &thread_data,
     return;
 
   offset += 4;
-  thread_data.siginfo.si_signo = data.GetU32(&offset);
+  thread_data.signo = data.GetU32(&offset);
 }
 
 llvm::Expected<std::vector<CoreNote>>
@@ -827,7 +850,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   // Signal targeted at the whole process.
   if (siglwp == 0) {
     for (auto &data : m_thread_data)
-      data.siginfo.si_signo = signo;
+      data.signo = signo;
   }
   // Signal destined for a particular LWP.
   else {
@@ -835,7 +858,7 @@ llvm::Error ProcessElfCore::parseNetBSDNotes(llvm::ArrayRef<CoreNote> notes) {
 
     for (auto &data : m_thread_data) {
       if (data.tid == siglwp) {
-        data.siginfo.si_signo = signo;
+        data.signo = signo;
         passed = true;
         break;
       }
@@ -935,15 +958,15 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
         return status.ToError();
       thread_data.name.assign (prpsinfo.pr_fname, strnlen (prpsinfo.pr_fname, sizeof (prpsinfo.pr_fname)));
       SetID(prpsinfo.pr_pid);
+      m_executable_name = thread_data.name;
       break;
     }
     case ELF::NT_SIGINFO: {
-      const lldb_private::UnixSignals &unix_signals = *GetUnixSignals();
-      ELFLinuxSigInfo siginfo;
-      Status status = siginfo.Parse(note.data, arch, unix_signals);
-      if (status.Fail())
-        return status.ToError();
-      thread_data.siginfo = siginfo;
+      lldb::offset_t size = note.data.GetByteSize();
+      lldb::offset_t offset = 0;
+      const char *bytes =
+          static_cast<const char *>(note.data.GetData(&offset, size));
+      thread_data.siginfo_bytes = llvm::StringRef(bytes, size);
       break;
     }
     case ELF::NT_FILE: {

@@ -7,10 +7,13 @@
 # ASM:      movabsq $puts@PLTOFF, %rax
 # OBJ:      movabsq $0, %rax
 # OBJ-NEXT:   0000000000000002: R_X86_64_PLTOFF64 puts{{$}}
+# OBJ:      movabsq $0, %rax
+# OBJ-NEXT:   000000000000000c: R_X86_64_PLTOFF64 .text{{$}}
 
 movabsq $puts@PLTOFF, %rax
+movabsq $.text@PLTOFF, %rax
 
 .ifdef ERR
-# ERR: {{.*}}.s:[[#@LINE+1]]:1: error: 64 bit reloc applied to a field with a different size
+# ERR: {{.*}}.s:[[#@LINE+1]]:7: error: 64 bit reloc applied to a field with a different size
 movl $puts@PLTOFF, %eax
 .endif

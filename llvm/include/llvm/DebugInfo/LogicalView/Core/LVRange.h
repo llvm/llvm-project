@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/IntervalTree.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {
@@ -46,7 +47,7 @@ public:
 // scope; the addresses are stored in ascending order and can overlap.
 using LVRangeEntries = std::vector<LVRangeEntry>;
 
-class LVRange final : public LVObject {
+class LLVM_ABI LVRange final : public LVObject {
   /// Map of where a user value is live, and its location.
   using LVRangesTree = IntervalTree<LVAddress, LVScope *>;
   using LVAllocator = LVRangesTree::Allocator;
@@ -61,7 +62,7 @@ public:
   LVRange() : LVObject(), RangesTree(Allocator) {}
   LVRange(const LVRange &) = delete;
   LVRange &operator=(const LVRange &) = delete;
-  ~LVRange() = default;
+  ~LVRange() override = default;
 
   void addEntry(LVScope *Scope, LVAddress LowerAddress, LVAddress UpperAddress);
   void addEntry(LVScope *Scope);
@@ -86,10 +87,6 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override {}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 } // end namespace logicalview

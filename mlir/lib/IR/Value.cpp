@@ -8,9 +8,7 @@
 
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -49,6 +47,18 @@ Block *Value::getParentBlock() {
   if (Operation *op = getDefiningOp())
     return op->getBlock();
   return llvm::cast<BlockArgument>(*this).getOwner();
+}
+
+unsigned Value::getNumUses() const {
+  return (unsigned)std::distance(use_begin(), use_end());
+}
+
+bool Value::hasNUses(unsigned n) const {
+  return hasNItems(use_begin(), use_end(), n);
+}
+
+bool Value::hasNUsesOrMore(unsigned n) const {
+  return hasNItemsOrMore(use_begin(), use_end(), n);
 }
 
 //===----------------------------------------------------------------------===//

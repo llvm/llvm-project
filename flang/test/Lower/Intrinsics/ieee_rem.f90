@@ -33,7 +33,7 @@
   ! CHECK-DAG: %[[V_19:[0-9]+]] = fir.call @remainderf(%[[V_14]], %[[V_15]]) fastmath<contract> : (f32, f32) -> f32
   ! CHECK:     fir.if %[[V_18]] {
   ! CHECK:       %[[V_40:[0-9]+]] = fir.call @_FortranAMapException(%c16{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_41:[0-9]+]] = fir.call @feraiseexcept(%[[V_40]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                          fir.call {{.*}}feraiseexcept(%[[V_40]]) fastmath<contract> : (i32)
   ! CHECK:     }
   ! CHECK:     %[[V_20:[0-9]+]] = fir.convert %[[V_19]] : (f32) -> f32
   ! CHECK:     hlfir.assign %[[V_20]] to %[[V_3]]#0 : f32, !fir.ref<f32>
@@ -54,7 +54,7 @@
   ! CHECK-DAG: %[[V_28:[0-9]+]] = fir.call @remainder(%[[V_23]], %[[V_24]]) fastmath<contract> : (f64, f64) -> f64
   ! CHECK:     fir.if %[[V_27]] {
   ! CHECK:       %[[V_40:[0-9]+]] = fir.call @_FortranAMapException(%c16{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_41:[0-9]+]] = fir.call @feraiseexcept(%[[V_40]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                          fir.call {{.*}}feraiseexcept(%[[V_40]]) fastmath<contract> : (i32)
   ! CHECK:     }
   ! CHECK:     %[[V_29:[0-9]+]] = fir.convert %[[V_28]] : (f64) -> f64
   ! CHECK:     %[[V_30:[0-9]+]] = fir.convert %[[V_29]] : (f64) -> f16
@@ -76,7 +76,7 @@
   ! CHECK-DAG: %[[V_38:[0-9]+]] = fir.call @remainder(%[[V_33]], %[[V_34]]) fastmath<contract> : (f64, f64) -> f64
   ! CHECK:     fir.if %[[V_37]] {
   ! CHECK:       %[[V_40:[0-9]+]] = fir.call @_FortranAMapException(%c16{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:       %[[V_41:[0-9]+]] = fir.call @feraiseexcept(%[[V_40]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                          fir.call {{.*}}feraiseexcept(%[[V_40]]) fastmath<contract> : (i32)
   ! CHECK:     }
   ! CHECK:     %[[V_39:[0-9]+]] = fir.convert %[[V_38]] : (f64) -> f64
   ! CHECK:     hlfir.assign %[[V_39]] to %[[V_5]]#0 : f64, !fir.ref<f64>

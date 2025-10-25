@@ -30,14 +30,14 @@ define signext i32 @foo() "frame-pointer"="all" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK-NEXT:    lgr %r11, %r15
 ; CHECK-NEXT:    .cfi_def_cfa_register %r11
-; CHECK-NEXT:    std %f8, 232(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 224(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 216(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f11, 208(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f12, 200(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f13, 192(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f14, 184(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f15, 176(%r11) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 232(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 224(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 216(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 208(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 200(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 192(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 184(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 176(%r11) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -59,14 +59,14 @@ define signext i32 @foo() "frame-pointer"="all" {
 ; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    lg %r1, 168(%r11)
 ; CHECK-NEXT:    lgf %r2, 0(%r1)
-; CHECK-NEXT:    ld %f8, 232(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 224(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 216(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f11, 208(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f12, 200(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f13, 192(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f14, 184(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f15, 176(%r11) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 232(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 224(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 216(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 208(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 200(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 192(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 184(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 176(%r11) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r6, %r15, 288(%r11)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -101,14 +101,14 @@ define signext i32 @foo1() "backchain" "frame-pointer"="all" {
 ; CHECK-NEXT:    stg %r1, 0(%r15)
 ; CHECK-NEXT:    lgr %r11, %r15
 ; CHECK-NEXT:    .cfi_def_cfa_register %r11
-; CHECK-NEXT:    std %f8, 232(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 224(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 216(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f11, 208(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f12, 200(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f13, 192(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f14, 184(%r11) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f15, 176(%r11) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 232(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 224(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 216(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 208(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 200(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 192(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 184(%r11) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 176(%r11) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -132,14 +132,14 @@ define signext i32 @foo1() "backchain" "frame-pointer"="all" {
 ; CHECK-NEXT:  .LBB1_2: # %entry
 ; CHECK-NEXT:    lg %r1, 168(%r11)
 ; CHECK-NEXT:    lgf %r2, 0(%r1)
-; CHECK-NEXT:    ld %f8, 232(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 224(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 216(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f11, 208(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f12, 200(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f13, 192(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f14, 184(%r11) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f15, 176(%r11) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 232(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 224(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 216(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 208(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 200(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 192(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 184(%r11) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 176(%r11) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r6, %r15, 288(%r11)
 ; CHECK-NEXT:    br %r14
 entry:

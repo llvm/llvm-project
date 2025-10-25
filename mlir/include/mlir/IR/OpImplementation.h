@@ -21,6 +21,19 @@
 #include "llvm/Support/SMLoc.h"
 #include <optional>
 
+namespace {
+// reference https://stackoverflow.com/a/16000226
+template <typename T, typename = void>
+struct HasStaticName : std::false_type {};
+
+template <typename T>
+struct HasStaticName<T,
+                     typename std::enable_if<
+                         std::is_same<::llvm::StringLiteral,
+                                      std::decay_t<decltype(T::name)>>::value,
+                         void>::type> : std::true_type {};
+} // namespace
+
 namespace mlir {
 class AsmParsedResourceEntry;
 class AsmResourceBuilder;
@@ -122,6 +135,19 @@ public:
   /// hook on the AsmParser.
   virtual void printFloat(const APFloat &value);
 
+  /// Print the given integer value. This is useful to force a uint8_t/int8_t to
+  /// be printed as an integer instead of a char.
+  template <typename IntT>
+  std::enable_if_t<std::is_integral_v<IntT>, void> printInteger(IntT value) {
+    // Handle int8_t/uint8_t specially to avoid printing as char
+    if constexpr (std::is_same_v<IntT, int8_t> ||
+                  std::is_same_v<IntT, uint8_t>) {
+      getStream() << static_cast<int>(value);
+    } else {
+      getStream() << value;
+    }
+  }
+
   virtual void printType(Type type);
   virtual void printAttribute(Attribute attr);
 
@@ -180,6 +206,9 @@ public:
   /// Print the given attribute without its type. The corresponding parser must
   /// provide a valid type for the attribute.
   virtual void printAttributeWithoutType(Attribute attr);
+
+  /// Print the given named attribute.
+  virtual void printNamedAttribute(NamedAttribute attr);
 
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
@@ -642,6 +671,12 @@ public:
 
   /// Parse a '+' token if present.
   virtual ParseResult parseOptionalPlus() = 0;
+
+  /// Parse a '/' token.
+  virtual ParseResult parseSlash() = 0;
+
+  /// Parse a '/' token if present.
+  virtual ParseResult parseOptionalSlash() = 0;
 
   /// Parse a '-' token.
   virtual ParseResult parseMinus() = 0;
@@ -1238,8 +1273,13 @@ public:
 
     // Check for the right kind of type.
     result = llvm::dyn_cast<TypeT>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeT>::value)
+        diag << ": expected " << TypeT::name << ", but found " << type;
+      return diag;
+    }
 
     return success();
   }
@@ -1270,8 +1310,13 @@ public:
 
     // Check for the right kind of Type.
     result = llvm::dyn_cast<TypeT>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of Type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeT>::value)
+        diag << ": expected " << TypeT::name << ", but found " << type;
+      return diag;
+    }
     return success();
   }
 
@@ -1307,8 +1352,13 @@ public:
 
     // Check for the right kind of type.
     result = llvm::dyn_cast<TypeType>(type);
-    if (!result)
-      return emitError(loc, "invalid kind of type specified");
+    if (!result) {
+      InFlightDiagnostic diag =
+          emitError(loc, "invalid kind of type specified");
+      if constexpr (HasStaticName<TypeType>::value)
+        diag << ": expected " << TypeType::name << ", but found " << type;
+      return diag;
+    }
 
     return success();
   }

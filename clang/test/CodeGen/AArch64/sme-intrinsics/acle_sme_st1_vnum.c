@@ -9,8 +9,9 @@
 // CHECK-C-LABEL: define dso_local void @test_svst1_hor_vnum_za8(
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP0]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP3:%.*]] = add i32 [[SLICE_BASE]], [[TMP2]]
@@ -23,8 +24,9 @@
 // CHECK-CXX-LABEL: define dso_local void @_Z23test_svst1_hor_vnum_za8ju10__SVBool_tPvl(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP0]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = add i32 [[SLICE_BASE]], [[TMP2]]
@@ -43,8 +45,9 @@ void test_svst1_hor_vnum_za8(uint32_t slice_base, svbool_t pg, void *ptr, int64_
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -58,8 +61,9 @@ void test_svst1_hor_vnum_za8(uint32_t slice_base, svbool_t pg, void *ptr, int64_
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -78,8 +82,9 @@ void test_svst1_hor_vnum_za16(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -93,8 +98,9 @@ void test_svst1_hor_vnum_za16(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -113,8 +119,9 @@ void test_svst1_hor_vnum_za32(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -128,8 +135,9 @@ void test_svst1_hor_vnum_za32(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -148,8 +156,9 @@ void test_svst1_hor_vnum_za64(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -161,8 +170,9 @@ void test_svst1_hor_vnum_za64(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -178,8 +188,9 @@ void test_svst1_hor_vnum_za128(uint32_t slice_base, svbool_t pg, void *ptr, int6
 // CHECK-C-LABEL: define dso_local void @test_svst1_ver_vnum_za8(
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
-// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP0]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP3:%.*]] = add i32 [[SLICE_BASE]], [[TMP2]]
@@ -192,8 +203,9 @@ void test_svst1_hor_vnum_za128(uint32_t slice_base, svbool_t pg, void *ptr, int6
 // CHECK-CXX-LABEL: define dso_local void @_Z23test_svst1_ver_vnum_za8ju10__SVBool_tPvl(
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
-// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP0]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = add i32 [[SLICE_BASE]], [[TMP2]]
@@ -212,8 +224,9 @@ void test_svst1_ver_vnum_za8(uint32_t slice_base, svbool_t pg, void *ptr, int64_
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -227,8 +240,9 @@ void test_svst1_ver_vnum_za8(uint32_t slice_base, svbool_t pg, void *ptr, int64_
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -247,8 +261,9 @@ void test_svst1_ver_vnum_za16(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -262,8 +277,9 @@ void test_svst1_ver_vnum_za16(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -282,8 +298,9 @@ void test_svst1_ver_vnum_za32(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -297,8 +314,9 @@ void test_svst1_ver_vnum_za32(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -317,8 +335,9 @@ void test_svst1_ver_vnum_za64(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-C-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-C-NEXT:  entry:
 // CHECK-C-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-C-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-C-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-C-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-C-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-C-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-C-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]
@@ -330,8 +349,9 @@ void test_svst1_ver_vnum_za64(uint32_t slice_base, svbool_t pg, void *ptr, int64
 // CHECK-CXX-SAME: i32 noundef [[SLICE_BASE:%.*]], <vscale x 16 x i1> [[PG:%.*]], ptr noundef [[PTR:%.*]], i64 noundef [[VNUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG]])
-// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
-// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[TMP1]], [[VNUM]]
+// CHECK-CXX-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-CXX-NEXT:    [[SVL:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-CXX-NEXT:    [[MULVL:%.*]] = mul i64 [[SVL]], [[VNUM]]
 // CHECK-CXX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[MULVL]]
 // CHECK-CXX-NEXT:    [[TMP3:%.*]] = trunc i64 [[VNUM]] to i32
 // CHECK-CXX-NEXT:    [[TMP4:%.*]] = add i32 [[SLICE_BASE]], [[TMP3]]

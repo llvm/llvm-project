@@ -1,3 +1,11 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef __CLC_RELATIONAL_CLC_ISNAN_H__
 #define __CLC_RELATIONAL_CLC_ISNAN_H__
 
@@ -5,7 +13,7 @@
 #include <clc/clctypes.h>
 
 #define _CLC_ISNAN_DECL(RET_TYPE, ARG_TYPE)                                    \
-  _CLC_OVERLOAD _CLC_DECL RET_TYPE __clc_isnan(ARG_TYPE);
+  _CLC_OVERLOAD _CLC_CONST _CLC_DECL RET_TYPE __clc_isnan(ARG_TYPE);
 
 #define _CLC_VECTOR_ISNAN_DECL(RET_TYPE, ARG_TYPE)                             \
   _CLC_ISNAN_DECL(RET_TYPE##2, ARG_TYPE##2)                                    \

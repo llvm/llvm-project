@@ -21,6 +21,15 @@ class LOCKABLE Mutex {
   void AssertReaderHeld() ASSERT_SHARED_LOCK();
 };
 
+class LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {
+public:
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
+  void Unlock() UNLOCK_FUNCTION();
+
+  // for negative capabilities
+  const ReentrantMutex& operator!() const { return *this; }
+};
+
 class SCOPED_LOCKABLE MutexLock {
 public:
   MutexLock(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
@@ -86,6 +95,29 @@ public:
 
   void test4() {
     MutexLock lock(&mu); // expected-warning {{acquiring mutex 'mu' requires negative capability '!mu'}}
+  }
+};
+
+class Reentrant {
+  ReentrantMutex mu;
+
+public:
+  void acquire() {
+    mu.Lock();   // no warning -- reentrant mutex
+    mu.Unlock();
+  }
+
+  void requireNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu) { // warning?
+    mu.Lock();
+    mu.Unlock();
+  }
+
+  void callRequireNegative() {
+    requireNegative(); // expected-warning{{calling function 'requireNegative' requires negative capability '!mu'}}
+  }
+
+  void callHaveNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu) {
+    requireNegative();
   }
 };
 

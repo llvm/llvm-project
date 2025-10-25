@@ -7,9 +7,9 @@ define void @mloadstore_f32(ptr noalias nocapture %a, ptr noalias nocapture read
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x float>, ptr
 ; CHECK-NEXT:  %[[MASK:.*]] = fcmp ogt <vscale x 4 x float> %[[LOAD1]],
 ; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr float, ptr %a,
-; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr %[[GEPA]], i32 4, <vscale x 4 x i1> %[[MASK]]
+; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]]
 ; CHECK-NEXT:  %[[FADD:.*]] = fadd <vscale x 4 x float> %[[LOAD1]], %[[LOAD2]]
-; CHECK-NEXT:  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %[[FADD]], ptr %[[GEPA]], i32 4, <vscale x 4 x i1> %[[MASK]])
+; CHECK-NEXT:  call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %[[FADD]], ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]])
 entry:
   br label %for.body
 
@@ -42,9 +42,9 @@ define void @mloadstore_i32(ptr noalias nocapture %a, ptr noalias nocapture read
 ; CHECK:       %[[LOAD1:.*]] = load <vscale x 4 x i32>, ptr
 ; CHECK-NEXT:  %[[MASK:.*]] = icmp ne <vscale x 4 x i32> %[[LOAD1]],
 ; CHECK-NEXT:  %[[GEPA:.*]] = getelementptr i32, ptr %a,
-; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr %[[GEPA]], i32 4, <vscale x 4 x i1> %[[MASK]]
+; CHECK-NEXT:  %[[LOAD2:.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]]
 ; CHECK-NEXT:  %[[FADD:.*]] = add <vscale x 4 x i32> %[[LOAD1]], %[[LOAD2]]
-; CHECK-NEXT:  call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %[[FADD]], ptr %[[GEPA]], i32 4, <vscale x 4 x i1> %[[MASK]])
+; CHECK-NEXT:  call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> %[[FADD]], ptr align 4 %[[GEPA]], <vscale x 4 x i1> %[[MASK]])
 entry:
   br label %for.body
 

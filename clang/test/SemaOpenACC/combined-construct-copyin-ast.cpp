@@ -14,18 +14,18 @@ void NormalUses(float *PointerParam) {
   // CHECK: ParmVarDecl
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc parallel loop copyin(GlobalArray) pcopyin(readonly:PointerParam[Global]) present_or_copyin(Global)
+#pragma acc parallel loop copyin(GlobalArray) pcopyin(readonly:PointerParam[Global]) present_or_copyin(always, alwaysin: Global)
   for (unsigned i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
-  // CHECK-NEXT: present_or_copyin clause
+  // CHECK-NEXT: present_or_copyin clause modifiers: always, alwaysin
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
   // CHECK-NEXT: ForStmt
   // CHECK: NullStmt
@@ -42,12 +42,12 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: ParmVarDecl{{.*}} referenced u 'U'
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc parallel loop copyin(t) pcopyin(readonly: NTTP, u) present_or_copyin(u[0:t])
+#pragma acc parallel loop copyin(always, readonly, alwaysin: t) pcopyin(readonly: NTTP, u) present_or_copyin(u[0:t])
   for (unsigned i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: copyin clause modifiers: always, alwaysin, readonly
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: present_or_copyin clause
@@ -73,9 +73,9 @@ void TemplUses(T t, U u) {
 
 // #pragma acc parallel copyin(t) pcopyin(readonly: NTTP, u) present_or_copyin(u[0:t])
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: copyin clause
+  // CHECK-NEXT: copyin clause modifiers: always, alwaysin, readonly
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
-  // CHECK-NEXT: pcopyin clause : readonly
+  // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'

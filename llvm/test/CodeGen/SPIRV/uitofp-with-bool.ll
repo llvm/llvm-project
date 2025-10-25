@@ -33,7 +33,7 @@
 ; SPV-DAG: %[[#int_8:]] = OpTypeInt 8 0
 ; SPV-DAG: %[[#int_16:]] = OpTypeInt 16 0
 ; SPV-DAG: %[[#int_64:]] = OpTypeInt 64 0
-; SPV-DAG: %[[#zero_32:]] = OpConstant %[[#int_32]] 0
+; SPV-DAG: %[[#zero_32:]] = OpConstantNull %[[#int_32]]
 ; SPV-DAG: %[[#one_32:]] = OpConstant %[[#int_32]] 1
 ; SPV-DAG: %[[#zero_8:]] = OpConstantNull %[[#int_8]]
 ; SPV-DAG: %[[#mone_8:]] = OpConstant %[[#int_8]] 255
