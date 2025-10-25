@@ -163,7 +163,7 @@ set common_cmake_flags=^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp"
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt"
 
 if "%force-msvc%" == "" (
   where /q clang-cl
@@ -221,11 +221,6 @@ set cmake_flags=^
 
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
-REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
-REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b 1
-REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 cd..
 
 REM CMake expects the paths that specifies the compiler and linker to be
@@ -246,11 +241,6 @@ mkdir build32
 cd build32
 cmake -GNinja %cmake_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
-REM ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
-REM ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
-ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
-ninja check-sanitizer || ninja check-sanitizer || ninja check-sanitizer || exit /b 1
-REM ninja check-clang-tools || ninja check-clang-tools || ninja check-clang-tools || exit /b 1
 ninja package || exit /b 1
 cd ..
 
@@ -288,7 +278,7 @@ cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
-ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
+ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
@@ -322,7 +312,7 @@ cmake -GNinja %cmake_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
-ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
+ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (

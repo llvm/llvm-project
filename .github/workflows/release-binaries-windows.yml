@@ -1,0 +1,25 @@
+name: Release Binaries Windows
+
+on:
+  pull_request:
+
+
+permissions:
+  contents: read # Default everything to read-only
+
+jobs:
+  build-windows-release:
+    runs-on: depot-windows-2022-16
+    if: github.repository_owner == 'llvm'
+    steps:
+      - uses: llvm/actions/setup-windows@main
+        with:
+          arch: amd64
+      - name: Setup crlf
+        run: |
+          git config --global core.autocrlf false
+      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
+      - run: |
+          subst S: ${{ github.workspace }}
+          cd S:\llvm\utils\release\
+          .\build_llvm_release.bat --x64 --version 21.1.3 --local-python --skip-checkout
