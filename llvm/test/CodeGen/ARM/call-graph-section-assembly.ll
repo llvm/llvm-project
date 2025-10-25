@@ -49,9 +49,9 @@ entry:
 ;; Number of unique direct callees.
 ; CHECK-NEXT: .byte	  3
 ;; Direct callees.
-; CHECK-NEXT: .long	direct_foo
-; CHECK-NEXT: .long	direct_bar
 ; CHECK-NEXT: .long	direct_baz
+; CHECK-NEXT: .long	direct_bar
+; CHECK-NEXT: .long	direct_foo
 ;; Number of unique indirect target type IDs.
 ; CHECK-NEXT: .byte   3
 ;; Indirect type IDs.

@@ -312,6 +312,8 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
       processVariable(Var);
     else if (auto *Import = dyn_cast_or_null<DIImportedEntity>(N))
       processImportedEntity(Import);
+    else if (auto *T = dyn_cast_or_null<DIType>(N))
+      processType(T);
   }
 }
 
