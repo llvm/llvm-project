@@ -21381,15 +21381,6 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
   TargetLowering::insertSSPDeclarations(M);
 }
 
-Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  RTLIB::LibcallImpl SecurityCheckCookie =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookie != RTLIB::Unsupported)
-    return M.getFunction(getLibcallImplName(SecurityCheckCookie));
-  return TargetLowering::getSSPStackGuardCheck(M);
-}
-
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                                   unsigned &Cost) const {
   // If we do not have NEON, vector types are not natively supported.
