@@ -44,7 +44,7 @@ bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
     return false;
 
   return StringSwitch<bool>(FPAttr.getValueAsString())
-      .Cases("all", "non-leaf", "reserved", true)
+      .Cases({"all", "non-leaf", "reserved"}, true)
       .Case("none", false);
 }
 

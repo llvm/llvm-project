@@ -3533,10 +3533,10 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   while (isLockRepeatNtPrefix(Name.lower())) {
     unsigned Prefix =
         StringSwitch<unsigned>(Name)
-            .Cases("lock", "lock", X86::IP_HAS_LOCK)
-            .Cases("rep", "repe", "repz", X86::IP_HAS_REPEAT)
-            .Cases("repne", "repnz", X86::IP_HAS_REPEAT_NE)
-            .Cases("notrack", "notrack", X86::IP_HAS_NOTRACK)
+            .Case("lock", X86::IP_HAS_LOCK)
+            .Cases({"rep", "repe", "repz"}, X86::IP_HAS_REPEAT)
+            .Cases({"repne", "repnz"}, X86::IP_HAS_REPEAT_NE)
+            .Case("notrack", X86::IP_HAS_NOTRACK)
             .Default(X86::IP_NO_PREFIX); // Invalid prefix (impossible)
     Flags |= Prefix;
     if (getLexer().is(AsmToken::EndOfStatement)) {
