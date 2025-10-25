@@ -4414,7 +4414,11 @@ enum CXErrorCode clang_parseTranslationUnit2(
     unsigned options, CXTranslationUnit *out_TU) {
   noteBottomOfStack();
   SmallVector<const char *, 4> Args;
-  Args.push_back("clang");
+
+  CIndexer *CXXIdx = static_cast<CIndexer *>(CIdx);
+  auto library_path = CXXIdx->getLibClangPath();
+  Args.push_back(library_path.c_str());
+
   Args.append(command_line_args, command_line_args + num_command_line_args);
   return clang_parseTranslationUnit2FullArgv(
       CIdx, source_filename, Args.data(), Args.size(), unsaved_files,
