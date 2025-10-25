@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 template<class T> class Array { /* ... */ }; 
 template<class T> void sort(Array<T>& v) { }
@@ -34,3 +33,11 @@ template<> struct hash<S> {
     return 0;
   }
 };
+
+struct A {
+  int g();
+  template<typename T> auto f() { return 0; } // expected-note{{candidate template ignored: could not match 'auto ()' against 'auto () -> decltype(this->g())' (aka 'auto () -> int')}}
+};
+
+template auto A::f<char>();
+template auto A::f<int>() -> decltype(g()); // expected-error{{explicit instantiation of 'f' does not refer to a function template, variable template, member function, member class, or static data member}}

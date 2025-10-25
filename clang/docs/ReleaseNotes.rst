@@ -471,6 +471,8 @@ Bug Fixes to C++ Support
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
+- Diagnose writing out the return type in an explicit instantiation of a member
+  function template whose return type is deduced. (#GH164398)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
