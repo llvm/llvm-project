@@ -529,6 +529,11 @@ struct Elf_Ehdr_Impl {
 
   unsigned char getFileClass() const { return e_ident[ELF::EI_CLASS]; }
   unsigned char getDataEncoding() const { return e_ident[ELF::EI_DATA]; }
+  bool hasPhdrNumExtension() const {
+    return (e_phnum == ELF::PN_XNUM || e_shnum == ELF::SHN_UNDEF ||
+            e_shstrndx == ELF::SHN_XINDEX) &&
+           e_shoff != 0;
+  }
 };
 
 template <endianness Endianness>
