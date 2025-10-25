@@ -141,9 +141,8 @@ func:
     .seh_handlerdata
     .long 0
     .text
-    .seh_startchained
     .seh_endprologue
-    .seh_endchained
+    .seh_splitchained
     .seh_startepilogue
     lea (%rbx), %rsp
     pop %rbx
