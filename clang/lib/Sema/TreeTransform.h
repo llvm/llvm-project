@@ -9360,6 +9360,33 @@ StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmt(
 }
 
 template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformCXXDependentExpansionStmt(
+    CXXDependentExpansionStmt *S) {
+  TransformCXXExpansionStmtResult Common =
+      TransformCXXExpansionStmtCommonParts(S);
+  if (!Common.isValid())
+    return StmtError();
+
+  ExprResult ExpansionInitializer =
+      getDerived().TransformExpr(S->getExpansionInitializer());
+  if (ExpansionInitializer.isInvalid())
+    return StmtError();
+
+  StmtResult Expansion = SemaRef.BuildNonEnumeratingCXXExpansionStmt(
+      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
+      ExpansionInitializer.get(), S->getForLoc(), S->getLParenLoc(),
+      S->getColonLoc(), S->getRParenLoc());
+  if (Expansion.isInvalid())
+    return StmtError();
+
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  return SemaRef.FinishCXXExpansionStmt(Expansion.get(), Body.get());
+}
+
+template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListExpr(
     CXXExpansionInitListExpr *E) {
   bool ArgChanged = false;

@@ -1350,6 +1350,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::DependentScopeDeclRefExprClass:
   case Expr::CXXFoldExprClass:
   case Expr::RecoveryExprClass:
+  case Expr::CXXDependentExpansionStmtClass:
     return CT_Dependent;
 
   case Expr::AsTypeExprClass:

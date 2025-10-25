@@ -11055,6 +11055,11 @@ public:
       BuildForRangeKind Kind,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
+  /// Set the type of a for-range declaration whose for-range or expansion
+  /// initialiser is dependent.
+  void ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                         BuildForRangeKind BFRK);
+
   /// Holds the 'begin' and 'end' variables of a range-based for loop or
   /// expansion statement; begin-expr and end-expr are also provided; the
   /// latter are used in some diagnostics.
@@ -15676,7 +15681,7 @@ public:
       ExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
       Expr *ExpansionInitializer, SourceLocation ForLoc,
       SourceLocation LParenLoc, SourceLocation ColonLoc,
-      SourceLocation RParenLoc, BuildForRangeKind Kind,
+      SourceLocation RParenLoc,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps);
 
   StmtResult FinishCXXExpansionStmt(Stmt *Expansion, Stmt *Body);
@@ -15692,6 +15697,13 @@ public:
   ExprResult
   BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
                                       Expr *Idx);
+
+  StmtResult BuildNonEnumeratingCXXExpansionStmt(
+      ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+      Expr *ExpansionInitializer, SourceLocation ForLoc,
+      SourceLocation LParenLoc, SourceLocation ColonLoc,
+      SourceLocation RParenLoc,
+      ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps = {});
 
   std::optional<uint64_t> ComputeExpansionSize(CXXExpansionStmt *Expansion);
   ///@}

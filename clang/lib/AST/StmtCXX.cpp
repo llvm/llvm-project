@@ -178,6 +178,9 @@ bool CXXExpansionStmt::hasDependentSize() const {
            End->isTypeDependent() || End->isValueDependent();
   }
 
+  if (isa<CXXDependentExpansionStmt>(this))
+    return true;
+
   llvm_unreachable("Invalid expansion statement class");
 }
 
@@ -194,6 +197,17 @@ CXXIteratingExpansionStmt::CXXIteratingExpansionStmt(
   SubStmts[END] = End;
   SubStmts[RANGE] = Range;
 }
+
+CXXDependentExpansionStmt::CXXDependentExpansionStmt(EmptyShell Empty)
+  : CXXExpansionStmt(CXXDependentExpansionStmtClass, Empty) {}
+
+CXXDependentExpansionStmt::CXXDependentExpansionStmt(
+    ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
+    Expr *ExpansionInitializer, SourceLocation ForLoc, SourceLocation LParenLoc,
+    SourceLocation ColonLoc, SourceLocation RParenLoc)
+    : CXXExpansionStmt(CXXDependentExpansionStmtClass, ESD, Init, ExpansionVar,
+                       ForLoc, LParenLoc, ColonLoc, RParenLoc),
+      ExpansionInitializer(ExpansionInitializer) {}
 
 CXXExpansionInstantiationStmt::CXXExpansionInstantiationStmt(
     EmptyShell Empty, unsigned NumInstantiations, unsigned NumSharedStmts)

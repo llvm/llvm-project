@@ -378,6 +378,11 @@ void StmtProfiler::VisitCXXIteratingExpansionStmt(
   VisitCXXExpansionStmt(S);
 }
 
+void StmtProfiler::VisitCXXDependentExpansionStmt(
+    const CXXDependentExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+}
+
 void StmtProfiler::VisitCXXExpansionInstantiationStmt(
     const CXXExpansionInstantiationStmt *S) {
   VisitStmt(S);

@@ -1842,6 +1842,9 @@ enum StmtCode {
   /// A CXXIteratingExpansionStmt.
   STMT_CXX_ITERATING_EXPANSION,
 
+  /// A CXXDependentExpansionStmt,
+  STMT_CXX_DEPENDENT_EXPANSION,
+
   /// A CXXExpansionInstantiationStmt.
   STMT_CXX_EXPANSION_INSTANTIATION,
 

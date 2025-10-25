@@ -1742,6 +1742,12 @@ void ASTStmtWriter::VisitCXXIteratingExpansionStmt(
   Code = serialization::STMT_CXX_ITERATING_EXPANSION;
 }
 
+void ASTStmtWriter::VisitCXXDependentExpansionStmt(
+    CXXDependentExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+  Record.AddStmt(S->getExpansionInitializer());
+  Code = serialization::STMT_CXX_DEPENDENT_EXPANSION;
+}
 void ASTStmtWriter::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
   VisitExpr(E);
   Record.push_back(E->getNumExprs());

@@ -2910,6 +2910,20 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
   return {BeginVar, EndVar, BeginExpr.get(), EndExpr.get()};
 }
 
+void Sema::ActOnDependentForRangeInitializer(VarDecl *LoopVar,
+                                             BuildForRangeKind BFRK) {
+  // Deduce any 'auto's in the loop variable as 'DependentTy'. We'll fill
+  // them in properly when we instantiate the loop.
+  if (!LoopVar->isInvalidDecl() && BFRK != BFRK_Check) {
+    if (auto *DD = dyn_cast<DecompositionDecl>(LoopVar))
+      for (auto *Binding : DD->bindings()) {
+        if (!Binding->isParameterPack())
+          Binding->setType(Context.DependentTy);
+      }
+    LoopVar->setType(SubstAutoTypeDependent(LoopVar->getType()));
+  }
+}
+
 StmtResult Sema::BuildCXXForRangeStmt(
     SourceLocation ForLoc, SourceLocation CoawaitLoc, Stmt *InitStmt,
     SourceLocation ColonLoc, Stmt *RangeDecl, Stmt *Begin, Stmt *End,
@@ -2941,17 +2955,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
   if (RangeVarType->isDependentType()) {
     // The range is implicitly used as a placeholder when it is dependent.
     RangeVar->markUsed(Context);
-
-    // Deduce any 'auto's in the loop variable as 'DependentTy'. We'll fill
-    // them in properly when we instantiate the loop.
-    if (!LoopVar->isInvalidDecl() && Kind != BFRK_Check) {
-      if (auto *DD = dyn_cast<DecompositionDecl>(LoopVar))
-        for (auto *Binding : DD->bindings()) {
-          if (!Binding->isParameterPack())
-            Binding->setType(Context.DependentTy);
-        }
-      LoopVar->setType(SubstAutoTypeDependent(LoopVar->getType()));
-    }
+    ActOnDependentForRangeInitializer(LoopVar, Kind);
   } else if (!BeginDeclStmt.get()) {
     StmtResult RebuildResult;
     auto RebuildWithDereference = [&] {

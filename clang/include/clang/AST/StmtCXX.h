@@ -621,6 +621,43 @@ public:
   }
 };
 
+/// Represents an expansion statement whose expansion-initializer is dependent.
+class CXXDependentExpansionStmt : public CXXExpansionStmt {
+  friend class ASTStmtReader;
+
+  Expr* ExpansionInitializer;
+
+public:
+  CXXDependentExpansionStmt(EmptyShell Empty);
+  CXXDependentExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
+                            DeclStmt *ExpansionVar, Expr *ExpansionInitializer,
+                            SourceLocation ForLoc, SourceLocation LParenLoc,
+                            SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+  Expr *getExpansionInitializer() { return ExpansionInitializer; }
+  const Expr *getExpansionInitializer() const { return ExpansionInitializer; }
+  void setExpansionInitializer(Expr* S) { ExpansionInitializer = S; }
+
+  child_range children() {
+    const_child_range CCR =
+        const_cast<const CXXDependentExpansionStmt *>(this)->children();
+    return child_range(cast_away_const(CCR.begin()),
+                       cast_away_const(CCR.end()));
+  }
+
+  const_child_range children() const {
+    // See CXXIteratingExpansion statement for an explansion of this terrible
+    // hack.
+    Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
+    unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) + 1;
+    return const_child_range(FirstParentSubStmt, FirstParentSubStmt + Count);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXDependentExpansionStmtClass;
+  }
+};
+
 /// Represents an unexpanded iterating expansion statement.
 ///
 /// The expression used to compute the size of the expansion is not stored in
@@ -697,7 +734,8 @@ public:
     // classes of CXXExpansionStmt instead or moving it into trailing data
     // would be quite a bit more complicated.
     //
-    // FIXME: There ought to be a better way of doing this.
+    // FIXME: There ought to be a better way of doing this. If we change this,
+    // we should also update CXXDependentExpansionStmt.
     Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
     unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) +
                      static_cast<unsigned>(CXXIteratingExpansionStmt::COUNT);

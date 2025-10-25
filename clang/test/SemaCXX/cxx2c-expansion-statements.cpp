@@ -124,7 +124,18 @@ constexpr int f3() {
   return count;
 }
 
+template <String s>
+constexpr int tf3() {
+  int count = 0;
+  template for (constexpr auto x : s) count++;
+  return count;
+}
+
 static_assert(f3() == 4);
+static_assert(tf3<"1">() == 1);
+static_assert(tf3<"12">() == 2);
+static_assert(tf3<"123">() == 3);
+static_assert(tf3<"1234">() == 4);
 
 void f4() {
   static constexpr String empty{""};

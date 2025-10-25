@@ -14603,8 +14603,7 @@ void Sema::ActOnCXXForRangeDecl(Decl *D, bool InExpansionStmt) {
     return;
   }
 
-  if (!InExpansionStmt)
-    VD->setCXXForRangeDecl(true);
+  VD->setCXXForRangeDecl(true);
 
   // for-range-declaration cannot be given a storage class specifier.
   int Error = -1;

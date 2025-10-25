@@ -62,6 +62,7 @@ def CoreturnStmt : StmtNode<Stmt>;
 def CXXExpansionStmt : StmtNode<Stmt, 1>;
 def CXXEnumeratingExpansionStmt : StmtNode<CXXExpansionStmt>;
 def CXXIteratingExpansionStmt : StmtNode<CXXExpansionStmt>;
+def CXXDependentExpansionStmt : StmtNode<CXXExpansionStmt>;
 def CXXExpansionInstantiationStmt : StmtNode<Stmt>; // *Not* derived from CXXExpansionStmt!
 
 // Expressions

@@ -1764,6 +1764,12 @@ void ASTStmtReader::VisitCXXIteratingExpansionStmt(
   S->setEndVarStmt(cast<DeclStmt>(Record.readSubStmt()));
 }
 
+void ASTStmtReader::VisitCXXDependentExpansionStmt(
+    CXXDependentExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+  S->setExpansionInitializer(Record.readSubExpr());
+}
+
 void ASTStmtReader::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
   VisitExpr(E);
   assert(Record.peekInt() == E->getNumExprs() && "NumExprFields is wrong ?");
@@ -3623,6 +3629,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_CXX_ITERATING_EXPANSION:
       S = new (Context) CXXIteratingExpansionStmt(Empty);
+      break;
+
+    case STMT_CXX_DEPENDENT_EXPANSION:
+      S = new (Context) CXXDependentExpansionStmt(Empty);
       break;
 
     case STMT_CXX_EXPANSION_INSTANTIATION:

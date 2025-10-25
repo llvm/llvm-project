@@ -45,33 +45,23 @@ struct IterableExpansionStmtData {
 };
 } // namespace
 
-  /*
-// By [stmt.expand]5.2, N is the result of evaluating the expression
-//
-// [] consteval {
-//    std::ptrdiff_t result = 0;
-//    for (auto i = begin; i != end; ++i, ++result);
-//    return result;
-// }()
-//
-// FIXME: Actually do that; unfortunately, conjuring a lambda out of thin
-// air in Sema is a massive pain, so for now just cheat by computing
-// 'end - begin'.
-auto CreateBeginDRE = [&] {
-  return S.BuildDeclRefExpr(Info.BeginVar,
-                            Info.BeginVar->getType().getNonReferenceType(),
-                            VK_LValue, ColonLoc);
-};
+// Build a 'DeclRefExpr' designating the template parameter '__N'.
+static DeclRefExpr *BuildIndexDRE(Sema &S, ExpansionStmtDecl *ESD) {
+  return S.BuildDeclRefExpr(ESD->getIndexTemplateParm(),
+                            S.Context.getPointerDiffType(), VK_PRValue,
+                            ESD->getBeginLoc());
+}
 
-DeclRefExpr *Begin = CreateBeginDRE();
-DeclRefExpr *End = S.BuildDeclRefExpr(
-    Info.EndVar, Info.EndVar->getType().getNonReferenceType(), VK_LValue,
-    ColonLoc);
+static bool FinaliseExpansionVar(Sema &S, VarDecl *ExpansionVar,
+                                 ExprResult Initializer) {
+  if (Initializer.isInvalid()) {
+    S.ActOnInitializerError(ExpansionVar);
+    return true;
+  }
 
-ExprResult N = S.ActOnBinOp(Scope, ColonLoc, tok::minus, Begin, End);
-if (N.isInvalid())
-  return ExprError();
-*/
+  S.AddInitializerToDecl(ExpansionVar, Initializer.get(), /*DirectInit=*/false);
+  return ExpansionVar->isInvalidDecl();
+}
 
 static IterableExpansionStmtData
 TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
@@ -225,10 +215,9 @@ ExprResult Sema::ActOnCXXExpansionInitList(MultiExprArg SubExprs,
 StmtResult Sema::ActOnCXXExpansionStmt(
     ExpansionStmtDecl *ESD, Stmt *Init, Stmt *ExpansionVarStmt,
     Expr *ExpansionInitializer, SourceLocation ForLoc, SourceLocation LParenLoc,
-    SourceLocation ColonLoc, SourceLocation RParenLoc, BuildForRangeKind Kind,
+    SourceLocation ColonLoc, SourceLocation RParenLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
-  // TODO: Do we actually need a BuildForRangeKind here at all?
-  if (!ExpansionInitializer || !ExpansionVarStmt || Kind == BFRK_Check)
+  if (!ExpansionInitializer || !ExpansionVarStmt)
     return StmtError();
 
   assert(CurContext->isExpansionStmt());
@@ -243,26 +232,12 @@ StmtResult Sema::ActOnCXXExpansionStmt(
       ExpansionInitializer->containsErrors())
     return StmtError();
 
-  auto FinaliseExpansionVar = [&](ExprResult Initializer) {
-    if (Initializer.isInvalid()) {
-      ActOnInitializerError(ExpansionVar);
-      return true;
-    }
-
-    AddInitializerToDecl(ExpansionVar, Initializer.get(), /*DirectInit=*/false);
-    return ExpansionVar->isInvalidDecl();
-  };
-
-  // Build a 'DeclRefExpr' designating the template parameter '__N'.
-  DeclRefExpr *Index = BuildDeclRefExpr(ESD->getIndexTemplateParm(),
-                                        Context.getPointerDiffType(),
-                                        VK_PRValue, ESD->getBeginLoc());
-
   // This is an enumerating expansion statement.
   if (auto *ILE = dyn_cast<CXXExpansionInitListExpr>(ExpansionInitializer)) {
 
-    ExprResult Initializer = BuildCXXExpansionInitListSelectExpr(ILE, Index);
-    if (FinaliseExpansionVar(Initializer))
+    ExprResult Initializer =
+        BuildCXXExpansionInitListSelectExpr(ILE, BuildIndexDRE(*this, ESD));
+    if (FinaliseExpansionVar(*this, ExpansionVar, Initializer))
       return StmtError();
 
     // Note that lifetime extension only applies to destructurable expansion
@@ -272,28 +247,9 @@ StmtResult Sema::ActOnCXXExpansionStmt(
                                             ColonLoc, RParenLoc);
   }
 
-  if (ExpansionInitializer->isTypeDependent())
-    llvm_unreachable("TODO: Dependent expansion initializer");
-
-  // Otherwise, if it can be an iterating expansion statement, it is one.
-  IterableExpansionStmtData Data = TryBuildIterableExpansionStmtInitializer(
-      *this, ExpansionInitializer, Index, ColonLoc, ExpansionVar->isConstexpr());
-  if (Data.hasError()) {
-    ActOnInitializerError(ExpansionVar);
-    return StmtError();
-  }
-
-  if (Data.isIterable()) {
-    if (FinaliseExpansionVar(Data.Initializer))
-      return StmtError();
-
-    return new (Context) CXXIteratingExpansionStmt(
-        ESD, Init, DS, Data.RangeDecl, Data.BeginDecl, Data.EndDecl, ForLoc,
-        LParenLoc, ColonLoc, RParenLoc);
-  }
-
-
-  llvm_unreachable("TODO: Destructuring expansion statement");
+  return BuildNonEnumeratingCXXExpansionStmt(
+      ESD, Init, DS, ExpansionInitializer, ForLoc, LParenLoc, ColonLoc,
+      RParenLoc, LifetimeExtendTemps);
 }
 
 StmtResult Sema::BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
@@ -305,6 +261,41 @@ StmtResult Sema::BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
   return new (Context) CXXEnumeratingExpansionStmt(
       cast<ExpansionStmtDecl>(ESD), Init, cast<DeclStmt>(ExpansionVar), ForLoc,
       LParenLoc, ColonLoc, RParenLoc);
+}
+
+StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
+    ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVarStmt,
+    Expr *ExpansionInitializer, SourceLocation ForLoc, SourceLocation LParenLoc,
+    SourceLocation ColonLoc, SourceLocation RParenLoc,
+    ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps) {
+  VarDecl *ExpansionVar = cast<VarDecl>(ExpansionVarStmt->getSingleDecl());
+
+  if (ExpansionInitializer->isTypeDependent()) {
+    ActOnDependentForRangeInitializer(ExpansionVar, BFRK_Build);
+    return new (Context) CXXDependentExpansionStmt(
+        ESD, Init, ExpansionVarStmt, ExpansionInitializer, ForLoc, LParenLoc,
+        ColonLoc, RParenLoc);
+  }
+
+  // Otherwise, if it can be an iterating expansion statement, it is one.
+  IterableExpansionStmtData Data = TryBuildIterableExpansionStmtInitializer(
+      *this, ExpansionInitializer, BuildIndexDRE(*this, ESD), ColonLoc,
+      ExpansionVar->isConstexpr());
+  if (Data.hasError()) {
+    ActOnInitializerError(ExpansionVar);
+    return StmtError();
+  }
+
+  if (Data.isIterable()) {
+    if (FinaliseExpansionVar(*this, ExpansionVar, Data.Initializer))
+      return StmtError();
+
+    return new (Context) CXXIteratingExpansionStmt(
+        ESD, Init, ExpansionVarStmt, Data.RangeDecl, Data.BeginDecl,
+        Data.EndDecl, ForLoc, LParenLoc, ColonLoc, RParenLoc);
+  }
+
+  llvm_unreachable("TODO: Destructuring expansion statement");
 }
 
 /*

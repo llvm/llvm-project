@@ -2251,7 +2251,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
     ForRangeStmt = Actions.ActOnCXXExpansionStmt(
         ExpansionStmtDeclaration, FirstPart.get(), ForRangeInfo.LoopVar.get(),
         ForRangeInfo.RangeExpr.get(), ForLoc, T.getOpenLocation(),
-        ForRangeInfo.ColonLoc, T.getCloseLocation(), Sema::BFRK_Build,
+        ForRangeInfo.ColonLoc, T.getCloseLocation(),
         ForRangeInfo.LifetimeExtendTemps);
   } else if (ForRangeInfo.ParsedForRangeDecl()) {
     ForRangeStmt = Actions.ActOnCXXForRangeStmt(
