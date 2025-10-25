@@ -16,9 +16,8 @@
 #include <type_traits>
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    static_assert((std::is_same<std::regex_iterator<std::wstring::const_iterator>, std::wsregex_iterator>::value), "");
+int main(int, char**) {
+  static_assert((std::is_same<std::regex_iterator<std::wstring::const_iterator>, std::wsregex_iterator>::value), "");
 
   return 0;
 }

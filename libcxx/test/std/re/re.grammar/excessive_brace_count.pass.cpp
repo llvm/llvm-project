@@ -17,22 +17,20 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-  for (std::regex_constants::syntax_option_type op :
-       {std::regex::basic, std::regex::grep}) {
+  for (std::regex_constants::syntax_option_type op : {std::regex::basic, std::regex::grep}) {
     try {
       TEST_IGNORE_NODISCARD std::regex("a\\{100000000000000000\\}", op);
       assert(false);
-    } catch (const std::regex_error &e) {
+    } catch (const std::regex_error& e) {
       assert(e.code() == std::regex_constants::error_badbrace);
     }
   }
   for (std::regex_constants::syntax_option_type op :
-       {std::regex::ECMAScript, std::regex::extended, std::regex::egrep,
-        std::regex::awk}) {
+       {std::regex::ECMAScript, std::regex::extended, std::regex::egrep, std::regex::awk}) {
     try {
       TEST_IGNORE_NODISCARD std::regex("a{100000000000000000}", op);
       assert(false);
-    } catch (const std::regex_error &e) {
+    } catch (const std::regex_error& e) {
       assert(e.code() == std::regex_constants::error_badbrace);
     }
   }

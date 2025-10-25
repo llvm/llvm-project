@@ -16,9 +16,8 @@
 #include <type_traits>
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    static_assert((std::is_same<std::regex_token_iterator<const wchar_t*>, std::wcregex_token_iterator>::value), "");
+int main(int, char**) {
+  static_assert((std::is_same<std::regex_token_iterator<const wchar_t*>, std::wcregex_token_iterator>::value), "");
 
   return 0;
 }

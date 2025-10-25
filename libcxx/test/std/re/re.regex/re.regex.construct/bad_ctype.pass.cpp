@@ -18,21 +18,19 @@
 #include <cassert>
 #include "test_macros.h"
 
-static bool error_ctype_thrown(const char *pat)
-{
-    bool result = false;
-    try {
-        std::regex re(pat);
-    } catch (const std::regex_error &ex) {
-        result = (ex.code() == std::regex_constants::error_ctype);
-    }
-    return result;
+static bool error_ctype_thrown(const char* pat) {
+  bool result = false;
+  try {
+    std::regex re(pat);
+  } catch (const std::regex_error& ex) {
+    result = (ex.code() == std::regex_constants::error_ctype);
+  }
+  return result;
 }
 
-int main(int, char**)
-{
-    assert(error_ctype_thrown("[[::]]"));
-    assert(error_ctype_thrown("[[:error:]]"));
+int main(int, char**) {
+  assert(error_ctype_thrown("[[::]]"));
+  assert(error_ctype_thrown("[[:error:]]"));
 
   return 0;
 }

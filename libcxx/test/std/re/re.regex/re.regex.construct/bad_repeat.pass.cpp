@@ -18,28 +18,26 @@
 #include <cassert>
 #include "test_macros.h"
 
-static bool error_badrepeat_thrown(const char *pat)
-{
-    bool result = false;
-    try {
-        std::regex re(pat);
-    } catch (const std::regex_error &ex) {
-        result = (ex.code() == std::regex_constants::error_badrepeat);
-    }
-    return result;
+static bool error_badrepeat_thrown(const char* pat) {
+  bool result = false;
+  try {
+    std::regex re(pat);
+  } catch (const std::regex_error& ex) {
+    result = (ex.code() == std::regex_constants::error_badrepeat);
+  }
+  return result;
 }
 
-int main(int, char**)
-{
-    assert(error_badrepeat_thrown("?a"));
-    assert(error_badrepeat_thrown("*a"));
-    assert(error_badrepeat_thrown("+a"));
-    assert(error_badrepeat_thrown("{a"));
+int main(int, char**) {
+  assert(error_badrepeat_thrown("?a"));
+  assert(error_badrepeat_thrown("*a"));
+  assert(error_badrepeat_thrown("+a"));
+  assert(error_badrepeat_thrown("{a"));
 
-    assert(error_badrepeat_thrown("?(a+)"));
-    assert(error_badrepeat_thrown("*(a+)"));
-    assert(error_badrepeat_thrown("+(a+)"));
-    assert(error_badrepeat_thrown("{(a+)"));
+  assert(error_badrepeat_thrown("?(a+)"));
+  assert(error_badrepeat_thrown("*(a+)"));
+  assert(error_badrepeat_thrown("+(a+)"));
+  assert(error_badrepeat_thrown("{(a+)"));
 
   return 0;
 }

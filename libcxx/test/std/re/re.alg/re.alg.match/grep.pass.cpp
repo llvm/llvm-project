@@ -21,31 +21,28 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-int main(int, char**)
-{
-    {
-        std::cmatch m;
-        const char s[] = "tournament";
-        assert(std::regex_match(s, m, std::regex("tour\nto\ntournament",
-                std::regex_constants::grep)));
-        assert(m.size() == 1);
-        assert(!m.prefix().matched);
-        assert(m.prefix().first == s);
-        assert(m.prefix().second == m[0].first);
-        assert(!m.suffix().matched);
-        assert(m.suffix().first == m[0].second);
-        assert(m.suffix().second == s + std::char_traits<char>::length(s));
-        assert(m.length(0) == 10);
-        assert(m.position(0) == 0);
-        assert(m.str(0) == "tournament");
-    }
-    {
-        std::cmatch m;
-        const char s[] = "ment";
-        assert(!std::regex_match(s, m, std::regex("tour\n\ntournament",
-                std::regex_constants::grep)));
-        assert(m.size() == 0);
-    }
+int main(int, char**) {
+  {
+    std::cmatch m;
+    const char s[] = "tournament";
+    assert(std::regex_match(s, m, std::regex("tour\nto\ntournament", std::regex_constants::grep)));
+    assert(m.size() == 1);
+    assert(!m.prefix().matched);
+    assert(m.prefix().first == s);
+    assert(m.prefix().second == m[0].first);
+    assert(!m.suffix().matched);
+    assert(m.suffix().first == m[0].second);
+    assert(m.suffix().second == s + std::char_traits<char>::length(s));
+    assert(m.length(0) == 10);
+    assert(m.position(0) == 0);
+    assert(m.str(0) == "tournament");
+  }
+  {
+    std::cmatch m;
+    const char s[] = "ment";
+    assert(!std::regex_match(s, m, std::regex("tour\n\ntournament", std::regex_constants::grep)));
+    assert(m.size() == 0);
+  }
 
   return 0;
 }
