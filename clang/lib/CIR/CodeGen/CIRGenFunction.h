@@ -929,9 +929,22 @@ public:
     return false;
   }
 
+  mlir::Block *getEHDispatchBlock(EHScopeStack::stable_iterator scope,
+                                  cir::TryOp tryOp);
+
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
+
+  mlir::Operation *getInvokeDestImpl(cir::TryOp tryOp);
+  mlir::Operation *getInvokeDest(cir::TryOp tryOp) {
+    if (!ehStack.requiresLandingPad())
+      return nullptr;
+    // Return the respective cir.try, this can be used to compute
+    // any other relevant information.
+    return getInvokeDestImpl(tryOp);
+  }
+  bool isInvokeDest();
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
@@ -1076,7 +1089,7 @@ public:
     bool isSwitch() { return scopeKind == Kind::Switch; }
     bool isTernary() { return scopeKind == Kind::Ternary; }
     bool isTry() { return scopeKind == Kind::Try; }
-
+    cir::TryOp getClosestTryParent();
     void setAsGlobalInit() { scopeKind = Kind::GlobalInit; }
     void setAsSwitch() { scopeKind = Kind::Switch; }
     void setAsTernary() { scopeKind = Kind::Ternary; }
@@ -1629,6 +1642,8 @@ public:
 
   void emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md);
   void emitLambdaStaticInvokeBody(const CXXMethodDecl *md);
+
+  mlir::Operation *emitLandingPad(cir::TryOp tryOp);
 
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 

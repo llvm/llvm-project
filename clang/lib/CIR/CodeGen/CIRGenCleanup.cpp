@@ -188,9 +188,17 @@ void EHScopeStack::popCleanup() {
   }
 }
 
+bool EHScopeStack::requiresLandingPad() const {
+  for (stable_iterator si = getInnermostEHScope(); si != stable_end();) {
+    // TODO(cir): Skip lifetime markers.
+    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    return true;
+  }
+  return false;
+}
+
 EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
   char *buffer = allocate(EHCatchScope::getSizeForNumHandlers(numHandlers));
-  assert(!cir::MissingFeatures::innermostEHScope());
   EHCatchScope *scope =
       new (buffer) EHCatchScope(numHandlers, innermostEHScope);
   innermostEHScope = stable_begin();

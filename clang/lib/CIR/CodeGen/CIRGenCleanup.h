@@ -38,6 +38,8 @@ class EHScope {
   };
   enum { NumCommonBits = 3 };
 
+  bool isScopeMayThrow;
+
 protected:
   class CatchBitFields {
     friend class EHCatchScope;
@@ -92,9 +94,10 @@ public:
     // Traditional LLVM codegen also checks for `!block->use_empty()`, but
     // in CIRGen the block content is not important, just used as a way to
     // signal `hasEHBranches`.
-    assert(!cir::MissingFeatures::ehstackBranches());
-    return false;
+    return isScopeMayThrow;
   }
+
+  void setMayThrow(bool mayThrow) { isScopeMayThrow = mayThrow; }
 
   EHScopeStack::stable_iterator getEnclosingEHScope() const {
     return enclosingEHScope;

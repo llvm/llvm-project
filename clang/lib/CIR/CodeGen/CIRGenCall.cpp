@@ -465,12 +465,48 @@ static cir::CIRCallOpInterface
 emitCallLikeOp(CIRGenFunction &cgf, mlir::Location callLoc,
                cir::FuncType indirectFuncTy, mlir::Value indirectFuncVal,
                cir::FuncOp directFuncOp,
-               const SmallVectorImpl<mlir::Value> &cirCallArgs,
+               const SmallVectorImpl<mlir::Value> &cirCallArgs, bool isInvoke,
                const mlir::NamedAttrList &attrs) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
   assert(!cir::MissingFeatures::opCallSurroundingTry());
-  assert(!cir::MissingFeatures::invokeOp());
+
+  if (isInvoke) {
+    // This call can throw, few options:
+    //  - If this call does not have an associated cir.try, use the
+    //    one provided by InvokeDest,
+    //  - User written try/catch clauses require calls to handle
+    //    exceptions under cir.try.
+
+    // In OG, we build the landing pad for this scope. In CIR, we emit a
+    // synthetic cir.try because this didn't come from code generating from a
+    // try/catch in C++.
+    assert(cgf.curLexScope && "expected scope");
+    cir::TryOp tryOp = cgf.curLexScope->getClosestTryParent();
+    if (!tryOp) {
+      cgf.cgm.errorNYI(
+          "emitCallLikeOp: call does not have an associated cir.try");
+      return {};
+    }
+
+    if (tryOp.getSynthetic()) {
+      cgf.cgm.errorNYI("emitCallLikeOp: tryOp synthetic");
+      return {};
+    }
+
+    cir::CallOp callOpWithExceptions;
+    if (indirectFuncTy) {
+      cgf.cgm.errorNYI("emitCallLikeOp: indirect function type");
+      return {};
+    }
+
+    callOpWithExceptions =
+        builder.createTryCallOp(callLoc, directFuncOp, cirCallArgs);
+
+    (void)cgf.getInvokeDest(tryOp);
+
+    return callOpWithExceptions;
+  }
 
   assert(builder.getInsertionBlock() && "expected valid basic block");
 
@@ -628,10 +664,16 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     indirectFuncVal = calleePtr->getResult(0);
   }
 
+  // TODO(cir): currentFunctionUsesSEHTry
+  // TODO(cir): check for MSVCXXPersonality
+  // TODO(cir): Create NoThrowAttr
+  bool cannotThrow = attrs.getNamed("nothrow").has_value();
+  bool isInvoke = !cannotThrow && isInvokeDest();
+
   mlir::Location callLoc = loc;
   cir::CIRCallOpInterface theCall =
       emitCallLikeOp(*this, loc, indirectFuncTy, indirectFuncVal, directFuncOp,
-                     cirCallArgs, attrs);
+                     cirCallArgs, isInvoke, attrs);
 
   if (callOp)
     *callOp = theCall;
