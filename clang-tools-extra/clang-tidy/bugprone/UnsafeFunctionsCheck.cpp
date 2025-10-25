@@ -90,10 +90,10 @@ static StringRef getReplacementForAdditional(StringRef FunctionName,
 /// safer alternative.
 static StringRef getRationaleFor(StringRef FunctionName) {
   return StringSwitch<StringRef>(FunctionName)
-      .Cases({"asctime", "asctime_r"}, "ctime",
+      .Cases({"asctime", "asctime_r", "ctime"},
              "is not bounds-checking and non-reentrant")
       .Cases({"bcmp", "bcopy", "bzero"}, "is deprecated")
-      .Cases("fopen", "freopen", "has no exclusive access to the opened file")
+      .Cases({"fopen", "freopen"}, "has no exclusive access to the opened file")
       .Case("gets", "is insecure, was deprecated and removed in C11 and C++14")
       .Case("getpw", "is dangerous as it may overflow the provided buffer")
       .Cases({"rewind", "setbuf"}, "has no error detection")
