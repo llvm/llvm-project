@@ -77,7 +77,7 @@ jobs:
         VCPKG_BUILD_TYPE: release
         VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
       run: |
-        vcpkg --verbose install libxml2:x64-windows-static
+        vcpkg --debug install libxml2:x64-windows-static
         find /c/vcpkg -iname 'libxml*.lib'
 
     - name: Checkout LLVM
