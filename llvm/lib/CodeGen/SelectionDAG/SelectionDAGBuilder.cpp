@@ -2015,9 +2015,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     Register InReg = FuncInfo.InitializeRegForValue(Inst);
 
     std::optional<CallingConv::ID> CallConv;
-    auto *CI = dyn_cast<CallInst>(Inst);
-    if (CI && !CI->isInlineAsm())
-      CallConv = CI->getCallingConv();
+    auto *CB = dyn_cast<CallBase>(Inst);
+    if (CB && !CB->isInlineAsm())
+      CallConv = CB->getCallingConv();
 
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
                      Inst->getType(), CallConv);

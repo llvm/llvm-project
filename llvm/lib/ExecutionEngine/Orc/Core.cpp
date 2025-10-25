@@ -2901,12 +2901,22 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
 
   for (auto &SN : ER.Ready)
     IL_collectQueries(
-        EQ.Updated, SN->defs(),
+        EQ.Completed, SN->defs(),
         [](JITDylib::SymbolTableEntry &E) { E.setState(SymbolState::Ready); },
         [](AsynchronousSymbolQuery &Q, JITDylib &JD,
            NonOwningSymbolStringPtr Name, JITDylib::SymbolTableEntry &E) {
           Q.notifySymbolMetRequiredState(SymbolStringPtr(Name), E.getSymbol());
         });
+
+  // std::erase_if is not available in C++17, and llvm::erase_if does not work
+  // here.
+  for (auto it = EQ.Completed.begin(), end = EQ.Completed.end(); it != end;) {
+    if ((*it)->isComplete()) {
+      ++it;
+    } else {
+      it = EQ.Completed.erase(it);
+    }
+  }
 
 #ifdef EXPENSIVE_CHECKS
   verifySessionState("exiting ExecutionSession::IL_emit");
@@ -3043,9 +3053,8 @@ Error ExecutionSession::OL_notifyEmitted(
     }
   }
 
-  for (auto &UQ : EmitQueries->Updated)
-    if (UQ->isComplete())
-      UQ->handleComplete(*this);
+  for (auto &UQ : EmitQueries->Completed)
+    UQ->handleComplete(*this);
 
   // If there are any bad dependencies then return an error.
   if (!BadDeps.empty()) {
