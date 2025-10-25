@@ -14,7 +14,10 @@
 #ifndef LLVM_LIB_TARGET_X86_X86_H
 #define LLVM_LIB_TARGET_X86_X86_H
 
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
@@ -162,11 +165,32 @@ FunctionPass *createX86WinEHUnwindV2Pass();
 
 /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
 /// or split the data to two <128 x i32>.
-FunctionPass *createX86LowerAMXTypePass();
+class X86LowerAMXTypePass : public PassInfoMixin<X86LowerAMXTypePass> {
+private:
+  const TargetMachine *TM;
+
+public:
+  X86LowerAMXTypePass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerAMXTypeLegacyPass();
 
 /// The pass transforms amx intrinsics to scalar operation if the function has
 /// optnone attribute or it is O0.
-FunctionPass *createX86LowerAMXIntrinsicsPass();
+class X86LowerAMXIntrinsicsPass
+    : public PassInfoMixin<X86LowerAMXIntrinsicsPass> {
+private:
+  const TargetMachine *TM;
+
+public:
+  X86LowerAMXIntrinsicsPass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerAMXIntrinsicsLegacyPass();
 
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
