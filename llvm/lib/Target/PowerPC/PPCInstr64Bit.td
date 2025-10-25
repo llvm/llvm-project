@@ -1994,3 +1994,7 @@ def : Pat<(i64 (int_ppc_mfspr timm:$SPR)),
           (MFSPR8 $SPR)>;
 def : Pat<(int_ppc_mtspr timm:$SPR, g8rc:$RT),
           (MTSPR8 $SPR, $RT)>;
+
+// XOR-NOT to EQV optimization patterns (64-bit) (moved to end of file)
+def : Pat<(xor (not i64:$A), i64:$B), (EQV8 i64:$A, i64:$B)>;
+def : Pat<(xor i64:$A, (not i64:$B)), (EQV8 i64:$A, i64:$B)>;

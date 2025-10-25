@@ -1673,3 +1673,7 @@ def VABSDUW : VXForm_1<1155, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
                        [(set v4i32:$VD, (int_ppc_altivec_vabsduw v4i32:$VA, v4i32:$VB))]>;
 
 } // end HasP9Altivec
+
+// XOR-NOT to VEQV optimization patterns (AltiVec) (moved to end of file)
+def : Pat<(xor (vnot v4i32:$A), v4i32:$B), (VEQV v4i32:$A, v4i32:$B)>;
+def : Pat<(xor v4i32:$A, (vnot v4i32:$B)), (VEQV v4i32:$A, v4i32:$B)>;
