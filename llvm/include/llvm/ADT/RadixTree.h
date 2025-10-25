@@ -22,6 +22,7 @@
 #include <limits>
 #include <list>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 
