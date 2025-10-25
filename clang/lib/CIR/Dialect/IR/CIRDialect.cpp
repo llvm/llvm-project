@@ -3097,6 +3097,23 @@ static mlir::ParseResult parseTryHandlerRegions(
 }
 
 //===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CatchParamOp::verify() {
+  std::optional<cir::CatchParamKind> kind = getKind();
+  if (getExceptionPtr()) {
+    if (!kind || *kind != cir::CatchParamKind::Begin)
+      return emitOpError("needs 'begin' to work with exception pointer");
+    return success();
+  }
+
+  if (!kind && !(*this)->getParentOfType<cir::TryOp>())
+    return emitOpError("without 'kind' requires 'cir.try' surrounding scope");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
