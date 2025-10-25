@@ -923,10 +923,10 @@ def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
     Arguments<(ins
-                   I32Attr:$m,
-                   I32Attr:$n,
-                   I32Attr:$k,
-                   I32Attr:$blocks,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[4, 16, 32]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[4, 16, 32]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[1, 2, 4, 8, 16, 32, 64, 128]>]>:$k,
+                   DefaultValuedAttr<ConfinedAttr<I32Attr, [IntIsOneOf<[1, 2, 4, 16]>]>, "1">:$blocks,
                    MFMAInTypes:$sourceA,
                    MFMAInTypes:$sourceB,
                    MFMAOutTypes:$destC,
@@ -969,14 +969,16 @@ def AMDGPU_MFMAOp :
 
     Example:
     ```mlir
-      %0 = amdgpu.mfma %matA * %matB + %matC
-        { abid = 1 : i32, cbsz = 1 : i32,
-          m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32 }
+      %0 = amdgpu.mfma 16x16x16 %matA * %matB + %matC
+        : vector<4xf16>, vector<4xf16>, vector<4xf32>
+
+      %1 = amdgpu.mfma 32x32x1 %matD * %matE + %matF
+        { abid = 1 : i32, cbsz = 1 : i32, blocks = 2 : i32 }
         blgp = bcast_second_32 : f32, f32, vector<32xf32>
     ```
   }];
   let assemblyFormat = [{
-    $sourceA `*` $sourceB `+` $destC
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     attr-dict
     `blgp` `=` $blgp
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)

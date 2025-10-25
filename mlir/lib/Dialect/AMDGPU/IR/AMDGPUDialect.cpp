@@ -422,11 +422,11 @@ LogicalResult MFMAOp::verify() {
 
   Type sourceElem = sourceType, destElem = destType;
   uint32_t sourceLen = 1, destLen = 1;
-  if (auto sourceVector = llvm::dyn_cast<VectorType>(sourceType)) {
+  if (auto sourceVector = dyn_cast<VectorType>(sourceType)) {
     sourceLen = sourceVector.getNumElements();
     sourceElem = sourceVector.getElementType();
   }
-  if (auto destVector = llvm::dyn_cast<VectorType>(destType)) {
+  if (auto destVector = dyn_cast<VectorType>(destType)) {
     destLen = destVector.getNumElements();
     destElem = destVector.getElementType();
   }
@@ -451,7 +451,7 @@ LogicalResult MFMAOp::verify() {
       return emitOpError("expected both non-small-float source operand types "
                          "to match exactly");
   }
-  // Normalize the wider integer types the compiler expects to i8
+  // Normalize the wider integer types the compiler expects to i8.
   if (sourceElem.isInteger(32)) {
     sourceLen *= 4;
     sourceElem = b.getI8Type();
