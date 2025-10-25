@@ -1433,9 +1433,9 @@ public:
   /// \p High as its lowest and highest case values, and expects \p NumCmps
   /// case value comparisons. Check if the number of destinations, comparison
   /// metric, and range are all suitable.
-  bool isSuitableForBitTests(unsigned NumDests, unsigned NumCmps,
-                             const APInt &Low, const APInt &High,
-                             const DataLayout &DL) const {
+  bool isSuitableForBitTests(
+      const DenseMap<const BasicBlock *, unsigned int> &DestCmps,
+      const APInt &Low, const APInt &High, const DataLayout &DL) const {
     // FIXME: I don't think NumCmps is the correct metric: a single case and a
     // range of cases both require only one branch to lower. Just looking at the
     // number of clusters and destinations should be enough to decide whether to
@@ -1444,6 +1444,20 @@ public:
     // To lower a range with bit tests, the range must fit the bitwidth of a
     // machine word.
     if (!rangeFitsInWord(Low, High, DL))
+      return false;
+
+    unsigned NumDests = DestCmps.size();
+    unsigned NumCmps = 0;
+    unsigned int MaxBitTestEntry = 0;
+    for (auto &DestCmp : DestCmps) {
+      NumCmps += DestCmp.second;
+      if (DestCmp.second > MaxBitTestEntry)
+        MaxBitTestEntry = DestCmp.second;
+    }
+
+    // Comparisons might be cheaper for small number of comparisons, which can
+    // be Arch Target specific.
+    if (MaxBitTestEntry < getMinimumBitTestCmps())
       return false;
 
     // Decide whether it's profitable to lower this range with bit tests. Each
@@ -2055,6 +2069,9 @@ public:
 
   virtual bool isJumpTableRelative() const;
 
+  /// Retuen the minimum of largest number of comparisons in BitTest.
+  unsigned getMinimumBitTestCmps() const;
+
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   Register getStackPointerRegisterToSaveRestore() const {
@@ -2576,6 +2593,9 @@ protected:
   /// Indicate the maximum number of entries in jump tables.
   /// Set to zero to generate unlimited jump tables.
   void setMaximumJumpTableSize(unsigned);
+
+  /// Set the minimum of largest of number of comparisons to generate BitTest.
+  void setMinimumBitTestCmps(unsigned Val);
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -3718,6 +3738,9 @@ private:
   /// Size in bits of the minimum cmpxchg or ll/sc operation the
   /// backend supports.
   unsigned MinCmpXchgSizeInBits;
+
+  /// The minimum of largest number of comparisons to use bit test for switch.
+  unsigned MinimumBitTestCmps;
 
   /// This indicates if the target supports unaligned atomic operations.
   bool SupportsUnalignedAtomics;
