@@ -9,9 +9,6 @@
 // RUN: %run %t 6 2>&1 | FileCheck %s --check-prefix=CHECK-6
 // RUN: %run %t 7 2>&1 | FileCheck %s --check-prefix=CHECK-7
 
-// Issue #41838
-// XFAIL: sparc-target-arch && target={{.*solaris.*}}
-
 // This test assumes float and double are IEEE-754 single- and double-precision.
 
 #if defined(__APPLE__)
