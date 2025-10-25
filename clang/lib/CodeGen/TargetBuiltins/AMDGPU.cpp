@@ -133,8 +133,8 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   }
 
   llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-  llvm::MDNode *RNode = MDHelper.createRange(
-      APInt(16, 1), APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
+  llvm::MDNode *RNode = MDHelper.createRange(APInt(16, 1),
+      APInt(16, CGF.getTarget().getMaxOpenCLWorkGroupSize() + 1));
   LD->setMetadata(llvm::LLVMContext::MD_range, RNode);
   LD->setMetadata(llvm::LLVMContext::MD_noundef,
                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
@@ -253,7 +253,8 @@ emitAMDGCNImageOverloadedReturnType(clang::CodeGen::CodeGenFunction &CGF,
 }
 
 // Emit an intrinsic that has 1 float or double operand, and 1 integer.
-static Value *emitFPIntBuiltin(CodeGenFunction &CGF, const CallExpr *E,
+static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
+                               const CallExpr *E,
                                unsigned IntrinsicID) {
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
@@ -455,8 +456,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Y = EmitScalarExpr(E->getArg(1));
     llvm::Value *Z = EmitScalarExpr(E->getArg(2));
 
-    llvm::Function *Callee =
-        CGM.getIntrinsic(Intrinsic::amdgcn_div_scale, X->getType());
+    llvm::Function *Callee = CGM.getIntrinsic(Intrinsic::amdgcn_div_scale,
+                                           X->getType());
 
     llvm::Value *Tmp = Builder.CreateCall(Callee, {X, Y, Z});
 
@@ -476,8 +477,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
     llvm::Value *Src3 = EmitScalarExpr(E->getArg(3));
 
-    llvm::Function *F =
-        CGM.getIntrinsic(Intrinsic::amdgcn_div_fmas, Src0->getType());
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_div_fmas,
+                                      Src0->getType());
     llvm::Value *Src3ToBool = Builder.CreateIsNotNull(Src3);
     return Builder.CreateCall(F, {Src0, Src1, Src2, Src3ToBool});
   }
@@ -618,13 +619,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_frexp_expf: {
     Value *Src0 = EmitScalarExpr(E->getArg(0));
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_frexp_exp,
-                                   {Builder.getInt32Ty(), Src0->getType()});
+                                { Builder.getInt32Ty(), Src0->getType() });
     return Builder.CreateCall(F, Src0);
   }
   case AMDGPU::BI__builtin_amdgcn_frexp_exph: {
     Value *Src0 = EmitScalarExpr(E->getArg(0));
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_frexp_exp,
-                                   {Builder.getInt16Ty(), Src0->getType()});
+                                { Builder.getInt16Ty(), Src0->getType() });
     return Builder.CreateCall(F, Src0);
   }
   case AMDGPU::BI__builtin_amdgcn_fract:
@@ -670,8 +671,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     // FIXME-GFX10: How should 32 bit mask be handled?
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_icmp,
-                                   {Builder.getInt64Ty(), Src0->getType()});
-    return Builder.CreateCall(F, {Src0, Src1, Src2});
+      { Builder.getInt64Ty(), Src0->getType() });
+    return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
   case AMDGPU::BI__builtin_amdgcn_fcmp:
   case AMDGPU::BI__builtin_amdgcn_fcmpf: {
@@ -681,8 +682,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     // FIXME-GFX10: How should 32 bit mask be handled?
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_fcmp,
-                                   {Builder.getInt64Ty(), Src0->getType()});
-    return Builder.CreateCall(F, {Src0, Src1, Src2});
+      { Builder.getInt64Ty(), Src0->getType() });
+    return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
   case AMDGPU::BI__builtin_amdgcn_class:
   case AMDGPU::BI__builtin_amdgcn_classf:
@@ -694,12 +695,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                                Intrinsic::amdgcn_fmed3);
   case AMDGPU::BI__builtin_amdgcn_ds_append:
   case AMDGPU::BI__builtin_amdgcn_ds_consume: {
-    Intrinsic::ID Intrin = BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_append
-                               ? Intrinsic::amdgcn_ds_append
-                               : Intrinsic::amdgcn_ds_consume;
+    Intrinsic::ID Intrin = BuiltinID == AMDGPU::BI__builtin_amdgcn_ds_append ?
+      Intrinsic::amdgcn_ds_append : Intrinsic::amdgcn_ds_consume;
     Value *Src0 = EmitScalarExpr(E->getArg(0));
-    Function *F = CGM.getIntrinsic(Intrin, {Src0->getType()});
-    return Builder.CreateCall(F, {Src0, Builder.getFalse()});
+    Function *F = CGM.getIntrinsic(Intrin, { Src0->getType() });
+    return Builder.CreateCall(F, { Src0, Builder.getFalse() });
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
@@ -919,10 +919,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     // The builtins take these arguments as vec4 where the last element is
     // ignored. The intrinsic takes them as vec3.
-    RayOrigin = Builder.CreateShuffleVector(RayOrigin, RayOrigin, {0, 1, 2});
-    RayDir = Builder.CreateShuffleVector(RayDir, RayDir, {0, 1, 2});
-    RayInverseDir =
-        Builder.CreateShuffleVector(RayInverseDir, RayInverseDir, {0, 1, 2});
+    RayOrigin = Builder.CreateShuffleVector(RayOrigin, RayOrigin,
+                                            {0, 1, 2});
+    RayDir =
+        Builder.CreateShuffleVector(RayDir, RayDir, {0, 1, 2});
+    RayInverseDir = Builder.CreateShuffleVector(RayInverseDir, RayInverseDir,
+                                                {0, 1, 2});
 
     Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_image_bvh_intersect_ray,
                                    {NodePtr->getType(), RayDir->getType()});
@@ -996,8 +998,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Value *Rtn = Builder.CreateExtractValue(Call, 0);
     Value *A = Builder.CreateExtractValue(Call, 1);
     llvm::Type *RetTy = ConvertType(E->getType());
-    Value *I0 =
-        Builder.CreateInsertElement(PoisonValue::get(RetTy), Rtn, (uint64_t)0);
+    Value *I0 = Builder.CreateInsertElement(PoisonValue::get(RetTy), Rtn,
+                                            (uint64_t)0);
     // ds_bvh_stack_push8_pop2_rtn returns {i64, i32} but the builtin returns
     // <2 x i64>, zext the second value.
     if (A->getType()->getPrimitiveSizeInBits() <
@@ -1702,7 +1704,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
     llvm::Value *Src2 = EmitScalarExpr(E->getArg(2));
     Function *F = CGM.getIntrinsic(Intrinsic::fshr, Src0->getType());
-    return Builder.CreateCall(F, {Src0, Src1, Src2});
+    return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
   case AMDGPU::BI__builtin_amdgcn_fence: {
     ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),

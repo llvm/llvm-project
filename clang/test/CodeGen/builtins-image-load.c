@@ -3,7 +3,8 @@
 
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef float float4 __attribute__((ext_vector_type(4)));
-typedef _Float16 half4 __attribute__((ext_vector_type(4)));
+typedef _Float16 half;
+typedef half half4 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: define dso_local float @test_builtin_image_load_2d(
 // CHECK-SAME: float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]]) #[[ATTR0:[0-9]+]] {

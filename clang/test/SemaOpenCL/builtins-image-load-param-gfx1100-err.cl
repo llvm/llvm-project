@@ -3,7 +3,7 @@
 
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef float float4 __attribute__((ext_vector_type(4)));
-typedef _Float16 half4 __attribute__((ext_vector_type(4)));
+typedef half half4 __attribute__((ext_vector_type(4)));
 
 float test_builtin_image_load_2d(float f32, int i32, __amdgpu_texture_t tex) {
 
