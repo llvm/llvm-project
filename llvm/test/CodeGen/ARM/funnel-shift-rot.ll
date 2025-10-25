@@ -19,7 +19,7 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i8 @rotl_i8_const_shift(i8 %x) {
 ; CHECK-LABEL: rotl_i8_const_shift:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    uxtb r1, r0
+; CHECK-NEXT:    and r1, r0, #224
 ; CHECK-NEXT:    lsl r0, r0, #3
 ; CHECK-NEXT:    orr r0, r0, r1, lsr #5
 ; CHECK-NEXT:    bx lr
@@ -161,8 +161,7 @@ define <4 x i32> @rotl_v4i32_rotl_const_shift(<4 x i32> %x) {
 define i8 @rotr_i8_const_shift(i8 %x) {
 ; CHECK-LABEL: rotr_i8_const_shift:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    uxtb r1, r0
-; CHECK-NEXT:    lsr r1, r1, #3
+; CHECK-NEXT:    ubfx r1, r0, #3, #5
 ; CHECK-NEXT:    orr r0, r1, r0, lsl #5
 ; CHECK-NEXT:    bx lr
   %f = call i8 @llvm.fshr.i8(i8 %x, i8 %x, i8 3)

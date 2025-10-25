@@ -118,6 +118,7 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-isel"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
+STATISTIC(NumOptimizedImms, "Number of times immediates were optimized");
 STATISTIC(NumMovwMovt, "Number of GAs materialized with movw + movt");
 STATISTIC(NumLoopByVals, "Number of loops generated for byval arguments");
 STATISTIC(NumConstpoolPromoted,
@@ -127,6 +128,12 @@ static cl::opt<bool>
 ARMInterworking("arm-interworking", cl::Hidden,
   cl::desc("Enable / disable ARM interworking (for debugging only)"),
   cl::init(true));
+
+static cl::opt<bool>
+    EnableOptimizeLogicalImm("arm-enable-logical-imm", cl::Hidden,
+                             cl::desc("Enable ARM logical imm instruction "
+                                      "optimization"),
+                             cl::init(true));
 
 static cl::opt<bool> EnableConstpoolPromotion(
     "arm-promote-constant", cl::Hidden,
@@ -20138,6 +20145,112 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
+static bool isLegalLogicalImmediate(unsigned Imm,
+                                    const ARMSubtarget *Subtarget) {
+  // Handle special cases first
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal(Imm) != -1;
+  if (Subtarget->isThumb2())
+    return ARM_AM::getT2SOImmVal(Imm) != -1;
+  // Thumb1 only has 8-bit unsigned immediate.
+  return Imm <= 255;
+}
+
+static bool optimizeLogicalImm(SDValue Op, unsigned Imm, const APInt &Demanded,
+                               TargetLowering::TargetLoweringOpt &TLO,
+                               unsigned NewOpc, const ARMSubtarget *Subtarget) {
+  unsigned OldImm = Imm, NewImm;
+
+  // Return if the immediate is already all zeros, all ones, a bimm32.
+  if (Imm == 0 || Imm == ~0U || isLegalLogicalImmediate(Imm, Subtarget))
+    return false;
+
+  // bic/orn/eon
+  if ((Op.getOpcode() == ISD::AND ||
+       (Subtarget->isThumb2() && Op.getOpcode() == ISD::OR)) &&
+      isLegalLogicalImmediate(~Imm, Subtarget))
+    return false;
+
+  unsigned DemandedBits = Demanded.getZExtValue();
+
+  // Clear bits that are not demanded.
+  Imm &= DemandedBits;
+
+  // Try to extend the immediate to a legal ARM rotating immediate
+  // by filling in non-demanded bits. ARM supports:
+  // - An 8-bit value rotated by an even number of bits (0, 2, 4, 6, ..., 30)
+  // - Any 8-bit immediate (Thumb2 also supports 16-bit splat patterns)
+  unsigned NonDemandedBits = ~DemandedBits;
+
+  // Try filling with 0
+  NewImm = Imm & DemandedBits;
+  if (isLegalLogicalImmediate(NewImm, Subtarget) ||
+      ((Op.getOpcode() == ISD::AND ||
+        (Subtarget->isThumb2() && Op.getOpcode() == ISD::OR)) &&
+       isLegalLogicalImmediate(~NewImm, Subtarget))) {
+    ++NumOptimizedImms;
+  } else {
+    // Try filling with 1
+    NewImm = Imm | NonDemandedBits;
+    if (isLegalLogicalImmediate(NewImm, Subtarget) ||
+        ((Op.getOpcode() == ISD::AND ||
+          (Subtarget->isThumb2() && Op.getOpcode() == ISD::OR)) &&
+         isLegalLogicalImmediate(~NewImm, Subtarget))) {
+      ++NumOptimizedImms;
+    } else {
+      return false;
+    }
+  }
+
+  (void)OldImm;
+  assert(((OldImm ^ NewImm) & Demanded.getZExtValue()) == 0 &&
+         "demanded bits should never be altered");
+  assert(OldImm != NewImm && "the new imm shouldn't be equal to the old imm");
+
+  // Create the new constant immediate node.
+  EVT VT = Op.getValueType();
+  SDLoc DL(Op);
+  SDValue New;
+
+  // If the new constant immediate is all-zeros or all-ones, let the target
+  // independent DAG combine optimize this node.
+  if (NewImm == 0 || NewImm == ~0U) {
+    New = TLO.DAG.getNode(Op.getOpcode(), DL, VT, Op.getOperand(0),
+                          TLO.DAG.getConstant(NewImm, DL, VT));
+    // Otherwise, create a machine node so that target independent DAG combine
+    // doesn't undo this optimization.
+  } else {
+    // bic/orn/eon
+    if (isLegalLogicalImmediate(NewImm, Subtarget)) {
+      SDValue EncConst = TLO.DAG.getTargetConstant(NewImm, DL, VT);
+      New = SDValue(
+          TLO.DAG.getMachineNode(NewOpc, DL, VT, Op.getOperand(0), EncConst),
+          0);
+    } else if ((Op.getOpcode() == ISD::AND ||
+                (Subtarget->isThumb2() && Op.getOpcode() == ISD::OR)) &&
+               isLegalLogicalImmediate(~NewImm, Subtarget)) {
+
+      if (Op.getOpcode() == ISD::OR) {
+        // ORN
+        NewOpc = ARM::t2ORNri;
+      } else {
+        // AND -> BIC
+        NewOpc = Subtarget->isThumb()
+                     ? Subtarget->isThumb2() ? ARM::t2BICri : ARM::tBIC
+                     : ARM::BICri;
+      }
+      SDValue EncConst = TLO.DAG.getTargetConstant(~NewImm, DL, VT);
+      New = SDValue(
+          TLO.DAG.getMachineNode(NewOpc, DL, VT, Op.getOperand(0), EncConst),
+          0);
+    } else {
+      return false;
+    }
+  }
+
+  return TLO.CombineTo(Op, New);
+}
+
 bool ARMTargetLowering::targetShrinkDemandedConstant(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     TargetLoweringOpt &TLO) const {
@@ -20146,17 +20259,18 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   if (!TLO.LegalOps)
     return false;
 
-  // Only optimize AND for now.
-  if (Op.getOpcode() != ISD::AND)
+  if (!EnableOptimizeLogicalImm)
     return false;
 
   EVT VT = Op.getValueType();
-
-  // Ignore vectors.
   if (VT.isVector())
     return false;
 
   assert(VT == MVT::i32 && "Unexpected integer type");
+
+  // Exit early if we demand all bits.
+  if (DemandedBits.popcount() == 32)
+    return false;
 
   // Make sure the RHS really is a constant.
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
@@ -20165,59 +20279,62 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
 
   unsigned Mask = C->getZExtValue();
 
-  unsigned Demanded = DemandedBits.getZExtValue();
-  unsigned ShrunkMask = Mask & Demanded;
-  unsigned ExpandedMask = Mask | ~Demanded;
+  // If thumb, check for uxth and uxtb masks.
+  if (Subtarget->isThumb1Only() && Op.getOpcode() == ISD::AND) {
+    unsigned Demanded = DemandedBits.getZExtValue();
+    unsigned ShrunkMask = Mask & Demanded;
+    unsigned ExpandedMask = Mask | ~Demanded;
 
-  // If the mask is all zeros, let the target-independent code replace the
-  // result with zero.
-  if (ShrunkMask == 0)
+    // If the mask is all zeros, let the target-independent code replace the
+    // result with zero.
+    if (ShrunkMask == 0)
+      return false;
+
+    // If the mask is all ones, erase the AND. (Currently, the
+    // target-independent code won't do this, so we have to do it explicitly to
+    // avoid an infinite loop in obscure cases.)
+    if (ExpandedMask == ~0U)
+      return TLO.CombineTo(Op, Op.getOperand(0));
+    auto IsLegalMask = [ShrunkMask, ExpandedMask](unsigned Mask) -> bool {
+      return (ShrunkMask & Mask) == ShrunkMask && (~ExpandedMask & Mask) == 0;
+    };
+    auto UseMask = [Mask, Op, VT, &TLO](unsigned NewMask) -> bool {
+      if (NewMask == Mask)
+        return true;
+      SDLoc DL(Op);
+      SDValue NewC = TLO.DAG.getConstant(NewMask, DL, VT);
+      SDValue NewOp = TLO.DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), NewC);
+      return TLO.CombineTo(Op, NewOp);
+    };
+
+    if (IsLegalMask(0xFF))
+      return UseMask(0xFF);
+    if (IsLegalMask(0xFFFF))
+      return UseMask(0xFFFF);
+  }
+
+  unsigned NewOpc;
+  switch (Op.getOpcode()) {
+  default:
     return false;
+  case ISD::AND:
+    NewOpc = Subtarget->isThumb()
+                 ? Subtarget->isThumb2() ? ARM::t2ANDri : ARM::tAND
+                 : ARM::ANDri;
+    break;
+  case ISD::OR:
+    NewOpc = Subtarget->isThumb()
+                 ? Subtarget->isThumb2() ? ARM::t2ORRri : ARM::tORR
+                 : ARM::ORRri;
+    break;
+  case ISD::XOR:
+    NewOpc = Subtarget->isThumb()
+                 ? Subtarget->isThumb2() ? ARM::t2EORri : ARM::tEOR
+                 : ARM::EORri;
+    break;
+  }
 
-  // If the mask is all ones, erase the AND. (Currently, the target-independent
-  // code won't do this, so we have to do it explicitly to avoid an infinite
-  // loop in obscure cases.)
-  if (ExpandedMask == ~0U)
-    return TLO.CombineTo(Op, Op.getOperand(0));
-
-  auto IsLegalMask = [ShrunkMask, ExpandedMask](unsigned Mask) -> bool {
-    return (ShrunkMask & Mask) == ShrunkMask && (~ExpandedMask & Mask) == 0;
-  };
-  auto UseMask = [Mask, Op, VT, &TLO](unsigned NewMask) -> bool {
-    if (NewMask == Mask)
-      return true;
-    SDLoc DL(Op);
-    SDValue NewC = TLO.DAG.getConstant(NewMask, DL, VT);
-    SDValue NewOp = TLO.DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), NewC);
-    return TLO.CombineTo(Op, NewOp);
-  };
-
-  // Prefer uxtb mask.
-  if (IsLegalMask(0xFF))
-    return UseMask(0xFF);
-
-  // Prefer uxth mask.
-  if (IsLegalMask(0xFFFF))
-    return UseMask(0xFFFF);
-
-  // [1, 255] is Thumb1 movs+ands, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if (ShrunkMask < 256)
-    return UseMask(ShrunkMask);
-
-  // [-256, -2] is Thumb1 movs+bics, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if ((int)ExpandedMask <= -2 && (int)ExpandedMask >= -256)
-    return UseMask(ExpandedMask);
-
-  // Potential improvements:
-  //
-  // We could try to recognize lsls+lsrs or lsrs+lsls pairs here.
-  // We could try to prefer Thumb1 immediates which can be lowered to a
-  // two-instruction sequence.
-  // We could try to recognize more legal ARM/Thumb2 immediates here.
-
-  return false;
+  return optimizeLogicalImm(Op, Mask, DemandedBits, TLO, NewOpc, Subtarget);
 }
 
 bool ARMTargetLowering::SimplifyDemandedBitsForTargetNode(
