@@ -121,11 +121,11 @@ void SpecialCaseList::GlobMatcher::match(
          SuffixPrefixToGlob.find_prefixes(reverse(Query))) {
       for (const auto &[_, V] : PToGlob.find_prefixes(Query)) {
         for (const auto *G : V) {
-          // Each value of the map is vector of globs sorted as from best to
+          // Each value of the map is a vector of globs sorted as from best to
           // worst.
           if (G->Pattern.match(Query)) {
             Cb(G->Name, G->LineNo);
-            // As soon as we find match in the vector we can break for the
+            // As soon as we find a match in the vector we can break for the vector,
             // vector, but we still need to continue for other values in the
             // map, as they may contain a better match.
             break;
