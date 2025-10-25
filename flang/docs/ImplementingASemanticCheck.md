@@ -775,7 +775,7 @@ to make sure that the names were clear.  Here's what I ended up with:
 
 ```C++
   void DoChecker::Leave(const parser::Expr &parsedExpr) {
-    ActualArgumentSet argSet{CollectActualArguments(GetExpr(parsedExpr))};
+    ActualArgumentSet argSet{CollectActualArguments((parsedExpr))};
     for (const evaluate::ActualArgumentRef &argRef : argSet) {
       if (const SomeExpr * argExpr{argRef->UnwrapExpr()}) {
         if (const Symbol * var{evaluate::UnwrapWholeSymbolDataRef(*argExpr)}) {
