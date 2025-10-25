@@ -15,7 +15,7 @@
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
-FUNCTION_PASS("x86-lower-amx-type", X86LowerAMXTypePass(*this))
+FUNCTION_PASS("x86-lower-amx-type", X86LowerAMXTypePass(this))
 #undef FUNCTION_PASS
 
 #ifndef DUMMY_FUNCTION_PASS

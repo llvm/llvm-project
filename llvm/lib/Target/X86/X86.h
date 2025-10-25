@@ -167,11 +167,12 @@ FunctionPass *createX86WinEHUnwindV2Pass();
 /// or split the data to two <128 x i32>.
 class X86LowerAMXTypePass : public PassInfoMixin<X86LowerAMXTypePass> {
 private:
-  const TargetMachine &TM;
+  const TargetMachine *TM;
 
 public:
-  X86LowerAMXTypePass(const TargetMachine &TM) : TM(TM) {}
+  X86LowerAMXTypePass(const TargetMachine *TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
 };
 
 FunctionPass *createX86LowerAMXTypeLegacyPass();

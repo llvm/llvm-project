@@ -1461,7 +1461,7 @@ bool lowerAmxType(Function &F, const TargetMachine *TM,
   if (TM->getOptLevel() == CodeGenOptLevel::None) {
     // If Front End not use O0 but the Mid/Back end use O0, (e.g.
     // "Clang -O2 -S -emit-llvm t.c" + "llc t.ll") we should make
-    // sure the amx data is volatile, that is nessary for AMX fast
+    // sure the amx data is volatile, that is necessary for AMX fast
     // register allocation.
     if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
       X86VolatileTileData VTD(F);
@@ -1477,7 +1477,7 @@ bool lowerAmxType(Function &F, const TargetMachine *TM,
 PreservedAnalyses X86LowerAMXTypePass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-  bool Changed = lowerAmxType(F, &TM, &TLI);
+  bool Changed = lowerAmxType(F, TM, &TLI);
   if (!Changed)
     return PreservedAnalyses::all();
 
