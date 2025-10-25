@@ -2,9 +2,8 @@
 ; RUN: opt -passes='print<scalar-evolution>' -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout="p64:64:64:64"
-
+t
 define void @ptrtoaddr(ptr %in, ptr %out0, ptr %out1, ptr %out2, ptr %out3) {
-;
 ; CHECK-LABEL: 'ptrtoaddr'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in to i64
@@ -17,7 +16,6 @@ define void @ptrtoaddr(ptr %in, ptr %out0, ptr %out1, ptr %out2, ptr %out3) {
 }
 
 define void @ptrtoaddr_as1(ptr addrspace(1) %in, ptr %out0, ptr %out1, ptr %out2, ptr %out3) {
-;
 ; CHECK-LABEL: 'ptrtoaddr_as1'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_as1
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr addrspace(1) %in to i64
@@ -30,7 +28,6 @@ define void @ptrtoaddr_as1(ptr addrspace(1) %in, ptr %out0, ptr %out1, ptr %out2
 }
 
 define void @ptrtoaddr_of_bitcast(ptr %in, ptr %out0) {
-;
 ; CHECK-LABEL: 'ptrtoaddr_of_bitcast'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_of_bitcast
 ; CHECK-NEXT:    %in_casted = bitcast ptr %in to ptr
@@ -46,7 +43,6 @@ define void @ptrtoaddr_of_bitcast(ptr %in, ptr %out0) {
 }
 
 define void @ptrtoaddr_of_nullptr(ptr %out0) {
-;
 ; CHECK-LABEL: 'ptrtoaddr_of_nullptr'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_of_nullptr
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr null to i64
@@ -59,7 +55,6 @@ define void @ptrtoaddr_of_nullptr(ptr %out0) {
 }
 
 define void @ptrtoaddr_of_gep(ptr %in, ptr %out0) {
-;
 ; CHECK-LABEL: 'ptrtoaddr_of_gep'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_of_gep
 ; CHECK-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
