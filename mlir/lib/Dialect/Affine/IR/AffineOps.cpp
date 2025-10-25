@@ -2740,9 +2740,9 @@ struct SimplifyTrivialLoops : public OpRewritePattern<AffineForOp> {
     SmallVector<Value> blockArgs;
     blockArgs.reserve(forOp.getInits().size() + 1);
     rewriter.setInsertionPointToStart(forOp.getBody());
-    Value lower =
-        rewriter.create<AffineApplyOp>(forOp.getLoc(), forOp.getLowerBoundMap(),
-                                       forOp.getLowerBoundOperands());
+    Value lower = AffineApplyOp::create(
+        rewriter, forOp.getLoc(), forOp.getLowerBoundMap(),
+        ValueRange(forOp.getLowerBoundOperands()));
     forOp.getInductionVar().replaceAllUsesWith(lower);
     blockArgs.push_back(lower);
     llvm::append_range(blockArgs, forOp.getInits());

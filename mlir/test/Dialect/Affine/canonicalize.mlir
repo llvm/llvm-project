@@ -2403,6 +2403,7 @@ func.func @for_empty_body_folder_iv_yield() -> index {
 // parent block.
 
 // CHECK-LABEL: func @promote_single_iter_loop
+// CHECK-SAME:    %[[IN:.*]]: memref<1xf32>, %[[OUT:.*]]: memref<1xf32>
 func.func @promote_single_iter_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
   affine.for %i = 0 to 1 {
     %1 = affine.load %in[%i] : memref<1xf32>
@@ -2411,7 +2412,5 @@ func.func @promote_single_iter_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
   return
 }
 
-// CHECK-NEXT: arith.constant
-// CHECK-NEXT: affine.load
-// CHECK-NEXT: affine.store
-// CHECK-NEXT: return
+// CHECK-NEXT: %[[DATA:.*]] = affine.load %[[IN]][0]
+// CHECK-NEXT: affine.store %[[DATA]], %[[OUT]][0]
