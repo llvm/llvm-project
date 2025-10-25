@@ -1566,7 +1566,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   }
 
   if (NextNonComment->isOneOf(TT_StartOfName, TT_PointerOrReference) ||
-      Previous.isOneOf(tok::coloncolon, tok::equal, TT_JsTypeColon)) {
+      Previous.isOneOf(TT_PointerOrReference, tok::coloncolon, tok::equal,
+                       TT_JsTypeColon)) {
     return ContinuationIndent;
   }
   if (PreviousNonComment && PreviousNonComment->is(tok::colon) &&
