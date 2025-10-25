@@ -52,5 +52,5 @@ jobs:
         working-directory: utils/bazel
         run: |
           bazel test --config=ci @llvm-project//llvm/... \
-            @llvm-project/clang/... \
-            @llvm-project/mlir/...
+            @llvm-project//clang/... \
+            @llvm-project//mlir/...
