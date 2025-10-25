@@ -1772,8 +1772,17 @@ bool TargetLowering::SimplifyDemandedBits(
       if (DemandedBits.isSignMask() &&
           Op0.getScalarValueSizeInBits() == BitWidth &&
           getBooleanContents(Op0.getValueType()) ==
-              BooleanContent::ZeroOrNegativeOneBooleanContent)
-        Changed |= TLO.CombineTo(Op, Op0);
+              BooleanContent::ZeroOrNegativeOneBooleanContent) {
+        if (CC == ISD::SETGE) {
+          SDLoc DL(Op); 
+          EVT VT = Op0.getValueType();
+          SDValue NotOp0 = TLO.DAG.getNode(ISD::XOR, DL, VT, Op0, TLO.DAG.getAllOnesConstant(DL, VT));
+          Changed |= TLO.CombineTo(Op, NotOp0);
+        }
+        else {
+          Changed |= TLO.CombineTo(Op, Op0);
+        }
+      }        
       return Changed;
     }
     // TODO: Should we check for other forms of sign-bit comparisons?
