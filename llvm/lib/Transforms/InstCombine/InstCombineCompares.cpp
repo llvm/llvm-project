@@ -5893,9 +5893,9 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
     Offsets.emplace_back(Instruction::Xor, Inst->getOperand(0));
     break;
   case Instruction::Shl:
-    if (match(Inst, m_NSWShl(m_Value(), m_Value())))
+    if (Inst->hasNoSignedWrap())
       Offsets.emplace_back(Instruction::AShr, Inst->getOperand(1));
-    if (match(Inst, m_NUWShl(m_Value(), m_Value())))
+    if (Inst->hasNoUnsignedWrap())
       Offsets.emplace_back(Instruction::LShr, Inst->getOperand(1));
     break;
   case Instruction::Select:
@@ -5958,18 +5958,16 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
     // V = shl nsw X, RHS => X = ashr V, RHS
     case Instruction::AShr: {
       const APInt *CV, *CRHS;
-      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
-            CV->ashr(*CRHS).shl(*CRHS) == *CV) &&
-          !match(V, m_NSWShl(m_Value(), m_Specific(RHS))))
+      if (match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+          CV->ashr(*CRHS).shl(*CRHS) != *CV)
         return nullptr;
       break;
     }
     // V = shl nuw X, RHS => X = lshr V, RHS
     case Instruction::LShr: {
       const APInt *CV, *CRHS;
-      if (!(match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
-            CV->lshr(*CRHS).shl(*CRHS) == *CV) &&
-          !match(V, m_NUWShl(m_Value(), m_Specific(RHS))))
+      if (match(V, m_APInt(CV)) && match(RHS, m_APInt(CRHS)) &&
+          CV->lshr(*CRHS).shl(*CRHS) != *CV)
         return nullptr;
       break;
     }
@@ -5978,8 +5976,7 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
     }
 
     Value *Simplified = simplifyBinOp(BinOpc, V, RHS, SQ);
-    // Avoid infinite loops by checking if RHS is an identity for the BinOp.
-    if (!Simplified || Simplified == V)
+    if (!Simplified)
       return nullptr;
     // Reject constant expressions as they don't simplify things.
     if (isa<Constant>(Simplified) && !match(Simplified, m_ImmConstant()))
