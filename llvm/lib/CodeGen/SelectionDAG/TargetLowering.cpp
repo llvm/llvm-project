@@ -9900,7 +9900,7 @@ SDValue TargetLowering::expandBSWAP(SDNode *N, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::ROTL, dl, VT, Op, DAG.getConstant(8, dl, SHVT));
   case MVT::i32:
     // This is meant for ARM speficially, which has ROTR but no ROTL.
-    if (isOperationLegal(ISD::ROTR, VT)) {
+    if (isOperationLegalOrCustom(ISD::ROTR, VT)) {
       SDValue Mask = DAG.getConstant(0x00FF00FF, dl, VT);
       // (x & 0x00FF00FF) rotr 8 | (x rotl 8) & 0x00FF00FF
       SDValue And = DAG.getNode(ISD::AND, dl, VT, Op, Mask);
