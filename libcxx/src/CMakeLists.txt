@@ -47,10 +47,6 @@ set(LIBCXX_SOURCES
   support/runtime/exception_libcxxabi.ipp
   support/runtime/exception_libcxxrt.ipp
   support/runtime/exception_msvc.ipp
-  support/runtime/exception_pointer_cxxabi.ipp
-  support/runtime/exception_pointer_glibcxx.ipp
-  support/runtime/exception_pointer_msvc.ipp
-  support/runtime/exception_pointer_unimplemented.ipp
   support/runtime/stdexcept_default.ipp
   support/runtime/stdexcept_vcruntime.ipp
   system_error.cpp

@@ -7,9 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPPABI_VERSION
-#  error this header can only be used with libc++abi
-#endif
+#include <cxxabi.h>
 
 namespace std {
 
@@ -17,9 +15,9 @@ bool uncaught_exception() noexcept { return uncaught_exceptions() > 0; }
 
 int uncaught_exceptions() noexcept {
 #if _LIBCPPABI_VERSION > 1001
-  return __cxa_uncaught_exceptions();
+  return __cxxabiv1::__cxa_uncaught_exceptions();
 #else
-  return __cxa_uncaught_exception() ? 1 : 0;
+  return __cxxabiv1::__cxa_uncaught_exception() ? 1 : 0;
 #endif
 }
 

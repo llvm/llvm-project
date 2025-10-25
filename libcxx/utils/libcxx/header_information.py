@@ -113,6 +113,10 @@ class Header:
         if self._name in ["cxxabi.h", "__cxxabi_config.h"]:
             return False
 
+        # exclude .ipp files - these are implementation details included by other headers
+        if self._name.endswith(".ipp"):
+            return False
+
         # exclude headers in __support/ - these aren't supposed to work everywhere,
         # so they shouldn't be included in general
         if self._name.startswith("__support/"):
