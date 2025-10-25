@@ -154,6 +154,13 @@ let Features = "zihintpause", Attributes = [NoThrow] in
 def pause : RISCVBuiltin<"void()">;
 
 //===----------------------------------------------------------------------===//
+// Zicboz extension.
+//===----------------------------------------------------------------------===//
+let Features = "zicboz" in {
+def cbo_zero : RISCVBuiltin<"void(void *)">;
+} // Features = "zicboz"
+
+//===----------------------------------------------------------------------===//
 // XCV extensions.
 //===----------------------------------------------------------------------===//
 include "clang/Basic/BuiltinsRISCVXCV.td"

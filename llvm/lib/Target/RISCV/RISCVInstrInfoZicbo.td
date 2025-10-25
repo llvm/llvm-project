@@ -56,6 +56,7 @@ def CBO_INVAL : CBO_r<0b000000000000, "cbo.inval">, Sched<[]>;
 
 let Predicates = [HasStdExtZicboz] in {
 def CBO_ZERO : CBO_r<0b000000000100, "cbo.zero">, Sched<[]>;
+def : Pat<(int_riscv_cbo_zero GPR:$rs1), (CBO_ZERO GPR:$rs1)>;
 } // Predicates = [HasStdExtZicboz]
 
 let Predicates = [HasStdExtZicbop, NoVendorXMIPSCBOP] in {
