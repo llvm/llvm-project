@@ -166,10 +166,10 @@ private:
 
     std::vector<GlobMatcher::Glob> Globs;
 
-    RadixTree<iterator_range<StringRef::const_iterator>,
-              RadixTree<iterator_range<StringRef::const_reverse_iterator>,
+    RadixTree<iterator_range<StringRef::const_reverse_iterator>,
+              RadixTree<iterator_range<StringRef::const_iterator>,
                         SmallVector<const GlobMatcher::Glob *, 1>>>
-        PrefixSuffixToGlob;
+        SuffixPrefixToGlob;
 
     RadixTree<iterator_range<StringRef::const_iterator>,
               SmallVector<const GlobMatcher::Glob *, 1>>
