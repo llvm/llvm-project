@@ -23,6 +23,7 @@ on:
           - ubuntu-22.04-arm
           - macos-13
           - macos-14
+          - windows-2022
 
   workflow_call:
     inputs:
@@ -70,6 +71,15 @@ jobs:
     - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
       with:
         python-version: '3.13'
+    - name: Install libxml2
+      shell: bash
+      env:
+        VCPKG_BUILD_TYPE: release
+        VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
+        VCPKG_ENV_PASSTHROUGH: 1
+      run: |
+        vcpkg --debug install libxml2:x64-windows-static
+        find /c/vcpkg -iname 'libxml*.lib'
 
     - name: Checkout LLVM
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -117,9 +127,15 @@ jobs:
         echo "ref=$ref" >> $GITHUB_OUTPUT
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          release_binary_suffix="exe"
+        else
+          release_binary_suffix="tar.xz"
+        fi
+
         release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
-        echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
+        echo "release-binary-filename=$release_binary_basename.$release_binary_suffix" >> $GITHUB_OUTPUT
 
         target="$RUNNER_OS-$RUNNER_ARCH"
 
@@ -142,14 +158,22 @@ jobs:
         fi
 
         if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
+          # LTO causes the WiX generator to crash so we need to disable it:
+          # light.exe : error LGHT0001 : Catastrophic failure (Exception from HRESULT: 0x8000FFFF (E_UNEXPECTED))
+          # Stack Trace:
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.Interop.NativeMethods.CreateCabFinish(IntPtr contextHandle, IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
+          #libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows-static/"
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+          #target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/s/libxml-install/"
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/c/vcpkg/packages/libxml2_x64-windows-static/"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
+          ubuntu-22.04*|windows-2022)
+            build_runs_on="depot-${{ inputs.runs-on }}"
             test_runs_on=$build_runs_on
             ;;
           macos-13)
@@ -175,6 +199,7 @@ jobs:
         esac
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
+        
 
   build-release-package:
     name: "Build Release Package"
@@ -197,6 +222,13 @@ jobs:
       with:
         arch: amd64
 
+    # In order to avoid some errors with long paths names, we need to shorten
+    # the path names for the build.
+    - name: Shorten paths on Windows
+      if: startsWith(runner.os, 'Windows')
+      run: |
+        subst S: ${{ github.workspace }}
+
     - name: Set Build Prefix
       id: setup-stage
       shell: bash
@@ -205,16 +237,55 @@ jobs:
         if [ "${{ runner.os }}" = "Linux" ]; then
           sudo chown $USER:$USER /mnt/
           build_prefix=/mnt/
+        elif [ "${{ runner.os }}" = "Windows" ]; then
+          build_prefix=/s/
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
+
+    - name: Install libxml2 for Windows
+      if: runner.os == 'Windows'
+      run: |
+        # Build libxml2 for windows
+        curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz
+        tar zxf libxml2-v2.9.12.tar.gz
+
+        cmake -S libxml2-v2.9.12 -G Ninja -B libxml-build `
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libxml-install `
+        -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_C14N=OFF -DLIBXML2_WITH_CATALOG=OFF `
+        -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_DOCB=OFF -DLIBXML2_WITH_FTP=OFF `
+        -DLIBXML2_WITH_HTML=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_ICONV=OFF `
+        -DLIBXML2_WITH_ICU=OFF -DLIBXML2_WITH_ISO8859X=OFF -DLIBXML2_WITH_LEGACY=OFF `
+        -DLIBXML2_WITH_LZMA=OFF -DLIBXML2_WITH_MEM_DEBUG=OFF -DLIBXML2_WITH_MODULES=OFF `
+        -DLIBXML2_WITH_OUTPUT=ON -DLIBXML2_WITH_PATTERN=OFF -DLIBXML2_WITH_PROGRAMS=OFF `
+        -DLIBXML2_WITH_PUSH=OFF -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_READER=OFF `
+        -DLIBXML2_WITH_REGEXPS=OFF -DLIBXML2_WITH_RUN_DEBUG=OFF -DLIBXML2_WITH_SAX1=OFF `
+        -DLIBXML2_WITH_SCHEMAS=OFF -DLIBXML2_WITH_SCHEMATRON=OFF -DLIBXML2_WITH_TESTS=OFF `
+        -DLIBXML2_WITH_THREADS=ON -DLIBXML2_WITH_THREAD_ALLOC=OFF -DLIBXML2_WITH_TREE=ON `
+        -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF `
+        -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF `
+        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded 
+        ninja -v -C libxml-build install
+
+    - name: Install libxml2
+      shell: bash
+      env:
+        VCPKG_BUILD_TYPE: release
+      run: |
+        vcpkg install libxml2:x64-windows-static
+        #find / -iname 'libxml*.lib'
 
     - name: Configure
       id: build
       shell: bash
       run: |
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/lib/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2/libxml
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
-        cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+        cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
@@ -225,7 +296,7 @@ jobs:
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-    
+
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
@@ -237,8 +308,19 @@ jobs:
     - name: Run Tests
       # These almost always fail so don't let them fail the build and prevent the uploads.
       continue-on-error: true
+      shell: bash
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+
+    - name: Save logs
+      if: failure() && runner.os == 'Windows'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-nsis-log
+        # Due to path differences on Windows when running in bash vs running on node,
+        # we need to search for files in the current workspace.
+        path: |
+          S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
 
   upload-release-binaries:
     name: "Upload Release Binaries"
