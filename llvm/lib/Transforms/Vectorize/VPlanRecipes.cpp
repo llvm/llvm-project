@@ -83,6 +83,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenCastSC:
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenPHISC:
@@ -106,6 +107,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -190,6 +192,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPInterleaveEVLSC:
   case VPInterleaveSC:
     return mayWriteToMemory();
+  case VPWidenStridedLoadSC:
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenStoreEVLSC:
@@ -2613,13 +2616,21 @@ void VPVectorEndPointerRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   unsigned CurrentPart = getUnrollPart(*this);
-  Type *IndexTy = getGEPIndexTy(State.VF.isScalable(), /*IsReverse*/ false,
-                                /*IsUnitStride*/ true, CurrentPart, Builder);
+  Value *Stride = State.get(getStride(), /*IsScalar*/ true);
+
+  auto *StrideC = dyn_cast<ConstantInt>(Stride);
+  bool IsStrideOne = StrideC && StrideC->isOne();
+  bool IsUnitStride = IsStrideOne || (StrideC && StrideC->isMinusOne());
+  Type *IndexTy =
+      getGEPIndexTy(State.VF.isScalable(),
+                    /*IsReverse*/ false, IsUnitStride, CurrentPart, Builder);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
 
+  Stride = Builder.CreateSExtOrTrunc(Stride, IndexTy);
   Value *Increment = createStepForVF(Builder, IndexTy, State.VF, CurrentPart);
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Increment,
-                                       "", getGEPNoWrapFlags());
+  Value *Index = IsStrideOne ? Increment : Builder.CreateMul(Increment, Stride);
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Index, "",
+                                       getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
@@ -3541,7 +3552,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     Type *PtrTy = Ptr->getType();
-
     // If the address value is uniform across all lanes, then the address can be
     // calculated with scalar type and broadcast.
     if (!vputils::isSingleScalar(getAddr()))
@@ -3693,6 +3703,57 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = vp.load ";
   printOperands(O, SlotTracker);
+}
+#endif
+
+void VPWidenStridedLoadRecipe::execute(VPTransformState &State) {
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
+  Value *Addr = State.get(getAddr(), /*IsScalar*/ true);
+  Value *StrideInBytes = State.get(getStride(), /*IsScalar*/ true);
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask())
+    Mask = State.get(VPMask);
+  else
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *RunTimeVF = Builder.CreateZExtOrTrunc(State.get(getVF(), VPLane(0)),
+                                               Builder.getInt32Ty());
+
+  auto *PtrTy = Addr->getType();
+  auto *StrideTy = StrideInBytes->getType();
+  CallInst *NewLI = Builder.CreateIntrinsic(
+      Intrinsic::experimental_vp_strided_load, {DataTy, PtrTy, StrideTy},
+      {Addr, StrideInBytes, Mask, RunTimeVF}, nullptr, "wide.strided.load");
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  applyMetadata(*NewLI);
+  State.set(this, NewLI);
+}
+
+InstructionCost
+VPWidenStridedLoadRecipe::computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const {
+  Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
+  const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  return Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, Ty, Ptr, IsMasked,
+                                        Alignment, Ctx.CostKind, &Ingredient);
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPWidenStridedLoadRecipe::print(raw_ostream &O, const Twine &Indent,
+                                     VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN ";
+  printAsOperand(O, SlotTracker);
+  O << " = load ";
+  getAddr()->printAsOperand(O, SlotTracker);
+  O << ", stride = ";
+  getStride()->printAsOperand(O, SlotTracker);
+  O << ", runtimeVF = ";
+  getVF()->printAsOperand(O, SlotTracker);
 }
 #endif
 
