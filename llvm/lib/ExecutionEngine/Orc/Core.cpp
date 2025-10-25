@@ -2908,7 +2908,15 @@ ExecutionSession::IL_emit(MaterializationResponsibility &MR,
           Q.notifySymbolMetRequiredState(SymbolStringPtr(Name), E.getSymbol());
         });
 
-  std::erase_if(EQ.Completed, [](const auto &Q) { return !Q->isComplete(); });
+  // std::erase_if is not available in C++17, and llvm::erase_if does not work
+  // here.
+  for (auto it = EQ.Completed.begin(), end = EQ.Completed.end(); it != end;) {
+    if ((*it)->isComplete()) {
+      ++it;
+    } else {
+      it = EQ.Completed.erase(it);
+    }
+  }
 
 #ifdef EXPENSIVE_CHECKS
   verifySessionState("exiting ExecutionSession::IL_emit");
