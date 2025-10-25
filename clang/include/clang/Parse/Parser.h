@@ -150,6 +150,7 @@ enum class TentativeCXXTypeIdContext {
   AsTemplateArgument,
   InTrailingReturnType,
   AsGenericSelectionArgument,
+  AsReflectionOperand
 };
 
 /// The kind of attribute specifier we have found.
@@ -5166,6 +5167,10 @@ private:
   /// \name HLSL Constructs
   /// Implementations are in ParseHLSL.cpp
   ///@{
+
+  //===--------------------------------------------------------------------===//
+  // Parses the operand of reflection operator
+  ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
 
 private:
   bool MaybeParseHLSLAnnotations(Declarator &D,
