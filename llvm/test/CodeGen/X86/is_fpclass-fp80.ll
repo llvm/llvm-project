@@ -352,21 +352,22 @@ define i1 @is_posnormal_f80(x86_fp80 %x) nounwind {
 ; X86-LABEL: is_posnormal_f80:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, %edx
-; X86-NEXT:    andl $32767, %edx # imm = 0x7FFF
-; X86-NEXT:    decl %edx
-; X86-NEXT:    movzwl %dx, %edx
+; X86-NEXT:    shll $16, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
+; X86-NEXT:    decl %ecx
+; X86-NEXT:    movzwl %cx, %ecx
 ; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    cmpl $32766, %edx # imm = 0x7FFE
+; X86-NEXT:    cmpl $32766, %ecx # imm = 0x7FFE
 ; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    setb %dl
-; X86-NEXT:    testl $32768, %ecx # imm = 0x8000
-; X86-NEXT:    sete %cl
+; X86-NEXT:    setb %cl
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    setns %dl
 ; X86-NEXT:    shrl $31, %eax
-; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    andb %dl, %al
+; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl

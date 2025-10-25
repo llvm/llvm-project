@@ -570,7 +570,7 @@ define i1 @posnormal_f16(half %x) nounwind {
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x7800
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
+; GFX7SELDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -2517,7 +2517,7 @@ define i1 @not_is_neg_normal_f16(half %x) {
 ; GFX7SELDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7SELDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX7SELDAG-NEXT:    s_movk_i32 s6, 0x77ff
-; GFX7SELDAG-NEXT:    v_bfe_i32 v1, v0, 0, 16
+; GFX7SELDAG-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX7SELDAG-NEXT:    v_add_i32_e32 v0, vcc, 0xfffffc00, v0
 ; GFX7SELDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0

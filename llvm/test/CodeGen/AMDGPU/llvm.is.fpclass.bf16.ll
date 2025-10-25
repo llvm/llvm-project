@@ -391,12 +391,11 @@ define i1 @posnormal_bf16(bfloat %x) nounwind {
 ; GFX7CHECK:       ; %bb.0:
 ; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7CHECK-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX7CHECK-NEXT:    v_ashrrev_i32_e32 v1, 16, v0
+; GFX7CHECK-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v0
 ; GFX7CHECK-NEXT:    v_bfe_u32 v0, v0, 16, 15
 ; GFX7CHECK-NEXT:    v_add_i32_e32 v0, vcc, 0xffffff80, v0
 ; GFX7CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7CHECK-NEXT:    s_movk_i32 s6, 0x7f00
-; GFX7CHECK-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v1
 ; GFX7CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, s6, v0
 ; GFX7CHECK-NEXT:    s_and_b64 s[4:5], vcc, s[4:5]
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
@@ -1706,12 +1705,11 @@ define i1 @not_is_neg_normal_bf16(bfloat %x) {
 ; GFX7CHECK:       ; %bb.0:
 ; GFX7CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7CHECK-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GFX7CHECK-NEXT:    v_ashrrev_i32_e32 v1, 16, v0
+; GFX7CHECK-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v0
 ; GFX7CHECK-NEXT:    v_bfe_u32 v0, v0, 16, 15
 ; GFX7CHECK-NEXT:    v_add_i32_e32 v0, vcc, 0xffffff80, v0
 ; GFX7CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7CHECK-NEXT:    s_movk_i32 s6, 0x7eff
-; GFX7CHECK-NEXT:    v_cmp_lt_i32_e64 s[4:5], -1, v1
 ; GFX7CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, s6, v0
 ; GFX7CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; GFX7CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
