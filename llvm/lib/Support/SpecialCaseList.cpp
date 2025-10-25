@@ -89,14 +89,32 @@ void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
       return A.Name.size() < B.Name.size();
     });
   }
+
+  for (const auto &G : reverse(Globs)) {
+    StringRef Prefix = G.Pattern.prefix();
+
+    auto &V = PrefixToGlob.emplace(Prefix).first->second;
+    V.emplace_back(&G);
+  }
 }
 
 void SpecialCaseList::GlobMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
-  for (const auto &G : reverse(Globs))
-    if (G.Pattern.match(Query))
-      return Cb(G.Name, G.LineNo);
+  if (!PrefixToGlob.empty()) {
+    for (const auto &[_, V] : PrefixToGlob.find_prefixes(Query)) {
+      for (const auto *G : V) {
+        if (G->Pattern.match(Query)) {
+          Cb(G->Name, G->LineNo);
+          // As soon as we find a match in the vector, we can break for this
+          // vector, since the globs are already sorted by priority within the
+          // prefix group. However, we continue searching other prefix groups in
+          // the map, as they may contain a better match overall.
+          break;
+        }
+      }
+    }
+  }
 }
 
 SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)

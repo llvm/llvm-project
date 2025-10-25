@@ -35,7 +35,7 @@ body:             |
     ; CHECK-NOZCZ-GPR32-ZCZ-GPR64-LABEL: name: f0
     ; CHECK-NOZCZ-GPR32-ZCZ-GPR64: liveins: $x0, $lr
     ; CHECK-NOZCZ-GPR32-ZCZ-GPR64-NEXT: {{  $}}
-    ; CHECK-NOZCZ-GPR32-ZCZ-GPR64-NEXT: $w0 = ORRWrr $wzr, $wzr
+    ; CHECK-NOZCZ-GPR32-ZCZ-GPR64-NEXT: $x0 = MOVZXi 0, 0
     ; CHECK-NOZCZ-GPR32-ZCZ-GPR64-NEXT: BL @f2, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
     ;
     ; CHECK-ZCZ-GPR32-ZCZ-GPR64-LABEL: name: f0
