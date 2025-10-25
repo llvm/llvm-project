@@ -47,8 +47,8 @@ define dso_local i32 @test() local_unnamed_addr !dbg !7 {
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
-; CHECK-NEXT:        .long   28
-; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   44
+; CHECK-NEXT:        .long   64
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   8                       # FuncInfo
 ; CHECK-NEXT:        .long   10                      # FuncInfo section string offset=10
@@ -57,7 +57,11 @@ define dso_local i32 @test() local_unnamed_addr !dbg !7 {
 ; CHECK-NEXT:        .long   3
 ; CHECK-NEXT:        .long   16                      # LineInfo
 ; CHECK-NEXT:        .long   10                      # LineInfo section string offset=10
-; CHECK-NEXT:        .long   1
+; CHECK-NEXT:        .long   2
+; CHECK-NEXT:        .long   .Lfunc_begin{{[0-9]+}}
+; CHECK-NEXT:        .long   16
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   1024                    # Line 1 Col 0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   16
 ; CHECK-NEXT:        .long   0
