@@ -104,7 +104,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
@@ -327,6 +329,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const RangeTy &R) {
 
 inline bool operator==(const RangeTy &A, const RangeTy &B) {
   return A.Offset == B.Offset && A.Size == B.Size;
+}
+
+inline bool operator<(const RangeTy &A, const RangeTy &B) {
+  return A.Offset < B.Offset;
 }
 
 inline bool operator!=(const RangeTy &A, const RangeTy &B) { return !(A == B); }
@@ -5808,8 +5814,10 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
 
 /// An abstract interface for struct information.
 struct AAPointerInfo : public AbstractAttribute {
+protected:
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}
 
+public:
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
@@ -5845,48 +5853,134 @@ struct AAPointerInfo : public AbstractAttribute {
   /// list should be strictly ascending, but we ensure that only when we
   /// actually translate the list of offsets to a RangeList.
   struct OffsetInfo {
-    using VecTy = SmallSet<int64_t, 4>;
+    using VecTy = SmallVector<AA::RangeTy>;
+    // A map to store depth 1 predecessors per offset.
+    using OriginsTy = SmallVector<SmallPtrSet<Value *, 4>>;
     using const_iterator = VecTy::const_iterator;
-    VecTy Offsets;
+    OriginsTy Origins;
+    VecTy Ranges;
 
-    const_iterator begin() const { return Offsets.begin(); }
-    const_iterator end() const { return Offsets.end(); }
+    const_iterator begin() const { return Ranges.begin(); }
+    const_iterator end() const { return Ranges.end(); }
 
     bool operator==(const OffsetInfo &RHS) const {
-      return Offsets == RHS.Offsets;
+      return Ranges == RHS.Ranges && Origins == RHS.Origins;
     }
 
     bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
 
-    bool insert(int64_t Offset) { return Offsets.insert(Offset).second; }
-    bool isUnassigned() const { return Offsets.size() == 0; }
+    // Insert a new Range and Origin
+    void insert(AA::RangeTy Range, Value &V) {
+      auto *It = std::find(Ranges.begin(), Ranges.end(), Range);
+      // Offset exists in Offsets map
+      if (It != Ranges.end()) {
+        size_t Index = It - Ranges.begin();
+        if (Index < Origins.size())
+          Origins[Index].insert(&V);
+      } else {
+        Ranges.push_back(Range);
+        Origins.emplace_back();
+        Origins.back().insert(&V);
+      }
+    }
+
+    // Set the size of the offset for all ranges.
+    void setSizeAll(uint64_t Size) {
+      for (auto &Range : Ranges)
+        Range.Size = Size;
+    }
+
+    // Helper function to get just the offsets from Ranges.
+    void getOnlyOffsets(SmallVector<int64_t> &Offsets) {
+      for (auto &Range : Ranges)
+        Offsets.push_back(Range.Offset);
+      // ensure unique
+      sort(Offsets.begin(), Offsets.end());
+      Offsets.erase(std::unique(Offsets.begin(), Offsets.end()), Offsets.end());
+    }
+
+    bool isUnassigned() const { return Ranges.empty(); }
 
     bool isUnknown() const {
       if (isUnassigned())
         return false;
-      if (Offsets.size() == 1)
-        return *Offsets.begin() == AA::RangeTy::Unknown;
+      if (Ranges.size() == 1)
+        return Ranges.front().Offset == AA::RangeTy::Unknown;
       return false;
     }
 
-    void setUnknown() {
-      Offsets.clear();
-      Offsets.insert(AA::RangeTy::Unknown);
+    void setUnknown(Value &V) {
+      Ranges.clear();
+      Origins.clear();
+      insert(AA::RangeTy{AA::RangeTy::Unknown, AA::RangeTy::Unknown}, V);
     }
 
+    // Increment all ranges by Inc.
+    // Add an origin V to all offsets.
+    void addToAll(int64_t Inc, Value &V) {
+      for (auto &Range : Ranges)
+        Range.Offset += Inc;
+
+      if (!Origins.empty()) {
+        for (auto &Origin : Origins)
+          Origin.insert(&V);
+      } else {
+        for (size_t Index = 0; Index < Ranges.size(); Index++) {
+          Origins.emplace_back();
+          Origins[Index].insert(&V);
+        }
+      }
+    }
+
+    // Increment all ranges by Inc.
     void addToAll(int64_t Inc) {
-      VecTy NewOffsets;
-      for (auto &Offset : Offsets)
-        NewOffsets.insert(Offset + Inc);
-      Offsets = std::move(NewOffsets);
+      for (auto &Range : Ranges)
+        Range.Offset += Inc;
     }
 
     /// Copy offsets from \p R into the current list.
     ///
     /// Ideally all lists should be strictly ascending, but we defer that to the
     /// actual use of the list. So we just blindly append here.
-    bool merge(const OffsetInfo &R) { return set_union(Offsets, R.Offsets); }
+    void merge(const OffsetInfo &R) {
+      Ranges.append(R.Ranges);
+      // ensure elements are unique.
+      sort(Ranges.begin(), Ranges.end());
+      Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
+
+      OriginsTy ToBeMergeOrigins = R.Origins;
+      for (auto &Origin : ToBeMergeOrigins)
+        Origins.emplace_back(Origin);
+    }
+
+    // Merge two OffsetInfo structs.
+    // takes an additional origin argument
+    // and adds it to the corresponding offset in the
+    // origins map.
+    void mergeWithOffset(const OffsetInfo &R, Value &CurPtr) {
+      Ranges.append(R.Ranges);
+      // ensure elements are unique.
+      sort(Ranges.begin(), Ranges.end());
+      Ranges.erase(std::unique(Ranges.begin(), Ranges.end()), Ranges.end());
+      auto &ROffsets = R.Ranges;
+      for (auto Offset : ROffsets) {
+        auto *It = std::find(Ranges.begin(), Ranges.end(), Offset);
+        if (It == Ranges.end())
+          continue;
+        size_t Index = It - Ranges.begin();
+        if (Index >= Origins.size()) {
+          Origins.emplace_back();
+          Origins.back().insert(&CurPtr);
+        } else {
+          Origins[Index].insert(&CurPtr);
+        }
+      }
+    }
   };
+
+  using OffsetInfoMapTy = DenseMap<Value *, OffsetInfo>;
+  using AccessPathTy = SmallVector<Value *, 4>;
+  using AccessPathSetTy = SmallPtrSet<AccessPathTy *, 4>;
 
   /// A container for a list of ranges.
   struct RangeList {
@@ -6042,15 +6136,17 @@ struct AAPointerInfo : public AbstractAttribute {
   /// An access description.
   struct Access {
     Access(Instruction *I, int64_t Offset, int64_t Size,
-           std::optional<Value *> Content, AccessKind Kind, Type *Ty)
+           std::optional<Value *> Content, AccessKind Kind, Type *Ty,
+           AccessPathSetTy *AccessPaths)
         : LocalI(I), RemoteI(I), Content(Content), Ranges(Offset, Size),
-          Kind(Kind), Ty(Ty) {
+          Kind(Kind), Ty(Ty), AccessPaths(AccessPaths) {
       verify();
     }
     Access(Instruction *LocalI, Instruction *RemoteI, const RangeList &Ranges,
-           std::optional<Value *> Content, AccessKind K, Type *Ty)
+           std::optional<Value *> Content, AccessKind K, Type *Ty,
+           AccessPathSetTy *AccessPaths)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content), Ranges(Ranges),
-          Kind(K), Ty(Ty) {
+          Kind(K), Ty(Ty), AccessPaths(AccessPaths) {
       if (Ranges.size() > 1) {
         Kind = AccessKind(Kind | AK_MAY);
         Kind = AccessKind(Kind & ~AK_MUST);
@@ -6059,9 +6155,9 @@ struct AAPointerInfo : public AbstractAttribute {
     }
     Access(Instruction *LocalI, Instruction *RemoteI, int64_t Offset,
            int64_t Size, std::optional<Value *> Content, AccessKind Kind,
-           Type *Ty)
+           Type *Ty, AccessPathSetTy *AccessPaths)
         : LocalI(LocalI), RemoteI(RemoteI), Content(Content),
-          Ranges(Offset, Size), Kind(Kind), Ty(Ty) {
+          Ranges(Offset, Size), Kind(Kind), Ty(Ty), AccessPaths(AccessPaths) {
       verify();
     }
     Access(const Access &Other) = default;
@@ -6069,7 +6165,8 @@ struct AAPointerInfo : public AbstractAttribute {
     Access &operator=(const Access &Other) = default;
     bool operator==(const Access &R) const {
       return LocalI == R.LocalI && RemoteI == R.RemoteI && Ranges == R.Ranges &&
-             Content == R.Content && Kind == R.Kind;
+             Content == R.Content && Kind == R.Kind &&
+             checkAccessPathsAreSame(R.AccessPaths);
     }
     bool operator!=(const Access &R) const { return !(*this == R); }
 
@@ -6181,11 +6278,53 @@ struct AAPointerInfo : public AbstractAttribute {
       }
     }
 
+    // Merge two access paths into one.
+    void mergeAccessPaths(const AccessPathSetTy *AccessPathsNew) const {
+      for (auto *Path : *AccessPathsNew)
+        if (!existsChain(Path))
+          AccessPaths->insert(Path);
+    }
+
+    // Check if the given access paths are same.
+    bool checkAccessPathsAreSame(const AccessPathSetTy *AccessPathsR) const {
+      bool IsSame = true;
+      if (AccessPaths->size() != AccessPathsR->size())
+        return false;
+
+      for (auto *Path : *AccessPathsR) {
+        if (!existsChain(Path))
+          IsSame = false;
+      }
+      return IsSame;
+    }
+
+    // Check if the chain exists in the AccessPathsSet.
+    bool existsChain(const AccessPathTy *NewPath) const {
+      for (auto *OldPath : *AccessPaths)
+        if (*OldPath == *NewPath)
+          return true;
+
+      return false;
+    }
+
+    void dumpAccessPaths(raw_ostream &O) const {
+      O << "Print all access paths found:"
+        << "\n";
+      for (auto *It : *AccessPaths) {
+        O << "Backtrack a unique access path:\n";
+        for (Value *Ins : *It) {
+          O << *Ins << "\n";
+        }
+      }
+    }
+
+    const AccessPathSetTy *getAccessChain() const { return AccessPaths; }
     const RangeList &getRanges() const { return Ranges; }
 
     using const_iterator = RangeList::const_iterator;
     const_iterator begin() const { return Ranges.begin(); }
     const_iterator end() const { return Ranges.end(); }
+    size_t size() const { return Ranges.size(); }
 
   private:
     /// The instruction responsible for the access with respect to the local
@@ -6208,6 +6347,10 @@ struct AAPointerInfo : public AbstractAttribute {
     /// The type of the content, thus the type read/written, can be null if not
     /// available.
     Type *Ty;
+
+    /// The full chain of instructions that participate in the Access.
+    /// There may be more than one access chain.
+    AccessPathSetTy *AccessPaths;
   };
 
   /// Create an abstract attribute view for the position \p IRP.
@@ -6227,6 +6370,9 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual int64_t numOffsetBins() const = 0;
   virtual bool reachesReturn() const = 0;
   virtual void addReturnedOffsetsTo(OffsetInfo &) const = 0;
+  virtual void dumpState(raw_ostream &O) const = 0;
+  virtual const Access &getBinAccess(unsigned Index) const = 0;
+  virtual const DenseMap<Value *, OffsetInfo> &getOffsetInfoMap() const = 0;
 
   /// Call \p CB on all accesses that might interfere with \p Range and return
   /// true if all such accesses were known and the callback returned true for
@@ -6480,6 +6626,9 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
                                                       Attributor &A);
 
   virtual std::optional<TypeSize> getAllocatedSize() const = 0;
+
+  using NewOffsetsTy = DenseMap<AA::RangeTy, AA::RangeTy>;
+  virtual const NewOffsetsTy &getNewOffsets() const = 0;
 
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAAllocationInfo"; }

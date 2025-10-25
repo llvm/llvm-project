@@ -4,13 +4,18 @@
 
 ;; This function returns its second argument on all return statements
 define internal ptr @incdec(i1 %C, ptr %V) {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; TUNIT: Function Attrs: mustprogress nofree norecurse nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@incdec
-; TUNIT-SAME: (i1 noundef [[C:%.*]], ptr noalias nofree noundef nonnull returned writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (i1 noundef [[C:%.*]], ptr nofree noundef nonnull returned align 4 dereferenceable(4) [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-NEXT:    [[X:%.*]] = load i32, ptr [[V]], align 4
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       T:
+; TUNIT-NEXT:    [[X1:%.*]] = add i32 [[X]], 1
+; TUNIT-NEXT:    store i32 [[X1]], ptr [[V]], align 4
 ; TUNIT-NEXT:    ret ptr [[V]]
 ; TUNIT:       F:
+; TUNIT-NEXT:    [[X2:%.*]] = sub i32 [[X]], 1
+; TUNIT-NEXT:    store i32 [[X2]], ptr [[V]], align 4
 ; TUNIT-NEXT:    ret ptr [[V]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
@@ -44,13 +49,13 @@ F:              ; preds = %0
 ;; This function returns its first argument as a part of a multiple return
 ;; value
 define internal { i32, i32 } @foo(i32 %A, i32 %B) {
-; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CGSCC-LABEL: define {{[^@]+}}@foo
-; CGSCC-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[X:%.*]] = add i32 [[A]], [[B]]
-; CGSCC-NEXT:    [[Y:%.*]] = insertvalue { i32, i32 } undef, i32 [[A]], 0
-; CGSCC-NEXT:    [[Z:%.*]] = insertvalue { i32, i32 } [[Y]], i32 [[X]], 1
-; CGSCC-NEXT:    ret { i32, i32 } [[Z]]
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A]], [[B]]
+; CHECK-NEXT:    [[Y:%.*]] = insertvalue { i32, i32 } undef, i32 [[A]], 0
+; CHECK-NEXT:    [[Z:%.*]] = insertvalue { i32, i32 } [[Y]], i32 [[X]], 1
+; CHECK-NEXT:    ret { i32, i32 } [[Z]]
 ;
   %X = add i32 %A, %B
   %Y = insertvalue { i32, i32 } undef, i32 %A, 0
@@ -59,13 +64,19 @@ define internal { i32, i32 } @foo(i32 %A, i32 %B) {
 }
 
 define void @caller(i1 %C) personality ptr @__gxx_personality_v0 {
-; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT: Function Attrs: norecurse
 ; TUNIT-LABEL: define {{[^@]+}}@caller
-; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] personality ptr @__gxx_personality_v0 {
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; TUNIT-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 noundef [[C]], ptr noalias nofree noundef nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 noundef [[C]], ptr nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
+; TUNIT-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR4:[0-9]+]]
+; TUNIT-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
+; TUNIT-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR4]]
 ; TUNIT-NEXT:    br label [[OK:%.*]]
 ; TUNIT:       OK:
+; TUNIT-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
+; TUNIT-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
+; TUNIT-NEXT:    store i32 [[Z]], ptr [[Q]], align 4
 ; TUNIT-NEXT:    br label [[RET:%.*]]
 ; TUNIT:       LPAD:
 ; TUNIT-NEXT:    unreachable
@@ -118,9 +129,11 @@ RET:
 
 declare i32 @__gxx_personality_v0(...)
 ;.
-; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nounwind willreturn }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(write) }
+; TUNIT: attributes #[[ATTR2]] = { norecurse }
+; TUNIT: attributes #[[ATTR3]] = { nofree nounwind willreturn }
+; TUNIT: attributes #[[ATTR4]] = { nounwind memory(none) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -129,5 +142,3 @@ declare i32 @__gxx_personality_v0(...)
 ; CGSCC: attributes #[[ATTR4]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn memory(none) }
 ;.
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
