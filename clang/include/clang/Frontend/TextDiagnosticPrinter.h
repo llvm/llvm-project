@@ -17,6 +17,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/FormattedStream.h"
 #include <memory>
 
 namespace clang {
@@ -25,7 +26,7 @@ class LangOptions;
 class TextDiagnostic;
 
 class TextDiagnosticPrinter : public DiagnosticConsumer {
-  raw_ostream &OS;
+  llvm::formatted_raw_ostream OS;
   DiagnosticOptions &DiagOpts;
 
   /// Handle to the currently active text diagnostic emitter.
