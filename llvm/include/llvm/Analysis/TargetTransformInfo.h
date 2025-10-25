@@ -205,6 +205,13 @@ enum class TailFoldingStyle {
   DataWithEVL,
 };
 
+enum class RTCheckStyle {
+  /// Create runtime checks based on the difference between two pointers
+  ScalarDifference,
+  /// Form a mask based on elements which won't be a WAR or RAW hazard.
+  UseSafeEltsMask,
+};
+
 struct TailFoldingInfo {
   TargetLibraryInfo *TLI;
   LoopVectorizationLegality *LVL;
@@ -1356,6 +1363,11 @@ public:
       ElementCount VF, PartialReductionExtendKind OpAExtend,
       PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind) const;
+
+  /// \return true if a mask should be formed that disables lanes that could
+  /// alias between two pointers. The mask is created by the
+  /// loop_dependence_{war,raw}_mask intrinsics.
+  LLVM_ABI bool useSafeEltsMask() const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
