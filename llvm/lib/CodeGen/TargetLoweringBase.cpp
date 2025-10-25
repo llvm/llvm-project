@@ -695,21 +695,6 @@ ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
   }
 }
 
-LibcallLoweringInfo::LibcallLoweringInfo(
-    const RTLIB::RuntimeLibcallsInfo &RTLCI)
-    : RTLCI(RTLCI) {
-  // TODO: This should be generated with lowering predicates, and assert the
-  // call is available.
-  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
-    if (RTLCI.isAvailable(Impl)) {
-      RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
-      // FIXME: Hack, assume the first available libcall wins.
-      if (LibcallImpls[LC] == RTLIB::Unsupported)
-        LibcallImpls[LC] = Impl;
-    }
-  }
-}
-
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
     : TM(tm),
