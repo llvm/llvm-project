@@ -40,7 +40,7 @@ class TestLaunchProcessPosixSpawn(TestBase):
         launch_info = target.GetLaunchInfo()
         error = lldb.SBError()
         process = target.Launch(launch_info, error)
-        self.assertTrue(error.Success, str(error))
+        self.assertTrue(error.Success(), str(error))
         self.assertState(process.GetState(), lldb.eStateExited)
         self.assertIn("slice: {}".format(arch), process.GetSTDOUT(1000))
 
