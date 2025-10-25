@@ -1923,8 +1923,7 @@ def HasAtomicLdSt
 def FeaturePermissiveZalrsc
     : SubtargetFeature<
           "permissive-zalrsc", "HasPermissiveZalrsc", "true",
-          "Implementation permits non-base instructions between LR/SC pairs",
-          [FeatureStdExtZalrsc]>;
+          "Implementation permits non-base instructions between LR/SC pairs">;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
