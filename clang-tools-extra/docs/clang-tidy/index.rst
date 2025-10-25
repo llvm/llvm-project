@@ -330,9 +330,12 @@ An overview of all the command-line options:
                                    TODO() comments in the relevant check.
     WarningsAsErrors             - Same as '--warnings-as-errors'.
     RemovedArgs                  - List of arguments to remove from the command
-                                   line sent to the compiler. Please note that 
-                                   removing arguments from the command line 
-                                   might lead to false positive or negatives. 
+                                   line sent to the compiler. Please note that
+                                   removing arguments might change the semantic
+                                   of the analzed code, possibly leading to
+                                   compiler errors, false positives or
+                                   false negatives. This option is applied 
+                                   before --extra-arg and --extra-arg-before
 
     The effective configuration can be inspected using --dump-config:
 
@@ -342,7 +345,6 @@ An overview of all the command-line options:
       WarningsAsErrors:    ''
       HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
       ImplementationFileExtensions: ['c','cc','cpp','cxx']
-      RemovedArgs: ['-Werror']
       HeaderFilterRegex:   ''
       FormatStyle:         none
       InheritParentConfig: true

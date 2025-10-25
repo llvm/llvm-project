@@ -582,15 +582,15 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
       };
 
   // Remove unwanted arguments passed to the compiler
-  ArgumentsAdjuster CompilationArgsToRemove =
+  ArgumentsAdjuster PerFileArgumentRemover =
       [&Context](const CommandLineArguments &Args, StringRef Filename) {
         ClangTidyOptions Opts = Context.getOptionsForFile(Filename);
         CommandLineArguments AdjustedArgs = Args;
 
         if (Opts.RemovedArgs) {
-          for (StringRef ArgToIgnore : *Opts.RemovedArgs) {
+          for (StringRef ArgToRemove : *Opts.RemovedArgs) {
             AdjustedArgs.erase(std::remove(AdjustedArgs.begin(),
-                                           AdjustedArgs.end(), ArgToIgnore),
+                                           AdjustedArgs.end(), ArgToRemove),
                                AdjustedArgs.end());
           }
         }
@@ -598,7 +598,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
         return AdjustedArgs;
       };
 
-  Tool.appendArgumentsAdjuster(CompilationArgsToRemove);
+  Tool.appendArgumentsAdjuster(PerFileArgumentRemover);
   Tool.appendArgumentsAdjuster(PerFileExtraArgumentsInserter);
   Tool.appendArgumentsAdjuster(getStripPluginsAdjuster());
   Context.setEnableProfiling(EnableCheckProfile);

@@ -168,7 +168,7 @@ Improvements to clang-tidy
   informational messages.
 
 - Improved :program:`clang-tidy` by adding the option `RemovedArgs` to remove
-  arguments sent to the compiler when invoking clang-tidy.
+  arguments sent to the compiler when invoking Clang-Tidy.
 
 - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
   moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
