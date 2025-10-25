@@ -150,11 +150,9 @@ struct MissingFeatures {
   static bool zeroSizeRecordMembers() { return false; }
 
   // Coroutines
-  static bool coroAllocBuiltinCall() { return false; }
-  static bool coroBeginBuiltinCall() { return false; }
   static bool coroEndBuiltinCall() { return false; }
-  static bool coroSizeBuiltinCall() { return false; }
   static bool coroutineFrame() { return false; }
+  static bool emitBodyAndFallthrough() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
