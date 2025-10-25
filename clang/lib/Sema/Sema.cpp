@@ -321,10 +321,10 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
           static_cast<unsigned>(ComparisonCategoryType::Last) + 1),
       StdSourceLocationImplDecl(nullptr), CXXTypeInfoDecl(nullptr),
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
-      TyposCorrected(0), IsBuildingRecoveryCallExpr(false), NumSFINAEErrors(0),
+      TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
       AccessCheckingSFINAE(false), CurrentInstantiationScope(nullptr),
-      InNonInstantiationSFINAEContext(false), NonInstantiationEntries(0),
-      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
+      NonInstantiationEntries(0), ArgPackSubstIndex(std::nullopt),
+      SatisfactionCache(Context) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -670,7 +670,9 @@ void Sema::addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E) {
 
 void Sema::PrintStats() const {
   llvm::errs() << "\n*** Semantic Analysis Stats:\n";
-  llvm::errs() << NumSFINAEErrors << " SFINAE diagnostics trapped.\n";
+  if (SFINAETrap *Trap = getSFINAEContext())
+    llvm::errs() << int(Trap->hasErrorOccurred())
+                 << " SFINAE diagnostics trapped.\n";
 
   BumpAlloc.PrintStats();
   AnalysisWarnings.PrintStats();
@@ -1681,7 +1683,8 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
   // issue I am not seeing yet), then there should at least be a clarifying
   // comment somewhere.
   Diagnostic DiagInfo(&Diags, DB);
-  if (std::optional<TemplateDeductionInfo *> Info = isSFINAEContext()) {
+  if (SFINAETrap *Trap = getSFINAEContext()) {
+    sema::TemplateDeductionInfo *Info = Trap->getDeductionInfo();
     switch (DiagnosticIDs::getDiagnosticSFINAEResponse(DiagInfo.getID())) {
     case DiagnosticIDs::SFINAE_Report:
       // We'll report the diagnostic below.
@@ -1690,14 +1693,14 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
     case DiagnosticIDs::SFINAE_SubstitutionFailure:
       // Count this failure so that we know that template argument deduction
       // has failed.
-      ++NumSFINAEErrors;
+      Trap->setErrorOccurred();
 
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information.
-      if (*Info && !(*Info)->hasSFINAEDiagnostic()) {
-        (*Info)->addSFINAEDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
-      }
+      if (Info && !Info->hasSFINAEDiagnostic())
+        Info->addSFINAEDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
 
       Diags.setLastDiagnosticIgnored(true);
       return;
@@ -1713,14 +1716,14 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
       SourceLocation Loc = DiagInfo.getLocation();
 
       // Suppress this diagnostic.
-      ++NumSFINAEErrors;
+      Trap->setErrorOccurred();
 
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information.
-      if (*Info && !(*Info)->hasSFINAEDiagnostic()) {
-        (*Info)->addSFINAEDiagnostic(DiagInfo.getLocation(),
-                       PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
-      }
+      if (Info && !Info->hasSFINAEDiagnostic())
+        Info->addSFINAEDiagnostic(
+            DiagInfo.getLocation(),
+            PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
 
       Diags.setLastDiagnosticIgnored(true);
 
@@ -1740,13 +1743,13 @@ void Sema::EmitDiagnostic(unsigned DiagID, const DiagnosticBuilder &DB) {
         return;
       // Make a copy of this suppressed diagnostic and store it with the
       // template-deduction information;
-      if (*Info) {
-        (*Info)->addSuppressedDiagnostic(
+      if (Info) {
+        Info->addSuppressedDiagnostic(
             DiagInfo.getLocation(),
             PartialDiagnostic(DiagInfo, Context.getDiagAllocator()));
         if (!Diags.getDiagnosticIDs()->isNote(DiagID))
           PrintContextStack([Info](SourceLocation Loc, PartialDiagnostic PD) {
-            (*Info)->addSuppressedDiagnostic(Loc, std::move(PD));
+            Info->addSuppressedDiagnostic(Loc, std::move(PD));
           });
       }
 
