@@ -328,6 +328,8 @@ private:
                            MachineInstr &I) const;
   bool selectFrexp(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
+  bool selectDpdCoarse(Register ResVReg, const SPIRVType *ResType,
+                       MachineInstr &I, const unsigned DPdOpCode) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -3140,6 +3142,59 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectDpdCoarse(Register ResVReg,
+                                               const SPIRVType *ResType,
+                                               MachineInstr &I,
+                                               const unsigned DPdOpCode) const {
+  // If the arg/result types are half then we need to wrap the instr in
+  // conversions to float
+  // This case occurs because a half arg/result is legal in HLSL but not spirv.
+  Register SrcReg = I.getOperand(2).getReg();
+  SPIRVType *SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+  unsigned BitWidth = std::min(GR.getScalarOrVectorBitWidth(SrcType),
+                               GR.getScalarOrVectorBitWidth(ResType));
+  if (BitWidth == 32) {
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg());
+  } else {
+    MachineIRBuilder MIRBuilder(I);
+    unsigned componentCount = GR.getScalarOrVectorComponentCount(SrcType);
+    SPIRVType *Float32Ty = GR.getOrCreateSPIRVFloatType(32, I, TII);
+    SPIRVType *F32ConvertTy;
+    if (componentCount == 1) {
+      F32ConvertTy = Float32Ty;
+    } else {
+      F32ConvertTy = GR.getOrCreateSPIRVVectorType(Float32Ty, componentCount,
+                                                   MIRBuilder, false);
+    }
+
+    const TargetRegisterClass *RegClass = GR.getRegClass(SrcType);
+    Register ConvertToVReg = MRI->createVirtualRegister(RegClass);
+    Register DpdOpVReg = MRI->createVirtualRegister(RegClass);
+
+    bool Result =
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+            .addDef(ConvertToVReg)
+            .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+            .addUse(SrcReg)
+            .constrainAllUses(TII, TRI, RBI);
+    Result &= BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(DPdOpCode))
+                  .addDef(DpdOpVReg)
+                  .addUse(GR.getSPIRVTypeID(F32ConvertTy))
+                  .addUse(ConvertToVReg)
+                  .constrainAllUses(TII, TRI, RBI);
+    Result &=
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpFConvert))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addUse(DpdOpVReg)
+            .constrainAllUses(TII, TRI, RBI);
+    return Result;
+  }
+}
+
 bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                const SPIRVType *ResType,
                                                MachineInstr &I) const {
@@ -3529,18 +3584,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
   }
   case Intrinsic::spv_ddx_coarse: {
-    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                   TII.get(SPIRV::OpDPdxCoarse))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg());
+    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdxCoarse);
   }
   case Intrinsic::spv_ddy_coarse: {
-    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                   TII.get(SPIRV::OpDPdyCoarse))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(I.getOperand(2).getReg());
+    return selectDpdCoarse(ResVReg, ResType, I, SPIRV::OpDPdyCoarse);
   }
   default: {
     std::string DiagMsg;
