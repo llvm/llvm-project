@@ -14,7 +14,7 @@ define void @foo(ptr %ptr) {
 ; TUNIT-NEXT:    br label [[CALL_BR:%.*]]
 ; TUNIT:       call.br:
 ; TUNIT-NEXT:    [[NEWGEP:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 0
-; TUNIT-NEXT:    tail call void @bar(ptr noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_TEST_A:%.*]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    tail call void @bar(ptr noalias nofree noundef nonnull readonly byval([[STRUCT_TEST_A:%.*]]) align 8 captures(none) dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)

@@ -1140,13 +1140,14 @@ struct AAPointerInfoImpl
            (isValidState() ? (std::string("#") +
                               std::to_string(OffsetBins.size()) + " bins")
                            : "<invalid>") +
-           (reachesReturn()
-                ? (" (returned:" +
-                   join(map_range(ReturnedOffsets,
-                                  [](int64_t O) { return std::to_string(O); }),
-                        ", ") +
-                   ")")
-                : "");
+           (reachesReturn() ? (" (returned:" +
+                               join(map_range(ReturnedOffsets,
+                                              [](const AA::RangeTy &R) {
+                                                return std::to_string(R.Offset);
+                                              }),
+                                    ", ") +
+                               ")")
+                            : "");
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -1164,14 +1165,14 @@ struct AAPointerInfoImpl
   }
   virtual void addReturnedOffsetsTo(OffsetInfo &OI) const override {
     if (ReturnedOffsets.isUnknown()) {
-      OI.setUnknown();
+      OI.setUnknown(getAssociatedValue());
       return;
     }
 
     OffsetInfo MergedOI;
-    for (auto Offset : ReturnedOffsets) {
+    for (const AA::RangeTy &OffsetRange : ReturnedOffsets) {
       OffsetInfo TmpOI = OI;
-      TmpOI.addToAll(Offset);
+      TmpOI.addToAll(OffsetRange.Offset);
       MergedOI.merge(TmpOI);
     }
     OI = std::move(MergedOI);
@@ -1181,11 +1182,15 @@ struct AAPointerInfoImpl
     if (ReturnedOffsets.isUnknown())
       return ChangeStatus::UNCHANGED;
     if (ReachedReturnedOffsets.isUnknown()) {
-      ReturnedOffsets.setUnknown();
+      ReturnedOffsets.setUnknown(getAssociatedValue());
       return ChangeStatus::CHANGED;
     }
-    if (ReturnedOffsets.merge(ReachedReturnedOffsets))
+
+    auto OldReturned = ReturnedOffsets;
+    ReturnedOffsets.merge(ReachedReturnedOffsets);
+    if (ReturnedOffsets != OldReturned)
       return ChangeStatus::CHANGED;
+
     return ChangeStatus::UNCHANGED;
   }
 
@@ -1539,8 +1544,9 @@ struct AAPointerInfoImpl
           AccessKind AK = RAcc.getKind();
           if (!IsMustAcc)
             AK = AccessKind((AK & ~AK_MUST) | AK_MAY);
-          Changed |= addAccess(A, NewRanges, CB, RAcc.getContent(), AK,
-                               RAcc.getType(), OffsetInfoMap, RAcc.getRemoteInst());
+          Changed |=
+              addAccess(A, NewRanges, CB, RAcc.getContent(), AK, RAcc.getType(),
+                        OffsetInfoMap, RAcc.getRemoteInst());
         }
       }
     }
@@ -13595,7 +13601,8 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
 
     // Set the new size of the allocation. The new size of the Allocation should
     // be the size of PrevBinEndOffset * 8 in bits.
-    auto NewAllocationSize = std::make_optional<TypeSize>(PrevBinEndOffset * 8, false);
+    auto NewAllocationSize =
+        std::make_optional<TypeSize>(PrevBinEndOffset * 8, false);
 
     if (!changeAllocationSize(NewAllocationSize))
       return ChangeStatus::UNCHANGED;
@@ -13643,7 +13650,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
            Instruction *LocalInst, const AA::RangeTy &OldRange,
            const AA::RangeTy &NewRange) {
           DenseMap<AA::RangeTy, AA::RangeTy> &NewBinsForInstruction =
-              Map.getOrInsertDefault(LocalInst);
+              Map.try_emplace(LocalInst).first->second;
 
           NewBinsForInstruction.insert(std::make_pair(OldRange, NewRange));
         };
@@ -13975,7 +13982,8 @@ private:
     if (OldOffset == NewComputedOffset)
       return false;
 
-    AA::RangeTy &NewRange = NewComputedOffsets.getOrInsertDefault(OldRange);
+    AA::RangeTy &NewRange =
+        NewComputedOffsets.try_emplace(OldRange).first->second;
     NewRange.Offset = NewComputedOffset;
     NewRange.Size = Size;
 
