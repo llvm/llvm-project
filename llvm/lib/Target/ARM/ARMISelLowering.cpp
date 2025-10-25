@@ -118,6 +118,7 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-isel"
 
 STATISTIC(NumTailCalls, "Number of tail calls");
+STATISTIC(NumOptimizedImms, "Number of times immediates were optimized");
 STATISTIC(NumMovwMovt, "Number of GAs materialized with movw + movt");
 STATISTIC(NumLoopByVals, "Number of loops generated for byval arguments");
 STATISTIC(NumConstpoolPromoted,
@@ -141,6 +142,12 @@ static cl::opt<unsigned> ConstpoolPromotionMaxTotal(
     "arm-promote-constant-max-total", cl::Hidden,
     cl::desc("Maximum size of ALL constants to promote into a constant pool"),
     cl::init(128));
+
+static cl::opt<bool>
+    EnableOptimizeLogicalImm("arm-enable-logical-imm", cl::Hidden,
+                             cl::desc("Enable ARM logical imm instruction "
+                                      "optimization"),
+                             cl::init(true));
 
 cl::opt<unsigned>
 MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
@@ -20105,6 +20112,16 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
+static bool isLegalLogicalImmediate(unsigned Imm,
+                                    const ARMSubtarget *Subtarget) {
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal(Imm) != -1;
+  if (Subtarget->isThumb2())
+    return ARM_AM::getT2SOImmVal(Imm) != -1;
+  // Thumb1 only has 8-bit unsigned immediate.
+  return Imm <= 255;
+}
+
 bool ARMTargetLowering::targetShrinkDemandedConstant(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     TargetLoweringOpt &TLO) const {
@@ -20113,8 +20130,7 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   if (!TLO.LegalOps)
     return false;
 
-  // Only optimize AND for now.
-  if (Op.getOpcode() != ISD::AND)
+  if (!EnableOptimizeLogicalImm)
     return false;
 
   EVT VT = Op.getValueType();
@@ -20125,6 +20141,14 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
 
   assert(VT == MVT::i32 && "Unexpected integer type");
 
+  // Exit early if we demand all bits.
+  if (DemandedBits.popcount() == 32)
+    return false;
+
+  // Only optimize AND for now.
+  if (Op.getOpcode() != ISD::AND)
+    return false;
+
   // Make sure the RHS really is a constant.
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1));
   if (!C)
@@ -20132,20 +20156,12 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
 
   unsigned Mask = C->getZExtValue();
 
+  if (Mask == 0 || Mask == ~0U)
+    return false;
+
   unsigned Demanded = DemandedBits.getZExtValue();
   unsigned ShrunkMask = Mask & Demanded;
   unsigned ExpandedMask = Mask | ~Demanded;
-
-  // If the mask is all zeros, let the target-independent code replace the
-  // result with zero.
-  if (ShrunkMask == 0)
-    return false;
-
-  // If the mask is all ones, erase the AND. (Currently, the target-independent
-  // code won't do this, so we have to do it explicitly to avoid an infinite
-  // loop in obscure cases.)
-  if (ExpandedMask == ~0U)
-    return TLO.CombineTo(Op, Op.getOperand(0));
 
   auto IsLegalMask = [ShrunkMask, ExpandedMask](unsigned Mask) -> bool {
     return (ShrunkMask & Mask) == ShrunkMask && (~ExpandedMask & Mask) == 0;
@@ -20159,30 +20175,61 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
     return TLO.CombineTo(Op, NewOp);
   };
 
-  // Prefer uxtb mask.
-  if (IsLegalMask(0xFF))
-    return UseMask(0xFF);
-
-  // Prefer uxth mask.
-  if (IsLegalMask(0xFFFF))
-    return UseMask(0xFFFF);
-
-  // [1, 255] is Thumb1 movs+ands, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if (ShrunkMask < 256)
+  // If the mask is all zeros, let the target-independent code replace the
+  // result with zero.
+  if (ShrunkMask == 0) {
+    ++NumOptimizedImms;
     return UseMask(ShrunkMask);
+  }
 
-  // [-256, -2] is Thumb1 movs+bics, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if ((int)ExpandedMask <= -2 && (int)ExpandedMask >= -256)
+  // If the mask is all ones, erase the AND. (Currently, the target-independent
+  // code won't do this, so we have to do it explicitly to avoid an infinite
+  // loop in obscure cases.)
+  if (ExpandedMask == ~0U) {
+    ++NumOptimizedImms;
     return UseMask(ExpandedMask);
+  }
+
+  // If thumb, check for uxth and uxtb masks first and foremost.
+  if (Subtarget->isThumb1Only() && Subtarget->hasV6Ops()) {
+    if (IsLegalMask(0xFF)) {
+      ++NumOptimizedImms;
+      return UseMask(0xFF);
+    }
+
+    if (IsLegalMask(0xFFFF)) {
+      ++NumOptimizedImms;
+      return UseMask(0xFFFF);
+    }
+  }
+
+  // Don't optimize if it is legal already.
+  if (isLegalLogicalImmediate(Mask, Subtarget))
+    return false;
+
+  if (isLegalLogicalImmediate(ShrunkMask, Subtarget)) {
+    ++NumOptimizedImms;
+    return UseMask(ShrunkMask);
+  }
+
+  // FIXME: The check for v6 is because this interferes with some ubfx
+  // optimizations
+  if (!Subtarget->hasV6Ops() &&
+      isLegalLogicalImmediate(~ExpandedMask, Subtarget)) {
+    ++NumOptimizedImms;
+    return UseMask(ExpandedMask);
+  }
+
+  if ((~ExpandedMask) < 256) {
+    ++NumOptimizedImms;
+    return UseMask(ExpandedMask);
+  }
 
   // Potential improvements:
   //
   // We could try to recognize lsls+lsrs or lsrs+lsls pairs here.
   // We could try to prefer Thumb1 immediates which can be lowered to a
   // two-instruction sequence.
-  // We could try to recognize more legal ARM/Thumb2 immediates here.
 
   return false;
 }
