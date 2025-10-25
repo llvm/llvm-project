@@ -1322,9 +1322,6 @@ def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 texternalsym:$dst)),
 def : Pat<(X86call_rvmarker (i64 tglobaladdr:$rvfunc), (i64 tglobaladdr:$dst)),
           (CALL64pcrel32_RVMARKER tglobaladdr:$rvfunc, tglobaladdr:$dst)>;
 
-def : Pat<(X86imp_call (i64 tglobaladdr:$dst)),
-          (CALL64pcrel32 tglobaladdr:$dst)>;
-
 // Tailcall stuff. The TCRETURN instructions execute after the epilog, so they
 // can never use callee-saved registers. That is the purpose of the GR64_TC
 // register classes.
@@ -1359,25 +1356,25 @@ def : Pat<(X86tcret (i32 texternalsym:$dst), timm:$off),
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64 ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabledOrCFGuardEnabled]>;
 
 def : Pat<(X86tcret GR64_TCW64:$dst, timm:$off),
           (TCRETURN_WIN64ri GR64_TCW64:$dst, timm:$off)>,
-          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabled]>;
+          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabledOrCFGuardEnabled]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (TCRETURNri64_ImpCall ptr_rc_tailcall:$dst, timm:$off)>,
-          Requires<[In64BitMode, NotUseIndirectThunkCalls, ImportCallOptimizationEnabled]>;
+          Requires<[In64BitMode, NotUseIndirectThunkCalls, ImportCallOptimizationEnabledAndCFGuardDisabled]>;
 
 // Don't fold loads into X86tcret requiring more than 6 regs.
 // There wouldn't be enough scratch registers for base+index.
 def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
           (TCRETURNmi64 addr:$dst, timm:$off)>,
-          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls]>;
+          Requires<[In64BitMode, IsNotWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabledOrCFGuardEnabled]>;
 
 def : Pat<(X86tcret_6regs (load addr:$dst), timm:$off),
           (TCRETURN_WINmi64 addr:$dst, timm:$off)>,
-          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls]>;
+          Requires<[IsWin64CCFunc, NotUseIndirectThunkCalls, ImportCallOptimizationDisabledOrCFGuardEnabled]>;
 
 def : Pat<(X86tcret ptr_rc_tailcall:$dst, timm:$off),
           (INDIRECT_THUNK_TCRETURN64 ptr_rc_tailcall:$dst, timm:$off)>,
