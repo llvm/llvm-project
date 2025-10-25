@@ -467,7 +467,7 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
       CmdArgs.push_back("-lc++experimental");
     break;
 
-  case ToolChain::CST_Libstdcxx:
+  default:
     llvm_unreachable("invalid stdlib name");
   }
 }
