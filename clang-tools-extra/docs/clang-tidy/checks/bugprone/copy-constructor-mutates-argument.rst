@@ -1,7 +1,7 @@
 .. title:: clang-tidy - bugprone-copy-constructor-mutates-argument
 
 bugprone-copy-constructor-mutates-argument
-======================
+==========================================
 
 Finds assignments to the copied object and its direct or indirect members
 in copy constructors and copy assignment operators.

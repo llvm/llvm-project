@@ -18,6 +18,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   CommandProcessorCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
   CopyConstructorInitCheck.cpp
+  CopyConstructorMutatesArgumentCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
   DerivedMethodShadowingBaseMethodCheck.cpp
@@ -53,7 +54,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
-  CopyConstructorMutatesArgumentCheck.cpp
   NarrowingConversionsCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp
