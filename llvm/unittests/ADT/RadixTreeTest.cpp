@@ -93,6 +93,13 @@ TEST(RadixTreeTest, Complex) {
   EXPECT_EQ(T.countNodes(), 9u);
 }
 
+TEST(RadixTreeTest, ValueWith2Parameters) {
+  RadixTree<StringRef, std::pair<std::string, int>> T;
+  T.emplace("abcd", "a", 3);
+
+  EXPECT_THAT(T, UnorderedElementsAre(Pair("abcd", Pair("a", 3))));
+}
+
 // Test different types, less readable.
 
 template <typename T> struct TestData {

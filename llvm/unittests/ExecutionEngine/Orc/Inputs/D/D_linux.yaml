@@ -1,0 +1,479 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.property
+    LastSec:         .rela.plt
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .init
+    LastSec:         .fini
+    VAddr:           0x1000
+    Align:           0x1000
+    Offset:          0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .rodata
+    LastSec:         .eh_frame
+    VAddr:           0x2000
+    Align:           0x1000
+    Offset:          0x2000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .bss
+    VAddr:           0x3DF0
+    Align:           0x1000
+    Offset:          0x2DF0
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x3E00
+    Align:           0x8
+    Offset:          0x2E00
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.property
+    LastSec:         .note.gnu.property
+    VAddr:           0x2A8
+    Align:           0x8
+    Offset:          0x2A8
+  - Type:            PT_NOTE
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.build-id
+    LastSec:         .note.gnu.build-id
+    VAddr:           0x2C8
+    Align:           0x4
+    Offset:          0x2C8
+  - Type:            PT_GNU_PROPERTY
+    Flags:           [ PF_R ]
+    FirstSec:        .note.gnu.property
+    LastSec:         .note.gnu.property
+    VAddr:           0x2A8
+    Align:           0x8
+    Offset:          0x2A8
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x2010
+    Align:           0x4
+    Offset:          0x2010
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+    Offset:          0x0
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .init_array
+    LastSec:         .got
+    VAddr:           0x3DF0
+    Offset:          0x2DF0
+Sections:
+  - Name:            .note.gnu.property
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2A8
+    AddressAlign:    0x8
+    Notes:
+      - Name:            GNU
+        Desc:            020000C0040000000300000000000000
+        Type:            NT_GNU_PROPERTY_TYPE_0
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2C8
+    AddressAlign:    0x4
+    Notes:
+      - Name:            GNU
+        Desc:            6A0CC906C743C23E1400FDD239CF755466AB3E7B
+        Type:            NT_PRPSINFO
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2F0
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x7
+      Shift2:          0x6
+    BloomFilter:     [ 0x400000400000 ]
+    HashBuckets:     [ 0x7, 0x0 ]
+    HashValues:      [ 0x7C9DCB97 ]
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x318
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x3D8
+    AddressAlign:    0x1
+    Content:         "6C6962412E736F006C6962632E736F2E3600244F524947494E2F2E2E2F4100"
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x468
+    Link:            .dynsym
+    AddressAlign:    0x2
+    Entries:         [ 0, 1, 2, 1, 1, 1, 2, 1 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x478
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Dependencies:
+      - Version:         1
+        File:            libc.so.6
+        Entries:
+          - Name:            GLIBC_2.2.5
+            Hash:            157882997
+            Flags:           0
+            Other:           2
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x498
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x3DF0
+        Type:            R_X86_64_RELATIVE
+        Addend:          4400
+      - Offset:          0x3DF8
+        Type:            R_X86_64_RELATIVE
+        Addend:          4336
+      - Offset:          0x4028
+        Type:            R_X86_64_RELATIVE
+        Addend:          16424
+      - Offset:          0x3FE0
+        Symbol:          _ITM_deregisterTMCloneTable
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x3FE8
+        Symbol:          __gmon_start__
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x3FF0
+        Symbol:          _ITM_registerTMCloneTable
+        Type:            R_X86_64_GLOB_DAT
+      - Offset:          0x3FF8
+        Symbol:          __cxa_finalize
+        Type:            R_X86_64_GLOB_DAT
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x540
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x4018
+        Symbol:          puts
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x4020
+        Symbol:          sayA
+        Type:            R_X86_64_JUMP_SLOT
+  - Name:            .init
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Offset:          0x1000
+    Content:         F30F1EFA4883EC08488B05D92F00004885C07402FFD04883C408C3
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1020
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         FF35E22F0000F2FF25E32F00000F1F00F30F1EFA6800000000F2E9E1FFFFFF90F30F1EFA6801000000F2E9D1FFFFFF90
+  - Name:            .plt.got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1050
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         F30F1EFAF2FF259D2F00000F1F440000
+  - Name:            .plt.sec
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1060
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Content:         F30F1EFAF2FF25AD2F00000F1F440000F30F1EFAF2FF25A52F00000F1F440000
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1080
+    AddressAlign:    0x10
+    Content:         488D3DA92F0000488D05A22F00004839F87415488B05462F00004885C07409FFE00F1F8000000000C30F1F8000000000488D3D792F0000488D35722F00004829FE4889F048C1EE3F48C1F8034801C648D1FE7414488B05152F00004885C07408FFE0660F1F440000C30F1F8000000000F30F1EFA803D352F000000752B5548833DF22E0000004889E5740C488B3D162F0000E839FFFFFFE864FFFFFFC6050D2F0000015DC30F1F00C30F1F8000000000F30F1EFAE977FFFFFFF30F1EFA554889E5B800000000E825FFFFFF905DC3F30F1EFA554889E5488D05A30E00004889C7E8FBFEFFFF905DC3
+  - Name:            .fini
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1168
+    AddressAlign:    0x4
+    Content:         F30F1EFA4883EC084883C408C3
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2000
+    AddressAlign:    0x1
+    Offset:          0x2000
+    Content:         48656C6C6F2066726F6D20442100
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2010
+    AddressAlign:    0x4
+    Content:         011B033B340000000500000010F0FFFF5000000040F0FFFF7800000050F0FFFF9000000029F1FFFFA80000003EF1FFFFC8000000
+  - Name:            .eh_frame
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x2048
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C070890010000240000001C000000B8EFFFFF30000000000E10460E184A0F0B770880003F1A3A2A332422000000001400000044000000C0EFFFFF100000000000000000000000140000005C000000B8EFFFFF2000000000000000000000001C0000007400000079F0FFFF1500000000450E108602430D064C0C07080000001C000000940000006EF0FFFF1A00000000450E108602430D06510C070800000000000000
+  - Name:            .init_array
+    Type:            SHT_INIT_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x3DF0
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Offset:          0x2DF0
+    Content:         '3011000000000000'
+  - Name:            .fini_array
+    Type:            SHT_FINI_ARRAY
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x3DF8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         F010000000000000
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x3E00
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x00
+      - Tag:             DT_NEEDED
+        Value:           0x08
+      - Tag:             DT_RUNPATH
+        Value:           0x12
+      - Tag:             DT_INIT
+        Value:           0x1000
+      - Tag:             DT_FINI
+        Value:           0x1168
+      - Tag:             DT_INIT_ARRAY
+        Value:           0x3DF0
+      - Tag:             DT_INIT_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_FINI_ARRAY
+        Value:           0x3DF8
+      - Tag:             DT_FINI_ARRAYSZ
+        Value:           0x8
+      - Tag:             DT_GNU_HASH
+        Value:           0x2F0
+      - Tag:             DT_STRTAB
+        Value:           0x3D8
+      - Tag:             DT_SYMTAB
+        Value:           0x318
+      - Tag:             DT_STRSZ
+        Value:           0x8F
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_PLTGOT
+        Value:           0x4000
+      - Tag:             DT_PLTRELSZ
+        Value:           0x30
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x540
+      - Tag:             DT_RELA
+        Value:           0x498
+      - Tag:             DT_RELASZ
+        Value:           0xA8
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_VERNEED
+        Value:           0x478
+      - Tag:             DT_VERNEEDNUM
+        Value:           0x1
+      - Tag:             DT_VERSYM
+        Value:           0x468
+      - Tag:             DT_RELACOUNT
+        Value:           0x3
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x3FE0
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '0000000000000000000000000000000000000000000000000000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x4000
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '003E0000000000000000000000000000000000000000000030100000000000004010000000000000'
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x4028
+    AddressAlign:    0x8
+    Content:         '2840000000000000'
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x4030
+    AddressAlign:    0x1
+    Size:            0x8
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         4743433A20285562756E74752031312E342E302D317562756E7475317E32322E30342E32292031312E342E3000
+Symbols:
+  - Name:            crtstuff.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            deregister_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1080
+  - Name:            register_tm_clones
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x10B0
+  - Name:            __do_global_dtors_aux
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x10F0
+  - Name:            completed.0
+    Type:            STT_OBJECT
+    Section:         .bss
+    Value:           0x4030
+    Size:            0x1
+  - Name:            __do_global_dtors_aux_fini_array_entry
+    Type:            STT_OBJECT
+    Section:         .fini_array
+    Value:           0x3DF8
+  - Name:            frame_dummy
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1130
+  - Name:            __frame_dummy_init_array_entry
+    Type:            STT_OBJECT
+    Section:         .init_array
+    Value:           0x3DF0
+  - Name:            libD.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            keepSayA
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x1139
+    Size:            0x15
+  - Name:            'crtstuff.c (1)'
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            __FRAME_END__
+    Type:            STT_OBJECT
+    Section:         .eh_frame
+    Value:           0x20F8
+  - Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            _fini
+    Type:            STT_FUNC
+    Section:         .fini
+    Value:           0x1168
+  - Name:            __dso_handle
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x4028
+  - Name:            _DYNAMIC
+    Type:            STT_OBJECT
+    Section:         .dynamic
+    Value:           0x3E00
+  - Name:            __GNU_EH_FRAME_HDR
+    Section:         .eh_frame_hdr
+    Value:           0x2010
+  - Name:            __TMC_END__
+    Type:            STT_OBJECT
+    Section:         .data
+    Value:           0x4030
+  - Name:            _GLOBAL_OFFSET_TABLE_
+    Type:            STT_OBJECT
+    Section:         .got.plt
+    Value:           0x4000
+  - Name:            _init
+    Type:            STT_FUNC
+    Section:         .init
+    Value:           0x1000
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            'puts@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            sayA
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            sayD
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x114E
+    Size:            0x1A
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            '__cxa_finalize@GLIBC_2.2.5'
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+DynamicSymbols:
+  - Name:            _ITM_deregisterTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            puts
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            sayA
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+  - Name:            _ITM_registerTMCloneTable
+    Binding:         STB_WEAK
+  - Name:            __cxa_finalize
+    Type:            STT_FUNC
+    Binding:         STB_WEAK
+  - Name:            sayD
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x114E
+    Size:            0x1A
+...
