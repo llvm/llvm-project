@@ -1781,8 +1781,7 @@ bool TargetLowering::SimplifyDemandedBits(
         if (CC == ISD::SETGE || CC == ISD::SETGT) {
           SDLoc DL(Op);
           EVT VT = Op0.getValueType();
-          SDValue NotOp0 = TLO.DAG.getNode(ISD::XOR, DL, VT, Op0,
-                                           TLO.DAG.getAllOnesConstant(DL, VT));
+          SDValue NotOp0 = TLO.DAG.getNOT(DL, Op0, VT);
           Changed |= TLO.CombineTo(Op, NotOp0);
         } else {
           Changed |= TLO.CombineTo(Op, Op0);
