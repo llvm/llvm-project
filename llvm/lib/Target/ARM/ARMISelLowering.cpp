@@ -20219,11 +20219,13 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   if (isLegalLogicalImmediate(~Mask, Subtarget))
     return false;
 
-  if (IsLegalMask(0xFF))
-    return UseMask(0xFF);
+  if (!Subtarget->isThumb1Only()) {
+    if (IsLegalMask(0xFF))
+      return UseMask(0xFF);
 
-  if (IsLegalMask(0xFF00))
-    return UseMask(0xFF00);
+    if (IsLegalMask(0xFF00))
+      return UseMask(0xFF00);
+  }
 
   if (isLegalLogicalImmediate(ShrunkMask, Subtarget))
     return UseMask(ShrunkMask);
