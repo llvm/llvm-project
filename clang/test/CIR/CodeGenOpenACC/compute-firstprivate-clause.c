@@ -142,7 +142,7 @@ struct NoCopyConstruct {};
 // CHECK-NEXT: }
 
 void acc_compute() {
-  // CHECK: cir.func{{.*}} @acc_compute() {
+  // CHECK: cir.func{{.*}} @acc_compute()
 
   int someInt;
   // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["someInt"]
