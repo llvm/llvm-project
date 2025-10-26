@@ -19,11 +19,10 @@
 #include "clang/AST/Stmt.h"
 #include "llvm/Support/Compiler.h"
 
-#include <clang/AST/ExprCXX.h>
-
 namespace clang {
 
 class VarDecl;
+class ExpansionStmtDecl;
 
 /// CXXCatchStmt - This represents a C++ catch block.
 ///
@@ -541,11 +540,30 @@ protected:
     INIT,
     VAR,
     BODY,
-    COUNT
+    FIRST_CHILD_STMT,
+
+    // CXXDependentExpansionStmt
+    EXPANSION_INITIALIZER = FIRST_CHILD_STMT,
+    COUNT_CXXDependentExpansionStmt,
+
+    // CXXDestructuringExpansionStmt
+    DECOMP_DECL = FIRST_CHILD_STMT,
+    COUNT_CXXDestructuringExpansionStmt,
+
+    // CXXIteratingExpansionStmt
+    RANGE = FIRST_CHILD_STMT,
+    BEGIN,
+    END,
+    COUNT_CXXIteratingExpansionStmt,
+
+    MAX_COUNT = COUNT_CXXIteratingExpansionStmt,
   };
 
-  // This must be the last member of this class.
-  Stmt* SubStmts[COUNT];
+  // Managing the memory for this properly would be rather complicated, and
+  // expansion statements are fairly uncommon, so just allocate space for the
+  // maximum amount of substatements we could possibly have.
+  Stmt* SubStmts[MAX_COUNT];
+
 
   CXXExpansionStmt(StmtClass SC, EmptyShell Empty);
   CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD, Stmt *Init,
@@ -595,11 +613,11 @@ public:
   }
 
   child_range children() {
-    return child_range(SubStmts, SubStmts + COUNT);
+    return child_range(SubStmts, SubStmts + FIRST_CHILD_STMT);
   }
 
   const_child_range children() const {
-    return const_child_range(SubStmts, SubStmts + COUNT);
+    return const_child_range(SubStmts, SubStmts + FIRST_CHILD_STMT);
   }
 };
 
@@ -625,8 +643,6 @@ public:
 class CXXDependentExpansionStmt : public CXXExpansionStmt {
   friend class ASTStmtReader;
 
-  Expr* ExpansionInitializer;
-
 public:
   CXXDependentExpansionStmt(EmptyShell Empty);
   CXXDependentExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
@@ -634,23 +650,21 @@ public:
                             SourceLocation ForLoc, SourceLocation LParenLoc,
                             SourceLocation ColonLoc, SourceLocation RParenLoc);
 
-  Expr *getExpansionInitializer() { return ExpansionInitializer; }
-  const Expr *getExpansionInitializer() const { return ExpansionInitializer; }
-  void setExpansionInitializer(Expr* S) { ExpansionInitializer = S; }
+  Expr *getExpansionInitializer() {
+    return cast<Expr>(SubStmts[EXPANSION_INITIALIZER]);
+  }
+  const Expr *getExpansionInitializer() const {
+    return cast<Expr>(SubStmts[EXPANSION_INITIALIZER]);
+  }
+  void setExpansionInitializer(Expr *S) { SubStmts[EXPANSION_INITIALIZER] = S; }
 
   child_range children() {
-    const_child_range CCR =
-        const_cast<const CXXDependentExpansionStmt *>(this)->children();
-    return child_range(cast_away_const(CCR.begin()),
-                       cast_away_const(CCR.end()));
+    return child_range(SubStmts, SubStmts + COUNT_CXXDependentExpansionStmt);
   }
 
   const_child_range children() const {
-    // See CXXIteratingExpansion statement for an explanation of this terrible
-    // hack.
-    Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
-    unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) + 1;
-    return const_child_range(FirstParentSubStmt, FirstParentSubStmt + Count);
+    return const_child_range(SubStmts,
+                             SubStmts + COUNT_CXXDependentExpansionStmt);
   }
 
   static bool classof(const Stmt *T) {
@@ -665,16 +679,6 @@ public:
 class CXXIteratingExpansionStmt : public CXXExpansionStmt {
   friend class ASTStmtReader;
 
-  enum SubStmt {
-    RANGE,
-    BEGIN,
-    END,
-    COUNT
-  };
-
-  // This must be the first member of this class.
-  DeclStmt* SubStmts[COUNT];
-
 public:
   CXXIteratingExpansionStmt(EmptyShell Empty);
   CXXIteratingExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
@@ -683,9 +687,11 @@ public:
                             SourceLocation ForLoc, SourceLocation LParenLoc,
                             SourceLocation ColonLoc, SourceLocation RParenLoc);
 
-  const DeclStmt* getRangeVarStmt() const { return SubStmts[RANGE]; }
-  DeclStmt* getRangeVarStmt() { return SubStmts[RANGE]; }
-  void setRangeVarStmt(DeclStmt* S) { SubStmts[RANGE] = S; }
+  const DeclStmt *getRangeVarStmt() const {
+    return cast<DeclStmt>(SubStmts[RANGE]);
+  }
+  DeclStmt *getRangeVarStmt() { return cast<DeclStmt>(SubStmts[RANGE]); }
+  void setRangeVarStmt(DeclStmt *S) { SubStmts[RANGE] = S; }
 
   const VarDecl* getRangeVar() const {
     return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
@@ -695,9 +701,11 @@ public:
     return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
   }
 
-  const DeclStmt* getBeginVarStmt() const { return SubStmts[BEGIN]; }
-  DeclStmt* getBeginVarStmt() { return SubStmts[BEGIN]; }
-  void setBeginVarStmt(DeclStmt* S) { SubStmts[BEGIN] = S; }
+  const DeclStmt *getBeginVarStmt() const {
+    return cast<DeclStmt>(SubStmts[BEGIN]);
+  }
+  DeclStmt *getBeginVarStmt() { return cast<DeclStmt>(SubStmts[BEGIN]); }
+  void setBeginVarStmt(DeclStmt *S) { SubStmts[BEGIN] = S; }
 
   const VarDecl* getBeginVar() const {
     return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
@@ -707,9 +715,11 @@ public:
     return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
   }
 
-  const DeclStmt* getEndVarStmt() const { return SubStmts[END]; }
-  DeclStmt* getEndVarStmt() { return SubStmts[END]; }
-  void setEndVarStmt(DeclStmt* S) { SubStmts[END] = S; }
+  const DeclStmt *getEndVarStmt() const {
+    return cast<DeclStmt>(SubStmts[END]);
+  }
+  DeclStmt *getEndVarStmt() { return cast<DeclStmt>(SubStmts[END]); }
+  void setEndVarStmt(DeclStmt *S) { SubStmts[END] = S; }
 
   const VarDecl* getEndVar() const {
     return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
@@ -720,26 +730,12 @@ public:
   }
 
   child_range children() {
-    const_child_range CCR =
-        const_cast<const CXXIteratingExpansionStmt *>(this)->children();
-    return child_range(cast_away_const(CCR.begin()),
-                       cast_away_const(CCR.end()));
+    return child_range(SubStmts, SubStmts + COUNT_CXXIteratingExpansionStmt);
   }
 
   const_child_range children() const {
-    // Build a contiguous range consisting of the end of the base
-    // CXXExpansionStmt’s SubStmts and ours.
-    //
-    // This is rather terrible, but allocating all this state in the derived
-    // classes of CXXExpansionStmt instead or moving it into trailing data
-    // would be quite a bit more complicated.
-    //
-    // FIXME: There ought to be a better way of doing this. If we change this,
-    // we should also update CXXDependentExpansionStmt.
-    Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
-    unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) +
-                     static_cast<unsigned>(CXXIteratingExpansionStmt::COUNT);
-    return const_child_range(FirstParentSubStmt, FirstParentSubStmt + Count);
+    return const_child_range(SubStmts,
+                             SubStmts + COUNT_CXXIteratingExpansionStmt);
   }
 
   static bool classof(const Stmt *T) {
@@ -751,8 +747,6 @@ public:
 class CXXDestructuringExpansionStmt : public CXXExpansionStmt {
   friend class ASTStmtReader;
 
-  Stmt* DecompositionDeclStmt;
-
 public:
   CXXDestructuringExpansionStmt(EmptyShell Empty);
   CXXDestructuringExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
@@ -760,9 +754,9 @@ public:
                             SourceLocation ForLoc, SourceLocation LParenLoc,
                             SourceLocation ColonLoc, SourceLocation RParenLoc);
 
-  Stmt *getDecompositionDeclStmt() { return DecompositionDeclStmt; }
-  const Stmt *getDecompositionDeclStmt() const { return DecompositionDeclStmt; }
-  void setDecompositionDeclStmt(Stmt* S) { DecompositionDeclStmt = S; }
+  Stmt *getDecompositionDeclStmt() { return SubStmts[DECOMP_DECL]; }
+  const Stmt *getDecompositionDeclStmt() const { return SubStmts[DECOMP_DECL]; }
+  void setDecompositionDeclStmt(Stmt* S) { SubStmts[DECOMP_DECL] = S; }
 
   DecompositionDecl* getDecompositionDecl();
   const DecompositionDecl* getDecompositionDecl() const {
@@ -770,18 +764,12 @@ public:
   }
 
   child_range children() {
-    const_child_range CCR =
-        const_cast<const CXXDestructuringExpansionStmt *>(this)->children();
-    return child_range(cast_away_const(CCR.begin()),
-                       cast_away_const(CCR.end()));
+    return child_range(SubStmts, SubStmts + COUNT_CXXDestructuringExpansionStmt);
   }
 
   const_child_range children() const {
-    // See CXXIteratingExpansion statement for an explanation of this terrible
-    // hack.
-    Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
-    unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) + 1;
-    return const_child_range(FirstParentSubStmt, FirstParentSubStmt + Count);
+    return const_child_range(SubStmts,
+                             SubStmts + COUNT_CXXDestructuringExpansionStmt);
   }
 
   static bool classof(const Stmt *T) {

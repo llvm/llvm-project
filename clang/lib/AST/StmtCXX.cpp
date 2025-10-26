@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/StmtCXX.h"
+#include "clang/AST/ExprCXX.h"
 
 #include "clang/AST/ASTContext.h"
 
@@ -137,9 +138,9 @@ CXXExpansionStmt::CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD,
                                    SourceLocation RParenLoc)
     : Stmt(SC), ParentDecl(ESD), ForLoc(ForLoc), LParenLoc(LParenLoc),
       ColonLoc(ColonLoc), RParenLoc(RParenLoc) {
-  SubStmts[INIT] = Init;
-  SubStmts[VAR] = ExpansionVar;
-  SubStmts[BODY] = nullptr;
+  setInit(Init);
+  setExpansionVarStmt(ExpansionVar);
+  setBody(nullptr);
 }
 
 CXXEnumeratingExpansionStmt::CXXEnumeratingExpansionStmt(EmptyShell Empty)
@@ -196,9 +197,9 @@ CXXIteratingExpansionStmt::CXXIteratingExpansionStmt(
     SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation RParenLoc)
     : CXXExpansionStmt(CXXIteratingExpansionStmtClass, ESD, Init, ExpansionVar,
                        ForLoc, LParenLoc, ColonLoc, RParenLoc) {
-  SubStmts[BEGIN] = Begin;
-  SubStmts[END] = End;
-  SubStmts[RANGE] = Range;
+  setRangeVarStmt(Range);
+  setBeginVarStmt(Begin);
+  setEndVarStmt(End);
 }
 
 CXXDestructuringExpansionStmt::CXXDestructuringExpansionStmt(EmptyShell Empty)
@@ -209,12 +210,13 @@ CXXDestructuringExpansionStmt::CXXDestructuringExpansionStmt(
     Stmt *DecompositionDeclStmt, SourceLocation ForLoc,
     SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation RParenLoc)
     : CXXExpansionStmt(CXXDestructuringExpansionStmtClass, ESD, Init, ExpansionVar,
-                       ForLoc, LParenLoc, ColonLoc, RParenLoc),
-      DecompositionDeclStmt(DecompositionDeclStmt) {}
+                       ForLoc, LParenLoc, ColonLoc, RParenLoc) {
+  setDecompositionDeclStmt(DecompositionDeclStmt);
+}
 
 DecompositionDecl* CXXDestructuringExpansionStmt::getDecompositionDecl() {
   return cast<DecompositionDecl>(
-      cast<DeclStmt>(DecompositionDeclStmt)->getSingleDecl());
+      cast<DeclStmt>(getDecompositionDeclStmt())->getSingleDecl());
 }
 
 CXXDependentExpansionStmt::CXXDependentExpansionStmt(EmptyShell Empty)
@@ -225,8 +227,9 @@ CXXDependentExpansionStmt::CXXDependentExpansionStmt(
     Expr *ExpansionInitializer, SourceLocation ForLoc, SourceLocation LParenLoc,
     SourceLocation ColonLoc, SourceLocation RParenLoc)
     : CXXExpansionStmt(CXXDependentExpansionStmtClass, ESD, Init, ExpansionVar,
-                       ForLoc, LParenLoc, ColonLoc, RParenLoc),
-      ExpansionInitializer(ExpansionInitializer) {}
+                       ForLoc, LParenLoc, ColonLoc, RParenLoc) {
+  setExpansionInitializer(ExpansionInitializer);
+}
 
 CXXExpansionInstantiationStmt::CXXExpansionInstantiationStmt(
     EmptyShell Empty, unsigned NumInstantiations, unsigned NumSharedStmts)
