@@ -53,12 +53,26 @@ struct StoreNdInstruction : public Instruction {
     return B->getInstructionKind() == InstructionKind::STORE_ND;
   }
   // Source :
-  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroups.html#_add_a_new_section_6_13_x_sub_group_read_and_write_functions
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
   // Reads 1, 2, 4, or 8 uints of data for each work item in the sub-group from
   // the specified pointer
-  llvm::ArrayRef<int> getSortedLaneVectorLengths() const {
-    const static int sortedLaneVectorLengths[] = {1, 2, 4, 8};
-    return sortedLaneVectorLengths;
+  std::optional<
+      std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
+  getBlockWidthHeightCount(Type elemTy) const {
+    const static int kHeight[] = {1, 2, 4, 8};
+    const static int kWidth16[] = {16};
+    const static int kWidth32[] = {16};
+    const static int kCount[] = {1};
+    const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
+    if (elemByteSize == 1)
+      return std::make_tuple(llvm::ArrayRef<int>(kWidth32),
+                             llvm::ArrayRef<int>(kHeight),
+                             llvm::ArrayRef<int>(kCount));
+    else if (elemByteSize == 2 || elemByteSize == 4)
+      return std::make_tuple(llvm::ArrayRef<int>(kWidth16),
+                             llvm::ArrayRef<int>(kHeight),
+                             llvm::ArrayRef<int>(kCount));
+    return std::nullopt;
   }
 };
 
@@ -68,13 +82,49 @@ struct LoadNdInstruction : public Instruction {
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::LOAD_ND;
   }
+
   // Source :
-  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroups.html#_add_a_new_section_6_13_x_sub_group_read_and_write_functions
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
   // Writes 1, 2, 4, or 8 uints of data for each work item in the sub-group to
   // the specified pointer.
-  llvm::ArrayRef<int> getSortedLaneVectorLengths() const {
-    const static int sortedLaneVectorLengths[] = {1, 2, 4, 8};
-    return sortedLaneVectorLengths;
+  std::optional<
+      std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
+  getBlockWidthHeightCount(Type elemTy, bool hasTransform, bool hasTranspose,
+                           bool upConv = false) const {
+    static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
+    static const int kHeightAtLeast8[] = {8, 16, 32};
+    static const int kHeightAtLeast16[] = {16, 32};
+    static const int kHeightAtLeast32[] = {32};
+
+    static const int kWidth32[] = {32};
+    static const int kWidth16[] = {16};
+    static const int kWidth8[] = {8};
+
+    static const int32_t kCount1[] = {1};
+    static const int32_t kCount2[] = {1, 2};
+    static const int32_t kCount4[] = {1, 2, 4};
+    static const int32_t kCount4Only[] = {4};
+    // (elemBytes, transform, transpose, upConvert)
+    using Key = std::tuple<int, uint8_t, uint8_t, uint8_t>;
+    // (widths, heights, counts)
+    using Value = std::tuple<llvm::ArrayRef<int32_t>, llvm::ArrayRef<int32_t>,
+                             llvm::ArrayRef<int32_t>>;
+    static const llvm::DenseMap<Key, Value> kMap = {
+        {{1, false, false, false}, {kWidth32, kHeightAtLeast1, kCount2}},
+        {{1, false, false, true}, {kWidth16, kHeightAtLeast8, kCount4Only}},
+        {{2, false, false, false}, {kWidth16, kHeightAtLeast1, kCount2}},
+        {{4, false, false, false}, {kWidth16, kHeightAtLeast1, kCount1}},
+        // Block Loads with Transform:
+        {{1, true, false, false}, {kWidth16, kHeightAtLeast32, kCount4}},
+        {{2, true, false, false}, {kWidth16, kHeightAtLeast16, kCount2}},
+        // Block Loads with Transpose:
+        {{4, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}},
+    };
+    const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
+    auto it = kMap.find({elemByteSize, hasTransform, hasTranspose, upConv});
+    if (it != kMap.end())
+      return it->second;
+    return std::nullopt;
   }
 };
 
@@ -86,29 +136,39 @@ struct PrefetchNdInstruction : public Instruction {
   }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_buffer_prefetch.html#_add_a_new_section_6_15_x_sub_group_prefetch_functions
-  llvm::ArrayRef<int> getSortedLaneVectorLengths(int elementBitwidth) const {
-    const static int sortedNarrowTypesLengths[] = {1, 2, 4, 8, 16};
-    const static int sortedWideTypesLengths[] = {1, 2, 4, 8};
-    switch (elementBitwidth) {
-    case 8:
-    case 16:
-      return sortedNarrowTypesLengths;
-    case 32:
-    case 64:
-      return sortedWideTypesLengths;
-    default:
-      llvm_unreachable("Unsupported element bitwidth");
-    }
+  std::optional<
+      std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
+  getBlockWidthHeightCount(Type elemTy) const {
+    static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
+
+    static const int kWidth32[] = {32};
+    static const int kWidth16[] = {16};
+
+    static const int32_t kCount1[] = {1};
+    static const int32_t kCount2[] = {1, 2};
+    // elemBytes
+    using Key = int;
+    // (widths, heights, counts)
+    using Value = std::tuple<llvm::ArrayRef<int32_t>, llvm::ArrayRef<int32_t>,
+                             llvm::ArrayRef<int32_t>>;
+    static const llvm::DenseMap<Key, Value> kMap = {
+        {1, {kWidth32, kHeightAtLeast1, kCount2}},
+        {2, {kWidth16, kHeightAtLeast1, kCount2}},
+        {4, {kWidth16, kHeightAtLeast1, kCount1}},
+    };
+    const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
+    auto it = kMap.find(elemByteSize);
+    if (it != kMap.end())
+      return it->second;
+    return std::nullopt;
   }
 };
 
 struct DPASInstruction : public Instruction, public MMAInstructionInterface {
-  DPASInstruction(unsigned packedFormatBitSizeA, unsigned packedFormatBitSizeB,
-                  unsigned packedFormatBitSizeC)
+  DPASInstruction(unsigned packedFormatBitSizeA, unsigned packedFormatBitSizeB)
       : Instruction(InstructionKind::DPAS, InstructionScope::Subgroup),
         packedFormatBitSizeA(packedFormatBitSizeA),
-        packedFormatBitSizeB(packedFormatBitSizeB),
-        packedFormatBitSizeC(packedFormatBitSizeC) {}
+        packedFormatBitSizeB(packedFormatBitSizeB) {}
   static bool classof(const Instruction *B) {
     return B->getInstructionKind() == InstructionKind::DPAS;
   }
@@ -142,12 +202,10 @@ struct DPASInstruction : public Instruction, public MMAInstructionInterface {
 
   unsigned getPackedFormatBitSizeA() const { return packedFormatBitSizeA; }
   unsigned getPackedFormatBitSizeB() const { return packedFormatBitSizeB; }
-  unsigned getPackedFormatBitSizeC() const { return packedFormatBitSizeC; }
 
 protected:
   const unsigned packedFormatBitSizeA;
   const unsigned packedFormatBitSizeB;
-  const unsigned packedFormatBitSizeC;
 };
 
 //===----------------------------------------------------------------------===//
@@ -156,7 +214,7 @@ protected:
 
 struct PVCuArch final : public Xe2Plus {
   static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
-    static const DPASInstruction dpasInst{16, 32, 32};
+    static const DPASInstruction dpasInst{16, 32};
     static const StoreNdInstruction loadNdInst;
     static const StoreNdInstruction storeNdInst;
     static const PrefetchNdInstruction prefetchNdInst;
@@ -179,7 +237,7 @@ struct PVCuArch final : public Xe2Plus {
 
 struct BMGuArch : public Xe2Plus {
   static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
-    static const DPASInstruction dpasInst{16, 32, 32};
+    static const DPASInstruction dpasInst{16, 32};
     static const StoreNdInstruction loadNdInst;
     static const StoreNdInstruction storeNdInst;
     static const PrefetchNdInstruction prefetchNdInst;
