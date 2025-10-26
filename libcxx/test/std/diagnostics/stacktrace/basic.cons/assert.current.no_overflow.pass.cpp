@@ -21,6 +21,7 @@
 #include <stacktrace>
 
 #include "check_assertion.h"
+#include "test_macros.h"
 
 int main(int, char**) {
   TEST_LIBCPP_ASSERT_FAILURE(

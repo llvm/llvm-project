@@ -21,23 +21,25 @@
 #include <cstdint>
 #include <stacktrace>
 
+#include "test_macros.h"
+
 uint32_t test1_line;
 uint32_t test2_line;
 uint32_t main_line;
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test1() {
+_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test1() {
   test1_line = __LINE__ + 1; // add 1 to get the next line (where the call to `current` occurs)
   auto ret   = std::stacktrace::current();
   return ret;
 }
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE std::stacktrace test2() {
+_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test2() {
   test2_line = __LINE__ + 1; // add 1 to get the next line (where the call to `current` occurs)
   auto ret   = test1();
   return ret;
 }
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current() {
+_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS void test_current() {
   main_line = __LINE__ + 1; // add 1 to get the next line (where the call to `current` occurs)
   auto st   = test2();
 
@@ -59,7 +61,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current() {
   // assert(st[2].source_line() == main_line);
 }
 
-_LIBCPP_NO_TAIL_CALLS
+TEST_NO_TAIL_CALLS
 int main(int, char**) {
   static_assert(noexcept(std::stacktrace::current()));
   test_current();

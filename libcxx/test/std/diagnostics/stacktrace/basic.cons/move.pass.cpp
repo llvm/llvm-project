@@ -24,6 +24,7 @@
 #include <stacktrace>
 #include <utility>
 
+#include "test_macros.h"
 #include "../test_allocs.h"
 
 void test_move_construct() {
@@ -81,7 +82,7 @@ void test_move_assign() {
   }
 }
 
-_LIBCPP_NO_TAIL_CALLS
+TEST_NO_TAIL_CALLS
 int main(int, char**) {
   test_move_construct();
   test_move_assign();

@@ -19,11 +19,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if _LIBCPP_STD_VER >= 23
-
-#  include <__stacktrace/stacktrace_entry.h>
-#  include <array>
-#  include <cstdint>
+#include <__stacktrace/stacktrace_entry.h>
+#include <array>
+#include <cstdint>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
@@ -111,8 +109,6 @@ struct images {
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 
