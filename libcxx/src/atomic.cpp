@@ -44,6 +44,7 @@
 #elif defined(_WIN32)
 
 #  include <windows.h>
+#  include <memory>
 
 #else // <- Add other operating systems here
 
@@ -107,11 +108,21 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 
 #elif defined(_WIN32)
 
+static HMODULE win32_get_win_core_synch_api_module() {
+  // HMODULE is documented as being a pointer type to the base address of the module in memory, which means we can
+  // safely use std::unique_ptr here as a wrapper for the handle, with a destructor freeing the handle when this module
+  // is unloaded.
+  // https://learn.microsoft.com/en-us/windows/win32/winprog/windows-data-types
+  static auto module_handle = std::unique_ptr<std::remove_pointer<HMODULE>::type, decltype(&FreeLibrary)>(
+      LoadLibraryW(L"api-ms-win-core-synch-l1-2-0.dll"), &FreeLibrary);
+  return module_handle.get();
+}
+
 static void
 __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
   // WaitOnAddress was added in Windows 8 (build 9200)
   static auto wait_on_address = reinterpret_cast<BOOL(WINAPI*)(volatile void*, PVOID, SIZE_T, DWORD)>(
-      GetProcAddress(GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll"), "WaitOnAddress"));
+      GetProcAddress(win32_get_win_core_synch_api_module(), "WaitOnAddress"));
   if (wait_on_address != nullptr) {
     wait_on_address(const_cast<__cxx_atomic_contention_t*>(__ptr), &__val, sizeof(__val), INFINITE);
   } else {
@@ -125,7 +136,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
   if (__notify_one) {
     // WakeByAddressSingle was added in Windows 8 (build 9200)
     static auto wake_by_address_single = reinterpret_cast<void(WINAPI*)(PVOID)>(
-        GetProcAddress(GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll"), "WakeByAddressSingle"));
+        GetProcAddress(win32_get_win_core_synch_api_module(), "WakeByAddressSingle"));
     if (wake_by_address_single != nullptr) {
       wake_by_address_single(const_cast<__cxx_atomic_contention_t*>(__ptr));
     } else {
@@ -135,7 +146,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
   } else {
     // WakeByAddressAll was added in Windows 8 (build 9200)
     static auto wake_by_address_all = reinterpret_cast<void(WINAPI*)(PVOID)>(
-        GetProcAddress(GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll"), "WakeByAddressAll"));
+        GetProcAddress(win32_get_win_core_synch_api_module(), "WakeByAddressAll"));
     if (wake_by_address_all != nullptr) {
       wake_by_address_all(const_cast<__cxx_atomic_contention_t*>(__ptr));
     } else {
