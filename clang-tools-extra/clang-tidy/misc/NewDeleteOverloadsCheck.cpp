@@ -1,4 +1,4 @@
-//===--- NewDeleteOverloadsCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,7 +53,7 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
   const auto *FPT = Node.getType()->castAs<FunctionProtoType>();
   ASTContext &Ctx = Node.getASTContext();
   if (Ctx.getLangOpts().SizedDeallocation &&
-      Ctx.hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
+      ASTContext::hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
     return false;
 
   return true;

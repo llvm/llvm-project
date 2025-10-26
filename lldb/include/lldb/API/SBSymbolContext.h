@@ -66,6 +66,7 @@ protected:
   friend class SBTarget;
   friend class SBSymbolContextList;
 
+  friend class lldb_private::ScriptInterpreter;
   friend class lldb_private::python::SWIGBridge;
 
   SBSymbolContext(const lldb_private::SymbolContext &sc_ptr);

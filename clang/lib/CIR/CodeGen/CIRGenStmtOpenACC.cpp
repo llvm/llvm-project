@@ -30,7 +30,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
 
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = builder.create<Op>(start, retTy, operands);
+  auto op = Op::create(builder, start, retTy, operands);
 
   emitOpenACCClauses(op, dirKind, dirLoc, clauses);
 
@@ -42,7 +42,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
     res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
 
-    builder.create<TermOp>(end);
+    TermOp::create(builder, end);
   }
   return res;
 }
@@ -73,7 +73,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
 
-  auto computeOp = builder.create<Op>(start, retTy, operands);
+  auto computeOp = Op::create(builder, start, retTy, operands);
   computeOp.setCombinedAttr(builder.getUnitAttr());
   mlir::acc::LoopOp loopOp;
 
@@ -85,7 +85,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
-    auto loopOp = builder.create<LoopOp>(start, retTy, operands);
+    auto loopOp = LoopOp::create(builder, start, retTy, operands);
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), CombinedType<Op>::value));
 
@@ -99,14 +99,14 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
 
       res = emitStmt(loopStmt, /*useCurrentScope=*/true);
 
-      builder.create<mlir::acc::YieldOp>(end);
+      mlir::acc::YieldOp::create(builder, end);
     }
 
     emitOpenACCClauses(computeOp, loopOp, dirKind, dirLoc, clauses);
 
     updateLoopOpParallelism(loopOp, /*isOrphan=*/false, dirKind);
 
-    builder.create<TermOp>(end);
+    TermOp::create(builder, end);
   }
 
   return res;
@@ -118,7 +118,7 @@ Op CIRGenFunction::emitOpenACCOp(
     llvm::ArrayRef<const OpenACCClause *> clauses) {
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = builder.create<Op>(start, retTy, operands);
+  auto op = Op::create(builder, start, retTy, operands);
 
   emitOpenACCClauses(op, dirKind, dirLoc, clauses);
   return op;
@@ -197,8 +197,8 @@ CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
             ? mlir::IntegerType::SignednessSemantics::Signed
             : mlir::IntegerType::SignednessSemantics::Unsigned);
 
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, expr);
+    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+        builder, exprLoc, targetType, expr);
     return conversionOp.getResult(0);
   };
 
@@ -294,9 +294,9 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
     CIRGenFunction::OpenACCDataOperandInfo opInfo =
         getOpenACCDataOperandInfo(var);
 
-    auto cacheOp = builder.create<CacheOp>(
-        opInfo.beginLoc, opInfo.varValue,
-        /*structured=*/false, /*implicit=*/false, opInfo.name, opInfo.bounds);
+    auto cacheOp = CacheOp::create(builder, opInfo.beginLoc, opInfo.varValue,
+                                   /*structured=*/false, /*implicit=*/false,
+                                   opInfo.name, opInfo.bounds);
 
     loopOp.getCacheOperandsMutable().append(cacheOp.getResult());
   }
@@ -306,6 +306,54 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
-  return mlir::failure();
+  // For now, we are only support 'read'/'write', so diagnose. We can switch on
+  // the kind later once we start implementing the other 2 forms. While we
+  if (s.getAtomicKind() != OpenACCAtomicKind::Read &&
+      s.getAtomicKind() != OpenACCAtomicKind::Write) {
+    cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
+    return mlir::failure();
+  }
+
+  // While Atomic is an 'associated statement' construct, it 'steals' the
+  // expression it is associated with rather than emitting it inside of it.  So
+  // it has custom emit logic.
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  OpenACCAtomicConstruct::StmtInfo inf = s.getAssociatedStmtInfo();
+
+  switch (s.getAtomicKind()) {
+  case OpenACCAtomicKind::None:
+  case OpenACCAtomicKind::Update:
+  case OpenACCAtomicKind::Capture:
+    llvm_unreachable("Unimplemented atomic construct type, should have "
+                     "diagnosed/returned above");
+    return mlir::failure();
+  case OpenACCAtomicKind::Read: {
+
+    // Atomic 'read' only permits 'v = x', where v and x are both scalar L
+    // values. The getAssociatedStmtInfo strips off implicit casts, which
+    // includes implicit conversions and L-to-R-Value conversions, so we can
+    // just emit it as an L value.  The Flang implementation has no problem with
+    // different types, so it appears that the dialect can handle the
+    // conversions.
+    mlir::Value v = emitLValue(inf.V).getPointer();
+    mlir::Value x = emitLValue(inf.X).getPointer();
+    mlir::Type resTy = convertType(inf.V->getType());
+    auto op = mlir::acc::AtomicReadOp::create(builder, start, x, v, resTy,
+                                              /*ifCond=*/{});
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
+                       s.clauses());
+    return mlir::success();
+  }
+  case OpenACCAtomicKind::Write: {
+    mlir::Value x = emitLValue(inf.X).getPointer();
+    mlir::Value expr = emitAnyExpr(inf.RefExpr).getValue();
+    auto op = mlir::acc::AtomicWriteOp::create(builder, start, x, expr,
+                                               /*ifCond=*/{});
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
+                       s.clauses());
+    return mlir::success();
+  }
+  }
+
+  llvm_unreachable("unknown OpenACC atomic kind");
 }

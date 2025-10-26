@@ -106,7 +106,7 @@ body:             |
 # RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
 # RUN:    --check-prefix=BESTEFFORT
 # DEALLOC-AFTER-EPILOG: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'dealloc_after_epilog':
-# DEALLOC-AFTER-EPILOG-SAME: Unexpected lea, mov or add instruction after the epilog
+# DEALLOC-AFTER-EPILOG-SAME: Unexpected lea or add instruction after the epilog
 
 --- |
   define dso_local void @dealloc_after_epilog() local_unnamed_addr {
@@ -157,6 +157,135 @@ body:             |
     SEH_BeginEpilogue
     $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
+    SEH_EndEpilogue
+    RET64
+...
+
+;--- mov_no_setframe.mir
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_no_setframe.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=MOV-NO-SETFRAME
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/mov_no_setframe.mir \
+# RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# MOV-NO-SETFRAME: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'mov_no_setframe':
+# MOV-NO-SETFRAME-SAME: The epilog is setting frame back, but prolog did not set it
+
+--- |
+  define dso_local void @mov_no_setframe() local_unnamed_addr {
+  entry:
+    ret void
+  }
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
+...
+---
+name:            mov_no_setframe
+body:             |
+  bb.0.entry:
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    $rsp = MOV64rr $rbp
+    SEH_EndEpilogue
+    RET64
+...
+
+;--- mov_after_epilog.mir
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_after_epilog.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=MOV-AFTER-EPILOG
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_after_epilog.mir -run-pass=x86-wineh-unwindv2 \
+# RUN:    -x86-wineh-unwindv2-force-mode=1 |  FileCheck %s \
+# RUN:    --check-prefix=BESTEFFORT
+# MOV-AFTER-EPILOG: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'mov_after_epilog':
+# MOV-AFTER-EPILOG-SAME: Unexpected mov instruction after the epilog
+
+--- |
+  define dso_local void @mov_after_epilog() local_unnamed_addr {
+  entry:
+    ret void
+  }
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
+...
+---
+name:            mov_after_epilog
+body:             |
+  bb.0.entry:
+    $rbp = MOV64rr $rsp
+    frame-setup SEH_SetFrame 52, 0
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    SEH_EndEpilogue
+    $rsp = MOV64rr $rbp
+    RET64
+...
+
+;--- pop_before_mov.mir
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/pop_before_mov.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=POP-BEFORE-MOV
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/pop_before_mov.mir \
+# RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# POP-BEFORE-MOV: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'pop_before_mov':
+# POP-BEFORE-MOV-SAME: The epilog is setting the frame back after popping registers
+
+--- |
+  define dso_local void @pop_before_mov() local_unnamed_addr {
+  entry:
+    ret void
+  }
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
+...
+---
+name:            pop_before_mov
+body:             |
+  bb.0.entry:
+    frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 55
+    $rbp = MOV64rr $rsp
+    frame-setup SEH_SetFrame 52, 0
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $rsp = MOV64rr $rbp
+    SEH_EndEpilogue
+    RET64
+...
+
+;--- mov_after_dealloc.mir
+# RUN: not --crash llc -mtriple=x86_64-pc-windows-msvc -o - \
+# RUN:    %t/mov_after_dealloc.mir -run-pass=x86-wineh-unwindv2 2>&1 | \
+# RUN:    FileCheck %s --check-prefix=MOV-AFTER-DEALLOC
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %t/mov_after_dealloc.mir \
+# RUN:    -run-pass=x86-wineh-unwindv2 -x86-wineh-unwindv2-force-mode=1 | \
+# RUN:    FileCheck %s --check-prefix=BESTEFFORT
+# MOV-AFTER-DEALLOC: LLVM ERROR: Windows x64 Unwind v2 is required, but LLVM has generated incompatible code in function 'mov_after_dealloc':
+# MOV-AFTER-DEALLOC-SAME: Cannot set the frame back after the stack allocation has been deallocated
+
+--- |
+  define dso_local void @mov_after_dealloc() local_unnamed_addr {
+  entry:
+    ret void
+  }
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
+...
+---
+name:            mov_after_dealloc
+body:             |
+  bb.0.entry:
+    $rbp = MOV64rr $rsp
+    frame-setup SEH_SetFrame 52, 0
+    $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
+    frame-setup SEH_StackAlloc 40
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    $rsp = frame-destroy ADD64ri32 $rsp, 40, implicit-def dead $eflags
+    $rsp = MOV64rr $rbp
     SEH_EndEpilogue
     RET64
 ...

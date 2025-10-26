@@ -157,52 +157,8 @@ size_t SBThread::GetStopReasonDataCount() {
   if (exe_ctx) {
     if (exe_ctx->HasThreadScope()) {
       StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
-      if (stop_info_sp) {
-        StopReason reason = stop_info_sp->GetStopReason();
-        switch (reason) {
-        case eStopReasonInvalid:
-        case eStopReasonNone:
-        case eStopReasonTrace:
-        case eStopReasonExec:
-        case eStopReasonPlanComplete:
-        case eStopReasonThreadExiting:
-        case eStopReasonInstrumentation:
-        case eStopReasonProcessorTrace:
-        case eStopReasonVForkDone:
-        case eStopReasonHistoryBoundary:
-          // There is no data for these stop reasons.
-          return 0;
-
-        case eStopReasonBreakpoint: {
-          break_id_t site_id = stop_info_sp->GetValue();
-          lldb::BreakpointSiteSP bp_site_sp(
-              exe_ctx->GetProcessPtr()->GetBreakpointSiteList().FindByID(
-                  site_id));
-          if (bp_site_sp)
-            return bp_site_sp->GetNumberOfConstituents() * 2;
-          else
-            return 0; // Breakpoint must have cleared itself...
-        } break;
-
-        case eStopReasonWatchpoint:
-          return 1;
-
-        case eStopReasonSignal:
-          return 1;
-
-        case eStopReasonInterrupt:
-          return 1;
-
-        case eStopReasonException:
-          return 1;
-
-        case eStopReasonFork:
-          return 1;
-
-        case eStopReasonVFork:
-          return 1;
-        }
-      }
+      if (stop_info_sp)
+        return stop_info_sp->GetStopReasonDataCount();
     }
   } else {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
@@ -220,63 +176,8 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
     if (exe_ctx->HasThreadScope()) {
       Thread *thread = exe_ctx->GetThreadPtr();
       StopInfoSP stop_info_sp = thread->GetStopInfo();
-      if (stop_info_sp) {
-        StopReason reason = stop_info_sp->GetStopReason();
-        switch (reason) {
-        case eStopReasonInvalid:
-        case eStopReasonNone:
-        case eStopReasonTrace:
-        case eStopReasonExec:
-        case eStopReasonPlanComplete:
-        case eStopReasonThreadExiting:
-        case eStopReasonInstrumentation:
-        case eStopReasonProcessorTrace:
-        case eStopReasonVForkDone:
-        case eStopReasonHistoryBoundary:
-          // There is no data for these stop reasons.
-          return 0;
-
-        case eStopReasonBreakpoint: {
-          break_id_t site_id = stop_info_sp->GetValue();
-          lldb::BreakpointSiteSP bp_site_sp(
-              exe_ctx->GetProcessPtr()->GetBreakpointSiteList().FindByID(
-                  site_id));
-          if (bp_site_sp) {
-            uint32_t bp_index = idx / 2;
-            BreakpointLocationSP bp_loc_sp(
-                bp_site_sp->GetConstituentAtIndex(bp_index));
-            if (bp_loc_sp) {
-              if (idx & 1) {
-                // Odd idx, return the breakpoint location ID
-                return bp_loc_sp->GetID();
-              } else {
-                // Even idx, return the breakpoint ID
-                return bp_loc_sp->GetBreakpoint().GetID();
-              }
-            }
-          }
-          return LLDB_INVALID_BREAK_ID;
-        } break;
-
-        case eStopReasonWatchpoint:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonSignal:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonInterrupt:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonException:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonFork:
-          return stop_info_sp->GetValue();
-
-        case eStopReasonVFork:
-          return stop_info_sp->GetValue();
-        }
-      }
+      if (stop_info_sp)
+        return stop_info_sp->GetStopReasonDataAtIndex(idx);
     }
   } else {
     LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");

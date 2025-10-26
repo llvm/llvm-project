@@ -53,6 +53,7 @@
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
 #include "src/stdio/printf_core/writer.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
@@ -250,7 +251,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   // there's space for it in the DigitsOutput buffer).
   DigitsOutput output;
   output.ndigits = view.size();
-  __builtin_memcpy(output.digits, view.data(), output.ndigits);
+  inline_memcpy(output.digits, view.data(), output.ndigits);
 
   // Set up the output exponent, which is done differently depending on mode.
   // Also, figure out whether we have one digit too many, and if so, set the
@@ -551,7 +552,7 @@ convert_float_inner(Writer<write_mode> *writer, const FormatSection &to_conv,
     cpp::string_view expview = expcvt.view();
     expbuf[0] = internal::islower(to_conv.conv_name) ? 'e' : 'E';
     explen = expview.size() + 1;
-    __builtin_memcpy(expbuf + 1, expview.data(), expview.size());
+    inline_memcpy(expbuf + 1, expview.data(), expview.size());
   }
 
   // Now we know enough to work out the length of the unpadded output:

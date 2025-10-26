@@ -125,11 +125,11 @@ static RT_API_ATTRS bool GetLowerCaseName(IoStatementState &io, char buffer[],
   return false;
 }
 
-static RT_API_ATTRS Fortran::common::optional<SubscriptValue> GetSubscriptValue(
+static RT_API_ATTRS common::optional<SubscriptValue> GetSubscriptValue(
     IoStatementState &io) {
-  Fortran::common::optional<SubscriptValue> value;
+  common::optional<SubscriptValue> value;
   std::size_t byteCount{0};
-  Fortran::common::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
+  common::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
   bool negate{ch && *ch == '-'};
   if ((ch && *ch == '+') || negate) {
     io.HandleRelativePosition(byteCount);
@@ -146,7 +146,7 @@ static RT_API_ATTRS Fortran::common::optional<SubscriptValue> GetSubscriptValue(
   if (overflow) {
     io.GetIoErrorHandler().SignalError(
         "NAMELIST input subscript value overflow");
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
   if (negate) {
     if (value) {
@@ -168,7 +168,7 @@ static RT_API_ATTRS bool HandleSubscripts(IoStatementState &io,
   std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
   std::size_t byteCount{0};
-  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   char32_t comma{GetComma(io)};
   for (; ch && *ch != ')'; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
@@ -258,13 +258,40 @@ static RT_API_ATTRS bool HandleSubscripts(IoStatementState &io,
   return false;
 }
 
-static RT_API_ATTRS void StorageSequenceExtension(
-    Descriptor &desc, const Descriptor &source) {
+static RT_API_ATTRS bool HasDefinedIoSubroutine(common::DefinedIo definedIo,
+    typeInfo::SpecialBinding::Which specialBinding,
+    const typeInfo::DerivedType *derivedType,
+    const NonTbpDefinedIoTable *table) {
+  for (; derivedType; derivedType = derivedType->GetParentType()) {
+    if ((table && table->Find(*derivedType, definedIo) != nullptr) ||
+        derivedType->FindSpecialBinding(specialBinding)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+static RT_API_ATTRS bool HasDefinedIoSubroutine(common::DefinedIo definedIo,
+    typeInfo::SpecialBinding::Which specialBinding,
+    const Descriptor &descriptor, const NonTbpDefinedIoTable *table) {
+  const DescriptorAddendum *addendum{descriptor.Addendum()};
+  return addendum &&
+      HasDefinedIoSubroutine(
+          definedIo, specialBinding, addendum->derivedType(), table);
+}
+
+static RT_API_ATTRS void StorageSequenceExtension(Descriptor &desc,
+    const Descriptor &source, const io::NonTbpDefinedIoTable *table) {
   // Support the near-universal extension of NAMELIST input into a
   // designatable storage sequence identified by its initial scalar array
   // element.  For example, treat "A(1) = 1. 2. 3." as if it had been
   // "A(1:) = 1. 2. 3.".
-  if (desc.rank() == 0 && (source.rank() == 1 || source.IsContiguous())) {
+  // (But don't do this for derived types with defined formatted READs,
+  // since they might do non-list-directed input that won't stop at the
+  // next namelist input item name.)
+  if (desc.rank() == 0 && (source.rank() == 1 || source.IsContiguous()) &&
+      !HasDefinedIoSubroutine(common::DefinedIo::ReadFormatted,
+          typeInfo::SpecialBinding::Which::ReadFormatted, desc, table)) {
     if (auto stride{source.rank() == 1
                 ? source.GetDimension(0).ByteStride()
                 : static_cast<SubscriptValue>(source.ElementBytes())};
@@ -300,9 +327,9 @@ static RT_API_ATTRS bool HandleSubstring(
   SubscriptValue chars{static_cast<SubscriptValue>(desc.ElementBytes()) / kind};
   // Allow for blanks in substring bounds; they're nonstandard, but not
   // ambiguous within the parentheses.
-  Fortran::common::optional<SubscriptValue> lower, upper;
+  common::optional<SubscriptValue> lower, upper;
   std::size_t byteCount{0};
-  Fortran::common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
+  common::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   if (ch) {
     if (*ch == ':') {
       lower = 1;
@@ -364,8 +391,7 @@ static RT_API_ATTRS bool HandleComponent(IoStatementState &io, Descriptor &desc,
           // If base and component are both arrays, the component name
           // must be followed by subscripts; process them now.
           std::size_t byteCount{0};
-          if (Fortran::common::optional<char32_t> next{
-                  io.GetNextNonBlank(byteCount)};
+          if (common::optional<char32_t> next{io.GetNextNonBlank(byteCount)};
               next && *next == '(') {
             io.HandleRelativePosition(byteCount); // skip over '('
             StaticDescriptor<maxRank, true, 16> staticDesc;
@@ -454,7 +480,7 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   RUNTIME_CHECK(handler, listInput != nullptr);
   // Find this namelist group's header in the input
   io.BeginReadingRecord();
-  Fortran::common::optional<char32_t> next;
+  common::optional<char32_t> next;
   char name[nameBufferSize];
   RUNTIME_CHECK(handler, group.groupName != nullptr);
   char32_t comma{GetComma(io)};
@@ -562,7 +588,8 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         next = io.GetCurrentChar(byteCount);
       } while (next && (*next == '(' || *next == '%'));
       if (lastSubscriptDescriptor) {
-        StorageSequenceExtension(*lastSubscriptDescriptor, *lastSubscriptBase);
+        StorageSequenceExtension(*lastSubscriptDescriptor, *lastSubscriptBase,
+            group.nonTbpDefinedIo);
       }
     }
     // Skip the '='
@@ -597,6 +624,12 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   }
   if (next && *next == '/') {
     io.HandleRelativePosition(byteCount);
+    if (auto *listInput{
+            io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
+      // Don't let the namelist's terminal '/' mess up a parent I/O's
+      // list-directed input.
+      listInput->set_hitSlash(false);
+    }
   } else if (*next && (*next == '&' || *next == '$')) {
     // stop at beginning of next group
   } else {

@@ -23,7 +23,7 @@ void f0(S0 *p) {
 
 #ifdef __cplusplus
 
-// PST containing an empty union with `[[no_unique_address]]`` - pass in registers.
+// PST containing an empty union with `[[no_unique_address]]` - pass in registers.
 typedef struct {
    fvec32 x[4];
    [[no_unique_address]]
