@@ -620,13 +620,11 @@ private:
   }
 
   /// Return a label at a given \p Address in the function. If the label does
-  /// not exist - create it. Assert if the \p Address does not belong to
-  /// the function. If \p CreatePastEnd is true, then return the function
-  /// end label when the \p Address points immediately past the last byte
-  /// of the function.
+  /// not exist - create it.
+  ///
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
-  MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool CreatePastEnd = false);
+  MCSymbol *getOrCreateLocalLabel(uint64_t Address);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
