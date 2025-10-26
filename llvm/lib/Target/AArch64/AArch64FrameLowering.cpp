@@ -2009,11 +2009,15 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       }
     }
 
-    LLVM_DEBUG(dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
-               if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
-               dbgs() << ") -> fi#(" << RPI.FrameIdx;
-               if (RPI.isPaired()) dbgs() << ", " << RPI.FrameIdx + 1;
-               dbgs() << ")\n");
+    LLVM_DEBUG({
+      dbgs() << "CSR spill: (" << printReg(Reg1, TRI);
+      if (RPI.isPaired())
+        dbgs() << ", " << printReg(Reg2, TRI);
+      dbgs() << ") -> fi#(" << RPI.FrameIdx;
+      if (RPI.isPaired())
+        dbgs() << ", " << RPI.FrameIdx + 1;
+      dbgs() << ")\n"
+    });
 
     assert((!NeedsWinCFI || !(Reg1 == AArch64::LR && Reg2 == AArch64::FP)) &&
            "Windows unwdinding requires a consecutive (FP,LR) pair");
@@ -2176,11 +2180,15 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
     case RegPairInfo::VG:
       continue;
     }
-    LLVM_DEBUG(dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
-               if (RPI.isPaired()) dbgs() << ", " << printReg(Reg2, TRI);
-               dbgs() << ") -> fi#(" << RPI.FrameIdx;
-               if (RPI.isPaired()) dbgs() << ", " << RPI.FrameIdx + 1;
-               dbgs() << ")\n");
+    LLVM_DEBUG({
+      dbgs() << "CSR restore: (" << printReg(Reg1, TRI);
+      if (RPI.isPaired())
+        dbgs() << ", " << printReg(Reg2, TRI);
+      dbgs() << ") -> fi#(" << RPI.FrameIdx;
+      if (RPI.isPaired())
+        dbgs() << ", " << RPI.FrameIdx + 1;
+      dbgs() << ")\n"
+    });
 
     // Windows unwind codes require consecutive registers if registers are
     // paired.  Make the switch here, so that the code below will save (x,x+1)
