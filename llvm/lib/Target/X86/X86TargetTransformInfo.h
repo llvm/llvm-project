@@ -319,6 +319,8 @@ public:
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const override;
 
+  bool useFastCCForInternalCall(Function &F) const override;
+
 private:
   bool supportsGather() const;
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
