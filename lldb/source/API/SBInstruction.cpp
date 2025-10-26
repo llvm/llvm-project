@@ -10,10 +10,11 @@
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBAddress.h"
-#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBFile.h"
+#include "lldb/API/SBFrame.h"
 
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/EmulateInstruction.h"
@@ -26,6 +27,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include <memory>
 
@@ -163,7 +165,8 @@ const char *SBInstruction::GetComment(SBTarget target) {
   return ConstString(inst_sp->GetComment(&exe_ctx)).GetCString();
 }
 
-lldb::InstructionControlFlowKind SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
+lldb::InstructionControlFlowKind
+SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
   LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
@@ -346,4 +349,68 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
   if (inst_sp)
     return inst_sp->TestEmulation(output_stream.ref(), test_file);
   return false;
+}
+
+lldb::SBStructuredData
+SBInstruction::GetVariableAnnotations(lldb::SBTarget target) {
+  LLDB_INSTRUMENT_VA(this, target);
+
+  SBStructuredData result;
+
+  if (!m_opaque_sp || !m_opaque_sp->IsValid() || !target.IsValid()) {
+    return result;
+  }
+
+  lldb::InstructionSP inst_sp = m_opaque_sp->GetSP();
+  lldb::TargetSP target_sp = target.GetSP();
+
+  if (!inst_sp || !target_sp) {
+    return result;
+  }
+
+  const Address &addr = inst_sp->GetAddress();
+  ModuleSP module_sp = addr.GetModule();
+
+  if (!module_sp) {
+    return result;
+  }
+
+  VariableAnnotator annotator;
+  std::vector<VariableAnnotation> annotations =
+      annotator.annotateStructured(*inst_sp, *target_sp, module_sp);
+
+  auto array_sp = std::make_shared<StructuredData::Array>();
+
+  for (const auto &ann : annotations) {
+    auto dict_sp = std::make_shared<StructuredData::Dictionary>();
+
+    dict_sp->AddStringItem("variable_name", ann.variable_name);
+    dict_sp->AddStringItem("location_description", ann.location_description);
+    dict_sp->AddBooleanItem("is_live", ann.is_live);
+    dict_sp->AddItem(
+        "start_address",
+        std::make_shared<StructuredData::UnsignedInteger>(ann.start_address));
+    dict_sp->AddItem(
+        "end_address",
+        std::make_shared<StructuredData::UnsignedInteger>(ann.end_address));
+    dict_sp->AddItem(
+        "register_kind",
+        std::make_shared<StructuredData::UnsignedInteger>(ann.register_kind));
+    if (ann.decl_file.has_value()) {
+      dict_sp->AddStringItem("decl_file", *ann.decl_file);
+    }
+    if (ann.decl_line.has_value()) {
+      dict_sp->AddItem(
+          "decl_line",
+          std::make_shared<StructuredData::UnsignedInteger>(*ann.decl_line));
+    }
+    if (ann.type_name.has_value()) {
+      dict_sp->AddStringItem("type_name", *ann.type_name);
+    }
+
+    array_sp->AddItem(dict_sp);
+  }
+
+  result.m_impl_up->SetObjectSP(array_sp);
+  return result;
 }

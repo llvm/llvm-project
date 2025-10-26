@@ -153,6 +153,7 @@ protected:
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
   friend class SBTrace;
+  friend class SBInstruction;
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::lua::SWIGBridge;
   friend class SBCommandInterpreter;

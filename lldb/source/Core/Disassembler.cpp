@@ -302,14 +302,39 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 std::vector<std::string>
 VariableAnnotator::annotate(Instruction &inst, Target &target,
                             const lldb::ModuleSP &module_sp) {
-  std::vector<std::string> events;
+  auto structured_annotations = annotateStructured(inst, target, module_sp);
 
-  // If we lost module context, everything becomes <undef>.
+  std::vector<std::string> events;
+  events.reserve(structured_annotations.size());
+
+  for (const auto &annotation : structured_annotations) {
+    std::string display_string;
+    display_string =
+        llvm::formatv(
+            "{0} = {1}", annotation.variable_name,
+            annotation.location_description == VariableAnnotator::kUndefLocation
+                ? llvm::formatv("<{0}>", VariableAnnotator::kUndefLocation)
+                      .str()
+                : annotation.location_description)
+            .str();
+    events.push_back(display_string);
+  }
+
+  return events;
+}
+
+std::vector<VariableAnnotation>
+VariableAnnotator::annotateStructured(Instruction &inst, Target &target,
+                                      const lldb::ModuleSP &module_sp) {
+  std::vector<VariableAnnotation> annotations;
+
+  // If we lost module context, mark all live variables as undefined.
   if (!module_sp) {
-    for (const auto &KV : Live_)
-      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+    for (const auto &KV : Live_) {
+      annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
+    }
     Live_.clear();
-    return events;
+    return annotations;
   }
 
   // Resolve function/block at this *file* address.
@@ -319,10 +344,11 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
   if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
       !sc.function) {
     // No function context: everything dies here.
-    for (const auto &KV : Live_)
-      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+    for (const auto &KV : Live_) {
+      annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
+    }
     Live_.clear();
-    return events;
+    return annotations;
   }
 
   // Collect in-scope variables for this instruction into Current.
@@ -376,8 +402,35 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
     if (loc.empty())
       continue;
 
-    Current.try_emplace(v->GetID(),
-                        VarState{std::string(name), std::string(loc)});
+    lldb::addr_t start_addr = inst.GetAddress().GetFileAddress();
+    lldb::addr_t end_addr = LLDB_INVALID_ADDRESS;
+    if (entry.file_range.has_value()) {
+      start_addr = entry.file_range->GetBaseAddress().GetFileAddress();
+      end_addr = start_addr + entry.file_range->GetByteSize();
+    }
+
+    std::optional<std::string> decl_file;
+    std::optional<uint32_t> decl_line;
+    std::optional<std::string> type_name;
+
+    const Declaration &decl = v->GetDeclaration();
+    if (decl.GetFile()) {
+      decl_file = decl.GetFile().GetFilename().AsCString();
+      if (decl.GetLine() > 0) {
+        decl_line = decl.GetLine();
+      }
+    }
+
+    if (Type *type = v->GetType()) {
+      if (const char *type_str = type->GetName().AsCString()) {
+        type_name = type_str;
+      }
+    }
+
+    Current.try_emplace(
+        v->GetID(), VarState{std::string(name), std::string(loc), start_addr,
+                             end_addr, entry.expr->GetRegisterKind(), decl_file,
+                             decl_line, type_name});
   }
 
   // Diff Live_ → Current.
@@ -387,24 +440,41 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
     auto it = Live_.find(KV.first);
     if (it == Live_.end()) {
       // Newly live.
-      events.emplace_back(
-          llvm::formatv("{0} = {1}", KV.second.name, KV.second.last_loc).str());
+      annotations.push_back(createAnnotation(KV.second, true));
     } else if (it->second.last_loc != KV.second.last_loc) {
       // Location changed.
-      events.emplace_back(
-          llvm::formatv("{0} = {1}", KV.second.name, KV.second.last_loc).str());
+      annotations.push_back(createAnnotation(KV.second, true));
     }
   }
 
-  // 2) Ends: anything that was live but is not in Current becomes <undef>.
+  // 2) Ends: anything that was live but is not in Current becomes
+  // <kUndefLocation>.
   for (const auto &KV : Live_) {
-    if (!Current.count(KV.first))
-      events.emplace_back(llvm::formatv("{0} = <undef>", KV.second.name).str());
+    if (!Current.count(KV.first)) {
+      annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
+    }
   }
 
   // Commit new state.
   Live_ = std::move(Current);
-  return events;
+  return annotations;
+}
+
+VariableAnnotation VariableAnnotator::createAnnotation(
+    const VarState &var_state, bool is_live,
+    const std::optional<std::string> &location_desc) {
+  VariableAnnotation annotation;
+  annotation.variable_name = var_state.name;
+  annotation.location_description =
+      location_desc.has_value() ? *location_desc : var_state.last_loc;
+  annotation.start_address = var_state.start_address;
+  annotation.end_address = var_state.end_address;
+  annotation.is_live = is_live;
+  annotation.register_kind = var_state.register_kind;
+  annotation.decl_file = var_state.decl_file;
+  annotation.decl_line = var_state.decl_line;
+  annotation.type_name = var_state.type_name;
+  return annotation;
 }
 
 void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,

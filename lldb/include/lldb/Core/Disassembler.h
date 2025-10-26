@@ -566,6 +566,21 @@ private:
   const Disassembler &operator=(const Disassembler &) = delete;
 };
 
+/// Structured data for a single variable annotation
+struct VariableAnnotation {
+  std::string variable_name;
+  std::string location_description; // e.g., "r15", "undef", "const_0"
+  lldb::addr_t start_address;       // Where this annotation starts being valid
+  lldb::addr_t end_address;         // Where this annotation ends being valid
+  bool is_live; // Whether variable is live at this instruction
+  lldb::RegisterKind
+      register_kind; // Register numbering scheme for location interpretation
+  std::optional<std::string>
+      decl_file;                     // Source file where variable was declared
+  std::optional<uint32_t> decl_line; // Line number where variable was declared
+  std::optional<std::string> type_name; // Variable's type name
+};
+
 /// Tracks live variable annotations across instructions and produces
 /// per-instruction "events" like `name = RDI` or `name = <undef>`.
 class VariableAnnotator {
@@ -574,16 +589,39 @@ class VariableAnnotator {
     std::string name;
     /// Last printed location (empty means <undef>).
     std::string last_loc;
+    /// Address range where this variable state is valid.
+    lldb::addr_t start_address;
+    lldb::addr_t end_address;
+    /// Register numbering scheme for location interpretation.
+    lldb::RegisterKind register_kind;
+
+    std::optional<std::string> decl_file;
+    std::optional<uint32_t> decl_line;
+    std::optional<std::string> type_name;
   };
 
   // Live state from the previous instruction, keyed by Variable::GetID().
   llvm::DenseMap<lldb::user_id_t, VarState> Live_;
+
+  static constexpr const char *kUndefLocation = "undef";
 
 public:
   /// Compute annotation strings for a single instruction and update `Live_`.
   /// Returns only the events that should be printed *at this instruction*.
   std::vector<std::string> annotate(Instruction &inst, Target &target,
                                     const lldb::ModuleSP &module_sp);
+
+  /// Compute structured annotation data for a single instruction and update
+  /// `Live_`. Returns structured data for all variables relevant at this
+  /// instruction.
+  std::vector<VariableAnnotation>
+  annotateStructured(Instruction &inst, Target &target,
+                     const lldb::ModuleSP &module_sp);
+
+private:
+  VariableAnnotation createAnnotation(
+      const VarState &var_state, bool is_live,
+      const std::optional<std::string> &location_desc = std::nullopt);
 };
 
 } // namespace lldb_private
