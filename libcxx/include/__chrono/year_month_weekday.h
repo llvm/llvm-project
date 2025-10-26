@@ -22,6 +22,7 @@
 #include <__chrono/year_month.h>
 #include <__chrono/year_month_day.h>
 #include <__config>
+#include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -279,6 +280,22 @@ year_month_weekday_last::operator-=(const years& __dy) noexcept {
 }
 
 } // namespace chrono
+
+template <>
+struct hash<chrono::year_month_weekday> : public __unary_function<chrono::year_month_weekday, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month_weekday& __ymw) const _NOEXCEPT {
+    return hash<chrono::year>{}(__ymw.year()) ^ hash<chrono::month>{}(__ymw.month()) ^
+           hash<chrono::weekday_indexed>{}(__ymw.weekday_indexed());
+  }
+};
+
+template <>
+struct hash<chrono::year_month_weekday_last> : public __unary_function<chrono::year_month_weekday_last, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month_weekday_last& __ymwl) const _NOEXCEPT {
+    return hash<chrono::year>{}(__ymwl.year()) ^ hash<chrono::month>{}(__ymwl.month()) ^
+           hash<chrono::weekday_last>{}(__ymwl.weekday_last());
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

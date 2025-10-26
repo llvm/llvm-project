@@ -13,6 +13,7 @@
 #include <__chrono/duration.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -91,6 +92,13 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr day& day::operator-=(const days& __dd) no
 }
 
 } // namespace chrono
+
+template <>
+struct hash<chrono::day> : public __unary_function<chrono::day, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::day& __d) const _NOEXCEPT {
+    return hash<unsigned>{}(static_cast<unsigned>(__d));
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 
