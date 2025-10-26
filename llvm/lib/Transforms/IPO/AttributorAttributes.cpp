@@ -13870,11 +13870,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
         int64_t ShiftValue = OffsetNew - OffsetOld;
         Value *IndexList[1] = {ConstantInt::get(Int64TyInteger, ShiftValue)};
         Value *GepToNewAddress = GetElementPtrInst::Create(
-            PointeeTy, PointerOperand, IndexList, "NewGep", OldLoadInst);
+            PointeeTy, PointerOperand, IndexList, "NewGep", OldLoadInst->getIterator());
 
         LoadInst *NewLoadInst = new LoadInst(
             OldLoadInst->getType(), GepToNewAddress, OldLoadInst->getName(),
-            false, OldLoadInst->getAlign(), OldLoadInst);
+            false, OldLoadInst->getAlign(), OldLoadInst->getIterator());
 
         Changed |=
             A.changeAfterManifest(IRPosition::inst(*OldLoadInst), *NewLoadInst);
@@ -13893,11 +13893,11 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
         Type *PointeeTy = OldStoreInst->getPointerOperandType();
         Value *IndexList[1] = {ConstantInt::get(Int64TyInteger, ShiftValue)};
         Value *GepToNewAddress = GetElementPtrInst::Create(
-            PointeeTy, PointerOperand, IndexList, "NewGep", OldStoreInst);
+            PointeeTy, PointerOperand, IndexList, "NewGep", OldStoreInst->getIterator());
 
         StoreInst *NewStoreInst =
             new StoreInst(OldStoreInst->getValueOperand(), GepToNewAddress,
-                          false, OldStoreInst->getAlign(), OldStoreInst);
+                          false, OldStoreInst->getAlign(), OldStoreInst->getIterator());
 
         Changed |= A.changeAfterManifest(IRPosition::inst(*OldStoreInst),
                                          *NewStoreInst);
@@ -13911,7 +13911,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
         Value *IndexList[1] = {ConstantInt::get(Int64TyInteger, OffsetNew)};
         Value *OldPointerOperand = OldGEP->getPointerOperand();
         Value *GepToNewAddress = GetElementPtrInst::Create(
-            NewAllocationType, OldPointerOperand, IndexList, "NewGep", OldGEP);
+            NewAllocationType, OldPointerOperand, IndexList, "NewGep", OldGEP->getIterator());
 
         Changed |=
             A.changeAfterManifest(IRPosition::inst(*OldGEP), *GepToNewAddress);
