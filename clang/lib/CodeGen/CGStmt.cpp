@@ -1580,8 +1580,10 @@ void CodeGenFunction::EmitCXXExpansionInstantiationStmt(
   JumpDest ExpandExit = getJumpDestInCurrentScope("expand.end");
   JumpDest ContinueDest;
   for (auto [N, Inst] : enumerate(S.getInstantiations())) {
-    if (!HaveInsertPoint())
+    if (!HaveInsertPoint()) {
+      EmitBlock(ExpandExit.getBlock(), true);
       return;
+    }
 
     if (N == S.getInstantiations().size() - 1)
       ContinueDest = ExpandExit;

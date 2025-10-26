@@ -644,3 +644,54 @@ constexpr int references_destructuring() {
 }
 
 static_assert(references_destructuring() == 12);
+
+constexpr int break_continue() {
+  int sum = 0;
+  template for (auto x : {1, 2}) {
+    break;
+    sum += x;
+  }
+
+  template for (auto x : {3, 4}) {
+    continue;
+    sum += x;
+  }
+
+  template for (auto x : {5, 6}) {
+    if (x == 6) break;
+    sum += x;
+  }
+
+  template for (auto x : {7, 8, 9}) {
+    if (x == 8) continue;
+    sum += x;
+  }
+
+  return sum;
+}
+
+static_assert(break_continue() == 21);
+
+constexpr int break_continue_nested() {
+  int sum = 0;
+
+  template for (auto x : {1, 2}) {
+    template for (auto y : {3, 4}) {
+      if (x == 2) break;
+      sum += y;
+    }
+    sum += x;
+  }
+
+  template for (auto x : {5, 6}) {
+    template for (auto y : {7, 8}) {
+      if (x == 6) continue;
+      sum += y;
+    }
+    sum += x;
+  }
+
+  return sum;
+}
+
+static_assert(break_continue_nested() == 36);
