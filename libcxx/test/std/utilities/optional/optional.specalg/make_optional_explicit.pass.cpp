@@ -15,10 +15,10 @@
 // GCC crashes on this file, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120577
 // XFAIL: gcc-15
 
+#include <cassert>
+#include <memory>
 #include <optional>
 #include <string>
-#include <memory>
-#include <cassert>
 
 #include "test_macros.h"
 
