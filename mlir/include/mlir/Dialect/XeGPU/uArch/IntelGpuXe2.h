@@ -36,8 +36,7 @@ struct Xe2Plus : public uArch {
           const XeCoreInfo &xeCore)
       : uArch(archName, archDescription, instructionRegistry), xeCore(xeCore) {}
   int getSubgroupSize() const override { return 16; }
-  unsigned getPackedFormatBitSize() const override { return 16; }
-  unsigned getPackedFormatBitSizeGatherScatter() const override { return 32; }
+  unsigned getGeneralPackedFormatBitSize() const override { return 32; }
 
 protected:
   XeCoreInfo xeCore;
@@ -46,16 +45,15 @@ protected:
 //===----------------------------------------------------------------------===//
 // uArch instructions
 //===----------------------------------------------------------------------===//
-struct StoreNdInstruction : public Instruction {
-  StoreNdInstruction()
-      : Instruction(InstructionKind::STORE_ND, InstructionScope::Subgroup) {}
+struct Subgroup2DBlockStoreInstruction : public Instruction {
+  Subgroup2DBlockStoreInstruction()
+      : Instruction(InstructionKind::Subgroup2DBlockStore,
+                    InstructionScope::Subgroup) {}
   static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::STORE_ND;
+    return B->getInstructionKind() == InstructionKind::Subgroup2DBlockStore;
   }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
-  // Reads 1, 2, 4, or 8 uints of data for each work item in the sub-group from
-  // the specified pointer
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
   getBlockWidthHeightCount(Type elemTy) const {
@@ -74,19 +72,20 @@ struct StoreNdInstruction : public Instruction {
                              llvm::ArrayRef<int>(kCount));
     return std::nullopt;
   }
+
+  int32_t getPackedFormatBitSize() const { return 16; }
 };
 
-struct LoadNdInstruction : public Instruction {
-  LoadNdInstruction()
-      : Instruction(InstructionKind::LOAD_ND, InstructionScope::Subgroup) {}
+struct Subgroup2DBlockLoadInstruction : public Instruction {
+  Subgroup2DBlockLoadInstruction()
+      : Instruction(InstructionKind::Subgroup2DBlockLoad,
+                    InstructionScope::Subgroup) {}
   static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::LOAD_ND;
+    return B->getInstructionKind() == InstructionKind::Subgroup2DBlockLoad;
   }
 
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
-  // Writes 1, 2, 4, or 8 uints of data for each work item in the sub-group to
-  // the specified pointer.
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
   getBlockWidthHeightCount(Type elemTy, bool hasTransform, bool hasTranspose,
@@ -126,13 +125,16 @@ struct LoadNdInstruction : public Instruction {
       return it->second;
     return std::nullopt;
   }
+
+  int32_t getPackedFormatBitSize() const { return 16; }
 };
 
-struct PrefetchNdInstruction : public Instruction {
-  PrefetchNdInstruction()
-      : Instruction(InstructionKind::PREFETCH_ND, InstructionScope::Subgroup) {}
+struct Subgroup2DBlockPrefetchInstruction : public Instruction {
+  Subgroup2DBlockPrefetchInstruction()
+      : Instruction(InstructionKind::Subgroup2DBlockPrefetch,
+                    InstructionScope::Subgroup) {}
   static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::PREFETCH_ND;
+    return B->getInstructionKind() == InstructionKind::Subgroup2DBlockPrefetch;
   }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_buffer_prefetch.html#_add_a_new_section_6_15_x_sub_group_prefetch_functions
@@ -162,15 +164,20 @@ struct PrefetchNdInstruction : public Instruction {
       return it->second;
     return std::nullopt;
   }
+  int32_t getPackedFormatBitSize() const { return 16; }
 };
 
-struct DPASInstruction : public Instruction, public MMAInstructionInterface {
-  DPASInstruction(unsigned packedFormatBitSizeA, unsigned packedFormatBitSizeB)
-      : Instruction(InstructionKind::DPAS, InstructionScope::Subgroup),
+struct SubgroupMatrixMultiplyAcc : public Instruction,
+                                   public MMAInstructionInterface {
+  SubgroupMatrixMultiplyAcc(unsigned packedFormatBitSizeA,
+                            unsigned packedFormatBitSizeB)
+      : Instruction(InstructionKind::SubgroupMatrixMultiplyAcc,
+                    InstructionScope::Subgroup),
         packedFormatBitSizeA(packedFormatBitSizeA),
         packedFormatBitSizeB(packedFormatBitSizeB) {}
   static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::DPAS;
+    return B->getInstructionKind() ==
+           InstructionKind::SubgroupMatrixMultiplyAcc;
   }
   // Source:
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html
@@ -214,10 +221,10 @@ protected:
 
 struct PVCuArch final : public Xe2Plus {
   static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
-    static const DPASInstruction dpasInst{16, 32};
-    static const StoreNdInstruction loadNdInst;
-    static const StoreNdInstruction storeNdInst;
-    static const PrefetchNdInstruction prefetchNdInst;
+    static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
+    static const Subgroup2DBlockLoadInstruction loadNdInst;
+    static const Subgroup2DBlockStoreInstruction storeNdInst;
+    static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
     static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
                                        &prefetchNdInst};
     return arr;
@@ -237,10 +244,10 @@ struct PVCuArch final : public Xe2Plus {
 
 struct BMGuArch : public Xe2Plus {
   static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
-    static const DPASInstruction dpasInst{16, 32};
-    static const StoreNdInstruction loadNdInst;
-    static const StoreNdInstruction storeNdInst;
-    static const PrefetchNdInstruction prefetchNdInst;
+    static const SubgroupMatrixMultiplyAcc dpasInst{16, 32};
+    static const Subgroup2DBlockLoadInstruction loadNdInst;
+    static const Subgroup2DBlockStoreInstruction storeNdInst;
+    static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
     static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
                                        &prefetchNdInst};
     return arr;
@@ -276,7 +283,8 @@ inline const uArch *getUArch(llvm::StringRef archName) {
 //===----------------------------------------------------------------------===//
 
 inline llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
-DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
+SubgroupMatrixMultiplyAcc::getSupportedShapes(Type dataType,
+                                              MMAOpndKind matrixType) {
   auto combineVectors = [](const llvm::SmallVector<uint32_t, 8> &a,
                            const llvm::SmallVector<uint32_t, 8> &b)
       -> llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16> {
@@ -312,8 +320,8 @@ DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
 }
 
 inline llvm::SmallVector<Type, 8>
-DPASInstruction::getSupportedTypes(MLIRContext &context,
-                                   MMAOpndKind matrixType) {
+SubgroupMatrixMultiplyAcc::getSupportedTypes(MLIRContext &context,
+                                             MMAOpndKind matrixType) {
   Type bf16Type = BFloat16Type::get(&context);
   Type f16Type = Float16Type::get(&context);
   Type tf32Type = FloatTF32Type::get(&context);
@@ -332,8 +340,10 @@ DPASInstruction::getSupportedTypes(MLIRContext &context,
   return {};
 }
 
-inline bool DPASInstruction::checkSupportedTypes(Type AType, Type BType,
-                                                 Type CType, Type DType) {
+inline bool SubgroupMatrixMultiplyAcc::checkSupportedTypes(Type AType,
+                                                           Type BType,
+                                                           Type CType,
+                                                           Type DType) {
   if (AType.isF16() || BType.isF16()) {
     if (AType != BType || (CType && (!CType.isF32() && !CType.isF16())) ||
         (!DType.isF32() && !DType.isF16())) {
@@ -363,7 +373,7 @@ inline bool DPASInstruction::checkSupportedTypes(Type AType, Type BType,
   return true;
 }
 
-inline bool DPASInstruction::checkSupportedShapesAndTypes(
+inline bool SubgroupMatrixMultiplyAcc::checkSupportedShapesAndTypes(
     std::pair<uint32_t, uint32_t> AShape, std::pair<uint32_t, uint32_t> BShape,
     std::pair<uint32_t, uint32_t> CShape, std::pair<uint32_t, uint32_t> DShape,
     Type AType, Type BType, Type CType, Type DType) {
@@ -378,23 +388,21 @@ inline bool DPASInstruction::checkSupportedShapesAndTypes(
          checkSupportedTypes(AType, BType, CType, DType);
 }
 
-inline bool DPASInstruction::validate(std::pair<uint32_t, uint32_t> AShape,
-                                      std::pair<uint32_t, uint32_t> BShape,
-                                      std::pair<uint32_t, uint32_t> CShape,
-                                      std::pair<uint32_t, uint32_t> DShape,
-                                      Type AType, Type BType, Type CType,
-                                      Type DType) {
+inline bool SubgroupMatrixMultiplyAcc::validate(
+    std::pair<uint32_t, uint32_t> AShape, std::pair<uint32_t, uint32_t> BShape,
+    std::pair<uint32_t, uint32_t> CShape, std::pair<uint32_t, uint32_t> DShape,
+    Type AType, Type BType, Type CType, Type DType) {
   return checkSupportedShapesAndTypes(AShape, BShape, CShape, DShape, AType,
                                       BType, CType, DType);
 }
 
 inline llvm::SmallVector<uint32_t, 8>
-DPASInstruction::getSupportedM(Type type) const {
+SubgroupMatrixMultiplyAcc::getSupportedM(Type type) const {
   return {1, 2, 3, 4, 5, 6, 7, 8};
 }
 
 inline llvm::SmallVector<uint32_t, 8>
-DPASInstruction::getSupportedK(Type type) const {
+SubgroupMatrixMultiplyAcc::getSupportedK(Type type) const {
   // assert if data type is not int or float type
   assert(type.isIntOrFloat() && "Matrix type must be int or float");
   auto bitWidth = type.getIntOrFloatBitWidth();
@@ -422,7 +430,7 @@ DPASInstruction::getSupportedK(Type type) const {
 }
 
 inline llvm::SmallVector<uint32_t, 8>
-DPASInstruction::getSupportedN(Type type) const {
+SubgroupMatrixMultiplyAcc::getSupportedN(Type type) const {
   return {16};
 }
 

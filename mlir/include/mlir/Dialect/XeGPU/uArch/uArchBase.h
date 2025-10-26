@@ -32,11 +32,11 @@ namespace uArch {
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
-  DPAS,       // Dot Product Accumulate Systolic (DPAS) is a matrix
-              // multiply-add operation
-  STORE_ND,   // Subgroup-level 2D block write instruction
-  LOAD_ND,    // Subgroup-level 2D block load instruction
-  PREFETCH_ND // Subgroup-level 2D block prefetch instruction
+  SubgroupMatrixMultiplyAcc, // Dot Product Accumulate Systolic (DPAS) is a
+                             // matrix multiply-add operation
+  Subgroup2DBlockStore,      // Subgroup-level 2D block write instruction
+  Subgroup2DBlockLoad,       // Subgroup-level 2D block load instruction
+  Subgroup2DBlockPrefetch    // Subgroup-level 2D block prefetch instruction
   // @TODO: Add more instructions as needed
 };
 
@@ -55,13 +55,13 @@ struct Instruction {
   InstructionScope getScope() const { return scope; }
   static llvm::StringRef toString(InstructionKind instKind) {
     switch (instKind) {
-    case InstructionKind::DPAS:
+    case InstructionKind::SubgroupMatrixMultiplyAcc:
       return "dpas";
-    case InstructionKind::STORE_ND:
+    case InstructionKind::Subgroup2DBlockStore:
       return "store_nd";
-    case InstructionKind::LOAD_ND:
+    case InstructionKind::Subgroup2DBlockLoad:
       return "load_nd";
-    case InstructionKind::PREFETCH_ND:
+    case InstructionKind::Subgroup2DBlockPrefetch:
       return "prefetch_nd";
     }
     llvm_unreachable("Unknown InstructionKind");
@@ -70,7 +70,7 @@ struct Instruction {
   static std::optional<InstructionKind>
   parseInstructionKind(llvm::StringRef str) {
     if (str.equals_insensitive("dpas"))
-      return InstructionKind::DPAS;
+      return InstructionKind::SubgroupMatrixMultiplyAcc;
     return std::nullopt;
   }
 
@@ -150,8 +150,7 @@ struct uArch {
   StringRef getName() const { return name; }
   StringRef getDescription() const { return description; }
   virtual int getSubgroupSize() const = 0;
-  virtual unsigned getPackedFormatBitSize() const = 0;
-  virtual unsigned getPackedFormatBitSizeGatherScatter() const = 0;
+  virtual unsigned getGeneralPackedFormatBitSize() const = 0;
 
   const Instruction *getInstruction(InstructionKind instKind) const {
     auto it = instructionRegistry.find(instKind);
