@@ -531,7 +531,6 @@ I.addOperand(MCOperand::createExpr(
     I = MCInst();
     I.setOpcode(PPC::LD);
     I.addOperand(R(R12));
-    I.addOperand(R(R12));
 I.addOperand(MCOperand::createExpr(
   MCSymbolRefExpr::create(TargetSym, PPC::fixup_ppc_half16ds, *Ctx)));
     I.addOperand(R(R12));
