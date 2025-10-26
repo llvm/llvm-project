@@ -26,9 +26,16 @@ add_llvm_library(LLVMBOLTTargetPowerPC
   PowerPCCommonTableGen
 )
 
-target_link_libraries(LLVMBOLTTargetPowerPC PRIVATE LLVMBOLTCore)
+target_link_libraries(LLVMBOLTTargetPowerPC
+  PRIVATE
+  LLVMBOLTCore
+  LLVMPowerPCDesc
+  LLVMPowerPCInfo
+)
 
 include_directories(
+  ${LLVM_MAIN_INCLUDE_DIR}
   ${LLVM_MAIN_SRC_DIR}/lib/Target/PowerPC
+  ${LLVM_MAIN_SRC_DIR}/lib/Target/PowerPC/MCTargetDesc
   ${LLVM_BINARY_DIR}/lib/Target/PowerPC
 )
