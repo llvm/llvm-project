@@ -376,14 +376,13 @@ PPCMCPlusBuilder::createRelocation(const MCFixup &Fixup,
     return R;
   }
 
-  // Absolute addressing
-  if (Name.equals_insensitive("fixup_ppc_addr16_lo") ||
-      L.find("addr16_lo") != std::string::npos) {
-    R.Type = ELF::R_PPC64_ADDR16_LO;
+  // DS-form low16 (implied 2 zero bits)
+  if (Name.equals_insensitive("fixup_ppc_half16ds")) {
+    R.Type = ELF::R_PPC64_ADDR16_LO_DS;
     return R;
   }
-  if (Name.equals_insensitive("fixup_ppc_addr16_ha") ||
-      L.find("addr16_ha") != std::string::npos) {
+  // Generic half16 — in our stub we use it with ADDIS (HA)
+  if (Name.equals_insensitive("fixup_ppc_half16")) {
     R.Type = ELF::R_PPC64_ADDR16_HA;
     return R;
   }
@@ -523,7 +522,8 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
     I.setOpcode(PPC::ADDIS);
     I.addOperand(R(R12));
     I.addOperand(R(R2));
-    I.addOperand(MCOperand::createExpr(HaExpr));
+I.addOperand(MCOperand::createExpr(
+  MCSymbolRefExpr::create(TargetSym, PPC::fixup_ppc_half16, *Ctx)));
     Out.push_back(I);
   }
   // ld r12, targetsym@lo(r12)
@@ -532,7 +532,9 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
     I.setOpcode(PPC::LD);
     I.addOperand(R(R12));
     I.addOperand(R(R12));
-    I.addOperand(MCOperand::createExpr(LoExpr));
+I.addOperand(MCOperand::createExpr(
+  MCSymbolRefExpr::create(TargetSym, PPC::fixup_ppc_half16ds, *Ctx)));
+    I.addOperand(R(R12));
     Out.push_back(I);
   }
   // Now r12 has the full 64-bit address of TargetSym.
