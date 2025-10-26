@@ -1,5 +1,3 @@
-// REQUIRES: shell
-
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/resource_directory/* %t
 
