@@ -509,10 +509,6 @@ def SymbolDCE : Pass<"symbol-dce"> {
     information on `Symbols`.
   }];
   let constructor = "mlir::createSymbolDCEPass()";
-
-  let statistics = [
-    Statistic<"numDCE", "num-dce'd", "Number of symbols DCE'd">,
-  ];
 }
 
 def SymbolPrivatize : Pass<"symbol-privatize"> {

@@ -10,6 +10,7 @@ add_mlir_library(MLIRTransformUtils
   LoopInvariantCodeMotionUtils.cpp
   RegionUtils.cpp
   WalkPatternRewriteDriver.cpp
+  SymbolDceUtils.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Transforms
