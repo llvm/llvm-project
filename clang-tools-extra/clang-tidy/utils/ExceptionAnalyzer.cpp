@@ -46,7 +46,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
 // FIXME: This could be ported to clang later.
 
 static bool isUnambiguousPublicBaseClass(const Type *DerivedType,
-                                  const Type *BaseType) {
+                                         const Type *BaseType) {
   const auto *DerivedClass =
       DerivedType->getCanonicalTypeUnqualified()->getAsCXXRecordDecl();
   const auto *BaseClass =
@@ -192,7 +192,7 @@ static bool isFunctionPointerConvertible(QualType From, QualType To) {
 //
 // The function should only be called in C++ mode.
 static bool isQualificationConvertiblePointer(QualType From, QualType To,
-                                       LangOptions LangOpts) {
+                                              LangOptions LangOpts) {
 
   // [N4659 7.5 (1)]
   // A cv-decomposition of a type T is a sequence of cv_i and P_i such that T is

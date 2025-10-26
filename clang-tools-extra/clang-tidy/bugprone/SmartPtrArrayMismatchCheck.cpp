@@ -28,8 +28,8 @@ static bool isInSingleDeclStmt(const DeclaratorDecl *D) {
   return false;
 }
 
-static const DeclaratorDecl *getConstructedVarOrField(const Expr *FoundConstructExpr,
-                                               ASTContext &Ctx) {
+static const DeclaratorDecl *
+getConstructedVarOrField(const Expr *FoundConstructExpr, ASTContext &Ctx) {
   const DynTypedNodeList ConstructParents =
       Ctx.getParentMapContext().getParents(*FoundConstructExpr);
   if (ConstructParents.size() != 1)

@@ -99,8 +99,9 @@ static auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
 
 // Matches member call expressions of the named method on the listed container
 // types.
-static auto cxxMemberCallExprOnContainer(StringRef MethodName,
-                                  llvm::ArrayRef<StringRef> ContainerNames) {
+static auto
+cxxMemberCallExprOnContainer(StringRef MethodName,
+                             llvm::ArrayRef<StringRef> ContainerNames) {
   return cxxMemberCallExpr(
       hasDeclaration(functionDecl(hasName(MethodName))),
       on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
@@ -115,7 +116,8 @@ static const auto DefaultContainersWithPushFront =
 static const auto DefaultSmartPointers =
     "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
 static const auto DefaultTupleTypes = "::std::pair; ::std::tuple";
-static const auto DefaultTupleMakeFunctions = "::std::make_pair; ::std::make_tuple";
+static const auto DefaultTupleMakeFunctions =
+    "::std::make_pair; ::std::make_tuple";
 static const auto DefaultEmplacyFunctions =
     "vector::emplace_back; vector::emplace;"
     "deque::emplace; deque::emplace_front; deque::emplace_back;"
