@@ -221,6 +221,8 @@ template <auto f>
 // [func.bind.partial], function templates bind_front and bind_back
 template<class F, class... Args>
   constexpr unspecified bind_front(F&&, Args&&...); // C++20
+template<auto f, class... Args>
+  constexpr unspecified bind_front(Args&&...);      // C++26
 template<class F, class... Args>
   constexpr unspecified bind_back(F&&, Args&&...);  // C++23
 
