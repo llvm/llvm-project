@@ -94,6 +94,19 @@ void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
     StringRef Prefix = G.Pattern.prefix();
     StringRef Suffix = G.Pattern.suffix();
 
+    if (Suffix.empty() && Prefix.empty()) {
+      // If both prefix and suffix are empty put into special tree to search by
+      // substring in a middle.
+      StringRef Substr = G.Pattern.longest_substr();
+      if (!Substr.empty()) {
+        // But only if substring is not empty. Searching this tree is more
+        // expensive.
+        auto &V = SubstrToGlob.emplace(Substr).first->second;
+        V.emplace_back(&G);
+        continue;
+      }
+    }
+
     auto &SToGlob = PrefixSuffixToGlob.emplace(Prefix).first->second;
     auto &V = SToGlob.emplace(reverse(Suffix)).first->second;
     V.emplace_back(&G);
@@ -113,6 +126,26 @@ void SpecialCaseList::GlobMatcher::match(
             // vector, since the globs are already sorted by priority within the
             // prefix group. However, we continue searching other prefix groups
             // in the map, as they may contain a better match overall.
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!SubstrToGlob.empty()) {
+    // As we don't know when substring exactly starts, we will try all
+    // possibilities. In most cases search will fail on first characters.
+    for (StringRef Q = Query; !Q.empty(); Q = Q.drop_front()) {
+      for (const auto &[_, V] : SubstrToGlob.find_prefixes(Q)) {
+        for (const auto *G : V) {
+          // Each value of the map is a vector of globs ordered from the best to
+          // the worst.
+          if (G->Pattern.match(Query)) {
+            Cb(G->Name, G->LineNo);
+            // As soon as we find a match in the vector we can break for the
+            // vector, but we can't return, and need to continue for other
+            // values in the map, as they may contain a better match.
             break;
           }
         }
