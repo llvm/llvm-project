@@ -522,8 +522,7 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
  I.setOpcode(PPC::STD);
  I.addOperand(R(R2));                                   // src
  I.addOperand(R(PPC::X1));                              // base
- I.addOperand(MCOperand::createExpr(
-     MCConstantExpr::create(24, *Ctx)));                // disp as MCExpr
+I.addOperand(MCOperand::createImm(24));
   Out.push_back(I);
 
   // addis r12, r2, sym@ha
@@ -557,8 +556,7 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
  I.setOpcode(PPC::LD);
  I.addOperand(R(R2));                                   // dst
  I.addOperand(R(PPC::X1));                              // base  (D/DS form uses base as #2)
- I.addOperand(MCOperand::createExpr(
-     MCConstantExpr::create(24, *Ctx)));
+ I.addOperand(MCOperand::createImm(24));
   Out.push_back(I);
 
   // blr                 ; return to caller
