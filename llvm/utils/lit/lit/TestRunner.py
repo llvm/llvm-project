@@ -602,16 +602,30 @@ def executeBuiltinUlimit(cmd, shenv):
     """executeBuiltinUlimit - Change the current limits."""
     if os.name != "posix":
         raise InternalShellError(cmd, "'ulimit' not supported on this system")
+    # Import resource here after we confirm we are on a POSIX system as the
+    # module does not exist on Windows.
+    import resource
     if len(cmd.args) != 3:
         raise InternalShellError(cmd, "'ulimit' requires two arguments")
     try:
-        new_limit = int(cmd.args[2])
+        if cmd.args[2] == "unlimited":
+            new_limit = resource.RLIM_INFINITY
+        else:
+            new_limit = int(cmd.args[2])
     except ValueError as err:
         raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
     if cmd.args[1] == "-v":
-        shenv.ulimit["RLIMIT_AS"] = new_limit * 1024
+        if new_limit != resource.RLIM_INFINITY:
+            new_limit = new_limit * 1024
+        shenv.ulimit["RLIMIT_AS"] = new_limit
     elif cmd.args[1] == "-n":
         shenv.ulimit["RLIMIT_NOFILE"] = new_limit
+    elif cmd.args[1] == "-s":
+        if new_limit != resource.RLIM_INFINITY:
+            new_limit = new_limit * 1024
+        shenv.ulimit["RLIMIT_STACK"] = new_limit
+    elif cmd.args[1] == "-f":
+        shenv.ulimit["RLIMIT_FSIZE"] = new_limit
     else:
         raise InternalShellError(
             cmd, "'ulimit' does not support option: %s" % cmd.args[1]
