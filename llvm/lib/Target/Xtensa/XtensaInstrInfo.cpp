@@ -114,14 +114,28 @@ void XtensaInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   const DebugLoc &DL, Register DestReg,
                                   Register SrcReg, bool KillSrc,
                                   bool RenamableDest, bool RenamableSrc) const {
-  // The MOV instruction is not present in core ISA,
-  // so use OR instruction.
-  if (Xtensa::ARRegClass.contains(DestReg, SrcReg))
+  unsigned Opcode;
+
+  // when we are copying a phys reg we want the bits for fp
+  if (Xtensa::ARRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(Xtensa::OR), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  } else if (STI.hasSingleFloat() && Xtensa::FPRRegClass.contains(SrcReg) &&
+             Xtensa::FPRRegClass.contains(DestReg))
+    Opcode = Xtensa::MOV_S;
+  else if (STI.hasSingleFloat() && Xtensa::FPRRegClass.contains(SrcReg) &&
+           Xtensa::ARRegClass.contains(DestReg))
+    Opcode = Xtensa::RFR;
+  else if (STI.hasSingleFloat() && Xtensa::ARRegClass.contains(SrcReg) &&
+           Xtensa::FPRRegClass.contains(DestReg))
+    Opcode = Xtensa::WFR;
   else
     report_fatal_error("Impossible reg-to-reg copy");
+
+  BuildMI(MBB, MBBI, DL, get(Opcode), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 void XtensaInstrInfo::storeRegToStackSlot(
