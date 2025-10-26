@@ -300,6 +300,9 @@ StmtResult Sema::ActOnCXXExpansionStmt(
     ExpansionInitializer = R.get();
   }
 
+  if (DiagnoseUnexpandedParameterPack(ExpansionInitializer))
+    return StmtError();
+
   // Reject lambdas early.
   if (auto *RD = ExpansionInitializer->getType()->getAsCXXRecordDecl();
       RD && RD->isLambda()) {

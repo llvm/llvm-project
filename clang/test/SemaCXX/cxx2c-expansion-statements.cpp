@@ -810,3 +810,25 @@ void case_default(int i) {
     }
   }
 }
+
+template <typename ...Ts>
+void unexpanded_pack_bad(Ts ...ts) {
+  template for (auto x : ts) {} // expected-error {{expression contains unexpanded parameter pack 'ts'}}
+  template for (Ts x : {1, 2}) {} // expected-error {{declaration type contains unexpanded parameter pack 'Ts'}}
+  template for (auto x : {ts}) {} // expected-error {{initializer contains unexpanded parameter pack}} \
+  // expected-note {{in instantiation of expansion statement requested here}}
+}
+
+struct E { int x, y; constexpr E(int x, int y) : x{x}, y{y} {}};
+
+template <typename ...Es>
+constexpr int unexpanded_pack_good(Es ...es) {
+  int sum = 0;
+  ([&] {
+    template for (auto x : es) sum += x;
+    template for (Es e : {{5, 6}, {7, 8}}) sum += e.x + e.y;
+  }(), ...);
+  return sum;
+}
+
+static_assert(unexpanded_pack_good(E{1, 2}, E{3, 4}) == 62);
