@@ -48,10 +48,10 @@ private:
   /// The bool parameter is used like \c SkipPathEnd in \c reportHandlerChain .
   /// \return Returns true if a diagnostic was emitted for this function.
   bool checkFunction(const FunctionDecl *FD, const Expr *CallOrRef,
-                     std::function<void(bool)> ChainReporter);
+                     llvm::function_ref<void(bool)> ChainReporter);
   /// Similar as \c checkFunction but only check for C++14 rules.
   bool checkFunctionCPP14(const FunctionDecl *FD, const Expr *CallOrRef,
-                          std::function<void(bool)> ChainReporter);
+                          llvm::function_ref<void(bool)> ChainReporter);
   /// Returns true if a standard library function is considered
   /// asynchronous-safe.
   bool isStandardFunctionAsyncSafe(const FunctionDecl *FD) const;
