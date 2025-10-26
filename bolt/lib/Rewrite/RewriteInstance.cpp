@@ -2892,23 +2892,12 @@ static BinaryFunction *getOrCreatePPCAbsoluteCallStub(BinaryContext &BC,
   // Build one basic block
   BinaryBasicBlock *BB = StubBF->addBasicBlock(/*Label=*/nullptr);
 
-  uint64_t TargetAddr = 0;
-  if (auto *BSym = BC.getBinaryDataByName(TargetSym.getName())) {
-    TargetAddr = BSym->getAddress();
-  }
-
-  assert(TargetAddr && "target symbol address expected");
-
-  auto highest = static_cast<uint16_t>((TargetAddr >> 48) & 0xFFFF);
-  auto higher = static_cast<uint16_t>((TargetAddr >> 32) & 0xFFFF);
-  auto half = static_cast<uint16_t>(((TargetAddr + 0x8000) >> 16) & 0xFFFF);
-  auto lower = static_cast<uint16_t>(TargetAddr & 0xFFFF);
+  MCContext &Ctx = *BC.Ctx;
 
   // Build the stub MCInsts
   std::vector<MCInst> Seq;
   auto &PPCBuilder = static_cast<PPCMCPlusBuilder &>(*BC.MIB);
-  PPCBuilder.buildCallStubAbsolute(Seq, &TargetSym, highest, higher, half,
-                                   lower);
+  PPCBuilder.buildCallStubAbsolute(&Ctx, &TargetSym, Seq);
 
   // Append instructions to the basic block
   for (auto &I : Seq)
