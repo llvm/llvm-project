@@ -1905,7 +1905,6 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit& FRI, ParsingDeclSp
   // constexpr variable in an expansion statement.
   auto Ctx = Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
   if (FRI.ExpansionStmt && VarDeclSpec && VarDeclSpec->hasConstexprSpecifier())
-    // TODO: Shouldn't this be 'ConstantEvaluated'?
     Ctx = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
 
   EnterExpressionEvaluationContext InitContext(

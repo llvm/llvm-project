@@ -855,3 +855,30 @@ constexpr bool empty_side_effect() {
 }
 
 static_assert(empty_side_effect());
+
+namespace apply_lifetime_extension {
+struct T {
+  int& x;
+  constexpr T(int& x) noexcept : x(x) {}
+  constexpr ~T() noexcept { x = 42; }
+};
+
+constexpr const T& f(const T& t) noexcept { return t; }
+constexpr T g(int& x) noexcept { return T(x); }
+
+// CWG 3043:
+//
+// Lifetime extension only applies to destructuring expansion statements
+// (enumerating statements don't have a range variable, and the range variable
+// of iterating statements is constexpr).
+constexpr int lifetime_extension() {
+  int x = 5;
+  int sum  = 0;
+  template for (auto e : f(g(x))) {
+    sum += x;
+  }
+  return sum + x;
+}
+
+static_assert(lifetime_extension() == 47);
+}
