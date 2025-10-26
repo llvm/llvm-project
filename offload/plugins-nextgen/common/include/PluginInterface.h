@@ -791,6 +791,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
 
+  /// Get the unique identifier of the device.
+  const char *getDeviceUid() const { return DeviceUid.c_str(); }
+
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
   virtual Error setContext() = 0;
@@ -989,9 +992,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error syncEvent(void *EventPtr);
   virtual Error syncEventImpl(void *EventPtr) = 0;
 
+  /// Obtain information about the device.
+  Expected<InfoTreeNode> obtainInfo();
+  virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
+
   /// Print information about the device.
   Error printInfo();
-  virtual Expected<InfoTreeNode> obtainInfoImpl() = 0;
 
   /// Return true if the device has work that is either queued or currently
   /// running
@@ -1204,6 +1210,14 @@ protected:
   /// global device id and is not the device id visible to the OpenMP user.
   const int32_t DeviceId;
 
+  /// The unique identifier of the device.
+  /// Per default, the unique identifier of the device is set to the device id,
+  /// combined with the plugin name, since the offload device id may overlap
+  /// between different plugins.
+  std::string DeviceUid;
+  /// Construct the device UID from the vendor (U)UID.
+  void setDeviceUidFromVendorUid(StringRef VendorUid);
+
   /// The default grid values used for this device.
   llvm::omp::GV GridValues;
 
@@ -1289,6 +1303,9 @@ struct GenericPluginTy {
     assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
     return UserDeviceIds.at(DeviceId);
   }
+
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
