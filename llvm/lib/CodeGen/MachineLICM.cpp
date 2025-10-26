@@ -945,13 +945,33 @@ void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
 ///
 /// If 'ConsiderSeen' is true, updates 'RegSeen' and uses the information to
 /// figure out which usages are live-ins.
-/// FIXME: Figure out a way to consider 'RegSeen' from all code paths.
 SmallDenseMap<unsigned, int>
 MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
                                   bool ConsiderUnseenAsDef) {
   SmallDenseMap<unsigned, int> Cost;
-  if (MI->isImplicitDef())
+  // Always use a local copy of RegSeen for consistent calculations
+  // Only update the global RegSeen if ConsiderSeen is true
+  SmallDenseSet<Register> LocalRegSeen = RegSeen;
+
+  // IMPLICIT_DEF instructions define registers that still need allocation,
+  // so they should contribute to register pressure.
+  if (MI->isImplicitDef()) {
+    for (const MachineOperand &MO : MI->operands()) {
+      if (!MO.isReg() || !MO.isDef())
+        continue;
+      Register Reg = MO.getReg();
+      if (!Reg.isVirtual())
+        continue;
+
+      const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+      RegClassWeight W = TRI->getRegClassWeight(RC);
+      const int *PS = TRI->getRegClassPressureSets(RC);
+      for (; *PS != -1; ++PS)
+        Cost[*PS] += W.RegWeight;
+    }
     return Cost;
+  }
+
   for (unsigned i = 0, e = MI->getDesc().getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || MO.isImplicit())
@@ -960,8 +980,11 @@ MachineLICMImpl::calcRegisterCost(const MachineInstr *MI, bool ConsiderSeen,
     if (!Reg.isVirtual())
       continue;
 
-    // FIXME: It seems bad to use RegSeen only for some of these calculations.
-    bool isNew = ConsiderSeen ? RegSeen.insert(Reg).second : false;
+    // Always check against LocalRegSeen for consistency
+    bool isNew = LocalRegSeen.insert(Reg).second;
+    // Only update global RegSeen if requested
+    if (ConsiderSeen)
+      RegSeen.insert(Reg);
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
     RegClassWeight W = TRI->getRegClassWeight(RC);
@@ -1252,8 +1275,9 @@ void MachineLICMImpl::UpdateBackTraceRegPressure(const MachineInstr *MI) {
 /// invariant.
 bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
                                           MachineLoop *CurLoop) {
-  if (MI.isImplicitDef())
-    return true;
+  // IMPLICIT_DEF instructions should go through the same register pressure
+  // checks as other instructions since they still define registers that
+  // need allocation.
 
   // Besides removing computation from the loop, hoisting an instruction has
   // these effects:
