@@ -110,6 +110,8 @@ public:
     /// of the type for the signed _BitInt(N) type stored after zero bit after
     /// TypeName as 32-bit unsigned integer.
     TK_BitInt = 0x0002,
+    /// A fixed-point type. The value representation is currently empty.
+    TK_FixedPoint = 0x0003,
     /// Any other type. The value representation is unspecified.
     TK_Unknown = 0xffff
   };
@@ -164,6 +166,8 @@ public:
     CHECK(isFloatTy());
     return TypeInfo;
   }
+
+  bool isFixedPointTy() const { return getKind() == TK_FixedPoint; }
 };
 
 /// \brief An opaque handle to a value.

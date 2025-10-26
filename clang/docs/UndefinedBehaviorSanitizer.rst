@@ -119,6 +119,8 @@ Available checks are:
   -  ``-fsanitize=enum``: Load of a value of an enumerated type which
      is not in the range of representable values for that enumerated
      type.
+  -  ``-fsanitize=fixed-point-divide-by-zero``: Fixed point division by zero
+     (when compiling with ``-ffixed-point``).
   -  ``-fsanitize=float-cast-overflow``: Conversion to, from, or
      between floating-point types which would overflow the
      destination. Because the range of representable values for all
@@ -224,6 +226,8 @@ You can also use the following check groups:
      ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
+  -  ``-fsanitize=fixed-point``: Checks for undefined behavior with fixed point
+     values. Enables ``-fsanitize=fixed-point-divide-by-zero``.
   -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
      conversions. Enables ``implicit-signed-integer-truncation`` and
      ``implicit-unsigned-integer-truncation``.
