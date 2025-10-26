@@ -4,6 +4,10 @@
 ; The ptrtoaddr folds are also valid for pointers that have external state.
 target datalayout = "pe1:64:64:64:32"
 
+declare void @use.i1(i1)
+declare void @use.i32(i32)
+declare void @use.i64(i64)
+
 ; ptrtoaddr result type is fixed, and can't be combined with integer cast.
 define i32 @ptrtoaddr_trunc(ptr %p) {
 ; CHECK-LABEL: define i32 @ptrtoaddr_trunc(
@@ -170,4 +174,66 @@ define i128 @sub_zext_ptrtoint_ptrtoaddr_addrsize(ptr addrspace(1) %p, i32 %offs
   %p2.addr.ext = zext i32 %p2.addr to i128
   %sub = sub i128 %p2.addr.ext, %p.int.ext
   ret i128 %sub
+}
+
+; The uses in icmp, ptrtoint, ptrtoaddr should be replaced. The one in the
+; return value should not, as the provenance differs.
+define ptr @gep_sub_ptrtoaddr_different_obj(ptr %p, ptr %p2, ptr %p3) {
+; CHECK-LABEL: define ptr @gep_sub_ptrtoaddr_different_obj(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]]) {
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[P2_ADDR:%.*]] = ptrtoaddr ptr [[P2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[P2_ADDR]], [[P_ADDR]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P2]], [[P3]]
+; CHECK-NEXT:    call void @use.i1(i1 [[CMP]])
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[P2]] to i64
+; CHECK-NEXT:    call void @use.i64(i64 [[INT]])
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoaddr ptr [[P2]] to i64
+; CHECK-NEXT:    call void @use.i64(i64 [[ADDR]])
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p2.addr = ptrtoaddr ptr %p2 to i64
+  %sub = sub i64 %p2.addr, %p.addr
+  %gep = getelementptr i8, ptr %p, i64 %sub
+  %cmp = icmp eq ptr %gep, %p3
+  call void @use.i1(i1 %cmp)
+  %int = ptrtoint ptr %gep to i64
+  call void @use.i64(i64 %int)
+  %addr = ptrtoaddr ptr %gep to i64
+  call void @use.i64(i64 %addr)
+  ret ptr %gep
+}
+
+; The use in ptrtoaddr should be replaced. The uses in ptrtoint and icmp should
+; not be replaced, as the non-address bits differ. The use in the return value
+; should not be replaced as the provenace differs.
+define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(1) %p, ptr addrspace(1) %p2, ptr addrspace(1) %p3) {
+; CHECK-LABEL: define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[P2:%.*]], ptr addrspace(1) [[P3:%.*]]) {
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[P]] to i32
+; CHECK-NEXT:    [[P2_ADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[P2]] to i32
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[P2_ADDR]], [[P_ADDR]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(1) [[P]], i32 [[SUB]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr addrspace(1) [[GEP]], [[P3]]
+; CHECK-NEXT:    call void @use.i1(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[GEP]] to i64
+; CHECK-NEXT:    [[INT:%.*]] = trunc i64 [[TMP1]] to i32
+; CHECK-NEXT:    call void @use.i32(i32 [[INT]])
+; CHECK-NEXT:    [[ADDR:%.*]] = ptrtoaddr ptr addrspace(1) [[P2]] to i32
+; CHECK-NEXT:    call void @use.i32(i32 [[ADDR]])
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP]]
+;
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %p2.addr = ptrtoaddr ptr addrspace(1) %p2 to i32
+  %sub = sub i32 %p2.addr, %p.addr
+  %gep = getelementptr i8, ptr addrspace(1) %p, i32 %sub
+  %cmp = icmp eq ptr addrspace(1) %gep, %p3
+  call void @use.i1(i1 %cmp)
+  %int = ptrtoint ptr addrspace(1) %gep to i32
+  call void @use.i32(i32 %int)
+  %addr = ptrtoaddr ptr addrspace(1) %gep to i32
+  call void @use.i32(i32 %addr)
+  ret ptr addrspace(1) %gep
 }
