@@ -1448,17 +1448,17 @@ _LIBCPP_HIDE_FROM_ABI constexpr optional<decay_t<_Tp>> make_optional(_Tp&& __v) 
 
 template <class _Tp, class... _Args>
 _LIBCPP_HIDE_FROM_ABI constexpr optional<_Tp> make_optional(_Args&&... __args) {
-  #if _LIBCPP_STD_VER >= 26
-    static_assert(!is_reference_v<_Tp>, "make_optional<T&, Args...> is disallowed");
-  #endif 
+#    if _LIBCPP_STD_VER >= 26
+  static_assert(!is_reference_v<_Tp>, "make_optional<T&, Args...> is disallowed");
+#    endif
   return optional<_Tp>(in_place, std::forward<_Args>(__args)...);
 }
 
 template <class _Tp, class _Up, class... _Args>
 _LIBCPP_HIDE_FROM_ABI constexpr optional<_Tp> make_optional(initializer_list<_Up> __il, _Args&&... __args) {
-  #if _LIBCPP_STD_VER >= 26
-    static_assert(!is_reference_v<_Tp>, "make_optional<T&, Args...> is disallowed");
-  #endif 
+#    if _LIBCPP_STD_VER >= 26
+  static_assert(!is_reference_v<_Tp>, "make_optional<T&, Args...> is disallowed");
+#    endif
   return optional<_Tp>(in_place, __il, std::forward<_Args>(__args)...);
 }
 

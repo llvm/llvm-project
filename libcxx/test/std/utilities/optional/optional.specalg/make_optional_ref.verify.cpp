@@ -13,9 +13,9 @@
 // template <class T, class... Args>
 //   constexpr optional<T> make_optional(Args&&... args);
 
-#include <optional> 
+#include <optional>
 
-struct Foo{
+struct Foo {
   int x, y;
 };
 
@@ -31,7 +31,7 @@ int main(int, char**) {
   // expected-error-re@optional:* 3 {{static assertion failed{{.*}} make_optional<T&, Args...> is disallowed}}
   std::make_optional<X&>(i);
   std::make_optional<int&>(1);
-  std::make_optional<Foo&>(1,2);
+  std::make_optional<Foo&>(1, 2);
 
   // FIXME: Garbage error messages that Clang produces after the static_assert is triggered
   // expected-error-re@optional:* 0+ {{no matching constructor for initialization of 'optional<{{.*}}>'}}
