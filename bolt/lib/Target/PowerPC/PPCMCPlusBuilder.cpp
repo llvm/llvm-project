@@ -27,6 +27,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
+// #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include <optional>
 #include <string>
 
@@ -510,48 +512,58 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
   const unsigned R2 = PPC::X2;   // caller TOC
   const unsigned R12 = PPC::X12; // scratch / entry per ELFv2
 
-  const MCSymbolRefExpr *HaExpr =
-      MCSymbolRefExpr::create(TargetSym, PPC::fixup_ppc_half16, *Ctx);
-  const MCSymbolRefExpr *LoExpr =
-      MCSymbolRefExpr::create(TargetSym, PPC::fixup_ppc_half16ds, *Ctx);
+// Wrap with PPC specifiers:
+  const MCExpr *HA = MCSymbolRefExpr::create(TargetSym, PPC::S_HA, *Ctx);
+  const MCExpr *LO = MCSymbolRefExpr::create(TargetSym, PPC::S_LO, *Ctx);
 
  MCInst I;
 
-  // addis r12, r2, targetsym@ha
-  {
-    I.setOpcode(PPC::ADDIS);
-    I.addOperand(R(R12));
-    I.addOperand(R(R2));
-I.addOperand(MCOperand::createExpr(
-  MCSymbolRefExpr::create(TargetSym, PPC::fixup_ppc_half16, *Ctx)));
-    Out.push_back(I);
-  }
-  // ld r12, targetsym@lo(r12)
-  {
-    I = MCInst();
-    I.setOpcode(PPC::LD);
-    I.addOperand(R(R12));
-I.addOperand(MCOperand::createExpr(
-  MCSymbolRefExpr::create(TargetSym, PPC::fixup_ppc_half16ds, *Ctx)));
-    I.addOperand(R(R12));
-    Out.push_back(I);
-  }
-  // Now r12 has the full 64-bit address of TargetSym.
+  // std r2, 24(r1)      ; save caller's TOC
+  I.setOpcode(PPC::STD);
+  I.addOperand(R(R2));               // src
+  I.addOperand(R(PPC::X1));          // base = r1
+  I.addOperand(MCOperand::createImm(24));
+  Out.push_back(I);
+
+  // addis r12, r2, sym@ha
+  I = MCInst();
+  I.setOpcode(PPC::ADDIS);
+  I.addOperand(R(R12));
+  I.addOperand(R(R2));
+  I.addOperand(MCOperand::createExpr(HA));
+  Out.push_back(I);
+
+  // ld r12, sym@lo(r12) ; DS-form: (dst, imm/expr, base)
+  I = MCInst();
+  I.setOpcode(PPC::LD);
+  I.addOperand(R(R12));                         // dst
+  I.addOperand(MCOperand::createExpr(LO));      // imm/expr
+  I.addOperand(R(R12));                         // base
+  Out.push_back(I);
+
   // mtctr r12
-  // Move address to Counter Register
-  {
-    I = MCInst();
-    I.setOpcode(PPC::MTCTR8);
-    I.addOperand(R(R12));
-    Out.push_back(I);
-  }
-  // Branch to the address in CTR (tail call to TargetSym)
-  // bctr
-  {
-    I = MCInst();
-    I.setOpcode(PPC::BCTR);
-    Out.push_back(I);
-  }
+  I = MCInst();
+  I.setOpcode(PPC::MTCTR8);
+  I.addOperand(R(R12));
+  Out.push_back(I);
+
+  // bctrl               ; link-return to stub
+  I = MCInst();
+  I.setOpcode(PPC::BCTRL);
+  Out.push_back(I);
+
+  // ld r2, 24(r1)       ; restore TOC
+  I = MCInst();
+  I.setOpcode(PPC::LD);
+  I.addOperand(R(R2));               // dst
+  I.addOperand(MCOperand::createImm(24));
+  I.addOperand(R(PPC::X1));          // base = r1
+  Out.push_back(I);
+
+  // blr                 ; return to caller
+  I = MCInst();
+  I.setOpcode(PPC::BLR8);            // or PPC::BLR on some trees
+  Out.push_back(I);
 }
 
 namespace llvm {
