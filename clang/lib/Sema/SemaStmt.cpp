@@ -2423,10 +2423,9 @@ VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
                                   TInfo, SC_None);
   Decl->setImplicit();
   Decl->setCXXForRangeImplicitVar(true);
-  if (ForExpansionStmt) {
+  if (ForExpansionStmt)
+    // CWG 3044: Do not make the variable 'static'.
     Decl->setConstexpr(true);
-    Decl->setStorageClass(SC_Static);
-  }
   return Decl;
 }
 

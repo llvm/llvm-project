@@ -564,3 +564,83 @@ constexpr int unpaired_begin_end() {
 }
 
 static_assert(unpaired_begin_end() == 10);
+
+// Examples taken from [stmt.expand].
+namespace stmt_expand_examples {
+consteval int f(auto const&... Containers) {
+  int result = 0;
+  template for (auto const& c : {Containers...}) {      // OK, enumerating expansion statement
+    result += c[0];
+  }
+  return result;
+}
+constexpr int c1[] = {1, 2, 3};
+constexpr int c2[] = {4, 3, 2, 1};
+static_assert(f(c1, c2) == 5);
+
+// TODO: This entire example should work without issuing any diagnostics once
+// we have full support for references to constexpr variables (P2686).
+consteval int f() {
+  constexpr Array<int, 3> arr {1, 2, 3}; // expected-note{{add 'static' to give it a constant address}}
+
+  int result = 0;
+
+  // expected-error@#invalid-ref {{constexpr variable '__range1' must be initialized by a constant expression}}
+  // expected-error@#invalid-ref {{constexpr variable '__begin1' must be initialized by a constant expression}}
+  // expected-error@#invalid-ref {{constexpr variable '__end1' must be initialized by a constant expression}}
+  // expected-error@#invalid-ref {{expansion size is not a constant expression}}
+  // expected-note@#invalid-ref 2 {{member call on variable '__range1' whose value is not known}}
+  // expected-note@#invalid-ref 1 {{initializer of '__end1' is not a constant expression}}
+  // expected-note@#invalid-ref 3 {{declared here}}
+  // expected-note@#invalid-ref {{reference to 'arr' is not a constant expression}}
+  template for (constexpr int s : arr) { // #invalid-ref                // OK, iterating expansion statement
+    result += sizeof(char[s]);
+  }
+  return result;
+}
+static_assert(f() == 6); // expected-error {{static assertion failed due to requirement 'f() == 6'}} expected-note {{expression evaluates to '0 == 6'}}
+
+struct S {
+  int i;
+  short s;
+};
+
+consteval long f(S s) {
+  long result = 0;
+  template for (auto x : s) {                           // OK, destructuring expansion statement
+    result += sizeof(x);
+  }
+  return result;
+}
+static_assert(f(S{}) == sizeof(int) + sizeof(short));
+}
+
+void not_constant_expression() {
+  template for (constexpr auto x : B()) { // expected-error {{constexpr variable '[__u0]' must be initialized by a constant expression}} \
+                                             expected-note {{reference to temporary is not a constant expression}} \
+                                             expected-note {{temporary created here}} \
+                                             expected-error {{constexpr variable 'x' must be initialized by a constant expression}} \
+                                             expected-note {{in instantiation of expansion statement requested here}} \
+                                             expected-note {{read of variable '[__u0]' whose value is not known}} \
+                                             expected-note {{declared here}}
+    g(x);
+  }
+}
+
+constexpr int references_enumerating() {
+  int x = 1, y = 2, z = 3;
+  template for (auto& x : {x, y, z}) { ++x; }
+  template for (auto&& x : {x, y, z}) { ++x; }
+  return x + y + z;
+}
+
+static_assert(references_enumerating() == 12);
+
+constexpr int references_destructuring() {
+  C c;
+  template for (auto& x : c) { ++x; }
+  template for (auto&& x : c) { ++x; }
+  return c.a + c.b + c.c;
+}
+
+static_assert(references_destructuring() == 12);

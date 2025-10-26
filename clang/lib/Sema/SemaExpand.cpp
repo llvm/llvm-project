@@ -182,6 +182,11 @@ static StmtResult BuildDestructuringExpansionStmtDecl(
     Ctx = Sema::ExpressionEvaluationContext::ImmediateFunctionContext;
   EnterExpressionEvaluationContext ExprEvalCtx(S, Ctx);
 
+  // The declarations should be attached to the parent decl context.
+  Sema::ContextRAII CtxGuard(
+      S, S.CurContext->getEnclosingNonExpansionStatementContext(),
+      /*NewThis=*/false);
+
   UnsignedOrNone Arity =
       S.GetDecompositionElementCount(ExpansionInitializer->getType(), ColonLoc);
 
@@ -196,8 +201,10 @@ static StmtResult BuildDestructuringExpansionStmtDecl(
   QualType AutoRRef = S.Context.getAutoRRefDeductType();
   SmallVector<BindingDecl *> Bindings;
   for (unsigned I = 0; I < *Arity; ++I)
-    Bindings.push_back(BindingDecl::Create(S.Context, S.CurContext, ColonLoc,
-                                           /*Id=*/nullptr, AutoRRef));
+    Bindings.push_back(BindingDecl::Create(
+        S.Context, S.CurContext, ColonLoc,
+        S.getPreprocessor().getIdentifierInfo("__u" + std::to_string(I)),
+        AutoRRef));
 
   TypeSourceInfo *TSI = S.Context.getTrivialTypeSourceInfo(AutoRRef);
   auto *DD =
@@ -360,6 +367,9 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
 
   auto *DS = DecompDeclStmt.getAs<DeclStmt>();
   auto *DD = cast<DecompositionDecl>(DS->getSingleDecl());
+  if (DD->isInvalidDecl())
+    return StmtError();
+
   ExprResult Select = BuildCXXDestructuringExpansionSelectExpr(DD, Index);
   if (Select.isInvalid()) {
     ActOnInitializerError(ExpansionVar);
@@ -530,7 +540,7 @@ std::optional<uint64_t>  Sema::ComputeExpansionSize(CXXExpansionStmt *Expansion)
   //
   // [] consteval {
   //    std::ptrdiff_t result = 0;
-  //    for (auto i = begin; i != end; ++i, ++result);
+  //    for (auto i = begin; i != end; ++i) ++result;
   //    return result;
   // }()
   if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmt>(Expansion)) {
