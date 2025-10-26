@@ -46,6 +46,16 @@ int break_continue_nested() {
   return sum;
 }
 
+void label() {
+  // Only local labels are allowed in expansion statements.
+  template for (auto x : {1, 2, 3}) {
+    __label__ a;
+    if (x == 1) goto a;
+    h(1, x);
+    a:;
+  }
+}
+
 
 // CHECK-LABEL: define {{.*}} void @_Z14break_continuev()
 // CHECK: entry:
@@ -262,3 +272,50 @@ int break_continue_nested() {
 // CHECK: expand.end52:
 // CHECK-NEXT:   %32 = load i32, ptr %sum, align 4
 // CHECK-NEXT:   ret i32 %32
+
+
+// CHECK-LABEL: define {{.*}} void @_Z5labelv()
+// CHECK: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %x1 = alloca i32, align 4
+// CHECK-NEXT:   %x7 = alloca i32, align 4
+// CHECK-NEXT:   store i32 1, ptr %x, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %cmp = icmp eq i32 %0, 1
+// CHECK-NEXT:   br i1 %cmp, label %if.then, label %if.end
+// CHECK: if.then:
+// CHECK-NEXT:   br label %a
+// CHECK: if.end:
+// CHECK-NEXT:   %1 = load i32, ptr %x, align 4
+// CHECK-NEXT:   call void @_Z1hii(i32 {{.*}} 1, i32 {{.*}} %1)
+// CHECK-NEXT:   br label %a
+// CHECK: a:
+// CHECK-NEXT:   br label %expand.next
+// CHECK: expand.next:
+// CHECK-NEXT:   store i32 2, ptr %x1, align 4
+// CHECK-NEXT:   %2 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   %cmp2 = icmp eq i32 %2, 1
+// CHECK-NEXT:   br i1 %cmp2, label %if.then3, label %if.end4
+// CHECK: if.then3:
+// CHECK-NEXT:   br label %a5
+// CHECK: if.end4:
+// CHECK-NEXT:   %3 = load i32, ptr %x1, align 4
+// CHECK-NEXT:   call void @_Z1hii(i32 {{.*}} 1, i32 {{.*}} %3)
+// CHECK-NEXT:   br label %a5
+// CHECK: a5:
+// CHECK-NEXT:   br label %expand.next6
+// CHECK: expand.next6:
+// CHECK-NEXT:   store i32 3, ptr %x7, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %x7, align 4
+// CHECK-NEXT:   %cmp8 = icmp eq i32 %4, 1
+// CHECK-NEXT:   br i1 %cmp8, label %if.then9, label %if.end10
+// CHECK: if.then9:
+// CHECK-NEXT:   br label %a11
+// CHECK: if.end10:
+// CHECK-NEXT:   %5 = load i32, ptr %x7, align 4
+// CHECK-NEXT:   call void @_Z1hii(i32 {{.*}} 1, i32 {{.*}} %5)
+// CHECK-NEXT:   br label %a11
+// CHECK: a11:
+// CHECK-NEXT:   br label %expand.end
+// CHECK: expand.end:
+// CHECK-NEXT:   ret void

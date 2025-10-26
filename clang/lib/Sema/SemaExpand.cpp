@@ -391,19 +391,6 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
   assert(!Expansion->getDecl()->getInstantiations() &&
          "should not rebuild expansion statement after instantiation");
 
-  // Diagnose identifier labels.
-  // TODO: Do this somewhere, somehow, but not every time we instantiate this.
-  /*struct DiagnoseLabels : DynamicRecursiveASTVisitor {
-    Sema &SemaRef;
-    DiagnoseLabels(Sema &S) : SemaRef(S) {}
-    bool VisitLabelStmt(LabelStmt *S) override {
-      SemaRef.Diag(S->getIdentLoc(), diag::err_expanded_identifier_label);
-      return false;
-    }
-  } Visitor(*this);
-  if (!Visitor.TraverseStmt(Body))
-    return StmtError();*/
-
   Expansion->setBody(Body);
   if (Expansion->hasDependentSize())
     return Expansion;

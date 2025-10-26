@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -verify
 namespace std {
 template <typename T>
 struct initializer_list {
@@ -695,3 +695,41 @@ constexpr int break_continue_nested() {
 }
 
 static_assert(break_continue_nested() == 36);
+
+
+void label() {
+  template for (auto x : {1, 2}) {
+    invalid1:; // expected-error {{labels are not allowed in expansion statements}}
+    invalid2:; // expected-error {{labels are not allowed in expansion statements}}
+    goto invalid1;
+  }
+
+  template for (auto x : {1, 2}) {
+    (void) [] {
+      template for (auto x : {1, 2}) {
+        invalid3:; // expected-error {{labels are not allowed in expansion statements}}
+      }
+      ok:;
+    };
+
+    (void) ^{
+      template for (auto x : {1, 2}) {
+        invalid4:; // expected-error {{labels are not allowed in expansion statements}}
+      }
+      ok:;
+    };
+
+    struct X {
+      void f() {
+        ok:;
+      }
+    };
+  }
+
+  // GNU local labels are allowed.
+  template for (auto x : {1, 2}) {
+    __label__ a;
+    a:;
+    if (x == 1) goto a;
+  }
+}
