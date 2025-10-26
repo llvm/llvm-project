@@ -312,7 +312,7 @@ Target ID
 =========
 
 A target ID is used to indicate the processor and optionally its configuration,
-expressed by a set of target features that affect ISA generation. It is target
+expressed by a set of target features, that affect ISA generation. It is target
 specific if a target ID is supported, or if the target triple alone is
 sufficient to specify the ISA generation.
 
