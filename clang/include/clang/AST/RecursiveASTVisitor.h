@@ -4160,6 +4160,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPXDynCGroupMemClause(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDynGroupprivateClause(
+    OMPDynGroupprivateClause *C) {
+  TRY_TO(VisitOMPClauseWithPreInit(C));
+  TRY_TO(TraverseStmt(C->getSize()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPDoacrossClause(
     OMPDoacrossClause *C) {
   TRY_TO(VisitOMPClauseList(C));
