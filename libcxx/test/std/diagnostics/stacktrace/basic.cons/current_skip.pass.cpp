@@ -19,6 +19,7 @@
 
 #include <cassert>
 #include <stacktrace>
+#include "test_macros.h"
 
 /*
   Let t be a stacktrace as-if obtained via basic_stacktrace::current(alloc). Let n be t.size().
@@ -26,7 +27,7 @@
   t.begin() + min(n, skip), t.end(), and alloc, or an empty basic_stacktrace object if the
   initialization of frames_ failed.
 */
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip() {
+_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS void test_current_with_skip() {
   // Use default allocator for simplicity; alloc is covered above
   auto st_skip0 = std::stacktrace::current();
   assert(st_skip0.size() >= 2);
@@ -38,7 +39,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip() {
   assert(st_skip_many.empty());
 }
 
-_LIBCPP_NO_TAIL_CALLS
+TEST_NO_TAIL_CALLS
 int main(int, char**) {
   static_assert(noexcept(std::stacktrace::current(0)));
   test_current_with_skip();

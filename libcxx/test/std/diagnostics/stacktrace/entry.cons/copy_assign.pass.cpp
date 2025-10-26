@@ -23,7 +23,9 @@ namespace std {
 #include <stacktrace>
 #include <type_traits>
 
-_LIBCPP_NO_TAIL_CALLS
+#include "test_macros.h"
+
+TEST_NO_TAIL_CALLS
 int main(int, char**) {
   static_assert(std::is_nothrow_copy_assignable_v<std::stacktrace_entry>);
 

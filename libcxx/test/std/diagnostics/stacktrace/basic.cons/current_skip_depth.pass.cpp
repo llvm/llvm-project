@@ -24,8 +24,9 @@
 #  include <cassert>
 #  include <iostream>
 #  include <stacktrace>
+#  include "test_macros.h"
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip_depth() {
+_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS void test_current_with_skip_depth() {
   // current stack is: [this function, main, (possibly something else, such as libc _start)]
   // so it's probably 3 functions deep -- but certainly at least 2 deep.
   std::stacktrace_entry entry;
@@ -46,7 +47,7 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void test_current_with_skip_depth() {
   assert(*it2 == entry);
 }
 
-_LIBCPP_NO_TAIL_CALLS
+TEST_NO_TAIL_CALLS
 int main(int, char**) {
   static_assert(noexcept(std::stacktrace::current(0, 0)));
   test_current_with_skip_depth();

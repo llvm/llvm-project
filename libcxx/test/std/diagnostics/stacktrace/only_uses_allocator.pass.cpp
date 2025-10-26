@@ -18,6 +18,7 @@
 #include <stacktrace>
 
 #include "test_allocs.h"
+#include "test_macros.h"
 
 /*
  * This file includes tests which ensure any allocations performed by `basic_stacktrace`
@@ -90,7 +91,7 @@ struct test_alloc : std::allocator<T> {
   }
 };
 
-_LIBCPP_NO_TAIL_CALLS
+TEST_NO_TAIL_CALLS
 int main(int, char**) {
   (void)std::stacktrace::current();
 

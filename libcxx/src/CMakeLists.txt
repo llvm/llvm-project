@@ -44,7 +44,6 @@ set(LIBCXX_SOURCES
   stacktrace/impl_generic.cpp
   stacktrace/impl_windows.cpp
   stacktrace/impl.cpp
-  stacktrace/unwinding.h
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp

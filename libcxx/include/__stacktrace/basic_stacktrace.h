@@ -40,6 +40,10 @@ _LIBCPP_PUSH_MACROS
 #  include <__fwd/ostream.h>
 #endif // _LIBCPP_HAS_LOCALIZATION
 
+#if !defined(_WIN32)
+#  include <unwind.h>
+#endif
+
 #if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 #  include <__stacktrace/stacktrace_entry.h>
@@ -76,11 +80,30 @@ struct base {
         __entry_iters_(__entry_iters),
         __entry_append_(__entry_append) {}
 
-  _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void current_impl(size_t __skip, size_t __max_depth);
+#  ifndef _WIN32
+  // Use <unwind.h> or <libunwind.h> to collect addresses in the stack.
+  // Defined in this header so it can be reliably force-inlined.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void unwind_addrs(size_t __skip, size_t __depth);
+#  endif
 
-  _LIBCPP_HIDE_FROM_ABI void find_images();
-  _LIBCPP_HIDE_FROM_ABI void find_symbols();
-  _LIBCPP_HIDE_FROM_ABI void find_source_locs();
+  // On Windows, there are DLLs which take care of all this (dbghelp, psapi), with
+  // zero overlap with any other OS, so it's in its own file, impl_windows.cpp.
+  // For all other platforms we implement these "find" methods.
+
+  // Resolve instruction addresses to their respective images, dealing with possible ASLR.
+  _LIBCPP_EXPORTED_FROM_ABI void find_images();
+
+  // Resolve addresses to symbols if possible.
+  _LIBCPP_EXPORTED_FROM_ABI void find_symbols();
+
+  // Resolve addresses to source locations if possible.
+  _LIBCPP_EXPORTED_FROM_ABI void find_source_locs();
+
+  _LIBCPP_HIDE_FROM_ABI void finish_stacktrace() {
+    find_images();
+    find_symbols();
+    find_source_locs();
+  }
 
   _LIBCPP_EXPORTED_FROM_ABI ostream& write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
@@ -147,7 +170,8 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
     basic_stacktrace __ret{__caller_alloc};
-    __ret.current_impl(__skip, __max_depth);
+    __ret.unwind_addrs(__skip, __max_depth);
+    __ret.finish_stacktrace();
     return __ret;
   }
 
@@ -157,7 +181,8 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
     basic_stacktrace __ret{__caller_alloc};
-    __ret.current_impl(__skip, __max_depth);
+    __ret.unwind_addrs(__skip, __max_depth);
+    __ret.finish_stacktrace();
     return __ret;
   }
 
@@ -169,7 +194,8 @@ public:
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
     basic_stacktrace __ret{__caller_alloc};
     if (__max_depth) [[likely]] {
-      __ret.current_impl(__skip, __max_depth);
+      __ret.unwind_addrs(__skip, __max_depth);
+      __ret.finish_stacktrace();
     }
     return __ret;
   }
@@ -333,6 +359,55 @@ struct hash<basic_stacktrace<_Allocator>> {
   }
 };
 
+namespace __stacktrace {
+
+#  if defined(_WIN32)
+
+_LIBCPP_EXPORTED_FROM_ABI void base::windows_impl(size_t skip, size_t max_depth)
+
+#  else
+
+struct unwind_backtrace {
+  base& base_;
+  size_t skip_;
+  size_t maxDepth_;
+
+  _LIBCPP_HIDE_FROM_ABI _Unwind_Reason_Code callback(_Unwind_Context* __ucx) {
+    if (skip_) {
+      --skip_;
+      return _Unwind_Reason_Code::_URC_NO_REASON;
+    }
+    if (!maxDepth_) {
+      return _Unwind_Reason_Code::_URC_NORMAL_STOP;
+    }
+    --maxDepth_;
+    int __ip_before{0};
+    auto __ip = _Unwind_GetIPInfo(__ucx, &__ip_before);
+    if (!__ip) {
+      return _Unwind_Reason_Code::_URC_NORMAL_STOP;
+    }
+    auto& __entry = base_.__entry_append_();
+    auto& __eb    = (entry_base&)__entry;
+    __eb.__addr_  = (__ip_before ? __ip : __ip - 1);
+    return _Unwind_Reason_Code::_URC_NO_REASON;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static _Unwind_Reason_Code callback(_Unwind_Context* __cx, void* __self) {
+    return ((unwind_backtrace*)__self)->callback(__cx);
+  }
+};
+
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void base::unwind_addrs(size_t __skip, size_t __depth) {
+  if (!__depth) {
+    return;
+  }
+  unwind_backtrace __bt{*this, __skip, __depth};
+  _Unwind_Backtrace(unwind_backtrace::callback, &__bt);
+}
+
+#  endif // _WIN32
+
+} // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE

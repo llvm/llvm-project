@@ -16,6 +16,7 @@
 #include <stacktrace>
 #include <type_traits>
 
+#include "test_macros.h"
 #include "../test_allocs.h"
 
 void test_default_construct() {

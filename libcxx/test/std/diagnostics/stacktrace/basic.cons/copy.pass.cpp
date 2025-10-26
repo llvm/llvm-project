@@ -17,6 +17,7 @@
 #include <cassert>
 #include <stacktrace>
 
+#include "test_macros.h"
 #include "../test_allocs.h"
 
 void test_copy_construct() {
@@ -73,7 +74,7 @@ void test_copy_assign() {
   }
 }
 
-_LIBCPP_NO_TAIL_CALLS
+TEST_NO_TAIL_CALLS
 int main(int, char**) {
   test_copy_construct();
   test_copy_assign();

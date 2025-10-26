@@ -378,6 +378,8 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_NO_TAIL_CALLS_IN
 #endif
 
+#define TEST_NO_TAIL_CALLS TEST_NO_TAIL_CALLS_IN TEST_NO_TAIL_CALLS_OUT
+
 #ifdef _WIN32
 #define TEST_NOT_WIN32(...) ((void)0)
 #else
