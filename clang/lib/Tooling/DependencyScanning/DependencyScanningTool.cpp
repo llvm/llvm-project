@@ -155,18 +155,27 @@ DependencyScanningTool::getTranslationUnitDependencies(
   return Consumer.takeTranslationUnitDeps();
 }
 
+llvm::Error DependencyScanningTool::initializeCompilerInstanceWithContext(
+    StringRef CWD, const std::vector<std::string> &CommandLine) {
+  return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine);
+}
+
 llvm::Expected<TranslationUnitDeps>
-DependencyScanningTool::getModuleDependencies(
-    StringRef ModuleName, const std::vector<std::string> &CommandLine,
-    StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
+DependencyScanningTool::computeDependenciesByNameWithContext(
+    StringRef ModuleName, const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
-                                                  Controller, ModuleName);
+  llvm::Error Result = Worker.computeDependenciesByNameWithContext(
+      ModuleName, Consumer, Controller);
   if (Result)
     return std::move(Result);
+
   return Consumer.takeTranslationUnitDeps();
+}
+
+llvm::Error DependencyScanningTool::finalizeCompilerInstanceWithContext() {
+  return Worker.finalizeCompilerInstanceWithContext();
 }
 
 TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
