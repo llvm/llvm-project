@@ -20,6 +20,7 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
+// NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
 bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
   const EnumDecl *Definition = D->getDefinition();
   return Definition && Definition->isComplete() &&
