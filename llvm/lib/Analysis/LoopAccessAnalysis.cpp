@@ -1018,8 +1018,8 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
 /// informating from the IR pointer value to determine no-wrap.
 static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
                      Value *Ptr, Type *AccessTy, const Loop *L, bool Assume,
-                     std::optional<int64_t> Stride = std::nullopt,
-                     DominatorTree *DT = nullptr) {
+                     const DominatorTree &DT,
+                     std::optional<int64_t> Stride = std::nullopt) {
   // FIXME: This should probably only return true for NUW.
   if (AR->getNoWrapFlags(SCEV::NoWrapMask))
     return true;
@@ -1037,15 +1037,11 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
     // For the above reasoning to apply, the pointer must be dereferenced in
     // every iteration.
     if (L->getHeader() == L->getLoopLatch() ||
-        any_of(GEP->users(), [L, DT,GEP](User *U) {
+        any_of(GEP->users(), [L, &DT, GEP](User *U) {
           if (getLoadStorePointerOperand(U) != GEP)
             return false;
           BasicBlock *UserBB = cast<Instruction>(U)->getParent();
-          if (DT && !LoopAccessInfo::blockNeedsPredication(UserBB, L, DT))
-            return true;
-          return UserBB == L->getHeader() ||
-                 (L->getExitingBlock() == L->getLoopLatch() &&
-                  UserBB == L->getLoopLatch());
+          return !LoopAccessInfo::blockNeedsPredication(UserBB, L, &DT);
         }))
       return true;
   }
@@ -1311,7 +1307,7 @@ bool AccessAnalysis::createCheckForAccess(
     }
 
     if (!isNoWrap(PSE, AR, RTCheckPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, Assume, {}, &DT))
+                  TheLoop, Assume, DT))
       return false;
   }
 
@@ -1648,7 +1644,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
-  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, Stride, DT))
+  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, *DT, Stride))
     return Stride;
 
   LLVM_DEBUG(
