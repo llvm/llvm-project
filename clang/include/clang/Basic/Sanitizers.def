@@ -94,6 +94,8 @@ SANITIZER("array-bounds", ArrayBounds)
 SANITIZER("bool", Bool)
 SANITIZER("builtin", Builtin)
 SANITIZER("enum", Enum)
+SANITIZER("fixed-point-divide-by-zero", FixedPointDivideByZero)
+SANITIZER_GROUP("fixed-point", FixedPoint, FixedPointDivideByZero)
 SANITIZER("float-cast-overflow", FloatCastOverflow)
 SANITIZER("float-divide-by-zero", FloatDivideByZero)
 SANITIZER("function", Function)
@@ -149,7 +151,7 @@ SANITIZER("shadow-call-stack", ShadowCallStack)
 // ABI or address space layout implications, and only catch undefined behavior.
 SANITIZER_GROUP("undefined", Undefined,
                 Alignment | Bool | Builtin | ArrayBounds | Enum |
-                    FloatCastOverflow |
+                    FixedPoint | FloatCastOverflow |
                     IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
                     PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
                     SignedIntegerOverflow | Unreachable | VLABound | Function)

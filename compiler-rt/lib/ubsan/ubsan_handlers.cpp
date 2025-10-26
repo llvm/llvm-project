@@ -294,6 +294,8 @@ static void handleDivremOverflowImpl(OverflowData *Data, ValueHandle LHS,
     ET = ErrorType::SignedIntegerOverflow;
   else if (Data->Type.isIntegerTy())
     ET = ErrorType::IntegerDivideByZero;
+  else if (Data->Type.isFixedPointTy())
+    ET = ErrorType::FixedPointDivideByZero;
   else
     ET = ErrorType::FloatDivideByZero;
 
