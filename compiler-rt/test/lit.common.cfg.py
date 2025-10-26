@@ -112,13 +112,17 @@ def push_dynamic_library_lookup_path(config, new_path):
         )
         config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
 
-
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
-use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
 if use_lit_shell:
-    # 0 is external, "" is default, and everything else is internal.
-    execute_external = use_lit_shell == "0"
+    execute_external = True
 else:
     # Otherwise we default to internal on Windows and external elsewhere, as
     # bash on Windows is usually very slow.
@@ -1066,3 +1070,5 @@ if config.compiler_id == "GNU":
 # llvm.
 config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
 config.substitutions.append(("%llvm_src", config.llvm_src_root))
+
+config.substitutions.append(("%python", '"%s"' % (sys.executable)))
