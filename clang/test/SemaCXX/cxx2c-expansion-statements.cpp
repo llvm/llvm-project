@@ -835,3 +835,23 @@ constexpr int unexpanded_pack_good(Es ...es) {
 }
 
 static_assert(unexpanded_pack_good(E{1, 2}, E{3, 4}) == 62);
+
+// Ensure that the expansion-initializer is evaluated even if it expands
+// to nothing.
+//
+// This is related to CWG 3048. Note that we currently still model this as
+// a DecompositionDecl w/ zero bindings.
+constexpr bool empty_side_effect() {
+  struct A {
+    bool& b;
+    constexpr A(bool& b) : b{b} {
+      b = true;
+    }
+  };
+
+  bool constructed = false;
+  template for (auto x : A(constructed)) {}
+  return constructed;
+}
+
+static_assert(empty_side_effect());
