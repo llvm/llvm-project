@@ -61,4 +61,32 @@ cir.func @f7(%arg0: !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>) -> !s32i {
 // CHECK-NEXT:   cir.return %[[#ret]] : !s32i
 // CHECK-NEXT: }
 
+cir.func private @division() -> !s32i
+
+cir.func dso_local @call_with_exception_attribute() {
+  cir.scope {
+    cir.try {
+      %0 = cir.call exception @division() : () -> !s32i
+      cir.yield
+    } catch all {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func private @division() -> !s32i
+
+// CHECK:      cir.func dso_local @call_with_exception_attribute() {
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     cir.try {
+// CHECK-NEXT:       %[[CALL:.*]] = cir.call exception @division() : () -> !s32i
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     } catch all {
+// CHECK-NEXT:       cir.yield
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
+
 }
