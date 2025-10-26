@@ -6507,7 +6507,7 @@ def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
 def fpie : Flag<["-"], "fpie">, Group<f_Group>;
 def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
 def pie : Flag<["-"], "pie">, Group<Link_Group>;
-def no_pie : Flag<["-"], "no-pie">;
+def no_pie : Flag<["-"], "no-pie">, Group<Link_Group>;
 
 } // let Vis = [Default, FlangOption]
 
