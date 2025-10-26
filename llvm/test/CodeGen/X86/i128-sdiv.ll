@@ -64,32 +64,32 @@ define i128 @test2(i128 %x) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 36(%ebp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    shrl $30, %ecx
-; X86-NEXT:    movl 24(%ebp), %esi
-; X86-NEXT:    addl %edx, %esi
-; X86-NEXT:    adcl 28(%ebp), %edx
-; X86-NEXT:    adcl 32(%ebp), %ecx
-; X86-NEXT:    adcl $0, %eax
-; X86-NEXT:    shrdl $2, %eax, %ecx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    sarl $31, %esi
-; X86-NEXT:    sarl $2, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    negl %ecx
-; X86-NEXT:    movl $0, %edi
-; X86-NEXT:    sbbl %eax, %edi
-; X86-NEXT:    movl $0, %ebx
-; X86-NEXT:    sbbl %esi, %ebx
-; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 36(%ebp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    shrl $30, %ecx
+; X86-NEXT:    movl 24(%ebp), %edi
+; X86-NEXT:    addl %esi, %edi
+; X86-NEXT:    adcl 28(%ebp), %esi
+; X86-NEXT:    adcl 32(%ebp), %ecx
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    shrdl $2, %edx, %ecx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sarl $31, %esi
+; X86-NEXT:    sarl $2, %edx
+; X86-NEXT:    xorl %edi, %edi
+; X86-NEXT:    negl %ecx
+; X86-NEXT:    movl $0, %ebx
+; X86-NEXT:    sbbl %edx, %ebx
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    sbbl %esi, %edx
+; X86-NEXT:    sbbl %esi, %edi
 ; X86-NEXT:    movl %ecx, (%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
-; X86-NEXT:    movl %ebx, 8(%eax)
-; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    movl %ebx, 4(%eax)
+; X86-NEXT:    movl %edx, 8(%eax)
+; X86-NEXT:    movl %edi, 12(%eax)
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

@@ -124,26 +124,26 @@ define i8 @scmp.8.128(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 24(%ebp), %ecx
-; X86-NEXT:    movl 28(%ebp), %eax
-; X86-NEXT:    movl 12(%ebp), %edi
-; X86-NEXT:    cmpl %ecx, 8(%ebp)
-; X86-NEXT:    sbbl %eax, %edi
-; X86-NEXT:    movl 32(%ebp), %edi
+; X86-NEXT:    movl 32(%ebp), %eax
+; X86-NEXT:    movl 24(%ebp), %edx
+; X86-NEXT:    movl 28(%ebp), %ecx
+; X86-NEXT:    movl 12(%ebp), %ebx
+; X86-NEXT:    cmpl %edx, 8(%ebp)
+; X86-NEXT:    sbbl %ecx, %ebx
 ; X86-NEXT:    movl 16(%ebp), %ebx
-; X86-NEXT:    sbbl %edi, %ebx
+; X86-NEXT:    sbbl %eax, %ebx
 ; X86-NEXT:    movl 36(%ebp), %ebx
-; X86-NEXT:    movl 20(%ebp), %edx
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    sbbl %ebx, %ecx
-; X86-NEXT:    setl %cl
-; X86-NEXT:    movl 24(%ebp), %esi
-; X86-NEXT:    cmpl 8(%ebp), %esi
-; X86-NEXT:    sbbl 12(%ebp), %eax
-; X86-NEXT:    sbbl 16(%ebp), %edi
-; X86-NEXT:    sbbl %edx, %ebx
+; X86-NEXT:    movl 20(%ebp), %esi
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    setl %dl
+; X86-NEXT:    movl 24(%ebp), %edi
+; X86-NEXT:    cmpl 8(%ebp), %edi
+; X86-NEXT:    sbbl 12(%ebp), %ecx
+; X86-NEXT:    sbbl 16(%ebp), %eax
+; X86-NEXT:    sbbl %esi, %ebx
 ; X86-NEXT:    setl %al
-; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    subb %dl, %al
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
