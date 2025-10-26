@@ -214,6 +214,41 @@ static bool checkOrderedReduction(RecurKind Kind, Instruction *ExactFPMathInst,
   return true;
 }
 
+static std::optional<RecurrenceDescriptor>
+getMultiUseMinMax(PHINode *Phi, RecurKind Kind, Loop *TheLoop) {
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+  if (!Latch)
+    return std::nullopt;
+  Value *Inc = Phi->getIncomingValueForBlock(Latch);
+  RecurKind RK;
+  if (Phi->hasOneUse() ||
+      !RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind))
+    return std::nullopt;
+
+  Value *A, *B;
+  if (match(Inc, m_OneUse(m_UMin(m_Value(A), m_Value(B)))))
+    RK = RecurKind::UMinMultiUse;
+  else if (match(Inc, m_OneUse(m_UMax(m_Value(A), m_Value(B)))))
+    RK = RecurKind::UMaxMultiUse;
+  else if (match(Inc, m_OneUse(m_SMax(m_Value(A), m_Value(B)))))
+    RK = RecurKind::SMaxMultiUse;
+  else if (match(Inc, m_OneUse(m_SMin(m_Value(A), m_Value(B)))))
+    RK = RecurKind::SMinMultiUse;
+  else
+    return std::nullopt;
+
+  if (RecurrenceDescriptor::convertFromMultiUseKind(RK) != Kind || A == B ||
+      (A != Phi && B != Phi))
+    return std::nullopt;
+
+  SmallPtrSet<Instruction *, 4> CastInsts;
+  Value *RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
+  RecurrenceDescriptor RD(RdxStart, nullptr, nullptr, RK, FastMathFlags(),
+                          nullptr, Phi->getType(), false, false, CastInsts,
+                          -1U);
+  return {RD};
+}
+
 bool RecurrenceDescriptor::AddReductionVar(
     PHINode *Phi, RecurKind Kind, Loop *TheLoop, FastMathFlags FuncFMF,
     RecurrenceDescriptor &RedDes, DemandedBits *DB, AssumptionCache *AC,
@@ -225,6 +260,10 @@ bool RecurrenceDescriptor::AddReductionVar(
   if (Phi->getParent() != TheLoop->getHeader())
     return false;
 
+  if (auto RD = getMultiUseMinMax(Phi, Kind, TheLoop)) {
+    RedDes = *RD;
+    return true;
+  }
   // Obtain the reduction start value from the value that comes from the loop
   // preheader.
   Value *RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
