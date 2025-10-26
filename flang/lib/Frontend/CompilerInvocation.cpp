@@ -114,11 +114,33 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
 
     assert(a->getOption().matches(clang::driver::options::OPT_O));
 
+    llvm::StringRef s(a->getValue());
+    if (s == "s" || s == "z")
+      return 2;
+
     return getLastArgIntValue(args, clang::driver::options::OPT_O, defaultOpt,
                               diags);
   }
 
   return defaultOpt;
+}
+
+/// Extracts the size-optimization level from \a args
+static unsigned getOptimizationLevelSize(llvm::opt::ArgList &args) {
+  if (llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_O_Group)) {
+    if (a->getOption().matches(clang::driver::options::OPT_O)) {
+      switch (a->getValue()[0]) {
+      default:
+        return 0;
+      case 's':
+        return 1;
+      case 'z':
+        return 2;
+      }
+    }
+  }
+  return 0;
 }
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
@@ -273,6 +295,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                              llvm::opt::ArgList &args,
                              clang::DiagnosticsEngine &diags) {
   opts.OptimizationLevel = getOptimizationLevel(args, diags);
+  opts.OptimizeSize = getOptimizationLevelSize(args);
 
   if (args.hasFlag(clang::driver::options::OPT_fdebug_pass_manager,
                    clang::driver::options::OPT_fno_debug_pass_manager, false))

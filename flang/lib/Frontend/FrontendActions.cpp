@@ -602,7 +602,16 @@ mapToLevel(const Fortran::frontend::CodeGenOptions &opts) {
   case 1:
     return llvm::OptimizationLevel::O1;
   case 2:
-    return llvm::OptimizationLevel::O2;
+    switch (opts.OptimizeSize) {
+    default:
+      llvm_unreachable("Invalid optimization level for size!");
+    case 0:
+      return llvm::OptimizationLevel::O2;
+    case 1:
+      return llvm::OptimizationLevel::Os;
+    case 2:
+      return llvm::OptimizationLevel::Oz;
+    }
   case 3:
     return llvm::OptimizationLevel::O3;
   }
