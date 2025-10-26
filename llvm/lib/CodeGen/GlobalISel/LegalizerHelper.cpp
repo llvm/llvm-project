@@ -3579,9 +3579,7 @@ static void emitLoadFromConstantPool(Register DstReg, const Constant *ConstVal,
 
   Align Alignment(DL.getABITypeAlign(ConstVal->getType()));
 
-  auto Addr = MIRBuilder.buildConstantPool(
-      AddrPtrTy,
-      MF.getConstantPool()->getConstantPoolIndex(ConstVal, Alignment));
+  auto Addr = MIRBuilder.buildConstantPool(AddrPtrTy, ConstVal);
 
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
