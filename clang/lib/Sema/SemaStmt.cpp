@@ -532,6 +532,11 @@ static bool DiagnoseSwitchCaseInExpansionStmt(Sema &S, SourceLocation KwLoc,
                                               bool IsDefault) {
   // C++26 [stmt.expand] The compound-statement of an expansion-statement is a
   // control-flow-limited statement.
+  //
+  // We diagnose this here rather than in JumpDiagnostics because those run
+  // after the expansion statement is instantiated, at which point we will have
+  // have already complained about duplicate case labels, which is not exactly
+  // great QOI.
   if (S.CurContext->isExpansionStmt() &&
       S.getCurFunction()->SwitchStack.back().EnclosingDC != S.CurContext) {
     S.Diag(KwLoc, diag::err_expansion_stmt_case) << IsDefault;
