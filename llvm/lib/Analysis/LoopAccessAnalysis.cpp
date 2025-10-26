@@ -1037,8 +1037,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
     // For the above reasoning to apply, the pointer must be dereferenced in
     // every iteration.
     if (L->getHeader() == L->getLoopLatch() ||
-        any_of(GEP->users(), [L, DT](User *U) {
-          if (!isa<LoadInst, StoreInst>(U))
+        any_of(GEP->users(), [L, DT,GEP](User *U) {
+          if (getLoadStorePointerOperand(U) != GEP)
             return false;
           BasicBlock *UserBB = cast<Instruction>(U)->getParent();
           if (DT && !LoopAccessInfo::blockNeedsPredication(UserBB, L, DT))
@@ -1311,7 +1311,7 @@ bool AccessAnalysis::createCheckForAccess(
     }
 
     if (!isNoWrap(PSE, AR, RTCheckPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, Assume, std::nullopt, &DT))
+                  TheLoop, Assume, {}, &DT))
       return false;
   }
 
