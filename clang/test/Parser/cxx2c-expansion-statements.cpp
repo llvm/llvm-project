@@ -37,7 +37,7 @@ void bad() {
   template for (int x; static __thread auto y : {1, 2}); // expected-error {{expansion variable 'y' may not be declared 'static'}}
   template for (int x; constinit auto y : {1, 2}); // expected-error {{local variable cannot be declared 'constinit'}}
   template for (int x; consteval auto y : {1, 2});  // expected-error {{consteval can only be used in function declarations}}
-  template for (auto y : {abc, -+, }); // expected-error {{use of undeclared identifier 'abc'}} expected-error 2 {{expected expression}}
+  template for (auto y : {abc, -+, }); // expected-error {{use of undeclared identifier 'abc'}} expected-error {{expected expression}}
   template while (true) {} // expected-error {{expected '<' after 'template'}}
   template for (auto y : {{1}, {2}, {3, {4}}, {{{5}}}});
 }
@@ -54,4 +54,9 @@ void good() {
       template for (constexpr int c : {1, 2});
     }
   }
+}
+
+void trailing_comma() {
+  template for (int x : {1, 2,}) {}
+  template for (int x : {,}) {} // expected-error {{expected expression}}
 }

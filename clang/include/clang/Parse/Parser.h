@@ -4188,7 +4188,8 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
-                           bool FailImmediatelyOnInvalidExpr = false);
+                           bool FailImmediatelyOnInvalidExpr = false,
+                           bool StopAtRBraceAfterComma = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -5257,7 +5258,8 @@ private:
   ///
   /// \verbatim
   ///       expansion-init-list: [C++26 [stmt.expand]]
-  ///          '{' expression-list[opt] '}'
+  ///          '{' expression-list ','[opt] '}'
+  ///          '{' '}'
   /// \endverbatim
   ExprResult ParseExpansionInitList();
 
