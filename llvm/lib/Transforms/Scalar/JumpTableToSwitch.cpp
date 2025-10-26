@@ -26,8 +26,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
 static cl::opt<unsigned>
     JumpTableSizeThreshold("jump-table-to-switch-size-threshold", cl::Hidden,
                            cl::desc("Only split jump tables with size less or "
@@ -43,8 +41,8 @@ static cl::opt<unsigned> FunctionSizeThreshold(
              "or equal than this threshold."),
     cl::init(50));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // end namespace llvm
 
 #define DEBUG_TYPE "jump-table-to-switch"

@@ -2609,7 +2609,6 @@ public:
                                         bool IsRelatedToDecl,
                                         ASTContext &Ctx) override {
     SourceLocation Loc;
-    std::string Message;
 
     Loc = Node.get<Stmt>()->getBeginLoc();
     S.Diag(Loc, diag::warn_unsafe_buffer_usage_unique_ptr_array_access)

@@ -920,6 +920,10 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
   // successors have been processed.
   RegisterSet BlockDefs, InsDefs;
   for (MachineInstr &MI : *B) {
+    // Stop if the map size is too large.
+    if (IFMap.size() >= MaxIFMSize)
+      break;
+
     InsDefs.clear();
     getInstrDefs(&MI, InsDefs);
     // Leave those alone. They are more transparent than "insert".
@@ -942,8 +946,8 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
 
         findRecordInsertForms(VR, AVs);
         // Stop if the map size is too large.
-        if (IFMap.size() > MaxIFMSize)
-          return;
+        if (IFMap.size() >= MaxIFMSize)
+          break;
       }
     }
 

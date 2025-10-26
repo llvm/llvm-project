@@ -121,9 +121,7 @@ private:
   NodeList Stack;
   bool Done = false;
 
-  iterator_range<node_iterator> nodes() const {
-    return make_range(Stack.begin(), Stack.end());
-  }
+  iterator_range<node_iterator> nodes() const { return Stack; }
 };
 using export_iterator = content_iterator<ExportEntry>;
 

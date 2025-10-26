@@ -464,12 +464,6 @@ static std::string generateOpDefinition(irdl::detail::dictionary &dict,
   auto opStrings = getStrings(op);
   fillDict(dict, opStrings);
 
-  const auto operandCount = opStrings.opOperandNames.size();
-  const auto operandNames =
-      operandCount ? joinNameList(opStrings.opOperandNames) : "{\"\"}";
-
-  const auto resultNames = joinNameList(opStrings.opResultNames);
-
   auto resultTypes = llvm::join(
       llvm::map_range(opStrings.opResultNames,
                       [](StringRef attr) -> std::string {

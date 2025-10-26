@@ -154,7 +154,7 @@ public:
 
   bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
 
-  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const override;
+  bool isIgnoredCVReg(MCRegister LLVMReg) const override;
 };
 
 } // end namespace llvm

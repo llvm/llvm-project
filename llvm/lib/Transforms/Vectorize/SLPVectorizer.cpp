@@ -2242,8 +2242,49 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
   bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                     Align Alignment, const int64_t Diff, Value *Ptr0,
-                     Value *PtrN, StridedPtrInfo &SPtrInfo) const;
+                     Align Alignment, const int64_t Diff,
+                     const size_t Sz) const;
+
+  /// Return true if an array of scalar loads can be replaced with a strided
+  ///  load (with constant stride).
+  ///
+  ///  TODO:
+  ///  It is possible that the load gets "widened". Suppose that originally each
+  ///  load loads `k` bytes and `PointerOps` can be arranged as follows (`%s` is
+  ///  constant): %b + 0 * %s + 0 %b + 0 * %s + 1 %b + 0 * %s + 2
+  ///  ...
+  ///  %b + 0 * %s + (w - 1)
+  ///
+  ///  %b + 1 * %s + 0
+  ///  %b + 1 * %s + 1
+  ///  %b + 1 * %s + 2
+  ///  ...
+  ///  %b + 1 * %s + (w - 1)
+  ///  ...
+  ///
+  ///  %b + (n - 1) * %s + 0
+  ///  %b + (n - 1) * %s + 1
+  ///  %b + (n - 1) * %s + 2
+  ///  ...
+  ///  %b + (n - 1) * %s + (w - 1)
+  ///
+  /// In this case we will generate a strided load of type `<n x (k * w)>`.
+  ///
+  /// \param PointerOps list of pointer arguments of loads.
+  /// \param ElemTy original scalar type of loads.
+  /// \param Alignment alignment of the first load.
+  /// \param SortedIndices is the order of PointerOps as returned by
+  /// `sortPtrAccesses`
+  /// \param Diff Pointer difference between the lowest and the highes pointer
+  /// in `PointerOps` as returned by `getPointersDiff`.
+  /// \param Ptr0 first pointer in `PointersOps`.
+  /// \param PtrN last pointer in `PointersOps`.
+  /// \param SPtrInfo If the function return `true`, it also sets all the fields
+  /// of `SPtrInfo` necessary to generate the strided load later.
+  bool analyzeConstantStrideCandidate(
+      const ArrayRef<Value *> PointerOps, Type *ElemTy, Align Alignment,
+      const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
+      Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const;
 
   /// Return true if an array of scalar loads can be replaced with a strided
   /// load (with run-time stride).
@@ -5291,19 +5332,19 @@ private:
         // data.
         for (TreeEntry *TE : Entries) {
           // Check if the user is commutative.
-          // The commutatives are handled later, as their oeprands can be
+          // The commutatives are handled later, as their operands can be
           // reordered.
           // Same applies even for non-commutative cmps, because we can invert
           // their predicate potentially and, thus, reorder the operands.
           bool IsCommutativeUser =
               ::isCommutative(User) ||
               ::isCommutative(TE->getMatchingMainOpOrAltOp(User), User);
-          EdgeInfo EI(TE, U.getOperandNo());
           if (!IsCommutativeUser && !isa<CmpInst>(User)) {
             unsigned &OpCnt =
                 OrderedEntriesCount.try_emplace(TE, 0).first->getSecond();
-            if (!getScheduleCopyableData(EI, Op) && OpCnt < NumOps)
-              return false;
+            EdgeInfo EI(TE, U.getOperandNo());
+            if (!getScheduleCopyableData(EI, Op))
+              continue;
             // Found copyable operand - continue.
             ++OpCnt;
             continue;
@@ -5312,33 +5353,38 @@ private:
                 .first->getSecond();
         }
       }
-      // Check the commutative/cmp entries.
-      if (!PotentiallyReorderedEntriesCount.empty()) {
-        for (auto &P : PotentiallyReorderedEntriesCount) {
-          auto *It = find(P.first->Scalars, User);
-          assert(It != P.first->Scalars.end() &&
-                 "User is not in the tree entry");
-          int Lane = std::distance(P.first->Scalars.begin(), It);
-          assert(Lane >= 0 && "Lane is not found");
-          if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
-            Lane = P.first->ReorderIndices[Lane];
-          assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
-                 "Couldn't find extract lane");
-          SmallVector<unsigned> OpIndices;
-          for (unsigned OpIdx :
-               seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
-                   P.first->getMainOp()))) {
-            if (P.first->getOperand(OpIdx)[Lane] == Op &&
-                getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
-              --P.getSecond();
-          }
-        }
-        return all_of(PotentiallyReorderedEntriesCount,
+      if (PotentiallyReorderedEntriesCount.empty())
+        return all_of(OrderedEntriesCount,
                       [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                        return P.second == NumOps - 1;
+                        return P.second == NumOps;
                       });
+      // Check the commutative/cmp entries.
+      for (auto &P : PotentiallyReorderedEntriesCount) {
+        auto *It = find(P.first->Scalars, User);
+        assert(It != P.first->Scalars.end() && "User is not in the tree entry");
+        int Lane = std::distance(P.first->Scalars.begin(), It);
+        assert(Lane >= 0 && "Lane is not found");
+        if (isa<StoreInst>(User) && !P.first->ReorderIndices.empty())
+          Lane = P.first->ReorderIndices[Lane];
+        assert(Lane < static_cast<int>(P.first->Scalars.size()) &&
+               "Couldn't find extract lane");
+        SmallVector<unsigned> OpIndices;
+        for (unsigned OpIdx :
+             seq<unsigned>(::getNumberOfPotentiallyCommutativeOps(
+                 P.first->getMainOp()))) {
+          if (P.first->getOperand(OpIdx)[Lane] == Op &&
+              getScheduleCopyableData(EdgeInfo(P.first, OpIdx), Op))
+            --P.getSecond();
+        }
       }
-      return true;
+      return all_of(PotentiallyReorderedEntriesCount,
+                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
+                      return P.second == NumOps - 1;
+                    }) &&
+             all_of(OrderedEntriesCount,
+                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
+                      return P.second == NumOps;
+                    });
     }
 
     SmallVector<ScheduleCopyableData *>
@@ -5531,62 +5577,79 @@ private:
           }
           // Decrement the unscheduled counter and insert to ready list if
           // ready.
-          auto DecrUnschedForInst = [&](Instruction *I, TreeEntry *UserTE,
-                                        unsigned OpIdx) {
-            if (!ScheduleCopyableDataMap.empty()) {
-              const EdgeInfo EI = {UserTE, OpIdx};
-              if (ScheduleCopyableData *CD = getScheduleCopyableData(EI, I)) {
-                DecrUnsched(CD, /*IsControl=*/false);
-                return;
-              }
-            }
-            auto It = OperandsUses.find(I);
-            assert(It != OperandsUses.end() && "Operand not found");
-            if (It->second > 0) {
-              --It->getSecond();
-              assert(TotalOpCount > 0 && "No more operands to decrement");
-              --TotalOpCount;
-              if (ScheduleData *OpSD = getScheduleData(I))
-                DecrUnsched(OpSD, /*IsControl=*/false);
-            }
-          };
+          auto DecrUnschedForInst =
+              [&](Instruction *I, TreeEntry *UserTE, unsigned OpIdx,
+                  SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>>
+                      &Checked) {
+                if (!ScheduleCopyableDataMap.empty()) {
+                  const EdgeInfo EI = {UserTE, OpIdx};
+                  if (ScheduleCopyableData *CD =
+                          getScheduleCopyableData(EI, I)) {
+                    if (!Checked.insert(std::make_pair(CD, OpIdx)).second)
+                      return;
+                    DecrUnsched(CD, /*IsControl=*/false);
+                    return;
+                  }
+                }
+                auto It = OperandsUses.find(I);
+                assert(It != OperandsUses.end() && "Operand not found");
+                if (It->second > 0) {
+                  --It->getSecond();
+                  assert(TotalOpCount > 0 && "No more operands to decrement");
+                  --TotalOpCount;
+                  if (ScheduleData *OpSD = getScheduleData(I)) {
+                    if (!Checked.insert(std::make_pair(OpSD, OpIdx)).second)
+                      return;
+                    DecrUnsched(OpSD, /*IsControl=*/false);
+                  }
+                }
+              };
 
           for (ScheduleBundle *Bundle : Bundles) {
             if (ScheduleCopyableDataMap.empty() && TotalOpCount == 0)
               break;
             // Need to search for the lane since the tree entry can be
             // reordered.
-            int Lane = std::distance(Bundle->getTreeEntry()->Scalars.begin(),
-                                     find(Bundle->getTreeEntry()->Scalars, In));
-            assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst>(In) &&
-                !Bundle->getTreeEntry()->ReorderIndices.empty())
-              Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
-            assert(Lane < static_cast<int>(
-                              Bundle->getTreeEntry()->Scalars.size()) &&
-                   "Couldn't find extract lane");
+            auto *It = find(Bundle->getTreeEntry()->Scalars, In);
+            SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
+            do {
+              int Lane =
+                  std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
+              assert(Lane >= 0 && "Lane not set");
+              if (isa<StoreInst>(In) &&
+                  !Bundle->getTreeEntry()->ReorderIndices.empty())
+                Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
+              assert(Lane < static_cast<int>(
+                                Bundle->getTreeEntry()->Scalars.size()) &&
+                     "Couldn't find extract lane");
 
-            // Since vectorization tree is being built recursively this
-            // assertion ensures that the tree entry has all operands set before
-            // reaching this code. Couple of exceptions known at the moment are
-            // extracts where their second (immediate) operand is not added.
-            // Since immediates do not affect scheduler behavior this is
-            // considered okay.
-            assert(In &&
-                   (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
-                    In->getNumOperands() ==
-                        Bundle->getTreeEntry()->getNumOperands() ||
-                    Bundle->getTreeEntry()->isCopyableElement(In)) &&
-                   "Missed TreeEntry operands?");
+              // Since vectorization tree is being built recursively this
+              // assertion ensures that the tree entry has all operands set
+              // before reaching this code. Couple of exceptions known at the
+              // moment are extracts where their second (immediate) operand is
+              // not added. Since immediates do not affect scheduler behavior
+              // this is considered okay.
+              assert(In &&
+                     (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
+                      In->getNumOperands() ==
+                          Bundle->getTreeEntry()->getNumOperands() ||
+                      Bundle->getTreeEntry()->isCopyableElement(In)) &&
+                     "Missed TreeEntry operands?");
 
-            for (unsigned OpIdx :
-                 seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
-              if (auto *I = dyn_cast<Instruction>(
-                      Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
-                LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): " << *I
-                                  << "\n");
-                DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx);
-              }
+              for (unsigned OpIdx :
+                   seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
+                if (auto *I = dyn_cast<Instruction>(
+                        Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
+                  LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
+                                    << *I << "\n");
+                  DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx, Checked);
+                }
+              // If parent node is schedulable, it will be handle correctly.
+              if (!Bundle->getTreeEntry()->doesNotNeedToSchedule())
+                break;
+              It = std::find(std::next(It),
+                             Bundle->getTreeEntry()->Scalars.end(), In);
+            } while (It != Bundle->getTreeEntry()->Scalars.end());
           }
         } else {
           // If BundleMember is a stand-alone instruction, no operand reordering
@@ -6844,9 +6907,8 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
 bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                            Align Alignment, const int64_t Diff, Value *Ptr0,
-                            Value *PtrN, StridedPtrInfo &SPtrInfo) const {
-  const size_t Sz = PointerOps.size();
+                            Align Alignment, const int64_t Diff,
+                            const size_t Sz) const {
   if (Diff % (Sz - 1) != 0)
     return false;
 
@@ -6870,27 +6932,40 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
       return false;
     if (!TTI->isLegalStridedLoadStore(VecTy, Alignment))
       return false;
+    return true;
+  }
+  return false;
+}
 
-    // Iterate through all pointers and check if all distances are
-    // unique multiple of Dist.
-    SmallSet<int64_t, 4> Dists;
-    for (Value *Ptr : PointerOps) {
-      int64_t Dist = 0;
-      if (Ptr == PtrN)
-        Dist = Diff;
-      else if (Ptr != Ptr0)
-        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
-      // If the strides are not the same or repeated, we can't
-      // vectorize.
-      if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
-        break;
-    }
-    if (Dists.size() == Sz) {
-      Type *StrideTy = DL->getIndexType(Ptr0->getType());
-      SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
-      SPtrInfo.Ty = getWidenedType(ScalarTy, Sz);
-      return true;
-    }
+bool BoUpSLP::analyzeConstantStrideCandidate(
+    const ArrayRef<Value *> PointerOps, Type *ScalarTy, Align Alignment,
+    const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
+    Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
+  const size_t Sz = PointerOps.size();
+  if (!isStridedLoad(PointerOps, ScalarTy, Alignment, Diff, Sz))
+    return false;
+
+  int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
+
+  // Iterate through all pointers and check if all distances are
+  // unique multiple of Dist.
+  SmallSet<int64_t, 4> Dists;
+  for (Value *Ptr : PointerOps) {
+    int64_t Dist = 0;
+    if (Ptr == PtrN)
+      Dist = Diff;
+    else if (Ptr != Ptr0)
+      Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
+    // If the strides are not the same or repeated, we can't
+    // vectorize.
+    if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
+      break;
+  }
+  if (Dists.size() == Sz) {
+    Type *StrideTy = DL->getIndexType(Ptr0->getType());
+    SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
+    SPtrInfo.Ty = getWidenedType(ScalarTy, Sz);
+    return true;
   }
   return false;
 }
@@ -6990,8 +7065,8 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     Align Alignment =
         cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
             ->getAlign();
-    if (isStridedLoad(PointerOps, ScalarTy, Alignment, *Diff, Ptr0, PtrN,
-                      SPtrInfo))
+    if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, Alignment, Order,
+                                       *Diff, Ptr0, PtrN, SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -10488,8 +10563,11 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
             PoisonValue::get(UniqueValues.front()->getType()));
         // Check that extended with poisons/copyable operations are still valid
         // for vectorization (div/rem are not allowed).
-        if (!S.areInstructionsWithCopyableElements() &&
-            !getSameOpcode(PaddedUniqueValues, TLI).valid()) {
+        if ((!S.areInstructionsWithCopyableElements() &&
+             !getSameOpcode(PaddedUniqueValues, TLI).valid()) ||
+            (S.areInstructionsWithCopyableElements() && S.isMulDivLikeOp() &&
+             (S.getMainOp()->isIntDivRem() || S.getMainOp()->isFPDivRem() ||
+              isa<CallInst>(S.getMainOp())))) {
           LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
           ReuseShuffleIndices.clear();
           return false;
@@ -10654,7 +10732,8 @@ class InstructionsCompatibilityAnalysis {
   static bool isSupportedOpcode(const unsigned Opcode) {
     return Opcode == Instruction::Add || Opcode == Instruction::LShr ||
            Opcode == Instruction::Shl || Opcode == Instruction::SDiv ||
-           Opcode == Instruction::UDiv;
+           Opcode == Instruction::UDiv || Opcode == Instruction::And ||
+           Opcode == Instruction::Or || Opcode == Instruction::Xor;
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10979,6 +11058,9 @@ public:
       case Instruction::Shl:
       case Instruction::SDiv:
       case Instruction::UDiv:
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
         VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
@@ -17623,7 +17705,9 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
-       E->doesNotNeedToSchedule()) ||
+       (E->doesNotNeedToSchedule() ||
+        (E->hasCopyableElements() && !E->isCopyableElement(LastInst) &&
+         isUsedOutsideBlock(LastInst)))) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
@@ -19451,7 +19535,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
       assert(getNumElements(Cond->getType()) == TrueNumElements &&
              "Cannot vectorize Instruction::Select");
-      Value *V = Builder.CreateSelect(Cond, True, False);
+      Value *V =
+          Builder.CreateSelectWithUnknownProfile(Cond, True, False, DEBUG_TYPE);
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
@@ -20071,7 +20156,9 @@ Value *BoUpSLP::vectorizeTree(
     // The is because source vector that supposed to feed this gather node was
     // inserted at the end of the block [after stab instruction]. So we need
     // to adjust insertion point again to the end of block.
-    if (isa<PHINode>(UserI)) {
+    if (isa<PHINode>(UserI) ||
+        (TE->UserTreeIndex.UserTE->hasState() &&
+         TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
       for (User *U : PrevVec->users()) {
@@ -23569,18 +23656,19 @@ class HorizontalReduction {
     switch (Kind) {
     case RecurKind::Or: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, ConstantInt::getAllOnesValue(CmpInst::makeCmpResultType(OpTy)),
-            RHS, Name);
+            RHS, DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
     }
     case RecurKind::And: {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
-        return Builder.CreateSelect(
+        return Builder.CreateSelectWithUnknownProfile(
             LHS, RHS,
-            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)), Name);
+            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)),
+            DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
                                  Name);
@@ -23601,7 +23689,8 @@ class HorizontalReduction {
       if (UseSelect) {
         CmpInst::Predicate Pred = llvm::getMinMaxReductionPredicate(Kind);
         Value *Cmp = Builder.CreateICmp(Pred, LHS, RHS, Name);
-        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+        return Builder.CreateSelectWithUnknownProfile(Cmp, LHS, RHS, DEBUG_TYPE,
+                                                      Name);
       }
       [[fallthrough]];
     case RecurKind::FMax:

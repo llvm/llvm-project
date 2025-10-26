@@ -497,6 +497,7 @@ public:
   LLVM_ABI LegalizeResult lowerMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFCopySign(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerFMinimumMaximum(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFMad(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerIntrinsicRound(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFFloor(MachineInstr &MI);

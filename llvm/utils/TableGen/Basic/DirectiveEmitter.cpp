@@ -266,10 +266,9 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     return;
 
   StringRef Lang = DirLang.getName();
+  IncludeGuardEmitter IncGuard(OS, (Twine("LLVM_") + Lang + "_INC").str());
 
-  OS << "#ifndef LLVM_" << Lang << "_INC\n";
-  OS << "#define LLVM_" << Lang << "_INC\n";
-  OS << "\n#include \"llvm/ADT/ArrayRef.h\"\n";
+  OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
 
   if (DirLang.hasEnableBitmaskEnumInNamespace())
     OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
@@ -370,7 +369,6 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "};\n";
   }
   LlvmNS.close();
-  OS << "#endif // LLVM_" << Lang << "_INC\n";
 }
 
 // Given a list of spellings (for a given clause/directive), order them
