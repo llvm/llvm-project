@@ -437,7 +437,8 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
     GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
-    void *FallbackBlockMem, AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+    uint32_t BlockMemSize, DynCGroupMemFallbackType DynBlockMemFb,
+    void *DynBlockMemFbPtr, AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
@@ -479,8 +480,9 @@ GenericKernelTy::getKernelLaunchEnvironment(
     LocalKLE.ReductionBuffer = nullptr;
   }
 
-  LocalKLE.DynCGroupMemSize = KernelArgs.DynCGroupMem;
-  LocalKLE.DynCGroupMemFallback = FallbackBlockMem;
+  LocalKLE.DynCGroupMemSize = BlockMemSize;
+  LocalKLE.DynCGroupMemFbPtr = DynBlockMemFbPtr;
+  LocalKLE.DynCGroupMemFb = DynBlockMemFb;
 
   INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
        "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
@@ -539,28 +541,43 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (StaticBlockMemSize > MaxBlockMemSize)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Static block memory size exceeds maximum");
-  else if (!KernelArgs.Flags.AllowDynCGroupMemFallback &&
+  else if (static_cast<DynCGroupMemFallbackType>(
+               KernelArgs.Flags.DynCGroupMemFallback) ==
+               DynCGroupMemFallbackType::Abort &&
            TotalBlockMemSize > MaxBlockMemSize)
     return Plugin::error(
         ErrorCode::INVALID_ARGUMENT,
         "Static and dynamic block memory size exceeds maximum");
 
-  void *FallbackBlockMem = nullptr;
+  void *DynBlockMemFbPtr = nullptr;
+  uint32_t DynBlockMemLaunchSize = DynBlockMemSize;
+
+  DynCGroupMemFallbackType DynBlockMemFb = DynCGroupMemFallbackType::None;
   if (DynBlockMemSize && (!GenericDevice.hasNativeBlockSharedMem() ||
                           TotalBlockMemSize > MaxBlockMemSize)) {
-    auto AllocOrErr = GenericDevice.dataAlloc(
-        NumBlocks[0] * DynBlockMemSize,
-        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
-    if (!AllocOrErr)
-      return AllocOrErr.takeError();
+    // Launch without native dynamic block memory.
+    DynBlockMemLaunchSize = 0;
+    DynBlockMemFb = static_cast<DynCGroupMemFallbackType>(
+        KernelArgs.Flags.DynCGroupMemFallback);
+    if (DynBlockMemFb == DynCGroupMemFallbackType::DefaultMem) {
+      // Get global memory as fallback.
+      auto AllocOrErr = GenericDevice.dataAlloc(
+          NumBlocks[0] * DynBlockMemSize,
+          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+      if (!AllocOrErr)
+        return AllocOrErr.takeError();
 
-    FallbackBlockMem = *AllocOrErr;
-    AsyncInfoWrapper.freeAllocationAfterSynchronization(FallbackBlockMem);
-    DynBlockMemSize = 0;
+      DynBlockMemFbPtr = *AllocOrErr;
+      AsyncInfoWrapper.freeAllocationAfterSynchronization(DynBlockMemFbPtr);
+    } else {
+      // Do not provide any memory as fallback.
+      DynBlockMemSize = 0;
+    }
   }
 
   auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
-      GenericDevice, KernelArgs, FallbackBlockMem, AsyncInfoWrapper);
+      GenericDevice, KernelArgs, DynBlockMemSize, DynBlockMemFb,
+      DynBlockMemFbPtr, AsyncInfoWrapper);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
@@ -591,7 +608,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
-  return launchImpl(GenericDevice, NumThreads, NumBlocks, DynBlockMemSize,
+  return launchImpl(GenericDevice, NumThreads, NumBlocks, DynBlockMemLaunchSize,
                     KernelArgs, LaunchParams, AsyncInfoWrapper);
 }
 

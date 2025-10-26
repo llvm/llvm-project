@@ -1,4 +1,7 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compilexx-generic -fopenmp-version=61
+// RUN: %libomptarget-run-generic | %fcheck-generic
+// RUN: %libomptarget-compileoptxx-generic -fopenmp-version=61
+// RUN: %libomptarget-run-generic | %fcheck-generic
 // REQUIRES: gpu
 
 #include <omp.h>
@@ -9,8 +12,9 @@
 int main() {
   int Result[N], NumThreads;
 
+// Verify the groupprivate buffer works as expected.
 #pragma omp target teams num_teams(1) thread_limit(N)                          \
-    dyn_groupprivate(strict : N * sizeof(Result[0]))                           \
+    dyn_groupprivate(fallback(abort) : N * sizeof(Result[0]))                  \
     map(from : Result, NumThreads)
   {
     int Buffer[N];
@@ -51,8 +55,8 @@ int main() {
   size_t MaxSize = omp_get_groupprivate_limit(0, omp_access_cgroup);
   size_t ExceededSize = MaxSize + 10;
 
-// Verify that the fallback modifier works.
-#pragma omp target dyn_groupprivate(fallback : ExceededSize)                   \
+// Verify that the fallback(default_mem) modifier works.
+#pragma omp target dyn_groupprivate(fallback(default_mem) : ExceededSize)      \
     map(tofrom : Failed)
   {
     int IsFallback;
@@ -66,13 +70,35 @@ int main() {
       ++Failed;
   }
 
-// Verify that the default modifier is fallback.
-#pragma omp target dyn_groupprivate(ExceededSize)
+// Verify that the fallback(null) modifier works.
+#pragma omp target dyn_groupprivate(fallback(null) : ExceededSize)             \
+    map(tofrom : Failed)
   {
+    int IsFallback;
+    if ((TmpPtr = omp_get_dyn_groupprivate_ptr(0, &IsFallback)))
+      ++Failed;
+    if ((TmpSize = omp_get_dyn_groupprivate_size()))
+      ++Failed;
+    if (!IsFallback)
+      ++Failed;
   }
 
-// Verify that the strict modifier works.
-#pragma omp target dyn_groupprivate(strict : N) map(tofrom : Failed)
+// Verify that the default modifier is fallback(default_mem).
+#pragma omp target dyn_groupprivate(ExceededSize)
+  {
+    int IsFallback;
+    if (!omp_get_dyn_groupprivate_ptr(0, &IsFallback))
+      ++Failed;
+    if (!omp_get_dyn_groupprivate_size())
+      ++Failed;
+    if (omp_get_dyn_groupprivate_size() != ExceededSize)
+      ++Failed;
+    if (!IsFallback)
+      ++Failed;
+  }
+
+// Verify that the fallback(abort) modifier works.
+#pragma omp target dyn_groupprivate(fallback(abort) : N) map(tofrom : Failed)
   {
     int IsFallback;
     if (!omp_get_dyn_groupprivate_ptr(0, &IsFallback))
@@ -85,8 +111,9 @@ int main() {
       ++Failed;
   }
 
-// Verify that the fallback does not trigger when not needed.
-#pragma omp target dyn_groupprivate(fallback : N) map(tofrom : Failed)
+// Verify that the fallback(default_mem) does not trigger when not needed.
+#pragma omp target dyn_groupprivate(fallback(default_mem) : N)                 \
+    map(tofrom : Failed)
   {
     int IsFallback;
     if (!omp_get_dyn_groupprivate_ptr(0, &IsFallback))
@@ -100,7 +127,7 @@ int main() {
   }
 
 // Verify that the clause works when passing a zero size.
-#pragma omp target dyn_groupprivate(strict : 0) map(tofrom : Failed)
+#pragma omp target dyn_groupprivate(fallback(abort) : 0) map(tofrom : Failed)
   {
     int IsFallback;
     if (omp_get_dyn_groupprivate_ptr(0, &IsFallback))
@@ -112,7 +139,8 @@ int main() {
   }
 
 // Verify that the clause works when passing a zero size.
-#pragma omp target dyn_groupprivate(fallback : 0) map(tofrom : Failed)
+#pragma omp target dyn_groupprivate(fallback(default_mem) : 0)                 \
+    map(tofrom : Failed)
   {
     int IsFallback;
     if (omp_get_dyn_groupprivate_ptr(0, &IsFallback))

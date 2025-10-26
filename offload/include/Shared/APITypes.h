@@ -102,9 +102,8 @@ struct KernelArgsTy {
   struct {
     uint64_t NoWait : 1; // Was this kernel spawned with a `nowait` clause.
     uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
-    uint64_t AllowDynCGroupMemFallback : 1; // Allow fallback for dynamic cgroup
-                                            // mem fallback.
-    uint64_t Unused : 61;
+    uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
+    uint64_t Unused : 60;
   } Flags = {0, 0, 0, 0};
   // The number of teams (for x,y,z dimension).
   uint32_t NumTeams[3] = {0, 0, 0};

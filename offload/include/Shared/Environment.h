@@ -92,12 +92,25 @@ struct KernelEnvironmentTy {
   DynamicEnvironmentTy *DynamicEnv = nullptr;
 };
 
+/// The fallback types for the dynamic cgroup memory.
+enum class DynCGroupMemFallbackType : unsigned char {
+  /// None. Used for indicating that no fallback was triggered.
+  None = 0,
+  /// Abort the execution.
+  Abort = None,
+  /// Return null pointer.
+  Null = 1,
+  /// Allocate from a implementation defined memory space.
+  DefaultMem = 2
+};
+
 struct KernelLaunchEnvironmentTy {
   void *ReductionBuffer = nullptr;
-  void *DynCGroupMemFallback = nullptr;
+  void *DynCGroupMemFbPtr = nullptr;
   uint32_t ReductionCnt = 0;
   uint32_t ReductionIterCnt = 0;
   uint32_t DynCGroupMemSize = 0;
+  DynCGroupMemFallbackType DynCGroupMemFb = DynCGroupMemFallbackType::None;
 };
 
 #endif // OMPTARGET_SHARED_ENVIRONMENT_H

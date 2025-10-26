@@ -162,27 +162,27 @@ struct DynCGroupMemTy {
   void init(KernelLaunchEnvironmentTy *KLE, void *NativeDynCGroup) {
     Size = 0;
     Ptr = nullptr;
-    IsFallback = false;
+    Fallback = DynCGroupMemFallbackType::None;
     if (!KLE)
       return;
 
     Size = KLE->DynCGroupMemSize;
-    if (void *Fallback = KLE->DynCGroupMemFallback) {
-      Ptr = static_cast<char *>(Fallback) + Size * omp_get_team_num();
-      IsFallback = true;
-    } else {
+    Fallback = KLE->DynCGroupMemFb;
+    if (Fallback == DynCGroupMemFallbackType::None)
       Ptr = static_cast<char *>(NativeDynCGroup);
-    }
+    else if (Fallback == DynCGroupMemFallbackType::DefaultMem)
+      Ptr = static_cast<char *>(KLE->DynCGroupMemFbPtr) +
+            Size * omp_get_team_num();
   }
 
   char *getPtr(size_t Offset) const { return Ptr + Offset; }
-  bool isFallback() const { return IsFallback; }
+  bool isFallback() const { return Fallback != DynCGroupMemFallbackType::None; }
   size_t getSize() const { return Size; }
 
 private:
   char *Ptr;
   size_t Size;
-  bool IsFallback;
+  DynCGroupMemFallbackType Fallback;
 };
 
 [[clang::loader_uninitialized]] static Local<DynCGroupMemTy> DynCGroupMem;
