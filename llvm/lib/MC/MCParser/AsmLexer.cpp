@@ -835,7 +835,14 @@ AsmToken AsmLexer::LexToken() {
   }
 
   if (isAtStartOfComment(TokStart)) {
-    CurPtr += MAI.getCommentString().size() - 1;
+    StringRef CommentString = MAI.getCommentString();
+    // For multi-char comment strings, advance CurPtr only if we matched the full
+    // string. This stops us from accidentally eating the newline if the current
+    // line ends in a single comment char.
+    if (CommentString.size() > 1 &&
+        StringRef(TokStart, CommentString.size()) == CommentString) {
+      CurPtr += CommentString.size() - 1;
+    }
     return LexLineComment();
   }
 
