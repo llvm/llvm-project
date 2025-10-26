@@ -7099,6 +7099,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // with early exits and plans with additional VPlan simplifications. The
   // legacy cost model doesn't properly model costs for such loops.
   assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+          !Legal->getLAI()->getSymbolicStrides().empty() ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop,
                                                 BestFactor.Width) ||

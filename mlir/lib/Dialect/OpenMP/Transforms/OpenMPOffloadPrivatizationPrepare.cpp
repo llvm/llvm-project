@@ -189,7 +189,9 @@ class PrepareForOMPOffloadPrivatizationPass
 
         DominanceInfo dom;
         llvm::sort(chainOfOps, [&](Operation *l, Operation *r) {
-          return dom.dominates(l, r);
+          if (l == r)
+            return false;
+          return dom.properlyDominates(l, r);
         });
 
         rewriter.setInsertionPoint(chainOfOps.front());
@@ -252,14 +254,17 @@ class PrepareForOMPOffloadPrivatizationPass
         // variable, rewrite all the uses of the original variable with
         // the heap-allocated variable.
         rewriter.setInsertionPoint(targetOp);
-        rewriter.setInsertionPoint(cloneModifyAndErase(mapInfoOp));
+        mapInfoOp = cast<omp::MapInfoOp>(cloneModifyAndErase(mapInfoOp));
+        rewriter.setInsertionPoint(mapInfoOp);
 
         // Fix any members that may use varPtr to now use heapMem
         for (auto member : mapInfoOp.getMembers()) {
           auto memberMapInfoOp = cast<omp::MapInfoOp>(member.getDefiningOp());
           if (!usesVarPtr(memberMapInfoOp))
             continue;
-          rewriter.setInsertionPoint(cloneModifyAndErase(memberMapInfoOp));
+          memberMapInfoOp =
+              cast<omp::MapInfoOp>(cloneModifyAndErase(memberMapInfoOp));
+          rewriter.setInsertionPoint(memberMapInfoOp);
 
           if (memberMapInfoOp.getVarPtrPtr()) {
             Operation *varPtrPtrdefOp =

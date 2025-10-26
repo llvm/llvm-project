@@ -150,6 +150,33 @@ static auto isComparisonOperatorCall(llvm::StringRef operator_name) {
       hasArgument(1, anyOf(hasType(statusType()), hasType(statusOrType()))));
 }
 
+static auto isOkStatusCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(hasName("::absl::OkStatus"))));
+}
+
+static auto isNotOkStatusCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(hasAnyName(
+      "::absl::AbortedError", "::absl::AlreadyExistsError",
+      "::absl::CancelledError", "::absl::DataLossError",
+      "::absl::DeadlineExceededError", "::absl::FailedPreconditionError",
+      "::absl::InternalError", "::absl::InvalidArgumentError",
+      "::absl::NotFoundError", "::absl::OutOfRangeError",
+      "::absl::PermissionDeniedError", "::absl::ResourceExhaustedError",
+      "::absl::UnauthenticatedError", "::absl::UnavailableError",
+      "::absl::UnimplementedError", "::absl::UnknownError"))));
+}
+
+static auto isPointerComparisonOperatorCall(std::string operator_name) {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return binaryOperator(hasOperatorName(operator_name),
+                        hasLHS(hasType(hasCanonicalType(pointerType(
+                            pointee(anyOf(statusOrType(), statusType())))))),
+                        hasRHS(hasType(hasCanonicalType(pointerType(
+                            pointee(anyOf(statusOrType(), statusType())))))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -420,6 +447,87 @@ static void transferComparisonOperator(const CXXOperatorCallExpr *Expr,
     State.Env.setValue(*Expr, *LhsAndRhsVal);
 }
 
+static RecordStorageLocation *getPointeeLocation(const Expr &Expr,
+                                                 Environment &Env) {
+  if (auto *PointerVal = Env.get<PointerValue>(Expr))
+    return dyn_cast<RecordStorageLocation>(&PointerVal->getPointeeLoc());
+  return nullptr;
+}
+
+static BoolValue *evaluatePointerEquality(const Expr *LhsExpr,
+                                          const Expr *RhsExpr,
+                                          Environment &Env) {
+  assert(LhsExpr->getType()->isPointerType());
+  assert(RhsExpr->getType()->isPointerType());
+  RecordStorageLocation *LhsStatusLoc = nullptr;
+  RecordStorageLocation *RhsStatusLoc = nullptr;
+  if (isStatusOrType(LhsExpr->getType()->getPointeeType()) &&
+      isStatusOrType(RhsExpr->getType()->getPointeeType())) {
+    auto *LhsStatusOrLoc = getPointeeLocation(*LhsExpr, Env);
+    auto *RhsStatusOrLoc = getPointeeLocation(*RhsExpr, Env);
+    if (LhsStatusOrLoc == nullptr || RhsStatusOrLoc == nullptr)
+      return nullptr;
+    LhsStatusLoc = &locForStatus(*LhsStatusOrLoc);
+    RhsStatusLoc = &locForStatus(*RhsStatusOrLoc);
+  } else if (isStatusType(LhsExpr->getType()->getPointeeType()) &&
+             isStatusType(RhsExpr->getType()->getPointeeType())) {
+    LhsStatusLoc = getPointeeLocation(*LhsExpr, Env);
+    RhsStatusLoc = getPointeeLocation(*RhsExpr, Env);
+  }
+  if (LhsStatusLoc == nullptr || RhsStatusLoc == nullptr)
+    return nullptr;
+  auto &LhsOkVal = valForOk(*LhsStatusLoc, Env);
+  auto &RhsOkVal = valForOk(*RhsStatusLoc, Env);
+  auto &Res = Env.makeAtomicBoolValue();
+  auto &A = Env.arena();
+  Env.assume(A.makeImplies(
+      Res.formula(), A.makeEquals(LhsOkVal.formula(), RhsOkVal.formula())));
+  return &Res;
+}
+
+static void transferPointerComparisonOperator(const BinaryOperator *Expr,
+                                              LatticeTransferState &State,
+                                              bool IsNegative) {
+  auto *LhsAndRhsVal =
+      evaluatePointerEquality(Expr->getLHS(), Expr->getRHS(), State.Env);
+  if (LhsAndRhsVal == nullptr)
+    return;
+
+  if (IsNegative)
+    State.Env.setValue(*Expr, State.Env.makeNot(*LhsAndRhsVal));
+  else
+    State.Env.setValue(*Expr, *LhsAndRhsVal);
+}
+
+static void transferOkStatusCall(const CallExpr *Expr,
+                                 const MatchFinder::MatchResult &,
+                                 LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatus(State.Env.getResultObjectLocation(*Expr), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
+static void transferNotOkStatusCall(const CallExpr *Expr,
+                                    const MatchFinder::MatchResult &,
+                                    LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatus(State.Env.getResultObjectLocation(*Expr), State.Env);
+  auto &A = State.Env.arena();
+  State.Env.assume(A.makeNot(OkVal.formula()));
+}
+
+static void transferEmplaceCall(const CXXMemberCallExpr *Expr,
+                                const MatchFinder::MatchResult &,
+                                LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
+      getImplicitObjectLocation(*Expr, State.Env);
+  if (StatusOrLoc == nullptr)
+    return;
+
+  auto &OkVal = valForOk(locForStatus(*StatusOrLoc), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -447,6 +555,24 @@ buildTransferMatchSwitch(ASTContext &Ctx,
             transferComparisonOperator(Expr, State,
                                        /*IsNegative=*/true);
           })
+      .CaseOfCFGStmt<BinaryOperator>(
+          isPointerComparisonOperatorCall("=="),
+          [](const BinaryOperator *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            transferPointerComparisonOperator(Expr, State,
+                                              /*IsNegative=*/false);
+          })
+      .CaseOfCFGStmt<BinaryOperator>(
+          isPointerComparisonOperatorCall("!="),
+          [](const BinaryOperator *Expr, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            transferPointerComparisonOperator(Expr, State,
+                                              /*IsNegative=*/true);
+          })
+      .CaseOfCFGStmt<CallExpr>(isOkStatusCall(), transferOkStatusCall)
+      .CaseOfCFGStmt<CallExpr>(isNotOkStatusCall(), transferNotOkStatusCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("emplace"),
+                                        transferEmplaceCall)
       .Build();
 }
 
