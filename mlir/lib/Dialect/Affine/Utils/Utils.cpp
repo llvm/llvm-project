@@ -556,10 +556,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
   op.setUpperBounds(ranges.getOperands(), newUpperMap);
 }
 
-LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
-                                               bool promoteSingleIter) {
-  if (promoteSingleIter && succeeded(promoteIfSingleIteration(op)))
-    return success();
+LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op) {
 
   // Check if the forop is already normalized.
   if (op.hasConstantLowerBound() && (op.getConstantLowerBound() == 0) &&
