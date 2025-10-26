@@ -161,6 +161,8 @@ inline constexpr weekday Saturday{6};
 
 } // namespace chrono
 
+#  if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::weekday> : public __unary_function<chrono::weekday, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::weekday& __w) const _NOEXCEPT {
@@ -181,6 +183,8 @@ struct hash<chrono::weekday_last> : public __unary_function<chrono::weekday_last
     return hash<chrono::weekday>{}(__wl.weekday());
   }
 };
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

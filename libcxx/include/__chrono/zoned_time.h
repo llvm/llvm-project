@@ -217,6 +217,8 @@ operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_
 
 } // namespace chrono
 
+#    if _LIBCPP_STD_VER >= 26
+
 template <class _Duration, class _TimeZonePtr>
   requires __has_enabled_hash<_Duration>::value && __has_enabled_hash<_TimeZonePtr>::value
 struct hash<chrono::zoned_time<_Duration, _TimeZonePtr>>
@@ -225,6 +227,8 @@ struct hash<chrono::zoned_time<_Duration, _TimeZonePtr>>
     return hash<chrono::sys_time<_Duration>>{}(__zt.get_sys_time()) ^ hash<_TimeZonePtr>{}(__zt.get_time_zone());
   }
 };
+
+#    endif // _LIBCPP_STD_VER >= 26
 
 #  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
          // _LIBCPP_HAS_LOCALIZATION

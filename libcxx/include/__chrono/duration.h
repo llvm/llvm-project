@@ -539,7 +539,7 @@ using namespace literals::chrono_literals;
 
 #endif // _LIBCPP_STD_VER >= 14
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 26
 
 template <class _Rep, class _Period>
   requires __has_enabled_hash<_Rep>::value
@@ -549,7 +549,7 @@ struct hash<chrono::duration<_Rep, _Period>> : public __unary_function<chrono::d
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -93,12 +93,16 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr day& day::operator-=(const days& __dd) no
 
 } // namespace chrono
 
+#  if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::day> : public __unary_function<chrono::day, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::day& __d) const _NOEXCEPT {
     return hash<unsigned>{}(static_cast<unsigned>(__d));
   }
 };
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

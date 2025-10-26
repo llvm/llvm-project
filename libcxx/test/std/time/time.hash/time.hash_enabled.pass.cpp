@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++26
 
 // <chrono>
 
@@ -14,42 +14,48 @@
 
 #include <chrono>
 #include "poisoned_hash_helper.h"
-namespace chrono = std::chrono;
 
 int main(int, char**) {
-  test_hash_enabled<chrono::nanoseconds>();
-  test_hash_enabled<chrono::microseconds>();
-  test_hash_enabled<chrono::milliseconds>();
-  test_hash_enabled<chrono::seconds>();
-  test_hash_enabled<chrono::minutes>();
-  test_hash_enabled<chrono::hours>();
-  test_hash_enabled<chrono::days>();
-  test_hash_enabled<chrono::weeks>();
-  test_hash_enabled<chrono::months>();
-  test_hash_enabled<chrono::years>();
+  test_hash_enabled<std::chrono::nanoseconds>();
+  test_hash_enabled<std::chrono::microseconds>();
+  test_hash_enabled<std::chrono::milliseconds>();
+  test_hash_enabled<std::chrono::seconds>();
+  test_hash_enabled<std::chrono::minutes>();
+  test_hash_enabled<std::chrono::hours>();
+  test_hash_enabled<std::chrono::days>();
+  test_hash_enabled<std::chrono::weeks>();
+  test_hash_enabled<std::chrono::months>();
+  test_hash_enabled<std::chrono::years>();
 
-  test_hash_enabled<chrono::day>();
-  test_hash_enabled<chrono::month>();
-  test_hash_enabled<chrono::year>();
+  test_hash_enabled<std::chrono::day>();
+  test_hash_enabled<std::chrono::month>();
+  test_hash_enabled<std::chrono::year>();
 
-  test_hash_enabled<chrono::weekday>();
-  test_hash_enabled<chrono::weekday_indexed>();
-  test_hash_enabled(chrono::weekday_last(chrono::weekday{}));
+  test_hash_enabled<std::chrono::weekday>();
+  test_hash_enabled<std::chrono::weekday_indexed>();
+  test_hash_enabled(std::chrono::weekday_last(std::chrono::weekday{}));
 
-  test_hash_enabled<chrono::month_day>();
-  test_hash_enabled(chrono::month_day_last(chrono::month{}));
+  test_hash_enabled<std::chrono::month_day>();
+  test_hash_enabled(std::chrono::month_day_last(std::chrono::month{}));
 
-  test_hash_enabled(chrono::month_weekday(chrono::month{}, chrono::weekday_indexed{}));
-  test_hash_enabled(chrono::month_weekday_last(chrono::month{}, chrono::weekday_last(chrono::weekday{})));
+  test_hash_enabled(std::chrono::month_weekday(std::chrono::month{}, std::chrono::weekday_indexed{}));
 
-  test_hash_enabled<chrono::year_month>();
-
-  test_hash_enabled<chrono::year_month_day>();
-  test_hash_enabled(chrono::year_month_day_last(chrono::year{}, chrono::month_day_last(chrono::month{})));
-
-  test_hash_enabled<chrono::year_month_weekday>();
   test_hash_enabled(
-      chrono::year_month_weekday_last(chrono::year{}, chrono::month{}, chrono::weekday_last(chrono::weekday{})));
+      std::chrono::month_weekday_last(std::chrono::month{}, std::chrono::weekday_last(std::chrono::weekday{})));
+
+  test_hash_enabled<std::chrono::year_month>();
+
+  test_hash_enabled<std::chrono::year_month_day>();
+
+  test_hash_enabled(
+      std::chrono::year_month_day_last(std::chrono::year{}, std::chrono::month_day_last(std::chrono::month{})));
+
+  test_hash_enabled<std::chrono::year_month_weekday>();
+
+  test_hash_enabled(std::chrono::year_month_weekday_last(
+      std::chrono::year{}, std::chrono::month{}, std::chrono::weekday_last(std::chrono::weekday{})));
+
+  test_hash_enabled(std::chrono::leap_second({}, std::chrono::sys_seconds{}, std::chrono::seconds{}));
 
   return 0;
 }

@@ -127,6 +127,8 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr month_day_last operator/(last_spec, int _
 
 } // namespace chrono
 
+#  if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::month_day> : public __unary_function<chrono::month_day, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month_day& __md) const _NOEXCEPT {
@@ -140,6 +142,8 @@ struct hash<chrono::month_day_last> : public __unary_function<chrono::month_day_
     return hash<chrono::month>{}(__mdl.month());
   }
 };
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

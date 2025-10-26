@@ -109,12 +109,16 @@ inline constexpr month December{12};
 
 } // namespace chrono
 
+#  if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::month> : public __unary_function<chrono::month, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month& __m) const _NOEXCEPT {
     return hash<unsigned>{}(static_cast<unsigned>(__m));
   }
 };
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

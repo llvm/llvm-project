@@ -117,12 +117,16 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator-=(const 
 
 } // namespace chrono
 
+#  if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::year_month> : public __unary_function<chrono::year_month, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month& __ym) const _NOEXCEPT {
     return hash<chrono::year>{}(__ym.year()) ^ hash<chrono::month>{}(__ym.month());
   }
 };
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
