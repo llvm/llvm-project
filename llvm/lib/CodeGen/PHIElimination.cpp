@@ -377,10 +377,21 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     // typically those created by tail duplication. Typically, an identical PHI
     // node can't occur, so avoid hashing/storing such PHIs, which is somewhat
     // expensive.
+
+    // canReuse() checks if two phis of the same rhs have the common sub class
+    // for their lhs's and allow reuse if so. (useful for some GPU targets)
+    auto canReuse = [](Register Reg0, Register Reg1, MachineFunction &MF) {
+      auto &MRI = MF.getRegInfo();
+      auto *RC0 = MRI.getRegClass(Reg0);
+      auto *RC1 = MRI.getRegClass(Reg1);
+      return MF.getSubtarget().getRegisterInfo()->getCommonSubClass(RC0, RC1) !=
+             nullptr;
+    };
+
     Register *Entry = nullptr;
     if (AllEdgesCritical)
       Entry = &LoweredPHIs[MPhi];
-    if (Entry && *Entry && TII->allowPHIReuse(*Entry, DestReg, MF)) {
+    if (Entry && *Entry && canReuse(*Entry, DestReg, MF)) {
       // An identical PHI node was already lowered. Reuse the incoming register.
       IncomingReg = *Entry;
       reusedIncoming = true;
