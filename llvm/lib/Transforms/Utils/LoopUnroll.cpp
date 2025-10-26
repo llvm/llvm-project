@@ -1217,7 +1217,9 @@ llvm::canParallelizeReductionWhenUnrolling(PHINode &Phi, Loop *L,
   RecurrenceDescriptor RdxDesc;
   if (!RecurrenceDescriptor::isReductionPHI(&Phi, L, RdxDesc,
                                             /*DemandedBits=*/nullptr,
-                                            /*AC=*/nullptr, /*DT=*/nullptr, SE))
+                                            /*AC=*/nullptr, /*DT=*/nullptr,
+                                            SE) ||
+      RdxDesc.isPhiMultiUse())
     return std::nullopt;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   // Skip unsupported reductions.

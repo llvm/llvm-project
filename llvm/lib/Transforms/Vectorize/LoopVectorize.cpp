@@ -6515,6 +6515,11 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
     PHINode *Phi = Reduction.first;
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
 
+    // Multi-use reductions (e.g., used in FindLastIV patterns) are handled
+    // separately and should not be considered for in-loop reductions.
+    if (RdxDesc.isPhiMultiUse())
+      continue;
+
     // We don't collect reductions that are type promoted (yet).
     if (RdxDesc.getRecurrenceType() != Phi->getType())
       continue;
@@ -8072,7 +8077,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
           getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
       PhiRecipe = new VPReductionPHIRecipe(
           Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
-          CM.useOrderedReductions(RdxDesc), ScaleFactor);
+          CM.useOrderedReductions(RdxDesc), ScaleFactor,
+          RdxDesc.isPhiMultiUse());
     } else if (Legal->isFixedOrderRecurrence(Phi)) {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
@@ -8429,8 +8435,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 
-  // Try to convert remaining VPWidenPHIRecipes to reduction recipes.
-  if (!VPlanTransforms::runPass(VPlanTransforms::legalizeUnclassifiedPhis,
+  // Try to legalize reductions with multiple in-loop uses.
+  if (!VPlanTransforms::runPass(VPlanTransforms::legalizeMultiUseReductions,
                                 *Plan))
     return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with

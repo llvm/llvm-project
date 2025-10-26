@@ -143,10 +143,10 @@ struct VPlanTransforms {
           GetIntOrFpInductionDescriptor,
       const TargetLibraryInfo &TLI);
 
-  /// Try to legalize unclassified phis by converting VPWidenPHIRecipes to
-  /// min-max reductions used by FindLastIV reductions if possible. Returns
-  /// false if the VPlan contains VPWidenPHIRecipes that cannot be legalized.
-  static bool legalizeUnclassifiedPhis(VPlan &Plan);
+  /// Try to legalize reductions with multiple in-loop uses. Currently only
+  /// min/max reductions used by FindLastIV reductions are supported. Otherwise
+  /// return false.
+  static bool legalizeMultiUseReductions(VPlan &Plan);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes

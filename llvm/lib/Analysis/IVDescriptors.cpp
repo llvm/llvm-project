@@ -227,25 +227,24 @@ getMultiUseMinMax(PHINode *Phi, RecurKind Kind, Loop *TheLoop) {
 
   Value *A, *B;
   if (match(Inc, m_OneUse(m_UMin(m_Value(A), m_Value(B)))))
-    RK = RecurKind::UMinMultiUse;
+    RK = RecurKind::UMin;
   else if (match(Inc, m_OneUse(m_UMax(m_Value(A), m_Value(B)))))
-    RK = RecurKind::UMaxMultiUse;
+    RK = RecurKind::UMax;
   else if (match(Inc, m_OneUse(m_SMax(m_Value(A), m_Value(B)))))
-    RK = RecurKind::SMaxMultiUse;
+    RK = RecurKind::SMax;
   else if (match(Inc, m_OneUse(m_SMin(m_Value(A), m_Value(B)))))
-    RK = RecurKind::SMinMultiUse;
+    RK = RecurKind::SMin;
   else
     return std::nullopt;
 
-  if (RecurrenceDescriptor::convertFromMultiUseKind(RK) != Kind || A == B ||
-      (A != Phi && B != Phi))
+  if (A == B || (A != Phi && B != Phi))
     return std::nullopt;
 
   SmallPtrSet<Instruction *, 4> CastInsts;
   Value *RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
   RecurrenceDescriptor RD(RdxStart, nullptr, nullptr, RK, FastMathFlags(),
-                          nullptr, Phi->getType(), false, false, CastInsts,
-                          -1U);
+                          nullptr, Phi->getType(), false, false, CastInsts, -1U,
+                          true);
   return {RD};
 }
 

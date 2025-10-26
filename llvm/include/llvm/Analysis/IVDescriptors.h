@@ -42,13 +42,9 @@ enum class RecurKind {
   And,      ///< Bitwise or logical AND of integers.
   Xor,      ///< Bitwise or logical XOR of integers.
   SMin,     ///< Signed integer min implemented in terms of select(cmp()).
-  SMinMultiUse,     ///< Signed integer min implemented in terms of select(cmp()).
   SMax,     ///< Signed integer max implemented in terms of select(cmp()).
-  SMaxMultiUse,     ///< Signed integer max implemented in terms of select(cmp()).
   UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
-  UMinMultiUse,     ///< Unsigned integer min implemented in terms of select(cmp()).
   UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
-  UMaxMultiUse,     ///< Unsigned integer max implemented in terms of select(cmp()).
   FAdd,     ///< Sum of floats.
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
@@ -99,12 +95,15 @@ public:
                        RecurKind K, FastMathFlags FMF, Instruction *ExactFP,
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
-                       unsigned MinWidthCastToRecurTy)
+                       unsigned MinWidthCastToRecurTy, bool PhiMultiUse = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
-        IsSigned(Signed), IsOrdered(Ordered),
+        IsSigned(Signed), IsOrdered(Ordered), IsPhiMultiUse(PhiMultiUse),
         MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
     CastInsts.insert_range(CI);
+    assert(
+        (!PhiMultiUse || isMinMaxRecurrenceKind(K)) &&
+        "Only min/max recurrences are allowed to have multiple uses currently");
   }
 
   /// This POD struct holds information about a potential recurrence operation.
@@ -251,26 +250,8 @@ public:
 
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::UMin || Kind == RecurKind::UMinMultiUse ||
-           Kind == RecurKind::UMax || Kind == RecurKind::UMaxMultiUse ||
-           Kind == RecurKind::SMin || Kind == RecurKind::SMinMultiUse ||
-           Kind == RecurKind::SMax || Kind == RecurKind::SMaxMultiUse;
-  }
-
-  static RecurKind convertFromMultiUseKind(RecurKind Kind) {
-    switch (Kind) {
-    case RecurKind::UMaxMultiUse:
-      return RecurKind::UMax;
-    case RecurKind::UMinMultiUse:
-      return RecurKind::UMin;
-    case RecurKind::SMinMultiUse:
-      return RecurKind::SMin;
-    case RecurKind::SMaxMultiUse:
-      return RecurKind::SMax;
-    default:
-      return Kind;
-    }
-    llvm_unreachable("all cases must be handled above");
+    return Kind == RecurKind::UMin || Kind == RecurKind::UMax ||
+           Kind == RecurKind::SMin || Kind == RecurKind::SMax;
   }
 
   /// Returns true if the recurrence kind is a floating-point minnum/maxnum
@@ -361,6 +342,10 @@ public:
   /// Expose an ordered FP reduction to the instance users.
   bool isOrdered() const { return IsOrdered; }
 
+  /// Returns true if the reduction PHI has multiple in-loop users. This is
+  /// relevant for min/max reductions that are part of a FindLastIV pattern.
+  bool isPhiMultiUse() const { return IsPhiMultiUse; }
+
   /// Attempts to find a chain of operations from Phi to LoopExitInst that can
   /// be treated as a set of reductions instructions for in-loop reductions.
   LLVM_ABI SmallVector<Instruction *, 4> getReductionOpChain(PHINode *Phi,
@@ -398,6 +383,9 @@ private:
   // Currently only a non-reassociative FAdd can be considered in-order,
   // if it is also the only FAdd in the PHI's use chain.
   bool IsOrdered = false;
+  // True if the reduction PHI has multiple in-loop users. This is relevant
+  // for min/max reductions that are part of a FindLastIV pattern.
+  bool IsPhiMultiUse = false;
   // Instructions used for type-promoting the recurrence.
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.

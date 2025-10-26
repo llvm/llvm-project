@@ -950,23 +950,25 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   return true;
 }
 
-bool VPlanTransforms::legalizeUnclassifiedPhis(VPlan &Plan) {
-  using namespace VPlanPatternMatch;
+bool VPlanTransforms::legalizeMultiUseReductions(VPlan &Plan) {
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
-    if (!MinMaxPhiR || !RecurrenceDescriptor::isIntMinMaxRecurrenceKind(
-                           MinMaxPhiR->getRecurrenceKind()))
+    if (!MinMaxPhiR)
       continue;
 
-    RecurKind RdxKind = RecurrenceDescriptor::convertFromMultiUseKind(
-        MinMaxPhiR->getRecurrenceKind());
-    if (RdxKind == MinMaxPhiR->getRecurrenceKind())
+    RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
+    // TODO: check for multi-uses in VPlan directly.
+    if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) ||
+        !MinMaxPhiR->isPhiMultiUse())
       continue;
 
     // One user of MinMaxPhiR is MinMaxOp, the other users must be a compare
     // that's part of a FindLastIV chain.
-    auto *MinMaxOp = cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
+    auto *MinMaxOp =
+        dyn_cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
+    if (!MinMaxOp || MinMaxOp->getNumUsers() != 2)
+      return false;
     auto MinMaxUsers = to_vector(MinMaxPhiR->users());
     auto *Cmp = dyn_cast<VPRecipeWithIRFlags>(
         MinMaxUsers[0] == MinMaxOp ? MinMaxUsers[1] : MinMaxUsers[0]);
@@ -1019,14 +1021,6 @@ bool VPlanTransforms::legalizeUnclassifiedPhis(VPlan &Plan) {
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
 
-    auto NewPhiR = new VPReductionPHIRecipe(
-        cast<PHINode>(MinMaxPhiR->getUnderlyingInstr()), RdxKind,
-        *MinMaxPhiR->getOperand(0), false, false, 1);
-    NewPhiR->insertBefore(MinMaxPhiR);
-    MinMaxPhiR->replaceAllUsesWith(NewPhiR);
-    NewPhiR->addOperand(MinMaxPhiR->getOperand(1));
-    MinMaxPhiR->eraseFromParent();
-
     // The reduction using MinMaxPhiR needs adjusting to compute the correct
     // result:
     //  1. We need to find the last IV for which the condition based on the
@@ -1034,13 +1028,15 @@ bool VPlanTransforms::legalizeUnclassifiedPhis(VPlan &Plan) {
     //  2. Compare the partial min/max reduction result to its final value and,
     //  3. Select the lanes of the partial FindLastIV reductions which
     //  correspond to the lanes matching the min/max reduction result.
-    VPInstruction *FindIVResult = cast<VPInstruction>(
+    VPInstruction *FindIVResult = dyn_cast<VPInstruction>(
         *(Sel->user_begin() + (*Sel->user_begin() == FindIVPhiR ? 1 : 0)));
+    if (!FindIVResult)
+      return false;
     VPBuilder B(FindIVResult);
-    VPInstruction *MinMaxResult =
-        B.createNaryOp(VPInstruction::ComputeReductionResult,
-                       {NewPhiR, NewPhiR->getBackedgeValue()}, VPIRFlags(), {});
-    NewPhiR->getBackedgeValue()->replaceUsesWithIf(
+    VPInstruction *MinMaxResult = B.createNaryOp(
+        VPInstruction::ComputeReductionResult,
+        {MinMaxPhiR, MinMaxPhiR->getBackedgeValue()}, VPIRFlags(), {});
+    MinMaxPhiR->getBackedgeValue()->replaceUsesWithIf(
         MinMaxResult, [](VPUser &U, unsigned) { return isa<VPPhi>(&U); });
     auto *FinalMinMaxCmp = B.createICmp(
         CmpInst::ICMP_EQ, MinMaxResult->getOperand(1), MinMaxResult);
