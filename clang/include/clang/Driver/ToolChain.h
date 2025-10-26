@@ -491,6 +491,8 @@ public:
   }
 
   /// GetDefaultLinker - Get the default linker to use.
+  /// Note: this is distinct from the 'preferred' linker, which is optionally
+  /// set at compile time using CLANG_DEFAULT_LINKER.
   virtual const char *getDefaultLinker() const { return "ld"; }
 
   /// GetDefaultRuntimeLibType - Get the default runtime library variant to use.
