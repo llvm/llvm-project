@@ -22,6 +22,7 @@
 #include "CommandProcessorCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
 #include "CopyConstructorInitCheck.h"
+#include "CopyConstructorMutatesArgumentCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
 #include "DanglingHandleCheck.h"
 #include "DerivedMethodShadowingBaseMethodCheck.h"
@@ -198,6 +199,8 @@ public:
         "bugprone-multiple-new-in-one-expression");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<CopyConstructorMutatesArgumentCheck>(
+        "bugprone-copy-constructor-mutates-argument");
     CheckFactories.registerCheck<NondeterministicPointerIterationOrderCheck>(
         "bugprone-nondeterministic-pointer-iteration-order");
     CheckFactories.registerCheck<OptionalValueConversionCheck>(

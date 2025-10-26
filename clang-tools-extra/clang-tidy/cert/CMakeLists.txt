@@ -9,7 +9,6 @@ add_clang_library(clangTidyCERTModule STATIC
   DontModifyStdNamespaceCheck.cpp
   FloatLoopCounter.cpp
   LimitedRandomnessCheck.cpp
-  MutatingCopyCheck.cpp
   NonTrivialTypesLibcMemoryCallsCheck.cpp
   ProperlySeededRandomGeneratorCheck.cpp
   ThrownExceptionTypeCheck.cpp
