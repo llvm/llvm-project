@@ -3,6 +3,10 @@
 ; RUN: not llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -global-isel=1 -new-reg-bank-select < %s 2>&1 | FileCheck -check-prefix=GFX9-GISEL-ERR %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=0 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+architected-sgprs -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx942 -global-isel=0 < %s | FileCheck -check-prefixes=GFX942 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx942 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX942 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx950 -global-isel=0 < %s | FileCheck -check-prefixes=GFX950 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx950 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX950 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=0 < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefix=GFX1200 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel=0 < %s | FileCheck -check-prefix=GFX1250 %s
@@ -18,6 +22,18 @@ define amdgpu_cs void @test_wave_id(ptr addrspace(1) %out) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX942-LABEL: test_wave_id:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    v_mov_b32_e32 v2, ttmp11
+; GFX942-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942-NEXT:    s_endpgm
+;
+; GFX950-LABEL: test_wave_id:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_mov_b32_e32 v2, ttmp11
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_endpgm
 ;
 ; GFX1200-LABEL: test_wave_id:
 ; GFX1200:       ; %bb.0:
@@ -48,6 +64,22 @@ define amdgpu_gfx void @test_wave_id_callable(ptr addrspace(1) %out) {
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-LABEL: test_wave_id_callable:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_mov_b32_e32 v2, ttmp11
+; GFX942-NEXT:    global_store_dword v[0:1], v2, off
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-LABEL: test_wave_id_callable:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_mov_b32_e32 v2, ttmp11
+; GFX950-NEXT:    global_store_dword v[0:1], v2, off
+; GFX950-NEXT:    s_waitcnt vmcnt(0)
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1200-LABEL: test_wave_id_callable:
 ; GFX1200:       ; %bb.0:
