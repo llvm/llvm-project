@@ -758,8 +758,7 @@ void label() {
   goto exp2; // expected-error {{use of undeclared label 'exp2'}}
 
   // Allow jumping from inside an expansion statement to a local label in
-  // one of its parents; this requires walking up the stack of expansion
-  // statement context.
+  // one of its parents.
   out1:;
   template for (auto x : {1, 2}) {
     __label__ x, y;
