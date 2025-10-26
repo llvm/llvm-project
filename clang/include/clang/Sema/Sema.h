@@ -9508,7 +9508,8 @@ public:
   /// of an __label__ label name, otherwise it is a normal label definition
   /// or use.
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
-                                 SourceLocation GnuLabelLoc = SourceLocation());
+                                 SourceLocation GnuLabelLoc = SourceLocation(),
+                                 bool ForLabelStmt = false);
 
   /// Perform a name lookup for a label with the specified name; this does not
   /// create a new label if the lookup fails.

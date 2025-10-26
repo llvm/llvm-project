@@ -704,8 +704,9 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   // identifier ':' statement
   SourceLocation ColonLoc = ConsumeToken();
 
-  LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
-                                              IdentTok.getLocation());
+  LabelDecl *LD = Actions.LookupOrCreateLabel(
+      IdentTok.getIdentifierInfo(), IdentTok.getLocation(), /*GnuLabelLoc=*/{},
+      /*ForLabelStmt=*/true);
 
   // Read label attributes, if present.
   StmtResult SubStmt;
@@ -749,14 +750,11 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
 
   DiagnoseLabelFollowedByDecl(*this, SubStmt.get());
 
-  // C++26 [stmt.label]p4 An identifier label shall not be enclosed by an
-  // expansion-statement.
-  //
-  // As an extension, we allow GNU local labels since they are logically
-  // scoped to the containing block, which prevents us from ending up with
-  // multiple copies of the same label in a function after instantiation.
-  if (Actions.CurContext->isExpansionStmt() && !LD->isGnuLocal())
-    Diag(LD->getLocation(), diag::err_expansion_stmt_label);
+  // If a label cannot appear here, just return the underlying statement.
+  if (!LD) {
+    Attrs.clear();
+    return SubStmt.get();
+  }
 
   Actions.ProcessDeclAttributeList(Actions.CurScope, LD, Attrs);
   Attrs.clear();

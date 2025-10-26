@@ -56,6 +56,19 @@ void label() {
   }
 }
 
+void nested_label() {
+  template for (auto x : {1, 2}) {
+    __label__ a;
+    template for (auto y : {3, 4}) {
+      if (y == 3) goto a;
+      if (y == 4) goto end;
+      h(x, y);
+    }
+    a:;
+  }
+  end:
+}
+
 
 // CHECK-LABEL: define {{.*}} void @_Z14break_continuev()
 // CHECK: entry:
@@ -318,4 +331,99 @@ void label() {
 // CHECK: a11:
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
+// CHECK-NEXT:   ret void
+
+
+// CHECK-LABEL: define {{.*}} void @_Z12nested_labelv()
+// CHECK: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %y = alloca i32, align 4
+// CHECK-NEXT:   %y4 = alloca i32, align 4
+// CHECK-NEXT:   %x12 = alloca i32, align 4
+// CHECK-NEXT:   %y13 = alloca i32, align 4
+// CHECK-NEXT:   %y21 = alloca i32, align 4
+// CHECK-NEXT:   store i32 1, ptr %x, align 4
+// CHECK-NEXT:   store i32 3, ptr %y, align 4
+// CHECK-NEXT:   %0 = load i32, ptr %y, align 4
+// CHECK-NEXT:   %cmp = icmp eq i32 %0, 3
+// CHECK-NEXT:   br i1 %cmp, label %if.then, label %if.end
+// CHECK: if.then:
+// CHECK-NEXT:   br label %a
+// CHECK: if.end:
+// CHECK-NEXT:   %1 = load i32, ptr %y, align 4
+// CHECK-NEXT:   %cmp1 = icmp eq i32 %1, 4
+// CHECK-NEXT:   br i1 %cmp1, label %if.then2, label %if.end3
+// CHECK: if.then2:
+// CHECK-NEXT:   br label %end
+// CHECK: if.end3:
+// CHECK-NEXT:   %2 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %3 = load i32, ptr %y, align 4
+// CHECK-NEXT:   call void @_Z1hii(i32 {{.*}} %2, i32 {{.*}} %3)
+// CHECK-NEXT:   br label %expand.next
+// CHECK: expand.next:
+// CHECK-NEXT:   store i32 4, ptr %y4, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %y4, align 4
+// CHECK-NEXT:   %cmp5 = icmp eq i32 %4, 3
+// CHECK-NEXT:   br i1 %cmp5, label %if.then6, label %if.end7
+// CHECK: if.then6:
+// CHECK-NEXT:   br label %a
+// CHECK: if.end7:
+// CHECK-NEXT:   %5 = load i32, ptr %y4, align 4
+// CHECK-NEXT:   %cmp8 = icmp eq i32 %5, 4
+// CHECK-NEXT:   br i1 %cmp8, label %if.then9, label %if.end10
+// CHECK: if.then9:
+// CHECK-NEXT:   br label %end
+// CHECK: if.end10:
+// CHECK-NEXT:   %6 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %y4, align 4
+// CHECK-NEXT:   call void @_Z1hii(i32 {{.*}} %6, i32 {{.*}} %7)
+// CHECK-NEXT:   br label %expand.end
+// CHECK: expand.end:
+// CHECK-NEXT:   br label %a
+// CHECK: a:
+// CHECK-NEXT:   br label %expand.next11
+// CHECK: expand.next11:
+// CHECK-NEXT:   store i32 2, ptr %x12, align 4
+// CHECK-NEXT:   store i32 3, ptr %y13, align 4
+// CHECK-NEXT:   %8 = load i32, ptr %y13, align 4
+// CHECK-NEXT:   %cmp14 = icmp eq i32 %8, 3
+// CHECK-NEXT:   br i1 %cmp14, label %if.then15, label %if.end16
+// CHECK: if.then15:
+// CHECK-NEXT:   br label %a29
+// CHECK: if.end16:
+// CHECK-NEXT:   %9 = load i32, ptr %y13, align 4
+// CHECK-NEXT:   %cmp17 = icmp eq i32 %9, 4
+// CHECK-NEXT:   br i1 %cmp17, label %if.then18, label %if.end19
+// CHECK: if.then18:
+// CHECK-NEXT:   br label %end
+// CHECK: if.end19:
+// CHECK-NEXT:   %10 = load i32, ptr %x12, align 4
+// CHECK-NEXT:   %11 = load i32, ptr %y13, align 4
+// CHECK-NEXT:   call void @_Z1hii(i32 {{.*}} %10, i32 {{.*}} %11)
+// CHECK-NEXT:   br label %expand.next20
+// CHECK: expand.next20:
+// CHECK-NEXT:   store i32 4, ptr %y21, align 4
+// CHECK-NEXT:   %12 = load i32, ptr %y21, align 4
+// CHECK-NEXT:   %cmp22 = icmp eq i32 %12, 3
+// CHECK-NEXT:   br i1 %cmp22, label %if.then23, label %if.end24
+// CHECK: if.then23:
+// CHECK-NEXT:   br label %a29
+// CHECK: if.end24:
+// CHECK-NEXT:   %13 = load i32, ptr %y21, align 4
+// CHECK-NEXT:   %cmp25 = icmp eq i32 %13, 4
+// CHECK-NEXT:   br i1 %cmp25, label %if.then26, label %if.end27
+// CHECK: if.then26:
+// CHECK-NEXT:   br label %end
+// CHECK: if.end27:
+// CHECK-NEXT:   %14 = load i32, ptr %x12, align 4
+// CHECK-NEXT:   %15 = load i32, ptr %y21, align 4
+// CHECK-NEXT:   call void @_Z1hii(i32 {{.*}} %14, i32 {{.*}} %15)
+// CHECK-NEXT:   br label %expand.end28
+// CHECK: expand.end28:
+// CHECK-NEXT:   br label %a29
+// CHECK: a29:
+// CHECK-NEXT:   br label %expand.end30
+// CHECK: expand.end30:
+// CHECK-NEXT:   br label %end
+// CHECK: end:
 // CHECK-NEXT:   ret void
