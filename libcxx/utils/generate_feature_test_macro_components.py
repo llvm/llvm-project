@@ -300,7 +300,7 @@ feature_test_macros = [
             "name": "__cpp_lib_chrono",
             "values": {
                 "c++17": 201611,
-                # "c++26": 202306, # P2592R3 Hashing support for std::chrono value classes
+                "c++26": 202306, # P2592R3 Hashing support for std::chrono value classes
             },
             "headers": ["chrono"],
         },
