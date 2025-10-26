@@ -9,7 +9,6 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -fno-signed-char -emit-llvm -o - -Wall -Werror -Wsign-conversion -fexperimental-new-constant-interpreter | FileCheck %s
 
 
-#include <emmintrin.h>
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
