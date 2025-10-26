@@ -109,8 +109,8 @@ struct sym_init_scope {
 
 }  // namespace
 
-_LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void
-base::current_impl(size_t skip, size_t max_depth) {
+_LIBCPP_EXPORTED_FROM_ABI void
+base::windows_impl(size_t skip, size_t max_depth) {
   if (!max_depth) [[unlikely]] {
     return;
   }
