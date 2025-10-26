@@ -99,6 +99,8 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr month_weekday_last operator/(const weekda
 }
 } // namespace chrono
 
+#  if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::month_weekday> : public __unary_function<chrono::month_weekday, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month_weekday& __mw) const _NOEXCEPT {
@@ -112,6 +114,8 @@ struct hash<chrono::month_weekday_last> : public __unary_function<chrono::month_
     return hash<chrono::month>{}(__mwl.month()) ^ hash<chrono::weekday_last>{}(__mwl.weekday_last());
   }
 };
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

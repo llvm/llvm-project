@@ -110,12 +110,16 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool year::ok() const noexcept {
 
 } // namespace chrono
 
+#  if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::year> : public __unary_function<chrono::year, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year& __y) const _NOEXCEPT {
     return hash<int>{}(static_cast<int>(__y));
   }
 };
+
+#  endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

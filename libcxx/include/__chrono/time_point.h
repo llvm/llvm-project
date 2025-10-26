@@ -225,7 +225,7 @@ operator-(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock, 
 
 } // namespace chrono
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 26
 
 template <class _Clock, class _Duration>
   requires __has_enabled_hash<_Duration>::value
@@ -236,7 +236,7 @@ struct hash<chrono::time_point<_Clock, _Duration>>
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 

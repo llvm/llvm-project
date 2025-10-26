@@ -123,12 +123,16 @@ private:
 
 } // namespace chrono
 
+#    if _LIBCPP_STD_VER >= 26
+
 template <>
 struct hash<chrono::leap_second> : public __unary_function<chrono::leap_second, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::leap_second& __lp) const _NOEXCEPT {
     return hash<chrono::seconds>{}(__lp.value());
   }
 };
+
+#    endif // _LIBCPP_STD_VER >= 26
 
 #  endif // _LIBCPP_STD_VER >= 20
 
