@@ -109,43 +109,17 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[DST_1]], %[[ENTRY]] ], [ [[PTR_IV_1_NEXT:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @val()
 ; CHECK-NEXT:    [[SEL_DST:%.*]] = select i1 [[C]], ptr [[DST_1]], ptr [[DST_2]]
-; CHECK-NEXT:    [[SEL_DST_LCSSA12:%.*]] = ptrtoint ptr [[SEL_DST]] to i64
 ; CHECK-NEXT:    [[PTR_IV_1_NEXT]] = getelementptr i8, ptr [[PTR_IV_1]], i64 1
 ; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    br i1 [[EC_1]], label %[[LOOP_2_HEADER_PREHEADER:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_2_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    [[PTR_IV_1_LCSSA:%.*]] = phi ptr [ [[PTR_IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[SEL_DST_LCSSA:%.*]] = phi ptr [ [[SEL_DST]], %[[LOOP_1]] ]
-; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR_IV_1_LCSSA]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[SEL_DST_LCSSA12]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[PTR_IV_1_LCSSA]], i64 1022
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[SEL_DST_LCSSA]], i64 1022
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PTR_IV_1_LCSSA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[SEL_DST_LCSSA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP4]], align 1
-; CHECK-NEXT:    store <2 x i8> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1022
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1023, %[[MIDDLE_BLOCK]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PTR_IV_1_LCSSA]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[SEL_DST_LCSSA]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_2_HEADER:.*]]
 ; CHECK:       [[LOOP_2_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[DEC7:%.*]], %[[LOOP_2_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[DEC7:%.*]], %[[LOOP_2_LATCH:.*]] ], [ 1, %[[LOOP_2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[PTR_IV_1_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[SEL_DST_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i32 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[EXIT:.*]], label %[[LOOP_2_LATCH]]
 ; CHECK:       [[LOOP_2_LATCH]]:
@@ -154,7 +128,7 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[PTR_IV_3]], align 1
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i64 1
 ; CHECK-NEXT:    store i8 [[L]], ptr [[PTR_IV_2]], align 1
-; CHECK-NEXT:    br label %[[LOOP_2_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br label %[[LOOP_2_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -240,7 +214,7 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP15]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -253,7 +227,7 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV_2]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP_DST]], align 4
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp slt i32 [[IV_2_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EC_2]], label %[[LOOP_2]], label %[[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_2]], label %[[LOOP_2]], label %[[EXIT]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -326,7 +300,7 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    store <2 x i64> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], -2
-; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -343,7 +317,7 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    store i64 [[L]], ptr [[PTR_IV_3]], align 8
 ; CHECK-NEXT:    [[IV_NEXT_2]] = add i64 [[IV_2]], 1
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp eq i64 [[IV_NEXT_2]], 0
-; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT:.*]], label %[[LOOP_3]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT:.*]], label %[[LOOP_3]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -420,7 +394,7 @@ define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    store <2 x i16> [[WIDE_LOAD]], ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 40
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -436,7 +410,7 @@ define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i64 2
 ; CHECK-NEXT:    store i16 [[L]], ptr [[PTR_IV_2]], align 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_1]], 40
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_2]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_2]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
