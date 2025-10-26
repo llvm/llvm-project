@@ -332,9 +332,10 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 
 #define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
 
-static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
-                                                   unsigned Model,
-                                                   const unsigned *Features) {
+static const char *
+getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                                const unsigned *Features,
+                                struct __processor_model *CpuModel) {
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
   const char *CPU = 0;
@@ -678,16 +679,17 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
   }
 
   if (Type != CPU_TYPE_MAX)
-    __cpu_model.__cpu_type = Type;
+    CpuModel->__cpu_type = Type;
   if (Subtype != CPU_SUBTYPE_MAX)
-    __cpu_model.__cpu_subtype = Subtype;
+    CpuModel->__cpu_subtype = Subtype;
 
   return CPU;
 }
 
-static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
-                                                 unsigned Model,
-                                                 const unsigned *Features) {
+static const char *
+getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                              const unsigned *Features,
+                              struct __processor_model *CpuModel) {
   const char *CPU = 0;
 
   enum ProcessorTypes Type = CPU_TYPE_MAX;
@@ -856,9 +858,9 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   }
 
   if (Type != CPU_TYPE_MAX)
-    __cpu_model.__cpu_type = Type;
+    CpuModel->__cpu_type = Type;
   if (Subtype != CPU_SUBTYPE_MAX)
-    __cpu_model.__cpu_subtype = Subtype;
+    CpuModel->__cpu_subtype = Subtype;
 
   return CPU;
 }
@@ -1223,11 +1225,11 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
 
   if (Vendor == SIG_INTEL) {
     // Get CPU type.
-    getIntelProcessorTypeAndSubtype(Family, Model, &Features[0]);
+    getIntelProcessorTypeAndSubtype(Family, Model, &Features[0], &__cpu_model);
     __cpu_model.__cpu_vendor = VENDOR_INTEL;
   } else if (Vendor == SIG_AMD) {
     // Get CPU type.
-    getAMDProcessorTypeAndSubtype(Family, Model, &Features[0]);
+    getAMDProcessorTypeAndSubtype(Family, Model, &Features[0], &__cpu_model);
     __cpu_model.__cpu_vendor = VENDOR_AMD;
   } else
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
