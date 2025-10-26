@@ -3690,8 +3690,10 @@ def err_expansion_stmt_invalid_init : Error<
   "cannot expand expression of type %0">;
 def err_expansion_stmt_lambda : Error<
   "cannot expand lambda closure type">;
-def err_expanded_identifier_label : Error<
-  "identifier labels are not allowed in expansion statements">;
+def err_expansion_stmt_case : Error<
+  "%select{'case'|'default'}0 belongs to 'switch' outside enclosing expansion statement">;
+def note_enclosing_switch_statement_here : Note<
+  "switch statement is here">;
 
 def err_attribute_patchable_function_entry_invalid_section
     : Error<"section argument to 'patchable_function_entry' attribute is not "

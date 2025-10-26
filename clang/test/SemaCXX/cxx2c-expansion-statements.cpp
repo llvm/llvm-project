@@ -733,3 +733,30 @@ void label() {
     if (x == 1) goto a;
   }
 }
+
+
+void case_default(int i) {
+  switch (i) { // expected-note 3 {{switch statement is here}}
+    template for (auto x : {1, 2}) {
+      case 1:; // expected-error {{'case' belongs to 'switch' outside enclosing expansion statement}}
+        template for (auto x : {1, 2}) {
+          case 2:; // expected-error {{'case' belongs to 'switch' outside enclosing expansion statement}}
+        }
+      default: // expected-error {{'default' belongs to 'switch' outside enclosing expansion statement}}
+        switch (i) {  // expected-note {{switch statement is here}}
+          case 3:;
+          default:
+            template for (auto x : {1, 2}) {
+              case 4:; // expected-error {{'case' belongs to 'switch' outside enclosing expansion statement}}
+            }
+        }
+    }
+  }
+
+  template for (auto x : {1, 2}) {
+    switch (i) {
+      case 1:;
+      default:
+    }
+  }
+}
