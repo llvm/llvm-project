@@ -421,12 +421,13 @@ define void @same_op4(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC17:%.*]] = load <16 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC22:%.*]] = load <16 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <16 x float> [[WIDE_VEC17]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x float> [[WIDE_VEC22]], [[TMP3]]
-; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x float> [[TMP3]], <16 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[TMP6]]
+; CHECK-NEXT:    store <4 x float> [[TMP5]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 288
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[FOR_END13:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[FOR_END13]]:
@@ -513,19 +514,20 @@ define void @same_op4_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <13 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <13 x float> [[TMP4]], <13 x float> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC15:%.*]] = load <16 x float>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <16 x float> [[WIDE_VEC]], [[TMP1]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x float> [[WIDE_VEC15]], [[TMP4]]
-; CHECK-NEXT:    store <16 x float> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[WIDE_LOAD]], [[TMP6]]
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 288
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[FOR_END11:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[FOR_END11]]:
