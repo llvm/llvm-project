@@ -881,9 +881,8 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    uxtb r1, r1
 ; THUMB6-NEXT:    lsls r0, r1
-; THUMB6-NEXT:    movs r1, #128
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    lsrs r0, r1, #7
+; THUMB6-NEXT:    uxtb r0, r0
+; THUMB6-NEXT:    lsrs r0, r0, #7
 ; THUMB6-NEXT:    bx lr
 ;
 ; THUMB78-LABEL: scalar_i8_signbit_ne:
