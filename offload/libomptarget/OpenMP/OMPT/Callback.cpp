@@ -410,11 +410,13 @@ void Interface::endTarget(int64_t DeviceId, void *Code) {
 }
 
 void Interface::beginTargetDataOperation() {
-  DP("in ompt_target_region_begin (TargetRegionId = %lu)\n", TargetData.value);
+  DPIF(TOOL, "in ompt_target_region_begin (TargetRegionId = %lu)\n",
+       TargetData.value);
 }
 
 void Interface::endTargetDataOperation() {
-  DP("in ompt_target_region_end (TargetRegionId = %lu)\n", TargetData.value);
+  DPIF(TOOL, "in ompt_target_region_end (TargetRegionId = %lu)\n",
+       TargetData.value);
 }
 
 void Interface::beginTargetRegion() {
@@ -462,12 +464,12 @@ private:
 int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
                                                int initial_device_num,
                                                ompt_data_t *tool_data) {
-  DP("Executing initializeLibrary\n");
+  DPIF(TOOL, "Executing initializeLibrary\n");
 #define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
   if (lookup)                                                                  \
     DestinationFunction = (OmptFunction##_t)lookup(#OmptFunction);             \
-  DP("initializeLibrary bound %s=%p\n", #DestinationFunction,                  \
-     ((void *)(uint64_t)DestinationFunction));
+  DPIF(TOOL, "initializeLibrary bound %s=%p\n", #DestinationFunction,          \
+       ((void *)(uint64_t)DestinationFunction));
 
   bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
   bindOmptFunctionName(ompt_get_task_data, ompt_get_task_data_fn);
@@ -493,7 +495,7 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
 }
 
 void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
-  DP("Executing finalizeLibrary\n");
+  DPIF(TOOL, "Executing finalizeLibrary\n");
   // Before disabling OMPT, call the (plugin) finalizations that were registered
   // with this library
   LibraryFinalizer->finalize();
@@ -502,7 +504,7 @@ void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
 }
 
 void llvm::omp::target::ompt::connectLibrary() {
-  DP("Entering connectLibrary\n");
+  DPIF(TOOL, "Entering connectLibrary\n");
   // Connect with libomp
   static OmptLibraryConnectorTy LibompConnector("libomp");
   static ompt_start_tool_result_t OmptResult;
@@ -525,7 +527,7 @@ void llvm::omp::target::ompt::connectLibrary() {
   FOREACH_OMPT_EMI_EVENT(bindOmptCallback)
 #undef bindOmptCallback
 
-  DP("Exiting connectLibrary\n");
+  DPIF(TOOL, "Exiting connectLibrary\n");
 }
 
 #endif // OMPT_SUPPORT
