@@ -4,6 +4,8 @@
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 
+; Index Delta
+
 define void @shl(i32 %b, i32 %s) {
 ; CHECK-LABEL: @shl(
 ; CHECK-NEXT:    [[T1:%.*]] = add i32 [[B:%.*]], [[S:%.*]]
@@ -171,3 +173,97 @@ define void @slsr_strided_add_128bit(i128 %b, i128 %s) {
 declare void @foo(i32)
 declare void @voo(<2 x i32>)
 declare void @bar(i128)
+
+; Stride Delta
+
+define void @stride_const(i32 %a, ptr %base, i16 %r) {
+; Reuse add1 to compute add2
+; CHECK-LABEL: @stride_const(
+; CHECK: [[I1:%.*]] = sext i32 %a to i64
+; CHECK: [[I2:%.*]] = mul i64 [[I1]], 2
+; CHECK: [[BI:%.*]] = ptrtoint ptr %base to i64
+; CHECK: [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
+; CHECK: [[ADD2:%.*]] = add i64 [[ADD1]], 8
+  %1 = sext i32 %a to i64
+  %2 = mul i64 %1, 2
+  %3 = add i64 %1, 4
+  %4 = mul i64 %3, 2
+  %baseInt = ptrtoint ptr %base to i64
+  %add1 = add i64 %baseInt, %2
+  %add2 = add i64 %baseInt, %4
+  %addr1 = inttoptr i64 %add1 to ptr
+  %addr2 = inttoptr i64 %add2 to ptr
+  store i16 %r, ptr %addr1, align 2
+  store i16 %r, ptr %addr2, align 2
+  ret void
+}
+
+define void @stride_var(i32 %a, ptr %base, i16 %r, i64 %n) {
+; Reuse add1 to compute add2 to save a add.s64
+; CHECK-LABEL: @stride_var(
+; CHECK: [[I1:%.*]] = sext i32 %a to i64
+; CHECK: [[I2:%.*]] = mul i64 [[I1]], 2
+; CHECK: [[BI:%.*]] = ptrtoint ptr %base to i64
+; CHECK: [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
+; CHECK: [[I3:%.*]] = shl i64 %n, 1
+; CHECK: [[ADD2:%.*]] = add i64 [[ADD1]], [[I3]]
+
+  %1 = sext i32 %a to i64
+  %2 = mul i64 %1, 2
+  %3 = add i64 %1, %n
+  %4 = mul i64 %3, 2
+  %baseInt = ptrtoint ptr %base to i64
+  %add1 = add i64 %baseInt, %2
+  %add2 = add i64 %baseInt, %4
+  %addr1 = inttoptr i64 %add1 to ptr
+  %addr2 = inttoptr i64 %add2 to ptr
+  store i16 %r, ptr %addr1, align 2
+  store i16 %r, ptr %addr2, align 2
+  ret void
+}
+
+; Base Delta
+
+define void @base_const(i32 %a, ptr %base, i16 %r) {
+; Reuse add1 to compute add2
+; CHECK-LABEL: @base_const(
+; CHECK: [[I1:%.*]] = sext i32 %a to i64
+; CHECK: [[I2:%.*]] = mul i64 [[I1]], 2
+; CHECK: [[BI:%.*]] = ptrtoint ptr %base to i64
+; CHECK: [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
+; CHECK: [[ADD2:%.*]] = add i64 [[ADD1]], 5
+
+  %1 = sext i32 %a to i64
+  %2 = mul i64 %1, 2
+  %baseInt = ptrtoint ptr %base to i64
+  %add1 = add i64 %baseInt, %2
+  %add2.0 = add i64 %baseInt, 5
+  %add2 = add i64 %add2.0, %2
+  %addr1 = inttoptr i64 %add1 to ptr
+  %addr2 = inttoptr i64 %add2 to ptr
+  store i16 %r, ptr %addr1, align 2
+  store i16 %r, ptr %addr2, align 2
+  ret void
+}
+
+define void @base_var(i32 %a, ptr %base, i16 %r, i64 %n) {
+; Reuse add1 to compute add2
+; CHECK-LABEL: @base_var(
+; CHECK: [[I1:%.*]] = sext i32 %a to i64
+; CHECK: [[I2:%.*]] = mul i64 [[I1]], 2
+; CHECK: [[BI:%.*]] = ptrtoint ptr %base to i64
+; CHECK: [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
+; CHECK: [[ADD2:%.*]] = add i64 [[ADD1]], %n
+
+  %1 = sext i32 %a to i64
+  %2 = mul i64 %1, 2
+  %baseInt = ptrtoint ptr %base to i64
+  %add1 = add i64 %baseInt, %2
+  %add2.0 = add i64 %baseInt, %n
+  %add2 = add i64 %add2.0, %2
+  %addr1 = inttoptr i64 %add1 to ptr
+  %addr2 = inttoptr i64 %add2 to ptr
+  store i16 %r, ptr %addr1, align 2
+  store i16 %r, ptr %addr2, align 2
+  ret void
+}
