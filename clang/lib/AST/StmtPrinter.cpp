@@ -264,7 +264,7 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
   if (!Node->isSingleDecl() ||
-      !isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
+      !isa<ExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
     OS << ";";
   OS << NL;
 }
@@ -449,13 +449,13 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
 }
 
 void StmtPrinter::VisitCXXExpansionStmt(CXXExpansionStmt *Node, Expr* Initializer) {
-  Indent() << "template for (";
+  OS << "template for (";
   if (Node->getInit())
     PrintInitStmt(Node->getInit(), 14);
   PrintingPolicy SubPolicy(Policy);
   SubPolicy.SuppressInitializers = true;
   Node->getExpansionVariable()->print(OS, SubPolicy, IndentLevel);
-  OS << ":";
+  OS << " : ";
   PrintExpr(Initializer ? Initializer
                         : Node->getExpansionVariable()->getInit());
   OS << ")";
@@ -469,7 +469,7 @@ void StmtPrinter::VisitCXXEnumeratingExpansionStmt(
 
 void StmtPrinter::VisitCXXIteratingExpansionStmt(
     CXXIteratingExpansionStmt *Node) {
-  VisitCXXExpansionStmt(Node);
+  VisitCXXExpansionStmt(Node, Node->getRangeVar()->getInit());
 }
 
 void StmtPrinter::VisitCXXDestructuringExpansionStmt(

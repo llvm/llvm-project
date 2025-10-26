@@ -2773,7 +2773,7 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
 void ASTDeclReader::VisitExpansionStmtDecl(ExpansionStmtDecl *D) {
   VisitDecl(D);
   D->Expansion = cast<CXXExpansionStmt>(Record.readStmt());
-  D->Instantiations = cast<CXXExpansionInstantiationStmt>(Record.readStmt());
+  D->Instantiations = cast_or_null<CXXExpansionInstantiationStmt>(Record.readStmt());
   D->TParams = Record.readTemplateParameterList();
 }
 
