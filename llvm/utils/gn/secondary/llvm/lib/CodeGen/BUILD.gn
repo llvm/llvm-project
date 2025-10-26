@@ -122,6 +122,7 @@ static_library("CodeGen") {
     "MLRegAllocPriorityAdvisor.cpp",
     "MachineBasicBlock.cpp",
     "MachineBlockFrequencyInfo.cpp",
+    "MachineBlockHashInfo.cpp",
     "MachineBlockPlacement.cpp",
     "MachineBranchProbabilityInfo.cpp",
     "MachineCFGPrinter.cpp",
