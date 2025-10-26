@@ -172,6 +172,12 @@ void f8() {
   t5<1, 2, 3>();
 }
 
+int references_enumerating() {
+  int x = 1, y = 2, z = 3;
+  template for (auto& v : {x, y, z}) { ++v; }
+  template for (auto&& v : {x, y, z}) { ++v; }
+  return x + y + z;
+}
 
 // CHECK-LABEL: define {{.*}} void @_Z2f1v()
 // CHECK: entry:
@@ -1404,6 +1410,70 @@ void f8() {
 // CHECK-NEXT:   call void @_ZZ2t5IJLi1ELi2ELi3EEEvvENKUlvE0_clEv(ptr {{.*}} %ref.tmp1)
 // CHECK-NEXT:   call void @_ZZ2t5IJLi1ELi2ELi3EEEvvENKUlvE_clEv(ptr {{.*}} %ref.tmp2)
 // CHECK-NEXT:   ret void
+
+
+// CHECK-LABEL: define {{.*}} i32 @_Z22references_enumeratingv()
+// CHECK: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %y = alloca i32, align 4
+// CHECK-NEXT:   %z = alloca i32, align 4
+// CHECK-NEXT:   %v = alloca ptr, align 8
+// CHECK-NEXT:   %v1 = alloca ptr, align 8
+// CHECK-NEXT:   %v4 = alloca ptr, align 8
+// CHECK-NEXT:   %v6 = alloca ptr, align 8
+// CHECK-NEXT:   %v9 = alloca ptr, align 8
+// CHECK-NEXT:   %v12 = alloca ptr, align 8
+// CHECK-NEXT:   store i32 1, ptr %x, align 4
+// CHECK-NEXT:   store i32 2, ptr %y, align 4
+// CHECK-NEXT:   store i32 3, ptr %z, align 4
+// CHECK-NEXT:   store ptr %x, ptr %v, align 8
+// CHECK-NEXT:   %0 = load ptr, ptr %v, align 8
+// CHECK-NEXT:   %1 = load i32, ptr %0, align 4
+// CHECK-NEXT:   %inc = add nsw i32 %1, 1
+// CHECK-NEXT:   store i32 %inc, ptr %0, align 4
+// CHECK-NEXT:   br label %expand.next
+// CHECK: expand.next:
+// CHECK-NEXT:   store ptr %y, ptr %v1, align 8
+// CHECK-NEXT:   %2 = load ptr, ptr %v1, align 8
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   %inc2 = add nsw i32 %3, 1
+// CHECK-NEXT:   store i32 %inc2, ptr %2, align 4
+// CHECK-NEXT:   br label %expand.next3
+// CHECK: expand.next3:
+// CHECK-NEXT:   store ptr %z, ptr %v4, align 8
+// CHECK-NEXT:   %4 = load ptr, ptr %v4, align 8
+// CHECK-NEXT:   %5 = load i32, ptr %4, align 4
+// CHECK-NEXT:   %inc5 = add nsw i32 %5, 1
+// CHECK-NEXT:   store i32 %inc5, ptr %4, align 4
+// CHECK-NEXT:   br label %expand.end
+// CHECK: expand.end:
+// CHECK-NEXT:   store ptr %x, ptr %v6, align 8
+// CHECK-NEXT:   %6 = load ptr, ptr %v6, align 8
+// CHECK-NEXT:   %7 = load i32, ptr %6, align 4
+// CHECK-NEXT:   %inc7 = add nsw i32 %7, 1
+// CHECK-NEXT:   store i32 %inc7, ptr %6, align 4
+// CHECK-NEXT:   br label %expand.next8
+// CHECK: expand.next8:
+// CHECK-NEXT:   store ptr %y, ptr %v9, align 8
+// CHECK-NEXT:   %8 = load ptr, ptr %v9, align 8
+// CHECK-NEXT:   %9 = load i32, ptr %8, align 4
+// CHECK-NEXT:   %inc10 = add nsw i32 %9, 1
+// CHECK-NEXT:   store i32 %inc10, ptr %8, align 4
+// CHECK-NEXT:   br label %expand.next11
+// CHECK: expand.next11:
+// CHECK-NEXT:   store ptr %z, ptr %v12, align 8
+// CHECK-NEXT:   %10 = load ptr, ptr %v12, align 8
+// CHECK-NEXT:   %11 = load i32, ptr %10, align 4
+// CHECK-NEXT:   %inc13 = add nsw i32 %11, 1
+// CHECK-NEXT:   store i32 %inc13, ptr %10, align 4
+// CHECK-NEXT:   br label %expand.end14
+// CHECK: expand.end14:
+// CHECK-NEXT:   %12 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %13 = load i32, ptr %y, align 4
+// CHECK-NEXT:   %add = add nsw i32 %12, %13
+// CHECK-NEXT:   %14 = load i32, ptr %z, align 4
+// CHECK-NEXT:   %add15 = add nsw i32 %add, %14
+// CHECK-NEXT:   ret i32 %add15
 
 
 // CHECK-LABEL: define {{.*}} void @_ZZ2t5IJLi1ELi2ELi3EEEvvENKUlvE1_clEv(ptr {{.*}} %this)
