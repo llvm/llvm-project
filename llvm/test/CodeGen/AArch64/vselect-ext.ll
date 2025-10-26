@@ -594,10 +594,10 @@ define void @extension_in_loop_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    cmge.16b v5, v4, #0
-; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
-; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
-; CHECK-NEXT:    tbl.16b v18, { v4 }, v2
-; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v16, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v18, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v0
 ; CHECK-NEXT:    sshll2.8h v6, v5, #0
 ; CHECK-NEXT:    sshll.8h v5, v5, #0
 ; CHECK-NEXT:    sshll2.4s v17, v6, #0
@@ -664,10 +664,10 @@ define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    cmge.16b v5, v4, #0
-; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
-; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
-; CHECK-NEXT:    tbl.16b v18, { v4 }, v2
-; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v16, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v18, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v0
 ; CHECK-NEXT:    sshll2.8h v6, v5, #0
 ; CHECK-NEXT:    sshll.8h v5, v5, #0
 ; CHECK-NEXT:    sshll2.4s v17, v6, #0
@@ -735,10 +735,10 @@ define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    cmge.16b v5, v4, #0
-; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
-; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
-; CHECK-NEXT:    tbl.16b v18, { v4 }, v2
-; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v7, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v16, { v4 }, v2
+; CHECK-NEXT:    tbl.16b v18, { v4 }, v1
+; CHECK-NEXT:    tbl.16b v4, { v4 }, v0
 ; CHECK-NEXT:    sshll2.8h v6, v5, #0
 ; CHECK-NEXT:    sshll.8h v5, v5, #0
 ; CHECK-NEXT:    sshll2.4s v17, v6, #0

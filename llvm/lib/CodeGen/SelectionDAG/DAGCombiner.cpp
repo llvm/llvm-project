@@ -14815,6 +14815,13 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
     return Res;
 
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse() && !VT.isVector()) {
+    SDValue Res =
+        DAG.getFreeze(DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0.getOperand(0)));
+    return DAG.getNode(ISD::AssertSext, DL, VT, Res,
+                       DAG.getValueType(N0.getOperand(0).getValueType()));
+  }
+
   return SDValue();
 }
 
@@ -15194,6 +15201,13 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       return SDValue(CSENode, 0);
   }
 
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse() && !VT.isVector()) {
+    SDValue Res =
+        DAG.getFreeze(DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0)));
+    return DAG.getNode(ISD::AssertZext, DL, VT, Res,
+                       DAG.getValueType(N0.getOperand(0).getValueType()));
+  }
+
   return SDValue();
 }
 
@@ -15361,6 +15375,10 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
 
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
     return Res;
+
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse())
+    return DAG.getFreeze(
+        DAG.getNode(ISD::ANY_EXTEND, DL, VT, N0.getOperand(0)));
 
   return SDValue();
 }
@@ -16911,6 +16929,11 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       return LegalShuffle;
   }
 
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse()) {
+    SDLoc DL(N);
+    return DAG.getFreeze(DAG.getNode(ISD::BITCAST, DL, VT, N0.getOperand(0)));
+  }
+
   return SDValue();
 }
 
@@ -16943,23 +16966,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // example https://reviews.llvm.org/D136529#4120959.
   if (N0.getOpcode() == ISD::SRA || N0.getOpcode() == ISD::SRL)
     return SDValue();
-
-  // fold: bitcast(freeze(load)) -> freeze(bitcast(load))
-  // fold: sext(freeze(load)) -> freeze(sext(load))
-  // fold: zext(freeze(load)) -> freeze(zext(load))
-  // This allows the conversion to potentially fold into the load.
-  if (N0.getOpcode() == ISD::LOAD && N->hasOneUse()) {
-    SDNode *User = *N->user_begin();
-    unsigned UserOpcode = User->getOpcode();
-    if (UserOpcode == ISD::BITCAST || UserOpcode == ISD::SIGN_EXTEND ||
-        UserOpcode == ISD::ZERO_EXTEND) {
-      SDValue NewConv =
-          DAG.getNode(UserOpcode, SDLoc(User), User->getValueType(0), N0);
-      SDValue FrozenConv = DAG.getFreeze(NewConv);
-      DAG.ReplaceAllUsesWith(User, FrozenConv.getNode());
-      return SDValue(N, 0);
-    }
-  }
+  // Avoid folding extensions and bitcasts. Each of these operations handles
+  // FREEZE in their own respective visitors.
+  if (N0.getOpcode() == ISD::ANY_EXTEND || N0.getOpcode() == ISD::SIGN_EXTEND ||
+      N0.getOpcode() == ISD::ZERO_EXTEND || N0.getOpcode() == ISD::BITCAST)
+    return SDValue();
 
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
   // Try to push freeze through instructions that propagate but don't produce

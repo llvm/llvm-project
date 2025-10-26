@@ -2902,7 +2902,7 @@ define arm_aapcs_vfpcc <8 x half> @faddqr_v8f16_y(<8 x half> %x, half %y, i32 %n
 ; CHECK-NEXT:    vctp.16 r0
 ; CHECK-NEXT:    vdup.16 q1, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vaddt.f16 q1, q0, r1
+; CHECK-NEXT:    vaddt.f16 q1, q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -2978,7 +2978,7 @@ define arm_aapcs_vfpcc <8 x half> @fmulqr_v8f16_y(<8 x half> %x, half %y, i32 %n
 ; CHECK-NEXT:    vctp.16 r0
 ; CHECK-NEXT:    vdup.16 q1, r1
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vmult.f16 q1, q0, r1
+; CHECK-NEXT:    vmult.f16 q1, q1, q0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

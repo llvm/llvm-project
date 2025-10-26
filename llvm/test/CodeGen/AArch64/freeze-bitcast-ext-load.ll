@@ -26,8 +26,7 @@ define i32 @test_sext_freeze_load_i8(ptr %p) {
 define i64 @test_sext_freeze_load_i32(ptr %p) {
 ; CHECK-LABEL: test_sext_freeze_load_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    sxtw x0, w8
+; CHECK-NEXT:    ldrsw x0, [x0]
 ; CHECK-NEXT:    ret
   %v = load i32, ptr %p
   %f = freeze i32 %v

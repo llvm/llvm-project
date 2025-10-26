@@ -5,8 +5,7 @@
 define i32 @PR66603(double %x) nounwind {
 ; CHECK-LABEL: PR66603:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w8, d0
-; CHECK-NEXT:    sxtb w0, w8
+; CHECK-NEXT:    fcvtzs w0, d0
 ; CHECK-NEXT:    ret
   %as_i8 = fptosi double %x to i8
   %frozen_i8 = freeze i8 %as_i8
