@@ -2,8 +2,7 @@
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1010 %s -emit-llvm -o - | FileCheck %s
 
 typedef float float4 __attribute__((ext_vector_type(4)));
-typedef _Float16 half;
-typedef half half4 __attribute__((ext_vector_type(4)));
+typedef _Float16 half4 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: define dso_local void @test_builtin_image_store_2d(
 // CHECK-SAME: float noundef [[F32:%.*]], i32 noundef [[I32:%.*]], ptr [[TEX:%.*]]) #[[ATTR0:[0-9]+]] {
