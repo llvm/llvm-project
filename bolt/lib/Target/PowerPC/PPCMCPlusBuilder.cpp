@@ -520,9 +520,9 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
 
   // std r2, 24(r1)      ; save caller's TOC
  I.setOpcode(PPC::STD);
- I.addOperand(R(R2));                                   // src
- I.addOperand(R(PPC::X1));                              // base
-I.addOperand(MCOperand::createImm(24));
+ I.addOperand(R(PPC::X2));  // reg (src)
+ I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
+ I.addOperand(R(PPC::X1));  // base (slot #2)
   Out.push_back(I);
 
   // addis r12, r2, sym@ha
@@ -536,9 +536,9 @@ I.addOperand(MCOperand::createImm(24));
   // ld r12, sym@lo(r12) ; DS-form: (dst, imm/expr, base)
   I = MCInst();
   I.setOpcode(PPC::LD);
-  I.addOperand(R(R12));                         // dst
-  I.addOperand(R(R12));                         // base
-  I.addOperand(MCOperand::createExpr(LO));      // disp as MCExpr
+ I.addOperand(R(PPC::X12));                         // reg (dst)
+ I.addOperand(MCOperand::createExpr(LO));           // disp expr (slot #1)
+ I.addOperand(R(PPC::X12));                         // base (slot #2)
   Out.push_back(I);
 
   // mtctr r12
@@ -554,9 +554,9 @@ I.addOperand(MCOperand::createImm(24));
 
   // ld r2, 24(r1)       ; restore TOC
  I.setOpcode(PPC::LD);
- I.addOperand(R(R2));                                   // dst
- I.addOperand(R(PPC::X1));                              // base  (D/DS form uses base as #2)
- I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx)));
+ I.addOperand(R(PPC::X2));  // reg (dst)
+ I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
+ I.addOperand(R(PPC::X1));  // base (slot #2)
   Out.push_back(I);
 
   // blr                 ; return to caller
