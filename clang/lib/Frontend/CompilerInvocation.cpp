@@ -3222,7 +3222,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       DashX = llvm::StringSwitch<InputKind>(XValue)
                   .Case("cpp-output", InputKind(Language::C).getPreprocessed())
                   .Case("assembler-with-cpp", Language::Asm)
-                  .Cases("ast", "pcm", "precompiled-header",
+                  .Cases({"ast", "pcm", "precompiled-header"},
                          InputKind(Language::Unknown, InputKind::Precompiled))
                   .Case("ir", Language::LLVM_IR)
                   .Case("cir", Language::CIR)
