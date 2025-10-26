@@ -13,6 +13,7 @@
 #include <__chrono/month.h>
 #include <__chrono/weekday.h>
 #include <__config>
+#include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -97,6 +98,20 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr month_weekday_last operator/(const weekda
   return month_weekday_last{month(__rhs), __lhs};
 }
 } // namespace chrono
+
+template <>
+struct hash<chrono::month_weekday> : public __unary_function<chrono::month_weekday, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month_weekday& __mw) const _NOEXCEPT {
+    return hash<chrono::month>{}(__mw.month()) ^ hash<chrono::weekday_indexed>{}(__mw.weekday_indexed());
+  }
+};
+
+template <>
+struct hash<chrono::month_weekday_last> : public __unary_function<chrono::month_weekday_last, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month_weekday_last& __mwl) const _NOEXCEPT {
+    return hash<chrono::month>{}(__mwl.month()) ^ hash<chrono::weekday_last>{}(__mwl.weekday_last());
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

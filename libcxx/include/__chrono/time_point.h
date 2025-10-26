@@ -14,6 +14,7 @@
 #include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__config>
+#include <__functional/hash.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_convertible.h>
@@ -223,6 +224,19 @@ operator-(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock, 
 }
 
 } // namespace chrono
+
+#if _LIBCPP_STD_VER >= 20
+
+template <class _Clock, class _Duration>
+  requires __has_enabled_hash<_Duration>::value
+struct hash<chrono::time_point<_Clock, _Duration>>
+    : public __unary_function<chrono::time_point<_Clock, _Duration>, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::time_point<_Clock, _Duration>& __tp) const {
+    return hash<_Duration>{}(__tp.time_since_epoch());
+  }
+};
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

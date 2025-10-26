@@ -22,6 +22,7 @@
 #  include <__compare/ordering.h>
 #  include <__compare/three_way_comparable.h>
 #  include <__config>
+#  include <__functional/hash.h>
 #  include <__utility/private_constructor_tag.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -121,6 +122,13 @@ private:
 };
 
 } // namespace chrono
+
+template <>
+struct hash<chrono::leap_second> : public __unary_function<chrono::leap_second, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::leap_second& __lp) const _NOEXCEPT {
+    return hash<chrono::seconds>{}(__lp.value());
+  }
+};
 
 #  endif // _LIBCPP_STD_VER >= 20
 

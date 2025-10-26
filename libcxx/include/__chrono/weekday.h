@@ -15,6 +15,7 @@
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
 #include <__config>
+#include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -159,6 +160,27 @@ inline constexpr weekday Friday{5};
 inline constexpr weekday Saturday{6};
 
 } // namespace chrono
+
+template <>
+struct hash<chrono::weekday> : public __unary_function<chrono::weekday, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::weekday& __w) const _NOEXCEPT {
+    return hash<unsigned>{}(__w.c_encoding());
+  }
+};
+
+template <>
+struct hash<chrono::weekday_indexed> : public __unary_function<chrono::weekday_indexed, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::weekday_indexed& __wi) const _NOEXCEPT {
+    return hash<chrono::weekday>{}(__wi.weekday()) ^ hash<unsigned>{}(__wi.index());
+  }
+};
+
+template <>
+struct hash<chrono::weekday_last> : public __unary_function<chrono::weekday_last, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::weekday_last& __wl) const _NOEXCEPT {
+    return hash<chrono::weekday>{}(__wl.weekday());
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

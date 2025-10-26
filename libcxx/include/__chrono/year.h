@@ -13,6 +13,7 @@
 #include <__chrono/duration.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__functional/hash.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -108,6 +109,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool year::ok() const noexcept {
 }
 
 } // namespace chrono
+
+template <>
+struct hash<chrono::year> : public __unary_function<chrono::year, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year& __y) const _NOEXCEPT {
+    return hash<int>{}(static_cast<int>(__y));
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 

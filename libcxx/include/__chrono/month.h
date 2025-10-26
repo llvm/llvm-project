@@ -13,6 +13,7 @@
 #include <__chrono/duration.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -107,6 +108,13 @@ inline constexpr month November{11};
 inline constexpr month December{12};
 
 } // namespace chrono
+
+template <>
+struct hash<chrono::month> : public __unary_function<chrono::month, size_t> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month& __m) const _NOEXCEPT {
+    return hash<unsigned>{}(static_cast<unsigned>(__m));
+  }
+};
 
 _LIBCPP_END_NAMESPACE_STD
 
