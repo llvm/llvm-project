@@ -759,4 +759,12 @@ void case_default(int i) {
       default:
     }
   }
+
+  // Ensure that we diagnose this even if the statements would be discarded.
+  switch (i) { // expected-note 2 {{switch statement is here}}
+    template for (auto x : {}) {
+      case 1:; // expected-error {{'case' belongs to 'switch' outside enclosing expansion statement}}
+      default:; // expected-error {{'default' belongs to 'switch' outside enclosing expansion statement}}
+    }
+  }
 }
