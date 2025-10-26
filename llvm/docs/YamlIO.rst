@@ -807,7 +807,7 @@ Flow Mapping
 A YAML "flow mapping" is a mapping that uses the inline notation
 (e.g { x: 1, y: 0 } ) when written to YAML. To specify that a type should be
 written in YAML using flow mapping, your MappingTraits specialization should
-add "static const bool flow = true;". For instance:
+add ``static constexpr bool flow = true;``. For instance:
 
 .. code-block:: c++
 
@@ -824,7 +824,7 @@ add "static const bool flow = true;". For instance:
         ...
       }
 
-      static const bool flow = true;
+      static constexpr bool flow = true;
     }
 
 Flow mappings are subject to line wrapping according to the ``Output`` object
@@ -859,7 +859,7 @@ Flow Sequence
 A YAML "flow sequence" is a sequence that when written to YAML it uses the
 inline notation (e.g [ foo, bar ] ).  To specify that a sequence type should
 be written in YAML as a flow sequence, your SequenceTraits specialization should
-add "static const bool flow = true;".  For instance:
+add ``static constexpr bool flow = true;``.  For instance:
 
 .. code-block:: c++
 
@@ -869,7 +869,7 @@ add "static const bool flow = true;".  For instance:
     static MyListEl &element(IO &io, MyList &list, size_t index) { ... }
 
     // The existence of this member causes YAML I/O to use a flow sequence
-    static const bool flow = true;
+    static constexpr bool flow = true;
   };
 
 With the above, if you used MyList as the data type in your native data

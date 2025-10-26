@@ -398,7 +398,7 @@ public:
                DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
-  virtual ~VPRecipeBase() = default;
+  ~VPRecipeBase() override = default;
 
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
@@ -576,7 +576,7 @@ public:
     return R && classof(R);
   }
 
-  virtual VPSingleDefRecipe *clone() override = 0;
+  VPSingleDefRecipe *clone() override = 0;
 
   /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
@@ -907,7 +907,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
     return R && classof(R);
   }
 
-  virtual VPRecipeWithIRFlags *clone() override = 0;
+  VPRecipeWithIRFlags *clone() override = 0;
 
   static inline bool classof(const VPSingleDefRecipe *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
@@ -2068,7 +2068,7 @@ public:
     return classof(static_cast<const VPRecipeBase *>(R));
   }
 
-  virtual void execute(VPTransformState &State) override = 0;
+  void execute(VPTransformState &State) override = 0;
 
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
@@ -2557,7 +2557,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
+  bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
 
   /// Returns the number of stored operands of this interleave group. Returns 0
   /// for load interleave groups.

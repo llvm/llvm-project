@@ -666,7 +666,7 @@ public:
 #endif
   }
 
-  ~X86SavedState() {
+  ~X86SavedState() override {
     // Restoring the X87 state does not flush pending exceptions, make sure
     // these exceptions are flushed now.
 #if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)

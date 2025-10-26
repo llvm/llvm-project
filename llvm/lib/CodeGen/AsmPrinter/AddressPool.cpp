@@ -18,8 +18,7 @@ using namespace llvm;
 
 unsigned AddressPool::getIndex(const MCSymbol *Sym, bool TLS) {
   resetUsedFlag(true);
-  auto IterBool =
-      Pool.insert(std::make_pair(Sym, AddressPoolEntry(Pool.size(), TLS)));
+  auto IterBool = Pool.try_emplace(Sym, Pool.size(), TLS);
   return IterBool.first->second.Number;
 }
 

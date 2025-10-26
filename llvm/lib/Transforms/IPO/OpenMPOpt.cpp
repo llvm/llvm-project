@@ -2693,7 +2693,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   AAExecutionDomainFunction(const IRPosition &IRP, Attributor &A)
       : AAExecutionDomain(IRP, A) {}
 
-  ~AAExecutionDomainFunction() { delete RPOT; }
+  ~AAExecutionDomainFunction() override { delete RPOT; }
 
   void initialize(Attributor &A) override {
     Function *F = getAnchorScope();
