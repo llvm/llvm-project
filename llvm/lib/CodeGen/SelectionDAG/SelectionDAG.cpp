@@ -4098,6 +4098,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = Known.anyext(BitWidth);
     break;
   }
+  case ISD::FREEZE: {
+    SDValue Src = Op.getOperand(0);
+    if (isGuaranteedNotToBeUndefOrPoison(Src, DemandedElts,
+                                         /*PoisonOnly=*/false))
+      return computeKnownBits(Src, DemandedElts, Depth + 1);
+    // For freeze(load), we can look through the freeze. Loads don't produce
+    // poison (though they may produce undef for uninitialized memory, which
+    // freeze converts to an arbitrary but fixed value). The known bits of the
+    // load itself are still valid.
+    if (Src.getOpcode() == ISD::LOAD || ISD::isZEXTLoad(Src.getNode()))
+      return computeKnownBits(Src, DemandedElts, Depth + 1);
+    break;
+  }
   case ISD::TRUNCATE: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known = Known.trunc(BitWidth);
