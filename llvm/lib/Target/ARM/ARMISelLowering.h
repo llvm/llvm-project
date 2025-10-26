@@ -708,7 +708,6 @@ class VectorType;
     bool useLoadStackGuardNode(const Module &M) const override;
 
     void insertSSPDeclarations(Module &M) const override;
-    Function *getSSPStackGuardCheck(const Module &M) const override;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;

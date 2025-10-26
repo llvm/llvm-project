@@ -52,7 +52,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -681,7 +681,7 @@ def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -714,7 +714,7 @@ def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -744,7 +744,7 @@ def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -774,7 +774,7 @@ def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -804,7 +804,7 @@ def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -835,7 +835,7 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"intdiv", [SameOperandsAndResultElementTy
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -897,7 +897,7 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -927,7 +927,7 @@ def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -1018,7 +1018,7 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
   let hasCustomAssemblyFormat = 1;
 }
@@ -1048,7 +1048,7 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasCustomAssemblyFormat = 1;
@@ -1082,7 +1082,7 @@ def Tosa_MulOp : Tosa_Op<"mul", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1143,7 +1143,7 @@ def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1228,7 +1228,7 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1256,7 +1256,7 @@ def Tosa_BitwiseNotOp : Tosa_ElementwiseUnaryOp<"bitwise_not"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -1308,7 +1308,7 @@ def Tosa_ClzOp : Tosa_ElementwiseUnaryOp<"clz"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT]>,
-    Extension<[]>,
+    Extension<[Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
@@ -1468,7 +1468,7 @@ def Tosa_NegateOp : Tosa_InferShapedTypeOp<"negate", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let builders = [Tosa_NegateOpQuantInfoBuilder];
@@ -1604,7 +1604,7 @@ def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizeMethod = 1;
@@ -1654,7 +1654,7 @@ def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let extraClassDeclaration = [{
@@ -1689,7 +1689,7 @@ def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1719,7 +1719,7 @@ def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1835,7 +1835,7 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1877,7 +1877,7 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -1959,7 +1959,7 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -2005,7 +2005,7 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -2061,7 +2061,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let builders = [Tosa_PadOpQuantInfoBuilder];
@@ -2099,7 +2099,7 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let extraClassDeclaration = [{
@@ -2136,7 +2136,7 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -2169,7 +2169,7 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -2200,7 +2200,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let extraClassDeclaration = [{
@@ -2239,7 +2239,7 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasCanonicalizer = 1;
@@ -2278,7 +2278,7 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasVerifier = 1;
@@ -2316,7 +2316,7 @@ def Tosa_ScatterOp : Tosa_InferShapedTypeOp<"scatter"> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let hasVerifier = 1;
@@ -2462,12 +2462,75 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: cast_from_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastFromBlockScaledOp: Tosa_InferShapedTypeOp<"cast_from_block_scaled"> {
+  let summary = "Apply scales from a scale tensor to the values in a value tensor";
+
+  let description = [{
+    Apply the scales from a scale tensor to the values in a value tensor, casting
+    the result to the output type. The block dimension must be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensorAtLeast1D:$input_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$input_scale,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_TensorAtLeast1D: $output_data
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>,
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: cast_to_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastToBlockScaledOp : Tosa_InferShapedTypeOp<"cast_to_block_scaled"> {
+  let summary = "Calculate scale tensor values per block, output to separate scale and data tensors.";
+
+  let description = [{
+    Calculate a scale value per block of input values and use that to calculate
+    scaled data values from an input tensor. The output tensors are cast to the
+    specified scale and value types. The block dimension will be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D:$input_data,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_MXFPDataTensorAtLeast1D:$output_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$output_scale
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2578,7 +2641,7 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
   ];
 
   let hasFolder = 1;
@@ -2606,7 +2669,7 @@ def Tosa_IdentityOp: Tosa_Op<"identity", [Pure,
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16]>,
+    Extension<[Tosa_EXT_INT4, Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
   ];
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
