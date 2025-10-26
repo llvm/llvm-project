@@ -16,6 +16,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/YAMLGenerateSchema.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <optional>
@@ -87,7 +88,7 @@ struct NOptionMap {
 template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
              EmptyContext &Ctx) {
-  if (IO.outputting()) {
+  if (IO.getKind() == IOKind::Outputting) {
     // Ensure check options are sorted
     std::vector<std::pair<StringRef, StringRef>> SortedOptions;
     SortedOptions.reserve(Val.size());
@@ -108,7 +109,7 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
       IO.postflightKey(SaveInfo);
     }
     IO.endMapping();
-  } else {
+  } else if (IO.getKind() == IOKind::Inputting) {
     // We need custom logic here to support the old method of specifying check
     // options using a list of maps containing key and value keys.
     auto &I = reinterpret_cast<Input &>(IO);
@@ -128,6 +129,11 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
     } else {
       IO.setError("expected a sequence or map");
     }
+  } else {
+    MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(IO,
+                                                                        Val);
+    EmptyContext Ctx;
+    yamlize(IO, NOpts->Options, true, Ctx);
   }
 }
 
@@ -184,7 +190,7 @@ struct ChecksVariant {
 };
 
 template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
-  if (!IO.outputting()) {
+  if (IO.getKind() == IOKind::Inputting) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list
     auto &I = reinterpret_cast<Input &>(IO);
@@ -197,6 +203,9 @@ template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
     } else {
       IO.setError("expected string or sequence");
     }
+  } else if (IO.getKind() == IOKind::GeneratingSchema) {
+    Val.AsVector = std::vector<std::string>();
+    yamlize(IO, *Val.AsVector, true, Ctx);
   }
 }
 
@@ -541,6 +550,12 @@ parseConfiguration(llvm::MemoryBufferRef Config) {
   if (Input.error())
     return Input.error();
   return Options;
+}
+
+void dumpConfigurationYAMLSchema(llvm::raw_ostream &Stream) {
+  ClangTidyOptions Options;
+  llvm::yaml::GenerateSchema GS(Stream);
+  GS << Options;
 }
 
 static void diagHandlerImpl(const llvm::SMDiagnostic &Diag, void *Ctx) {
