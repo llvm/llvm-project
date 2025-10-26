@@ -537,8 +537,8 @@ void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
   I = MCInst();
   I.setOpcode(PPC::LD);
   I.addOperand(R(R12));                         // dst
-  I.addOperand(MCOperand::createExpr(LO));      // imm/expr
   I.addOperand(R(R12));                         // base
+  I.addOperand(MCOperand::createExpr(LO));      // imm/expr
   Out.push_back(I);
 
   // mtctr r12
