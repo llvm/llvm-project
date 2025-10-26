@@ -428,6 +428,11 @@ RTLIB::Libcall RTLIB::getSINCOSPI(EVT RetVT) {
                       SINCOSPI_F128, SINCOSPI_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getSINCOS_STRET(EVT RetVT) {
+  return getFPLibCall(RetVT, SINCOS_STRET_F32, SINCOS_STRET_F64,
+                      UNKNOWN_LIBCALL, UNKNOWN_LIBCALL, UNKNOWN_LIBCALL);
+}
+
 RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
   return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
                       MODF_PPCF128);
