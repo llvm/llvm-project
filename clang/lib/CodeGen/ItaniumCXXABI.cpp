@@ -30,6 +30,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenShared/ItaniumCXXABIShared.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
@@ -43,7 +44,7 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace {
-class ItaniumCXXABI : public CodeGen::CGCXXABI {
+class ItaniumCXXABI : public ItaniumCXXABIShared<CodeGen::CGCXXABI> {
   /// VTables - All the vtables which have been defined.
   llvm::DenseMap<const CXXRecordDecl *, llvm::GlobalVariable *> VTables;
 
@@ -61,12 +62,11 @@ protected:
   }
 
 public:
-  ItaniumCXXABI(CodeGen::CodeGenModule &CGM,
-                bool UseARMMethodPtrABI = false,
-                bool UseARMGuardVarABI = false) :
-    CGCXXABI(CGM), UseARMMethodPtrABI(UseARMMethodPtrABI),
-    UseARMGuardVarABI(UseARMGuardVarABI),
-    Use32BitVTableOffsetABI(false) { }
+  ItaniumCXXABI(CodeGen::CodeGenModule &CGM, bool UseARMMethodPtrABI = false,
+                bool UseARMGuardVarABI = false)
+      : ItaniumCXXABIShared<CodeGen::CGCXXABI>(CGM),
+        UseARMMethodPtrABI(UseARMMethodPtrABI),
+        UseARMGuardVarABI(UseARMGuardVarABI), Use32BitVTableOffsetABI(false) {}
 
   bool classifyReturnType(CGFunctionInfo &FI) const override;
 
@@ -75,50 +75,6 @@ public:
     if (!RD->canPassInRegisters())
       return RAA_Indirect;
     return RAA_Default;
-  }
-
-  bool isThisCompleteObject(GlobalDecl GD) const override {
-    // The Itanium ABI has separate complete-object vs.  base-object
-    // variants of both constructors and destructors.
-    if (isa<CXXDestructorDecl>(GD.getDecl())) {
-      switch (GD.getDtorType()) {
-      case Dtor_Complete:
-      case Dtor_Deleting:
-        return true;
-
-      case Dtor_Base:
-        return false;
-
-      case Dtor_Comdat:
-        llvm_unreachable("emitting dtor comdat as function?");
-      case Dtor_Unified:
-        llvm_unreachable("emitting unified dtor as function?");
-      }
-      llvm_unreachable("bad dtor kind");
-    }
-    if (isa<CXXConstructorDecl>(GD.getDecl())) {
-      switch (GD.getCtorType()) {
-      case Ctor_Complete:
-        return true;
-
-      case Ctor_Base:
-        return false;
-
-      case Ctor_CopyingClosure:
-      case Ctor_DefaultClosure:
-        llvm_unreachable("closure ctors in Itanium ABI?");
-
-      case Ctor_Comdat:
-        llvm_unreachable("emitting ctor comdat as function?");
-
-      case Ctor_Unified:
-        llvm_unreachable("emitting unified ctor as function?");
-      }
-      llvm_unreachable("bad dtor kind");
-    }
-
-    // No other kinds.
-    return false;
   }
 
   bool isZeroInitializable(const MemberPointerType *MPT) override;
@@ -263,13 +219,6 @@ public:
   buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) override;
 
-  bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
-                              CXXDtorType DT) const override {
-    // Itanium does not emit any destructor variant as an inline thunk.
-    // Delegating may occur as an optimization, but all variants are either
-    // emitted with external linkage or as linkonce if they are inline and used.
-    return false;
-  }
 
   void EmitCXXDestructors(const CXXDestructorDecl *D) override;
 
@@ -301,9 +250,6 @@ public:
   bool isVirtualOffsetNeededForVTableField(CodeGenFunction &CGF,
                                            CodeGenFunction::VPtr Vptr) override;
 
-  bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
-    return true;
-  }
 
   llvm::Constant *
   getVTableAddressPoint(BaseSubobject Base,
@@ -395,8 +341,6 @@ public:
   }
   LValue EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF, const VarDecl *VD,
                                       QualType LValType) override;
-
-  bool NeedsVTTParameter(GlobalDecl GD) override;
 
   llvm::Constant *
   getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD);
@@ -3405,26 +3349,6 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
                                CGF.getContext().getDeclAlign(VD));
   // FIXME: need setObjCGCLValueClass?
   return LV;
-}
-
-/// Return whether the given global decl needs a VTT parameter, which it does
-/// if it's a base constructor or destructor with virtual bases.
-bool ItaniumCXXABI::NeedsVTTParameter(GlobalDecl GD) {
-  const CXXMethodDecl *MD = cast<CXXMethodDecl>(GD.getDecl());
-
-  // We don't have any virtual bases, just return early.
-  if (!MD->getParent()->getNumVBases())
-    return false;
-
-  // Check if we have a base constructor.
-  if (isa<CXXConstructorDecl>(MD) && GD.getCtorType() == Ctor_Base)
-    return true;
-
-  // Check if we have a base destructor.
-  if (isa<CXXDestructorDecl>(MD) && GD.getDtorType() == Dtor_Base)
-    return true;
-
-  return false;
 }
 
 llvm::Constant *

@@ -833,7 +833,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
 
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
   if (md && md->isInstance()) {
-    if (cgm.getCXXABI().hasThisReturn(gd))
+    if (cgm.getCXXABI().HasThisReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "this return");
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "most derived return");
