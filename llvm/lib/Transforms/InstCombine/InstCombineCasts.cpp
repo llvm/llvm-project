@@ -1528,14 +1528,14 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   }
 
   // Try to extend the entire expression tree to the wide destination type.
-  bool shouldExtendExpression = true;
+  bool ShouldExtendExpression = true;
   Value *TruncSrc = nullptr;
   // It is not desirable to extend expression in the trunc + sext pattern when
   // destination type is narrower than original (pre-trunc) type.
   if (match(Src, m_Trunc(m_Value(TruncSrc))))
     if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
-      shouldExtendExpression = false;
-  if (shouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+      ShouldExtendExpression = false;
+  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
       canEvaluateSExtd(Src, DestTy)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
