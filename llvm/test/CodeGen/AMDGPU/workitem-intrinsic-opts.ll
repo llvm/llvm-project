@@ -9,77 +9,36 @@
 
 ; (workitem_id_x | workitem_id_y | workitem_id_z) == 0
 define i1 @workitem_zero() {
-; DAGISEL-GFX8-LABEL: workitem_zero:
-; DAGISEL-GFX8:       ; %bb.0: ; %entry
-; DAGISEL-GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL-GFX8-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
-; DAGISEL-GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; DAGISEL-GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; DAGISEL-GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-LABEL: workitem_zero:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
+; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; DAGISEL-GFX942-LABEL: workitem_zero:
-; DAGISEL-GFX942:       ; %bb.0: ; %entry
-; DAGISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL-GFX942-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
-; DAGISEL-GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; DAGISEL-GFX942-NEXT:    s_nop 1
-; DAGISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; DAGISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
+; GFX942-LABEL: workitem_zero:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
+; GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; DAGISEL-GFX12-LABEL: workitem_zero:
-; DAGISEL-GFX12:       ; %bb.0: ; %entry
-; DAGISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_expcnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL-GFX12-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
-; DAGISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DAGISEL-GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffd
-; DAGISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX8-LABEL: workitem_zero:
-; GISEL-GFX8:       ; %bb.0: ; %entry
-; GISEL-GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX8-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GISEL-GFX8-NEXT:    v_bfe_u32 v1, v31, 10, 10
-; GISEL-GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
-; GISEL-GFX8-NEXT:    v_bfe_u32 v1, v31, 20, 10
-; GISEL-GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
-; GISEL-GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GISEL-GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GISEL-GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX942-LABEL: workitem_zero:
-; GISEL-GFX942:       ; %bb.0: ; %entry
-; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX942-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GISEL-GFX942-NEXT:    v_bfe_u32 v1, v31, 10, 10
-; GISEL-GFX942-NEXT:    v_bfe_u32 v2, v31, 20, 10
-; GISEL-GFX942-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GISEL-GFX942-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GISEL-GFX942-NEXT:    s_nop 1
-; GISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX12-LABEL: workitem_zero:
-; GISEL-GFX12:       ; %bb.0: ; %entry
-; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GISEL-GFX12-NEXT:    v_bfe_u32 v1, v31, 10, 10
-; GISEL-GFX12-NEXT:    v_bfe_u32 v2, v31, 20, 10
-; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-GFX12-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GISEL-GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GISEL-GFX12-NEXT:    s_wait_alu 0xfffd
-; GISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: workitem_zero:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %1 = tail call i32 @llvm.amdgcn.workitem.id.y()
@@ -92,77 +51,36 @@ entry:
 
 ; (workitem_id_x | workitem_id_y | workitem_id_z) != 0
 define i1 @workitem_nonzero() {
-; DAGISEL-GFX8-LABEL: workitem_nonzero:
-; DAGISEL-GFX8:       ; %bb.0: ; %entry
-; DAGISEL-GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL-GFX8-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
-; DAGISEL-GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; DAGISEL-GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; DAGISEL-GFX8-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-LABEL: workitem_nonzero:
+; GFX8:       ; %bb.0: ; %entry
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
+; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; DAGISEL-GFX942-LABEL: workitem_nonzero:
-; DAGISEL-GFX942:       ; %bb.0: ; %entry
-; DAGISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; DAGISEL-GFX942-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
-; DAGISEL-GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; DAGISEL-GFX942-NEXT:    s_nop 1
-; DAGISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; DAGISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
+; GFX942-LABEL: workitem_nonzero:
+; GFX942:       ; %bb.0: ; %entry
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
+; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
-; DAGISEL-GFX12-LABEL: workitem_nonzero:
-; DAGISEL-GFX12:       ; %bb.0: ; %entry
-; DAGISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_expcnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
-; DAGISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; DAGISEL-GFX12-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
-; DAGISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DAGISEL-GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffd
-; DAGISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX8-LABEL: workitem_nonzero:
-; GISEL-GFX8:       ; %bb.0: ; %entry
-; GISEL-GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX8-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GISEL-GFX8-NEXT:    v_bfe_u32 v1, v31, 10, 10
-; GISEL-GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
-; GISEL-GFX8-NEXT:    v_bfe_u32 v1, v31, 20, 10
-; GISEL-GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
-; GISEL-GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GISEL-GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX942-LABEL: workitem_nonzero:
-; GISEL-GFX942:       ; %bb.0: ; %entry
-; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX942-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GISEL-GFX942-NEXT:    v_bfe_u32 v1, v31, 10, 10
-; GISEL-GFX942-NEXT:    v_bfe_u32 v2, v31, 20, 10
-; GISEL-GFX942-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GISEL-GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-GFX942-NEXT:    s_nop 1
-; GISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; GISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX12-LABEL: workitem_nonzero:
-; GISEL-GFX12:       ; %bb.0: ; %entry
-; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GISEL-GFX12-NEXT:    v_bfe_u32 v1, v31, 10, 10
-; GISEL-GFX12-NEXT:    v_bfe_u32 v2, v31, 20, 10
-; GISEL-GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-GFX12-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GISEL-GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GISEL-GFX12-NEXT:    s_wait_alu 0xfffd
-; GISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GISEL-GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: workitem_nonzero:
+; GFX12:       ; %bb.0: ; %entry
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v31
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %0 = tail call i32 @llvm.amdgcn.workitem.id.x()
   %1 = tail call i32 @llvm.amdgcn.workitem.id.y()
