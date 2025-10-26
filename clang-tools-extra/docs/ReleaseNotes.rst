@@ -221,6 +221,11 @@ New checks
 
   Detect redundant parentheses.
 
+- New :doc:`portability-avoid-unprototyped-functions
+  <clang-tidy/checks/portability/avoid-unprototyped-functions>` check.
+
+  Checks if unprototyped function types are used in the source code.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
