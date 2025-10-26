@@ -51,17 +51,8 @@ type_id = type_specifier_seq [abstract_declarator] ;
 
 type_specifier_seq = type_specifier [type_specifier];
 
-type_specifier = ["::"] [nested_name_specifier] type_name;
-               | "char"
-               | "bool"
-               | "short"
-               | "int"
-               | "long"
-               | "signed"
-               | "unsigned"
-               | "float"
-               | "double"
-               | "void" ;
+type_specifier = ["::"] [nested_name_specifier] type_name
+               | builtin_typename ;
 
 nested_name_specifier = type_name "::"
                       | namespace_name "::"
@@ -76,6 +67,8 @@ type_name = class_name
           | enum_name
           | typedef_name;
 
+builtin_typename = identifier_seq;
+
 class_name = identifier ;
 
 enum_name = identifier ;
@@ -84,6 +77,7 @@ typedef_name = identifier ;
 
 namespace_name = identifier ;
 
-
+identifier_seq = identifier
+               | identifier identifier_seq;
 
 
