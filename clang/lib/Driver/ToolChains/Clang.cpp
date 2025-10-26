@@ -6399,6 +6399,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_foperator_arrow_depth_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_depth_EQ);
   Args.AddLastArg(CmdArgs, options::OPT_fconstexpr_steps_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fexpansion_limit_EQ);
 
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_library);
 

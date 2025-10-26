@@ -45,6 +45,18 @@ struct IterableExpansionStmtData {
 };
 } // namespace
 
+static bool CheckExpansionSize(Sema &S, uint64_t NumInstantiations,
+                               SourceLocation Loc) {
+  unsigned Max = S.LangOpts.MaxTemplateForExpansions;
+  if (Max != 0 && NumInstantiations > Max) {
+    S.Diag(Loc, diag::err_expansion_too_big) << NumInstantiations << Max;
+    S.Diag(Loc, diag::note_use_fexpansion_limit);
+    return true;
+  }
+
+  return false;
+}
+
 // Build a 'DeclRefExpr' designating the template parameter '__N'.
 static DeclRefExpr *BuildIndexDRE(Sema &S, ExpansionStmtDecl *ESD) {
   return S.BuildDeclRefExpr(ESD->getIndexTemplateParm(),
@@ -197,6 +209,9 @@ static StmtResult BuildDestructuringExpansionStmtDecl(
         << ExpansionInitializer->getSourceRange();
     return StmtError();
   }
+
+  if (CheckExpansionSize(S, *Arity, ColonLoc))
+    return StmtError();
 
   QualType AutoRRef = S.Context.getAutoRRefDeductType();
   SmallVector<BindingDecl *> Bindings;
@@ -403,17 +418,8 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
   if (!NumInstantiations)
     return StmtError();
 
-  // TODO: Actually make this configurable. It is set to 32 for now so our
-  // tests don't take for ever to run; we should pick a larger default value
-  // once we add an option for this and then pass '-fexpansion-limit=32' to
-  // the tests.
-  static constexpr uint64_t MaxExpansionSize = 32;
-  if (MaxExpansionSize != 0 && *NumInstantiations > MaxExpansionSize) {
-    Diag(Expansion->getColonLoc(), diag::err_expansion_too_big)
-        << *NumInstantiations << MaxExpansionSize;
-    Diag(Expansion->getColonLoc(), diag::note_use_fexpansion_limit);
+  if (CheckExpansionSize(*this, *NumInstantiations, Expansion->getColonLoc()))
     return StmtError();
-  }
 
   // Collect shared statements.
   SmallVector<Stmt*, 1> Shared;

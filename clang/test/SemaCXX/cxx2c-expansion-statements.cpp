@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -fdeclspec -fblocks -fexpansion-limit=32 -verify
 namespace std {
 template <typename T>
 struct initializer_list {
@@ -192,6 +192,9 @@ void expansion_size() {
     11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
     21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
     31, 32, 33}) g(x);
+
+  int huge[1'000'000'000];
+  template for (auto x : huge) {} // expected-error {{expansion size 1000000000 exceeds maximum configured size 32}} expected-note {{use -fexpansion-limit=N to adjust this limit}}
 }
 
 struct NotInt {

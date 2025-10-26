@@ -2049,6 +2049,10 @@ def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of steps in constexpr function evaluation (0 = no limit)">,
   MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
+def fexpansion_limit_EQ : Joined<["-"], "fexpansion-limit=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Set the maximum number of times a single expansion statement may be expanded (0 = no limit)">,
+  MarshallingInfoInt<LangOpts<"MaxTemplateForExpansions">, "256">;
 def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-constant-interpreter">, Group<f_Group>,
   HelpText<"Enable the experimental new constant interpreter">,
   Visibility<[ClangOption, CC1Option]>,

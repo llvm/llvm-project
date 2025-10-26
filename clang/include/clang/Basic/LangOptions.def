@@ -376,6 +376,7 @@ LANGOPT(ConstexprCallDepth, 32, 512, Benign,
         "maximum constexpr call depth")
 LANGOPT(ConstexprStepLimit, 32, 1048576, Benign,
         "maximum constexpr evaluation steps")
+LANGOPT(MaxTemplateForExpansions, 32, 256, Benign, "maximum template for expansions")
 LANGOPT(EnableNewConstInterp, 1, 0, Benign,
         "enable the experimental new constant interpreter")
 LANGOPT(BracketDepth, 32, 256, Benign,
