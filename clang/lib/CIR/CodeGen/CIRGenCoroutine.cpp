@@ -55,7 +55,7 @@ cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
   if (!builtin) {
     fnOp = cgm.createCIRBuiltinFunction(
         loc, cgm.builtinCoroId,
-        cir::FuncType::get({int32Ty, VoidPtrTy, VoidPtrTy, VoidPtrTy}, int32Ty),
+        cir::FuncType::get({int32Ty, voidPtrTy, voidPtrTy, voidPtrTy}, int32Ty),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
@@ -75,7 +75,7 @@ cir::CallOp CIRGenFunction::emitCoroAllocBuiltinCall(mlir::Location loc) {
   cir::FuncOp fnOp;
   if (!builtin) {
     fnOp = cgm.createCIRBuiltinFunction(loc, cgm.builtinCoroAlloc,
-                                        cir::FuncType::get({UInt32Ty}, boolTy),
+                                        cir::FuncType::get({uInt32Ty}, boolTy),
                                         /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
@@ -95,7 +95,7 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
   if (!builtin) {
     fnOp = cgm.createCIRBuiltinFunction(
         loc, cgm.builtinCoroBegin,
-        cir::FuncType::get({UInt32Ty, VoidPtrTy}, VoidPtrTy),
+        cir::FuncType::get({uInt32Ty, voidPtrTy}, voidPtrTy),
         /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
@@ -110,7 +110,7 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
 mlir::LogicalResult
 CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::Location openCurlyLoc = getLoc(s.getBeginLoc());
-  cir::ConstantOp nullPtrCst = builder.getNullPtr(VoidPtrTy, openCurlyLoc);
+  cir::ConstantOp nullPtrCst = builder.getNullPtr(voidPtrTy, openCurlyLoc);
 
   auto fn = mlir::cast<cir::FuncOp>(curFn);
   fn.setCoroutine(true);
