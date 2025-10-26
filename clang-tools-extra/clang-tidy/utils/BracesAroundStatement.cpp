@@ -139,7 +139,7 @@ BraceInsertionHints getBraceInsertionsHints(const Stmt *const S,
 
   // StartLoc points at the location of the opening brace to be inserted.
   SourceLocation EndLoc;
-  std::string ClosingInsertion;
+  StringRef ClosingInsertion;
   if (EndLocHint.isValid()) {
     EndLoc = EndLocHint;
     ClosingInsertion = "} ";
