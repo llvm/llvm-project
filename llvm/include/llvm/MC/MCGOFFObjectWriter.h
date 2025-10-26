@@ -21,7 +21,7 @@ protected:
   MCGOFFObjectTargetWriter() = default;
 
 public:
-  virtual ~MCGOFFObjectTargetWriter() = default;
+  ~MCGOFFObjectTargetWriter() override = default;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::GOFF; }
 

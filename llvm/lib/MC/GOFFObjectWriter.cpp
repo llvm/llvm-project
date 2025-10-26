@@ -440,7 +440,7 @@ public:
     SetBuffer(Buffer, sizeof(Buffer));
   }
 
-  ~TextStream() { flush(); }
+  ~TextStream() override { flush(); }
 };
 } // namespace
 

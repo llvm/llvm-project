@@ -62,7 +62,7 @@ protected:
                           bool HasRelocationAddend_, uint8_t ABIVersion_ = 0);
 
 public:
-  virtual ~MCELFObjectTargetWriter() = default;
+  ~MCELFObjectTargetWriter() override = default;
 
   Triple::ObjectFormatType getFormat() const override { return Triple::ELF; }
   static bool classof(const MCObjectTargetWriter *W) {
