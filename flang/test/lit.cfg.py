@@ -139,18 +139,63 @@ config.substitutions.append(("%isysroot", " ".join(isysroot_flag)))
 if config.default_sysroot:
     config.available_features.add("default_sysroot")
 
+
+flang_exe = lit.util.which("flang", config.flang_llvm_tools_dir)
+if not flang_exe:
+    lit_config.fatal(f"Could not identify flang executable")
+
+
+def get_resource_module_intrinsic_dir():
+    # Determine the intrinsic module search path that is added by the driver. If
+    # skipping the driver using -fc1, we need to append the path manually.
+    flang_intrinsics_dir = subprocess.check_output(
+        [flang_exe, "-print-file-name=__fortran_builtins.mod"], text=True
+    ).strip()
+    if not flang_intrinsics_dir:
+        return None
+    flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
+    return flang_intrinsics_dir
+
+
+intrinsics_search_args = []
+if flang_intrinsics_dir := get_resource_module_intrinsic_dir():
+    intrinsics_search_args += [f"-fintrinsic-modules-path={flang_intrinsics_dir}"]
+    lit_config.note(f"using default module intrinsics: {flang_intrinsics_dir}")
+
+extra_intrinsics_search_args = []
+if config.flang_intrinsic_modules_dir:
+    extra_intrinsics_search_args += [
+        f"-fintrinsic-modules-path={config.flang_intrinsic_modules_dir}",
+    ]
+    lit_config.note(
+        f"using extra module intrinsics: {config.flang_intrinsic_modules_dir}"
+    )
+
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
 tools = [
     ToolSubst(
+        "bbc",
+        command=FindTool("bbc"),
+        extra_args=intrinsics_search_args + extra_intrinsics_search_args,
+        unresolved="fatal",
+    ),
+    ToolSubst(
         "%flang",
         command=FindTool("flang"),
+        extra_args=extra_intrinsics_search_args,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
         command=FindTool("flang"),
-        extra_args=["-fc1"],
+        extra_args=["-fc1"] + intrinsics_search_args + extra_intrinsics_search_args,
+        unresolved="fatal",
+    ),
+    # Do not implicitly add intrinsic search paths
+    ToolSubst(
+        "%bbc_bare",
+        command=FindTool("bbc"),
         unresolved="fatal",
     ),
 ]
@@ -193,15 +238,30 @@ result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
 
+# If intrinsic modules are not available, disable tests unless they are marked as 'module-independent'.
+config.available_features.add("module-independent")
+if config.have_flangrt_mod or config.flang_intrinsic_modules_dir:
+    config.available_features.add("flangrt-modules")
+else:
+    lit_config.warning(f"Intrinsic modules not available: disabling most tests")
+    config.limit_to_features.add("module-independent")
+
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
 openmp_flags_substitution = "-fopenmp"
-if config.have_openmp_rtl:
-    config.available_features.add("openmp_runtime")
-    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
-    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
-    # project or runtime.
-    if config.openmp_module_dir:
-        openmp_flags_substitution += f" -J {config.openmp_module_dir}"
+if not config.have_openmp_rtl:
+  lit_config.warning(f"OpenMP runtime not available: tests disabled")
+elif not config.openmp_module_dir:
+  lit_config.warning(f"OpenMP modules not available: tests disabled")
+else:
+  # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
+  # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
+  # project or runtime.
+  config.available_features.add("openmp_runtime")
+  openmp_flags_substitution += f" -J {config.openmp_module_dir}"
+  lit_config.note(f"Using OpenMP modules: {config.openmp_module_dir}")
+
+
+
 config.substitutions.append(("%openmp_flags", openmp_flags_substitution))
 
 # Add features and substitutions to test F128 math support.
