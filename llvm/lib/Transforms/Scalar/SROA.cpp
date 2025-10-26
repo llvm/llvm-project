@@ -122,6 +122,12 @@ namespace llvm {
 /// Disable running mem2reg during SROA in order to test or debug SROA.
 static cl::opt<bool> SROASkipMem2Reg("sroa-skip-mem2reg", cl::init(false),
                                      cl::Hidden);
+/// Maximum struct size in bytes to canonicalize homogeneous structs to vectors.
+/// 0 disables the transformation to avoid regressions by default.
+static cl::opt<unsigned> SROAMaxStructToVectorBytes(
+    "sroa-max-struct-to-vector-bytes", cl::init(0), cl::Hidden,
+    cl::desc("Max struct size in bytes to canonicalize homogeneous structs to "
+             "fixed vectors (0=disable)"));
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 } // namespace llvm
 
@@ -5266,6 +5272,57 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
       IsIntegerPromotable ? nullptr : isVectorPromotionViable(P, DL, VScale);
   if (VecTy)
     SliceTy = VecTy;
+
+  // Canonicalize homogeneous, tightly-packed 2- or 4-field structs to
+  // a fixed-width vector type when the DataLayout proves bitwise identity.
+  // Do this BEFORE the alloca reuse fast-path so that we don't miss
+  // opportunities to vectorize memcpy on allocas whose SliceTy initially
+  // equals the allocated type.
+  if (SROAMaxStructToVectorBytes) {
+    if (auto *STy = dyn_cast<StructType>(SliceTy)) {
+      unsigned NumElts = STy->getNumElements();
+      if (NumElts == 2 || NumElts == 4) {
+        Type *EltTy =
+            STy->getNumElements() > 0 ? STy->getElementType(0) : nullptr;
+        bool IsAllowedElt = false;
+        if (EltTy && VectorType::isValidElementType(EltTy)) {
+          if (auto *IT = dyn_cast<IntegerType>(EltTy))
+            IsAllowedElt = IT->getBitWidth() >= 8;
+          else if (EltTy->isFloatingPointTy())
+            IsAllowedElt = true;
+        }
+        bool AllSame = IsAllowedElt;
+        for (unsigned I = 1; AllSame && I < NumElts; ++I)
+          if (STy->getElementType(I) != EltTy)
+            AllSame = false;
+        if (AllSame) {
+          const StructLayout *SL = DL.getStructLayout(STy);
+          TypeSize EltTS = DL.getTypeAllocSize(EltTy);
+          if (EltTS.isFixed()) {
+            const uint64_t EltSize = EltTS.getFixedValue();
+            if (EltSize >= 1) {
+              const uint64_t StructSize = SL->getSizeInBytes();
+              if (StructSize != 0 && StructSize <= SROAMaxStructToVectorBytes) {
+                bool TightlyPacked = (StructSize == NumElts * EltSize);
+                if (TightlyPacked) {
+                  for (unsigned I = 0; I < NumElts; ++I) {
+                    if (SL->getElementOffset(I) != I * EltSize) {
+                      TightlyPacked = false;
+                      break;
+                    }
+                  }
+                }
+                if (TightlyPacked) {
+                  Type *NewSliceTy = FixedVectorType::get(EltTy, NumElts);
+                  SliceTy = NewSliceTy;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
