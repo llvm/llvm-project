@@ -600,10 +600,7 @@ struct Variant {
 namespace std {
 
 template <> struct hash<llvm::pdb::PDB_SymType> {
-  using argument_type = llvm::pdb::PDB_SymType;
-  using result_type = std::size_t;
-
-  result_type operator()(const argument_type &Arg) const {
+  std::size_t operator()(const llvm::pdb::PDB_SymType &Arg) const {
     return std::hash<int>()(static_cast<int>(Arg));
   }
 };
