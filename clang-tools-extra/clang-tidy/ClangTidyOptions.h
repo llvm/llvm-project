@@ -112,6 +112,9 @@ struct ClangTidyOptions {
   /// comments in the relevant check.
   std::optional<std::string> User;
 
+  /// \brief Remove command line arguments sent to the compiler matching this.
+  std::optional<std::vector<std::string>> RemovedArgs;
+
   /// Helper structure for storing option value with priority of the value.
   struct ClangTidyValue {
     ClangTidyValue() = default;
