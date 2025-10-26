@@ -556,7 +556,7 @@ I.addOperand(MCOperand::createImm(24));
  I.setOpcode(PPC::LD);
  I.addOperand(R(R2));                                   // dst
  I.addOperand(R(PPC::X1));                              // base  (D/DS form uses base as #2)
- I.addOperand(MCOperand::createImm(24));
+ I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx)));
   Out.push_back(I);
 
   // blr                 ; return to caller
