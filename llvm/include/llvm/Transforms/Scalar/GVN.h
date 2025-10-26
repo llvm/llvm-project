@@ -292,12 +292,14 @@ private:
         Current = Current->Next;
         return *this;
       }
+#ifndef __swift__
       bool operator==(const leader_iterator &Other) const {
         return Current == Other.Current;
       }
       bool operator!=(const leader_iterator &Other) const {
         return Current != Other.Current;
       }
+#endif
       reference operator*() const { return Current->Entry; }
     };
 
