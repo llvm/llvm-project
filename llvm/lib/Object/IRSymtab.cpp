@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Comdat.h"
@@ -75,12 +76,14 @@ struct Builder {
   Builder(SmallVector<char, 0> &Symtab, StringTableBuilder &StrtabBuilder,
           BumpPtrAllocator &Alloc, const Triple &TT)
       : Symtab(Symtab), StrtabBuilder(StrtabBuilder), Saver(Alloc), TT(TT),
-        Libcalls(TT) {}
+        TLII(TT), TLI(TLII), Libcalls(TT) {}
 
   DenseMap<const Comdat *, int> ComdatMap;
   Mangler Mang;
   const Triple &TT;
 
+  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfo TLI;
   // FIXME: This shouldn't be here.
   RTLIB::RuntimeLibcallsInfo Libcalls;
 
@@ -95,6 +98,9 @@ struct Builder {
   std::vector<storage::Str> DependentLibraries;
 
   bool isPreservedName(StringRef Name) {
+    LibFunc F;
+    if (TLI.getLibFunc(Name, F) && TLI.has(F))
+      return true;
     return Libcalls.getSupportedLibcallImpl(Name) != RTLIB::Unsupported;
   }
 
