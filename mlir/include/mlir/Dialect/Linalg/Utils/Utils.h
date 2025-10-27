@@ -33,6 +33,7 @@ namespace linalg {
 //===----------------------------------------------------------------------===//
 // Utilities for inferring various semantics properties of Linalg ops.
 //===----------------------------------------------------------------------===//
+
 /// Compute inverse permutation for the destination tensor (i.e. in the packed
 /// domain).
 SmallVector<int64_t> getPackInverseDestPerm(linalg::PackOp packOp,
