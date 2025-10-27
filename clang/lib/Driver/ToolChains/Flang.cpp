@@ -945,6 +945,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
     assert(false && "Unexpected action class for Flang tool.");
   }
 
+  // We support some options that are invalid for Fortran and have no effect.
+  // These are solely for compatibility with other compilers. Emit a warning if
+  // any such options are provided, then proceed normally.
+  for (options::ID Opt : {options::OPT_fbuiltin, options::OPT_fno_builtin})
+    if (const Arg *A = Args.getLastArg(Opt))
+      D.Diag(diag::warn_drv_invalid_argument_for_flang) << A->getSpelling();
+
   const InputInfo &Input = Inputs[0];
   types::ID InputType = Input.getType();
 

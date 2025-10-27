@@ -13,3 +13,16 @@
 ! CHECK-PROFILE-GENERATE-LLVM: "-fprofile-generate"
 ! RUN: %flang -### -S -fprofile-use=%S %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
 ! CHECK-PROFILE-USE-DIR: "-fprofile-use={{.*}}"
+
+! RUN: %flang -### -fbuiltin %s 2>&1 \
+! RUN:     | FileCheck %s -check-prefix=WARN-BUILTIN
+! WARN-BUILTIN: warning: '-fbuiltin' is not valid for Fortran
+
+! RUN: %flang -### -fno-builtin %s 2>&1 \
+! RUN:     | FileCheck %s -check-prefix=WARN-NO-BUILTIN
+! WARN-NO-BUILTIN: warning: '-fno-builtin' is not valid for Fortran
+
+! RUN: %flang -### -fbuiltin -fno-builtin %s 2>&1 \
+! RUN:     | FileCheck %s -check-prefix=WARN-BUILTIN-MULTIPLE
+! WARN-BUILTIN-MULTIPLE: warning: '-fbuiltin' is not valid for Fortran
+! WARN-BUILTIN-MULTIPLE: warning: '-fno-builtin' is not valid for Fortran
