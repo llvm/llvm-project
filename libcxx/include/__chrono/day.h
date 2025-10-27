@@ -98,9 +98,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr day& day::operator-=(const days& __dd) no
 
 template <>
 struct hash<chrono::day> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::day& __d) noexcept {
-    return hash<unsigned>{}(static_cast<unsigned>(__d));
-  }
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::day& __d) noexcept { return static_cast<unsigned>(__d); }
 };
 
 #  endif // _LIBCPP_STD_VER >= 26
