@@ -79,6 +79,11 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
+static cl::opt<bool>
+    EnableCondOpt("arm-enable-condopt",
+                  cl::desc("Enable the condition optimizer pass"),
+                  cl::init(true), cl::Hidden);
+
 namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
@@ -98,6 +103,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
+  initializeARMConditionOptimizerPass(Registry);
   initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
@@ -309,6 +315,7 @@ public:
   void addIRPasses() override;
   void addCodeGenPrepare() override;
   bool addPreISel() override;
+  bool addILPOpts() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
@@ -430,6 +437,12 @@ bool ARMPassConfig::addPreISel() {
     addPass(createBarrierNoopPass());
   }
 
+  return false;
+}
+
+bool ARMPassConfig::addILPOpts() {
+  if (EnableCondOpt)
+    addPass(createARMConditionOptimizerPass());
   return false;
 }
 
