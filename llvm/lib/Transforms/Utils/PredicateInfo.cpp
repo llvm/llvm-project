@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/Dominators.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/raw_ostream.h"
 #define DEBUG_TYPE "predicateinfo"
 using namespace llvm;
 using namespace PatternMatch;
@@ -812,11 +814,23 @@ public:
         OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
         OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
-           << " Switch:" << *PS->Switch << " Edge: [";
+           << " Edge: [";
         PS->From->printAsOperand(OS);
         OS << ",";
         PS->To->printAsOperand(OS);
-        OS << "]";
+        OS << "] Switch:\n";
+        // A switch might cross > 1 lines, we should add the comment prefix ';'
+        // for each line
+        std::string SwitchStr;
+        {
+          llvm::raw_string_ostream SwitchOS(SwitchStr);
+          PS->Switch->print(SwitchOS);
+        }
+        SmallVector<StringRef, 8> Lines;
+        StringRef(SwitchStr).split(Lines, '\n');
+        for (const auto &Line : Lines)
+          OS << ";   " << Line << "\n";
+        OS << "; ";
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
         OS << "; assume predicate info {"
            << " Comparison:" << *PA->Condition;
