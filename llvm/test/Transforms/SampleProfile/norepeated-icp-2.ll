@@ -17,7 +17,7 @@ entry:
 }
 
 ; Function Attrs: nofree nounwind
-declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) #1
+declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...)
 
 ; Function Attrs: uwtable mustprogress
 define dso_local void @_Z3hoov() #0 !dbg !11 {
@@ -35,7 +35,7 @@ if.end:                                           ; preds = %if.then, %entry
   ret void, !dbg !22
 }
 
-declare !dbg !23 dso_local void @_Z10hoo_calleev() #2
+declare !dbg !23 dso_local void @_Z10hoo_calleev()
 
 ; MAX2-LABEL: @_Z3goov(
 ; MAX2: icmp eq ptr {{.*}} @_Z3hoov
@@ -78,12 +78,9 @@ entry:
 ; MAX4: ![[PROF_ID5]] = !{!"VP", i32 0, i64 13000, i64 4128940972712279918, i64 -1, i64 3137940972712279918, i64 -1, i64 2132940972712279918, i64 -1, i64 1850239051784516332, i64 -1}
 
 ; Function Attrs: nofree nounwind
-declare noundef i32 @puts(ptr nocapture noundef readonly) #3
+declare noundef i32 @puts(ptr nocapture noundef readonly)
 
-attributes #0 = { uwtable mustprogress "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-sample-profile" "use-soft-float"="false" }
-attributes #1 = { nofree nounwind "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nofree nounwind }
+attributes #0 = { uwtable mustprogress "use-sample-profile" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

@@ -140,25 +140,17 @@ public:
   using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
   using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
 
-  iterator_range<compile_unit_iterator> compile_units() const {
-    return make_range(CUs.begin(), CUs.end());
-  }
+  iterator_range<compile_unit_iterator> compile_units() const { return CUs; }
 
-  iterator_range<subprogram_iterator> subprograms() const {
-    return make_range(SPs.begin(), SPs.end());
-  }
+  iterator_range<subprogram_iterator> subprograms() const { return SPs; }
 
   iterator_range<global_variable_expression_iterator> global_variables() const {
-    return make_range(GVs.begin(), GVs.end());
+    return GVs;
   }
 
-  iterator_range<type_iterator> types() const {
-    return make_range(TYs.begin(), TYs.end());
-  }
+  iterator_range<type_iterator> types() const { return TYs; }
 
-  iterator_range<scope_iterator> scopes() const {
-    return make_range(Scopes.begin(), Scopes.end());
-  }
+  iterator_range<scope_iterator> scopes() const { return Scopes; }
 
   unsigned compile_unit_count() const { return CUs.size(); }
   unsigned global_variable_count() const { return GVs.size(); }

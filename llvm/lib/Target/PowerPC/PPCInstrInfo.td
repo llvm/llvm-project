@@ -4578,6 +4578,8 @@ def : InstAlias<"mfamr $Rx", (MFSPR gprc:$Rx, 29)>;
 
 def : InstAlias<"mtpid $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsBookE]>;
 def : InstAlias<"mfpid $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsBookE]>;
+def : InstAlias<"mtpidr $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsISA3_0]>;
+def : InstAlias<"mfpidr $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsISA3_0]>;
 
 foreach SPRG = 4-7 in {
   def : InstAlias<"mfsprg $RT, "#SPRG, (MFSPR gprc:$RT, !add(SPRG, 256))>,

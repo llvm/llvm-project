@@ -14,7 +14,7 @@
 #ifndef COMPILERRT_ASSEMBLY_H
 #define COMPILERRT_ASSEMBLY_H
 
-#if defined(__linux__) && defined(__CET__)
+#ifdef __CET__
 #if __has_include(<cet.h>)
 #include <cet.h>
 #endif
@@ -337,7 +337,8 @@
 #endif
 #endif
 
-#if defined(__ASSEMBLER__) && (defined(__i386__) || defined(__amd64__))
+#if defined(__ASSEMBLER__) && (defined(__i386__) || defined(__amd64__)) &&     \
+    !defined(__arm64ec__)
 .att_syntax
 #endif
 

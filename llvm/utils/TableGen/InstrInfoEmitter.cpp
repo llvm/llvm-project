@@ -285,7 +285,7 @@ emitGetNamedOperandIdx(raw_ostream &OS,
 
 static void
 emitGetOperandIdxName(raw_ostream &OS,
-                      MapVector<StringRef, unsigned> OperandNameToID,
+                      const MapVector<StringRef, unsigned> &OperandNameToID,
                       const MapVector<SmallVector<int>, unsigned> &OperandMap,
                       unsigned MaxNumOperands, unsigned NumOperandNames) {
   OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) "
