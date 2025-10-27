@@ -420,6 +420,11 @@ static void Instantiate(OmpStylizedExpression &ose,
   // 2. Run the parser to get the AST for the stylized expression.
   // 3. Create OmpStylizedInstance and append it to the list in ose.
   assert(types.size() == vars.size() && "List size mismatch");
+  // A ParseState object is irreversibly modified during parsing (in
+  // particular, it cannot be rewound to an earlier position in the source).
+  // Because of that we need to create a local copy for each instantiation.
+  // If rewinding was possible, we could just use the current one, and we
+  // wouldn't need to save it in the AST node.
   ParseState state{DEREF(ose.state)};
 
   std::list<OmpStylizedDeclaration> decls;
@@ -460,6 +465,7 @@ static void InstantiateDeclareReduction(OmpDirectiveSpecification &spec) {
     InstantiateForTypes(const_cast<OmpCombinerExpression &>(*cexpr), *typeNames,
         OmpCombinerExpression::Variables());
     delete cexpr->state;
+    cexpr->state = nullptr;
   } else {
     // If there are no types, there is nothing else to do.
     return;
@@ -472,6 +478,7 @@ static void InstantiateDeclareReduction(OmpDirectiveSpecification &spec) {
         InstantiateForTypes(const_cast<OmpInitializerExpression &>(*iexpr),
             *typeNames, OmpInitializerExpression::Variables());
         delete iexpr->state;
+        iexpr->state = nullptr;
       }
     }
   }

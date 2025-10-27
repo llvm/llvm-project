@@ -3556,8 +3556,14 @@ struct OmpStylizedInstance {
 
 class ParseState;
 
+// Ref: [5.2:76], [6.0:185]
+//
 struct OmpStylizedExpression {
   CharBlock source;
+  // Pointer to a temporary copy of the ParseState that is used to create
+  // additional parse subtrees for the stylized expression. This is only
+  // used internally during parsing and conveys no information to the
+  // consumers of the AST.
   const ParseState *state{nullptr};
   WRAPPER_CLASS_BOILERPLATE(
       OmpStylizedExpression, std::list<OmpStylizedInstance>);
