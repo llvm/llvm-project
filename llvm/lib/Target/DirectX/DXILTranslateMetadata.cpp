@@ -435,7 +435,7 @@ static void translateInstructionMetadata(Module &M) {
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       // This needs to be done first so that "hlsl.controlflow.hints" isn't
-      // removed in the whitelist below
+      // removed in the allow-list below
       if (auto *I = BB.getTerminator())
         translateBranchMetadata(M, I);
 
