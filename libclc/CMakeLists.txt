@@ -434,6 +434,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       # Error on undefined macros
       -Werror=undef
       -fdiscard-value-names
+      -ffp-contract=fast-honor-pragmas
     )
 
     if( NOT "${cpu}" STREQUAL "" )
