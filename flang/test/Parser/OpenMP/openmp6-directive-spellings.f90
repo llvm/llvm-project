@@ -79,7 +79,7 @@ end
 !UNPARSE:  TYPE :: t
 !UNPARSE:   INTEGER :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x+omp_in%x)
+!UNPARSE: !$OMP DECLARE_REDUCTION(+:t: omp_out%x = omp_out%x + omp_in%x)
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
