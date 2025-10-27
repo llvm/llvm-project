@@ -96,10 +96,9 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
 
   DP("Found %" PRIu32 " devices.\n", NumDevices);
   DP("List of devices (DeviceID[.SubID[.CCSID]])\n");
-    for (auto &DeviceInfo : DetectedDevices) {
+  for (auto &DeviceInfo : DetectedDevices) {
     (void)DeviceInfo; // to avoid unused variable warning in non-debug builds
-    DP("-- Device %" PRIu32 "%s%s\n",
-       DeviceInfo.Id.RootId,
+    DP("-- Device %" PRIu32 "%s%s\n", DeviceInfo.Id.RootId,
        (DeviceInfo.Id.SubId < 0
             ? ""
             : ("." + std::to_string(DeviceInfo.Id.SubId)).c_str()),
