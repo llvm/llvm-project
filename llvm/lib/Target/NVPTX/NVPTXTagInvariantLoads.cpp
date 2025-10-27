@@ -69,14 +69,12 @@ static bool tagInvariantLoads(Function &F) {
         markLoadsAsInvariant(LI);
         Changed = true;
       }
-      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
-        if (II->getIntrinsicID() == Intrinsic::masked_load) {
-          if (isInvariantLoad(II, II->getOperand(0), IsKernelFn)) {
-            markLoadsAsInvariant(II);
-            Changed = true;
-          }
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::masked_load &&
+            isInvariantLoad(II, II->getOperand(0), IsKernelFn)) {
+          markLoadsAsInvariant(II);
+          Changed = true;
         }
-      }
     }
   }
   return Changed;
