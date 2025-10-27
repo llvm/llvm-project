@@ -440,11 +440,10 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
   // allow-list
   SmallVector<NamedMDNode *> ToStrip;
 
-  for (NamedMDNode &NamedMD : M.named_metadata()) {
+  for (NamedMDNode &NamedMD : M.named_metadata())
     if (!NamedMD.getName().starts_with("llvm.dbg.") &&
         !llvm::is_contained(CompatibleNamedModuleMDs, NamedMD.getName()))
       ToStrip.push_back(&NamedMD);
-  }
 
   for (NamedMDNode *NamedMD : ToStrip)
     NamedMD->eraseFromParent();
