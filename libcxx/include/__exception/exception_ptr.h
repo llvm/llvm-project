@@ -107,9 +107,7 @@ public:
 };
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
-  void* __tmp = __x.__ptr_;
-  __x.__ptr_  = __y.__ptr_;
-  __y.__ptr_  = __tmp;
+  swap(__x.__ptr_, __y.__ptr_);
 }
 
 #  if _LIBCPP_HAS_EXCEPTIONS
