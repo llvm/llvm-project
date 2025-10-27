@@ -2617,6 +2617,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                   llvm::codegenoptions::DebugInfoConstructor,
                                   DwarfVersion, llvm::DebuggerKind::Default);
         }
+      } else if (Value == "--gsframe") {
+        CmdArgs.push_back("--gsframe");
       } else if (Value.starts_with("-mcpu") || Value.starts_with("-mfpu") ||
                  Value.starts_with("-mhwdiv") || Value.starts_with("-march")) {
         // Do nothing, we'll validate it later.
@@ -5919,6 +5921,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-funwind-tables=2");
   else if (UnwindTables)
      CmdArgs.push_back("-funwind-tables=1");
+
+  // Sframe unwind tables are independent of the other types, and only defined
+  // for these two targets.
+  if (Arg *A = Args.getLastArg(options::OPT_gsframe)) {
+    if ((Triple.isAArch64() || Triple.isX86()) && Triple.isOSBinFormatELF())
+      CmdArgs.push_back("--gsframe");
+    else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+  }
 
   // Prepare `-aux-target-cpu` and `-aux-target-feature` unless
   // `--gpu-use-aux-triple-only` is specified.
