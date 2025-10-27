@@ -4057,7 +4057,7 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
 
     auto SaveModifier = [&](unsigned Type, unsigned Modifier,
                             SourceLocation Loc) {
-      assert(Type < NumberOfModifiers);
+      assert(Type < NumberOfModifiers && "Unexpected modifier type");
       if (!KLoc[Type].isValid()) {
         Arg[Type] = Modifier;
         KLoc[Type] = Loc;
