@@ -46,9 +46,6 @@ class LangOptions;
 class MultiKeywordSelector;
 class SourceLocation;
 
-// This is an inline namespace to allow both clang and lldb to use them without
-// namespace prefixes (via `using namespace` in lldb's case).
-inline namespace TokenKeyEnumerators {
 enum TokenKey : unsigned {
   KEYC99 = 0x1,
   KEYCXX = 0x2,
@@ -84,7 +81,6 @@ enum TokenKey : unsigned {
   KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL &
            ~KEYNOZOS // KEYNOMS18, KEYNOOPENCL, KEYNOZOS are excluded.
 };
-} // namespace TokenKeyEnumerators
 
 /// How a keyword is treated in the selected standard. This enum is ordered
 /// intentionally so that the value that 'wins' is the most 'permissive'.

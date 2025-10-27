@@ -755,15 +755,15 @@ static const clang::LangOptions &GetLangOptions() {
 }
 
 static const llvm::StringMap<tok::TokenKind> GetKeywordsMap() {
-  using namespace clang::TokenKeyEnumerators;
+  using namespace clang;
   llvm::StringMap<tok::TokenKind> g_map;
 
   auto LangOpts = GetLangOptions();
 
-  clang::KeywordStatus AddResult;
+  KeywordStatus AddResult;
 #define KEYWORD(NAME, FLAGS)                                                   \
   AddResult = getKeywordStatus(LangOpts, FLAGS);                               \
-  if (AddResult != clang::KS_Disabled)                                         \
+  if (AddResult != KS_Disabled)                                                \
     g_map[llvm::StringRef(#NAME)] = tok::kw_##NAME;
 #include "clang/Basic/TokenKinds.def"
 #undef KEYWORD
