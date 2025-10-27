@@ -24,13 +24,13 @@ namespace __stacktrace {
 
 namespace {
 
-struct dll {
+struct _DLL {
   HMODULE module_{};
   bool loaded_{};
 
-  explicit dll(char const* name) : module_(LoadLibraryA(name)) {}
+  explicit _DLL(char const* name) : module_(LoadLibraryA(name)) {}
 
-  ~dll() {
+  ~_DLL() {
     if (module_) {
       FreeLibrary(module_);
     }
@@ -44,7 +44,7 @@ struct dll {
 
 // clang-format off
 
-struct dbghelp_dll final : dll {
+struct _Dbghelp_DLL final : _DLL {
   IMAGE_NT_HEADERS* (*ImageNtHeader)(void*);
   bool    (WINAPI *SymCleanup)         (HANDLE);
   DWORD   (WINAPI *SymGetOptions)      ();
@@ -60,7 +60,7 @@ struct dbghelp_dll final : dll {
   bool    (WINAPI *SymGetSymFromAddr64)(HANDLE, DWORD64, DWORD64*, IMAGEHLP_SYMBOL64*);
   DWORD64 (WINAPI *SymLoadModule64)    (HANDLE, HANDLE, char const*, char const*, void*, DWORD);
 
-  dbghelp_dll() : dll("dbghelp.dll") {
+  _Dbghelp_DLL() : _DLL("dbghelp.dll") {
     loaded_ = true
       && get_func(&ImageNtHeader, "ImageNtHeader")
       && get_func(&SymCleanup, "SymCleanup")
@@ -80,12 +80,12 @@ struct dbghelp_dll final : dll {
   }
 };
 
-struct psapi_dll final : dll {
+struct _Psapi_DLL final : _DLL {
   bool  (WINAPI *EnumProcessModules)   (HANDLE, HMODULE*, DWORD, DWORD*);
   bool  (WINAPI *GetModuleInformation) (HANDLE, HMODULE, MODULEINFO*, DWORD);
   DWORD (WINAPI *GetModuleBaseName)    (HANDLE, HMODULE, char**, DWORD);
 
-  psapi_dll() : dll("psapi.dll") {
+  _Psapi_DLL() : _DLL("psapi.dll") {
     loaded_ = true
       && get_func(&EnumProcessModules, "EnumProcessModules")
       && get_func(&GetModuleInformation, "GetModuleInformation")
@@ -94,15 +94,15 @@ struct psapi_dll final : dll {
   }
 };
 
-struct sym_init_scope {
-  dbghelp_dll& dbghelp_;
+struct _Sym_Init_Scope {
+  _Dbghelp_DLL& dbghelp_;
   HANDLE proc_;
 
-  sym_init_scope(dbghelp_dll& dbghelp, HANDLE proc)
+  _Sym_Init_Scope(_Dbghelp_DLL& dbghelp, HANDLE proc)
     : dbghelp_(dbghelp), proc_(proc) {
     (*dbghelp_.SymInitialize)(proc_, nullptr, true);
   }
-  ~sym_init_scope() {
+  ~_Sym_Init_Scope() {
     (*dbghelp_.SymCleanup)(proc_);
   }
 };
@@ -110,13 +110,13 @@ struct sym_init_scope {
 }  // namespace
 
 _LIBCPP_EXPORTED_FROM_ABI void
-base::windows_impl(size_t skip, size_t max_depth) {
+_Trace::windows_impl(size_t skip, size_t max_depth) {
   if (!max_depth) [[unlikely]] {
     return;
   }
 
-  static psapi_dll psapi;
-  static dbghelp_dll dbghelp;
+  static _Psapi_DLL psapi;
+  static _Dbghelp_DLL dbghelp;
   if (!psapi.loaded_ || !dbghelp.loaded_) { return; }
 
   // Not thread-safe according to docs
@@ -127,7 +127,7 @@ base::windows_impl(size_t skip, size_t max_depth) {
   HMODULE exe = GetModuleHandle(nullptr);
   if (!exe) { return; }
 
-  sym_init_scope symscope(dbghelp, proc);
+  _Sym_Init_Scope symscope(dbghelp, proc);
 
   char sym_path[MAX_PATH * 4]; // arbitrary
   if (!(*dbghelp.SymGetSearchPath)(proc, sym_path, sizeof(sym_path))) { return; }
