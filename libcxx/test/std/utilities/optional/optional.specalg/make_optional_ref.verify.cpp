@@ -19,20 +19,21 @@ struct Foo {
   int x, y;
 };
 
-class X {
+struct X {
   double i_;
 
 public:
   explicit X(int& i) : i_(i) {}
-}
+};
 
 int main(int, char**) {
   int i = 1;
-  // expected-error-re@optional:* 3 {{static assertion failed{{.*}} make_optional<T&, Args...> is disallowed}}
+  // expected-error-re@optional:* 4 {{static assertion failed{{.*}} make_optional<T&, Args...> is disallowed}}
+  std::make_optional<int&>(i);
   std::make_optional<X&>(i);
   std::make_optional<int&>(1);
   std::make_optional<Foo&>(1, 2);
 
-  // FIXME: Garbage error messages that Clang produces after the static_assert is triggered
+  // FIXME: Garbage error messages that Clang produces after the static_assert is reported
   // expected-error-re@optional:* 0+ {{no matching constructor for initialization of 'optional<{{.*}}>'}}
 }
