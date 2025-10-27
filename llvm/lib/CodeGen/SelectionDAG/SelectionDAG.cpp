@@ -5869,12 +5869,6 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,
                            ? APInt::getAllOnes(VT.getVectorNumElements())
                            : APInt(1, 1);
 
-  // If all users of this operand is annotated with nnan, we can assume
-  // this operand is not NaN, since nnan also affects inputs.
-  if (llvm::all_of(Op->users(),
-                   [](const SDNode *N) { return N->getFlags().hasNoNaNs(); }))
-    return true;
-
   return isKnownNeverNaN(Op, DemandedElts, SNaN, Depth);
 }
 
