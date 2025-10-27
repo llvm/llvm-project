@@ -106,6 +106,12 @@ Then execute the following snippet to create a toolchain file:
     EOF
 
 
+.. note::
+  These instructions require **CMake version 3.29 or higher**, because
+  the ``CMAKE_LINKER_TYPE`` option used in the toolchain file is only
+  supported from this version onward. Older versions of CMake will
+  result in configuration errors.
+  
 Then configure and build by invoking ``cmake``:
 
    .. code-block:: bash
