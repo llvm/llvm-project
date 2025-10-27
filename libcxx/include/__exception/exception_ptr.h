@@ -24,6 +24,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #ifndef _LIBCPP_ABI_MICROSOFT
 
 #  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
@@ -215,5 +218,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 
 #endif // _LIBCPP_ABI_MICROSOFT
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
