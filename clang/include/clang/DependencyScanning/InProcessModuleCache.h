@@ -12,6 +12,7 @@
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/StringMap.h"
 
+#include <atomic>
 #include <mutex>
 #include <shared_mutex>
 
