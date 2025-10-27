@@ -217,6 +217,16 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   }
 }
 
+bool llvm::isVectorIntrinsicWithStructReturnScalarAtField(Intrinsic::ID ID,
+                                                          int RetIdx) {
+  switch (ID) {
+  case Intrinsic::vp_load_ff:
+    return RetIdx == 1;
+  default:
+    return false;
+  }
+}
+
 bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
     Intrinsic::ID ID, int RetIdx, const TargetTransformInfo *TTI) {
 
@@ -224,6 +234,10 @@ bool llvm::isVectorIntrinsicWithStructReturnOverloadAtField(
     return TTI->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
 
   switch (ID) {
+  case Intrinsic::modf:
+  case Intrinsic::sincos:
+  case Intrinsic::sincospi:
+    return false;
   case Intrinsic::frexp:
     return RetIdx == 0 || RetIdx == 1;
   default:
