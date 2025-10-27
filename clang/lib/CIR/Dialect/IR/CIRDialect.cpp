@@ -3104,12 +3104,12 @@ LogicalResult cir::CatchParamOp::verify() {
   std::optional<cir::CatchParamKind> kind = getKind();
   if (getExceptionPtr()) {
     if (!kind || *kind != cir::CatchParamKind::Begin)
-      return emitOpError("needs 'begin' to work with exception pointer");
+      return emitOpError("with exception pointer must be of `begin` kind");
     return success();
   }
 
   if (!kind && !(*this)->getParentOfType<cir::TryOp>())
-    return emitOpError("without 'kind' requires 'cir.try' surrounding scope");
+    return emitOpError("without `kind` requires `cir.try` surrounding scope");
   return success();
 }
 

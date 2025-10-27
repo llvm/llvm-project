@@ -4525,7 +4525,7 @@ def CIR_CatchParamOp : CIR_Op<"catch_param"> {
   let assemblyFormat = [{
     ($kind^)?
     ($exception_ptr^)?
-    (`->` qualified(type($param))^)?
+    (`:` qualified(type($param))^)?
     attr-dict
   }];
 
