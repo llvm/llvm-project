@@ -133,10 +133,17 @@ Error PointerAuthCFIAnalyzer::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
       SkipPredicate, "PointerAuthCFIAnalyzer");
+
+  float IgnoredPercent = (100.0 * FunctionsIgnored) / Total;
   BC.outs() << "BOLT-INFO: PointerAuthCFIAnalyzer ran on " << Total
             << " functions. Ignored " << FunctionsIgnored << " functions "
-            << format("(%.2lf%%)", (100.0 * FunctionsIgnored) / Total)
+            << format("(%.2lf%%)", IgnoredPercent)
             << " because of CFI inconsistencies\n";
+
+  if (IgnoredPercent >= 10.0)
+    BC.outs() << "BOLT-WARNING: PointerAuthCFIAnalyzer only supports "
+                 "asynchronous unwind tables. For C compilers, see "
+                 "-fasynchronous-unwind-tables.\n";
 
   return Error::success();
 }
