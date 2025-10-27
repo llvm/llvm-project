@@ -6,7 +6,7 @@ define <2 x i32> @load(<2 x i1> %mask, ptr %ptr) {
 ; CHECK-SAME: <2 x i1> [[MASK:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 64) ]
-; CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr [[PTR]], i32 64, <2 x i1> [[MASK]], <2 x i32> poison)
+; CHECK-NEXT:    [[MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 64 [[PTR]], <2 x i1> [[MASK]], <2 x i32> poison)
 ; CHECK-NEXT:    ret <2 x i32> [[MASKED_LOAD]]
 ;
 entry:
@@ -20,13 +20,25 @@ define void @store(<2 x i1> %mask, <2 x i32> %val, ptr %ptr) {
 ; CHECK-SAME: <2 x i1> [[MASK:%.*]], <2 x i32> [[VAL:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 64) ]
-; CHECK-NEXT:    tail call void @llvm.masked.store.v2i32.p0(<2 x i32> [[VAL]], ptr [[PTR]], i32 64, <2 x i1> [[MASK]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.v2i32.p0(<2 x i32> [[VAL]], ptr align 64 [[PTR]], <2 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 64) ]
   tail call void @llvm.masked.store.v2i32.p0(<2 x i32> %val, ptr %ptr, i32 1, <2 x i1> %mask)
   ret void
+}
+
+define <2 x i32> @null(<2 x i1> %mask, <2 x i32> %val) {
+; CHECK-LABEL: define <2 x i32> @null(
+; CHECK-SAME: <2 x i1> [[MASK:%.*]], <2 x i32> [[VAL:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MASKED_LOAD:%.*]] = tail call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4294967296 null, <2 x i1> [[MASK]], <2 x i32> [[VAL]])
+; CHECK-NEXT:    ret <2 x i32> [[MASKED_LOAD]]
+;
+entry:
+  %masked_load = tail call <2 x i32> @llvm.masked.load.v2i32.p0(ptr null, i32 1, <2 x i1> %mask, <2 x i32> %val)
+  ret <2 x i32> %masked_load
 }
 
 declare void @llvm.assume(i1)

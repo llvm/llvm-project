@@ -366,7 +366,7 @@ private:
 protected:
   explicit BasicTTIImplBase(const TargetMachine *TM, const DataLayout &DL)
       : BaseT(DL) {}
-  virtual ~BasicTTIImplBase() = default;
+  ~BasicTTIImplBase() override = default;
 
   using TargetTransformInfoImplBase::DL;
 
@@ -821,13 +821,13 @@ public:
         SimplifyAndSetOp);
   }
 
-  virtual std::optional<unsigned>
+  std::optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const override {
     return std::optional<unsigned>(
         getST()->getCacheSize(static_cast<unsigned>(Level)));
   }
 
-  virtual std::optional<unsigned>
+  std::optional<unsigned>
   getCacheAssociativity(TargetTransformInfo::CacheLevel Level) const override {
     std::optional<unsigned> TargetResult =
         getST()->getCacheAssociativity(static_cast<unsigned>(Level));
@@ -838,31 +838,31 @@ public:
     return BaseT::getCacheAssociativity(Level);
   }
 
-  virtual unsigned getCacheLineSize() const override {
+  unsigned getCacheLineSize() const override {
     return getST()->getCacheLineSize();
   }
 
-  virtual unsigned getPrefetchDistance() const override {
+  unsigned getPrefetchDistance() const override {
     return getST()->getPrefetchDistance();
   }
 
-  virtual unsigned getMinPrefetchStride(unsigned NumMemAccesses,
-                                        unsigned NumStridedMemAccesses,
-                                        unsigned NumPrefetches,
-                                        bool HasCall) const override {
+  unsigned getMinPrefetchStride(unsigned NumMemAccesses,
+                                unsigned NumStridedMemAccesses,
+                                unsigned NumPrefetches,
+                                bool HasCall) const override {
     return getST()->getMinPrefetchStride(NumMemAccesses, NumStridedMemAccesses,
                                          NumPrefetches, HasCall);
   }
 
-  virtual unsigned getMaxPrefetchIterationsAhead() const override {
+  unsigned getMaxPrefetchIterationsAhead() const override {
     return getST()->getMaxPrefetchIterationsAhead();
   }
 
-  virtual bool enableWritePrefetching() const override {
+  bool enableWritePrefetching() const override {
     return getST()->enableWritePrefetching();
   }
 
-  virtual bool shouldPrefetchAddressSpace(unsigned AS) const override {
+  bool shouldPrefetchAddressSpace(unsigned AS) const override {
     return getST()->shouldPrefetchAddressSpace(AS);
   }
 
@@ -1927,17 +1927,17 @@ public:
       return thisT()->getMemcpyCost(ICA.getInst());
 
     case Intrinsic::masked_scatter: {
-      const Value *Mask = Args[3];
+      const Value *Mask = Args[2];
       bool VarMask = !isa<Constant>(Mask);
-      Align Alignment = cast<ConstantInt>(Args[2])->getAlignValue();
+      Align Alignment = I->getParamAlign(1).valueOrOne();
       return thisT()->getGatherScatterOpCost(Instruction::Store,
                                              ICA.getArgTypes()[0], Args[1],
                                              VarMask, Alignment, CostKind, I);
     }
     case Intrinsic::masked_gather: {
-      const Value *Mask = Args[2];
+      const Value *Mask = Args[1];
       bool VarMask = !isa<Constant>(Mask);
-      Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
+      Align Alignment = I->getParamAlign(0).valueOrOne();
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
     }
@@ -2929,7 +2929,7 @@ public:
                                       CostKind);
 
       EVT VT = TLI->getValueType(DL, CmpTy, true);
-      if (TLI->shouldExpandCmpUsingSelects(VT)) {
+      if (TLI->preferSelectsOverBooleanArithmetic(VT)) {
         // x < y ? -1 : (x > y ? 1 : 0)
         Cost += 2 * thisT()->getCmpSelInstrCost(
                         BinaryOperator::Select, RetTy, CondTy,

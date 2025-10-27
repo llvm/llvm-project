@@ -108,11 +108,8 @@ template <typename Pred, unsigned BitWidth = 0> struct int_pred_ty {
     Value *V = VPV->getLiveInIRValue();
     if (!V)
       return false;
+    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
     const auto *CI = dyn_cast<ConstantInt>(V);
-    if (!CI && V->getType()->isVectorTy())
-      if (const auto *C = dyn_cast<Constant>(V))
-        CI = dyn_cast_or_null<ConstantInt>(
-            C->getSplatValue(/*AllowPoison=*/false));
     if (!CI)
       return false;
 
@@ -175,6 +172,49 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// Match an integer 1 or a vector with all elements equal to 1.
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
+
+struct bind_apint {
+  const APInt *&Res;
+
+  bind_apint(const APInt *&Res) : Res(Res) {}
+
+  bool match(VPValue *VPV) const {
+    if (!VPV->isLiveIn())
+      return false;
+    Value *V = VPV->getLiveInIRValue();
+    if (!V)
+      return false;
+    assert(!V->getType()->isVectorTy() && "Unexpected vector live-in");
+    const auto *CI = dyn_cast<ConstantInt>(V);
+    if (!CI)
+      return false;
+    Res = &CI->getValue();
+    return true;
+  }
+};
+
+inline bind_apint m_APInt(const APInt *&C) { return C; }
+
+struct bind_const_int {
+  uint64_t &Res;
+
+  bind_const_int(uint64_t &Res) : Res(Res) {}
+
+  bool match(VPValue *VPV) const {
+    const APInt *APConst;
+    if (!bind_apint(APConst).match(VPV))
+      return false;
+    if (auto C = APConst->tryZExtValue()) {
+      Res = *C;
+      return true;
+    }
+    return false;
+  }
+};
+
+/// Match a plain integer constant no wider than 64-bits, capturing it if we
+/// match.
+inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
@@ -320,6 +360,10 @@ m_Freeze(const Op0_t &Op0) {
   return m_VPInstruction<Instruction::Freeze>(Op0);
 }
 
+inline VPInstruction_match<VPInstruction::BranchOnCond> m_BranchOnCond() {
+  return m_VPInstruction<VPInstruction::BranchOnCond>();
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::BranchOnCond, Op0_t>
 m_BranchOnCond(const Op0_t &Op0) {
@@ -344,16 +388,44 @@ m_ExtractLastElement(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<Instruction::ExtractElement, Op0_t, Op1_t>
+m_ExtractElement(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<Instruction::ExtractElement>(Op0, Op1);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::ExtractLastLanePerPart, Op0_t>
+m_ExtractLastLanePerPart(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::ExtractLastLanePerPart>(Op0);
+}
+
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
 }
 
+inline VPInstruction_match<VPInstruction::BranchOnCount> m_BranchOnCount() {
+  return m_VPInstruction<VPInstruction::BranchOnCount>();
+}
+
 template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
 m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
+m_AnyOf(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::AnyOf>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::FirstActiveLane, Op0_t>
+m_FirstActiveLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::FirstActiveLane>(Op0);
 }
 
 template <unsigned Opcode, typename Op0_t>
@@ -712,6 +784,29 @@ template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
 inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
 m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
+}
+
+struct live_in_vpvalue {
+  template <typename ITy> bool match(ITy *V) const {
+    VPValue *Val = dyn_cast<VPValue>(V);
+    return Val && Val->isLiveIn();
+  }
+};
+
+inline live_in_vpvalue m_LiveIn() { return live_in_vpvalue(); }
+
+template <typename SubPattern_t> struct OneUse_match {
+  SubPattern_t SubPattern;
+
+  OneUse_match(const SubPattern_t &SP) : SubPattern(SP) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    return V->hasOneUse() && SubPattern.match(V);
+  }
+};
+
+template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
+  return SubPattern;
 }
 
 } // namespace VPlanPatternMatch

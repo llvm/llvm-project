@@ -42,7 +42,6 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -647,6 +646,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   if (!Subtarget->hasV8_1MMainlineOps())
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
 
+  if (!Subtarget->isThumb1Only())
+    setOperationAction(ISD::ABS, MVT::i32, Custom);
+
   setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
   setOperationAction(ISD::ConstantFP, MVT::f64, Custom);
 
@@ -1087,7 +1089,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   // Register based DivRem for AEABI (RTABI 4.2)
   if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+      TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isOSWindows()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
@@ -1350,6 +1352,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FLOG, MVT::f16, Promote);
     setOperationAction(ISD::FLOG10, MVT::f16, Promote);
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);
+    setOperationAction(ISD::LRINT, MVT::f16, Expand);
+    setOperationAction(ISD::LROUND, MVT::f16, Expand);
 
     setOperationAction(ISD::FROUND, MVT::f16, Legal);
     setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
@@ -1479,7 +1483,7 @@ bool ARMTargetLowering::useSoftFloat() const {
   return Subtarget->useSoftFloat();
 }
 
-bool ARMTargetLowering::shouldExpandCmpUsingSelects(EVT VT) const {
+bool ARMTargetLowering::preferSelectsOverBooleanArithmetic(EVT VT) const {
   return !Subtarget->isThumb1Only() && VT.getSizeInBits() <= 32;
 }
 
@@ -2845,6 +2849,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (isTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, MVT::Other, Ops);
+    if (CLI.CFIType)
+      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
@@ -2852,6 +2858,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a chain and a flag for retval copy to use.
   Chain = DAG.getNode(CallOpc, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
@@ -5570,7 +5578,7 @@ static void expandf64Toi32(SDValue Op, SelectionDAG &DAG,
   llvm_unreachable("Unknown VFP cmp argument!");
 }
 
-/// OptimizeVFPBrcond - With nnan, it's legal to optimize some
+/// OptimizeVFPBrcond - With nnan and without daz, it's legal to optimize some
 /// f32 and even f64 comparisons to integer ones.
 SDValue
 ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
@@ -5619,6 +5627,19 @@ ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
   }
 
   return SDValue();
+}
+
+// Generate CMP + CMOV for integer abs.
+SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  SDValue Neg = DAG.getNegative(Op.getOperand(0), DL, MVT::i32);
+
+  // Generate CMP & CMOV.
+  SDValue Cmp = DAG.getNode(ARMISD::CMP, DL, FlagsVT, Op.getOperand(0),
+                            DAG.getConstant(0, DL, MVT::i32));
+  return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Op.getOperand(0), Neg,
+                     DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
 }
 
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -5713,9 +5734,9 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDNodeFlags Flags = Op->getFlags();
-  if ((getTargetMachine().Options.UnsafeFPMath || Flags.hasNoNaNs()) &&
-      (DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
-       DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE()) &&
+  if (Flags.hasNoNaNs() &&
+      DAG.getDenormalMode(MVT::f32) == DenormalMode::getIEEE() &&
+      DAG.getDenormalMode(MVT::f64) == DenormalMode::getIEEE() &&
       (CC == ISD::SETEQ || CC == ISD::SETOEQ || CC == ISD::SETNE ||
        CC == ISD::SETUNE)) {
     if (SDValue Result = OptimizeVFPBrcond(Op, DAG))
@@ -10703,6 +10724,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UCMP:
   case ISD::SCMP:
     return LowerCMP(Op, DAG);
+  case ISD::ABS:
+    return LowerABS(Op, DAG);
   }
 }
 
@@ -11989,6 +12012,71 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
       .add(predOps(ARMCC::AL));
 }
 
+bool ARMTargetLowering::supportKCFIBundles() const {
+  // KCFI is supported in all ARM/Thumb modes
+  return true;
+}
+
+MachineInstr *
+ARMTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::instr_iterator &MBBI,
+                                 const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  MachineOperand *TargetOp = nullptr;
+  switch (MBBI->getOpcode()) {
+  // ARM mode opcodes
+  case ARM::BLX:
+  case ARM::BLX_pred:
+  case ARM::BLX_noip:
+  case ARM::BLX_pred_noip:
+  case ARM::BX_CALL:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
+  case ARM::TAILJMPr:
+  case ARM::TAILJMPr4:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  // Thumb mode opcodes (Thumb1 and Thumb2)
+  // Note: Most Thumb call instructions have predicate operands before the
+  // target register Format: tBLXr pred, predreg, target_register, ...
+  case ARM::tBLXr:      // Thumb1/Thumb2: BLX register (requires V5T)
+  case ARM::tBLXr_noip: // Thumb1/Thumb2: BLX register, no IP clobber
+  case ARM::tBX_CALL:   // Thumb1 only: BX call (push LR, BX)
+    TargetOp = &MBBI->getOperand(2);
+    break;
+  // Tail call instructions don't have predicates, target is operand 0
+  case ARM::tTAILJMPr: // Thumb1/Thumb2: Tail call via register
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  assert(TargetOp && TargetOp->isReg() && "Invalid target operand");
+  TargetOp->setIsRenamable(false);
+
+  // Select the appropriate KCFI_CHECK variant based on the instruction set
+  unsigned KCFICheckOpcode;
+  if (Subtarget->isThumb()) {
+    if (Subtarget->isThumb2()) {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb2;
+    } else {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb1;
+    }
+  } else {
+    KCFICheckOpcode = ARM::KCFI_CHECK_ARM;
+  }
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(KCFICheckOpcode))
+      .addReg(TargetOp->getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
+}
+
 MachineBasicBlock *
 ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -12288,89 +12376,6 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case ARM::Int_eh_sjlj_setup_dispatch:
     EmitSjLjDispatchBlock(MI, BB);
     return BB;
-
-  case ARM::ABS:
-  case ARM::t2ABS: {
-    // To insert an ABS instruction, we have to insert the
-    // diamond control-flow pattern.  The incoming instruction knows the
-    // source vreg to test against 0, the destination vreg to set,
-    // the condition code register to branch on, the
-    // true/false values to select between, and a branch opcode to use.
-    // It transforms
-    //     V1 = ABS V0
-    // into
-    //     V2 = MOVS V0
-    //     BCC                      (branch to SinkBB if V0 >= 0)
-    //     RSBBB: V3 = RSBri V2, 0  (compute ABS if V2 < 0)
-    //     SinkBB: V1 = PHI(V2, V3)
-    const BasicBlock *LLVM_BB = BB->getBasicBlock();
-    MachineFunction::iterator BBI = ++BB->getIterator();
-    MachineFunction *Fn = BB->getParent();
-    MachineBasicBlock *RSBBB = Fn->CreateMachineBasicBlock(LLVM_BB);
-    MachineBasicBlock *SinkBB  = Fn->CreateMachineBasicBlock(LLVM_BB);
-    Fn->insert(BBI, RSBBB);
-    Fn->insert(BBI, SinkBB);
-
-    // Set the call frame size on entry to the new basic blocks.
-    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
-    RSBBB->setCallFrameSize(CallFrameSize);
-    SinkBB->setCallFrameSize(CallFrameSize);
-
-    Register ABSSrcReg = MI.getOperand(1).getReg();
-    Register ABSDstReg = MI.getOperand(0).getReg();
-    bool ABSSrcKIll = MI.getOperand(1).isKill();
-    bool isThumb2 = Subtarget->isThumb2();
-    MachineRegisterInfo &MRI = Fn->getRegInfo();
-    // In Thumb mode S must not be specified if source register is the SP or
-    // PC and if destination register is the SP, so restrict register class
-    Register NewRsbDstReg = MRI.createVirtualRegister(
-        isThumb2 ? &ARM::rGPRRegClass : &ARM::GPRRegClass);
-
-    // Transfer the remainder of BB and its successor edges to sinkMBB.
-    SinkBB->splice(SinkBB->begin(), BB,
-                   std::next(MachineBasicBlock::iterator(MI)), BB->end());
-    SinkBB->transferSuccessorsAndUpdatePHIs(BB);
-
-    BB->addSuccessor(RSBBB);
-    BB->addSuccessor(SinkBB);
-
-    // fall through to SinkMBB
-    RSBBB->addSuccessor(SinkBB);
-
-    // insert a cmp at the end of BB
-    BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
-        .addReg(ABSSrcReg)
-        .addImm(0)
-        .add(predOps(ARMCC::AL));
-
-    // insert a bcc with opposite CC to ARMCC::MI at the end of BB
-    BuildMI(BB, dl,
-      TII->get(isThumb2 ? ARM::t2Bcc : ARM::Bcc)).addMBB(SinkBB)
-      .addImm(ARMCC::getOppositeCondition(ARMCC::MI)).addReg(ARM::CPSR);
-
-    // insert rsbri in RSBBB
-    // Note: BCC and rsbri will be converted into predicated rsbmi
-    // by if-conversion pass
-    BuildMI(*RSBBB, RSBBB->begin(), dl,
-            TII->get(isThumb2 ? ARM::t2RSBri : ARM::RSBri), NewRsbDstReg)
-        .addReg(ABSSrcReg, ABSSrcKIll ? RegState::Kill : 0)
-        .addImm(0)
-        .add(predOps(ARMCC::AL))
-        .add(condCodeOp());
-
-    // insert PHI in SinkBB,
-    // reuse ABSDstReg to not change uses of ABS instruction
-    BuildMI(*SinkBB, SinkBB->begin(), dl,
-      TII->get(ARM::PHI), ABSDstReg)
-      .addReg(NewRsbDstReg).addMBB(RSBBB)
-      .addReg(ABSSrcReg).addMBB(BB);
-
-    // remove ABS instruction
-    MI.eraseFromParent();
-
-    // return last added BB
-    return SinkBB;
-  }
   case ARM::COPY_STRUCT_BYVAL_I32:
     ++NumLoopByVals;
     return EmitStructByval(MI, BB);
@@ -13881,7 +13886,7 @@ bool ARMTargetLowering::isDesirableToCommuteXorWithShift(
 }
 
 bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
-    const SDNode *N, CombineLevel Level) const {
+    const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
            N->getOperand(0).getOpcode() == ISD::SRL) ||
           (N->getOpcode() == ISD::SRL &&
@@ -13891,7 +13896,8 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   if (!Subtarget->isThumb1Only())
     return true;
 
-  if (Level == BeforeLegalizeTypes)
+  EVT VT = N->getValueType(0);
+  if (VT.getScalarSizeInBits() > 32)
     return true;
 
   return false;
@@ -14082,6 +14088,41 @@ static SDValue PerformSubCSINCCombine(SDNode *N, SelectionDAG &DAG) {
                      CSINC.getOperand(3));
 }
 
+static bool isNegatedInteger(SDValue Op) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
+}
+
+// Try to fold
+//
+// (neg (cmov X, Y)) -> (cmov (neg X), (neg Y))
+//
+// The folding helps cmov to be matched with csneg without generating
+// redundant neg instruction.
+static SDValue performNegCMovCombine(SDNode *N, SelectionDAG &DAG) {
+  if (!isNegatedInteger(SDValue(N, 0)))
+    return SDValue();
+
+  SDValue CMov = N->getOperand(1);
+  if (CMov.getOpcode() != ARMISD::CMOV || !CMov->hasOneUse())
+    return SDValue();
+
+  SDValue N0 = CMov.getOperand(0);
+  SDValue N1 = CMov.getOperand(1);
+
+  // If neither of them are negations, it's not worth the folding as it
+  // introduces two additional negations while reducing one negation.
+  if (!isNegatedInteger(N0) && !isNegatedInteger(N1))
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = CMov.getValueType();
+
+  SDValue N0N = DAG.getNegative(N0, DL, VT);
+  SDValue N1N = DAG.getNegative(N1, DL, VT);
+  return DAG.getNode(ARMISD::CMOV, DL, VT, N0N, N1N, CMov.getOperand(2),
+                     CMov.getOperand(3));
+}
+
 /// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
 ///
 static SDValue PerformSUBCombine(SDNode *N,
@@ -14097,6 +14138,9 @@ static SDValue PerformSUBCombine(SDNode *N,
 
   if (SDValue R = PerformSubCSINCCombine(N, DCI.DAG))
     return R;
+
+  if (SDValue Val = performNegCMovCombine(N, DCI.DAG))
+    return Val;
 
   if (!Subtarget->hasMVEIntegerOps() || !N->getValueType(0).isVector())
     return SDValue();
@@ -20455,9 +20499,9 @@ void ARMTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
           if (CVal >= -255 && CVal <= -1)
             break;
         } else {
-          // This must be a constant between -4095 and 4095. It is not clear
-          // what this constraint is intended for. Implemented for
-          // compatibility with GCC.
+          // This must be a constant between -4095 and 4095. This is suitable
+          // for use as the immediate offset field in LDR and STR instructions
+          // such as LDR r0,[r1,#offset].
           if (CVal >= -4095 && CVal <= 4095)
             break;
         }
@@ -20600,7 +20644,7 @@ static TargetLowering::ArgListTy getDivRemArgList(
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
           Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
-          Subtarget->isTargetWindows()) &&
+          Subtarget->isTargetFuchsia() || Subtarget->isTargetWindows()) &&
          "Register-based DivRem lowering only");
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
@@ -21313,30 +21357,28 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
 }
 
 void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
+  // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
       getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall == RTLIB::Unsupported)
-    return TargetLowering::insertSSPDeclarations(M);
 
-  // MSVC CRT has a global variable holding security cookie.
-  M.getOrInsertGlobal("__security_cookie",
-                      PointerType::getUnqual(M.getContext()));
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
+    // MSVC CRT has a global variable holding security cookie.
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
+                        PointerType::getUnqual(M.getContext()));
 
-  // MSVC CRT has a function to validate security cookie.
-  FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-      getLibcallImplName(SecurityCheckCookieLibcall),
-      Type::getVoidTy(M.getContext()), PointerType::getUnqual(M.getContext()));
-  if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
-    F->addParamAttr(0, Attribute::AttrKind::InReg);
-}
+    // MSVC CRT has a function to validate security cookie.
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
+    if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
+      F->addParamAttr(0, Attribute::AttrKind::InReg);
+  }
 
-Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  RTLIB::LibcallImpl SecurityCheckCookie =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookie != RTLIB::Unsupported)
-    return M.getFunction(getLibcallImplName(SecurityCheckCookie));
-  return TargetLowering::getSSPStackGuardCheck(M);
+  TargetLowering::insertSSPDeclarations(M);
 }
 
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,

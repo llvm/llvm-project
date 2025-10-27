@@ -731,19 +731,22 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     ExplodedNodeSet checkDst;
     NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
 
+    ProgramStateRef State = Pred->getState();
+    CallEventRef<> UpdatedCall = Call.cloneWithState(State);
+
     // Check if any of the EvalCall callbacks can evaluate the call.
     for (const auto &EvalCallChecker : EvalCallCheckers) {
       // TODO: Support the situation when the call doesn't correspond
       // to any Expr.
       ProgramPoint L = ProgramPoint::getProgramPoint(
-          Call.getOriginExpr(), ProgramPoint::PostStmtKind,
+          UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
           Pred->getLocationContext(), EvalCallChecker.Checker);
       bool evaluated = false;
-      { // CheckerContext generates transitions(populates checkDest) on
+      { // CheckerContext generates transitions (populates checkDest) on
         // destruction, so introduce the scope to make sure it gets properly
         // populated.
         CheckerContext C(B, Eng, Pred, L);
-        evaluated = EvalCallChecker(Call, C);
+        evaluated = EvalCallChecker(*UpdatedCall, C);
       }
 #ifndef NDEBUG
       if (evaluated && evaluatorChecker) {
@@ -774,7 +777,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
     // If none of the checkers evaluated the call, ask ExprEngine to handle it.
     if (!evaluatorChecker) {
       NodeBuilder B(Pred, Dst, Eng.getBuilderContext());
-      Eng.defaultEvalCall(B, Pred, Call, CallOpts);
+      Eng.defaultEvalCall(B, Pred, *UpdatedCall, CallOpts);
     }
   }
 }

@@ -287,7 +287,7 @@ private:
   /// moment we only make sure that there are no broadcast dimensions, but this
   /// might change if indexing maps evolve.
   bool isValidMaskingMap(AffineMap maskingMap) {
-    return maskingMap.getBroadcastDims().size() == 0;
+    return maskingMap.getBroadcastDims().empty();
   }
 
   /// Turn the input indexing map into a valid masking map.
@@ -524,6 +524,40 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
 
   if (!mask) {
     LDBG() << "No mask required";
+    if (assumeDynamicDimsMatchVecSizes) {
+      llvm::TypeSwitch<Operation *>(opToMask)
+          .Case<vector::TransferReadOp, vector::TransferWriteOp>(
+              [&](auto xferOp) {
+                // For vector.transfer_read and vector.transfer_write, there is
+                // also the `in-bounds` attribute that has to be set explicitly
+                // to true. Otherwise, "out-of-bounds" access will be assumed
+                // and masks will be generated while lowering these.
+                LDBG() << "Assuming dynamic dimensions match vector sizes and "
+                          "setting their in-bounds to true!";
+                SmallVector<bool> inBoundsMap = xferOp.getInBoundsValues();
+                ShapedType xferType = xferOp.getShapedType();
+                AffineMap permMap = xferOp.getPermutationMap();
+                // Only set the in-bounds values to true for dynamic dims.
+                // Different mechanisms will set these accordingly for the
+                // static dims.
+                for (unsigned i = 0; i < xferOp.getTransferRank(); i++) {
+                  auto dimExpr = dyn_cast<AffineDimExpr>(permMap.getResult(i));
+                  // Skip broadcast dimensions.
+                  if (!dimExpr)
+                    continue;
+                  unsigned pos = dimExpr.getPosition();
+                  if (xferType.isDynamicDim(pos))
+                    inBoundsMap[i] = true;
+                }
+                rewriter.modifyOpInPlace(xferOp, [&]() {
+                  xferOp.setInBoundsAttr(
+                      rewriter.getBoolArrayAttr(inBoundsMap));
+                });
+              })
+          .Default([](Operation *op) {
+            // No-op if the operation is not an xfer read or write.
+          });
+    }
     return opToMask;
   }
 
@@ -923,7 +957,7 @@ static uint64_t getTrailingNonUnitLoopDimIdx(LinalgOp linalgOp) {
        llvm::count_if(loopRanges, [](int64_t dim) { return dim != 1; }) == 1) &&
       "For statically shaped Linalg Ops, only one "
       "non-unit loop dim is expected");
-  assert(loopRanges.size() != 0 && "Empty loops, nothing to analyse.");
+  assert(!loopRanges.empty() && "Empty loops, nothing to analyse.");
 
   size_t idx = loopRanges.size() - 1;
   for (; idx != 0; idx--)
@@ -1770,12 +1804,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
   rewriter.setInsertionPoint(packOp);
 
   Location loc = packOp.getLoc();
-  auto padValue = packOp.getPaddingValue();
-  if (!padValue) {
-    padValue = arith::ConstantOp::create(
-        rewriter, loc,
-        rewriter.getZeroAttr(packOp.getSourceType().getElementType()));
-  }
+  std::optional<Value> padValue = packOp.getPaddingValue()
+                                      ? std::optional(packOp.getPaddingValue())
+                                      : std::nullopt;
 
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
@@ -1936,11 +1967,8 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
   }
 
   // -- Generate the read operation --
-  auto padValue = arith::ConstantOp::create(
-      rewriter, loc,
-      rewriter.getZeroAttr(unpackOp.getSourceType().getElementType()));
   Value readResult = vector::createReadOrMaskedRead(
-      rewriter, loc, unpackOp.getSource(), readVectorSizes, padValue,
+      rewriter, loc, unpackOp.getSource(), readVectorSizes, std::nullopt,
       useInBoundsInsteadOfMasking, readScalableVectorFlags);
 
   // -- Generate the transpose operation --

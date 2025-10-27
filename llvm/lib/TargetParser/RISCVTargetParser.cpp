@@ -153,7 +153,7 @@ namespace RISCVVType {
 //
 // Bits | Name       | Description
 // -----+------------+------------------------------------------------
-// 8    | altfmt     | Alternative format for bf16
+// 8    | altfmt     | Alternative format for bf16/ofp8
 // 7    | vma        | Vector mask agnostic
 // 6    | vta        | Vector tail agnostic
 // 5:3  | vsew[2:0]  | Standard element width (SEW) setting
@@ -226,6 +226,10 @@ void printVType(unsigned VType, raw_ostream &OS) {
     OS << ", ma";
   else
     OS << ", mu";
+}
+
+void printXSfmmVType(unsigned VType, raw_ostream &OS) {
+  OS << "e" << getSEW(VType) << ", w" << getXSfmmWiden(VType);
 }
 
 unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul) {

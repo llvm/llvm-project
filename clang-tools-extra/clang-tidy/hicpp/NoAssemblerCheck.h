@@ -16,7 +16,7 @@ namespace clang::tidy::hicpp {
 /// Find assembler statements. No fix is offered.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/hicpp/no-assembler.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/no-assembler.html
 class NoAssemblerCheck : public ClangTidyCheck {
 public:
   NoAssemblerCheck(StringRef Name, ClangTidyContext *Context)

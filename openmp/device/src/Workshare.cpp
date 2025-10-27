@@ -800,10 +800,6 @@ public:
 
     // If we know we have more threads than iterations we can indicate that to
     // avoid an outer loop.
-    if (config::getAssumeThreadsOversubscription()) {
-      OneIterationPerThread = true;
-    }
-
     if (OneIterationPerThread)
       ASSERT(NumThreads >= NumIters, "Broken assumption");
 
@@ -851,10 +847,6 @@ public:
 
     // If we know we have more blocks than iterations we can indicate that to
     // avoid an outer loop.
-    if (config::getAssumeTeamsOversubscription()) {
-      OneIterationPerThread = true;
-    }
-
     if (OneIterationPerThread)
       ASSERT(NumBlocks >= NumIters, "Broken assumption");
 
@@ -914,11 +906,6 @@ public:
 
     // If we know we have more threads (across all blocks) than iterations we
     // can indicate that to avoid an outer loop.
-    if (config::getAssumeTeamsOversubscription() &
-        config::getAssumeThreadsOversubscription()) {
-      OneIterationPerThread = true;
-    }
-
     if (OneIterationPerThread)
       ASSERT(NumBlocks * NumThreads >= NumIters, "Broken assumption");
 

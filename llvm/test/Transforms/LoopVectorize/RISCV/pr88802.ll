@@ -5,7 +5,7 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH1:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i8> poison, i8 [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
@@ -37,27 +37,7 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_COND]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT1:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
-; CHECK:       for.cond:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH1]] ], [ [[ADD:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    [[ADD]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i32 [[IV]], 2
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 48
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr i64 [[SHL]], 52
-; CHECK-NEXT:    [[TRUNC_I32:%.*]] = trunc i64 [[ASHR]] to i32
-; CHECK-NEXT:    br i1 [[CMP_SLT]], label [[COND_FALSE:%.*]], label [[FOR_BODY]]
-; CHECK:       cond.false:
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    br label [[FOR_BODY]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[TRUNC_I32]], [[FOR_COND1]] ], [ [[ZEXT]], [[COND_FALSE]] ]
-; CHECK-NEXT:    [[SHL_I32:%.*]] = shl i32 [[COND]], 8
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[SHL_I32]] to i8
-; CHECK-NEXT:    store i8 [[TRUNC]], ptr [[P]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 8
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_COND1]], label [[EXIT1]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -89,9 +69,7 @@ exit:                                             ; preds = %for.body
   ret void
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
-; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]]}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

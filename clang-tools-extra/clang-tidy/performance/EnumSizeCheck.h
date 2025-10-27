@@ -18,7 +18,7 @@ namespace clang::tidy::performance {
 /// base.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance/enum-size.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/enum-size.html
 class EnumSizeCheck : public ClangTidyCheck {
 public:
   EnumSizeCheck(StringRef Name, ClangTidyContext *Context);

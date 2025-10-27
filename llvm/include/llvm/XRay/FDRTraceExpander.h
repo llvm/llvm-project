@@ -17,8 +17,7 @@
 #include "llvm/XRay/FDRRecords.h"
 #include "llvm/XRay/XRayRecord.h"
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 class TraceExpander : public RecordVisitor {
   // Type-erased callback for handling individual XRayRecord instances.
@@ -56,7 +55,6 @@ public:
   Error flush();
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_FDRTRACEEXPANDER_H

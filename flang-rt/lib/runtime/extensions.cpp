@@ -424,6 +424,15 @@ std::int64_t RTNAME(Ftell)(int unitNumber) {
     return -1;
   }
 }
+
+std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return unit->fd();
+  } else {
+    return -1;
+  }
+}
+
 } // namespace io
 
 } // extern "C"

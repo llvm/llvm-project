@@ -137,7 +137,7 @@ ol_result_t printDeviceValue(std::ostream &S, ol_device_handle_t Dev,
     size_t Size;
     OFFLOAD_ERR(olGetDeviceInfoSize(Dev, Info, &Size));
     Val.resize(Size);
-    OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, sizeof(Val), Val.data()));
+    OFFLOAD_ERR(olGetDeviceInfo(Dev, Info, Size, Val.data()));
     doWrite<T, PK>(S, reinterpret_cast<T>(Val.data()));
   } else {
     T Val;

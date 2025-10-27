@@ -9,8 +9,10 @@ set(LLVM_OPTIONAL_SOURCES
   FunctionInterfaces.cpp
   IndexingMapOpInterface.cpp
   InferIntRangeInterface.cpp
+  InferStridedMetadataInterface.cpp
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
+  MemOpInterfaces.cpp
   MemorySlotInterfaces.cpp
   ParallelCombiningOpInterface.cpp
   RuntimeVerifiableOpInterface.cpp
@@ -63,6 +65,21 @@ add_mlir_library(MLIRFunctionInterfaces
 
 add_mlir_interface_library(IndexingMapOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
+
+add_mlir_library(MLIRInferStridedMetadataInterface
+  InferStridedMetadataInterface.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
+
+  DEPENDS
+  MLIRInferStridedMetadataInterfaceIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRInferIntRangeInterface
+  MLIRIR
+)
+
 add_mlir_interface_library(InferTypeOpInterface)
 
 add_mlir_library(MLIRLoopLikeInterface
@@ -79,6 +96,7 @@ add_mlir_library(MLIRLoopLikeInterface
   MLIRFunctionInterfaces
 )
 
+add_mlir_interface_library(MemOpInterfaces)
 add_mlir_interface_library(MemorySlotInterfaces)
 add_mlir_interface_library(ParallelCombiningOpInterface)
 add_mlir_interface_library(RuntimeVerifiableOpInterface)

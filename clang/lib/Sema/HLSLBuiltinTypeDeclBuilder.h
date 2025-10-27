@@ -72,8 +72,9 @@ public:
                     AccessSpecifier Access = AccessSpecifier::AS_private);
 
   BuiltinTypeDeclBuilder &
-  addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
-                  AccessSpecifier Access = AccessSpecifier::AS_private);
+  addBufferHandles(ResourceClass RC, bool IsROV, bool RawBuffer,
+                   bool HasCounter,
+                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addArraySubscriptOperators();
 
   // Builtin types constructors
@@ -82,8 +83,7 @@ public:
   BuiltinTypeDeclBuilder &addCopyAssignmentOperator();
 
   // Static create methods
-  BuiltinTypeDeclBuilder &addCreateFromBinding();
-  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
+  BuiltinTypeDeclBuilder &addStaticInitializationFunctions(bool HasCounter);
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
@@ -94,8 +94,25 @@ public:
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
+  BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+
 private:
+  BuiltinTypeDeclBuilder &addCreateFromBinding();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();
+  BuiltinTypeDeclBuilder &addCreateFromBindingWithImplicitCounter();
+  BuiltinTypeDeclBuilder &addCreateFromImplicitBindingWithImplicitCounter();
+  BuiltinTypeDeclBuilder &addResourceMember(StringRef MemberName,
+                                            ResourceClass RC, bool IsROV,
+                                            bool RawBuffer, bool IsCounter,
+                                            AccessSpecifier Access);
+  BuiltinTypeDeclBuilder &
+  addHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
+                  AccessSpecifier Access = AccessSpecifier::AS_private);
+  BuiltinTypeDeclBuilder &
+  addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,
+                         AccessSpecifier Access = AccessSpecifier::AS_private);
   FieldDecl *getResourceHandleField() const;
+  FieldDecl *getResourceCounterHandleField() const;
   QualType getFirstTemplateTypeParam();
   QualType getHandleElementType();
   Expr *getConstantIntExpr(int value);

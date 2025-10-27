@@ -19,7 +19,7 @@ namespace clang::tidy::readability {
 /// Detects magic numbers, integer and floating point literals embedded in code.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/magic-numbers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/magic-numbers.html
 class MagicNumbersCheck : public ClangTidyCheck {
 public:
   MagicNumbersCheck(StringRef Name, ClangTidyContext *Context);
