@@ -214,12 +214,12 @@ class MemAllocatorTy {
     void printUsage();
 
     /// Initialize pool with allocation kind, allocator, and user options.
-    Error init(int32_t Kind, MemAllocatorTy *_Allocator,
+    Error init(int32_t Kind, MemAllocatorTy *Allocator,
                const L0OptionsTy &Option);
     // Initialize pool used for reduction pool
-    Error init(MemAllocatorTy *_Allocator, const L0OptionsTy &Option);
+    Error init(MemAllocatorTy *Allocator, const L0OptionsTy &Option);
     // Initialize pool used for small memory pool with fixed parameters
-    Error init(MemAllocatorTy *_Allocator);
+    Error init(MemAllocatorTy *Allocator);
 
     /// Release resources used in the pool.
     Error deinit();

@@ -430,6 +430,8 @@ Error MemAllocatorTy::deinit() {
     return Plugin::success();
 
   std::lock_guard<std::mutex> Lock(Mtx);
+  if (!L0Context)
+    return Plugin::success();
   // Release RTL-owned memory
   for (auto *M : MemOwned) {
     auto Err = deallocLocked(M);
@@ -501,7 +503,7 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
       (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_COUNTER);
   const bool UseDedicatedPool = UseScratchPool || UseZeroInitPool;
 
-  if ((Pools[Kind] != nullptr && MemAdvice == UINT32_MAX) || UseDedicatedPool) {
+  if ((Pools[Kind] && MemAdvice == UINT32_MAX) || UseDedicatedPool) {
     // Pool is enabled for the allocation kind, and we do not use any memory
     // advice. We should avoid using pool if there is any meaningful memory
     // advice not to affect sibling allocation in the same block.
@@ -511,11 +513,11 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
     MemPoolTy *Pool = nullptr;
 
     if (UseScratchPool)
-      AllocBase = &ReductionPool;
+      Pool = ReductionPool.get();
     else if (UseZeroInitPool)
-      AllocBase = &CounterPool;
+      Pool = CounterPool.get();
     else
-      AllocBase = Pools[Kind].get();
+      Pool = Pools[Kind].get();
 
     auto PtrOrErr = Pool->alloc(AllocSize, PoolAllocSize);
     if (!PtrOrErr)
@@ -567,7 +569,7 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
   }
   if (Info.InPool) {
     size_t DeallocSize = 0;
-    if (Pools[Info.Kind] != nullptr)
+    if (Pools[Info.Kind])
       DeallocSize = Pools[Info.Kind]->dealloc(Info.Base);
     if (DeallocSize == 0) {
       // Try reduction scratch pool

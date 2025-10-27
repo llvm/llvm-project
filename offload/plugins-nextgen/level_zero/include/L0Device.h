@@ -348,10 +348,10 @@ public:
   uint32_t getMaxSharedLocalMemory() const {
     return ComputeProperties.maxSharedLocalMemory;
   }
-  auto getMaxGroupSize() const { return ComputeProperties.maxTotalGroupSize; }
-  auto getGlobalMemorySize() const { return MemoryProperties.totalSize; }
-  auto getCacheSize() const { return CacheProperties.cacheSize; }
-  auto getMaxMemAllocSize() const { return DeviceProperties.maxMemAllocSize; }
+  uint32_t getMaxGroupSize() const { return ComputeProperties.maxTotalGroupSize; }
+  uint64_t getGlobalMemorySize() const { return MemoryProperties.totalSize; }
+  size_t getCacheSize() const { return CacheProperties.cacheSize; }
+  uint64_t getMaxMemAllocSize() const { return DeviceProperties.maxMemAllocSize; }
 
   int32_t getAllocKind() const { return AllocKind; }
   DeviceArchTy getDeviceArch() const { return DeviceArch; }

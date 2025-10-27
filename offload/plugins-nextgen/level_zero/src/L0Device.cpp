@@ -213,7 +213,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
 
   IsAsyncEnabled =
       isDiscreteDevice() && Options.CommandMode != CommandModeTy::Sync;
-  if (auto Err = MemAllocator.initDevicePools(*this, getPlugin().getOptions()))
+  if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
   l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   return Plugin::success();
@@ -639,6 +639,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
     if (useImmForInterop()) {
       auto CmdListOrErr = createImmCmdList(InOrder);
       if (!CmdListOrErr) {
+        delete Ret->async_info;
         delete Ret;
         return CmdListOrErr.takeError();
       }
@@ -647,6 +648,7 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
     } else {
       auto QueueOrErr = createCommandQueue(InOrder);
       if (!QueueOrErr) {
+        delete Ret->async_info;
         delete Ret;
         return QueueOrErr.takeError();
       }

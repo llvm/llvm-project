@@ -41,8 +41,7 @@ void L0OptionsTy::processEnvironmentVars() {
   if (MemoryPoolVar.isPresent()) {
     if (MemoryPoolVar.get() == "0") {
       Flags.UseMemoryPool = 0;
-      std::for_each(MemPoolConfig.begin(), MemPoolConfig.end(),
-                    [](auto &I) { I = {false, 0, 0, 0}; });
+      MemPoolConfig.fill({false, 0, 0, 0});
     } else {
       std::istringstream Str(MemoryPoolVar.get());
       int32_t MemType = -1;
@@ -51,7 +50,7 @@ void L0OptionsTy::processEnvironmentVars() {
       const std::array<int32_t, 3> DefaultValue{1, 4, 256};
       const int32_t AllMemType = INT32_MAX;
       std::array<int32_t, 3> AllInfo{1, 4, 256};
-      std::array<std::array<int32_t, 3>, 3> PoolInfo;
+      std::array<std::array<int32_t, 3>, 3> PoolInfo = {{{0, 0, 0}}};
       for (std::string Token; std::getline(Str, Token, ',') && Valid > 0;) {
         if (Token == "device") {
           MemType = TARGET_ALLOC_DEVICE;
@@ -95,8 +94,7 @@ void L0OptionsTy::processEnvironmentVars() {
             MemPoolConfig[TARGET_ALLOC_SHARED] = {true, AllInfo[0], AllInfo[1],
                                                   AllInfo[2]};
           } else {
-            std::for_each(MemPoolConfig.begin(), MemPoolConfig.end(),
-                          [](auto &I) { I = {false, 0, 0, 0}; });
+            MemPoolConfig.fill({false, 0, 0, 0});
           }
         } else {
           for (size_t Pool = 0; Pool < PoolInfo.size(); ++Pool) {

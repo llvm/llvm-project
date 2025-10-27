@@ -96,17 +96,16 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
 
   DP("Found %" PRIu32 " devices.\n", NumDevices);
   DP("List of devices (DeviceID[.SubID[.CCSID]])\n");
-  for (auto &DeviceInfo : DetectedDevices) {
+    for (auto &DeviceInfo : DetectedDevices) {
     (void)DeviceInfo; // to avoid unused variable warning in non-debug builds
-    DP("-- Device %" PRIu32 "%s%s (zeDevice=" PRIu64 ") from Driver %p\n",
+    DP("-- Device %" PRIu32 "%s%s\n",
        DeviceInfo.Id.RootId,
        (DeviceInfo.Id.SubId < 0
             ? ""
             : ("." + std::to_string(DeviceInfo.Id.SubId)).c_str()),
        (DeviceInfo.Id.CCSId < 0
             ? ""
-            : ("." + std::to_string(DeviceInfo.Id.CCSId)).c_str()),
-       DPxPTR(DeviceInfo.Id.zeId), DPxPTR(DeviceInfo.Driver));
+            : ("." + std::to_string(DeviceInfo.Id.CCSId)).c_str()));
   }
   return NumDevices;
 }
