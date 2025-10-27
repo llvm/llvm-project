@@ -2763,6 +2763,20 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
 
+/// Matches any named cast expression.
+///
+/// Example: Matches all four of the casts in
+/// \code
+///   struct S { virtual void f(); };
+///   S* p = nullptr;
+///   S* ptr1 = static_cast<S*>(p);
+///   S* ptr2 = reinterpret_cast<S*>(p);
+///   S* ptr3 = dynamic_cast<S*>(p);
+///   S* ptr4 = const_cast<S*>(p);
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
+
 /// Matches a C-style cast expression.
 ///
 /// Example: Matches (int) 2.2f in

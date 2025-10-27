@@ -221,6 +221,11 @@ New checks
 
   Detect redundant parentheses.
 
+- New :doc:`readability-redundant-typename
+  <clang-tidy/checks/readability/redundant-typename>` check.
+
+  Finds redundant uses of the ``typename`` keyword.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
