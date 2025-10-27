@@ -55,4 +55,4 @@ exit:
 
 ; CHECK: ![[#LOOP_MD:]] = distinct !{![[#LOOP_MD]]}
 
-!1 = !{!1, i32 0} ; not a metadata node
+!1 = !{!1, i32 0} ; second operand is not a metadata node
