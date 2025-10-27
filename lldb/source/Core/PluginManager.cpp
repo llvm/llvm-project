@@ -1300,6 +1300,35 @@ PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
   return none_instance(debugger);
 }
 
+#pragma mark SyntheticFrameProvider
+
+typedef PluginInstance<SyntheticFrameProviderCreateInstance>
+    SyntheticFrameProviderInstance;
+typedef PluginInstances<SyntheticFrameProviderInstance>
+    SyntheticFrameProviderInstances;
+
+static SyntheticFrameProviderInstances &GetSyntheticFrameProviderInstances() {
+  static SyntheticFrameProviderInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    SyntheticFrameProviderCreateInstance create_callback) {
+  return GetSyntheticFrameProviderInstances().RegisterPlugin(name, description,
+                                                             create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    SyntheticFrameProviderCreateInstance create_callback) {
+  return GetSyntheticFrameProviderInstances().UnregisterPlugin(create_callback);
+}
+
+SyntheticFrameProviderCreateInstance
+PluginManager::GetSyntheticFrameProviderCreateCallbackAtIndex(uint32_t idx) {
+  return GetSyntheticFrameProviderInstances().GetCallbackAtIndex(idx);
+}
+
 #pragma mark StructuredDataPlugin
 
 struct StructuredDataPluginInstance
