@@ -1196,6 +1196,18 @@ def SVMLLA_F32 : SInst<"svmmla[_f32]", "dddd","f", MergeNone, "aarch64_sve_fmmla
 let SVETargetGuard = "f64mm", SMETargetGuard = InvalidMode in {
 def SVMLLA_F64 : SInst<"svmmla[_f64]",  "dddd", "d", MergeNone, "aarch64_sve_fmmla">;
 
+let SVETargetGuard = "sve-f16f32mm", SMETargetGuard = InvalidMode in {
+  def SVMLLA_F32_F16  : SInst<"svmmla[_f32_f16]", "MMdd", "h", MergeNone, "aarch64_sve_fmmla_f16f32", [IsOverloadNone]>;
+}
+
+let SVETargetGuard = "sve2,f8f32mm", SMETargetGuard = InvalidMode in {
+  def SVMLLA_F32_MF8 : SInst<"svmmla[_f32_mf8]", "MM~~>", "m", MergeNone, "aarch64_sve_fmmla_mf8f32", [IsOverloadNone]>;
+}
+
+let SVETargetGuard = "sve2,f8f16mm", SMETargetGuard = InvalidMode in {
+  def SVMLLA_F16_MF8 : SInst<"svmmla[_f16_mf8]", "OO~~>", "m", MergeNone, "aarch64_sve_fmmla_mf8f16", [IsOverloadNone]>;
+}
+
 def SVTRN1Q : SInst<"svtrn1q[_{d}]", "ddd", "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_trn1q">;
 def SVTRN2Q : SInst<"svtrn2q[_{d}]", "ddd", "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_trn2q">;
 def SVUZP1Q : SInst<"svuzp1q[_{d}]", "ddd", "csilUcUsUiUlhfdb", MergeNone, "aarch64_sve_uzp1q">;

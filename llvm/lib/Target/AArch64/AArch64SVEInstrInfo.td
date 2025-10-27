@@ -3684,7 +3684,7 @@ let Predicates = [HasSVE, HasMatMulFP32] in {
 } // End HasSVE, HasMatMulFP32
 
 let Predicates = [HasSVE_F16F32MM] in {
-  def FMLLA_ZZZ_HtoS : sve_fp_matrix_mla<0b001, "fmmla", ZPR32, ZPR16>;
+  defm FMLLA_ZZZ_HtoS : sve_fp_matrix_mla<0b001, "fmmla", ZPR32, ZPR16, int_aarch64_sve_fmmla_f16f32, nxv4f32, nxv8f16>;
 } // End HasSVE_F16F32MM
 
 let Predicates = [HasSVE, HasMatMulFP64] in {
@@ -4745,10 +4745,14 @@ defm FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt", nxv4f32, int_aarch64_
 
 let Predicates = [HasSVE2, HasF8F32MM] in {
   def FMMLA_ZZZ_BtoS :  sve2_fp8_mmla<0b0, ZPR32, "fmmla">;
+  def : Pat<(nxv4f32 (int_aarch64_sve_fmmla_mf8f32 nxv4f32:$acc, nxv16i8:$zn, nxv16i8:$zm)), 
+        (FMMLA_ZZZ_BtoS $acc, $zn, $zm)>;
 }
 
 let Predicates = [HasSVE2, HasF8F16MM] in {
   def FMMLA_ZZZ_BtoH :  sve2_fp8_mmla<0b1, ZPR16, "fmmla">;
+  def : Pat<(nxv8f16 (int_aarch64_sve_fmmla_mf8f16 nxv8f16:$acc, nxv16i8:$zn, nxv16i8:$zm)),
+        (FMMLA_ZZZ_BtoH $acc, $zn, $zm)>;
 }
 
 let Predicates = [HasSSVE_FP8DOT2] in {
