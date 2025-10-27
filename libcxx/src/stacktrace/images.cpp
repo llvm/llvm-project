@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-images::images() {
+_Images::_Images() {
   images_[count_++] = {0uz, 0};  // sentinel at low end
   images_[count_++] = {~0uz, 0}; // sentinel at high end
   auto dyld_count   = _dyld_image_count();
@@ -55,8 +55,8 @@ namespace __stacktrace {
 
 namespace {
 int add_image(dl_phdr_info* info, size_t, void* images_v) {
-  auto& imgs = *(images*)images_v;
-  if (imgs.count_ == images::k_max_images) {
+  auto& imgs = *(_Images*)images_v;
+  if (imgs.count_ == _Images::k_max_images) {
     return 0;
   }
   auto is_first = (imgs.count_ == 0);
@@ -69,17 +69,17 @@ int add_image(dl_phdr_info* info, size_t, void* images_v) {
   // `dl_iterate_phdr` gives us the main program image first
   image.is_main_prog_ = is_first;
   if (!image.name_[0] && is_first) {
-    char buf[entry_base::__max_file_len]{0};
+    char buf[_Entry::__max_file_len]{0};
     if (readlink("/proc/self/exe", buf, sizeof(buf)) != -1) { // Ignores errno if error
       strncpy(image.name_, buf, sizeof(image.name_));
     }
   }
   // If we're at the limit, return nonzero to stop iterating
-  return imgs.count_ == images::k_max_images;
+  return imgs.count_ == _Images::k_max_images;
 }
 } // namespace
 
-images::images() {
+_Images::_Images() {
   dl_iterate_phdr(add_image, this);
   images_[count_++] = {0uz, 0};  // sentinel at low end
   images_[count_++] = {~0uz, 0}; // sentinel at high end
