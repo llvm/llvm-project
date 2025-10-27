@@ -10127,6 +10127,9 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
               case 'c':
                 set.set(common::IgnoreTKR::Contiguous);
                 break;
+              case 'p':
+                set.set(common::IgnoreTKR::Pointer);
+                break;
               case 'a':
                 set = common::ignoreTKRAll;
                 break;
