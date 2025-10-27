@@ -455,9 +455,8 @@ inline std::wstring GetPathToExecutableW() {
 /// `false` otherwise.
 bool AddPythonDLLToSearchPath() {
   std::wstring modulePath = GetPathToExecutableW();
-  if (modulePath.empty()) {
+  if (modulePath.empty())
     return false;
-  }
 
   SmallVector<char, MAX_PATH> utf8Path;
   if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
@@ -501,8 +500,8 @@ void SetupPythonRuntimeLibrary() {
   if (AddPythonDLLToSearchPath())
     return;
 #endif
-  llvm::errs() << "error: unable to find "
-               << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << ".\n";
+  llvm::errs() << "error: unable to find '"
+               << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << "'.\n";
   return;
 #elif defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
   if (!AddPythonDLLToSearchPath())
