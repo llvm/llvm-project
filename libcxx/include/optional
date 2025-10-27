@@ -1438,7 +1438,7 @@ swap(optional<_Tp>& __x, optional<_Tp>& __y) noexcept(noexcept(__x.swap(__y))) {
 }
 
 struct __make_optional_barrier_tag {
-  explicit __make_optional_barrier_tag() = default; 
+  explicit __make_optional_barrier_tag() = default;
 };
 
 template <
