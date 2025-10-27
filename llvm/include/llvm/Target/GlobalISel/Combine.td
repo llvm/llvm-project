@@ -213,6 +213,7 @@ def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
+def mi_vector_matchinfo : GIDefMatchData<"SmallVector<MachineInstr *>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -396,6 +397,16 @@ def commute_shift : GICombineRule<
          [{ return Helper.matchCommuteShift(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${d}, ${matchinfo}); }])>;
 
+// Fold (lshr (trunc (lshr x, C1)), C2) -> trunc (lshr x, (C1 + C2))
+def lshr_of_trunc_of_lshr_matchdata : GIDefMatchData<"LshrOfTruncOfLshr">;
+def lshr_of_trunc_of_lshr : GICombineRule<
+  (defs root:$root, lshr_of_trunc_of_lshr_matchdata:$matchinfo),
+  (match (G_LSHR $d1, $x, $y):$Shift,
+         (G_TRUNC $d2, $d1),
+         (G_LSHR $dst, $d2, $z):$root,
+         [{ return Helper.matchLshrOfTruncOfLshr(*${root}, ${matchinfo}, *${Shift}); }]),
+  (apply [{ Helper.applyLshrOfTruncOfLshr(*${root}, ${matchinfo}); }])>;
+
 def narrow_binop_feeding_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
@@ -472,13 +483,6 @@ def propagate_undef_shuffle_mask: GICombineRule<
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return Helper.matchUndefShuffleVectorMask(*${root}); }]),
   (apply [{ Helper.replaceInstWithUndef(*${root}); }])>;
-
-// Replace a G_SHUFFLE_VECTOR with a G_EXTRACT_VECTOR_ELT.
-def shuffle_to_extract: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
-         [{ return Helper.matchShuffleToExtract(*${root}); }]),
-  (apply [{ Helper.applyShuffleToExtract(*${root}); }])>;
 
   // Replace an insert/extract element of an out of bounds index with undef.
   def insert_extract_vec_elt_out_of_bounds : GICombineRule<
@@ -684,6 +688,7 @@ def constant_fold_fabs : constant_fold_unary_fp_op_rule<G_FABS>;
 def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
+def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -702,6 +707,7 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_fsqrt,
   constant_fold_flog2,
   constant_fold_fptrunc,
+  constant_fold_fpext,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;
@@ -1406,6 +1412,14 @@ def combine_minmax_nan: GICombineRule<
          [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
 
+// Combine multiple FDIVs with the same divisor into multiple FMULs by the
+// reciprocal.
+def fdiv_repeated_divison: GICombineRule<
+  (defs root:$root, mi_vector_matchinfo:$matchinfo),
+  (match (G_FDIV $dst, $src1, $src2):$root,
+         [{ return Helper.matchRepeatedFPDivisor(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyRepeatedFPDivisor(${matchinfo}); }])>;
+
 // Transform (add x, (sub y, x)) -> y
 // Transform (add (sub y, x), x) -> y
 def add_sub_reg_frags : GICombinePatFrag<
@@ -1653,8 +1667,7 @@ def combine_shuffle_concat : GICombineRule<
 // Combines shuffles of vector into build_vector
 def combine_shuffle_vector_to_build_vector : GICombineRule<
   (defs root:$root),
-  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
-    [{ return Helper.matchCombineShuffleToBuildVector(*${root}); }]),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
 
 def insert_vector_element_idx_undef : GICombineRule<
@@ -2129,11 +2142,13 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     constant_fold_cast_op, fabs_fneg_fold,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    intrem_combines, intdiv_combines, sub_add_reg, select_to_minmax,
+    intrem_combines, intdiv_combines, fdiv_repeated_divison,
+    sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
-    combine_use_vector_truncate, merge_combines, overflow_combines, truncsat_combines]>;
+    combine_use_vector_truncate, merge_combines, overflow_combines, 
+    truncsat_combines, lshr_of_trunc_of_lshr]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

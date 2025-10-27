@@ -17,10 +17,10 @@
 
 #include <cmath>
 
-namespace llvm {
+using namespace llvm;
 
-static const unsigned heatSize = 100;
-static const char heatPalette[heatSize][8] = {
+static constexpr unsigned HeatSize = 100;
+static constexpr char HeatPalette[HeatSize][8] = {
     "#3d50c3", "#4055c8", "#4358cb", "#465ecf", "#4961d2", "#4c66d6", "#4f69d9",
     "#536edd", "#5572df", "#5977e3", "#5b7ae5", "#5f7fe8", "#6282ea", "#6687ed",
     "#6a8bef", "#6c8ff1", "#7093f3", "#7396f5", "#779af7", "#7a9df8", "#7ea1fa",
@@ -37,43 +37,37 @@ static const char heatPalette[heatSize][8] = {
     "#d24b40", "#d0473d", "#cc403a", "#ca3b37", "#c53334", "#c32e31", "#be242e",
     "#bb1b2c", "#b70d28"};
 
-uint64_t
-getNumOfCalls(Function &callerFunction, Function &calledFunction) {
-  uint64_t counter = 0;
-  for (User *U : calledFunction.users()) {
-    if (auto CI = dyn_cast<CallInst>(U)) {
-      if (CI->getCaller() == (&callerFunction)) {
-          counter += 1;
-      }
-    }
-  }
-  return counter;
+uint64_t llvm::getNumOfCalls(const Function &CallerFunction,
+                             const Function &CalledFunction) {
+  uint64_t Counter = 0;
+  for (const User *U : CalledFunction.users())
+    if (auto CI = dyn_cast<CallInst>(U))
+      Counter += CI->getCaller() == &CallerFunction;
+  return Counter;
 }
 
-uint64_t getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI) {
-  uint64_t maxFreq = 0;
+uint64_t llvm::getMaxFreq(const Function &F, const BlockFrequencyInfo *BFI) {
+  uint64_t MaxFreq = 0;
   for (const BasicBlock &BB : F) {
-    uint64_t freqVal = BFI->getBlockFreq(&BB).getFrequency();
-    if (freqVal >= maxFreq)
-      maxFreq = freqVal;
+    uint64_t FreqVal = BFI->getBlockFreq(&BB).getFrequency();
+    if (FreqVal >= MaxFreq)
+      MaxFreq = FreqVal;
   }
-  return maxFreq;
+  return MaxFreq;
 }
 
-std::string getHeatColor(uint64_t freq, uint64_t maxFreq) {
-  if (freq > maxFreq)
-    freq = maxFreq;
-  double percent = (freq > 0) ? log2(double(freq)) / log2(maxFreq) : 0;
-  return getHeatColor(percent);
+std::string llvm::getHeatColor(uint64_t Freq, uint64_t MaxFreq) {
+  if (Freq > MaxFreq)
+    Freq = MaxFreq;
+  double Percent = (Freq > 0) ? log2(double(Freq)) / log2(MaxFreq) : 0;
+  return getHeatColor(Percent);
 }
 
-std::string getHeatColor(double percent) {
-  if (percent > 1.0)
-    percent = 1.0;
-  if (percent < 0.0)
-    percent = 0.0;
-  unsigned colorId = unsigned(round(percent * (heatSize - 1.0)));
-  return heatPalette[colorId];
+std::string llvm::getHeatColor(double Percent) {
+  if (Percent > 1.0)
+    Percent = 1.0;
+  if (Percent < 0.0)
+    Percent = 0.0;
+  unsigned ColorID = unsigned(round(Percent * (HeatSize - 1.0)));
+  return HeatPalette[ColorID];
 }
-
-} // namespace llvm

@@ -59,14 +59,22 @@ RT_EXT_API_GROUP_BEGIN
 void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
     const Descriptor *status, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-#if !defined(RT_DEVICE_COMPILATION)
-  char *pathSrc{EnsureNullTerminated(
-      path1.OffsetElement(), path1.ElementBytes(), terminator)};
-  char *pathDst{EnsureNullTerminated(
-      path2.OffsetElement(), path2.ElementBytes(), terminator)};
 
-  // We simply call rename(2) from POSIX
-  int result{rename(pathSrc, pathDst)};
+  // Semantics for character strings: A null character (CHAR(0)) can be used to
+  // mark the end of the names in PATH1 and PATH2; otherwise, trailing blanks in
+  // the file names are ignored.
+  // (https://gcc.gnu.org/onlinedocs/gfortran/RENAME.html)
+#if !defined(RT_DEVICE_COMPILATION)
+  // Trim tailing spaces, respect presences of null character when doing so.
+  auto pathSrc{SaveDefaultCharacter(path1.OffsetElement(),
+      TrimTrailingSpaces(path1.OffsetElement(), path1.ElementBytes()),
+      terminator)};
+  auto pathDst{SaveDefaultCharacter(path2.OffsetElement(),
+      TrimTrailingSpaces(path2.OffsetElement(), path2.ElementBytes()),
+      terminator)};
+
+  // We can now simply call rename(2) from POSIX.
+  int result{rename(pathSrc.get(), pathDst.get())};
   if (status) {
     // When an error has happened,
     int errorCode{0}; // Assume success
@@ -75,14 +83,6 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
       errorCode = errno;
     }
     StoreIntToDescriptor(status, errorCode, terminator);
-  }
-
-  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
-  if (pathSrc != path1.OffsetElement()) {
-    FreeMemory(pathSrc);
-  }
-  if (pathDst != path2.OffsetElement()) {
-    FreeMemory(pathDst);
   }
 #else // !defined(RT_DEVICE_COMPILATION)
   terminator.Crash("RENAME intrinsic is only supported on host devices");

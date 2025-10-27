@@ -1,9 +1,5 @@
 // Needs symlinks
 // UNSUPPORTED: system-windows
-// env -u is not supported on AIX.
-// TODO(boomanaiden154): Remove this once we have switched over to lit's
-// internal shell which does support env -u.
-// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // REQUIRES: x86-registered-target
 
 // RUN: rm -rf %t && mkdir %t
@@ -230,7 +226,7 @@
 
 //--- Tilde expansion in user configuration file directory
 //
-// RUN: HOME=%S/Inputs/config %clang -### --config-user-dir=~ -v 2>&1 | FileCheck %s --check-prefix=CHECK-TILDE
+// RUN: env HOME=%S/Inputs/config %clang -### --config-user-dir=~ -v 2>&1 | FileCheck %s --check-prefix=CHECK-TILDE
 // CHECK-TILDE: User configuration file directory: {{.*}}/Inputs/config
 
 //--- Fallback to stripping OS versions

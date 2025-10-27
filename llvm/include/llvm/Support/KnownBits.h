@@ -94,6 +94,13 @@ public:
     One.setAllBits();
   }
 
+  /// Make all bits known to be both zero and one. Useful before a loop that
+  /// calls intersectWith.
+  void setAllConflict() {
+    Zero.setAllBits();
+    One.setAllBits();
+  }
+
   /// Returns true if this value is known to be negative.
   bool isNegative() const { return One.isSignBitSet(); }
 

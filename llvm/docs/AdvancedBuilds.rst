@@ -16,7 +16,7 @@ If **you are a new contributor**, please start with the :doc:`GettingStarted` or
 :doc:`CMake` pages. This page is intended for users doing more complex builds.
 
 Many of the examples below are written assuming specific CMake Generators.
-Unless otherwise explicitly called out these commands should work with any CMake
+Unless explicitly stated otherwise, these commands should work with any CMake
 generator.
 
 Many of the build configurations mentioned on this documentation page can be
@@ -66,7 +66,7 @@ CMake option, each variable separated by a ";". For example:
   $ ninja stage2
 
 CMake options starting with ``BOOTSTRAP_`` will be passed only to the stage2 build.
-This gives the opportunity to use Clang specific build flags.
+This gives the opportunity to use Clang-specific build flags.
 For example, the following CMake call will enable ``-fno-addrsig`` only during
 the stage2 build for C and C++.
 
@@ -124,7 +124,7 @@ performance counters (``.profraw`` files). After generating all the profraw file
 you use llvm-profdata to merge the files into a single profdata file that you
 can feed into the ``LLVM_PROFDATA_FILE`` option.
 
-Our PGO.cmake cache automates that whole process. You can use it for
+Our ``PGO.cmake`` cache automates that whole process. You can use it for
 configuration with CMake with the following command:
 
 .. code-block:: console
@@ -146,7 +146,7 @@ that also enables ThinLTO, use the following command:
       <path to source>/llvm
 
 By default, clang will generate profile data by compiling a simple
-hello world program.  You can also tell clang use an external
+hello world program.  You can also tell clang to use an external
 project for generating profile data that may be a better fit for your
 use case.  The project you specify must either be a lit test suite
 (use the ``CLANG_PGO_TRAINING_DATA`` option) or a CMake project (use the
@@ -163,7 +163,7 @@ profile data you would use the following command:
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DEPS=runtimes
 
 The ``BOOTSTRAP\_`` prefix tells CMake to pass the variables on to the instrumented
-stage two build.  And the ``CLANG_PGO_TRAINING_DEPS`` option let's you specify
+stage two build.  And the ``CLANG_PGO_TRAINING_DEPS`` option lets you specify
 additional build targets to build before building the external project.  The
 LLVM Test Suite requires compiler-rt to build, so we need to add the
 `runtimes` target as a dependency.

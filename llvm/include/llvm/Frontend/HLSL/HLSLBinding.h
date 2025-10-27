@@ -133,17 +133,19 @@ class BoundRegs {
 public:
   BoundRegs(SmallVector<Binding> &&Bindings) : Bindings(std::move(Bindings)) {}
 
-  bool isBound(dxil::ResourceClass RC, uint32_t Space, uint32_t LowerBound,
-               uint32_t UpperBound) const {
+  const Binding *findBoundReg(dxil::ResourceClass RC, uint32_t Space,
+                              uint32_t LowerBound, uint32_t UpperBound) const {
     // UpperBound and Cookie are given dummy values, since they aren't
     // interesting for operator<
     const Binding *It =
         llvm::upper_bound(Bindings, Binding{RC, Space, LowerBound, 0, nullptr});
     if (It == Bindings.begin())
-      return false;
+      return nullptr;
     --It;
-    return It->RC == RC && It->Space == Space && It->LowerBound <= LowerBound &&
-           It->UpperBound >= UpperBound;
+    if (It->RC == RC && It->Space == Space && It->LowerBound <= LowerBound &&
+        It->UpperBound >= UpperBound)
+      return It;
+    return nullptr;
   }
 };
 

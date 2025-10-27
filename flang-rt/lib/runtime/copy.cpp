@@ -168,6 +168,8 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
         std::size_t nComponents{componentDesc.Elements()};
         for (std::size_t j{0}; j < nComponents; ++j, ++component) {
           if (component->genre() == typeInfo::Component::Genre::Allocatable ||
+              component->genre() ==
+                  typeInfo::Component::Genre::AllocatableDevice ||
               component->genre() == typeInfo::Component::Genre::Automatic) {
             Descriptor &toDesc{
                 *reinterpret_cast<Descriptor *>(toPtr + component->offset())};

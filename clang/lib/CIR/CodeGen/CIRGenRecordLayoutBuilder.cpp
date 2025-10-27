@@ -296,9 +296,8 @@ void CIRRecordLowering::lower(bool nonVirtualBaseType) {
   }
 
   llvm::stable_sort(members);
-  // TODO: implement clipTailPadding once bitfields are implemented
-  assert(!cir::MissingFeatures::bitfields());
-  assert(!cir::MissingFeatures::recordZeroInit());
+  // TODO: Verify bitfield clipping
+  assert(!cir::MissingFeatures::checkBitfieldClipping());
 
   members.push_back(makeStorageInfo(size, getUIntNType(8)));
   determinePacked(nonVirtualBaseType);
@@ -319,9 +318,11 @@ void CIRRecordLowering::fillOutputFields() {
         fieldIdxMap[member.fieldDecl->getCanonicalDecl()] =
             fieldTypes.size() - 1;
       // A field without storage must be a bitfield.
-      assert(!cir::MissingFeatures::bitfields());
-      if (!member.data)
+      if (!member.data) {
+        assert(member.fieldDecl &&
+               "member.data is a nullptr so member.fieldDecl should not be");
         setBitFieldInfo(member.fieldDecl, member.offset, fieldTypes.back());
+      }
     } else if (member.kind == MemberInfo::InfoKind::Base) {
       nonVirtualBases[member.cxxRecordDecl] = fieldTypes.size() - 1;
     } else if (member.kind == MemberInfo::InfoKind::VBase) {
@@ -615,7 +616,7 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
-    if (member.offset % getAlignment(member.data))
+    if (!member.offset.isMultipleOf(getAlignment(member.data)))
       packed = true;
     if (member.offset < nvSize)
       nvAlignment = std::max(nvAlignment, getAlignment(member.data));
@@ -623,12 +624,12 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
   }
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
-  if (members.back().offset % alignment)
+  if (!members.back().offset.isMultipleOf(alignment))
     packed = true;
   // If the non-virtual sub-object is not a multiple of the non-virtual
   // sub-object's alignment, it must be packed.  We cannot have a packed
   // non-virtual sub-object and an unpacked complete object or vise versa.
-  if (nvSize % nvAlignment)
+  if (!nvSize.isMultipleOf(nvAlignment))
     packed = true;
   // Update the alignment of the sentinel.
   if (!packed)
@@ -697,12 +698,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       ty ? *ty : cir::RecordType{}, baseTy ? baseTy : cir::RecordType{},
       (bool)lowering.zeroInitializable, (bool)lowering.zeroInitializableAsBase);
 
-  assert(!cir::MissingFeatures::recordZeroInit());
-
   rl->nonVirtualBases.swap(lowering.nonVirtualBases);
   rl->completeObjectVirtualBases.swap(lowering.virtualBases);
-
-  assert(!cir::MissingFeatures::bitfields());
 
   // Add all the field numbers.
   rl->fieldIdxMap.swap(lowering.fieldIdxMap);
@@ -824,7 +821,7 @@ void CIRRecordLowering::lowerUnion() {
     appendPaddingBytes(layoutSize - getSize(storageType));
 
   // Set packed if we need it.
-  if (layoutSize % getAlignment(storageType))
+  if (!layoutSize.isMultipleOf(getAlignment(storageType)))
     packed = true;
 }
 

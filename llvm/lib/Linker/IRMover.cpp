@@ -1152,7 +1152,6 @@ void IRLinker::linkNamedMDNodes() {
       if (Inserted.insert(MD).second)
         DestNMD->addOperand(MD);
     }
-    assert(Inserted.size() == DestNMD->getNumOperands());
   }
 }
 
@@ -1513,6 +1512,11 @@ Error IRLinker::run() {
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
 
+  // Convert module level attributes to function level attributes because
+  // after merging modules the attributes might change and would have different
+  // effect on the functions as the original module would have.
+  copyModuleAttrToFunctions(*SrcM);
+
   std::reverse(Worklist.begin(), Worklist.end());
   while (!Worklist.empty()) {
     GlobalValue *GV = Worklist.back();
@@ -1678,6 +1682,11 @@ IRMover::IRMover(Module &M) : Composite(M) {
   for (const auto *MD : StructTypes.getVisitedMetadata()) {
     SharedMDs[MD].reset(const_cast<MDNode *>(MD));
   }
+
+  // Convert module level attributes to function level attributes because
+  // after merging modules the attributes might change and would have different
+  // effect on the functions as the original module would have.
+  copyModuleAttrToFunctions(M);
 }
 
 Error IRMover::move(std::unique_ptr<Module> Src,

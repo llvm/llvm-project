@@ -559,7 +559,7 @@ public:
   lldb::InstructionControlFlowKind
   GetControlFlowKind(const lldb_private::ExecutionContext *exe_ctx) override {
     DisassemblerScope disasm(*this, exe_ctx);
-    if (disasm){
+    if (disasm) {
       if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86)
         return x86::GetControlFlowKind(/*is_64b=*/false, m_opcode);
       else if (disasm->GetArchitecture().GetMachine() == llvm::Triple::x86_64)
@@ -1249,11 +1249,14 @@ private:
 };
 
 std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>
-DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple, const char *cpu,
+DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
+                                            const char *cpu,
                                             const char *features_str,
                                             unsigned flavor,
                                             DisassemblerLLVMC &owner) {
   using Instance = std::unique_ptr<DisassemblerLLVMC::MCDisasmInstance>;
+
+  llvm::Triple triple(triple_name);
 
   std::string Status;
   const llvm::Target *curr_target =

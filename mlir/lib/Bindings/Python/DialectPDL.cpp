@@ -36,7 +36,7 @@ static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
         return cls(mlirPDLAttributeTypeGet(ctx));
       },
       "Get an instance of AttributeType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // OperationType
@@ -50,7 +50,7 @@ static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
         return cls(mlirPDLOperationTypeGet(ctx));
       },
       "Get an instance of OperationType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // RangeType
@@ -68,6 +68,8 @@ static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
   rangeType.def_property_readonly(
       "element_type",
       [](MlirType type) { return mlirPDLRangeTypeGetElementType(type); },
+      nb::sig(
+          "def element_type(self) -> " MAKE_MLIR_PYTHON_QUALNAME("ir.Type")),
       "Get the element type.");
 
   //===-------------------------------------------------------------------===//
@@ -81,7 +83,7 @@ static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
         return cls(mlirPDLTypeTypeGet(ctx));
       },
       "Get an instance of TypeType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
 
   //===-------------------------------------------------------------------===//
   // ValueType
@@ -94,7 +96,7 @@ static void populateDialectPDLSubmodule(const nanobind::module_ &m) {
         return cls(mlirPDLValueTypeGet(ctx));
       },
       "Get an instance of TypeType in given context.", nb::arg("cls"),
-      nb::arg("context").none() = nb::none());
+      nb::arg("context") = nb::none());
 }
 
 NB_MODULE(_mlirDialectsPDL, m) {

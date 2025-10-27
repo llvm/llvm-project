@@ -84,6 +84,10 @@ def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
 def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat],
                                 "number">;
 
+def Tosa_MXFPNumber : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN],
+                                "micro-scaling format number">;
+def Tosa_MXFPScaleNumber : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
+
 //===----------------------------------------------------------------------===//
 // TOSA Tensor Conformance
 //===----------------------------------------------------------------------===//
@@ -187,6 +191,25 @@ def Tosa_Int32Tensor2D : AnyTypeOf<[
 def Tosa_TensorAtLeast1D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaRankedTensorOf<[Tosa_AnyNumber], [AtLeastRankOne]>], "tosa-conformant tensor of at least rank 1", "::mlir::TensorType">;
 
+def Tosa_MXFPDataTensor3D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPNumber], [3]>
+]>;
+def Tosa_MXFPScaleTensor3D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPScaleNumber], [3]>
+]>;
+def Tosa_MXFPDataTensorAtLeast1D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
+  TosaRankedTensorOf<[Tosa_MXFPNumber], [AtLeastRankOne]>],
+  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
+>;
+def Tosa_MXFPScaleTensorAtLeast1D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
+  TosaRankedTensorOf<[Tosa_MXFPScaleNumber], [AtLeastRankOne]>],
+  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
+>;
+
 //===----------------------------------------------------------------------===//
 // Generic scalar, vector, or tensor of a particular type.
 //===----------------------------------------------------------------------===//
@@ -282,8 +305,7 @@ def Tosa_Shape : Tosa_Type<"shape", "shape"> {
      !tosa.shape<0>
     ```
   }];
-  let parameters = (ins "int" : $rank);
-  let builders = [TypeBuilder<(ins "int" : $rank)>];
+  let parameters = (ins "int":$rank);
   let assemblyFormat = "`<` $rank `>`";
 
   let genVerifyDecl = 1;

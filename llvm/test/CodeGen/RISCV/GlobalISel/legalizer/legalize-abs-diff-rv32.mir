@@ -9,19 +9,32 @@ name:            abds_i8
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
-    ; CHECK-LABEL: name: abds_i8
-    ; CHECK: liveins: $x10, $x11
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
-    ; CHECK-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 8
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
-    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](s32), [[ASSERT_SEXT1]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
-    ; CHECK-NEXT: $x10 = COPY [[SELECT]](s32)
-    ; CHECK-NEXT: PseudoRET implicit $x10
+    ; RV32I-LABEL: name: abds_i8
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
+    ; RV32I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 8
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](s32), [[ASSERT_SEXT1]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
+    ; RV32I-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32ZBB-LABEL: name: abds_i8
+    ; RV32ZBB: liveins: $x10, $x11
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 8
+    ; RV32ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 8
+    ; RV32ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
+    ; RV32ZBB-NEXT: [[SMIN:%[0-9]+]]:_(s32) = G_SMIN [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SMAX]], [[SMIN]]
+    ; RV32ZBB-NEXT: $x10 = COPY [[SUB]](s32)
+    ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %3:_(s32) = G_ASSERT_SEXT %1, 8
@@ -38,19 +51,32 @@ name:            abds_i16
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
-    ; CHECK-LABEL: name: abds_i16
-    ; CHECK: liveins: $x10, $x11
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
-    ; CHECK-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 16
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
-    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](s32), [[ASSERT_SEXT1]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
-    ; CHECK-NEXT: $x10 = COPY [[SELECT]](s32)
-    ; CHECK-NEXT: PseudoRET implicit $x10
+    ; RV32I-LABEL: name: abds_i16
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32I-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
+    ; RV32I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 16
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](s32), [[ASSERT_SEXT1]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
+    ; RV32I-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32ZBB-LABEL: name: abds_i16
+    ; RV32ZBB: liveins: $x10, $x11
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32ZBB-NEXT: [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY]], 16
+    ; RV32ZBB-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[COPY1]], 16
+    ; RV32ZBB-NEXT: [[SMAX:%[0-9]+]]:_(s32) = G_SMAX [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
+    ; RV32ZBB-NEXT: [[SMIN:%[0-9]+]]:_(s32) = G_SMIN [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[SMAX]], [[SMIN]]
+    ; RV32ZBB-NEXT: $x10 = COPY [[SUB]](s32)
+    ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %3:_(s32) = G_ASSERT_SEXT %1, 16
@@ -138,19 +164,32 @@ name:            abdu_i8
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
-    ; CHECK-LABEL: name: abdu_i8
-    ; CHECK: liveins: $x10, $x11
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
-    ; CHECK-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
-    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s32), [[ASSERT_ZEXT1]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
-    ; CHECK-NEXT: $x10 = COPY [[SELECT]](s32)
-    ; CHECK-NEXT: PseudoRET implicit $x10
+    ; RV32I-LABEL: name: abdu_i8
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
+    ; RV32I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s32), [[ASSERT_ZEXT1]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
+    ; RV32I-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32ZBB-LABEL: name: abdu_i8
+    ; RV32ZBB: liveins: $x10, $x11
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 8
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
+    ; RV32ZBB-NEXT: [[UMAX:%[0-9]+]]:_(s32) = G_UMAX [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32ZBB-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMAX]], [[UMIN]]
+    ; RV32ZBB-NEXT: $x10 = COPY [[SUB]](s32)
+    ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %3:_(s32) = G_ASSERT_ZEXT %1, 8
@@ -167,19 +206,32 @@ name:            abdu_i16
 body:             |
   bb.0.entry:
     liveins: $x10, $x11
-    ; CHECK-LABEL: name: abdu_i16
-    ; CHECK: liveins: $x10, $x11
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
-    ; CHECK-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
-    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
-    ; CHECK-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s32), [[ASSERT_ZEXT1]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
-    ; CHECK-NEXT: $x10 = COPY [[SELECT]](s32)
-    ; CHECK-NEXT: PseudoRET implicit $x10
+    ; RV32I-LABEL: name: abdu_i16
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32I-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV32I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
+    ; RV32I-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32I-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](s32), [[ASSERT_ZEXT1]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[SUB]], [[SUB1]]
+    ; RV32I-NEXT: $x10 = COPY [[SELECT]](s32)
+    ; RV32I-NEXT: PseudoRET implicit $x10
+    ;
+    ; RV32ZBB-LABEL: name: abdu_i16
+    ; RV32ZBB: liveins: $x10, $x11
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 16
+    ; RV32ZBB-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 16
+    ; RV32ZBB-NEXT: [[UMAX:%[0-9]+]]:_(s32) = G_UMAX [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32ZBB-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
+    ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[UMAX]], [[UMIN]]
+    ; RV32ZBB-NEXT: $x10 = COPY [[SUB]](s32)
+    ; RV32ZBB-NEXT: PseudoRET implicit $x10
     %1:_(s32) = COPY $x10
     %2:_(s32) = COPY $x11
     %3:_(s32) = G_ASSERT_ZEXT %1, 16

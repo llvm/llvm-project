@@ -86,6 +86,115 @@ static Value *expand16BitIsInf(CallInst *Orig) {
   return B3;
 }
 
+static Value *expand16BitIsNaN(CallInst *Orig) {
+  Module *M = Orig->getModule();
+  if (M->getTargetTriple().getDXILVersion() >= VersionTuple(1, 9))
+    return nullptr;
+
+  Value *Val = Orig->getOperand(0);
+  Type *ValTy = Val->getType();
+  if (!ValTy->getScalarType()->isHalfTy())
+    return nullptr;
+
+  IRBuilder<> Builder(Orig);
+  Type *IType = Type::getInt16Ty(M->getContext());
+
+  Constant *ExpBitMask =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0x7c00))
+          : ConstantInt::get(IType, 0x7c00);
+  Constant *SigBitMask =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0x3ff))
+          : ConstantInt::get(IType, 0x3ff);
+
+  Constant *Zero =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0))
+          : ConstantInt::get(IType, 0);
+
+  Value *IVal = Builder.CreateBitCast(Val, ExpBitMask->getType());
+  Value *Exp = Builder.CreateAnd(IVal, ExpBitMask);
+  Value *B1 = Builder.CreateICmpEQ(Exp, ExpBitMask);
+
+  Value *Sig = Builder.CreateAnd(IVal, SigBitMask);
+  Value *B2 = Builder.CreateICmpNE(Sig, Zero);
+  Value *B3 = Builder.CreateAnd(B1, B2);
+  return B3;
+}
+
+static Value *expand16BitIsFinite(CallInst *Orig) {
+  Module *M = Orig->getModule();
+  if (M->getTargetTriple().getDXILVersion() >= VersionTuple(1, 9))
+    return nullptr;
+
+  Value *Val = Orig->getOperand(0);
+  Type *ValTy = Val->getType();
+  if (!ValTy->getScalarType()->isHalfTy())
+    return nullptr;
+
+  IRBuilder<> Builder(Orig);
+  Type *IType = Type::getInt16Ty(M->getContext());
+
+  Constant *ExpBitMask =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0x7c00))
+          : ConstantInt::get(IType, 0x7c00);
+
+  Value *IVal = Builder.CreateBitCast(Val, ExpBitMask->getType());
+  Value *Exp = Builder.CreateAnd(IVal, ExpBitMask);
+  Value *B1 = Builder.CreateICmpNE(Exp, ExpBitMask);
+  return B1;
+}
+
+static Value *expand16BitIsNormal(CallInst *Orig) {
+  Module *M = Orig->getModule();
+  if (M->getTargetTriple().getDXILVersion() >= VersionTuple(1, 9))
+    return nullptr;
+
+  Value *Val = Orig->getOperand(0);
+  Type *ValTy = Val->getType();
+  if (!ValTy->getScalarType()->isHalfTy())
+    return nullptr;
+
+  IRBuilder<> Builder(Orig);
+  Type *IType = Type::getInt16Ty(M->getContext());
+
+  Constant *ExpBitMask =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0x7c00))
+          : ConstantInt::get(IType, 0x7c00);
+  Constant *Zero =
+      ValTy->isVectorTy()
+          ? ConstantVector::getSplat(
+                ElementCount::getFixed(
+                    cast<FixedVectorType>(ValTy)->getNumElements()),
+                ConstantInt::get(IType, 0))
+          : ConstantInt::get(IType, 0);
+
+  Value *IVal = Builder.CreateBitCast(Val, ExpBitMask->getType());
+  Value *Exp = Builder.CreateAnd(IVal, ExpBitMask);
+  Value *NotAllZeroes = Builder.CreateICmpNE(Exp, Zero);
+  Value *NotAllOnes = Builder.CreateICmpNE(Exp, ExpBitMask);
+  Value *B1 = Builder.CreateAnd(NotAllZeroes, NotAllOnes);
+  return B1;
+}
+
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:
@@ -104,6 +213,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_nclamp:
   case Intrinsic::dx_degrees:
   case Intrinsic::dx_isinf:
+  case Intrinsic::dx_isnan:
   case Intrinsic::dx_lerp:
   case Intrinsic::dx_normalize:
   case Intrinsic::dx_fdot:
@@ -342,9 +452,11 @@ static Value *expandIsFPClass(CallInst *Orig) {
   case FPClassTest::fcInf:
     return expand16BitIsInf(Orig);
   case FPClassTest::fcNan:
+    return expand16BitIsNaN(Orig);
   case FPClassTest::fcNormal:
+    return expand16BitIsNormal(Orig);
   case FPClassTest::fcFinite:
-    return nullptr;
+    return expand16BitIsFinite(Orig);
   }
 
   IRBuilder<> Builder(Orig);
@@ -912,6 +1024,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_isinf:
     Result = expand16BitIsInf(Orig);
+    break;
+  case Intrinsic::dx_isnan:
+    Result = expand16BitIsNaN(Orig);
     break;
   case Intrinsic::dx_lerp:
     Result = expandLerpIntrinsic(Orig);

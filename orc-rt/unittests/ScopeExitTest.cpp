@@ -37,3 +37,15 @@ TEST(ScopeExitTest, Release) {
   }
   EXPECT_FALSE(ScopeExitRun);
 }
+
+TEST(ScopeExitTest, MoveOnlyFunctionObject) {
+  struct MoveOnly {
+    MoveOnly() = default;
+    MoveOnly(MoveOnly &&) = default;
+    void operator()() {}
+  };
+
+  {
+    auto OnExit = make_scope_exit(MoveOnly());
+  }
+}

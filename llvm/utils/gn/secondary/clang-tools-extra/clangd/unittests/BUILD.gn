@@ -70,6 +70,7 @@ unittest("ClangdTests") {
     "DumpASTTests.cpp",
     "ExpectedTypeTest.cpp",
     "FSTests.cpp",
+    "FeatureModulesRegistryTests.cpp",
     "FeatureModulesTests.cpp",
     "FileDistanceTests.cpp",
     "FileIndexTests.cpp",

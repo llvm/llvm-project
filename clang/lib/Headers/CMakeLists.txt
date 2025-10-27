@@ -4,6 +4,9 @@
 set(core_files
   builtins.h
   float.h
+  __float_float.h
+  __float_header_macro.h
+  __float_infinity_nan.h
   inttypes.h
   iso646.h
   limits.h
@@ -131,6 +134,7 @@ set(riscv_files
   riscv_ntlh.h
   sifive_vector.h
   andes_vector.h
+  riscv_mips.h
   )
 
 set(spirv_files

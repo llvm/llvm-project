@@ -1,4 +1,4 @@
-//===--- MisleadingIndentationCheck.h - clang-tidy---------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 /// or spaces are used consistently and not mixed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/misleading-indentation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/misleading-indentation.html
 class MisleadingIndentationCheck : public ClangTidyCheck {
 public:
   MisleadingIndentationCheck(StringRef Name, ClangTidyContext *Context)

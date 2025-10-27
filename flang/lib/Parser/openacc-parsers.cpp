@@ -75,21 +75,21 @@ TYPE_PARSER(
 // tile size is one of:
 //   * (represented as an empty std::optional<ScalarIntExpr>)
 //   constant-int-expr
-TYPE_PARSER(construct<AccTileExpr>(scalarIntConstantExpr) ||
+TYPE_PARSER(sourced(construct<AccTileExpr>(scalarIntConstantExpr) ||
     construct<AccTileExpr>(
-        "*" >> construct<std::optional<ScalarIntConstantExpr>>()))
+        "*" >> construct<std::optional<ScalarIntConstantExpr>>())))
 TYPE_PARSER(construct<AccTileExprList>(nonemptyList(Parser<AccTileExpr>{})))
 
 // 2.9 (1979-1982) gang-arg is one of :
 //   [num:]int-expr
 //   dim:int-expr
 //   static:size-expr
-TYPE_PARSER(construct<AccGangArg>(construct<AccGangArg::Static>(
-                "STATIC: " >> Parser<AccSizeExpr>{})) ||
+TYPE_PARSER(sourced(construct<AccGangArg>(construct<AccGangArg::Static>(
+                        "STATIC: " >> Parser<AccSizeExpr>{})) ||
     construct<AccGangArg>(
         construct<AccGangArg::Dim>("DIM: " >> scalarIntExpr)) ||
     construct<AccGangArg>(
-        construct<AccGangArg::Num>(maybe("NUM: "_tok) >> scalarIntExpr)))
+        construct<AccGangArg::Num>(maybe("NUM: "_tok) >> scalarIntExpr))))
 
 // 2.9 gang-arg-list
 TYPE_PARSER(
@@ -101,7 +101,7 @@ TYPE_PARSER(construct<AccCollapseArg>(
 
 // 2.5.15 Reduction, F'2023 R1131, and CUF reduction-op
 // Operator for reduction
-TYPE_PARSER(sourced(construct<ReductionOperator>(
+TYPE_PARSER(construct<ReductionOperator>(
     first("+" >> pure(ReductionOperator::Operator::Plus),
         "*" >> pure(ReductionOperator::Operator::Multiply),
         "MAX" >> pure(ReductionOperator::Operator::Max),
@@ -112,32 +112,32 @@ TYPE_PARSER(sourced(construct<ReductionOperator>(
         ".AND." >> pure(ReductionOperator::Operator::And),
         ".OR." >> pure(ReductionOperator::Operator::Or),
         ".EQV." >> pure(ReductionOperator::Operator::Eqv),
-        ".NEQV." >> pure(ReductionOperator::Operator::Neqv)))))
+        ".NEQV." >> pure(ReductionOperator::Operator::Neqv))))
 
 // 2.15.1 Bind clause
-TYPE_PARSER(sourced(construct<AccBindClause>(name)) ||
-    sourced(construct<AccBindClause>(scalarDefaultCharExpr)))
+TYPE_PARSER(sourced(construct<AccBindClause>(name) ||
+    construct<AccBindClause>(scalarDefaultCharExpr)))
 
 // 2.5.16 Default clause
-TYPE_PARSER(construct<AccDefaultClause>(
+TYPE_PARSER(sourced(construct<AccDefaultClause>(
     first("NONE" >> pure(llvm::acc::DefaultValue::ACC_Default_none),
-        "PRESENT" >> pure(llvm::acc::DefaultValue::ACC_Default_present))))
+        "PRESENT" >> pure(llvm::acc::DefaultValue::ACC_Default_present)))))
 
 // SELF clause is either a simple optional condition for compute construct
 // or a synonym of the HOST clause for the update directive 2.14.4 holding
 // an object list.
-TYPE_PARSER(
+TYPE_PARSER(sourced(
     construct<AccSelfClause>(Parser<AccObjectList>{}) / lookAhead(")"_tok) ||
-    construct<AccSelfClause>(scalarLogicalExpr / lookAhead(")"_tok)) ||
+    construct<AccSelfClause>(scalarLogicalExpr) / lookAhead(")"_tok) ||
     construct<AccSelfClause>(
         recovery(fail<std::optional<ScalarLogicalExpr>>(
                      "logical expression or object list expected"_err_en_US),
-            SkipTo<')'>{} >> pure<std::optional<ScalarLogicalExpr>>())))
+            SkipTo<')'>{} >> pure<std::optional<ScalarLogicalExpr>>()))))
 
 // Modifier for copyin, copyout, cache and create
-TYPE_PARSER(construct<AccDataModifier>(
+TYPE_PARSER(sourced(construct<AccDataModifier>(
     first("ZERO:" >> pure(AccDataModifier::Modifier::Zero),
-        "READONLY:" >> pure(AccDataModifier::Modifier::ReadOnly))))
+        "READONLY:" >> pure(AccDataModifier::Modifier::ReadOnly)))))
 
 // Combined directives
 TYPE_PARSER(sourced(construct<AccCombinedDirective>(
@@ -166,14 +166,13 @@ TYPE_PARSER(sourced(construct<AccStandaloneDirective>(
 TYPE_PARSER(sourced(construct<AccLoopDirective>(
     first("LOOP" >> pure(llvm::acc::Directive::ACCD_loop)))))
 
-TYPE_PARSER(construct<AccBeginLoopDirective>(
-    sourced(Parser<AccLoopDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<AccBeginLoopDirective>(
+    Parser<AccLoopDirective>{}, Parser<AccClauseList>{})))
 
 TYPE_PARSER(construct<AccEndLoop>("END LOOP"_tok))
 
 TYPE_PARSER(construct<OpenACCLoopConstruct>(
-    sourced(Parser<AccBeginLoopDirective>{} / endAccLine),
-    maybe(Parser<DoConstruct>{}),
+    Parser<AccBeginLoopDirective>{} / endAccLine, maybe(Parser<DoConstruct>{}),
     maybe(startAccLine >> Parser<AccEndLoop>{} / endAccLine)))
 
 // 2.15.1 Routine directive
@@ -186,8 +185,8 @@ TYPE_PARSER(sourced(
         parenthesized(Parser<AccObjectListWithModifier>{}))))
 
 // 2.11 Combined constructs
-TYPE_PARSER(construct<AccBeginCombinedDirective>(
-    sourced(Parser<AccCombinedDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<AccBeginCombinedDirective>(
+    Parser<AccCombinedDirective>{}, Parser<AccClauseList>{})))
 
 // 2.12 Atomic constructs
 TYPE_PARSER(construct<AccEndAtomic>(startAccLine >> "END ATOMIC"_tok))
@@ -213,10 +212,10 @@ TYPE_PARSER("ATOMIC" >>
         statement(assignmentStmt), Parser<AccEndAtomic>{} / endAccLine))
 
 TYPE_PARSER(
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{})) ||
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicCapture>{})) ||
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicWrite>{})) ||
-    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicUpdate>{})))
+    sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{}) ||
+        construct<OpenACCAtomicConstruct>(Parser<AccAtomicCapture>{}) ||
+        construct<OpenACCAtomicConstruct>(Parser<AccAtomicWrite>{}) ||
+        construct<OpenACCAtomicConstruct>(Parser<AccAtomicUpdate>{})))
 
 // 2.13 Declare constructs
 TYPE_PARSER(sourced(construct<AccDeclarativeDirective>(
@@ -250,18 +249,18 @@ TYPE_PARSER(construct<OpenACCBlockConstruct>(
             pure(llvm::acc::Directive::ACCD_data))))))
 
 // Standalone constructs
-TYPE_PARSER(construct<OpenACCStandaloneConstruct>(
-    sourced(Parser<AccStandaloneDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<OpenACCStandaloneConstruct>(
+    Parser<AccStandaloneDirective>{}, Parser<AccClauseList>{})))
 
 // Standalone declarative constructs
-TYPE_PARSER(construct<OpenACCStandaloneDeclarativeConstruct>(
-    sourced(Parser<AccDeclarativeDirective>{}), Parser<AccClauseList>{}))
+TYPE_PARSER(sourced(construct<OpenACCStandaloneDeclarativeConstruct>(
+    Parser<AccDeclarativeDirective>{}, Parser<AccClauseList>{})))
 
 TYPE_PARSER(startAccLine >>
     withMessage("expected OpenACC directive"_err_en_US,
-        first(sourced(construct<OpenACCDeclarativeConstruct>(
-                  Parser<OpenACCStandaloneDeclarativeConstruct>{})),
-            sourced(construct<OpenACCDeclarativeConstruct>(
+        sourced(first(construct<OpenACCDeclarativeConstruct>(
+                          Parser<OpenACCStandaloneDeclarativeConstruct>{}),
+            construct<OpenACCDeclarativeConstruct>(
                 Parser<OpenACCRoutineConstruct>{})))))
 
 TYPE_PARSER(sourced(construct<OpenACCEndConstruct>(
@@ -293,9 +292,9 @@ TYPE_PARSER(startAccLine >>
             "SERIAL"_tok >> maybe("LOOP"_tok) >>
                 pure(llvm::acc::Directive::ACCD_serial_loop))))))
 
-TYPE_PARSER(construct<OpenACCCombinedConstruct>(
-    sourced(Parser<AccBeginCombinedDirective>{} / endAccLine),
+TYPE_PARSER(sourced(construct<OpenACCCombinedConstruct>(
+    Parser<AccBeginCombinedDirective>{} / endAccLine,
     maybe(Parser<DoConstruct>{}),
-    maybe(Parser<AccEndCombinedDirective>{} / endAccLine)))
+    maybe(Parser<AccEndCombinedDirective>{} / endAccLine))))
 
 } // namespace Fortran::parser

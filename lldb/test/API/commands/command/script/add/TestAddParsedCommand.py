@@ -34,6 +34,7 @@ class ParsedCommandTestCase(TestBase):
             else:
                 (short_opt, type, long_opt) = elem
                 substrs.append(f"-{short_opt} <{type}> ( --{long_opt} <{type}> )")
+
         self.expect("help " + cmd_name, substrs=substrs)
 
     def run_one_repeat(self, commands, expected_num_errors):
@@ -215,6 +216,19 @@ class ParsedCommandTestCase(TestBase):
                 "bool-arg (set: True): False",
                 "shlib-name (set: True): Something",
                 "disk-file-name (set: False):",
+                "flag-value (set: False):",
+                "line-num (set: False):",
+                "enum-option (set: False):",
+            ],
+        )
+        # Make sure flag values work:
+        self.expect(
+            "no-args -b false -s Something -f",
+            substrs=[
+                "bool-arg (set: True): False",
+                "shlib-name (set: True): Something",
+                "disk-file-name (set: False):",
+                "flag-value (set: True):",
                 "line-num (set: False):",
                 "enum-option (set: False):",
             ],

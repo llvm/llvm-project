@@ -47,6 +47,12 @@ def debugger_pid: S<"debugger-pid">,
   HelpText<"The PID of the lldb-dap instance that sent the launchInTerminal "
     "request when using --launch-target.">;
 
+def stdio: S<"stdio">,
+  MetaVarName<"<stdin:stdout:stderr:...>">,
+  HelpText<"An array of file paths for redirecting the program's standard IO "
+    "streams. A colon-separated list of entries. Empty value means no "
+    "redirection.">;
+
 def repl_mode
     : S<"repl-mode">,
       MetaVarName<"<mode>">,
@@ -67,3 +73,12 @@ def no_lldbinit: F<"no-lldbinit">,
 def: Flag<["-"], "x">,
   Alias<no_lldbinit>,
   HelpText<"Alias for --no-lldbinit">;
+
+def connection_timeout: S<"connection-timeout">,
+  MetaVarName<"<timeout>">,
+  HelpText<"When using --connection, the number of seconds to wait for new "
+    "connections after the server has started and after all clients have "
+    "disconnected. Each new connection will reset the timeout. When the "
+    "timeout is reached, the server will be closed and the process will exit. "
+    "Not specifying this argument or specifying non-positive values will "
+    "cause the server to wait for new connections indefinitely.">;

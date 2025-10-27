@@ -70,7 +70,7 @@ public:
   DebugObjectManagerPlugin(ExecutionSession &ES,
                            std::unique_ptr<DebugObjectRegistrar> Target,
                            bool RequireDebugSections, bool AutoRegisterCode);
-  ~DebugObjectManagerPlugin();
+  ~DebugObjectManagerPlugin() override;
 
   void notifyMaterializing(MaterializationResponsibility &MR,
                            jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,

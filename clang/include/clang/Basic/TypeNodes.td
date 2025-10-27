@@ -5,10 +5,11 @@ class TypeNode<TypeNode base, bit abstract = 0> : ASTNode {
   bit Abstract = abstract;
 }
 
-/// A type node that is only used to represent dependent types in C++.  For
-/// example, DependentTemplateSpecializationType is used to represent types
-/// where the base template-id is dependent (such as `T::foo<U>`).  Code
-/// that only works with non-dependent types can ignore these type nodes.
+/// A type node that is only used to represent dependent types in C++.
+/// For example, DependentSizedArrayType is used to represent types where the
+/// size expression is dependent (such as `T[V]`, where V is a constant template
+/// parameter). Code that only works with non-dependent types can ignore these
+/// type nodes.
 class AlwaysDependent {}
 
 /// A type node that is never used to represent a canonical type, which is to
@@ -96,7 +97,6 @@ def DeducedType : TypeNode<Type, 1>;
 def AutoType : TypeNode<DeducedType>;
 def DeducedTemplateSpecializationType : TypeNode<DeducedType>;
 def DependentNameType : TypeNode<Type>, AlwaysDependent;
-def DependentTemplateSpecializationType : TypeNode<Type>, AlwaysDependent;
 def PackExpansionType : TypeNode<Type>, AlwaysDependent;
 def PackIndexingType  : TypeNode<Type>, NeverCanonicalUnlessDependent;
 def ObjCTypeParamType : TypeNode<Type>, NeverCanonical;

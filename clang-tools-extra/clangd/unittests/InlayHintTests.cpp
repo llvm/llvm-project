@@ -1441,7 +1441,8 @@ TEST(TypeHints, DependentType) {
     void bar(T arg) {
       auto [a, b] = arg;
     }
-  )cpp");
+  )cpp",
+                  ExpectedHint{": T", "var2"});
 }
 
 TEST(TypeHints, LongTypeName) {

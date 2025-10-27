@@ -34,12 +34,12 @@ TEST(SimpleExecutorMemoryManagerTest, AllocFinalizeFree) {
   SimpleExecutorMemoryManager MemMgr;
 
   constexpr unsigned AllocSize = 16384;
-  auto Mem = MemMgr.allocate(AllocSize);
+  auto Mem = MemMgr.reserve(AllocSize);
   EXPECT_THAT_ERROR(Mem.takeError(), Succeeded());
 
   std::string HW = "Hello, world!";
 
-  int FinalizeCounter = 0;
+  int InitializeCounter = 0;
   int DeallocateCounter = 0;
 
   tpctypes::FinalizeRequest FR;
@@ -52,27 +52,27 @@ TEST(SimpleExecutorMemoryManagerTest, AllocFinalizeFree) {
       {/* Finalize: */
        cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddr>>(
            ExecutorAddr::fromPtr(incrementWrapper),
-           ExecutorAddr::fromPtr(&FinalizeCounter))),
+           ExecutorAddr::fromPtr(&InitializeCounter))),
        /*  Deallocate: */
        cantFail(WrapperFunctionCall::Create<SPSArgList<SPSExecutorAddr>>(
            ExecutorAddr::fromPtr(incrementWrapper),
            ExecutorAddr::fromPtr(&DeallocateCounter)))});
 
-  EXPECT_EQ(FinalizeCounter, 0);
+  EXPECT_EQ(InitializeCounter, 0);
   EXPECT_EQ(DeallocateCounter, 0);
 
-  auto FinalizeErr = MemMgr.finalize(FR);
-  EXPECT_THAT_ERROR(std::move(FinalizeErr), Succeeded());
+  auto InitializeErr = MemMgr.initialize(FR);
+  EXPECT_THAT_EXPECTED(std::move(InitializeErr), Succeeded());
 
-  EXPECT_EQ(FinalizeCounter, 1);
+  EXPECT_EQ(InitializeCounter, 1);
   EXPECT_EQ(DeallocateCounter, 0);
 
   EXPECT_EQ(HW, std::string(Mem->toPtr<const char *>()));
 
-  auto DeallocateErr = MemMgr.deallocate({*Mem});
-  EXPECT_THAT_ERROR(std::move(DeallocateErr), Succeeded());
+  auto ReleaseErr = MemMgr.release({*Mem});
+  EXPECT_THAT_ERROR(std::move(ReleaseErr), Succeeded());
 
-  EXPECT_EQ(FinalizeCounter, 1);
+  EXPECT_EQ(InitializeCounter, 1);
   EXPECT_EQ(DeallocateCounter, 1);
 }
 

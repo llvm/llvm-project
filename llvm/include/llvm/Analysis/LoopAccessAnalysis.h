@@ -724,8 +724,9 @@ public:
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
-  LLVM_ABI static bool blockNeedsPredication(BasicBlock *BB, Loop *TheLoop,
-                                             DominatorTree *DT);
+  LLVM_ABI static bool blockNeedsPredication(const BasicBlock *BB,
+                                             const Loop *TheLoop,
+                                             const DominatorTree *DT);
 
   /// Returns true if value \p V is loop invariant.
   LLVM_ABI bool isInvariant(Value *V) const;

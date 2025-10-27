@@ -137,5 +137,5 @@ void f11(void) {
 int a, b;
 void unknown_val_crash(void) {
   // We're unable to evaluate the integer-to-pointer cast.
-  strlcat(&b, a, 0); // no-crash
+  strlcat((char*)&b, a, 0); // no-crash
 }

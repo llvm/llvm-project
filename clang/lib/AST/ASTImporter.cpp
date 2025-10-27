@@ -1069,22 +1069,22 @@ Error ASTNodeImporter::ImportConstraintSatisfaction(
   ToSat.ContainsErrors = FromSat.ContainsErrors;
   if (!ToSat.IsSatisfied) {
     for (auto Record = FromSat.begin(); Record != FromSat.end(); ++Record) {
-      if (Expr *E = Record->dyn_cast<Expr *>()) {
+      if (const Expr *E = Record->dyn_cast<const Expr *>()) {
         ExpectedExpr ToSecondExpr = import(E);
         if (!ToSecondExpr)
           return ToSecondExpr.takeError();
         ToSat.Details.emplace_back(ToSecondExpr.get());
       } else {
-        auto Pair = Record->dyn_cast<std::pair<SourceLocation, StringRef> *>();
+        auto Pair =
+            Record->dyn_cast<const ConstraintSubstitutionDiagnostic *>();
 
         ExpectedSLoc ToPairFirst = import(Pair->first);
         if (!ToPairFirst)
           return ToPairFirst.takeError();
         StringRef ToPairSecond = ImportASTStringRef(Pair->second);
-        ToSat.Details.emplace_back(
-            new (Importer.getToContext())
-                ConstraintSatisfaction::SubstitutionDiagnostic{
-                    ToPairFirst.get(), ToPairSecond});
+        ToSat.Details.emplace_back(new (Importer.getToContext())
+                                       ConstraintSubstitutionDiagnostic{
+                                           ToPairFirst.get(), ToPairSecond});
       }
     }
   }
@@ -1740,20 +1740,18 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
 }
 
 ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
-  TagDecl *DeclForType = T->getOriginalDecl();
+  TagDecl *DeclForType = T->getDecl();
   Expected<TagDecl *> ToDeclOrErr = import(DeclForType);
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
-  if (DeclForType->isUsed()) {
-    // If there is a definition of the 'OriginalDecl', it should be imported to
-    // have all information for the type in the "To" AST. (In some cases no
-    // other reference may exist to the definition decl and it would not be
-    // imported otherwise.)
-    Expected<TagDecl *> ToDefDeclOrErr = import(DeclForType->getDefinition());
-    if (!ToDefDeclOrErr)
-      return ToDefDeclOrErr.takeError();
-  }
+  // If there is a definition of the 'OriginalDecl', it should be imported to
+  // have all information for the type in the "To" AST. (In some cases no
+  // other reference may exist to the definition decl and it would not be
+  // imported otherwise.)
+  Expected<TagDecl *> ToDefDeclOrErr = import(DeclForType->getDefinition());
+  if (!ToDefDeclOrErr)
+    return ToDefDeclOrErr.takeError();
 
   if (T->isCanonicalUnqualified())
     return Importer.getToContext().getCanonicalTagType(*ToDeclOrErr);
@@ -1890,25 +1888,6 @@ ASTNodeImporter::VisitPackExpansionType(const PackExpansionType *T) {
   return Importer.getToContext().getPackExpansionType(*ToPatternOrErr,
                                                       T->getNumExpansions(),
                                                       /*ExpactPack=*/false);
-}
-
-ExpectedType ASTNodeImporter::VisitDependentTemplateSpecializationType(
-    const DependentTemplateSpecializationType *T) {
-  const DependentTemplateStorage &DTN = T->getDependentTemplateName();
-  auto QualifierOrErr = import(DTN.getQualifier());
-  if (!QualifierOrErr)
-    return QualifierOrErr.takeError();
-
-  SmallVector<TemplateArgument, 2> ToPack;
-  ToPack.reserve(T->template_arguments().size());
-  if (Error Err = ImportTemplateArguments(T->template_arguments(), ToPack))
-    return std::move(Err);
-
-  return Importer.getToContext().getDependentTemplateSpecializationType(
-      T->getKeyword(),
-      {*QualifierOrErr, Importer.Import(DTN.getName()),
-       DTN.hasTemplateKeyword()},
-      ToPack);
 }
 
 ExpectedType
@@ -2176,7 +2155,7 @@ Error ASTNodeImporter::ImportDeclParts(
       const Type *LeafT =
           getLeafPointeeType(P->getType().getCanonicalType().getTypePtr());
       auto *RT = dyn_cast<RecordType>(LeafT);
-      if (RT && RT->getOriginalDecl() == D) {
+      if (RT && RT->getDecl() == D) {
         Importer.FromDiag(D->getLocation(), diag::err_unsupported_ast_node)
             << D->getDeclKindName();
         return make_error<ASTImportError>(ASTImportError::UnsupportedConstruct);
@@ -2429,8 +2408,8 @@ Error ASTNodeImporter::ImportFieldDeclDefinition(const FieldDecl *From,
     const RecordType *RecordTo = ToType->getAs<RecordType>();
 
     if (RecordFrom && RecordTo) {
-      FromRecordDecl = RecordFrom->getOriginalDecl();
-      ToRecordDecl = RecordTo->getOriginalDecl();
+      FromRecordDecl = RecordFrom->getDecl();
+      ToRecordDecl = RecordTo->getDecl();
     }
   }
 
@@ -3226,7 +3205,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          FoundDecl = Tag->getOriginalDecl();
+          FoundDecl = Tag->getDecl();
       }
 
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
@@ -3357,7 +3336,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       Decl *Found = FoundDecl;
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(Found)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          Found = Tag->getOriginalDecl();
+          Found = Tag->getDecl();
       }
 
       if (auto *FoundRecord = dyn_cast<RecordDecl>(Found)) {
@@ -3778,12 +3757,11 @@ public:
   }
 
   std::optional<bool> VisitTagType(const TagType *T) {
-    if (auto *Spec =
-            dyn_cast<ClassTemplateSpecializationDecl>(T->getOriginalDecl()))
+    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl()))
       for (const auto &Arg : Spec->getTemplateArgs().asArray())
         if (checkTemplateArgument(Arg))
           return true;
-    return isAncestorDeclContextOf(ParentDC, T->getOriginalDecl());
+    return isAncestorDeclContextOf(ParentDC, T->getDecl());
   }
 
   std::optional<bool> VisitPointerType(const PointerType *T) {

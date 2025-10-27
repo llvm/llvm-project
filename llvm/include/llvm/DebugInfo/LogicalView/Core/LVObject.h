@@ -82,6 +82,8 @@ using LVScopes = SmallVector<LVScope *, 8>;
 using LVSymbols = SmallVector<LVSymbol *, 8>;
 using LVTypes = SmallVector<LVType *, 8>;
 
+using LVElementsView = detail::concat_range<LVElement *const, const LVScopes &,
+                                            const LVTypes &, const LVSymbols &>;
 using LVOffsets = SmallVector<LVOffset, 8>;
 
 // The following DWARF documents detail the 'tombstone' concept:

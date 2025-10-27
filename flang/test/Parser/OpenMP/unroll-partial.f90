@@ -17,7 +17,7 @@ subroutine openmp_parse_unroll(x)
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = unroll
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = unroll
 !PARSE-TREE: OmpClauseList -> OmpClause -> Partial -> Scalar -> Integer -> Constant -> Expr = '3_4'
 !PARSE-TREE: LiteralConstant -> IntLiteralConstant = '3'
 
