@@ -224,6 +224,13 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   }
   $1 = (char *)malloc($2);
 }
+
+// Remove the default type check for this match.
+// because if the match function has an overload and a typemap,
+// it will typecheck against the original function instead of the
+// typemap.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) (char *dst_or_null, size_t dst_len) ""
+
 %typemap(argout) (char *dst_or_null, size_t dst_len) {
   Py_XDECREF($result); /* Blow away any previous result */
   llvm::StringRef ref($1);

@@ -118,6 +118,7 @@ static constexpr llvm::StringRef MethodsWithPointerPlusLen[] = {
     "_ZN4lldb8SBTarget15GetInstructionsEyPKvm",
     "_ZN4lldb8SBTarget25GetInstructionsWithFlavorEyPKcPKvm",
     "_ZN4lldb8SBThread18GetStopDescriptionEPcm",
+    "_ZNK4lldb8SBThread18GetStopDescriptionERNS_8SBStreamE",
     // The below mangled names are used for dummy methods in shell tests
     // that test the emitters' output. If you're adding any new mangled names
     // from the actual SB API to this list please add them above.

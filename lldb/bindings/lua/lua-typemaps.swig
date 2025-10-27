@@ -121,9 +121,16 @@ LLDB_NUMBER_TYPEMAP(enum SWIGTYPE);
   $1 = (char *)malloc($2);
 }
 
+// Remove the default type check for this match.
+// because if the match function has an overload and a typemap,
+// it will typecheck against the original function instead of the
+// typemap.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) (char *dst_or_null, size_t dst_len) ""
+
 %typemap(argout) (char *dst_or_null, size_t dst_len) {
   lua_pop(L, 1); // Blow away the previous result
-  lua_pushlstring(L, (const char *)$1, $result);
+  llvm::StringRef ref($1);
+  lua_pushlstring(L, (const char *)$1, ref.size());
   free($1);
   // SWIG_arg was already incremented
 }
