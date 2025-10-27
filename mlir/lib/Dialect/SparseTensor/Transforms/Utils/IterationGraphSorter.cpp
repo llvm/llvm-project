@@ -82,13 +82,13 @@ inline static bool includesDenseOutput(SortMask mask) {
 
 /// Returns a sparsity rank for loop ordering: lower values indicate
 /// dimensions that should be placed in outer loops.
-/// 0 = Dense, 1 = Compressed, 2 = Singleton, 3 = Other/Unknown
+/// 0 = Dense, 1 = Compressed, 2 = Singleton, 3 = Other/Unknown.
 static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
                                     ArrayRef<AffineMap> allMaps) {
-  unsigned bestRank = 3; // Default: most sparse (unknown/singleton-like)
+  unsigned bestRank = 3; // Default: most sparse (unknown/singleton-like).
 
   for (auto [tensor, map] : llvm::zip(allTensors, allMaps)) {
-    // Check if this loop accesses this tensor
+    // Check if this loop accesses this tensor.
     bool loopAccessesTensor = false;
     unsigned tensorDim = 0;
     for (AffineExpr expr : map.getResults()) {
@@ -104,19 +104,19 @@ static unsigned getLoopSparsityRank(unsigned loop, ArrayRef<Value> allTensors,
     if (loopAccessesTensor) {
       const auto enc = getSparseTensorEncoding(tensor.getType());
       if (!enc) {
-        // Dense tensor - highest priority
+        // Dense tensor - highest priority.
         return 0;
       } else {
-        // Sparse tensor - check the level type for this dimension
+        // Sparse tensor - check the level type for this dimension.
         auto lvlTypes = enc.getLvlTypes();
         if (tensorDim < lvlTypes.size()) {
           auto lvlType = lvlTypes[tensorDim];
           if (isDenseLT(lvlType)) {
-            return 0; // Dense level
+            return 0; // Dense level.
           } else if (isCompressedLT(lvlType)) {
-            bestRank = std::min(bestRank, 1u); // Compressed level
+            bestRank = std::min(bestRank, 1u); // Compressed level.
           } else if (isSingletonLT(lvlType)) {
-            bestRank = std::min(bestRank, 2u); // Singleton level
+            bestRank = std::min(bestRank, 2u); // Singleton level.
           }
         }
       }
