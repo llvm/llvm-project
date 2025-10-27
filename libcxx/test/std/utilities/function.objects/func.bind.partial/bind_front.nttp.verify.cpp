@@ -35,6 +35,7 @@ void test() {
     Arg arg;
     auto _ = std::bind_front<AnyArgs{}>(arg);
     // expected-error@*:* {{static assertion failed due to requirement 'is_constructible_v<Arg, Arg &>': bind_front requires all decay_t<Args> to be constructible from respective Args}}
+    // expected-error@*:* 0-1{{call to deleted constructor of 'Arg'}}
   }
 
   { // (is_move_constructible_v<BoundArgs> && ...) is true
