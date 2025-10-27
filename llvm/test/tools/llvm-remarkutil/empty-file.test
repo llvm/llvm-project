@@ -4,18 +4,21 @@ RUN: not llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/empty-file -o -
 RUN: not llvm-remarkutil annotation-count --parser=yaml --annotation-type=remark %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
 RUN: not llvm-remarkutil count --parser=yaml %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
 RUN: not llvm-remarkutil filter --parser=yaml %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
+RUN: not llvm-remarkutil summary --parser=yaml %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --check-prefix=YAMLPARSER
 RUN: llvm-remarkutil bitstream2yaml %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=BITSTREAM2YAML
 RUN: llvm-remarkutil instruction-count --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=SIZEBITSTREAM
 RUN: llvm-remarkutil instruction-mix --parser=bitstream %p/Inputs/empty-file --report_style=csv -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=MIXBITSTREAM
 RUN: llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remark %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=ANNOTATIONBITSTREAM
 RUN: llvm-remarkutil count --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=COUNTBITSTREAM
-RUN: llvm-remarkutil filter --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=FILTERBITSTREAM
+RUN: llvm-remarkutil filter --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=EMPTYBITSTREAM
+RUN: llvm-remarkutil summary --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=EMPTYBITSTREAM
 ; Parser format auto-detection should treat empty files as bitstream files
 RUN: llvm-remarkutil instruction-count %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=SIZEBITSTREAM
 RUN: llvm-remarkutil instruction-mix %p/Inputs/empty-file --report_style=csv -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=MIXBITSTREAM
 RUN: llvm-remarkutil annotation-count --annotation-type=remark %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=ANNOTATIONBITSTREAM
 RUN: llvm-remarkutil count %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=COUNTBITSTREAM
-RUN: llvm-remarkutil filter %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=FILTERBITSTREAM
+RUN: llvm-remarkutil filter %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=EMPTYBITSTREAM
+RUN: llvm-remarkutil summary %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=EMPTYBITSTREAM
 
 ; YAMLPARSER: error: document root is not of mapping type.
 
@@ -34,4 +37,4 @@ RUN: llvm-remarkutil filter %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allo
 ; MIXBITSTREAM-LABEL: Instruction,Count
 ; MIXBITSTREAM-EMPTY:
 
-; FILTERBITSTREAM-NOT: {{.}}
+; EMPTYBITSTREAM-NOT: {{.}}
