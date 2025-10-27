@@ -4020,7 +4020,7 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
       unsigned Type = NumberOfModifiers;
       unsigned Modifier;
       SourceLocation Loc;
-      if (PP.getSpelling(Tok) == "fallback" && NextToken().is(tok::l_paren)) {
+      if (!Tok.isAnnotation() && PP.getSpelling(Tok) == "fallback" && NextToken().is(tok::l_paren)) {
         ConsumeToken();
         BalancedDelimiterTracker ParenT(*this, tok::l_paren, tok::r_paren);
         ParenT.consumeOpen();
