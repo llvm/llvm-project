@@ -350,7 +350,7 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
 // Initially, when OmpStylizedExpression is first created, the expression is
 // parsed as if it was an actual code, but this parsing is only done to
 // establish where the stylized expression ends (in the source). The source
-// and the initial parser state are store in the object, and the instance
+// and the initial parser state are stored in the object, and the instance
 // list is empty.
 // Once the parsing of the containing OmpDirectiveSpecification completes,
 // a post-processing "parser" (OmpStylizedInstanceCreator) executes. This
