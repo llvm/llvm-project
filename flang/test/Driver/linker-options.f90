@@ -10,14 +10,14 @@
 ! Make sure that `-L' is "visible" to Flang's driver
 ! RUN: %flang -L/ -### %s
 
-! Check that '-pie' is "visible" to Flang's driver and is passed on to the
-! linker.
+! Check that '-pie' and '-no-pie' are "visible" to Flang's driver. Check that
+! the correct option is added to the link line. The default is '-pie'.
+! RUN: %flang -### %s 2>&1 | FileCheck %s --check-prefix=PIE
 ! RUN: %flang -pie -### %s 2>&1 | FileCheck %s --check-prefix=PIE
-! PIE: "-pie"
-
-! Check that '-no-pie' is "visible" to Flang's driver and that "-pie" is *not*
-! passed to the linker.
 ! RUN: %flang -no-pie -### %s 2>&1 | FileCheck %s --check-prefix=NO-PIE
+! RUN: %flang -pie -no-pie -### %s 2>&1 | FileCheck %s --check-prefix=NO-PIE
+! RUN: %flang -no-pie -pie -### %s 2>&1 | FileCheck %s --check-prefix=PIE
+! PIE: "-pie"
 ! NO-PIE-NOT: "-pie"
 
 program hello
