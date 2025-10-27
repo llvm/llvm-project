@@ -148,8 +148,9 @@ int main(int argc, char *argv[]) {
   }
 
   // Test rocm 5.7 elf virtual address mapping
+  amd_comgr_data_t DataExec2;
   Status = amd_comgr_action_data_get_data(
-      DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, 1, &DataExec);
+      DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, 1, &DataExec2);
   ElfVirtualAddress = 0x60;
   CodeObjectOffset = -1;
   // phdr.p_vaddr:   0
@@ -161,7 +162,7 @@ int main(int argc, char *argv[]) {
   // nobits = phdr.p_vaddr >= phdr.p_filesz
   // slizesize = phdr.p_memsz - (elfVirtualAddress - phdr.p_vaddr);
   Status = amd_comgr_map_elf_virtual_address_to_code_object_offset(
-      DataExec, ElfVirtualAddress, &CodeObjectOffset, &SliceSize, &Nobits);
+      DataExec2, ElfVirtualAddress, &CodeObjectOffset, &SliceSize, &Nobits);
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (CodeObjectOffset != 0x60 || Nobits != 0 || SliceSize != 0x860) {
@@ -184,7 +185,7 @@ int main(int argc, char *argv[]) {
   // nobits = phdr.p_vaddr >= phdr.p_filesz
   // slizesize = phdr.p_memsz - (elfVirtualAddress - phdr.p_vaddr);
   Status = amd_comgr_map_elf_virtual_address_to_code_object_offset(
-      DataExec, ElfVirtualAddress, &CodeObjectOffset, &SliceSize, &Nobits);
+      DataExec2, ElfVirtualAddress, &CodeObjectOffset, &SliceSize, &Nobits);
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (CodeObjectOffset != 0xa00 || Nobits != 0 || SliceSize != 0x480) {
@@ -207,7 +208,7 @@ int main(int argc, char *argv[]) {
   // nobits = phdr.p_vaddr >= phdr.p_filesz
   // slizesize = phdr.p_memsz - (elfVirtualAddress - phdr.p_vaddr);
   Status = amd_comgr_map_elf_virtual_address_to_code_object_offset(
-      DataExec, ElfVirtualAddress, &CodeObjectOffset, &SliceSize, &Nobits);
+      DataExec2, ElfVirtualAddress, &CodeObjectOffset, &SliceSize, &Nobits);
   checkError(Status, "amd_comgr_map_elf_virtual_address_to_code_object_offset");
 
   if (CodeObjectOffset != 0xe90 || Nobits != 0 || SliceSize != 0x60) {
@@ -237,6 +238,8 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_release_data(DataSource2);
   checkError(Status, "amd_comgr_release_data");
   Status = amd_comgr_release_data(DataExec);
+  checkError(Status, "amd_comgr_release_data");
+  Status = amd_comgr_release_data(DataExec2);
   checkError(Status, "amd_comgr_release_data");
   Status = amd_comgr_destroy_data_set(DataSetExec);
   checkError(Status, "amd_comgr_destroy_data_set");

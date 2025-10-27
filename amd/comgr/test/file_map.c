@@ -47,6 +47,9 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_get_data(DataObject, &SliceLength, Slice);
   checkError(Status, "amd_comgr_get_data");
 
+  Status = amd_comgr_release_data(DataObject);
+  checkError(Status, "amd_comgr_release_data");
+
   if (SliceLength != Length - Offset) {
     fail("File Slice Length incorrect");
   }
