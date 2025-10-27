@@ -13,6 +13,7 @@
 #include <__chrono/duration.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 #include <limits>
 
