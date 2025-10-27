@@ -700,6 +700,15 @@ TEST(DataLayout, NonIntegralHelpers) {
   }
 }
 
+TEST(DataLayoutTest, IsNullPointerAllZeroes) {
+  EXPECT_TRUE(DataLayout("").isNullPointerAllZeroes(0));
+  EXPECT_FALSE(DataLayout("").isNullPointerAllZeroes(1));
+  EXPECT_TRUE(DataLayout("p:32:32").isNullPointerAllZeroes(0));
+  EXPECT_FALSE(DataLayout("p:32:32").isNullPointerAllZeroes(1));
+  EXPECT_TRUE(DataLayout("p:64:64").isNullPointerAllZeroes(0));
+  EXPECT_FALSE(DataLayout("p:64:64").isNullPointerAllZeroes(1));
+}
+
 TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
   DataLayout DL1 = cantFail(DataLayout::parse("p:32:32"));
   DataLayout DL2 = cantFail(DataLayout::parse("p:64:64"));

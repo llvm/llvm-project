@@ -398,6 +398,12 @@ public:
            PS.HasExternalState;
   }
 
+  /// Returns if the null pointer for this address space has an all-zero bit
+  /// representation.
+  bool isNullPointerAllZeroes(unsigned AddrSpace) const {
+    return AddrSpace == 0;
+  }
+
   /// Returns whether this address space has an "unstable" pointer
   /// representation. The bitwise pattern of such pointers is allowed to change
   /// in a target-specific way. For example, this could be used for copying
