@@ -49,6 +49,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Registry.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -95,6 +96,8 @@
 #include <optional>
 using namespace clang;
 using namespace llvm;
+
+LLVM_INSTANTIATE_REGISTRY(BackendPluginRegistry)
 
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
@@ -1234,6 +1237,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 void EmitAssemblyHelper::RunCodegenPipeline(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
     std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
+  for (auto &Plugin : BackendPluginRegistry::entries()) {
+    std::unique_ptr<BackendPlugin> P = Plugin.instantiate();
+    if (!P->preCodeGenModuleHook(CI, *OS, *TheModule))
+      return;
+  }
+
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1515,3 +1524,6 @@ void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
                               Align(object::OffloadBinary::getAlignment()));
   }
 }
+
+// Out-of-line destructor to provide a home for the class.
+clang::BackendPlugin::~BackendPlugin() = default;
