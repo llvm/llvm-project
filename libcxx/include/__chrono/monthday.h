@@ -15,6 +15,7 @@
 #include <__chrono/month.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

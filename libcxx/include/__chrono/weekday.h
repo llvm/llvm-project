@@ -15,6 +15,7 @@
 #include <__chrono/system_clock.h>
 #include <__chrono/time_point.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__functional/hash.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

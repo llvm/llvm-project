@@ -24,6 +24,7 @@
 #  include <__chrono/tzdb_list.h>
 #  include <__concepts/constructible.h>
 #  include <__config>
+#  include <__cstddef/size_t.h>
 #  include <__functional/hash.h>
 #  include <__type_traits/common_type.h>
 #  include <__type_traits/conditional.h>
