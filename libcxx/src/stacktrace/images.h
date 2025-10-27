@@ -26,16 +26,16 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-struct image;
-struct images;
+struct _Image;
+struct _Images;
 
-struct image {
+struct _Image {
   uintptr_t loaded_at_{};
   uintptr_t slide_{};
-  char name_[__stacktrace::entry_base::__max_file_len]{0};
+  char name_[__stacktrace::_Entry::__max_file_len]{0};
   bool is_main_prog_{};
 
-  _LIBCPP_HIDE_FROM_ABI bool operator<(image const& __rhs) const {
+  _LIBCPP_HIDE_FROM_ABI bool operator<(_Image const& __rhs) const {
     if (loaded_at_ < __rhs.loaded_at_) {
       return true;
     }
@@ -58,22 +58,22 @@ struct image {
  *  (sentinel)      foo.exe         libc++so.1      libc.so.6         (sentinel)
  *  0x000000000000  0x000100000000  0x633b00000000  0x7c5500000000    0xffffffffffff
  */
-struct images {
+struct _Images {
   constexpr static size_t k_max_images = 256;
-  std::array<image, k_max_images + 2> images_{}; // space for the L/R sentinels
-  unsigned count_{0};                            // image count, including sentinels
+  std::array<_Image, k_max_images + 2> images_{}; // space for the L/R sentinels
+  unsigned count_{0};                             // image count, including sentinels
 
   /** An OS-specific constructor is defined. */
-  _LIBCPP_EXPORTED_FROM_ABI images();
+  _LIBCPP_EXPORTED_FROM_ABI _Images();
 
   /** Get prog_image by index (0 <= index < count_) */
-  _LIBCPP_HIDE_FROM_ABI image& operator[](size_t __index) {
+  _LIBCPP_HIDE_FROM_ABI _Image& operator[](size_t __index) {
     _LIBCPP_ASSERT(__index < count_, "index out of range");
     return images_.at(__index);
   }
 
   /** Image representing the main program, or nullptr if we couldn't find it */
-  _LIBCPP_HIDE_FROM_ABI image* main_prog_image() {
+  _LIBCPP_HIDE_FROM_ABI _Image* main_prog_image() {
     for (size_t __i = 1; __i < count_ - 1; __i++) {
       auto& __image = images_[__i];
       if (__image.is_main_prog_) {

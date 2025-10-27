@@ -20,8 +20,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-_LIBCPP_EXPORTED_FROM_ABI void base::find_images() {
-  images images;
+_LIBCPP_EXPORTED_FROM_ABI void _Trace::find_images() {
+  _Images images;
   size_t i = 0;
   for (auto& entry : __entry_iters_()) {
     images.find(&i, entry.__addr_);
@@ -33,11 +33,11 @@ _LIBCPP_EXPORTED_FROM_ABI void base::find_images() {
   }
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void base::find_symbols() {
+_LIBCPP_EXPORTED_FROM_ABI void _Trace::find_symbols() {
   // TODO
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void base::find_source_locs() {
+_LIBCPP_EXPORTED_FROM_ABI void _Trace::find_source_locs() {
   // TODO
 }
 

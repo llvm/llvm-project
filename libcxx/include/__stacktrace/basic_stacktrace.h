@@ -53,7 +53,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
 template <typename _Tp, typename _Bp = _Tp>
-struct iters {
+struct _Iters {
   _Tp* __data_{};
   size_t __size_{};
 
@@ -63,20 +63,20 @@ struct iters {
   _Bp* end() { return data() + size(); }
 };
 
-struct base {
+struct _Trace {
   constexpr static size_t __default_max_depth  = 64;
   constexpr static size_t __absolute_max_depth = 256;
 
-  str_alloc<char> __string_alloc_;
+  _Str_Alloc<char> __string_alloc_;
 
-  using _EntryIters _LIBCPP_NODEBUG = iters<stacktrace_entry, entry_base>;
+  using _EntryIters _LIBCPP_NODEBUG = _Iters<stacktrace_entry, _Entry>;
   function<_EntryIters()> __entry_iters_;
-  function<entry_base&()> __entry_append_;
+  function<_Entry&()> __entry_append_;
 
   template <class _Allocator>
   _LIBCPP_HIDE_FROM_ABI
-  base(_Allocator const& __alloc, function<_EntryIters()> __entry_iters, function<entry_base&()> __entry_append)
-      : __string_alloc_(std::move(str_alloc<char>::make(__alloc))),
+  _Trace(_Allocator const& __alloc, function<_EntryIters()> __entry_iters, function<_Entry&()> __entry_append)
+      : __string_alloc_(std::move(_Str_Alloc<char>::make(__alloc))),
         __entry_iters_(__entry_iters),
         __entry_append_(__entry_append) {}
 
@@ -108,7 +108,7 @@ struct base {
   _LIBCPP_EXPORTED_FROM_ABI ostream& write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 
-  _LIBCPP_HIDE_FROM_ABI str __create_str() { return str(__string_alloc_); }
+  _LIBCPP_HIDE_FROM_ABI _Str __create_str() { return _Str(__string_alloc_); }
 };
 
 } // namespace __stacktrace
@@ -119,9 +119,9 @@ struct base {
 class stacktrace_entry;
 
 template <class _Allocator>
-class basic_stacktrace : private __stacktrace::base {
+class basic_stacktrace : private __stacktrace::_Trace {
   friend struct hash<basic_stacktrace<_Allocator>>;
-  friend struct __stacktrace::base;
+  friend struct __stacktrace::_Trace;
 
   using _ATraits _LIBCPP_NODEBUG            = allocator_traits<_Allocator>;
   constexpr static bool __kPropOnCopyAssign = _ATraits::propagate_on_container_copy_assignment::value;
@@ -134,15 +134,15 @@ class basic_stacktrace : private __stacktrace::base {
 
   vector<stacktrace_entry, _Allocator> __entries_;
   _LIBCPP_HIDE_FROM_ABI _EntryIters entry_iters() { return {__entries_.data(), __entries_.size()}; }
-  _LIBCPP_HIDE_FROM_ABI __stacktrace::entry_base& entry_append() {
-    return (__stacktrace::entry_base&)__entries_.emplace_back();
+  _LIBCPP_HIDE_FROM_ABI __stacktrace::_Entry& entry_append() {
+    return (__stacktrace::_Entry&)__entries_.emplace_back();
   }
 
   _LIBCPP_HIDE_FROM_ABI auto entry_iters_fn() {
     return [this] -> _EntryIters { return entry_iters(); };
   }
   _LIBCPP_HIDE_FROM_ABI auto entry_append_fn() {
-    return [this] -> __stacktrace::entry_base& { return entry_append(); };
+    return [this] -> __stacktrace::_Entry& { return entry_append(); };
   }
 
 public:
@@ -202,16 +202,16 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr ~basic_stacktrace() = default;
 
-  static_assert(sizeof(__stacktrace::entry_base) == sizeof(stacktrace_entry));
+  static_assert(sizeof(__stacktrace::_Entry) == sizeof(stacktrace_entry));
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc)
-      : base(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__alloc_) {}
+      : _Trace(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__alloc_) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace const& __other, allocator_type const& __alloc)
-      : base(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__other.__entries_) {}
+      : _Trace(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__other.__entries_) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, allocator_type const& __alloc)
-      : base(__alloc, entry_iters_fn(), entry_append_fn()),
+      : _Trace(__alloc, entry_iters_fn(), entry_append_fn()),
         __alloc_(__alloc),
         __entries_(std::move(__other.__entries_)) {}
 
@@ -337,11 +337,11 @@ swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexc
 #  if _LIBCPP_HAS_LOCALIZATION
 template <class _Allocator>
 _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
-  return ((__stacktrace::base const&)__stacktrace).write_to(__os);
+  return ((__stacktrace::_Trace const&)__stacktrace).write_to(__os);
 }
 template <class _Allocator>
 _LIBCPP_HIDE_FROM_ABI inline string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
-  return ((__stacktrace::base const&)__stacktrace).to_string();
+  return ((__stacktrace::_Trace const&)__stacktrace).to_string();
 }
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
@@ -363,12 +363,12 @@ namespace __stacktrace {
 
 #  if defined(_WIN32)
 
-_LIBCPP_EXPORTED_FROM_ABI void base::windows_impl(size_t skip, size_t max_depth)
+_LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_depth)
 
 #  else
 
-struct unwind_backtrace {
-  base& base_;
+struct _Unwind_Wrapper {
+  _Trace& base_;
   size_t skip_;
   size_t maxDepth_;
 
@@ -387,22 +387,22 @@ struct unwind_backtrace {
       return _Unwind_Reason_Code::_URC_NORMAL_STOP;
     }
     auto& __entry = base_.__entry_append_();
-    auto& __eb    = (entry_base&)__entry;
+    auto& __eb    = (_Entry&)__entry;
     __eb.__addr_  = (__ip_before ? __ip : __ip - 1);
     return _Unwind_Reason_Code::_URC_NO_REASON;
   }
 
   _LIBCPP_HIDE_FROM_ABI static _Unwind_Reason_Code callback(_Unwind_Context* __cx, void* __self) {
-    return ((unwind_backtrace*)__self)->callback(__cx);
+    return ((_Unwind_Wrapper*)__self)->callback(__cx);
   }
 };
 
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void base::unwind_addrs(size_t __skip, size_t __depth) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::unwind_addrs(size_t __skip, size_t __depth) {
   if (!__depth) {
     return;
   }
-  unwind_backtrace __bt{*this, __skip, __depth};
-  _Unwind_Backtrace(unwind_backtrace::callback, &__bt);
+  _Unwind_Wrapper __bt{*this, __skip, __depth};
+  _Unwind_Backtrace(_Unwind_Wrapper::callback, &__bt);
 }
 
 #  endif // _WIN32
