@@ -246,7 +246,7 @@
 // RUN:   -fno-integrated-as -fno-pic -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-NAN-LEGACY %s
 // MIPS-NAN-LEGACY: as{{(.exe)?}}"
-// MIPS-NAN-LEGACY-NOT: "{{[ A-Za-z\\\/]*}}as{{(.exe)?}}{{.*}}"-mnan={{.*}}"
+// MIPS-NAN-LEGACY: "-target-feature" "+nan2008" "-target-feature" "+abs2008"
 //
 // RUN: %clang --target=mips-linux-gnu -mfp64 -mfpxx -mfp32 -### \
 // RUN:   -fno-integrated-as -fno-pic -c %s 2>&1 \
