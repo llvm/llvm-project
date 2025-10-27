@@ -5956,19 +5956,24 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
     // No need to push an extra scope for these since they're already
     // CompoundStmts.
+    EvalStmtResult ESR = ESR_Succeeded;
     for (const Stmt *Instantiation : Expansion->getInstantiations()) {
-      EvalStmtResult ESR = EvaluateStmt(Result, Info, Instantiation);
+      ESR = EvaluateStmt(Result, Info, Instantiation);
       if (ESR == ESR_Failed ||
           ShouldPropagateBreakContinue(Info, Expansion, &Scope, ESR))
         return ESR;
       if (ESR != ESR_Continue) {
         // Succeeded here actually means we encountered a 'break'.
-        assert(ESR == ESR_Succeeded);
+        assert(ESR == ESR_Succeeded || ESR == ESR_Returned);
         break;
       }
     }
 
-    return Scope.destroy() ? ESR_Succeeded : ESR_Failed;
+    // Map Continue back to Succeeded if we fell off the end of the loop.
+    if (ESR == ESR_Continue)
+      ESR = ESR_Succeeded;
+
+    return Scope.destroy() ? ESR : ESR_Failed;
   }
 
   case Stmt::SwitchStmtClass:

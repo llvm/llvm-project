@@ -918,3 +918,24 @@ static_assert(lifetime_extension_instantiate_expansions<int>() == 47);
 static_assert(lifetime_extension_dependent_expansion_stmt<int>() == 47);
 static_assert(foo<int>().lifetime_extension_multiple_instantiations<int>() == 47);
 }
+
+template <typename... Ts>
+constexpr int return_from_expansion(Ts... ts) {
+  template for (int i : {1, 2, 3}) {
+    return (ts + ...);
+  }
+  __builtin_unreachable();
+}
+
+static_assert(return_from_expansion(4, 5, 6) == 15);
+
+void not_constexpr();
+
+constexpr int empty_expansion_consteval() {
+  template for (auto _ : {}) {
+    not_constexpr();
+  }
+  return 3;
+}
+
+static_assert(empty_expansion_consteval() == 3);
