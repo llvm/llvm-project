@@ -20,6 +20,11 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
 
     @skipIf(macos_version=["<", "15.0"], archs=["arm64", "arm64e"])
     @expectedFailureAll(dwarf_version=["<", "5"])
+    @expectedFailureAll(
+        compiler="clang",
+        compiler_version=["<", "19.0"],
+        oslist=[lldbplatformutil.getDarwinOSTriples()],
+    )
     def test_frame_var(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
