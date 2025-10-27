@@ -85,7 +85,7 @@ private:
 /// them a prefixed name.
 class ClangTidyModule {
 public:
-  virtual ~ClangTidyModule() {}
+  virtual ~ClangTidyModule() = default;
 
   /// Implement this function in order to register all \c CheckFactories
   /// belonging to this module.

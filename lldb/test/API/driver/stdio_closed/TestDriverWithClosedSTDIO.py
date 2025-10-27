@@ -12,7 +12,7 @@ import fcntl
 
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
+from lldbsuite.test.decorators import *
 
 class TestDriverWithClosedSTDIO(TestBase):
     # If your test case doesn't stress debug info, then
@@ -20,6 +20,9 @@ class TestDriverWithClosedSTDIO(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    # Windows doesn't have the fcntl module, so we can't run this
+    # test there.
+    @skipIf(oslist=["windows"])
     def test_run_lldb_and_wait(self):
         """This test forks, closes the stdio channels and exec's lldb.
         Then it waits for it to exit and asserts it did that successfully"""

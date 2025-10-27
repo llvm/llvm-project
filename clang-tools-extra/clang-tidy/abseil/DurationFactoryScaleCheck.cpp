@@ -112,7 +112,7 @@ static std::optional<DurationScale> getNewScale(DurationScale OldScale,
 void DurationFactoryScaleCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          callee(functionDecl(DurationFactoryFunction()).bind("call_decl")),
+          callee(functionDecl(durationFactoryFunction()).bind("call_decl")),
           hasArgument(
               0,
               ignoringImpCasts(anyOf(

@@ -21,7 +21,7 @@ void DurationAdditionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(hasOperatorName("+"),
                      hasEitherOperand(expr(ignoringParenImpCasts(
-                         callExpr(callee(functionDecl(TimeConversionFunction())
+                         callExpr(callee(functionDecl(timeConversionFunction())
                                              .bind("function_decl")))
                              .bind("call")))))
           .bind("binop"),

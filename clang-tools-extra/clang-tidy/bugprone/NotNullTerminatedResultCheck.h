@@ -43,15 +43,15 @@ private:
   void memcpyFix(StringRef Name,
                  const ast_matchers::MatchFinder::MatchResult &Result,
                  DiagnosticBuilder &Diag);
-  void memcpy_sFix(StringRef Name,
-                   const ast_matchers::MatchFinder::MatchResult &Result,
-                   DiagnosticBuilder &Diag);
+  void memcpySFix(StringRef Name,
+                  const ast_matchers::MatchFinder::MatchResult &Result,
+                  DiagnosticBuilder &Diag);
   void memchrFix(StringRef Name,
                  const ast_matchers::MatchFinder::MatchResult &Result);
   void memmoveFix(StringRef Name,
                   const ast_matchers::MatchFinder::MatchResult &Result,
                   DiagnosticBuilder &Diag) const;
-  void strerror_sFix(const ast_matchers::MatchFinder::MatchResult &Result);
+  void strerrorSFix(const ast_matchers::MatchFinder::MatchResult &Result);
   void ncmpFix(StringRef Name,
                const ast_matchers::MatchFinder::MatchResult &Result);
   void xfrmFix(StringRef Name,
