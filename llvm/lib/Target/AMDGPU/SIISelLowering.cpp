@@ -9874,6 +9874,20 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
+  case Intrinsic::amdgcn_gfx9_wave_id: {
+    MVT VT = MVT::i32;
+    auto UpperBound = DAG.getAnyExtOrTrunc(Op.getOperand(0), DL, VT);
+
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    unsigned MaxID = Subtarget->getMaxWorkitemID(MF.getFunction(), 0);
+    const ArgDescriptor Arg = MFI->getArgInfo().WorkItemIDX;
+    SDValue Val = loadInputValue(DAG, &AMDGPU::SGPR_32RegClass, MVT::i32,
+                                 SDLoc(DAG.getEntryNode()), Arg);
+    SDValue Bounded = DAG.getNode(ISD::AND, DL, VT, Val, UpperBound);
+    SDValue WaveFrontSize =  DAG.getConstant(MF.getSubtarget<GCNSubtarget>().getWavefrontSize(),
+                           SDLoc(Op), MVT::i32);
+    return DAG.getNode(ISD::SDIV, DL, VT, Bounded, WaveFrontSize);
+  }
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);
