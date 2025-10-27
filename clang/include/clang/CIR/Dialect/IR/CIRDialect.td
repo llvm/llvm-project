@@ -44,6 +44,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
+    static llvm::StringRef getOperandSegmentSizesAttrName() { return "operandSegmentSizes"; }
 
     void registerAttributes();
     void registerTypes();

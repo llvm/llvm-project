@@ -2728,7 +2728,7 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
 
 def CIR_SideEffect : CIR_I32EnumAttr<
@@ -2851,6 +2851,98 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
         $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
+    }]>
+  ];
+}
+
+def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
+  DeclareOpInterfaceMethods<BranchOpInterface>,
+  Terminator, AttrSizedOperandSegments
+]> {
+  let summary = "try_call operation";
+
+  let description = [{
+    Mostly similar to cir.call but requires two destination
+    branches, one for handling exceptions in case its thrown and
+    the other one to follow on regular control-flow.
+
+    Example:
+
+    ```mlir
+    // Direct call
+    %result = cir.try_call @division(%a, %b) ^continue, ^landing_pad 
+      : (f32, f32) -> f32
+    ```
+  }];
+
+  let arguments = !con((ins
+    Variadic<CIR_AnyType>:$contOperands,
+    Variadic<CIR_AnyType>:$landingPadOperands
+  ), commonArgs);
+
+  let results = (outs Optional<CIR_AnyType>:$result);
+  let successors = (successor AnySuccessor:$cont, AnySuccessor:$landing_pad);
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
+               "mlir::Block *":$cont, "mlir::Block *":$landing_pad,
+               CArg<"mlir::ValueRange", "{}">:$operands,
+               CArg<"mlir::ValueRange", "{}">:$contOperands,
+               CArg<"mlir::ValueRange", "{}">:$landingPadOperands,
+               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+      $_state.addOperands(operands);
+      if (callee)
+        $_state.addAttribute("callee", callee);
+      if (resType && !isa<VoidType>(resType))
+        $_state.addTypes(resType);
+
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
+
+      // Handle branches
+      $_state.addOperands(contOperands);
+      $_state.addOperands(landingPadOperands);
+      // The TryCall ODS layout is: cont, landing_pad, operands.
+      llvm::copy(::llvm::ArrayRef<int32_t>({
+        static_cast<int32_t>(contOperands.size()),
+        static_cast<int32_t>(landingPadOperands.size()),
+        static_cast<int32_t>(operands.size())
+        }),
+        odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
+      $_state.addSuccessors(cont);
+      $_state.addSuccessors(landing_pad);
+    }]>,
+    OpBuilder<(ins "mlir::Value":$ind_target,
+               "FuncType":$fn_type,
+               "mlir::Block *":$cont, "mlir::Block *":$landing_pad,
+               CArg<"mlir::ValueRange", "{}">:$operands,
+               CArg<"mlir::ValueRange", "{}">:$contOperands,
+               CArg<"mlir::ValueRange", "{}">:$landingPadOperands, 
+               CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
+      ::llvm::SmallVector<mlir::Value, 4> finalCallOperands({ind_target});
+      finalCallOperands.append(operands.begin(), operands.end());
+      $_state.addOperands(finalCallOperands);
+
+      if (!fn_type.hasVoidReturn())
+        $_state.addTypes(fn_type.getReturnType());
+
+      $_state.addAttribute("side_effect",
+        SideEffectAttr::get($_builder.getContext(), sideEffect));
+
+      // Handle branches
+      $_state.addOperands(contOperands);
+      $_state.addOperands(landingPadOperands);
+      // The TryCall ODS layout is: cont, landing_pad, operands.
+      llvm::copy(::llvm::ArrayRef<int32_t>({
+        static_cast<int32_t>(contOperands.size()),
+        static_cast<int32_t>(landingPadOperands.size()),
+        static_cast<int32_t>(finalCallOperands.size())
+        }),
+        odsState.getOrAddProperties<Properties>().operandSegmentSizes.begin());
+      $_state.addSuccessors(cont);
+      $_state.addSuccessors(landing_pad);
     }]>
   ];
 }
