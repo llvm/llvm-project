@@ -719,8 +719,9 @@ CPlusPlusNameParser::ParseFullNameImpl() {
     }
     start_position.Remove();
     return result;
+  } else {
+    return std::nullopt;
   }
-  return std::nullopt;
 }
 
 llvm::StringRef CPlusPlusNameParser::GetTextForRange(const Range &range) {
@@ -754,19 +755,12 @@ static const clang::LangOptions &GetLangOptions() {
   return g_options;
 }
 
-static const llvm::StringMap<tok::TokenKind> GetKeywordsMap() {
-  using namespace clang;
-  llvm::StringMap<tok::TokenKind> g_map;
-
-  auto LangOpts = GetLangOptions();
-
-  KeywordStatus AddResult;
-#define KEYWORD(NAME, FLAGS)                                                   \
-  AddResult = getKeywordStatus(LangOpts, FLAGS);                               \
-  if (AddResult != KS_Disabled)                                                \
-    g_map[llvm::StringRef(#NAME)] = tok::kw_##NAME;
+static const llvm::StringMap<tok::TokenKind> &GetKeywordsMap() {
+  static llvm::StringMap<tok::TokenKind> g_map{
+#define KEYWORD(Name, Flags) {llvm::StringRef(#Name), tok::kw_##Name},
 #include "clang/Basic/TokenKinds.def"
 #undef KEYWORD
+  };
   return g_map;
 }
 
@@ -775,7 +769,7 @@ void CPlusPlusNameParser::ExtractTokens() {
     return;
   clang::Lexer lexer(clang::SourceLocation(), GetLangOptions(), m_text.data(),
                      m_text.data(), m_text.data() + m_text.size());
-  const auto kw_map = GetKeywordsMap();
+  const auto &kw_map = GetKeywordsMap();
   clang::Token token;
   for (lexer.LexFromRawLexer(token); !token.is(clang::tok::eof);
        lexer.LexFromRawLexer(token)) {
