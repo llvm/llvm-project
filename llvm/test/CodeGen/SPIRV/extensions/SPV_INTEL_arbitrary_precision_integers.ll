@@ -8,6 +8,14 @@ define i13 @getConstantI13() {
   ret i13 42
 }
 
+define i96 @getConstantI96() {
+  ret i96 18446744073709551620
+}
+
+define i160 @getConstantI160() {
+  ret i160 3363637389930338837376336738763689377839373638
+}
+
 ;; Capabilities:
 ; CHECK-DAG: OpExtension "SPV_INTEL_arbitrary_precision_integers"
 ; CHECK-DAG: OpCapability ArbitraryPrecisionIntegersINTEL
@@ -17,14 +25,20 @@ define i13 @getConstantI13() {
 ;; Names:
 ; CHECK-DAG: OpName %[[#GET_I6:]] "getConstantI6"
 ; CHECK-DAG: OpName %[[#GET_I13:]] "getConstantI13"
+; CHECK-DAG: OpName %[[#GET_I96:]] "getConstantI96"
+; CHECK-DAG: OpName %[[#GET_I160:]] "getConstantI160"
 
 ; CHECK-NOT: DAG-FENCE
 
 ;; Types and Constants:
 ; CHECK-DAG: %[[#I6:]] = OpTypeInt 6 0
 ; CHECK-DAG: %[[#I13:]] = OpTypeInt 13 0
+; CHECK-DAG: %[[#I96:]] = OpTypeInt 96 0
+; CHECK-DAG: %[[#I160:]] = OpTypeInt 160 0
 ; CHECK-DAG: %[[#CST_I6:]] = OpConstant %[[#I6]] 2
 ; CHECK-DAG: %[[#CST_I13:]] = OpConstant %[[#I13]] 42
+; CHECK-DAG: %[[#CST_I96:]] = OpConstant %[[#I96]] 18446744073709551620
+; CHECK-DAG: %[[#CST_I160:]] = OpConstant %[[#I160]] 3363637389930338837376336738763689377839373638
 
 ; CHECK: %[[#GET_I6]] = OpFunction %[[#I6]]
 ; CHECK: OpReturnValue %[[#CST_I6]]
@@ -32,4 +46,12 @@ define i13 @getConstantI13() {
 
 ; CHECK: %[[#GET_I13]] = OpFunction %[[#I13]]
 ; CHECK: OpReturnValue %[[#CST_I13]]
+; CHECK: OpFunctionEnd
+
+; CHECK: %[[#GET_I96]] = OpFunction %[[#I96]]
+; CHECK: OpReturnValue %[[#CST_I96]]
+; CHECK: OpFunctionEnd
+
+; CHECK: %[[#GET_I160]] = OpFunction %[[#I160]]
+; CHECK: OpReturnValue %[[#CST_I160]]
 ; CHECK: OpFunctionEnd

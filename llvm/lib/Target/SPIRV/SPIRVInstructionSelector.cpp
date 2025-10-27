@@ -2953,8 +2953,13 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
     Reg = GR.getOrCreateConstFP(I.getOperand(1).getFPImm()->getValue(), I,
                                 ResType, TII, !STI.isShader());
   } else {
-    Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getZExtValue(), I,
-                                 ResType, TII, !STI.isShader());
+    if (GR.getScalarOrVectorBitWidth(ResType) <= 64) {
+      Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getZExtValue(), I,
+                                   ResType, TII, !STI.isShader());
+    } else {
+      Reg = GR.getOrCreateConstInt(I.getOperand(1).getCImm()->getValue(), I,
+                                   ResType, TII, !STI.isShader());
+    }
   }
   return Reg == ResVReg ? true : BuildCOPY(ResVReg, Reg, I);
 }

@@ -149,7 +149,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeBool(MachineIRBuilder &MIRBuilder) {
 }
 
 unsigned SPIRVGlobalRegistry::adjustOpTypeIntWidth(unsigned Width) const {
-  if (Width > 64)
+  if (Width > 1024)
     report_fatal_error("Unsupported integer width!");
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(CurMF->getSubtarget());
   if (ST.canUseExtension(
@@ -343,6 +343,20 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
   return Res;
 }
 
+Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt Val,
+                                                  MachineInstr &I,
+                                                  SPIRVType *SpvType,
+                                                  const SPIRVInstrInfo &TII,
+                                                  bool ZeroAsNull) {
+  const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
+  Constant *const CA = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  const MachineInstr *MI = findMI(CA, CurMF);
+  if (MI && (MI->getOpcode() == SPIRV::OpConstantNull ||
+             MI->getOpcode() == SPIRV::OpConstantI))
+    return MI->getOperand(0).getReg();
+  return createConstInt(CA, I, SpvType, TII, ZeroAsNull);
+}
+
 Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                                   SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
@@ -356,7 +370,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
   return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
 }
 
-Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
+Register SPIRVGlobalRegistry::createConstInt(const Constant *CA,
                                              MachineInstr &I,
                                              SPIRVType *SpvType,
                                              const SPIRVInstrInfo &TII,
@@ -374,15 +388,20 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
         MachineInstrBuilder MIB;
         if (BitWidth == 1) {
           MIB = MIRBuilder
-                    .buildInstr(CI->isZero() ? SPIRV::OpConstantFalse
-                                             : SPIRV::OpConstantTrue)
+                    .buildInstr(CA->isZeroValue() ? SPIRV::OpConstantFalse
+                                                  : SPIRV::OpConstantTrue)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-        } else if (!CI->isZero() || !ZeroAsNull) {
+        } else if (!CA->isZeroValue() || !ZeroAsNull) {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                     .addDef(Res)
                     .addUse(getSPIRVTypeID(SpvType));
-          addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
+          if (BitWidth <= 64) {
+            const ConstantInt *CI = dyn_cast<ConstantInt>(CA);
+            addNumImm(APInt(BitWidth, CI->getZExtValue()), MIB);
+          } else {
+            addNumImm(CA->getUniqueInteger(), MIB);
+          }
         } else {
           MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                     .addDef(Res)
@@ -394,7 +413,7 @@ Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
                                          *ST.getRegBankInfo());
         return MIB;
       });
-  add(CI, NewType);
+  add(CA, NewType);
   return Res;
 }
 

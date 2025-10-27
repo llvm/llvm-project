@@ -100,11 +100,12 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     if (Bitwidth == 16)
       MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH16);
     return;
-  } else if (Bitwidth <= 64) {
-    uint64_t FullImm = Imm.getZExtValue();
-    uint32_t LowBits = FullImm & 0xffffffff;
-    uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
-    MIB.addImm(LowBits).addImm(HighBits);
+  } else if (Bitwidth <= 1024) {
+    unsigned NumWords = (Bitwidth + 31) / 32;
+    for (unsigned i = 0; i < NumWords; ++i) {
+      uint32_t Word = Imm.extractBits(32, i * 32).getZExtValue();
+      MIB.addImm(Word);
+    }
     return;
   }
   report_fatal_error("Unsupported constant bitwidth");

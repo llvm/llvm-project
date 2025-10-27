@@ -49,9 +49,12 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
                                              raw_ostream &O) {
   unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
+  const unsigned Opcode = MI->getOpcode();
 
-  assert((NumVarOps == 1 || NumVarOps == 2) &&
-         "Unsupported number of bits for literal variable");
+  // We support up to 1024 bits for integers, and 64 bits for floats
+  assert(((NumVarOps <= 32 && Opcode == SPIRV::OpConstantI) ||
+          (NumVarOps <= 2 && Opcode == SPIRV::OpConstantF)) &&
+         "Unsupported number of operands for constant");
 
   O << ' ';
 
@@ -60,6 +63,18 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   // Handle 64 bit literals.
   if (NumVarOps == 2) {
     Imm |= (MI->getOperand(StartIndex + 1).getImm() << 32);
+  }
+
+  // Handle arbitrary number of 32-bit words for integer literals
+  if (Opcode == SPIRV::OpConstantI && NumVarOps > 2) {
+    const unsigned TotalBits = NumVarOps * 32;
+    APInt Val(TotalBits, 0);
+    for (unsigned i = 0; i < NumVarOps; ++i) {
+      uint64_t Word = MI->getOperand(StartIndex + i).getImm();
+      Val |= APInt(TotalBits, Word) << (i * 32);
+    }
+    O << Val;
+    return;
   }
 
   // Format and print float values.
