@@ -302,7 +302,7 @@ void ProfOStream::patch(ArrayRef<PatchItem> P) {
 
 std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
-                           uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
+                           [[maybe_unused]] uint64_t Version) {
   // Value names may be prefixed with a binary '1' to indicate
   // that the backend should not modify the symbols due to any platform
   // naming convention. Do not include that '1' in the PGO profile name.

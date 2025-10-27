@@ -142,5 +142,9 @@ PythonObject SWIGBridge::ToSWIGWrapper(
   return ToSWIGHelper(module_spec_sb.release(), SWIGTYPE_p_lldb__SBModuleSpec);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::DescriptionLevel level) {
+  return PythonInteger((int64_t) level);
+}
+
 } // namespace python
 } // namespace lldb_private

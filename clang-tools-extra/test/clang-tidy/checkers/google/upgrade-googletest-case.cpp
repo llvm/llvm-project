@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s google-upgrade-googletest-case %t -- -- -I%S/Inputs
+// RUN: %check_clang_tidy %s google-upgrade-googletest-case %t -- -- -I%S/Inputs
 // RUN: %check_clang_tidy -check-suffix=NOSUITE %s google-upgrade-googletest-case %t -- -- -DNOSUITE -I%S/Inputs/gtest/nosuite
 
 #include "gtest/gtest.h"
@@ -89,12 +89,14 @@ public:
   // CHECK-FIXES: static void TearDownTestSuite();
 };
 
-template <typename T> void FooTypedTest<T>::SetUpTestCase() {}
-// CHECK-MESSAGES: [[@LINE-1]]:45: warning: Google Test APIs named with 'case'
+template <typename T>
+void FooTypedTest<T>::SetUpTestCase() {}
+// CHECK-MESSAGES: [[@LINE-1]]:23: warning: Google Test APIs named with 'case'
 // CHECK-FIXES: void FooTypedTest<T>::SetUpTestSuite() {}
 
-template <typename T> void FooTypedTest<T>::TearDownTestCase() {}
-// CHECK-MESSAGES: [[@LINE-1]]:45: warning: Google Test APIs named with 'case'
+template <typename T>
+void FooTypedTest<T>::TearDownTestCase() {}
+// CHECK-MESSAGES: [[@LINE-1]]:23: warning: Google Test APIs named with 'case'
 // CHECK-FIXES: void FooTypedTest<T>::TearDownTestSuite() {}
 
 class BarTest : public testing::Test {
