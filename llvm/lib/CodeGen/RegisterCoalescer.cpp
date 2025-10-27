@@ -2301,7 +2301,8 @@ bool RegisterCoalescer::joinCopy(
   }
 
   SmallVector<MachineInstr *> SubregToRegSrcInsts;
-  if (CopyMI->isSubregToReg()) {
+  Register SrcReg = CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg();
+  if (CopyMI->isSubregToReg() && !SrcReg.isPhysical()) {
     // For the case where the copy instruction is a SUBREG_TO_REG, e.g.
     //
     //   %0:gpr32 = movimm32 ..
@@ -2319,8 +2320,7 @@ bool RegisterCoalescer::joinCopy(
     //                                            // require an implicit-def,
     //                                            // because it has nothing to
     //                                            // do with the SUBREG_TO_REG.
-    LiveInterval &SrcInt =
-        LIS->getInterval(CP.isFlipped() ? CP.getDstReg() : CP.getSrcReg());
+    LiveInterval &SrcInt = LIS->getInterval(SrcReg);
     SlotIndex SubregToRegSlotIdx = LIS->getInstructionIndex(*CopyMI);
     SmallPtrSet<MachineBasicBlock *, 8> VisitedBlocks;
     if (!FindDefInBlock(VisitedBlocks, SubregToRegSrcInsts, LIS, SrcInt,
@@ -2397,10 +2397,8 @@ bool RegisterCoalescer::joinCopy(
 
   // Rewrite all SrcReg operands to DstReg.
   // Also update DstReg operands to include DstIdx if it is set.
-  if (CP.getDstIdx()) {
-    assert(SubregToRegSrcInsts.empty() && "can this happen?");
+  if (CP.getDstIdx())
     updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx());
-  }
   updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx(),
                     SubregToRegSrcInsts);
 
