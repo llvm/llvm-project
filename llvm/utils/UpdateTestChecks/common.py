@@ -606,7 +606,7 @@ MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 
 IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
-IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d{1,2} \d+, label %\w+")
+IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\w+")
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r"^(\s+)")
 SCRUB_WHITESPACE_RE = re.compile(r"(?!^(|  \w))[ \t]+", flags=re.M)
