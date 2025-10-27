@@ -387,6 +387,8 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
+- The `-Wnrvo` compiler flag is now ignored in C mode.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
