@@ -94,8 +94,8 @@
 #  ifndef __cpp_lib_chrono
 #    error "__cpp_lib_chrono should be defined in c++26"
 #  endif
-#  if __cpp_lib_chrono != 202306L
-#    error "__cpp_lib_chrono should have the value 202306L in c++26"
+#  if __cpp_lib_chrono != 201611L
+#    error "__cpp_lib_chrono should have the value 201611L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_chrono_udls

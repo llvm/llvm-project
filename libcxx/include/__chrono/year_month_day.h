@@ -334,16 +334,19 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr bool year_month_day::ok() const noexcept 
 #  if _LIBCPP_STD_VER >= 26
 
 template <>
-struct hash<chrono::year_month_day> : public __unary_function<chrono::year_month_day, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month_day& __ymd) const _NOEXCEPT {
-    return hash<chrono::year>{}(__ymd.year()) ^ hash<chrono::month>{}(__ymd.month()) ^ hash<chrono::day>{}(__ymd.day());
+struct hash<chrono::year_month_day> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_day& __ymd) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymd.year()),
+        std::__hash_combine(hash<chrono::month>{}(__ymd.month()), hash<chrono::day>{}(__ymd.day())));
   }
 };
 
 template <>
-struct hash<chrono::year_month_day_last> : public __unary_function<chrono::year_month_day_last, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month_day_last& __ymdl) const _NOEXCEPT {
-    return hash<chrono::year>{}(__ymdl.year()) ^ hash<chrono::month_day_last>{}(__ymdl.month_day_last());
+struct hash<chrono::year_month_day_last> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_day_last& __ymdl) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymdl.year()), hash<chrono::month_day_last>{}(__ymdl.month_day_last()));
   }
 };
 

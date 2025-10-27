@@ -229,9 +229,8 @@ operator-(const time_point<_Clock, _Duration1>& __lhs, const time_point<_Clock, 
 
 template <class _Clock, class _Duration>
   requires __has_enabled_hash<_Duration>::value
-struct hash<chrono::time_point<_Clock, _Duration>>
-    : public __unary_function<chrono::time_point<_Clock, _Duration>, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::time_point<_Clock, _Duration>& __tp) const {
+struct hash<chrono::time_point<_Clock, _Duration>> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::time_point<_Clock, _Duration>& __tp) {
     return hash<_Duration>{}(__tp.time_since_epoch());
   }
 };
