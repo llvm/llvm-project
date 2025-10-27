@@ -54634,6 +54634,7 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
   SDLoc DL(N);
 
   // Attempt to pre-truncate inputs to arithmetic ops instead.
@@ -54651,6 +54652,39 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   // Try to combine PMULHUW/PMULHW for vXi16.
   if (SDValue V = combinePMULH(Src, VT, DL, DAG, Subtarget))
     return V;
+
+  // Fold trunc(srl(load(p),amt) -> load(p+amt/8)
+  // If we're shifting down whole byte+pow2 aligned bit chunks from a larger
+  // load for truncation, see if we can convert the shift into a pointer
+  // offset instead. Limit this to normal (non-ext) scalar integer loads.
+  if (SrcVT.isScalarInteger() && Src.getOpcode() == ISD::SRL &&
+      Src.hasOneUse() && Src.getOperand(0).hasOneUse() &&
+      ISD::isNormalLoad(Src.getOperand(0).getNode())) {
+    auto *Ld = cast<LoadSDNode>(Src.getOperand(0));
+    if (Ld->isSimple() && VT.isByteSized() &&
+        isPowerOf2_64(VT.getSizeInBits())) {
+      SDValue ShAmt = Src.getOperand(1);
+      KnownBits KnownAmt = DAG.computeKnownBits(ShAmt);
+      // Check the shift amount is aligned to the truncated size.
+      // Check the truncation doesn't use any shifted in (zero) top bits.
+      if (KnownAmt.countMinTrailingZeros() >= Log2_64(VT.getSizeInBits()) &&
+          KnownAmt.getMaxValue().ule(SrcVT.getSizeInBits() -
+                                     VT.getSizeInBits())) {
+        EVT PtrVT = Ld->getBasePtr().getValueType();
+        SDValue PtrBitOfs = DAG.getZExtOrTrunc(ShAmt, DL, PtrVT);
+        SDValue PtrByteOfs =
+            DAG.getNode(ISD::SRL, DL, PtrVT, PtrBitOfs,
+                        DAG.getShiftAmountConstant(3, PtrVT, DL));
+        SDValue NewPtr = DAG.getMemBasePlusOffset(
+            Ld->getBasePtr(), PtrByteOfs, DL, SDNodeFlags::NoUnsignedWrap);
+        SDValue NewLoad =
+            DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getMemOperand());
+        DAG.ReplaceAllUsesOfValueWith(Src.getOperand(0).getValue(1),
+                                      NewLoad.getValue(1));
+        return NewLoad;
+      }
+    }
+  }
 
   // The bitcast source is a direct mmx result.
   // Detect bitcasts between i32 to x86mmx
