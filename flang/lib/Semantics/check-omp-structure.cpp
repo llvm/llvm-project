@@ -98,7 +98,7 @@ bool OmpStructureChecker::Enter(const parser::BlockData &x) {
   } else {
     for (const Scope &scope : context_.globalScope().children()) {
       if (scope.kind() == Scope::Kind::BlockData) {
-        if (scope.symbol()->name().empty()) {
+        if (auto *s{scope.symbol()}; !s || s->name().empty()) {
           scopeStack_.push_back(&scope);
           break;
         }
