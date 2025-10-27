@@ -53,19 +53,21 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto bind_front(_Fn&& __f, _Args&&... __args) {
 
 #if _LIBCPP_STD_VER >= 26
 
-template <auto _Fn>
-struct __nttp_bind_front_op {
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Args&&... __args) const
-      noexcept(noexcept(std::invoke(_Fn, std::forward<_Args>(__args)...)))
-          -> decltype(std::invoke(_Fn, std::forward<_Args>(__args)...)) {
-    return std::invoke(_Fn, std::forward<_Args>(__args)...);
-  }
-};
+template <auto _Fn, class _Indices, class... _BoundArgs>
+struct __nttp_bind_front_t;
 
-template <auto _Fn, class... _BoundArgs>
-struct __nttp_bind_front_t : __perfect_forward<__nttp_bind_front_op<_Fn>, _BoundArgs...> {
-  using __perfect_forward<__nttp_bind_front_op<_Fn>, _BoundArgs...>::__perfect_forward;
+template <auto _Fn, size_t... _Indices, class... _BoundArgs>
+struct __nttp_bind_front_t<_Fn, index_sequence<_Indices...>, _BoundArgs...> {
+  tuple<_BoundArgs...> __bound_args_;
+
+  template <class _Self, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(this _Self&& __self, _Args&&... __args) noexcept(noexcept(std::invoke(
+      _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...)))
+      -> decltype(std::invoke(
+          _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...)) {
+    return std::invoke(
+        _Fn, std::get<_Indices>(std::forward<_Self>(__self).__bound_args_)..., std::forward<_Args>(__args)...);
+  }
 };
 
 template <auto _Fn, class... _Args>
@@ -77,7 +79,8 @@ template <auto _Fn, class... _Args>
   if constexpr (using _Ty = decltype(_Fn); is_pointer_v<_Ty> || is_member_pointer_v<_Ty>)
     static_assert(_Fn != nullptr, "f cannot be equal to nullptr");
 
-  return __nttp_bind_front_t<_Fn, decay_t<_Args>...>(std::forward<_Args>(__args)...);
+  return __nttp_bind_front_t<_Fn, index_sequence_for<_Args...>, decay_t<_Args>...>{
+      .__bound_args_{std::forward<_Args>(__args)...}};
 }
 
 #endif // _LIBCPP_STD_VER >= 26

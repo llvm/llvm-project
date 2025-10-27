@@ -328,12 +328,12 @@ constexpr void test_return_type() {
     static_assert(!noexcept(never_noexcept()));
   }
 
-  { // Test calling volatile wrapper
+  { // Test calling volatile wrapper -- we allow it as an extension
     using Fn = decltype(std::bind_front<std::integral_constant<int, 0>{}>());
-    static_assert(!std::invocable<volatile Fn&>);
-    static_assert(!std::invocable<const volatile Fn&>);
-    static_assert(!std::invocable<volatile Fn>);
-    static_assert(!std::invocable<const volatile Fn>);
+    static_assert(std::invocable<volatile Fn&>);
+    static_assert(std::invocable<const volatile Fn&>);
+    static_assert(std::invocable<volatile Fn>);
+    static_assert(std::invocable<const volatile Fn>);
   }
 }
 
