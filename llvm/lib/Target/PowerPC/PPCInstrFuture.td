@@ -333,15 +333,14 @@ let Predicates = [IsISAFuture] in {
   def TLBIEIO
       : XForm_RSB5_UIMM2<31, 18, (outs), (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC),
                          "tlbieio $RB, $RS, $RIC", []>;
+  def MTLPL : XForm_RBS5<31, 275, (outs), (ins gprc:$RB, gprc:$RS),
+                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     def TLBIEP8
         : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
                                   (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
                                       u1imm:$PRS, u1imm:$R),
                                   "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
-  def MTLPL : XForm_RBS5<31, 275, (outs), (ins gprc:$RB, gprc:$RS),
-                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>;
-  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     def MTLPL8 : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
                             "mtlpl $RB, $RS", IIC_SprMTSPR, []>, isPPC64;
   }
