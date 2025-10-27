@@ -177,6 +177,10 @@ static auto isPointerComparisonOperatorCall(std::string operator_name) {
                             pointee(anyOf(statusOrType(), statusType())))))));
 }
 
+// The nullPointerConstant in the two matchers below is to support
+// absl::StatusOr<void*> X = nullptr.
+// nullptr does not match the bound type.
+// TODO: be less restrictive around convertible types in general.
 static auto isStatusOrValueAssignmentCall() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return cxxOperatorCallExpr(
