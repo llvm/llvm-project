@@ -5757,6 +5757,13 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost;
   }
 
+  if (!ST->useSVEForFixedLengthVectors() &&
+      (AccumLT.second.isFixedLengthVector() && ST->isNeonAvailable() &&
+       ST->hasDotProd()) &&
+      (AccumLT.second.getScalarType() == MVT::i64 &&
+       InputLT.second.getScalarType() == MVT::i32))
+    return Invalid;
+
   // Add additional cost for the extends that would need to be inserted.
   return Cost + 4;
 }
