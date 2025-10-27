@@ -401,7 +401,7 @@ void NVPTXInstPrinter::printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
   assert(Op.isImm() && "Invalid operand");
   uint32_t Imm = (uint32_t)Op.getImm();
   if (Imm != UINT32_MAX) {
-    O << ".pragma \"used_bytes_mask " << Imm << "\";\n\t";
+    O << ".pragma \"used_bytes_mask " << format_hex(Imm, 1) << "\";\n\t";
   }
 }
 
