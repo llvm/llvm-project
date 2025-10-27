@@ -13,7 +13,6 @@
 @CB.str = private unnamed_addr constant [3 x i8] c"CB\00", align 1
 @Constants.str = private unnamed_addr constant [10 x i8] c"Constants\00", align 1
 
-
 define void @test_typedbuffer() {
   ; ByteAddressBuffer Buf : register(t8, space1)
   %srv0 = call target("dx.RawBuffer", void, 0, 0)
