@@ -253,7 +253,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   Value *RealContext = nullptr;
 
   StructType *ThisContextType = nullptr;
-  Value *TheRootFuctionData = nullptr;
+  Value *TheRootFunctionData = nullptr;
   Value *ExpectedCalleeTLSAddr = nullptr;
   Value *CallsiteInfoTLSAddr = nullptr;
   const bool HasMusttail = [&F]() {
@@ -291,7 +291,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
            ArrayType::get(Builder.getPtrTy(), NumCallsites)});
       // Figure out which way we obtain the context object for this function -
       // if it's an entrypoint, then we call StartCtx, otherwise GetCtx. In the
-      // former case, we also set TheRootFuctionData since we need to release it
+      // former case, we also set TheRootFunctionData since we need to release it
       // at the end (plus it can be used to know if we have an entrypoint or a
       // regular function)
       // Don't set a name, they end up taking a lot of space and we don't need
@@ -300,19 +300,19 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // Zero-initialize the FunctionData, except for functions that have
       // musttail calls. There, we set the CtxRoot field to 1, which will be
       // treated as a "can't be set as root".
-      TheRootFuctionData = new GlobalVariable(
+      TheRootFunctionData = new GlobalVariable(
           M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
           HasMusttail ? CannotBeRootInitializer
                       : Constant::getNullValue(FunctionDataTy));
 
       if (ContextRootSet.contains(&F)) {
         Context = Builder.CreateCall(
-            StartCtx, {TheRootFuctionData, Guid, Builder.getInt32(NumCounters),
+            StartCtx, {TheRootFunctionData, Guid, Builder.getInt32(NumCounters),
                        Builder.getInt32(NumCallsites)});
         ORE.emit(
             [&] { return OptimizationRemark(DEBUG_TYPE, "Entrypoint", &F); });
       } else {
-        Context = Builder.CreateCall(GetCtx, {TheRootFuctionData, &F, Guid,
+        Context = Builder.CreateCall(GetCtx, {TheRootFunctionData, &F, Guid,
                                               Builder.getInt32(NumCounters),
                                               Builder.getInt32(NumCallsites)});
         ORE.emit([&] {
@@ -399,7 +399,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       } else if (!HasMusttail && isa<ReturnInst>(I)) {
         // Remember to release the context if we are an entrypoint.
         IRBuilder<> Builder(&I);
-        Builder.CreateCall(ReleaseCtx, {TheRootFuctionData});
+        Builder.CreateCall(ReleaseCtx, {TheRootFunctionData});
         ContextWasReleased = true;
       }
     }
