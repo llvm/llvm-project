@@ -100,15 +100,17 @@ public:
     return !(__x == __y);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
-    void* __tmp = __x.__ptr_;
-    __x.__ptr_  = __y.__ptr_;
-    __y.__ptr_  = __tmp;
-  }
+  friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT;
 
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
+
+inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
+  void* __tmp = __x.__ptr_;
+  __x.__ptr_  = __y.__ptr_;
+  __y.__ptr_  = __tmp;
+}
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
