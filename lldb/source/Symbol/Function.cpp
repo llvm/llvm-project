@@ -593,7 +593,7 @@ uint32_t Function::GetPrologueByteSize() {
 
         if (first_line_entry.is_prologue_end) {
           prologue_end_file_addr =
-              first_line_entry.range.GetBaseAddress().GetFileAddress();
+              first_line_entry.GetRange().GetBaseAddress().GetFileAddress();
           prologue_end_line_idx = first_line_entry_idx;
         } else {
           // Check the first few instructions and look for one that has
@@ -605,7 +605,7 @@ uint32_t Function::GetPrologueByteSize() {
             if (line_table->GetLineEntryAtIndex(idx, line_entry)) {
               if (line_entry.is_prologue_end) {
                 prologue_end_file_addr =
-                    line_entry.range.GetBaseAddress().GetFileAddress();
+                    line_entry.GetRange().GetBaseAddress().GetFileAddress();
                 prologue_end_line_idx = idx;
                 break;
               }
@@ -625,7 +625,7 @@ uint32_t Function::GetPrologueByteSize() {
             if (line_table->GetLineEntryAtIndex(idx, line_entry)) {
               if (line_entry.line != first_line_entry.line) {
                 prologue_end_file_addr =
-                    line_entry.range.GetBaseAddress().GetFileAddress();
+                    line_entry.GetRange().GetBaseAddress().GetFileAddress();
                 prologue_end_line_idx = idx;
                 break;
               }
@@ -634,8 +634,8 @@ uint32_t Function::GetPrologueByteSize() {
 
           if (prologue_end_file_addr == LLDB_INVALID_ADDRESS) {
             prologue_end_file_addr =
-                first_line_entry.range.GetBaseAddress().GetFileAddress() +
-                first_line_entry.range.GetByteSize();
+                first_line_entry.GetRange().GetBaseAddress().GetFileAddress() +
+                first_line_entry.GetRange().GetByteSize();
             prologue_end_line_idx = first_line_entry_idx;
           }
         }
@@ -659,7 +659,7 @@ uint32_t Function::GetPrologueByteSize() {
             if (line_entry.line != 0)
               break;
           }
-          if (line_entry.range.GetBaseAddress().GetFileAddress() >=
+          if (line_entry.GetRange().GetBaseAddress().GetFileAddress() >=
               range_end_file_addr)
             break;
 
@@ -670,8 +670,9 @@ uint32_t Function::GetPrologueByteSize() {
           LineEntry first_non_zero_entry;
           if (line_table->GetLineEntryAtIndex(first_non_zero_line,
                                               first_non_zero_entry)) {
-            line_zero_end_file_addr =
-                first_non_zero_entry.range.GetBaseAddress().GetFileAddress();
+            line_zero_end_file_addr = first_non_zero_entry.GetRange()
+                                          .GetBaseAddress()
+                                          .GetFileAddress();
           }
         }
 

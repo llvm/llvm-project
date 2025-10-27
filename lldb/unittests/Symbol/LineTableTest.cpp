@@ -284,9 +284,14 @@ TEST_F(LineTableTest, FindLineEntryByAddress) {
     LineEntry entry;
     if (!table->FindLineEntryByAddress(Address(fixture->text_sp, addr), entry))
       return {LLDB_INVALID_ADDRESS, LLDB_INVALID_ADDRESS, false};
-    return {entry.range.GetBaseAddress().GetFileAddress(),
-            entry.range.GetByteSize(),
-            static_cast<bool>(entry.is_terminal_entry)};
+    if (entry.HasValidRange()) {
+      return {entry.GetRange().GetBaseAddress().GetFileAddress(),
+              entry.GetRange().GetByteSize(),
+              static_cast<bool>(entry.is_terminal_entry)};
+    } else {
+      return {LLDB_INVALID_ADDRESS, 0,
+              static_cast<bool>(entry.is_terminal_entry)};
+    }
   };
 
   EXPECT_THAT(find(0), testing::FieldsAre(0, 10, false));

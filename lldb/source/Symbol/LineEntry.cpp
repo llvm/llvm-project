@@ -14,13 +14,13 @@
 using namespace lldb_private;
 
 LineEntry::LineEntry()
-    : range(), file_sp(std::make_shared<SupportFile>()),
+    : m_range(), file_sp(std::make_shared<SupportFile>()),
       original_file_sp(std::make_shared<SupportFile>()),
       is_start_of_statement(0), is_start_of_basic_block(0), is_prologue_end(0),
       is_epilogue_begin(0), is_terminal_entry(0) {}
 
 void LineEntry::Clear() {
-  range.Clear();
+  m_range.reset();
   file_sp = std::make_shared<SupportFile>();
   original_file_sp = std::make_shared<SupportFile>();
   line = LLDB_INVALID_LINE_NUMBER;
@@ -32,9 +32,18 @@ void LineEntry::Clear() {
   is_terminal_entry = 0;
 }
 
-bool LineEntry::IsValid() const {
-  return range.GetBaseAddress().IsValid() && line != LLDB_INVALID_LINE_NUMBER;
+bool LineEntry::IsValid() const { return line != LLDB_INVALID_LINE_NUMBER; }
+
+const AddressRange &LineEntry::GetRange() const {
+  static AddressRange invalid_range;
+  return m_range ? *m_range : invalid_range;
 }
+
+bool LineEntry::HasValidRange() const {
+  return m_range.has_value() && m_range->GetBaseAddress().IsValid();
+}
+
+void LineEntry::SetRange(const AddressRange &range) { m_range = range; }
 
 bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
   const FileSpec &file = file_sp->GetSpecOnly();
@@ -62,11 +71,12 @@ bool LineEntry::Dump(Stream *s, Target *target, bool show_file,
                      Address::DumpStyle fallback_style, bool show_range) const {
   if (show_range) {
     // Show address range
-    if (!range.Dump(s, target, style, fallback_style))
+    if (!HasValidRange() || !GetRange().Dump(s, target, style, fallback_style))
       return false;
   } else {
     // Show address only
-    if (!range.GetBaseAddress().Dump(s, target, style, fallback_style))
+    if (!HasValidRange() ||
+        !GetRange().GetBaseAddress().Dump(s, target, style, fallback_style))
       return false;
   }
   if (show_file)
@@ -99,11 +109,16 @@ bool LineEntry::GetDescription(Stream *s, lldb::DescriptionLevel level,
   if (level == lldb::eDescriptionLevelBrief ||
       level == lldb::eDescriptionLevelFull) {
     if (show_address_only) {
-      range.GetBaseAddress().Dump(s, target, Address::DumpStyleLoadAddress,
-                                  Address::DumpStyleFileAddress);
+      if (HasValidRange()) {
+        GetRange().GetBaseAddress().Dump(s, target,
+                                         Address::DumpStyleLoadAddress,
+                                         Address::DumpStyleFileAddress);
+      }
     } else {
-      range.Dump(s, target, Address::DumpStyleLoadAddress,
-                 Address::DumpStyleFileAddress);
+      if (HasValidRange()) {
+        GetRange().Dump(s, target, Address::DumpStyleLoadAddress,
+                        Address::DumpStyleFileAddress);
+      }
     }
 
     *s << ": " << GetFile();
@@ -145,13 +160,13 @@ bool lldb_private::operator<(const LineEntry &a, const LineEntry &b) {
 }
 
 int LineEntry::Compare(const LineEntry &a, const LineEntry &b) {
-  int result = Address::CompareFileAddress(a.range.GetBaseAddress(),
-                                           b.range.GetBaseAddress());
+  int result = Address::CompareFileAddress(a.GetRange().GetBaseAddress(),
+                                           b.GetRange().GetBaseAddress());
   if (result != 0)
     return result;
 
-  const lldb::addr_t a_byte_size = a.range.GetByteSize();
-  const lldb::addr_t b_byte_size = b.range.GetByteSize();
+  const lldb::addr_t a_byte_size = a.GetRange().GetByteSize();
+  const lldb::addr_t b_byte_size = b.GetRange().GetByteSize();
 
   if (a_byte_size < b_byte_size)
     return -1;
@@ -183,7 +198,10 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
     bool include_inlined_functions) const {
   // Add each LineEntry's range to complete_line_range until we find a
   // different file / line number.
-  AddressRange complete_line_range = range;
+  if (!HasValidRange())
+    return {};
+  AddressRange complete_line_range = GetRange();
+
   auto symbol_context_scope = lldb::eSymbolContextLineEntry;
   Declaration start_call_site(original_file_sp->GetSpecOnly(), line);
   if (include_inlined_functions)
@@ -196,7 +214,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
     range_end.CalculateSymbolContext(&next_line_sc, symbol_context_scope);
 
     if (!next_line_sc.line_entry.IsValid() ||
-        next_line_sc.line_entry.range.GetByteSize() == 0)
+        !next_line_sc.line_entry.HasValidRange() ||
+        next_line_sc.line_entry.GetRange().GetByteSize() == 0)
       break;
 
     if (original_file_sp->Equal(*next_line_sc.line_entry.original_file_sp,
@@ -209,7 +228,7 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
       // our AddressRange by its size and continue to see if there are more
       // LineEntries that we can combine. However, if there was nothing to
       // extend we're done.
-      if (!complete_line_range.Extend(next_line_sc.line_entry.range))
+      if (!complete_line_range.Extend(next_line_sc.line_entry.GetRange()))
         break;
       continue;
     }
@@ -231,7 +250,7 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange(
         break;
       // Extend our AddressRange by the size of the inlined block, but if there
       // was nothing to add then we're done.
-      if (!complete_line_range.Extend(next_line_sc.line_entry.range))
+      if (!complete_line_range.Extend(next_line_sc.line_entry.GetRange()))
         break;
       continue;
     }

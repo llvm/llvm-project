@@ -128,7 +128,7 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
   sc = frame->GetSymbolContext(eSymbolContextLineEntry | eSymbolContextSymbol);
 
   if (sc.line_entry.line == 0) {
-    AddressRange range = sc.line_entry.range;
+    AddressRange range = sc.line_entry.GetRange();
     bool just_step_out = false;
     if (sc.symbol) {
       ProcessSP process_sp(current_plan->GetThread().GetProcess());

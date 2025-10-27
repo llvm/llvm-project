@@ -1918,10 +1918,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionLineOffset:
-    if (sc)
-      return (DumpAddressOffsetFromFunction(
-          s, sc, exe_ctx, sc->line_entry.range.GetBaseAddress(), false, false,
-          false));
+    if (sc) {
+      Address line_addr = sc->line_entry.GetRange().GetBaseAddress();
+      return (DumpAddressOffsetFromFunction(s, sc, exe_ctx, line_addr, false,
+                                            false, false));
+    }
     return false;
 
   case Entry::Type::FunctionPCOffset:
@@ -1986,11 +1987,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::LineEntryStartAddress:
   case Entry::Type::LineEntryEndAddress:
-    if (sc && sc->line_entry.range.GetBaseAddress().IsValid()) {
-      Address addr = sc->line_entry.range.GetBaseAddress();
+    if (sc && sc->line_entry.HasValidRange()) {
+      Address addr = sc->line_entry.GetRange().GetBaseAddress();
 
       if (entry.type == Entry::Type::LineEntryEndAddress)
-        addr.Slide(sc->line_entry.range.GetByteSize());
+        addr.Slide(sc->line_entry.GetRange().GetByteSize());
       if (DumpAddressAndContent(s, sc, exe_ctx, addr, false))
         return true;
     }

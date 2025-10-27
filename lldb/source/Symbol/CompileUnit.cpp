@@ -335,7 +335,7 @@ void CompileUnit::ResolveSymbolContext(
     // line entry will be the in function that contained the line that might
     // be a CallSite, and we can just iterate over that function to find any
     // inline records, and dig up their call sites.
-    Address start_addr = line_entry.range.GetBaseAddress();
+    Address start_addr = line_entry.GetRange().GetBaseAddress();
     Function *function = start_addr.CalculateSymbolContextFunction();
     // Record the size of the list to see if we added to it:
     size_t old_sc_list_size = sc_list.GetSize();
@@ -390,8 +390,9 @@ void CompileUnit::ResolveSymbolContext(
                      *src_location_spec.GetColumn() == call_site_line.column))
                   matches_spec = true;
               }
-              if (matches_spec &&
-                  sibling_block->GetRangeAtIndex(0, call_site_line.range)) {
+              AddressRange range;
+              if (matches_spec && sibling_block->GetRangeAtIndex(0, range)) {
+                call_site_line.SetRange(range);
                 SymbolContext call_site_sc(sc.target_sp, sc.module_sp,
                                            sc.comp_unit, sc.function, sc.block,
                                            &call_site_line, sc.symbol);
@@ -446,8 +447,9 @@ void CompileUnit::ResolveSymbolContext(
     if (resolve_scope == eSymbolContextLineEntry) {
       sc_list.Append(sc);
     } else {
-      line_entry.range.GetBaseAddress().CalculateSymbolContext(&resolved_sc,
-                                                               resolve_scope);
+      if (line_entry.HasValidRange())
+        line_entry.GetRange().GetBaseAddress().CalculateSymbolContext(
+            &resolved_sc, resolve_scope);
       // Sometimes debug info is bad and isn't able to resolve the line entry's
       // address back to the same compile unit and/or line entry. If the compile
       // unit changed, then revert back to just the compile unit and line entry.
@@ -474,7 +476,9 @@ void CompileUnit::ResolveSymbolContext(
               "unable to resolve a line table file address {0:x16} back "
               "to a compile unit, please file a bug and attach the address "
               "and file.",
-              line_entry.range.GetBaseAddress().GetFileAddress());
+              line_entry.HasValidRange()
+                  ? line_entry.GetRange().GetBaseAddress().GetFileAddress()
+                  : 0);
         }
         sc_list.Append(sc);
       }

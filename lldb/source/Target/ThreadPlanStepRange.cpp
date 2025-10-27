@@ -160,8 +160,10 @@ bool ThreadPlanStepRange::InRange() {
                       "stepping through that range: %s",
                       s.GetData());
           }
-        } else if (new_context.line_entry.range.GetBaseAddress().GetLoadAddress(
-                       &GetTarget()) != pc_load_addr) {
+        } else if (new_context.line_entry.HasValidRange() &&
+                   new_context.line_entry.GetRange()
+                           .GetBaseAddress()
+                           .GetLoadAddress(&GetTarget()) != pc_load_addr) {
           // Another thing that sometimes happens here is that we step out of
           // one line into the MIDDLE of another line.  So far I mostly see
           // this due to bugs in the debug information. But we probably don't
@@ -170,7 +172,9 @@ bool ThreadPlanStepRange::InRange() {
           // and continue.
           m_addr_context = new_context;
           m_address_ranges.clear();
-          AddRange(m_addr_context.line_entry.range);
+          if (m_addr_context.line_entry.HasValidRange()) {
+            AddRange(m_addr_context.line_entry.GetRange());
+          }
           ret_value = true;
           if (log) {
             StreamString s;
@@ -430,7 +434,7 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
             FileSpec call_site_file_spec = call_site.GetFile();
             top_most_line_entry.original_file_sp =
                 std::make_shared<SupportFile>(call_site_file_spec);
-            top_most_line_entry.range = range;
+            top_most_line_entry.SetRange(range);
             top_most_line_entry.file_sp.reset();
             top_most_line_entry.ApplyFileMappings(
                 GetThread().CalculateTarget());
