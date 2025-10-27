@@ -181,7 +181,7 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
   if (!dataTy) {
     if (subgroup_block_io)
       return emitError() << "subgroup_block_io "
-                            "are only allowed when result is a 1D VectorType.";
+                            "are only allowed when result is a VectorType.";
     else
       return success();
   }
@@ -193,9 +193,6 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
 
   if (dataShape.size() == 2) {
-    if (subgroup_block_io)
-      return emitError() << "subgroup_block_io "
-                            "are only allowed when result is a 1D VectorType.";
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitError() << "data shape must not exceed mem_desc shape.";
