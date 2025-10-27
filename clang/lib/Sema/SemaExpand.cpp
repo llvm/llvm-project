@@ -109,7 +109,7 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
                                       OverloadCandidateSet::CSK_Normal);
 
     S.AddArgumentDependentLookupCandidates(BeginName.getName(), ColonLoc,
-                                           ExpansionInitializer, nullptr,
+                                           ExpansionInitializer, /*ExplicitTemplateArgs=*/nullptr,
                                            Candidates);
 
     if (Candidates.empty())
@@ -117,7 +117,7 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
 
     Candidates.clear(OverloadCandidateSet::CSK_Normal);
     S.AddArgumentDependentLookupCandidates(EndName.getName(), ColonLoc,
-                                           ExpansionInitializer, nullptr,
+                                           ExpansionInitializer, /*ExplicitTemplateArgs=*/nullptr,
                                            Candidates);
 
     if (Candidates.empty())
@@ -237,10 +237,9 @@ static StmtResult BuildDestructuringExpansionStmtDecl(
 ExpansionStmtDecl *Sema::ActOnExpansionStmtDecl(unsigned TemplateDepth,
                                                 SourceLocation TemplateKWLoc) {
   // Create a template parameter '__N'. This will be used to denote the index
-  // of the element that we're instantiating. The wording around iterable
-  // expansion statements (which are the only kind of expansion statements that
-  // actually use this parameter in an expression) implies that its type should
-  // be 'ptrdiff_t', so use that in all cases.
+  // of the element that we're instantiating. CWG 3044 requires this type to
+  // be 'ptrdiff_t' for iterating expansion statements, so use that in all
+  // cases.
   IdentifierInfo *ParmName = &Context.Idents.get("__N");
   QualType ParmTy = Context.getPointerDiffType();
   TypeSourceInfo *ParmTI =
@@ -295,7 +294,6 @@ StmtResult Sema::ActOnCXXExpansionStmt(
 
   // This is an enumerating expansion statement.
   if (auto *ILE = dyn_cast<CXXExpansionInitListExpr>(ExpansionInitializer)) {
-
     ExprResult Initializer =
         BuildCXXExpansionInitListSelectExpr(ILE, BuildIndexDRE(*this, ESD));
     if (FinaliseExpansionVar(*this, ExpansionVar, Initializer))
@@ -512,7 +510,7 @@ ExprResult Sema::BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
     llvm_unreachable("Failed to evaluate expansion index");
 
   uint64_t I = ER.Val.getInt().getZExtValue();
-  MarkAnyDeclReferenced(Idx->getBeginLoc(), DD, true); // TODO: Do we need this?
+  MarkAnyDeclReferenced(Idx->getBeginLoc(), DD, true);
   if (auto *BD = DD->bindings()[I]; auto *HVD = BD->getHoldingVar())
     return HVD->getInit();
   else

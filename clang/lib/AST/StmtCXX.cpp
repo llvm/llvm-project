@@ -157,8 +157,6 @@ SourceLocation CXXExpansionStmt::getBeginLoc() const {
   return ParentDecl->getLocation();
 }
 
-// FIXME: Copy-pasted from CXXForRangeStmt. Can we convert this into a helper
-// function and put it somewhere else maybe?
 VarDecl *CXXExpansionStmt::getExpansionVariable() {
   Decl *LV = cast<DeclStmt>(getExpansionVarStmt())->getSingleDecl();
   assert(LV && "No expansion variable in CXXExpansionStmt");

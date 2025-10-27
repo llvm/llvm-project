@@ -5501,8 +5501,8 @@ public:
   }
 };
 
-// Represents an expansion-init-list to be expanded over by an expansion
-// statement.
+/// Represents an expansion-init-list to be expanded over by an expansion
+/// statement.
 class CXXExpansionInitListExpr final
     : public Expr,
       llvm::TrailingObjects<CXXExpansionInitListExpr, Expr *> {
@@ -5560,6 +5560,8 @@ private:
   }
 };
 
+/// Helper that selects an expression from an expansion init list depending
+/// on the current expansion index.
 class CXXExpansionInitListSelectExpr : public Expr {
   friend class ASTStmtReader;
 

@@ -7449,8 +7449,9 @@ public:
   ///       for-statement: [C99 6.8.5.3]
   ///         'for' '(' expr[opt] ';' expr[opt] ';' expr[opt] ')' statement
   ///         'for' '(' declaration expr[opt] ';' expr[opt] ')' statement
-  /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt]
-  /// ')' [C++]       statement [C++0x] 'for'
+  /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt] ')'
+  /// [C++]       statement
+  /// [C++0x] 'for'
   ///             'co_await'[opt]    [Coroutines]
   ///             '(' for-range-declaration ':' for-range-initializer ')'
   ///             statement
@@ -7709,7 +7710,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim
+  /// \endverbatim 
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

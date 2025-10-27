@@ -2282,7 +2282,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
   if (ExpansionStmtDeclaration)
-    ; // TODO: Figure out what to do here, if anything.
+    ; // Nothing.
   else if (ForRangeInfo.ParsedForRangeDecl())
     getActions().OpenACC().ActOnRangeForStmtBegin(ForLoc, ForRangeStmt.get());
   else

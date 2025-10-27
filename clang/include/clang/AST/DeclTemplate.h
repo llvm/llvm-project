@@ -3352,13 +3352,7 @@ public:
 /// compute the "template depth" of entities enclosed therein. In particular,
 /// the "template depth" is used to find instantiations of parameter variables,
 /// and a lambda enclosed within an expansion statement cannot compute its
-/// templat depth without a pointer to the enclosing expansion statement.
-///
-/// Another approach would be to extend 'CXXExpansionStmt' from 'DeclContext'
-/// without also providing a 'Decl' - but it seems as if this would be novel,
-/// and I'm not sure if existing code assumes that a 'DeclContext' is a 'Decl'.
-///
-/// TODO(P2996): This could probably be a 'TemplateDecl'.
+/// template depth without a pointer to the enclosing expansion statement.
 class ExpansionStmtDecl : public Decl, public DeclContext {
   CXXExpansionStmt *Expansion = nullptr;
   TemplateParameterList *TParams;
