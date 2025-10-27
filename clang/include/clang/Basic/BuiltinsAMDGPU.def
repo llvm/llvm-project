@@ -838,6 +838,15 @@ TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b4_u4, "V2UiUiUiV2Ui", "nc", "tensor-c
 TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b6_u4, "V3UiUiULiV2Ui", "nc", "tensor-cvt-lut-insts")
 TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b8_u4, "V4UiULiULiV2Ui", "nc", "tensor-cvt-lut-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_add_max_i32, "iiiiIb", "nc", "add-min-max-insts")
+TARGET_BUILTIN(__builtin_amdgcn_add_max_u32, "UiUiUiUiIb", "nc", "add-min-max-insts")
+TARGET_BUILTIN(__builtin_amdgcn_add_min_i32, "iiiiIb", "nc", "add-min-max-insts")
+TARGET_BUILTIN(__builtin_amdgcn_add_min_u32, "UiUiUiUiIb", "nc", "add-min-max-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pk_add_max_i16, "V2sV2sV2sV2sIb", "nc", "pk-add-min-max-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pk_add_max_u16, "V2UsV2UsV2UsV2UsIb", "nc", "pk-add-min-max-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pk_add_min_i16, "V2sV2sV2sV2sIb", "nc", "pk-add-min-max-insts")
+TARGET_BUILTIN(__builtin_amdgcn_pk_add_min_u16, "V2UsV2UsV2UsV2UsIb", "nc", "pk-add-min-max-insts")
+
 // GFX1250 WMMA builtins
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f32_16x16x4_f32, "V8fIbV2fIbV2fIsV8fIbIb", "nc", "gfx1250-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f32_16x16x32_bf16, "V8fIbV16yIbV16yIsV8fIbIb", "nc", "gfx1250-insts,wavefrontsize32")

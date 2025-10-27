@@ -2760,27 +2760,12 @@ llvm::Value *CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
 }
 
 llvm::Value *
-CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
-                                   const OMPMessageClause *MessageClause) {
-  return emitMessageClause(
-      CGF, MessageClause ? MessageClause->getMessageString() : nullptr,
-      MessageClause->getBeginLoc());
-}
-
-llvm::Value *
 CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity,
                                     SourceLocation Loc) {
   // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
   // as if sev-level is fatal."
   return llvm::ConstantInt::get(CGM.Int32Ty,
                                 Severity == OMPC_SEVERITY_warning ? 1 : 2);
-}
-
-llvm::Value *
-CGOpenMPRuntime::emitSeverityClause(const OMPSeverityClause *SeverityClause) {
-  return emitSeverityClause(SeverityClause ? SeverityClause->getSeverityKind()
-                                           : OMPC_SEVERITY_unknown,
-                            SeverityClause->getBeginLoc());
 }
 
 void CGOpenMPRuntime::emitNumThreadsClause(

@@ -2760,6 +2760,10 @@ def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
   MetaVarName<"<N>">,
   HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
 
+def falloc_token_mode_EQ : Joined<["-"], "falloc-token-mode=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Set the allocation token mode (experimental)">;
+
 def fallow_runtime_check_skip_hot_cutoff_EQ
     : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
       Group<f_clang_Group>,
@@ -6706,6 +6710,8 @@ def mv75 : Flag<["-"], "mv75">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv75"]>;
 def mv79 : Flag<["-"], "mv79">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv79"]>;
+def mv81 : Flag<["-"], "mv81">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv81"]>;
 def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
 def mhexagon_hvx_EQ : Joined<["-"], "mhvx=">,

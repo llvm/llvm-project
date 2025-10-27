@@ -348,6 +348,79 @@ int main(int Argc, char *Argv[]) {
     }
   }
 
+  // Unbundle silently via LINK action
+  {
+    // Set up ActionInfo
+    Status = amd_comgr_create_action_info(&ActionInfoLink);
+    checkError(Status, "amd_comgr_create_action_info");
+
+    Status = amd_comgr_action_info_set_language(ActionInfoLink,
+                                                AMD_COMGR_LANGUAGE_HIP);
+    checkError(Status, "amd_comgr_action_info_set_language");
+
+    const char *IsaName = "amdgcn-amd-amdhsa--gfx900";
+    Status = amd_comgr_action_info_set_isa_name(ActionInfoLink, IsaName);
+
+    // Unbundle
+    Status = amd_comgr_create_data_set(&DataSetLinked);
+    checkError(Status, "amd_comgr_create_data_set");
+    Status = amd_comgr_do_action(AMD_COMGR_ACTION_LINK_BC_TO_BC, ActionInfoLink,
+                                 DataSetBundled, DataSetLinked);
+    checkError(Status, "amd_comgr_do_action");
+
+    // Check Linked bitcode count
+    size_t Count;
+    Status = amd_comgr_action_data_count(DataSetLinked, AMD_COMGR_DATA_KIND_BC,
+                                         &Count);
+    checkError(Status, "amd_comgr_action_data_count");
+
+    if (Count != 1) {
+      printf("Bundled bitcode linking: "
+             "produced %zu bitcodes (expected 1)\n",
+             Count);
+      exit(1);
+    }
+
+    // Compile to relocatable
+    Status = amd_comgr_create_data_set(&DataSetReloc);
+    checkError(Status, "amd_comgr_create_data_set");
+
+    Status = amd_comgr_do_action(AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE,
+                                 ActionInfoLink, DataSetLinked, DataSetReloc);
+    checkError(Status, "amd_comgr_do_action");
+
+    Status = amd_comgr_action_data_count(
+        DataSetReloc, AMD_COMGR_DATA_KIND_RELOCATABLE, &Count);
+    checkError(Status, "amd_comgr_action_data_count");
+
+    if (Count != 1) {
+      printf("AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE Failed: "
+             "produced %zu source objects (expected 1)\n",
+             Count);
+      exit(1);
+    }
+
+    // Compile to executable
+    Status = amd_comgr_create_data_set(&DataSetExec);
+    checkError(Status, "amd_comgr_create_data_set");
+
+    Status =
+        amd_comgr_do_action(AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE,
+                            ActionInfoLink, DataSetReloc, DataSetExec);
+    checkError(Status, "amd_comgr_do_action");
+
+    Status = amd_comgr_action_data_count(
+        DataSetExec, AMD_COMGR_DATA_KIND_EXECUTABLE, &Count);
+    checkError(Status, "amd_comgr_action_data_count");
+
+    if (Count != 1) {
+      printf("AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE Failed: "
+             "produced %zu executable objects (expected 1)\n",
+             Count);
+      exit(1);
+    }
+  }
+
   // Cleanup
   Status = amd_comgr_destroy_action_info(ActionInfoUnbundle);
   checkError(Status, "amd_comgr_destroy_action_info");

@@ -21,23 +21,32 @@ implicit none
     procedure :: syncthreads
   end interface
 
-  interface
-    attributes(device) integer function syncthreads_and(value)
-      integer, value :: value
+  interface syncthreads_and
+    attributes(device) integer function syncthreads_and_i4(value)
+      integer(4), value :: value
     end function
-  end interface
+    attributes(device) integer function syncthreads_and_l4(value)
+      logical(4), value :: value
+    end function
+  end interface syncthreads_and
 
-  interface
-    attributes(device) integer function syncthreads_count(value)
-      integer, value :: value
+  interface syncthreads_count
+    attributes(device) integer function syncthreads_count_i4(value)
+      integer(4), value :: value
     end function
-  end interface
+    attributes(device) integer function syncthreads_count_l4(value)
+      logical(4), value :: value
+    end function
+  end interface syncthreads_count
 
-  interface
-    attributes(device) integer function syncthreads_or(value)
-      integer, value :: value
+  interface syncthreads_or
+    attributes(device) integer function syncthreads_or_i4(value)
+      integer(4), value :: value
     end function
-  end interface
+    attributes(device) integer function syncthreads_or_l4(value)
+      logical(4), value :: value
+    end function
+  end interface syncthreads_or
 
   interface
     attributes(device) subroutine syncwarp(mask)

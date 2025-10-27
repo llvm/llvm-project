@@ -293,6 +293,23 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
+    # Check for Glibc < 2.36, where there was no support for char8_t functions
+    Feature(
+        name="glibc-no-char8_t-support",
+        when=lambda cfg: "__GLIBC__" in compilerMacros(cfg)
+        and not sourceBuilds(
+            cfg,
+            """
+            #include <uchar.h>
+            #include <wchar.h>
+            int main(void) {
+                char8_t c;
+                mbstate_t s = {0};
+                return mbrtoc8(&c, "", 0, &s);
+            }
+            """,
+        ),
+    ),
     Feature(
         name="has-unix-headers",
         when=lambda cfg: sourceBuilds(

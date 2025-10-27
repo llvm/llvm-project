@@ -1846,6 +1846,10 @@ void GenericDeviceTy::clear_ArgBufs() {
   ArgBufEntries.clear();
 }
 
+Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return isAccessiblePtrImpl(Ptr, Size);
+}
+
 Error GenericPluginTy::init() {
   if (Initialized)
     return Plugin::success();
@@ -2648,6 +2652,22 @@ void GenericPluginTy::set_coarse_grain_mem(int32_t DeviceId, const void *ptr,
            toString(std::move(Err)).data());
   T.res(0);
   return;
+}
+
+int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
+                                           size_t Size) {
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure while checking accessibility of pointer %p for device %d: %s",
+       Ptr, DeviceId, ErrStr.c_str());
+    return false;
+  };
+
+  auto AccessibleOrErr = getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
+  if (Error Err = AccessibleOrErr.takeError())
+    return HandleError(std::move(Err));
+
+  return *AccessibleOrErr;
 }
 
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,

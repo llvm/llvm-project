@@ -280,6 +280,7 @@ public:
   void VisitUnaryDeref(UnaryOperator *e) { emitAggLoadOfLValue(e); }
   void VisitStringLiteral(StringLiteral *e) { emitAggLoadOfLValue(e); }
   void VisitCompoundLiteralExpr(CompoundLiteralExpr *e);
+
   void VisitPredefinedExpr(const PredefinedExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitPredefinedExpr");
@@ -361,8 +362,7 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXTypeidExpr");
   }
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitMaterializeTemporaryExpr");
+    Visit(e->getSubExpr());
   }
   void VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -670,7 +670,7 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
       return;
     }
 
-    cgf.cgm.errorNYI("emitStoreThroughBitfieldLValue");
+    cgf.emitStoreThroughBitfieldLValue(RValue::get(null), lv);
     return;
   }
 

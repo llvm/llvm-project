@@ -451,6 +451,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeModuleFlags(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
+  copyModuleAttrToFunctions(*M);
 
   if (!Slots)
     return false;
@@ -751,14 +752,21 @@ bool LLParser::parseDeclare() {
 ///   ::= 'define' FunctionHeader (!dbg !56)* '{' ...
 bool LLParser::parseDefine() {
   assert(Lex.getKind() == lltok::kw_define);
+  FileLoc FunctionStart(Lex.getTokLineColumnPos());
   Lex.Lex();
 
   Function *F;
   unsigned FunctionNumber = -1;
   SmallVector<unsigned> UnnamedArgNums;
-  return parseFunctionHeader(F, true, FunctionNumber, UnnamedArgNums) ||
-         parseOptionalFunctionMetadata(*F) ||
-         parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
+  bool RetValue =
+      parseFunctionHeader(F, true, FunctionNumber, UnnamedArgNums) ||
+      parseOptionalFunctionMetadata(*F) ||
+      parseFunctionBody(*F, FunctionNumber, UnnamedArgNums);
+  if (ParserContext)
+    ParserContext->addFunctionLocation(
+        F, FileLocRange(FunctionStart, Lex.getPrevTokEndLineColumnPos()));
+
+  return RetValue;
 }
 
 /// parseGlobalType
@@ -7204,6 +7212,8 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
 /// parseBasicBlock
 ///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
+  FileLoc BBStart(Lex.getTokLineColumnPos());
+
   // If this basic block starts out with a name, remember it.
   std::string Name;
   int NameID = -1;
@@ -7245,6 +7255,7 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
+    FileLoc InstStart(Lex.getTokLineColumnPos());
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
@@ -7294,7 +7305,15 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
     for (DbgRecordPtr &DR : TrailingDbgRecord)
       BB->insertDbgRecordBefore(DR.release(), Inst->getIterator());
     TrailingDbgRecord.clear();
+    if (ParserContext) {
+      ParserContext->addInstructionLocation(
+          Inst, FileLocRange(InstStart, Lex.getPrevTokEndLineColumnPos()));
+    }
   } while (!Inst->isTerminator());
+
+  if (ParserContext)
+    ParserContext->addBlockLocation(
+        BB, FileLocRange(BBStart, Lex.getPrevTokEndLineColumnPos()));
 
   assert(TrailingDbgRecord.empty() &&
          "All debug values should have been attached to an instruction.");
