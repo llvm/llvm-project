@@ -890,6 +890,7 @@ private:
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
+  SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT(SDNode *N);

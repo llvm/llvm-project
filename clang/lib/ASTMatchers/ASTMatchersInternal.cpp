@@ -1009,6 +1009,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
     cxxDynamicCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CStyleCastExpr>
     cStyleCastExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ExplicitCastExpr>

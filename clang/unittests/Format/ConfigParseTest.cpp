@@ -176,7 +176,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
-  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
@@ -1139,6 +1138,18 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SDS_Leave);
   CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
               FormatStyle::SDS_Never);
+
+  CHECK_PARSE("Cpp11BracedListStyle: Block", Cpp11BracedListStyle,
+              FormatStyle::BLS_Block);
+  CHECK_PARSE("Cpp11BracedListStyle: FunctionCall", Cpp11BracedListStyle,
+              FormatStyle::BLS_FunctionCall);
+  CHECK_PARSE("Cpp11BracedListStyle: AlignFirstComment", Cpp11BracedListStyle,
+              FormatStyle::BLS_AlignFirstComment);
+  // For backward compatibility:
+  CHECK_PARSE("Cpp11BracedListStyle: false", Cpp11BracedListStyle,
+              FormatStyle::BLS_Block);
+  CHECK_PARSE("Cpp11BracedListStyle: true", Cpp11BracedListStyle,
+              FormatStyle::BLS_AlignFirstComment);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
