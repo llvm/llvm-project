@@ -105,20 +105,19 @@ TryBuildIterableExpansionStmtInitializer(Sema &S, Expr *ExpansionInitializer,
 
   // Try ADL.
   if (!FoundBeginEnd) {
-    OverloadCandidateSet Candidates(ColonLoc,
-                                      OverloadCandidateSet::CSK_Normal);
+    OverloadCandidateSet Candidates(ColonLoc, OverloadCandidateSet::CSK_Normal);
 
-    S.AddArgumentDependentLookupCandidates(BeginName.getName(), ColonLoc,
-                                           ExpansionInitializer, /*ExplicitTemplateArgs=*/nullptr,
-                                           Candidates);
+    S.AddArgumentDependentLookupCandidates(
+        BeginName.getName(), ColonLoc, ExpansionInitializer,
+        /*ExplicitTemplateArgs=*/nullptr, Candidates);
 
     if (Candidates.empty())
       return Data;
 
     Candidates.clear(OverloadCandidateSet::CSK_Normal);
-    S.AddArgumentDependentLookupCandidates(EndName.getName(), ColonLoc,
-                                           ExpansionInitializer, /*ExplicitTemplateArgs=*/nullptr,
-                                           Candidates);
+    S.AddArgumentDependentLookupCandidates(
+        EndName.getName(), ColonLoc, ExpansionInitializer,
+        /*ExplicitTemplateArgs=*/nullptr, Candidates);
 
     if (Candidates.empty())
       return Data;
@@ -517,15 +516,16 @@ ExprResult Sema::BuildCXXDestructuringExpansionSelectExpr(DecompositionDecl *DD,
     return BD->getBinding();
 }
 
-std::optional<uint64_t>  Sema::ComputeExpansionSize(CXXExpansionStmt *Expansion) {
+std::optional<uint64_t>
+Sema::ComputeExpansionSize(CXXExpansionStmt *Expansion) {
   assert(!Expansion->hasDependentSize());
 
   if (isa<CXXEnumeratingExpansionStmt>(Expansion)) {
     uint64_t Size = cast<CXXExpansionInitListSelectExpr>(
-               Expansion->getExpansionVariable()->getInit())
-        ->getRangeExpr()
-        ->getExprs()
-        .size();
+                        Expansion->getExpansionVariable()->getInit())
+                        ->getRangeExpr()
+                        ->getExprs()
+                        .size();
 
     return Size;
   }
@@ -567,7 +567,7 @@ std::optional<uint64_t>  Sema::ComputeExpansionSize(CXXExpansionStmt *Expansion)
     ER.Diag = &Notes;
     if (!N.get()->EvaluateAsInt(ER, Context)) {
       Diag(Loc, diag::err_expansion_size_expr_not_ice);
-      for (const auto& [Location, PDiag] : Notes)
+      for (const auto &[Location, PDiag] : Notes)
         Diag(Location, PDiag);
       return std::nullopt;
     }

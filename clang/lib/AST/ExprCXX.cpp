@@ -2064,9 +2064,8 @@ CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(
 }
 
 bool CXXExpansionInitListExpr::containsPackExpansion() const {
-  return llvm::any_of(getExprs(), [](const Expr* E) {
-    return isa<PackExpansionExpr>(E);
-  });
+  return llvm::any_of(getExprs(),
+                      [](const Expr *E) { return isa<PackExpansionExpr>(E); });
 }
 
 CXXDestructuringExpansionSelectExpr::CXXDestructuringExpansionSelectExpr(

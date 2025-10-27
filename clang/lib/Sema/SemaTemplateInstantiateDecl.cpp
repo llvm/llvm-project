@@ -7097,7 +7097,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
   if (CurrentInstantiationScope) {
     if (auto Found = CurrentInstantiationScope->getInstantiationOfIfExists(D))
-      if (auto *FD = dyn_cast<NamedDecl>(cast<Decl*>(*Found)))
+      if (auto *FD = dyn_cast<NamedDecl>(cast<Decl *>(*Found)))
         return FD;
   }
 

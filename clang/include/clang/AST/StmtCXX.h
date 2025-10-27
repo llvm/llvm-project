@@ -529,7 +529,7 @@ public:
 class CXXExpansionStmt : public Stmt {
   friend class ASTStmtReader;
 
-  ExpansionStmtDecl* ParentDecl;
+  ExpansionStmtDecl *ParentDecl;
   SourceLocation ForLoc;
   SourceLocation LParenLoc;
   SourceLocation ColonLoc;
@@ -562,8 +562,7 @@ protected:
   // Managing the memory for this properly would be rather complicated, and
   // expansion statements are fairly uncommon, so just allocate space for the
   // maximum amount of substatements we could possibly have.
-  Stmt* SubStmts[MAX_COUNT];
-
+  Stmt *SubStmts[MAX_COUNT];
 
   CXXExpansionStmt(StmtClass SC, EmptyShell Empty);
   CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD, Stmt *Init,
@@ -693,11 +692,11 @@ public:
   DeclStmt *getRangeVarStmt() { return cast<DeclStmt>(SubStmts[RANGE]); }
   void setRangeVarStmt(DeclStmt *S) { SubStmts[RANGE] = S; }
 
-  const VarDecl* getRangeVar() const {
+  const VarDecl *getRangeVar() const {
     return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
   }
 
-  VarDecl* getRangeVar() {
+  VarDecl *getRangeVar() {
     return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
   }
 
@@ -707,11 +706,11 @@ public:
   DeclStmt *getBeginVarStmt() { return cast<DeclStmt>(SubStmts[BEGIN]); }
   void setBeginVarStmt(DeclStmt *S) { SubStmts[BEGIN] = S; }
 
-  const VarDecl* getBeginVar() const {
+  const VarDecl *getBeginVar() const {
     return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
   }
 
-  VarDecl* getBeginVar() {
+  VarDecl *getBeginVar() {
     return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
   }
 
@@ -721,11 +720,11 @@ public:
   DeclStmt *getEndVarStmt() { return cast<DeclStmt>(SubStmts[END]); }
   void setEndVarStmt(DeclStmt *S) { SubStmts[END] = S; }
 
-  const VarDecl* getEndVar() const {
+  const VarDecl *getEndVar() const {
     return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
   }
 
-  VarDecl* getEndVar() {
+  VarDecl *getEndVar() {
     return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
   }
 
@@ -750,21 +749,25 @@ class CXXDestructuringExpansionStmt : public CXXExpansionStmt {
 public:
   CXXDestructuringExpansionStmt(EmptyShell Empty);
   CXXDestructuringExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
-                            DeclStmt *ExpansionVar, Stmt *DecompositionDeclStmt,
-                            SourceLocation ForLoc, SourceLocation LParenLoc,
-                            SourceLocation ColonLoc, SourceLocation RParenLoc);
+                                DeclStmt *ExpansionVar,
+                                Stmt *DecompositionDeclStmt,
+                                SourceLocation ForLoc, SourceLocation LParenLoc,
+                                SourceLocation ColonLoc,
+                                SourceLocation RParenLoc);
 
   Stmt *getDecompositionDeclStmt() { return SubStmts[DECOMP_DECL]; }
   const Stmt *getDecompositionDeclStmt() const { return SubStmts[DECOMP_DECL]; }
-  void setDecompositionDeclStmt(Stmt* S) { SubStmts[DECOMP_DECL] = S; }
+  void setDecompositionDeclStmt(Stmt *S) { SubStmts[DECOMP_DECL] = S; }
 
-  DecompositionDecl* getDecompositionDecl();
-  const DecompositionDecl* getDecompositionDecl() const {
-    return const_cast<CXXDestructuringExpansionStmt *>(this)->getDecompositionDecl();
+  DecompositionDecl *getDecompositionDecl();
+  const DecompositionDecl *getDecompositionDecl() const {
+    return const_cast<CXXDestructuringExpansionStmt *>(this)
+        ->getDecompositionDecl();
   }
 
   child_range children() {
-    return child_range(SubStmts, SubStmts + COUNT_CXXDestructuringExpansionStmt);
+    return child_range(SubStmts,
+                       SubStmts + COUNT_CXXDestructuringExpansionStmt);
   }
 
   const_child_range children() const {
@@ -810,11 +813,10 @@ class CXXExpansionInstantiationStmt final
 
   CXXExpansionInstantiationStmt(EmptyShell Empty, unsigned NumInstantiations,
                                 unsigned NumSharedStmts);
-  CXXExpansionInstantiationStmt(
-      SourceLocation BeginLoc,
-      SourceLocation EndLoc, ArrayRef<Stmt *> Instantiations,
-      ArrayRef<Stmt *> SharedStmts,
-      bool ShouldApplyLifetimeExtensionToSharedStmts);
+  CXXExpansionInstantiationStmt(SourceLocation BeginLoc, SourceLocation EndLoc,
+                                ArrayRef<Stmt *> Instantiations,
+                                ArrayRef<Stmt *> SharedStmts,
+                                bool ShouldApplyLifetimeExtensionToSharedStmts);
 
 public:
   static CXXExpansionInstantiationStmt *

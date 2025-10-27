@@ -171,8 +171,8 @@ bool CXXExpansionStmt::hasDependentSize() const {
         ->containsPackExpansion();
 
   if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmt>(this)) {
-    const Expr* Begin = Iterating->getBeginVar()->getInit();
-    const Expr* End = Iterating->getBeginVar()->getInit();
+    const Expr *Begin = Iterating->getBeginVar()->getInit();
+    const Expr *End = Iterating->getBeginVar()->getInit();
     return Begin->isTypeDependent() || Begin->isValueDependent() ||
            End->isTypeDependent() || End->isValueDependent();
   }
@@ -187,7 +187,7 @@ bool CXXExpansionStmt::hasDependentSize() const {
 }
 
 CXXIteratingExpansionStmt::CXXIteratingExpansionStmt(EmptyShell Empty)
-  : CXXExpansionStmt(CXXIteratingExpansionStmtClass, Empty) {}
+    : CXXExpansionStmt(CXXIteratingExpansionStmtClass, Empty) {}
 
 CXXIteratingExpansionStmt::CXXIteratingExpansionStmt(
     ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar, DeclStmt *Range,
@@ -207,18 +207,18 @@ CXXDestructuringExpansionStmt::CXXDestructuringExpansionStmt(
     ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
     Stmt *DecompositionDeclStmt, SourceLocation ForLoc,
     SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation RParenLoc)
-    : CXXExpansionStmt(CXXDestructuringExpansionStmtClass, ESD, Init, ExpansionVar,
-                       ForLoc, LParenLoc, ColonLoc, RParenLoc) {
+    : CXXExpansionStmt(CXXDestructuringExpansionStmtClass, ESD, Init,
+                       ExpansionVar, ForLoc, LParenLoc, ColonLoc, RParenLoc) {
   setDecompositionDeclStmt(DecompositionDeclStmt);
 }
 
-DecompositionDecl* CXXDestructuringExpansionStmt::getDecompositionDecl() {
+DecompositionDecl *CXXDestructuringExpansionStmt::getDecompositionDecl() {
   return cast<DecompositionDecl>(
       cast<DeclStmt>(getDecompositionDeclStmt())->getSingleDecl());
 }
 
 CXXDependentExpansionStmt::CXXDependentExpansionStmt(EmptyShell Empty)
-  : CXXExpansionStmt(CXXDependentExpansionStmtClass, Empty) {}
+    : CXXExpansionStmt(CXXDependentExpansionStmtClass, Empty) {}
 
 CXXDependentExpansionStmt::CXXDependentExpansionStmt(
     ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,

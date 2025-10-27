@@ -160,7 +160,8 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
-    void VisitCXXExpansionStmt(CXXExpansionStmt* Node, Expr* Initializer = nullptr);
+    void VisitCXXExpansionStmt(CXXExpansionStmt *Node,
+                               Expr *Initializer = nullptr);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -264,7 +265,8 @@ void StmtPrinter::VisitDeclStmt(DeclStmt *Node) {
   PrintRawDeclStmt(Node);
   // Certain pragma declarations shouldn't have a semi-colon after them.
   if (!Node->isSingleDecl() ||
-      !isa<ExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(Node->getSingleDecl()))
+      !isa<ExpansionStmtDecl, OpenACCDeclareDecl, OpenACCRoutineDecl>(
+          Node->getSingleDecl()))
     OS << ";";
   OS << NL;
 }
@@ -448,7 +450,8 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintControlledStmt(Node->getBody());
 }
 
-void StmtPrinter::VisitCXXExpansionStmt(CXXExpansionStmt *Node, Expr* Initializer) {
+void StmtPrinter::VisitCXXExpansionStmt(CXXExpansionStmt *Node,
+                                        Expr *Initializer) {
   OS << "template for (";
   if (Node->getInit())
     PrintInitStmt(Node->getInit(), 14);

@@ -5945,7 +5945,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::CXXExpansionInstantiationStmtClass: {
     BlockScopeRAII Scope(Info);
     const auto *Expansion = cast<CXXExpansionInstantiationStmt>(S);
-    for (const Stmt* Shared : Expansion->getSharedStmts()) {
+    for (const Stmt *Shared : Expansion->getSharedStmts()) {
       EvalStmtResult ESR = EvaluateStmt(Result, Info, Shared);
       if (ESR != ESR_Succeeded) {
         if (ESR != ESR_Failed && !Scope.destroy())
@@ -5956,7 +5956,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
     // No need to push an extra scope for these since they're already
     // CompoundStmts.
-    for (const Stmt* Instantiation : Expansion->getInstantiations()) {
+    for (const Stmt *Instantiation : Expansion->getInstantiations()) {
       EvalStmtResult ESR = EvaluateStmt(Result, Info, Instantiation);
       if (ESR == ESR_Failed ||
           ShouldPropagateBreakContinue(Info, Expansion, &Scope, ESR))

@@ -516,7 +516,7 @@ namespace clang {
     ExpectedDecl VisitEmptyDecl(EmptyDecl *D);
     ExpectedDecl VisitAccessSpecDecl(AccessSpecDecl *D);
     ExpectedDecl VisitStaticAssertDecl(StaticAssertDecl *D);
-    ExpectedDecl VisitExpansionStmtDecl(ExpansionStmtDecl* D);
+    ExpectedDecl VisitExpansionStmtDecl(ExpansionStmtDecl *D);
     ExpectedDecl VisitTranslationUnitDecl(TranslationUnitDecl *D);
     ExpectedDecl VisitBindingDecl(BindingDecl *D);
     ExpectedDecl VisitNamespaceDecl(NamespaceDecl *D);
@@ -609,11 +609,14 @@ namespace clang {
     ExpectedStmt VisitCXXCatchStmt(CXXCatchStmt *S);
     ExpectedStmt VisitCXXTryStmt(CXXTryStmt *S);
     ExpectedStmt VisitCXXForRangeStmt(CXXForRangeStmt *S);
-    ExpectedStmt VisitCXXEnumeratingExpansionStmt(CXXEnumeratingExpansionStmt *S);
+    ExpectedStmt
+    VisitCXXEnumeratingExpansionStmt(CXXEnumeratingExpansionStmt *S);
     ExpectedStmt VisitCXXIteratingExpansionStmt(CXXIteratingExpansionStmt *S);
-    ExpectedStmt VisitCXXDestructuringExpansionStmt(CXXDestructuringExpansionStmt *S);
+    ExpectedStmt
+    VisitCXXDestructuringExpansionStmt(CXXDestructuringExpansionStmt *S);
     ExpectedStmt VisitCXXDependentExpansionStmt(CXXDependentExpansionStmt *S);
-    ExpectedStmt VisitCXXExpansionInstantiationStmt(CXXExpansionInstantiationStmt *S);
+    ExpectedStmt
+    VisitCXXExpansionInstantiationStmt(CXXExpansionInstantiationStmt *S);
     // FIXME: MSDependentExistsStmt
     ExpectedStmt VisitObjCForCollectionStmt(ObjCForCollectionStmt *S);
     ExpectedStmt VisitObjCAtCatchStmt(ObjCAtCatchStmt *S);
@@ -702,10 +705,11 @@ namespace clang {
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
     ExpectedStmt VisitRequiresExpr(RequiresExpr* E);
     ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr* E);
-    ExpectedStmt VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr* E);
-    ExpectedStmt VisitCXXExpansionInitListSelectExpr(CXXExpansionInitListSelectExpr* E);
-    ExpectedStmt VisitCXXDestructuringExpansionSelectExpr(CXXDestructuringExpansionSelectExpr* E);
-
+    ExpectedStmt VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E);
+    ExpectedStmt
+    VisitCXXExpansionInitListSelectExpr(CXXExpansionInitListSelectExpr *E);
+    ExpectedStmt VisitCXXDestructuringExpansionSelectExpr(
+        CXXDestructuringExpansionSelectExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure
@@ -2853,9 +2857,9 @@ ExpectedDecl ASTNodeImporter::VisitExpansionStmtDecl(ExpansionStmtDecl *D) {
   if (Err)
     return std::move(Err);
 
-  ExpansionStmtDecl* ToD;
-  if (GetImportedOrCreateDecl(
-      ToD, D, Importer.getToContext(), DC, ToLocation, ToTemplateParams))
+  ExpansionStmtDecl *ToD;
+  if (GetImportedOrCreateDecl(ToD, D, Importer.getToContext(), DC, ToLocation,
+                              ToTemplateParams))
     return ToD;
 
   ToD->setExpansionPattern(ToExpansion);
@@ -7458,7 +7462,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
       ToBody, ToForLoc, ToCoawaitLoc, ToColonLoc, ToRParenLoc);
 }
 
-ExpectedStmt ASTNodeImporter::VisitCXXEnumeratingExpansionStmt(CXXEnumeratingExpansionStmt *S) {
+ExpectedStmt ASTNodeImporter::VisitCXXEnumeratingExpansionStmt(
+    CXXEnumeratingExpansionStmt *S) {
   Error Err = Error::success();
   auto ToESD = importChecked(Err, S->getDecl());
   auto ToInit = importChecked(Err, S->getInit());
@@ -7474,8 +7479,9 @@ ExpectedStmt ASTNodeImporter::VisitCXXEnumeratingExpansionStmt(CXXEnumeratingExp
       CXXEnumeratingExpansionStmt(ToESD, ToInit, ToExpansionVar, ToForLoc,
                                   ToLParenLoc, ToColonLoc, ToRParenLoc);
 }
-ExpectedStmt ASTNodeImporter::VisitCXXIteratingExpansionStmt(CXXIteratingExpansionStmt *S) {
-    Error Err = Error::success();
+ExpectedStmt
+ASTNodeImporter::VisitCXXIteratingExpansionStmt(CXXIteratingExpansionStmt *S) {
+  Error Err = Error::success();
   auto ToESD = importChecked(Err, S->getDecl());
   auto ToInit = importChecked(Err, S->getInit());
   auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
@@ -7493,12 +7499,14 @@ ExpectedStmt ASTNodeImporter::VisitCXXIteratingExpansionStmt(CXXIteratingExpansi
       ToESD, ToInit, ToExpansionVar, ToRange, ToBegin, ToEnd, ToForLoc,
       ToLParenLoc, ToColonLoc, ToRParenLoc);
 }
-ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionStmt(CXXDestructuringExpansionStmt *S) {
-    Error Err = Error::success();
+ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionStmt(
+    CXXDestructuringExpansionStmt *S) {
+  Error Err = Error::success();
   auto ToESD = importChecked(Err, S->getDecl());
   auto ToInit = importChecked(Err, S->getInit());
   auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
-  auto ToDecompositionDeclStmt = importChecked(Err, S->getDecompositionDeclStmt());
+  auto ToDecompositionDeclStmt =
+      importChecked(Err, S->getDecompositionDeclStmt());
   auto ToForLoc = importChecked(Err, S->getForLoc());
   auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
   auto ToColonLoc = importChecked(Err, S->getColonLoc());
@@ -7510,12 +7518,14 @@ ExpectedStmt ASTNodeImporter::VisitCXXDestructuringExpansionStmt(CXXDestructurin
       ToESD, ToInit, ToExpansionVar, ToDecompositionDeclStmt, ToForLoc,
       ToLParenLoc, ToColonLoc, ToRParenLoc);
 }
-ExpectedStmt ASTNodeImporter::VisitCXXDependentExpansionStmt(CXXDependentExpansionStmt *S) {
-    Error Err = Error::success();
+ExpectedStmt
+ASTNodeImporter::VisitCXXDependentExpansionStmt(CXXDependentExpansionStmt *S) {
+  Error Err = Error::success();
   auto ToESD = importChecked(Err, S->getDecl());
   auto ToInit = importChecked(Err, S->getInit());
   auto ToExpansionVar = importChecked(Err, S->getExpansionVarStmt());
-  auto ToExpansionInitializer = importChecked(Err, S->getExpansionInitializer());
+  auto ToExpansionInitializer =
+      importChecked(Err, S->getExpansionInitializer());
   auto ToForLoc = importChecked(Err, S->getForLoc());
   auto ToLParenLoc = importChecked(Err, S->getLParenLoc());
   auto ToColonLoc = importChecked(Err, S->getColonLoc());
@@ -7527,15 +7537,16 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentExpansionStmt(CXXDependentExpansi
       ToESD, ToInit, ToExpansionVar, ToExpansionInitializer, ToForLoc,
       ToLParenLoc, ToColonLoc, ToRParenLoc);
 }
-ExpectedStmt ASTNodeImporter::VisitCXXExpansionInstantiationStmt(CXXExpansionInstantiationStmt *S) {
+ExpectedStmt ASTNodeImporter::VisitCXXExpansionInstantiationStmt(
+    CXXExpansionInstantiationStmt *S) {
   Error Err = Error::success();
-  SmallVector<Stmt*> ToInstantiations;
-  SmallVector<Stmt*> ToSharedStmts;
+  SmallVector<Stmt *> ToInstantiations;
+  SmallVector<Stmt *> ToSharedStmts;
   auto ToBeginLoc = importChecked(Err, S->getBeginLoc());
   auto ToEndLoc = importChecked(Err, S->getEndLoc());
-  for (Stmt* FromInst : S->getInstantiations())
+  for (Stmt *FromInst : S->getInstantiations())
     ToInstantiations.push_back(importChecked(Err, FromInst));
-  for (Stmt* FromShared : S->getSharedStmts())
+  for (Stmt *FromShared : S->getSharedStmts())
     ToSharedStmts.push_back(importChecked(Err, FromShared));
 
   if (Err)

@@ -3343,7 +3343,6 @@ public:
   static bool classofKind(Kind K) { return K == TemplateParamObject; }
 };
 
-
 /// Represents a C++26 expansion statement declaration.
 ///
 /// This is a bit of a hack, since expansion statements shouldn't really be

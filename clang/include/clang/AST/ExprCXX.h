@@ -5611,8 +5611,8 @@ public:
 class CXXDestructuringExpansionSelectExpr : public Expr {
   friend class ASTStmtReader;
 
-  DecompositionDecl* Decomposition;
-  Expr* Index;
+  DecompositionDecl *Decomposition;
+  Expr *Index;
 
 public:
   CXXDestructuringExpansionSelectExpr(EmptyShell Empty);
@@ -5632,7 +5632,7 @@ public:
 
   Expr *getIndexExpr() { return Index; }
   const Expr *getIndexExpr() const { return Index; }
-  void setIndexExpr(Expr* E) { Index = E; }
+  void setIndexExpr(Expr *E) { Index = E; }
 
   SourceLocation getBeginLoc() const { return Decomposition->getBeginLoc(); }
   SourceLocation getEndLoc() const { return Decomposition->getEndLoc(); }
@@ -5644,8 +5644,8 @@ public:
 
   const_child_range children() const {
     return const_child_range(
-            reinterpret_cast<Stmt **>(const_cast<Expr **>(&Index)),
-            reinterpret_cast<Stmt **>(const_cast<Expr **>(&Index + 1)));
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(&Index)),
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(&Index + 1)));
   }
 
   static bool classof(const Stmt *T) {

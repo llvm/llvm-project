@@ -268,8 +268,8 @@ public:
   void VisitCoawaitExpr(const CoawaitExpr *Node);
   void VisitCoreturnStmt(const CoreturnStmt *Node);
   void VisitCompoundStmt(const CompoundStmt *Node);
-  void VisitCXXExpansionInstantiationStmt(
-      const CXXExpansionInstantiationStmt *Node);
+  void
+  VisitCXXExpansionInstantiationStmt(const CXXExpansionInstantiationStmt *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);

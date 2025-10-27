@@ -202,8 +202,8 @@ private:
 public:
   /// A SwitchStmt, along with a flag indicating if its list of case statements
   /// is incomplete (because we dropped an invalid one while parsing).
-  struct SwitchInfo : llvm::PointerIntPair<SwitchStmt*, 1, bool> {
-    DeclContext* EnclosingDC;
+  struct SwitchInfo : llvm::PointerIntPair<SwitchStmt *, 1, bool> {
+    DeclContext *EnclosingDC;
     SwitchInfo(SwitchStmt *Switch, DeclContext *DC)
         : PointerIntPair(Switch, false), EnclosingDC(DC) {}
   };
