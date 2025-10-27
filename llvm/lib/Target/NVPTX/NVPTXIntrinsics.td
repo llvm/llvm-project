@@ -1082,6 +1082,161 @@ let Predicates = [hasPTX<70>, hasSM<80>] in {
             "mbarrier.pending_count.b64",
             [(set i32:$res, (int_nvvm_mbarrier_pending_count i64:$state))]>;
 }
+
+class MBAR_UTIL<string op, string scope,
+                string space = "", string sem = "",
+                bit tl = 0, bit parity = 0> {
+  // The mbarrier instructions in PTX ISA are of the general form:
+  // mbarrier.op.semantics.scope.space.b64 arg1, arg2 ...
+  // where:
+  // op -> arrive, expect_tx, complete_tx, arrive.expect_tx etc.
+  // semantics -> acquire, release, relaxed (default depends on the op)
+  // scope -> cta or cluster (default is cta-scope)
+  // space -> shared::cta or shared::cluster (default is shared::cta)
+  //
+  // The 'semantics' and 'scope' go together. If one is specified,
+  // then the other _must_ be specified. For example:
+  // (A) mbarrier.arrive             <args> (valid, release and cta are default)
+  // (B) mbarrier.arrive.release.cta <args> (valid, sem/scope mentioned explicitly)
+  // (C) mbarrier.arrive.release     <args> (invalid, needs scope)
+  // (D) mbarrier.arrive.cta         <args> (invalid, needs order)
+  //
+  // Wherever possible, we prefer form (A) to (B) since it is available
+  // from early PTX versions. In most cases, explicitly specifying the
+  // scope requires a later version of PTX.
+  string _scope_asm = !cond(
+                      !eq(scope, "scope_cluster") : "cluster",
+                      !eq(scope, "scope_cta") : !if(!empty(sem), "", "cta"),
+                      true : scope);
+  string _space_asm = !cond(
+                      !eq(space, "space_cta") : "shared",
+                      !eq(space, "space_cluster") : "shared::cluster",
+                      true : space);
+
+  string _parity = !if(parity, "parity", "");
+  string asm_str = StrJoin<".", ["mbarrier", op, _parity,
+                                  sem, _scope_asm, _space_asm, "b64"]>.ret;
+
+  string _intr_suffix = StrJoin<"_", [!subst(".", "_", op), _parity,
+                                      !if(tl, "tl", ""),
+                                      sem, scope, space]>.ret;
+  string intr_name = "int_nvvm_mbarrier_" # _intr_suffix;
+
+  // Predicate checks:
+  // These are used only for the "test_wait/try_wait" variants as they
+  // have evolved since sm80 and are complex. The predicates for the
+  // remaining instructions are straightforward and have already been
+  // applied directly.
+  Predicate _sm_pred = !cond(!or(
+                       !eq(op, "try_wait"),
+                       !eq(scope, "scope_cluster"),
+                       !eq(sem, "relaxed")) : hasSM<90>,
+                       true : hasSM<80>);
+  Predicate _ptx_pred = !cond(
+                        !eq(sem, "relaxed") : hasPTX<86>,
+                        !ne(_scope_asm, "") : hasPTX<80>,
+                        !eq(op, "try_wait") : hasPTX<78>,
+                        parity : hasPTX<71>,
+                        true   : hasPTX<70>);
+  list<Predicate> preds = [_ptx_pred, _sm_pred];
+}
+
+foreach op = ["expect_tx", "complete_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach space = ["space_cta", "space_cluster"] in {
+      defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
+      defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
+                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
+                           [(intr addr:$addr, i32:$tx_count)]>,
+                           Requires<[hasPTX<80>, hasSM<90>]>;
+    } // space
+  } // scope
+} // op
+
+multiclass MBAR_ARR_INTR<string op, string scope, string sem,
+                         list<Predicate> pred = []> {
+  // When either of sem or scope is non-default, both have to
+  // be explicitly specified. So, explicitly state that
+  // sem is `release` when scope is `cluster`.
+  defvar asm_sem = !if(!and(!empty(sem), !eq(scope, "scope_cluster")),
+                    "release", sem);
+
+  defvar asm_cta  = MBAR_UTIL<op, scope, "space_cta", asm_sem>.asm_str;
+  defvar intr_cta = !cast<Intrinsic>(MBAR_UTIL<op, scope,
+                                     "space_cta", sem>.intr_name);
+
+  defvar asm_cluster  = MBAR_UTIL<op, scope, "space_cluster", asm_sem>.asm_str;
+  defvar intr_cluster = !cast<Intrinsic>(MBAR_UTIL<op, scope,
+                                         "space_cluster", sem>.intr_name);
+
+  def _CTA : NVPTXInst<(outs B64:$state),
+             (ins ADDR:$addr, B32:$tx_count),
+             asm_cta # " $state, [$addr], $tx_count;",
+             [(set i64:$state, (intr_cta addr:$addr, i32:$tx_count))]>,
+             Requires<pred>;
+  def _CLUSTER : NVPTXInst<(outs),
+                 (ins ADDR:$addr, B32:$tx_count),
+                 asm_cluster # " _, [$addr], $tx_count;",
+                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 Requires<pred>;
+}
+foreach op = ["arrive", "arrive.expect_tx",
+              "arrive_drop", "arrive_drop.expect_tx"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    defvar suffix = !subst(".", "_", op) # scope;
+    defm mbar_ # suffix # _release : MBAR_ARR_INTR<op, scope, "", [hasPTX<80>, hasSM<90>]>;
+    defm mbar_ # suffix # _relaxed : MBAR_ARR_INTR<op, scope, "relaxed", [hasPTX<86>, hasSM<90>]>;
+  } // scope
+} // op
+
+multiclass MBAR_WAIT_INTR<string op, string scope, string sem, bit time_limit> {
+  // When either of sem or scope is non-default, both have to
+  // be explicitly specified. So, explicitly state that the
+  // semantics is `acquire` when the scope is `cluster`.
+  defvar asm_sem = !if(!and(!empty(sem), !eq(scope, "scope_cluster")),
+                    "acquire", sem);
+
+  defvar asm_parity  = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                 time_limit, 1>.asm_str;
+  defvar pred_parity = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                 time_limit, 1>.preds;
+  defvar intr_parity = !cast<Intrinsic>(MBAR_UTIL<op, scope, "space_cta",
+                                        sem, time_limit, 1>.intr_name);
+
+  defvar asm_state  = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                time_limit>.asm_str;
+  defvar pred_state = MBAR_UTIL<op, scope, "space_cta", asm_sem,
+                                time_limit>.preds;
+  defvar intr_state = !cast<Intrinsic>(MBAR_UTIL<op, scope, "space_cta",
+                                       sem, time_limit>.intr_name);
+
+  defvar ins_tl_dag = !if(time_limit, (ins B32:$tl), (ins));
+  defvar tl_suffix = !if(time_limit, ", $tl;", ";");
+  defvar intr_state_dag = !con((intr_state addr:$addr, i64:$state),
+                               !if(time_limit, (intr_state i32:$tl), (intr_state)));
+  defvar intr_parity_dag = !con((intr_parity addr:$addr, i32:$phase),
+                               !if(time_limit, (intr_parity i32:$tl), (intr_parity)));
+
+  def _STATE : NVPTXInst<(outs B1:$res), !con((ins ADDR:$addr, B64:$state), ins_tl_dag),
+               asm_state # " $res, [$addr], $state" # tl_suffix,
+               [(set i1:$res, intr_state_dag)]>,
+               Requires<pred_state>;
+  def _PARITY : NVPTXInst<(outs B1:$res), !con((ins ADDR:$addr, B32:$phase), ins_tl_dag),
+                asm_parity # " $res, [$addr], $phase" # tl_suffix,
+                [(set i1:$res, intr_parity_dag)]>,
+                Requires<pred_parity>;
+}
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+      defvar suffix = StrJoin<"_", [op, scope, !if(time_limit, "tl", "")]>.ret;
+      defm mbar_ # suffix # "_acquire" : MBAR_WAIT_INTR<op, scope, "", time_limit>;
+      defm mbar_ # suffix # "_relaxed" : MBAR_WAIT_INTR<op, scope, "relaxed", time_limit>;
+    } // time_limit
+  } // scope
+} // op
+
 //-----------------------------------
 // Math Functions
 //-----------------------------------
