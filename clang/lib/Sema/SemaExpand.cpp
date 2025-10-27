@@ -12,16 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Sema.h"
-
-#include <clang/Sema/EnterExpressionEvaluationContext.h>
-#include <clang/Sema/Template.h>
+#include "clang/Sema/Template.h"
 
 using namespace clang;
 using namespace sema;
@@ -34,10 +32,10 @@ struct IterableExpansionStmtData {
     Ok,
   };
 
-  DeclStmt *RangeDecl{};
-  DeclStmt *BeginDecl{};
-  DeclStmt *EndDecl{};
-  Expr *Initializer{};
+  DeclStmt *RangeDecl = nullptr;
+  DeclStmt *BeginDecl = nullptr;
+  DeclStmt *EndDecl = nullptr;
+  Expr *Initializer = nullptr;
   State TheState = State::NotIterable;
 
   bool isIterable() const { return TheState == State::Ok; }
@@ -520,15 +518,12 @@ std::optional<uint64_t>
 Sema::ComputeExpansionSize(CXXExpansionStmt *Expansion) {
   assert(!Expansion->hasDependentSize());
 
-  if (isa<CXXEnumeratingExpansionStmt>(Expansion)) {
-    uint64_t Size = cast<CXXExpansionInitListSelectExpr>(
-                        Expansion->getExpansionVariable()->getInit())
-                        ->getRangeExpr()
-                        ->getExprs()
-                        .size();
-
-    return Size;
-  }
+  if (isa<CXXEnumeratingExpansionStmt>(Expansion))
+    return cast<CXXExpansionInitListSelectExpr>(
+               Expansion->getExpansionVariable()->getInit())
+        ->getRangeExpr()
+        ->getExprs()
+        .size();
 
   if (auto *Destructuring = dyn_cast<CXXDestructuringExpansionStmt>(Expansion))
     return Destructuring->getDecompositionDecl()->bindings().size();

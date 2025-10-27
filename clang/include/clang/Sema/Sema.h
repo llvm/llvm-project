@@ -11065,10 +11065,10 @@ public:
   /// expansion statement; begin-expr and end-expr are also provided; the
   /// latter are used in some diagnostics.
   struct ForRangeBeginEndInfo {
-    VarDecl *BeginVar{};
-    VarDecl *EndVar{};
-    Expr *BeginExpr{};
-    Expr *EndExpr{};
+    VarDecl *BeginVar = nullptr;
+    VarDecl *EndVar = nullptr;
+    Expr *BeginExpr = nullptr;
+    Expr *EndExpr = nullptr;
     bool isValid() const { return BeginVar != nullptr && EndVar != nullptr; }
   };
 
