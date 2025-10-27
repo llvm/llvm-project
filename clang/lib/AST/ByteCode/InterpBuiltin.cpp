@@ -12,12 +12,14 @@
 #include "InterpHelpers.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
 
@@ -747,7 +749,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
                                        const CallExpr *Call,
                                        unsigned BuiltinOp) {
   const Pointer &ResultPtr = S.Stk.pop<Pointer>();
-  if (ResultPtr.isDummy())
+  if (ResultPtr.isDummy() || !ResultPtr.isBlockPointer())
     return false;
 
   PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
@@ -1304,6 +1306,45 @@ interp__builtin_ptrauth_string_discriminator(InterpState &S, CodePtr OpPC,
   StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
   uint64_t Result = getPointerAuthStableSipHash(R);
   pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
+                                              const InterpFrame *Frame,
+                                              const CallExpr *Call) {
+  const ASTContext &ASTCtx = S.getASTContext();
+  uint64_t BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
+  auto Mode =
+      ASTCtx.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+  uint64_t MaxTokens =
+      ASTCtx.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+
+  // We do not read any of the arguments; discard them.
+  for (int I = Call->getNumArgs() - 1; I >= 0; --I)
+    discard(S.Stk, *S.getContext().classify(Call->getArg(I)));
+
+  // Note: Type inference from a surrounding cast is not supported in
+  // constexpr evaluation.
+  QualType AllocType = infer_alloc::inferPossibleType(Call, ASTCtx, nullptr);
+  if (AllocType.isNull()) {
+    S.CCEDiag(Call,
+              diag::note_constexpr_infer_alloc_token_type_inference_failed);
+    return false;
+  }
+
+  auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, ASTCtx);
+  if (!ATMD) {
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_no_metadata);
+    return false;
+  }
+
+  auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
+  if (!MaybeToken) {
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    return false;
+  }
+
+  pushInteger(S, llvm::APInt(BitWidth, *MaybeToken), ASTCtx.getSizeType());
   return true;
 }
 
@@ -1899,6 +1940,9 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     pushInteger(S, 0, Call->getType());
     return true;
   }
+
+  if (!PtrA.isBlockPointer() || !PtrB.isBlockPointer())
+    return false;
 
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
@@ -3279,6 +3323,65 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_x86_byteshift(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned ID,
+    llvm::function_ref<APInt(const Pointer &, unsigned Lane, unsigned I,
+                             unsigned Shift)>
+        Fn) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Shift = ImmAPS.getZExtValue() & 0xff;
+
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  if (!Src.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned NumElems = Src.getNumElems();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
+
+  for (unsigned Lane = 0; Lane != NumElems; Lane += 16) {
+    for (unsigned I = 0; I != 16; ++I) {
+      unsigned Base = Lane + I;
+      APSInt Result = APSInt(Fn(Src, Lane, I, Shift));
+      INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                              { Dst.elem<T>(Base) = static_cast<T>(Result); });
+    }
+  }
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_ia32_shuffle_generic(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::pair<unsigned, unsigned>(unsigned, unsigned)>
+        GetSourceIndex) {
+
+  assert(Call->getNumArgs() == 3);
+  unsigned ShuffleMask = popToAPSInt(S, Call->getArg(2)).getZExtValue();
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
+    const Pointer &Src = (SrcVecIdx == 0) ? A : B;
+    TYPE_SWITCH(ElemT, { Dst.elem<T>(DstIdx) = Src.elem<T>(SrcIdx); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -3471,7 +3574,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
           return Value.rotl(Amount);
         });
 
@@ -3485,7 +3588,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
           return Value.rotr(Amount);
         });
 
@@ -3694,6 +3797,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_ptrauth_string_discriminator:
     return interp__builtin_ptrauth_string_discriminator(S, OpPC, Frame, Call);
 
+  case Builtin::BI__builtin_infer_alloc_token:
+    return interp__builtin_infer_alloc_token(S, OpPC, Frame, Call);
+
   case Builtin::BI__noop:
     pushInteger(S, 0, Call->getType());
     return true;
@@ -3808,6 +3914,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_movmskpd256: {
     return interp__builtin_ia32_movmsk_op(S, OpPC, Call);
   }
+
+  case X86::BI__builtin_ia32_psignb128:
+  case X86::BI__builtin_ia32_psignb256:
+  case X86::BI__builtin_ia32_psignw128:
+  case X86::BI__builtin_ia32_psignw256:
+  case X86::BI__builtin_ia32_psignd128:
+  case X86::BI__builtin_ia32_psignd256:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APInt &AElem, const APInt &BElem) {
+          if (BElem.isZero())
+            return APInt::getZero(AElem.getBitWidth());
+          if (BElem.isNegative())
+            return -AElem;
+          return AElem;
+        });
 
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
@@ -4191,6 +4312,42 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
 
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 4;
+          unsigned NumSelectableElems = NumElemPerLane / 2;
+          unsigned BitsPerElem = 2;
+          unsigned IndexMask = 0x3;
+          unsigned MaskBits = 8;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned ElemInLane = DstIdx % NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+          return std::pair<unsigned, unsigned>{SrcIdx, LaneOffset + Index};
+        });
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 2;
+          unsigned NumSelectableElems = NumElemPerLane / 2;
+          unsigned BitsPerElem = 1;
+          unsigned IndexMask = 0x1;
+          unsigned MaskBits = 8;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned ElemInLane = DstIdx % NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+          return std::pair<unsigned, unsigned>{SrcIdx, LaneOffset + Index};
+        });
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512:
@@ -4330,6 +4487,39 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift:
+    // These SLLDQ intrinsics always operate on byte elements (8 bits).
+    // The lane width is hardcoded to 16 to match the SIMD register size,
+    // but the algorithm processes one byte per iteration,
+    // so APInt(8, ...) is correct and intentional.
+    return interp__builtin_x86_byteshift(
+        S, OpPC, Call, BuiltinID,
+        [](const Pointer &Src, unsigned Lane, unsigned I, unsigned Shift) {
+          if (I < Shift) {
+            return APInt(8, 0);
+          }
+          return APInt(8, Src.elem<uint8_t>(Lane + I - Shift));
+        });
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift:
+    // These SRLDQ intrinsics always operate on byte elements (8 bits).
+    // The lane width is hardcoded to 16 to match the SIMD register size,
+    // but the algorithm processes one byte per iteration,
+    // so APInt(8, ...) is correct and intentional.
+    return interp__builtin_x86_byteshift(
+        S, OpPC, Call, BuiltinID,
+        [](const Pointer &Src, unsigned Lane, unsigned I, unsigned Shift) {
+          if (I + Shift < 16) {
+            return APInt(8, Src.elem<uint8_t>(Lane + I + Shift));
+          }
+
+          return APInt(8, 0);
+        });
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

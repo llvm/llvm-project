@@ -43,28 +43,8 @@ public:
   /// The \p OnDiskGraphDB instance for the open directory.
   OnDiskGraphDB &getGraphDB() { return *PrimaryGraphDB; }
 
-  /// Associate an \p ObjectID, of the \p OnDiskGraphDB instance, with a key.
-  ///
-  /// \param Key the hash bytes for the key.
-  /// \param Value the \p ObjectID value.
-  ///
-  /// \returns the \p ObjectID associated with the \p Key. It may be different
-  /// than \p Value if another value was already associated with this key.
-  Expected<ObjectID> KVPut(ArrayRef<uint8_t> Key, ObjectID Value);
-
-  /// Associate an \p ObjectID, of the \p OnDiskGraphDB instance, with a key.
-  /// An \p ObjectID as a key is equivalent to its digest bytes.
-  ///
-  /// \param Key the \p ObjectID for the key.
-  /// \param Value the \p ObjectID value.
-  ///
-  /// \returns the \p ObjectID associated with the \p Key. It may be different
-  /// than \p Value if another value was already associated with this key.
-  Expected<ObjectID> KVPut(ObjectID Key, ObjectID Value);
-
-  /// \returns the \p ObjectID, of the \p OnDiskGraphDB instance, associated
-  /// with the \p Key, or \p std::nullopt if the key does not exist.
-  Expected<std::optional<ObjectID>> KVGet(ArrayRef<uint8_t> Key);
+  /// The \p OnDiskGraphDB instance for the open directory.
+  OnDiskKeyValueDB &getKeyValueDB() { return *PrimaryKVDB; }
 
   /// Open a \p UnifiedOnDiskCache instance for a directory.
   ///
@@ -152,20 +132,21 @@ public:
   /// Remove unused data from the current UnifiedOnDiskCache.
   Error collectGarbage();
 
-  /// Validate the key value databases.
-  Error validateActionCache();
+  /// Helper function to convert the value stored in KeyValueDB and ObjectID.
+  static ObjectID getObjectIDFromValue(ArrayRef<char> Value);
 
-  /// Get the upstream OnDiskGraphDB if exists.
-  ///
-  /// \returns upstream database or nullptr if upstream database doesn't exist.
-  OnDiskGraphDB *getUpstreamGraphDB() const { return UpstreamGraphDB; }
+  using ValueBytes = std::array<char, sizeof(uint64_t)>;
+  static ValueBytes getValueFromObjectID(ObjectID ID);
 
   ~UnifiedOnDiskCache();
 
 private:
+  friend class OnDiskGraphDB;
+  friend class OnDiskKeyValueDB;
+
   UnifiedOnDiskCache();
 
-  Expected<std::optional<ObjectID>>
+  Expected<std::optional<ArrayRef<char>>>
   faultInFromUpstreamKV(ArrayRef<uint8_t> Key);
 
   /// \returns the storage size of the primary directory.
@@ -179,7 +160,7 @@ private:
   std::atomic<bool> NeedsGarbageCollection;
   std::string PrimaryDBDir;
 
-  OnDiskGraphDB *UpstreamGraphDB = nullptr;
+  std::unique_ptr<OnDiskGraphDB> UpstreamGraphDB;
   std::unique_ptr<OnDiskGraphDB> PrimaryGraphDB;
 
   std::unique_ptr<OnDiskKeyValueDB> UpstreamKVDB;

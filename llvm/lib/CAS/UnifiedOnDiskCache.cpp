@@ -74,6 +74,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/Support/Compiler.h"
@@ -103,38 +104,22 @@ static constexpr StringLiteral DBDirPrefix = "v1.";
 static constexpr StringLiteral ValidationFilename = "v1.validation";
 static constexpr StringLiteral CorruptPrefix = "corrupt.";
 
-Expected<ObjectID> UnifiedOnDiskCache::KVPut(ObjectID Key, ObjectID Value) {
-  return KVPut(PrimaryGraphDB->getDigest(Key), Value);
+ObjectID UnifiedOnDiskCache::getObjectIDFromValue(ArrayRef<char> Value) {
+  // little endian encoded.
+  assert(Value.size() == sizeof(uint64_t));
+  return ObjectID::fromOpaqueData(support::endian::read64le(Value.data()));
 }
 
-Expected<ObjectID> UnifiedOnDiskCache::KVPut(ArrayRef<uint8_t> Key,
-                                             ObjectID Value) {
-  static_assert(sizeof(Value.getOpaqueData()) == sizeof(uint64_t),
-                "unexpected return opaque type");
-  std::array<char, sizeof(uint64_t)> ValBytes;
-  support::endian::write64le(ValBytes.data(), Value.getOpaqueData());
-  Expected<ArrayRef<char>> Existing = PrimaryKVDB->put(Key, ValBytes);
-  if (!Existing)
-    return Existing.takeError();
-  assert(Existing->size() == sizeof(uint64_t));
-  return ObjectID::fromOpaqueData(support::endian::read64le(Existing->data()));
+UnifiedOnDiskCache::ValueBytes
+UnifiedOnDiskCache::getValueFromObjectID(ObjectID ID) {
+  // little endian encoded.
+  UnifiedOnDiskCache::ValueBytes ValBytes;
+  static_assert(ValBytes.size() == sizeof(ID.getOpaqueData()));
+  support::endian::write64le(ValBytes.data(), ID.getOpaqueData());
+  return ValBytes;
 }
 
-Expected<std::optional<ObjectID>>
-UnifiedOnDiskCache::KVGet(ArrayRef<uint8_t> Key) {
-  std::optional<ArrayRef<char>> Value;
-  if (Error E = PrimaryKVDB->get(Key).moveInto(Value))
-    return std::move(E);
-  if (!Value) {
-    if (UpstreamKVDB)
-      return faultInFromUpstreamKV(Key);
-    return std::nullopt;
-  }
-  assert(Value->size() == sizeof(uint64_t));
-  return ObjectID::fromOpaqueData(support::endian::read64le(Value->data()));
-}
-
-Expected<std::optional<ObjectID>>
+Expected<std::optional<ArrayRef<char>>>
 UnifiedOnDiskCache::faultInFromUpstreamKV(ArrayRef<uint8_t> Key) {
   assert(UpstreamGraphDB);
   assert(UpstreamKVDB);
@@ -148,36 +133,12 @@ UnifiedOnDiskCache::faultInFromUpstreamKV(ArrayRef<uint8_t> Key) {
   // The value is the \p ObjectID in the context of the upstream
   // \p OnDiskGraphDB instance. Translate it to the context of the primary
   // \p OnDiskGraphDB instance.
-  assert(UpstreamValue->size() == sizeof(uint64_t));
-  ObjectID UpstreamID = ObjectID::fromOpaqueData(
-      support::endian::read64le(UpstreamValue->data()));
+  ObjectID UpstreamID = getObjectIDFromValue(*UpstreamValue);
   auto PrimaryID =
       PrimaryGraphDB->getReference(UpstreamGraphDB->getDigest(UpstreamID));
   if (LLVM_UNLIKELY(!PrimaryID))
     return PrimaryID.takeError();
-  return KVPut(Key, *PrimaryID);
-}
-
-Error UnifiedOnDiskCache::validateActionCache() {
-  auto ValidateRef = [&](FileOffset Offset, ArrayRef<char> Value) -> Error {
-    assert(Value.size() == sizeof(uint64_t) && "should be validated already");
-    auto ID = ObjectID::fromOpaqueData(support::endian::read64le(Value.data()));
-    auto formatError = [&](Twine Msg) {
-      return createStringError(
-          llvm::errc::illegal_byte_sequence,
-          "bad record at 0x" +
-              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
-              Msg.str());
-    };
-    if (ID.getOpaqueData() == 0)
-      return formatError("zero is not a valid ref");
-    return Error::success();
-  };
-  if (Error E = PrimaryKVDB->validate(ValidateRef))
-    return E;
-  if (UpstreamKVDB)
-    return UpstreamKVDB->validate(ValidateRef);
-  return Error::success();
+  return PrimaryKVDB->put(Key, getValueFromObjectID(*PrimaryID));
 }
 
 /// \returns all the 'v<version>.<x>' names of sub-directories, sorted with
@@ -302,7 +263,8 @@ static Error validateInProcess(StringRef RootPath, StringRef HashName,
   auto CAS = builtin::createObjectStoreFromUnifiedOnDiskCache(UniDB);
   if (Error E = CAS->validate(CheckHash))
     return E;
-  if (Error E = UniDB->validateActionCache())
+  auto Cache = builtin::createActionCacheFromUnifiedOnDiskCache(UniDB);
+  if (Error E = Cache->validate())
     return E;
   return Error::success();
 }
@@ -486,6 +448,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   /// more directories, get the most recent directories and chain them, with the
   /// most recent being the primary one. The remaining directories are unused
   /// data than can be garbage-collected.
+  auto UniDB = std::unique_ptr<UnifiedOnDiskCache>(new UnifiedOnDiskCache());
   std::unique_ptr<OnDiskGraphDB> UpstreamGraphDB;
   std::unique_ptr<OnDiskKeyValueDB> UpstreamKVDB;
   if (DBDirs.size() > 1) {
@@ -502,32 +465,31 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
                       .moveInto(UpstreamKVDB))
       return std::move(E);
   }
-  OnDiskGraphDB *UpstreamGraphDBPtr = UpstreamGraphDB.get();
 
   StringRef PrimaryDir = *(DBDirs.end() - 1);
   PathBuf = RootPath;
   sys::path::append(PathBuf, PrimaryDir);
   std::unique_ptr<OnDiskGraphDB> PrimaryGraphDB;
   if (Error E = OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
-                                    std::move(UpstreamGraphDB), FaultInPolicy)
+                                    UpstreamGraphDB.get(), FaultInPolicy)
                     .moveInto(PrimaryGraphDB))
     return std::move(E);
   std::unique_ptr<OnDiskKeyValueDB> PrimaryKVDB;
   // \p UnifiedOnDiskCache does manual chaining for key-value requests,
   // including an extra translation step of the value during fault-in.
-  if (Error E = OnDiskKeyValueDB::open(PathBuf, HashName, HashByteSize,
-                                       /*ValueName=*/"objectid",
-                                       /*ValueSize=*/sizeof(uint64_t))
-                    .moveInto(PrimaryKVDB))
+  if (Error E =
+          OnDiskKeyValueDB::open(PathBuf, HashName, HashByteSize,
+                                 /*ValueName=*/"objectid",
+                                 /*ValueSize=*/sizeof(uint64_t), UniDB.get())
+              .moveInto(PrimaryKVDB))
     return std::move(E);
 
-  auto UniDB = std::unique_ptr<UnifiedOnDiskCache>(new UnifiedOnDiskCache());
   UniDB->RootPath = RootPath;
   UniDB->SizeLimit = SizeLimit.value_or(0);
   UniDB->LockFD = LockFD;
   UniDB->NeedsGarbageCollection = DBDirs.size() > 2;
   UniDB->PrimaryDBDir = PrimaryDir;
-  UniDB->UpstreamGraphDB = UpstreamGraphDBPtr;
+  UniDB->UpstreamGraphDB = std::move(UpstreamGraphDB);
   UniDB->PrimaryGraphDB = std::move(PrimaryGraphDB);
   UniDB->UpstreamKVDB = std::move(UpstreamKVDB);
   UniDB->PrimaryKVDB = std::move(PrimaryKVDB);
@@ -588,10 +550,10 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
   });
 
   bool ExceededSizeLimit = CheckSizeLimit ? hasExceededSizeLimit() : false;
-  PrimaryKVDB.reset();
   UpstreamKVDB.reset();
+  PrimaryKVDB.reset();
+  UpstreamGraphDB.reset();
   PrimaryGraphDB.reset();
-  UpstreamGraphDB = nullptr;
   if (std::error_code EC = unlockFileThreadSafe(LockFD))
     return createFileError(RootPath, EC);
 

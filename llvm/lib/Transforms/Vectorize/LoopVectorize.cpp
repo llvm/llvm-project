@@ -4378,8 +4378,21 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   const SCEV *TC =
       vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
-  RemainingIterations =
-      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+  const SCEV *KnownMinTC;
+  bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
+  // Use versions of TC and VF in which both are either scalable or fixed.
+  if (ScalableTC == MainLoopVF.isScalable())
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+  else if (ScalableTC) {
+    const SCEV *EstimatedTC = SE.getMulExpr(
+        KnownMinTC,
+        SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
+    RemainingIterations = SE.getURemExpr(
+        EstimatedTC, SE.getElementCount(TCType, MainLoopVF * IC));
+  } else
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
 
   // No iterations left to process in the epilogue.
   if (RemainingIterations->isZero())
@@ -7231,6 +7244,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     return DenseMap<const SCEV *, Value *>();
   }
 
+  VPlanTransforms::narrowInterleaveGroups(
+      BestVPlan, BestVF,
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -8199,10 +8215,6 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (CM.foldTailWithEVL())
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
                                  *Plan, CM.getMaxSafeElements());
-
-      if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
-        VPlans.push_back(std::move(P));
-
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }

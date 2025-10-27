@@ -17,6 +17,7 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Errc.h"
 
 #define DEBUG_TYPE "cas-action-caches"
 
@@ -203,13 +204,14 @@ UnifiedOnDiskActionCache::UnifiedOnDiskActionCache(
 Expected<std::optional<CASID>>
 UnifiedOnDiskActionCache::getImpl(ArrayRef<uint8_t> Key,
                                   bool /*CanBeDistributed*/) const {
-  std::optional<ondisk::ObjectID> Val;
-  if (Error E = UniDB->KVGet(Key).moveInto(Val))
+  std::optional<ArrayRef<char>> Val;
+  if (Error E = UniDB->getKeyValueDB().get(Key).moveInto(Val))
     return std::move(E);
   if (!Val)
     return std::nullopt;
+  auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(*Val);
   return CASID::create(&getContext(),
-                       toStringRef(UniDB->getGraphDB().getDigest(*Val)));
+                       toStringRef(UniDB->getGraphDB().getDigest(ID)));
 }
 
 Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
@@ -218,19 +220,35 @@ Error UnifiedOnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
   auto Expected = UniDB->getGraphDB().getReference(Result.getHash());
   if (LLVM_UNLIKELY(!Expected))
     return Expected.takeError();
-  std::optional<ondisk::ObjectID> Observed;
-  if (Error E = UniDB->KVPut(Key, *Expected).moveInto(Observed))
+
+  auto Value = ondisk::UnifiedOnDiskCache::getValueFromObjectID(*Expected);
+  std::optional<ArrayRef<char>> Observed;
+  if (Error E = UniDB->getKeyValueDB().put(Key, Value).moveInto(Observed))
     return E;
 
-  if (*Expected == Observed)
+  auto ObservedID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(*Observed);
+  if (*Expected == ObservedID)
     return Error::success();
 
   return createResultCachePoisonedError(
-      Key, getContext(), Result, UniDB->getGraphDB().getDigest(*Observed));
+      Key, getContext(), Result, UniDB->getGraphDB().getDigest(ObservedID));
 }
 
 Error UnifiedOnDiskActionCache::validate() const {
-  return UniDB->validateActionCache();
+  auto ValidateRef = [](FileOffset Offset, ArrayRef<char> Value) -> Error {
+    auto ID = ondisk::UnifiedOnDiskCache::getObjectIDFromValue(Value);
+    auto formatError = [&](Twine Msg) {
+      return createStringError(
+          llvm::errc::illegal_byte_sequence,
+          "bad record at 0x" +
+              utohexstr((unsigned)Offset.get(), /*LowerCase=*/true) + ": " +
+              Msg.str());
+    };
+    if (ID.getOpaqueData() == 0)
+      return formatError("zero is not a valid ref");
+    return Error::success();
+  };
+  return UniDB->getKeyValueDB().validate(ValidateRef);
 }
 
 Expected<std::unique_ptr<ActionCache>>

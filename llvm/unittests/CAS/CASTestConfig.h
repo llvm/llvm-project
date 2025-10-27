@@ -67,12 +67,12 @@ protected:
     return std::move(TD.Cache);
   }
 
-  void SetUp() {
+  void SetUp() override {
     NextCASIndex = 0;
     setMaxOnDiskCASMappingSize();
   }
 
-  void TearDown() {
+  void TearDown() override {
     NextCASIndex = std::nullopt;
     Dirs.clear();
     Envs.clear();

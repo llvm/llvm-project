@@ -13,7 +13,6 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -98,8 +97,6 @@ Error OnDiskCAS::validate(bool CheckHash) const {
 
   if (auto E = DB->validate(CheckHash, Hasher))
     return E;
-  if (UnifiedDB && UnifiedDB->getUpstreamGraphDB())
-    return UnifiedDB->getUpstreamGraphDB()->validate(CheckHash, Hasher);
 
   return Error::success();
 }

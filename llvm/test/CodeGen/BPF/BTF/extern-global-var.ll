@@ -10,7 +10,7 @@
 @a = external dso_local local_unnamed_addr global i8, align 1
 
 ; Function Attrs: norecurse nounwind readonly
-define dso_local i32 @foo() local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @foo() local_unnamed_addr !dbg !7 {
   %1 = load i8, ptr @a, align 1, !dbg !11, !tbaa !12
   %2 = sext i8 %1 to i32, !dbg !11
   ret i32 %2, !dbg !15
@@ -44,8 +44,6 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "/home/yhs/work/tests/llvm/bug/test.c" # string offset=15
 ; CHECK-NEXT:        .byte   0
-
-attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

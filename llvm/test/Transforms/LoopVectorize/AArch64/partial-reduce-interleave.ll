@@ -23,12 +23,12 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
 ; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
 ; IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
-; IC2-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; IC2-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
-; IC2-NEXT:    [[TMP6:%.*]] = mul nuw nsw <16 x i32> [[TMP4]], [[TMP4]]
+; IC2-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; IC2-NEXT:    [[TMP7:%.*]] = mul nuw nsw <16 x i32> [[TMP5]], [[TMP5]]
-; IC2-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP6]])
-; IC2-NEXT:    [[PARTIAL_REDUCE3]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI1]], <16 x i32> [[TMP7]])
+; IC2-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP7]])
+; IC2-NEXT:    [[TMP8:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
+; IC2-NEXT:    [[TMP6:%.*]] = mul nuw nsw <16 x i32> [[TMP8]], [[TMP8]]
+; IC2-NEXT:    [[PARTIAL_REDUCE3]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI1]], <16 x i32> [[TMP6]])
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; IC2-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IC2-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -80,18 +80,18 @@ define i32 @partial_reduce_with_non_constant_start_value(ptr %src, i32 %rdx.star
 ; IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
 ; IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i8>, ptr [[TMP4]], align 1
 ; IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
-; IC4-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; IC4-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[WIDE_LOAD4]] to <16 x i32>
-; IC4-NEXT:    [[TMP8:%.*]] = zext <16 x i8> [[WIDE_LOAD5]] to <16 x i32>
-; IC4-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[WIDE_LOAD6]] to <16 x i32>
-; IC4-NEXT:    [[TMP10:%.*]] = mul nuw nsw <16 x i32> [[TMP6]], [[TMP6]]
-; IC4-NEXT:    [[TMP11:%.*]] = mul nuw nsw <16 x i32> [[TMP7]], [[TMP7]]
-; IC4-NEXT:    [[TMP12:%.*]] = mul nuw nsw <16 x i32> [[TMP8]], [[TMP8]]
+; IC4-NEXT:    [[TMP9:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; IC4-NEXT:    [[TMP13:%.*]] = mul nuw nsw <16 x i32> [[TMP9]], [[TMP9]]
-; IC4-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP10]])
+; IC4-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP13]])
+; IC4-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[WIDE_LOAD4]] to <16 x i32>
+; IC4-NEXT:    [[TMP11:%.*]] = mul nuw nsw <16 x i32> [[TMP7]], [[TMP7]]
 ; IC4-NEXT:    [[PARTIAL_REDUCE7]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI1]], <16 x i32> [[TMP11]])
+; IC4-NEXT:    [[TMP10:%.*]] = zext <16 x i8> [[WIDE_LOAD5]] to <16 x i32>
+; IC4-NEXT:    [[TMP12:%.*]] = mul nuw nsw <16 x i32> [[TMP10]], [[TMP10]]
 ; IC4-NEXT:    [[PARTIAL_REDUCE8]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI2]], <16 x i32> [[TMP12]])
-; IC4-NEXT:    [[PARTIAL_REDUCE9]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI3]], <16 x i32> [[TMP13]])
+; IC4-NEXT:    [[TMP14:%.*]] = zext <16 x i8> [[WIDE_LOAD6]] to <16 x i32>
+; IC4-NEXT:    [[TMP16:%.*]] = mul nuw nsw <16 x i32> [[TMP14]], [[TMP14]]
+; IC4-NEXT:    [[PARTIAL_REDUCE9]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI3]], <16 x i32> [[TMP16]])
 ; IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; IC4-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IC4-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
