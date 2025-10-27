@@ -2061,9 +2061,13 @@ def : Pat<(lsxsplatf32 FPR32:$fj),
 def : Pat<(lsxsplatf64 FPR64:$fj),
           (VREPLVEI_D (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)>;
 
+// VSTELM
 defm : VstelmPat<truncstorei8, v16i8, VSTELM_B, simm8, uimm4>;
 defm : VstelmPat<truncstorei16, v8i16, VSTELM_H, simm8_lsl1, uimm3>;
 defm : VstelmPat<truncstorei32, v4i32, VSTELM_W, simm8_lsl2, uimm2>;
+let Predicates = [IsLA32] in {
+  defm : VstelmPat<store, v4i32, VSTELM_W, simm8_lsl2, uimm2>;
+} // Predicates = [IsLA32]
 defm : VstelmPat<store, v2i64, VSTELM_D, simm8_lsl3, uimm1>;
 defm : VstelmPat<store, v4f32, VSTELM_W, simm8_lsl2, uimm2, f32>;
 defm : VstelmPat<store, v2f64, VSTELM_D, simm8_lsl3, uimm1, f64>;

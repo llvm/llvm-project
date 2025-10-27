@@ -1920,10 +1920,13 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in
   def : Pat<(vt (loongarch_xvreplve0q LASX256:$xj)),
             (XVREPLVE0_Q LASX256:$xj)>;
 
-// VSTELM
+// XVSTELM
 defm : VstelmPat<truncstorei8, v32i8, XVSTELM_B, simm8, uimm5>;
 defm : VstelmPat<truncstorei16, v16i16, XVSTELM_H, simm8_lsl1, uimm4>;
 defm : VstelmPat<truncstorei32, v8i32, XVSTELM_W, simm8_lsl2, uimm3>;
+let Predicates = [IsLA32] in {
+  defm : VstelmPat<store, v8i32, XVSTELM_W, simm8_lsl2, uimm3>;
+} // Predicates = [IsLA32]
 defm : VstelmPat<store, v4i64, XVSTELM_D, simm8_lsl3, uimm2>;
 defm : VstelmPat<store, v8f32, XVSTELM_W, simm8_lsl2, uimm3, f32>;
 defm : VstelmPat<store, v4f64, XVSTELM_D, simm8_lsl3, uimm2, f64>;
