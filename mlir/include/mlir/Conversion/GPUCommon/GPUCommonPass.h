@@ -73,6 +73,10 @@ using MemorySpaceMapping = std::function<unsigned(gpu::AddressSpace)>;
 /// gpu.address_space to integer values.
 void populateGpuMemorySpaceAttributeConversions(
     TypeConverter &typeConverter, const MemorySpaceMapping &mapping);
+
+/// TODO name this better
+void populateGpuMultipleAsyncDepsConversionPatterns(
+    RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_

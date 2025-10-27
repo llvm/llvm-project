@@ -483,6 +483,14 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+template <typename Op>
+struct ConvertMultipleAsyncDepsToGpuWaitPattern final : OpRewritePattern<Op> {
+  using OpRewritePattern<Op>::OpRewritePattern;
+
+  LogicalResult
+  matchAndRewrite(Op op, PatternRewriter &rewriter) const override;
+};
+
 /// Generic rewriting rule for operation on sparse matrices.
 /// Currently supports CUDA (by means of cuSparse and cuSparseLt).
 #define DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(op_name)                \
@@ -538,6 +546,20 @@ void GpuToLLVMConversionPass::runOnOperation() {
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
+  // 
+  if (true /*handle multiple async deps enabled*/) {
+    RewritePatternSet patternss(&getContext());
+    populateGpuMultipleAsyncDepsConversionPatterns(patternss);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patternss)))) {
+      return signalPassFailure();
+    }
+  }
+
+  // TODO wrap this in debug macros
+  llvm::errs() << "--- IR After applyPatternsGreedily ---\n";
+  getOperation()->print(llvm::errs());
+  llvm::errs() << "--------------------------------------\n\n";
+
 
   LowerToLLVMOptions options(context);
   options.useBarePtrCallConv = hostBarePtrCallConv;
@@ -1787,6 +1809,27 @@ LogicalResult ConvertCreateBsrOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
+template<class Op>
+LogicalResult ConvertMultipleAsyncDepsToGpuWaitPattern<Op>::matchAndRewrite(
+  Op op, PatternRewriter &rewriter) const {
+  if (op.getAsyncDependencies().size() <= 1)
+    return rewriter.notifyMatchFailure(
+        op, "Can only convert ops with multiple async dependencies.");
+
+  // Create a new gpu.wait with the original async deps.
+  Type tokenType = rewriter.getType<gpu::AsyncTokenType>();
+  Value waitToken = gpu::WaitOp::create(rewriter, op.getLoc(), tokenType, op.getAsyncDependencies()).getAsyncToken();
+
+  // TODO is it safe to just do getAsyncDependenciesMutable on the original op?
+  Operation *newOp = rewriter.clone(*op.getOperation());
+  auto OpAdaptor = dyn_cast<Op>(newOp);
+  assert(OpAdaptor && "Expected cloned op to have same type as original op.");
+  OpAdaptor.getAsyncDependenciesMutable().assign({waitToken});
+  rewriter.replaceOp(op, newOp);
+
+  return success();
+}
+
 void mlir::populateGpuToLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool kernelBarePtrCallConv, bool kernelIntersperseSizeCallConv) {
@@ -1828,6 +1871,39 @@ void mlir::populateGpuToLLVMConversionPatterns(
                ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
   patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv,
                                             kernelIntersperseSizeCallConv);
+}
+
+void mlir::populateGpuMultipleAsyncDepsConversionPatterns(
+    RewritePatternSet &patterns) {
+  // gpu::AllocOp,
+  // gpu::DeallocOp,
+  // gpu::MemcpyOp,
+  // gpu::MemsetOp,
+  // gpu::CreateDnTensorOp,
+  // gpu::DestroyDnTensorOp,
+  // gpu::CreateCooOp,
+  // gpu::CreateCooAoSOp,
+  // gpu::CreateCsrOp,
+  // gpu::Create2To4SpMatOp,
+  // gpu::DestroySpMatOp,
+  // gpu::SpMVBufferSizeOp,
+  // gpu::SpMVOp,
+  // gpu::SpMMBufferSizeOp,
+  // gpu::SDDMMBufferSizeOp,
+  // gpu::SpMMOp,
+  // gpu::SDDMMOp,
+  // gpu::SpGEMMCreateDescrOp,
+  // gpu::SpGEMMDestroyDescrOp,
+  // gpu::SpGEMMWorkEstimationOrComputeOp,
+  // gpu::SpGEMMCopyOp,
+  // gpu::SpMatGetSizeOp,
+  // gpu::SetCsrPointersOp,
+  // gpu::CreateCscOp,
+  // gpu::CreateBsrOp,
+  // gpu::LaunchFuncOp
+  patterns.add<
+    ConvertMultipleAsyncDepsToGpuWaitPattern<gpu::LaunchFuncOp>
+  >(patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
