@@ -21,6 +21,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Printable.h"
 #include <cassert>
 
 namespace llvm {
@@ -610,6 +611,10 @@ LLVM_ABI void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 // Check whether the function only has simple terminator:
 // br/brcond/unreachable/ret
 LLVM_ABI bool hasOnlySimpleTerminator(const Function &F);
+
+/// Print BasicBlock \p BB as an operand or print "<nullptr>" if \p BB is a
+/// nullptr.
+LLVM_ABI Printable printBasicBlock(const BasicBlock *BB);
 
 } // end namespace llvm
 

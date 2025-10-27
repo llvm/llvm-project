@@ -1772,11 +1772,11 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
-  bool Pre(const parser::OmpTypeSpecifier &x) {
+  bool Pre(const parser::OmpTypeName &x) {
     BeginDeclTypeSpec();
     return true;
   }
-  void Post(const parser::OmpTypeSpecifier &x) { //
+  void Post(const parser::OmpTypeName &x) { //
     EndDeclTypeSpec();
   }
 
@@ -2007,7 +2007,7 @@ void OmpVisitor::ProcessReductionSpecifier(
       }
     }
     EndDeclTypeSpec();
-    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
     Walk(clauses);
     PopScope();
   }
@@ -9194,11 +9194,11 @@ bool DeclarationVisitor::CheckNonPointerInitialization(
               "'%s' has already been initialized"_err_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
+        } else if (details->isCDefined()) {
+          // CDEFINED variables cannot have initializer, because their storage
+          // may come outside of Fortran.
+          Say(name, "CDEFINED variable cannot be initialized"_err_en_US);
         } else {
-          if (details->isCDefined()) {
-            context().Warn(common::UsageWarning::CdefinedInit, name.source,
-                "CDEFINED variable should not have an initializer"_warn_en_US);
-          }
           return true;
         }
       } else {
