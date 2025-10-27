@@ -29,6 +29,7 @@ Version changelog:
    'none' and 'all'. 'smart' is the default.
 5: Basic block labels are matched by FileCheck expressions
 6: The semantics of TBAA checks has been incorporated in the check lines.
+7: Indent switch-cases correctly.
 """
 DEFAULT_VERSION = 6
 

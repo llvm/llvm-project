@@ -265,7 +265,10 @@ def update_test(ti: common.TestInfo):
                     " " * 4
                     if (
                         common.IS_DEBUG_RECORD_RE.match(input_line)
-                        or common.IS_SWITCH_CASE_RE.match(input_line)
+                        or (
+                            ti.args.version > 6
+                            and common.IS_SWITCH_CASE_RE.match(input_line)
+                        )
                     )
                     else " " * 2
                 )
