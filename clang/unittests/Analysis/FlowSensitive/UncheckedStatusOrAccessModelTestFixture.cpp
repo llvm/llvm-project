@@ -3147,6 +3147,45 @@ TEST_P(UncheckedStatusOrAccessModelTest, InPlaceConstruct) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, ConstructStatusOrFromReference) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+    void target() {
+      const auto sor1 = Make<STATUSOR_INT&>();
+      const auto sor2 = Make<STATUSOR_INT&>();
+      if (!sor1.ok() && !sor2.ok()) return;
+      if (sor1.ok() && !sor2.ok()) {
+      } else if (!sor1.ok() && sor2.ok()) {
+      } else {
+        sor1.value();
+        sor2.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, ConstructStatusFromReference) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      const auto sor1 = Make<STATUSOR_INT&>();
+      const auto sor2 = Make<STATUSOR_INT&>();
+      const auto s1 = Make<STATUS&>();
+      const auto s2 = Make<STATUS&>();
+
+      if (!s1.ok() && !s2.ok()) return;
+      if (s1.ok() && !s2.ok()) {
+      } else if (!s1.ok() && s2.ok()) {
+      } else {
+        if (s1 != sor1.status() || s2 != sor2.status()) return;
+        sor1.value();
+        sor2.value();
+      }
+    }
+  )cc");
+}
+
 } // namespace
 
 std::string
