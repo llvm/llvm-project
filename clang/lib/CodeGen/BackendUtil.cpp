@@ -684,7 +684,8 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
                         PassBuilder &PB) {
   // If the back-end supports KCFI operand bundle lowering, skip KCFIPass.
   if (TargetTriple.getArch() == llvm::Triple::x86_64 ||
-      TargetTriple.isAArch64(64) || TargetTriple.isRISCV())
+      TargetTriple.isAArch64(64) || TargetTriple.isRISCV() ||
+      TargetTriple.isARM() || TargetTriple.isThumb())
     return;
 
   // Ensure we lower KCFI operand bundles with -O0.
@@ -712,14 +713,16 @@ static void addSanitizers(const Triple &TargetTriple,
                                 ThinOrFullLTOPhase) {
     if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
-      MPM.addPass(SanitizerCoveragePass(
-          SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
-          CodeGenOpts.SanitizeCoverageIgnorelistFiles));
+      MPM.addPass(
+          SanitizerCoveragePass(SancovOpts, PB.getVirtualFileSystemPtr(),
+                                CodeGenOpts.SanitizeCoverageAllowlistFiles,
+                                CodeGenOpts.SanitizeCoverageIgnorelistFiles));
     }
 
     if (CodeGenOpts.hasSanitizeBinaryMetadata()) {
       MPM.addPass(SanitizerBinaryMetadataPass(
           getSanitizerBinaryMetadataOptions(CodeGenOpts),
+          PB.getVirtualFileSystemPtr(),
           CodeGenOpts.SanitizeMetadataIgnorelistFiles));
     }
 
