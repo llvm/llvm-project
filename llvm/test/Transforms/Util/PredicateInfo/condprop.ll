@@ -134,6 +134,8 @@ define void @test4(i1 %b, i32 %x) {
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[SW:%.*]], label [[CASE3:%.*]]
 ; CHECK:       sw:
 ; CHECK:         [[X_0:%.*]] = bitcast i32 [[X:%.*]] to i32
+; CHECK:         [[X_1:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[X_2:%.*]] = bitcast i32 [[X]] to i32
 ; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[CASE0:%.*]]
 ; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
@@ -142,13 +144,13 @@ define void @test4(i1 %b, i32 %x) {
 ; CHECK-NEXT:      i32 4, label [[DEFAULT]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
-; CHECK-NEXT:    call void @bar(i32 [[X]])
+; CHECK-NEXT:    call void @bar(i32 [[X_0]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       case0:
-; CHECK-NEXT:    call void @bar(i32 [[X]])
+; CHECK-NEXT:    call void @bar(i32 [[X_1]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       case1:
-; CHECK-NEXT:    call void @bar(i32 [[X_0]])
+; CHECK-NEXT:    call void @bar(i32 [[X_2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       case3:
 ; CHECK-NEXT:    call void @bar(i32 [[X]])

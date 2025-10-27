@@ -245,7 +245,8 @@ return:
 define i32 @switch_default_dest(i32 %x) {
 ; CHECK-LABEL: @switch_default_dest(
 ; CHECK-NEXT:  case0:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X:%.*]] to i32
+; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[PHI:%.*]]
 ; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:    ]
@@ -254,7 +255,7 @@ define i32 @switch_default_dest(i32 %x) {
 ; CHECK:       default:
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[CASE1]] ], [ 1, [[CASE0:%.*]] ], [ [[X]], [[DEFAULT]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[CASE1]] ], [ 1, [[CASE0:%.*]] ], [ [[X_0]], [[DEFAULT]] ]
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[RES]], [[X]]
 ; CHECK-NEXT:    ret i32 [[FOO]]
 ;
@@ -279,14 +280,15 @@ phi:
 define i32 @switch_multicases_dest(i32 %x) {
 ; CHECK-LABEL: @switch_multicases_dest(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[PHI:%.*]] [
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X:%.*]] to i32
+; CHECK-NEXT:    switch i32 [[X]], label [[PHI:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[CASE:%.*]]
 ; CHECK-NEXT:      i32 1, label [[CASE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       case:
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X]], [[CASE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X_0]], [[CASE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[RES]], [[X]]
 ; CHECK-NEXT:    ret i32 [[FOO]]
 ;
@@ -308,14 +310,15 @@ phi:
 define i32 @switch_multicases_dest2(i32 %x) {
 ; CHECK-LABEL: @switch_multicases_dest2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[X:%.*]], label [[DEFAULT:%.*]] [
+; CHECK:         [[X_0:%.*]] = bitcast i32 [[X:%.*]] to i32
+; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[PHI:%.*]]
 ; CHECK-NEXT:      i32 1, label [[PHI]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[X]], [[ENTRY]] ], [ 0, [[DEFAULT]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X_0]], [[ENTRY:%.*]] ], [ [[X_0]], [[ENTRY]] ], [ 0, [[DEFAULT]] ]
 ; CHECK-NEXT:    [[FOO:%.*]] = add i32 [[RES]], [[X]]
 ; CHECK-NEXT:    ret i32 [[FOO]]
 ;

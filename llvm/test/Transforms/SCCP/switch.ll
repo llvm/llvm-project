@@ -391,8 +391,7 @@ define i1 @switch_default_dest(i32 %x) {
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 2, [[CASE1]] ], [ 3, [[CASE0:%.*]] ], [ [[X]], [[DEFAULT]] ]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[RES]], 2
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 false
 ;
 case0:
   switch i32 %x, label %default [
@@ -424,8 +423,7 @@ define i1 @switch_multicases_dest(i32 %x) {
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X]], [[CASE]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[RES]], 2
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   switch i32 %x, label %phi [
@@ -454,8 +452,7 @@ define i1 @switch_multicases_dest2(i32 %x) {
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[X]], [[ENTRY]] ], [ 0, [[DEFAULT]] ]
-; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[RES]], 2
-; CHECK-NEXT:    ret i1 [[RET]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   switch i32 %x, label %default [
