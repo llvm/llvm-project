@@ -471,15 +471,13 @@ static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
-  auto ExternallyVisibleCopies =
-      llvm::count_if(VI.getSummaryList(),
-                     [](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                       return !GlobalValue::isLocalLinkage(Summary->linkage());
-                     });
-
   // Before performing index-based internalization and promotion for this GUID,
   // the local flag should be consistent with the summary list linkage types.
   VI.verifyLocal();
+
+  const bool SingleExternallyVisibleCopy =
+      VI.getSummaryList().size() == 1 &&
+      !GlobalValue::isLocalLinkage(VI.getSummaryList().front()->linkage());
 
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
@@ -543,7 +541,9 @@ static void thinLTOInternalizeAndPromoteGUID(
         GlobalValue::isExternalWeakLinkage(S->linkage()))
       continue;
 
-    if (isPrevailing(VI.getGUID(), S.get()) && ExternallyVisibleCopies == 1)
+    // We may have a single summary copy that is externally visible but not
+    // prevailing if the prevailing copy is in a native object.
+    if (SingleExternallyVisibleCopy && isPrevailing(VI.getGUID(), S.get()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
 }
@@ -1711,7 +1711,7 @@ public:
                              /*ShouldEmitImportsFiles=*/false),
         IRFiles(std::move(IRFiles)), CombinedCGDataHash(CombinedCGDataHash) {}
 
-  virtual Error runThinLTOBackendThread(
+  Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
       ModuleSummaryIndex &CombinedIndex,
       const FunctionImporter::ImportMapTy &ImportList,
@@ -2271,8 +2271,8 @@ public:
         RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
         RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps) {}
 
-  virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
-                     llvm::Triple Triple) override {
+  void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
+             llvm::Triple Triple) override {
     UID = itostr(sys::Process::getProcessId());
     Jobs.resize((size_t)ThinLTONumTasks);
     this->ThinLTOTaskOffset = ThinLTOTaskOffset;

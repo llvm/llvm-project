@@ -1656,7 +1656,7 @@ public:
                            unsigned *PredCost = nullptr) const override;
 
   InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const override final;
+  getInstructionUniformity(const MachineInstr &MI) const final;
 
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;

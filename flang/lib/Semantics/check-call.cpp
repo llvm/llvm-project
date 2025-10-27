@@ -2241,10 +2241,9 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
   }
 }
 
-static parser::Messages CheckExplicitInterface(
-    const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
-    SemanticsContext &context, const Scope *scope,
-    const evaluate::SpecificIntrinsic *intrinsic,
+parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
+    evaluate::ActualArguments &actuals, SemanticsContext &context,
+    const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
     bool allowActualArgumentConversions, bool extentErrors,
     bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
