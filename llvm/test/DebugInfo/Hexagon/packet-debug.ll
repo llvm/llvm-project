@@ -1,8 +1,6 @@
 ; Passes if line number 9 is generated in the line table
 
-; REQUIRES: hexagon-registered-target
-
-; RUN: llc %s -march=hexagon -filetype=obj -mcpu=hexagonv69 -o - | llvm-dwarfdump --debug-line - | FileCheck %s
+; RUN: llc %s -mtriple=hexagon-unknown-elf -filetype=obj -mcpu=hexagonv69 -o - | llvm-dwarfdump --debug-line - | FileCheck %s
 
 ; CHECK: 9 9 1 0 0 0 is_stmt prologue_end
 
