@@ -81,7 +81,6 @@ public:
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
-
   bool isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
                                            CIRGenFunction::VPtr vptr) override;
 

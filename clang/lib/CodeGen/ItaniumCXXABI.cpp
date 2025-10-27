@@ -219,7 +219,6 @@ public:
   buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) override;
 
-
   void EmitCXXDestructors(const CXXDestructorDecl *D) override;
 
   void addImplicitStructorParams(CodeGenFunction &CGF, QualType &ResTy,
@@ -249,7 +248,6 @@ public:
 
   bool isVirtualOffsetNeededForVTableField(CodeGenFunction &CGF,
                                            CodeGenFunction::VPtr Vptr) override;
-
 
   llvm::Constant *
   getVTableAddressPoint(BaseSubobject Base,
