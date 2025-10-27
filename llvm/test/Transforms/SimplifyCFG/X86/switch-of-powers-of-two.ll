@@ -34,3 +34,103 @@ return:
   %phi = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 0, %bb4 ], [ 42, %bb5 ]
   ret i32 %phi
 }
+
+define i32 @switch_of_powers_two_default_reachable(i32 %arg) {
+; CHECK-LABEL: define i32 @switch_of_powers_two_default_reachable(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    switch i32 [[ARG]], label %[[RETURN:.*]] [
+; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
+; CHECK-NEXT:      i32 8, label %[[BB2:.*]]
+; CHECK-NEXT:      i32 16, label %[[BB3:.*]]
+; CHECK-NEXT:      i32 32, label %[[BB4:.*]]
+; CHECK-NEXT:      i32 64, label %[[BB5:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 3, %[[BB1]] ], [ 2, %[[BB2]] ], [ 1, %[[BB3]] ], [ 0, %[[BB4]] ], [ 42, %[[BB5]] ], [ 5, %[[ENTRY]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  switch i32 %arg, label %default_case [
+  i32 1,  label %bb1
+  i32 8,  label %bb2
+  i32 16, label %bb3
+  i32 32, label %bb4
+  i32 64, label %bb5
+  ]
+
+default_case: br label %return
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+bb4: br label %return
+bb5: br label %return
+
+return:
+  %phi = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 0, %bb4 ], [ 42, %bb5 ], [ 5, %default_case ]
+  ret i32 %phi
+}
+
+define i32 @switch_of_powers_two_default_reachable_multipreds(i32 %arg, i1 %cond) {
+; CHECK-LABEL: define i32 @switch_of_powers_two_default_reachable_multipreds(
+; CHECK-SAME: i32 [[ARG:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[COND]], label %[[SWITCH:.*]], label %[[RETURN:.*]]
+; CHECK:       [[SWITCH]]:
+; CHECK-NEXT:    switch i32 [[ARG]], label %[[RETURN]] [
+; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
+; CHECK-NEXT:      i32 8, label %[[BB2:.*]]
+; CHECK-NEXT:      i32 16, label %[[BB3:.*]]
+; CHECK-NEXT:      i32 32, label %[[BB4:.*]]
+; CHECK-NEXT:      i32 64, label %[[BB5:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB3]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB4]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 3, %[[BB1]] ], [ 2, %[[BB2]] ], [ 1, %[[BB3]] ], [ 0, %[[BB4]] ], [ 42, %[[BB5]] ], [ 0, %[[ENTRY]] ], [ [[ARG]], %[[SWITCH]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %cond, label %switch, label %default_case
+
+switch:
+  switch i32 %arg, label %default_case [
+  i32 1,  label %bb1
+  i32 8,  label %bb2
+  i32 16, label %bb3
+  i32 32, label %bb4
+  i32 64, label %bb5
+  ]
+
+default_case:
+  %pn = phi i32 [ 0, %entry ], [ %arg, %switch ]
+  br label %return
+
+bb1: br label %return
+bb2: br label %return
+bb3: br label %return
+bb4: br label %return
+bb5: br label %return
+
+return:
+  %phi = phi i32 [ 3, %bb1 ], [ 2, %bb2 ], [ 1, %bb3 ], [ 0, %bb4 ], [ 42, %bb5 ], [ %pn, %default_case ]
+  ret i32 %phi
+}
