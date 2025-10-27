@@ -1,9 +1,5 @@
 add_subdirectory(memory_utils)
 
-if(string_config_options)
-  list(PREPEND string_config_options "COMPILE_OPTIONS")
-endif()
-
 add_header_library(
   string_utils
   HDRS
@@ -18,7 +14,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.attributes
     libc.src.string.memory_utils.inline_memcpy
-  ${string_config_options}
 )
 
 add_header_library(

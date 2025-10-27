@@ -86,7 +86,7 @@ function(_get_compile_options_from_config output_var)
   endif()
 
   if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
-    list(APPEND string_config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
+    list(APPEND config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
   endif()
 
   if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
