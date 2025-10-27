@@ -245,30 +245,6 @@ def G_USDOT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_AVGFLOORU : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
-}
-
-def G_AVGCEILU : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
-}
-
-def G_AVGFLOORS : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
-}
-
-def G_AVGCEILS : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
-  let hasSideEffects = 0;
-}
-
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
