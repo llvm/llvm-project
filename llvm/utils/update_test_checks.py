@@ -260,9 +260,14 @@ def update_test(ti: common.TestInfo):
                 skip_same_checks=dropped_previous_line,
             ):
                 # This input line of the function body will go as-is into the output.
-                # Except make leading whitespace uniform: 2 spaces. 4 for debug records.
+                # Except make leading whitespace uniform: 2 spaces. 4 for debug records/switch cases.
                 indent = (
-                    "  " if not common.IS_DEBUG_RECORD_RE.match(input_line) else "    "
+                    " " * 4
+                    if (
+                        common.IS_DEBUG_RECORD_RE.match(input_line)
+                        or common.IS_SWITCH_CASE_RE.match(input_line)
+                    )
+                    else " " * 2
                 )
                 input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(indent, input_line)
                 output_lines.append(input_line)
