@@ -138,4 +138,3 @@ define amdgpu_kernel void @kern_block_direct_allocation() {
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-lds-size"="16" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-;.
