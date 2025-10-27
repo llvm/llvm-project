@@ -1420,23 +1420,14 @@ define <4 x float> @global_load_f32_zext_vgpr_range_too_large(ptr addrspace(1) %
 ;; Check add-as-or with split 64-bit or.
 define <4 x float> @global_load_i8_offset_or_i64_imm_offset_16(ptr addrspace(6) %sbase, i32 %idx) {
 ;
-; GFX-SDAG-LABEL: global_load_i8_offset_or_i64_imm_offset_16:
-; GFX-SDAG:       ; %bb.0:
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-SDAG-NEXT:    v_or_b32_e32 v0, 16, v1
-; GFX-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX-ISEL-LABEL: global_load_i8_offset_or_i64_imm_offset_16:
-; GFX-ISEL:       ; %bb.0:
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-ISEL-NEXT:    v_mov_b32_e32 v3, 0
-; GFX-ISEL-NEXT:    v_or_b32_e32 v2, 16, v1
-; GFX-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[2:3], off sc1
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX-ISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX-LABEL: global_load_i8_offset_or_i64_imm_offset_16:
+; GFX:       ; %bb.0:
+; GFX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX-NEXT:    v_or_b32_e32 v0, 16, v1
+; GFX-NEXT:    v_mov_b32_e32 v1, 0
+; GFX-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
+; GFX-NEXT:    s_waitcnt vmcnt(0)
+; GFX-NEXT:    s_setpc_b64 s[30:31]
   %zext.idx = zext i32 %idx to i64
   %or = or i64 %zext.idx, 16
   %addr = inttoptr i64 %or to ptr addrspace(1)
@@ -1447,23 +1438,14 @@ define <4 x float> @global_load_i8_offset_or_i64_imm_offset_16(ptr addrspace(6) 
 
 define <4 x float> @global_load_i8_offset_or_i64_imm_offset_4160(ptr addrspace(6) %sbase, i32 %idx) {
 ;
-; GFX-SDAG-LABEL: global_load_i8_offset_or_i64_imm_offset_4160:
-; GFX-SDAG:       ; %bb.0:
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-SDAG-NEXT:    v_or_b32_e32 v0, 0x1040, v1
-; GFX-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0 sc1
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX-ISEL-LABEL: global_load_i8_offset_or_i64_imm_offset_4160:
-; GFX-ISEL:       ; %bb.0:
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-ISEL-NEXT:    v_mov_b32_e32 v3, 0
-; GFX-ISEL-NEXT:    v_or_b32_e32 v2, 0x1040, v1
-; GFX-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[2:3], off sc0 sc1
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX-ISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX-LABEL: global_load_i8_offset_or_i64_imm_offset_4160:
+; GFX:       ; %bb.0:
+; GFX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX-NEXT:    v_or_b32_e32 v0, 0x1040, v1
+; GFX-NEXT:    v_mov_b32_e32 v1, 0
+; GFX-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0 sc1
+; GFX-NEXT:    s_waitcnt vmcnt(0)
+; GFX-NEXT:    s_setpc_b64 s[30:31]
   %zext.idx = zext i32 %idx to i64
   %or = or i64 %zext.idx, 4160
   %addr = inttoptr i64 %or to ptr addrspace(1)
@@ -2629,23 +2611,14 @@ define <4 x float> @global_load_f32_saddr_zext_vgpr_range_too_large(ptr addrspac
 ;; Check add-as-or with split 64-bit or.
 define <4 x float> @global_load_saddr_i8_offset_or_i64_imm_offset_16(ptr addrspace(6) inreg %sbase, i32 %idx) {
 ;
-; GFX-SDAG-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_16:
-; GFX-SDAG:       ; %bb.0:
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-SDAG-NEXT:    v_or_b32_e32 v0, 16, v0
-; GFX-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX-ISEL-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_16:
-; GFX-ISEL:       ; %bb.0:
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-ISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX-ISEL-NEXT:    v_or_b32_e32 v0, 16, v0
-; GFX-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX-ISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_16:
+; GFX:       ; %bb.0:
+; GFX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX-NEXT:    v_or_b32_e32 v0, 16, v0
+; GFX-NEXT:    v_mov_b32_e32 v1, 0
+; GFX-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc0
+; GFX-NEXT:    s_waitcnt vmcnt(0)
+; GFX-NEXT:    s_setpc_b64 s[30:31]
   %zext.idx = zext i32 %idx to i64
   %or = or i64 %zext.idx, 16
   %addr = inttoptr i64 %or to ptr addrspace(1)
@@ -2656,23 +2629,14 @@ define <4 x float> @global_load_saddr_i8_offset_or_i64_imm_offset_16(ptr addrspa
 
 define <4 x float> @global_load_saddr_i8_offset_or_i64_imm_offset_4160(ptr addrspace(6) inreg %sbase, i32 %idx) {
 ;
-; GFX-SDAG-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_4160:
-; GFX-SDAG:       ; %bb.0:
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-SDAG-NEXT:    v_or_b32_e32 v0, 0x1040, v0
-; GFX-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX-SDAG-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
-; GFX-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX-ISEL-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_4160:
-; GFX-ISEL:       ; %bb.0:
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX-ISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX-ISEL-NEXT:    v_or_b32_e32 v0, 0x1040, v0
-; GFX-ISEL-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
-; GFX-ISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX-ISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX-LABEL: global_load_saddr_i8_offset_or_i64_imm_offset_4160:
+; GFX:       ; %bb.0:
+; GFX-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX-NEXT:    v_or_b32_e32 v0, 0x1040, v0
+; GFX-NEXT:    v_mov_b32_e32 v1, 0
+; GFX-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off sc1
+; GFX-NEXT:    s_waitcnt vmcnt(0)
+; GFX-NEXT:    s_setpc_b64 s[30:31]
   %zext.idx = zext i32 %idx to i64
   %or = or i64 %zext.idx, 4160
   %addr = inttoptr i64 %or to ptr addrspace(1)

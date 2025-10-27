@@ -69,33 +69,29 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    s_mul_i32 s11, s5, s11
 ; GFX942-NEXT:    s_add_u32 s11, s14, s11
 ; GFX942-NEXT:    s_addc_u32 s14, 0, s15
-; GFX942-NEXT:    s_add_u32 s15, s10, s11
-; GFX942-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GFX942-NEXT:    s_cmp_lg_u64 s[10:11], 0
+; GFX942-NEXT:    s_add_u32 s10, s10, s11
 ; GFX942-NEXT:    s_addc_u32 s5, s5, s14
-; GFX942-NEXT:    s_mul_i32 s10, s1, s5
-; GFX942-NEXT:    s_mul_hi_u32 s11, s1, s15
-; GFX942-NEXT:    s_add_i32 s10, s11, s10
-; GFX942-NEXT:    s_mul_i32 s3, s3, s15
-; GFX942-NEXT:    s_add_i32 s10, s10, s3
-; GFX942-NEXT:    s_mul_i32 s1, s1, s15
-; GFX942-NEXT:    s_mul_hi_u32 s11, s5, s1
-; GFX942-NEXT:    s_mul_i32 s14, s5, s1
-; GFX942-NEXT:    s_mul_i32 s17, s15, s10
-; GFX942-NEXT:    s_mul_hi_u32 s1, s15, s1
-; GFX942-NEXT:    s_mul_hi_u32 s16, s15, s10
+; GFX942-NEXT:    s_mul_i32 s11, s1, s5
+; GFX942-NEXT:    s_mul_hi_u32 s14, s1, s10
+; GFX942-NEXT:    s_add_i32 s11, s14, s11
+; GFX942-NEXT:    s_mul_i32 s3, s3, s10
+; GFX942-NEXT:    s_add_i32 s11, s11, s3
+; GFX942-NEXT:    s_mul_i32 s1, s1, s10
+; GFX942-NEXT:    s_mul_hi_u32 s14, s5, s1
+; GFX942-NEXT:    s_mul_i32 s15, s5, s1
+; GFX942-NEXT:    s_mul_i32 s17, s10, s11
+; GFX942-NEXT:    s_mul_hi_u32 s1, s10, s1
+; GFX942-NEXT:    s_mul_hi_u32 s16, s10, s11
 ; GFX942-NEXT:    s_add_u32 s1, s1, s17
 ; GFX942-NEXT:    s_addc_u32 s16, 0, s16
-; GFX942-NEXT:    s_add_u32 s1, s1, s14
-; GFX942-NEXT:    s_mul_hi_u32 s3, s5, s10
-; GFX942-NEXT:    s_addc_u32 s1, s16, s11
+; GFX942-NEXT:    s_add_u32 s1, s1, s15
+; GFX942-NEXT:    s_mul_hi_u32 s3, s5, s11
+; GFX942-NEXT:    s_addc_u32 s1, s16, s14
 ; GFX942-NEXT:    s_addc_u32 s3, s3, 0
-; GFX942-NEXT:    s_mul_i32 s10, s5, s10
-; GFX942-NEXT:    s_add_u32 s1, s1, s10
+; GFX942-NEXT:    s_mul_i32 s11, s5, s11
+; GFX942-NEXT:    s_add_u32 s1, s1, s11
 ; GFX942-NEXT:    s_addc_u32 s3, 0, s3
-; GFX942-NEXT:    s_add_u32 s1, s15, s1
-; GFX942-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GFX942-NEXT:    s_cmp_lg_u64 s[10:11], 0
+; GFX942-NEXT:    s_add_u32 s1, s10, s1
 ; GFX942-NEXT:    s_addc_u32 s3, s5, s3
 ; GFX942-NEXT:    s_mul_i32 s10, s6, s3
 ; GFX942-NEXT:    s_mul_hi_u32 s11, s6, s1
@@ -118,37 +114,34 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    s_add_i32 s5, s5, s10
 ; GFX942-NEXT:    s_sub_i32 s14, s7, s5
 ; GFX942-NEXT:    s_mul_i32 s10, s12, s1
-; GFX942-NEXT:    s_sub_u32 s16, s6, s10
+; GFX942-NEXT:    s_sub_u32 s15, s6, s10
 ; GFX942-NEXT:    s_cselect_b64 s[10:11], -1, 0
-; GFX942-NEXT:    s_cmp_lg_u64 s[10:11], 0
-; GFX942-NEXT:    s_subb_u32 s17, s14, s13
-; GFX942-NEXT:    s_sub_u32 s18, s16, s12
-; GFX942-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; GFX942-NEXT:    s_cmp_lg_u64 s[14:15], 0
-; GFX942-NEXT:    s_subb_u32 s14, s17, 0
+; GFX942-NEXT:    s_subb_u32 s14, s14, s13
+; GFX942-NEXT:    s_sub_u32 s16, s15, s12
+; GFX942-NEXT:    s_subb_u32 s14, s14, 0
 ; GFX942-NEXT:    s_cmp_ge_u32 s14, s13
-; GFX942-NEXT:    s_cselect_b32 s15, -1, 0
-; GFX942-NEXT:    s_cmp_ge_u32 s18, s12
 ; GFX942-NEXT:    s_cselect_b32 s17, -1, 0
+; GFX942-NEXT:    s_cmp_ge_u32 s16, s12
+; GFX942-NEXT:    s_cselect_b32 s16, -1, 0
 ; GFX942-NEXT:    s_cmp_eq_u32 s14, s13
-; GFX942-NEXT:    s_cselect_b32 s14, s17, s15
-; GFX942-NEXT:    s_add_u32 s15, s1, 1
+; GFX942-NEXT:    s_cselect_b32 s14, s16, s17
+; GFX942-NEXT:    s_add_u32 s16, s1, 1
 ; GFX942-NEXT:    s_addc_u32 s17, s3, 0
 ; GFX942-NEXT:    s_add_u32 s18, s1, 2
 ; GFX942-NEXT:    s_addc_u32 s19, s3, 0
 ; GFX942-NEXT:    s_cmp_lg_u32 s14, 0
-; GFX942-NEXT:    s_cselect_b32 s14, s18, s15
-; GFX942-NEXT:    s_cselect_b32 s15, s19, s17
+; GFX942-NEXT:    s_cselect_b32 s14, s18, s16
+; GFX942-NEXT:    s_cselect_b32 s16, s19, s17
 ; GFX942-NEXT:    s_cmp_lg_u64 s[10:11], 0
 ; GFX942-NEXT:    s_subb_u32 s5, s7, s5
 ; GFX942-NEXT:    s_cmp_ge_u32 s5, s13
 ; GFX942-NEXT:    s_cselect_b32 s10, -1, 0
-; GFX942-NEXT:    s_cmp_ge_u32 s16, s12
+; GFX942-NEXT:    s_cmp_ge_u32 s15, s12
 ; GFX942-NEXT:    s_cselect_b32 s11, -1, 0
 ; GFX942-NEXT:    s_cmp_eq_u32 s5, s13
 ; GFX942-NEXT:    s_cselect_b32 s5, s11, s10
 ; GFX942-NEXT:    s_cmp_lg_u32 s5, 0
-; GFX942-NEXT:    s_cselect_b32 s11, s15, s3
+; GFX942-NEXT:    s_cselect_b32 s11, s16, s3
 ; GFX942-NEXT:    s_cselect_b32 s10, s14, s1
 ; GFX942-NEXT:    s_cbranch_execnz .LBB0_3
 ; GFX942-NEXT:  .LBB0_2:

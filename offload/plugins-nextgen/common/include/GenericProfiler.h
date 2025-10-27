@@ -60,7 +60,7 @@ public:
   /// Obtain a pointer to profiler-specific data, if any.
   virtual void *getProfilerSpecificData() { return nullptr; }
 
-  virtual bool shouldEnableProfiling() { return false; }
+  virtual bool isProfilingEnabled() { return false; }
 
   /// Set the factors which are used to interpolate the device clock compared to
   /// the host clock. This follows a simple linear interpolation: Slope * <time>

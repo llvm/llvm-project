@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -27,6 +28,7 @@
 using namespace llvm;
 
 using testing::ElementsAre;
+using testing::ElementsAreArray;
 using testing::UnorderedElementsAre;
 
 namespace {
@@ -772,48 +774,30 @@ TEST(STLExtrasTest, DropBeginTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
   for (int n = 0; n < 5; ++n) {
-    int i = n;
-    for (auto &v : drop_begin(vec, n)) {
-      EXPECT_EQ(v, i);
-      i += 1;
-    }
-    EXPECT_EQ(i, 5);
+    EXPECT_THAT(drop_begin(vec, n),
+                ElementsAreArray(ArrayRef(&vec[n], vec.size() - n)));
   }
 }
 
 TEST(STLExtrasTest, DropBeginDefaultTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
-  int i = 1;
-  for (auto &v : drop_begin(vec)) {
-    EXPECT_EQ(v, i);
-    i += 1;
-  }
-  EXPECT_EQ(i, 5);
+  EXPECT_THAT(drop_begin(vec), ElementsAre(1, 2, 3, 4));
 }
 
 TEST(STLExtrasTest, DropEndTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
   for (int n = 0; n < 5; ++n) {
-    int i = 0;
-    for (auto &v : drop_end(vec, n)) {
-      EXPECT_EQ(v, i);
-      i += 1;
-    }
-    EXPECT_EQ(i, 5 - n);
+    EXPECT_THAT(drop_end(vec, n),
+                ElementsAreArray(ArrayRef(vec.data(), vec.size() - n)));
   }
 }
 
 TEST(STLExtrasTest, DropEndDefaultTest) {
   SmallVector<int, 5> vec{0, 1, 2, 3, 4};
 
-  int i = 0;
-  for (auto &v : drop_end(vec)) {
-    EXPECT_EQ(v, i);
-    i += 1;
-  }
-  EXPECT_EQ(i, 4);
+  EXPECT_THAT(drop_end(vec), ElementsAre(0, 1, 2, 3));
 }
 
 TEST(STLExtrasTest, MapRangeTest) {

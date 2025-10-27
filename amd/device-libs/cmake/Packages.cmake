@@ -15,9 +15,6 @@ configure_file(AMDDeviceLibsConfig.cmake.in
   ${PACKAGE_PREFIX}/AMDDeviceLibsConfig.cmake
   @ONLY)
 
-
-set(install_path_suffix "amdgcn/bitcode")
-
 # Generate the install-tree package.
 # We do not know the absolute path to the intall tree until we are installed,
 # so we calculate it dynamically in AMD_DEVICE_LIBS_PREFIX_CODE and use
@@ -38,7 +35,7 @@ foreach(target ${AMDGCN_LIB_LIST})
   set(AMD_DEVICE_LIBS_TARGET_CODE "${AMD_DEVICE_LIBS_TARGET_CODE}
 add_library(${target} STATIC IMPORTED)
 set_target_properties(${target} PROPERTIES
-  IMPORTED_LOCATION \"\${AMD_DEVICE_LIBS_PREFIX}/${install_path_suffix}/${target_prefix}${target_name}${target_suffix}\")")
+  IMPORTED_LOCATION \"\${AMD_DEVICE_LIBS_PREFIX}/${INSTALL_ROOT_SUFFIX}/${target_prefix}${target_name}${target_suffix}\")")
 endforeach()
 configure_file(AMDDeviceLibsConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/AMDDeviceLibsConfig.cmake.install

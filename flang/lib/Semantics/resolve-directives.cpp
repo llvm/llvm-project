@@ -31,14 +31,16 @@
 #include <list>
 #include <map>
 
-template <typename T>
-static Fortran::semantics::Scope *GetScope(
-    Fortran::semantics::SemanticsContext &context, const T &x) {
-  std::optional<Fortran::parser::CharBlock> source{GetLastSource(x)};
-  return source ? &context.FindScope(*source) : nullptr;
-}
-
 namespace Fortran::semantics {
+
+template <typename T>
+static Scope *GetScope(SemanticsContext &context, const T &x) {
+  if (auto source{GetLastSource(x)}) {
+    return &context.FindScope(*source);
+  } else {
+    return nullptr;
+  }
+}
 
 template <typename T> class DirectiveAttributeVisitor {
 public:
@@ -361,7 +363,7 @@ private:
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *ResolveAcc(Symbol &, Symbol::Flag, Scope &);
-  Symbol *ResolveName(const parser::Name &, bool parentScope = false);
+  Symbol *ResolveName(const parser::Name &);
   Symbol *ResolveFctName(const parser::Name &);
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
@@ -1257,31 +1259,22 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCStandaloneConstruct &x) {
   return true;
 }
 
-Symbol *AccAttributeVisitor::ResolveName(
-    const parser::Name &name, bool parentScope) {
-  Symbol *prev{currScope().FindSymbol(name.source)};
-  // Check in parent scope if asked for.
-  if (!prev && parentScope) {
-    prev = currScope().parent().FindSymbol(name.source);
-  }
-  if (prev != name.symbol) {
-    name.symbol = prev;
-  }
-  return prev;
+Symbol *AccAttributeVisitor::ResolveName(const parser::Name &name) {
+  return name.symbol;
 }
 
 Symbol *AccAttributeVisitor::ResolveFctName(const parser::Name &name) {
   Symbol *prev{currScope().FindSymbol(name.source)};
-  if (!prev || (prev && prev->IsFuncResult())) {
+  if (prev && prev->IsFuncResult()) {
     prev = currScope().parent().FindSymbol(name.source);
-    if (!prev) {
-      prev = &context_.globalScope().MakeSymbol(
-          name.source, Attrs{}, ProcEntityDetails{});
-    }
   }
-  if (prev != name.symbol) {
-    name.symbol = prev;
+  if (!prev) {
+    prev = &*context_.globalScope()
+                 .try_emplace(name.source, ProcEntityDetails{})
+                 .first->second;
   }
+  CHECK(!name.symbol || name.symbol == prev);
+  name.symbol = prev;
   return prev;
 }
 
@@ -1388,9 +1381,8 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
   } else {
     PushContext(verbatim.source, llvm::acc::Directive::ACCD_routine);
   }
-  const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
-  if (optName) {
-    if (Symbol *sym = ResolveFctName(*optName)) {
+  if (const auto &optName{std::get<std::optional<parser::Name>>(x.t)}) {
+    if (Symbol * sym{ResolveFctName(*optName)}) {
       Symbol &ultimate{sym->GetUltimate()};
       AddRoutineInfoToSymbol(ultimate, x);
     } else {
@@ -1425,7 +1417,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   case llvm::acc::Directive::ACCD_kernels_loop:
   case llvm::acc::Directive::ACCD_parallel_loop:
   case llvm::acc::Directive::ACCD_serial_loop:
-    PushContext(combinedDir.source, combinedDir.v);
+    PushContext(x.source, combinedDir.v);
     break;
   default:
     break;
@@ -1706,41 +1698,37 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
   }
 }
 
-// For OpenACC constructs, check all the data-refs within the constructs
-// and adjust the symbol for each Name if necessary
 void AccAttributeVisitor::Post(const parser::Name &name) {
-  auto *symbol{name.symbol};
-  if (symbol && WithinConstruct()) {
-    symbol = &symbol->GetUltimate();
-    if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
-        !symbol->has<SubprogramDetails>() && !IsObjectWithVisibleDSA(*symbol)) {
+  if (name.symbol && WithinConstruct()) {
+    const Symbol &symbol{name.symbol->GetUltimate()};
+    if (!symbol.owner().IsDerivedType() && !symbol.has<ProcEntityDetails>() &&
+        !symbol.has<SubprogramDetails>() && !IsObjectWithVisibleDSA(symbol)) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
-        if (symbol != found) {
-          name.symbol = found; // adjust the symbol within region
+        if (&symbol != found) {
+          // adjust the symbol within the region
+          // TODO: why didn't name resolution set the right name originally?
+          name.symbol = found;
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
           // 2.5.14.
           context_.Say(name.source,
               "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
-              symbol->name());
+              symbol.name());
         }
+      } else {
+        // TODO: assertion here?  or clear name.symbol?
       }
     }
-  } // within OpenACC construct
+  }
 }
 
 Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     const parser::Name *name) {
-  if (auto *prev{name
-              ? GetContext().scope.parent().FindCommonBlock(name->source)
-              : nullptr}) {
-    name->symbol = prev;
-    return prev;
-  }
-  // Check if the Common Block is declared in the current scope
-  if (auto *commonBlockSymbol{
-          name ? GetContext().scope.FindCommonBlock(name->source) : nullptr}) {
-    name->symbol = commonBlockSymbol;
-    return commonBlockSymbol;
+  if (name) {
+    if (Symbol *
+        cb{GetContext().scope.FindCommonBlockInVisibleScopes(name->source)}) {
+      name->symbol = cb;
+      return cb;
+    }
   }
   return nullptr;
 }
@@ -1790,8 +1778,8 @@ void AccAttributeVisitor::ResolveAccObject(
               }
             } else {
               context_.Say(name.source,
-                  "COMMON block must be declared in the same scoping unit "
-                  "in which the OpenACC directive or clause appears"_err_en_US);
+                  "Could not find COMMON block '%s' used in OpenACC directive"_err_en_US,
+                  name.ToString());
             }
           },
       },
@@ -1810,13 +1798,11 @@ Symbol *AccAttributeVisitor::ResolveAcc(
 
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     const parser::Name &name, Symbol::Flag accFlag) {
-  Symbol *prev{currScope().FindSymbol(name.source)};
-  if (!name.symbol || !prev) {
+  if (name.symbol) {
+    return DeclareOrMarkOtherAccessEntity(*name.symbol, accFlag);
+  } else {
     return nullptr;
-  } else if (prev != name.symbol) {
-    name.symbol = prev;
   }
-  return DeclareOrMarkOtherAccessEntity(*prev, accFlag);
 }
 
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
@@ -2991,6 +2977,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
 }
 
 Symbol *OmpAttributeVisitor::ResolveName(const parser::Name *name) {
+  // TODO: why is the symbol not properly resolved by name resolution?
   if (auto *resolvedSymbol{
           name ? GetContext().scope.FindSymbol(name->source) : nullptr}) {
     name->symbol = resolvedSymbol;
@@ -3106,26 +3093,6 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
 
       if (ompFlag == Symbol::Flag::OmpAllocate) {
         AddAllocateName(name);
-      }
-    }
-    if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
-        IsAllocatable(*symbol) &&
-        !IsNestedInDirective(llvm::omp::Directive::OMPD_allocate)) {
-      context_.Say(designator.source,
-          "List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement"_err_en_US);
-    }
-    bool checkScope{ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective};
-    // In 5.1 the scope check only applies to declarative allocate.
-    if (version == 50 && !checkScope) {
-      checkScope = ompFlag == Symbol::Flag::OmpExecutableAllocateDirective;
-    }
-    if (checkScope) {
-      if (omp::GetScopingUnit(GetContext().scope) !=
-          omp::GetScopingUnit(symbol->GetUltimate().owner())) {
-        context_.Say(designator.source, // 2.15.3
-            "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
-            parser::ToUpperCaseLetters(
-                llvm::omp::getOpenMPDirectiveName(directive, version)));
       }
     }
     if (ompFlag == Symbol::Flag::OmpReduction) {

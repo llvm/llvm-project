@@ -245,18 +245,12 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
           omp_get_initial_device(), HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
-      // The Profiler can allocate specific data to be used to pass information
-      // from here to lower parts of the runtime system.
-      // NOTE: It is the responsibility of the programmer to ensure type
-      // compatibility and correct usage of the data. The profiler, however,
-      // OWNS the pointer and frees it at an appropriate time.
-      void *ProfData = RTL->getProfiler()->getProfilerSpecificData();
       // Only if 'TracedDeviceId' is actually traced, AsyncInfo->OmptEventInfo
       // is set and a trace record generated. Otherwise: No OMPT device tracing.
       TracerInterfaceRAII TargetDataSubmitTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_to_device>(),
-          AsyncInfo, ProfData, /*TracedDeviceId=*/DeviceID,
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/DeviceID,
           /*EventType=*/ompt_callback_target_data_op, omp_get_initial_device(),
           HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
@@ -281,18 +275,12 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           DeviceID, TgtPtrBegin, omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
-      // The Profiler can allocate specific data to be used to pass information
-      // from here to lower parts of the runtime system.
-      // NOTE: It is the responsibility of the programmer to ensure type
-      // compatibility and correct usage of the data. The profiler, however,
-      // OWNS the pointer and frees it at an appropriate time.
-      void *ProfData = RTL->getProfiler()->getProfilerSpecificData();
       // Only if 'TracedDeviceId' is actually traced, AsyncInfo->OmptEventInfo
       // is set and a trace record generated. Otherwise: No OMPT device tracing.
       TracerInterfaceRAII TargetDataSubmitTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_from_device>(),
-          AsyncInfo, ProfData, /*TracedDeviceId=*/DeviceID,
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/DeviceID,
           /*EventType=*/ompt_callback_target_data_op, DeviceID, TgtPtrBegin,
           omp_get_initial_device(), HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
@@ -316,18 +304,12 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
-      // The Profiler can allocate specific data to be used to pass information
-      // from here to lower parts of the runtime system.
-      // NOTE: It is the responsibility of the programmer to ensure type
-      // compatibility and correct usage of the data. The profiler, however,
-      // OWNS the pointer and frees it at an appropriate time.
-      void *ProfData = RTL->getProfiler()->getProfilerSpecificData();
       // Only if 'TracedDeviceId' is actually traced, AsyncInfo->OmptEventInfo
       // is set and a trace record generated. Otherwise: No OMPT device tracing.
       TracerInterfaceRAII TargetDataExchangeTraceRAII(
           RegionInterface
               .getTraceGenerators<ompt_target_data_transfer_from_device>(),
-          AsyncInfo, ProfData, /*TracedDeviceId=*/RTLDeviceID,
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/RTLDeviceID,
           /*EventType=*/ompt_callback_target_data_op, RTLDeviceID, SrcPtr,
           DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
@@ -455,4 +437,8 @@ uint32_t DeviceTy::getNumMultiDevices() const {
 // Check if kernel is a multi device kernel
 bool DeviceTy::isMultiDeviceKernel(void *TgtEntryPtr) {
   return RTL->kernel_is_multi_device(RTLDeviceID, TgtEntryPtr);
+}
+
+bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
 }
