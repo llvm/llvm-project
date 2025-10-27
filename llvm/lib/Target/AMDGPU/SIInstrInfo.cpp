@@ -10689,7 +10689,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!optimizeSCC(Def, &CmpInstr, RI))
       return false;
 
-    // If s_or_32 result is unused (i.e. it is effectively a 64-bit s_cmp_lg of
+    // If s_or_b32 result is unused (i.e. it is effectively a 64-bit s_cmp_lg of
     // a register pair) and the input is a 64-bit foldableSelect then transform:
     //
     //   (s_or_b32 (S_CSELECT_B64 (non-zero imm), 0), 0 => (S_CSELECT_B64
