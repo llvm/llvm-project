@@ -22760,7 +22760,10 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
     NewPtr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(COffset), DL);
     PointerInfo = ST->getPointerInfo().getWithOffset(COffset);
   } else {
-    NewPtr = TLI.getVectorElementPointer(DAG, Ptr, Value.getValueType(), Idx);
+    // The original DAG loaded the entire vector from memory, so arithmetic
+    // within it must be inbounds.
+    NewPtr = TLI.getInboundsVectorElementPointer(DAG, Ptr, Value.getValueType(),
+                                                 Idx);
   }
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
