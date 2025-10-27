@@ -69,8 +69,8 @@ picolibc_source_dir="${build_dir}/picolibc-source"
 picolibc_build_dir="${build_dir}/picolibc-build"
 mkdir -p "${picolibc_source_dir}"
 mkdir -p "${picolibc_build_dir}"
-# Download a known good version of picolibc.
-picolibc_commit="48fbc2009c6473293d03d5ec6f190565c6223a5c"
+# Download a known good version of picolibc: v1.8.10
+picolibc_commit="51a8b32857e75345c37652a80b5cda98b28d69e5"
 curl -L "https://github.com/picolibc/picolibc/archive/${picolibc_commit}.zip" --output "${picolibc_source_dir}/picolibc.zip"
 unzip -q "${picolibc_source_dir}/picolibc.zip" -d "${picolibc_source_dir}"
 mv "${picolibc_source_dir}/picolibc-${picolibc_commit}"/* "${picolibc_source_dir}"

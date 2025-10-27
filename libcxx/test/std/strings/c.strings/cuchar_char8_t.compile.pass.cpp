@@ -15,11 +15,12 @@
 // XFAIL: freebsd
 // XFAIL: windows
 // XFAIL: glibc-no-char8_t-support
-// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <cuchar>
 
 #include <cuchar>
+
+#include "test_macros.h"
 
 ASSERT_SAME_TYPE(std::size_t, decltype(std::mbrtoc8((char8_t*)0, (const char*)0, (size_t)0, (mbstate_t*)0)));
 ASSERT_SAME_TYPE(std::size_t, decltype(std::c8rtomb((char*)0, (char8_t)0, (mbstate_t*)0)));
