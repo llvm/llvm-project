@@ -122,41 +122,41 @@ public:
               .Case("970", ArchDefineName | ArchDefinePwr4 | ArchDefinePpcgr |
                                ArchDefinePpcsq)
               .Case("a2", ArchDefineA2)
-              .Cases("power3", "pwr3", ArchDefinePpcgr)
-              .Cases("power4", "pwr4",
+              .Cases({"power3", "pwr3"}, ArchDefinePpcgr)
+              .Cases({"power4", "pwr4"},
                      ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
               .Cases("power5", "pwr5",
                      ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                          ArchDefinePpcsq)
-              .Cases("power5x", "pwr5x",
+              .Cases({"power5x", "pwr5x"},
                      ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
                          ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power6", "pwr6",
-                     ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
-                         ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power6x", "pwr6x",
+              .Cases({"power6", "pwr6"}, ArchDefinePwr6 | ArchDefinePwr5x |
+                                             ArchDefinePwr5 | ArchDefinePwr4 |
+                                             ArchDefinePpcgr | ArchDefinePpcsq)
+              .Cases({"power6x", "pwr6x"},
                      ArchDefinePwr6x | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                          ArchDefinePpcsq)
-              .Cases("power7", "pwr7",
-                     ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
-                         ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
-                         ArchDefinePpcsq)
+              .Cases({"power7", "pwr7"}, ArchDefinePwr7 | ArchDefinePwr6 |
+                                             ArchDefinePwr5x | ArchDefinePwr5 |
+                                             ArchDefinePwr4 | ArchDefinePpcgr |
+                                             ArchDefinePpcsq)
               // powerpc64le automatically defaults to at least power8.
-              .Cases("power8", "pwr8", "ppc64le",
+              .Cases({"power8", "pwr8", "ppc64le"},
                      ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
                          ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
                          ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power9", "pwr9",
+              .Cases({"power9", "pwr9"},
                      ArchDefinePwr9 | ArchDefinePwr8 | ArchDefinePwr7 |
                          ArchDefinePwr6 | ArchDefinePwr5x | ArchDefinePwr5 |
                          ArchDefinePwr4 | ArchDefinePpcgr | ArchDefinePpcsq)
-              .Cases("power10", "pwr10",
+              .Cases({"power10", "pwr10"},
                      ArchDefinePwr10 | ArchDefinePwr9 | ArchDefinePwr8 |
                          ArchDefinePwr7 | ArchDefinePwr6 | ArchDefinePwr5x |
                          ArchDefinePwr5 | ArchDefinePwr4 | ArchDefinePpcgr |
                          ArchDefinePpcsq)
-              .Cases("power11", "pwr11",
+              .Cases({"power11", "pwr11"},
                      ArchDefinePwr11 | ArchDefinePwr10 | ArchDefinePwr9 |
                          ArchDefinePwr8 | ArchDefinePwr7 | ArchDefinePwr6 |
                          ArchDefinePwr5x | ArchDefinePwr5 | ArchDefinePwr4 |
