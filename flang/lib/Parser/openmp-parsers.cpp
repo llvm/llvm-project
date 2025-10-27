@@ -341,7 +341,7 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
 // The semantic analysis stores "evaluate::Expr" in each AST node rooted
 // in parser::Expr (in the typedExpr member). The evaluate::Expr is specific
 // to a given type, and so to allow different types for a given expression,
-// for each type a separate copy of the parsee::Expr subtree is created.
+// for each type a separate copy of the parser::Expr subtree is created.
 // Normally, AST nodes are non-copyable (copy-ctor is deleted), so to create
 // several copies of a subtree, the same source string is parsed several
 // times. The ParseState member in OmpStylizedExpression is the parser state
