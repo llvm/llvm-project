@@ -1,4 +1,4 @@
-//===--- CreateInvocationFromCommandLine.cpp - CompilerInvocation from Args ==//
+//===--- CreateInvocationFromArgs.h - CompilerInvocation from Args --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,26 +10,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
-#include "clang/Frontend/Utils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
-using namespace clang;
+
 using namespace llvm::opt;
 
+namespace clang {
+
 std::unique_ptr<CompilerInvocation>
-clang::createInvocation(ArrayRef<const char *> ArgList,
-                        CreateInvocationOptions Opts) {
+createInvocation(ArrayRef<const char *> ArgList, CreateInvocationOptions Opts) {
   assert(!ArgList.empty());
   std::optional<DiagnosticOptions> LocalDiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags;
@@ -78,7 +78,7 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
   const driver::JobList &Jobs = C->getJobs();
   bool OffloadCompilation = false;
   if (Jobs.size() > 1) {
-    for (auto &A : C->getActions()){
+    for (auto &A : C->getActions()) {
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();
@@ -114,3 +114,5 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
     return nullptr;
   return CI;
 }
+
+} // namespace clang
