@@ -1673,7 +1673,7 @@ define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535,65535,0,65535,65535]
 ; SSE2-NEXT:    pandn %xmm0, %xmm1
-; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [0,128,0,16,0,2,0,32,0,64,0,0,0,8,0,4]
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
@@ -1750,7 +1750,7 @@ define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [65535,65535,65535,65535,65535,0,65535,65535]
 ; X86-SSE-NEXT:    pandn %xmm0, %xmm1
-; X86-SSE-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    pmulhuw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [0,128,0,16,0,2,0,32,0,64,0,0,0,8,0,4]
 ; X86-SSE-NEXT:    por %xmm1, %xmm0
 ; X86-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]

@@ -30,6 +30,9 @@ namespace doc {
 // SHA1'd hash of a USR.
 using SymbolID = std::array<uint8_t, 20>;
 
+constexpr SymbolID GlobalNamespaceID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 struct BaseRecordInfo;
 struct EnumInfo;
 struct FunctionInfo;

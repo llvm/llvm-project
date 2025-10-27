@@ -169,6 +169,12 @@ TEST(SimplePackedSerializationTest, StdOptionalValueSerialization) {
   blobSerializationRoundTrip<SPSOptional<int64_t>>(Value);
 }
 
+TEST(SimplePackedSerializationTest, Pointers) {
+  int X = 42;
+  int *P = &X;
+  blobSerializationRoundTrip<SPSExecutorAddr>(P);
+}
+
 TEST(SimplePackedSerializationTest, ArgListSerialization) {
   using BAL = SPSArgList<bool, int32_t, SPSString>;
 

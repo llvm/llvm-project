@@ -542,6 +542,24 @@ test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
 }
 
 //===----------------------------------------------------------------------===//
+// TestTensorEncodingAttr
+//===----------------------------------------------------------------------===//
+
+::llvm::LogicalResult TestTensorEncodingAttr::verifyEncoding(
+    mlir::ArrayRef<int64_t> shape, mlir::Type elementType,
+    llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) const {
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TestMemRefLayoutAttr
+//===----------------------------------------------------------------------===//
+
+mlir::AffineMap TestMemRefLayoutAttr::getAffineMap() const {
+  return mlir::AffineMap::getMultiDimIdentityMap(1, getContext());
+}
+
+//===----------------------------------------------------------------------===//
 // TestDialect
 //===----------------------------------------------------------------------===//
 

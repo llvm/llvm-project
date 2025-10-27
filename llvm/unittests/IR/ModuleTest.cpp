@@ -103,6 +103,36 @@ TEST(ModuleTest, setModuleFlagInt) {
   EXPECT_EQ(Val2, A2->getZExtValue());
 }
 
+TEST(ModuleTest, setModuleFlagTwoMod) {
+  LLVMContext Context;
+  Module MA("MA", Context);
+  Module MB("MB", Context);
+  StringRef Key = "Key";
+  uint32_t Val1 = 1;
+  uint32_t Val2 = 2;
+
+  // Set a flag to MA
+  EXPECT_EQ(nullptr, MA.getModuleFlag(Key));
+  MA.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto A1 = mdconst::extract_or_null<ConstantInt>(MA.getModuleFlag(Key));
+  EXPECT_EQ(Val1, A1->getZExtValue());
+
+  // Set a flag to MB
+  EXPECT_EQ(nullptr, MB.getModuleFlag(Key));
+  MB.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val1);
+  auto B1 = mdconst::extract_or_null<ConstantInt>(MB.getModuleFlag(Key));
+  EXPECT_EQ(Val1, B1->getZExtValue());
+
+  // Change the flag of MA
+  MA.setModuleFlag(Module::ModFlagBehavior::Error, Key, Val2);
+  auto A2 = mdconst::extract_or_null<ConstantInt>(MA.getModuleFlag(Key));
+  EXPECT_EQ(Val2, A2->getZExtValue());
+
+  // MB should keep the original flag value
+  auto B2 = mdconst::extract_or_null<ConstantInt>(MB.getModuleFlag(Key));
+  EXPECT_EQ(Val1, B2->getZExtValue());
+}
+
 const char *IRString = R"IR(
   !llvm.module.flags = !{!0}
 

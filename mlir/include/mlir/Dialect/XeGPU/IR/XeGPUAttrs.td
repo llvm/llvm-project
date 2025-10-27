@@ -712,8 +712,12 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
       return getAttrs().contains(name);
     }
 
-    ArrayAttr getStrides() {
+    ArrayAttr getStrideAttr() {
       return getAttrs().getAs<ArrayAttr>("stride");
+    }
+
+    ArrayAttr getBlockAttr() {
+      return getAttrs().getAs<ArrayAttr>("block");
     }
 
   }];

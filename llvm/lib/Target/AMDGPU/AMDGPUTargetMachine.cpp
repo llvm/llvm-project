@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
+#include "AMDGPUBarrierLatency.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUExportKernelRuntimeHandles.h"
@@ -526,6 +527,11 @@ static cl::opt<bool> HasClosedWorldAssumption(
     cl::desc("Whether has closed-world assumption at link time"),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EnableUniformIntrinsicCombine(
+    "amdgpu-enable-uniform-intrinsic-combine",
+    cl::desc("Enable/Disable the Uniform Intrinsic Combine Pass"),
+    cl::init(true), cl::Hidden);
+
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheR600Target());
@@ -634,6 +640,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
   return DAG;
 }
 
@@ -654,6 +661,7 @@ createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
   return DAG;
 }
 
@@ -732,7 +740,7 @@ static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
   return "r600";
 }
 
-static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel() {
   // The AMDGPU toolchain only supports generating shared objects, so we
   // must always use PIC.
   return Reloc::PIC_;
@@ -746,8 +754,8 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOptLevel OptLevel)
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(), TT, getGPUOrDefault(TT, CPU), FS, Options,
-          getEffectiveRelocModel(RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
+          getEffectiveRelocModel(), getEffectiveCodeModel(CM, CodeModel::Small),
+          OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
   if (TT.isAMDGCN()) {
@@ -879,6 +887,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
+
+        if (EnableUniformIntrinsicCombine)
+          PM.addPass(AMDGPUUniformIntrinsicCombinePass());
       });
 
   PB.registerPeepholeEPCallback(
@@ -1189,6 +1200,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
       EnableVOPD)
     DAG->addMutation(createVOPDPairingMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
   return DAG;
 }
 //===----------------------------------------------------------------------===//
@@ -2074,7 +2086,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
     addPass(AMDGPUAtomicOptimizerPass(TM, AMDGPUAtomicOptimizerStrategy));
 
-  addPass(AtomicExpandPass(&TM));
+  addPass(AtomicExpandPass(TM));
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(AMDGPUPromoteAllocaPass(TM));

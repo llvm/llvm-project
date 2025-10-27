@@ -58,6 +58,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "flang/Semantics/openmp-dsa.h"
 #include "flang/Semantics/runtime-type-info.h"
@@ -642,6 +643,8 @@ public:
   getSymbolStorage(Fortran::lower::SymbolRef sym) override final {
     return localSymbols.lookupStorage(sym);
   }
+
+  Fortran::lower::SymMap &getSymbolMap() override final { return localSymbols; }
 
   void
   overrideExprValues(const Fortran::lower::ExprToValueMap *map) override final {
@@ -1763,7 +1766,7 @@ private:
       // to a crash due to a block with no terminator. See issue #126452.
       mlir::FunctionType funcType = builder->getFunction().getFunctionType();
       mlir::Type resultType = funcType.getResult(0);
-      mlir::Value undefResult = builder->create<fir::UndefOp>(loc, resultType);
+      mlir::Value undefResult = fir::UndefOp::create(*builder, loc, resultType);
       genExitRoutine(false, undefResult);
       return;
     }
@@ -3190,15 +3193,20 @@ private:
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
     Fortran::lower::pft::Evaluation *curEval = &getEval();
+    // Determine collapse depth/force and loopCount
+    bool collapseForce = false;
+    uint64_t collapseDepth = 1;
+    uint64_t loopCount = 1;
 
     if (accLoop || accCombined) {
-      uint64_t loopCount;
       if (accLoop) {
         const Fortran::parser::AccBeginLoopDirective &beginLoopDir =
             std::get<Fortran::parser::AccBeginLoopDirective>(accLoop->t);
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginLoopDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
+        std::tie(collapseDepth, collapseForce) =
+            Fortran::lower::getCollapseSizeAndForce(clauseList);
       } else if (accCombined) {
         const Fortran::parser::AccBeginCombinedDirective &beginCombinedDir =
             std::get<Fortran::parser::AccBeginCombinedDirective>(
@@ -3206,6 +3214,8 @@ private:
         const Fortran::parser::AccClauseList &clauseList =
             std::get<Fortran::parser::AccClauseList>(beginCombinedDir.t);
         loopCount = Fortran::lower::getLoopCountForCollapseAndTile(clauseList);
+        std::tie(collapseDepth, collapseForce) =
+            Fortran::lower::getCollapseSizeAndForce(clauseList);
       }
 
       if (curEval->lowerAsStructured()) {
@@ -3215,8 +3225,63 @@ private:
       }
     }
 
-    for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
-      genFIR(e);
+    const bool isStructured = curEval && curEval->lowerAsStructured();
+    if (isStructured && collapseForce && collapseDepth > 1) {
+      // force: collect prologue/epilogue for the first collapseDepth nested
+      // loops and sink them into the innermost loop body at that depth
+      llvm::SmallVector<Fortran::lower::pft::Evaluation *> prologue, epilogue;
+      Fortran::lower::pft::Evaluation *parent = &getEval();
+      Fortran::lower::pft::Evaluation *innermostLoopEval = nullptr;
+      for (uint64_t lvl = 0; lvl + 1 < collapseDepth; ++lvl) {
+        epilogue.clear();
+        auto &kids = parent->getNestedEvaluations();
+        // Collect all non-loop statements before the next inner loop as
+        // prologue, then mark remaining siblings as epilogue and descend into
+        // the inner loop.
+        Fortran::lower::pft::Evaluation *childLoop = nullptr;
+        for (auto it = kids.begin(); it != kids.end(); ++it) {
+          if (it->getIf<Fortran::parser::DoConstruct>()) {
+            childLoop = &*it;
+            for (auto it2 = std::next(it); it2 != kids.end(); ++it2)
+              epilogue.push_back(&*it2);
+            break;
+          }
+          prologue.push_back(&*it);
+        }
+        // Semantics guarantees collapseDepth does not exceed nest depth
+        // so childLoop must be found here.
+        assert(childLoop && "Expected inner DoConstruct for collapse");
+        parent = childLoop;
+        innermostLoopEval = childLoop;
+      }
+
+      // Track sunk evaluations (avoid double-lowering)
+      llvm::SmallPtrSet<const Fortran::lower::pft::Evaluation *, 16> sunk;
+      for (auto *e : prologue)
+        sunk.insert(e);
+      for (auto *e : epilogue)
+        sunk.insert(e);
+
+      auto sink =
+          [&](llvm::SmallVector<Fortran::lower::pft::Evaluation *> &lst) {
+            for (auto *e : lst)
+              genFIR(*e);
+          };
+
+      sink(prologue);
+
+      // Lower innermost loop body, skipping sunk
+      for (Fortran::lower::pft::Evaluation &e :
+           innermostLoopEval->getNestedEvaluations())
+        if (!sunk.contains(&e))
+          genFIR(e);
+
+      sink(epilogue);
+    } else {
+      // Normal lowering
+      for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
+        genFIR(e);
+    }
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
 
@@ -3288,7 +3353,7 @@ private:
                 &var.u)) {
           const Fortran::parser::Designator &designator = iDesignator->value();
           if (const auto *name =
-                  Fortran::semantics::getDesignatorNameIfDataRef(designator)) {
+                  Fortran::parser::GetDesignatorNameIfDataRef(designator)) {
             auto val = getSymbolAddress(*name->symbol);
             reduceOperands.push_back(val);
           }
@@ -3945,8 +4010,8 @@ private:
       // parameters and dynamic type. The selector cannot be a
       // POINTER/ALLOCATBLE as per F'2023 C1160.
       fir::ExtendedValue newExv;
-      llvm::SmallVector assumeSizeExtents{
-          builder->createMinusOneInteger(loc, builder->getIndexType())};
+      llvm::SmallVector<mlir::Value> assumeSizeExtents{
+          fir::AssumedSizeExtentOp::create(*builder, loc)};
       mlir::Value baseAddr =
           hlfir::genVariableRawAddress(loc, *builder, selector);
       const bool isVolatile = fir::isa_volatile_type(selector.getType());
@@ -4668,11 +4733,21 @@ private:
       return fir::factory::createUnallocatedBox(*builder, loc, lhsBoxType, {});
     hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.rhs, localSymbols, rhsContext);
+    auto rhsBoxType = rhs.getBoxType();
     // Create pointer descriptor value from the RHS.
     if (rhs.isMutableBox())
       rhs = hlfir::Entity{fir::LoadOp::create(*builder, loc, rhs)};
-    mlir::Value rhsBox = hlfir::genVariableBox(
-        loc, *builder, rhs, lhsBoxType.getBoxTypeWithNewShape(rhs.getRank()));
+
+    // Use LHS type if LHS is not polymorphic.
+    fir::BaseBoxType targetBoxType;
+    if (assign.lhs.GetType()->IsPolymorphic())
+      targetBoxType = rhsBoxType.getBoxTypeWithNewAttr(
+          fir::BaseBoxType::Attribute::Pointer);
+    else
+      targetBoxType = lhsBoxType.getBoxTypeWithNewShape(rhs.getRank());
+    mlir::Value rhsBox =
+        hlfir::genVariableBox(loc, *builder, rhs, targetBoxType);
+
     // Apply lower bounds or reshaping if any.
     if (const auto *lbExprs =
             std::get_if<Fortran::evaluate::Assignment::BoundsSpec>(&assign.u);
@@ -4923,11 +4998,8 @@ private:
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
-      if (Fortran::lower::isTransferWithConversion(rhs)) {
+      if (auto elementalOp = Fortran::lower::isTransferWithConversion(rhs)) {
         mlir::OpBuilder::InsertionGuard insertionGuard(builder);
-        auto elementalOp =
-            mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp());
-        assert(elementalOp && "expect elemental op");
         auto designateOp =
             *elementalOp.getBody()->getOps<hlfir::DesignateOp>().begin();
         builder.setInsertionPoint(elementalOp);
@@ -4992,8 +5064,7 @@ private:
           hlfir::Entity entity{baseValue};
           auto [temp, cleanup] =
               hlfir::createTempFromMold(loc, builder, entity);
-          auto needCleanup = fir::getIntIfConstant(cleanup);
-          if (needCleanup && *needCleanup) {
+          if (cleanup) {
             if (auto declareOp =
                     mlir::dyn_cast<hlfir::DeclareOp>(temp.getDefiningOp()))
               temps.push_back(declareOp.getMemref());
@@ -6016,7 +6087,7 @@ private:
         if (resTy != wrappedSymTy) {
           // check size of the pointed to type so we can't overflow by writing
           // double precision to a single precision allocation, etc
-          LLVM_ATTRIBUTE_UNUSED auto getBitWidth = [this](mlir::Type ty) {
+          [[maybe_unused]] auto getBitWidth = [this](mlir::Type ty) {
             // 15.6.2.6.3: differering result types should be integer, real,
             // complex or logical
             if (auto cmplx = mlir::dyn_cast_or_null<mlir::ComplexType>(ty))

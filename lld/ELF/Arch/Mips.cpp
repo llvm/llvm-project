@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -31,6 +32,9 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  void scanSection(InputSectionBase &) override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -568,6 +572,123 @@ static uint64_t fixupCrossModeJump(Ctx &ctx, uint8_t *loc, RelType type,
       << "unsupported jump/branch instruction between ISA modes referenced by "
       << type << " relocation";
   return val;
+}
+
+template <class RelTy>
+static RelType getMipsN32RelType(Ctx &ctx, RelTy *&rel, RelTy *end) {
+  uint32_t type = 0;
+  uint64_t offset = rel->r_offset;
+  int n = 0;
+  while (rel != end && rel->r_offset == offset)
+    type |= (rel++)->getType(ctx.arg.isMips64EL) << (8 * n++);
+  return type;
+}
+
+static RelType getMipsPairType(RelType type, bool isLocal) {
+  switch (type) {
+  case R_MIPS_HI16:
+    return R_MIPS_LO16;
+  case R_MIPS_GOT16:
+    // In case of global symbol, the R_MIPS_GOT16 relocation does not
+    // have a pair. Each global symbol has a unique entry in the GOT
+    // and a corresponding instruction with help of the R_MIPS_GOT16
+    // relocation loads an address of the symbol. In case of local
+    // symbol, the R_MIPS_GOT16 relocation creates a GOT entry to hold
+    // the high 16 bits of the symbol's value. A paired R_MIPS_LO16
+    // relocations handle low 16 bits of the address. That allows
+    // to allocate only one GOT entry for every 64 KiB of local data.
+    return isLocal ? R_MIPS_LO16 : R_MIPS_NONE;
+  case R_MICROMIPS_GOT16:
+    return isLocal ? R_MICROMIPS_LO16 : R_MIPS_NONE;
+  case R_MIPS_PCHI16:
+    return R_MIPS_PCLO16;
+  case R_MICROMIPS_HI16:
+    return R_MICROMIPS_LO16;
+  default:
+    return R_MIPS_NONE;
+  }
+}
+
+template <class ELFT>
+template <class RelTy>
+void MIPS<ELFT>::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+  RelType type;
+  for (auto it = rels.begin(); it != rels.end();) {
+    const RelTy &rel = *it;
+    uint64_t offset = rel.r_offset;
+    if constexpr (ELFT::Is64Bits) {
+      type = it->getType(ctx.arg.isMips64EL);
+      ++it;
+    } else {
+      if (ctx.arg.mipsN32Abi) {
+        type = getMipsN32RelType(ctx, it, rels.end());
+      } else {
+        type = it->getType(ctx.arg.isMips64EL);
+        ++it;
+      }
+    }
+
+    uint32_t symIdx = rel.getSymbol(ctx.arg.isMips64EL);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    RelExpr expr =
+        ctx.target->getRelExpr(type, sym, sec.content().data() + rel.r_offset);
+    if (expr == R_NONE)
+      continue;
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+
+    auto addend = rs.getAddend<ELFT>(rel, type);
+    if (expr == RE_MIPS_GOTREL && sym.isLocal()) {
+      addend += sec.getFile<ELFT>()->mipsGp0;
+    } else if (!RelTy::HasAddend) {
+      // MIPS has an odd notion of "paired" relocations to calculate addends.
+      // For example, if a relocation is of R_MIPS_HI16, there must be a
+      // R_MIPS_LO16 relocation after that, and an addend is calculated using
+      // the two relocations.
+      RelType pairTy = getMipsPairType(type, sym.isLocal());
+      if (pairTy != R_MIPS_NONE) {
+        const uint8_t *buf = sec.content().data();
+        // To make things worse, paired relocations might not be contiguous in
+        // the relocation table, so we need to do linear search. *sigh*
+        bool found = false;
+        for (auto *ri = &rel; ri != rels.end(); ++ri) {
+          if (ri->getType(ctx.arg.isMips64EL) == pairTy &&
+              ri->getSymbol(ctx.arg.isMips64EL) == symIdx) {
+            addend += ctx.target->getImplicitAddend(buf + ri->r_offset, pairTy);
+            found = true;
+            break;
+          }
+        }
+
+        if (!found)
+          Warn(ctx) << "can't find matching " << pairTy << " relocation for "
+                    << type;
+      }
+    }
+
+    if (expr == RE_MIPS_TLSLD) {
+      ctx.in.mipsGot->addTlsIndex(*sec.file);
+      sec.addReloc({expr, type, offset, addend, &sym});
+    } else if (expr == RE_MIPS_TLSGD) {
+      ctx.in.mipsGot->addDynTlsEntry(*sec.file, sym);
+      sec.addReloc({expr, type, offset, addend, &sym});
+    } else {
+      if (expr == R_TPREL && rs.checkTlsLe(offset, sym, type))
+        continue;
+      rs.process(expr, type, offset, sym, addend);
+    }
+  }
+}
+
+template <class ELFT> void MIPS<ELFT>::scanSection(InputSectionBase &sec) {
+  auto relocs = sec.template relsOrRelas<ELFT>();
+  if (relocs.areRelocsRel())
+    scanSectionImpl(sec, relocs.rels);
+  else
+    scanSectionImpl(sec, relocs.relas);
 }
 
 template <class ELFT>
