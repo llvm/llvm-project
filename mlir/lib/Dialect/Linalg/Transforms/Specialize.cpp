@@ -237,7 +237,7 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
-/// Utility to create a `genericOp` with a convolution op of type `ConvOpTy`
+/// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`
 /// with `dilations` and `strides`.
 template <typename ConvOpTy>
 static FailureOr<LinalgOp>
@@ -272,7 +272,7 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
   SmallVector<int64_t> dilations, strides;
   // -----------------------------
   // Depthwise Convolution ops.
-  //------------------------------
+  // -----------------------------
   if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
           genericOp, &dilations, &strides))
     return specializeToConvOp<linalg::DepthwiseConv1DNwcWcOp>(
@@ -287,7 +287,7 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
         rewriter, genericOp, dilations, strides);
   // -----------------------------
   // Pooling ops.
-  //------------------------------
+  // -----------------------------
   if (isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(genericOp, &dilations,
                                                        &strides))
     return specializeToConvOp<linalg::PoolingNhwcMaxOp>(rewriter, genericOp,
