@@ -15815,7 +15815,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
       const APSInt &A = LHS.getVectorElt(ElemNum).getInt();
       const APSInt &B = RHS.getVectorElt(ElemNum).getInt();
-      bool result = false;
+      bool Result = false;
 
       switch (Opcode.getExtValue() & 0x7) {
       case 0: // _MM_CMPINT_EQ
