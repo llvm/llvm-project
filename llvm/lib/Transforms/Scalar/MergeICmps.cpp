@@ -64,9 +64,9 @@
 
 using namespace llvm;
 
-namespace {
-
 #define DEBUG_TYPE "mergeicmps"
+
+namespace {
 
 // A BCE atom "Binary Compare Expression Atom" represents an integer load
 // that is a constant offset from a base value, e.g. `a` or `o.c` in the example
@@ -128,11 +128,12 @@ private:
   unsigned Order = 1;
   DenseMap<const Value*, int> BaseToIndex;
 };
+} // namespace
 
 // If this value is a load from a constant offset w.r.t. a base address, and
 // there are no other users of the load or address, returns the base address and
 // the offset.
-BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
+static BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
   auto *const LoadI = dyn_cast<LoadInst>(Val);
   if (!LoadI)
     return {};
@@ -175,6 +176,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
   return BCEAtom(GEP, LoadI, BaseId.getBaseId(Base), Offset);
 }
 
+namespace {
 // A comparison between two BCE atoms, e.g. `a == o.a` in the example at the
 // top.
 // Note: the terminology is misleading: the comparison is symmetric, so there
@@ -239,6 +241,7 @@ class BCECmpBlock {
 private:
   BCECmp Cmp;
 };
+} // namespace
 
 bool BCECmpBlock::canSinkBCECmpInst(const Instruction *Inst,
                                     AliasAnalysis &AA) const {
@@ -302,9 +305,9 @@ bool BCECmpBlock::doesOtherWork() const {
 
 // Visit the given comparison. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
-                                const ICmpInst::Predicate ExpectedPredicate,
-                                BaseIdentifier &BaseId) {
+static std::optional<BCECmp>
+visitICmp(const ICmpInst *const CmpI,
+          const ICmpInst::Predicate ExpectedPredicate, BaseIdentifier &BaseId) {
   // The comparison can only be used once:
   //  - For intermediate blocks, as a branch condition.
   //  - For the final block, as an incoming value for the Phi.
@@ -332,10 +335,9 @@ std::optional<BCECmp> visitICmp(const ICmpInst *const CmpI,
 
 // Visit the given comparison block. If this is a comparison between two valid
 // BCE atoms, returns the comparison.
-std::optional<BCECmpBlock> visitCmpBlock(Value *const Val,
-                                         BasicBlock *const Block,
-                                         const BasicBlock *const PhiBlock,
-                                         BaseIdentifier &BaseId) {
+static std::optional<BCECmpBlock>
+visitCmpBlock(Value *const Val, BasicBlock *const Block,
+              const BasicBlock *const PhiBlock, BaseIdentifier &BaseId) {
   if (Block->empty())
     return std::nullopt;
   auto *const BranchI = dyn_cast<BranchInst>(Block->getTerminator());
@@ -397,6 +399,7 @@ static inline void enqueueBlock(std::vector<BCECmpBlock> &Comparisons,
   Comparisons.push_back(std::move(Comparison));
 }
 
+namespace {
 // A chain of comparisons.
 class BCECmpChain {
 public:
@@ -420,6 +423,7 @@ private:
   // The original entry block (before sorting);
   BasicBlock *EntryBlock_;
 };
+} // namespace
 
 static bool areContiguous(const BCECmpBlock &First, const BCECmpBlock &Second) {
   return First.Lhs().BaseId == Second.Lhs().BaseId &&
@@ -742,9 +746,8 @@ bool BCECmpChain::simplify(const TargetLibraryInfo &TLI, AliasAnalysis &AA,
   return true;
 }
 
-std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
-                                           BasicBlock *const LastBlock,
-                                           int NumBlocks) {
+static std::vector<BasicBlock *>
+getOrderedBlocks(PHINode &Phi, BasicBlock *const LastBlock, int NumBlocks) {
   // Walk up from the last block to find other blocks.
   std::vector<BasicBlock *> Blocks(NumBlocks);
   assert(LastBlock && "invalid last block");
@@ -777,8 +780,8 @@ std::vector<BasicBlock *> getOrderedBlocks(PHINode &Phi,
   return Blocks;
 }
 
-bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI, AliasAnalysis &AA,
-                DomTreeUpdater &DTU) {
+static bool processPhi(PHINode &Phi, const TargetLibraryInfo &TLI,
+                       AliasAnalysis &AA, DomTreeUpdater &DTU) {
   LLVM_DEBUG(dbgs() << "processPhi()\n");
   if (Phi.getNumIncomingValues() <= 1) {
     LLVM_DEBUG(dbgs() << "skip: only one incoming value in phi\n");
@@ -874,6 +877,7 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
   return MadeChange;
 }
 
+namespace {
 class MergeICmpsLegacyPass : public FunctionPass {
 public:
   static char ID;
