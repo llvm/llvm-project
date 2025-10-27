@@ -16,7 +16,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 using namespace clang;
 
-ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
+ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
   // TODO(reflection) : support parsing for more reflect-expressions.
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -30,7 +30,8 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
       ConsumeToken();
       TPA.Commit();
       Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
-      return Actions.ActOnCXXReflectExpr(OpLoc, SourceLocation(), TUDecl);
+      return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, SourceLocation(),
+                                         TUDecl);
     }
     TPA.Revert();
   }
@@ -52,7 +53,7 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
     QualType Canon = QT.getCanonicalType();
     if (Canon->isBuiltinType()) {
       // Only supports builtin types for now
-      return Actions.ActOnCXXReflectExpr(OpLoc, TSI);
+      return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, TSI);
     }
   }
 

@@ -5158,6 +5158,16 @@ private:
 
   ///@}
 
+  //===--------------------------------------------------------------------===//
+  // Reflection parsing
+
+  /// ParseCXXReflectExpression - parses the operand of reflection operator
+  /// \param DoubleCaretLoc the location of the double caret operator
+  ///
+  /// \returns on success, a expression holdiing the constructed CXXReflectExpr;
+  ///          on failture, an ExprError
+  ExprResult ParseCXXReflectExpression(SourceLocation DoubleCaretLoc);
+
   //
   //
   // -------------------------------------------------------------------------
@@ -5169,8 +5179,6 @@ private:
   ///@{
 
   //===--------------------------------------------------------------------===//
-  // Parses the operand of reflection operator
-  ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
 
 private:
   bool MaybeParseHLSLAnnotations(Declarator &D,
@@ -7682,7 +7690,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 
