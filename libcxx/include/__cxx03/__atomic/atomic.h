@@ -34,9 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 struct atomic : public __atomic_base<_Tp> {
-  using __base          = __atomic_base<_Tp>;
-  using value_type      = _Tp;
-  using difference_type = value_type;
+  using __base = __atomic_base<_Tp>;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 
@@ -59,8 +57,8 @@ struct atomic : public __atomic_base<_Tp> {
 
 template <class _Tp>
 struct atomic<_Tp*> : public __atomic_base<_Tp*> {
-  using __base          = __atomic_base<_Tp*>;
-  using value_type      = _Tp*;
+  using __base = __atomic_base<_Tp*>;
+
   using difference_type = ptrdiff_t;
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;

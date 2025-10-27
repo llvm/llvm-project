@@ -271,7 +271,6 @@ define i1 @workgroup_nonzero() {
 ; DAGISEL-GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX8-NEXT:    s_or_b32 s4, s12, s13
 ; DAGISEL-GFX8-NEXT:    s_or_b32 s4, s4, s14
-; DAGISEL-GFX8-NEXT:    s_cmp_lg_u32 s4, 0
 ; DAGISEL-GFX8-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; DAGISEL-GFX8-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[4:5]
 ; DAGISEL-GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -281,7 +280,6 @@ define i1 @workgroup_nonzero() {
 ; DAGISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; DAGISEL-GFX942-NEXT:    s_or_b32 s0, s12, s13
 ; DAGISEL-GFX942-NEXT:    s_or_b32 s0, s0, s14
-; DAGISEL-GFX942-NEXT:    s_cmp_lg_u32 s0, 0
 ; DAGISEL-GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; DAGISEL-GFX942-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; DAGISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -299,8 +297,6 @@ define i1 @workgroup_nonzero() {
 ; DAGISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
 ; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
-; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
-; DAGISEL-GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; DAGISEL-GFX12-NEXT:    s_cselect_b32 s0, -1, 0
 ; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
@@ -311,7 +307,6 @@ define i1 @workgroup_nonzero() {
 ; GISEL-GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX8-NEXT:    s_or_b32 s4, s12, s13
 ; GISEL-GFX8-NEXT:    s_or_b32 s4, s4, s14
-; GISEL-GFX8-NEXT:    s_cmp_lg_u32 s4, 0
 ; GISEL-GFX8-NEXT:    s_cselect_b32 s4, 1, 0
 ; GISEL-GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GISEL-GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -321,7 +316,6 @@ define i1 @workgroup_nonzero() {
 ; GISEL-GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX942-NEXT:    s_or_b32 s0, s12, s13
 ; GISEL-GFX942-NEXT:    s_or_b32 s0, s0, s14
-; GISEL-GFX942-NEXT:    s_cmp_lg_u32 s0, 0
 ; GISEL-GFX942-NEXT:    s_cselect_b32 s0, 1, 0
 ; GISEL-GFX942-NEXT:    v_mov_b32_e32 v0, s0
 ; GISEL-GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -339,8 +333,6 @@ define i1 @workgroup_nonzero() {
 ; GISEL-GFX12-NEXT:    s_or_b32 s0, ttmp9, s0
 ; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; GISEL-GFX12-NEXT:    s_or_b32 s0, s0, s1
-; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
-; GISEL-GFX12-NEXT:    s_cmp_lg_u32 s0, 0
 ; GISEL-GFX12-NEXT:    s_cselect_b32 s0, 1, 0
 ; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
 ; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0

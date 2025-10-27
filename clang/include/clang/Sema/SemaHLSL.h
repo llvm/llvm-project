@@ -130,9 +130,6 @@ public:
   bool ActOnUninitializedVarDecl(VarDecl *D);
   void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
-  bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D);
-  void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
-                               const HLSLAnnotationAttr *AnnotationAttr);
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
   void DiagnoseAttrStageMismatch(
@@ -179,17 +176,17 @@ public:
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
-  T *createSemanticAttr(const ParsedAttr &AL,
+  T *createSemanticAttr(const AttributeCommonInfo &ACI, NamedDecl *TargetDecl,
                         std::optional<unsigned> Location) {
-    T *Attr = ::new (getASTContext()) T(getASTContext(), AL);
-    if (Attr->isSemanticIndexable())
-      Attr->setSemanticIndex(Location ? *Location : 0);
-    else if (Location.has_value()) {
+    T *Attr =
+        ::new (getASTContext()) T(getASTContext(), ACI, TargetDecl,
+                                  Location.value_or(0), Location.has_value());
+
+    if (!Attr->isSemanticIndexable() && Location.has_value()) {
       Diag(Attr->getLocation(), diag::err_hlsl_semantic_indexing_not_supported)
           << Attr->getAttrName()->getName();
       return nullptr;
     }
-
     return Attr;
   }
 
@@ -215,7 +212,6 @@ public:
   bool diagnosePositionType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
-  bool ContainsBitField(QualType BaseTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
@@ -248,10 +244,25 @@ private:
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
+  struct SemanticInfo {
+    HLSLSemanticAttr *Semantic;
+    std::optional<uint32_t> Index;
+  };
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                const RecordType *RT);
+
+  void checkSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
+                               const HLSLSemanticAttr *SemanticAttr);
+  HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
+                                   DeclaratorDecl *TargetDecl);
+  bool determineActiveSemanticOnScalar(FunctionDecl *FD, DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic);
+  bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
+                               SemanticInfo &ActiveSemantic);
+
   void processExplicitBindingsOnDecl(VarDecl *D);
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);

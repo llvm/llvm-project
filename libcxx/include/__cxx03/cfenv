@@ -54,9 +54,9 @@ int feupdateenv(const fenv_t* envp);
 
 #include <__cxx03/__config>
 
-#include <__cxx03/fenv.h>
+#include <fenv.h>
 
-#ifndef _LIBCPP___CXX03_FENV_H
+#ifndef _LIBCPP_FENV_H
 #   error <cfenv> tried including <fenv.h> but didn't find libc++'s <fenv.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
