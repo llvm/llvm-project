@@ -12,7 +12,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Sema/DeclSpec.h"
 
 using namespace clang::ast_matchers;
 
