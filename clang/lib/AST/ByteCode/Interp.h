@@ -2281,7 +2281,7 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
     }
   }
 
-  if (Invalid && S.getLangOpts().CPlusPlus)
+  if (Invalid && (S.getLangOpts().CPlusPlus || Ptr.inArray()))
     return std::nullopt;
 
   // Offset is valid - compute it on unsigned.
