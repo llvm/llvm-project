@@ -12,7 +12,7 @@ import fcntl
 
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
+from lldbsuite.test.decorators import *
 
 class TestDriverWithClosedSTDIO(TestBase):
     # If your test case doesn't stress debug info, then
