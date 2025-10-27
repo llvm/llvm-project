@@ -5182,28 +5182,21 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_64SVR4(
   return true;
 }
 
-static bool
-needStackSlotPassParameters_AIX(const PPCSubtarget &Subtarget,
-                                const SmallVectorImpl<ISD::OutputArg> &Outs) {
+static void calculeStackSlotSizeForParameter_AIX(const PPCSubtarget &Subtarget,
+                                                 MVT ArgVT,
+                                                 ISD::ArgFlagsTy ArgFlags,
+                                                 unsigned &StackSize,
+                                                 Align &MaxStackArgAlign) {
   const bool IsPPC64 = Subtarget.isPPC64();
   const Align PtrAlign = IsPPC64 ? Align(8) : Align(4);
-  const unsigned PhyGPRsNum = 8;
-  const unsigned PhyVRsNum = 12;
-  unsigned PhyGPRAllocated = 0;
-  unsigned PhyVRAllocated = 0;
+  unsigned Size = 0;
+  Align Alignment = PtrAlign;
 
-  for (unsigned i = 0; i != Outs.size(); ++i) {
-    MVT ArgVT = Outs[i].VT;
-    ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    if (ArgFlags.isByVal()) {
-      const unsigned ByValSize = ArgFlags.getByValSize();
-      const unsigned StackSize = alignTo(ByValSize, PtrAlign);
-      PhyGPRAllocated += StackSize / PtrAlign.value();
-      if (PhyGPRAllocated > PhyGPRsNum)
-        return true;
-      continue;
-    }
-
+  if (ArgFlags.isByVal()) {
+    Size = ArgFlags.getByValSize();
+    const Align ByValAlign(ArgFlags.getNonZeroByValAlign());
+    Alignment = ByValAlign > PtrAlign ? ByValAlign : PtrAlign;
+  } else {
     switch (ArgVT.SimpleTy) {
     default:
       report_fatal_error("Unhandled value type for argument.");
@@ -5213,17 +5206,13 @@ needStackSlotPassParameters_AIX(const PPCSubtarget &Subtarget,
       [[fallthrough]];
     case MVT::i1:
     case MVT::i32:
-      if (++PhyGPRAllocated > PhyGPRsNum)
-        return true;
+      Size = PtrAlign.value();
       break;
     case MVT::f32:
-    case MVT::f64: {
-      const unsigned StoreSize = ArgVT.getStoreSize();
-      PhyGPRAllocated += StoreSize / PtrAlign.value();
-      if (PhyGPRAllocated > PhyGPRsNum)
-        return true;
+    case MVT::f64:
+      Size = ArgVT.getStoreSize();
+      Alignment = Align(4);
       break;
-    }
     case MVT::v4f32:
     case MVT::v4i32:
     case MVT::v8i16:
@@ -5231,12 +5220,12 @@ needStackSlotPassParameters_AIX(const PPCSubtarget &Subtarget,
     case MVT::v2i64:
     case MVT::v2f64:
     case MVT::v1i128:
-      if (++PhyVRAllocated > PhyVRsNum)
-        return true;
+      Size = 16;
+      Alignment = Align(16);
     }
   }
-
-  return false;
+  StackSize = alignTo(StackSize, Alignment) + Size;
+  MaxStackArgAlign = std::max(Alignment, MaxStackArgAlign);
 }
 
 bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
@@ -5273,19 +5262,28 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
   if (DisableSCO)
     return false;
 
-  if (CallerCC != CalleeCC && needStackSlotPassParameters_AIX(Subtarget, Outs))
+  unsigned CalleeArgSize = 0;
+  Align MaxAligment = Align(1);
+  for (auto OutArg : Outs)
+    calculeStackSlotSizeForParameter_AIX(Subtarget, OutArg.VT, OutArg.Flags,
+                                         CalleeArgSize, MaxAligment);
+  CalleeArgSize = alignTo(CalleeArgSize, MaxAligment);
+
+  // TODO: In the future, calculate the actual caller argument size
+  // instead of using the minimum parameter save area.
+  unsigned MinPSA = 8 * (Subtarget.isPPC64() ? 8 : 4);
+
+  if (CallerCC != CalleeCC && CalleeArgSize > MinPSA)
     return false;
 
   // If callee use the same argument list that caller is using, then we can
-  // apply SCO on this case. If it is not, then we need to check if callee needs
-  // stack for passing arguments.
-  // PC Relative tail calls may not have a CallBase.
-  // If there is no CallBase we cannot verify if we have the same argument
-  // list so assume that we don't have the same argument list.
-  if (CB && !hasSameArgumentList(CallerFunc, *CB) &&
-      needStackSlotPassParameters_AIX(Subtarget, Outs))
+  // apply SCO on this case. If it is not, then we need to check if callee
+  // needs stack for passing arguments. PC Relative tail calls may not have
+  // a CallBase. If there is no CallBase we cannot verify if we have the
+  // same argument list so assume that we don't have the same argument list.
+  if (CB && !hasSameArgumentList(CallerFunc, *CB) && CalleeArgSize > MinPSA)
     return false;
-  else if (!CB && needStackSlotPassParameters_AIX(Subtarget, Outs))
+  else if (!CB && CalleeArgSize > MinPSA)
     return false;
 
   return true;
