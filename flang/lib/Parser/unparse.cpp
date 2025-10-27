@@ -1867,6 +1867,7 @@ public:
             [&](const CompilerDirective::NoUnrollAndJam &) {
               Word("!DIR$ NOUNROLL_AND_JAM");
             },
+            [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());

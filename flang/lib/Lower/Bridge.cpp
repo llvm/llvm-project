@@ -2431,22 +2431,33 @@ private:
         {}, {}, {}, {});
   }
 
+  // Enabling loop vectorization attribute.
+  mlir::LLVM::LoopVectorizeAttr
+  genLoopVectorizeAttr(mlir::BoolAttr disableAttr,
+                       mlir::BoolAttr ivdepEnableAttr) {
+    mlir::LLVM::LoopVectorizeAttr va;
+    if (disableAttr || ivdepEnableAttr)
+      va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
+                                              /*disable=*/disableAttr, {}, {},
+                                              /*ivdepEnable*/ ivdepEnableAttr,
+                                              {}, {}, {}, {});
+    return va;
+  }
+
   void addLoopAnnotationAttr(
       IncrementLoopInfo &info,
       llvm::SmallVectorImpl<const Fortran::parser::CompilerDirective *> &dirs) {
-    mlir::LLVM::LoopVectorizeAttr va;
+    mlir::BoolAttr disableVecAttr, ivdepEnableAttr;
     mlir::LLVM::LoopUnrollAttr ua;
     mlir::LLVM::LoopUnrollAndJamAttr uja;
+    llvm::SmallVector<mlir::LLVM::AccessGroupAttr> aga;
     bool has_attrs = false;
     for (const auto *dir : dirs) {
       Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::parser::CompilerDirective::VectorAlways &) {
-                mlir::BoolAttr falseAttr =
+                disableVecAttr =
                     mlir::BoolAttr::get(builder->getContext(), false);
-                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
-                                                        /*disable=*/falseAttr,
-                                                        {}, {}, {}, {}, {}, {});
                 has_attrs = true;
               },
               [&](const Fortran::parser::CompilerDirective::Unroll &u) {
@@ -2458,11 +2469,8 @@ private:
                 has_attrs = true;
               },
               [&](const Fortran::parser::CompilerDirective::NoVector &u) {
-                mlir::BoolAttr trueAttr =
+                disableVecAttr =
                     mlir::BoolAttr::get(builder->getContext(), true);
-                va = mlir::LLVM::LoopVectorizeAttr::get(builder->getContext(),
-                                                        /*disable=*/trueAttr,
-                                                        {}, {}, {}, {}, {}, {});
                 has_attrs = true;
               },
               [&](const Fortran::parser::CompilerDirective::NoUnroll &u) {
@@ -2473,10 +2481,16 @@ private:
                 uja = genLoopUnrollAndJamAttr(/*unrollingFactor=*/0);
                 has_attrs = true;
               },
-
+              [&](const Fortran::parser::CompilerDirective::IVDep &iv) {
+                ivdepEnableAttr =
+                    mlir::BoolAttr::get(builder->getContext(), true);
+                has_attrs = true;
+              },
               [&](const auto &) {}},
           dir->u);
     }
+    mlir::LLVM::LoopVectorizeAttr va =
+        genLoopVectorizeAttr(disableVecAttr, ivdepEnableAttr);
     mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
         builder->getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ ua,
         /*unroll_and_jam*/ uja, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
@@ -3175,6 +3189,9 @@ private:
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const Fortran::parser::CompilerDirective::NoUnrollAndJam &) {
+              attachDirectiveToLoop(dir, &eval);
+            },
+            [&](const Fortran::parser::CompilerDirective::IVDep &) {
               attachDirectiveToLoop(dir, &eval);
             },
             [&](const auto &) {}},
