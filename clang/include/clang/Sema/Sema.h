@@ -1136,7 +1136,7 @@ public:
   ///
   ///\param[in] E - A non-null external sema source.
   ///
-  void addExternalSource(ExternalSemaSource *E);
+  void addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E);
 
   /// Print out statistics about the semantic analysis.
   void PrintStats() const;

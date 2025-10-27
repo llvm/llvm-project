@@ -122,7 +122,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   ASSERT_TRUE(Invocation);
   CompilerInstance Instance(std::move(Invocation));
   Instance.setVirtualFileSystem(CIOpts.VFS);
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
@@ -147,7 +147,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
                              Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
   Instance2.setVirtualFileSystem(CIOpts.VFS);
-  Instance2.setDiagnostics(Diags.get());
+  Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());
@@ -174,7 +174,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   ASSERT_TRUE(Invocation);
   CompilerInstance Instance(std::move(Invocation));
   Instance.setVirtualFileSystem(CIOpts.VFS);
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
   SyntaxOnlyAction Action;
   ASSERT_TRUE(Instance.ExecuteAction(Action));
   ASSERT_FALSE(Diags->hasErrorOccurred());
@@ -193,7 +193,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
                              Instance.getPCHContainerOperations(),
                              &Instance.getModuleCache());
   Instance2.setVirtualFileSystem(CIOpts.VFS);
-  Instance2.setDiagnostics(Diags.get());
+  Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
   ASSERT_FALSE(Instance2.ExecuteAction(Action2));
   ASSERT_TRUE(Diags->hasErrorOccurred());

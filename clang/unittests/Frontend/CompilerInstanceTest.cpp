@@ -71,7 +71,7 @@ TEST(CompilerInstance, DefaultVFSOverlayFromInvocation) {
   // Create a minimal CompilerInstance which should use the VFS we specified
   // in the CompilerInvocation (as we don't explicitly set our own).
   CompilerInstance Instance(std::move(CInvok));
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
   Instance.createVirtualFileSystem();
   Instance.createFileManager();
 
@@ -137,7 +137,7 @@ TEST(CompilerInstance, MultipleInputsCleansFileIDs) {
 
   CompilerInstance Instance(std::move(CInvok));
   Instance.setVirtualFileSystem(VFS);
-  Instance.setDiagnostics(Diags.get());
+  Instance.setDiagnostics(Diags);
   Instance.createFileManager();
 
   // Run once for `a.cc` and then for `a.h`. This makes sure we get the same

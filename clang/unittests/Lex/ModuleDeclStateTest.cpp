@@ -54,8 +54,8 @@ public:
 class ModuleDeclStateTest : public ::testing::Test {
 protected:
   ModuleDeclStateTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-unknown-linux-gnu";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -94,7 +94,6 @@ protected:
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;

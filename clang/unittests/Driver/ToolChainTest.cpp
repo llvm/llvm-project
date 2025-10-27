@@ -40,7 +40,7 @@ namespace {
 TEST(ToolChainTest, VFSGCCInstallation) {
   DiagnosticOptions DiagOpts;
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
@@ -137,7 +137,7 @@ TEST(ToolChainTest, VFSGCCInstallation) {
 TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
   DiagnosticOptions DiagOpts;
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -176,7 +176,7 @@ TEST(ToolChainTest, VFSGCCInstallationRelativeDir) {
 TEST(ToolChainTest, VFSSolarisMultiGCCInstallation) {
   DiagnosticOptions DiagOpts;
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
@@ -340,7 +340,7 @@ MATCHER_P(jobHasArgs, Substr, "") {
 TEST(ToolChainTest, VFSGnuLibcxxPathNoSysroot) {
   DiagnosticOptions DiagOpts;
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
@@ -371,7 +371,7 @@ TEST(ToolChainTest, VFSGnuLibcxxPathNoSysroot) {
 TEST(ToolChainTest, DefaultDriverMode) {
   DiagnosticOptions DiagOpts;
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -402,7 +402,7 @@ TEST(ToolChainTest, DefaultDriverMode) {
   EXPECT_TRUE(CLDriver.IsCLMode());
 }
 TEST(ToolChainTest, InvalidArgument) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
@@ -517,7 +517,7 @@ TEST(ToolChainTest, GetTargetAndMode) {
 TEST(ToolChainTest, CommandOutput) {
   DiagnosticOptions DiagOpts;
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -545,7 +545,7 @@ TEST(ToolChainTest, CommandOutput) {
 
 TEST(ToolChainTest, PostCallback) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -599,7 +599,7 @@ TEST(ToolChainTest, UEFICallingConventionTest) {
 
 TEST(ToolChainTest, UEFIDefaultDebugFormatTest) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
@@ -641,7 +641,7 @@ struct SimpleDiagnosticConsumer : public DiagnosticConsumer {
 
 TEST(ToolChainTest, ConfigFileSearch) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
@@ -718,7 +718,7 @@ struct FileSystemWithError : public llvm::vfs::FileSystem {
 
 TEST(ToolChainTest, ConfigFileError) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   std::unique_ptr<SimpleDiagnosticConsumer> DiagConsumer(
       new SimpleDiagnosticConsumer());
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer.get(), false);
@@ -739,7 +739,7 @@ TEST(ToolChainTest, ConfigFileError) {
 
 TEST(ToolChainTest, BadConfigFile) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   std::unique_ptr<SimpleDiagnosticConsumer> DiagConsumer(
       new SimpleDiagnosticConsumer());
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer.get(), false);
@@ -813,7 +813,7 @@ TEST(ToolChainTest, BadConfigFile) {
 
 TEST(ToolChainTest, ConfigInexistentInclude) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   std::unique_ptr<SimpleDiagnosticConsumer> DiagConsumer(
       new SimpleDiagnosticConsumer());
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer.get(), false);
@@ -854,7 +854,7 @@ TEST(ToolChainTest, ConfigInexistentInclude) {
 
 TEST(ToolChainTest, ConfigRecursiveInclude) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   std::unique_ptr<SimpleDiagnosticConsumer> DiagConsumer(
       new SimpleDiagnosticConsumer());
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagConsumer.get(), false);
@@ -900,7 +900,7 @@ TEST(ToolChainTest, ConfigRecursiveInclude) {
 
 TEST(ToolChainTest, NestedConfigFile) {
   DiagnosticOptions DiagOpts;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
   struct TestDiagnosticConsumer : public DiagnosticConsumer {};
   DiagnosticsEngine Diags(DiagID, DiagOpts, new TestDiagnosticConsumer);
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(

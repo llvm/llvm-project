@@ -78,8 +78,8 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
       ArrayRef(Args).slice(1), MissingArgIndex, MissingArgCount);
   ParseDiagnosticArgs(DiagOpts, ParsedArgs);
 
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diag = new clang::DiagnosticsEngine(
-      new clang::DiagnosticIDs(), DiagOpts,
+  auto Diag = llvm::makeIntrusiveRefCnt<clang::DiagnosticsEngine>(
+      clang::DiagnosticIDs::create(), DiagOpts,
       new clang::TextDiagnosticPrinter(llvm::errs(), DiagOpts));
 
   // Create file manager for all file operations and holding in-memory generated
@@ -89,8 +89,9 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  IntrusiveRefCntPtr<clang::FileManager> FM(
-      new FileManager(clang::FileSystemOptions(), OverlayFileSystem));
+  IntrusiveRefCntPtr<clang::FileManager> FM =
+      llvm::makeIntrusiveRefCnt<FileManager>(clang::FileSystemOptions(),
+                                             OverlayFileSystem);
 
   // Capture all options and diagnose any errors.
   Options Opts(*Diag, FM.get(), Args, ProgName);
@@ -114,7 +115,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
   CI->setVirtualFileSystem(FM->getVirtualFileSystemPtr());
-  CI->setFileManager(FM.get());
+  CI->setFileManager(FM);
   CI->createDiagnostics();
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;

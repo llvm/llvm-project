@@ -40,7 +40,7 @@ namespace {
 class SearchPathTest : public ::testing::Test {
 protected:
   SearchPathTest()
-      : Diags(new DiagnosticIDs(), DiagOpts, new IgnoringDiagConsumer()),
+      : Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         VFS(new llvm::vfs::InMemoryFileSystem),
         FileMgr(FileSystemOptions(), VFS), SourceMgr(Diags, FileMgr),
         Invocation(std::make_unique<CompilerInvocation>()) {}

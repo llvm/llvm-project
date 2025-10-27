@@ -585,8 +585,7 @@ llvm::Expected<std::string> applyAllReplacements(StringRef Code,
       new llvm::vfs::InMemoryFileSystem);
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
   SourceManager SourceMgr(Diagnostics, Files);
   Rewriter Rewrite(SourceMgr, LangOptions());
   InMemoryFileSystem->addFile(

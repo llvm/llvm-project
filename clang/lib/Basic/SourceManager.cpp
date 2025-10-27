@@ -2381,8 +2381,8 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
   DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
-  Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
+  Diagnostics =
+      std::make_unique<DiagnosticsEngine>(DiagnosticIDs::create(), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =

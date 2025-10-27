@@ -241,8 +241,7 @@ static bool fillRanges(MemoryBuffer *Code,
       new llvm::vfs::InMemoryFileSystem);
   FileManager Files(FileSystemOptions(), InMemoryFileSystem);
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
   SourceManager Sources(Diagnostics, Files);
   const auto ID = createInMemoryFile("<irrelevant>", *Code, Sources, Files,
                                      InMemoryFileSystem.get());
@@ -517,9 +516,8 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
 
     DiagnosticOptions DiagOpts;
     ClangFormatDiagConsumer IgnoreDiagnostics;
-    DiagnosticsEngine Diagnostics(
-        IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), DiagOpts,
-        &IgnoreDiagnostics, false);
+    DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                  &IgnoreDiagnostics, false);
     SourceManager Sources(Diagnostics, Files);
     FileID ID = createInMemoryFile(AssumedFileName, *Code, Sources, Files,
                                    InMemoryFileSystem.get());

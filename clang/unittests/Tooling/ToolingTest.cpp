@@ -193,8 +193,8 @@ TEST(ToolInvocation, TestMapVirtualFile) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-Idef");
@@ -219,8 +219,8 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-Idef");
@@ -245,8 +245,8 @@ TEST(ToolInvocation, DiagnosticsEngineProperlyInitializedForCC1Construction) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
@@ -274,8 +274,8 @@ TEST(ToolInvocation, CustomDiagnosticOptionsOverwriteParsedOnes) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
 
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
@@ -320,8 +320,8 @@ TEST(ToolInvocation, DiagConsumerExpectingSourceManager) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   // Note: intentional error; user probably meant -ferror-limit=0.
@@ -346,8 +346,8 @@ TEST(ToolInvocation, CC1Args) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-cc1");
@@ -366,8 +366,8 @@ TEST(ToolInvocation, CC1ArgsInvalid) {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), OverlayFileSystem));
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
   std::vector<std::string> Args;
   Args.push_back("tool-executable");
   Args.push_back("-cc1");

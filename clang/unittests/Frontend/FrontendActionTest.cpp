@@ -248,7 +248,8 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   auto *TDC = new TypoDiagnosticConsumer;
   Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   Compiler.createDiagnostics(TDC, /*ShouldOwnClient=*/true);
-  Compiler.setExternalSemaSource(new TypoExternalSemaSource(Compiler));
+  Compiler.setExternalSemaSource(
+      llvm::makeIntrusiveRefCnt<TypoExternalSemaSource>(Compiler));
 
   SyntaxOnlyAction TestAction;
   ASSERT_TRUE(Compiler.ExecuteAction(TestAction));

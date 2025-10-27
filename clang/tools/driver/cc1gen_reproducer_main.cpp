@@ -121,8 +121,8 @@ generateReproducerForInvocationArguments(ArrayRef<const char *> Argv,
 
   DiagnosticOptions DiagOpts;
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  DiagnosticsEngine Diags(DiagID, DiagOpts, new IgnoringDiagConsumer());
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
+                          new IgnoringDiagConsumer());
   auto VFS = llvm::vfs::getRealFileSystem();
   ProcessWarningOptions(Diags, DiagOpts, *VFS, /*ReportDiags=*/false);
   Driver TheDriver(ToolContext.Path, llvm::sys::getDefaultTargetTriple(), Diags,
