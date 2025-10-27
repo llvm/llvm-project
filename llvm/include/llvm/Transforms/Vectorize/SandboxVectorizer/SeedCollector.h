@@ -260,11 +260,13 @@ public:
       ++(*this);
       return Copy;
     }
+#ifndef __swift__
     bool operator==(const iterator &Other) const {
       assert(Map == Other.Map && "Iterator of different objects!");
       return MapIt == Other.MapIt && VecIdx == Other.VecIdx;
     }
     bool operator!=(const iterator &Other) const { return !(*this == Other); }
+#endif
   };
   using const_iterator = BundleMapT::const_iterator;
   template <typename LoadOrStoreT> void insert(LoadOrStoreT *LSI);

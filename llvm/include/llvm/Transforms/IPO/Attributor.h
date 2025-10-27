@@ -5852,11 +5852,13 @@ struct AAPointerInfo : public AbstractAttribute {
     const_iterator begin() const { return Offsets.begin(); }
     const_iterator end() const { return Offsets.end(); }
 
+#ifndef __swift__
     bool operator==(const OffsetInfo &RHS) const {
       return Offsets == RHS.Offsets;
     }
 
     bool operator!=(const OffsetInfo &RHS) const { return !(*this == RHS); }
+#endif
 
     bool insert(int64_t Offset) { return Offsets.insert(Offset).second; }
     bool isUnassigned() const { return Offsets.size() == 0; }

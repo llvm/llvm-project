@@ -100,7 +100,9 @@ namespace llvm {
     public:
       explicit iterator(const node *N) : Cur(N) {}
 
+#ifndef __swift__
       bool operator==(const iterator &That) const { return Cur == That.Cur; }
+#endif
       iterator &operator++() { Cur = Cur->Next; return *this; }
       const entry &operator*() const { return Cur->Val; }
     };
