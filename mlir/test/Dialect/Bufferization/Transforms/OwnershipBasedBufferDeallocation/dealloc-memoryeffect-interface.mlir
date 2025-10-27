@@ -165,7 +165,7 @@ func.func @manual_deallocation(%c: i1, %f: f32, %idx: index) -> f32 {
 // CHECK:             %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1x63x378x16xui8>
 // CHECK:             bufferization.dealloc (%[[alloc]] : memref<1x63x378x16xui8>) if (%[[true]])
 
-func.func private @properly_creats_deallocations_in_execute_region(%arg1: memref<1x16x252x380xui8> ) -> (memref<1x250x378x16xui8> )  {
+func.func private @properly_creates_deallocations_in_execute_region(%arg1: memref<1x16x252x380xui8> ) -> (memref<1x250x378x16xui8> )  {
   %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x250x378x16xui8>
   scf.execute_region no_inline {
     %subview = memref.subview %arg1[0, 0, 0, 0] [1, 16, 65, 380] [1, 1, 1, 1] : memref<1x16x252x380xui8> to memref<1x16x65x380xui8, strided<[1532160, 95760, 380, 1]>>
