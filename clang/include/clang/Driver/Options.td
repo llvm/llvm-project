@@ -1955,7 +1955,7 @@ defm borland_extensions : BoolFOption<"borland-extensions",
           "Accept non-standard constructs supported by the Borland compiler">,
   NegFlag<SetFalse>>;
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption, FC1Option]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,
   Flags<[]>, HelpText<"Load the clang builtins module map file.">;
 defm caret_diagnostics : BoolFOption<"caret-diagnostics",
@@ -3563,7 +3563,7 @@ def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, 
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AssumeSaneOperatorNew">>;
 def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"Disable implicit builtin knowledge of functions">;
 def fno_builtin_ : Joined<["-"], "fno-builtin-">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
