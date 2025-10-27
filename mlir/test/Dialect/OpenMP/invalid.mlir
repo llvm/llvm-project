@@ -1490,8 +1490,8 @@ func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
 // -----
 
 func.func @test_teams_dyn_groupprivate_errors_1(%dyn_size: i32) {
-  // expected-error @below {{duplicate dyn_groupprivate modifier 'strict'}}
-  omp.teams dyn_groupprivate(strict, strict : %dyn_size : i32) {
+  // expected-error @below {{duplicate access group modifier}}
+  omp.teams dyn_groupprivate(cgroup, cgroup, %dyn_size : i32) {
     omp.terminator
   }
   return
@@ -1500,8 +1500,40 @@ func.func @test_teams_dyn_groupprivate_errors_1(%dyn_size: i32) {
 // -----
 
 func.func @test_teams_dyn_groupprivate_errors_2(%dyn_size: i32) {
-  // expected-error @below {{incompatible dyn_groupprivate modifiers: 'strict' and 'fallback' cannot be used together}}
-  omp.teams dyn_groupprivate(strict, fallback : %dyn_size : i32) {
+  // expected-error @below {{duplicate fallback modifier}}
+  omp.teams dyn_groupprivate(fallback(null), fallback(abort), %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_3(%dyn_size: i32) {
+  // expected-error @below {{invalid fallback modifier 'no'}}
+  omp.teams dyn_groupprivate(fallback(no), %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_4(%dyn_size: i32) {
+  // expected-error @below {{custom op 'omp.teams' expected dyn_groupprivate_size operand}}
+  // expected-error @below {{expected SSA operand}}
+  omp.teams dyn_groupprivate(fallback(null)) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_5() {
+  // expected-error @below {{expected dyn_groupprivate_size operand}}
+  // expected-error @below {{expected SSA operand}}
+  omp.teams dyn_groupprivate() {
     omp.terminator
   }
   return
@@ -2497,20 +2529,6 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
       "omp.terminator"() : () -> ()
     }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
-}
-
-// -----
-
-func.func @test_target_dyn_groupprivate_errors(%dyn_size: i32) {
-  // expected-error @below {{duplicate dyn_groupprivate modifier 'strict'}}
-  omp.target dyn_groupprivate(strict, strict : %dyn_size : i32) {
-    omp.terminator
-  }
-  // expected-error @below {{incompatible dyn_groupprivate modifiers: 'strict' and 'fallback' cannot be used together}}
-  omp.target dyn_groupprivate(strict, fallback : %dyn_size : i32) {
-    omp.terminator
-  }
-  return
 }
 
 // -----

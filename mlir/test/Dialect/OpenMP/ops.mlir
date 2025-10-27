@@ -1188,8 +1188,8 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
   }
   
   // Test dyn_groupprivate
-  // CHECK: omp.teams dyn_groupprivate(cgroup, strict : %{{.+}} : i32)
-  omp.teams dyn_groupprivate(cgroup, strict : %dyn_size : i32) {
+  // CHECK: omp.teams dyn_groupprivate(cgroup, fallback(null), %{{.+}} : i32)
+  omp.teams dyn_groupprivate(cgroup, fallback(null), %dyn_size : i32) {
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -2256,17 +2256,21 @@ func.func @omp_target_depend(%arg0: memref<i32>, %arg1: memref<i32>) {
 
 // CHECK-LABEL: @omp_target_dyn_groupprivate
 func.func @omp_target_dyn_groupprivate(%dyn_size: i32, %large_size: i64) {
-  // CHECK: omp.target dyn_groupprivate(strict, cgroup : %{{.*}} : i32)
-  omp.target dyn_groupprivate(strict, cgroup : %dyn_size : i32) {
+  // CHECK: omp.target dyn_groupprivate(%{{.*}} : i32)
+  omp.target dyn_groupprivate(%dyn_size : i32) {
+    omp.terminator
+  }
+  // CHECK: omp.target dyn_groupprivate(cgroup, %{{.*}} : i64)
+  omp.target dyn_groupprivate(cgroup, %large_size : i64) {
+    omp.terminator
+  }
+  // CHECK: omp.target dyn_groupprivate(cgroup, fallback(abort), %{{.*}} : i32)
+  omp.target dyn_groupprivate(cgroup, fallback(abort), %dyn_size : i32) {
     // CHECK: omp.terminator
     omp.terminator
   }
-  // CHECK: omp.target dyn_groupprivate(cgroup : %{{.*}} : i64)
-  omp.target dyn_groupprivate(cgroup : %large_size : i64) {
-    omp.terminator
-  }
-  // CHECK: omp.target dyn_groupprivate(fallback, cgroup : %{{.*}} : i32)
-  omp.target dyn_groupprivate(fallback, cgroup : %dyn_size : i32) {
+  // CHECK: omp.target dyn_groupprivate(cgroup, fallback(null), %{{.*}} : i32)
+  omp.target dyn_groupprivate(fallback(null), cgroup, %dyn_size : i32) {
     omp.terminator
   }
   // CHECK: omp.target dyn_groupprivate(%{{.*}} : i64)

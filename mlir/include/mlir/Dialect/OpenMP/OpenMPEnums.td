@@ -332,23 +332,36 @@ def VariableCaptureKindAttr : OpenMP_EnumAttr<VariableCaptureKind,
 }
 
 //===----------------------------------------------------------------------===//
-// dyn_groupprivate enum.
+// dyn_groupprivate enums.
 //===----------------------------------------------------------------------===//
 
-def DynGroupprivateCGroup : I32EnumAttrCase<"cgroup", 0>;
-def DynGroupprivateStrict : I32EnumAttrCase<"strict", 1>;
-def DynGroupprivateFallback : I32EnumAttrCase<"fallback", 2>;
+def AccessGroupCGroup : I32EnumAttrCase<"cgroup", 0>;
 
-def DynGroupprivateModifier : OpenMP_I32EnumAttr<
-    "DynGroupprivateModifier",
-    "dyn_groupprivate modifier", [
-      DynGroupprivateCGroup,
-      DynGroupprivateStrict,
-      DynGroupprivateFallback
+def AccessGroupModifier : OpenMP_I32EnumAttr<
+    "AccessGroupModifier",
+    "access group modifier", [
+      AccessGroupCGroup
     ]>;
 
-def DynGroupprivateModifierAttr : OpenMP_EnumAttr<DynGroupprivateModifier,
-                                            "dyn_groupprivate_modifier"> {
+def AccessGroupModifierAttr : OpenMP_EnumAttr<AccessGroupModifier,
+                                            "access_group_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+def FallbackAbort : I32EnumAttrCase<"abort", 0>;
+def FallbackNull : I32EnumAttrCase<"null", 1>;
+def FallbackDefaultMem : I32EnumAttrCase<"default_mem", 2>;
+
+def FallbackModifier : OpenMP_I32EnumAttr<
+    "FallbackModifier",
+    "fallback modifier", [
+      FallbackAbort,
+      FallbackNull,
+      FallbackDefaultMem
+    ]>;
+
+def FallbackModifierAttr : OpenMP_EnumAttr<FallbackModifier,
+                                            "fallback_modifier"> {
   let assemblyFormat = "`(` $value `)`";
 }
 

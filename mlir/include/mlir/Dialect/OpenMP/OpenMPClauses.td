@@ -1703,8 +1703,8 @@ class OpenMP_DynGroupprivateClauseSkip<
                     extraClassDeclaration> {
 
   let arguments = (ins
-    OptionalAttr<DynGroupprivateModifierAttr>:$modifier_first,
-    OptionalAttr<DynGroupprivateModifierAttr>:$modifier_second,
+    OptionalAttr<AccessGroupModifierAttr>:$accessGroup,
+    OptionalAttr<FallbackModifierAttr>:$fallback,
     Optional<AnyInteger>:$dyn_groupprivate_size
   );
 
@@ -1716,18 +1716,18 @@ class OpenMP_DynGroupprivateClauseSkip<
 
     Syntax:
     ```
-    dyn_groupprivate(modifier_first ,modifier_second : dyn_groupprivate_size)
+    dyn_groupprivate(cgroup, fallback(abort), %size)
     ```
 
     Example:
     ```
-    omp.target dyn_groupprivate(strict, cgroup : %dyn_groupprivate_size : i32)
+    omp.target dyn_groupprivate(cgroup, fallback(default_mem), %size : i32)
     ```
   }];
 
   let optAssemblyFormat = [{
     `dyn_groupprivate` `(`
-      custom<DynGroupprivateClause>($modifier_first, $modifier_second, 
+      custom<DynGroupprivateClause>($accessGroup, $fallback, 
       $dyn_groupprivate_size, type($dyn_groupprivate_size))
     `)`
   }];
