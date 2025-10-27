@@ -8776,6 +8776,11 @@ private:
           UseDeviceDataCombinedInfo.DevicePtrDecls.emplace_back(VD);
           UseDeviceDataCombinedInfo.DevicePointers.emplace_back(
               IsDevAddr ? DeviceInfoTy::Address : DeviceInfoTy::Pointer);
+          // FIXME: For use_device_addr on array-sections, this should
+          // be the starting address of the section.
+          // e.g. int *p;
+          //   ... use_device_addr(p[3])
+          //   &p[0], &p[3], /*size=*/0, RETURN_PARAM
           UseDeviceDataCombinedInfo.Pointers.push_back(Ptr);
           UseDeviceDataCombinedInfo.Sizes.push_back(
               llvm::Constant::getNullValue(CGF.Int64Ty));
@@ -8791,8 +8796,7 @@ private:
                 Components,
             bool IsDevAddr, bool IEIsAttachPtrForDevAddr = false) {
           // We didn't find any match in our map information - generate a zero
-          // size array section - if the pointer is a struct member we defer
-          // this action until the whole struct has been processed.
+          // size array section.
           llvm::Value *Ptr;
           if (IsDevAddr && !IEIsAttachPtrForDevAddr) {
             if (IE->isGLValue())
