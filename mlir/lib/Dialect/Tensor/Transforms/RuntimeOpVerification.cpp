@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
 
@@ -184,37 +185,11 @@ struct ExtractSliceOpInterface
       Value sizeIsNonZero = arith::CmpIOp::create(
           builder, loc, arith::CmpIPredicate::sgt, size, zero);
 
-      /*
-       * Split the current block to create the below control flow structure:
-       *
-       * ^preCondBlock:
-       *   ... // offset check already done above
-       *   %size_nonzero = arith.cmpi sgt, %size, %zero
-       *   cf.cond_br %size_nonzero, ^sizeBoundsCheckBlock, ^afterCheckBlock
-       *
-       * ^sizeBoundsCheckBlock:
-       *   %last_pos = ... // compute offset + (size-1) * stride
-       *   %last_pos_ok = ... // last position bounds check
-       *   cf.assert %last_pos_ok, "extract_slice runs out-of-bounds"
-       *   cf.br ^afterCheckBlock
-       *
-       * ^afterCheckBlock:
-       *   tensor.extract_slice ... // the original operation
-       */
-      Block *preCondBlock = builder.getBlock();
-      Block *afterCheckBlock = preCondBlock->splitBlock(extractSliceOp);
+      auto ifOp = scf::IfOp::create(builder, loc, builder.getI1Type(),
+                                    sizeIsNonZero, /*withElseRegion=*/true);
 
-      // Create the block for conditional size bounds verification.
-      Block *sizeBoundsCheckBlock = builder.createBlock(
-          preCondBlock->getParent(), Region::iterator(afterCheckBlock));
-
-      // Terminate the pre-condition block with the conditional branch.
-      builder.setInsertionPointToEnd(preCondBlock);
-      cf::CondBranchOp::create(builder, loc, sizeIsNonZero,
-                               sizeBoundsCheckBlock, afterCheckBlock);
-
-      // Populate the size bounds check block with lastPos verification.
-      builder.setInsertionPointToStart(sizeBoundsCheckBlock);
+      // Populate the "then" region (for size > 0).
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
       // Verify that slice does not run out-of-bounds.
       Value sizeMinusOne = arith::SubIOp::create(builder, loc, size, one);
@@ -224,12 +199,22 @@ struct ExtractSliceOpInterface
           arith::AddIOp::create(builder, loc, offset, sizeMinusOneTimesStride);
       Value lastPosInBounds =
           generateInBoundsCheck(builder, loc, lastPos, zero, dimSize);
+      scf::YieldOp::create(builder, loc, lastPosInBounds);
+
+      // Populate the "else" region (for size == 0).
+      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+      Value trueVal =
+          arith::ConstantOp::create(builder, loc, builder.getBoolAttr(true));
+      scf::YieldOp::create(builder, loc, trueVal);
+
+      builder.setInsertionPointAfter(ifOp);
+      Value finalCondition = ifOp.getResult(0);
+
       cf::AssertOp::create(
-          builder, loc, lastPosInBounds,
+          builder, loc, finalCondition,
           generateErrorMessage(
               op, "extract_slice runs out-of-bounds along dimension " +
                       std::to_string(i)));
-      cf::BranchOp::create(builder, loc, afterCheckBlock);
     }
   }
 };
