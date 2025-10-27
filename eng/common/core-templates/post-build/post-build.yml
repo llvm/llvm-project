@@ -1,106 +1,106 @@
 parameters:
-  # Which publishing infra should be used. THIS SHOULD MATCH THE VERSION ON THE BUILD MANIFEST.
-  # Publishing V1 is no longer supported
-  # Publishing V2 is no longer supported
-  # Publishing V3 is the default
-  - name: publishingInfraVersion
-    displayName: Which version of publishing should be used to promote the build definition?
-    type: number
-    default: 3
-    values:
-    - 3
+# Which publishing infra should be used. THIS SHOULD MATCH THE VERSION ON THE BUILD MANIFEST.
+# Publishing V1 is no longer supported
+# Publishing V2 is no longer supported
+# Publishing V3 is the default
+- name: publishingInfraVersion
+  displayName: Which version of publishing should be used to promote the build definition?
+  type: number
+  default: 3
+  values:
+  - 3
 
-  - name: BARBuildId
-    displayName: BAR Build Id
-    type: number
-    default: 0
+- name: BARBuildId
+  displayName: BAR Build Id
+  type: number
+  default: 0
 
-  - name: PromoteToChannelIds
-    displayName: Channel to promote BARBuildId to
-    type: string
-    default: ''
+- name: PromoteToChannelIds
+  displayName: Channel to promote BARBuildId to
+  type: string
+  default: ''
 
-  - name: enableSourceLinkValidation
-    displayName: Enable SourceLink validation
-    type: boolean
-    default: false
+- name: enableSourceLinkValidation
+  displayName: Enable SourceLink validation
+  type: boolean
+  default: false
 
-  - name: enableSigningValidation
-    displayName: Enable signing validation
-    type: boolean
-    default: true
+- name: enableSigningValidation
+  displayName: Enable signing validation
+  type: boolean
+  default: true
 
-  - name: enableSymbolValidation
-    displayName: Enable symbol validation
-    type: boolean
-    default: false
+- name: enableSymbolValidation
+  displayName: Enable symbol validation
+  type: boolean
+  default: false
 
-  - name: enableNugetValidation
-    displayName: Enable NuGet validation
-    type: boolean
-    default: true
-    
-  - name: publishInstallersAndChecksums
-    displayName: Publish installers and checksums
-    type: boolean
-    default: true
-    
-  - name: requireDefaultChannels
-    displayName: Fail the build if there are no default channel(s) registrations for the current build
-    type: boolean
-    default: false
+- name: enableNugetValidation
+  displayName: Enable NuGet validation
+  type: boolean
+  default: true
 
-  - name: SDLValidationParameters
-    type: object
-    default:
-      enable: false
-      publishGdn: false
-      continueOnError: false
-      params: ''
-      artifactNames: ''
-      downloadArtifacts: true
+- name: publishInstallersAndChecksums
+  displayName: Publish installers and checksums
+  type: boolean
+  default: true
 
-  - name: isAssetlessBuild
-    type: boolean
-    displayName: Is Assetless Build
-    default: false
+- name: requireDefaultChannels
+  displayName: Fail the build if there are no default channel(s) registrations for the current build
+  type: boolean
+  default: false
 
-  # These parameters let the user customize the call to sdk-task.ps1 for publishing
-  # symbols & general artifacts as well as for signing validation
-  - name: symbolPublishingAdditionalParameters
-    displayName: Symbol publishing additional parameters
-    type: string
-    default: ''
+- name: SDLValidationParameters
+  type: object
+  default:
+    enable: false
+    publishGdn: false
+    continueOnError: false
+    params: ''
+    artifactNames: ''
+    downloadArtifacts: true
 
-  - name: artifactsPublishingAdditionalParameters
-    displayName: Artifact publishing additional parameters
-    type: string
-    default: ''
+- name: isAssetlessBuild
+  type: boolean
+  displayName: Is Assetless Build
+  default: false
 
-  - name: signingValidationAdditionalParameters
-    displayName: Signing validation additional parameters
-    type: string
-    default: ''
+# These parameters let the user customize the call to sdk-task.ps1 for publishing
+# symbols & general artifacts as well as for signing validation
+- name: symbolPublishingAdditionalParameters
+  displayName: Symbol publishing additional parameters
+  type: string
+  default: ''
 
-  # Which stages should finish execution before post-build stages start
-  - name: validateDependsOn
-    type: object
-    default:
-    - build
+- name: artifactsPublishingAdditionalParameters
+  displayName: Artifact publishing additional parameters
+  type: string
+  default: ''
 
-  - name: publishDependsOn
-    type: object
-    default:
-    - Validate
+- name: signingValidationAdditionalParameters
+  displayName: Signing validation additional parameters
+  type: string
+  default: ''
 
-  # Optional: Call asset publishing rather than running in a separate stage
-  - name: publishAssetsImmediately
-    type: boolean
-    default: false
+# Which stages should finish execution before post-build stages start
+- name: validateDependsOn
+  type: object
+  default:
+  - build
 
-  - name: is1ESPipeline
-    type: boolean
-    default: false
+- name: publishDependsOn
+  type: object
+  default:
+  - Validate
+
+# Optional: Call asset publishing rather than running in a separate stage
+- name: publishAssetsImmediately
+  type: boolean
+  default: false
+
+- name: is1ESPipeline
+  type: boolean
+  default: false
 
 stages:
 - ${{ if or(eq( parameters.enableNugetValidation, 'true'), eq(parameters.enableSigningValidation, 'true'), eq(parameters.enableSourceLinkValidation, 'true'), eq(parameters.SDLValidationParameters.enable, 'true')) }}:
@@ -108,10 +108,10 @@ stages:
     dependsOn: ${{ parameters.validateDependsOn }}
     displayName: Validate Build Assets
     variables:
-      - template: /eng/common/core-templates/post-build/common-variables.yml
-      - template: /eng/common/core-templates/variables/pool-providers.yml
-        parameters:
-          is1ESPipeline: ${{ parameters.is1ESPipeline }}
+    - template: /eng/common/core-templates/post-build/common-variables.yml
+    - template: /eng/common/core-templates/variables/pool-providers.yml
+      parameters:
+        is1ESPipeline: ${{ parameters.is1ESPipeline }}
     jobs:
     - job:
       displayName: NuGet Validation
@@ -134,28 +134,28 @@ stages:
             demands: ImageOverride -equals windows.vs2022.amd64
 
       steps:
-        - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
-          parameters:
-            BARBuildId: ${{ parameters.BARBuildId }}
-            PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
-            is1ESPipeline: ${{ parameters.is1ESPipeline }}
+      - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
+        parameters:
+          BARBuildId: ${{ parameters.BARBuildId }}
+          PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
+          is1ESPipeline: ${{ parameters.is1ESPipeline }}
 
-        - task: DownloadBuildArtifacts@0
-          displayName: Download Package Artifacts
-          inputs:
-            buildType: specific
-            buildVersionToDownload: specific
-            project: $(AzDOProjectName)
-            pipeline: $(AzDOPipelineId)
-            buildId: $(AzDOBuildId)
-            artifactName: PackageArtifacts
-            checkDownloadedFiles: true
+      - task: DownloadBuildArtifacts@0
+        displayName: Download Package Artifacts
+        inputs:
+          buildType: specific
+          buildVersionToDownload: specific
+          project: $(AzDOProjectName)
+          pipeline: $(AzDOPipelineId)
+          buildId: $(AzDOBuildId)
+          artifactName: PackageArtifacts
+          checkDownloadedFiles: true
 
-        - task: PowerShell@2
-          displayName: Validate
-          inputs:
-            filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/nuget-validation.ps1
-            arguments: -PackagesPath $(Build.ArtifactStagingDirectory)/PackageArtifacts/
+      - task: PowerShell@2
+        displayName: Validate
+        inputs:
+          filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/nuget-validation.ps1
+          arguments: -PackagesPath $(Build.ArtifactStagingDirectory)/PackageArtifacts/
 
     - job:
       displayName: Signing Validation
@@ -169,54 +169,54 @@ stages:
           os: windows
         # If it's not devdiv, it's dnceng
         ${{ else }}:
-          ${{ if eq(parameters.is1ESPipeline, true) }}:        
+          ${{ if eq(parameters.is1ESPipeline, true) }}:
             name: $(DncEngInternalBuildPool)
             image: 1es-windows-2022
             os: windows
           ${{ else }}:
             name: $(DncEngInternalBuildPool)
-            demands: ImageOverride -equals windows.vs2022.amd64          
+            demands: ImageOverride -equals windows.vs2022.amd64
       steps:
-        - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
-          parameters:
-            BARBuildId: ${{ parameters.BARBuildId }}
-            PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
-            is1ESPipeline: ${{ parameters.is1ESPipeline }}
+      - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
+        parameters:
+          BARBuildId: ${{ parameters.BARBuildId }}
+          PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
+          is1ESPipeline: ${{ parameters.is1ESPipeline }}
 
-        - task: DownloadBuildArtifacts@0
-          displayName: Download Package Artifacts
-          inputs:
-            buildType: specific
-            buildVersionToDownload: specific
-            project: $(AzDOProjectName)
-            pipeline: $(AzDOPipelineId)
-            buildId: $(AzDOBuildId)
-            artifactName: PackageArtifacts
-            checkDownloadedFiles: true
+      - task: DownloadBuildArtifacts@0
+        displayName: Download Package Artifacts
+        inputs:
+          buildType: specific
+          buildVersionToDownload: specific
+          project: $(AzDOProjectName)
+          pipeline: $(AzDOPipelineId)
+          buildId: $(AzDOBuildId)
+          artifactName: PackageArtifacts
+          checkDownloadedFiles: true
 
-        # This is necessary whenever we want to publish/restore to an AzDO private feed
-        # Since sdk-task.ps1 tries to restore packages we need to do this authentication here
-        # otherwise it'll complain about accessing a private feed.
-        - task: NuGetAuthenticate@1
-          displayName: 'Authenticate to AzDO Feeds'
+      # This is necessary whenever we want to publish/restore to an AzDO private feed
+      # Since sdk-task.ps1 tries to restore packages we need to do this authentication here
+      # otherwise it'll complain about accessing a private feed.
+      - task: NuGetAuthenticate@1
+        displayName: 'Authenticate to AzDO Feeds'
 
-        # Signing validation will optionally work with the buildmanifest file which is downloaded from
-        # Azure DevOps above.
-        - task: PowerShell@2
-          displayName: Validate
-          inputs:
-            filePath: eng\common\sdk-task.ps1
-            arguments: -task SigningValidation -restore -msbuildEngine vs
-              /p:PackageBasePath='$(Build.ArtifactStagingDirectory)/PackageArtifacts'
-              /p:SignCheckExclusionsFile='$(System.DefaultWorkingDirectory)/eng/SignCheckExclusionsFile.txt'
-              ${{ parameters.signingValidationAdditionalParameters }}
+      # Signing validation will optionally work with the buildmanifest file which is downloaded from
+      # Azure DevOps above.
+      - task: PowerShell@2
+        displayName: Validate
+        inputs:
+          filePath: eng\common\sdk-task.ps1
+          arguments: -task SigningValidation -restore -msbuildEngine vs
+            /p:PackageBasePath='$(Build.ArtifactStagingDirectory)/PackageArtifacts'
+            /p:SignCheckExclusionsFile='$(System.DefaultWorkingDirectory)/eng/SignCheckExclusionsFile.txt'
+            ${{ parameters.signingValidationAdditionalParameters }}
 
-        - template: /eng/common/core-templates/steps/publish-logs.yml
-          parameters:
-            is1ESPipeline: ${{ parameters.is1ESPipeline }}
-            StageLabel: 'Validation'
-            JobLabel: 'Signing'
-            BinlogToolVersion: $(BinlogToolVersion)
+      - template: /eng/common/core-templates/steps/publish-logs.yml
+        parameters:
+          is1ESPipeline: ${{ parameters.is1ESPipeline }}
+          StageLabel: 'Validation'
+          JobLabel: 'Signing'
+          BinlogToolVersion: $(BinlogToolVersion)
 
     - job:
       displayName: SourceLink Validation
@@ -230,41 +230,41 @@ stages:
           os: windows
         # If it's not devdiv, it's dnceng
         ${{ else }}:
-          ${{ if eq(parameters.is1ESPipeline, true) }}:          
+          ${{ if eq(parameters.is1ESPipeline, true) }}:
             name: $(DncEngInternalBuildPool)
             image: 1es-windows-2022
             os: windows
           ${{ else }}:
             name: $(DncEngInternalBuildPool)
-            demands: ImageOverride -equals windows.vs2022.amd64          
+            demands: ImageOverride -equals windows.vs2022.amd64
       steps:
-        - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
-          parameters:
-            BARBuildId: ${{ parameters.BARBuildId }}
-            PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
-            is1ESPipeline: ${{ parameters.is1ESPipeline }}
+      - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
+        parameters:
+          BARBuildId: ${{ parameters.BARBuildId }}
+          PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
+          is1ESPipeline: ${{ parameters.is1ESPipeline }}
 
-        - task: DownloadBuildArtifacts@0
-          displayName: Download Blob Artifacts
-          inputs:
-            buildType: specific
-            buildVersionToDownload: specific
-            project: $(AzDOProjectName)
-            pipeline: $(AzDOPipelineId)
-            buildId: $(AzDOBuildId)
-            artifactName: BlobArtifacts
-            checkDownloadedFiles: true
+      - task: DownloadBuildArtifacts@0
+        displayName: Download Blob Artifacts
+        inputs:
+          buildType: specific
+          buildVersionToDownload: specific
+          project: $(AzDOProjectName)
+          pipeline: $(AzDOPipelineId)
+          buildId: $(AzDOBuildId)
+          artifactName: BlobArtifacts
+          checkDownloadedFiles: true
 
-        - task: PowerShell@2
-          displayName: Validate
-          inputs:
-            filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/sourcelink-validation.ps1
-            arguments: -InputPath $(Build.ArtifactStagingDirectory)/BlobArtifacts/ 
-              -ExtractPath $(Agent.BuildDirectory)/Extract/ 
-              -GHRepoName $(Build.Repository.Name) 
-              -GHCommit $(Build.SourceVersion)
-              -SourcelinkCliVersion $(SourceLinkCLIVersion)
-          continueOnError: true
+      - task: PowerShell@2
+        displayName: Validate
+        inputs:
+          filePath: $(System.DefaultWorkingDirectory)/eng/common/post-build/sourcelink-validation.ps1
+          arguments: -InputPath $(Build.ArtifactStagingDirectory)/BlobArtifacts/ 
+            -ExtractPath $(Agent.BuildDirectory)/Extract/ 
+            -GHRepoName $(Build.Repository.Name) 
+            -GHCommit $(Build.SourceVersion)
+            -SourcelinkCliVersion $(SourceLinkCLIVersion)
+        continueOnError: true
 
 - ${{ if ne(parameters.publishAssetsImmediately, 'true') }}:
   - stage: publish_using_darc
@@ -274,10 +274,10 @@ stages:
       dependsOn: ${{ parameters.validateDependsOn }}
     displayName: Publish using Darc
     variables:
-      - template: /eng/common/core-templates/post-build/common-variables.yml
-      - template: /eng/common/core-templates/variables/pool-providers.yml
-        parameters:
-          is1ESPipeline: ${{ parameters.is1ESPipeline }}
+    - template: /eng/common/core-templates/post-build/common-variables.yml
+    - template: /eng/common/core-templates/variables/pool-providers.yml
+      parameters:
+        is1ESPipeline: ${{ parameters.is1ESPipeline }}
     jobs:
     - job:
       displayName: Publish Using Darc
@@ -291,30 +291,36 @@ stages:
           os: windows
         # If it's not devdiv, it's dnceng
         ${{ else }}:
-          ${{ if eq(parameters.is1ESPipeline, true) }}:          
+          ${{ if eq(parameters.is1ESPipeline, true) }}:
             name: NetCore1ESPool-Publishing-Internal
             image: windows.vs2019.amd64
             os: windows
           ${{ else }}:
             name: NetCore1ESPool-Publishing-Internal
-            demands: ImageOverride -equals windows.vs2019.amd64          
+            demands: ImageOverride -equals windows.vs2019.amd64
       steps:
-        - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
-          parameters:
-            BARBuildId: ${{ parameters.BARBuildId }}
-            PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
-            is1ESPipeline: ${{ parameters.is1ESPipeline }}
+      - template: /eng/common/core-templates/post-build/setup-maestro-vars.yml
+        parameters:
+          BARBuildId: ${{ parameters.BARBuildId }}
+          PromoteToChannelIds: ${{ parameters.PromoteToChannelIds }}
+          is1ESPipeline: ${{ parameters.is1ESPipeline }}
 
-        - task: NuGetAuthenticate@1
+      - task: NuGetAuthenticate@1 # Populate internal runtime variables.
 
-        - task: AzureCLI@2
-          displayName: Publish Using Darc
-          inputs:
-            azureSubscription: "Darc: Maestro Production"
-            scriptType: ps
-            scriptLocation: scriptPath
-            scriptPath: $(System.DefaultWorkingDirectory)/eng/common/post-build/publish-using-darc.ps1
-            arguments: >
+      - template: /eng/common/templates/steps/enable-internal-sources.yml
+        parameters:
+          legacyCredential: $(dn-bot-dnceng-artifact-feeds-rw)
+
+      - template: /eng/common/templates/steps/enable-internal-runtimes.yml
+
+      - task: AzureCLI@2
+        displayName: Publish Using Darc
+        inputs:
+          azureSubscription: "Darc: Maestro Production"
+          scriptType: ps
+          scriptLocation: scriptPath
+          scriptPath: $(System.DefaultWorkingDirectory)/eng/common/post-build/publish-using-darc.ps1
+          arguments: >
               -BuildId $(BARBuildId)
               -PublishingInfraVersion ${{ parameters.publishingInfraVersion }}
               -AzdoToken '$(System.AccessToken)'
@@ -323,3 +329,5 @@ stages:
               -ArtifactsPublishingAdditionalParameters '${{ parameters.artifactsPublishingAdditionalParameters }}'
               -SymbolPublishingAdditionalParameters '${{ parameters.symbolPublishingAdditionalParameters }}'
               -SkipAssetsPublishing '${{ parameters.isAssetlessBuild }}'
+              -runtimeSourceFeed https://ci.dot.net/internal 
+              -runtimeSourceFeedKey $(dotnetbuilds-internal-container-read-token-base64)

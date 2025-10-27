@@ -13,9 +13,6 @@ parameters:
   # Unfortunately, _SignType can't be used to exclude the use of the service connection in non-real sign scenarios. The
   # variable is not available in template expression. _SignType has a very large proliferation across .NET, so replacing it is tough.
   microbuildUseESRP: true
-  # Location of the MicroBuild output folder
-  # NOTE: There's something that relies on this being in the "default" source directory for tasks such as Signing to work properly.
-  microBuildOutputFolder: '$(Build.SourcesDirectory)'
   # Microbuild version
   microbuildPluginVersion: 'latest'
 
@@ -24,14 +21,16 @@ parameters:
 steps:
   - ${{ if eq(parameters.enableMicrobuild, 'true') }}:
     - ${{ if eq(parameters.enableMicrobuildForMacAndLinux, 'true') }}:
-      # Needed to download the MicroBuild plugin nupkgs on Mac and Linux when nuget.exe is unavailable
+      # Installing .NET 8 is required to use the MicroBuild signing plugin on non-Windows platforms
       - task: UseDotNet@2
         displayName: Install .NET 8.0 SDK for MicroBuild Plugin
         inputs:
           packageType: sdk
           version: 8.0.x
-          installationPath: ${{ parameters.microBuildOutputFolder }}/.dotnet
-          workingDirectory: ${{ parameters.microBuildOutputFolder }}
+          # Installing the SDK in a '.dotnet-microbuild' directory is required for signing.
+          # See target FindDotNetPathForMicroBuild in arcade/src/Microsoft.DotNet.Arcade.Sdk/tools/Sign.proj
+          # Do not remove '.dotnet-microbuild' from the path without changing the corresponding logic.
+          installationPath: $(Agent.TempDirectory)/.dotnet-microbuild
         condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'))
 
     - script: |
@@ -71,7 +70,7 @@ steps:
               ConnectedPMEServiceName: 248d384a-b39b-46e3-8ad5-c2c210d5e7ca
         microbuildEnv:
           TeamName: $(_TeamName)
-          MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}
+          MicroBuildOutputFolderOverride: $(Agent.TempDirectory)/MicroBuild
           SYSTEM_ACCESSTOKEN: $(System.AccessToken)
         continueOnError: ${{ parameters.continueOnError }}
         condition: and(succeeded(), eq(variables['Agent.Os'], 'Windows_NT'), in(variables['_SignType'], 'real', 'test'))
@@ -93,7 +92,7 @@ steps:
                 ConnectedPMEServiceName: c24de2a5-cc7a-493d-95e4-8e5ff5cad2bc
           microbuildEnv:
             TeamName: $(_TeamName)
-            MicroBuildOutputFolderOverride: ${{ parameters.microBuildOutputFolder }}
+            MicroBuildOutputFolderOverride: $(Agent.TempDirectory)/MicroBuild
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
           continueOnError: ${{ parameters.continueOnError }}
           condition: and(succeeded(), ne(variables['Agent.Os'], 'Windows_NT'),  eq(variables['_SignType'], 'real'))

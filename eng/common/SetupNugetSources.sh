@@ -66,10 +66,8 @@ EnableInternalPackageSource() {
     grep -i "<add key=\"$PackageSourceName\" value=\"true\"" "$ConfigFile" > /dev/null
     if [ "$?" == "0" ]; then
         echo "Enabling internal source '$PackageSourceName'."
-        # Remove the disabled entry
-        local OldDisableValue="<add key=\"$PackageSourceName\" value=\"true\" />"
-        local NewDisableValue="<!-- Reenabled for build : $PackageSourceName -->"
-        sed -i.bak "s|$OldDisableValue|$NewDisableValue|" "$ConfigFile"
+        # Remove the disabled entry (including any surrounding comments or whitespace on the same line)
+        sed -i.bak "/<add key=\"$PackageSourceName\" value=\"true\" \/>/d" "$ConfigFile"
         
         # Add the source name to PackageSources for credential handling
         PackageSources+=("$PackageSourceName")

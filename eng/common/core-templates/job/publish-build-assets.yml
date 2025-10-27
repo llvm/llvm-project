@@ -91,8 +91,8 @@ jobs:
       fetchDepth: 3
       clean: true
 
-    - ${{ if eq(parameters.isAssetlessBuild, 'false') }}: 
-      - ${{ if eq(parameters.publishingVersion, 3) }}: 
+    - ${{ if eq(parameters.isAssetlessBuild, 'false') }}:
+      - ${{ if eq(parameters.publishingVersion, 3) }}:
         - task: DownloadPipelineArtifact@2
           displayName: Download Asset Manifests
           inputs:
@@ -117,8 +117,15 @@ jobs:
             flattenFolders: true
           condition: ${{ parameters.condition }}
           continueOnError: ${{ parameters.continueOnError }}
-    
+
     - task: NuGetAuthenticate@1
+
+    # Populate internal runtime variables.
+    - template: /eng/common/templates/steps/enable-internal-sources.yml
+      parameters:
+        legacyCredential: $(dn-bot-dnceng-artifact-feeds-rw)
+
+    - template: /eng/common/templates/steps/enable-internal-runtimes.yml
 
     - task: AzureCLI@2
       displayName: Publish Build Assets
@@ -132,9 +139,12 @@ jobs:
           /p:IsAssetlessBuild=${{ parameters.isAssetlessBuild }}
           /p:MaestroApiEndpoint=https://maestro.dot.net
           /p:OfficialBuildId=$(OfficialBuildId)
+          -runtimeSourceFeed https://ci.dot.net/internal
+          -runtimeSourceFeedKey $(dotnetbuilds-internal-container-read-token-base64)
+
       condition: ${{ parameters.condition }}
       continueOnError: ${{ parameters.continueOnError }}
-    
+
     - task: powershell@2
       displayName: Create ReleaseConfigs Artifact
       inputs:
@@ -162,7 +172,7 @@ jobs:
             artifactName: AssetManifests
             displayName: 'Publish Merged Manifest'
             retryCountOnTaskFailure: 10 # for any logs being locked
-            sbomEnabled: false  # we don't need SBOM for logs
+            sbomEnabled: false # we don't need SBOM for logs
 
     - template: /eng/common/core-templates/steps/publish-build-artifacts.yml
       parameters:
@@ -195,9 +205,11 @@ jobs:
             -ArtifactsPublishingAdditionalParameters '${{ parameters.artifactsPublishingAdditionalParameters }}'
             -SymbolPublishingAdditionalParameters '${{ parameters.symbolPublishingAdditionalParameters }}'
             -SkipAssetsPublishing '${{ parameters.isAssetlessBuild }}'
+            -runtimeSourceFeed https://ci.dot.net/internal 
+            -runtimeSourceFeedKey $(dotnetbuilds-internal-container-read-token-base64)
 
     - ${{ if eq(parameters.enablePublishBuildArtifacts, 'true') }}:
       - template: /eng/common/core-templates/steps/publish-logs.yml
         parameters:
           is1ESPipeline: ${{ parameters.is1ESPipeline }}
-          JobLabel: 'Publish_Artifacts_Logs'     
+          JobLabel: 'Publish_Artifacts_Logs'
