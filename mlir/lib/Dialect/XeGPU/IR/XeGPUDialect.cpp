@@ -299,21 +299,21 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   /// The first dimension in order is the fastest-changing
   ///
   /// Example walkthrough for linearId=22, sgLayout=[2,4,4], order=[2,1,0]:
-  /// 
+  ///
   /// Initial: remaining=22, result=[?,?,?]
-  /// 
+  ///
   /// i=0 (process columns, dimIdx=2, dimSize=4):
   ///   result[2] = 22 % 4 = 2  (column coordinate)
   ///   remaining = 22 / 4 = 5  (5 complete groups of 4 columns processed)
-  /// 
+  ///
   /// i=1 (process rows, dimIdx=1, dimSize=4):
-  ///   result[1] = 5 % 4 = 1   (row coordinate) 
+  ///   result[1] = 5 % 4 = 1   (row coordinate)
   ///   remaining = 5 / 4 = 1   (1 complete group of 4 rows processed)
-  /// 
+  ///
   /// i=2 (process layers, dimIdx=0, dimSize=2):
   ///   result[0] = 1 % 2 = 1   (layer coordinate)
   ///   (no remaining update - last iteration)
-  /// 
+  ///
   /// Final result: [1,1,2] = Layer 1, Row 1, Column 2
   for (size_t i = 0; i < order.size(); ++i) {
     int64_t dimIdx = order[i];
@@ -324,8 +324,8 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
 
     /// Extract the coordinate for this dimension using modulo operation
     /// This gives us "how far within this dimension" we are
-    /// e.g., linearId=22, dimSize=4: 22 % 4 = 2 (we're at position 2 within this
-    /// dimension)
+    /// e.g., linearId=22, dimSize=4: 22 % 4 = 2 (we're at position 2 within
+    /// this dimension)
     result[dimIdx] =
         builder.createOrFold<index::RemUOp>(loc, remaining, dimSizeVal);
 
