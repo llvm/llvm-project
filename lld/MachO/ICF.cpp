@@ -179,8 +179,30 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
       return isecA->getOffset(ra.addend) == isecB->getOffset(rb.addend);
     }
   };
-  return std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(),
-                    f);
+  if (!llvm::equal(ia->relocs, ib->relocs, f))
+    return false;
+
+  // Check unwind info structural compatibility: if there are symbols with
+  // associated unwind info, check that both sections have compatible symbol
+  // layouts. For simplicity, we only attempt folding when all symbols are at
+  // offset zero within the section (which is typically the case with
+  // .subsections_via_symbols.)
+  auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
+  const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
+  const auto *itB = llvm::find_if(ib->symbols, hasUnwind);
+  if (itA == ia->symbols.end())
+    return itB == ib->symbols.end();
+  if (itB == ib->symbols.end())
+    return false;
+  const Defined *da = *itA;
+  const Defined *db = *itB;
+  if (da->value != 0 || db->value != 0)
+    return false;
+  auto isZero = [](Defined *d) { return d->value == 0; };
+  return std::find_if_not(std::next(itA), ia->symbols.end(), isZero) ==
+             ia->symbols.end() &&
+         std::find_if_not(std::next(itB), ib->symbols.end(), isZero) ==
+             ib->symbols.end();
 }
 
 // Compare the "moving" parts of two ConcatInputSections -- i.e. everything not
@@ -217,31 +239,21 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
     }
     return isecA->icfEqClass[icfPass % 2] == isecB->icfEqClass[icfPass % 2];
   };
-  if (!std::equal(ia->relocs.begin(), ia->relocs.end(), ib->relocs.begin(), f))
+  if (!llvm::equal(ia->relocs, ib->relocs, f))
     return false;
 
-  // If there are symbols with associated unwind info, check that the unwind
-  // info matches. For simplicity, we only handle the case where there are only
-  // symbols at offset zero within the section (which is typically the case with
-  // .subsections_via_symbols.)
+  // Compare unwind info equivalence classes.
   auto hasUnwind = [](Defined *d) { return d->unwindEntry() != nullptr; };
   const auto *itA = llvm::find_if(ia->symbols, hasUnwind);
-  const auto *itB = llvm::find_if(ib->symbols, hasUnwind);
-  if (itA == ia->symbols.end())
-    return itB == ib->symbols.end();
-  if (itB == ib->symbols.end())
-    return false;
-  const Defined *da = *itA;
-  const Defined *db = *itB;
-  if (da->unwindEntry()->icfEqClass[icfPass % 2] !=
-          db->unwindEntry()->icfEqClass[icfPass % 2] ||
-      da->value != 0 || db->value != 0)
-    return false;
-  auto isZero = [](Defined *d) { return d->value == 0; };
-  return std::find_if_not(std::next(itA), ia->symbols.end(), isZero) ==
-             ia->symbols.end() &&
-         std::find_if_not(std::next(itB), ib->symbols.end(), isZero) ==
-             ib->symbols.end();
+  if (itA != ia->symbols.end()) {
+    const Defined *da = *itA;
+    // equalsConstant() guarantees that both sections have unwind info.
+    const Defined *db = *llvm::find_if(ib->symbols, hasUnwind);
+    if (da->unwindEntry()->icfEqClass[icfPass % 2] !=
+        db->unwindEntry()->icfEqClass[icfPass % 2])
+      return false;
+  }
+  return true;
 }
 
 // Find the first InputSection after BEGIN whose equivalence class differs
