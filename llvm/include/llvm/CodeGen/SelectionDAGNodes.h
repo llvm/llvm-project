@@ -735,6 +735,18 @@ public:
     }
   }
 
+  /// Test if this node has a chain.
+  bool hasChain() const {
+    if (NumValues > 0) {
+      if (ValueList[NumValues - 1] == MVT::Other)
+        return true;
+      if (ValueList[NumValues - 1] == MVT::Glue)
+        if (NumValues > 1 && ValueList[NumValues - 2] == MVT::Other)
+          return true;
+    }
+    return false;
+  }
+
   /// Test if this node is an assert operation.
   bool isAssert() const {
     switch (NodeType) {
