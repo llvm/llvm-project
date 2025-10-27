@@ -40,11 +40,10 @@ public:
                                                     Expr *Op);
 
   /// Constructor of a Ripple parallel compute construct statement
-  StmtResult
-  CreateRippleParallelComputeStmt(SourceRange PragmaLoc, SourceRange PELoc,
-                                  SourceRange DimsLoc, ValueDecl *BlockShape,
-                                  ArrayRef<uint64_t> Dims,
-                                  Stmt *AssociatedStatement, bool NoRemainder);
+  StmtResult CreateRippleParallelComputeStmt(
+      SourceRange PragmaLoc, SourceRange PELoc, SourceRange DimsLoc,
+      ValueDecl *BlockShape, ArrayRef<uint64_t> Dims, Stmt *AssociatedStatement,
+      bool NoRemainder, bool MaskPostlude);
 
   // Checks that dimension indices are uniq
   void ActOnDuplicateDimensionIndex(const RippleComputeConstruct &S);
@@ -62,6 +61,7 @@ public:
     SmallVector<uint64_t, 4> Dims;
     bool IgnoreNullStatements = false;
     bool NoRemainder = false;
+    bool MaskPostlude = true;
   };
 
 private:

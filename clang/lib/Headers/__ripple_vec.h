@@ -46,6 +46,17 @@ typedef struct ripple_block_shape *ripple_block_t;
       __VA_ARGS__) IgnoreNullStmts NoRemainder))
 
 /**
+ * A descriptive loop annotation to split a loop across the specified
+ * dimension(s) of work-items. Unlike ripple_parallel (which masks the postlude)
+ * or ripple_parallel_full (which assumes no remainder), this variant executes
+ * full blocks in parallel and peels the non-full block, executing it
+ * sequentially as specified in the original loop.
+ */
+#define ripple_parallel_peel(BlockShape, ...)                                  \
+  _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
+      __VA_ARGS__) IgnoreNullStmts BlockIndependent))
+
+/**
  * Request the index of the block being processed by an enclosing ripple
  * parallel loop. The index is an integer value between 0 and the number of
  * iterations of the loop divided by the parallel block size.

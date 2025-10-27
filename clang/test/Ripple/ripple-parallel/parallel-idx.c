@@ -45,7 +45,7 @@ void test2(int N, int start, int end, float x[restrict N], float y[restrict N],
     for (int j = start; j < end; ++j) {
       int parallel_idx_i = ripple_parallel_idx(BS, 0);
       int parallel_idx_j = ripple_parallel_idx(BS, 1);
-      xpy[i] = (x[i + j] + y[i + j]) * parallel_idx_i * parallel_idx_j;
+      xpy[i + j] = (x[i + j] + y[i + j]) * parallel_idx_i * parallel_idx_j;
     }
   }
 }
@@ -64,7 +64,7 @@ void test3(int N, int start, int end, float x[restrict N], float y[restrict N],
            float xpy[restrict N]) {
   ripple_block_t BS = ripple_set_block_shape(0, 4, 8);
   ripple_parallel(BS, 0, 1);
-  for (unsigned i = start; i < end; ++i) {
+  for (int i = start; i < end; ++i) {
     int parallel_idx_i = ripple_parallel_idx(BS, 0, 1);
     xpy[i] = (x[i] + y[i]) * parallel_idx_i;
   }

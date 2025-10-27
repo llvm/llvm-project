@@ -8,17 +8,18 @@
 void test1(size_t n, float * C, float * A, float * B) {
   ripple_block_t BS = ripple_set_block_shape(0, 4, 8);
 
-  // CHECK: ripple.par.block.size = alloca i{{[0-9]+}}
+  // CHECK: ripple.par.origin.LB = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
-  // We allocate i as part of ripple codegen since it's declared in the loop init
-  // CHECK-NEXT: i = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
   // CHECK: ripple.par.for.begin:
+  // The LB is not part of i's init
+  // CHECK: store i{{[0-9]+}} 0, ptr %ripple.par.origin.LB
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.block.size
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.loop.iters
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.loop.iters
@@ -80,16 +81,17 @@ void test1(size_t n, float * C, float * A, float * B) {
   // We are in the masked region (case where the number of iteration is not a multiple of the parallel region),
   //   hence we compute the UB as-if we executed the loop sequentially (to get the real UB and not the next multiple of the parallel step),
   //   i.e., IV = LB + Step * NumIter
+  // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
   // CHECK: %[[NParam:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %n
   // CHECK-NEXT: %[[NPlusOne:[A-Za-z0-9_]+]] = sub i{{[0-9]+}} %[[NParam]], -1
   // CHECK-NEXT: %[[NumLoopIters:[A-Za-z0-9_]+]] = udiv i{{[0-9]+}} %[[NPlusOne]], 1
   // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[NumLoopIters]], 1
-  // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} 0, %[[TotalStride]]
+  // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
   // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
-
+  size_t i;
 #ifdef USE_PRAGMA
   #pragma ripple parallel Block(BS) Dims(0, 1)
 #elif USE_CALL
@@ -97,7 +99,7 @@ void test1(size_t n, float * C, float * A, float * B) {
 #else
   #error "Should define USE_CALL or USE_PRAGMA to test this file"
 #endif
-  for (size_t i = 0; i <= n; i++)
+  for (i = 0; i <= n; i++)
     C[i] = A[i] + B[i];
 
 }
@@ -106,17 +108,22 @@ void test1(size_t n, float * C, float * A, float * B) {
 void test2(size_t n, float * C, float * A, float * B) {
   ripple_block_t BS = ripple_set_block_shape(0, 4, 8);
 
-  // CHECK: ripple.par.block.size = alloca i{{[0-9]+}}
+  // We allocate i as part of ripple codegen since it's declared in the loop init
+  // CHECK: i = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.origin.LB = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
-  // We allocate i as part of ripple codegen since it's declared in the loop init
-  // CHECK-NEXT: i = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
   // CHECK: ripple.par.for.begin:
+  // THE LB is part of i's init
+  // CHECK: store i{{[0-9]+}} 0, ptr %i
+  // CHECK: [[I_LB:%.*]] = load i{{[0-9]+}}, ptr %i
+  // CHECK: store i{{[0-9]+}} [[I_LB]], ptr %ripple.par.origin.LB
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.block.size
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.loop.iters
   // CHECK: store i{{[0-9]+}} %{{[0-9A-Za-z_]+}}, ptr %ripple.par.loop.iters
@@ -152,12 +159,13 @@ void test2(size_t n, float * C, float * A, float * B) {
   // Scalar precondition of the masked section
   // CHECK: for.end:
   // Update IV to the UB
-  // CHECK-NEXT: %[[RippleInit:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.init
-  // CHECK-NEXT: %[[RippleStep:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.step
-  // CHECK-NEXT: %[[RippleIV:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.iv
-  // CHECK-NEXT: %[[Offset:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[RippleStep]], %[[RippleIV]]
-  // CHECK-NEXT: %[[InitPlusOffset:[A-Za-z0-9_]+]] = add i{{[0-9]+}} %[[RippleInit]], %[[Offset]]
-  // CHECK-NEXT: store i{{[0-9]+}} %[[InitPlusOffset]], ptr %{{[A-Za-z0-9_]+}}
+  // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
+  // CHECK: %[[NParam:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %n
+  // CHECK-NEXT: %[[NPlusOne:[A-Za-z0-9_]+]] = sub i{{[0-9]+}} %[[NParam]], -1
+  // CHECK-NEXT: %[[NumLoopIters:[A-Za-z0-9_]+]] = udiv i{{[0-9]+}} %[[NPlusOne]], 2
+  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[NumLoopIters]], 2
+  // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
+  // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
@@ -180,7 +188,8 @@ void test3(size_t n, float * C, float * A, float * B) {
 
   // I is declared outside the loop
   // CHECK: i = alloca i{{[0-9]+}}
-  // CHECK: ripple.par.block.size = alloca i{{[0-9]+}}
+  // CHECK: ripple.par.origin.LB = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
@@ -191,12 +200,13 @@ void test3(size_t n, float * C, float * A, float * B) {
 
   // CHECK: for.end:
   // Update IV to the UB
-  // CHECK-NEXT: %[[RippleInit:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.init
-  // CHECK-NEXT: %[[RippleStep:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.step
-  // CHECK-NEXT: %[[RippleIV:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.iv
-  // CHECK-NEXT: %[[Offset:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[RippleStep]], %[[RippleIV]]
-  // CHECK-NEXT: %[[InitPlusOffset:[A-Za-z0-9_]+]] = add i{{[0-9]+}} %[[RippleInit]], %[[Offset]]
-  // CHECK-NEXT: store i{{[0-9]+}} %[[InitPlusOffset]], ptr %{{[A-Za-z0-9_]+}}
+  // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
+  // CHECK: %[[NParam:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %n
+  // CHECK-NEXT: %[[NPlusOne:[A-Za-z0-9_]+]] = sub i{{[0-9]+}} %[[NParam]], 0
+  // CHECK-NEXT: %[[NumLoopIters:[A-Za-z0-9_]+]] = udiv i{{[0-9]+}} %[[NPlusOne]], 1
+  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[NumLoopIters]], 1
+  // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
+  // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
@@ -206,6 +216,69 @@ void test3(size_t n, float * C, float * A, float * B) {
   #pragma ripple parallel Block(BS) Dims(0, 1) NoRemainder
 #elif USE_CALL
   ripple_parallel_full(BS, 0, 1)
+#else
+  #error "Should define USE_CALL or USE_PRAGMA to test this file"
+#endif
+  for (i = 0; i < n; i++)
+    C[i] = A[i] + B[i];
+
+}
+
+
+// Testing scalar postlude codegen
+// CHECK: test4
+void test4(size_t n, float * C, float * A, float * B) {
+  ripple_block_t BS = ripple_set_block_shape(0, 4, 8);
+
+  // I is declared outside the loop
+  // CHECK: i = alloca i{{[0-9]+}}
+  // CHECK: ripple.par.origin.LB = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.block.size = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.loop.iters = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
+  // CHECK-NOT: i = alloca i{{[0-9]+}}
+  // CHECK: br label %ripple.par.for.begin
+
+  // CHECK: for.end:
+  // The parallel LB becomes a scalar LB
+  // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
+  // CHECK-NEXT: store i{{[0-9]+}} [[ORIGIN_LB]], ptr %ripple.par.init
+  // Update i to the current scalar value
+  // CHECK: %[[RippleInit:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.init
+  // CHECK: %[[RippleStep:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.step
+  // CHECK: %[[RippleIV:[A-Za-z0-9_]+]] = load i{{[0-9]+}}, ptr %ripple.par.iv
+  // CHECK: %[[Offset:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} %[[RippleStep]], %[[RippleIV]]
+  // CHECK: %[[InitPlusOffset:[A-Za-z0-9_]+]] = add i{{[0-9]+}} %[[RippleInit]], %[[Offset]]
+  // CHECK: store i{{[0-9]+}} %[[InitPlusOffset]], ptr %i
+  // CHECK-NEXT: br label %[[ScalarLoopCond:.*]]
+
+  // CHECK: [[ScalarLoopCond]]:
+  // i < n
+  // CHECK-NEXT: [[IVal:%.*]] = load i{{[0-9]+}}, ptr %i
+  // CHECK-NEXT: [[NVal:%.*]] = load i{{[0-9]+}}, ptr %n
+  // CHECK-NEXT: [[LoopCond:%.*]] = icmp ult i{{[0-9]+}} [[IVal]], [[NVal]]
+  // CHECK-NEXT: br i1 [[LoopCond]], label %[[ScalarBody:.*]], label %[[ScalarEnd:.*]]
+
+  // CHECK: [[ScalarBody]]:
+  // The parallel IV is the scalar IV in the scalar postlude
+  // CHECK-NEXT: [[IVal:%.*]] = load i{{[0-9]+}}, ptr %i
+  // CHECK-NEXT: store i{{[0-9]+}} [[IVal]], ptr %ripple.par.iv
+  // CHECK: br label %[[INC:.*]]
+
+  // CHECK: [[INC]]:
+  // CHECK-NEXT: [[IVal:%.*]] = load i{{[0-9]+}}, ptr %i
+  // CHECK-NEXT: [[INext:%.*]] = add i{{[0-9]+}} [[IVal]], 1
+  // CHECK-NEXT: store i{{[0-9]+}} [[INext]], ptr %i
+  // CHECK-NEXT: br label %[[ScalarLoopCond]]
+
+  size_t i;
+#ifdef USE_PRAGMA
+  #pragma ripple parallel Block(BS) Dims(0, 1) BlockIndependent
+#elif USE_CALL
+  ripple_parallel_peel(BS, 0, 1)
 #else
   #error "Should define USE_CALL or USE_PRAGMA to test this file"
 #endif

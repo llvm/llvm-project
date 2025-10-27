@@ -1076,7 +1076,7 @@ Expr *RippleIterationSpaceChecker::buildPrivateCounterVar() const {
 StmtResult SemaRipple::CreateRippleParallelComputeStmt(
     SourceRange PragmaLoc, SourceRange BlockShapeLoc, SourceRange DimsLoc,
     ValueDecl *BlockShape, ArrayRef<uint64_t> Dims, Stmt *AssociatedStatement,
-    bool NoRemainder) {
+    bool NoRemainder, bool MaskPostlude) {
   auto ForLoop = dyn_cast<ForStmt>(AssociatedStatement);
   if (!ForLoop) {
     Diag(AssociatedStatement->getBeginLoc(),
@@ -1087,7 +1087,7 @@ StmtResult SemaRipple::CreateRippleParallelComputeStmt(
 
   auto *RPC = RippleComputeConstruct::Create(
       getASTContext(), PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape, Dims,
-      cast<ForStmt>(AssociatedStatement), NoRemainder);
+      cast<ForStmt>(AssociatedStatement), NoRemainder, MaskPostlude);
 
   ActOnDuplicateDimensionIndex(*RPC);
   ActOnRippleComputeConstruct(*RPC);
@@ -1219,6 +1219,19 @@ createIndexAndSizeExprs(Sema &SemaRef, SourceLocation Loc,
         RippleSizeProduct.get(), ExprTypes, AssignmentAction::Converting);
   }
   return {RippleIndexSum.get(), RippleSizeProduct.get()};
+}
+
+Expr *createOriginLB(Sema &SemaRef, SourceLocation Loc, Expr *LoopInit,
+                     Expr *LoopIV, bool LBIsLoopIV) {
+  auto T = LoopInit->getType();
+  VarDecl *OriginLB =
+      buildVarDecl(SemaRef, Loc, T, "ripple.par.origin.LB", nullptr);
+  assert(!OriginLB->isInvalidDecl());
+  if (LBIsLoopIV)
+    SemaRef.AddInitializerToDecl(OriginLB, LoopIV, true);
+  else
+    SemaRef.AddInitializerToDecl(OriginLB, LoopInit, true);
+  return buildDeclRefExpr(SemaRef, OriginLB, T, Loc);
 }
 
 Expr *createRippleInit(Sema &SemaRef, SourceLocation Loc, Expr *RippleIndex,
@@ -1410,6 +1423,66 @@ Stmt *createRippleLoopBody(Sema &SemaRef, Expr *LoopIVUpdate, Stmt *LoopBody) {
                          {LoopIVUpdate, LoopBody},
                          /*IsStmtExpr*/ false)
       .get();
+}
+
+ForStmt *createScalarPostludeLoop(Sema &SemaRef, ForStmt &InitialFor,
+                                  Stmt &Body, Expr &ParallelIndVar,
+                                  Expr &OriginalIndVar,
+                                  Expr &ParallelLowerBound,
+                                  Expr &ScalarLowerBound, Expr &LoopIVUpdate) {
+  // Init: parallel lower bound = scalar lowe bound so that LoopIVUpdate is
+  // scalar
+  Stmt *UpdateLBToScalar =
+      SemaRef
+          .CreateBuiltinBinOp(
+              InitialFor.getInc()->getEndLoc(),
+              BinaryOperator::Opcode::BO_Assign, &ParallelLowerBound,
+              SemaRef
+                  .PerformImplicitConversion(
+                      SemaRef
+                          .ActOnParenExpr(InitialFor.getInc()->getEndLoc(),
+                                          InitialFor.getInc()->getEndLoc(),
+                                          &ScalarLowerBound)
+                          .get(),
+                      ParallelLowerBound.getType(),
+                      AssignmentAction::Converting)
+                  .get())
+          .get();
+  Stmt *ScalarInit = SemaRef
+                         .ActOnCompoundStmt(InitialFor.getInit()->getBeginLoc(),
+                                            InitialFor.getInit()->getEndLoc(),
+                                            {UpdateLBToScalar, &LoopIVUpdate},
+                                            /*IsStmtExpr*/ false)
+                         .get();
+
+  auto ScalarCond = SemaRef.ActOnCondition(
+      nullptr, InitialFor.getCond()->getBeginLoc(), InitialFor.getCond(),
+      Sema::ConditionKind::Boolean);
+
+  Stmt *ParallelIVEqualsIV =
+      SemaRef
+          .CreateBuiltinBinOp(
+              InitialFor.getInc()->getEndLoc(),
+              BinaryOperator::Opcode::BO_Assign, &ParallelIndVar,
+              ImplicitCastExpr::Create(SemaRef.getASTContext(),
+                                       OriginalIndVar.getType(),
+                                       CK_LValueToRValue, &OriginalIndVar,
+                                       nullptr, VK_LValue, FPOptionsOverride()))
+          .get();
+  Stmt *ScalarBody =
+      SemaRef
+          .ActOnCompoundStmt(InitialFor.getBody()->getBeginLoc(),
+                             InitialFor.getBody()->getEndLoc(),
+                             {ParallelIVEqualsIV, &Body}, /*IsStmtExpr*/ false)
+          .get();
+
+  return cast_if_present<ForStmt>(
+      SemaRef
+          .ActOnForStmt(InitialFor.getBeginLoc(), InitialFor.getLParenLoc(),
+                        ScalarInit, ScalarCond,
+                        SemaRef.MakeFullExpr(InitialFor.getInc()),
+                        InitialFor.getRParenLoc(), ScalarBody)
+          .get());
 }
 
 ForStmt *createRippleLoop(Sema &SemaRef, const ForStmt *InitialFor, Expr *Cond,
@@ -1771,8 +1844,11 @@ void SemaRipple::ActOnRippleComputeConstruct(RippleComputeConstruct &S) {
       SemaRef, LIS.InitSrcRange.getBegin(), S.getAssociatedLoopIters(),
       S.getParallelBlockSize()));
 
+  S.setOriginLowerBound(createOriginLB(SemaRef, LIS.InitSrcRange.getBegin(),
+                                       LIS.CounterInit, LIS.CounterVar,
+                                       LIS.IsDeclStmtInit));
   S.setRippleLowerBound(createRippleInit(SemaRef, LIS.InitSrcRange.getBegin(),
-                                         RippleIdx, LIS.CounterInit));
+                                         RippleIdx, S.getOriginLowerBound()));
   S.setRippleStep(createRippleStep(SemaRef, LIS.InitSrcRange.getBegin(),
                                    S.getParallelBlockSize(), LIS.CounterStep));
 
@@ -1808,19 +1884,33 @@ void SemaRipple::ActOnRippleComputeConstruct(RippleComputeConstruct &S) {
                                        RippleLoopCond, RippleLoopInc,
                                        RippleLoopBody));
 
+  // Set the loop induction variable to the scalar UB at the end of NoRemainder
+  // and MaskPostlude tensor cases
+  if (!S.generateRemainder() ||
+      (S.generateRemainder() && S.generateMaskedPostlude())) {
+    // Compute the real IV UB at the end of the remainder
+    Expr *SetLoopIVToUB = createStoreUBtoIV(
+        SemaRef, S.getAssociatedForStmt()->getInc()->getBeginLoc(),
+        LIS.CounterVar, S.getOriginLowerBound(), LIS.NumIterations,
+        LIS.CounterStep);
+    S.setEndLoopIVUpdate(SetLoopIVToUB);
+  }
+
   if (S.generateRemainder()) {
-    S.setRemainderRuntimeCond(createRemainderEntryCondition(
-        SemaRef, LIS.CondSrcRange.getBegin(), S.getLoopInit(),
-        S.getParallelBlockSize(), S.getAssociatedLoopIters()));
     VarDeclRedeclTransformer VDT(SemaRef);
     auto ClonedBody = VDT.TransformStmt(BodyWithRippleParallelIdx.get());
     if (!ClonedBody.isUsable())
       return;
-    S.setRemainderBody(ClonedBody.get());
-    // Compute the real IV UB at the end of the remainder
-    Expr *SetLoopIVToUB = createStoreUBtoIV(
-        SemaRef, S.getAssociatedForStmt()->getInc()->getBeginLoc(),
-        LIS.CounterVar, LIS.CounterInit, LIS.NumIterations, LIS.CounterStep);
-    S.setEndLoopIVUpdate(SetLoopIVToUB);
+    if (S.generateMaskedPostlude()) {
+      S.setRemainderRuntimeCond(createRemainderEntryCondition(
+          SemaRef, LIS.CondSrcRange.getBegin(), S.getLoopInit(),
+          S.getParallelBlockSize(), S.getAssociatedLoopIters()));
+      S.setRemainderBody(ClonedBody.get());
+    } else /* !S.generateMaskedPostlude() */ {
+      S.setScalarLoopPostlude(createScalarPostludeLoop(
+          SemaRef, *S.getAssociatedForStmt(), *ClonedBody.get(),
+          *LIS.PrivateCounterVar, *LIS.CounterVar, *S.getRippleLowerBound(),
+          *S.getOriginLowerBound(), *S.getLoopIVUpdate()));
+    }
   }
 }

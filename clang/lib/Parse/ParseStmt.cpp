@@ -504,7 +504,8 @@ Retry:
     }
     return Actions.Ripple().CreateRippleParallelComputeStmt(
         AnnotRange, PragmaVals->BlockShapeRange, PragmaVals->DimsRange,
-        BlockShape, PragmaVals->Dims, Stmt.get(), PragmaVals->NoRemainder);
+        BlockShape, PragmaVals->Dims, Stmt.get(), PragmaVals->NoRemainder,
+        PragmaVals->MaskPostlude);
   }
 
   case tok::annot_pragma_ms_pointers_to_members:

@@ -4324,7 +4324,8 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.RISCV().DeclareAndesVectorBuiltins = true;
 }
 
-// '#pragma ripple Block(<BlockRef>) DIMS(<index>[, <index>]) [IgnoreEmptyStmts]'
+// '#pragma ripple Block(<BlockRef>) DIMS(<index>[, <index>]*)
+// [IgnoreEmptyStmts]? [NoRemainder]? [MaskPostlude]?'
 void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
                                        PragmaIntroducer Introducer,
                                        Token &FirstToken) {
@@ -4450,15 +4451,18 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
       AnnotData->IgnoreNullStatements = true;
     } else if (Arg && Arg->isStr("NoRemainder")) {
       AnnotData->NoRemainder = true;
+    } else if (Arg && Arg->isStr("BlockIndependent")) {
+      AnnotData->MaskPostlude = false;
     } else if (Arg) {
       // IgnoreNullStmts is only for backward compatibility w/ the
       // ripple_parallel(); interface so don't advertise it!
       PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
           << SourceRange(Tok.getLocation(), Tok.getEndLoc()) << Arg->getName()
           << "ripple parallel" << /*Expected=*/true
-          << "Block, Dims or NoRemainder"
-          << FixItHint::CreateInsertion(Tok.getLocation(),
-                                        "Block, Dims or NoRemainder");
+          << "Block, Dims, NoRemainder or BlockIndependent"
+          << FixItHint::CreateInsertion(
+                 Tok.getLocation(),
+                 "Block, Dims, NoRemainder or BlockIndependent");
       return;
     } else if (Tok.isNot(tok::eod) && ParsedBlock && ParsedDims) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)

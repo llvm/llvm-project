@@ -4957,7 +4957,7 @@ void Ripple::ifConvert() {
       LoopIncBB2Mask.insert({BranchingBB, LoopIncMask});
       for (auto *LoopIncBB : LoopIncBBs) {
         if (pred_size(LoopIncBB) != 1) {
-          irBuilder.SetInsertPoint(&*LoopIncBB->getFirstInsertionPt());
+          irBuilder.SetInsertPoint(&*LoopIncBB->begin());
           auto *LoopIncBBMask = irBuilder.CreatePHI(
               VectorConditional->getType(), pred_size(LoopIncBB));
           // Mask operations in LoopIncBB with the mask phi(currentMask, true).

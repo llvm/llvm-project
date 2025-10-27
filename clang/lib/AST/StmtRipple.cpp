@@ -20,16 +20,15 @@
 
 using namespace clang;
 
-RippleComputeConstruct *
-RippleComputeConstruct::Create(const ASTContext &C, SourceRange PragmaLoc,
-                               SourceRange BlockShapeLoc, SourceRange DimsLoc,
-                               ValueDecl *BlockShape, ArrayRef<uint64_t> Dims,
-                               ForStmt *AssociatedLoop, bool NoRemainder) {
+RippleComputeConstruct *RippleComputeConstruct::Create(
+    const ASTContext &C, SourceRange PragmaLoc, SourceRange BlockShapeLoc,
+    SourceRange DimsLoc, ValueDecl *BlockShape, ArrayRef<uint64_t> Dims,
+    ForStmt *AssociatedLoop, bool NoRemainder, bool MaskPostlude) {
   void *Mem = C.Allocate(
       RippleComputeConstruct::totalSizeToAlloc<uint64_t>(Dims.size()));
   auto *Inst = new (Mem)
       RippleComputeConstruct(PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape,
-                             Dims, AssociatedLoop, NoRemainder);
+                             Dims, AssociatedLoop, NoRemainder, MaskPostlude);
   return Inst;
 }
 

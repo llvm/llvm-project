@@ -50,24 +50,27 @@ class RippleComputeConstruct final
   ValueDecl *BlockShape;
   size_t NumDimensionIds;
   bool NoRemainder = false;
+  bool MaskPostlude = false;
 
   /// Children of this AST node.
   enum {
     LOOP_STMT,
+    LOOP_IV_ORIGIN,
+    LB_INIT_ORIGIN,
     PARALLEL_BLOCK_SIZE,
     DISTANCE_EXPR,
     DISTANCE_RIPPLE_FULL_BLOCK,
     LB_INIT_RIPPLE,
     STEP_RIPPLE,
-    LOOP_IV_ORIGIN,
     LOOP_INIT_RIPPLE,
     LOOP_IV_UPDATE,
     RIPPLE_LOOP_STMT,
     REMAINDER_RUNTIME_COND,
     LOOP_IV_SET_TO_UB,
+    SCALAR_LOOP_POSTLUDE,
     REMAINDER_BODY,
     LastSubStmt = REMAINDER_BODY,
-    FirstVarDecl = PARALLEL_BLOCK_SIZE,
+    FirstVarDecl = LOOP_IV_ORIGIN,
     LastVarDecl = LOOP_INIT_RIPPLE,
     NumVarDecls = LastVarDecl - FirstVarDecl + 1
   };
@@ -80,10 +83,11 @@ class RippleComputeConstruct final
   RippleComputeConstruct(SourceRange PragmaRange, SourceRange PERange,
                          SourceRange DimsRange, ValueDecl *BlockShape,
                          ArrayRef<uint64_t> Dims, ForStmt *AssociatedLoop,
-                         bool NoRemainder)
+                         bool NoRemainder, bool MaskPostlude)
       : Stmt(RippleComputeConstructClass), Range(PragmaRange), PERange(PERange),
         DimsRange(DimsRange), BlockShape(BlockShape),
-        NumDimensionIds(Dims.size()), NoRemainder(NoRemainder) {
+        NumDimensionIds(Dims.size()), NoRemainder(NoRemainder),
+        MaskPostlude(MaskPostlude) {
     setAssociatedForStmt(AssociatedLoop);
     std::uninitialized_copy(Dims.begin(), Dims.end(),
                             getTrailingObjectsNonStrict<uint64_t>());
@@ -100,7 +104,7 @@ public:
   static RippleComputeConstruct *
   Create(const ASTContext &C, SourceRange PragmaLoc, SourceRange PELoc,
          SourceRange DimsLoc, ValueDecl *BlockShape, ArrayRef<uint64_t> Dims,
-         ForStmt *AssociatedLoop, bool NoRemainder);
+         ForStmt *AssociatedLoop, bool NoRemainder, bool MaskPostlude);
   static RippleComputeConstruct *CreateEmpty(const ASTContext &C,
                                              uint64_t NumDims);
 
@@ -125,6 +129,9 @@ public:
 
   // True if we need to generate the remainder loop section, false otherwise
   bool generateRemainder() const { return !NoRemainder; }
+
+  // True if we generate a masked ripple section for the postlude
+  bool generateMaskedPostlude() const { return MaskPostlude; }
 
   /// The associated for statement
   ForStmt *getAssociatedForStmt() {
@@ -166,6 +173,13 @@ public:
   }
   void setRippleFullBlockIters(Expr *E) {
     SubStmts[DISTANCE_RIPPLE_FULL_BLOCK] = cast_if_present<Stmt>(E);
+  }
+
+  Expr *getOriginLowerBound() const {
+    return cast_if_present<Expr>(SubStmts[LB_INIT_ORIGIN]);
+  }
+  void setOriginLowerBound(Expr *E) {
+    SubStmts[LB_INIT_ORIGIN] = cast_if_present<Stmt>(E);
   }
 
   /// The new init for the original loop
@@ -241,6 +255,15 @@ public:
   }
   void setEndLoopIVUpdate(Expr *E) {
     SubStmts[LOOP_IV_SET_TO_UB] = cast_if_present<Stmt>(E);
+  }
+
+  /// An expression that sets the loop induction variable to the loop upper
+  /// bound
+  ForStmt *getScalarLoopPostlude() const {
+    return cast_if_present<ForStmt>(SubStmts[SCALAR_LOOP_POSTLUDE]);
+  }
+  void setScalarLoopPostlude(Stmt *ForLoop) {
+    SubStmts[SCALAR_LOOP_POSTLUDE] = ForLoop;
   }
 };
 
