@@ -9410,26 +9410,6 @@ StmtResult TreeTransform<Derived>::TransformCXXDestructuringExpansionStmt(
   // leave the underlying CXXExpansionStmt as-is). Since destructuring expansion
   // statements never have a dependent size, we should never get here.
   llvm_unreachable("Should never be instantiated");
-  /*TransformCXXExpansionStmtResult Common =
-      TransformCXXExpansionStmtCommonParts(S);
-  if (!Common.isValid())
-    return StmtError();
-
-  StmtResult DecompositionDeclStmt =
-      getDerived().TransformStmt(S->getDecompositionDeclStmt());
-  if (DecompositionDeclStmt.isInvalid())
-    return StmtError();
-
-  auto *Expansion = new (SemaRef.Context) CXXDestructuringExpansionStmt(
-      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
-      DecompositionDeclStmt.get(), S->getForLoc(), S->getLParenLoc(),
-      S->getColonLoc(), S->getRParenLoc());
-
-  StmtResult Body = getDerived().TransformStmt(S->getBody());
-  if (Body.isInvalid())
-    return StmtError();
-
-  return SemaRef.FinishCXXExpansionStmt(Expansion, Body.get());*/
 }
 
 template <typename Derived>
