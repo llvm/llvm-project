@@ -3637,13 +3637,13 @@ SDValue NVPTXTargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
 
     OtherOps.push_back(DAG.getConstant(UsedBytesMask, DL, MVT::i32));
 
-    // The select routine does not have access to the LoadSDNode instance, so
-    // pass along the extension information
+    // We currently are not lowering extending loads, but pass the extension
+    // type anyway as later handling expects it.
     OtherOps.push_back(
         DAG.getIntPtrConstant(cast<LoadSDNode>(LD)->getExtensionType(), DL));
-    SDValue NewLD = DAG.getMemIntrinsicNode(
-        NVPTXISD::MLoadV1, DL, LD->getVTList(), OtherOps, LD->getMemoryVT(),
-        LD->getMemOperand());
+    SDValue NewLD =
+        DAG.getMemIntrinsicNode(NVPTXISD::MLoad, DL, LD->getVTList(), OtherOps,
+                                LD->getMemoryVT(), LD->getMemOperand());
     return NewLD;
   }
   return SDValue();

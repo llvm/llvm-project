@@ -105,7 +105,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
-  case NVPTXISD::MLoadV1:
+  case NVPTXISD::MLoad:
     if (tryLoad(N))
       return;
     break;
@@ -1139,8 +1139,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   case ISD::ATOMIC_LOAD:
     UsedBytesMask = UINT32_MAX;
     break;
-  case NVPTXISD::MLoadV1:
-    UsedBytesMask = N->getConstantOperandVal(N->getNumOperands() - 2);
+  case NVPTXISD::MLoad:
+    UsedBytesMask = N->getConstantOperandVal(3);
     break;
   default:
     llvm_unreachable("Unexpected opcode");
@@ -1302,7 +1302,7 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_i16,
                              NVPTX::LD_GLOBAL_NC_i32, NVPTX::LD_GLOBAL_NC_i64);
     break;
-  case NVPTXISD::MLoadV1:
+  case NVPTXISD::MLoad:
     Opcode = pickOpcodeForVT(TargetVT, std::nullopt, NVPTX::LD_GLOBAL_NC_i32,
                              NVPTX::LD_GLOBAL_NC_i64);
     break;
