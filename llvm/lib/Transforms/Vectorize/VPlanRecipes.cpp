@@ -1828,7 +1828,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
         ElementTy = toVectorizedTy(ElementTy, VF);
       Tys.push_back(ElementTy);
     }
-    RetTy = StructType::create(Tys);
+    RetTy = StructType::get(StructTy->getContext(), Tys);
   } else if (VF.isVector())
     RetTy = toVectorizedTy(RetTy, VF);
   SmallVector<Type *> ParamTys;
