@@ -51,10 +51,10 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX-NEXT:    [[TMP17:%.*]] = or <8 x i1> [[TMP9]], [[TMP13]]
 ; AVX-NEXT:    [[TMP18:%.*]] = or <8 x i1> [[TMP10]], [[TMP14]]
 ; AVX-NEXT:    [[TMP19:%.*]] = or <8 x i1> [[TMP11]], [[TMP15]]
-; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[NEXT_GEP]], i32 4, <8 x i1> [[TMP16]])
-; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP5]], i32 4, <8 x i1> [[TMP17]])
-; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP6]], i32 4, <8 x i1> [[TMP18]])
-; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP7]], i32 4, <8 x i1> [[TMP19]])
+; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[NEXT_GEP]], <8 x i1> [[TMP16]])
+; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[TMP5]], <8 x i1> [[TMP17]])
+; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[TMP6]], <8 x i1> [[TMP18]])
+; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[TMP7]], <8 x i1> [[TMP19]])
 ; AVX-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; AVX-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -80,7 +80,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX-NEXT:    [[TMP24:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD13]], splat (i32 -12)
 ; AVX-NEXT:    [[TMP25:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD13]], splat (i32 13)
 ; AVX-NEXT:    [[TMP26:%.*]] = or <8 x i1> [[TMP24]], [[TMP25]]
-; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[NEXT_GEP12]], i32 4, <8 x i1> [[TMP26]])
+; AVX-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[NEXT_GEP12]], <8 x i1> [[TMP26]])
 ; AVX-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX11]], 8
 ; AVX-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT14]], [[N_VEC10]]
 ; AVX-NEXT:    br i1 [[TMP27]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
