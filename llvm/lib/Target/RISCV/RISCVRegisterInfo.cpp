@@ -864,15 +864,14 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
     // First priority: Check if partner is already allocated
     if (Partner.isVirtual() && VRM && VRM->hasPhys(Partner)) {
-      MCPhysReg PartnerPhys = VRM->getPhys(Partner);
+      MCRegister PartnerPhys = VRM->getPhys(Partner);
       // Calculate the exact register we need for consecutive pairing
-      MCPhysReg TargetReg = PartnerPhys + (WantOdd ? 1 : -1);
+      MCRegister TargetReg = PartnerPhys.id() + (WantOdd ? 1 : -1);
 
       // Verify it's valid and available
       if (RISCV::GPRRegClass.contains(TargetReg) &&
-          is_contained(Order, TargetReg)) {
-        Hints.push_back(TargetReg);
-      }
+          is_contained(Order, TargetReg))
+        Hints.push_back(TargetReg.id());
     }
 
     // Second priority: Try to find consecutive register pairs in the allocation
