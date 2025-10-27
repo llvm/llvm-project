@@ -70,6 +70,16 @@ struct __nttp_bind_front_t<_Fn, index_sequence<_Indices...>, _BoundArgs...> {
   }
 };
 
+template <auto _Fn>
+struct __nttp_bind_without_bound_args_t {
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Args&&... __args) noexcept(noexcept(std::invoke(_Fn, std::forward<_Args>(__args)...)))
+      -> decltype(std::invoke(_Fn, std::forward<_Args>(__args)...)) {
+    return std::invoke(_Fn, std::forward<_Args>(__args)...);
+  }
+};
+
 template <auto _Fn, class... _Args>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto bind_front(_Args&&... __args) {
   static_assert((is_constructible_v<decay_t<_Args>, _Args> && ...),
@@ -79,8 +89,11 @@ template <auto _Fn, class... _Args>
   if constexpr (using _Ty = decltype(_Fn); is_pointer_v<_Ty> || is_member_pointer_v<_Ty>)
     static_assert(_Fn != nullptr, "f cannot be equal to nullptr");
 
-  return __nttp_bind_front_t<_Fn, index_sequence_for<_Args...>, decay_t<_Args>...>{
-      .__bound_args_{std::forward<_Args>(__args)...}};
+  if constexpr (sizeof...(_Args) == 0)
+    return __nttp_bind_without_bound_args_t<_Fn>{};
+  else
+    return __nttp_bind_front_t<_Fn, index_sequence_for<_Args...>, decay_t<_Args>...>{
+        .__bound_args_{std::forward<_Args>(__args)...}};
 }
 
 #endif // _LIBCPP_STD_VER >= 26
