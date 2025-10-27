@@ -52,8 +52,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   // compute sgSize by multiply elements of laneLayout
   // e.g. for 2D layout, sgSize = laneLayout[0] * laneLayout[1]
   // e.g. for 1D layout, sgSize = laneLayout[0]
-  auto sgSize = std::accumulate(laneLayout.begin(), laneLayout.end(), 1,
-                                std::multiplies<int64_t>());
+  int64_t sgSize = llvm::product_of(laneLayout);
 
   // Case 1: regular loads/stores
   auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
@@ -247,11 +246,28 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   if (!computeShapeRatio(srcShape, shape))
     return {value};
 
+  int64_t srcShapeRank = srcShape.size();
+  int64_t targetShapeRank = shape.size();
+
+  SmallVector<int64_t> adjustedTargetShape(srcShape.size());
+  int64_t rankDiff = srcShapeRank - targetShapeRank;
+  std::fill(adjustedTargetShape.begin(), adjustedTargetShape.begin() + rankDiff,
+            1);
+  std::copy(shape.begin(), shape.end(), adjustedTargetShape.begin() + rankDiff);
+
   SmallVector<Value> result;
-  for (SmallVector<int64_t> offsets : StaticTileOffsetRange(srcShape, shape)) {
+  for (SmallVector<int64_t> offsets :
+       StaticTileOffsetRange(srcShape, adjustedTargetShape)) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-    result.push_back(vector::ExtractStridedSliceOp::create(
-        builder, loc, value, offsets, shape, staticStrides));
+    Value slice = vector::ExtractStridedSliceOp::create(
+        builder, loc, value, offsets, adjustedTargetShape, staticStrides);
+
+    // Reshape to remove leading unit dims if needed
+    if (srcShapeRank > targetShapeRank) {
+      auto targetTy = VectorType::get(shape, vecTy.getElementType());
+      slice = vector::ShapeCastOp::create(builder, loc, targetTy, slice);
+    }
+    result.push_back(slice);
   }
 
   return result;
@@ -275,7 +291,7 @@ Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 
   for (auto [src, offsets] :
        llvm::zip_equal(values, StaticTileOffsetRange(shape, tileShape))) {
-    SmallVector<int64_t> staticStrides(offsets.size(), 1);
+    SmallVector<int64_t> staticStrides(tileShape.size(), 1);
     result = vector::InsertStridedSliceOp::create(builder, loc, src, result,
                                                   offsets, staticStrides);
   }

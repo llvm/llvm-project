@@ -832,6 +832,8 @@ private:
   SDValue SoftPromoteHalfRes_SELECT(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT_CC(SDNode *N);
   SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
+  SDValue SoftPromoteHalfRes_FABS(SDNode *N);
+  SDValue SoftPromoteHalfRes_FNEG(SDNode *N);
   SDValue SoftPromoteHalfRes_AssertNoFPClass(SDNode *N);
   SDValue SoftPromoteHalfRes_XINT_TO_FP(SDNode *N);
   SDValue SoftPromoteHalfRes_UNDEF(SDNode *N);
@@ -888,6 +890,7 @@ private:
   SDValue ScalarizeVecRes_UnaryOpWithExtraInput(SDNode *N);
   SDValue ScalarizeVecRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue ScalarizeVecRes_LOAD(LoadSDNode *N);
+  SDValue ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N);
   SDValue ScalarizeVecRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue ScalarizeVecRes_VSELECT(SDNode *N);
   SDValue ScalarizeVecRes_SELECT(SDNode *N);

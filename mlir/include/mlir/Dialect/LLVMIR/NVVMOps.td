@@ -263,6 +263,7 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
   let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
   let llvmBuilder = baseLlvmBuilder # setRangeRetAttrCode # baseLlvmBuilderCoda;
   let mlirBuilder = baseMlirBuilder # importRangeRetAttrCode # baseMlirBuilderCoda;
+  let hasVerifier = 1;
 
   // Backwards-compatibility builder for an unspecified range.
   let builders = [
@@ -278,6 +279,11 @@ class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = 
         ArrayRef<::mlir::ConstantIntRanges> argRanges,
         SetIntRangeFn setResultRanges) {
         nvvmInferResultRanges(getOperation(), getResult(), argRanges, setResultRanges);
+    }
+
+    // Verify the range attribute satisfies LLVM ConstantRange constructor requirements.
+    ::llvm::LogicalResult $cppClass::verify() {
+      return verifyConstantRangeAttr(getOperation(), getRange());
     }
   }];
 
@@ -1655,6 +1661,40 @@ def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   }];
 }
 
+def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
+  let summary = "Convert a pair of float inputs to f4x2";
+  let description = [{
+    This Op converts each of the given float inputs to the specified fp4 type.
+    The result `dst` is returned as an i8 type where the converted values are 
+    packed such that the value converted from `a` is stored in the upper 4 bits 
+    of `dst` and the value converted from `b` is stored in the lower 4 bits of 
+    `dst`.
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs I8:$dst);
+  let arguments = (ins F32:$a, F32:$b,
+                       DefaultValuedAttr<BoolAttr, "false">:$relu,
+                       TypeAttr:$dstTy);
+  let assemblyFormat = "$a `,` $b attr-dict `:` type($dst) `(` $dstTy `)`";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [intId, args] = NVVM::ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
+    $dst = builder.CreateTruncOrBitCast(packedI16, llvm::Type::getInt8Ty(builder.getContext()));
+  }];
+}
+
 def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let summary = "Convert a pair of float inputs to f6x2";
   let description = [{
@@ -1831,6 +1871,55 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
                       llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
   }];
 }
+
+class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstType>
+: NVVM_Op<"convert." # !tolower(srcType) # "x2.to." # !tolower(dstType) # "x2"> {
+  let summary = "Convert a pair of " # !tolower(srcType) # " inputs to " # !tolower(dstType) # "x2";
+  let description = [{
+    This Op converts the given }] # !tolower(srcType) # [{ inputs in a }] #
+    !if(!eq(srcType, "F4"), "packed i8", "i8x2 vector") # [{ to }] #
+    !tolower(dstType) # [{.
+
+    The result `dst` is represented as a vector of }] # !tolower(dstType) # [{ elements.
+    }] #
+    !if(!eq(dstType, "F16"),
+    [{The `relu` attribute, when set, lowers to the '.relu' variant of 
+    the cvt instruction."}], "") # [{
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstType)]>:$dst);
+  let arguments = !if(!eq(dstType, "F16"),
+    (ins srcArgType:$src,
+         DefaultValuedAttr<BoolAttr, "false">:$relu,
+         TypeAttr:$srcType),
+    (ins srcArgType:$src,
+         TypeAttr:$srcType));
+  let assemblyFormat = "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)";
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt, 
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [intId, args] =
+    NVVM::Convert}] # srcType # [{x2To}] # dstType # 
+      [{x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    $dst = createIntrinsicCall(builder, intId, args);
+  }];
+}
+
+def NVVM_ConvertF8x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16">;
+def NVVM_ConvertF8x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16">;
+def NVVM_ConvertF6x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16">;
+def NVVM_ConvertF4x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16">;
 
 //===----------------------------------------------------------------------===//
 // NVVM MMA Ops
@@ -3233,35 +3322,15 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
     attr-dict  `:` type($dstMem) `,` type($srcMem)
   }];
 
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // dst, mbar, src, size
-    // multicast_mask, cache_hint,
-    // flag for multicast_mask,
-    // flag for cache_hint
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($dstMem);
-    translatedOperands.push_back($mbar);
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($size);
-
-    // Multicast, if available
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i16Unused = llvm::ConstantInt::get(llvm::Type::getInt16Ty(ctx), 0);
-    bool isMulticast = op.getMulticastMask() ? true : false;
-    translatedOperands.push_back(isMulticast ? $multicastMask : i16Unused);
-
-    // Cachehint, if available
-    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
-
-    // Flag arguments for multicast and cachehint
-    translatedOperands.push_back(builder.getInt1(isMulticast));
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    createIntrinsicCall(builder,
-      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster, translatedOperands);
+    auto [id, args] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
 }
 

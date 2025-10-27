@@ -24,7 +24,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @sudecrypt(ptr %buff) #0 {
+define void @sudecrypt(ptr %buff) {
 entry:
   br i1 undef, label %cleanup, label %if.end
 
@@ -61,8 +61,6 @@ if.end.34:                                        ; preds = %if.end.16
 cleanup:                                          ; preds = %entry
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

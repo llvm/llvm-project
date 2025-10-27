@@ -2404,6 +2404,190 @@ multiclass XXEvalTernarySelectOr<ValueType Vt> {
             126>;
 }
 
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNor
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), XOR(B,C), NOT(C),
+//   NOT(B), NAND(B,C)}
+// - C is the "false" case op NOR(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectNor<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOR(B,C)) XXEVAL immediate value: 129
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          129>;
+
+  // Pattern: (A ? B : NOR(B,C)) XXEVAL immediate value: 131
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vB, (VNor Vt:$vB, Vt:$vC)),131>;
+
+  // Pattern: (A ? C : NOR(B,C)) XXEVAL immediate value: 133
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vC, (VNor Vt:$vB, Vt:$vC)),
+          133>;
+
+  // Pattern: (A ? XOR(B,C) : NOR(B,C)) XXEVAL immediate value: 134
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          134>;
+
+  // Pattern: (A ? NOT(C) : NOR(B,C)) XXEVAL immediate value: 138
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          138>;
+
+  // Pattern: (A ? NOT(B) : NOR(B,C)) XXEVAL immediate value: 140
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VNor Vt:$vB, Vt:$vC)),
+          140>;
+
+  // Pattern: (A ? NAND(B,C) : NOR(B,C)) XXEVAL immediate value: 142
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          142>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectEqv
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : EQV(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {OR(B,C), NOR(B,C), NAND(B,C), NOT(B),
+//   NOT(C)}
+// - C is the "false" case op EQV(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectEqv<ValueType Vt>{
+  // Pattern: (A ? OR(B,C) : EQV(B,C)) XXEVAL immediate value: 151
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          151>;
+
+  // Pattern: (A ? NOR(B,C) : EQV(B,C)) XXEVAL immediate value: 152
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          152>;
+
+  // Pattern: (A ? NOT(C) : EQV(B,C)) XXEVAL immediate value: 154
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          154>;
+
+  // Pattern: (A ? NAND(B,C) : EQV(B,C)) XXEVAL immediate value: 158
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          158>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNotC
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOT(C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {AND(B,C), OR(B,C), XOR(B,C), NAND(B,C),
+//   B, NOT(B)}
+// - C is the "false" case op NOT(C)
+// =============================================================================
+multiclass XXEvalTernarySelectNotC<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOT(C)) XXEVAL immediate value: 161
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 161>;
+
+  // Pattern: (A ? B : NOT(C)) XXEVAL immediate value: 163
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vB, (VNot Vt:$vC)), 163>;
+
+  // Pattern: (A ? XOR(B,C) : NOT(C)) XXEVAL immediate value: 166
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 166>;
+
+  // Pattern: (A ? OR(B,C) : NOT(C)) XXEVAL immediate value: 167
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 167>;
+  
+  // Pattern: (A ? NOT(B) : NOT(C)) XXEVAL immediate value: 172
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VNot Vt:$vC)), 172>;
+
+  // Pattern: (A ? NAND(B,C) : NOT(C)) XXEVAL immediate value: 174
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 174>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNotB
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOT(B)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {AND(B,C), OR(B,C), XOR(B,C), NAND(B,C),
+//   C, NOT(B)}
+// - C is the "false" case op NOT(B)
+// =============================================================================
+multiclass XXEvalTernarySelectNotB<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOT(B)) XXEVAL immediate value: 193
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 193>;
+
+  // Pattern: (A ? C : NOT(B)) XXEVAL immediate value: 197
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vC, (VNot Vt:$vB)), 197>;
+
+  // Pattern: (A ? XOR(B,C) : NOT(B)) XXEVAL immediate value: 198
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 198>;
+
+  // Pattern: (A ? OR(B,C) : NOT(B)) XXEVAL immediate value: 199
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 199>;
+  
+  // Pattern: (A ? NOT(C) : NOT(B)) XXEVAL immediate value: 202
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VNot Vt:$vB)), 202>;
+
+  // Pattern: (A ? NAND(B,C) : NOT(B)) XXEVAL immediate value: 206
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 206>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNand
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NAND(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, XOR(B,C), OR(B,C), EQV(B,C)}
+// - C is the "false" case op NAND(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectNand<ValueType Vt>{
+  // Pattern: (A ? B : NAND(B,C)) XXEVAL immediate value: 227
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vB, (VNand Vt:$vB, Vt:$vC)), 227>;
+
+  // Pattern: (A ? C : NAND(B,C)) XXEVAL immediate value: 229
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vC, (VNand Vt:$vB, Vt:$vC)), 229>;
+
+  // Pattern: (A ? XOR(B,C) : NAND(B,C)) XXEVAL immediate value: 230
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          230>;
+
+  // Pattern: (A ? OR(B,C) : NAND(B,C)) XXEVAL immediate value: 231
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          231>;
+
+  // Pattern: (A ? EQV(B,C) : NAND(B,C)) XXEVAL immediate value: 233
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          233>;
+}
+
 let Predicates = [PrefixInstrs, HasP10Vector] in {
   let AddedComplexity = 400 in {
     def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
@@ -2519,6 +2703,11 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
         defm : XXEvalTernarySelectC<Ty>;
         defm : XXEvalTernarySelectXor<Ty>;
         defm : XXEvalTernarySelectOr<Ty>;
+        defm : XXEvalTernarySelectNor<Ty>;
+        defm : XXEvalTernarySelectEqv<Ty>;
+        defm : XXEvalTernarySelectNotC<Ty>;
+        defm : XXEvalTernarySelectNotB<Ty>;
+        defm : XXEvalTernarySelectNand<Ty>;
     }
 
     // Anonymous patterns to select prefixed VSX loads and stores.

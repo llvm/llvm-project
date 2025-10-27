@@ -1793,3 +1793,13 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
   }
   return true;
 }
+
+Printable llvm::printBasicBlock(const BasicBlock *BB) {
+  return Printable([BB](raw_ostream &OS) {
+    if (!BB) {
+      OS << "<nullptr>";
+      return;
+    }
+    BB->printAsOperand(OS);
+  });
+}

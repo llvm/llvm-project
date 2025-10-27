@@ -36,10 +36,10 @@ if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
 endif()
 
-# Disable flang on Darwin due to:
+# Don't build flang on Darwin due to:
 # https://github.com/llvm/llvm-project/issues/160546
 if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
-  list(APPEND DEFAULT_PROJECT "flang")
+  list(APPEND DEFAULT_PROJECTS "flang")
 endif()
 
 set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
@@ -51,14 +51,17 @@ set(LLVM_RELEASE_ENABLE_PGO ON CACHE BOOL "")
 set(LLVM_RELEASE_ENABLE_RUNTIMES ${DEFAULT_RUNTIMES} CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PROJECTS ${DEFAULT_PROJECTS} CACHE STRING "")
 
-if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
-  # Don't link against the just built runtimes due to:
-  # https://github.com/llvm/llvm-project/issues/77653
-  set(DEFAULT_LINK_LOCAL_RUNTIMES OFF)
-else()
-  set(DEFAULT_LINK_LOCAL_RUNTIMES ON)
-endif()
-set(LLVM_RELEASE_LINK_LOCAL_RUNTIMES ${DEFAULT_LINK_LOCAL_RUNTIMES} CACHE BOOL "")
+# This option enables linking stage2 clang statically with the runtimes
+# (libc++ and compiler-rt) from stage1.  In theory this will give the
+# binaries better performance and make them more portable.  However,
+# this configuration is not well tested and causes build failures with
+# the flang-rt tests cases, since the -stclib=libc++ flag does not
+# get propagated to the runtimes build.  There is also a separate
+# issue on Darwin where clang will use the local libc++ headers, but
+# link with system libc++ which can cause some incompatibilities.
+# See https://github.com/llvm/llvm-project/issues/77653
+# Because of these problems, this option will default to OFF.
+set(LLVM_RELEASE_ENABLE_LINK_LOCAL_RUNTIMES OFF CACHE BOOL "")
 
 # Note we don't need to add install here, since it is one of the pre-defined
 # steps.
@@ -74,7 +77,7 @@ set(STAGE1_PROJECTS "clang")
 # Need to build compiler-rt in order to use PGO for later stages.
 set(STAGE1_RUNTIMES "compiler-rt")
 # Build all runtimes so we can statically link them into the stage2 compiler.
-if(DEFAULT_LINK_LOCAL_RUNTIMES)
+if(LLVM_RELEASE_ENABLE_LINK_LOCAL_RUNTIMES)
   list(APPEND STAGE1_RUNTIMES "libcxx;libcxxabi;libunwind")
 endif()
 
@@ -138,7 +141,7 @@ set_instrument_and_final_stage_var(LLVM_ENABLE_LTO "${LLVM_RELEASE_ENABLE_LTO}" 
 if (LLVM_RELEASE_ENABLE_LTO)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LLD "ON" BOOL)
 endif()
-if(DEFAULT_LINK_LOCAL_RUNTIMES)
+if(LLVM_RELEASE_ENABLE_LINK_LOCAL_RUNTIMES)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LIBCXX "ON" BOOL)
   set_instrument_and_final_stage_var(LLVM_STATIC_LINK_CXX_STDLIB "ON" BOOL)
   set(RELEASE_LINKER_FLAGS "-rtlib=compiler-rt --unwindlib=libunwind")

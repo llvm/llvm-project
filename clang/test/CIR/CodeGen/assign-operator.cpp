@@ -20,7 +20,7 @@ void a() {
 // CIR:   %[[ONE_CAST:.*]] = cir.cast integral %[[ONE]] : !u32i -> !s32i
 // CIR:   %[[RET:.*]] = cir.call @_ZN1xaSEi(%[[A_ADDR]], %[[ONE_CAST]]) : (!cir.ptr<!rec_x>, !s32i) -> !s32i
 
-// LLVM: define{{.*}} @_Z1av()
+// LLVM: define{{.*}} @_Z1av(){{.*}}
 // OGCG: define{{.*}} @_Z1av()
 
 void f(int i, int j) {
@@ -121,7 +121,7 @@ void copy_ref_to_ref(E &e1, E &e2) {
 // CIR:   %[[D1_REF_2:.*]] = cir.call @_ZN1DaSERKS_(%[[D1_REF]], %[[D2_REF]])
 // CIR:   cir.return
 
-// LLVM: define{{.*}} void @_Z15copy_ref_to_refR1ES0_(ptr %[[ARG0:.*]], ptr %[[ARG1:.*]]) {
+// LLVM: define{{.*}} void @_Z15copy_ref_to_refR1ES0_(ptr %[[ARG0:.*]], ptr %[[ARG1:.*]]){{.*}} {
 // LLVM:   %[[E1_ADDR:.*]] = alloca ptr
 // LLVM:   %[[E2_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[E1_ADDR]]

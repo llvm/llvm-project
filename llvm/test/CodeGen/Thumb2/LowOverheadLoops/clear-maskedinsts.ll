@@ -36,7 +36,7 @@ define hidden i32 @_Z4loopPiPjiS0_i(ptr noalias nocapture readonly %s1, ptr noal
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP5]])
 ; CHECK-NEXT:    [[TMP9]] = sub i32 [[TMP5]], 4
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT72]], ptr [[LSR_IV9]], i32 4, <4 x i1> [[TMP8]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT72]], ptr align 4 [[LSR_IV9]], <4 x i1> [[TMP8]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[SCEVGEP10]] = getelementptr i32, ptr [[LSR_IV9]], i32 4
 ; CHECK-NEXT:    [[TMP10]] = call i32 @llvm.loop.decrement.reg.i32(i32 [[TMP4]], i32 1)
@@ -54,10 +54,10 @@ define hidden i32 @_Z4loopPiPjiS0_i(ptr noalias nocapture readonly %s1, ptr noal
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> undef, i32 [[TRIP_COUNT_MINUS_183]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ule <4 x i32> [[INDUCTION86]], [[TMP14]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV6]], i32 4, <4 x i1> [[TMP15]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD89:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV3]], i32 4, <4 x i1> [[TMP15]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV6]], <4 x i1> [[TMP15]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD89:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV3]], <4 x i1> [[TMP15]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP16:%.*]] = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> [[WIDE_MASKED_LOAD89]], <4 x i32> [[WIDE_MASKED_LOAD]])
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP16]], ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP15]])
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP16]], ptr align 4 [[LSR_IV]], <4 x i1> [[TMP15]])
 ; CHECK-NEXT:    [[INDEX_NEXT81]] = add i32 [[INDEX80]], 4
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
 ; CHECK-NEXT:    [[SCEVGEP4]] = getelementptr i32, ptr [[LSR_IV3]], i32 4

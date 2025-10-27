@@ -37,8 +37,8 @@ The default mode to calculate tokens is:
   pointers.
 
 Other token ID assignment modes are supported, but they may be subject to
-change or removal. These may (experimentally) be selected with ``-mllvm
--alloc-token-mode=<mode>``:
+change or removal. These may (experimentally) be selected with ``-Xclang
+-falloc-token-mode=<mode>``:
 
 * ``typehash``: This mode assigns a token ID based on the hash of the allocated
   type's name.

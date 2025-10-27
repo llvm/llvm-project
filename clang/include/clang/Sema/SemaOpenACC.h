@@ -245,7 +245,7 @@ public:
 
   OpenACCPrivateRecipe CreatePrivateInitRecipe(const Expr *VarExpr);
   OpenACCFirstPrivateRecipe CreateFirstPrivateInitRecipe(const Expr *VarExpr);
-  OpenACCReductionRecipe
+  OpenACCReductionRecipeWithStorage
   CreateReductionInitRecipe(OpenACCReductionOperator ReductionOperator,
                             const Expr *VarExpr);
 
@@ -951,12 +951,14 @@ public:
                   ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
   // Does the checking for a 'reduction ' clause that needs to be done in
   // dependent and not dependent cases.
-  OpenACCClause *CheckReductionClause(
-      ArrayRef<const OpenACCClause *> ExistingClauses,
-      OpenACCDirectiveKind DirectiveKind, SourceLocation BeginLoc,
-      SourceLocation LParenLoc, OpenACCReductionOperator ReductionOp,
-      ArrayRef<Expr *> Vars, ArrayRef<OpenACCReductionRecipe> Recipes,
-      SourceLocation EndLoc);
+  OpenACCClause *
+  CheckReductionClause(ArrayRef<const OpenACCClause *> ExistingClauses,
+                       OpenACCDirectiveKind DirectiveKind,
+                       SourceLocation BeginLoc, SourceLocation LParenLoc,
+                       OpenACCReductionOperator ReductionOp,
+                       ArrayRef<Expr *> Vars,
+                       ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+                       SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

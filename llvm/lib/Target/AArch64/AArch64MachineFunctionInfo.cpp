@@ -40,7 +40,11 @@ yaml::AArch64FunctionInfo::AArch64FunctionInfo(
           getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizePPR)),
       HasStackFrame(MFI.hasStackFrame()
                         ? std::optional<bool>(MFI.hasStackFrame())
-                        : std::nullopt) {}
+                        : std::nullopt),
+      HasStreamingModeChanges(
+          MFI.hasStreamingModeChanges()
+              ? std::optional<bool>(MFI.hasStreamingModeChanges())
+              : std::nullopt) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -55,6 +59,8 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
                     YamlMFI.StackSizePPR.value_or(0));
   if (YamlMFI.HasStackFrame)
     setHasStackFrame(*YamlMFI.HasStackFrame);
+  if (YamlMFI.HasStreamingModeChanges)
+    setHasStreamingModeChanges(*YamlMFI.HasStreamingModeChanges);
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {

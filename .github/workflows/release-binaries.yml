@@ -58,7 +58,6 @@ jobs:
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
-      ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
@@ -123,6 +122,27 @@ jobs:
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
         enable_pgo=1
 
+        target="$RUNNER_OS-$RUNNER_ARCH"
+
+        # The macOS builds try to cross compile some libraries so we need to
+        # add extra CMake args to disable them.
+        # See https://github.com/llvm/llvm-project/issues/99767
+        if [ "$RUNNER_OS" = "macOS" ]; then
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
+          if [ "$RUNNER_ARCH" = "ARM64" ]; then
+            arches=arm64
+          else
+            arches=x86_64
+          fi
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
+        fi
+
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          # The build times out on Windows, so we need to disable LTO.
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+        fi
+
+        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
@@ -239,14 +259,13 @@ jobs:
     - name: Configure
       id: build
       shell: bash
-      env:
-        CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang/cmake/caches/Release.cmake
+            -C clang/cmake/caches/Release.cmake \
+            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build
       shell: bash

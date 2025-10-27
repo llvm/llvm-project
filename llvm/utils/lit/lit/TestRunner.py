@@ -92,12 +92,12 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env, umask=-1, ulimit={}):
+    def __init__(self, cwd, env, umask=-1, ulimit=None):
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
         self.dirStack = []
-        self.ulimit = ulimit
+        self.ulimit = ulimit if ulimit else {}
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -612,6 +612,10 @@ def executeBuiltinUlimit(cmd, shenv):
         shenv.ulimit["RLIMIT_AS"] = new_limit * 1024
     elif cmd.args[1] == "-n":
         shenv.ulimit["RLIMIT_NOFILE"] = new_limit
+    elif cmd.args[1] == "-s":
+        shenv.ulimit["RLIMIT_STACK"] = new_limit * 1024
+    elif cmd.args[1] == "-f":
+        shenv.ulimit["RLIMIT_FSIZE"] = new_limit
     else:
         raise InternalShellError(
             cmd, "'ulimit' does not support option: %s" % cmd.args[1]
