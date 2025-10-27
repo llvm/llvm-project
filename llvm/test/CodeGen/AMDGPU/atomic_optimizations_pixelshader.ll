@@ -250,9 +250,9 @@ else:
 define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspace(8) inreg %inout, i32 %val) {
 ; GFX7-LABEL: add_i32_varying:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_wqm_b64 s[8:9], -1
 ; GFX7-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
-; GFX7-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; GFX7-NEXT:    s_wqm_b64 s[4:5], -1
+; GFX7-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_vccnz .LBB1_2
 ; GFX7-NEXT:  ; %bb.1: ; %if
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)

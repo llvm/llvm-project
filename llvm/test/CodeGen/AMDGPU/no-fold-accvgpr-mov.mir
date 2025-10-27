@@ -58,9 +58,7 @@ body:             |
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sreg_32 = PHI [[DEF]], %bb.1, [[S_AND_B32_]], %bb.2
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:agpr_32 = PHI [[COPY3]], %bb.1, [[V_MFMA_F32_16X16X16F16_e64_]].sub0, %bb.2
   ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:sreg_64_xexec = PHI [[S_MOV_B64_]], %bb.1, [[S_MOV_B64_1]], %bb.2
-  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[PHI4]], implicit $exec
-  ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_1]], 1, implicit $exec
-  ; CHECK-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_1]], implicit-def $scc
+  ; CHECK-NEXT:   $vcc = S_ANDN2_B64 $exec, [[PHI4]], implicit-def $scc
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}
@@ -112,9 +110,7 @@ body:             |
   ; COALESCE-NEXT: bb.3:
   ; COALESCE-NEXT:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
   ; COALESCE-NEXT: {{  $}}
-  ; COALESCE-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_MOV_B64_]], implicit $exec
-  ; COALESCE-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_1]], implicit $exec
-  ; COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_1]], implicit-def dead $scc
+  ; COALESCE-NEXT:   $vcc = S_ANDN2_B64 $exec, [[S_MOV_B64_]], implicit-def dead $scc
   ; COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
   ; COALESCE-NEXT:   S_BRANCH %bb.4
   ; COALESCE-NEXT: {{  $}}
@@ -166,9 +162,7 @@ body:             |
   ; GFX908-COALESCE-NEXT: bb.3:
   ; GFX908-COALESCE-NEXT:   successors: %bb.4(0x40000000), %bb.1(0x40000000)
   ; GFX908-COALESCE-NEXT: {{  $}}
-  ; GFX908-COALESCE-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[S_MOV_B64_]], implicit $exec
-  ; GFX908-COALESCE-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 1, [[V_CNDMASK_B32_e64_1]], implicit $exec
-  ; GFX908-COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_1]], implicit-def dead $scc
+  ; GFX908-COALESCE-NEXT:   $vcc = S_ANDN2_B64 $exec, [[S_MOV_B64_]], implicit-def dead $scc
   ; GFX908-COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
   ; GFX908-COALESCE-NEXT:   S_BRANCH %bb.4
   ; GFX908-COALESCE-NEXT: {{  $}}

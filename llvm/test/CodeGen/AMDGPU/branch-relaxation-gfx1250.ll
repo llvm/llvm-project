@@ -520,20 +520,20 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-LABEL: long_branch_hang:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
-; GCN-NEXT:    s_mov_b32 s7, -1
+; GCN-NEXT:    s_mov_b32 s8, -1
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_cselect_b32 s6, -1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
 ; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:    s_cselect_b32 s8, -1, 0
+; GCN-NEXT:    s_cselect_b32 s7, -1, 0
 ; GCN-NEXT:    s_cmp_lt_i32 s3, 6
 ; GCN-NEXT:    s_cbranch_scc0 .LBB10_1
 ; GCN-NEXT:  ; %bb.10: ; %bb
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_4-.Lpost_addpc14
 ; GCN-NEXT:  .Lpost_addpc14:
 ; GCN-NEXT:  .LBB10_1: ; %Flow
-; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s7
+; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s8
 ; GCN-NEXT:    s_cbranch_vccnz .LBB10_2
 ; GCN-NEXT:  ; %bb.12: ; %Flow
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_5-.Lpost_addpc15
@@ -563,7 +563,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_sleep 0
-; GCN-NEXT:    s_mov_b32 s0, s8
+; GCN-NEXT:    s_mov_b32 s0, s7
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_cbranch_execz .LBB10_5
 ; GCN-NEXT:  ; %bb.16: ; %bb13

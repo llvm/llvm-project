@@ -10,6 +10,7 @@
 
 #include "SIFoldOperands.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
@@ -265,6 +266,7 @@ public:
   bool tryFoldRegSequence(MachineInstr &MI);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
+  bool tryOptimizeVcndVcmpPair(MachineInstr &MI);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -2784,6 +2786,140 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
   return Changed;
 }
 
+
+static bool isPhysRegDefBetween(const SIRegisterInfo *TRI, Register Reg,
+                         const MachineInstr &Start, const MachineInstr &End) {
+  if(Start.getParent() != End.getParent())
+    return false;
+  
+  auto Itr = ++Start.getIterator();
+  auto EndItr = End.getIterator();
+  while (Itr != EndItr) {
+    if ((*Itr).modifiesRegister(Reg, TRI))
+      return true;
+    Itr++;
+  }                    
+
+  return false;
+}
+
+// Optimize sequence
+//    %sel = V_CNDMASK_B32_e64 0, 1, %cc
+//    %cmp = V_CMP_NE_U32 1, %sel
+//    $vcc = S_AND_B64 $exec, %cmp
+//    S_CBRANCH_VCC[N]Z
+// =>
+//    $vcc = S_ANDN2_B64 $exec, %cc
+//    S_CBRANCH_VCC[N]Z
+//
+// It is the negation pattern inserted by DAGCombiner::visitBRCOND() in the
+// rebuildSetCC(). S_AND_B64 with exec is a required part of the pattern since 
+// V_CNDMASK_B32 writes zeroes for inactive lanes.
+bool SIFoldOperandsImpl::tryOptimizeVcndVcmpPair(MachineInstr &MI) {
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(*ST);
+  Register ExecReg = LMC.ExecReg;
+
+  if (MI.getOpcode() != LMC.AndOpc || !MI.getOperand(1).isReg() ||
+      !MI.getOperand(2).isReg())
+    return false;
+
+  if(!MI.getOperand(0).isReg() || !MI.getOperand(0).getReg().isPhysical() ||
+      MI.getOperand(0).getReg() != LMC.VccReg)
+    return false;
+
+  auto I = llvm::find_if(MRI->use_nodbg_instructions(MI.getOperand(0).getReg()), 
+                          [](const MachineInstr &MI) {
+                           unsigned Opc = MI.getOpcode();
+                           return Opc == AMDGPU::S_CBRANCH_VCCZ ||
+                                  Opc == AMDGPU::S_CBRANCH_VCCNZ; });
+  if (I == MRI->use_instr_nodbg_end())
+    return false;
+
+  MachineOperand *AndCmp = &MI.getOperand(1);
+  Register CmpReg = AndCmp->getReg();
+  if (CmpReg == ExecReg) {
+    AndCmp = &MI.getOperand(2);
+    CmpReg = AndCmp->getReg();
+  } else if (MI.getOperand(2).getReg() != ExecReg) {
+    return false;
+  }
+
+  auto CmpIt = llvm::find_if(MRI->def_instructions(CmpReg), 
+                          [&MI](const MachineInstr &DefMI) {
+                            unsigned Opc = DefMI.getOpcode();
+                            return ((Opc == AMDGPU::V_CMP_NE_U32_e32 ||
+                                     Opc == AMDGPU::V_CMP_NE_U32_e64) &&
+                                    DefMI.getParent() == MI.getParent());
+                          });
+  if (CmpIt == MRI->def_instr_end())
+    return false;
+  MachineInstr &Cmp = *CmpIt;
+
+  // Check for cmpReg is physical only vcc/vcc_lo possible and not redefined 
+  // uptil s_and_b32.
+  if (CmpReg.isPhysical()) {
+    assert(CmpReg == LMC.VccReg && "CmpReg should be VCC or VCC_LO.");
+    if (isPhysRegDefBetween(TRI, CmpReg, Cmp, MI))
+      return false;
+  }
+
+  MachineOperand *Op1 = TII->getNamedOperand(Cmp, AMDGPU::OpName::src0);
+  MachineOperand *Op2 = TII->getNamedOperand(Cmp, AMDGPU::OpName::src1);
+  if (Op1->isImm() && Op2->isReg())
+    std::swap(Op1, Op2);
+  if (!Op1->isReg() || !Op2->isImm() || Op2->getImm() != 1)
+    return false;
+
+  Register SelReg = Op1->getReg();
+  if (SelReg.isPhysical())
+    return false;
+
+  MachineInstr *Sel = MRI->getVRegDef(SelReg);
+  if (!Sel || Sel->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
+    return false;
+
+  if (TII->hasModifiersSet(*Sel, AMDGPU::OpName::src0_modifiers) ||
+      TII->hasModifiersSet(*Sel, AMDGPU::OpName::src1_modifiers))
+    return false;
+
+  Op1 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src0);
+  Op2 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src1);
+  MachineOperand *CC = TII->getNamedOperand(*Sel, AMDGPU::OpName::src2);
+  if (!Op1->isImm() || !Op2->isImm() || !CC->isReg() ||
+      Op1->getImm() != 0 || Op2->getImm() != 1)
+    return false;
+
+  
+  if (CmpReg.isPhysical()) {
+    bool UsedByAndOnly = true;
+    auto Itr = ++Cmp.getIterator();
+    auto AndItr = MI.getIterator();
+    while (Itr != AndItr) {
+      if ((*Itr).readsRegister(CmpReg, TRI)) {
+        UsedByAndOnly = false;
+        break;
+      }
+      Itr++;
+    }
+
+    if (UsedByAndOnly)
+      Cmp.eraseFromParent();
+  } else if ((CmpReg.isVirtual() && MRI->hasOneNonDBGUse(CmpReg))) {
+      Cmp.eraseFromParent();
+  }
+
+  MI.setDesc(TII->get(LMC.AndN2Opc));
+  AndCmp->setReg(CC->getReg());
+  AndCmp->setSubReg(CC->getSubReg());
+  AndCmp->setIsUndef(CC->isUndef());
+  AndCmp->setIsKill(CC->isKill());
+  
+  if (MRI->use_nodbg_empty(SelReg))
+    Sel->eraseFromParent();
+
+  return true;
+}
+
 bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   this->MF = &MF;
   MRI = &MF.getRegInfo();
@@ -2821,6 +2957,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
       }
 
       if (MI.mayLoad() && tryFoldLoad(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryOptimizeVcndVcmpPair(MI)) {
         Changed = true;
         continue;
       }

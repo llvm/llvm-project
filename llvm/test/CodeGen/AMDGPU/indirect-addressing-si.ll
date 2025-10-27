@@ -7175,7 +7175,6 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:    ;;#ASMSTART
 ; GENERIC-NEXT:    ; reg use v[0:3]
 ; GENERIC-NEXT:    ;;#ASMEND
-; GENERIC-NEXT:    s_mov_b64 vcc, exec
 ; GENERIC-NEXT:    s_cbranch_execnz .LBB19_3
 ; GENERIC-NEXT:  .LBB19_2: ; %bb1
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
@@ -7192,7 +7191,6 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    s_endpgm
 ; GENERIC-NEXT:  .LBB19_4:
-; GENERIC-NEXT:    s_mov_b64 vcc, 0
 ; GENERIC-NEXT:    s_branch .LBB19_2
 ;
 ; NOOPT-LABEL: extract_adjacent_blocks:
@@ -7414,7 +7412,6 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:    ;;#ASMSTART
 ; GENERIC-NEXT:    ; reg use v[0:3]
 ; GENERIC-NEXT:    ;;#ASMEND
-; GENERIC-NEXT:    s_mov_b64 vcc, exec
 ; GENERIC-NEXT:    s_cbranch_execnz .LBB20_3
 ; GENERIC-NEXT:  .LBB20_2: ; %bb1
 ; GENERIC-NEXT:    s_mov_b32 s3, 0xf000
@@ -7431,7 +7428,6 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; GENERIC-NEXT:    s_waitcnt vmcnt(0)
 ; GENERIC-NEXT:    s_endpgm
 ; GENERIC-NEXT:  .LBB20_4:
-; GENERIC-NEXT:    s_mov_b64 vcc, 0
 ; GENERIC-NEXT:    s_branch .LBB20_2
 ;
 ; NOOPT-LABEL: insert_adjacent_blocks:

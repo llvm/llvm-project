@@ -291,7 +291,6 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:    s_cbranch_execnz .LBB5_5
 ; GCN-NEXT:  ; %bb.9: ; %bb3
 ; GCN-NEXT:    s_getpc_b64 s[6:7]
