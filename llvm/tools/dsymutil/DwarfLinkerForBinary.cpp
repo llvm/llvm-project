@@ -796,7 +796,8 @@ bool DwarfLinkerForBinary::linkImpl(
                       Obj->getObjectFilename());
         // Only skip swiftmodules that could be parsed and are positively
         // identified as textual. Do so only when the option allows.
-      } else if (*FromInterfaceOrErr && !Options.IncludeSwiftModulesFromInterface) {
+      } else if (*FromInterfaceOrErr &&
+                 !Options.IncludeSwiftModulesFromInterface) {
         if (Options.Verbose)
           outs() << "Skipping compiled textual Swift interface: "
                  << Obj->getObjectFilename() << "\n";
