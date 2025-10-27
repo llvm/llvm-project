@@ -42,7 +42,7 @@ if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
     # Enable libxml2 with static linking.  This is necessary for llvm-mt.
     set_instrument_and_final_stage_var(LLVM_ENABLE_LIBXML2 "FORCE_ON" STRING)
     set_instrument_and_final_stage_var(LIBXML2_LIBRARIES "${LLVM_RELEASE_LIBXML2_PREFIX}/lib/libxml2.lib" STRING)
-    set_instrument_and_final_stage_var(LLVM_ENABLE_LIBXML2 "${LLVM_RELEASE_LIBXML2_PREFIX}/include/libxml2" STRING)
+    set_instrument_and_final_stage_var(LIBXML2_INCLUDE_DIR "${LLVM_RELEASE_LIBXML2_PREFIX}/include/libxml2" STRING)
     set_instrument_and_final_stage_var(LIBXML2_DEFINITIONS "-DLIBXML_STATIC" STRING)
   endif()
   set_instrument_and_final_stage_var(LLDB_ENABLE_LIBXML2 "OFF" BOOL)
