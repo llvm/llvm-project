@@ -14,8 +14,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -442,6 +444,7 @@ void PredicateInfoBuilder::processBranch(
     }
   }
 }
+
 // Process a block terminating switch, and place relevant operations to be
 // renamed into OpsToRename.
 void PredicateInfoBuilder::processSwitch(
@@ -450,21 +453,41 @@ void PredicateInfoBuilder::processSwitch(
   Value *Op = SI->getCondition();
   if ((!isa<Instruction>(Op) && !isa<Argument>(Op)) || Op->hasOneUse())
     return;
+  using CaseValuesVec = PredicateSwitch::CaseValuesVec;
 
-  // Remember how many outgoing edges there are to every successor.
-  SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
-  for (BasicBlock *TargetBlock : successors(BranchBB))
-    ++SwitchEdges[TargetBlock];
+  BasicBlock *DefaultDest = SI->getDefaultDest();
+  // Remember all cases for PT_Switch related to the default dest.
+  CaseValuesVec AllCases;
+  AllCases.reserve(SI->getNumCases());
 
-  // Now propagate info for each case value
+  // For each successor, remember all its related case values.
+  SmallDenseMap<BasicBlock *, CaseValuesVec, 16> SwitchEdges;
+
   for (auto C : SI->cases()) {
     BasicBlock *TargetBlock = C.getCaseSuccessor();
-    if (SwitchEdges.lookup(TargetBlock) == 1) {
-      PredicateSwitch *PS = new (Allocator) PredicateSwitch(
-          Op, SI->getParent(), TargetBlock, C.getCaseValue(), SI);
-      addInfoFor(OpsToRename, Op, PS);
-    }
+    /// TODO: Replace this if with an assertion if we can guarantee that
+    /// this function must be called after SimplifyCFG, as a canonical switch
+    /// should not have case dest being the default dest.
+    if (TargetBlock == DefaultDest)
+      continue;
+    // Only collect real case values
+    ConstantInt *CaseValue = C.getCaseValue();
+    AllCases.push_back(CaseValue);
+    SwitchEdges[TargetBlock].push_back(CaseValue);
   }
+
+  // Now propagate info for each case successor
+  for (auto *CaseSucc : SwitchEdges.keys()) {
+    auto &CaseValues = SwitchEdges.at(CaseSucc);
+    PredicateSwitch *PS = new (Allocator) PredicateSwitch(
+        Op, SI->getParent(), CaseSucc, std::move(CaseValues), SI, false);
+    addInfoFor(OpsToRename, Op, PS);
+  }
+
+  // Finally, propagate info for the default case
+  PredicateSwitch *PS = new (Allocator) PredicateSwitch(
+      Op, SI->getParent(), DefaultDest, std::move(AllCases), SI, true);
+  addInfoFor(OpsToRename, Op, PS);
 }
 
 // Build predicate info for our function
@@ -500,8 +523,8 @@ void PredicateInfoBuilder::buildPredicateInfo() {
 // Given the renaming stack, make all the operands currently on the stack real
 // by inserting them into the IR.  Return the last operation's value.
 Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
-                                             ValueDFSStack &RenameStack,
-                                             Value *OrigOp) {
+                                              ValueDFSStack &RenameStack,
+                                              Value *OrigOp) {
   // Find the first thing we have to materialize
   auto RevIter = RenameStack.rbegin();
   for (; RevIter != RenameStack.rend(); ++RevIter)
@@ -601,7 +624,8 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
         // block, and handle it specially. We know that it goes last, and only
         // dominate phi uses.
         auto BlockEdge = getBlockEdge(PossibleCopy);
-        if (!BlockEdge.second->getSinglePredecessor()) {
+        // We use unique predecessor to identify the mult-cases dest in switch
+        if (!BlockEdge.second->getUniquePredecessor()) {
           VD.LocalNum = LN_Last;
           auto *DomNode = DT.getNode(BlockEdge.first);
           if (DomNode) {
@@ -759,8 +783,63 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
       // TODO: Make this an assertion once RenamedOp is fully accurate.
       return std::nullopt;
     }
+    const auto &PS = *cast<PredicateSwitch>(this);
+    unsigned NumCases = PS.CaseValues.size();
+    assert(NumCases != 0 && "PT_Switch with no cases is invalid");
+    // PT_Switch with >1 cases is too complex to derive a PredicateConstraint.
+    if (NumCases > 1)
+      return std::nullopt;
+    // If we have a single case, we can derive a predicate constraint.
+    return {
+        {PS.IsDefault ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ, PS.CaseValues[0]}};
+  }
+  llvm_unreachable("Unknown predicate type");
+}
 
-    return {{CmpInst::ICMP_EQ, cast<PredicateSwitch>(this)->CaseValue}};
+std::optional<ConstantRange> PredicateBase::getRangeConstraint() const {
+  switch (Type) {
+  case PT_Assume:
+  case PT_Branch: {
+    // For PT_Assume/PT_Branch, we derive the condition constant range from
+    // its predicate constraint.
+    const std::optional<PredicateConstraint> &Constraint = getConstraint();
+    if (!Constraint)
+      return std::nullopt;
+    CmpInst::Predicate Pred = Constraint->Predicate;
+    Value *OtherOp = Constraint->OtherOp;
+    const APInt *IntOp;
+    // If the other operand is not a constant integer, we can't derive a
+    // constant range.
+    if (!match(OtherOp, m_APInt(IntOp)))
+      return std::nullopt;
+    return {ConstantRange::makeExactICmpRegion(Pred, *IntOp)};
+  }
+  case PT_Switch:
+    // For PT_Switch, we directly derive the constant range from its case
+    // values.
+    if (Condition != RenamedOp) {
+      // TODO: Make this an assertion once RenamedOp is fully accurate.
+      return std::nullopt;
+    }
+
+    const auto &PS = *cast<PredicateSwitch>(this);
+    assert(!PS.CaseValues.empty() && "SwitchInfo with no cases is invalid");
+
+    unsigned BitWidth = PS.Condition->getType()->getScalarSizeInBits();
+
+    // For case values, CR = emptyset ∪ {case1, case2,..., caseN}
+    // For default, CR = fullset ∩ ~{case1} ∩ ~{case2} ∩ ... ∩ ~{caseN}
+    bool IsDefault = PS.IsDefault;
+    ConstantRange CR = IsDefault ? ConstantRange::getFull(BitWidth)
+                                 : ConstantRange::getEmpty(BitWidth);
+    for (ConstantInt *Case : PS.CaseValues) {
+      assert(Case && "CaseValue in switch should not be null");
+      CR = IsDefault
+               ? CR.intersectWith(ConstantRange(Case->getValue()).inverse())
+               : CR.unionWith(Case->getValue());
+    }
+
+    return {CR};
   }
   llvm_unreachable("Unknown predicate type");
 }
@@ -818,8 +897,20 @@ public:
         PB->To->printAsOperand(OS);
         OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
-        OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
-           << " Edge: [";
+        OS << "; switch predicate info { ";
+        if (PS->IsDefault) {
+          OS << "Case: default";
+        } else if (PS->CaseValues.size() == 1) {
+          OS << "CaseValue: " << *PS->CaseValues[0];
+        } else {
+          auto CaseValues =
+              llvm::map_range(PS->CaseValues, [](ConstantInt *Case) {
+                return std::to_string(Case->getSExtValue());
+              });
+          OS << "CaseValues: " << *PS->Condition->getType() << " [ "
+             << join(CaseValues, ", ") << " ]";
+        }
+        OS << " Edge: [";
         PS->From->printAsOperand(OS);
         OS << ",";
         PS->To->printAsOperand(OS);

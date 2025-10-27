@@ -102,6 +102,8 @@ public:
 
   /// Fetch condition in the form of PredicateConstraint, if possible.
   LLVM_ABI std::optional<PredicateConstraint> getConstraint() const;
+  /// Fetch condition in the form of a ConstantRange, if possible.
+  LLVM_ABI std::optional<ConstantRange> getRangeConstraint() const;
 
 protected:
   PredicateBase(PredicateType PT, Value *Op, Value *Condition)
@@ -157,18 +159,22 @@ public:
 
 class PredicateSwitch : public PredicateWithEdge {
 public:
-  Value *CaseValue;
-  // This is the switch instruction.
-  SwitchInst *Switch;
+  using CaseValuesVec = SmallVector<ConstantInt *, 2>;
+  CaseValuesVec CaseValues;
+  bool IsDefault;
   PredicateSwitch(Value *Op, BasicBlock *SwitchBB, BasicBlock *TargetBB,
-                  Value *CaseValue, SwitchInst *SI)
+                  ArrayRef<ConstantInt *> CaseValues, SwitchInst *SI,
+                  bool IsDefault)
       : PredicateWithEdge(PT_Switch, Op, SwitchBB, TargetBB,
                           SI->getCondition()),
-        CaseValue(CaseValue), Switch(SI) {}
+        CaseValues(CaseValues), IsDefault(IsDefault) {}
+  PredicateSwitch(Value *Op, BasicBlock *SwitchBB, BasicBlock *TargetBB,
+                  CaseValuesVec &&CaseValues, SwitchInst *SI, bool IsDefault)
+      : PredicateWithEdge(PT_Switch, Op, SwitchBB, TargetBB,
+                          SI->getCondition()),
+        CaseValues(CaseValues), IsDefault(IsDefault) {}
   PredicateSwitch() = delete;
-  static bool classof(const PredicateBase *PB) {
-    return PB->Type == PT_Switch;
-  }
+  static bool classof(const PredicateBase *PB) { return PB->Type == PT_Switch; }
 };
 
 /// Encapsulates PredicateInfo, including all data associated with memory
