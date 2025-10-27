@@ -5758,7 +5758,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   }
 
   // Add additional cost for the extends that would need to be inserted.
-  return Cost + 2;
+  return Cost + 4;
 }
 
 InstructionCost
