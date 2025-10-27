@@ -671,6 +671,12 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   Align OptimisticAlign = Align(MaxVecRegBits / 8);
   unsigned int MaxVectorNumElems =
       MaxVecRegBits / DL.getTypeSizeInBits(ElementType);
+  // Note: This check decides whether to try to fill gaps based on the masked
+  // legality of the target's maximum vector size (getLoadStoreVecRegBitWidth).
+  // If a target *does not* support a masked load/store with this max vector
+  // size, but *does* support a masked load/store with a *smaller* vector size,
+  // that optimization will be missed. This does not occur in any of the targets
+  // that currently support this API.
   FixedVectorType *OptimisticVectorType =
       FixedVectorType::get(ElementType, MaxVectorNumElems);
   bool TryFillGaps =
