@@ -17,30 +17,11 @@
 #  include <sstream>
 #endif //_LIBCPP_HAS_LOCALIZATION
 
-#include "stacktrace/images.h"
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
 #if _LIBCPP_HAS_LOCALIZATION
-
-_LIBCPP_EXPORTED_FROM_ABI ostream& _Entry::write_to(ostream& __os) const {
-  // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
-  constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
-
-  __os << "0x" << std::hex << std::setfill('0') << std::setw(__k_addr_width) << __addr_;
-  if (__desc_) {
-    __os << ": " << __desc_->view();
-  }
-  if (__file_) {
-    __os << ": " << __file_->view();
-  }
-  if (__line_) {
-    __os << ":" << std::dec << __line_;
-  }
-  return __os;
-}
 
 _LIBCPP_EXPORTED_FROM_ABI ostream& _Trace::write_to(std::ostream& __os) const {
   auto iters = __entry_iters_();
@@ -60,12 +41,6 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& _Trace::write_to(std::ostream& __os) const {
   return __os;
 }
 
-_LIBCPP_EXPORTED_FROM_ABI string _Entry::to_string() const {
-  stringstream __ss;
-  write_to(__ss);
-  return __ss.str();
-}
-
 _LIBCPP_EXPORTED_FROM_ABI string _Trace::to_string() const {
   stringstream __ss;
   write_to(__ss);
@@ -73,11 +48,6 @@ _LIBCPP_EXPORTED_FROM_ABI string _Trace::to_string() const {
 }
 
 #endif // _LIBCPP_HAS_LOCALIZATION
-
-_LIBCPP_HIDE_FROM_ABI uintptr_t _Entry::adjusted_addr() const {
-  auto sub = __image_ ? __image_->slide_ : 0;
-  return __addr_ - sub;
-}
 
 } // namespace __stacktrace
 
