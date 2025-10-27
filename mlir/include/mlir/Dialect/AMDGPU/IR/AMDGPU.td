@@ -923,10 +923,10 @@ def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
     Arguments<(ins
-                   I32Attr:$m,
-                   I32Attr:$n,
-                   I32Attr:$k,
-                   I32Attr:$blocks,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[4, 16, 32]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[4, 16, 32]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[1, 2, 4, 8, 16, 32, 64, 128]>]>:$k,
+                   DefaultValuedAttr<ConfinedAttr<I32Attr, [IntIsOneOf<[1, 2, 4, 16]>]>, "1">:$blocks,
                    MFMAInTypes:$sourceA,
                    MFMAInTypes:$sourceB,
                    MFMAOutTypes:$destC,
@@ -969,14 +969,16 @@ def AMDGPU_MFMAOp :
 
     Example:
     ```mlir
-      %0 = amdgpu.mfma %matA * %matB + %matC
-        { abid = 1 : i32, cbsz = 1 : i32,
-          m = 32 : i32, n = 32 : i32, k = 1 : i32, blocks = 2 : i32 }
+      %0 = amdgpu.mfma 16x16x16 %matA * %matB + %matC
+        : vector<4xf16>, vector<4xf16>, vector<4xf32>
+
+      %1 = amdgpu.mfma 32x32x1 %matD * %matE + %matF
+        { abid = 1 : i32, cbsz = 1 : i32, blocks = 2 : i32 }
         blgp = bcast_second_32 : f32, f32, vector<32xf32>
     ```
   }];
   let assemblyFormat = [{
-    $sourceA `*` $sourceB `+` $destC
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     attr-dict
     `blgp` `=` $blgp
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
@@ -1109,9 +1111,9 @@ def AMDGPU_ScaledMFMAOp :
     AMDGPU_Op<"scaled_mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,
     Arguments<(ins
-                   I32Attr:$m,
-                   I32Attr:$n,
-                   I32Attr:$k,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16, 32]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[64, 128]>]>:$k,
                    ScaledMFMAInTypes:$sourceA,
                    ScaledMFMAInTypes:$sourceB,
                    ScaledMFMAOutTypes:$destC,
@@ -1124,8 +1126,8 @@ def AMDGPU_ScaledMFMAOp :
   let summary = "MLIR wrapper for CDNA scaled mfma instructions";
   let description = [{
     The `amdgpu.scaled_mfma` op is an MLIR wrapper around intrinsics
-    for various scaled versions of `mfma` instructions in the CDNA architecture, which perform
-    multiple outer products in order to allow fast matrix multiplication.
+    for various scaled versions of `mfma` instructions in the CDNA architecture, which
+    perform multiple outer products in order to allow fast matrix multiplication.
 
     The wrapper will select an appropriate `mfma` instruction, if one is available,
     based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
@@ -1140,15 +1142,23 @@ def AMDGPU_ScaledMFMAOp :
 
     This wrapper takes inspiration from `amdgpu.mfma`, but has some key differences:
     - `amdgpu.scaled_mfma` operates on fp4 (f4E2M1FN), fp6 (f6E2M3FN and f6E3M2FN) and
-    fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as their tile
-    size.
+      fp8 (f8E4M3FN and f8E5M2) types using either M=N=16, K=128 or M=N=32, K=64 as
+      their tile size.
     - `amdgpu.scaled_mfma` does not support broadcasting. So, `cbsz`, `abid`, and `blgp`
-    are omitted from this wrapper.
-    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for
-    double-precision operations on gfx94x and so are not included here.
+      are omitted from this wrapper.
+    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported
+      for double-precision operations on gfx94x and so are not included here.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2
+        : vector<4xf8E8M0FNU>, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+    ```
   }];
   let assemblyFormat = [{
-    `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
+    custom<MNKDimensionList>($m, $n, $k) ` `
+    `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*`
+    `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
     attr-dict
     `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
   }];
