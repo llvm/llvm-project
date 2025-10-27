@@ -176,6 +176,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
             for (unsigned OpIdx = NumFixedOps; OpIdx < NumOps;) {
               if (OpIdx + 1 >= NumOps || !MI->getOperand(OpIdx).isImm() ||
                   !MI->getOperand(OpIdx + 1).isImm()) {
+                llvm_unreachable("Unexpected OpSwitch operands");
                 continue;
               }
               OS << ' ';
