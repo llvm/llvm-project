@@ -2532,15 +2532,12 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
 
   SCS.setToType(2, FromType);
 
-  // If we have not converted the argument type to the parameter type,
-  // this is a bad conversion sequence, unless we're resolving an overload in C.
-  //
-  // Permit conversions from a function without `cfi_unchecked_callee` to a
-  // function with `cfi_unchecked_callee`.
-  if (CanonFrom == CanonTo || S.AddingCFIUncheckedCallee(CanonFrom, CanonTo))
+  if (CanonFrom == CanonTo)
     return true;
 
-  if ((S.getLangOpts().CPlusPlus || !InOverloadResolution))
+  // If we have not converted the argument type to the parameter type,
+  // this is a bad conversion sequence, unless we're resolving an overload in C.
+  if (S.getLangOpts().CPlusPlus || !InOverloadResolution)
     return false;
 
   ExprResult ER = ExprResult{From};

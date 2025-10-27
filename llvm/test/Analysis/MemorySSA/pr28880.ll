@@ -8,7 +8,7 @@
 @global.1 = external hidden unnamed_addr global double, align 8
 
 ; Function Attrs: nounwind ssp uwtable
-define hidden fastcc void @hoge(i1 %arg) unnamed_addr #0 {
+define hidden fastcc void @hoge(i1 %arg) unnamed_addr {
 bb:
   br i1 %arg, label %bb1, label %bb2
 
@@ -45,6 +45,3 @@ bb4:                                              ; preds = %bb3
 bb6:                                              ; preds = %bb3
   unreachable
 }
-
-attributes #0 = { nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3" "unsafe-fp-math"="false" "use-soft-float"="false" }
-

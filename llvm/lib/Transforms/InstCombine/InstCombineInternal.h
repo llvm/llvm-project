@@ -72,7 +72,7 @@ public:
       : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
                      PSI, DL, RPOT) {}
 
-  virtual ~InstCombinerImpl() = default;
+  ~InstCombinerImpl() override = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
@@ -664,7 +664,8 @@ public:
   /// This also works for Cast instructions, which obviously do not have a
   /// second operand.
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
-                                bool FoldWithMultiUse = false);
+                                bool FoldWithMultiUse = false,
+                                bool SimplifyBothArms = false);
 
   /// This is a convenience wrapper function for the above two functions.
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
