@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTUDiagnostic.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -619,7 +620,7 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
                                                             DiagClient);
 
-  return ASTUnit::LoadFromCommandLine(
+  return CreateASTUnitFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),
       CI.getPCHContainerOperations(), DiagOpts, Diags,
       CI.getHeaderSearchOpts().ResourceDir);

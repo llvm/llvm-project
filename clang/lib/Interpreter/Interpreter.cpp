@@ -105,7 +105,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-        CompilerInvocation::GetResourcesPath(Argv[0], nullptr);
+        driver::Driver::GetResourcesPathForInvocation(Argv[0], nullptr);
 
   Clang->createVirtualFileSystem();
 

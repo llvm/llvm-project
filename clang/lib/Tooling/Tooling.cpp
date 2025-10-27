@@ -510,7 +510,8 @@ static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
 
   // If there's no override in place add our resource dir.
   Args = getInsertArgumentAdjuster(
-      ("-resource-dir=" + CompilerInvocation::GetResourcesPath(Argv0, MainAddr))
+      ("-resource-dir=" +
+       driver::Driver::GetResourcesPathForInvocation(Argv0, MainAddr))
           .c_str())(Args, "");
 }
 
