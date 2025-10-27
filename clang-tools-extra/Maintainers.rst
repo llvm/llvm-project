@@ -4,7 +4,7 @@ Clang Tools Extra Maintainers
 
 This file is a list of the 
 `maintainers <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_
-for clang-tools-extra.
+for `clang-tools-extra <https://clang.llvm.org/extra/index.html>`_ project.
 
 .. contents::
    :depth: 2
