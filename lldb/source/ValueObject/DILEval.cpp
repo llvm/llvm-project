@@ -608,4 +608,16 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
   return ValueObject::CreateValueObjectFromBool(m_target, value, "result");
 }
 
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const CStyleCastNode *node) {
+  auto operand_or_err = Evaluate(node->GetOperand());
+  if (!operand_or_err)
+    return operand_or_err;
+
+  lldb::ValueObjectSP operand = *operand_or_err;
+  // Don't actually do the cast for now -- that code will be added later.
+  // For now just return the original operand, unchanged.
+  return operand;
+}
+
 } // namespace lldb_private::dil
