@@ -5265,6 +5265,11 @@ bool PPCTargetLowering::IsEligibleForTailCallOptimization_AIX(
   if (CalleeCC == CallingConv::Fast && TailCallOpt)
     return true;
 
+  // Check if we share the TOC base.
+  if (!Subtarget.isUsingPCRelativeCalls() &&
+      !callsShareTOCBase(CallerFunc, CalleeGV, getTargetMachine()))
+    return false;
+
   if (DisableSCO)
     return false;
 
