@@ -832,6 +832,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK))
     return false;
+  if (!Ptr.isConst() && !S.inConstantContext() && isConstexprUnknown(Ptr))
+    return false;
   return true;
 }
 
