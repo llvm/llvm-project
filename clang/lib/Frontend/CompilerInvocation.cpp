@@ -4600,7 +4600,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         // Validate that if fnative-half-type is given, that
         // the language standard is at least hlsl2018, and that
         // the target shader model is at least 6.2.
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018 &&
@@ -4614,12 +4615,16 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
           Diags.Report(diag::err_drv_hlsl_bad_shader_unsupported)
               << VulkanEnv << T.getOSName() << T.str();
         }
-        if (Args.getLastArg(OPT_fnative_half_type)) {
+        if (Args.getLastArg(OPT_fnative_half_type) ||
+            Args.getLastArg(OPT_fnative_int16_type)) {
+          const char *Str = Args.getLastArg(OPT_fnative_half_type)
+                                ? "-fnative-half-type"
+                                : "-fnative-int16-type";
           const LangStandard &Std =
               LangStandard::getLangStandardForKind(Opts.LangStd);
           if (!(Opts.LangStd >= LangStandard::lang_hlsl2018))
             Diags.Report(diag::err_drv_hlsl_16bit_types_unsupported)
-                << "-fnative-half-type" << false << Std.getName();
+                << Str << false << Std.getName();
         }
       } else {
         llvm_unreachable("expected DXIL or SPIR-V target");

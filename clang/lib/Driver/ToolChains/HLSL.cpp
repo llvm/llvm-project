@@ -498,6 +498,15 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       continue;
     }
 
+    if (A->getOption().getID() == options::OPT_enable_16bit_types) {
+      // Translate -enable-16bit-types into -fnative-half-type and
+      // -fnative-int16-type
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_half_type));
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_int16_type));
+      A->claim();
+      continue;
+    }
+
     DAL->append(A);
   }
 

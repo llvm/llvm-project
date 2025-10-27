@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK:      define hidden void @{{.*}}builtin_clip_float{{.*}}(float {{.*}} [[P0:%.*]])
 // CHECK:      [[LOAD:%.*]] = load float, ptr [[P0]].addr, align 4
