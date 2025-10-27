@@ -161,8 +161,8 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           #libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows-static/"
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-          #target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/s/libxml-install/"
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/c/vcpkg/packages/libxml2_x64-windows-static/"
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/s/libxml-install/"
+          #target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/c/vcpkg/packages/libxml2_x64-windows-static/"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
@@ -262,6 +262,7 @@ jobs:
         ninja -v -C libxml-build install
 
     - name: Install libxml2
+      if: false
       shell: bash
       env:
         VCPKG_BUILD_TYPE: release
