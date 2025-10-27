@@ -3325,7 +3325,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
-  virtual ~AbstractAttribute() = default;
+  ~AbstractAttribute() override = default;
 
   /// Compile time access to the IR attribute kind.
   static constexpr Attribute::AttrKind IRAttributeKind = Attribute::None;
@@ -5599,7 +5599,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 // Synthetic root node for the Attributor's internal call graph.
 struct AttributorCallGraph : public AACallGraphNode {
   AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
-  virtual ~AttributorCallGraph() = default;
+  ~AttributorCallGraph() override = default;
 
   AACallEdgeIterator optimisticEdgesBegin() const override {
     return AACallEdgeIterator(A, A.Functions.begin());

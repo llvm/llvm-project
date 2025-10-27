@@ -398,7 +398,7 @@ public:
                DebugLoc DL = DebugLoc::getUnknown())
       : VPDef(SC), VPUser(Operands), DL(DL) {}
 
-  virtual ~VPRecipeBase() = default;
+  ~VPRecipeBase() override = default;
 
   /// Clone the current recipe.
   virtual VPRecipeBase *clone() = 0;
@@ -576,7 +576,7 @@ public:
     return R && classof(R);
   }
 
-  virtual VPSingleDefRecipe *clone() override = 0;
+  VPSingleDefRecipe *clone() override = 0;
 
   /// Returns the underlying instruction.
   Instruction *getUnderlyingInstr() {
@@ -907,7 +907,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
     return R && classof(R);
   }
 
-  virtual VPRecipeWithIRFlags *clone() override = 0;
+  VPRecipeWithIRFlags *clone() override = 0;
 
   static inline bool classof(const VPSingleDefRecipe *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
@@ -2068,7 +2068,7 @@ public:
     return classof(static_cast<const VPRecipeBase *>(R));
   }
 
-  virtual void execute(VPTransformState &State) override = 0;
+  void execute(VPTransformState &State) override = 0;
 
   /// Returns the step value of the induction.
   VPValue *getStepValue() { return getOperand(1); }
@@ -2557,7 +2557,7 @@ public:
                               VPCostContext &Ctx) const override;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  virtual bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
+  bool onlyFirstLaneUsed(const VPValue *Op) const override = 0;
 
   /// Returns the number of stored operands of this interleave group. Returns 0
   /// for load interleave groups.
@@ -4172,11 +4172,6 @@ class VPlan {
   /// definitions are VPValues that hold a pointer to their underlying IR.
   SmallVector<VPValue *, 16> VPLiveIns;
 
-  /// Mapping from SCEVs to the VPValues representing their expansions.
-  /// NOTE: This mapping is temporary and will be removed once all users have
-  /// been modeled in VPlan directly.
-  DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
-
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
@@ -4423,15 +4418,6 @@ public:
   /// Dump the plan to stderr (for debugging).
   LLVM_DUMP_METHOD void dump() const;
 #endif
-
-  VPValue *getSCEVExpansion(const SCEV *S) const {
-    return SCEVToExpansion.lookup(S);
-  }
-
-  void addSCEVExpansion(const SCEV *S, VPValue *V) {
-    assert(!SCEVToExpansion.contains(S) && "SCEV already expanded");
-    SCEVToExpansion[S] = V;
-  }
 
   /// Clone the current VPlan, update all VPValues of the new VPlan and cloned
   /// recipes to refer to the clones, and return it.
