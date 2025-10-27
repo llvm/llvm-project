@@ -2113,3 +2113,31 @@ define <4 x i32> @or_zext_nneg_minus_constant_splat(<4 x i8> %a) {
   %or = or <4 x i32> %zext, splat (i32 -9)
   ret <4 x i32> %or
 }
+
+define i8 @or_positive_minus_non_positive_to_abs(i8 noundef %0){
+; CHECK-LABEL: @or_positive_minus_non_positive_to_abs(
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %2 = icmp sgt i8 %0, zeroinitializer
+  %3 = sext i1 %2 to i8
+  %4 = sub i8 zeroinitializer, %0
+  %5 = xor i8 %3, -1
+  %6 = and i8 %4, %5
+  %7 = and i8 %0, %3
+  %8 = or i8 %6, %7
+  ret i8 %8
+}
+
+define <2 x i8> @or_select_smax_to_abs(<2 x i8> %0){
+; CHECK-LABEL: @or_select_smax_to_abs(
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+;
+  %2 = icmp sgt <2 x i8> %0, zeroinitializer
+  %3 = sub <2 x i8> zeroinitializer, %0
+  %4 = select <2 x i1> %2, <2 x i8> zeroinitializer, <2 x i8> %3
+  %5 = tail call <2 x i8> @llvm.smax.v2i8(<2 x i8> %0, <2 x i8> zeroinitializer)
+  %6 = or <2 x i8> %4, %5
+  ret <2 x i8> %6
+}

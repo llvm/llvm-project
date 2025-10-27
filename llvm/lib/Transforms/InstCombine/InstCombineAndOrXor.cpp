@@ -3997,6 +3997,20 @@ static Value *foldOrUnsignedUMulOverflowICmp(BinaryOperator &I,
   return nullptr;
 }
 
+// Fold select(X >s 0, 0, -X) | smax(X, 0) --> abs(X)
+static Value *FoldOrOfSelectSmaxToAbs(BinaryOperator &I,
+                                      InstCombiner::BuilderTy &Builder) {
+  CmpPredicate Pred;
+  Value *X;
+  if (match(&I, m_c_Or(m_Select(m_ICmp(Pred, m_Value(X), m_ZeroInt()),
+                                m_ZeroInt(), m_Sub(m_ZeroInt(), m_Deferred(X))),
+                       m_OneUse(m_Intrinsic<Intrinsic::smax>(m_Deferred(X),
+                                                             m_ZeroInt())))) &&
+      Pred == ICmpInst::ICMP_SGT)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, X, Builder.getFalse());
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -4544,6 +4558,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (cast<PossiblyDisjointInst>(I).isDisjoint())
     if (Value *V = SimplifyAddWithRemainder(I))
       return replaceInstUsesWith(I, V);
+
+  // select(X >s 0, 0, -X) | smax(X, 0) -> abs(X)
+  if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
+    return replaceInstUsesWith(I, Res);
 
   return nullptr;
 }
