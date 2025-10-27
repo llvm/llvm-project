@@ -938,8 +938,6 @@ stacktrace cwctype
 stacktrace initializer_list
 stacktrace iosfwd
 stacktrace limits
-stacktrace memory
-stacktrace optional
 stacktrace stdexcept
 stacktrace string
 stacktrace string_view

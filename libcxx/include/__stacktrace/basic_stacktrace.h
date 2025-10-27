@@ -67,48 +67,24 @@ struct _Trace {
   constexpr static size_t __default_max_depth  = 64;
   constexpr static size_t __absolute_max_depth = 256;
 
-  _Str_Alloc<char> __string_alloc_;
-
   using _EntryIters _LIBCPP_NODEBUG = _Iters<stacktrace_entry, _Entry>;
   function<_EntryIters()> __entry_iters_;
   function<_Entry&()> __entry_append_;
 
-  template <class _Allocator>
-  _LIBCPP_HIDE_FROM_ABI
-  _Trace(_Allocator const& __alloc, function<_EntryIters()> __entry_iters, function<_Entry&()> __entry_append)
-      : __string_alloc_(std::move(_Str_Alloc<char>::make(__alloc))),
-        __entry_iters_(__entry_iters),
-        __entry_append_(__entry_append) {}
-
-#  ifndef _WIN32
-  // Use <unwind.h> or <libunwind.h> to collect addresses in the stack.
-  // Defined in this header so it can be reliably force-inlined.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void unwind_addrs(size_t __skip, size_t __depth);
-#  endif
-
-  // On Windows, there are DLLs which take care of all this (dbghelp, psapi), with
-  // zero overlap with any other OS, so it's in its own file, impl_windows.cpp.
-  // For all other platforms we implement these "find" methods.
-
-  // Resolve instruction addresses to their respective images, dealing with possible ASLR.
-  _LIBCPP_EXPORTED_FROM_ABI void find_images();
-
-  // Resolve addresses to symbols if possible.
-  _LIBCPP_EXPORTED_FROM_ABI void find_symbols();
-
-  // Resolve addresses to source locations if possible.
-  _LIBCPP_EXPORTED_FROM_ABI void find_source_locs();
-
-  _LIBCPP_HIDE_FROM_ABI void finish_stacktrace() {
-    find_images();
-    find_symbols();
-    find_source_locs();
-  }
+  _LIBCPP_HIDE_FROM_ABI _Trace(function<_EntryIters()> __entry_iters, function<_Entry&()> __entry_append)
+      : __entry_iters_(__entry_iters), __entry_append_(__entry_append) {}
 
   _LIBCPP_EXPORTED_FROM_ABI ostream& write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 
-  _LIBCPP_HIDE_FROM_ABI _Str __create_str() { return _Str(__string_alloc_); }
+#  ifdef _WIN32
+  // Windows impl uses dbghelp and psapi DLLs to do the full stacktrace operation.
+  _LIBCPP_EXPORTED_FROM_ABI void windows_impl(size_t skip, size_t max_depth);
+#  else
+  // Non-windows: impl separated out into several smaller platform-dependent parts.
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void populate_addrs(size_t __skip, size_t __depth);
+  _LIBCPP_EXPORTED_FROM_ABI void populate_images();
+#  endif
 };
 
 } // namespace __stacktrace
@@ -122,15 +98,6 @@ template <class _Allocator>
 class basic_stacktrace : private __stacktrace::_Trace {
   friend struct hash<basic_stacktrace<_Allocator>>;
   friend struct __stacktrace::_Trace;
-
-  using _ATraits _LIBCPP_NODEBUG            = allocator_traits<_Allocator>;
-  constexpr static bool __kPropOnCopyAssign = _ATraits::propagate_on_container_copy_assignment::value;
-  constexpr static bool __kPropOnMoveAssign = _ATraits::propagate_on_container_move_assignment::value;
-  constexpr static bool __kPropOnSwap       = _ATraits::propagate_on_container_swap::value;
-  constexpr static bool __kAlwaysEqual      = _ATraits::is_always_equal::value;
-  constexpr static bool __kNoThrowAlloc     = noexcept(noexcept(_Allocator().allocate(1)));
-
-  _LIBCPP_NO_UNIQUE_ADDRESS _Allocator __alloc_;
 
   vector<stacktrace_entry, _Allocator> __entries_;
   _LIBCPP_HIDE_FROM_ABI _EntryIters entry_iters() { return {__entries_.data(), __entries_.size()}; }
@@ -152,106 +119,71 @@ public:
   using value_type             = stacktrace_entry;
   using const_reference        = value_type const&;
   using reference              = value_type&;
+  using const_iterator         = decltype(__entries_.cbegin());
+  using iterator               = const_iterator;
+  using reverse_iterator       = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   using difference_type        = ptrdiff_t;
   using size_type              = size_t;
   using allocator_type         = _Allocator;
-  using iterator               = decltype(__entries_.begin());
-  using const_iterator         = decltype(__entries_.cbegin());
-  using reverse_iterator       = decltype(__entries_.rbegin());
-  using const_reverse_iterator = decltype(__entries_.crbegin());
 
   // (19.6.4.2)
   // Creation and assignment [stacktrace.basic.cons]
 
-  _LIBCPP_ALWAYS_INLINE static basic_stacktrace
-  current(const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    size_type __skip      = 0;
-    size_type __max_depth = __default_max_depth;
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
-    basic_stacktrace __ret{__caller_alloc};
-    __ret.unwind_addrs(__skip, __max_depth);
-    __ret.finish_stacktrace();
-    return __ret;
+  _LIBCPP_ALWAYS_INLINE // Omit this function from the trace
+  static basic_stacktrace current(const allocator_type& __alloc = allocator_type()) noexcept {
+    return current(0, __default_max_depth, __alloc);
   }
 
-  _LIBCPP_ALWAYS_INLINE static basic_stacktrace
-  current(size_type __skip, const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    size_type __max_depth = __default_max_depth;
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
-    basic_stacktrace __ret{__caller_alloc};
-    __ret.unwind_addrs(__skip, __max_depth);
-    __ret.finish_stacktrace();
-    return __ret;
+  _LIBCPP_ALWAYS_INLINE // Omit this function from the trace
+  static basic_stacktrace current(size_type __skip, const allocator_type& __alloc = allocator_type()) noexcept {
+    return current(__skip, __default_max_depth, __alloc);
   }
 
-  _LIBCPP_ALWAYS_INLINE static basic_stacktrace
-  current(size_type __skip,
-          size_type __max_depth,
-          const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
+  _LIBCPP_ALWAYS_INLINE // Omit this function from the trace
+  static basic_stacktrace
+  current(size_type __skip, size_type __max_depth, const allocator_type& __alloc = allocator_type()) noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
-    basic_stacktrace __ret{__caller_alloc};
-    if (__max_depth) [[likely]] {
-      __ret.unwind_addrs(__skip, __max_depth);
-      __ret.finish_stacktrace();
+    basic_stacktrace __ret{__alloc};
+
+    if (__max_depth) {
+#  if defined(WIN32)
+      __ret.windows_impl(__skip, __max_depth);
+#  else
+      __ret.populate_addrs(__skip, __max_depth);
+      __ret.populate_images();
+#  endif
     }
+
     return __ret;
   }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr ~basic_stacktrace() = default;
-
-  static_assert(sizeof(__stacktrace::_Entry) == sizeof(stacktrace_entry));
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc)
-      : _Trace(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__alloc_) {}
+      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(__alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace const& __other, allocator_type const& __alloc)
-      : _Trace(__alloc, entry_iters_fn(), entry_append_fn()), __alloc_(__alloc), __entries_(__other.__entries_) {}
+      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(__other.__entries_, __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, allocator_type const& __alloc)
-      : _Trace(__alloc, entry_iters_fn(), entry_append_fn()),
-        __alloc_(__alloc),
-        __entries_(std::move(__other.__entries_)) {}
+      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(std::move(__other.__entries_), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace() noexcept(is_nothrow_default_constructible_v<allocator_type>)
       : basic_stacktrace(allocator_type()) {}
 
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace const& __other) noexcept
-      : basic_stacktrace(__other, _ATraits::select_on_container_copy_construction(__other.__alloc_)) {}
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace const& __other) noexcept       = default;
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept            = default;
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other)     = default;
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(basic_stacktrace&& __other) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept
-      : basic_stacktrace(std::move(__other), __other.__alloc_) {}
-
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other) {
-    if (std::addressof(__other) != this) {
-      if (__kPropOnCopyAssign) {
-        new (this) basic_stacktrace(__other, __other.__alloc_);
-      } else {
-        new (this) basic_stacktrace(__other);
-      }
-    }
-    return *this;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace&
-  operator=(basic_stacktrace&& __other) noexcept(__kPropOnMoveAssign || __kAlwaysEqual) {
-    if (std::addressof(__other) != this) {
-      if (__kPropOnMoveAssign) {
-        auto __alloc = __other.__alloc_;
-        new (this) basic_stacktrace(std::move(__other), __alloc);
-      } else {
-        new (this) basic_stacktrace(std::move(__other));
-      }
-    }
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI ~basic_stacktrace() = default;
 
   // (19.6.4.3)
   // [stacktrace.basic.obs], observers
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __alloc_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept {
+    return __entries_.get_allocator();
+  }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __entries_.begin(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __entries_.end(); }
@@ -313,9 +245,6 @@ public:
       allocator_traits<_Allocator>::propagate_on_container_swap::value ||
       allocator_traits<_Allocator>::is_always_equal::value) {
     std::swap(__entries_, __other.__entries_);
-    if (__kPropOnSwap) {
-      std::swap(__alloc_, __other.__alloc_);
-    }
   }
 };
 
@@ -361,11 +290,7 @@ struct hash<basic_stacktrace<_Allocator>> {
 
 namespace __stacktrace {
 
-#  if defined(_WIN32)
-
-_LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_depth)
-
-#  else
+#  if !defined(_WIN32)
 
 struct _Unwind_Wrapper {
   _Trace& base_;
@@ -397,7 +322,7 @@ struct _Unwind_Wrapper {
   }
 };
 
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::unwind_addrs(size_t __skip, size_t __depth) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::populate_addrs(size_t __skip, size_t __depth) {
   if (!__depth) {
     return;
   }

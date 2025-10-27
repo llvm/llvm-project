@@ -627,9 +627,7 @@
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__rs_defaultclEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace11find_imagesEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace12find_symbolsEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace16find_source_locsEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__112__stacktrace6_Trace15populate_imagesEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__stacktrace7_ImagesC1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__stacktrace7_ImagesC2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112bad_weak_ptrD0Ev', 'type': 'FUNC'}

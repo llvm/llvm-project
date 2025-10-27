@@ -211,7 +211,7 @@ _Trace::windows_impl(size_t skip, size_t max_depth) {
     memset(&mod_info, 0, sizeof(mod_info));
     mod_info.SizeOfStruct = sizeof(mod_info);
     if ((*dbghelp.SymGetModuleInfo64)(proc, frame.AddrPC.Offset, &mod_info)) {
-      entry.assign_file(__create_str()).assign(mod_info.LoadedImageName);
+      entry.__file_.assign(mod_info.LoadedImageName);
     }
 
     --max_depth;
@@ -236,11 +236,11 @@ _Trace::windows_impl(size_t skip, size_t max_depth) {
     DWORD linedisp{0};
     IMAGEHLP_LINE64 line;
     if ((*dbghelp.SymGetSymFromAddr64)(proc, entry.__addr_, &symdisp, sym)) {
-      entry.assign_desc(__create_str()).assign(sym->Name);
+      entry.__desc_.assign(sym->Name);
     }
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
     if ((*dbghelp.SymGetLineFromAddr64)(proc, entry.__addr_, &linedisp, &line)) {
-      entry.assign_file(__create_str()).assign(line.FileName);
+      entry.__file_.assign(line.FileName);
       entry.__line_ = line.LineNumber;
     }
   }
