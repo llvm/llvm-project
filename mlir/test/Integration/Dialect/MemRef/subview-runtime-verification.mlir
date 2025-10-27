@@ -2,6 +2,7 @@
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \
 // RUN:     -test-cf-assert \
+// RUN:     -convert-scf-to-cf \
 // RUN:     -convert-to-llvm | \
 // RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
@@ -11,6 +12,7 @@
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \
 // RUN:     -test-cf-assert \
+// RUN:     -convert-scf-to-cf \
 // RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
 // RUN:     -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
