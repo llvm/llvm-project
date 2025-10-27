@@ -207,7 +207,6 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
 }
 
 static dxil::ElementType toDXILStorageType(dxil::ElementType ET) {
-  // TODO: Handle unorm and snorm.
   if (ET == dxil::ElementType::U64 || ET == dxil::ElementType::F64 ||
       ET == dxil::ElementType::I64 || ET == dxil::ElementType::SNormF64 ||
       ET == dxil::ElementType::UNormF64)
@@ -646,9 +645,10 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
       OS << "  Alignment: " << Struct.AlignLog2 << "\n";
     } else if (isTyped()) {
       TypedInfo Typed = getTyped();
-      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy) << "\n"
-         << "  Storage Type: " << getElementTypeName(Typed.DXILStorageTy)
-         << "\n"
+      OS << "  Element Type: " << getElementTypeName(Typed.ElementTy);
+      if (Typed.ElementTy != Typed.DXILStorageTy)
+        OS << " (stored as " << getElementTypeName(Typed.DXILStorageTy) << ")";
+      OS << "\n"
          << "  Element Count: " << Typed.ElementCount << "\n";
     } else if (isFeedback())
       OS << "  Feedback Type: " << getSamplerFeedbackTypeName(getFeedbackType())
