@@ -1892,13 +1892,13 @@ private:
       Fortran::common::visit(
           Fortran::common::visitors{
               [&](const Fortran::parser::CompilerDirective::ForceInline &) {
-                stmt.typedCall->set_alwaysInline(true);
+                stmt.typedCall->setAlwaysInline(true);
               },
               [&](const Fortran::parser::CompilerDirective::Inline &) {
-                stmt.typedCall->set_inlineHint(true);
+                stmt.typedCall->setInlineHint(true);
               },
               [&](const Fortran::parser::CompilerDirective::NoInline &) {
-                stmt.typedCall->set_noInline(true);
+                stmt.typedCall->setNoInline(true);
               },
               [&](const auto &) {}},
           dir->u);
@@ -2418,7 +2418,7 @@ private:
 
     // Add attribute(s) on operations in fir::DoLoopOp if necessary
     for (IncrementLoopInfo &info : incrementLoopNestInfo)
-      if(auto loopOp = mlir::dyn_cast_if_present<fir::DoLoopOp>(info.loopOp))
+      if (auto loopOp = mlir::dyn_cast_if_present<fir::DoLoopOp>(info.loopOp))
         attachAttributesToDoLoopOperations(loopOp, doStmtEval.dirs);
   }
 
