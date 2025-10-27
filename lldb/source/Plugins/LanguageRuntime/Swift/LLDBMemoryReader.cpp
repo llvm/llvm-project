@@ -317,6 +317,132 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
   return tagged_pointer;
 }
 
+swift::reflection::RemoteAddress
+LLDBMemoryReader::resolveIndirectAddressAtOffset(
+    swift::reflection::RemoteAddress address, uint64_t offset,
+    bool directnessEncodedInOffset) {
+  // Usually, simply adding the address with the offset will produce the correct
+  // remote address.
+  //
+  // However, on Apple platforms, the shared cache can coalesce pointers in the
+  // global offset table from multiple images into one location, patch all the
+  // uses to point to the new location, and zero out the original pointer. In
+  // this case, LLDBMemoryReader needs to be conservative and re-fetch the
+  // offset from live memory to ensure it points to the new, coalesced location
+  // instead.
+  Log *log = GetLog(LLDBLog::Types);
+
+  LLDB_LOGV(log,
+            "[MemoryReader::resolveAddressAtOffset] Asked to resolve address "
+            "{0:x} at offset {1:x}",
+            address.getRawAddress(), offset);
+
+  swift::reflection::RemoteAddress offset_address = address + offset;
+
+  if (!readMetadataFromFileCacheEnabled())
+    return offset_address;
+
+  // Addresses in the process can be read directly.
+  if (offset_address.getAddressSpace() ==
+      swift::reflection::RemoteAddress::DefaultAddressSpace)
+    return offset_address;
+
+  // Check if offset_address points to a GOT entry.
+  std::optional<Address> maybeAddr =
+      resolveRemoteAddressFromSymbolObjectFile(offset_address);
+
+  if (!maybeAddr)
+    maybeAddr = remoteAddressToLLDBAddress(offset_address);
+
+  if (!maybeAddr) {
+    LLDB_LOGV(log,
+              "[MemoryReader::resolveAddressAtOffset] could not resolve "
+              "address {0:x}",
+              offset_address.getRawAddress());
+    return offset_address;
+  }
+
+  Address lldb_offset_address = *maybeAddr;
+  if (!lldb_offset_address.IsSectionOffset()) {
+    LLDB_LOGV(
+        log,
+        "[MemoryReader::resolveAddressAtOffset] lldb offset address has no "
+        "section {0:x}",
+        offset_address.getRawAddress());
+    return offset_address;
+  }
+
+  // This is only necessary on Apple platforms.
+  ObjectFile *obj_file = lldb_offset_address.GetModule()->GetObjectFile();
+  if (!obj_file || !obj_file->GetArchitecture().GetTriple().isOSDarwin())
+    return offset_address;
+
+  SectionSP section = lldb_offset_address.GetSection();
+  if (!section->IsGOTSection())
+    return offset_address;
+
+  // offset_address is in a GOT section. Re-read the offset from the base
+  // address in live memory, since the offset in live memory can have been
+  // patched in the shared cache to point somewhere else.
+  std::optional<Address> maybe_lldb_addr =
+      resolveRemoteAddressFromSymbolObjectFile(address);
+
+  if (!maybe_lldb_addr)
+    maybe_lldb_addr = remoteAddressToLLDBAddress(address);
+
+  if (!maybe_lldb_addr) {
+    LLDB_LOGV(log,
+              "[MemoryReader::resolveAddressAtOffset] could not resolve offset "
+              "address {0:x}",
+              address.getRawAddress());
+    return offset_address;
+  }
+
+  auto lldb_addr = *maybe_lldb_addr;
+  Target &target(m_process.GetTarget());
+  Status error;
+  const bool force_live_memory = true;
+  bool did_read_live_memory = false;
+
+  // Relative offsets are always 4 bytes long, regardless of target.
+  uint32_t live_offset = 0;
+  size_t size = sizeof(live_offset);
+  if (size !=
+      target.ReadMemory(lldb_addr, &live_offset, size, error, force_live_memory,
+                        /*load_addr_ptr=*/nullptr, &did_read_live_memory)) {
+    LLDB_LOG(log,
+             "[MemoryReader::resolveAddressAtOffset] Resolve address returned "
+             "different bytes than asked "
+             "for {0:x}",
+             lldb_addr.GetLoadAddress(&target));
+    return offset_address;
+  }
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "[MemoryReader::resolveAddressAtOffset] memory read returned "
+             "error: {0}",
+             error.AsCString());
+    return offset_address;
+  }
+  // Some Swift metadata encodes the directness directly into the offset,
+  // in that case clear the directness bit.
+  if (directnessEncodedInOffset)
+    live_offset &= ~1u;
+
+  // Now, get the live address counterpart of the lldb address this function
+  // started with, and add the live offset we just read to it.
+  addr_t live_address = lldb_addr.GetLoadAddress(&target);
+  LLDB_LOGV(
+      log,
+      "[MemoryReader::resolveAddressAtOffset] Succesfully resolved address "
+      "into live address {0:x} and offset {1:x} resulting in address {2:x}",
+      live_address, live_offset, live_address + live_offset);
+
+  return swift::remote::RemoteAddress(
+      live_address + live_offset,
+      swift::remote::RemoteAddress::DefaultAddressSpace);
+}
+
 bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
                                  uint8_t *dest, uint64_t size) {
   auto read_bytes_result = readBytesImpl(address, dest, size);
