@@ -24,7 +24,7 @@ endif ()
 
 if (NOT TARGET default_gtest)
   message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
-                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
+                  "FLANG_RT_INCLUDE_TESTS=ON requires LLVM_INCLUDE_TESTS=ON")
   return ()
 endif ()
 
