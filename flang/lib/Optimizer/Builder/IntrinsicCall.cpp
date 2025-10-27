@@ -3311,7 +3311,7 @@ IntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
       builder, loc, mlir::arith::CmpIPredicate::ne, beforeArg, zero);
   mlir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
   mlir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
-  mlir::Value afterArg = afterBlock->addArgument(resultType, loc);
+  afterBlock->addArgument(resultType, loc);
   builder.setInsertionPointToStart(afterBlock);
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
