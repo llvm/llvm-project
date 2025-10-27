@@ -4016,7 +4016,7 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
     Arg[SimpleModifier] = OMPC_DYN_GROUPPRIVATE_unknown;
     Arg[ComplexModifier] = OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown;
 
-    auto consumeModifier = [&]() {
+    auto ConsumeModifier = [&]() {
       unsigned Type = NumberOfModifiers;
       unsigned Modifier;
       SourceLocation Loc;
@@ -4055,28 +4055,29 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
       return std::make_tuple(Type, Modifier, Loc);
     };
 
-    auto saveModifier = [&](unsigned Type, unsigned Modifier,
+    auto SaveModifier = [&](unsigned Type, unsigned Modifier,
                             SourceLocation Loc) {
       assert(Type < NumberOfModifiers);
       if (!KLoc[Type].isValid()) {
         Arg[Type] = Modifier;
         KLoc[Type] = Loc;
-      } else
+      } else {
         Diag(Loc, diag::err_omp_incompatible_dyn_groupprivate_modifier)
             << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate, Modifier)
             << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate, Arg[Type]);
+      }
     };
 
     // Parse 'modifier'
-    auto [Type1, Mod1, Loc1] = consumeModifier();
+    auto [Type1, Mod1, Loc1] = ConsumeModifier();
     if (Type1 < NumberOfModifiers) {
-      saveModifier(Type1, Mod1, Loc1);
+      SaveModifier(Type1, Mod1, Loc1);
       if (Tok.is(tok::comma)) {
         // Parse ',' 'modifier'
         ConsumeAnyToken();
-        auto [Type2, Mod2, Loc2] = consumeModifier();
+        auto [Type2, Mod2, Loc2] = ConsumeModifier();
         if (Type2 < NumberOfModifiers)
-          saveModifier(Type2, Mod2, Loc2);
+          SaveModifier(Type2, Mod2, Loc2);
       }
       // Parse ':'
       if (Tok.is(tok::colon))
