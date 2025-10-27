@@ -401,6 +401,30 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
   }
 }
 
+static void lowerExtractVectorElements(MachineFunction &MF) {
+  SmallVector<MachineInstr *, 8> ExtractInstrs;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
+        ExtractInstrs.push_back(&MI);
+      }
+    }
+  }
+
+  for (MachineInstr *MI : ExtractInstrs) {
+    MachineIRBuilder MIB(*MI);
+    Register Dst = MI->getOperand(0).getReg();
+    Register Vec = MI->getOperand(1).getReg();
+    Register Idx = MI->getOperand(2).getReg();
+
+    auto Intr = MIB.buildIntrinsic(Intrinsic::spv_extractelt, Dst, true, false);
+    Intr.addUse(Vec);
+    Intr.addUse(Idx);
+
+    MI->eraseFromParent();
+  }
+}
+
 // Do a preorder traversal of the CFG starting from the BB |Start|.
 // point. Calls |op| on each basic block encountered during the traversal.
 void visit(MachineFunction &MF, MachineBasicBlock &Start,
@@ -439,6 +463,8 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   MachineIRBuilder MIB(MF);
   registerSpirvTypeForNewInstructions(MF, GR, MIB);
   ensureAssignTypeForTypeFolding(MF, GR, MIB);
+  lowerExtractVectorElements(MF);
+
   return true;
 }
 
