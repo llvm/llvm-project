@@ -113,8 +113,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool year::ok() const noexcept {
 #  if _LIBCPP_STD_VER >= 26
 
 template <>
-struct hash<chrono::year> : public __unary_function<chrono::year, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year& __y) const _NOEXCEPT {
+struct hash<chrono::year> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year& __y) noexcept {
     return hash<int>{}(static_cast<int>(__y));
   }
 };

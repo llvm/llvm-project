@@ -284,18 +284,22 @@ year_month_weekday_last::operator-=(const years& __dy) noexcept {
 #  if _LIBCPP_STD_VER >= 26
 
 template <>
-struct hash<chrono::year_month_weekday> : public __unary_function<chrono::year_month_weekday, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month_weekday& __ymw) const _NOEXCEPT {
-    return hash<chrono::year>{}(__ymw.year()) ^ hash<chrono::month>{}(__ymw.month()) ^
-           hash<chrono::weekday_indexed>{}(__ymw.weekday_indexed());
+struct hash<chrono::year_month_weekday> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday& __ymw) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymw.year()),
+        std::__hash_combine(
+            hash<chrono::month>{}(__ymw.month()), hash<chrono::weekday_indexed>{}(__ymw.weekday_indexed())));
   }
 };
 
 template <>
-struct hash<chrono::year_month_weekday_last> : public __unary_function<chrono::year_month_weekday_last, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month_weekday_last& __ymwl) const _NOEXCEPT {
-    return hash<chrono::year>{}(__ymwl.year()) ^ hash<chrono::month>{}(__ymwl.month()) ^
-           hash<chrono::weekday_last>{}(__ymwl.weekday_last());
+struct hash<chrono::year_month_weekday_last> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month_weekday_last& __ymwl) noexcept {
+    return std::__hash_combine(
+        hash<chrono::year>{}(__ymwl.year()),
+        std::__hash_combine(
+            hash<chrono::month>{}(__ymwl.month()), hash<chrono::weekday_last>{}(__ymwl.weekday_last())));
   }
 };
 

@@ -164,22 +164,22 @@ inline constexpr weekday Saturday{6};
 #  if _LIBCPP_STD_VER >= 26
 
 template <>
-struct hash<chrono::weekday> : public __unary_function<chrono::weekday, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::weekday& __w) const _NOEXCEPT {
+struct hash<chrono::weekday> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::weekday& __w) noexcept {
     return hash<unsigned>{}(__w.c_encoding());
   }
 };
 
 template <>
-struct hash<chrono::weekday_indexed> : public __unary_function<chrono::weekday_indexed, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::weekday_indexed& __wi) const _NOEXCEPT {
-    return hash<chrono::weekday>{}(__wi.weekday()) ^ hash<unsigned>{}(__wi.index());
+struct hash<chrono::weekday_indexed> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::weekday_indexed& __wi) noexcept {
+    return std::__hash_combine(hash<chrono::weekday>{}(__wi.weekday()), hash<unsigned>{}(__wi.index()));
   }
 };
 
 template <>
-struct hash<chrono::weekday_last> : public __unary_function<chrono::weekday_last, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::weekday_last& __wl) const _NOEXCEPT {
+struct hash<chrono::weekday_last> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::weekday_last& __wl) noexcept {
     return hash<chrono::weekday>{}(__wl.weekday());
   }
 };

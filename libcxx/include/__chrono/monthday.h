@@ -130,15 +130,15 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr month_day_last operator/(last_spec, int _
 #  if _LIBCPP_STD_VER >= 26
 
 template <>
-struct hash<chrono::month_day> : public __unary_function<chrono::month_day, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month_day& __md) const _NOEXCEPT {
-    return hash<chrono::month>{}(__md.month()) ^ hash<chrono::day>{}(__md.day());
+struct hash<chrono::month_day> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::month_day& __md) noexcept {
+    return std::__hash_combine(hash<chrono::month>{}(__md.month()), hash<chrono::day>{}(__md.day()));
   }
 };
 
 template <>
-struct hash<chrono::month_day_last> : public __unary_function<chrono::month_day_last, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::month_day_last& __mdl) const _NOEXCEPT {
+struct hash<chrono::month_day_last> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::month_day_last& __mdl) noexcept {
     return hash<chrono::month>{}(__mdl.month());
   }
 };

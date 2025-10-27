@@ -543,8 +543,8 @@ using namespace literals::chrono_literals;
 
 template <class _Rep, class _Period>
   requires __has_enabled_hash<_Rep>::value
-struct hash<chrono::duration<_Rep, _Period>> : public __unary_function<chrono::duration<_Rep, _Period>, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::duration<_Rep, _Period>& __d) const {
+struct hash<chrono::duration<_Rep, _Period>> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::duration<_Rep, _Period>& __d) {
     return hash<_Rep>{}(__d.count());
   }
 };

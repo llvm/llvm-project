@@ -120,9 +120,9 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr year_month& year_month::operator-=(const 
 #  if _LIBCPP_STD_VER >= 26
 
 template <>
-struct hash<chrono::year_month> : public __unary_function<chrono::year_month, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::year_month& __ym) const _NOEXCEPT {
-    return hash<chrono::year>{}(__ym.year()) ^ hash<chrono::month>{}(__ym.month());
+struct hash<chrono::year_month> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year_month& __ym) noexcept {
+    return std::__hash_combine(hash<chrono::year>{}(__ym.year()), hash<chrono::month>{}(__ym.month()));
   }
 };
 

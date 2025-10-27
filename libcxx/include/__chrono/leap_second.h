@@ -126,9 +126,9 @@ private:
 #    if _LIBCPP_STD_VER >= 26
 
 template <>
-struct hash<chrono::leap_second> : public __unary_function<chrono::leap_second, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const chrono::leap_second& __lp) const _NOEXCEPT {
-    return hash<chrono::seconds>{}(__lp.value());
+struct hash<chrono::leap_second> {
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::leap_second& __lp) noexcept {
+    return std::__hash_combine(hash<chrono::sys_seconds>{}(__lp.date()), hash<chrono::seconds>{}(__lp.value()));
   }
 };
 
