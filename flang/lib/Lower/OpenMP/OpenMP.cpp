@@ -3569,8 +3569,8 @@ static void genOpenMPDeclareMapperImpl(
     mapperNameStr = converter.mangleName(mapperNameStr, sym->owner());
   }
 
-  // If the mapper op already exists (e.g., created by regular lowering),
-  // do not recreate it.
+  // If the mapper op already exists (e.g., created by regular lowering or by
+  // materialization of imported mappers), do not recreate it.
   if (converter.getModuleOp().lookupSymbol(mapperNameStr))
     return;
 
@@ -4262,12 +4262,8 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
     return;
 
   // Only materialize for modules coming from mod files to avoid duplicates.
-  if (const semantics::Symbol *modSym = root.symbol()) {
-    if (!modSym->test(semantics::Symbol::Flag::ModFile))
-      return;
-  } else {
+  if (!root.symbol() || !root.symbol()->test(semantics::Symbol::Flag::ModFile))
     return;
-  }
 
   // Scan symbols in this module scope for MapperDetails.
   for (auto &it : root) {
