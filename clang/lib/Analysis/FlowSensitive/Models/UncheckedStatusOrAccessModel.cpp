@@ -202,6 +202,16 @@ static auto isStatusOrValueConstructor() {
                                                      "std::in_place_t"))))));
 }
 
+static auto isStatusOrConstructor() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(hasType(statusOrType()));
+}
+
+static auto isStatusConstructor() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxConstructExpr(hasType(statusType()));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -574,6 +584,25 @@ static void transferValueConstructor(const CXXConstructExpr *Expr,
   State.Env.assume(OkVal.formula());
 }
 
+static void transferStatusOrConstructor(const CXXConstructExpr *Expr,
+                                        const MatchFinder::MatchResult &,
+                                        LatticeTransferState &State) {
+  RecordStorageLocation &StatusOrLoc = State.Env.getResultObjectLocation(*Expr);
+  RecordStorageLocation &StatusLoc = locForStatus(StatusOrLoc);
+
+  if (State.Env.getValue(locForOk(StatusLoc)) == nullptr)
+    initializeStatusOr(StatusOrLoc, State.Env);
+}
+
+static void transferStatusConstructor(const CXXConstructExpr *Expr,
+                                      const MatchFinder::MatchResult &,
+                                      LatticeTransferState &State) {
+  RecordStorageLocation &StatusLoc = State.Env.getResultObjectLocation(*Expr);
+
+  if (State.Env.getValue(locForOk(StatusLoc)) == nullptr)
+    initializeStatus(StatusLoc, State.Env);
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -623,6 +652,16 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                           transferValueAssignmentCall)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrValueConstructor(),
                                        transferValueConstructor)
+      // N.B. These need to come after all other CXXConstructExpr.
+      // These are there to make sure that every Status and StatusOr object
+      // have their ok boolean initialized when constructed. If we were to
+      // lazily initialize them when we first access them, we can produce
+      // false positives if that first access is in a control flow statement.
+      // You can comment out these two constructors and see tests fail.
+      .CaseOfCFGStmt<CXXConstructExpr>(isStatusOrConstructor(),
+                                       transferStatusOrConstructor)
+      .CaseOfCFGStmt<CXXConstructExpr>(isStatusConstructor(),
+                                       transferStatusConstructor)
       .Build();
 }
 
