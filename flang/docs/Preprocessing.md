@@ -163,7 +163,7 @@ The first block of tests (`pp0*.F`) are all fixed-form source files;
 the second block (`pp1*.F90`) are free-form source files.
 
 ```
-f18
+flang
 | pgfortran
 | | ifort
 | | | gfortran

@@ -819,7 +819,7 @@ public:
         OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
         OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
-           << " Switch:" << *PS->Switch << " Edge: [";
+           << " Edge: [";
         PS->From->printAsOperand(OS);
         OS << ",";
         PS->To->printAsOperand(OS);
