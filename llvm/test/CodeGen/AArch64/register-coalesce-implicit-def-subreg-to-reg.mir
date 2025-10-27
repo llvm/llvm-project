@@ -21,3 +21,25 @@ body: |
     $x1 = COPY killed %193:gpr64all
     RET_ReallyLR implicit $x1, implicit $x0
 ...
+
+# In this test, we should avoid adding an implicit-def to ORRXri, because
+# the register class will already be gpr64sp.
+---
+name: test2
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: test2
+    ; CHECK: renamable $x8 = IMPLICIT_DEF
+    ; CHECK-NEXT: renamable $x9 = ORRXri renamable $x8, 8128
+    ; CHECK-NEXT: $x2 = ORRXri renamable $x8, 8128
+    ; CHECK-NEXT: RET_ReallyLR implicit killed renamable $x8, implicit killed renamable $x9
+    %0:gpr64 = IMPLICIT_DEF
+    %1:gpr64sp = ORRXri %0, 8128
+    %3:gpr64 = SUBREG_TO_REG 0, %1.sub_32, %subreg.sub_32
+    %2:gpr64all = COPY killed %1
+    $x2 = COPY killed %2
+    RET_ReallyLR implicit %0, implicit %3
+...

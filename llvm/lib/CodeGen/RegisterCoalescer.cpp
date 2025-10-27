@@ -1968,12 +1968,11 @@ void RegisterCoalescer::updateRegDefsUses(
       //
       // Because that would thrash the top 24 bits of %1.sub32.
       if (is_contained(SubregToRegSrcInsts, UseMI) &&
-          all_of(UseMI->defs(),
-                 [&SubIdx, &SrcReg](const MachineOperand &MO) -> bool {
-                   if (MO.getReg() != SrcReg || !MO.getSubReg() || MO.isUndef())
-                     return true;
-                   return SubIdx == MO.getSubReg();
-                 })) {
+          all_of(UseMI->defs(), [&SubIdx](const MachineOperand &MO) -> bool {
+            if (MO.isUndef())
+              return true;
+            return SubIdx && (!MO.getSubReg() || SubIdx == MO.getSubReg());
+          })) {
         // Add implicit-def of super-register to express that the whole
         // register is defined by the instruction.
         MachineInstrBuilder MIB(*MF, UseMI);
