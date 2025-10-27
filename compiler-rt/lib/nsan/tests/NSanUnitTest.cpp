@@ -60,4 +60,3 @@ TEST(NSanTest, Double) {
 TEST(NSanTest, Float128) { TestFT<__float128, nextafterf128>(); }
 
 } // end namespace __nsan
-
