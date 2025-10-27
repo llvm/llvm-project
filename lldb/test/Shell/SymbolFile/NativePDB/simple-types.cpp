@@ -3,7 +3,6 @@
 // Test that simple types can be found
 // RUN: %build --std=c++20 --nodefaultlib --compiler=clang-cl --arch=64 -o %t.exe -- %s
 // RUN: lldb-test symbols %t.exe | FileCheck %s
-// RUN: lldb-test symbols %t.exe | FileCheck --check-prefix=FUNC-PARAMS %s
 
 bool *PB;
 bool &RB = *PB;
@@ -101,12 +100,14 @@ int main() {
 // CHECK-DAG: Type{{.*}} , name = "float", size = 4, compiler_type = 0x{{[0-9a-f]+}} float
 // CHECK-DAG: Type{{.*}} , name = "const float", size = 4, compiler_type = 0x{{[0-9a-f]+}} const float
 
+// CHECK-DAG: Type{{.*}} , name = "double", size = 8, compiler_type = 0x{{[0-9a-f]+}} double
+
 // CHECK-DAG: Type{{.*}} , name = "_Complex float", size = 4, compiler_type = 0x{{[0-9a-f]+}} _Complex float
 // CHECK-DAG: Type{{.*}} , name = "_Complex double", size = 8, compiler_type = 0x{{[0-9a-f]+}} _Complex double
 
-// CHECK-DAG:  Type{{.*}} , name = "ReturnedStruct1", size = 1, decl = simple-types.cpp:21, compiler_type = 0x{{[0-9a-f]+}} struct ReturnedStruct1 {
-// CHECK-DAG:  Type{{.*}} , name = "ReturnedStruct2", size = 1, decl = simple-types.cpp:22, compiler_type = 0x{{[0-9a-f]+}} struct ReturnedStruct2 {
-// CHECK-DAG:  Type{{.*}} , name = "MyStruct", size = 1, decl = simple-types.cpp:24, compiler_type = 0x{{[0-9a-f]+}} struct MyStruct {
+// CHECK-DAG:  Type{{.*}} , name = "ReturnedStruct1", size = 1, decl = simple-types.cpp:20, compiler_type = 0x{{[0-9a-f]+}} struct ReturnedStruct1 {
+// CHECK-DAG:  Type{{.*}} , name = "ReturnedStruct2", size = 1, decl = simple-types.cpp:21, compiler_type = 0x{{[0-9a-f]+}} struct ReturnedStruct2 {
+// CHECK-DAG:  Type{{.*}} , name = "MyStruct", size = 1, decl = simple-types.cpp:23, compiler_type = 0x{{[0-9a-f]+}} struct MyStruct {
 
 // CHECK-DAG:  Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} struct MyStruct *const
 // CHECK-DAG:  Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} const struct MyStruct *const
@@ -137,6 +138,3 @@ int main() {
 // CHECK-DAG: Type{{.*}} , size = 0, compiler_type = 0x{{[0-9a-f]+}} struct ReturnedStruct2 (char *)
 
 // CHECK-DAG: Type{{.*}} , size = 8, compiler_type = 0x{{[0-9a-f]+}} long[2]
-
-// double is used as a parameter to `PF`, but not created as an LLDB type
-// FUNC-PARAMS-NOT: Type{{.*}} , name = "double"

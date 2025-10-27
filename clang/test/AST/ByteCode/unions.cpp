@@ -977,4 +977,13 @@ namespace UnionMemberOnePastEnd {
   }
   static_assert(!b());
 }
+
+namespace ActicvateInvalidPtr {
+  constexpr void bar() { // both-error {{never produces a constant expression}}
+    union {
+      int a[1];
+    } foo;
+    foo.a[1] = 0; // both-note {{assignment to dereferenced one-past-the-end pointer}}
+  }
+}
 #endif

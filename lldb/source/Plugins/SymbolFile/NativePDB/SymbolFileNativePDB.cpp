@@ -754,6 +754,10 @@ TypeSP SymbolFileNativePDB::CreateArrayType(PdbTypeSymId type_id,
 TypeSP SymbolFileNativePDB::CreateFunctionType(PdbTypeSymId type_id,
                                                const MemberFunctionRecord &mfr,
                                                CompilerType ct) {
+  if (mfr.ReturnType.isSimple())
+    GetOrCreateType(mfr.ReturnType);
+  CreateSimpleArgumentListTypes(mfr.ArgumentList);
+
   Declaration decl;
   return MakeType(toOpaqueUid(type_id), ConstString(), 0, nullptr,
                   LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
@@ -763,10 +767,31 @@ TypeSP SymbolFileNativePDB::CreateFunctionType(PdbTypeSymId type_id,
 TypeSP SymbolFileNativePDB::CreateProcedureType(PdbTypeSymId type_id,
                                                 const ProcedureRecord &pr,
                                                 CompilerType ct) {
+  if (pr.ReturnType.isSimple())
+    GetOrCreateType(pr.ReturnType);
+  CreateSimpleArgumentListTypes(pr.ArgumentList);
+
   Declaration decl;
   return MakeType(toOpaqueUid(type_id), ConstString(), 0, nullptr,
                   LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
                   ct, lldb_private::Type::ResolveState::Full);
+}
+
+void SymbolFileNativePDB::CreateSimpleArgumentListTypes(
+    llvm::codeview::TypeIndex arglist_ti) {
+  if (arglist_ti.isNoneType())
+    return;
+
+  CVType arglist_cvt = m_index->tpi().getType(arglist_ti);
+  if (arglist_cvt.kind() != LF_ARGLIST)
+    return; // invalid debug info
+
+  ArgListRecord alr;
+  llvm::cantFail(
+      TypeDeserializer::deserializeAs<ArgListRecord>(arglist_cvt, alr));
+  for (TypeIndex id : alr.getIndices())
+    if (!id.isNoneType() && id.isSimple())
+      GetOrCreateType(id);
 }
 
 TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
