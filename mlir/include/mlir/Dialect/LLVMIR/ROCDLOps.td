@@ -667,12 +667,11 @@ def ROCDL_GlobalLoadLDSOp :
 // Tensor load/store intrinsics (available in GFX1250)
 //===---------------------------------------------------------------------===//
 
-def ROCDL_TensorLoadToLDSIntrOp :
-  ROCDL_IntrOp<"tensor.load.to.lds", [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
-  dag args = (ins Arg<LLVM_VectorOf<I32>, "", [MemRead]>:$dgroup0,
-                  Arg<LLVM_VectorOf<I32>, "", [MemRead]>:$dgroup1,
-                  Arg<LLVM_VectorOf<I32>, "", [MemRead]>:$dgroup2,
-                  Arg<LLVM_VectorOf<I32>, "", [MemRead]>:$dgroup3,
+// Base class for tensor load/store operations with 4 descriptor groups
+class ROCDL_TensorLDSIntrOp<string mnemonic> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
+  dag args = (ins LLVM_VectorOf<I32>:$dgroup0, LLVM_VectorOf<I32>:$dgroup1,
+                  LLVM_VectorOf<I32>:$dgroup2, LLVM_VectorOf<I32>:$dgroup3,
                   I32Attr:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
@@ -686,29 +685,11 @@ def ROCDL_TensorLoadToLDSIntrOp :
   }];
 }
 
-def ROCDL_TensorStoreFromLDSIntrOp :
-  ROCDL_IntrOp<"tensor.store.from.lds", [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
-  dag args = (ins Arg<LLVM_VectorOf<I32>, "", [MemWrite]>:$dgroup0,
-                  Arg<LLVM_VectorOf<I32>, "", [MemWrite]>:$dgroup1,
-                  Arg<LLVM_VectorOf<I32>, "", [MemWrite]>:$dgroup2,
-                  Arg<LLVM_VectorOf<I32>, "", [MemWrite]>:$dgroup3,
-                  I32Attr:$cachePolicy);
-  let arguments = !con(args, baseArgs);
-  let assemblyFormat = [{
-    $dgroup0 `,` $dgroup1 `,` $dgroup2 `,` $dgroup3 `,` $cachePolicy
-    attr-dict `:` type($dgroup0) `,` type($dgroup1) `,` type($dgroup2) `,` type($dgroup3)
-  }];
-  let extraClassDefinition = [{
-    SmallVector<Value> $cppClass::getAccessedOperands() {
-      return {getDgroup0(), getDgroup1(), getDgroup2(), getDgroup3()};
-    }
-  }];
-}
-
-def ROCDL_TensorLoadToLDSIntrD2Op :
-  ROCDL_IntrOp<"tensor.load.to.lds.d2", [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
-  dag args = (ins Arg<LLVM_VectorOf<I32>, "", [MemRead]>:$dgroup0,
-                  Arg<LLVM_VectorOf<I32>, "", [MemRead]>:$dgroup1,
+// Base class for tensor load/store operations with 2 descriptor groups
+// (D2 variant)
+class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
+  dag args = (ins LLVM_VectorOf<I32>:$dgroup0, LLVM_VectorOf<I32>:$dgroup1,
                   I32Attr:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let assemblyFormat = [{
@@ -722,22 +703,11 @@ def ROCDL_TensorLoadToLDSIntrD2Op :
   }];
 }
 
-def ROCDL_TensorStoreFromLDSIntrD2Op :
-  ROCDL_IntrOp<"tensor.store.from.lds.d2", [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
-  dag args = (ins Arg<LLVM_VectorOf<I32>, "", [MemWrite]>:$dgroup0,
-                  Arg<LLVM_VectorOf<I32>, "", [MemWrite]>:$dgroup1,
-                  I32Attr:$cachePolicy);
-  let arguments = !con(args, baseArgs);
-  let assemblyFormat = [{
-    $dgroup0 `,` $dgroup1 `,` $cachePolicy
-    attr-dict `:` type($dgroup0) `,` type($dgroup1)
-  }];
-  let extraClassDefinition = [{
-    SmallVector<Value> $cppClass::getAccessedOperands() {
-      return {getDgroup0(), getDgroup1()};
-    }
-  }];
-}
+// Tensor load and store operations
+def ROCDL_TensorLoadToLDSOp : ROCDL_TensorLDSIntrOp<"tensor.load.to.lds">;
+def ROCDL_TensorStoreFromLDSOp : ROCDL_TensorLDSIntrOp<"tensor.store.from.lds">;
+def ROCDL_TensorLoadToLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.load.to.lds.d2">;
+def ROCDL_TensorStoreFromLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.store.from.lds.d2">;
 
 //===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
