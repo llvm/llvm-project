@@ -605,7 +605,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setAllExpand(MVT::f32);
     if (!Subtarget->hasFP64())
       setAllExpand(MVT::f64);
-  }
+  } else if (TM.Options.FloatABIType == FloatABI::Hard)
+    errs() << "The hard-float ABI can't be used for a target that "
+              "doesn't support floating-point (ignoring float-abi)\n";
 
   if (Subtarget->hasFullFP16()) {
     addRegisterClass(MVT::f16, &ARM::HPRRegClass);
