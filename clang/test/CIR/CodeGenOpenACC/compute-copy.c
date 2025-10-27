@@ -2,7 +2,7 @@
 
 int global;
 void acc_compute(int parmVar) {
-  // CHECK: cir.func{{.*}} @acc_compute(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_compute(%[[ARG:.*]]: !s32i{{.*}})
   // CHECK-NEXT: %[[PARM:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["parmVar", init]
   int localVar1;
   short localVar2;
@@ -899,7 +899,7 @@ void acc_compute_members() {
 }
 
 void modifier_list() {
-  // CHECK: cir.func{{.*}} @modifier_list() {
+  // CHECK: cir.func{{.*}} @modifier_list()
   int localVar;
   // CHECK-NEXT: %[[LOCALVAR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["localVar"]
 

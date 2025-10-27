@@ -901,12 +901,153 @@ func.func @scope_merge_without_terminator() {
 
 // -----
 
+// Check that we simplify extract_strided_metadata of cast
+// when the source of the cast is compatible with what
+// `extract_strided_metadata`s accept.
+//
+// When we apply the transformation the resulting offset, sizes and strides
+// should come straight from the inputs of the cast.
+// Additionally the folder on extract_strided_metadata should propagate the
+// static information.
+//
+// CHECK-LABEL: func @extract_strided_metadata_of_cast
+//  CHECK-SAME: %[[ARG:.*]]: memref<3x?xi32, strided<[4, ?], offset: ?>>)
+//
+//   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
+//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+//       CHECK: %[[BASE:.*]], %[[DYN_OFFSET:.*]], %[[DYN_SIZES:.*]]:2, %[[DYN_STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
+//
+//       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[C3]], %[[DYN_SIZES]]#1, %[[C4]], %[[DYN_STRIDES]]#1
+func.func @extract_strided_metadata_of_cast(
+  %arg : memref<3x?xi32, strided<[4, ?], offset:?>>)
+  -> (memref<i32>, index,
+      index, index,
+      index, index) {
+
+  %cast =
+    memref.cast %arg :
+      memref<3x?xi32, strided<[4, ?], offset: ?>> to
+      memref<?x?xi32, strided<[?, ?], offset: ?>>
+
+  %base, %base_offset, %sizes:2, %strides:2 =
+    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
+    -> memref<i32>, index,
+       index, index,
+       index, index
+
+  return %base, %base_offset,
+    %sizes#0, %sizes#1,
+    %strides#0, %strides#1 :
+      memref<i32>, index,
+      index, index,
+      index, index
+}
+
+// -----
+
+// Check that we simplify extract_strided_metadata of cast
+// when the source of the cast is compatible with what
+// `extract_strided_metadata`s accept.
+//
+// Same as extract_strided_metadata_of_cast but with constant sizes and strides
+// in the destination type.
+//
+// CHECK-LABEL: func @extract_strided_metadata_of_cast_w_csts
+//  CHECK-SAME: %[[ARG:.*]]: memref<?x?xi32, strided<[?, ?], offset: ?>>)
+//
+//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+//   CHECK-DAG: %[[C18:.*]] = arith.constant 18 : index
+//   CHECK-DAG: %[[C25:.*]] = arith.constant 25 : index
+//       CHECK: %[[BASE:.*]], %[[DYN_OFFSET:.*]], %[[DYN_SIZES:.*]]:2, %[[DYN_STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
+//
+//       CHECK: return %[[BASE]], %[[C25]], %[[C4]], %[[DYN_SIZES]]#1, %[[DYN_STRIDES]]#0, %[[C18]]
+func.func @extract_strided_metadata_of_cast_w_csts(
+  %arg : memref<?x?xi32, strided<[?, ?], offset:?>>)
+  -> (memref<i32>, index,
+      index, index,
+      index, index) {
+
+  %cast =
+    memref.cast %arg :
+      memref<?x?xi32, strided<[?, ?], offset: ?>> to
+      memref<4x?xi32, strided<[?, 18], offset: 25>>
+
+  %base, %base_offset, %sizes:2, %strides:2 =
+    memref.extract_strided_metadata %cast:memref<4x?xi32, strided<[?, 18], offset: 25>>
+    -> memref<i32>, index,
+       index, index,
+       index, index
+
+  return %base, %base_offset,
+    %sizes#0, %sizes#1,
+    %strides#0, %strides#1 :
+      memref<i32>, index,
+      index, index,
+      index, index
+}
+
+// -----
+
+// Check that we don't simplify extract_strided_metadata of
+// cast when the source of the cast is unranked.
+// Unranked memrefs cannot feed into extract_strided_metadata operations.
+// Note: Technically we could still fold the sizes and strides.
+//
+// CHECK-LABEL: func @extract_strided_metadata_of_cast_unranked
+//  CHECK-SAME: %[[ARG:.*]]: memref<*xi32>)
+//
+//       CHECK: %[[CAST:.*]] = memref.cast %[[ARG]] :
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[CAST]]
+//
+//       CHECK: return %[[BASE]], %[[OFFSET]], %[[SIZES]]#0, %[[SIZES]]#1, %[[STRIDES]]#0, %[[STRIDES]]#1
+func.func @extract_strided_metadata_of_cast_unranked(
+  %arg : memref<*xi32>)
+  -> (memref<i32>, index,
+      index, index,
+      index, index) {
+
+  %cast =
+    memref.cast %arg :
+      memref<*xi32> to
+      memref<?x?xi32, strided<[?, ?], offset: ?>>
+
+  %base, %base_offset, %sizes:2, %strides:2 =
+    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
+    -> memref<i32>, index,
+       index, index,
+       index, index
+
+  return %base, %base_offset,
+    %sizes#0, %sizes#1,
+    %strides#0, %strides#1 :
+      memref<i32>, index,
+      index, index,
+      index, index
+}
+
+// -----
+
 // CHECK-LABEL: func @reinterpret_noop
 //  CHECK-SAME: (%[[ARG:.*]]: memref<2x3x4xf32>)
 //  CHECK-NEXT: return %[[ARG]]
 func.func @reinterpret_noop(%arg : memref<2x3x4xf32>) -> memref<2x3x4xf32> {
   %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [2, 3, 4], strides: [12, 4, 1] : memref<2x3x4xf32> to memref<2x3x4xf32>
   return %0 : memref<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @reinterpret_constant_fold
+//  CHECK-SAME: (%[[ARG:.*]]: memref<f32>)
+//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [100, 100], strides: [100, 1]
+//       CHECK: %[[CAST:.*]] = memref.cast %[[RES]]
+//       CHECK: return %[[CAST]]
+func.func @reinterpret_constant_fold(%arg0: memref<f32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c100 = arith.constant 100 : index
+  %reinterpret_cast = memref.reinterpret_cast %arg0 to offset: [%c0], sizes: [%c100, %c100], strides: [%c100, %c1] : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %reinterpret_cast : memref<?x?xf32, strided<[?, ?], offset: ?>>
 }
 
 // -----
@@ -996,10 +1137,9 @@ func.func @reinterpret_of_extract_strided_metadata_same_type(%arg0 : memref<?x?x
 // when the strides don't match.
 // CHECK-LABEL: func @reinterpret_of_extract_strided_metadata_w_different_stride
 //  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
-//   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [%[[C0]]], sizes: [4, 2, 2], strides: [1, 1, %[[C1]]]
-//       CHECK: return %[[RES]]
+//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [4, 2, 2], strides: [1, 1, 1]
+//       CHECK: %[[CAST:.*]] = memref.cast %[[RES]]
+//       CHECK: return %[[CAST]]
 func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : memref<8x2xf32>) -> memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
   %m2 = memref.reinterpret_cast %base to offset: [%offset], sizes: [4, 2, 2], strides: [1, 1, %strides#1] : memref<f32> to memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
@@ -1011,11 +1151,9 @@ func.func @reinterpret_of_extract_strided_metadata_w_different_stride(%arg0 : me
 // when the offset doesn't match.
 // CHECK-LABEL: func @reinterpret_of_extract_strided_metadata_w_different_offset
 //  CHECK-SAME: (%[[ARG:.*]]: memref<8x2xf32>)
-//   CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
-//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
-//   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [1], sizes: [%[[C8]], %[[C2]]], strides: [%[[C2]], %[[C1]]]
-//       CHECK: return %[[RES]]
+//       CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [1], sizes: [8, 2], strides: [2, 1]
+//       CHECK: %[[CAST:.*]] = memref.cast %[[RES]]
+//       CHECK: return %[[CAST]]
 func.func @reinterpret_of_extract_strided_metadata_w_different_offset(%arg0 : memref<8x2xf32>) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
   %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<8x2xf32> -> memref<f32>, index, index, index, index, index
   %m2 = memref.reinterpret_cast %base to offset: [1], sizes: [%sizes#0, %sizes#1], strides: [%strides#0, %strides#1] : memref<f32> to memref<?x?xf32, strided<[?, ?], offset: ?>>

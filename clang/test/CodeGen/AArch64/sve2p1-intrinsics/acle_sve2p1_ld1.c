@@ -390,8 +390,8 @@ svmfloat8x4_t test_svld1_mf8_x4(svcount_t pn, const mfloat8_t *base) ATTR
 // CHECK-LABEL: @test_svld1_vnum_u8_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -399,8 +399,8 @@ svmfloat8x4_t test_svld1_mf8_x4(svcount_t pn, const mfloat8_t *base) ATTR
 // CPP-CHECK-LABEL: @_Z21test_svld1_vnum_u8_x2u11__SVCount_tPKhl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -413,8 +413,8 @@ svuint8x2_t test_svld1_vnum_u8_x2(svcount_t pn, const uint8_t *base, int64_t vnu
 // CHECK-LABEL: @test_svld1_vnum_u16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -422,8 +422,8 @@ svuint8x2_t test_svld1_vnum_u8_x2(svcount_t pn, const uint8_t *base, int64_t vnu
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_u16_x2u11__SVCount_tPKtl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -436,8 +436,8 @@ svuint16x2_t test_svld1_vnum_u16_x2(svcount_t pn, const uint16_t *base, int64_t 
 // CHECK-LABEL: @test_svld1_vnum_u32_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -445,8 +445,8 @@ svuint16x2_t test_svld1_vnum_u16_x2(svcount_t pn, const uint16_t *base, int64_t 
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_u32_x2u11__SVCount_tPKjl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -459,8 +459,8 @@ svuint32x2_t test_svld1_vnum_u32_x2(svcount_t pn, const uint32_t *base, int64_t 
 // CHECK-LABEL: @test_svld1_vnum_u64_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -468,8 +468,8 @@ svuint32x2_t test_svld1_vnum_u32_x2(svcount_t pn, const uint32_t *base, int64_t 
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_u64_x2u11__SVCount_tPKml(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -482,8 +482,8 @@ svuint64x2_t test_svld1_vnum_u64_x2(svcount_t pn, const uint64_t *base, int64_t 
 // CHECK-LABEL: @test_svld1_vnum_u8_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -491,8 +491,8 @@ svuint64x2_t test_svld1_vnum_u64_x2(svcount_t pn, const uint64_t *base, int64_t 
 // CPP-CHECK-LABEL: @_Z21test_svld1_vnum_u8_x4u11__SVCount_tPKhl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -505,8 +505,8 @@ svuint8x4_t test_svld1_vnum_u8_x4(svcount_t pn, const uint8_t *base, int64_t vnu
 // CHECK-LABEL: @test_svld1_vnum_u16_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -514,8 +514,8 @@ svuint8x4_t test_svld1_vnum_u8_x4(svcount_t pn, const uint8_t *base, int64_t vnu
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_u16_x4u11__SVCount_tPKtl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -528,8 +528,8 @@ svuint16x4_t test_svld1_vnum_u16_x4(svcount_t pn, const uint16_t *base, int64_t 
 // CHECK-LABEL: @test_svld1_vnum_u32_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -537,8 +537,8 @@ svuint16x4_t test_svld1_vnum_u16_x4(svcount_t pn, const uint16_t *base, int64_t 
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_u32_x4u11__SVCount_tPKjl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -551,8 +551,8 @@ svuint32x4_t test_svld1_vnum_u32_x4(svcount_t pn, const uint32_t *base, int64_t 
 // CHECK-LABEL: @test_svld1_vnum_u64_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -560,8 +560,8 @@ svuint32x4_t test_svld1_vnum_u32_x4(svcount_t pn, const uint32_t *base, int64_t 
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_u64_x4u11__SVCount_tPKml(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -574,8 +574,8 @@ svuint64x4_t test_svld1_vnum_u64_x4(svcount_t pn, const uint64_t *base, int64_t 
 // CHECK-LABEL: @test_svld1_vnum_s8_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -583,8 +583,8 @@ svuint64x4_t test_svld1_vnum_u64_x4(svcount_t pn, const uint64_t *base, int64_t 
 // CPP-CHECK-LABEL: @_Z21test_svld1_vnum_s8_x2u11__SVCount_tPKal(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -597,8 +597,8 @@ svint8x2_t test_svld1_vnum_s8_x2(svcount_t pn, const int8_t *base, int64_t vnum)
 // CHECK-LABEL: @test_svld1_vnum_s16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -606,8 +606,8 @@ svint8x2_t test_svld1_vnum_s8_x2(svcount_t pn, const int8_t *base, int64_t vnum)
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_s16_x2u11__SVCount_tPKsl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -620,8 +620,8 @@ svint16x2_t test_svld1_vnum_s16_x2(svcount_t pn, const int16_t *base, int64_t vn
 // CHECK-LABEL: @test_svld1_vnum_s32_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -629,8 +629,8 @@ svint16x2_t test_svld1_vnum_s16_x2(svcount_t pn, const int16_t *base, int64_t vn
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_s32_x2u11__SVCount_tPKil(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -643,8 +643,8 @@ svint32x2_t test_svld1_vnum_s32_x2(svcount_t pn, const int32_t *base, int64_t vn
 // CHECK-LABEL: @test_svld1_vnum_s64_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -652,8 +652,8 @@ svint32x2_t test_svld1_vnum_s32_x2(svcount_t pn, const int32_t *base, int64_t vn
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_s64_x2u11__SVCount_tPKll(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -666,8 +666,8 @@ svint64x2_t test_svld1_vnum_s64_x2(svcount_t pn, const int64_t *base, int64_t vn
 // CHECK-LABEL: @test_svld1_vnum_s8_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -675,8 +675,8 @@ svint64x2_t test_svld1_vnum_s64_x2(svcount_t pn, const int64_t *base, int64_t vn
 // CPP-CHECK-LABEL: @_Z21test_svld1_vnum_s8_x4u11__SVCount_tPKal(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -689,8 +689,8 @@ svint8x4_t test_svld1_vnum_s8_x4(svcount_t pn, const int8_t *base, int64_t vnum)
 // CHECK-LABEL: @test_svld1_vnum_s16_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -698,8 +698,8 @@ svint8x4_t test_svld1_vnum_s8_x4(svcount_t pn, const int8_t *base, int64_t vnum)
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_s16_x4u11__SVCount_tPKsl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]]
@@ -712,8 +712,8 @@ svint16x4_t test_svld1_vnum_s16_x4(svcount_t pn, const int16_t *base, int64_t vn
 // CHECK-LABEL: @test_svld1_vnum_s32_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -721,8 +721,8 @@ svint16x4_t test_svld1_vnum_s16_x4(svcount_t pn, const int16_t *base, int64_t vn
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_s32_x4u11__SVCount_tPKil(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]]
@@ -735,8 +735,8 @@ svint32x4_t test_svld1_vnum_s32_x4(svcount_t pn, const int32_t *base, int64_t vn
 // CHECK-LABEL: @test_svld1_vnum_s64_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -744,8 +744,8 @@ svint32x4_t test_svld1_vnum_s32_x4(svcount_t pn, const int32_t *base, int64_t vn
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_s64_x4u11__SVCount_tPKll(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]]
@@ -758,8 +758,8 @@ svint64x4_t test_svld1_vnum_s64_x4(svcount_t pn, const int64_t *base, int64_t vn
 // CHECK-LABEL: @test_svld1_vnum_f16_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld1.pn.x2.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]]
@@ -767,8 +767,8 @@ svint64x4_t test_svld1_vnum_s64_x4(svcount_t pn, const int64_t *base, int64_t vn
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_f16_x2u11__SVCount_tPKDhl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld1.pn.x2.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]]
@@ -781,8 +781,8 @@ svfloat16x2_t test_svld1_vnum_f16_x2(svcount_t pn, const float16_t *base, int64_
 // CHECK-LABEL: @test_svld1_vnum_f32_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x2.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]]
@@ -790,8 +790,8 @@ svfloat16x2_t test_svld1_vnum_f16_x2(svcount_t pn, const float16_t *base, int64_
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_f32_x2u11__SVCount_tPKfl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x2.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]]
@@ -804,8 +804,8 @@ svfloat32x2_t test_svld1_vnum_f32_x2(svcount_t pn, const float32_t *base, int64_
 // CHECK-LABEL: @test_svld1_vnum_f64_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]]
@@ -813,8 +813,8 @@ svfloat32x2_t test_svld1_vnum_f32_x2(svcount_t pn, const float32_t *base, int64_
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_f64_x2u11__SVCount_tPKdl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]]
@@ -827,8 +827,8 @@ svfloat64x2_t test_svld1_vnum_f64_x2(svcount_t pn, const float64_t *base, int64_
 // CHECK-LABEL: @test_svld1_vnum_mf8_x2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -836,8 +836,8 @@ svfloat64x2_t test_svld1_vnum_f64_x2(svcount_t pn, const float64_t *base, int64_
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_mf8_x2u11__SVCount_tPKu6__mfp8l(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -850,8 +850,8 @@ svmfloat8x2_t test_svld1_vnum_mf8_x2(svcount_t pn, const mfloat8_t *base, int64_
 // CHECK-LABEL: @test_svld1_vnum_f16_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld1.pn.x4.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]]
@@ -859,8 +859,8 @@ svmfloat8x2_t test_svld1_vnum_mf8_x2(svcount_t pn, const mfloat8_t *base, int64_
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_f16_x4u11__SVCount_tPKDhl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld1.pn.x4.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]]
@@ -873,8 +873,8 @@ svfloat16x4_t test_svld1_vnum_f16_x4(svcount_t pn, const float16_t *base, int64_
 // CHECK-LABEL: @test_svld1_vnum_f32_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]]
@@ -882,8 +882,8 @@ svfloat16x4_t test_svld1_vnum_f16_x4(svcount_t pn, const float16_t *base, int64_
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_f32_x4u11__SVCount_tPKfl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]]
@@ -896,8 +896,8 @@ svfloat32x4_t test_svld1_vnum_f32_x4(svcount_t pn, const float32_t *base, int64_
 // CHECK-LABEL: @test_svld1_vnum_f64_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x4.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]]
@@ -905,8 +905,8 @@ svfloat32x4_t test_svld1_vnum_f32_x4(svcount_t pn, const float32_t *base, int64_
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_f64_x4u11__SVCount_tPKdl(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x4.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]]
@@ -919,8 +919,8 @@ svfloat64x4_t test_svld1_vnum_f64_x4(svcount_t pn, const float64_t *base, int64_
 // CHECK-LABEL: @test_svld1_vnum_mf8_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]
@@ -928,8 +928,8 @@ svfloat64x4_t test_svld1_vnum_f64_x4(svcount_t pn, const float64_t *base, int64_
 // CPP-CHECK-LABEL: @_Z22test_svld1_vnum_mf8_x4u11__SVCount_tPKu6__mfp8l(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[VNUM:%.*]]
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
 // CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]]

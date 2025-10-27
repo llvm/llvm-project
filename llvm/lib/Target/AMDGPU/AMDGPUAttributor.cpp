@@ -1288,16 +1288,17 @@ static unsigned inlineAsmGetNumRequiredAGPRs(const InlineAsm *IA,
   return std::min(MaxVirtReg + MaxPhysReg, 256u);
 }
 
-// TODO: Migrate to range merge of amdgpu-agpr-alloc.
-struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAAMDGPUNoAGPR(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+struct AAAMDGPUMinAGPRAlloc
+    : public StateWrapper<DecIntegerState<>, AbstractAttribute> {
+  using Base = StateWrapper<DecIntegerState<>, AbstractAttribute>;
+  AAAMDGPUMinAGPRAlloc(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  static AAAMDGPUNoAGPR &createForPosition(const IRPosition &IRP,
-                                           Attributor &A) {
+  static AAAMDGPUMinAGPRAlloc &createForPosition(const IRPosition &IRP,
+                                                 Attributor &A) {
     if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
-      return *new (A.Allocator) AAAMDGPUNoAGPR(IRP, A);
-    llvm_unreachable("AAAMDGPUNoAGPR is only valid for function position");
+      return *new (A.Allocator) AAAMDGPUMinAGPRAlloc(IRP, A);
+    llvm_unreachable(
+        "AAAMDGPUMinAGPRAlloc is only valid for function position");
   }
 
   void initialize(Attributor &A) override {
@@ -1310,25 +1311,33 @@ struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
   }
 
   const std::string getAsStr(Attributor *A) const override {
-    return getAssumed() ? "amdgpu-no-agpr" : "amdgpu-maybe-agpr";
+    std::string Str = "amdgpu-agpr-alloc=";
+    raw_string_ostream OS(Str);
+    OS << getAssumed();
+    return OS.str();
   }
 
   void trackStatistics() const override {}
 
   ChangeStatus updateImpl(Attributor &A) override {
-    // TODO: Use AACallEdges, but then we need a way to inspect asm edges.
+    DecIntegerState<> Maximum;
 
-    auto CheckForNoAGPRs = [&](Instruction &I) {
+    // Check for cases which require allocation of AGPRs. The only cases where
+    // AGPRs are required are if there are direct references to AGPRs, so inline
+    // assembly and special intrinsics.
+    auto CheckForMinAGPRAllocs = [&](Instruction &I) {
       const auto &CB = cast<CallBase>(I);
       const Value *CalleeOp = CB.getCalledOperand();
-      const Function *Callee = dyn_cast<Function>(CalleeOp);
-      if (!Callee) {
-        if (const InlineAsm *IA = dyn_cast<InlineAsm>(CalleeOp))
-          return inlineAsmGetNumRequiredAGPRs(IA, CB) == 0;
-        return false;
+
+      if (const InlineAsm *IA = dyn_cast<InlineAsm>(CalleeOp)) {
+        // Technically, the inline asm could be invoking a call to an unknown
+        // external function that requires AGPRs, but ignore that.
+        unsigned NumRegs = inlineAsmGetNumRequiredAGPRs(IA, CB);
+        Maximum.takeAssumedMaximum(NumRegs);
+        return true;
       }
 
-      switch (Callee->getIntrinsicID()) {
+      switch (CB.getIntrinsicID()) {
       case Intrinsic::not_intrinsic:
         break;
       case Intrinsic::write_register:
@@ -1340,7 +1349,10 @@ struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
                 ->getOperand(0));
         auto [Kind, RegIdx, NumRegs] =
             AMDGPU::parseAsmPhysRegName(RegName->getString());
-        return Kind != 'a';
+        if (Kind == 'a')
+          Maximum.takeAssumedMaximum(std::min(RegIdx + NumRegs, 256u));
+
+        return true;
       }
       default:
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
@@ -1349,32 +1361,50 @@ struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
       }
 
       // TODO: Handle callsite attributes
-      const auto *CalleeInfo = A.getAAFor<AAAMDGPUNoAGPR>(
-          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
-      return CalleeInfo && CalleeInfo->isValidState() &&
-             CalleeInfo->getAssumed();
+      auto *CBEdges = A.getAAFor<AACallEdges>(
+          *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
+      if (!CBEdges || CBEdges->hasUnknownCallee()) {
+        Maximum.indicatePessimisticFixpoint();
+        return false;
+      }
+
+      for (const Function *PossibleCallee : CBEdges->getOptimisticEdges()) {
+        const auto *CalleeInfo = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+            *this, IRPosition::function(*PossibleCallee), DepClassTy::REQUIRED);
+        if (!CalleeInfo || !CalleeInfo->isValidState()) {
+          Maximum.indicatePessimisticFixpoint();
+          return false;
+        }
+
+        Maximum.takeAssumedMaximum(CalleeInfo->getAssumed());
+      }
+
+      return true;
     };
 
     bool UsedAssumedInformation = false;
-    if (!A.checkForAllCallLikeInstructions(CheckForNoAGPRs, *this,
+    if (!A.checkForAllCallLikeInstructions(CheckForMinAGPRAllocs, *this,
                                            UsedAssumedInformation))
       return indicatePessimisticFixpoint();
-    return ChangeStatus::UNCHANGED;
+
+    return clampStateAndIndicateChange(getState(), Maximum);
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    if (!getAssumed())
-      return ChangeStatus::UNCHANGED;
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
-    return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
+    SmallString<4> Buffer;
+    raw_svector_ostream OS(Buffer);
+    OS << getAssumed();
+
+    return A.manifestAttrs(
+        getIRPosition(), {Attribute::get(Ctx, "amdgpu-agpr-alloc", OS.str())});
   }
 
-  StringRef getName() const override { return "AAAMDGPUNoAGPR"; }
+  StringRef getName() const override { return "AAAMDGPUMinAGPRAlloc"; }
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is
-  /// AAAMDGPUNoAGPRs
+  /// AAAMDGPUMinAGPRAllocs
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
@@ -1382,7 +1412,7 @@ struct AAAMDGPUNoAGPR : public StateWrapper<BooleanState, AbstractAttribute> {
   static const char ID;
 };
 
-const char AAAMDGPUNoAGPR::ID = 0;
+const char AAAMDGPUMinAGPRAlloc::ID = 0;
 
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
@@ -1550,10 +1580,11 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   DenseSet<const char *> Allowed(
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
-       &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
-       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
-       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID});
+       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
+       &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
+       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
+       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
+       &AAAMDGPUClusterDims::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1595,7 +1626,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
 
     if (ST.hasGFX90AInsts())
-      A.getOrCreateAAFor<AAAMDGPUNoAGPR>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;

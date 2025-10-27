@@ -236,7 +236,7 @@ TEST_F(FormatTestJava, ArrayInitializers) {
                "};");
 
   FormatStyle Style = getStyleWithColumns(65);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(
       "expected = new int[] { 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,\n"
       "  100, 100, 100, 100, 100, 100, 100, 100, 100, 100 };",

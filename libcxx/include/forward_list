@@ -235,6 +235,7 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/is_swappable.h>
 #  include <__type_traits/remove_cv.h>
 #  include <__type_traits/type_identity.h>
+#  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
 #  include <__utility/swap.h>
@@ -1180,22 +1181,17 @@ forward_list<_Tp, _Alloc>::__insert_after(const_iterator __p, size_type __n, _Ar
   if (__n > 0) {
     __node_pointer __first = this->__create_node(/* next = */ nullptr, std::forward<_Args>(__args)...);
     __node_pointer __last  = __first;
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (--__n; __n != 0; --__n, __last = __last->__next_) {
-        __last->__next_ = this->__create_node(/* next = */ nullptr, std::forward<_Args>(__args)...);
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard           = std::__make_exception_guard([&] {
       while (__first != nullptr) {
         __node_pointer __next = __first->__next_;
         this->__delete_node(__first);
         __first = __next;
       }
-      throw;
+    });
+    for (--__n; __n != 0; --__n, __last = __last->__next_) {
+      __last->__next_ = this->__create_node(/* next = */ nullptr, std::forward<_Args>(__args)...);
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;
     __r             = std::__static_fancy_pointer_cast<__begin_node_pointer>(__last);
@@ -1220,22 +1216,17 @@ forward_list<_Tp, _Alloc>::__insert_after_with_sentinel(const_iterator __p, _Inp
     __node_pointer __first = this->__create_node(/* next = */ nullptr, *__f);
     __node_pointer __last  = __first;
 
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (++__f; __f != __l; ++__f, ((void)(__last = __last->__next_))) {
-        __last->__next_ = this->__create_node(/* next = */ nullptr, *__f);
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
+    auto __guard = std::__make_exception_guard([&] {
       while (__first != nullptr) {
         __node_pointer __next = __first->__next_;
         this->__delete_node(__first);
         __first = __next;
       }
-      throw;
+    });
+    for (++__f; __f != __l; ++__f, ((void)(__last = __last->__next_))) {
+      __last->__next_ = this->__create_node(/* next = */ nullptr, *__f);
     }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
 
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;

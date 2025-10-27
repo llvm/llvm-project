@@ -837,7 +837,7 @@ func.func @fold_extract_splatlike(%a : f32, %idx0 : index, %idx1 : index, %idx2 
 // CHECK-LABEL: fold_extract_vector_from_splat
 //       CHECK: vector.broadcast {{.*}} f32 to vector<4xf32>
 func.func @fold_extract_vector_from_splat(%a : f32, %idx0 : index, %idx1 : index) -> vector<4xf32> {
-  %b = vector.splat %a : vector<1x2x4xf32>
+  %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
   return %r : vector<4xf32>
 }
@@ -3322,6 +3322,46 @@ func.func @from_elements_to_elements_shuffle(%a: vector<4x2xf32>) -> vector<4x2x
 
 // -----
 
+// CHECK-LABEL: func @to_elements_of_scalar_broadcast_folds
+// CHECK-SAME: (%[[S:.*]]: f32) -> (f32, f32, f32, f32)
+func.func @to_elements_of_scalar_broadcast_folds(%s: f32) -> (f32, f32, f32, f32) {
+  %v = vector.broadcast %s : f32 to vector<4xf32>
+  %e:4 = vector.to_elements %v : vector<4xf32>
+  // CHECK-NOT: vector.broadcast
+  // CHECK-NOT: vector.to_elements
+  // CHECK: return %[[S]], %[[S]], %[[S]], %[[S]]
+  return %e#0, %e#1, %e#2, %e#3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @to_elements_of_vector_broadcast
+// CHECK-SAME: (%[[VEC:.*]]: vector<2xf32>) -> (f32, f32, f32, f32, f32, f32)
+func.func @to_elements_of_vector_broadcast(%vec: vector<2xf32>) -> (f32, f32, f32, f32, f32, f32) {
+  %v = vector.broadcast %vec : vector<2xf32> to vector<3x2xf32>
+  %e:6 = vector.to_elements %v : vector<3x2xf32>
+  // CHECK-NOT: vector.broadcast
+  // CHECK: %[[SRC_ELEMS:.*]]:2 = vector.to_elements %[[VEC]]
+  // CHECK: return %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1, %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1, %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1
+  return %e#0, %e#1, %e#2, %e#3, %e#4, %e#5 : f32, f32, f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @to_elements_of_vector_broadcast_inner_dim
+// CHECK-SAME: (%[[V:.*]]: vector<2x1x2xf32>) -> (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)
+func.func @to_elements_of_vector_broadcast_inner_dim(%v: vector<2x1x2xf32>) -> (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) {
+  %b = vector.broadcast %v : vector<2x1x2xf32> to vector<2x3x2xf32>
+  %e:12 = vector.to_elements %b : vector<2x3x2xf32>
+  // CHECK-NOT: vector.broadcast
+  // CHECK: %[[SRC:.*]]:4 = vector.to_elements %[[V]] : vector<2x1x2xf32>
+  // CHECK: return %[[SRC]]#0, %[[SRC]]#1, %[[SRC]]#0, %[[SRC]]#1, %[[SRC]]#0, %[[SRC]]#1, %[[SRC]]#2, %[[SRC]]#3, %[[SRC]]#2, %[[SRC]]#3, %[[SRC]]#2, %[[SRC]]#3
+  return %e#0, %e#1, %e#2, %e#3, %e#4, %e#5, %e#6, %e#7, %e#8, %e#9, %e#10, %e#11 :
+    f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32
+}
+
+// -----
+
 // +---------------------------------------------------------------------------
 // Tests for foldFromElementsToConstant
 // +---------------------------------------------------------------------------
@@ -3486,6 +3526,62 @@ func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
 
 // +---------------------------------------------------------------------------
 // End of  Tests for foldFromElementsToConstant
+// +---------------------------------------------------------------------------
+
+// -----
+
+// +---------------------------------------------------------------------------
+// Tests for FoldTransposeFromElements
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL: transpose_from_elements_1d
+// CHECK-SAME:  %[[EL_0:.*]]: i32, %[[EL_1:.*]]: i32 
+func.func @transpose_from_elements_1d(%el_0: i32, %el_1: i32) -> vector<2xi32> {
+  %v = vector.from_elements %el_0, %el_1 : vector<2xi32>
+  %t = vector.transpose %v, [0] : vector<2xi32> to vector<2xi32>
+  return %t : vector<2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0]], %[[EL_1]] : vector<2xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// CHECK-LABEL: transpose_from_elements_2d
+// CHECK-SAME:  %[[EL_0_0:.*]]: i32, %[[EL_0_1:.*]]: i32, %[[EL_0_2:.*]]: i32, %[[EL_1_0:.*]]: i32, %[[EL_1_1:.*]]: i32, %[[EL_1_2:.*]]: i32 
+func.func @transpose_from_elements_2d(
+  %el_0_0: i32, %el_0_1: i32, %el_0_2: i32,
+  %el_1_0: i32, %el_1_1: i32, %el_1_2: i32
+) -> vector<3x2xi32> {
+  %v = vector.from_elements %el_0_0, %el_0_1, %el_0_2, %el_1_0, %el_1_1, %el_1_2 : vector<2x3xi32>
+  %t = vector.transpose %v, [1, 0] : vector<2x3xi32> to vector<3x2xi32>
+  return %t : vector<3x2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0:.*]], %[[EL_1_0:.*]], %[[EL_0_1:.*]], %[[EL_1_1:.*]], %[[EL_0_2:.*]], %[[EL_1_2:.*]] : vector<3x2xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// CHECK-LABEL: transpose_from_elements_3d
+// CHECK-SAME:  %[[EL_0_0_0:.*]]: i32, %[[EL_0_0_1:.*]]: i32, %[[EL_0_1_0:.*]]: i32, %[[EL_0_1_1:.*]]: i32, %[[EL_0_2_0:.*]]: i32, %[[EL_0_2_1:.*]]: i32, %[[EL_1_0_0:.*]]: i32, %[[EL_1_0_1:.*]]: i32, %[[EL_1_1_0:.*]]: i32, %[[EL_1_1_1:.*]]: i32, %[[EL_1_2_0:.*]]: i32, %[[EL_1_2_1:.*]]: i32 
+func.func @transpose_from_elements_3d(
+  %el_0_0_0: i32, %el_0_0_1: i32, %el_0_1_0: i32, %el_0_1_1: i32, %el_0_2_0: i32, %el_0_2_1: i32,
+  %el_1_0_0: i32, %el_1_0_1: i32, %el_1_1_0: i32, %el_1_1_1: i32, %el_1_2_0: i32, %el_1_2_1: i32
+) -> vector<2x2x3xi32> {
+  %v = vector.from_elements
+    %el_0_0_0, %el_0_0_1,
+    %el_0_1_0, %el_0_1_1,
+    %el_0_2_0, %el_0_2_1,
+    %el_1_0_0, %el_1_0_1,
+    %el_1_1_0, %el_1_1_1,
+    %el_1_2_0, %el_1_2_1
+    : vector<2x3x2xi32>
+  %t = vector.transpose %v, [0, 2, 1] : vector<2x3x2xi32> to vector<2x2x3xi32>
+  return %t : vector<2x2x3xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0_0:.*]], %[[EL_0_1_0:.*]], %[[EL_0_2_0:.*]], %[[EL_0_0_1:.*]], %[[EL_0_1_1:.*]], %[[EL_0_2_1:.*]], %[[EL_1_0_0:.*]], %[[EL_1_1_0:.*]], %[[EL_1_2_0:.*]], %[[EL_1_0_1:.*]], %[[EL_1_1_1:.*]], %[[EL_1_2_1:.*]] : vector<2x2x3xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// +---------------------------------------------------------------------------
+// End of  Tests for FoldTransposeFromElements
 // +---------------------------------------------------------------------------
 
 // -----

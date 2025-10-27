@@ -46,7 +46,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -348,7 +347,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
 public:
   SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {}
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
     GR = ST.getSPIRVGlobalRegistry();
     DeadInstructions.clear();
