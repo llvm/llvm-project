@@ -4511,9 +4511,7 @@ def CIR_CatchParamOp : CIR_Op<"catch_param"> {
 
     ```mlir
     %exception = cir.catch_param begin %exception_obj -> !cir.ptr<!s32i>
-
     %exception = cir.catch_param -> !cir.ptr<!void>
-
     cir.catch_param end
     ```
   }];
