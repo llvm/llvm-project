@@ -479,6 +479,12 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
                                     TLI, TTI, L, MSSAU, &SafetyInfo, Flags, ORE)
             : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
                          MSSAU, &SafetyInfo, Flags, ORE);
+
+  // sink pre-header defs that are unused in-loop into the unique exit to reduce
+  // pressure.
+  Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU,
+                                                     SE, DT, Flags, ORE);
+
   Flags.setIsSink(false);
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
@@ -551,18 +557,11 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   assert((L->isOutermost() || L->getParentLoop()->isLCSSAForm(*DT)) &&
          "Parent loop not left in LCSSA form after LICM!");
 
-  // sink pre-header defs that are unused in-loop into the unique exit to reduce
-  // pressure.
-  Flags.setIsSink(true);
-  Changed |= sinkUnusedInvariantsFromPreheaderToExit(L, AA, &SafetyInfo, MSSAU,
-                                                     SE, DT, Flags, ORE);
-
   if (VerifyMemorySSA)
     MSSA->verifyMemorySSA();
 
   if (Changed && SE)
     SE->forgetLoopDispositions();
-
   return Changed;
 }
 

@@ -44,6 +44,7 @@ define void @test2(i32 %i) {
 ; CHECK-SAME: i32 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X2:%.*]] = getelementptr i32, ptr @X, i64 1
+; CHECK-NEXT:    [[X3:%.*]] = getelementptr i32, ptr @X, i64 1
 ; CHECK-NEXT:    [[X1_PROMOTED:%.*]] = load i32, ptr [[X2]], align 4
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
@@ -52,7 +53,6 @@ define void @test2(i32 %i) {
 ; CHECK-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i32 [ [[V]], %[[LOOP]] ]
-; CHECK-NEXT:    [[X3:%.*]] = getelementptr i32, ptr @X, i64 1
 ; CHECK-NEXT:    store i32 [[V_LCSSA]], ptr [[X2]], align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -63,6 +63,7 @@ exit:
 define i32 @test_with_unused_load_modified_store(i32 %a, ptr %b, i32 %N) {
 ; CHECK-LABEL: @test_with_unused_load_modified_store(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -71,9 +72,8 @@ define i32 @test_with_unused_load_modified_store(i32 %a, ptr %b, i32 %N) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[SMAX:%.*]] = phi i32 [ [[IV_NEXT]], [[LOOP]] ]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[B:%.*]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[LOAD]]
 ; CHECK-NEXT:    store i32 [[SMAX]], ptr [[B]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[LOAD]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:
