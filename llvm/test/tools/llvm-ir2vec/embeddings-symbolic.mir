@@ -1,0 +1,92 @@
+# REQUIRES: x86_64-linux
+# RUN: llvm-ir2vec embeddings --mode=mir --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s | FileCheck %s -check-prefix=CHECK-DEFAULT
+# RUN: llvm-ir2vec embeddings --mode=mir --level=func --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s | FileCheck %s -check-prefix=CHECK-FUNC-LEVEL
+# RUN: llvm-ir2vec embeddings --mode=mir --level=func --function=add_function --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s | FileCheck %s -check-prefix=CHECK-FUNC-LEVEL-ADD
+# RUN: not llvm-ir2vec embeddings --mode=mir --level=func --function=missing_function --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s 2>&1 | FileCheck %s -check-prefix=CHECK-FUNC-MISSING
+# RUN: llvm-ir2vec embeddings --mode=mir --level=bb --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s | FileCheck %s -check-prefix=CHECK-BB-LEVEL
+# RUN: llvm-ir2vec embeddings --mode=mir --level=inst --function=add_function --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s | FileCheck %s -check-prefix=CHECK-INST-LEVEL
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local noundef i32 @add_function(i32 noundef %a, i32 noundef %b) {
+  entry:
+    %sum = add nsw i32 %a, %b
+    %result = mul nsw i32 %sum, 2
+    ret i32 %result
+  }
+  
+  define dso_local void @simple_function() {
+  entry:
+    ret void
+  }
+...
+---
+name:            add_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %2:gr32 = nsw ADD32rr %0, %1, implicit-def dead $eflags
+    %3:gr32 = ADD32rr %2, %2, implicit-def dead $eflags
+    $eax = COPY %3
+    RET 0, $eax
+
+---
+name:            simple_function
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    RET 0
+
+# CHECK-DEFAULT: MIR2Vec embeddings for machine function add_function:
+# CHECK-DEFAULT-NEXT: Function vector:  [ 26.50  27.10  27.70 ]
+# CHECK-DEFAULT: MIR2Vec embeddings for machine function simple_function:
+# CHECK-DEFAULT-NEXT: Function vector:  [ 1.10  1.20  1.30 ]
+
+# CHECK-FUNC-LEVEL: MIR2Vec embeddings for machine function add_function:
+# CHECK-FUNC-LEVEL-NEXT: Function vector:  [ 26.50  27.10  27.70 ]
+# CHECK-FUNC-LEVEL: MIR2Vec embeddings for machine function simple_function:
+# CHECK-FUNC-LEVEL-NEXT: Function vector:  [ 1.10  1.20  1.30 ]
+
+# CHECK-FUNC-LEVEL-ADD: MIR2Vec embeddings for machine function add_function:
+# CHECK-FUNC-LEVEL-ADD-NEXT: Function vector:  [ 26.50  27.10  27.70 ]
+# CHECK-FUNC-LEVEL-ADD-NOT: simple_function
+
+# CHECK-FUNC-MISSING: error: Function 'missing_function' not found
+
+# CHECK-BB-LEVEL: MIR2Vec embeddings for machine function add_function:
+# CHECK-BB-LEVEL-NEXT: Basic block vectors:
+# CHECK-BB-LEVEL-NEXT: MBB entry:  [ 26.50  27.10  27.70 ]
+# CHECK-BB-LEVEL: MIR2Vec embeddings for machine function simple_function:
+# CHECK-BB-LEVEL-NEXT: Basic block vectors:
+# CHECK-BB-LEVEL-NEXT: MBB entry:  [ 1.10  1.20  1.30 ]
+
+# CHECK-INST-LEVEL: MIR2Vec embeddings for machine function add_function:
+# CHECK-INST-LEVEL-NEXT: Instruction vectors:
+# CHECK-INST-LEVEL: %1:gr32 = COPY $esi
+# CHECK-INST-LEVEL-NEXT:  ->  [ 6.00  6.10  6.20 ]
+# CHECK-INST-LEVEL-NEXT: %0:gr32 = COPY $edi
+# CHECK-INST-LEVEL-NEXT:  ->  [ 6.00  6.10  6.20 ]
+# CHECK-INST-LEVEL: %2:gr32 = nsw ADD32rr
+# CHECK-INST-LEVEL:  ->  [ 3.70  3.80  3.90 ]
+# CHECK-INST-LEVEL: %3:gr32 = ADD32rr
+# CHECK-INST-LEVEL:  ->  [ 3.70  3.80  3.90 ]
+# CHECK-INST-LEVEL: $eax = COPY %3:gr32
+# CHECK-INST-LEVEL-NEXT:  ->  [ 6.00  6.10  6.20 ]
+# CHECK-INST-LEVEL: RET 0, $eax
+# CHECK-INST-LEVEL-NEXT:  ->  [ 1.10  1.20  1.30 ]

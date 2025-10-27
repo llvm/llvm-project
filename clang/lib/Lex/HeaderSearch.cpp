@@ -2186,6 +2186,8 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
 void clang::normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
                                      SmallVectorImpl<char> &NormalizedPath) {
   NormalizedPath.assign(Path.begin(), Path.end());
-  FileMgr.makeAbsolutePath(NormalizedPath);
-  llvm::sys::path::remove_dots(NormalizedPath);
+  if (!NormalizedPath.empty()) {
+    FileMgr.makeAbsolutePath(NormalizedPath);
+    llvm::sys::path::remove_dots(NormalizedPath);
+  }
 }

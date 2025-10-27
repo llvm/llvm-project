@@ -1213,6 +1213,27 @@ defm EXTMUL_LOW_U :
 defm EXTMUL_HIGH_U :
   SIMDExtBinary<I64x2, extmul_high_u, "extmul_high_i32x4_u", 0xdf>;
 
+// Pattern for i32x4.dot_i16x8_s
+def : Pat<
+  (v4i32 (add
+    (wasm_shuffle
+      (v4i32 (extmul_low_s v8i16:$lhs, v8i16:$rhs)),
+      (v4i32 (extmul_high_s v8i16:$lhs, v8i16:$rhs)),
+      (i32 0), (i32 1), (i32 2), (i32 3),
+      (i32 8), (i32 9), (i32 10), (i32 11),
+      (i32 16), (i32 17), (i32 18), (i32 19),
+      (i32 24), (i32 25), (i32 26), (i32 27)),
+    (wasm_shuffle
+      (v4i32 (extmul_low_s v8i16:$lhs, v8i16:$rhs)),
+      (v4i32 (extmul_high_s v8i16:$lhs, v8i16:$rhs)),
+      (i32 4), (i32 5), (i32 6), (i32 7),
+      (i32 12), (i32 13), (i32 14), (i32 15),
+      (i32 20), (i32 21), (i32 22), (i32 23),
+      (i32 28), (i32 29), (i32 30), (i32 31)))
+  ),
+  (v4i32 (DOT v8i16:$lhs, v8i16:$rhs))
+>;
+
 //===----------------------------------------------------------------------===//
 // Floating-point unary arithmetic
 //===----------------------------------------------------------------------===//
@@ -1315,22 +1336,25 @@ def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
 ]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
+multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {
+  def : Pat<(vec.int_vt (vselect
+              (setolt (vec.vt (bitconvert V128:$rhs)),
+                      (vec.vt (bitconvert V128:$lhs))),
+              V128:$rhs, V128:$lhs)),
+            (baseMinInst $lhs, $rhs)>;
+  def : Pat<(vec.int_vt (vselect
+              (setolt (vec.vt (bitconvert V128:$lhs)),
+                      (vec.vt (bitconvert V128:$rhs))),
+              V128:$rhs, V128:$lhs)),
+            (baseMaxInst $lhs, $rhs)>;
+}
 // Also match the pmin/pmax cases where the operands are int vectors (but the
 // comparison is still a floating point comparison). This can happen when using
 // the wasm_simd128.h intrinsics because v128_t is an integer vector.
 foreach vec = [F32x4, F64x2, F16x8] in {
-defvar pmin = !cast<NI>("PMIN_"#vec);
-defvar pmax = !cast<NI>("PMAX_"#vec);
-def : Pat<(vec.int_vt (vselect
-            (setolt (vec.vt (bitconvert V128:$rhs)),
-                    (vec.vt (bitconvert V128:$lhs))),
-            V128:$rhs, V128:$lhs)),
-          (pmin $lhs, $rhs)>;
-def : Pat<(vec.int_vt (vselect
-            (setolt (vec.vt (bitconvert V128:$lhs)),
-                    (vec.vt (bitconvert V128:$rhs))),
-            V128:$rhs, V128:$lhs)),
-          (pmax $lhs, $rhs)>;
+  defvar pmin = !cast<NI>("PMIN_"#vec);
+  defvar pmax = !cast<NI>("PMAX_"#vec); 
+  defm : PMinMaxInt<vec, pmin, pmax>;
 }
 
 // And match the pmin/pmax LLVM intrinsics as well
@@ -1562,11 +1586,9 @@ def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v8i16 V128:$lhs),
 // MLA: v16i8 -> v4i32
 def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$lhs),
                                                          (v16i8 V128:$rhs))),
-          (ADD_I32x4 (ADD_I32x4 (DOT (extend_low_s_I16x8 $lhs),
-                                     (extend_low_s_I16x8 $rhs)),
-                                (DOT (extend_high_s_I16x8 $lhs),
-                                     (extend_high_s_I16x8 $rhs))),
-                      $acc)>;
+          (ADD_I32x4 (ADD_I32x4 (extadd_pairwise_s_I32x4 (EXTMUL_LOW_S_I16x8 $lhs, $rhs)),
+                                (extadd_pairwise_s_I32x4 (EXTMUL_HIGH_S_I16x8 $lhs, $rhs))),
+                     $acc)>;
 def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v16i8 V128:$lhs),
                                                          (v16i8 V128:$rhs))),
           (ADD_I32x4 (ADD_I32x4 (extadd_pairwise_u_I32x4 (EXTMUL_LOW_U_I16x8 $lhs, $rhs)),
@@ -1626,7 +1648,8 @@ defm "" : RelaxedConvert<I32x4, F64x2, int_wasm_relaxed_trunc_unsigned_zero,
 // Relaxed (Negative) Multiply-Add  (madd/nmadd)
 //===----------------------------------------------------------------------===//
 
-multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate> reqs> {
+multiclass RELAXED_SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS,
+                            list<Predicate> reqs> {
   defm MADD_#vec :
     SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
            [(set (vec.vt V128:$dst), (int_wasm_relaxed_madd
@@ -1640,16 +1663,46 @@ multiclass SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS, list<Predicate>
            vec.prefix#".relaxed_nmadd\t$dst, $a, $b, $c",
            vec.prefix#".relaxed_nmadd", simdopS, reqs>;
 
-  def : Pat<(fadd_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
-             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+  def : Pat<(fadd_contract (fmul_contract (vec.vt V128:$a), (vec.vt V128:$b)), (vec.vt V128:$c)),
+            (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
+  def : Pat<(fmuladd (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)),
+             (!cast<Instruction>("MADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
 
-  def : Pat<(fsub_contract (vec.vt V128:$a), (fmul_contract (vec.vt V128:$b), (vec.vt V128:$c))),
-             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<[HasRelaxedSIMD]>;
+  def : Pat<(fsub_contract (vec.vt V128:$c), (fmul_contract (vec.vt V128:$a), (vec.vt V128:$b))),
+            (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
+  def : Pat<(fmuladd (fneg (vec.vt V128:$a)), (vec.vt V128:$b), (vec.vt V128:$c)),
+             (!cast<Instruction>("NMADD_"#vec) V128:$a, V128:$b, V128:$c)>, Requires<reqs>;
 }
 
-defm "" : SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
-defm "" : SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
+defm "" : RELAXED_SIMDMADD<F32x4, 0x105, 0x106, [HasRelaxedSIMD]>;
+defm "" : RELAXED_SIMDMADD<F64x2, 0x107, 0x108, [HasRelaxedSIMD]>;
+
+//===----------------------------------------------------------------------===//
+// FP16 (Negative) Multiply-Add  (madd/nmadd)
+//===----------------------------------------------------------------------===//
+
+multiclass HALF_PRECISION_SIMDMADD<Vec vec, bits<32> simdopA, bits<32> simdopS,
+                                   list<Predicate> reqs> {
+  defm MADD_#vec :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+           [(set (vec.vt V128:$dst), (fma
+             (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
+           vec.prefix#".madd\t$dst, $a, $b, $c",
+           vec.prefix#".madd", simdopA, reqs>;
+  defm NMADD_#vec :
+    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c), (outs), (ins),
+           [(set (vec.vt V128:$dst), (fma
+             (fneg (vec.vt V128:$a)), (vec.vt V128:$b), (vec.vt V128:$c)))],
+           vec.prefix#".nmadd\t$dst, $a, $b, $c",
+           vec.prefix#".nmadd", simdopS, reqs>;
+}
+defm "" : HALF_PRECISION_SIMDMADD<F16x8, 0x14e, 0x14f, [HasFP16]>;
+
+// TODO: I think separate intrinsics should be introduced for these FP16 operations.
+def : Pat<(v8f16 (int_wasm_relaxed_madd (v8f16 V128:$a), (v8f16 V128:$b), (v8f16 V128:$c))),
+          (MADD_F16x8 V128:$a, V128:$b, V128:$c)>;
+def : Pat<(v8f16 (int_wasm_relaxed_nmadd (v8f16 V128:$a), (v8f16 V128:$b), (v8f16 V128:$c))),
+          (NMADD_F16x8 V128:$a, V128:$b, V128:$c)>;
 
 //===----------------------------------------------------------------------===//
 // Laneselect
@@ -1692,6 +1745,32 @@ defm SIMD_RELAXED_FMIN :
 defm SIMD_RELAXED_FMAX :
    RelaxedBinary<F64x2, int_wasm_relaxed_max, "relaxed_max", 0x110>;
 
+let Predicates = [HasRelaxedSIMD] in {
+  foreach vec = [F32x4, F64x2] in {
+    defvar relaxed_min = !cast<NI>("SIMD_RELAXED_FMIN_"#vec);
+    defvar relaxed_max = !cast<NI>("SIMD_RELAXED_FMAX_"#vec);
+
+    // Transform standard fminimum/fmaximum to relaxed versions
+    def : Pat<(vec.vt (fminnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_min V128:$lhs, V128:$rhs)>;
+    def : Pat<(vec.vt (fminimumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_min V128:$lhs, V128:$rhs)>;
+    def : Pat<(vec.vt (fmaxnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_max V128:$lhs, V128:$rhs)>;
+    def : Pat<(vec.vt (fmaximumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_max V128:$lhs, V128:$rhs)>;
+
+    // Transform pmin/max-supposed patterns to relaxed min max
+    let AddedComplexity = 1 in {
+      def : Pat<(vec.vt (pmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+                (relaxed_min $lhs, $rhs)>;
+      def : Pat<(vec.vt (pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+                (relaxed_max $lhs, $rhs)>;
+      defm : PMinMaxInt<vec, relaxed_min, relaxed_max>;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Relaxed rounding q15 multiplication
 //===----------------------------------------------------------------------===//
@@ -1711,6 +1790,26 @@ defm RELAXED_DOT :
             "i16x8.relaxed_dot_i8x16_i7x16_s\t$dst, $lhs, $rhs",
             "i16x8.relaxed_dot_i8x16_i7x16_s", 0x112>;
 
+def : Pat<
+  (v8i16 (add
+    (wasm_shuffle
+      (v8i16 (extmul_low_s v16i8:$lhs, v16i8:$rhs)),
+      (v8i16 (extmul_high_s v16i8:$lhs, v16i8:$rhs)),
+      (i32 0), (i32 1), (i32 4), (i32 5),
+      (i32 8), (i32 9), (i32 12), (i32 13),
+      (i32 16), (i32 17), (i32 20), (i32 21),
+      (i32 24), (i32 25), (i32 28), (i32 29)),
+    (wasm_shuffle
+      (v8i16 (extmul_low_s v16i8:$lhs, v16i8:$rhs)),
+      (v8i16 (extmul_high_s v16i8:$lhs, v16i8:$rhs)),
+      (i32 2), (i32 3), (i32 6), (i32 7),
+      (i32 10), (i32 11), (i32 14), (i32 15),
+      (i32 18), (i32 19), (i32 22), (i32 23),
+      (i32 26), (i32 27), (i32 30), (i32 31)))
+  ),
+  (v8i16 (RELAXED_DOT v16i8:$lhs, v16i8:$rhs))
+>;
+
 defm RELAXED_DOT_ADD :
   RELAXED_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs, V128:$acc),
             (outs), (ins),
@@ -1718,6 +1817,18 @@ defm RELAXED_DOT_ADD :
                (v16i8 V128:$lhs), (v16i8 V128:$rhs), (v4i32 V128:$acc)))],
             "i32x4.relaxed_dot_i8x16_i7x16_add_s\t$dst, $lhs, $rhs, $acc",
             "i32x4.relaxed_dot_i8x16_i7x16_add_s", 0x113>;
+
+def : Pat<
+  (v4i32 (add
+    (v4i32 (int_wasm_extadd_pairwise_signed
+      (v8i16 (int_wasm_relaxed_dot_i8x16_i7x16_signed v16i8:$lhs, v16i8:$rhs)))),
+    (v4i32 V128:$acc))),
+  (v4i32 (RELAXED_DOT_ADD v16i8:$lhs, v16i8:$rhs, (v4i32 V128:$acc)))
+    >;
+
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$lhs),
+                                                         (v16i8 V128:$rhs))),
+          (RELAXED_DOT_ADD $lhs, $rhs, $acc)>, Requires<[HasRelaxedSIMD]>;
 
 //===----------------------------------------------------------------------===//
 // Relaxed BFloat16 dot product

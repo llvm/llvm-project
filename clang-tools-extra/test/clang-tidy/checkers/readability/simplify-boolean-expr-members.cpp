@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s readability-simplify-boolean-expr %t
+// RUN: %check_clang_tidy %s readability-simplify-boolean-expr %t
 
 class A {
 public:
@@ -353,4 +353,4 @@ bool S::expr_with_cleanups() {
   return true;
 }
 // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: m_ar == (A)m_ar;
+// CHECK-FIXES: return m_ar == (A)m_ar;

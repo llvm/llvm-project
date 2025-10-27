@@ -30,7 +30,7 @@ class GsymReader;
 class GsymContext : public DIContext {
 public:
   GsymContext(std::unique_ptr<GsymReader> Reader);
-  ~GsymContext();
+  ~GsymContext() override;
 
   GsymContext(GsymContext &) = delete;
   GsymContext &operator=(GsymContext &) = delete;

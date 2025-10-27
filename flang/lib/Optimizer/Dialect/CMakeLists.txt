@@ -1,6 +1,7 @@
 add_subdirectory(Support)
 add_subdirectory(CUF)
 add_subdirectory(FIRCG)
+add_subdirectory(MIF)
 
 add_flang_library(FIRDialect
   FIRAttr.cpp

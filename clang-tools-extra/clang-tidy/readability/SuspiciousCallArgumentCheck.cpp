@@ -288,8 +288,8 @@ static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
   std::size_t Intersection = 0;
 
   // Find the intersection between the two sets.
-  for (auto IT = ParamBigrams.begin(); IT != ParamBigrams.end(); ++IT)
-    Intersection += ArgBigrams.count((IT->getKey()));
+  for (const auto &[Key, _] : ParamBigrams)
+    Intersection += ArgBigrams.count(Key);
 
   // Calculate Dice coefficient.
   return percentage(Intersection * 2.0,
@@ -413,11 +413,10 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
 
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
-    if ((ParamType->isEnumeralType() && ParamType->castAsCanonical<EnumType>()
-                                            ->getOriginalDecl()
-                                            ->isScoped()) ||
+    if ((ParamType->isEnumeralType() &&
+         ParamType->castAsCanonical<EnumType>()->getDecl()->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->castAsCanonical<EnumType>()->getOriginalDecl()->isScoped()))
+         ArgType->castAsCanonical<EnumType>()->getDecl()->isScoped()))
       return false;
 
     return true;

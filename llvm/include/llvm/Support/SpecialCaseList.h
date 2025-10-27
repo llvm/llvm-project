@@ -13,7 +13,10 @@
 #define LLVM_SUPPORT_SPECIALCASELIST_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/RadixTree.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
@@ -115,7 +118,8 @@ protected:
   // classes.
   LLVM_ABI bool createInternal(const std::vector<std::string> &Paths,
                                vfs::FileSystem &VFS, std::string &Error);
-  LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error);
+  LLVM_ABI bool createInternal(const MemoryBuffer *MB, std::string &Error,
+                               bool OrderBySize = false);
 
   SpecialCaseList() = default;
   SpecialCaseList(SpecialCaseList const &) = delete;
@@ -126,6 +130,8 @@ private:
   class RegexMatcher {
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    LLVM_ABI void preprocess(bool BySize);
+
     LLVM_ABI void
     match(StringRef Query,
           llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
@@ -144,6 +150,8 @@ private:
   class GlobMatcher {
   public:
     LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    LLVM_ABI void preprocess(bool BySize);
+
     LLVM_ABI void
     match(StringRef Query,
           llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const;
@@ -157,12 +165,24 @@ private:
     };
 
     std::vector<GlobMatcher::Glob> Globs;
+
+    RadixTree<iterator_range<StringRef::const_iterator>,
+              RadixTree<iterator_range<StringRef::const_reverse_iterator>,
+                        SmallVector<const GlobMatcher::Glob *, 1>>>
+        PrefixSuffixToGlob;
+
+    RadixTree<iterator_range<StringRef::const_iterator>,
+              SmallVector<const GlobMatcher::Glob *, 1>>
+        SubstrToGlob;
   };
 
   /// Represents a set of patterns and their line numbers
   class Matcher {
   public:
     LLVM_ABI Matcher(bool UseGlobs, bool RemoveDotSlash);
+
+    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
+    LLVM_ABI void preprocess(bool BySize);
 
     LLVM_ABI void
     match(StringRef Query,
@@ -173,8 +193,6 @@ private:
       match(Query, [&](StringRef, unsigned) { R = true; });
       return R;
     }
-
-    LLVM_ABI Error insert(StringRef Pattern, unsigned LineNumber);
 
     std::variant<RegexMatcher, GlobMatcher> M;
     bool RemoveDotSlash;
@@ -206,6 +224,8 @@ protected:
                                        StringRef Category) const;
 
   private:
+    friend class SpecialCaseList;
+    LLVM_ABI void preprocess(bool OrderBySize);
     LLVM_ABI const SpecialCaseList::Matcher *
     findMatcher(StringRef Prefix, StringRef Category) const;
   };
@@ -222,7 +242,7 @@ private:
 
   /// Parses just-constructed SpecialCaseList entries from a memory buffer.
   LLVM_ABI bool parse(unsigned FileIdx, const MemoryBuffer *MB,
-                      std::string &Error);
+                      std::string &Error, bool OrderBySize);
 };
 
 } // namespace llvm

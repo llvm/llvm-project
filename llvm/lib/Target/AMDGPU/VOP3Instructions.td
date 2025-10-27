@@ -775,10 +775,10 @@ let SubtargetPredicate = HasMinimum3Maximum3F16, ReadsModeReg = 0 in {
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
 let SubtargetPredicate = HasAddMinMaxInsts, isCommutable = 1, isReMaterializable = 1 in {
-  defm V_ADD_MAX_I32 : VOP3Inst <"v_add_max_i32", VOP_I32_I32_I32_I32>;
-  defm V_ADD_MAX_U32 : VOP3Inst <"v_add_max_u32", VOP_I32_I32_I32_I32>;
-  defm V_ADD_MIN_I32 : VOP3Inst <"v_add_min_i32", VOP_I32_I32_I32_I32>;
-  defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MAX_I32 : VOP3Inst <"v_add_max_i32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_max_i32>;
+  defm V_ADD_MAX_U32 : VOP3Inst <"v_add_max_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_max_u32>;
+  defm V_ADD_MIN_I32 : VOP3Inst <"v_add_min_i32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_min_i32>;
+  defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>, int_amdgcn_add_min_u32>;
 }
 
 defm V_ADD_I16 : VOP3Inst_t16 <"v_add_i16", VOP_I16_I16_I16>;
@@ -976,10 +976,10 @@ def : GCNPat <
 } // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
-def : ThreeOp_i32_Pats<add, smax, V_ADD_MAX_I32_e64>;
-def : ThreeOp_i32_Pats<add, umax, V_ADD_MAX_U32_e64>;
-def : ThreeOp_i32_Pats<add, smin, V_ADD_MIN_I32_e64>;
-def : ThreeOp_i32_Pats<add, umin, V_ADD_MIN_U32_e64>;
+def : ThreeOp_i32_Pats<saddsat, smax, V_ADD_MAX_I32_e64>;
+def : ThreeOp_i32_Pats<uaddsat, umax, V_ADD_MAX_U32_e64>;
+def : ThreeOp_i32_Pats<saddsat, smin, V_ADD_MIN_I32_e64>;
+def : ThreeOp_i32_Pats<uaddsat, umin, V_ADD_MIN_U32_e64>;
 }
 
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;

@@ -15,10 +15,18 @@
 #define CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H
 
 #include "Address.h"
+#include "CIRGenModule.h"
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
 
 namespace clang::CIRGen {
+
+/// The MS C++ ABI needs a pointer to RTTI data plus some flags to describe the
+/// type of a catch handler, so we use this wrapper.
+struct CatchTypeInfo {
+  mlir::TypedAttr rtti;
+  unsigned flags;
+};
 
 /// A protected scope for zero-cost EH handling.
 class EHScope {
@@ -29,6 +37,12 @@ class EHScope {
   enum { NumCommonBits = 3 };
 
 protected:
+  class CatchBitFields {
+    friend class EHCatchScope;
+    unsigned : NumCommonBits;
+    unsigned numHandlers : 32 - NumCommonBits;
+  };
+
   class CleanupBitFields {
     friend class EHCleanupScope;
     unsigned : NumCommonBits;
@@ -58,6 +72,7 @@ protected:
 
   union {
     CommonBitFields commonBits;
+    CatchBitFields catchBits;
     CleanupBitFields cleanupBits;
   };
 
@@ -67,11 +82,88 @@ public:
   EHScope(Kind kind) { commonBits.kind = kind; }
 
   Kind getKind() const { return static_cast<Kind>(commonBits.kind); }
+
+  bool mayThrow() const {
+    // Traditional LLVM codegen also checks for `!block->use_empty()`, but
+    // in CIRGen the block content is not important, just used as a way to
+    // signal `hasEHBranches`.
+    assert(!cir::MissingFeatures::ehstackBranches());
+    return false;
+  }
+};
+
+/// A scope which attempts to handle some, possibly all, types of
+/// exceptions.
+///
+/// Objective C \@finally blocks are represented using a cleanup scope
+/// after the catch scope.
+
+class EHCatchScope : public EHScope {
+  // In effect, we have a flexible array member
+  //   Handler Handlers[0];
+  // But that's only standard in C99, not C++, so we have to do
+  // annoying pointer arithmetic instead.
+
+public:
+  struct Handler {
+    /// A type info value, or null MLIR attribute for a catch-all
+    CatchTypeInfo type;
+
+    /// The catch handler for this type.
+    mlir::Region *region;
+  };
+
+private:
+  friend class EHScopeStack;
+
+  Handler *getHandlers() { return reinterpret_cast<Handler *>(this + 1); }
+
+public:
+  static size_t getSizeForNumHandlers(unsigned n) {
+    return sizeof(EHCatchScope) + n * sizeof(Handler);
+  }
+
+  EHCatchScope(unsigned numHandlers) : EHScope(Catch) {
+    catchBits.numHandlers = numHandlers;
+    assert(catchBits.numHandlers == numHandlers && "NumHandlers overflow?");
+  }
+
+  unsigned getNumHandlers() const { return catchBits.numHandlers; }
+
+  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region) {
+    assert(i < getNumHandlers());
+    getHandlers()[i].type = type;
+    getHandlers()[i].region = region;
+  }
+
+  // Clear all handler blocks.
+  // FIXME: it's better to always call clearHandlerBlocks in DTOR and have a
+  // 'takeHandler' or some such function which removes ownership from the
+  // EHCatchScope object if the handlers should live longer than EHCatchScope.
+  void clearHandlerBlocks() {
+    // The blocks are owned by TryOp, nothing to delete.
+  }
+
+  static bool classof(const EHScope *scope) {
+    return scope->getKind() == Catch;
+  }
 };
 
 /// A cleanup scope which generates the cleanup blocks lazily.
 class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
     : public EHScope {
+  /// The nearest normal cleanup scope enclosing this one.
+  EHScopeStack::stable_iterator enclosingNormal;
+
+  /// The dual entry/exit block along the normal edge.  This is lazily
+  /// created if needed before the cleanup is popped.
+  mlir::Block *normalBlock = nullptr;
+
+  /// The number of fixups required by enclosing scopes (not including
+  /// this one).  If this is the top cleanup scope, all the fixups
+  /// from this index onwards belong to this scope.
+  unsigned fixupDepth = 0;
+
 public:
   /// Gets the size required for a lazy cleanup scope with the given
   /// cleanup-data requirements.
@@ -83,7 +175,10 @@ public:
     return sizeof(EHCleanupScope) + cleanupBits.cleanupSize;
   }
 
-  EHCleanupScope(unsigned cleanupSize) : EHScope(EHScope::Cleanup) {
+  EHCleanupScope(unsigned cleanupSize, unsigned fixupDepth,
+                 EHScopeStack::stable_iterator enclosingNormal)
+      : EHScope(EHScope::Cleanup), enclosingNormal(enclosingNormal),
+        fixupDepth(fixupDepth) {
     // TODO(cir): When exception handling is upstreamed, isNormalCleanup and
     // isEHCleanup will be arguments to the constructor.
     cleanupBits.isNormalCleanup = true;
@@ -101,10 +196,18 @@ public:
   // Objects of EHCleanupScope are not destructed. Use destroy().
   ~EHCleanupScope() = delete;
 
+  mlir::Block *getNormalBlock() const { return normalBlock; }
+  void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
+
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
+
+  unsigned getFixupDepth() const { return fixupDepth; }
+  EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
+    return enclosingNormal;
+  }
 
   size_t getCleanupSize() const { return cleanupBits.cleanupSize; }
   void *getCleanupBuffer() { return this + 1; }
@@ -146,6 +249,62 @@ EHScopeStack::find(stable_iterator savePoint) const {
          "finding savepoint after pop");
   return iterator(endOfBuffer - savePoint.size);
 }
+
+inline void EHScopeStack::popCatch() {
+  assert(!empty() && "popping exception stack when not empty");
+
+  EHCatchScope &scope = llvm::cast<EHCatchScope>(*begin());
+  assert(!cir::MissingFeatures::innermostEHScope());
+  deallocate(EHCatchScope::getSizeForNumHandlers(scope.getNumHandlers()));
+}
+
+/// The exceptions personality for a function.
+struct EHPersonality {
+  const char *personalityFn = nullptr;
+
+  // If this is non-null, this personality requires a non-standard
+  // function for rethrowing an exception after a catchall cleanup.
+  // This function must have prototype void(void*).
+  const char *catchallRethrowFn = nullptr;
+
+  static const EHPersonality &get(CIRGenModule &cgm,
+                                  const clang::FunctionDecl *fd);
+  static const EHPersonality &get(CIRGenFunction &cgf);
+
+  static const EHPersonality GNU_C;
+  static const EHPersonality GNU_C_SJLJ;
+  static const EHPersonality GNU_C_SEH;
+  static const EHPersonality GNU_ObjC;
+  static const EHPersonality GNU_ObjC_SJLJ;
+  static const EHPersonality GNU_ObjC_SEH;
+  static const EHPersonality GNUstep_ObjC;
+  static const EHPersonality GNU_ObjCXX;
+  static const EHPersonality NeXT_ObjC;
+  static const EHPersonality GNU_CPlusPlus;
+  static const EHPersonality GNU_CPlusPlus_SJLJ;
+  static const EHPersonality GNU_CPlusPlus_SEH;
+  static const EHPersonality MSVC_except_handler;
+  static const EHPersonality MSVC_C_specific_handler;
+  static const EHPersonality MSVC_CxxFrameHandler3;
+  static const EHPersonality GNU_Wasm_CPlusPlus;
+  static const EHPersonality XL_CPlusPlus;
+  static const EHPersonality ZOS_CPlusPlus;
+
+  /// Does this personality use landingpads or the family of pad instructions
+  /// designed to form funclets?
+  bool usesFuncletPads() const {
+    return isMSVCPersonality() || isWasmPersonality();
+  }
+
+  bool isMSVCPersonality() const {
+    return this == &MSVC_except_handler || this == &MSVC_C_specific_handler ||
+           this == &MSVC_CxxFrameHandler3;
+  }
+
+  bool isWasmPersonality() const { return this == &GNU_Wasm_CPlusPlus; }
+
+  bool isMSVCXXPersonality() const { return this == &MSVC_CxxFrameHandler3; }
+};
 
 } // namespace clang::CIRGen
 #endif // CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H

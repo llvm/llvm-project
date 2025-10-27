@@ -815,7 +815,8 @@ void TargetLoweringBase::initActions() {
                         ISD::FTAN,           ISD::FACOS,
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
-                        ISD::FTANH,          ISD::FATAN2},
+                        ISD::FTANH,          ISD::FATAN2,
+                        ISD::FMULADD},
                        VT, Expand);
 
     // Overflow operations default to expand
@@ -2096,6 +2097,11 @@ Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
 }
 
 Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
+  // MSVC CRT has a function to validate security cookie.
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported)
+    return M.getFunction(getLibcallImplName(SecurityCheckCookieLibcall));
   return nullptr;
 }
 

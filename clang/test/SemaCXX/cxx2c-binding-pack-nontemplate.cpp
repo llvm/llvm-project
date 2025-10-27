@@ -10,7 +10,7 @@ void decompose_array() {
   auto [x, ...rest, y] = arr;
 
   // cxx26-warning@+4 {{structured binding packs are incompatible with C++ standards before C++2c}}
-  // cxx23-error@+3 {{decomposition declaration cannot be declared 'constexpr'}}
+  // cxx23-error@+3 {{structured binding declaration cannot be declared 'constexpr'}}
   // cxx23-warning@+2 {{structured binding packs are a C++2c extension}}
   // nontemplate-error@+1 {{pack declaration outside of template}}
   constexpr auto [x_c, ...rest_c, y_c] = arr;

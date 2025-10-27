@@ -117,9 +117,9 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
 
   bool hasSideEffect = s.isVolatile() || s.getNumOutputs() == 0;
 
-  cir::InlineAsmOp ia = builder.create<cir::InlineAsmOp>(
-      getLoc(s.getAsmLoc()), resultType, operands, asmString, constraints,
-      hasSideEffect, inferFlavor(cgm, s), mlir::ArrayAttr());
+  cir::InlineAsmOp ia = cir::InlineAsmOp::create(
+      builder, getLoc(s.getAsmLoc()), resultType, operands, asmString,
+      constraints, hasSideEffect, inferFlavor(cgm, s), mlir::ArrayAttr());
 
   if (isGCCAsmGoto) {
     assert(!cir::MissingFeatures::asmGoto());

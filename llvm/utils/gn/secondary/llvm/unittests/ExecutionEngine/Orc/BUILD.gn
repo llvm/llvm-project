@@ -24,6 +24,7 @@ unittest("OrcJITTests") {
     "JITLinkRedirectionManagerTest.cpp",
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
+    "LibraryResolverTest.cpp",
     "LookupAndRecordAddrsTest.cpp",
     "MachOPlatformTest.cpp",
     "MapperJITLinkMemoryManagerTest.cpp",
@@ -42,6 +43,7 @@ unittest("OrcJITTests") {
     "SymbolStringPoolTest.cpp",
     "TaskDispatchTest.cpp",
     "ThreadSafeModuleTest.cpp",
+    "WaitingOnGraphTest.cpp",
     "WrapperFunctionUtilsTest.cpp",
   ]
 

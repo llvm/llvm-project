@@ -563,7 +563,7 @@ public:
 
   die_iterator_range dies() {
     extractDIEsIfNeeded(false);
-    return die_iterator_range(DieArray.begin(), DieArray.end());
+    return DieArray;
   }
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;

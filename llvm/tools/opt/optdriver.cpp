@@ -296,23 +296,25 @@ static CodeGenOptLevel GetCodeGenOptLevel() {
   return static_cast<CodeGenOptLevel>(unsigned(CodeGenOptLevelCL));
 }
 
+namespace {
 struct TimeTracerRAII {
   TimeTracerRAII(StringRef ProgramName) {
     if (TimeTrace)
       timeTraceProfilerInitialize(TimeTraceGranularity, ProgramName);
   }
   ~TimeTracerRAII() {
-    if (TimeTrace) {
-      if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
-        handleAllErrors(std::move(E), [&](const StringError &SE) {
-          errs() << SE.getMessage() << "\n";
-        });
-        return;
-      }
-      timeTraceProfilerCleanup();
+    if (!TimeTrace)
+      return;
+    if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
+      handleAllErrors(std::move(E), [&](const StringError &SE) {
+        errs() << SE.getMessage() << "\n";
+      });
+      return;
     }
+    timeTraceProfilerCleanup();
   }
 };
+} // namespace
 
 // For use in NPM transition. Currently this contains most codegen-specific
 // passes. Remove passes from here when porting to the NPM.
@@ -377,10 +379,10 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "callbrprepare",
       "scalarizer",
   };
-  for (const auto &P : PassNamePrefix)
+  for (StringLiteral P : PassNamePrefix)
     if (Pass.starts_with(P))
       return true;
-  for (const auto &P : PassNameContain)
+  for (StringLiteral P : PassNameContain)
     if (Pass.contains(P))
       return true;
   return llvm::is_contained(PassNameExact, Pass);
@@ -388,7 +390,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
 
 // For use in NPM transition.
 static bool shouldForceLegacyPM() {
-  for (const auto &P : PassList) {
+  for (const PassInfo *P : PassList) {
     StringRef Arg = P->getPassArgument();
     if (shouldPinPassToLegacyPM(Arg))
       return true;
@@ -399,9 +401,9 @@ static bool shouldForceLegacyPM() {
 //===----------------------------------------------------------------------===//
 // main for opt
 //
-extern "C" int optMain(
-    int argc, char **argv,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks) {
+extern "C" int
+optMain(int argc, char **argv,
+        ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks) {
   InitLLVM X(argc, argv);
 
   // Enable debug stream buffering.
@@ -673,7 +675,7 @@ extern "C" int optMain(
   else {
     // Disable individual builtin functions in TargetLibraryInfo.
     LibFunc F;
-    for (auto &FuncName : DisableBuiltins) {
+    for (const std::string &FuncName : DisableBuiltins) {
       if (TLII.getLibFunc(FuncName, F))
         TLII.setUnavailable(F);
       else {
@@ -683,7 +685,7 @@ extern "C" int optMain(
       }
     }
 
-    for (auto &FuncName : EnableBuiltins) {
+    for (const std::string &FuncName : EnableBuiltins) {
       if (TLII.getLibFunc(FuncName, F))
         TLII.setAvailable(F);
       else {
@@ -814,9 +816,8 @@ extern "C" int optMain(
     Passes.add(TPC);
   }
 
-  // Create a new optimization pass for each one specified on the command line
-  for (unsigned i = 0; i < PassList.size(); ++i) {
-    const PassInfo *PassInf = PassList[i];
+  // Create a new optimization pass for each one specified on the command line.
+  for (const PassInfo *PassInf : PassList) {
     if (PassInf->getNormalCtor()) {
       Pass *P = PassInf->getNormalCtor()();
       if (P) {
@@ -826,9 +827,10 @@ extern "C" int optMain(
         if (VerifyEach)
           Passes.add(createVerifierPass());
       }
-    } else
+    } else {
       errs() << argv[0] << ": cannot create pass: " << PassInf->getPassName()
              << "\n";
+    }
   }
 
   // Check that the module is well formed on completion of optimization

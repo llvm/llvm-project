@@ -357,11 +357,6 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   if (expressionOp.getDoNotInline())
     return false;
 
-  // Do not inline expressions with side effects to prevent side-effect
-  // reordering.
-  if (expressionOp.hasSideEffects())
-    return false;
-
   // Do not inline expressions with multiple uses.
   Value result = expressionOp.getResult();
   if (!result.hasOneUse())
@@ -377,7 +372,34 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   // Do not inline expressions used by other expressions or by ops with the
   // CExpressionInterface. If this was intended, the user could have been merged
   // into the expression op.
-  return !isa<emitc::ExpressionOp, emitc::CExpressionInterface>(*user);
+  if (isa<emitc::ExpressionOp, emitc::CExpressionInterface>(*user))
+    return false;
+
+  // Expressions with no side-effects can safely be inlined.
+  if (!expressionOp.hasSideEffects())
+    return true;
+
+  // Expressions with side-effects can be only inlined if side-effect ordering
+  // in the program is provably retained.
+
+  // Require the user to immediately follow the expression.
+  if (++Block::iterator(expressionOp) != Block::iterator(user))
+    return false;
+
+  // These single-operand ops are safe.
+  if (isa<emitc::IfOp, emitc::SwitchOp, emitc::ReturnOp>(user))
+    return true;
+
+  // For assignment look for specific cases to inline as evaluation order of
+  // its lvalue and rvalue is undefined in C.
+  if (auto assignOp = dyn_cast<emitc::AssignOp>(user)) {
+    // Inline if this assignment is of the form `<var> = <expression>`.
+    if (expressionOp.getResult() == assignOp.getValue() &&
+        isa_and_present<VariableOp>(assignOp.getVar().getDefiningOp()))
+      return true;
+  }
+
+  return false;
 }
 
 static LogicalResult printConstantOp(CppEmitter &emitter, Operation *operation,

@@ -484,7 +484,7 @@ constexpr auto starOrExpr{
         applyFunction(presentOptional<ScalarExpr>, scalarExpr))};
 TYPE_PARSER(extension<LanguageFeature::CUDA>(
     "<<<" >> construct<CallStmt::Chevrons>(starOrExpr, ", " >> scalarExpr,
-                 maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
+                 maybe("," >> scalarExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
 constexpr auto actualArgSpecList{optionalList(actualArgSpec)};
 TYPE_CONTEXT_PARSER("CALL statement"_en_US,

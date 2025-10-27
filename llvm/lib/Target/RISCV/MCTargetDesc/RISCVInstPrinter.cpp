@@ -220,7 +220,8 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   if (RISCVVType::getVLMUL(Imm) == RISCVVType::VLMUL::LMUL_RESERVED ||
       RISCVVType::getSEW(Imm) > 64 ||
       (RISCVVType::isAltFmt(Imm) &&
-       !STI.hasFeature(RISCV::FeatureStdExtZvfbfa)) ||
+       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+         STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))) ||
       (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;

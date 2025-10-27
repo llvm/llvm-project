@@ -68,6 +68,7 @@ static_library("Orc") {
     "SectCreate.cpp",
     "SelfExecutorProcessControl.cpp",
     "SimpleRemoteEPC.cpp",
+    "SimpleRemoteMemoryMapper.cpp",
     "SpeculateAnalyses.cpp",
     "Speculation.cpp",
     "TaskDispatch.cpp",

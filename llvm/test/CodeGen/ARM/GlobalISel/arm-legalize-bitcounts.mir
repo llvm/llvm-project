@@ -119,9 +119,10 @@ body:             |
     ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SUB [[COUNT]], [[BITDIFF]]
     %2(s16) = G_CTLZ %1
 
-    ; CHECK: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[R32]], [[BITDIFF]]
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
-    ; CHECK: $r0 = COPY [[R]]
+    ; LIBCALLS: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[R32]], [[BITDIFF]]
+    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
+    ; LIBCALLS: $r0 = COPY [[R]]
+    ; CLZ: $r0 = COPY [[R32]]
     %3(s32) = G_SEXT %2(s16)
     $r0 = COPY %3(s32)
     BX_RET 14, $noreg, implicit $r0

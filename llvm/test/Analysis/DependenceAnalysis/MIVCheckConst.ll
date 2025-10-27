@@ -30,7 +30,7 @@ target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 %20 = type { [768 x i32] }
 %21 = type { [416 x i32] }
 
-define void @test(ptr %A, ptr %B, i1 %arg, i32 %n, i32 %m) #0 align 2 {
+define void @test(ptr %A, ptr %B, i1 %arg, i32 %n, i32 %m) align 2 {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Src: %v1 = load i32, ptr %B, align 4 --> Dst: %v1 = load i32, ptr %B, align 4
 ; CHECK-NEXT:    da analyze - none!
@@ -91,5 +91,3 @@ bb38:
 bb40:
   ret void
 }
-
-attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

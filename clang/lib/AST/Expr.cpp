@@ -4126,9 +4126,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
 
   if (const RecordType *UT = getType()->getAsUnionType())
     if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
-        UT->getOriginalDecl()
-            ->getMostRecentDecl()
-            ->hasAttr<TransparentUnionAttr>())
+        UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))

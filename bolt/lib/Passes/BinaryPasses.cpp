@@ -346,13 +346,16 @@ void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
   uint64_t Bytes;
   Function.markUnreachableBlocks();
   LLVM_DEBUG({
+    bool HasInvalidBB = false;
     for (BinaryBasicBlock &BB : Function) {
       if (!BB.isValid()) {
+        HasInvalidBB = true;
         dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
                << " in function " << Function << "\n";
-        Function.dump();
       }
     }
+    if (HasInvalidBB)
+      Function.dump();
   });
   BinaryContext::IndependentCodeEmitter Emitter =
       BC.createIndependentMCCodeEmitter();

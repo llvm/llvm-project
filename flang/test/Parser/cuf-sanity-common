@@ -43,6 +43,7 @@ module m
     call globalsub<<<1, 2>>>
     call globalsub<<<1, 2, 3>>>
     call globalsub<<<1, 2, 3, 4>>>
+    call globalsub<<<1, 2, 0.9*10, 4>>>
     call globalsub<<<*,5>>>
     allocate(pa(32), pinned = isPinned)
   end subroutine

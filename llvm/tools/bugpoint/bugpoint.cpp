@@ -90,7 +90,7 @@ public:
     D.addPass(std::string(PI->getPassArgument()));
   }
 };
-}
+} // namespace
 
 #define HANDLE_EXTENSION(Ext)                                                  \
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
