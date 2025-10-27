@@ -597,14 +597,10 @@ struct Variant {
 } // end namespace pdb
 } // end namespace llvm
 
-namespace std {
-
-template <> struct hash<llvm::pdb::PDB_SymType> {
+template <> struct std::hash<llvm::pdb::PDB_SymType> {
   std::size_t operator()(const llvm::pdb::PDB_SymType &Arg) const {
     return std::hash<int>()(static_cast<int>(Arg));
   }
 };
-
-} // end namespace std
 
 #endif // LLVM_DEBUGINFO_PDB_PDBTYPES_H
