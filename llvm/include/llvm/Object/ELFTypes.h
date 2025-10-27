@@ -1017,7 +1017,7 @@ struct PGOAnalysisMap {
       uint32_t ID;
       /// Branch Probability of the edge to this successor taken from MBPI.
       BranchProbability Prob;
-      /// Edge frequency from Propeller.
+      /// Raw edge count from Propeller.
       uint32_t PropellerFreq;
 
       bool operator==(const SuccessorEntry &Other) const {
@@ -1028,8 +1028,8 @@ struct PGOAnalysisMap {
 
     /// Block frequency taken from MBFI
     BlockFrequency BlockFreq;
-    /// Block frequency taken from Propeller.
-    uint32_t PropellerBlockFreq;
+    /// Raw block count taken from Propeller.
+    uint32_t PropellerBlockFreq = 0;
     /// List of successors of the current block
     llvm::SmallVector<SuccessorEntry, 2> Successors;
 
