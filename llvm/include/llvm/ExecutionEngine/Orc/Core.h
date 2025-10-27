@@ -26,6 +26,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
+#include "llvm/ExecutionEngine/Orc/WaitingOnGraph.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
@@ -48,6 +49,9 @@ class ResourceTracker;
 class InProgressLookupState;
 
 enum class SymbolState : uint8_t;
+
+using WaitingOnGraph =
+    detail::WaitingOnGraph<JITDylib *, NonOwningSymbolStringPtr>;
 
 using ResourceTrackerSP = IntrusiveRefCntPtr<ResourceTracker>;
 using JITDylibSP = IntrusiveRefCntPtr<JITDylib>;
@@ -444,7 +448,7 @@ public:
 
   FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
                       std::shared_ptr<SymbolDependenceMap> Symbols);
-  ~FailedToMaterialize();
+  ~FailedToMaterialize() override;
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const SymbolDependenceMap &getSymbols() const { return *Symbols; }
@@ -1131,20 +1135,6 @@ private:
   using UnmaterializedInfosList =
       std::vector<std::shared_ptr<UnmaterializedInfo>>;
 
-  struct EmissionDepUnit {
-    EmissionDepUnit(JITDylib &JD) : JD(&JD) {}
-
-    JITDylib *JD = nullptr;
-    DenseMap<NonOwningSymbolStringPtr, JITSymbolFlags> Symbols;
-    DenseMap<JITDylib *, DenseSet<NonOwningSymbolStringPtr>> Dependencies;
-  };
-
-  struct EmissionDepUnitInfo {
-    std::shared_ptr<EmissionDepUnit> EDU;
-    DenseSet<EmissionDepUnit *> IntraEmitUsers;
-    DenseMap<JITDylib *, DenseSet<NonOwningSymbolStringPtr>> NewDeps;
-  };
-
   // Information about not-yet-ready symbol.
   // * DefiningEDU will point to the EmissionDepUnit that defines the symbol.
   // * DependantEDUs will hold pointers to any EmissionDepUnits currently
@@ -1153,9 +1143,6 @@ private:
   //   symbol.
   struct MaterializingInfo {
     friend class ExecutionSession;
-
-    std::shared_ptr<EmissionDepUnit> DefiningEDU;
-    DenseSet<EmissionDepUnit *> DependantEDUs;
 
     LLVM_ABI void addQuery(std::shared_ptr<AsynchronousSymbolQuery> Q);
     LLVM_ABI void removeQuery(const AsynchronousSymbolQuery &Q);
@@ -1778,30 +1765,26 @@ private:
   LLVM_ABI Error OL_notifyResolved(MaterializationResponsibility &MR,
                                    const SymbolMap &Symbols);
 
-  using EDUInfosMap =
-      DenseMap<JITDylib::EmissionDepUnit *, JITDylib::EmissionDepUnitInfo>;
+  // FIXME: We should be able to derive FailedSymsForQuery from each query once
+  //        we fix how the detach operation works.
+  struct EmitQueries {
+    JITDylib::AsynchronousSymbolQuerySet Completed;
+    JITDylib::AsynchronousSymbolQuerySet Failed;
+    DenseMap<AsynchronousSymbolQuery *, std::shared_ptr<SymbolDependenceMap>>
+        FailedSymsForQuery;
+  };
 
-  template <typename HandleNewDepFn>
-  void propagateExtraEmitDeps(std::deque<JITDylib::EmissionDepUnit *> Worklist,
-                              EDUInfosMap &EDUInfos,
-                              HandleNewDepFn HandleNewDep);
-  EDUInfosMap simplifyDepGroups(MaterializationResponsibility &MR,
-                                ArrayRef<SymbolDependenceGroup> EmittedDeps);
-  void IL_makeEDUReady(std::shared_ptr<JITDylib::EmissionDepUnit> EDU,
-                       JITDylib::AsynchronousSymbolQuerySet &Queries);
-  void IL_makeEDUEmitted(std::shared_ptr<JITDylib::EmissionDepUnit> EDU,
-                         JITDylib::AsynchronousSymbolQuerySet &Queries);
-  bool IL_removeEDUDependence(JITDylib::EmissionDepUnit &EDU, JITDylib &DepJD,
-                              NonOwningSymbolStringPtr DepSym,
-                              EDUInfosMap &EDUInfos);
+  WaitingOnGraph::ExternalState
+  IL_getSymbolState(JITDylib *JD, NonOwningSymbolStringPtr Name);
 
-  static Error makeJDClosedError(JITDylib::EmissionDepUnit &EDU,
-                                 JITDylib &ClosedJD);
-  static Error makeUnsatisfiedDepsError(JITDylib::EmissionDepUnit &EDU,
-                                        JITDylib &BadJD, SymbolNameSet BadDeps);
+  template <typename UpdateSymbolFn, typename UpdateQueryFn>
+  void IL_collectQueries(JITDylib::AsynchronousSymbolQuerySet &Qs,
+                         WaitingOnGraph::ContainerElementsMap &QualifiedSymbols,
+                         UpdateSymbolFn &&UpdateSymbol,
+                         UpdateQueryFn &&UpdateQuery);
 
-  Expected<JITDylib::AsynchronousSymbolQuerySet>
-  IL_emit(MaterializationResponsibility &MR, EDUInfosMap EDUInfos);
+  Expected<EmitQueries> IL_emit(MaterializationResponsibility &MR,
+                                WaitingOnGraph::SimplifyResult SR);
   LLVM_ABI Error OL_notifyEmitted(MaterializationResponsibility &MR,
                                   ArrayRef<SymbolDependenceGroup> EmittedDeps);
 
@@ -1830,6 +1813,7 @@ private:
   std::vector<ResourceManager *> ResourceManagers;
 
   std::vector<JITDylibSP> JDs;
+  WaitingOnGraph G;
 
   // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
   //        with callbacks from asynchronous queries.

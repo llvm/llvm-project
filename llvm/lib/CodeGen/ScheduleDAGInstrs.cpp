@@ -1551,7 +1551,7 @@ LLVM_DUMP_METHOD void ILPValue::dump() const {
   dbgs() << *this << '\n';
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &llvm::operator<<(raw_ostream &OS, const ILPValue &Val) {
   Val.print(OS);
   return OS;

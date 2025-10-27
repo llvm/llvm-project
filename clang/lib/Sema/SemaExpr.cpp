@@ -1535,12 +1535,8 @@ void Sema::checkEnumArithmeticConversions(Expr *LHS, Expr *RHS,
     // are ill-formed.
     if (getLangOpts().CPlusPlus26)
       DiagID = diag::warn_conv_mixed_enum_types_cxx26;
-    else if (!L->castAsCanonical<EnumType>()
-                  ->getOriginalDecl()
-                  ->hasNameForLinkage() ||
-             !R->castAsCanonical<EnumType>()
-                  ->getOriginalDecl()
-                  ->hasNameForLinkage()) {
+    else if (!L->castAsCanonical<EnumType>()->getDecl()->hasNameForLinkage() ||
+             !R->castAsCanonical<EnumType>()->getDecl()->hasNameForLinkage()) {
       // If either enumeration type is unnamed, it's less likely that the
       // user cares about this, but this situation is still deprecated in
       // C++2a. Use a different warning group.
@@ -7095,7 +7091,7 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     for (unsigned i = 0, e = Args.size(); i != e; i++) {
       if (const auto *RT =
               dyn_cast<RecordType>(Args[i]->getType().getCanonicalType())) {
-        if (RT->getOriginalDecl()->isOrContainsUnion())
+        if (RT->getDecl()->isOrContainsUnion())
           Diag(Args[i]->getBeginLoc(), diag::warn_cmse_nonsecure_union)
               << 0 << i;
       }
@@ -9748,7 +9744,7 @@ Sema::CheckTransparentUnionArgumentConstraints(QualType ArgType,
   if (!UT)
     return AssignConvertType::Incompatible;
 
-  RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return AssignConvertType::Incompatible;
 
@@ -10844,7 +10840,7 @@ static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
   auto DiagnosticHelper = [&S](const Expr *expr, const QualType type) {
     SourceLocation BeginLoc = expr->getBeginLoc();
     QualType IntType = type->castAs<EnumType>()
-                           ->getOriginalDecl()
+                           ->getDecl()
                            ->getDefinitionOrSelf()
                            ->getIntegerType();
     std::string InsertionString = "static_cast<" + IntType.getAsString() + ">(";
@@ -11533,7 +11529,7 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
 static bool isScopedEnumerationType(QualType T) {
   if (const EnumType *ET = T->getAsCanonical<EnumType>())
-    return ET->getOriginalDecl()->isScoped();
+    return ET->getDecl()->isScoped();
   return false;
 }
 
@@ -12815,7 +12811,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
       if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
         if (CTSD->isInStdNamespace() &&
             llvm::StringSwitch<bool>(CTSD->getName())
-                .Cases("less", "less_equal", "greater", "greater_equal", true)
+                .Cases({"less", "less_equal", "greater", "greater_equal"}, true)
                 .Default(false)) {
           if (RHSType->isNullPtrType())
             RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
@@ -13839,7 +13835,7 @@ static void DiagnoseRecursiveConstFields(Sema &S, const ValueDecl *VD,
   while (RecordTypeList.size() > NextToCheckIndex) {
     bool IsNested = NextToCheckIndex > 0;
     for (const FieldDecl *Field : RecordTypeList[NextToCheckIndex]
-                                      ->getOriginalDecl()
+                                      ->getDecl()
                                       ->getDefinitionOrSelf()
                                       ->fields()) {
       // First, check every field for constness.
@@ -15948,6 +15944,20 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
             return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                              << resultType << Input.get()->getSourceRange());
         }
+      } else if (Context.getLangOpts().HLSL && resultType->isVectorType() &&
+                 !resultType->hasBooleanRepresentation()) {
+        // HLSL unary logical 'not' behaves like C++, which states that the
+        // operand is converted to bool and the result is bool, however HLSL
+        // extends this property to vectors.
+        const VectorType *VTy = resultType->castAs<VectorType>();
+        resultType =
+            Context.getExtVectorType(Context.BoolTy, VTy->getNumElements());
+
+        Input = ImpCastExprToType(
+                    Input.get(), resultType,
+                    ScalarTypeToBooleanCastKind(VTy->getElementType()))
+                    .get();
+        break;
       } else if (resultType->isExtVectorType()) {
         if (Context.getLangOpts().OpenCL &&
             Context.getLangOpts().getOpenCLCompatibleVersion() < 120) {
