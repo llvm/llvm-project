@@ -870,7 +870,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return true;
 }
 
-bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                bool WillBeActivated) {
   if (!Ptr.isBlockPointer() || Ptr.isZero())
     return false;
 
@@ -885,7 +886,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!CheckActive(S, OpPC, Ptr, AK_Assign))
+  if (!WillBeActivated && !CheckActive(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;
