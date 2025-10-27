@@ -2016,7 +2016,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
       dbgs() << ") -> fi#(" << RPI.FrameIdx;
       if (RPI.isPaired())
         dbgs() << ", " << RPI.FrameIdx + 1;
-      dbgs() << ")\n"
+      dbgs() << ")\n";
     });
 
     assert((!NeedsWinCFI || !(Reg1 == AArch64::LR && Reg2 == AArch64::FP)) &&
@@ -2187,7 +2187,7 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
       dbgs() << ") -> fi#(" << RPI.FrameIdx;
       if (RPI.isPaired())
         dbgs() << ", " << RPI.FrameIdx + 1;
-      dbgs() << ")\n"
+      dbgs() << ")\n";
     });
 
     // Windows unwind codes require consecutive registers if registers are
