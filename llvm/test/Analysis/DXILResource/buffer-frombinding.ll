@@ -9,9 +9,9 @@
 @Four.str = private unnamed_addr constant [5 x i8] c"Four\00", align 1
 @Array.str = private unnamed_addr constant [6 x i8] c"Array\00", align 1
 @Five.str = private unnamed_addr constant [5 x i8] c"Five\00", align 1
+@Six.str = private unnamed_addr constant [4 x i8] c"Six\00", align 1
 @CB.str = private unnamed_addr constant [3 x i8] c"CB\00", align 1
 @Constants.str = private unnamed_addr constant [10 x i8] c"Constants\00", align 1
-@Six.str = private unnamed_addr constant [4 x i8] c"Six\00", align 1
 
 
 define void @test_typedbuffer() {
