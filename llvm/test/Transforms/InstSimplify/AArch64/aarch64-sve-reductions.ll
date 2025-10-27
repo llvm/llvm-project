@@ -10,8 +10,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define i8 @andv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i8 @andv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.andv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %out = call i8 @llvm.aarch64.sve.andv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i8 %out
@@ -20,8 +19,7 @@ define i8 @andv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i8 @andv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i8 @andv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.andv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -1))
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %out = call i8 @llvm.aarch64.sve.andv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat(i8 -1))
   ret i8 %out
@@ -40,10 +38,7 @@ define i8 @andv_i8_splat_non_neutral_val(<vscale x 16 x i1> %pg) #0 {
 define i8 @andv_i8_all_active_splat(i8 %a) #0 {
 ; CHECK-LABEL: define i8 @andv_i8_all_active_splat(
 ; CHECK-SAME: i8 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i8 0
-; CHECK-NEXT:    [[A_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[A_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.andv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A_SPLAT]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 [[A]]
 ;
   %a.insert = insertelement <vscale x 16 x i8> poison, i8 %a, i8 0
   %a.splat = shufflevector <vscale x 16 x i8> %a.insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -54,8 +49,7 @@ define i8 @andv_i8_all_active_splat(i8 %a) #0 {
 define i16 @andv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @andv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i16 @llvm.aarch64.sve.andv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 -1))
-; CHECK-NEXT:    ret i16 [[OUT]]
+; CHECK-NEXT:    ret i16 -1
 ;
   %out = call i16 @llvm.aarch64.sve.andv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> splat(i16 -1))
   ret i16 %out
@@ -74,8 +68,7 @@ define i16 @andv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i32 @andv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i32 @andv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i32 @llvm.aarch64.sve.andv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -1))
-; CHECK-NEXT:    ret i32 [[OUT]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %out = call i32 @llvm.aarch64.sve.andv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat(i32 -1))
   ret i32 %out
@@ -94,8 +87,7 @@ define i32 @andv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @andv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @andv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.andv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 -1))
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 -1
 ;
   %out = call i64 @llvm.aarch64.sve.andv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> splat(i64 -1))
   ret i64 %out
@@ -118,8 +110,7 @@ define i64 @andv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i8 @eorv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i8 @eorv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.eorv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 0
 ;
   %out = call i8 @llvm.aarch64.sve.eorv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i8 %out
@@ -128,8 +119,7 @@ define i8 @eorv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i8 @eorv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i8 @eorv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.eorv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 0
 ;
   %out = call i8 @llvm.aarch64.sve.eorv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> zeroinitializer)
   ret i8 %out
@@ -148,10 +138,7 @@ define i8 @eorv_i8_splat_non_neutral_val(<vscale x 16 x i1> %pg) #0 {
 define i8 @eorv_i8_all_active_splat(i8 %a) #0 {
 ; CHECK-LABEL: define i8 @eorv_i8_all_active_splat(
 ; CHECK-SAME: i8 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i8 0
-; CHECK-NEXT:    [[A_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[A_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.eorv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A_SPLAT]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 0
 ;
   %a.insert = insertelement <vscale x 16 x i8> poison, i8 %a, i8 0
   %a.splat = shufflevector <vscale x 16 x i8> %a.insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -162,8 +149,7 @@ define i8 @eorv_i8_all_active_splat(i8 %a) #0 {
 define i16 @eorv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @eorv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i16 @llvm.aarch64.sve.eorv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret i16 [[OUT]]
+; CHECK-NEXT:    ret i16 0
 ;
   %out = call i16 @llvm.aarch64.sve.eorv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> zeroinitializer)
   ret i16 %out
@@ -182,8 +168,7 @@ define i16 @eorv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i32 @eorv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i32 @eorv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i32 @llvm.aarch64.sve.eorv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[OUT]]
+; CHECK-NEXT:    ret i32 0
 ;
   %out = call i32 @llvm.aarch64.sve.eorv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> zeroinitializer)
   ret i32 %out
@@ -202,8 +187,7 @@ define i32 @eorv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @eorv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @eorv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.eorv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.eorv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> zeroinitializer)
   ret i64 %out
@@ -226,8 +210,7 @@ define i64 @eorv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i8 @orv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i8 @orv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.orv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 0
 ;
   %out = call i8 @llvm.aarch64.sve.orv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i8 %out
@@ -236,8 +219,7 @@ define i8 @orv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i8 @orv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i8 @orv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.orv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 0
 ;
   %out = call i8 @llvm.aarch64.sve.orv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> zeroinitializer)
   ret i8 %out
@@ -256,10 +238,7 @@ define i8 @orv_i8_splat_non_neutral_val(<vscale x 16 x i1> %pg) #0 {
 define i8 @orv_i8_all_active_splat(i8 %a) #0 {
 ; CHECK-LABEL: define i8 @orv_i8_all_active_splat(
 ; CHECK-SAME: i8 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i8 0
-; CHECK-NEXT:    [[A_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[A_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.orv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A_SPLAT]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 [[A]]
 ;
   %a.insert = insertelement <vscale x 16 x i8> poison, i8 %a, i8 0
   %a.splat = shufflevector <vscale x 16 x i8> %a.insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -270,8 +249,7 @@ define i8 @orv_i8_all_active_splat(i8 %a) #0 {
 define i16 @orv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @orv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i16 @llvm.aarch64.sve.orv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret i16 [[OUT]]
+; CHECK-NEXT:    ret i16 0
 ;
   %out = call i16 @llvm.aarch64.sve.orv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> zeroinitializer)
   ret i16 %out
@@ -290,8 +268,7 @@ define i16 @orv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i32 @orv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i32 @orv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i32 @llvm.aarch64.sve.orv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[OUT]]
+; CHECK-NEXT:    ret i32 0
 ;
   %out = call i32 @llvm.aarch64.sve.orv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> zeroinitializer)
   ret i32 %out
@@ -310,8 +287,7 @@ define i32 @orv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @orv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @orv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.orv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.orv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> zeroinitializer)
   ret i64 %out
@@ -334,8 +310,7 @@ define i64 @orv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i64 @saddv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i64 @saddv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.saddv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.saddv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i64 %out
@@ -344,8 +319,7 @@ define i64 @saddv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i64 @saddv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @saddv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.saddv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.saddv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> zeroinitializer)
   ret i64 %out
@@ -378,8 +352,7 @@ define i64 @saddv_i8_all_active_splat(i8 %a) #0 {
 define i64 @saddv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @saddv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.saddv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.saddv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> zeroinitializer)
   ret i64 %out
@@ -398,8 +371,7 @@ define i64 @saddv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i64 @saddv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @saddv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.saddv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.saddv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> zeroinitializer)
   ret i64 %out
@@ -418,8 +390,7 @@ define i64 @saddv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @saddv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @saddv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.saddv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.saddv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> zeroinitializer)
   ret i64 %out
@@ -442,8 +413,7 @@ define i64 @saddv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i8 @smaxv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i8 @smaxv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.smaxv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %out = call i8 @llvm.aarch64.sve.smaxv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i8 %out
@@ -452,8 +422,7 @@ define i8 @smaxv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i8 @smaxv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i8 @smaxv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.smaxv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -128))
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 -128
 ;
   %out = call i8 @llvm.aarch64.sve.smaxv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat(i8 -128))
   ret i8 %out
@@ -472,10 +441,7 @@ define i8 @smaxv_i8_splat_non_neutral_val(<vscale x 16 x i1> %pg) #0 {
 define i8 @smaxv_i8_all_active_splat(i8 %a) #0 {
 ; CHECK-LABEL: define i8 @smaxv_i8_all_active_splat(
 ; CHECK-SAME: i8 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i8 0
-; CHECK-NEXT:    [[A_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[A_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.smaxv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A_SPLAT]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 [[A]]
 ;
   %a.insert = insertelement <vscale x 16 x i8> poison, i8 %a, i8 0
   %a.splat = shufflevector <vscale x 16 x i8> %a.insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -486,8 +452,7 @@ define i8 @smaxv_i8_all_active_splat(i8 %a) #0 {
 define i16 @smaxv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @smaxv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i16 @llvm.aarch64.sve.smaxv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 -32768))
-; CHECK-NEXT:    ret i16 [[OUT]]
+; CHECK-NEXT:    ret i16 -32768
 ;
   %out = call i16 @llvm.aarch64.sve.smaxv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> splat(i16 -32768))
   ret i16 %out
@@ -506,8 +471,7 @@ define i16 @smaxv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i32 @smaxv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i32 @smaxv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i32 @llvm.aarch64.sve.smaxv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -2147483648))
-; CHECK-NEXT:    ret i32 [[OUT]]
+; CHECK-NEXT:    ret i32 -2147483648
 ;
   %out = call i32 @llvm.aarch64.sve.smaxv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat(i32 -2147483648))
   ret i32 %out
@@ -526,8 +490,7 @@ define i32 @smaxv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @smaxv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @smaxv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.smaxv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 -9223372036854775808))
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
   %out = call i64 @llvm.aarch64.sve.smaxv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> splat(i64 -9223372036854775808))
   ret i64 %out
@@ -550,8 +513,7 @@ define i64 @smaxv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i8 @sminv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i8 @sminv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.sminv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 127
 ;
   %out = call i8 @llvm.aarch64.sve.sminv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i8 %out
@@ -560,8 +522,7 @@ define i8 @sminv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i8 @sminv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i8 @sminv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.sminv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 127))
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 127
 ;
   %out = call i8 @llvm.aarch64.sve.sminv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat(i8 127))
   ret i8 %out
@@ -580,10 +541,7 @@ define i8 @sminv_i8_splat_non_neutral_val(<vscale x 16 x i1> %pg) #0 {
 define i8 @sminv_i8_all_active_splat(i8 %a) #0 {
 ; CHECK-LABEL: define i8 @sminv_i8_all_active_splat(
 ; CHECK-SAME: i8 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i8 0
-; CHECK-NEXT:    [[A_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[A_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.sminv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A_SPLAT]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 [[A]]
 ;
   %a.insert = insertelement <vscale x 16 x i8> poison, i8 %a, i8 0
   %a.splat = shufflevector <vscale x 16 x i8> %a.insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -594,8 +552,7 @@ define i8 @sminv_i8_all_active_splat(i8 %a) #0 {
 define i16 @sminv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @sminv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i16 @llvm.aarch64.sve.sminv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 32767))
-; CHECK-NEXT:    ret i16 [[OUT]]
+; CHECK-NEXT:    ret i16 32767
 ;
   %out = call i16 @llvm.aarch64.sve.sminv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> splat(i16 32767))
   ret i16 %out
@@ -614,8 +571,7 @@ define i16 @sminv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i32 @sminv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i32 @sminv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i32 @llvm.aarch64.sve.sminv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 2147483647))
-; CHECK-NEXT:    ret i32 [[OUT]]
+; CHECK-NEXT:    ret i32 2147483647
 ;
   %out = call i32 @llvm.aarch64.sve.sminv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat(i32 2147483647))
   ret i32 %out
@@ -634,8 +590,7 @@ define i32 @sminv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @sminv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @sminv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.sminv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 9223372036854775807))
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 9223372036854775807
 ;
   %out = call i64 @llvm.aarch64.sve.sminv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> splat(i64 9223372036854775807))
   ret i64 %out
@@ -658,8 +613,7 @@ define i64 @sminv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i64 @uaddv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i64 @uaddv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.uaddv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.uaddv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i64 %out
@@ -668,8 +622,7 @@ define i64 @uaddv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i64 @uaddv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @uaddv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.uaddv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.uaddv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> zeroinitializer)
   ret i64 %out
@@ -702,8 +655,7 @@ define i64 @uaddv_i8_all_active_splat(i8 %a) #0 {
 define i64 @uaddv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @uaddv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.uaddv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.uaddv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> zeroinitializer)
   ret i64 %out
@@ -722,8 +674,7 @@ define i64 @uaddv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i64 @uaddv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @uaddv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.uaddv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> zeroinitializer)
   ret i64 %out
@@ -742,8 +693,7 @@ define i64 @uaddv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @uaddv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @uaddv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.uaddv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.uaddv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> zeroinitializer)
   ret i64 %out
@@ -766,8 +716,7 @@ define i64 @uaddv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i8 @umaxv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i8 @umaxv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.umaxv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 0
 ;
   %out = call i8 @llvm.aarch64.sve.umaxv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i8 %out
@@ -776,8 +725,7 @@ define i8 @umaxv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i8 @umaxv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i8 @umaxv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.umaxv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> zeroinitializer)
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 0
 ;
   %out = call i8 @llvm.aarch64.sve.umaxv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> zeroinitializer)
   ret i8 %out
@@ -796,10 +744,7 @@ define i8 @umaxv_i8_splat_non_neutral_val(<vscale x 16 x i1> %pg) #0 {
 define i8 @umaxv_i8_all_active_splat(i8 %a) #0 {
 ; CHECK-LABEL: define i8 @umaxv_i8_all_active_splat(
 ; CHECK-SAME: i8 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i8 0
-; CHECK-NEXT:    [[A_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[A_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.umaxv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A_SPLAT]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 [[A]]
 ;
   %a.insert = insertelement <vscale x 16 x i8> poison, i8 %a, i8 0
   %a.splat = shufflevector <vscale x 16 x i8> %a.insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -810,8 +755,7 @@ define i8 @umaxv_i8_all_active_splat(i8 %a) #0 {
 define i16 @umaxv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @umaxv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i16 @llvm.aarch64.sve.umaxv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> zeroinitializer)
-; CHECK-NEXT:    ret i16 [[OUT]]
+; CHECK-NEXT:    ret i16 0
 ;
   %out = call i16 @llvm.aarch64.sve.umaxv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> zeroinitializer)
   ret i16 %out
@@ -830,8 +774,7 @@ define i16 @umaxv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i32 @umaxv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i32 @umaxv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i32 @llvm.aarch64.sve.umaxv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret i32 [[OUT]]
+; CHECK-NEXT:    ret i32 0
 ;
   %out = call i32 @llvm.aarch64.sve.umaxv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> zeroinitializer)
   ret i32 %out
@@ -850,8 +793,7 @@ define i32 @umaxv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @umaxv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @umaxv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.umaxv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> zeroinitializer)
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %out = call i64 @llvm.aarch64.sve.umaxv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> zeroinitializer)
   ret i64 %out
@@ -874,8 +816,7 @@ define i64 @umaxv_i64_splat_non_neutral_val(<vscale x 2 x i1> %pg) #0 {
 define i8 @uminv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define i8 @uminv_i8_no_active(
 ; CHECK-SAME: <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.uminv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %out = call i8 @llvm.aarch64.sve.uminv.nxv16i8(<vscale x 16 x i1> zeroinitializer, <vscale x 16 x i8> %a)
   ret i8 %out
@@ -884,8 +825,7 @@ define i8 @uminv_i8_no_active(<vscale x 16 x i8> %a) #0 {
 define i8 @uminv_i8_splat_neutral_val(<vscale x 16 x i1> %pg) #0 {
 ; CHECK-LABEL: define i8 @uminv_i8_splat_neutral_val(
 ; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.uminv.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> splat (i8 -1))
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %out = call i8 @llvm.aarch64.sve.uminv.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> splat(i8 -1))
   ret i8 %out
@@ -904,10 +844,7 @@ define i8 @uminv_i8_splat_non_neutral_val(<vscale x 16 x i1> %pg) #0 {
 define i8 @uminv_i8_all_active_splat(i8 %a) #0 {
 ; CHECK-LABEL: define i8 @uminv_i8_all_active_splat(
 ; CHECK-SAME: i8 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[A_INSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i8 0
-; CHECK-NEXT:    [[A_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[A_INSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; CHECK-NEXT:    [[OUT:%.*]] = call i8 @llvm.aarch64.sve.uminv.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A_SPLAT]])
-; CHECK-NEXT:    ret i8 [[OUT]]
+; CHECK-NEXT:    ret i8 [[A]]
 ;
   %a.insert = insertelement <vscale x 16 x i8> poison, i8 %a, i8 0
   %a.splat = shufflevector <vscale x 16 x i8> %a.insert, <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -918,8 +855,7 @@ define i8 @uminv_i8_all_active_splat(i8 %a) #0 {
 define i16 @uminv_i16_splat_neutral_val(<vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: define i16 @uminv_i16_splat_neutral_val(
 ; CHECK-SAME: <vscale x 8 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i16 @llvm.aarch64.sve.uminv.nxv8i16(<vscale x 8 x i1> [[PG]], <vscale x 8 x i16> splat (i16 -1))
-; CHECK-NEXT:    ret i16 [[OUT]]
+; CHECK-NEXT:    ret i16 -1
 ;
   %out = call i16 @llvm.aarch64.sve.uminv.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> splat(i16 -1))
   ret i16 %out
@@ -938,8 +874,7 @@ define i16 @uminv_i16_splat_non_neutral_val(<vscale x 8 x i1> %pg) #0 {
 define i32 @uminv_i32_splat_neutral_val(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define i32 @uminv_i32_splat_neutral_val(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i32 @llvm.aarch64.sve.uminv.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> splat (i32 -1))
-; CHECK-NEXT:    ret i32 [[OUT]]
+; CHECK-NEXT:    ret i32 -1
 ;
   %out = call i32 @llvm.aarch64.sve.uminv.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> splat(i32 -1))
   ret i32 %out
@@ -958,8 +893,7 @@ define i32 @uminv_i32_splat_non_neutral_val(<vscale x 4 x i1> %pg) #0 {
 define i64 @uminv_i64_splat_neutral_val(<vscale x 2 x i1> %pg) #0 {
 ; CHECK-LABEL: define i64 @uminv_i64_splat_neutral_val(
 ; CHECK-SAME: <vscale x 2 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[OUT:%.*]] = call i64 @llvm.aarch64.sve.uminv.nxv2i64(<vscale x 2 x i1> [[PG]], <vscale x 2 x i64> splat (i64 -1))
-; CHECK-NEXT:    ret i64 [[OUT]]
+; CHECK-NEXT:    ret i64 -1
 ;
   %out = call i64 @llvm.aarch64.sve.uminv.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> splat(i64 -1))
   ret i64 %out

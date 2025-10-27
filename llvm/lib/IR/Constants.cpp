@@ -183,6 +183,23 @@ bool Constant::isMinSignedValue() const {
   return false;
 }
 
+bool Constant::isMaxSignedValue() const {
+  // Check for INT_MAX integers
+  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
+    return CI->isMaxValue(/*isSigned=*/true);
+
+  // Check for FP which are bitcasted from INT_MAX integers
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
+    return CFP->getValueAPF().bitcastToAPInt().isMaxSignedValue();
+
+  // Check for splats of INT_MAX values.
+  if (getType()->isVectorTy())
+    if (const auto *SplatVal = getSplatValue())
+      return SplatVal->isMaxSignedValue();
+
+  return false;
+}
+
 bool Constant::isNotMinSignedValue() const {
   // Check for INT_MIN integers
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
