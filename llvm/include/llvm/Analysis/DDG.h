@@ -96,7 +96,7 @@ public:
   RootDDGNode() : DDGNode(NodeKind::Root) {}
   RootDDGNode(const RootDDGNode &N) = delete;
   RootDDGNode(RootDDGNode &&N) : DDGNode(std::move(N)) {}
-  ~RootDDGNode() = default;
+  ~RootDDGNode() override = default;
 
   /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
   static bool classof(const DDGNode *N) {
@@ -114,7 +114,7 @@ public:
   SimpleDDGNode(Instruction &I);
   SimpleDDGNode(const SimpleDDGNode &N);
   SimpleDDGNode(SimpleDDGNode &&N);
-  ~SimpleDDGNode();
+  ~SimpleDDGNode() override;
 
   SimpleDDGNode &operator=(const SimpleDDGNode &N) = default;
 
@@ -176,7 +176,7 @@ public:
   PiBlockDDGNode(const PiNodeList &List);
   PiBlockDDGNode(const PiBlockDDGNode &N);
   PiBlockDDGNode(PiBlockDDGNode &&N);
-  ~PiBlockDDGNode();
+  ~PiBlockDDGNode() override;
 
   PiBlockDDGNode &operator=(const PiBlockDDGNode &N) = default;
 
@@ -318,7 +318,7 @@ public:
       : DDGBase(std::move(G)), DDGInfo(std::move(G)) {}
   DataDependenceGraph(Function &F, DependenceInfo &DI);
   DataDependenceGraph(Loop &L, LoopInfo &LI, DependenceInfo &DI);
-  ~DataDependenceGraph();
+  ~DataDependenceGraph() override;
 
   /// If node \p N belongs to a pi-block return a pointer to the pi-block,
   /// otherwise return null.
