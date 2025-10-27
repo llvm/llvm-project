@@ -291,11 +291,10 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
            ArrayType::get(Builder.getPtrTy(), NumCallsites)});
       // Figure out which way we obtain the context object for this function -
       // if it's an entrypoint, then we call StartCtx, otherwise GetCtx. In the
-      // former case, we also set TheRootFunctionData since we need to release it
-      // at the end (plus it can be used to know if we have an entrypoint or a
-      // regular function)
-      // Don't set a name, they end up taking a lot of space and we don't need
-      // them.
+      // former case, we also set TheRootFunctionData since we need to release
+      // it at the end (plus it can be used to know if we have an entrypoint or
+      // a regular function). Don't set a name, they end up taking a lot of
+      // space and we don't need them.
 
       // Zero-initialize the FunctionData, except for functions that have
       // musttail calls. There, we set the CtxRoot field to 1, which will be
