@@ -13,8 +13,7 @@ namespace clang {
 
 StandaloneDiagnostic::SourceOffsetRange::SourceOffsetRange(
     CharSourceRange Range, const SourceManager &SrcMgr,
-    const LangOptions &LangOpts)
-    : IsTokenRange(Range.isTokenRange()) {
+    const LangOptions &LangOpts) {
   const auto FileRange = Lexer::makeFileCharRange(Range, SrcMgr, LangOpts);
   Begin = SrcMgr.getFileOffset(FileRange.getBegin());
   End = SrcMgr.getFileOffset(FileRange.getEnd());
@@ -75,7 +74,7 @@ translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
         return CharSourceRange(
             SourceRange(FileLoc.getLocWithOffset(Range.Begin),
                         FileLoc.getLocWithOffset(Range.End)),
-            Range.IsTokenRange);
+            /*IsTokenRange*/ false);
       };
 
   SmallVector<CharSourceRange, 0> TranslatedRanges;
