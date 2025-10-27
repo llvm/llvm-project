@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <vector>
 
 namespace llvm::orc::detail {
 
@@ -185,9 +186,7 @@ private:
         SmallVector<ElementId> SortedElems(ContainerElems.begin(),
                                            ContainerElems.end());
         llvm::sort(SortedElems);
-        Hash = hash_combine(
-            Hash, Container,
-            hash_combine_range(SortedElems.begin(), SortedElems.end()));
+        Hash = hash_combine(Hash, Container, hash_combine_range(SortedElems));
       }
       return Hash;
     }

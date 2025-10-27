@@ -385,6 +385,28 @@ public:
     return inherited::TraverseStmt(E->getReplacement());
   }
 
+  bool TraverseTemplateName(TemplateName Template) {
+    if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
+            Template.getAsTemplateDecl());
+        TTP && TTP->getDepth() < TemplateArgs.getNumLevels()) {
+      if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(),
+                                            TTP->getPosition()))
+        return true;
+
+      TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
+      if (TTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+        assert(Arg.getKind() == TemplateArgument::Pack &&
+               "Missing argument pack");
+        Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
+      }
+      assert(!Arg.getAsTemplate().isNull() &&
+             "Null template template argument");
+      UsedTemplateArgs.push_back(
+          SemaRef.Context.getCanonicalTemplateArgument(Arg));
+    }
+    return inherited::TraverseTemplateName(Template);
+  }
+
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
     if (!Constraint.hasParameterMapping()) {
       for (const auto &List : TemplateArgs)
@@ -417,8 +439,8 @@ class ConstraintSatisfactionChecker {
   const NamedDecl *Template;
   SourceLocation TemplateNameLoc;
   UnsignedOrNone PackSubstitutionIndex;
-
   ConstraintSatisfaction &Satisfaction;
+  bool BuildExpression;
 
 private:
   ExprResult
@@ -461,10 +483,11 @@ public:
   ConstraintSatisfactionChecker(Sema &SemaRef, const NamedDecl *Template,
                                 SourceLocation TemplateNameLoc,
                                 UnsignedOrNone PackSubstitutionIndex,
-                                ConstraintSatisfaction &Satisfaction)
+                                ConstraintSatisfaction &Satisfaction,
+                                bool BuildExpression)
       : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
-        Satisfaction(Satisfaction) {}
+        Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
 
   ExprResult Evaluate(const NormalizedConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
@@ -821,9 +844,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.ContainsErrors = false;
     ExprResult Expr =
         ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
-                                      UnsignedOrNone(I), Satisfaction)
+                                      UnsignedOrNone(I), Satisfaction,
+                                      /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
-    if (Expr.isUsable()) {
+    if (BuildExpression && Expr.isUsable()) {
       if (Out.isUnset())
         Out = Expr;
       else
@@ -834,7 +858,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                      Constraint.getBeginLoc(),
                                      FPOptionsOverride{});
     } else {
-      assert(!Satisfaction.IsSatisfied);
+      assert(!BuildExpression || !Satisfaction.IsSatisfied);
     }
     if (!Conjunction && Satisfaction.IsSatisfied) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() +
@@ -985,7 +1009,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
-  if (!E.isUsable()) {
+  if (E.isInvalid()) {
     Satisfaction.Details.insert(Satisfaction.Details.begin() + Size, ConceptId);
     return E;
   }
@@ -1041,7 +1065,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (Conjunction && (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
     return LHS;
 
-  if (!Conjunction && LHS.isUsable() && Satisfaction.IsSatisfied &&
+  if (!Conjunction && !LHS.isInvalid() && Satisfaction.IsSatisfied &&
       !Satisfaction.ContainsErrors)
     return LHS;
 
@@ -1050,11 +1074,14 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ExprResult RHS = Evaluate(Constraint.getRHS(), MLTAL);
 
-  if (RHS.isUsable() && Satisfaction.IsSatisfied &&
+  if (!Conjunction && !RHS.isInvalid() && Satisfaction.IsSatisfied &&
       !Satisfaction.ContainsErrors)
     Satisfaction.Details.erase(Satisfaction.Details.begin() +
                                    EffectiveDetailEndIndex,
                                Satisfaction.Details.end());
+
+  if (!BuildExpression)
+    return Satisfaction.ContainsErrors ? ExprError() : ExprEmpty();
 
   if (!LHS.isUsable())
     return RHS;
@@ -1136,10 +1163,11 @@ static bool CheckConstraintSatisfaction(
                                     Template, /*CSE=*/nullptr,
                                     S.ArgPackSubstIndex);
 
-  ExprResult Res =
-      ConstraintSatisfactionChecker(S, Template, TemplateIDRange.getBegin(),
-                                    S.ArgPackSubstIndex, Satisfaction)
-          .Evaluate(*C, TemplateArgsLists);
+  ExprResult Res = ConstraintSatisfactionChecker(
+                       S, Template, TemplateIDRange.getBegin(),
+                       S.ArgPackSubstIndex, Satisfaction,
+                       /*BuildExpression=*/ConvertedExpr != nullptr)
+                       .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
     return true;
@@ -2672,8 +2700,9 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     });
 
     if (Compound.getCompoundKind() == FormulaType::Kind) {
+      unsigned SizeLeft = Left.size();
       Res = std::move(Left);
-      Res.reserve(Left.size() + Right.size());
+      Res.reserve(SizeLeft + Right.size());
       std::for_each(std::make_move_iterator(Right.begin()),
                     std::make_move_iterator(Right.end()), Add);
       return Res;

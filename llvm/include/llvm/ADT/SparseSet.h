@@ -20,8 +20,8 @@
 #ifndef LLVM_ADT_SPARSESET_H
 #define LLVM_ADT_SPARSESET_H
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/identity.h"
 #include "llvm/Support/AllocatorBase.h"
 #include <cassert>
 #include <cstdint>
@@ -59,22 +59,18 @@ template <typename ValueT> struct SparseSetValTraits {
   }
 };
 
-/// SparseSetValFunctor - Helper class for selecting SparseSetValTraits. The
-/// generic implementation handles ValueT classes which either provide
-/// getSparseSetIndex() or specialize SparseSetValTraits<>.
+/// SparseSetValFunctor - Helper class for getting a value's index.
 ///
+/// In the generic case, this is done via SparseSetValTraits. When the value
+/// type is the same as the key type, the KeyFunctor is used directly.
 template <typename KeyT, typename ValueT, typename KeyFunctorT>
 struct SparseSetValFunctor {
   unsigned operator()(const ValueT &Val) const {
-    return SparseSetValTraits<ValueT>::getValIndex(Val);
+    if constexpr (std::is_same_v<KeyT, ValueT>)
+      return KeyFunctorT()(Val);
+    else
+      return SparseSetValTraits<ValueT>::getValIndex(Val);
   }
-};
-
-/// SparseSetValFunctor<KeyT, KeyT> - Helper class for the common case of
-/// identity key/value sets.
-template <typename KeyT, typename KeyFunctorT>
-struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
-  unsigned operator()(const KeyT &Key) const { return KeyFunctorT()(Key); }
 };
 
 /// SparseSet - Fast set implementation for objects that can be identified by
@@ -112,16 +108,16 @@ struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
 /// uint16_t or uint32_t.
 ///
 /// @tparam ValueT      The type of objects in the set.
+/// @tparam KeyT        The type of the key, which is passed to the key functor.
 /// @tparam KeyFunctorT A functor that computes an unsigned index from KeyT.
 /// @tparam SparseT     An unsigned integer type. See above.
 ///
-template <typename ValueT, typename KeyFunctorT = identity<unsigned>,
-          typename SparseT = uint8_t>
+template <typename ValueT, typename KeyT = unsigned,
+          typename KeyFunctorT = identity, typename SparseT = uint8_t>
 class SparseSet {
   static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
 
-  using KeyT = typename KeyFunctorT::argument_type;
   using DenseT = SmallVector<ValueT, 8>;
   using size_type = unsigned;
   DenseT Dense;

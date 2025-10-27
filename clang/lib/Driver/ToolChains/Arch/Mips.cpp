@@ -502,8 +502,8 @@ bool mips::shouldUseFPXX(const ArgList &Args, const llvm::Triple &Triple,
   if (Arg *A = Args.getLastArg(options::OPT_mmsa))
     if (A->getOption().matches(options::OPT_mmsa))
       UseFPXX = llvm::StringSwitch<bool>(CPUName)
-                    .Cases("mips32r2", "mips32r3", "mips32r5", false)
-                    .Cases("mips64r2", "mips64r3", "mips64r5", false)
+                    .Cases({"mips32r2", "mips32r3", "mips32r5"}, false)
+                    .Cases({"mips64r2", "mips64r3", "mips64r5"}, false)
                     .Default(UseFPXX);
 
   return UseFPXX;

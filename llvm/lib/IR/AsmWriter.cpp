@@ -843,7 +843,7 @@ public:
   SlotTracker(const SlotTracker &) = delete;
   SlotTracker &operator=(const SlotTracker &) = delete;
 
-  ~SlotTracker() = default;
+  ~SlotTracker() override = default;
 
   void setProcessHook(
       std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>);
@@ -3196,7 +3196,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
   for (auto &GlobalList : *TheIndex) {
     auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList)
+    for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
@@ -4082,10 +4082,10 @@ void AssemblyWriter::printTypeIdentities() {
 
 /// printFunction - Print all aspects of a function.
 void AssemblyWriter::printFunction(const Function *F) {
-  if (AnnotationWriter) AnnotationWriter->emitFunctionAnnot(F, Out);
-
   if (F->isMaterializable())
     Out << "; Materializable\n";
+  else if (AnnotationWriter)
+    AnnotationWriter->emitFunctionAnnot(F, Out);
 
   const AttributeList &Attrs = F->getAttributes();
   if (Attrs.hasFnAttrs()) {
@@ -5323,7 +5323,7 @@ struct MDTreeAsmWriterContext : public AsmWriterContext {
     --Level;
   }
 
-  ~MDTreeAsmWriterContext() {
+  ~MDTreeAsmWriterContext() override {
     for (const auto &Entry : Buffer) {
       MainOS << "\n";
       unsigned NumIndent = Entry.first * 2U;
