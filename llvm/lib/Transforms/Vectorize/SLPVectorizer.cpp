@@ -6937,7 +6937,7 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
 }
 
 bool BoUpSLP::analyzeConstantStrideCandidate(
-    const ArrayRef<Value *> PointerOps, Type *ElemTy, Align Alignment,
+    const ArrayRef<Value *> PointerOps, Type *ScalarTy, Align Alignment,
     const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
     Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
   const size_t Sz = PointerOps.size();
@@ -6947,7 +6947,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     Value *Ptr =
         SortedIndices.empty() ? PointerOps[I] : PointerOps[SortedIndices[I]];
     SortedOffsetsFromBase[I] =
-        *getPointersDiff(ElemTy, Ptr0, ElemTy, Ptr, *DL, *SE);
+        *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
   }
 
   // The code below checks that `SortedOffsetsFromBase` looks as follows:
@@ -6968,17 +6968,16 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
       SortedOffsetsFromBase[1] - SortedOffsetsFromBase[0];
   // Determine size of the first group. Later we will check that all other
   // groups have the same size.
-  unsigned GroupSize = 1;
-  for (; GroupSize != SortedOffsetsFromBase.size(); ++GroupSize) {
-    if (SortedOffsetsFromBase[GroupSize] -
-            SortedOffsetsFromBase[GroupSize - 1] !=
-        StrideWithinGroup)
-      break;
-  }
+  auto isEndOfGroupIndex = [=, &SortedOffsetsFromBase](unsigned Idx) {
+    return SortedOffsetsFromBase[Idx] - SortedOffsetsFromBase[Idx - 1] !=
+           StrideWithinGroup;
+  };
+  unsigned GroupSize = *llvm::find_if(seq<unsigned>(1, Sz), isEndOfGroupIndex);
+
   unsigned VecSz = Sz;
-  Type *ScalarTy = ElemTy;
+  Type *NewScalarTy = ScalarTy;
   int64_t StrideIntVal = StrideWithinGroup;
-  FixedVectorType *StridedLoadTy = getWidenedType(ScalarTy, VecSz);
+  FixedVectorType *StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
 
   // Quick detour: at this point we can say what the type of strided load would
   // be if all the checks pass. Check if this type is legal for the target.
@@ -6991,13 +6990,13 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
     if (StrideWithinGroup != 1)
       return false;
     unsigned VecSz = Sz / GroupSize;
-    ScalarTy = Type::getIntNTy(SE->getContext(),
-                               DL->getTypeSizeInBits(ElemTy).getFixedValue() *
-                                   GroupSize);
-    StridedLoadTy = getWidenedType(ScalarTy, VecSz);
+    NewScalarTy = Type::getIntNTy(
+        SE->getContext(),
+        DL->getTypeSizeInBits(ScalarTy).getFixedValue() * GroupSize);
+    StridedLoadTy = getWidenedType(NewScalarTy, VecSz);
   }
 
-  if (!isStridedLoad(PointerOps, ScalarTy, Alignment, Diff, VecSz))
+  if (!isStridedLoad(PointerOps, NewScalarTy, Alignment, Diff, VecSz))
     return false;
 
   if (NeedsWidening) {
