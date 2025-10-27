@@ -239,6 +239,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // Remember all entry-points if object dumping is enabled.
   if (options.enableObjectDump) {
     for (auto funcOp : m->getRegion(0).getOps<LLVM::LLVMFuncOp>()) {
+      if (funcOp.getBlocks().empty())
+        continue;
       StringRef funcName = funcOp.getSymName();
       engine->functionNames.push_back(funcName.str());
     }
