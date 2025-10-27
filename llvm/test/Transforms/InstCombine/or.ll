@@ -2161,6 +2161,6 @@ define <2 x i8> @or_select_smax_multi_uses(<2 x i8> %a){
   %sel = select <2 x i1> %sgt0, <2 x i8> zeroinitializer, <2 x i8> %neg
   %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
   %or = or <2 x i8> %sel, %max
-  %e = add <2 x i8> %or, %max
-  ret <2 x i8> %e
+  %add = add <2 x i8> %or, %max
+  ret <2 x i8> %add
 }
