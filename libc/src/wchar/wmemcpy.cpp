@@ -12,13 +12,14 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(wchar_t *, wmemcpy,
                    (wchar_t *__restrict s1, const wchar_t *__restrict s2,
                     size_t n)) {
-  __builtin_memcpy(s1, s2, n * sizeof(wchar_t));
+  inline_memcpy(s1, s2, n * sizeof(wchar_t));
   return s1;
 }
 

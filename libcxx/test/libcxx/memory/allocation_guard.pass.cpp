@@ -12,8 +12,6 @@
 // To allow checking that self-move works correctly.
 // ADDITIONAL_COMPILE_FLAGS: -Wno-self-move
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // template<class _Alloc>
 // struct __allocation_guard;
 

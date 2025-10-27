@@ -84,6 +84,12 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
+  if (Opcode == AArch64::SYSLxt)
+    if (printSyslAlias(MI, STI, O)) {
+      printAnnotation(O, Annot);
+      return;
+    }
+
   if (Opcode == AArch64::SYSPxt || Opcode == AArch64::SYSPxt_XZR)
     if (printSyspAlias(MI, STI, O)) {
       printAnnotation(O, Annot);
@@ -278,7 +284,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     {
       WithMarkup M = markup(O, Markup::Immediate);
       O << "#";
-      MI->getOperand(1).getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *MI->getOperand(1).getExpr());
     }
     return;
   }
@@ -291,7 +297,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     {
       WithMarkup M = markup(O, Markup::Immediate);
       O << "#";
-      MI->getOperand(2).getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *MI->getOperand(2).getExpr());
     }
     return;
   }
@@ -362,13 +368,6 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     O << '\t' << MAI.getCommentString() << " SPACE "
       << MI->getOperand(1).getImm();
     printAnnotation(O, Annot);
-    return;
-  }
-
-  // Instruction TSB is specified as a one operand instruction, but 'csync' is
-  // not encoded, so for printing it is treated as a special case here:
-  if (Opcode == AArch64::TSB) {
-    O << "\ttsb\tcsync";
     return;
   }
 
@@ -916,13 +915,25 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   Encoding |= CnVal << 7;
   Encoding |= Op1Val << 11;
 
-  bool NeedsReg;
+  bool NeedsReg = false;
+  bool OptionalReg = false;
   std::string Ins;
   std::string Name;
 
   if (CnVal == 7) {
     switch (CmVal) {
     default: return false;
+    // MLBI aliases
+    case 0: {
+      const AArch64MLBI::MLBI *MLBI =
+          AArch64MLBI::lookupMLBIByEncoding(Encoding);
+      if (!MLBI || !MLBI->haveFeatures(STI.getFeatureBits()))
+        return false;
+
+      NeedsReg = MLBI->NeedsReg;
+      Ins = "mlbi\t";
+      Name = std::string(MLBI->Name);
+    } break;
     // Maybe IC, maybe Prediction Restriction
     case 1:
       switch (Op1Val) {
@@ -1011,20 +1022,101 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       return false;
 
     NeedsReg = TLBI->NeedsReg;
+    if (STI.hasFeature(AArch64::FeatureAll) ||
+        STI.hasFeature(AArch64::FeatureTLBID))
+      OptionalReg = TLBI->OptionalReg;
     Ins = "tlbi\t";
     Name = std::string(TLBI->Name);
-  }
-  else
+  } else if (CnVal == 12) {
+    if (CmVal != 0) {
+      // GIC aliases
+      const AArch64GIC::GIC *GIC = AArch64GIC::lookupGICByEncoding(Encoding);
+      if (!GIC || !GIC->haveFeatures(STI.getFeatureBits()))
+        return false;
+
+      NeedsReg = true;
+      Ins = "gic\t";
+      Name = std::string(GIC->Name);
+    } else {
+      // GSB aliases
+      const AArch64GSB::GSB *GSB = AArch64GSB::lookupGSBByEncoding(Encoding);
+      if (!GSB || !GSB->haveFeatures(STI.getFeatureBits()))
+        return false;
+
+      NeedsReg = false;
+      Ins = "gsb\t";
+      Name = std::string(GSB->Name);
+    }
+  } else
+    return false;
+
+  StringRef Reg = getRegisterName(MI->getOperand(4).getReg());
+  bool NotXZR = Reg != "xzr";
+
+  // If a mandatory or optional register is not specified in the TableGen
+  // (i.e. no register operand should be present), and the register value
+  // is not xzr/x31, then disassemble to a SYS alias instead.
+  if (NotXZR && !NeedsReg && !OptionalReg)
     return false;
 
   std::string Str = Ins + Name;
   llvm::transform(Str, Str.begin(), ::tolower);
 
   O << '\t' << Str;
-  if (NeedsReg) {
-    O << ", ";
-    printRegName(O, MI->getOperand(4).getReg());
-  }
+
+  // For optional registers, don't print the value if it's xzr/x31
+  // since this defaults to xzr/x31 if register is not specified.
+  if (NeedsReg || (OptionalReg && NotXZR))
+    O << ", " << Reg;
+
+  return true;
+}
+
+bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+#ifndef NDEBUG
+  unsigned Opcode = MI->getOpcode();
+  assert(Opcode == AArch64::SYSLxt && "Invalid opcode for SYSL alias!");
+#endif
+
+  StringRef Reg = getRegisterName(MI->getOperand(0).getReg());
+  const MCOperand &Op1 = MI->getOperand(1);
+  const MCOperand &Cn = MI->getOperand(2);
+  const MCOperand &Cm = MI->getOperand(3);
+  const MCOperand &Op2 = MI->getOperand(4);
+
+  unsigned Op1Val = Op1.getImm();
+  unsigned CnVal = Cn.getImm();
+  unsigned CmVal = Cm.getImm();
+  unsigned Op2Val = Op2.getImm();
+
+  uint16_t Encoding = Op2Val;
+  Encoding |= CmVal << 3;
+  Encoding |= CnVal << 7;
+  Encoding |= Op1Val << 11;
+
+  std::string Ins;
+  std::string Name;
+
+  if (CnVal == 12) {
+    if (CmVal == 3) {
+      // GICR aliases
+      const AArch64GICR::GICR *GICR =
+          AArch64GICR::lookupGICRByEncoding(Encoding);
+      if (!GICR || !GICR->haveFeatures(STI.getFeatureBits()))
+        return false;
+
+      Ins = "gicr";
+      Name = std::string(GICR->Name);
+    } else
+      return false;
+  } else
+    return false;
+
+  llvm::transform(Name, Name.begin(), ::tolower);
+
+  O << '\t' << Ins << '\t' << Reg.str() << ", " << Name;
 
   return true;
 }
@@ -1065,12 +1157,13 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
       Encoding &= ~(1 << 7);
     }
 
-    const AArch64TLBI::TLBI *TLBI = AArch64TLBI::lookupTLBIByEncoding(Encoding);
-    if (!TLBI || !TLBI->haveFeatures(STI.getFeatureBits()))
+    const AArch64TLBIP::TLBIP *TLBIP =
+        AArch64TLBIP::lookupTLBIPByEncoding(Encoding);
+    if (!TLBIP || !TLBIP->haveFeatures(STI.getFeatureBits()))
       return false;
 
     Ins = "tlbip\t";
-    Name = std::string(TLBI->Name);
+    Name = std::string(TLBIP->Name);
     if (CnVal == 9)
       Name += "nXS";
   } else
@@ -1163,7 +1256,7 @@ void AArch64InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     printImm(MI, OpNo, STI, O);
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -1240,7 +1333,7 @@ void AArch64InstPrinter::printAddSubImm(const MCInst *MI, unsigned OpNum,
     }
   } else {
     assert(MO.isExpr() && "Unexpected operand type!");
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
     printShifter(MI, OpNum + 1, STI, O);
   }
 }
@@ -1431,7 +1524,7 @@ void AArch64InstPrinter::printUImm12Offset(const MCInst *MI, unsigned OpNum,
     markup(O, Markup::Immediate) << '#' << formatImm(MO.getImm() * Scale);
   } else {
     assert(MO.isExpr() && "Unexpected operand type!");
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
   }
 }
 
@@ -1446,7 +1539,7 @@ void AArch64InstPrinter::printAMIndexedWB(const MCInst *MI, unsigned OpNum,
   } else {
     assert(MO1.isExpr() && "Unexpected operand type!");
     O << ", ";
-    MO1.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO1.getExpr());
   }
   O << ']';
 }
@@ -1504,6 +1597,17 @@ void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
     O << BTI->Name;
   else
     markup(O, Markup::Immediate) << '#' << formatImm(btihintop);
+}
+
+void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
+                                                unsigned OpNum,
+                                                const MCSubtargetInfo &STI,
+                                                raw_ostream &O) {
+  unsigned priorityhint_op = MI->getOperand(OpNum).getImm();
+  auto PHint =
+      AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(priorityhint_op);
+  if (PHint)
+    O << PHint->Name;
 }
 
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
@@ -1784,6 +1888,10 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
                                            unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
   const MCOperand &Op = MI->getOperand(OpNum);
 
   // If the label has already been resolved to an immediate offset (say, when
@@ -1805,7 +1913,7 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
     markup(O, Markup::Target) << formatHex((uint64_t)TargetAddress);
   } else {
     // Otherwise, just print the expression.
-    MI->getOperand(OpNum).getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MI->getOperand(OpNum).getExpr());
   }
 }
 
@@ -1813,6 +1921,12 @@ void AArch64InstPrinter::printAdrAdrpLabel(const MCInst *MI, uint64_t Address,
                                            unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  // However, do print for ADRP, as this is typically used together with an ADD
+  // or an immediate-offset ldr/str and the label is likely at the wrong point.
+  if (SymbolizeOperands && MI->getOpcode() != AArch64::ADRP)
+    return;
+
   const MCOperand &Op = MI->getOperand(OpNum);
 
   // If the label has already been resolved to an immediate offset (say, when
@@ -1832,7 +1946,7 @@ void AArch64InstPrinter::printAdrAdrpLabel(const MCInst *MI, uint64_t Address,
   }
 
   // Otherwise, just print the expression.
-  MI->getOperand(OpNum).getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MI->getOperand(OpNum).getExpr());
 }
 
 void AArch64InstPrinter::printBarrierOption(const MCInst *MI, unsigned OpNo,

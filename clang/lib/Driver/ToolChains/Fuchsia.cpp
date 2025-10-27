@@ -91,7 +91,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--execute-only");
 
     std::string CPU = getCPUName(D, Args, Triple);
-    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+    if (Args.hasFlag(options::OPT_mfix_cortex_a53_843419,
+                     options::OPT_mno_fix_cortex_a53_843419, true) &&
+        (CPU.empty() || CPU == "generic" || CPU == "cortex-a53"))
       CmdArgs.push_back("--fix-cortex-a53-843419");
   }
 
@@ -479,9 +481,11 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::Leak;
-  Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Scudo;
   Res |= SanitizerKind::Thread;
+  if (getTriple().getArch() == llvm::Triple::x86_64) {
+    Res |= SanitizerKind::SafeStack;
+  }
   return Res;
 }
 

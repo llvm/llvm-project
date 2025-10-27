@@ -1,0 +1,4 @@
+## Test that readfile reports information appropriately when the file specified
+## does not exist.
+
+# RUN: echo %{readfile:/file/does/not/exist}

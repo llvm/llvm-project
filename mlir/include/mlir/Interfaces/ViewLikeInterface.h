@@ -109,8 +109,8 @@ public:
 
     // Create the new op in canonical form.
     auto newOp =
-        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
-                                mixedOffsets, mixedSizes, mixedStrides);
+        OpType::create(rewriter, op.getLoc(), resultType, op.getSource(),
+                       mixedOffsets, mixedSizes, mixedStrides);
     CastOpFunc()(rewriter, op, newOp);
 
     return success();
@@ -229,6 +229,22 @@ LogicalResult verifyListOfOperandsOrIntegers(Operation *op, StringRef name,
                                              unsigned expectedNumElements,
                                              ArrayRef<int64_t> attr,
                                              ValueRange values);
+
+namespace OpTrait {
+/// This trai indicates that pointer-like objects (such as memrefs) returned
+/// from this operation will never alias with each other. This provides a
+/// guarantee to optimization passes that accesses through different results
+/// of this operation can be safely reordered, as they will never reference
+/// overlapping memory locations.
+///
+/// Operations with this trait take multiple pointer-like operands
+/// and return the same operands with additional non-aliasing guarantees.
+/// If the access to the results of this operation aliases at runtime, the
+/// behavior of such access is undefined.
+template <typename ConcreteType>
+class DistinctObjectsTrait
+    : public TraitBase<ConcreteType, DistinctObjectsTrait> {};
+} // namespace OpTrait
 
 } // namespace mlir
 

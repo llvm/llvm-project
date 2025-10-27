@@ -5,9 +5,9 @@
 // -Werror.  This allows basic warnings not to interfere with producing
 // analyzer results.
 
-char* f(int *p) {
-  return p; // expected-warning{{incompatible pointer types}} \
-               werror-warning{{incompatible pointer types}}
+void f(int *p) {
+  int; // expected-warning{{declaration does not declare anything}} \
+          werror-warning{{declaration does not declare anything}}
 }
 
 void g(int *p) {

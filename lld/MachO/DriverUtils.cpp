@@ -45,7 +45,7 @@ using namespace lld::macho;
 static constexpr OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
                VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
+               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
@@ -59,7 +59,8 @@ static constexpr OptTable::Info optInfo[] = {
    OPT_##GROUP,                                                                \
    OPT_##ALIAS,                                                                \
    ALIASARGS,                                                                  \
-   VALUES},
+   VALUES,                                                                     \
+   SUBCOMMANDIDS_OFFSET},
 #include "Options.inc"
 #undef OPTION
 };
@@ -225,19 +226,42 @@ std::optional<StringRef> macho::resolveDylibPath(StringRef dylibPath) {
 // especially if it's a commonly re-exported core library.
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
+static StringRef realPathIfDifferent(StringRef path) {
+  SmallString<128> realPathBuf;
+  if (fs::real_path(path, realPathBuf))
+    return StringRef();
+
+  SmallString<128> absPathBuf = path;
+  if (!fs::make_absolute(absPathBuf) && realPathBuf == absPathBuf)
+    return StringRef();
+
+  return uniqueSaver().save(StringRef(realPathBuf));
+}
+
 DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
                             bool isBundleLoader, bool explicitlyLinked) {
-  // Frameworks can be found from different symlink paths, so resolve
-  // symlinks before looking up in the dylib cache.
-  SmallString<128> realPath;
-  std::error_code err = fs::real_path(mbref.getBufferIdentifier(), realPath);
-  CachedHashStringRef path(!err ? uniqueSaver().save(StringRef(realPath))
-                                : mbref.getBufferIdentifier());
+  CachedHashStringRef path(mbref.getBufferIdentifier());
   DylibFile *&file = loadedDylibs[path];
   if (file) {
     if (explicitlyLinked)
       file->setExplicitlyLinked();
     return file;
+  }
+
+  // Frameworks can be found from different symlink paths, so resolve
+  // symlinks and look up in the dylib cache.
+  CachedHashStringRef realPath(
+      realPathIfDifferent(mbref.getBufferIdentifier()));
+  if (!realPath.val().empty()) {
+    // Avoid map insertions here so that we do not invalidate the "file"
+    // reference.
+    auto it = loadedDylibs.find(realPath);
+    if (it != loadedDylibs.end()) {
+      DylibFile *realfile = it->second;
+      if (explicitlyLinked)
+        realfile->setExplicitlyLinked();
+      return realfile;
+    }
   }
 
   DylibFile *newFile;
@@ -292,6 +316,11 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
             sys::path::filename(newFile->installName) + "' because " +
             config->clientName + " is not an allowed client");
   }
+
+  // If the load path was a symlink, cache the real path too.
+  if (!realPath.val().empty())
+    loadedDylibs[realPath] = newFile;
+
   return newFile;
 }
 

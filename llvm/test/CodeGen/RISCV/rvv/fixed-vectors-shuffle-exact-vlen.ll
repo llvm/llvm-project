@@ -197,9 +197,9 @@ define void @shuffle1(ptr %explicit_0, ptr %explicit_1) vscale_range(2,2) {
 ; CHECK-NEXT:    ret
   %1 = getelementptr i32, ptr %explicit_0, i64 63
   %2 = load <3 x i32>, ptr %1, align 1
-  %3 = shufflevector <3 x i32> %2, <3 x i32> undef, <2 x i32> <i32 1, i32 2>
-  %4 = shufflevector <2 x i32> %3, <2 x i32> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %5 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 0, i32 undef, i32 0>, <8 x i32> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
+  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <2 x i32> <i32 1, i32 2>
+  %4 = shufflevector <2 x i32> %3, <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %5 = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 0, i32 poison, i32 0>, <8 x i32> %4, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 5, i32 9, i32 7>
   %6 = getelementptr inbounds <8 x i32>, ptr %explicit_1, i64 21
   store <8 x i32> %5, ptr %6, align 32
   ret void
@@ -218,7 +218,7 @@ define <16 x float> @shuffle2(<4 x float> %a) vscale_range(2,2) {
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v12, v0
 ; CHECK-NEXT:    ret
   %b = extractelement <4 x float> %a, i32 2
-  %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
+  %c = insertelement <16 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, float %b, i32 5
   %b1 = extractelement <4 x float> %a, i32 0
   %c1 = insertelement <16 x float> %c, float %b1, i32 6
   ret <16 x float>%c1
@@ -296,8 +296,8 @@ define <4 x double> @shuffles_add(<4 x double> %0, <4 x double> %1) vscale_range
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v10
 ; CHECK-NEXT:    ret
-  %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 2, i32 4, i32 6>
-  %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 undef, i32 3, i32 5, i32 7>
+  %3 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 poison, i32 2, i32 4, i32 6>
+  %4 = shufflevector <4 x double> %0, <4 x double> %1, <4 x i32> <i32 poison, i32 3, i32 5, i32 7>
   %5 = fadd <4 x double> %3, %4
   ret <4 x double> %5
 }

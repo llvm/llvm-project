@@ -18,6 +18,26 @@ def constructAndPrintInModule(f):
     return f
 
 
+# CHECK-LABEL: TEST: testSimpleForall
+# CHECK: scf.forall (%[[IV0:.*]], %[[IV1:.*]]) in (4, 8) shared_outs(%[[BOUND_ARG:.*]] = %{{.*}}) -> (tensor<4x8xf32>)
+# CHECK:   arith.addi %[[IV0]], %[[IV1]]
+# CHECK:   scf.forall.in_parallel
+@constructAndPrintInModule
+def testSimpleForall():
+    f32 = F32Type.get()
+    tensor_type = RankedTensorType.get([4, 8], f32)
+
+    @func.FuncOp.from_py_func(tensor_type)
+    def forall_loop(tensor):
+        loop = scf.ForallOp([0, 0], [4, 8], [1, 1], [tensor])
+        with InsertionPoint(loop.body):
+            i, j = loop.induction_variables
+            arith.addi(i, j)
+            loop.terminator()
+        # The verifier will check that the regions have been created properly.
+        assert loop.verify()
+
+
 # CHECK-LABEL: TEST: testSimpleLoop
 @constructAndPrintInModule
 def testSimpleLoop():

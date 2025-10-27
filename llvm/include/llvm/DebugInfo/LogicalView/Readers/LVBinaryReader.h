@@ -159,7 +159,8 @@ protected:
   LVAddress WasmCodeSectionOffset = 0;
 
   // Loads all info for the architecture of the provided object file.
-  Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures);
+  Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures,
+                              StringRef TheCPU);
 
   virtual void mapRangeAddress(const object::ObjectFile &Obj) {}
   virtual void mapRangeAddress(const object::ObjectFile &Obj,
@@ -191,7 +192,7 @@ public:
       : LVReader(Filename, FileFormatName, W, BinaryType) {}
   LVBinaryReader(const LVBinaryReader &) = delete;
   LVBinaryReader &operator=(const LVBinaryReader &) = delete;
-  virtual ~LVBinaryReader() = default;
+  ~LVBinaryReader() override = default;
 
   void addInlineeLines(LVScope *Scope, LVLines &Lines) {
     CUInlineeLines.emplace(Scope, std::make_unique<LVLines>(std::move(Lines)));

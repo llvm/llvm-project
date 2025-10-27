@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -Wpedantic -fsyntax-only %s -verify
+// RUN: %clang_cc1 -Wpedantic -fsyntax-only %s -verify -fexperimental-new-constant-interpreter
 
 void foo() __attribute__((diagnose_if(1, "", "error"))); // expected-warning{{'diagnose_if' is a clang extension}}
 void foo(int a) __attribute__((diagnose_if(a, "", "error"))); // expected-warning{{'diagnose_if' is a clang extension}}

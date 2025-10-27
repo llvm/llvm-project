@@ -508,7 +508,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
     // Don't change declarations such as
     // `foo(struct Foo const a);` -> `foo(struct Foo const a);`
-    if (!Previous || !Previous->isOneOf(tok::kw_struct, tok::kw_class)) {
+    if (!Previous || Previous->isNoneOf(tok::kw_struct, tok::kw_class)) {
       insertQualifierBefore(SourceMgr, Fixes, TypeToken, Qualifier);
       removeToken(SourceMgr, Fixes, Tok);
     }
@@ -571,7 +571,7 @@ void LeftRightQualifierAlignmentFixer::fixQualifierAlignment(
 
     for (const auto *Tok = First; Tok && Tok != Last && Tok->Next;
          Tok = Tok->Next) {
-      if (Tok->MustBreakBefore)
+      if (Tok->MustBreakBefore && Tok != First)
         break;
       if (Tok->is(tok::comment))
         continue;
@@ -635,15 +635,26 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
 // If a token is an identifier and it's upper case, it could
 // be a macro and hence we need to be able to ignore it.
 bool isPossibleMacro(const FormatToken *Tok) {
-  if (!Tok)
-    return false;
+  assert(Tok);
   if (Tok->isNot(tok::identifier))
     return false;
-  if (Tok->TokenText.upper() == Tok->TokenText.str()) {
-    // T,K,U,V likely could be template arguments
-    return Tok->TokenText.size() != 1;
-  }
-  return false;
+
+  const auto Text = Tok->TokenText;
+  assert(!Text.empty());
+
+  // T,K,U,V likely could be template arguments
+  if (Text.size() == 1)
+    return false;
+
+  // It's unlikely that qualified names are object-like macros.
+  const auto *Prev = Tok->getPreviousNonComment();
+  if (Prev && Prev->is(tok::coloncolon))
+    return false;
+  const auto *Next = Tok->getNextNonComment();
+  if (Next && Next->is(tok::coloncolon))
+    return false;
+
+  return Text == Text.upper();
 }
 
 } // namespace format

@@ -151,17 +151,17 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
 
-  MDNode *CFGProfile = nullptr;
+  MDNode *CGProfile = nullptr;
 
   for (const auto &MFE : ModuleFlags) {
     StringRef Key = MFE.Key->getString();
     if (Key == "CG Profile") {
-      CFGProfile = cast<MDNode>(MFE.Val);
+      CGProfile = cast<MDNode>(MFE.Val);
       break;
     }
   }
 
-  if (!CFGProfile)
+  if (!CGProfile)
     return;
 
   auto GetSym = [this](const MDOperand &MDO) -> MCSymbol * {
@@ -174,7 +174,7 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
     return TM->getSymbol(F);
   };
 
-  for (const auto &Edge : CFGProfile->operands()) {
+  for (const auto &Edge : CGProfile->operands()) {
     MDNode *E = cast<MDNode>(Edge);
     const MCSymbol *From = GetSym(E->getOperand(0));
     const MCSymbol *To = GetSym(E->getOperand(1));
@@ -188,6 +188,41 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
                          .getZExtValue();
     Streamer.emitCGProfileEntry(MCSymbolRefExpr::create(From, C),
                                 MCSymbolRefExpr::create(To, C), Count);
+  }
+}
+
+void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
+    MCStreamer &Streamer, Module &M,
+    std::function<void(MCStreamer &Streamer)> COMDATSymEmitter) const {
+  NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName);
+  if (!FuncInfo)
+    return;
+
+  // Emit a descriptor for every function including functions that have an
+  // available external linkage. We may not want this for imported functions
+  // that has code in another thinLTO module but we don't have a good way to
+  // tell them apart from inline functions defined in header files. Therefore
+  // we put each descriptor in a separate comdat section and rely on the
+  // linker to deduplicate.
+  auto &C = getContext();
+  for (const auto *Operand : FuncInfo->operands()) {
+    const auto *MD = cast<MDNode>(Operand);
+    auto *GUID = mdconst::extract<ConstantInt>(MD->getOperand(0));
+    auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
+    auto *Name = cast<MDString>(MD->getOperand(2));
+    auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
+        TM->getFunctionSections() ? Name->getString() : StringRef());
+
+    Streamer.switchSection(S);
+
+    // emit COFF COMDAT symbol.
+    if (COMDATSymEmitter)
+      COMDATSymEmitter(Streamer);
+
+    Streamer.emitInt64(GUID->getZExtValue());
+    Streamer.emitInt64(Hash->getZExtValue());
+    Streamer.emitULEB128IntValue(Name->getString().size());
+    Streamer.emitBytes(Name->getString());
   }
 }
 

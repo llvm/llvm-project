@@ -55,7 +55,7 @@ public:
     Plugins = Layer.Plugins;
   }
 
-  ~JITLinkCtx() {
+  ~JITLinkCtx() override {
     // If there is an object buffer return function then use it to
     // return ownership of the buffer.
     if (Layer.ReturnObjectBuffer && ObjBuffer)
@@ -207,7 +207,6 @@ public:
     if (auto Err = MR->notifyResolved(InternedResult))
       return Err;
 
-    notifyLoaded();
     return Error::success();
   }
 
@@ -242,11 +241,6 @@ public:
         [this](LinkGraph &G) { return registerDependencies(G); });
 
     return Error::success();
-  }
-
-  void notifyLoaded() {
-    for (auto &P : Plugins)
-      P->notifyLoaded(*MR);
   }
 
   Error notifyEmitted(jitlink::JITLinkMemoryManager::FinalizedAlloc FA) {

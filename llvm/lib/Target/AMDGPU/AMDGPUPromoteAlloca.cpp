@@ -70,7 +70,7 @@ static cl::opt<unsigned> PromoteAllocaToVectorMaxRegs(
     "amdgpu-promote-alloca-to-vector-max-regs",
     cl::desc(
         "Maximum vector size (in 32b registers) to use when promoting alloca"),
-    cl::init(16));
+    cl::init(32));
 
 // Use up to 1/4 of available register budget for vectorization.
 // FIXME: Increase the limit for whole function budgets? Perhaps x2?
@@ -167,42 +167,22 @@ public:
   }
 };
 
-class AMDGPUPromoteAllocaToVector : public FunctionPass {
-public:
-  static char ID;
-
-  AMDGPUPromoteAllocaToVector() : FunctionPass(ID) {}
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>())
-      return AMDGPUPromoteAllocaImpl(
-                 TPC->getTM<TargetMachine>(),
-                 getAnalysis<LoopInfoWrapperPass>().getLoopInfo())
-          .run(F, /*PromoteToLDS*/ false);
-    return false;
-  }
-
-  StringRef getPassName() const override {
-    return "AMDGPU Promote Alloca to vector";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<LoopInfoWrapperPass>();
-    FunctionPass::getAnalysisUsage(AU);
-  }
-};
-
 static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
                             const Function &F) {
   if (!TM.getTargetTriple().isAMDGCN())
     return 128;
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+
+  unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is removed.
+  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
+
   unsigned MaxVGPRs = ST.getMaxNumVGPRs(
-      ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first);
+      ST.getWavesPerEU(ST.getFlatWorkGroupSizes(F), LDSBytes, F).first,
+      DynamicVGPRBlockSize);
 
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
@@ -216,7 +196,6 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
 } // end anonymous namespace
 
 char AMDGPUPromoteAlloca::ID = 0;
-char AMDGPUPromoteAllocaToVector::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AMDGPUPromoteAlloca, DEBUG_TYPE,
                       "AMDGPU promote alloca to vector or LDS", false, false)
@@ -227,14 +206,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPromoteAlloca, DEBUG_TYPE,
                     "AMDGPU promote alloca to vector or LDS", false, false)
 
-INITIALIZE_PASS_BEGIN(AMDGPUPromoteAllocaToVector, DEBUG_TYPE "-to-vector",
-                      "AMDGPU promote alloca to vector", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(AMDGPUPromoteAllocaToVector, DEBUG_TYPE "-to-vector",
-                    "AMDGPU promote alloca to vector", false, false)
-
 char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
-char &llvm::AMDGPUPromoteAllocaToVectorID = AMDGPUPromoteAllocaToVector::ID;
 
 PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
@@ -262,10 +234,6 @@ AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 FunctionPass *llvm::createAMDGPUPromoteAlloca() {
   return new AMDGPUPromoteAlloca();
-}
-
-FunctionPass *llvm::createAMDGPUPromoteAllocaToVector() {
-  return new AMDGPUPromoteAllocaToVector();
 }
 
 static void collectAllocaUses(AllocaInst &Alloca,
@@ -319,8 +287,12 @@ void AMDGPUPromoteAllocaImpl::sortAllocasToPromote(
 
 void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
   // Load per function limits, overriding with global options where appropriate.
+  // R600 register tuples/aliasing are fragile with large vector promotions so
+  // apply architecture specific limit here.
+  const int R600MaxVectorRegs = 16;
   MaxVectorRegs = F.getFnAttributeAsParsedInteger(
-      "amdgpu-promote-alloca-to-vector-max-regs", PromoteAllocaToVectorMaxRegs);
+      "amdgpu-promote-alloca-to-vector-max-regs",
+      IsAMDGCN ? PromoteAllocaToVectorMaxRegs : R600MaxVectorRegs);
   if (PromoteAllocaToVectorMaxRegs.getNumOccurrences())
     MaxVectorRegs = PromoteAllocaToVectorMaxRegs;
   VGPRBudgetRatio = F.getFnAttributeAsParsedInteger(
@@ -434,6 +406,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
                                SmallVector<Instruction *> &NewInsts) {
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
+  LLVMContext &Ctx = GEP->getContext();
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
   SmallMapVector<Value *, APInt, 4> VarOffsets;
   APInt ConstOffset(BW, 0);
@@ -466,23 +439,23 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   assert(CurPtr == Alloca && "GEP not based on alloca");
 
-  unsigned VecElemSize = DL.getTypeAllocSize(VecElemTy);
+  int64_t VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)
     return nullptr;
 
   APInt IndexQuot;
-  uint64_t Rem;
-  APInt::udivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
+  int64_t Rem;
+  APInt::sdivrem(ConstOffset, VecElemSize, IndexQuot, Rem);
   if (Rem != 0)
     return nullptr;
   if (VarOffsets.size() == 0)
-    return ConstantInt::get(GEP->getContext(), IndexQuot);
+    return ConstantInt::get(Ctx, IndexQuot);
 
   IRBuilder<> Builder(GEP);
 
   const auto &VarOffset = VarOffsets.front();
   APInt OffsetQuot;
-  APInt::udivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
+  APInt::sdivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
   if (Rem != 0 || OffsetQuot.isZero())
     return nullptr;
 
@@ -493,7 +466,7 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   if (!OffsetQuot.isOne()) {
     ConstantInt *ConstMul =
-        ConstantInt::get(OffsetType, OffsetQuot.getZExtValue());
+        ConstantInt::get(Ctx, OffsetQuot.sext(OffsetType->getBitWidth()));
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
@@ -502,8 +475,8 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     return Offset;
 
   ConstantInt *ConstIndex =
-      ConstantInt::get(OffsetType, IndexQuot.getZExtValue());
-  Value *IndexAdd = Builder.CreateAdd(ConstIndex, Offset);
+      ConstantInt::get(Ctx, IndexQuot.sext(OffsetType->getBitWidth()));
+  Value *IndexAdd = Builder.CreateAdd(Offset, ConstIndex);
   if (Instruction *NewInst = dyn_cast<Instruction>(IndexAdd))
     NewInsts.push_back(NewInst);
   return IndexAdd;
@@ -818,39 +791,6 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
-/// Get the underlying type of a homogeneous aggregate type, or nullptr if the
-/// type is non-homogeneous.
-static Type *getHomogeneousType(Type *Ty) {
-  Type *ElemTy = nullptr;
-  SmallVector<Type *> WorkList;
-  WorkList.push_back(Ty);
-  while (!WorkList.empty()) {
-    Type *CurTy = WorkList.pop_back_val();
-
-    // Check if the current type is an aggregate type.
-    if (auto *VectorTy = dyn_cast<FixedVectorType>(CurTy)) {
-      WorkList.push_back(VectorTy->getElementType());
-      continue;
-    }
-    if (auto *ArrayTy = dyn_cast<ArrayType>(CurTy)) {
-      WorkList.push_back(ArrayTy->getElementType());
-      continue;
-    }
-    if (auto *StructTy = dyn_cast<StructType>(CurTy)) {
-      WorkList.append(StructTy->element_begin(), StructTy->element_end());
-      continue;
-    }
-
-    // If not, it must be the same as all other non-aggregate types.
-    if (!ElemTy)
-      ElemTy = CurTy;
-    else if (ElemTy != CurTy)
-      return nullptr;
-  }
-
-  return ElemTy;
-}
-
 // FIXME: Should try to pick the most likely to be profitable allocas first.
 bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "Trying to promote to vector: " << Alloca << '\n');
@@ -861,42 +801,42 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   }
 
   Type *AllocaTy = Alloca.getAllocatedType();
-  Type *ElemTy = getHomogeneousType(AllocaTy);
+  auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
+  if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
+    uint64_t NumElems = 1;
+    Type *ElemTy;
+    do {
+      NumElems *= ArrayTy->getNumElements();
+      ElemTy = ArrayTy->getElementType();
+    } while ((ArrayTy = dyn_cast<ArrayType>(ElemTy)));
 
-  if (!ElemTy || !VectorType::isValidElementType(ElemTy)) {
+    // Check for array of vectors
+    auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
+    if (InnerVectorTy) {
+      NumElems *= InnerVectorTy->getNumElements();
+      ElemTy = InnerVectorTy->getElementType();
+    }
+
+    if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
+      unsigned ElementSize = DL->getTypeSizeInBits(ElemTy) / 8;
+      if (ElementSize > 0) {
+        unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
+        // Expand vector if required to match padding of inner type,
+        // i.e. odd size subvectors.
+        // Storage size of new vector must match that of alloca for correct
+        // behaviour of byte offsets and GEP computation.
+        if (NumElems * ElementSize != AllocaSize)
+          NumElems = AllocaSize / ElementSize;
+        if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
+          VectorTy = FixedVectorType::get(ElemTy, NumElems);
+      }
+    }
+  }
+
+  if (!VectorTy) {
     LLVM_DEBUG(dbgs() << "  Cannot convert type to vector\n");
     return false;
   }
-
-  unsigned ElementSizeInBits = DL->getTypeSizeInBits(ElemTy);
-  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(ElemTy)) {
-    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
-                         "does not match the type's size\n");
-    return false;
-  }
-  unsigned ElementSize = ElementSizeInBits / 8;
-  if (ElementSize == 0) {
-    LLVM_DEBUG(dbgs() << "  Cannot create vector of zero-sized elements\n");
-    return false;
-  }
-
-  // Calculate the size of the corresponding vector, accounting for padding of
-  // inner types, e.g., odd-sized subvectors. Storage size of new vector must
-  // match that of alloca for correct behaviour of byte offsets and GEP
-  // computation.
-  unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
-  unsigned NumElems = AllocaSize / ElementSize;
-  if (NumElems == 0) {
-    LLVM_DEBUG(dbgs() << "  Cannot vectorize an empty aggregate type\n");
-    return false;
-  }
-  if (NumElems * ElementSize != AllocaSize) {
-    LLVM_DEBUG(
-        dbgs() << "  Cannot convert type into vector of the same size\n");
-    return false;
-  }
-  auto *VectorTy = FixedVectorType::get(ElemTy, NumElems);
-  assert(VectorTy && "Failed to create vector type.");
 
   const unsigned MaxElements =
       (MaxVectorRegs * 32) / DL->getTypeSizeInBits(VectorTy->getElementType());
@@ -928,6 +868,15 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
+  Type *VecEltTy = VectorTy->getElementType();
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
+  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
+                         "does not match the type's size\n");
+    return false;
+  }
+  unsigned ElementSize = ElementSizeInBits / 8;
+  assert(ElementSize > 0);
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
@@ -967,7 +916,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
-      Value *Index = GEPToVectorIndex(GEP, &Alloca, ElemTy, *DL, NewGEPInsts);
+      Value *Index = GEPToVectorIndex(GEP, &Alloca, VecEltTy, *DL, NewGEPInsts);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 

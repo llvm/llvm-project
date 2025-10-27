@@ -74,7 +74,7 @@ public:
   }
   LVSymbol(const LVSymbol &) = delete;
   LVSymbol &operator=(const LVSymbol &) = delete;
-  ~LVSymbol() = default;
+  ~LVSymbol() override = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_SYMBOL;
@@ -183,10 +183,6 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 } // end namespace logicalview

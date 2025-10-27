@@ -218,4 +218,42 @@ void regression() {
 
 }
 
+namespace GH146063 {
+template <typename>
+struct A {
+  static_assert([]() constexpr { return true; }());
+};
+
+void f1() {
+  if constexpr (false) {
+    A<int> a;
+  }
+}
+
+void f2() {
+  if constexpr (false) {
+    static_assert([]{});
+    // expected-warning@-1 {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  }
+}
+
+}
+
+namespace GH153884 {
+  bool f1() {
+    auto f = [](auto) { return true; };
+    if constexpr (0)
+      return f(1);
+    return false;
+  }
+  bool f2() {
+    auto f = [](auto x) { if (x) return 1.5; else return "wat"; };
+    // expected-error@-1 {{'auto' in return type deduced as 'const char *' here but deduced as 'double' in earlier return statement}}
+    if constexpr (0)
+      return f(1);
+    // expected-note@-1 {{in instantiation of function template specialization 'GH153884::f2()}}
+    return false;
+  }
+}
+
 #endif

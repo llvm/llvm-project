@@ -27,10 +27,23 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
+}
+
+def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
+  let summary = "Propagate and assign XeGPU layout information";
+  let description = [{
+    This pass propagates the XeGPU layout information accross ops. Starting
+    from a set of anchor operations (e.g. `dpas`, `store_nd`), this will
+    propagate the layouts required for their operands to the producers. With
+    this propagated layout information, pass will then update op result type
+    with the layout information.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect"];
   let options = [Option<
-      "printOnly", "print-analysis-only", "bool",
-      /*default=*/"false",
-      "Print the result of the subgroup map propagation analysis and exit.">];
+    "printOnly", "print-analysis-only", "bool",
+    /*default=*/"false",
+    "Print the result of layout propagation analysis and exit.">];
 }
 
 def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
@@ -54,8 +67,17 @@ def XeGPUBlocking: Pass<"xegpu-blocking"> {
     to a hardware instruction.
   }];
   let dependentDialects = [
-      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
-  ];
+      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect",
+      "index::IndexDialect"];
+}
+
+def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
+  let summary = "Linearize n-D vectors to 1-D vectors";
+  let description = [{
+    This pass linearizes n-D vectors to 1-D vectors for lowering to XeVM.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
+                           "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD

@@ -42,6 +42,7 @@
 // CHECK:           %[[VAL_10:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_13:.*]] = fir.load %{{.*}} {tbaa = [#[[$ATTR_14]]]} : !fir.ref<f32>
 // CHECK:           fir.store %{{.*}} {tbaa = [#[[$ATTR_15]]]} : !fir.ref<f32>
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @test1(%arg0: !fir.ref<f32> {fir.bindc_name = "x", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "y", fir.target}) {
   %scope_out = fir.dummy_scope : !fir.dscope
   %0 = fir.declare %arg0 dummy_scope %scope_out {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
@@ -59,6 +60,7 @@ func.func @test1(%arg0: !fir.ref<f32> {fir.bindc_name = "x", fir.target}, %arg1:
   %8 = fir.load %7 : !fir.ref<f32>
   fir.store %8 to %6 : !fir.ref<f32>
   return
+}
 }
 
 // -----
@@ -118,6 +120,7 @@ func.func @test1(%arg0: !fir.ref<f32> {fir.bindc_name = "x", fir.target}, %arg1:
 // CHECK:           fir.store %[[VAL_14]] to %[[VAL_10]] {tbaa = [#[[$ATTR_49]]]} : !fir.ref<f32>
 // CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_13]] {tbaa = [#[[$ATTR_50]]]} : !fir.ref<f32>
 // CHECK:           fir.store %[[VAL_15]] to %[[VAL_12]] {tbaa = [#[[$ATTR_48]]]} : !fir.ref<f32>
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @_QMtestPcaller(%arg0: !fir.ref<f32> {fir.bindc_name = "z"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.address_of(@_QMtestEx) : !fir.ref<f32>
@@ -146,4 +149,5 @@ fir.global @_QMtestEx : f32 {
 fir.global @_QMtestEy : f32 {
   %0 = fir.zero_bits f32
   fir.has_value %0 : f32
+}
 }

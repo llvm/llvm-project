@@ -277,24 +277,14 @@ protected:
     SourceLocation GotoLoc;
   };
 
-  class ContinueStmtBitfields {
-    friend class ContinueStmt;
+  class LoopControlStmtBitfields {
+    friend class LoopControlStmt;
 
     LLVM_PREFERRED_TYPE(StmtBitfields)
     unsigned : NumStmtBits;
 
-    /// The location of the "continue".
-    SourceLocation ContinueLoc;
-  };
-
-  class BreakStmtBitfields {
-    friend class BreakStmt;
-
-    LLVM_PREFERRED_TYPE(StmtBitfields)
-    unsigned : NumStmtBits;
-
-    /// The location of the "break".
-    SourceLocation BreakLoc;
+    /// The location of the "continue"/"break".
+    SourceLocation KwLoc;
   };
 
   class ReturnStmtBitfields {
@@ -1325,8 +1315,7 @@ protected:
     DoStmtBitfields DoStmtBits;
     ForStmtBitfields ForStmtBits;
     GotoStmtBitfields GotoStmtBits;
-    ContinueStmtBitfields ContinueStmtBits;
-    BreakStmtBitfields BreakStmtBits;
+    LoopControlStmtBitfields LoopControlStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
 
@@ -2184,6 +2173,14 @@ public:
   SourceLocation getBeginLoc() const { return getIdentLoc(); }
   SourceLocation getEndLoc() const LLVM_READONLY { return SubStmt->getEndLoc();}
 
+  /// Look through nested labels and return the first non-label statement; e.g.
+  /// if this is 'a:' in 'a: b: c: for(;;)', this returns the for loop.
+  const Stmt *getInnermostLabeledStmt() const;
+  Stmt *getInnermostLabeledStmt() {
+    return const_cast<Stmt *>(
+        const_cast<const LabelStmt *>(this)->getInnermostLabeledStmt());
+  }
+
   child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 
   const_child_range children() const {
@@ -2214,7 +2211,7 @@ class AttributedStmt final
       : ValueStmt(AttributedStmtClass), SubStmt(SubStmt) {
     AttributedStmtBits.NumAttrs = Attrs.size();
     AttributedStmtBits.AttrLoc = Loc;
-    std::copy(Attrs.begin(), Attrs.end(), getAttrArrayPtr());
+    llvm::copy(Attrs, getAttrArrayPtr());
   }
 
   explicit AttributedStmt(EmptyShell Empty, unsigned NumAttrs)
@@ -2236,7 +2233,7 @@ public:
 
   SourceLocation getAttrLoc() const { return AttributedStmtBits.AttrLoc; }
   ArrayRef<const Attr *> getAttrs() const {
-    return llvm::ArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
+    return {getAttrArrayPtr(), AttributedStmtBits.NumAttrs};
   }
 
   Stmt *getSubStmt() { return SubStmt; }
@@ -3056,63 +3053,97 @@ public:
   }
 };
 
-/// ContinueStmt - This represents a continue.
-class ContinueStmt : public Stmt {
-public:
-  ContinueStmt(SourceLocation CL) : Stmt(ContinueStmtClass) {
-    setContinueLoc(CL);
+/// Base class for BreakStmt and ContinueStmt.
+class LoopControlStmt : public Stmt {
+  /// If this is a named break/continue, the label whose statement we're
+  /// targeting, as well as the source location of the label after the
+  /// keyword; for example:
+  ///
+  ///   a: // <-- TargetLabel
+  ///   for (;;)
+  ///     break a; // <-- LabelLoc
+  ///
+  LabelDecl *TargetLabel = nullptr;
+  SourceLocation LabelLoc;
+
+protected:
+  LoopControlStmt(StmtClass Class, SourceLocation Loc, SourceLocation LabelLoc,
+                  LabelDecl *Target)
+      : Stmt(Class), TargetLabel(Target), LabelLoc(LabelLoc) {
+    setKwLoc(Loc);
   }
 
+  LoopControlStmt(StmtClass Class, SourceLocation Loc)
+      : LoopControlStmt(Class, Loc, SourceLocation(), nullptr) {}
+
+  LoopControlStmt(StmtClass Class, EmptyShell ES) : Stmt(Class, ES) {}
+
+public:
+  SourceLocation getKwLoc() const { return LoopControlStmtBits.KwLoc; }
+  void setKwLoc(SourceLocation L) { LoopControlStmtBits.KwLoc = L; }
+
+  SourceLocation getBeginLoc() const { return getKwLoc(); }
+  SourceLocation getEndLoc() const {
+    return hasLabelTarget() ? getLabelLoc() : getKwLoc();
+  }
+
+  bool hasLabelTarget() const { return TargetLabel != nullptr; }
+
+  SourceLocation getLabelLoc() const { return LabelLoc; }
+  void setLabelLoc(SourceLocation L) { LabelLoc = L; }
+
+  LabelDecl *getLabelDecl() { return TargetLabel; }
+  const LabelDecl *getLabelDecl() const { return TargetLabel; }
+  void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
+
+  /// If this is a named break/continue, get the loop or switch statement
+  /// that this targets.
+  const Stmt *getNamedLoopOrSwitch() const;
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    StmtClass Class = T->getStmtClass();
+    return Class == ContinueStmtClass || Class == BreakStmtClass;
+  }
+};
+
+/// ContinueStmt - This represents a continue.
+class ContinueStmt : public LoopControlStmt {
+public:
+  ContinueStmt(SourceLocation CL) : LoopControlStmt(ContinueStmtClass, CL) {}
+  ContinueStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
+      : LoopControlStmt(ContinueStmtClass, CL, LabelLoc, Target) {}
+
   /// Build an empty continue statement.
-  explicit ContinueStmt(EmptyShell Empty) : Stmt(ContinueStmtClass, Empty) {}
-
-  SourceLocation getContinueLoc() const { return ContinueStmtBits.ContinueLoc; }
-  void setContinueLoc(SourceLocation L) { ContinueStmtBits.ContinueLoc = L; }
-
-  SourceLocation getBeginLoc() const { return getContinueLoc(); }
-  SourceLocation getEndLoc() const { return getContinueLoc(); }
+  explicit ContinueStmt(EmptyShell Empty)
+      : LoopControlStmt(ContinueStmtClass, Empty) {}
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ContinueStmtClass;
   }
-
-  // Iterators
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
-  }
 };
 
 /// BreakStmt - This represents a break.
-class BreakStmt : public Stmt {
+class BreakStmt : public LoopControlStmt {
 public:
-  BreakStmt(SourceLocation BL) : Stmt(BreakStmtClass) {
-    setBreakLoc(BL);
-  }
+  BreakStmt(SourceLocation BL) : LoopControlStmt(BreakStmtClass, BL) {}
+  BreakStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
+      : LoopControlStmt(BreakStmtClass, CL, LabelLoc, Target) {}
 
   /// Build an empty break statement.
-  explicit BreakStmt(EmptyShell Empty) : Stmt(BreakStmtClass, Empty) {}
-
-  SourceLocation getBreakLoc() const { return BreakStmtBits.BreakLoc; }
-  void setBreakLoc(SourceLocation L) { BreakStmtBits.BreakLoc = L; }
-
-  SourceLocation getBeginLoc() const { return getBreakLoc(); }
-  SourceLocation getEndLoc() const { return getBreakLoc(); }
+  explicit BreakStmt(EmptyShell Empty)
+      : LoopControlStmt(BreakStmtClass, Empty) {}
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == BreakStmtClass;
-  }
-
-  // Iterators
-  child_range children() {
-    return child_range(child_iterator(), child_iterator());
-  }
-
-  const_child_range children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
   }
 };
 
@@ -3649,16 +3680,13 @@ public:
   //===--- Other ---===//
 
   ArrayRef<StringRef> getAllConstraints() const {
-    return llvm::ArrayRef(Constraints, NumInputs + NumOutputs);
+    return {Constraints, NumInputs + NumOutputs};
   }
 
-  ArrayRef<StringRef> getClobbers() const {
-    return llvm::ArrayRef(Clobbers, NumClobbers);
-  }
+  ArrayRef<StringRef> getClobbers() const { return {Clobbers, NumClobbers}; }
 
   ArrayRef<Expr*> getAllExprs() const {
-    return llvm::ArrayRef(reinterpret_cast<Expr **>(Exprs),
-                          NumInputs + NumOutputs);
+    return {reinterpret_cast<Expr **>(Exprs), NumInputs + NumOutputs};
   }
 
   StringRef getClobber(unsigned i) const { return getClobbers()[i]; }

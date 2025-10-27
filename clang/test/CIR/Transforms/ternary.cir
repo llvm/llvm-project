@@ -22,7 +22,7 @@ module {
     cir.return %6 : !s32i
   }
 
-// CHECK: cir.func @foo(%arg0: !s32i) -> !s32i {
+// CHECK: cir.func{{.*}} @foo(%arg0: !s32i) -> !s32i {
 // CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
 // CHECK:   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
@@ -53,7 +53,7 @@ module {
     cir.return
   }
 
-// CHECK: cir.func @foo2(%arg0: !cir.bool) {
+// CHECK: cir.func{{.*}} @foo2(%arg0: !cir.bool) {
 // CHECK:   cir.brcond %arg0 ^bb1, ^bb2
 // CHECK: ^bb1:  // pred: ^bb0
 // CHECK:   cir.br ^bb3

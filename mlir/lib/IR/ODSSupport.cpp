@@ -49,6 +49,40 @@ Attribute mlir::convertToAttribute(MLIRContext *ctx, int32_t storage) {
 }
 
 LogicalResult
+mlir::convertFromAttribute(int8_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getSExtValue();
+  return success();
+}
+
+Attribute mlir::convertToAttribute(MLIRContext *ctx, int8_t storage) {
+  /// Convert the provided int8_t to an IntegerAttr attribute.
+  return IntegerAttr::get(IntegerType::get(ctx, 8), storage);
+}
+
+LogicalResult
+mlir::convertFromAttribute(uint8_t &storage, Attribute attr,
+                           function_ref<InFlightDiagnostic()> emitError) {
+  auto valueAttr = dyn_cast<IntegerAttr>(attr);
+  if (!valueAttr) {
+    emitError() << "expected IntegerAttr for key `value`";
+    return failure();
+  }
+  storage = valueAttr.getValue().getZExtValue();
+  return success();
+}
+
+Attribute mlir::convertToAttribute(MLIRContext *ctx, uint8_t storage) {
+  /// Convert the provided uint8_t to an IntegerAttr attribute.
+  return IntegerAttr::get(IntegerType::get(ctx, 8), storage);
+}
+
+LogicalResult
 mlir::convertFromAttribute(std::string &storage, Attribute attr,
                            function_ref<InFlightDiagnostic()> emitError) {
   auto valueAttr = dyn_cast<StringAttr>(attr);
@@ -78,7 +112,7 @@ Attribute mlir::convertToAttribute(MLIRContext *ctx, bool storage) {
 }
 
 template <typename DenseArrayTy, typename T>
-LogicalResult
+static LogicalResult
 convertDenseArrayFromAttr(MutableArrayRef<T> storage, Attribute attr,
                           function_ref<InFlightDiagnostic()> emitError,
                           StringRef denseArrayTyStr) {
@@ -109,7 +143,7 @@ mlir::convertFromAttribute(MutableArrayRef<int32_t> storage, Attribute attr,
 }
 
 template <typename DenseArrayTy, typename T>
-LogicalResult
+static LogicalResult
 convertDenseArrayFromAttr(SmallVectorImpl<T> &storage, Attribute attr,
                           function_ref<InFlightDiagnostic()> emitError,
                           StringRef denseArrayTyStr) {
@@ -138,4 +172,9 @@ mlir::convertFromAttribute(SmallVectorImpl<int32_t> &storage, Attribute attr,
 Attribute mlir::convertToAttribute(MLIRContext *ctx,
                                    ArrayRef<int64_t> storage) {
   return DenseI64ArrayAttr::get(ctx, storage);
+}
+
+Attribute mlir::convertToAttribute(MLIRContext *ctx,
+                                   ArrayRef<int32_t> storage) {
+  return DenseI32ArrayAttr::get(ctx, storage);
 }

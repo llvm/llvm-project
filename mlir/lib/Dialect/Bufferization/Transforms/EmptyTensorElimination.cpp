@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace bufferization {
@@ -169,8 +168,8 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
             cast<ShapedType>(v.getType()).getElementType())
           continue;
         rewriter.setInsertionPointAfterValue(replacement);
-        replacement = rewriter.create<tensor::CastOp>(v.getLoc(), v.getType(),
-                                                      replacement);
+        replacement = tensor::CastOp::create(rewriter, v.getLoc(), v.getType(),
+                                             replacement);
       }
       // Replace the specific use of the tensor::EmptyOp.
       rewriter.modifyOpInPlace(user, [&]() {

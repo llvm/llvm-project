@@ -233,7 +233,7 @@ man_pages = [
     (
         "index",
         "flang",
-        "Flang Documentation (In Progress)",
+        "flang - the Flang Fortran compiler",
         ["Flang Contributors"],
         1,
     )

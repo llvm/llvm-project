@@ -21,7 +21,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -98,6 +97,12 @@ static cl::opt<MatrixLayoutTy> MatrixLayout(
 static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
                                             cl::init(false));
 
+static cl::opt<unsigned> SplitMatmulRemainderOverThreshold(
+    "matrix-split-matmul-remainder-over-threshold", cl::Hidden,
+    cl::desc("Illegal remainder vectors over this size in bits should be split "
+             "in the inner loop of matmul"),
+    cl::init(0));
+
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
 static DISubprogram *getSubprogram(DIScope *Scope) {
@@ -116,17 +121,15 @@ static bool isSplat(Value *V) {
 
 /// Match any mul operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyMul(const LTy &L, const RTy &R) {
+static auto m_AnyMul(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Mul(L, R), m_FMul(L, R));
 }
 
 /// Match any add operation (fp or integer).
 template <typename LTy, typename RTy>
-auto m_AnyAdd(const LTy &L, const RTy &R) {
+static auto m_AnyAdd(const LTy &L, const RTy &R) {
   return m_CombineOr(m_Add(L, R), m_FAdd(L, R));
 }
-
-namespace {
 
 // Given an element pointer \p BasePtr to the start of a (sub) matrix, compute
 // the start address of vector \p VecIdx with type (\p EltType x \p NumElements)
@@ -168,9 +171,9 @@ namespace {
 //         v_2_0 |v_2_1 |v_2_2 |v_2_3
 //         v_3_0 {v_3_1 {v_3_2  v_3_3
 //
-Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
-                         unsigned NumElements, Type *EltType,
-                         IRBuilder<> &Builder) {
+static Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
+                                unsigned NumElements, Type *EltType,
+                                IRBuilder<> &Builder) {
 
   assert((!isa<ConstantInt>(Stride) ||
           cast<ConstantInt>(Stride)->getZExtValue() >= NumElements) &&
@@ -263,6 +266,7 @@ static bool isUniformShape(Value *V) {
     case llvm::Instruction::FPExt:
       return true;
     case llvm::Instruction::AddrSpaceCast:
+    case CastInst::PtrToAddr:
     case CastInst::PtrToInt:
     case CastInst::IntToPtr:
       return false;
@@ -288,6 +292,7 @@ static bool isUniformShape(Value *V) {
     }
 
   switch (I->getOpcode()) {
+  case Instruction::PHI:
   case Instruction::FNeg:
     return true;
   default:
@@ -337,6 +342,8 @@ computeShapeInfoForInst(Instruction *I,
   return std::nullopt;
 }
 
+namespace {
+
 /// LowerMatrixIntrinsics contains the methods used to lower matrix intrinsics.
 ///
 /// Currently, the lowering for each matrix intrinsic is done as follows:
@@ -370,7 +377,8 @@ class LowerMatrixIntrinsics {
   LoopInfo *LI = nullptr;
   OptimizationRemarkEmitter *ORE = nullptr;
 
-  /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
+  /// Contains estimates of the number of operations (loads, stores, compute)
+  /// required to lower a matrix operation.
   struct OpInfoTy {
     /// Number of stores emitted to generate this matrix.
     unsigned NumStores = 0;
@@ -1136,7 +1144,30 @@ public:
 
     Changed |= !FusedInsts.empty();
 
-    // Fourth, lower remaining instructions with shape information.
+    // Fourth, pre-process all the PHINode's. The incoming values will be
+    // assigned later in VisitPHI.
+    for (Instruction *Inst : MatrixInsts) {
+      if (FusedInsts.count(Inst))
+        continue;
+
+      auto *PHI = dyn_cast<PHINode>(Inst);
+      if (!PHI)
+        continue;
+
+      const ShapeInfo &SI = ShapeMap.at(Inst);
+      auto *EltTy = cast<FixedVectorType>(PHI->getType())->getElementType();
+      MatrixTy PhiM(SI.NumRows, SI.NumColumns, EltTy);
+
+      IRBuilder<> Builder(Inst);
+      for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI)
+        PhiM.setVector(VI, Builder.CreatePHI(PhiM.getVectorTy(),
+                                             PHI->getNumIncomingValues(),
+                                             PHI->getName()));
+      assert(!Inst2ColumnMatrix.contains(PHI) && "map already contains phi?");
+      Inst2ColumnMatrix[PHI] = PhiM;
+    }
+
+    // Fifth, lower remaining instructions with shape information.
     for (Instruction *Inst : MatrixInsts) {
       if (FusedInsts.count(Inst))
         continue;
@@ -1146,24 +1177,26 @@ public:
       Value *Op1;
       Value *Op2;
       MatrixTy Result;
+      IRBuilder<> Builder(Inst);
       if (auto *BinOp = dyn_cast<BinaryOperator>(Inst))
-        Result = VisitBinaryOperator(BinOp, SI);
+        Result = VisitBinaryOperator(BinOp, SI, Builder);
       else if (auto *Cast = dyn_cast<CastInst>(Inst))
-        Result = VisitCastInstruction(Cast, SI);
+        Result = VisitCastInstruction(Cast, SI, Builder);
       else if (auto *UnOp = dyn_cast<UnaryOperator>(Inst))
-        Result = VisitUnaryOperator(UnOp, SI);
+        Result = VisitUnaryOperator(UnOp, SI, Builder);
       else if (auto *Intr = dyn_cast<IntrinsicInst>(Inst))
-        Result = VisitIntrinsicInst(Intr, SI);
+        Result = VisitIntrinsicInst(Intr, SI, Builder);
       else if (auto *Select = dyn_cast<SelectInst>(Inst))
-        Result = VisitSelectInst(Select, SI);
+        Result = VisitSelectInst(Select, SI, Builder);
       else if (match(Inst, m_Load(m_Value(Op1))))
-        Result = VisitLoad(cast<LoadInst>(Inst), SI, Op1);
+        Result = VisitLoad(cast<LoadInst>(Inst), SI, Op1, Builder);
       else if (match(Inst, m_Store(m_Value(Op1), m_Value(Op2))))
-        Result = VisitStore(cast<StoreInst>(Inst), SI, Op1, Op2);
+        Result = VisitStore(cast<StoreInst>(Inst), SI, Op1, Op2, Builder);
+      else if (auto *PHI = dyn_cast<PHINode>(Inst))
+        Result = VisitPHI(PHI, SI, Builder);
       else
         continue;
 
-      IRBuilder<> Builder(Inst);
       finalizeLowering(Inst, Result, Builder);
       Changed = true;
     }
@@ -1182,7 +1215,7 @@ public:
     //
     // For verification, we keep track of where we changed uses to poison in
     // PoisonedInsts and then check that we in fact remove them.
-    SmallSet<Instruction *, 16> PoisonedInsts;
+    SmallPtrSet<Instruction *, 16> PoisonedInsts;
     for (auto *Inst : reverse(ToRemove)) {
       for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
         if (auto *Poisoned = dyn_cast<Instruction>(U.getUser()))
@@ -1204,22 +1237,22 @@ public:
   }
 
   /// Replace intrinsic calls.
-  MatrixTy VisitIntrinsicInst(IntrinsicInst *Inst, const ShapeInfo &SI) {
+  MatrixTy VisitIntrinsicInst(IntrinsicInst *Inst, const ShapeInfo &SI,
+                              IRBuilder<> &Builder) {
     assert(Inst->getCalledFunction() &&
            Inst->getCalledFunction()->isIntrinsic());
 
     switch (Inst->getCalledFunction()->getIntrinsicID()) {
     case Intrinsic::matrix_multiply:
-      return LowerMultiply(Inst);
+      return LowerMultiply(Inst, Builder);
     case Intrinsic::matrix_transpose:
-      return LowerTranspose(Inst);
+      return LowerTranspose(Inst, Builder);
     case Intrinsic::matrix_column_major_load:
-      return LowerColumnMajorLoad(Inst);
+      return LowerColumnMajorLoad(Inst, Builder);
     case Intrinsic::matrix_column_major_store:
-      return LowerColumnMajorStore(Inst);
+      return LowerColumnMajorStore(Inst, Builder);
     case Intrinsic::abs:
     case Intrinsic::fabs: {
-      IRBuilder<> Builder(Inst);
       MatrixTy Result;
       MatrixTy M = getMatrix(Inst->getOperand(0), SI, Builder);
       Builder.setFastMathFlags(getFastMathFlags(Inst));
@@ -1269,6 +1302,24 @@ public:
     return commonAlignment(InitialAlign, ElementSizeInBits / 8);
   }
 
+  IntegerType *getIndexType(Value *Ptr) const {
+    return cast<IntegerType>(DL.getIndexType(Ptr->getType()));
+  }
+
+  Value *getIndex(Value *Ptr, uint64_t V) const {
+    return ConstantInt::get(getIndexType(Ptr), V);
+  }
+
+  Value *castToIndexType(Value *Ptr, Value *V, IRBuilder<> &Builder) const {
+    assert(isa<IntegerType>(V->getType()) &&
+           "Attempted to cast non-integral type to integer index");
+    // In case the data layout's index type differs in width from the type of
+    // the value we're given, truncate or zero extend to the appropriate width.
+    // We zero extend here as indices are unsigned.
+    return Builder.CreateZExtOrTrunc(V, getIndexType(Ptr),
+                                     V->getName() + ".cast");
+  }
+
   /// Load a matrix with \p Shape starting at \p Ptr and using \p Stride between
   /// vectors.
   MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
@@ -1278,6 +1329,7 @@ public:
     Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
     Value *EltPtr = Ptr;
     MatrixTy Result;
+    Stride = castToIndexType(Ptr, Stride, Builder);
     for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
       Value *GEP = computeVectorAddr(
           EltPtr, Builder.getIntN(Stride->getType()->getScalarSizeInBits(), I),
@@ -1298,23 +1350,22 @@ public:
                       ShapeInfo MatrixShape, Value *I, Value *J,
                       ShapeInfo ResultShape, Type *EltTy,
                       IRBuilder<> &Builder) {
-
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
     Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
                                                    ResultShape.NumColumns);
 
     return loadMatrix(TileTy, TileStart, Align,
-                      Builder.getInt64(MatrixShape.getStride()), IsVolatile,
+                      getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
                       ResultShape, Builder);
   }
 
   /// Lower a load instruction with shape information.
   MatrixTy LowerLoad(Instruction *Inst, Value *Ptr, MaybeAlign Align,
-                     Value *Stride, bool IsVolatile, ShapeInfo Shape) {
-    IRBuilder<> Builder(Inst);
+                     Value *Stride, bool IsVolatile, ShapeInfo Shape,
+                     IRBuilder<> &Builder) {
     return loadMatrix(Inst->getType(), Ptr, Align, Stride, IsVolatile, Shape,
                       Builder);
   }
@@ -1322,14 +1373,14 @@ public:
   /// Lowers llvm.matrix.column.major.load.
   ///
   /// The intrinsic loads a matrix from memory using a stride between columns.
-  MatrixTy LowerColumnMajorLoad(CallInst *Inst) {
+  MatrixTy LowerColumnMajorLoad(CallInst *Inst, IRBuilder<> &Builder) {
     assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Ptr = Inst->getArgOperand(0);
     Value *Stride = Inst->getArgOperand(1);
     return LowerLoad(Inst, Ptr, Inst->getParamAlign(0), Stride,
                      cast<ConstantInt>(Inst->getArgOperand(2))->isOne(),
-                     {Inst->getArgOperand(3), Inst->getArgOperand(4)});
+                     {Inst->getArgOperand(3), Inst->getArgOperand(4)}, Builder);
   }
 
   /// Stores a sub-matrix \p StoreVal into the \p R x \p C matrix starting at \p
@@ -1338,14 +1389,15 @@ public:
                    MaybeAlign MAlign, bool IsVolatile, ShapeInfo MatrixShape,
                    Value *I, Value *J, Type *EltTy, IRBuilder<> &Builder) {
     Value *Offset = Builder.CreateAdd(
-        Builder.CreateMul(J, Builder.getInt64(MatrixShape.getStride())), I);
+        Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
     Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
                                                    StoreVal.getNumColumns());
 
     storeMatrix(TileTy, StoreVal, TileStart, MAlign,
-                Builder.getInt64(MatrixShape.getStride()), IsVolatile, Builder);
+                getIndex(MatrixPtr, MatrixShape.getStride()), IsVolatile,
+                Builder);
   }
 
   /// Store matrix \p StoreVal starting at \p Ptr and using \p Stride between
@@ -1355,6 +1407,7 @@ public:
                        IRBuilder<> &Builder) {
     auto *VType = cast<FixedVectorType>(Ty);
     Value *EltPtr = Ptr;
+    Stride = castToIndexType(Ptr, Stride, Builder);
     for (auto Vec : enumerate(StoreVal.vectors())) {
       Value *GEP = computeVectorAddr(
           EltPtr,
@@ -1374,8 +1427,7 @@ public:
   /// Lower a store instruction with shape information.
   MatrixTy LowerStore(Instruction *Inst, Value *Matrix, Value *Ptr,
                       MaybeAlign A, Value *Stride, bool IsVolatile,
-                      ShapeInfo Shape) {
-    IRBuilder<> Builder(Inst);
+                      ShapeInfo Shape, IRBuilder<> &Builder) {
     auto StoreVal = getMatrix(Matrix, Shape, Builder);
     return storeMatrix(Matrix->getType(), StoreVal, Ptr, A, Stride, IsVolatile,
                        Builder);
@@ -1384,7 +1436,7 @@ public:
   /// Lowers llvm.matrix.column.major.store.
   ///
   /// The intrinsic store a matrix back memory using a stride between columns.
-  MatrixTy LowerColumnMajorStore(CallInst *Inst) {
+  MatrixTy LowerColumnMajorStore(CallInst *Inst, IRBuilder<> &Builder) {
     assert(MatrixLayout == MatrixLayoutTy::ColumnMajor &&
            "Intrinsic only supports column-major layout!");
     Value *Matrix = Inst->getArgOperand(0);
@@ -1392,7 +1444,8 @@ public:
     Value *Stride = Inst->getArgOperand(2);
     return LowerStore(Inst, Matrix, Ptr, Inst->getParamAlign(1), Stride,
                       cast<ConstantInt>(Inst->getArgOperand(3))->isOne(),
-                      {Inst->getArgOperand(4), Inst->getArgOperand(5)});
+                      {Inst->getArgOperand(4), Inst->getArgOperand(5)},
+                      Builder);
   }
 
   // Set elements I..I+NumElts-1 to Block
@@ -1459,7 +1512,8 @@ public:
                         IRBuilder<> &Builder) {
     auto inserted = Inst2ColumnMatrix.insert(std::make_pair(Inst, Matrix));
     (void)inserted;
-    assert(inserted.second && "multiple matrix lowering mapping");
+    assert((inserted.second || isa<PHINode>(Inst)) &&
+           "multiple matrix lowering mapping");
 
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
@@ -1534,9 +1588,9 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost +=
-              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 {}, TTI::TCK_RecipThroughput);
+          EmbedCost += TTI.getShuffleCost(
+              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1556,9 +1610,9 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -=
-              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 {}, TTI::TCK_RecipThroughput);
+          EmbedCost -= TTI.getShuffleCost(
+              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1672,6 +1726,31 @@ public:
     ToRemove.push_back(MatMul);
   }
 
+  /// Given \p Remainder iterations of the the matmul inner loop,
+  /// potentially lower \p Blocksize that is used for the underlying
+  /// vector.
+  unsigned capBlockSize(unsigned BlockSize, unsigned Remainder, Type *EltType) {
+    if (BlockSize <= Remainder)
+      return BlockSize;
+
+    // If the remainder is also a legal type just use it.
+    auto *VecTy = FixedVectorType::get(EltType, Remainder);
+    if (TTI.isTypeLegal(VecTy))
+      return Remainder;
+
+    // Similarly, if the vector is small enough that we don't want
+    // to split further.
+    if (VecTy->getPrimitiveSizeInBits() <= SplitMatmulRemainderOverThreshold)
+      return Remainder;
+
+    // Gradually lower the vectorization factor to cover the
+    // remainder.
+    do {
+      BlockSize /= 2;
+    } while (BlockSize > Remainder);
+    return BlockSize;
+  }
+
   /// Compute \p Result += \p A * \p B for input matrices with left-associating
   /// addition.
   ///
@@ -1709,10 +1788,8 @@ public:
         bool isSumZero = isa<ConstantAggregateZero>(Result.getColumn(J));
 
         for (unsigned I = 0; I < R; I += BlockSize) {
-          // Gradually lower the vectorization factor to cover the remainder.
-          while (I + BlockSize > R)
-            BlockSize /= 2;
-
+          // Lower block size to make sure we stay within bounds.
+          BlockSize = capBlockSize(BlockSize, R - I, Result.getElementType());
           Value *Sum = IsTiled ? Result.extractVector(I, J, BlockSize, Builder)
                                : nullptr;
           for (unsigned K = 0; K < M; ++K) {
@@ -1737,9 +1814,8 @@ public:
         unsigned BlockSize = VF;
         bool isSumZero = isa<ConstantAggregateZero>(Result.getRow(I));
         for (unsigned J = 0; J < C; J += BlockSize) {
-          // Gradually lower the vectorization factor to cover the remainder.
-          while (J + BlockSize > C)
-            BlockSize /= 2;
+          // Lower the vectorization factor to cover the remainder.
+          BlockSize = capBlockSize(BlockSize, C - J, Result.getElementType());
 
           Value *Sum = nullptr;
           for (unsigned K = 0; K < M; ++K) {
@@ -1985,18 +2061,17 @@ public:
             const unsigned TileM = std::min(M - K, unsigned(TileSize));
             MatrixTy A =
                 loadMatrix(APtr, LoadOp0->getAlign(), LoadOp0->isVolatile(),
-                           LShape, Builder.getInt64(I), Builder.getInt64(K),
+                           LShape, getIndex(APtr, I), getIndex(APtr, K),
                            {TileR, TileM}, EltType, Builder);
             MatrixTy B =
                 loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
-                           RShape, Builder.getInt64(K), Builder.getInt64(J),
+                           RShape, getIndex(BPtr, K), getIndex(BPtr, J),
                            {TileM, TileC}, EltType, Builder);
             emitMatrixMultiply(Res, A, B, Builder, true, false,
                                getFastMathFlags(MatMul));
           }
           storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
-                      Builder.getInt64(I), Builder.getInt64(J), EltType,
-                      Builder);
+                      getIndex(CPtr, I), getIndex(CPtr, J), EltType, Builder);
         }
     }
 
@@ -2140,7 +2215,7 @@ public:
 
         // If the loads don't alias the lifetime.end, it won't interfere with
         // fusion.
-        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 1, nullptr);
+        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 0, nullptr);
         if (!EndLoc.Ptr)
           continue;
         if (AA->isNoAlias(Load0Loc, EndLoc) && AA->isNoAlias(Load1Loc, EndLoc))
@@ -2167,8 +2242,7 @@ public:
   }
 
   /// Lowers llvm.matrix.multiply.
-  MatrixTy LowerMultiply(CallInst *MatMul) {
-    IRBuilder<> Builder(MatMul);
+  MatrixTy LowerMultiply(CallInst *MatMul, IRBuilder<> &Builder) {
     auto *EltType = cast<FixedVectorType>(MatMul->getType())->getElementType();
     ShapeInfo LShape(MatMul->getArgOperand(2), MatMul->getArgOperand(3));
     ShapeInfo RShape(MatMul->getArgOperand(3), MatMul->getArgOperand(4));
@@ -2193,9 +2267,8 @@ public:
   }
 
   /// Lowers llvm.matrix.transpose.
-  MatrixTy LowerTranspose(CallInst *Inst) {
+  MatrixTy LowerTranspose(CallInst *Inst, IRBuilder<> &Builder) {
     MatrixTy Result;
-    IRBuilder<> Builder(Inst);
     Value *InputVal = Inst->getArgOperand(0);
     FixedVectorType *VectorTy = cast<FixedVectorType>(InputVal->getType());
     ShapeInfo ArgShape(Inst->getArgOperand(1), Inst->getArgOperand(2));
@@ -2228,25 +2301,53 @@ public:
   }
 
   /// Lower load instructions.
-  MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr) {
-    IRBuilder<> Builder(Inst);
-    return LowerLoad(Inst, Ptr, Inst->getAlign(),
-                     Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI);
+  MatrixTy VisitLoad(LoadInst *Inst, const ShapeInfo &SI, Value *Ptr,
+                     IRBuilder<> &Builder) {
+    return LowerLoad(Inst, Ptr, Inst->getAlign(), getIndex(Ptr, SI.getStride()),
+                     Inst->isVolatile(), SI, Builder);
   }
 
   MatrixTy VisitStore(StoreInst *Inst, const ShapeInfo &SI, Value *StoredVal,
-                      Value *Ptr) {
-    IRBuilder<> Builder(Inst);
+                      Value *Ptr, IRBuilder<> &Builder) {
     return LowerStore(Inst, StoredVal, Ptr, Inst->getAlign(),
-                      Builder.getInt64(SI.getStride()), Inst->isVolatile(), SI);
+                      getIndex(Ptr, SI.getStride()), Inst->isVolatile(), SI,
+                      Builder);
+  }
+
+  MatrixTy VisitPHI(PHINode *Inst, const ShapeInfo &SI, IRBuilder<> &Builder) {
+    auto BlockIP = Inst->getParent()->getFirstInsertionPt();
+    Builder.SetInsertPoint(BlockIP);
+    MatrixTy PhiM = getMatrix(Inst, SI, Builder);
+
+    for (auto [IncomingV, IncomingB] :
+         llvm::zip_equal(Inst->incoming_values(), Inst->blocks())) {
+      // getMatrix() may insert some instructions to help with reshaping. The
+      // safest place for those is at the top of the block after the rest of the
+      // PHI's. Even better, if we can put it in the incoming block.
+      Builder.SetInsertPoint(BlockIP);
+      if (auto *IncomingInst = dyn_cast<Instruction>(IncomingV))
+        if (auto MaybeIP = IncomingInst->getInsertionPointAfterDef())
+          Builder.SetInsertPoint(*MaybeIP);
+
+      MatrixTy OpM = getMatrix(IncomingV, SI, Builder);
+
+      for (unsigned VI = 0, VE = PhiM.getNumVectors(); VI != VE; ++VI) {
+        PHINode *NewPHI = cast<PHINode>(PhiM.getVector(VI));
+        NewPHI->addIncoming(OpM.getVector(VI), IncomingB);
+      }
+    }
+
+    // finalizeLowering() may also insert instructions in some cases. The safe
+    // place for those is at the end of the initial block of PHIs.
+    Builder.SetInsertPoint(BlockIP);
+    return PhiM;
   }
 
   /// Lower binary operators.
-  MatrixTy VisitBinaryOperator(BinaryOperator *Inst, const ShapeInfo &SI) {
+  MatrixTy VisitBinaryOperator(BinaryOperator *Inst, const ShapeInfo &SI,
+                               IRBuilder<> &Builder) {
     Value *Lhs = Inst->getOperand(0);
     Value *Rhs = Inst->getOperand(1);
-
-    IRBuilder<> Builder(Inst);
 
     MatrixTy Result;
     MatrixTy A = getMatrix(Lhs, SI, Builder);
@@ -2265,10 +2366,9 @@ public:
   }
 
   /// Lower unary operators.
-  MatrixTy VisitUnaryOperator(UnaryOperator *Inst, const ShapeInfo &SI) {
+  MatrixTy VisitUnaryOperator(UnaryOperator *Inst, const ShapeInfo &SI,
+                              IRBuilder<> &Builder) {
     Value *Op = Inst->getOperand(0);
-
-    IRBuilder<> Builder(Inst);
 
     MatrixTy Result;
     MatrixTy M = getMatrix(Op, SI, Builder);
@@ -2293,10 +2393,9 @@ public:
   }
 
   /// Lower cast instructions.
-  MatrixTy VisitCastInstruction(CastInst *Inst, const ShapeInfo &Shape) {
+  MatrixTy VisitCastInstruction(CastInst *Inst, const ShapeInfo &Shape,
+                                IRBuilder<> &Builder) {
     Value *Op = Inst->getOperand(0);
-
-    IRBuilder<> Builder(Inst);
 
     MatrixTy Result;
     MatrixTy M = getMatrix(Op, Shape, Builder);
@@ -2315,12 +2414,11 @@ public:
   }
 
   /// Lower selects.
-  MatrixTy VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape) {
+  MatrixTy VisitSelectInst(SelectInst *Inst, const ShapeInfo &Shape,
+                           IRBuilder<> &Builder) {
     Value *Cond = Inst->getOperand(0);
     Value *OpA = Inst->getOperand(1);
     Value *OpB = Inst->getOperand(2);
-
-    IRBuilder<> Builder(Inst);
 
     MatrixTy Result;
     MatrixTy A = getMatrix(OpA, Shape, Builder);
@@ -2332,7 +2430,7 @@ public:
       llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
       CondV.resize(A.getNumVectors());
-      std::fill(CondV.begin(), CondV.end(), Cond);
+      llvm::fill(CondV, Cond);
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))

@@ -110,16 +110,20 @@ define void @v3i8(ptr %p1, ptr %p2) {
 ;
 ; CHECK-GI-LABEL: v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldrb w8, [x0]
-; CHECK-GI-NEXT:    ldrb w9, [x1]
-; CHECK-GI-NEXT:    ldrb w10, [x0, #1]
-; CHECK-GI-NEXT:    ldrb w11, [x1, #1]
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    ldr w9, [x1]
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    fmov s1, w9
-; CHECK-GI-NEXT:    ldrb w8, [x0, #2]
-; CHECK-GI-NEXT:    ldrb w9, [x1, #2]
-; CHECK-GI-NEXT:    mov v0.h[1], w10
-; CHECK-GI-NEXT:    mov v1.h[1], w11
+; CHECK-GI-NEXT:    mov b2, v0.b[1]
+; CHECK-GI-NEXT:    mov b3, v1.b[1]
+; CHECK-GI-NEXT:    mov b4, v0.b[2]
+; CHECK-GI-NEXT:    mov b5, v1.b[2]
+; CHECK-GI-NEXT:    fmov w8, s2
+; CHECK-GI-NEXT:    fmov w9, s3
+; CHECK-GI-NEXT:    mov v0.h[1], w8
+; CHECK-GI-NEXT:    mov v1.h[1], w9
+; CHECK-GI-NEXT:    fmov w8, s4
+; CHECK-GI-NEXT:    fmov w9, s5
 ; CHECK-GI-NEXT:    mov v0.h[2], w8
 ; CHECK-GI-NEXT:    mov v1.h[2], w9
 ; CHECK-GI-NEXT:    add v0.4h, v0.4h, v1.4h
@@ -270,16 +274,10 @@ define void @v3i16(ptr %p1, ptr %p2) {
 ;
 ; CHECK-GI-LABEL: v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr h0, [x0]
-; CHECK-GI-NEXT:    ldr h1, [x1]
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
 ; CHECK-GI-NEXT:    add x8, x0, #2
-; CHECK-GI-NEXT:    add x9, x1, #2
-; CHECK-GI-NEXT:    add x10, x1, #4
-; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
-; CHECK-GI-NEXT:    ld1 { v1.h }[1], [x9]
 ; CHECK-GI-NEXT:    add x9, x0, #4
-; CHECK-GI-NEXT:    ld1 { v0.h }[2], [x9]
-; CHECK-GI-NEXT:    ld1 { v1.h }[2], [x10]
 ; CHECK-GI-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    str h0, [x0]
 ; CHECK-GI-NEXT:    st1 { v0.h }[1], [x8]

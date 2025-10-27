@@ -41,7 +41,7 @@ class StepScriptedTestCase(TestBase):
 
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("main", frame.GetFunctionName())
-        stop_desc = thread.GetStopDescription(1000)
+        stop_desc = thread.stop_description
         self.assertIn("Stepping out from", stop_desc, "Got right description")
 
     def run_until_branch_instruction(self):
@@ -153,7 +153,7 @@ class StepScriptedTestCase(TestBase):
         self.assertTrue(foo_val.GetValueDidChange(), "Foo changed")
 
         # And we should have a reasonable stop description:
-        desc = thread.GetStopDescription(1000)
+        desc = thread.stop_description
         self.assertIn("Stepped until foo changed", desc, "Got right stop description")
 
     def test_stop_others_from_command(self):

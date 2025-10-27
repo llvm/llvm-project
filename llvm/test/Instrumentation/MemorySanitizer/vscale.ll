@@ -44,7 +44,7 @@ define void @test_load_store_i32(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       14:
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP7]])
 ; ORIGIN-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 16
+; ORIGIN-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 16
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 3
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i64 [[TMP18]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -125,7 +125,7 @@ define void @test_load_store_add_int(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       25:
 ; ORIGIN-NEXT:    [[TMP26:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP14]])
 ; ORIGIN-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 64
+; ORIGIN-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 64
 ; ORIGIN-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], 3
 ; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i64 [[TMP29]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -188,7 +188,7 @@ define void @test_load_store_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       14:
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP7]])
 ; ORIGIN-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 16
+; ORIGIN-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 16
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 3
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i64 [[TMP18]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -269,7 +269,7 @@ define void @test_load_store_add_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       25:
 ; ORIGIN-NEXT:    [[TMP26:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP14]])
 ; ORIGIN-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 8
+; ORIGIN-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 8
 ; ORIGIN-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], 3
 ; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i64 [[TMP29]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -363,7 +363,7 @@ define void @test_ret(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       11:
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP4]])
 ; ORIGIN-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 8
+; ORIGIN-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 8
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 3
 ; ORIGIN-NEXT:    [[TMP16:%.*]] = udiv i64 [[TMP15]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -411,7 +411,7 @@ define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
 ; ORIGIN:       7:
 ; ORIGIN-NEXT:    [[TMP8:%.*]] = call i32 @__msan_chain_origin(i32 0)
 ; ORIGIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 8
+; ORIGIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
 ; ORIGIN-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 3
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = udiv i64 [[TMP11]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -435,7 +435,7 @@ define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
 define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; CHECK-LABEL: define void @test_param(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
@@ -455,8 +455,8 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ;
 ; ORIGIN-LABEL: define void @test_param(
 ; ORIGIN-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
@@ -490,7 +490,7 @@ define void @test_alloca1() sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x i1>, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -503,7 +503,7 @@ define void @test_alloca1() sanitize_memory {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[X:%.*]] = alloca <vscale x 64 x i1>, align 4
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; ORIGIN-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -526,7 +526,7 @@ define void @test_alloca2() sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x double>, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 512
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 512
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -539,7 +539,7 @@ define void @test_alloca2() sanitize_memory {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[X:%.*]] = alloca <vscale x 64 x double>, align 4
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 512
+; ORIGIN-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 512
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr

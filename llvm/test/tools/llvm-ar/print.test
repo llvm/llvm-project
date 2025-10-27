@@ -1,12 +1,11 @@
 ## Test Print output
-# XFAIL: target={{.*}}-darwin{{.*}}
 
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: echo file1 > %t/1.txt
 # RUN: echo file2 > %t/2.txt
 # RUN: echo file3 > %t/3.txt
 
-# RUN: llvm-ar -rc %t/archive.a %t/1.txt %t/2.txt %t/3.txt
+# RUN: llvm-ar -rc --format=gnu %t/archive.a %t/1.txt %t/2.txt %t/3.txt
 
 ## Print empty archive:
 # RUN: llvm-ar --format=gnu  cr %t/empty.a

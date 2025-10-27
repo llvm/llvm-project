@@ -2018,9 +2018,9 @@ define half @v_fminimum3_f16_const1_const2(half %a) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0x4c00
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0x4800
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_minimum3_f16 v0.l, v0.l, 0x4800, v0.h
+; GFX12-TRUE16-NEXT:    v_minimum3_f16 v0.l, v0.l, v1.l, 0x4c00
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_fminimum3_f16_const1_const2:

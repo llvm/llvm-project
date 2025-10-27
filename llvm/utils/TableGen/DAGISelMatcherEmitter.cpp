@@ -29,7 +29,7 @@
 using namespace llvm;
 
 enum {
-  IndexWidth = 6,
+  IndexWidth = 7,
   FullIndexWidth = IndexWidth + 4,
   HistOpcWidth = 40,
 };
@@ -1158,7 +1158,7 @@ void MatcherTableEmitter::EmitPredicateFunctions(raw_ostream &OS) {
   EmitNodePredicatesFunction(
       NodePredicatesWithOperands,
       "CheckNodePredicateWithOperands(SDValue Op, unsigned PredNo, "
-      "const SmallVectorImpl<SDValue> &Operands) const",
+      "ArrayRef<SDValue> Operands) const",
       OS);
 
   // Emit CompletePattern matchers.

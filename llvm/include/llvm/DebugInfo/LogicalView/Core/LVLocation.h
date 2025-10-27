@@ -51,7 +51,7 @@ public:
   LLVM_ABI void print(raw_ostream &OS, bool Full = true) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() { print(dbgs()); }
+  void dump() const { print(dbgs()); }
 #endif
 };
 
@@ -100,7 +100,7 @@ public:
   LVLocation() : LVObject() { setIsLocation(); }
   LVLocation(const LVLocation &) = delete;
   LVLocation &operator=(const LVLocation &) = delete;
-  virtual ~LVLocation() = default;
+  ~LVLocation() override = default;
 
   PROPERTY(Property, IsAddressRange);
   PROPERTY(Property, IsBaseClassOffset);
@@ -159,10 +159,6 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 class LLVM_ABI LVLocationSymbol final : public LVLocation {
@@ -175,7 +171,7 @@ public:
   LVLocationSymbol() : LVLocation() {}
   LVLocationSymbol(const LVLocationSymbol &) = delete;
   LVLocationSymbol &operator=(const LVLocationSymbol &) = delete;
-  ~LVLocationSymbol() = default;
+  ~LVLocationSymbol() override = default;
 
   void addObject(LVAddress LowPC, LVAddress HighPC, LVUnsigned SectionOffset,
                  uint64_t LocDescOffset) override;

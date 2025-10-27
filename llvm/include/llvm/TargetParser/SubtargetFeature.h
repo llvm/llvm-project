@@ -32,7 +32,7 @@ namespace llvm {
 class raw_ostream;
 class Triple;
 
-const unsigned MAX_SUBTARGET_WORDS = 5;
+const unsigned MAX_SUBTARGET_WORDS = 6;
 const unsigned MAX_SUBTARGET_FEATURES = MAX_SUBTARGET_WORDS * 64;
 
 /// Container class for subtarget features.
@@ -56,7 +56,7 @@ public:
   }
 
   FeatureBitset &set() {
-    std::fill(std::begin(Bits), std::end(Bits), -1ULL);
+    llvm::fill(Bits, -1ULL);
     return *this;
   }
 

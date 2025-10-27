@@ -19,6 +19,7 @@ if (ANDROID OR CYGWIN OR CMAKE_SYSTEM_NAME MATCHES "AIX|DragonFly|FreeBSD|Haiku|
   set(HAVE_SYS_MMAN_H 1)
   set(HAVE_SYSEXITS_H 1)
   set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
 elseif (APPLE)
   set(HAVE_MACH_MACH_H 1)
   set(HAVE_MALLOC_MALLOC_H 1)
@@ -26,6 +27,7 @@ elseif (APPLE)
   set(HAVE_SYS_MMAN_H 1)
   set(HAVE_SYSEXITS_H 1)
   set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
 elseif (WIN32)
   set(HAVE_MACH_MACH_H 0)
   set(HAVE_MALLOC_MALLOC_H 0)
@@ -33,6 +35,7 @@ elseif (WIN32)
   set(HAVE_SYS_MMAN_H 0)
   set(HAVE_SYSEXITS_H 0)
   set(HAVE_UNISTD_H 0)
+  set(HAVE_SYS_IOCTL_H 0)
 elseif (ZOS)
   # Confirmed in
   # https://github.com/llvm/llvm-project/pull/104706#issuecomment-2297109613
@@ -42,6 +45,7 @@ elseif (ZOS)
   set(HAVE_SYS_MMAN_H 1)
   set(HAVE_SYSEXITS_H 0)
   set(HAVE_UNISTD_H 1)
+  set(HAVE_SYS_IOCTL_H 1)
 else()
   # Other platforms that we don't promise support for.
   check_include_file(mach/mach.h HAVE_MACH_MACH_H)
@@ -50,6 +54,7 @@ else()
   check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
   check_include_file(sysexits.h HAVE_SYSEXITS_H)
   check_include_file(unistd.h HAVE_UNISTD_H)
+  check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
 endif()
 
 if( UNIX AND NOT (APPLE OR BEOS OR HAIKU) )
@@ -64,14 +69,14 @@ endif()
 
 # Do checks with _XOPEN_SOURCE and large-file API on AIX, because we will build
 # with those too.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_XOPEN_SOURCE=700")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_LARGE_FILE_API")
 endif()
 
 # Do checks with _FILE_OFFSET_BITS=64 on Solaris, because we will build
 # with those too.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
@@ -117,7 +122,7 @@ if(APPLE)
     HAVE_CRASHREPORTER_INFO)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
   if(NOT HAVE_LINUX_MAGIC_H)
     # older kernels use split files
@@ -406,7 +411,7 @@ endif()
 
 CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 # The st_mtim.tv_nsec member of a `stat` structure is not reliable on some AIX
 # environments.
   set(HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 0)
@@ -505,7 +510,7 @@ set(USE_NO_UNINITIALIZED 0)
 # false positives.
 if (CMAKE_COMPILER_IS_GNUCXX)
   # Disable all -Wuninitialized warning for old GCC versions.
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15.0)
     set(USE_NO_UNINITIALIZED 1)
   else()
     set(USE_NO_MAYBE_UNINITIALIZED 1)

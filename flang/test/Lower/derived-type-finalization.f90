@@ -255,5 +255,5 @@ program p
   type(t1) :: t
 end program
 
-! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "p"} {
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "P"} {
 ! CHECK-NOT: fir.call @_FortranADestroy

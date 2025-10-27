@@ -145,7 +145,7 @@ end subroutine
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_4:.*]] = arith.cmpi sgt, %[[VAL_2]], %[[VAL_3]] : index
 ! CHECK:           %[[VAL_5:.*]] = arith.select %[[VAL_4]], %[[VAL_2]], %[[VAL_3]] : index
-! CHECK:           %[[VAL_6:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_6:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_5]], %[[VAL_6]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_7]]) dummy_scope %{{[0-9]+}} {uniq_name = "_QFint_r2_assumed_size_to_assumed_rankEx"} : (!fir.ref<!fir.array<10x?xi32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<10x?xi32>>, !fir.ref<!fir.array<10x?xi32>>)
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.box<!fir.array<10x?xi32>>) -> !fir.box<!fir.array<*:i32>>

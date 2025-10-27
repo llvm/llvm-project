@@ -71,23 +71,6 @@ struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 struct contiguous_iterator_tag : public random_access_iterator_tag {};
 #endif
 
-template <class _Tp>
-struct __has_iterator_typedefs {
-private:
-  template <class _Up>
-  static false_type __test(...);
-  template <class _Up>
-  static true_type
-  __test(__void_t<typename _Up::iterator_category>* = nullptr,
-         __void_t<typename _Up::difference_type>*   = nullptr,
-         __void_t<typename _Up::value_type>*        = nullptr,
-         __void_t<typename _Up::reference>*         = nullptr,
-         __void_t<typename _Up::pointer>*           = nullptr);
-
-public:
-  static const bool value = decltype(__test<_Tp>(nullptr, nullptr, nullptr, nullptr, nullptr))::value;
-};
-
 #if _LIBCPP_STD_VER >= 20
 
 // The `cpp17-*-iterator` exposition-only concepts have very similar names to the `Cpp17*Iterator` named requirements
@@ -322,6 +305,23 @@ struct __iterator_traits<_Iter, true>
                               is_convertible<typename _Iter::iterator_category, input_iterator_tag>::value ||
                                   is_convertible<typename _Iter::iterator_category, output_iterator_tag>::value > {};
 
+template <class _Tp>
+struct __has_iterator_typedefs {
+private:
+  template <class _Up>
+  static false_type __test(...);
+  template <class _Up>
+  static true_type
+  __test(__void_t<typename _Up::iterator_category>* = nullptr,
+         __void_t<typename _Up::difference_type>*   = nullptr,
+         __void_t<typename _Up::value_type>*        = nullptr,
+         __void_t<typename _Up::reference>*         = nullptr,
+         __void_t<typename _Up::pointer>*           = nullptr);
+
+public:
+  static const bool value = decltype(__test<_Tp>(nullptr, nullptr, nullptr, nullptr, nullptr))::value;
+};
+
 // iterator_traits<Iterator> will only have the nested types if Iterator::iterator_category
 //    exists.  Else iterator_traits<Iterator> will be an empty class.  This is a
 //    conforming extension which allows some programs to compile and behave as
@@ -420,44 +420,43 @@ using __has_exactly_bidirectional_iterator_category _LIBCPP_NODEBUG =
                           !__has_iterator_category_convertible_to<_Tp, random_access_iterator_tag>::value>;
 
 template <class _InputIterator>
-using __iter_value_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type;
+using __iterator_value_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type;
 
 #if _LIBCPP_STD_VER >= 23
 template <class _InputIterator>
-using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iter_value_type<_InputIterator>>>;
+using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iterator_value_type<_InputIterator>>>;
 
 template <class _InputIterator>
-using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iter_value_type<_InputIterator>>;
+using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iterator_value_type<_InputIterator>>;
 
 template <class _InputIterator>
 using __iter_to_alloc_type _LIBCPP_NODEBUG =
-    pair<const tuple_element_t<0, __iter_value_type<_InputIterator>>,
-         tuple_element_t<1, __iter_value_type<_InputIterator>>>;
+    pair<const tuple_element_t<0, __iterator_value_type<_InputIterator>>,
+         tuple_element_t<1, __iterator_value_type<_InputIterator>>>;
 #else
 template <class _InputIterator>
-using __iter_key_type _LIBCPP_NODEBUG =
-    __remove_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>;
+using __iter_key_type _LIBCPP_NODEBUG = __remove_const_t<typename __iterator_value_type<_InputIterator>::first_type>;
 
 template <class _InputIterator>
-using __iter_mapped_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type::second_type;
+using __iter_mapped_type _LIBCPP_NODEBUG = typename __iterator_value_type<_InputIterator>::second_type;
 
 template <class _InputIterator>
 using __iter_to_alloc_type _LIBCPP_NODEBUG =
-    pair<const typename iterator_traits<_InputIterator>::value_type::first_type,
-         typename iterator_traits<_InputIterator>::value_type::second_type>;
+    pair<const typename __iterator_value_type<_InputIterator>::first_type,
+         typename __iterator_value_type<_InputIterator>::second_type>;
 #endif // _LIBCPP_STD_VER >= 23
 
 template <class _Iter>
-using __iterator_category_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
+using __iterator_iterator_category _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
 
 template <class _Iter>
-using __iterator_pointer_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::pointer;
+using __iterator_pointer _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::pointer;
 
 template <class _Iter>
-using __iter_diff_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
+using __iterator_difference_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
 
 template <class _Iter>
-using __iter_reference _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::reference;
+using __iterator_reference _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::reference;
 
 #if _LIBCPP_STD_VER >= 20
 

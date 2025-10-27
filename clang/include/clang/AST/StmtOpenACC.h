@@ -538,10 +538,8 @@ public:
 
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() const {
-    return getExprs().drop_front();
-  }
+  ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
+  ArrayRef<Expr *> getQueueIdExprs() const { return getExprs().drop_front(); }
 
   child_range children() {
     Stmt **Begin = reinterpret_cast<Stmt **>(getExprPtr());
@@ -736,7 +734,7 @@ class OpenACCUpdateConstruct final
                              OpenACCDirectiveKind::Update, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
     std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCUpdateConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
@@ -817,6 +815,20 @@ public:
   Stmt *getAssociatedStmt() {
     return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
   }
+
+  // A struct to represent a broken-down version of the associated statement,
+  // providing the information specified in OpenACC3.3 Section 2.12.
+  struct StmtInfo {
+    const Expr *V;
+    const Expr *X;
+    // Listed as 'expr' in the standard, this is typically a generic expression
+    // as a component.
+    const Expr *RefExpr;
+    // TODO: OpenACC: We should expand this as we're implementing the other
+    // atomic construct kinds.
+  };
+
+  const StmtInfo getAssociatedStmtInfo() const;
 };
 
 } // namespace clang

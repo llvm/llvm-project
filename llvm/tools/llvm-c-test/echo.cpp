@@ -823,9 +823,11 @@ struct FunCloner {
       }
       case LLVMICmp: {
         LLVMIntPredicate Pred = LLVMGetICmpPredicate(Src);
+        LLVMBool IsSameSign = LLVMGetICmpSameSign(Src);
         LLVMValueRef LHS = CloneValue(LLVMGetOperand(Src, 0));
         LLVMValueRef RHS = CloneValue(LLVMGetOperand(Src, 1));
         Dst = LLVMBuildICmp(Builder, Pred, LHS, RHS, Name);
+        LLVMSetICmpSameSign(Dst, IsSameSign);
         break;
       }
       case LLVMPHI: {

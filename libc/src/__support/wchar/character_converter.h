@@ -11,8 +11,11 @@
 
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
+#include "hdr/types/size_t.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/wchar/mbstate.h"
-#include "src/__support/wchar/utf_ret.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -24,13 +27,19 @@ private:
 public:
   CharacterConverter(mbstate *mbstate);
 
-  bool isComplete();
+  void clear();
+  bool isFull();
+  bool isEmpty();
+  bool isValidState();
+
+  template <typename CharType> size_t sizeAs();
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
 
-  utf_ret<char8_t> pop_utf8();
-  utf_ret<char32_t> pop_utf32();
+  ErrorOr<char8_t> pop_utf8();
+  ErrorOr<char32_t> pop_utf32();
+  template <typename CharType> ErrorOr<CharType> pop();
 };
 
 } // namespace internal

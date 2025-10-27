@@ -57,8 +57,9 @@ Additionally for Python, progress is supported in a with statement. ::
     with lldb.SBProgress('Non deterministic progress', 'Detail', lldb.SBDebugger) as progress:
         for i in range(10):
             progress.Increment(1)
-    # The progress object is automatically finalized when the with statement
+            ...
 
+The progress object is automatically finalized on the exit of the with block.
 ") lldb::SBProgress;    
 
 %feature("docstring",

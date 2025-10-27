@@ -17,8 +17,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;  }
 ;}
 
-define i32 @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) nounwind uwtable ssp {
-; CHECK-LABEL: define i32 @function0(
+define void @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) nounwind uwtable ssp {
+; CHECK-LABEL: define void @function0(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], i32 [[START:%.*]], i32 [[END:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP16:%.*]] = icmp slt i32 [[START]], [[END]]
@@ -94,7 +94,7 @@ define i32 @function0(ptr nocapture %a, ptr nocapture %b, i32 %start, i32 %end) 
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[FOR_END]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp16 = icmp slt i32 %start, %end
@@ -127,7 +127,7 @@ if.end:
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:
-  ret i32 undef
+  ret void
 }
 
 
@@ -237,6 +237,8 @@ for.end:                                          ; preds = %for.inc, %entry
 ; Handle PHI with single incoming value having a full mask.
 ; PR34523
 
+; NOTE: Changing PHI inputs from undef to poison leads to change in
+; behaviour of the test. Left as undef for now.
 define void @PR34523() {
 ; CHECK-LABEL: define void @PR34523() {
 ; CHECK-NEXT:  [[BB1:.*:]]

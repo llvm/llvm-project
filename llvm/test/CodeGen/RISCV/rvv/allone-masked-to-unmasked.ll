@@ -22,7 +22,7 @@ entry:
   %allone = call <vscale x 1 x i1> @llvm.riscv.vmset.nxv1i1(
     iXLen %2);
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     <vscale x 1 x i1> %allone,
@@ -42,7 +42,7 @@ entry:
   %allone = call <vscale x 1 x i1> @llvm.riscv.vmset.nxv1i1(
     iXLen %2);
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     <vscale x 1 x i1> %allone,
