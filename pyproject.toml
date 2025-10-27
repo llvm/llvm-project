@@ -6,4 +6,6 @@ extend-exclude = '''
 '''
 
 [tool.pyright]
-pythonVersion = "3.8"
+executionEnvironments = [
+  { root = "lldb/packages/Python", pythonVersion = "3.8" }
+]
