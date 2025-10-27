@@ -20,6 +20,8 @@ add_llvm_component_library(LLVMTransformUtils
   CtorUtils.cpp
   CountVisits.cpp
   Debugify.cpp
+  DebugRecordCounter.cpp
+  DebugRecordDeleter.cpp
   DebugSSAUpdater.cpp
   DeclareRuntimeLibcalls.cpp
   DemoteRegToStack.cpp

@@ -350,6 +350,8 @@
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/DXILUpgrade.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/DebugRecordCounter.h"
+#include "llvm/Transforms/Utils/DebugRecordDeleter.h"
 #include "llvm/Transforms/Utils/DeclareRuntimeLibcalls.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/FixIrreducible.h"
