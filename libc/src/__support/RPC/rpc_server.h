@@ -395,7 +395,9 @@ LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
     port.recv([](rpc::Buffer *buffer, uint32_t) {
       int status = 0;
       __builtin_memcpy(&status, buffer->data, sizeof(int));
-      exit(status);
+      // We want a quick exit to avoid conflicts with offloading library
+      // teardowns when called from the GPU.
+      quick_exit(status);
     });
     break;
   }

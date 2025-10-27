@@ -64,6 +64,8 @@ private:
   const SourceManager &SM;
 };
 
+} // namespace
+
 void DuplicateIncludeCallbacks::FileChanged(SourceLocation Loc,
                                             FileChangeReason Reason,
                                             SrcMgr::CharacteristicKind FileType,
@@ -106,8 +108,6 @@ void DuplicateIncludeCallbacks::MacroUndefined(const Token &MacroNameTok,
                                                const MacroDirective *Undef) {
   Files.back().clear();
 }
-
-} // namespace
 
 void DuplicateIncludeCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {

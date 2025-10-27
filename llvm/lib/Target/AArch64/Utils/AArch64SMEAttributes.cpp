@@ -75,8 +75,8 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 }
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
-                                     const AArch64TargetLowering &TLI) {
-  RTLIB::LibcallImpl Impl = TLI.getSupportedLibcallImpl(FuncName);
+                                     const RTLIB::RuntimeLibcallsInfo &RTLCI) {
+  RTLIB::LibcallImpl Impl = RTLCI.getSupportedLibcallImpl(FuncName);
   if (Impl == RTLIB::Unsupported)
     return;
   unsigned KnownAttrs = SMEAttrs::Normal;
@@ -124,15 +124,22 @@ bool SMECallAttrs::requiresSMChange() const {
   return true;
 }
 
-SMECallAttrs::SMECallAttrs(const CallBase &CB, const AArch64TargetLowering *TLI)
+SMECallAttrs::SMECallAttrs(const CallBase &CB,
+                           const RTLIB::RuntimeLibcallsInfo *RTLCI)
     : CallerFn(*CB.getFunction()), CalledFn(SMEAttrs::Normal),
       Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
   if (auto *CalledFunction = CB.getCalledFunction())
-    CalledFn = SMEAttrs(*CalledFunction, TLI);
+    CalledFn = SMEAttrs(*CalledFunction, RTLCI);
 
   // FIXME: We probably should not allow SME attributes on direct calls but
   // clang duplicates streaming mode attributes at each callsite.
   assert((IsIndirect ||
           ((Callsite.withoutPerCallsiteFlags() | CalledFn) == CalledFn)) &&
          "SME attributes at callsite do not match declaration");
+
+  // An `invoke` of an agnostic ZA function may not return normally (it may
+  // resume in an exception block). In this case, it acts like a private ZA
+  // callee and may require a ZA save to be set up before it is called.
+  if (isa<InvokeInst>(CB))
+    CalledFn.set(SMEAttrs::ZA_State_Agnostic, /*Enable=*/false);
 }

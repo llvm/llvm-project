@@ -13,6 +13,7 @@
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -34,10 +35,20 @@ void commandToMarkup(markup::Paragraph &Out, StringRef Command,
                      StringRef Args) {
   Out.appendBoldText(commandMarkerAsString(CommandMarker) + Command.str());
   Out.appendSpace();
-  if (!Args.empty()) {
-    Out.appendEmphasizedText(Args.str());
-  }
+  if (!Args.empty())
+    Out.appendCode(Args.str());
 }
+
+template <typename T> std::string getArgText(const T *Command) {
+  std::string ArgText;
+  for (unsigned I = 0; I < Command->getNumArgs(); ++I) {
+    if (!ArgText.empty())
+      ArgText += " ";
+    ArgText += Command->getArgText(I);
+  }
+  return ArgText;
+}
+
 } // namespace
 
 class ParagraphToMarkupDocument
@@ -70,12 +81,7 @@ public:
   void visitInlineCommandComment(const comments::InlineCommandComment *C) {
 
     if (C->getNumArgs() > 0) {
-      std::string ArgText;
-      for (unsigned I = 0; I < C->getNumArgs(); ++I) {
-        if (!ArgText.empty())
-          ArgText += " ";
-        ArgText += C->getArgText(I);
-      }
+      std::string ArgText = getArgText(C);
 
       switch (C->getRenderKind()) {
       case comments::InlineCommandRenderKind::Monospaced:
@@ -158,10 +164,9 @@ public:
   void visitInlineCommandComment(const comments::InlineCommandComment *C) {
     Out << commandMarkerAsString(C->getCommandMarker());
     Out << C->getCommandName(Traits);
-    if (C->getNumArgs() > 0) {
-      for (unsigned I = 0; I < C->getNumArgs(); ++I)
-        Out << " " << C->getArgText(I);
-    }
+    std::string ArgText = getArgText(C);
+    if (!ArgText.empty())
+      Out << " " << ArgText;
     Out << " ";
   }
 
@@ -210,16 +215,38 @@ public:
                                 Traits)
           .visit(B->getParagraph());
       break;
+    case comments::CommandTraits::KCI_note:
+    case comments::CommandTraits::KCI_warning:
+      commandToHeadedParagraph(B);
+      break;
+    case comments::CommandTraits::KCI_retval: {
+      // The \retval command describes the return value given as its single
+      // argument in the corresponding paragraph.
+      // Note: We know that we have exactly one argument but not if it has an
+      // associated paragraph.
+      auto &P = Out.addParagraph().appendCode(getArgText(B));
+      if (B->getParagraph() && !B->getParagraph()->isWhitespace()) {
+        P.appendText(" - ");
+        ParagraphToMarkupDocument(P, Traits).visit(B->getParagraph());
+      }
+      return;
+    }
+    case comments::CommandTraits::KCI_details: {
+      // The \details command is just used to separate the brief from the
+      // detailed description. This separation is already done in the
+      // SymbolDocCommentVisitor. Therefore we can omit the command itself
+      // here and just process the paragraph.
+      if (B->getParagraph() && !B->getParagraph()->isWhitespace()) {
+        ParagraphToMarkupDocument(Out.addParagraph(), Traits)
+            .visit(B->getParagraph());
+      }
+      return;
+    }
     default: {
       // Some commands have arguments, like \throws.
       // The arguments are not part of the paragraph.
       // We need reconstruct them here.
-      std::string ArgText;
-      for (unsigned I = 0; I < B->getNumArgs(); ++I) {
-        if (!ArgText.empty())
-          ArgText += " ";
-        ArgText += B->getArgText(I);
-      }
+      std::string ArgText = getArgText(B);
       auto &P = Out.addParagraph();
       commandToMarkup(P, B->getCommandName(Traits), B->getCommandMarker(),
                       ArgText);
@@ -234,7 +261,53 @@ public:
     }
   }
 
+  void visitCodeCommand(const comments::VerbatimBlockComment *VB) {
+    std::string CodeLang = "";
+    auto *FirstLine = VB->child_begin();
+    // The \\code command has an optional language argument.
+    // This argument is currently not parsed by the clang doxygen parser.
+    // Therefore we try to extract it from the first line of the verbatim
+    // block.
+    if (VB->getNumLines() > 0) {
+      if (const auto *Line =
+              cast<comments::VerbatimBlockLineComment>(*FirstLine)) {
+        llvm::StringRef Text = Line->getText();
+        // Language is a single word enclosed in {}.
+        if (llvm::none_of(Text, llvm::isSpace) && Text.consume_front("{") &&
+            Text.consume_back("}")) {
+          // drop a potential . since this is not supported in Markdown
+          // fenced code blocks.
+          Text.consume_front(".");
+          // Language is alphanumeric or '+'.
+          CodeLang = Text.take_while([](char C) {
+                           return llvm::isAlnum(C) || C == '+';
+                         })
+                         .str();
+          // Skip the first line for the verbatim text.
+          ++FirstLine;
+        }
+      }
+    }
+
+    std::string CodeBlockText;
+
+    for (const auto *LI = FirstLine; LI != VB->child_end(); ++LI) {
+      if (const auto *Line = cast<comments::VerbatimBlockLineComment>(*LI)) {
+        CodeBlockText += Line->getText().str() + "\n";
+      }
+    }
+
+    Out.addCodeBlock(CodeBlockText, CodeLang);
+  }
+
   void visitVerbatimBlockComment(const comments::VerbatimBlockComment *VB) {
+    // The \\code command is a special verbatim block command which we handle
+    // separately.
+    if (VB->getCommandID() == comments::CommandTraits::KCI_code) {
+      visitCodeCommand(VB);
+      return;
+    }
+
     commandToMarkup(Out.addParagraph(), VB->getCommandName(Traits),
                     VB->getCommandMarker(), "");
 
@@ -262,7 +335,122 @@ private:
   markup::Document &Out;
   const comments::CommandTraits &Traits;
   StringRef CommentEscapeMarker;
+
+  /// Emphasize the given command in a paragraph.
+  /// Uses the command name with the first letter capitalized as the heading.
+  void commandToHeadedParagraph(const comments::BlockCommandComment *B) {
+    auto &P = Out.addParagraph();
+    std::string Heading = B->getCommandName(Traits).slice(0, 1).upper() +
+                          B->getCommandName(Traits).drop_front().str();
+    P.appendBoldText(Heading + ":");
+    P.appendText("  \n");
+    ParagraphToMarkupDocument(P, Traits).visit(B->getParagraph());
+  }
 };
+
+void SymbolDocCommentVisitor::preprocessDocumentation(StringRef Doc) {
+  enum State {
+    Normal,
+    FencedCodeblock,
+  } State = Normal;
+  std::string CodeFence;
+
+  llvm::raw_string_ostream OS(CommentWithMarkers);
+
+  // The documentation string is processed line by line.
+  // The raw documentation string does not contain the comment markers
+  // (e.g. /// or /** */).
+  // But the comment lexer expects doxygen markers, so add them back.
+  // We need to use the /// style doxygen markers because the comment could
+  // contain the closing tag "*/" of a C Style "/** */" comment
+  // which would break the parsing if we would just enclose the comment text
+  // with "/** */".
+
+  // Escape doxygen commands inside markdown inline code spans.
+  // This is required to not let the doxygen parser interpret them as
+  // commands.
+  // Note: This is a heuristic which may fail in some cases.
+  bool InCodeSpan = false;
+
+  llvm::StringRef Line, Rest;
+  for (std::tie(Line, Rest) = Doc.split('\n'); !(Line.empty() && Rest.empty());
+       std::tie(Line, Rest) = Rest.split('\n')) {
+
+    // Detect code fence (``` or ~~~)
+    if (State == Normal) {
+      llvm::StringRef Trimmed = Line.ltrim();
+      if (Trimmed.starts_with("```") || Trimmed.starts_with("~~~")) {
+        // https://www.doxygen.nl/manual/markdown.html#md_fenced
+        CodeFence =
+            Trimmed.take_while([](char C) { return C == '`' || C == '~'; })
+                .str();
+        // Try to detect language: first word after fence. Could also be
+        // enclosed in {}
+        llvm::StringRef AfterFence =
+            Trimmed.drop_front(CodeFence.size()).ltrim();
+        // ignore '{' at the beginning of the language name to not duplicate it
+        // for the doxygen command
+        AfterFence.consume_front("{");
+        // The name is alphanumeric or '.' or '+'
+        StringRef CodeLang = AfterFence.take_while(
+            [](char C) { return llvm::isAlnum(C) || C == '.' || C == '+'; });
+
+        OS << "///@code";
+
+        if (!CodeLang.empty())
+          OS << "{" << CodeLang.str() << "}";
+
+        OS << "\n";
+
+        State = FencedCodeblock;
+        continue;
+      }
+
+      // FIXME: handle indented code blocks too?
+      // In doxygen, the indentation which triggers a code block depends on the
+      // indentation of the previous paragraph.
+      // https://www.doxygen.nl/manual/markdown.html#mddox_code_blocks
+    } else if (State == FencedCodeblock) {
+      // End of code fence
+      if (Line.ltrim().starts_with(CodeFence)) {
+        OS << "///@endcode\n";
+        State = Normal;
+        continue;
+      }
+      OS << "///" << Line << "\n";
+      continue;
+    }
+
+    // Normal line preprocessing (add doxygen markers, handle escaping)
+    OS << "///";
+
+    if (Line.empty() || Line.trim().empty()) {
+      OS << "\n";
+      // Empty lines reset the InCodeSpan state.
+      InCodeSpan = false;
+      continue;
+    }
+
+    if (Line.starts_with("<"))
+      // A comment line starting with '///<' is treated as a doxygen
+      // command. To avoid this, we add a space before the '<'.
+      OS << ' ';
+
+    for (char C : Line) {
+      if (C == '`')
+        InCodeSpan = !InCodeSpan;
+      else if (InCodeSpan && (C == '@' || C == '\\'))
+        OS << '\\';
+      OS << C;
+    }
+
+    OS << "\n";
+  }
+
+  // Close any unclosed code block
+  if (State == FencedCodeblock)
+    OS << "///@endcode\n";
+}
 
 void SymbolDocCommentVisitor::visitBlockCommandComment(
     const comments::BlockCommandComment *B) {
@@ -282,34 +470,20 @@ void SymbolDocCommentVisitor::visitBlockCommandComment(
     }
     break;
   case comments::CommandTraits::KCI_retval:
-    RetvalParagraphs.push_back(B->getParagraph());
-    return;
-  case comments::CommandTraits::KCI_warning:
-    WarningParagraphs.push_back(B->getParagraph());
-    return;
-  case comments::CommandTraits::KCI_note:
-    NoteParagraphs.push_back(B->getParagraph());
+    // Only consider retval commands having an argument.
+    // The argument contains the described return value which is needed to
+    // convert it to markup.
+    if (B->getNumArgs() == 1)
+      RetvalCommands.push_back(B);
     return;
   default:
     break;
   }
 
-  // For all other commands, we store them in the UnhandledCommands map.
+  // For all other commands, we store them in the BlockCommands map.
   // This allows us to keep the order of the comments.
-  UnhandledCommands[CommentPartIndex] = B;
+  BlockCommands[CommentPartIndex] = B;
   CommentPartIndex++;
-}
-
-void SymbolDocCommentVisitor::paragraphsToMarkup(
-    markup::Document &Out,
-    const llvm::SmallVectorImpl<const comments::ParagraphComment *> &Paragraphs)
-    const {
-  if (Paragraphs.empty())
-    return;
-
-  for (const auto *P : Paragraphs) {
-    ParagraphToMarkupDocument(Out.addParagraph(), Traits).visit(P);
-  }
 }
 
 void SymbolDocCommentVisitor::briefToMarkup(markup::Paragraph &Out) const {
@@ -322,14 +496,6 @@ void SymbolDocCommentVisitor::returnToMarkup(markup::Paragraph &Out) const {
   if (!ReturnParagraph)
     return;
   ParagraphToMarkupDocument(Out, Traits).visit(ReturnParagraph);
-}
-
-void SymbolDocCommentVisitor::notesToMarkup(markup::Document &Out) const {
-  paragraphsToMarkup(Out, NoteParagraphs);
-}
-
-void SymbolDocCommentVisitor::warningsToMarkup(markup::Document &Out) const {
-  paragraphsToMarkup(Out, WarningParagraphs);
 }
 
 void SymbolDocCommentVisitor::parameterDocToMarkup(
@@ -352,9 +518,9 @@ void SymbolDocCommentVisitor::parameterDocToString(
   }
 }
 
-void SymbolDocCommentVisitor::docToMarkup(markup::Document &Out) const {
+void SymbolDocCommentVisitor::detailedDocToMarkup(markup::Document &Out) const {
   for (unsigned I = 0; I < CommentPartIndex; ++I) {
-    if (const auto *BC = UnhandledCommands.lookup(I)) {
+    if (const auto *BC = BlockCommands.lookup(I)) {
       BlockCommentToMarkupDocument(Out, Traits).visit(BC);
     } else if (const auto *P = FreeParagraphs.lookup(I)) {
       ParagraphToMarkupDocument(Out.addParagraph(), Traits).visit(P);
@@ -379,6 +545,15 @@ void SymbolDocCommentVisitor::templateTypeParmDocToString(
 
   if (const auto *P = TemplateParameters.lookup(TemplateParamName)) {
     ParagraphToString(Out, Traits).visit(P->getParagraph());
+  }
+}
+
+void SymbolDocCommentVisitor::retvalsToMarkup(markup::Document &Out) const {
+  if (RetvalCommands.empty())
+    return;
+  markup::BulletList &BL = Out.addBulletList();
+  for (const auto *P : RetvalCommands) {
+    BlockCommentToMarkupDocument(BL.addItem(), Traits).visit(P);
   }
 }
 
