@@ -459,11 +459,11 @@ static void InstantiateDeclareReduction(OmpDirectiveSpecification &spec) {
 
   const OmpTypeNameList *typeNames{nullptr};
 
-  if (auto *cexpr{GetCombinerExpr(*rspec)}) {
+  if (auto *cexpr{
+          const_cast<OmpCombinerExpression *>(GetCombinerExpr(*rspec))}) {
     typeNames = &std::get<OmpTypeNameList>(rspec->t);
 
-    InstantiateForTypes(const_cast<OmpCombinerExpression &>(*cexpr), *typeNames,
-        OmpCombinerExpression::Variables());
+    InstantiateForTypes(*cexpr, *typeNames, OmpCombinerExpression::Variables());
     delete cexpr->state;
     cexpr->state = nullptr;
   } else {
@@ -474,9 +474,10 @@ static void InstantiateDeclareReduction(OmpDirectiveSpecification &spec) {
   for (const OmpClause &clause : spec.Clauses().v) {
     llvm::omp::Clause id{clause.Id()};
     if (id == llvm::omp::Clause::OMPC_initializer) {
-      if (auto *iexpr{GetInitializerExpr(clause)}) {
-        InstantiateForTypes(const_cast<OmpInitializerExpression &>(*iexpr),
-            *typeNames, OmpInitializerExpression::Variables());
+      if (auto *iexpr{const_cast<OmpInitializerExpression *>(
+              GetInitializerExpr(clause))}) {
+        InstantiateForTypes(
+            *iexpr, *typeNames, OmpInitializerExpression::Variables());
         delete iexpr->state;
         iexpr->state = nullptr;
       }
