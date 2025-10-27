@@ -357,13 +357,17 @@ static bool isLoopMDCompatible(Module &M, Metadata *MD) {
   };
 
   if (HintStr->getString() == "llvm.loop.unroll.count") {
-    if (!ValidCountNode(HintMD))
-      return reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
-                                "must be a constant integer");
-  } else if (HintMD->getNumOperands() != 1)
-    return reportLoopError(
+    if (!ValidCountNode(HintMD)) {
+      reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
+                         "must be a constant integer");
+      return false;
+    }
+  } else if (HintMD->getNumOperands() != 1) {
+    reportLoopError(
         M, "\"llvm.loop.unroll.disable\" and \"llvm.loop.unroll.disable\" "
            "must be provided as a single operand");
+    return false;
+  }
 
   return true;
 }
