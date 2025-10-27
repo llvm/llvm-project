@@ -283,7 +283,7 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       Guid = Builder.getInt64(
           AssignGUIDPass::getGUID(cast<Function>(*Mark->getNameValue())));
       // The type of the context of this function is now knowable since we have
-      // NumCallsites and NumCounters. We delcare it here because it's more
+      // NumCallsites and NumCounters. We declare it here because it's more
       // convenient - we have the Builder.
       ThisContextType = StructType::get(
           F.getContext(),
