@@ -170,6 +170,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isDivergent(Reg);
   case _:
     return true;
+  case PhysReg:
+    return true;
   default:
     llvm_unreachable("missing matchUniformityAndLLT");
   }
@@ -914,6 +916,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
 
   addRulesForGOpcs({G_READSTEADYCOUNTER}, Standard).Uni(S64, {{Sgpr64}, {}});
+
+  addRulesForGOpcs({G_SI_CALL})
+      .Any({{PhysReg, UniP0}, {{None}, {SgprP0}}})
+      .Any({{PhysReg, DivP0}, {{None}, {VgprP0}, WaterfallCall}})
+      .Any({{PhysReg, UniP4}, {{None}, {SgprP4}}})
+      .Any({{PhysReg, DivP4}, {{None}, {VgprP4}, WaterfallCall}});
 
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
