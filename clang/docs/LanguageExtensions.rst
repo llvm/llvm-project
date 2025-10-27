@@ -1784,6 +1784,7 @@ Pack Indexing                                 __cpp_pack_indexing              C
 ``= delete ("should have a reason");``        __cpp_deleted_function           C++26         C++03
 Variadic Friends                              __cpp_variadic_friend            C++26         C++03
 Trivial Relocatability                        __cpp_trivial_relocatability     C++26         C++03
+Expansion Statements                                                           C++26         C++03
 --------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                 C99           C89
 ``_Complex`` (N693)                                                            C99           C89, C++
