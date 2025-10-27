@@ -1338,18 +1338,6 @@ protected:
     return StructuredData::ObjectSP();
   }
 
-<<<<<<< HEAD
-  lldb::StackFrameListSP GetStackFrameList();
-
-||||||| parent of e4e31827a1bf ([lldb] Introduce SBFrameList for lazy frame iteration)
-  lldb::StackFrameListSP GetStackFrameList();
-
-  llvm::Expected<lldb::StackFrameListSP> GetScriptedFrameList();
-
-=======
-  llvm::Expected<lldb::StackFrameListSP> GetScriptedFrameList();
-
->>>>>>> e4e31827a1bf ([lldb] Introduce SBFrameList for lazy frame iteration)
   void SetTemporaryResumeState(lldb::StateType new_state) {
     m_temporary_resume_state = new_state;
   }
