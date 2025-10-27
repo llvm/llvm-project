@@ -1820,10 +1820,12 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
     // Resolve direct calls.
     const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
     return emitDirectCallee(funcDecl);
-  } else if (isa<MemberExpr>(e)) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCallee: call to member function is NYI");
-    return {};
+  } else if (auto me = dyn_cast<MemberExpr>(e)) {
+    if (const auto *fd = dyn_cast<FunctionDecl>(me->getMemberDecl())) {
+      emitIgnoredExpr(me->getBase());
+      return emitDirectCallee(fd);
+    }
+    // Else fall through to the indirect reference handling below.
   } else if (auto *pde = dyn_cast<CXXPseudoDestructorExpr>(e)) {
     return CIRGenCallee::forPseudoDestructor(pde);
   }
@@ -2063,7 +2065,11 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   // a surrounding cir.scope, make sure the alloca ends up in the surrounding
   // scope instead. This is necessary in order to guarantee all SSA values are
   // reachable during cleanups.
-  assert(!cir::MissingFeatures::tryOp());
+  if (auto tryOp =
+          llvm::dyn_cast_if_present<cir::TryOp>(entryBlock->getParentOp())) {
+    if (auto scopeOp = llvm::dyn_cast<cir::ScopeOp>(tryOp->getParentOp()))
+      entryBlock = &scopeOp.getScopeRegion().front();
+  }
 
   return emitAlloca(name, ty, loc, alignment,
                     builder.getBestAllocaInsertPoint(entryBlock), arraySize);

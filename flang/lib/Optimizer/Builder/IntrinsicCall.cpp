@@ -1767,8 +1767,10 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::SinOp>},
     {"sin", RTNAME_STRING(CSinF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::SinhOp>},
+    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::SinhOp>},
     {"sinh", RTNAME_STRING(SinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"sinh", "csinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"sinh", "csinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
@@ -3104,7 +3106,9 @@ IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  return mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  mlir::Value boolResult =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  return builder.createConvert(loc, resultType, boolResult);
 }
 
 mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
@@ -8974,10 +8978,12 @@ IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                     llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_COUNT
@@ -8986,10 +8992,12 @@ IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_OR
@@ -8998,10 +9006,12 @@ IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCWARP

@@ -671,9 +671,12 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
     return RValue::get(results[0]);
   }
-  case cir::TEK_Complex:
-    cgm.errorNYI(loc, "unsupported evaluation kind of function call result");
-    return getUndefRValue(retTy);
+  case cir::TEK_Complex: {
+    mlir::ResultRange results = theCall->getOpResults();
+    assert(!results.empty() &&
+           "Expected at least one result for complex rvalue");
+    return RValue::getComplex(results[0]);
+  }
   }
   llvm_unreachable("Invalid evaluation kind");
 }
