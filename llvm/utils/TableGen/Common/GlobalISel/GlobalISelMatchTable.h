@@ -901,7 +901,7 @@ public:
   OperandPredicateMatcher(PredicateKind Kind, unsigned InsnVarID,
                           unsigned OpIdx)
       : PredicateMatcher(Kind, InsnVarID, OpIdx) {}
-  virtual ~OperandPredicateMatcher();
+  ~OperandPredicateMatcher() override;
 
   /// Compare the priority of this object and B.
   ///
@@ -1377,7 +1377,7 @@ class InstructionPredicateMatcher : public PredicateMatcher {
 public:
   InstructionPredicateMatcher(PredicateKind Kind, unsigned InsnVarID)
       : PredicateMatcher(Kind, InsnVarID) {}
-  virtual ~InstructionPredicateMatcher() {}
+  ~InstructionPredicateMatcher() override {}
 
   /// Compare the priority of this object and B.
   ///
