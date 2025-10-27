@@ -209,7 +209,7 @@ int main(int, char**)
     static_assert(check_swap_ref<W>());
     check_swap_ref<int>();
     check_swap_ref<W>();
-#endif 
+#endif
     {
         optional<X> opt1;
         optional<X> opt2;
