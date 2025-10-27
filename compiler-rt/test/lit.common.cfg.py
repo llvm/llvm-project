@@ -112,6 +112,7 @@ def push_dynamic_library_lookup_path(config, new_path):
         )
         config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
 
+
 # TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
 # See https://github.com/llvm/llvm-project/issues/106636 for more details.
 #
