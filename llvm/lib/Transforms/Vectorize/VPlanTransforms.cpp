@@ -2853,13 +2853,14 @@ void VPlanTransforms::adjustFFLoadEarlyExitForPoisonSafety(VPlan &Plan) {
   // Set AVL to min(VF, remainder).
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   DebugLoc DL = LastFFLoad->getDebugLoc();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
   VPValue *Remainder = Builder.createNaryOp(
-      Instruction::Sub, {&Plan.getVectorTripCount(), Plan.getCanonicalIV()},
-      DL);
+      Instruction::Sub, {&Plan.getVectorTripCount(), CanonicalIVPHI}, DL);
   VPValue *Cmp =
       Builder.createICmp(CmpInst::ICMP_ULE, &Plan.getVF(), Remainder, DL);
   VPValue *AVL = Builder.createSelect(Cmp, &Plan.getVF(), Remainder, DL);
-  Type *CanIVTy = Plan.getCanonicalIV()->getScalarType();
+  Type *CanIVTy = CanonicalIVPHI->getScalarType();
   Type *I32Ty = IntegerType::getInt32Ty(Plan.getContext());
   AVL = Builder.createScalarZExtOrTrunc(AVL, I32Ty, CanIVTy, DL);
   LastFFLoad->setOperand(2, AVL);
