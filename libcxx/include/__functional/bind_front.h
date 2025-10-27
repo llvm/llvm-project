@@ -74,9 +74,8 @@ template <auto _Fn, class... _Args>
                 "bind_front requires all decay_t<Args> to be constructible from respective Args");
   static_assert((is_move_constructible_v<decay_t<_Args>> && ...),
                 "bind_front requires all decay_t<Args> to be move constructible");
-  if constexpr (using _Ty = decltype(_Fn); is_pointer_v<_Ty> || is_member_pointer_v<_Ty>) {
+  if constexpr (using _Ty = decltype(_Fn); is_pointer_v<_Ty> || is_member_pointer_v<_Ty>)
     static_assert(_Fn != nullptr, "f cannot be equal to nullptr");
-  }
 
   return __nttp_bind_front_t<_Fn, decay_t<_Args>...>(std::forward<_Args>(__args)...);
 }
