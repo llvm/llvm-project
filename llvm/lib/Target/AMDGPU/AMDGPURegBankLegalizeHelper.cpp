@@ -1055,6 +1055,21 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     MI.eraseFromParent();
     return true;
+  case WaterfallCall: {
+    SmallSet<Register, 4> SGPROperandRegs;
+    SGPROperandRegs.insert(MI.getOperand(1).getReg());
+
+    MachineBasicBlock::iterator Start(&MI);
+    while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
+      --Start;
+    MachineBasicBlock::iterator End(&MI);
+    while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
+      ++End;
+    ++End;
+    B.setInsertPt(B.getMBB(), Start);
+
+    executeInWaterfallLoop(B, make_range(Start, End), SGPROperandRegs);
+    break;
   }
   }
 
