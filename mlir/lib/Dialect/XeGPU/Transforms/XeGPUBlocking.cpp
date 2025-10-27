@@ -344,6 +344,13 @@ void XeGPUBlockingPass::runOnOperation() {
 
   xegpu::doSCFStructuralTypeConversionWithTensorType(op, converter);
 
+  // Remove leading unit dimensions from vector ops and then
+  // do the unrolling.
+  {
+    RewritePatternSet patterns(ctx);
+    vector::populateCastAwayVectorLeadingOneDimPatterns(patterns);
+    (void)applyPatternsGreedily(op, std::move(patterns));
+  }
   xegpu::UnrollOptions options;
   options.setFilterConstraint(
       [&](Operation *op) -> LogicalResult { return success(needsUnroll(op)); });
