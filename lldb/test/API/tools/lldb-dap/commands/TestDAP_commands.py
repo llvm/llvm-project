@@ -7,6 +7,7 @@ from lldbsuite.test.decorators import *
 
 
 class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
+    @skipIfWindows	# rdar://163316257
     def test_command_directive_quiet_on_success(self):
         program = self.getBuildArtifact("a.out")
         command_quiet = (
