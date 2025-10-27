@@ -408,7 +408,7 @@ def G_ASHR : GenericInstruction {
 }
 
 // Generic absolute difference signed.
-def G_ABDS : GenericInstruction {
+def G_SABD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = false;
@@ -416,7 +416,7 @@ def G_ABDS : GenericInstruction {
 }
 
 // Generic absolute difference unsigned.
-def G_ABDU : GenericInstruction {
+def G_UABD : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type0:$src2);
   let hasSideEffects = false;

@@ -1884,32 +1884,32 @@ public:
     return buildInstr(TargetOpcode::G_MUL, {Dst}, {Src0, Src1}, Flags);
   }
 
-  /// Build and insert \p Res = G_ABDS \p Op0, \p Op1
+  /// Build and insert \p Res = G_SABD \p Op0, \p Op1
   ///
-  /// G_ABDS return the signed absolute difference of \p Op0 and \p Op1.
+  /// G_SABD return the signed absolute difference of \p Op0 and \p Op1.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
   ///      with the same (scalar or vector) type).
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAbds(const DstOp &Dst, const SrcOp &Src0,
+  MachineInstrBuilder buildSAbd(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_ABDS, {Dst}, {Src0, Src1});
+    return buildInstr(TargetOpcode::G_SABD, {Dst}, {Src0, Src1});
   }
 
-  /// Build and insert \p Res = G_ABDU \p Op0, \p Op1
+  /// Build and insert \p Res = G_UABD \p Op0, \p Op1
   ///
-  /// G_ABDU return the unsigned absolute difference of \p Op0 and \p Op1.
+  /// G_UABD return the unsigned absolute difference of \p Op0 and \p Op1.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res, \p Op0 and \p Op1 must be generic virtual registers
   ///      with the same (scalar or vector) type).
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAbdu(const DstOp &Dst, const SrcOp &Src0,
+  MachineInstrBuilder buildUAbd(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_ABDU, {Dst}, {Src0, Src1});
+    return buildInstr(TargetOpcode::G_UABD, {Dst}, {Src0, Src1});
   }
 
   MachineInstrBuilder buildUMulH(const DstOp &Dst, const SrcOp &Src0,

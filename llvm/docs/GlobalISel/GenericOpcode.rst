@@ -501,15 +501,15 @@ undefined.
   %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
   %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
 
-G_ABDS, G_ABDU
+G_SABD, G_UABD
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Compute the absolute difference (signed and unsigned), e.g. trunc(abs(ext(x)-ext(y)).
 
 .. code-block:: none
 
-  %0:_(s33) = G_ABDS %2, %3
-  %1:_(s33) = G_ABDU %4, %5
+  %0:_(s33) = G_SABD %2, %3
+  %1:_(s33) = G_UABD %4, %5
 
 Floating Point Operations
 -------------------------
