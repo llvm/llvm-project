@@ -368,6 +368,9 @@ template <typename A> struct NeverParser {
 
 template <typename A> constexpr auto never() { return NeverParser<A>{}; }
 
+// Parser for optional<T> which always succeeds and returns std::nullptr.
+// It's only needed to produce "std::optional<CallStmt::Chevrons>" in
+// CallStmt.
 template <typename A, typename B = void> struct NullParser;
 template <typename B> struct NullParser<std::optional<B>> {
   using resultType = std::optional<B>;
@@ -382,6 +385,7 @@ template <typename A> constexpr auto null() { return NullParser<A>{}; }
 // don't correspond to anything in the source. Their parsers should still
 // exist, but they should never be executed.
 TYPE_PARSER(construct<OmpStylizedDeclaration>(never<OmpStylizedDeclaration>()))
+TYPE_PARSER(construct<OmpStylizedInstance>(never<OmpStylizedInstance>()))
 
 TYPE_PARSER( //
     construct<OmpStylizedInstance::Instance>(Parser<AssignmentStmt>{}) ||
@@ -390,8 +394,6 @@ TYPE_PARSER( //
             null<std::optional<CallStmt::Chevrons>>(),
             parenthesized(optionalList(actualArgSpec))))) ||
     construct<OmpStylizedInstance::Instance>(indirect(expr)))
-
-TYPE_PARSER(construct<OmpStylizedInstance>(never<OmpStylizedInstance>()))
 
 struct OmpStylizedExpressionParser {
   using resultType = OmpStylizedExpression;
