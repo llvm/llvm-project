@@ -34,6 +34,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstdint>
@@ -1990,17 +1991,16 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitCtpop(IntrinsicInst &I) {
-  uint32_t BitWidth, DestinationWidth, IntrinsicWidth;
-  if (!I.hasOneUse() || !I.getType()->isIntegerTy() ||
-      !ST.hasBCNT(BitWidth = I.getType()->getIntegerBitWidth()))
+  uint32_t BitWidth, DestinationWidth;
+  if (!I.hasOneUse() || !I.getType()->isIntegerTy())
     return false;
 
-  BinaryOperator *MustBeSub = dyn_cast<BinaryOperator>(I.user_back());
-  if (!MustBeSub || MustBeSub->getOpcode() != BinaryOperator::Sub)
+  BitWidth = I.getType()->getIntegerBitWidth();
+  if(!ST.hasBCNT(BitWidth))
     return false;
 
-  ConstantInt *FirstOperand = dyn_cast<ConstantInt>(MustBeSub->getOperand(0));
-  if (!FirstOperand || FirstOperand->getZExtValue() != BitWidth)
+  Instruction *MustBeSub = I.user_back();
+  if (!match(MustBeSub, m_Sub(m_SpecificInt(BitWidth), m_Specific(&I))))
     return false;
 
   IRBuilder<> Builder(MustBeSub);
@@ -2009,14 +2009,12 @@ bool AMDGPUCodeGenPrepareImpl::visitCtpop(IntrinsicInst &I) {
                                             : Intrinsic::amdgcn_bcnt32_lo,
                               {}, {I.getArgOperand(0)});
 
-  if ((DestinationWidth = MustBeSub->getType()->getIntegerBitWidth()) !=
-      (IntrinsicWidth = TransformedIns->getType()->getIntegerBitWidth()))
-    TransformedIns = cast<Instruction>(Builder.CreateZExtOrTrunc(
-        TransformedIns, Type::getIntNTy(I.getContext(), DestinationWidth)));
+  DestinationWidth = MustBeSub->getType()->getIntegerBitWidth();
+  TransformedIns = cast<Instruction>(Builder.CreateZExtOrTrunc(
+      TransformedIns, Type::getIntNTy(I.getContext(), DestinationWidth)));
 
-  MustBeSub->replaceAllUsesWith(TransformedIns);
-  TransformedIns->takeName(MustBeSub);
-  MustBeSub->eraseFromParent();
+  BasicBlock::iterator SubIt = MustBeSub->getIterator();
+  ReplaceInstWithValue(SubIt,TransformedIns);
   return true;
 }
 
