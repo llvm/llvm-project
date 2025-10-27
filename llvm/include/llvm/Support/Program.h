@@ -45,7 +45,7 @@ typedef procid_t process_t;
 
 /// This struct encapsulates information about a process.
 struct ProcessInfo {
-  enum : procid_t { InvalidPid = 0 };
+  static constexpr procid_t InvalidPid = 0;
 
   procid_t Pid;      /// The process identifier.
   process_t Process; /// Platform-dependent process object.
