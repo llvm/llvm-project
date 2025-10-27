@@ -255,6 +255,11 @@ public:
     return Layout.getNonVirtualSize() == PointerSize;
   }
 
+  llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> *
+  getRecordToCopyCtor() override {
+    return nullptr;
+  }
+
   const CXXConstructorDecl *
   getCopyConstructorForExceptionObject(CXXRecordDecl *RD) override {
     return nullptr;
