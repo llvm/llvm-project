@@ -37,8 +37,8 @@ entry:
 
 switch:
   switch i32 -1, label %switch.default [
-  i32 0, label %end
-  i32 1, label %end
+    i32 0, label %end
+    i32 1, label %end
   ]
 
 switch.default:
@@ -65,8 +65,8 @@ entry:
 
 switch:
   switch i32 0, label %switch.default [
-  i32 0, label %end
-  i32 1, label %end
+    i32 0, label %end
+    i32 1, label %end
   ]
 
 switch.default:
@@ -102,11 +102,11 @@ entry:
 switch:
   %x = load i32, ptr %p, !range !{i32 0, i32 3}
   switch i32 %x, label %switch.default [
-  i32 0, label %switch.default
-  i32 1, label %switch.0
-  i32 2, label %switch.0
-  i32 3, label %switch.1
-  i32 4, label %switch.1
+    i32 0, label %switch.default
+    i32 1, label %switch.0
+    i32 2, label %switch.0
+    i32 3, label %switch.1
+    i32 4, label %switch.1
   ]
 
 switch.default:
@@ -140,10 +140,10 @@ define i32 @test_local_range(ptr %p) {
 ;
   %x = load i32, ptr %p, !range !{i32 0, i32 3}
   switch i32 %x, label %switch.default [
-  i32 0, label %switch.0
-  i32 1, label %switch.1
-  i32 2, label %switch.2
-  i32 3, label %switch.3
+    i32 0, label %switch.0
+    i32 1, label %switch.1
+    i32 2, label %switch.2
+    i32 3, label %switch.3
   ]
 
 switch.default:
@@ -182,12 +182,12 @@ define i32 @test_duplicate_successors(ptr %p) {
 ;
   %x = load i32, ptr %p, !range !{i32 0, i32 3}
   switch i32 %x, label %switch.default [
-  i32 0, label %switch.0
-  i32 1, label %switch.0
-  i32 2, label %switch.1
-  i32 3, label %switch.1
-  i32 4, label %switch.2
-  i32 5, label %switch.2
+    i32 0, label %switch.0
+    i32 1, label %switch.0
+    i32 2, label %switch.1
+    i32 3, label %switch.1
+    i32 4, label %switch.2
+    i32 5, label %switch.2
   ]
 
 switch.default:
@@ -223,10 +223,10 @@ define internal i32 @test_ip_range(i32 %x) {
 ; CHECK-NEXT:    ret i32 3
 ;
   switch i32 %x, label %switch.default [
-  i32 0, label %switch.0
-  i32 1, label %switch.1
-  i32 2, label %switch.2
-  i32 3, label %switch.3
+    i32 0, label %switch.0
+    i32 1, label %switch.1
+    i32 2, label %switch.2
+    i32 3, label %switch.3
   ], !prof !{!"branch_weights", i32 1, i32 2, i32 3, i32 4, i32 5}
 
 switch.default:
@@ -295,8 +295,8 @@ else.2:
 switch:
   %p = phi i32 [ 0, %then.1 ], [ 2, %else.1 ], [ undef, %else.2 ]
   switch i32 %p, label %switch.default [
-  i32 0, label %end.1
-  i32 3, label %end.2
+    i32 0, label %end.1
+    i32 3, label %end.2
   ]
 
 switch.default:
@@ -346,10 +346,10 @@ entry:
 
 if.then:
   switch i32 %x, label %sw.epilog [
-  i32 0, label %sw.bb
-  i32 1, label %sw.bb2
-  i32 2, label %sw.bb4
-  i32 3, label %sw.bb6
+    i32 0, label %sw.bb
+    i32 1, label %sw.bb2
+    i32 2, label %sw.bb4
+    i32 3, label %sw.bb6
   ]
 
 sw.bb:
@@ -375,6 +375,101 @@ sw.epilog:
 return:
   %retval.0 = phi i32 [ %call7, %sw.bb6 ], [ %call5, %sw.bb4 ], [ %call3, %sw.bb2 ], [ %call, %sw.bb ], [ -23, %sw.epilog ], [ -23, %entry ]
   ret i32 %retval.0
+}
+
+define i1 @switch_default_dest(i32 %x) {
+; CHECK-LABEL: define i1 @switch_default_dest(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  case0:
+; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[PHI:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[PHI]]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[PHI]]
+; CHECK:       phi:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 2, [[CASE1]] ], [ 3, [[CASE0:%.*]] ], [ [[X]], [[DEFAULT]] ]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[RES]], 2
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+case0:
+  switch i32 %x, label %default [
+    i32 0, label %phi
+    i32 1, label %case1
+  ]
+
+case1:
+  br label %phi
+
+default:
+  br label %phi
+
+phi:
+  %res = phi i32 [ 2, %case1 ], [ 3, %case0 ], [ %x, %default ]
+  %ret = icmp ult i32 %res, 2
+  ret i1 %ret
+}
+
+define i1 @switch_multicases_dest(i32 %x) {
+; CHECK-LABEL: define i1 @switch_multicases_dest(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X]], label [[PHI:%.*]] [
+; CHECK-NEXT:      i32 0, label [[CASE:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE]]
+; CHECK-NEXT:    ]
+; CHECK:       case:
+; CHECK-NEXT:    br label [[PHI]]
+; CHECK:       phi:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X]], [[CASE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[RES]], 2
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  switch i32 %x, label %phi [
+    i32 0, label %case
+    i32 1, label %case
+  ]
+
+case:
+  br label %phi
+
+phi:
+  %res = phi i32 [ %x, %case ], [ 0, %entry ]
+  %ret = icmp ult i32 %res, 2
+  ret i1 %ret
+}
+
+define i1 @switch_multicases_dest2(i32 %x) {
+; CHECK-LABEL: define i1 @switch_multicases_dest2(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[PHI:%.*]]
+; CHECK-NEXT:      i32 1, label [[PHI]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[PHI]]
+; CHECK:       phi:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[X]], [[ENTRY]] ], [ 0, [[DEFAULT]] ]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ult i32 [[RES]], 2
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+entry:
+  switch i32 %x, label %default [
+    i32 0, label %phi
+    i32 1, label %phi
+  ]
+
+default:
+  br label %phi
+
+phi:
+  %res = phi i32 [ %x, %entry ], [ %x, %entry ], [ 0, %default ]
+  %ret = icmp ult i32 %res, 2
+  ret i1 %ret
 }
 
 declare void @llvm.assume(i1)
