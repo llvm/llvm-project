@@ -15,78 +15,79 @@
 # RUN:     FileCheck -check-prefix=OBJ-N64 %s
 	.text
 foo:
-	.reloc 4, R_MIPS_NONE, foo   # ASM: .reloc 4, R_MIPS_NONE, foo
-	.reloc 0, R_MIPS_NONE, foo+4 # ASM: .reloc 0, R_MIPS_NONE, foo+4
-	.reloc 8, R_MIPS_32, foo+8   # ASM: .reloc 8, R_MIPS_32, foo+8
+# ASM: .reloc {{.*}}+4, R_MIPS_NONE, foo
+	.reloc .+4, R_MIPS_NONE, foo
+	.reloc .+0, R_MIPS_NONE, foo+4
+	.reloc .+8, R_MIPS_32, foo+8
 	nop
 	nop
 	nop
-	.reloc 12, R_MIPS_NONE       # ASM: .reloc 12, R_MIPS_NONE{{$}}
+	.reloc ., R_MIPS_NONE
         nop
-  .reloc 16, R_MIPS_CALL_HI16, 4        # ASM: .reloc 16, R_MIPS_CALL_HI16, 4
+  .reloc ., R_MIPS_CALL_HI16, 4
   nop
-  .reloc 20, R_MIPS_CALL_LO16, 4        # ASM: .reloc 20, R_MIPS_CALL_LO16, 4
+  .reloc ., R_MIPS_CALL_LO16, 4
   nop
-  .reloc 24, R_MIPS_CALL16, 4           # ASM: .reloc 24, R_MIPS_CALL16, 4
+  .reloc ., R_MIPS_CALL16, 4
   nop
-  .reloc 28, R_MIPS_GOT16, 4            # ASM: .reloc 28, R_MIPS_GOT16, 4
+  .reloc ., R_MIPS_GOT16, 4
   nop
-  .reloc 32, R_MIPS_GOT_PAGE, 4         # ASM: .reloc 32, R_MIPS_GOT_PAGE, 4
+  .reloc ., R_MIPS_GOT_PAGE, 4
   nop
-  .reloc 36, R_MIPS_GOT_OFST, 4         # ASM: .reloc 36, R_MIPS_GOT_OFST, 4
+  .reloc ., R_MIPS_GOT_OFST, 4
   nop
-  .reloc 40, R_MIPS_GOT_DISP, 4         # ASM: .reloc 40, R_MIPS_GOT_DISP, 4
+  .reloc ., R_MIPS_GOT_DISP, 4
   nop
-  .reloc 44, R_MIPS_GOT_HI16, 4         # ASM: .reloc 44, R_MIPS_GOT_HI16, 4
+  .reloc ., R_MIPS_GOT_HI16, 4
   nop
-  .reloc 48, R_MIPS_GOT_LO16, 4         # ASM: .reloc 48, R_MIPS_GOT_LO16, 4
+  .reloc ., R_MIPS_GOT_LO16, 4
   nop
-  .reloc 52, R_MIPS_TLS_GOTTPREL, 4     # ASM: .reloc 52, R_MIPS_TLS_GOTTPREL, 4
+  .reloc ., R_MIPS_TLS_GOTTPREL, 4
   nop
-  .reloc 56, R_MIPS_TLS_DTPREL_HI16, 4  # ASM: .reloc 56, R_MIPS_TLS_DTPREL_HI16, 4
+  .reloc ., R_MIPS_TLS_DTPREL_HI16, 4
   nop
-  .reloc 60, R_MIPS_TLS_DTPREL_LO16, 4  # ASM: .reloc 60, R_MIPS_TLS_DTPREL_LO16, 4
+  .reloc ., R_MIPS_TLS_DTPREL_LO16, 4
   nop
-  .reloc 64, R_MIPS_TLS_GD, 4           # ASM: .reloc 64, R_MIPS_TLS_GD, 4
+  .reloc ., R_MIPS_TLS_GD, 4
   nop
-  .reloc 68, R_MIPS_TLS_LDM, 4          # ASM: .reloc 68, R_MIPS_TLS_LDM, 4
+  .reloc ., R_MIPS_TLS_LDM, 4
   nop
-  .reloc 72, R_MIPS_TLS_TPREL_HI16, 4   # ASM: .reloc 72, R_MIPS_TLS_TPREL_HI16, 4
+  .reloc ., R_MIPS_TLS_TPREL_HI16, 4
   nop
-  .reloc 76, R_MIPS_TLS_TPREL_LO16, 4   # ASM: .reloc 76, R_MIPS_TLS_TPREL_LO16, 4
+  .reloc ., R_MIPS_TLS_TPREL_LO16, 4
   nop
-  .reloc 80, R_MICROMIPS_CALL16, 4      # ASM: .reloc 80, R_MICROMIPS_CALL16, 4
+  .reloc ., R_MICROMIPS_CALL16, 4
   nop
-  .reloc 84, R_MICROMIPS_GOT_DISP, 4    # ASM: .reloc 84, R_MICROMIPS_GOT_DISP, 4
+  .reloc ., R_MICROMIPS_GOT_DISP, 4
   nop
-  .reloc 88, R_MICROMIPS_GOT_PAGE, 4    # ASM: .reloc 88, R_MICROMIPS_GOT_PAGE, 4
+  .reloc ., R_MICROMIPS_GOT_PAGE, 4
   nop
-  .reloc 92, R_MICROMIPS_GOT_OFST, 4    # ASM: .reloc 92, R_MICROMIPS_GOT_OFST, 4
+  .reloc ., R_MICROMIPS_GOT_OFST, 4
   nop
-  .reloc 96, R_MICROMIPS_GOT16, 4       # ASM: .reloc 96, R_MICROMIPS_GOT16, 4
+  .reloc ., R_MICROMIPS_GOT16, 4
   nop
-  .reloc 100, R_MICROMIPS_TLS_GOTTPREL, 4       # ASM: .reloc 100, R_MICROMIPS_TLS_GOTTPREL, 4
+  .reloc ., R_MICROMIPS_TLS_GOTTPREL, 4
   nop
-  .reloc 104, R_MICROMIPS_TLS_DTPREL_HI16, 4    # ASM: .reloc 104, R_MICROMIPS_TLS_DTPREL_HI16, 4
+  .reloc ., R_MICROMIPS_TLS_DTPREL_HI16, 4
   nop
-  .reloc 108, R_MICROMIPS_TLS_DTPREL_LO16, 4    # ASM: .reloc 108, R_MICROMIPS_TLS_DTPREL_LO16, 4
+  .reloc ., R_MICROMIPS_TLS_DTPREL_LO16, 4
   nop
-  .reloc 112, R_MICROMIPS_TLS_GD, 4             # ASM: .reloc 112, R_MICROMIPS_TLS_GD, 4
+  .reloc ., R_MICROMIPS_TLS_GD, 4
   nop
-  .reloc 116, R_MICROMIPS_TLS_LDM, 4            # ASM: .reloc 116, R_MICROMIPS_TLS_LDM, 4
+  .reloc ., R_MICROMIPS_TLS_LDM, 4
   nop
-  .reloc 120, R_MICROMIPS_TLS_TPREL_HI16, 4     # ASM: .reloc 120, R_MICROMIPS_TLS_TPREL_HI16, 4
+  .reloc ., R_MICROMIPS_TLS_TPREL_HI16, 4
   nop
-  .reloc 124, R_MICROMIPS_TLS_TPREL_LO16, 4     # ASM: .reloc 124, R_MICROMIPS_TLS_TPREL_LO16, 4
+  .reloc ., R_MICROMIPS_TLS_TPREL_LO16, 4
   nop
-  .reloc 128, R_MIPS_JALR, 4            # ASM: .reloc 128, R_MIPS_JALR, 4
+  .reloc ., R_MIPS_JALR, 4
   nop
-  .reloc 132, R_MICROMIPS_JALR, 4       # ASM: .reloc 132, R_MICROMIPS_JALR, 4
+  .reloc ., R_MICROMIPS_JALR, 4
   nop
-  .reloc 136, BFD_RELOC_NONE, 9         # ASM: .reloc 136, BFD_RELOC_NONE, 9
-  .reloc 137, BFD_RELOC_16, 9           # ASM: .reloc 137, BFD_RELOC_16, 9
-  .reloc 138, BFD_RELOC_32, 9           # ASM: .reloc 138, BFD_RELOC_32, 9
-  .reloc 139, BFD_RELOC_64, 9           # ASM: .reloc 139, BFD_RELOC_64, 9
+  .reloc ., BFD_RELOC_NONE, 9
+  .reloc ., BFD_RELOC_16, 9
+  .reloc ., BFD_RELOC_32, 9
+  .reloc ., BFD_RELOC_64, 9
   nop
 
 # OBJ-O32-LABEL: Name: .text
@@ -134,9 +135,9 @@ foo:
 # OBJ-O32-NEXT:  0x80 R_MIPS_JALR -
 # OBJ-O32-NEXT:  0x84 R_MICROMIPS_JALR -
 # OBJ-O32-NEXT:  0x88 R_MIPS_NONE -
-# OBJ-O32-NEXT:  0x89 R_MIPS_16 -
-# OBJ-O32-NEXT:  0x8A R_MIPS_32 -
-# OBJ-O32-NEXT:  0x8B R_MIPS_64 -
+# OBJ-O32-NEXT:  0x88 R_MIPS_16 -
+# OBJ-O32-NEXT:  0x88 R_MIPS_32 -
+# OBJ-O32-NEXT:  0x88 R_MIPS_64 -
 # OBJ-O32-NEXT:  0x1C R_MIPS_GOT16 -
 # OBJ-O32-NEXT:  0x60 R_MICROMIPS_GOT16 -
 
@@ -188,9 +189,9 @@ foo:
 # OBJ-N32-NEXT:  0x80 R_MIPS_JALR - 0x4
 # OBJ-N32-NEXT:  0x84 R_MICROMIPS_JALR - 0x4
 # OBJ-N32-NEXT:  0x88 R_MIPS_NONE - 0x9
-# OBJ-N32-NEXT:  0x89 R_MIPS_16 - 0x9
-# OBJ-N32-NEXT:  0x8A R_MIPS_32 - 0x9
-# OBJ-N32-NEXT:  0x8B R_MIPS_64 - 0x9
+# OBJ-N32-NEXT:  0x88 R_MIPS_16 - 0x9
+# OBJ-N32-NEXT:  0x88 R_MIPS_32 - 0x9
+# OBJ-N32-NEXT:  0x88 R_MIPS_64 - 0x9
 
 # OBJ-N64-LABEL: Name: .text
 # OBJ-N64:       0000: 00000000 00000000 00000000 00000000
@@ -239,6 +240,6 @@ foo:
 # OBJ-N64-NEXT:  0x80 R_MIPS_JALR/R_MIPS_NONE/R_MIPS_NONE - 0x4
 # OBJ-N64-NEXT:  0x84 R_MICROMIPS_JALR/R_MIPS_NONE/R_MIPS_NONE - 0x4
 # OBJ-N64-NEXT:  0x88 R_MIPS_NONE/R_MIPS_NONE/R_MIPS_NONE - 0x9
-# OBJ-N64-NEXT:  0x89 R_MIPS_16/R_MIPS_NONE/R_MIPS_NONE - 0x9
-# OBJ-N64-NEXT:  0x8A R_MIPS_32/R_MIPS_NONE/R_MIPS_NONE - 0x9
-# OBJ-N64-NEXT:  0x8B R_MIPS_64/R_MIPS_NONE/R_MIPS_NONE - 0x9
+# OBJ-N64-NEXT:  0x88 R_MIPS_16/R_MIPS_NONE/R_MIPS_NONE - 0x9
+# OBJ-N64-NEXT:  0x88 R_MIPS_32/R_MIPS_NONE/R_MIPS_NONE - 0x9
+# OBJ-N64-NEXT:  0x88 R_MIPS_64/R_MIPS_NONE/R_MIPS_NONE - 0x9

@@ -8,13 +8,15 @@
 
 #include "src/sched/sched_getaffinity.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include <sched.h>
-#include <stdint.h>
+#include "hdr/types/cpu_set_t.h"
+#include "hdr/types/pid_t.h"
+#include "hdr/types/size_t.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {

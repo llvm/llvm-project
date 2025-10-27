@@ -112,7 +112,7 @@ def fir_ReduceOperationEnum : I32BitEnumAttr<"ReduceOperationEnum",
       I32BitEnumAttrCaseBit<"MIN", 7, "min">,
       I32BitEnumAttrCaseBit<"IAND", 8, "iand">,
       I32BitEnumAttrCaseBit<"IOR", 9, "ior">,
-      I32BitEnumAttrCaseBit<"EIOR", 10, "eior">
+      I32BitEnumAttrCaseBit<"IEOR", 10, "ieor">
     ]> {
   let separator = ", ";
   let cppNamespace = "::fir";

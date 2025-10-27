@@ -13,7 +13,20 @@
 
 #include <optional>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+
+// Test SFINAE.
+static_assert(HasOperatorGreaterThan<std::optional<ThreeWayComparable>>);
+static_assert(HasOperatorGreaterThan<std::optional<ThreeWayComparable>, std::optional<int>>);
+
+static_assert(!HasOperatorGreaterThan<std::optional<NonComparable>>);
+static_assert(!HasOperatorGreaterThan<std::optional<EqualityComparable>>);
+static_assert(!HasOperatorGreaterThan<std::optional<ThreeWayComparable>, std::optional<NonComparable>>);
+
+#endif
 
 using std::optional;
 

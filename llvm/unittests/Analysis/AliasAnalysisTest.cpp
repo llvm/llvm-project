@@ -147,7 +147,8 @@ protected:
   std::unique_ptr<BasicAAResult> BAR;
   std::unique_ptr<AAResults> AAR;
 
-  AliasAnalysisTest() : M("AliasAnalysisTest", C), TLI(TLII) {}
+  AliasAnalysisTest()
+      : M("AliasAnalysisTest", C), TLII(M.getTargetTriple()), TLI(TLII) {}
 
   AAResults &getAAResults(Function &F) {
     // Reset the Function AA results first to clear out any references.

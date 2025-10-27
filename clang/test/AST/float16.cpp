@@ -126,7 +126,7 @@ public:
 };
 
 //CHECK:      |-CXXRecordDecl {{.*}} referenced class C1 definition
-//CHECK:      | |-CXXRecordDecl {{.*}} implicit referenced class C1
+//CHECK:      | |-CXXRecordDecl {{.*}} implicit class C1
 //CHECK-NEXT: | |-FieldDecl {{.*}} referenced f1c '_Float16'
 //CHECK-NEXT: | |-VarDecl {{.*}} used f2c 'const _Float16' static
 //CHECK-NEXT: | |-FieldDecl {{.*}} f3c 'volatile _Float16'

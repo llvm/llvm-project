@@ -46,9 +46,10 @@ using namespace lldb_private;
 
 // GDBRemoteCommunicationServerPlatform constructor
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
-    const Socket::SocketProtocol socket_protocol, uint16_t gdbserver_port)
-    : GDBRemoteCommunicationServerCommon(), m_socket_protocol(socket_protocol),
-      m_gdbserver_port(gdbserver_port) {
+    FileSpec debugserver_path, const Socket::SocketProtocol socket_protocol,
+    uint16_t gdbserver_port)
+    : m_debugserver_path(std::move(debugserver_path)),
+      m_socket_protocol(socket_protocol), m_gdbserver_port(gdbserver_port) {
 
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qC,
@@ -102,14 +103,15 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
   debugserver_launch_info.SetLaunchInSeparateProcessGroup(false);
   debugserver_launch_info.SetMonitorProcessCallback(
       [](lldb::pid_t, int, int) {});
+  if (!FileSystem::Instance().Exists(m_debugserver_path))
+    return Status::FromErrorString("debugserver does not exist");
+  debugserver_launch_info.SetExecutableFile(m_debugserver_path,
+                                            /*add_exe_file_as_first_arg=*/true);
 
   Status error;
   if (fd == SharedSocket::kInvalidFD) {
     if (m_socket_protocol == Socket::ProtocolTcp) {
-      // Just check that GDBServer exists. GDBServer must be launched after
-      // accepting the connection.
-      if (!GetDebugserverPath(nullptr))
-        return Status::FromErrorString("unable to locate debugserver");
+      // The server will be launched after accepting the connection.
       return Status();
     }
 
@@ -120,13 +122,11 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
 #endif
     socket_name = GetDomainSocketPath("gdbserver").GetPath();
     url << socket_name;
-    error = StartDebugserverProcess(url.str(), nullptr, debugserver_launch_info,
-                                    &args);
+    error = StartDebugserverProcess(url.str(), debugserver_launch_info, &args);
   } else {
     if (m_socket_protocol != Socket::ProtocolTcp)
       return Status::FromErrorString("protocol must be tcp");
-    error =
-        StartDebugserverProcess(fd, nullptr, debugserver_launch_info, &args);
+    error = StartDebugserverProcess(fd, debugserver_launch_info, &args);
   }
 
   if (error.Success()) {

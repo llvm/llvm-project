@@ -1263,6 +1263,15 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
+  if (!options.GetProcess())
+    options.SetProcess(process_sp);
+
+  if (options.GetProcess().GetSP() != process_sp) {
+    error = Status::FromErrorString(
+        "Save Core Options configured for a different process.");
+    return error;
+  }
+
   std::lock_guard<std::recursive_mutex> guard(
       process_sp->GetTarget().GetAPIMutex());
 
@@ -1271,7 +1280,7 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
-  error.ref() = PluginManager::SaveCore(process_sp, options.ref());
+  error.ref() = PluginManager::SaveCore(options.ref());
 
   return error;
 }

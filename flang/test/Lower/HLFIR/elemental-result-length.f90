@@ -4,7 +4,7 @@ module m1
 contains
 elemental function fct1(a, b) result(t)
   character(*), intent(in) :: a, b
-  character(len(a) + len(b)) :: t
+  character(len(a, kind=8) + len(b,kind=8)) :: t
   t = a // b
 end function
 
@@ -27,10 +27,10 @@ end subroutine
 ! CHECK: %[[DUMMYA:.*]]:2 = hlfir.declare %[[UNBOX_A]]#0 typeparams %[[UNBOX_A]]#1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMm1Ffct1Ea"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK: %[[UNBOX_B:.*]]:2 = fir.unboxchar %[[B]]#0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK: %[[DUMMYB:.*]]:2 = hlfir.declare %[[UNBOX_B]]#0 typeparams %[[UNBOX_B]]#1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMm1Ffct1Eb"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK: %[[LEN_A:.*]] = fir.convert %[[UNBOX_A]]#1 : (index) -> i32
-! CHECK: %[[LEN_B:.*]] = fir.convert %[[UNBOX_B]]#1 : (index) -> i32
-! CHECK: %[[LEN_LEN:.*]] = arith.addi %[[LEN_A]], %[[LEN_B]] : i32
-! CHECK: %[[LEN_LEN_IDX:.*]] = fir.convert %[[LEN_LEN]] : (i32) -> index
+! CHECK: %[[LEN_A:.*]] = fir.convert %[[UNBOX_A]]#1 : (index) -> i64
+! CHECK: %[[LEN_B:.*]] = fir.convert %[[UNBOX_B]]#1 : (index) -> i64
+! CHECK: %[[LEN_LEN:.*]] = arith.addi %[[LEN_A]], %[[LEN_B]] : i64
+! CHECK: %[[LEN_LEN_IDX:.*]] = fir.convert %[[LEN_LEN]] : (i64) -> index
 ! CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[LEN_LEN_IDX]], %c0{{.*}} : index
 ! CHECK: %[[RES_LENGTH:.*]] = arith.select %[[CMPI]], %[[LEN_LEN_IDX]], %c0{{.*}} : index
 ! CHECK: %[[RES:.*]] = fir.alloca !fir.char<1,?>(%[[RES_LENGTH]] : index) {bindc_name = ".result"}
@@ -50,12 +50,12 @@ end subroutine
 ! CHECK: %[[C:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QMm1Fsub4Ec"} : (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.box<!fir.array<?x!fir.char<1,?>>>)
 ! CHECK: %[[LEN_A:.*]] = fir.box_elesize %[[A]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK: %[[LEN_B:.*]] = fir.box_elesize %[[B]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
-! CHECK: %[[LEN_A_I32:.*]] = fir.convert %[[LEN_A]] : (index) -> i32
-! CHECK: %[[LEN_B_I32:.*]] = fir.convert %[[LEN_B]] : (index) -> i32
-! CHECK: %[[LEN_LEN:.*]] = arith.addi %[[LEN_A_I32]], %[[LEN_B_I32]] : i32
-! CHECK: %[[LEN_LEN_IDX:.*]] = fir.convert %[[LEN_LEN]] : (i32) -> index
+! CHECK: %[[LEN_A_I32:.*]] = fir.convert %[[LEN_A]] : (index) -> i64
+! CHECK: %[[LEN_B_I32:.*]] = fir.convert %[[LEN_B]] : (index) -> i64
+! CHECK: %[[LEN_LEN:.*]] = arith.addi %[[LEN_A_I32]], %[[LEN_B_I32]] : i64
+! CHECK: %[[LEN_LEN_IDX:.*]] = fir.convert %[[LEN_LEN]] : (i64) -> index
 ! CHECK: %[[CMPI:.*]] = arith.cmpi sgt, %[[LEN_LEN_IDX]], %c0{{.*}} : index
-! CHECK: %[[LENGTH:.*]] = arith.select %[[CMPI]], %17, %c0{{.*}} : index
+! CHECK: %[[LENGTH:.*]] = arith.select %[[CMPI]], %[[LEN_LEN_IDX]], %c0{{.*}} : index
 ! CHECK: %{{.*}} = hlfir.elemental %{{.*}} typeparams %[[LENGTH]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>>
 
 end module

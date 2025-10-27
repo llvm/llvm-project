@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   IndependenceTransforms.cpp
   MultiBuffer.cpp
   NormalizeMemRefs.cpp
+  ReifyResultShapes.cpp
   ResolveShapedTypeResultDims.cpp
   RuntimeOpVerification.cpp
 

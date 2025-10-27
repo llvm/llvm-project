@@ -91,6 +91,7 @@ function(builtin_default_target compiler_rt_path)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
+                                      -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       ${COMMON_CMAKE_ARGS}
                                       ${BUILTINS_CMAKE_ARGS}
@@ -131,6 +132,7 @@ function(builtin_register_target compiler_rt_path name)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
                                       -DCMAKE_C_COMPILER_WORKS=ON
+                                      -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
                                       ${COMMON_CMAKE_ARGS}
@@ -471,7 +473,6 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
-                clang-offload-packager
                 flang
                 count
                 lld
@@ -480,11 +481,14 @@ if(build_runtimes)
                 llvm-lto
                 llvm-jitlink
                 llvm-nm
+                llvm-strip
                 llvm-objdump
                 llvm-profdata
+                llvm-readobj
                 llvm-size
                 llvm-symbolizer
                 llvm-xray
+                llvm-offload-binary
                 not
                 obj2yaml
                 opt
@@ -497,6 +501,9 @@ if(build_runtimes)
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
+    if(WIN32)
+      list(APPEND extra_deps KillTheDoctor)
+    endif()
   endif()
 
   # Forward user-provived system configuration to runtimes for requirement introspection.
@@ -517,6 +524,18 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
+  # Tools needed by build_symbolizer.sh.
+  if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+    foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
+  # Allow openmp to see the Fortran compiler
+  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    list(APPEND extra_args ENABLE_FORTRAN)
+  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     if (${LLVM_TOOL_FLANG_BUILD})
       message(STATUS "Configuring build of omp_lib.mod and omp_lib_kinds.mod via flang")
@@ -529,7 +548,7 @@ if(build_runtimes)
       # that all .mod files are also properly build.
       list(APPEND extra_deps "flang" "module_files")
     endif()
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager clang-nvlink-wrapper)
+    foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
@@ -537,8 +556,8 @@ if(build_runtimes)
   endif()
   if(LLVM_LIBC_GPU_BUILD)
     list(APPEND extra_cmake_args "-DLLVM_LIBC_GPU_BUILD=ON")
-    if(TARGET clang-offload-packager)
-      list(APPEND extra_deps clang-offload-packager)
+    if(TARGET llvm-offload-binary)
+      list(APPEND extra_deps llvm-offload-binary)
     endif()
     if(TARGET clang-nvlink-wrapper)
       list(APPEND extra_deps clang-nvlink-wrapper)

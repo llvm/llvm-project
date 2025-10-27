@@ -10,6 +10,7 @@
 // into the calling function.
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -60,22 +61,22 @@ public:
     v2 = castToProductType(v2, resultType);
     mlir::Value result;
     if (mlir::isa<mlir::FloatType>(resultType)) {
-      result = builder.create<mlir::arith::AddFOp>(
-          loc, acc, builder.create<mlir::arith::MulFOp>(loc, v1, v2));
+      result = mlir::arith::AddFOp::create(
+          builder, loc, acc, mlir::arith::MulFOp::create(builder, loc, v1, v2));
     } else if (mlir::isa<mlir::ComplexType>(resultType)) {
       if constexpr (CONJ)
         result = fir::IntrinsicLibrary{builder, loc}.genConjg(resultType, v1);
       else
         result = v1;
 
-      result = builder.create<fir::AddcOp>(
-          loc, acc, builder.create<fir::MulcOp>(loc, result, v2));
+      result = fir::AddcOp::create(
+          builder, loc, acc, fir::MulcOp::create(builder, loc, result, v2));
     } else if (mlir::isa<mlir::IntegerType>(resultType)) {
-      result = builder.create<mlir::arith::AddIOp>(
-          loc, acc, builder.create<mlir::arith::MulIOp>(loc, v1, v2));
+      result = mlir::arith::AddIOp::create(
+          builder, loc, acc, mlir::arith::MulIOp::create(builder, loc, v1, v2));
     } else if (mlir::isa<fir::LogicalType>(resultType)) {
-      result = builder.create<mlir::arith::OrIOp>(
-          loc, acc, builder.create<mlir::arith::AndIOp>(loc, v1, v2));
+      result = mlir::arith::OrIOp::create(
+          builder, loc, acc, mlir::arith::AndIOp::create(builder, loc, v1, v2));
     } else {
       llvm_unreachable("unsupported type");
     }
@@ -168,8 +169,8 @@ private:
 
     // transpose indices
     assert(inExtents.size() == 2 && "checked in TransposeOp::validate");
-    return builder.create<fir::ShapeOp>(
-        loc, mlir::ValueRange{inExtents[1], inExtents[0]});
+    return fir::ShapeOp::create(builder, loc,
+                                mlir::ValueRange{inExtents[1], inExtents[0]});
   }
 };
 
@@ -385,23 +386,22 @@ genMinMaxComparison(mlir::Location loc, fir::FirOpBuilder &builder,
     // is not NaN. A OGL/OLT condition will usually work for this unless all
     // the values are Nan or Inf. This follows the same logic as
     // NumericCompare for Minloc/Maxloc in extrema.cpp.
-    mlir::Value cmp = builder.create<mlir::arith::CmpFOp>(
-        loc,
-        IS_MAX ? mlir::arith::CmpFPredicate::OGT
-               : mlir::arith::CmpFPredicate::OLT,
-        elem, reduction);
-    mlir::Value cmpNan = builder.create<mlir::arith::CmpFOp>(
-        loc, mlir::arith::CmpFPredicate::UNE, reduction, reduction);
-    mlir::Value cmpNan2 = builder.create<mlir::arith::CmpFOp>(
-        loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
-    cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
-    return builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
+    mlir::Value cmp =
+        mlir::arith::CmpFOp::create(builder, loc,
+                                    IS_MAX ? mlir::arith::CmpFPredicate::OGT
+                                           : mlir::arith::CmpFPredicate::OLT,
+                                    elem, reduction);
+    mlir::Value cmpNan = mlir::arith::CmpFOp::create(
+        builder, loc, mlir::arith::CmpFPredicate::UNE, reduction, reduction);
+    mlir::Value cmpNan2 = mlir::arith::CmpFOp::create(
+        builder, loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
+    cmpNan = mlir::arith::AndIOp::create(builder, loc, cmpNan, cmpNan2);
+    return mlir::arith::OrIOp::create(builder, loc, cmp, cmpNan);
   } else if (mlir::isa<mlir::IntegerType>(reduction.getType())) {
-    return builder.create<mlir::arith::CmpIOp>(
-        loc,
-        IS_MAX ? mlir::arith::CmpIPredicate::sgt
-               : mlir::arith::CmpIPredicate::slt,
-        elem, reduction);
+    return mlir::arith::CmpIOp::create(builder, loc,
+                                       IS_MAX ? mlir::arith::CmpIPredicate::sgt
+                                              : mlir::arith::CmpIPredicate::slt,
+                                       elem, reduction);
   }
   llvm_unreachable("unsupported type");
 }
@@ -415,9 +415,9 @@ genIsNotEmptyArrayExtents(mlir::Location loc, fir::FirOpBuilder &builder,
   for (auto extent : extents) {
     mlir::Value zero =
         fir::factory::createZeroValue(builder, loc, extent.getType());
-    mlir::Value cmp = builder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::ne, extent, zero);
-    isNotEmpty = builder.create<mlir::arith::AndIOp>(loc, isNotEmpty, cmp);
+    mlir::Value cmp = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::ne, extent, zero);
+    isNotEmpty = mlir::arith::AndIOp::create(builder, loc, isNotEmpty, cmp);
   }
   return isNotEmpty;
 }
@@ -581,8 +581,8 @@ MinMaxlocAsElementalConverter<T>::genReductionInitValues(
     llvm::SmallVector<mlir::Type> ifTypes(getNumCoors(),
                                           getResultElementType());
     ifTypes.push_back(getSourceElementType());
-    ifOp = builder.create<fir::IfOp>(loc, ifTypes, isNotEmpty,
-                                     /*withElseRegion=*/true);
+    ifOp = fir::IfOp::create(builder, loc, ifTypes, isNotEmpty,
+                             /*withElseRegion=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Value one =
         builder.createIntegerConstant(loc, getResultElementType(), 1);
@@ -590,7 +590,7 @@ MinMaxlocAsElementalConverter<T>::genReductionInitValues(
     mlir::Value minMaxFirst =
         hlfir::loadElementAt(loc, builder, hlfir::Entity{getSource()}, indices);
     results.push_back(minMaxFirst);
-    builder.create<fir::ResultOp>(loc, results);
+    fir::ResultOp::create(builder, loc, results);
 
     // In the 'else' block use default init values.
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -607,7 +607,7 @@ MinMaxlocAsElementalConverter<T>::genReductionInitValues(
   result.push_back(minMaxInit);
 
   if (ifOp) {
-    builder.create<fir::ResultOp>(loc, result);
+    fir::ResultOp::create(builder, loc, result);
     builder.setInsertionPointAfter(ifOp);
     result = ifOp.getResults();
   } else if (useIsFirst()) {
@@ -635,7 +635,7 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
     // If isFirst is true, then do the reduction update regardless
     // of the FP comparison.
     cmp =
-        builder.create<mlir::arith::OrIOp>(loc, cmp, getIsFirst(currentValue));
+        mlir::arith::OrIOp::create(builder, loc, cmp, getIsFirst(currentValue));
   }
 
   llvm::SmallVector<mlir::Value> newIndices;
@@ -654,12 +654,12 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
     mlir::Value newCoor = builder.createConvert(
         loc, currentCoor.getType(), oneBasedIndices[coorIdx + dim - 1]);
     mlir::Value update =
-        builder.create<mlir::arith::SelectOp>(loc, cmp, newCoor, currentCoor);
+        mlir::arith::SelectOp::create(builder, loc, cmp, newCoor, currentCoor);
     newIndices.push_back(update);
   }
 
-  mlir::Value newMinMax = builder.create<mlir::arith::SelectOp>(
-      loc, cmp, elementValue, getCurrentMinMax(currentValue));
+  mlir::Value newMinMax = mlir::arith::SelectOp::create(
+      builder, loc, cmp, elementValue, getCurrentMinMax(currentValue));
   newIndices.push_back(newMinMax);
 
   if (useIsFirst()) {
@@ -711,10 +711,10 @@ hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
     mlir::Value idx = builder.createIntegerConstant(loc, indexType, i + 1);
     mlir::Value resultElement =
         hlfir::getElementAt(loc, builder, hlfir::Entity{tempArray}, {idx});
-    builder.create<hlfir::AssignOp>(loc, coor, resultElement);
+    hlfir::AssignOp::create(builder, loc, coor, resultElement);
   }
-  mlir::Value tempExpr = builder.create<hlfir::AsExprOp>(
-      loc, tempArray, builder.createBool(loc, false));
+  mlir::Value tempExpr = hlfir::AsExprOp::create(
+      builder, loc, tempArray, builder.createBool(loc, false));
   return hlfir::Entity{tempExpr};
 }
 
@@ -792,10 +792,10 @@ private:
     mlir::Value cmp =
         genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
     if (useIsFirst())
-      cmp = builder.create<mlir::arith::OrIOp>(loc, cmp,
-                                               getIsFirst(currentValue));
-    mlir::Value newMinMax = builder.create<mlir::arith::SelectOp>(
-        loc, cmp, elementValue, currentMinMax);
+      cmp = mlir::arith::OrIOp::create(builder, loc, cmp,
+                                       getIsFirst(currentValue));
+    mlir::Value newMinMax = mlir::arith::SelectOp::create(
+        builder, loc, cmp, elementValue, currentMinMax);
     result.push_back(newMinMax);
     if (useIsFirst())
       result.push_back(builder.createBool(loc, false));
@@ -867,13 +867,13 @@ MinMaxvalAsElementalConverter<T>::genReductionInitValues(
         loc, builder, this->isTotalReduction(), this->getConstDim(),
         this->getSourceRank(), oneBasedIndices);
 
-    ifOp =
-        builder.create<fir::IfOp>(loc, this->getResultElementType(), isNotEmpty,
-                                  /*withElseRegion=*/true);
+    ifOp = fir::IfOp::create(builder, loc, this->getResultElementType(),
+                             isNotEmpty,
+                             /*withElseRegion=*/true);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     mlir::Value minMaxFirst = hlfir::loadElementAt(
         loc, builder, hlfir::Entity{this->getSource()}, indices);
-    builder.create<fir::ResultOp>(loc, minMaxFirst);
+    fir::ResultOp::create(builder, loc, minMaxFirst);
 
     // In the 'else' block use default init values.
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -884,7 +884,7 @@ MinMaxvalAsElementalConverter<T>::genReductionInitValues(
   result.push_back(init);
 
   if (ifOp) {
-    builder.create<fir::ResultOp>(loc, result);
+    fir::ResultOp::create(builder, loc, result);
     builder.setInsertionPointAfter(ifOp);
     result = ifOp.getResults();
   } else if (useIsFirst()) {
@@ -992,9 +992,9 @@ private:
     mlir::Value mask =
         builder.createConvert(loc, builder.getI1Type(), elementValue);
     if constexpr (isAll)
-      return {builder.create<mlir::arith::AndIOp>(loc, mask, currentValue[0])};
+      return {mlir::arith::AndIOp::create(builder, loc, mask, currentValue[0])};
     else
-      return {builder.create<mlir::arith::OrIOp>(loc, mask, currentValue[0])};
+      return {mlir::arith::OrIOp::create(builder, loc, mask, currentValue[0])};
   }
 
   virtual hlfir::Entity genFinalResult(
@@ -1034,9 +1034,9 @@ private:
     mlir::Value one =
         builder.createIntegerConstant(loc, getResultElementType(), 1);
     mlir::Value add1 =
-        builder.create<mlir::arith::AddIOp>(loc, currentValue[0], one);
-    return {builder.create<mlir::arith::SelectOp>(loc, cond, add1,
-                                                  currentValue[0])};
+        mlir::arith::AddIOp::create(builder, loc, currentValue[0], one);
+    return {mlir::arith::SelectOp::create(builder, loc, cond, add1,
+                                          currentValue[0])};
   }
 };
 
@@ -1068,7 +1068,7 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
       // MASK represented by a box might be dynamically optional,
       // so we have to check for its presence before accessing it.
       isPresentPred =
-          builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), mask);
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), mask);
     }
 
     if (hlfir::Entity{mask}.isScalar())
@@ -1119,20 +1119,20 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
           // to address the proper mask element.
           maskValue = genMaskValue(mask, isPresentPred, indices);
         }
-        mlir::Value isUnmasked =
-            builder.create<fir::ConvertOp>(loc, builder.getI1Type(), maskValue);
-        ifOp = builder.create<fir::IfOp>(loc, reductionTypes, isUnmasked,
-                                         /*withElseRegion=*/true);
+        mlir::Value isUnmasked = fir::ConvertOp::create(
+            builder, loc, builder.getI1Type(), maskValue);
+        ifOp = fir::IfOp::create(builder, loc, reductionTypes, isUnmasked,
+                                 /*withElseRegion=*/true);
         // In the 'else' block return the current reduction value.
         builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-        builder.create<fir::ResultOp>(loc, reductionValues);
+        fir::ResultOp::create(builder, loc, reductionValues);
 
         // In the 'then' block do the actual addition.
         builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       }
       reductionValues = reduceOneElement(reductionValues, array, indices);
       if (ifOp) {
-        builder.create<fir::ResultOp>(loc, reductionValues);
+        fir::ResultOp::create(builder, loc, reductionValues);
         builder.setInsertionPointAfter(ifOp);
         reductionValues = ifOp.getResults();
       }
@@ -1177,7 +1177,7 @@ ReductionAsElementalConverter::genResultShapeForPartialReduction(
 
   mlir::Value dimExtent = inExtents[dimVal - 1];
   inExtents.erase(inExtents.begin() + dimVal - 1);
-  return {builder.create<fir::ShapeOp>(loc, inExtents), dimExtent};
+  return {fir::ShapeOp::create(builder, loc, inExtents), dimExtent};
 }
 
 mlir::Value SumAsElementalConverter::genScalarAdd(mlir::Value value1,
@@ -1185,11 +1185,11 @@ mlir::Value SumAsElementalConverter::genScalarAdd(mlir::Value value1,
   mlir::Type ty = value1.getType();
   assert(ty == value2.getType() && "reduction values' types do not match");
   if (mlir::isa<mlir::FloatType>(ty))
-    return builder.create<mlir::arith::AddFOp>(loc, value1, value2);
+    return mlir::arith::AddFOp::create(builder, loc, value1, value2);
   else if (mlir::isa<mlir::ComplexType>(ty))
-    return builder.create<fir::AddcOp>(loc, value1, value2);
+    return fir::AddcOp::create(builder, loc, value1, value2);
   else if (mlir::isa<mlir::IntegerType>(ty))
-    return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
+    return mlir::arith::AddIOp::create(builder, loc, value1, value2);
 
   llvm_unreachable("unsupported SUM reduction type");
 }
@@ -1201,14 +1201,14 @@ mlir::Value ReductionAsElementalConverter::genMaskValue(
   mlir::Type maskType =
       hlfir::getFortranElementType(fir::unwrapPassByRefType(mask.getType()));
   if (isPresentPred) {
-    ifOp = builder.create<fir::IfOp>(loc, maskType, isPresentPred,
-                                     /*withElseRegion=*/true);
+    ifOp = fir::IfOp::create(builder, loc, maskType, isPresentPred,
+                             /*withElseRegion=*/true);
 
     // Use 'true', if the mask is not present.
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
     mlir::Value trueValue = builder.createBool(loc, true);
     trueValue = builder.createConvert(loc, maskType, trueValue);
-    builder.create<fir::ResultOp>(loc, trueValue);
+    fir::ResultOp::create(builder, loc, trueValue);
 
     // Load the mask value, if the mask is present.
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -1219,7 +1219,7 @@ mlir::Value ReductionAsElementalConverter::genMaskValue(
     if (mlir::isa<fir::BaseBoxType>(mask.getType())) {
       // MASK may be a boxed scalar.
       mlir::Value addr = hlfir::genVariableRawAddress(loc, builder, maskVar);
-      mask = builder.create<fir::LoadOp>(loc, hlfir::Entity{addr});
+      mask = fir::LoadOp::create(builder, loc, hlfir::Entity{addr});
     } else {
       mask = hlfir::loadTrivialScalar(loc, builder, maskVar);
     }
@@ -1233,7 +1233,7 @@ mlir::Value ReductionAsElementalConverter::genMaskValue(
   if (!isPresentPred)
     return mask;
 
-  builder.create<fir::ResultOp>(loc, mask);
+  fir::ResultOp::create(builder, loc, mask);
   return ifOp.getResult(0);
 }
 
@@ -1270,64 +1270,91 @@ public:
   }
 };
 
-class CShiftConversion : public mlir::OpRewritePattern<hlfir::CShiftOp> {
+template <typename Op>
+class ArrayShiftConversion : public mlir::OpRewritePattern<Op> {
 public:
-  using mlir::OpRewritePattern<hlfir::CShiftOp>::OpRewritePattern;
+  // The implementation below only support CShiftOp and EOShiftOp.
+  static_assert(std::is_same_v<Op, hlfir::CShiftOp> ||
+                std::is_same_v<Op, hlfir::EOShiftOp>);
+
+  using mlir::OpRewritePattern<Op>::OpRewritePattern;
 
   llvm::LogicalResult
-  matchAndRewrite(hlfir::CShiftOp cshift,
-                  mlir::PatternRewriter &rewriter) const override {
+  matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
 
-    hlfir::ExprType expr = mlir::dyn_cast<hlfir::ExprType>(cshift.getType());
+    hlfir::ExprType expr = mlir::dyn_cast<hlfir::ExprType>(op.getType());
     assert(expr &&
-           "expected an expression type for the result of hlfir.cshift");
+           "expected an expression type for the result of the array shift");
     unsigned arrayRank = expr.getRank();
-    // When it is a 1D CSHIFT, we may assume that the DIM argument
+    // When it is a 1D CSHIFT/EOSHIFT, we may assume that the DIM argument
     // (whether it is present or absent) is equal to 1, otherwise,
     // the program is illegal.
     int64_t dimVal = 1;
     if (arrayRank != 1)
-      if (mlir::Value dim = cshift.getDim()) {
+      if (mlir::Value dim = op.getDim()) {
         auto constDim = fir::getIntIfConstant(dim);
         if (!constDim)
-          return rewriter.notifyMatchFailure(cshift,
-                                             "Nonconstant DIM for CSHIFT");
+          return rewriter.notifyMatchFailure(
+              op, "Nonconstant DIM for CSHIFT/EOSHIFT");
         dimVal = *constDim;
       }
 
     if (dimVal <= 0 || dimVal > arrayRank)
-      return rewriter.notifyMatchFailure(cshift, "Invalid DIM for CSHIFT");
+      return rewriter.notifyMatchFailure(op, "Invalid DIM for CSHIFT/EOSHIFT");
+
+    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>) {
+      // TODO: the EOSHIFT inlining code is not ready to produce
+      // fir.if selecting between ARRAY and BOUNDARY (or the default
+      // boundary value), when they are expressions of type CHARACTER.
+      // This needs more work.
+      if (mlir::isa<fir::CharacterType>(expr.getEleTy())) {
+        if (!hlfir::Entity{op.getArray()}.isVariable())
+          return rewriter.notifyMatchFailure(
+              op, "EOSHIFT with ARRAY being CHARACTER expression");
+        if (op.getBoundary() && !hlfir::Entity{op.getBoundary()}.isVariable())
+          return rewriter.notifyMatchFailure(
+              op, "EOSHIFT with BOUNDARY being CHARACTER expression");
+      }
+      // TODO: selecting between ARRAY and BOUNDARY values with derived types
+      // need more work.
+      if (fir::isa_derived(expr.getEleTy()))
+        return rewriter.notifyMatchFailure(op, "EOSHIFT of derived type");
+    }
 
     // When DIM==1 and the contiguity of the input array is not statically
     // known, try to exploit the fact that the leading dimension might be
     // contiguous. We can do this now using hlfir.eval_in_mem with
     // a dynamic check for the leading dimension contiguity.
-    // Otherwise, convert hlfir.cshift to hlfir.elemental.
+    // Otherwise, convert hlfir.cshift/eoshift to hlfir.elemental.
     //
     // Note that the hlfir.elemental can be inlined into other hlfir.elemental,
     // while hlfir.eval_in_mem prevents this, and we will end up creating
     // a temporary array for the result. We may need to come up with
     // a more sophisticated logic for picking the most efficient
     // representation.
-    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
+    hlfir::Entity array = hlfir::Entity{op.getArray()};
     mlir::Type elementType = array.getFortranElementType();
     if (dimVal == 1 && fir::isa_trivial(elementType) &&
-        // genInMemCShift() only works for variables currently.
+        // genInMemArrayShift() only works for variables currently.
         array.isVariable())
-      rewriter.replaceOp(cshift, genInMemCShift(rewriter, cshift, dimVal));
+      rewriter.replaceOp(op, genInMemArrayShift(rewriter, op, dimVal));
     else
-      rewriter.replaceOp(cshift, genElementalCShift(rewriter, cshift, dimVal));
+      rewriter.replaceOp(op, genElementalArrayShift(rewriter, op, dimVal));
     return mlir::success();
   }
 
 private:
-  /// Generate MODULO(\p shiftVal, \p extent).
+  /// For CSHIFT, generate MODULO(\p shiftVal, \p extent).
+  /// For EOSHIFT, return \p shiftVal casted to \p calcType.
   static mlir::Value normalizeShiftValue(mlir::Location loc,
                                          fir::FirOpBuilder &builder,
                                          mlir::Value shiftVal,
                                          mlir::Value extent,
                                          mlir::Type calcType) {
     shiftVal = builder.createConvert(loc, calcType, shiftVal);
+    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
+      return shiftVal;
+
     extent = builder.createConvert(loc, calcType, extent);
     // Make sure that we do not divide by zero. When the dimension
     // has zero size, turn the extent into 1. Note that the computed
@@ -1335,32 +1362,235 @@ private:
     // which extent value we use.
     mlir::Value zero = builder.createIntegerConstant(loc, calcType, 0);
     mlir::Value one = builder.createIntegerConstant(loc, calcType, 1);
-    mlir::Value isZero = builder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::eq, extent, zero);
-    extent = builder.create<mlir::arith::SelectOp>(loc, isZero, one, extent);
+    mlir::Value isZero = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::eq, extent, zero);
+    extent = mlir::arith::SelectOp::create(builder, loc, isZero, one, extent);
     shiftVal = fir::IntrinsicLibrary{builder, loc}.genModulo(
         calcType, {shiftVal, extent});
     return builder.createConvert(loc, calcType, shiftVal);
   }
 
-  /// Convert \p cshift into an hlfir.elemental using
-  /// the pre-computed constant \p dimVal.
-  static mlir::Operation *genElementalCShift(mlir::PatternRewriter &rewriter,
-                                             hlfir::CShiftOp cshift,
-                                             int64_t dimVal) {
-    using Fortran::common::maxRank;
-    hlfir::Entity shift = hlfir::Entity{cshift.getShift()};
-    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
+  /// The indices computations for the array shifts are done using I64 type.
+  /// For CSHIFT, all computations do not overflow signed and unsigned I64.
+  /// For EOSHIFT, some computations may involve negative shift values,
+  /// so using no-unsigned wrap flag would be incorrect.
+  static void setArithOverflowFlags(Op op, fir::FirOpBuilder &builder) {
+    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
+      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
+    else
+      builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
+                                      mlir::arith::IntegerOverflowFlags::nuw);
+  }
 
-    mlir::Location loc = cshift.getLoc();
-    fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
+  /// Return the element type of the EOSHIFT boundary that may be omitted
+  /// statically or dynamically. This element type might be used
+  /// to generate MLIR where we have to select between the default
+  /// boundary value and the dynamically absent/present boundary value.
+  /// If the boundary has a type not defined in Table 16.4 in 16.9.77
+  /// of F2023, then the return value is nullptr.
+  static mlir::Type getDefaultBoundaryValueType(mlir::Type elementType) {
+    // To be able to generate a "select" between the default boundary value
+    // and the dynamic boundary value, use BoxCharType for the CHARACTER
+    // cases. This might be a little bit inefficient, because we may
+    // create unnecessary tuples, but it simplifies the inlining code.
+    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(elementType))
+      return fir::BoxCharType::get(charTy.getContext(), charTy.getFKind());
+
+    if (mlir::isa<fir::LogicalType>(elementType) ||
+        fir::isa_integer(elementType) || fir::isa_real(elementType) ||
+        fir::isa_complex(elementType))
+      return elementType;
+
+    return nullptr;
+  }
+
+  /// Generate the default boundary value as defined in Table 16.4 in 16.9.77
+  /// of F2023.
+  static mlir::Value genDefaultBoundary(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        mlir::Type elementType) {
+    assert(getDefaultBoundaryValueType(elementType) &&
+           "default boundary value cannot be computed for the given type");
+    if (mlir::isa<fir::CharacterType>(elementType)) {
+      // Create an empty CHARACTER of the same kind. The assignment
+      // of this empty CHARACTER into the result will add the padding
+      // if necessary.
+      fir::factory::CharacterExprHelper charHelper{builder, loc};
+      mlir::Value zeroLen = builder.createIntegerConstant(
+          loc, builder.getCharacterLengthType(), 0);
+      fir::CharBoxValue emptyCharTemp =
+          charHelper.createCharacterTemp(elementType, zeroLen);
+      return charHelper.createEmbox(emptyCharTemp);
+    }
+
+    return fir::factory::createZeroValue(builder, loc, elementType);
+  }
+
+  /// \p entity represents the boundary operand of hlfir.eoshift.
+  /// This method generates a scalar boundary value fetched
+  /// from the boundary entity using \p indices (which may be empty,
+  /// if the boundary operand is scalar).
+  static mlir::Value loadEoshiftVal(mlir::Location loc,
+                                    fir::FirOpBuilder &builder,
+                                    hlfir::Entity entity,
+                                    mlir::ValueRange indices = {}) {
+    hlfir::Entity boundaryVal =
+        hlfir::loadElementAt(loc, builder, entity, indices);
+
+    mlir::Type boundaryValTy =
+        getDefaultBoundaryValueType(entity.getFortranElementType());
+
+    // Boxed !fir.char<KIND,LEN> with known LEN are loaded
+    // as raw references to !fir.char<KIND,LEN>.
+    // We need to wrap them into the !fir.boxchar.
+    if (boundaryVal.isVariable() && boundaryValTy &&
+        mlir::isa<fir::BoxCharType>(boundaryValTy))
+      return hlfir::genVariableBoxChar(loc, builder, boundaryVal);
+    return boundaryVal;
+  }
+
+  /// This method generates a scalar boundary value for the given hlfir.eoshift
+  /// \p op that can be used to initialize cells of the result
+  /// if the scalar/array boundary operand is statically or dynamically
+  /// absent. The first result is the scalar boundary value. The second result
+  /// is a dynamic predicate indicating whether the scalar boundary value
+  /// should actually be used.
+  [[maybe_unused]] static std::pair<mlir::Value, mlir::Value>
+  genScalarBoundaryForEOShift(mlir::Location loc, fir::FirOpBuilder &builder,
+                              hlfir::EOShiftOp op) {
+    hlfir::Entity array{op.getArray()};
+    mlir::Type elementType = array.getFortranElementType();
+
+    if (!op.getBoundary()) {
+      // Boundary operand is statically absent.
+      mlir::Value defaultVal = genDefaultBoundary(loc, builder, elementType);
+      mlir::Value boundaryIsScalarPred = builder.createBool(loc, true);
+      return {defaultVal, boundaryIsScalarPred};
+    }
+
+    hlfir::Entity boundary{op.getBoundary()};
+    mlir::Type boundaryValTy = getDefaultBoundaryValueType(elementType);
+
+    if (boundary.isScalar()) {
+      if (!boundaryValTy || !boundary.mayBeOptional()) {
+        // The boundary must be present.
+        mlir::Value boundaryVal = loadEoshiftVal(loc, builder, boundary);
+        mlir::Value boundaryIsScalarPred = builder.createBool(loc, true);
+        return {boundaryVal, boundaryIsScalarPred};
+      }
+
+      // Boundary is a scalar that may be dynamically absent.
+      // If boundary is not present dynamically, we must use the default
+      // value.
+      assert(mlir::isa<fir::BaseBoxType>(boundary.getType()));
+      mlir::Value isPresentPred =
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), boundary);
+      mlir::Value boundaryVal =
+          builder
+              .genIfOp(loc, {boundaryValTy}, isPresentPred,
+                       /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value boundaryVal =
+                    loadEoshiftVal(loc, builder, boundary);
+                fir::ResultOp::create(builder, loc, boundaryVal);
+              })
+              .genElse([&]() {
+                mlir::Value defaultVal =
+                    genDefaultBoundary(loc, builder, elementType);
+                fir::ResultOp::create(builder, loc, defaultVal);
+              })
+              .getResults()[0];
+      mlir::Value boundaryIsScalarPred = builder.createBool(loc, true);
+      return {boundaryVal, boundaryIsScalarPred};
+    }
+    if (!boundaryValTy || !boundary.mayBeOptional()) {
+      // The boundary must be present
+      mlir::Value boundaryIsScalarPred = builder.createBool(loc, false);
+      return {nullptr, boundaryIsScalarPred};
+    }
+
+    // Boundary is an array that may be dynamically absent.
+    mlir::Value defaultVal = genDefaultBoundary(loc, builder, elementType);
+    mlir::Value isPresentPred =
+        fir::IsPresentOp::create(builder, loc, builder.getI1Type(), boundary);
+    // If the array is present, then boundaryIsScalarPred must be equal
+    // to false, otherwise, it should be true.
+    mlir::Value trueVal = builder.createBool(loc, true);
+    mlir::Value falseVal = builder.createBool(loc, false);
+    mlir::Value boundaryIsScalarPred = mlir::arith::SelectOp::create(
+        builder, loc, isPresentPred, falseVal, trueVal);
+    return {defaultVal, boundaryIsScalarPred};
+  }
+
+  /// Generate code that produces the final boundary value to be assigned
+  /// to the result of hlfir.eoshift \p op. \p precomputedScalarBoundary
+  /// specifies the scalar boundary value pre-computed before the elemental
+  /// or the assignment loop. If it is nullptr, then the boundary operand
+  /// of \p op must be a present array. \p boundaryIsScalarPred is a dynamic
+  /// predicate that is true, when the pre-computed scalar value must be used.
+  /// \p oneBasedIndices specify the indices to address into the boundary
+  /// array - they may be empty, if the boundary is scalar.
+  [[maybe_unused]] static mlir::Value selectBoundaryValue(
+      mlir::Location loc, fir::FirOpBuilder &builder, hlfir::EOShiftOp op,
+      mlir::Value precomputedScalarBoundary, mlir::Value boundaryIsScalarPred,
+      mlir::ValueRange oneBasedIndices) {
+    // Boundary is statically absent: a default value has been precomputed.
+    if (!op.getBoundary())
+      return precomputedScalarBoundary;
+
+    // Boundary is statically present and is a scalar: boundary does not depend
+    // upon the indices and so it has been precomputed.
+    hlfir::Entity boundary{op.getBoundary()};
+    if (boundary.isScalar())
+      return precomputedScalarBoundary;
+
+    // Boundary is statically present and is an array: if the scalar
+    // boundary has not been precomputed, this means that the data type
+    // of the shifted values does not provide a way to compute
+    // the default boundary value, so the array boundary must be dynamically
+    // present, and we can load the boundary values from it.
+    bool mustBePresent = !precomputedScalarBoundary;
+    if (mustBePresent)
+      return loadEoshiftVal(loc, builder, boundary, oneBasedIndices);
+
+    // The array boundary may be dynamically absent.
+    // In this case, precomputedScalarBoundary is a pre-computed scalar
+    // boundary value that has to be used if boundaryIsScalarPred
+    // is true, otherwise, the boundary value has to be loaded
+    // from the boundary array.
+    mlir::Type boundaryValTy = precomputedScalarBoundary.getType();
+    mlir::Value newBoundaryVal =
+        builder
+            .genIfOp(loc, {boundaryValTy}, boundaryIsScalarPred,
+                     /*withElseRegion=*/true)
+            .genThen([&]() {
+              fir::ResultOp::create(builder, loc, precomputedScalarBoundary);
+            })
+            .genElse([&]() {
+              mlir::Value elem =
+                  loadEoshiftVal(loc, builder, boundary, oneBasedIndices);
+              fir::ResultOp::create(builder, loc, elem);
+            })
+            .getResults()[0];
+    return newBoundaryVal;
+  }
+
+  /// Convert \p op into an hlfir.elemental using
+  /// the pre-computed constant \p dimVal.
+  static mlir::Operation *
+  genElementalArrayShift(mlir::PatternRewriter &rewriter, Op op,
+                         int64_t dimVal) {
+    using Fortran::common::maxRank;
+    hlfir::Entity shift = hlfir::Entity{op.getShift()};
+    hlfir::Entity array = hlfir::Entity{op.getArray()};
+
+    mlir::Location loc = op.getLoc();
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
     // The new index computation involves MODULO, which is not implemented
     // for IndexType, so use I64 instead.
     mlir::Type calcType = builder.getI64Type();
-    // All the indices arithmetic used below does not overflow
-    // signed and unsigned I64.
-    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
-                                    mlir::arith::IntegerOverflowFlags::nuw);
+    // Set the indices arithmetic overflow flags.
+    setArithOverflowFlags(op, builder);
 
     mlir::Value arrayShape = hlfir::genShape(loc, builder, array);
     llvm::SmallVector<mlir::Value, maxRank> arrayExtents =
@@ -1375,6 +1605,17 @@ private:
       shiftVal =
           normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent, calcType);
     }
+    // The boundary operand of hlfir.eoshift may be statically or
+    // dynamically absent.
+    // In both cases, it is assumed to be a scalar with the value
+    // corresponding to the array element type.
+    // boundaryIsScalarPred is a dynamic predicate that identifies
+    // these cases. If boundaryIsScalarPred is dynamicaly false,
+    // then the boundary operand must be a present array.
+    mlir::Value boundaryVal, boundaryIsScalarPred;
+    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
+      std::tie(boundaryVal, boundaryIsScalarPred) =
+          genScalarBoundaryForEOShift(loc, builder, op);
 
     auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                          mlir::ValueRange inputIndices) -> hlfir::Entity {
@@ -1395,34 +1636,84 @@ private:
         shiftVal = normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent,
                                        calcType);
       }
+      if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>) {
+        llvm::SmallVector<mlir::Value, maxRank> boundaryIndices{indices};
+        boundaryIndices.erase(boundaryIndices.begin() + dimVal - 1);
+        boundaryVal =
+            selectBoundaryValue(loc, builder, op, boundaryVal,
+                                boundaryIsScalarPred, boundaryIndices);
+      }
 
-      // Element i of the result (1-based) is element
-      // 'MODULO(i + SH - 1, SIZE(ARRAY,DIM)) + 1' (1-based) of the original
-      // ARRAY (or its section, when ARRAY is not a vector).
+      if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>) {
+        // EOSHIFT:
+        // Element i of the result (1-based) is the element of the original
+        // array (or its section, when ARRAY is not a vector) with index
+        // (i + SH), if (1 <= i + SH <= SIZE(ARRAY,DIM)), otherwise
+        // it is the BOUNDARY value.
+        mlir::Value index =
+            builder.createConvert(loc, calcType, inputIndices[dimVal - 1]);
+        mlir::arith::IntegerOverflowFlags savedFlags =
+            builder.getIntegerOverflowFlags();
+        builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
+        mlir::Value indexPlusShift =
+            mlir::arith::AddIOp::create(builder, loc, index, shiftVal);
+        builder.setIntegerOverflowFlags(savedFlags);
+        mlir::Value one = builder.createIntegerConstant(loc, calcType, 1);
+        mlir::Value cmp1 = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::sge, indexPlusShift, one);
+        mlir::Value cmp2 = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::sle, indexPlusShift,
+            shiftDimExtent);
+        mlir::Value loadFromArray =
+            mlir::arith::AndIOp::create(builder, loc, cmp1, cmp2);
+        mlir::Type boundaryValTy = boundaryVal.getType();
+        mlir::Value result =
+            builder
+                .genIfOp(loc, {boundaryValTy}, loadFromArray,
+                         /*withElseRegion=*/true)
+                .genThen([&]() {
+                  indices[dimVal - 1] = builder.createConvert(
+                      loc, builder.getIndexType(), indexPlusShift);
+                  ;
+                  mlir::Value elem =
+                      loadEoshiftVal(loc, builder, array, indices);
+                  fir::ResultOp::create(builder, loc, elem);
+                })
+                .genElse(
+                    [&]() { fir::ResultOp::create(builder, loc, boundaryVal); })
+                .getResults()[0];
+        return hlfir::Entity{result};
+      } else {
+        // CSHIFT:
+        // Element i of the result (1-based) is element
+        // 'MODULO(i + SH - 1, SIZE(ARRAY,DIM)) + 1' (1-based) of the original
+        // ARRAY (or its section, when ARRAY is not a vector).
 
-      // Compute the index into the original array using the normalized
-      // shift value, which satisfies (SH >= 0 && SH < SIZE(ARRAY,DIM)):
-      //   newIndex =
-      //     i + ((i <= SIZE(ARRAY,DIM) - SH) ? SH : SH - SIZE(ARRAY,DIM))
-      //
-      // Such index computation allows for further loop vectorization
-      // in LLVM.
-      mlir::Value wrapBound =
-          builder.create<mlir::arith::SubIOp>(loc, shiftDimExtent, shiftVal);
-      mlir::Value adjustedShiftVal =
-          builder.create<mlir::arith::SubIOp>(loc, shiftVal, shiftDimExtent);
-      mlir::Value index =
-          builder.createConvert(loc, calcType, inputIndices[dimVal - 1]);
-      mlir::Value wrapCheck = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::sle, index, wrapBound);
-      mlir::Value actualShift = builder.create<mlir::arith::SelectOp>(
-          loc, wrapCheck, shiftVal, adjustedShiftVal);
-      mlir::Value newIndex =
-          builder.create<mlir::arith::AddIOp>(loc, index, actualShift);
-      newIndex = builder.createConvert(loc, builder.getIndexType(), newIndex);
-      indices[dimVal - 1] = newIndex;
-      hlfir::Entity element = hlfir::getElementAt(loc, builder, array, indices);
-      return hlfir::loadTrivialScalar(loc, builder, element);
+        // Compute the index into the original array using the normalized
+        // shift value, which satisfies (SH >= 0 && SH < SIZE(ARRAY,DIM)):
+        //   newIndex =
+        //     i + ((i <= SIZE(ARRAY,DIM) - SH) ? SH : SH - SIZE(ARRAY,DIM))
+        //
+        // Such index computation allows for further loop vectorization
+        // in LLVM.
+        mlir::Value wrapBound =
+            mlir::arith::SubIOp::create(builder, loc, shiftDimExtent, shiftVal);
+        mlir::Value adjustedShiftVal =
+            mlir::arith::SubIOp::create(builder, loc, shiftVal, shiftDimExtent);
+        mlir::Value index =
+            builder.createConvert(loc, calcType, inputIndices[dimVal - 1]);
+        mlir::Value wrapCheck = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::sle, index, wrapBound);
+        mlir::Value actualShift = mlir::arith::SelectOp::create(
+            builder, loc, wrapCheck, shiftVal, adjustedShiftVal);
+        mlir::Value newIndex =
+            mlir::arith::AddIOp::create(builder, loc, index, actualShift);
+        newIndex = builder.createConvert(loc, builder.getIndexType(), newIndex);
+        indices[dimVal - 1] = newIndex;
+        hlfir::Entity element =
+            hlfir::getElementAt(loc, builder, array, indices);
+        return hlfir::loadTrivialScalar(loc, builder, element);
+      }
     };
 
     mlir::Type elementType = array.getFortranElementType();
@@ -1430,19 +1721,42 @@ private:
         loc, builder, elementType, arrayShape, typeParams, genKernel,
         /*isUnordered=*/true,
         array.isPolymorphic() ? static_cast<mlir::Value>(array) : nullptr,
-        cshift.getResult().getType());
+        op.getResult().getType());
     return elementalOp.getOperation();
   }
 
-  /// Convert \p cshift into an hlfir.eval_in_mem using the pre-computed
+  /// Convert \p op into an hlfir.eval_in_mem using the pre-computed
   /// constant \p dimVal.
-  /// The converted code looks like this:
-  ///   do i=1,SH
-  ///     result(i + (SIZE(ARRAY,DIM) - SH)) = array(i)
+  /// The converted code for CSHIFT looks like this:
+  ///   DEST_OFFSET = SIZE(ARRAY,DIM) - SH
+  ///   COPY_END1 = SH
+  ///   do i=1,COPY_END1
+  ///     result(i + DEST_OFFSET) = array(i)
   ///   end
-  ///   do i=1,SIZE(ARRAY,DIM) - SH
-  ///     result(i) = array(i + SH)
+  ///   SOURCE_OFFSET = SH
+  ///   COPY_END2 = SIZE(ARRAY,DIM) - SH
+  ///   do i=1,COPY_END2
+  ///     result(i) = array(i + SOURCE_OFFSET)
   ///   end
+  /// Where SH is the normalized shift value, which satisfies
+  /// (SH >= 0 && SH < SIZE(ARRAY,DIM)).
+  ///
+  /// The converted code for EOSHIFT looks like this:
+  ///   EXTENT = SIZE(ARRAY,DIM)
+  ///   DEST_OFFSET = SH < 0 ? -SH : 0
+  ///   SOURCE_OFFSET = SH < 0 ? 0 : SH
+  ///   COPY_END = SH < 0 ?
+  ///       (-EXTENT > SH ? 0 : EXTENT + SH) :
+  ///       (EXTENT < SH ? 0 : EXTENT - SH)
+  ///   do i=1,COPY_END
+  ///     result(i + DEST_OFFSET) = array(i + SOURCE_OFFSET)
+  ///   end
+  ///   INIT_END = EXTENT - COPY_END
+  ///   INIT_OFFSET = SH < 0 ? 0 : COPY_END
+  ///   do i=1,INIT_END
+  ///     result(i + INIT_OFFSET) = BOUNDARY
+  ///   end
+  /// Where SH is the original shift value.
   ///
   /// When \p dimVal is 1, we generate the same code twice
   /// under a dynamic check for the contiguity of the leading
@@ -1451,24 +1765,21 @@ private:
   /// as a contiguous slice of the original array.
   /// This allows recognizing the above two loops as memcpy
   /// loop idioms in LLVM.
-  static mlir::Operation *genInMemCShift(mlir::PatternRewriter &rewriter,
-                                         hlfir::CShiftOp cshift,
-                                         int64_t dimVal) {
+  static mlir::Operation *genInMemArrayShift(mlir::PatternRewriter &rewriter,
+                                             Op op, int64_t dimVal) {
     using Fortran::common::maxRank;
-    hlfir::Entity shift = hlfir::Entity{cshift.getShift()};
-    hlfir::Entity array = hlfir::Entity{cshift.getArray()};
+    hlfir::Entity shift = hlfir::Entity{op.getShift()};
+    hlfir::Entity array = hlfir::Entity{op.getArray()};
     assert(array.isVariable() && "array must be a variable");
     assert(!array.isPolymorphic() &&
-           "genInMemCShift does not support polymorphic types");
-    mlir::Location loc = cshift.getLoc();
-    fir::FirOpBuilder builder{rewriter, cshift.getOperation()};
+           "genInMemArrayShift does not support polymorphic types");
+    mlir::Location loc = op.getLoc();
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
     // The new index computation involves MODULO, which is not implemented
     // for IndexType, so use I64 instead.
     mlir::Type calcType = builder.getI64Type();
-    // All the indices arithmetic used below does not overflow
-    // signed and unsigned I64.
-    builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw |
-                                    mlir::arith::IntegerOverflowFlags::nuw);
+    // Set the indices arithmetic overflow flags.
+    setArithOverflowFlags(op, builder);
 
     mlir::Value arrayShape = hlfir::genShape(loc, builder, array);
     llvm::SmallVector<mlir::Value, maxRank> arrayExtents =
@@ -1483,10 +1794,20 @@ private:
       shiftVal =
           normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent, calcType);
     }
+    // The boundary operand of hlfir.eoshift may be statically or
+    // dynamically absent.
+    // In both cases, it is assumed to be a scalar with the value
+    // corresponding to the array element type.
+    // boundaryIsScalarPred is a dynamic predicate that identifies
+    // these cases. If boundaryIsScalarPred is dynamicaly false,
+    // then the boundary operand must be a present array.
+    mlir::Value boundaryVal, boundaryIsScalarPred;
+    if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
+      std::tie(boundaryVal, boundaryIsScalarPred) =
+          genScalarBoundaryForEOShift(loc, builder, op);
 
-    hlfir::EvaluateInMemoryOp evalOp =
-        builder.create<hlfir::EvaluateInMemoryOp>(
-            loc, mlir::cast<hlfir::ExprType>(cshift.getType()), arrayShape);
+    hlfir::EvaluateInMemoryOp evalOp = hlfir::EvaluateInMemoryOp::create(
+        builder, loc, mlir::cast<hlfir::ExprType>(op.getType()), arrayShape);
     builder.setInsertionPointToStart(&evalOp.getBody().front());
 
     mlir::Value resultArray = evalOp.getMemory();
@@ -1500,11 +1821,12 @@ private:
     // (if any). If exposeContiguity is true, the array's section
     // array(s(1), ..., s(dim-1), :, s(dim+1), ..., s(n)) is represented
     // as a contiguous 1D array.
-    // shiftVal is the normalized shift value that satisfies (SH >= 0 && SH <
-    // SIZE(ARRAY,DIM)).
+    // For CSHIFT, shiftVal is the normalized shift value that satisfies
+    // (SH >= 0 && SH < SIZE(ARRAY,DIM)).
     //
     auto genDimensionShift = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                                 mlir::Value shiftVal, bool exposeContiguity,
+                                 mlir::Value shiftVal, mlir::Value boundary,
+                                 bool exposeContiguity,
                                  mlir::ValueRange oneBasedIndices)
         -> llvm::SmallVector<mlir::Value, 0> {
       // Create a vector of indices (s(1), ..., s(dim-1), nullptr, s(dim+1),
@@ -1537,62 +1859,143 @@ private:
         srcIndices.resize(1);
       }
 
-      // Copy first portion of the array:
-      // do i=1,SH
-      //   result(i + (SIZE(ARRAY,DIM) - SH)) = array(i)
-      // end
-      auto genAssign1 = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::ValueRange index,
-                            mlir::ValueRange reductionArgs)
+      // genCopy labda generates the body of a generic copy loop.
+      //   do i=1,COPY_END
+      //     result(i + DEST_OFFSET) = array(i + SOURCE_OFFSET)
+      //   end
+      //
+      // It is parameterized by DEST_OFFSET and SOURCE_OFFSET.
+      mlir::Value dstOffset, srcOffset;
+      auto genCopy = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                         mlir::ValueRange index, mlir::ValueRange reductionArgs)
           -> llvm::SmallVector<mlir::Value, 0> {
         assert(index.size() == 1 && "expected single loop");
         mlir::Value srcIndex = builder.createConvert(loc, calcType, index[0]);
+        mlir::Value dstIndex = srcIndex;
+        if (srcOffset)
+          srcIndex =
+              mlir::arith::AddIOp::create(builder, loc, srcIndex, srcOffset);
         srcIndices[dimVal - 1] = srcIndex;
         hlfir::Entity srcElementValue =
             hlfir::loadElementAt(loc, builder, srcArray, srcIndices);
-        mlir::Value dstIndex = builder.create<mlir::arith::AddIOp>(
-            loc, srcIndex,
-            builder.create<mlir::arith::SubIOp>(loc, shiftDimExtent, shiftVal));
+        if (dstOffset)
+          dstIndex =
+              mlir::arith::AddIOp::create(builder, loc, dstIndex, dstOffset);
         dstIndices[dimVal - 1] = dstIndex;
         hlfir::Entity dstElement = hlfir::getElementAt(
             loc, builder, hlfir::Entity{resultArray}, dstIndices);
-        builder.create<hlfir::AssignOp>(loc, srcElementValue, dstElement);
+        hlfir::AssignOp::create(builder, loc, srcElementValue, dstElement);
+        // Reset the external parameters' values to make sure
+        // they are properly updated between the labda calls.
+        // WARNING: if genLoopNestWithReductions() calls the lambda
+        // multiple times, this is going to be a problem.
+        dstOffset = nullptr;
+        srcOffset = nullptr;
         return {};
       };
 
-      // Generate the first loop.
-      hlfir::genLoopNestWithReductions(loc, builder, {shiftVal},
-                                       /*reductionInits=*/{}, genAssign1,
-                                       /*isUnordered=*/true);
+      if constexpr (std::is_same_v<Op, hlfir::CShiftOp>) {
+        // Copy first portion of the array:
+        //   DEST_OFFSET = SIZE(ARRAY,DIM) - SH
+        //   COPY_END1 = SH
+        //   do i=1,COPY_END1
+        //     result(i + DEST_OFFSET) = array(i)
+        //   end
+        dstOffset =
+            mlir::arith::SubIOp::create(builder, loc, shiftDimExtent, shiftVal);
+        srcOffset = nullptr;
+        hlfir::genLoopNestWithReductions(loc, builder, {shiftVal},
+                                         /*reductionInits=*/{}, genCopy,
+                                         /*isUnordered=*/true);
 
-      // Copy second portion of the array:
-      // do i=1,SIZE(ARRAY,DIM)-SH
-      //   result(i) = array(i + SH)
-      // end
-      auto genAssign2 = [&](mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::ValueRange index,
-                            mlir::ValueRange reductionArgs)
-          -> llvm::SmallVector<mlir::Value, 0> {
-        assert(index.size() == 1 && "expected single loop");
-        mlir::Value dstIndex = builder.createConvert(loc, calcType, index[0]);
-        mlir::Value srcIndex =
-            builder.create<mlir::arith::AddIOp>(loc, dstIndex, shiftVal);
-        srcIndices[dimVal - 1] = srcIndex;
-        hlfir::Entity srcElementValue =
-            hlfir::loadElementAt(loc, builder, srcArray, srcIndices);
-        dstIndices[dimVal - 1] = dstIndex;
-        hlfir::Entity dstElement = hlfir::getElementAt(
-            loc, builder, hlfir::Entity{resultArray}, dstIndices);
-        builder.create<hlfir::AssignOp>(loc, srcElementValue, dstElement);
-        return {};
-      };
+        // Copy second portion of the array:
+        //   SOURCE_OFFSET = SH
+        //   COPY_END2 = SIZE(ARRAY,DIM) - SH
+        //   do i=1,COPY_END2
+        //     result(i) = array(i + SOURCE_OFFSET)
+        //   end
+        mlir::Value bound =
+            mlir::arith::SubIOp::create(builder, loc, shiftDimExtent, shiftVal);
+        dstOffset = nullptr;
+        srcOffset = shiftVal;
+        hlfir::genLoopNestWithReductions(loc, builder, {bound},
+                                         /*reductionInits=*/{}, genCopy,
+                                         /*isUnordered=*/true);
+      } else {
+        // Do the copy:
+        //   EXTENT = SIZE(ARRAY,DIM)
+        //   DEST_OFFSET = SH < 0 ? -SH : 0
+        //   SOURCE_OFFSET = SH < 0 ? 0 : SH
+        //   COPY_END = SH < 0 ?
+        //       (-EXTENT > SH ? 0 : EXTENT + SH) :
+        //       (EXTENT < SH ? 0 : EXTENT - SH)
+        //   do i=1,COPY_END
+        //     result(i + DEST_OFFSET) = array(i + SOURCE_OFFSET)
+        //   end
+        mlir::arith::IntegerOverflowFlags savedFlags =
+            builder.getIntegerOverflowFlags();
+        builder.setIntegerOverflowFlags(mlir::arith::IntegerOverflowFlags::nsw);
 
-      // Generate the second loop.
-      mlir::Value bound =
-          builder.create<mlir::arith::SubIOp>(loc, shiftDimExtent, shiftVal);
-      hlfir::genLoopNestWithReductions(loc, builder, {bound},
-                                       /*reductionInits=*/{}, genAssign2,
-                                       /*isUnordered=*/true);
+        mlir::Value zero = builder.createIntegerConstant(loc, calcType, 0);
+        mlir::Value isNegativeShift = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::slt, shiftVal, zero);
+        mlir::Value shiftNeg =
+            mlir::arith::SubIOp::create(builder, loc, zero, shiftVal);
+        dstOffset = mlir::arith::SelectOp::create(builder, loc, isNegativeShift,
+                                                  shiftNeg, zero);
+        srcOffset = mlir::arith::SelectOp::create(builder, loc, isNegativeShift,
+                                                  zero, shiftVal);
+        mlir::Value extentNeg =
+            mlir::arith::SubIOp::create(builder, loc, zero, shiftDimExtent);
+        mlir::Value extentPlusShift =
+            mlir::arith::AddIOp::create(builder, loc, shiftDimExtent, shiftVal);
+        mlir::Value extentNegShiftCmp = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::sgt, extentNeg, shiftVal);
+        mlir::Value negativeShiftBound = mlir::arith::SelectOp::create(
+            builder, loc, extentNegShiftCmp, zero, extentPlusShift);
+        mlir::Value extentMinusShift =
+            mlir::arith::SubIOp::create(builder, loc, shiftDimExtent, shiftVal);
+        mlir::Value extentShiftCmp = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::slt, shiftDimExtent,
+            shiftVal);
+        mlir::Value positiveShiftBound = mlir::arith::SelectOp::create(
+            builder, loc, extentShiftCmp, zero, extentMinusShift);
+        mlir::Value copyEnd = mlir::arith::SelectOp::create(
+            builder, loc, isNegativeShift, negativeShiftBound,
+            positiveShiftBound);
+        hlfir::genLoopNestWithReductions(loc, builder, {copyEnd},
+                                         /*reductionInits=*/{}, genCopy,
+                                         /*isUnordered=*/true);
+
+        // Do the init:
+        //   INIT_END = EXTENT - COPY_END
+        //   INIT_OFFSET = SH < 0 ? 0 : COPY_END
+        //   do i=1,INIT_END
+        //     result(i + INIT_OFFSET) = BOUNDARY
+        //   end
+        assert(boundary && "boundary cannot be null");
+        mlir::Value initEnd =
+            mlir::arith::SubIOp::create(builder, loc, shiftDimExtent, copyEnd);
+        mlir::Value initOffset = mlir::arith::SelectOp::create(
+            builder, loc, isNegativeShift, zero, copyEnd);
+        auto genInit = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                           mlir::ValueRange index,
+                           mlir::ValueRange reductionArgs)
+            -> llvm::SmallVector<mlir::Value, 0> {
+          mlir::Value dstIndex = builder.createConvert(loc, calcType, index[0]);
+          dstIndex =
+              mlir::arith::AddIOp::create(builder, loc, dstIndex, initOffset);
+          dstIndices[dimVal - 1] = dstIndex;
+          hlfir::Entity dstElement = hlfir::getElementAt(
+              loc, builder, hlfir::Entity{resultArray}, dstIndices);
+          hlfir::AssignOp::create(builder, loc, boundary, dstElement);
+          return {};
+        };
+        hlfir::genLoopNestWithReductions(loc, builder, {initEnd},
+                                         /*reductionInits=*/{}, genInit,
+                                         /*isUnordered=*/true);
+        builder.setIntegerOverflowFlags(savedFlags);
+      }
       return {};
     };
 
@@ -1614,6 +2017,10 @@ private:
         shiftVal = normalizeShiftValue(loc, builder, shiftVal, shiftDimExtent,
                                        calcType);
       }
+      if constexpr (std::is_same_v<Op, hlfir::EOShiftOp>)
+        boundaryVal =
+            selectBoundaryValue(loc, builder, op, boundaryVal,
+                                boundaryIsScalarPred, oneBasedIndices);
 
       // If we can fetch the byte stride of the leading dimension,
       // and the byte size of the element, then we can generate
@@ -1625,29 +2032,30 @@ private:
       if (dimVal == 1 && mlir::isa<fir::BaseBoxType>(array.getType())) {
         mlir::Type indexType = builder.getIndexType();
         elemSize =
-            builder.create<fir::BoxEleSizeOp>(loc, indexType, array.getBase());
+            fir::BoxEleSizeOp::create(builder, loc, indexType, array.getBase());
         mlir::Value dimIdx =
             builder.createIntegerConstant(loc, indexType, dimVal - 1);
-        auto boxDim = builder.create<fir::BoxDimsOp>(
-            loc, indexType, indexType, indexType, array.getBase(), dimIdx);
+        auto boxDim =
+            fir::BoxDimsOp::create(builder, loc, indexType, indexType,
+                                   indexType, array.getBase(), dimIdx);
         stride = boxDim.getByteStride();
       }
 
       if (array.isSimplyContiguous() || !elemSize || !stride) {
-        genDimensionShift(loc, builder, shiftVal, /*exposeContiguity=*/false,
-                          oneBasedIndices);
+        genDimensionShift(loc, builder, shiftVal, boundaryVal,
+                          /*exposeContiguity=*/false, oneBasedIndices);
         return {};
       }
 
-      mlir::Value isContiguous = builder.create<mlir::arith::CmpIOp>(
-          loc, mlir::arith::CmpIPredicate::eq, elemSize, stride);
+      mlir::Value isContiguous = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, elemSize, stride);
       builder.genIfOp(loc, {}, isContiguous, /*withElseRegion=*/true)
           .genThen([&]() {
-            genDimensionShift(loc, builder, shiftVal, /*exposeContiguity=*/true,
-                              oneBasedIndices);
+            genDimensionShift(loc, builder, shiftVal, boundaryVal,
+                              /*exposeContiguity=*/true, oneBasedIndices);
           })
           .genElse([&]() {
-            genDimensionShift(loc, builder, shiftVal,
+            genDimensionShift(loc, builder, shiftVal, boundaryVal,
                               /*exposeContiguity=*/false, oneBasedIndices);
           });
 
@@ -1667,6 +2075,418 @@ private:
       genShiftBody(loc, builder, {}, {});
 
     return evalOp.getOperation();
+  }
+};
+
+class CmpCharOpConversion : public mlir::OpRewritePattern<hlfir::CmpCharOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::CmpCharOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CmpCharOp cmp,
+                  mlir::PatternRewriter &rewriter) const override {
+
+    fir::FirOpBuilder builder{rewriter, cmp.getOperation()};
+    const mlir::Location &loc = cmp->getLoc();
+
+    auto toVariable =
+        [&builder,
+         &loc](mlir::Value val) -> std::pair<mlir::Value, hlfir::AssociateOp> {
+      mlir::Value opnd;
+      hlfir::AssociateOp associate;
+      if (mlir::isa<hlfir::ExprType>(val.getType())) {
+        hlfir::Entity entity{val};
+        mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
+        associate = hlfir::genAssociateExpr(loc, builder, entity,
+                                            entity.getType(), "", byRefAttr);
+        opnd = associate.getBase();
+      } else {
+        opnd = val;
+      }
+      return {opnd, associate};
+    };
+
+    auto [lhsOpnd, lhsAssociate] = toVariable(cmp.getLchr());
+    auto [rhsOpnd, rhsAssociate] = toVariable(cmp.getRchr());
+
+    hlfir::Entity lhs{lhsOpnd};
+    hlfir::Entity rhs{rhsOpnd};
+
+    auto charTy = mlir::cast<fir::CharacterType>(lhs.getFortranElementType());
+    unsigned kind = charTy.getFKind();
+
+    auto bits = builder.getKindMap().getCharacterBitsize(kind);
+    auto intTy = builder.getIntegerType(bits);
+
+    auto idxTy = builder.getIndexType();
+    auto charLen1Ty =
+        fir::CharacterType::getSingleton(builder.getContext(), kind);
+    mlir::Type designatorType =
+        fir::ReferenceType::get(charLen1Ty, fir::isa_volatile_type(charTy));
+    auto idxAttr = builder.getIntegerAttr(idxTy, 0);
+
+    auto genExtractAndConvertToInt =
+        [&idxAttr, &intTy, &designatorType](
+            mlir::Location loc, fir::FirOpBuilder &builder,
+            hlfir::Entity &charStr, mlir::Value index, mlir::Value length) {
+          auto singleChr = hlfir::DesignateOp::create(
+              builder, loc, designatorType, charStr, /*component=*/{},
+              /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+              /*substring=*/mlir::ValueRange{index, index},
+              /*complexPart=*/std::nullopt,
+              /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{length},
+              fir::FortranVariableFlagsAttr{});
+          auto chrVal = fir::LoadOp::create(builder, loc, singleChr);
+          mlir::Value intVal = fir::ExtractValueOp::create(
+              builder, loc, intTy, chrVal, builder.getArrayAttr(idxAttr));
+          return intVal;
+        };
+
+    mlir::arith::CmpIPredicate predicate = cmp.getPredicate();
+    mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+
+    mlir::Value lhsLen = builder.createConvert(
+        loc, idxTy, hlfir::genCharLength(loc, builder, lhs));
+    mlir::Value rhsLen = builder.createConvert(
+        loc, idxTy, hlfir::genCharLength(loc, builder, rhs));
+
+    enum class GenCmp { LeftToRight, LeftToBlank, BlankToRight };
+
+    mlir::Value zeroInt = builder.createIntegerConstant(loc, intTy, 0);
+    mlir::Value oneInt = builder.createIntegerConstant(loc, intTy, 1);
+    mlir::Value negOneInt = builder.createIntegerConstant(loc, intTy, -1);
+    mlir::Value blankInt = builder.createIntegerConstant(loc, intTy, ' ');
+
+    auto step = GenCmp::LeftToRight;
+    auto genCmp = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                      mlir::ValueRange index, mlir::ValueRange reductionArgs)
+        -> llvm::SmallVector<mlir::Value, 1> {
+      assert(index.size() == 1 && "expected single loop");
+      assert(reductionArgs.size() == 1 && "expected single reduction value");
+      mlir::Value inRes = reductionArgs[0];
+      auto accEQzero = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, inRes, zeroInt);
+
+      mlir::Value res =
+          builder
+              .genIfOp(loc, {intTy}, accEQzero,
+                       /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value offset =
+                    builder.createConvert(loc, idxTy, index[0]);
+                mlir::Value lhsInt;
+                mlir::Value rhsInt;
+                if (step == GenCmp::LeftToRight) {
+                  lhsInt = genExtractAndConvertToInt(loc, builder, lhs, offset,
+                                                     oneIdx);
+                  rhsInt = genExtractAndConvertToInt(loc, builder, rhs, offset,
+                                                     oneIdx);
+                } else if (step == GenCmp::LeftToBlank) {
+                  // lhsLen > rhsLen
+                  offset =
+                      mlir::arith::AddIOp::create(builder, loc, rhsLen, offset);
+
+                  lhsInt = genExtractAndConvertToInt(loc, builder, lhs, offset,
+                                                     oneIdx);
+                  rhsInt = blankInt;
+                } else if (step == GenCmp::BlankToRight) {
+                  // rhsLen > lhsLen
+                  offset =
+                      mlir::arith::AddIOp::create(builder, loc, lhsLen, offset);
+
+                  lhsInt = blankInt;
+                  rhsInt = genExtractAndConvertToInt(loc, builder, rhs, offset,
+                                                     oneIdx);
+                } else {
+                  llvm_unreachable(
+                      "unknown compare step for CmpCharOp lowering");
+                }
+
+                mlir::Value newVal = mlir::arith::SelectOp::create(
+                    builder, loc,
+                    mlir::arith::CmpIOp::create(builder, loc,
+                                                mlir::arith::CmpIPredicate::ult,
+                                                lhsInt, rhsInt),
+                    negOneInt, inRes);
+                newVal = mlir::arith::SelectOp::create(
+                    builder, loc,
+                    mlir::arith::CmpIOp::create(builder, loc,
+                                                mlir::arith::CmpIPredicate::ugt,
+                                                lhsInt, rhsInt),
+                    oneInt, newVal);
+                fir::ResultOp::create(builder, loc, newVal);
+              })
+              .genElse([&]() { fir::ResultOp::create(builder, loc, inRes); })
+              .getResults()[0];
+
+      return {res};
+    };
+
+    // First generate comparison of two strings for the legth of the shorter
+    // one.
+    mlir::Value minLen = mlir::arith::SelectOp::create(
+        builder, loc,
+        mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::slt, lhsLen, rhsLen),
+        lhsLen, rhsLen);
+
+    llvm::SmallVector<mlir::Value, 1> loopOut =
+        hlfir::genLoopNestWithReductions(loc, builder, {minLen},
+                                         /*reductionInits=*/{zeroInt}, genCmp,
+                                         /*isUnordered=*/false);
+    mlir::Value partRes = loopOut[0];
+
+    auto lhsLonger = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::sgt, lhsLen, rhsLen);
+    mlir::Value tempRes =
+        builder
+            .genIfOp(loc, {intTy}, lhsLonger,
+                     /*withElseRegion=*/true)
+            .genThen([&]() {
+              // If left is the longer string generate compare left to blank.
+              step = GenCmp::LeftToBlank;
+              auto lenDiff =
+                  mlir::arith::SubIOp::create(builder, loc, lhsLen, rhsLen);
+
+              llvm::SmallVector<mlir::Value, 1> output =
+                  hlfir::genLoopNestWithReductions(loc, builder, {lenDiff},
+                                                   /*reductionInits=*/{partRes},
+                                                   genCmp,
+                                                   /*isUnordered=*/false);
+              mlir::Value res = output[0];
+              fir::ResultOp::create(builder, loc, res);
+            })
+            .genElse([&]() {
+              // If right  is the longer string generate compare blank to
+              // right.
+              step = GenCmp::BlankToRight;
+              auto lenDiff =
+                  mlir::arith::SubIOp::create(builder, loc, rhsLen, lhsLen);
+              llvm::SmallVector<mlir::Value, 1> output =
+                  hlfir::genLoopNestWithReductions(loc, builder, {lenDiff},
+                                                   /*reductionInits=*/{partRes},
+                                                   genCmp,
+                                                   /*isUnordered=*/false);
+
+              mlir::Value res = output[0];
+              fir::ResultOp::create(builder, loc, res);
+            })
+            .getResults()[0];
+    if (lhsAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, lhsAssociate);
+    if (rhsAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, rhsAssociate);
+
+    auto finalCmpResult =
+        mlir::arith::CmpIOp::create(builder, loc, predicate, tempRes, zeroInt);
+    rewriter.replaceOp(cmp, finalCmpResult);
+    return mlir::success();
+  }
+};
+
+static std::pair<mlir::Value, hlfir::AssociateOp>
+getVariable(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value val) {
+  // If it is an expression - create a variable from it, or forward
+  // the value otherwise.
+  hlfir::AssociateOp associate;
+  if (!mlir::isa<hlfir::ExprType>(val.getType()))
+    return {val, associate};
+  hlfir::Entity entity{val};
+  mlir::NamedAttribute byRefAttr = fir::getAdaptToByRefAttr(builder);
+  associate = hlfir::genAssociateExpr(loc, builder, entity, entity.getType(),
+                                      "", byRefAttr);
+  return {associate.getBase(), associate};
+}
+
+class IndexOpConversion : public mlir::OpRewritePattern<hlfir::IndexOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::IndexOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::IndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    // We simplify only limited cases:
+    // 1) a substring length shall be known at compile time
+    // 2) if a substring length is 0 then replace with 1 for forward search,
+    //    or otherwise with the string length + 1 (builder shall const-fold if
+    //    lookup direction is known at compile time).
+    // 3) for known string length at compile time, if it is
+    //    shorter than substring  => replace with zero.
+    // 4) if a substring length is one => inline as simple search loop
+    // 5) for forward search with input strings of kind=1 runtime is faster.
+    // Do not simplify in all the other cases relying on a runtime call.
+
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
+    const mlir::Location &loc = op->getLoc();
+
+    auto resultTy = op.getType();
+    mlir::Value back = op.getBack();
+    auto substrLenCst =
+        hlfir::getCharLengthIfConst(hlfir::Entity{op.getSubstr()});
+    if (!substrLenCst) {
+      return rewriter.notifyMatchFailure(
+          op, "substring length unknown at compile time");
+    }
+    hlfir::Entity strEntity{op.getStr()};
+    auto i1Ty = builder.getI1Type();
+    auto idxTy = builder.getIndexType();
+    if (*substrLenCst == 0) {
+      mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+      // zero length substring. For back search replace with
+      // strLen+1, or otherwise with 1.
+      mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
+      mlir::Value strEnd = mlir::arith::AddIOp::create(
+          builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
+      if (back)
+        back = builder.createConvert(loc, i1Ty, back);
+      else
+        back = builder.createIntegerConstant(loc, i1Ty, 0);
+      mlir::Value result =
+          mlir::arith::SelectOp::create(builder, loc, back, strEnd, oneIdx);
+
+      rewriter.replaceOp(op, builder.createConvert(loc, resultTy, result));
+      return mlir::success();
+    }
+
+    if (auto strLenCst = hlfir::getCharLengthIfConst(strEntity)) {
+      if (*strLenCst < *substrLenCst) {
+        rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 0));
+        return mlir::success();
+      }
+      if (*strLenCst == 0) {
+        // both strings have zero length
+        rewriter.replaceOp(op, builder.createIntegerConstant(loc, resultTy, 1));
+        return mlir::success();
+      }
+    }
+    if (*substrLenCst != 1) {
+      return rewriter.notifyMatchFailure(
+          op, "rely on runtime implementation if substring length > 1");
+    }
+    // For forward search and character kind=1 the runtime uses memchr
+    // which well optimized. But it looks like memchr idiom is not recognized
+    // in LLVM yet. On a micro-kernel test with strings of length 40 runtime
+    // had ~2x less execution time vs inlined code. For unknown search direction
+    // at compile time pessimistically assume "forward".
+    std::optional<bool> isBack;
+    if (back) {
+      if (auto backCst = fir::getIntIfConstant(back))
+        isBack = *backCst != 0;
+    } else {
+      isBack = false;
+    }
+    auto charTy = mlir::cast<fir::CharacterType>(
+        hlfir::getFortranElementType(op.getSubstr().getType()));
+    unsigned kind = charTy.getFKind();
+    if (kind == 1 && (!isBack || !*isBack)) {
+      return rewriter.notifyMatchFailure(
+          op, "rely on runtime implementation for character kind 1");
+    }
+
+    // All checks are passed here. Generate single character search loop.
+    auto [strV, strAssociate] = getVariable(builder, loc, op.getStr());
+    auto [substrV, substrAssociate] = getVariable(builder, loc, op.getSubstr());
+    hlfir::Entity str{strV};
+    hlfir::Entity substr{substrV};
+    mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
+
+    auto genExtractAndConvertToInt = [&charTy, &idxTy, &oneIdx,
+                                      kind](mlir::Location loc,
+                                            fir::FirOpBuilder &builder,
+                                            hlfir::Entity &charStr,
+                                            mlir::Value index) {
+      auto bits = builder.getKindMap().getCharacterBitsize(kind);
+      auto intTy = builder.getIntegerType(bits);
+      auto charLen1Ty =
+          fir::CharacterType::getSingleton(builder.getContext(), kind);
+      mlir::Type designatorTy =
+          fir::ReferenceType::get(charLen1Ty, fir::isa_volatile_type(charTy));
+      auto idxAttr = builder.getIntegerAttr(idxTy, 0);
+
+      auto singleChr = hlfir::DesignateOp::create(
+          builder, loc, designatorTy, charStr, /*component=*/{},
+          /*compShape=*/mlir::Value{}, hlfir::DesignateOp::Subscripts{},
+          /*substring=*/mlir::ValueRange{index, index},
+          /*complexPart=*/std::nullopt,
+          /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{oneIdx},
+          fir::FortranVariableFlagsAttr{});
+      auto chrVal = fir::LoadOp::create(builder, loc, singleChr);
+      mlir::Value intVal = fir::ExtractValueOp::create(
+          builder, loc, intTy, chrVal, builder.getArrayAttr(idxAttr));
+      return intVal;
+    };
+
+    auto wantChar = genExtractAndConvertToInt(loc, builder, substr, oneIdx);
+
+    // Generate search loop body with the following C equivalent:
+    //  idx_t result = 0;
+    //  idx_t end = strlen + 1;
+    //  char want = substr[0];
+    //  for (idx_t idx = 1; idx < end; ++idx) {
+    //    if (result == 0) {
+    //        idx_t at = back ? end - idx: idx;
+    //        result = str[at-1] == want ? at : result;
+    //    }
+    //  }
+    mlir::Value strLen = hlfir::genCharLength(loc, builder, strEntity);
+    if (!back)
+      back = builder.createIntegerConstant(loc, i1Ty, 0);
+    else
+      back = builder.createConvert(loc, i1Ty, back);
+    mlir::Value strEnd = mlir::arith::AddIOp::create(
+        builder, loc, builder.createConvert(loc, idxTy, strLen), oneIdx);
+    mlir::Value zeroIdx = builder.createIntegerConstant(loc, idxTy, 0);
+    auto genSearchBody = [&](mlir::Location loc, fir::FirOpBuilder &builder,
+                             mlir::ValueRange index,
+                             mlir::ValueRange reductionArgs)
+        -> llvm::SmallVector<mlir::Value, 1> {
+      assert(index.size() == 1 && "expected single loop");
+      assert(reductionArgs.size() == 1 && "expected single reduction value");
+      mlir::Value inRes = reductionArgs[0];
+      auto resEQzero = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, inRes, zeroIdx);
+
+      mlir::Value res =
+          builder
+              .genIfOp(loc, {idxTy}, resEQzero,
+                       /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value idx = builder.createConvert(loc, idxTy, index[0]);
+                // offset = back ? end - idx : idx;
+                mlir::Value offset = mlir::arith::SelectOp::create(
+                    builder, loc, back,
+                    mlir::arith::SubIOp::create(builder, loc, strEnd, idx),
+                    idx);
+
+                auto haveChar =
+                    genExtractAndConvertToInt(loc, builder, str, offset);
+                auto charsEQ = mlir::arith::CmpIOp::create(
+                    builder, loc, mlir::arith::CmpIPredicate::eq, haveChar,
+                    wantChar);
+                mlir::Value newVal = mlir::arith::SelectOp::create(
+                    builder, loc, charsEQ, offset, inRes);
+
+                fir::ResultOp::create(builder, loc, newVal);
+              })
+              .genElse([&]() { fir::ResultOp::create(builder, loc, inRes); })
+              .getResults()[0];
+      return {res};
+    };
+
+    llvm::SmallVector<mlir::Value, 1> loopOut =
+        hlfir::genLoopNestWithReductions(loc, builder, {strLen},
+                                         /*reductionInits=*/{zeroIdx},
+                                         genSearchBody,
+                                         /*isUnordered=*/false);
+    mlir::Value result = builder.createConvert(loc, resultTy, loopOut[0]);
+
+    if (strAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, strAssociate);
+    if (substrAssociate)
+      hlfir::EndAssociateOp::create(builder, loc, substrAssociate);
+
+    rewriter.replaceOp(op, result);
+    return mlir::success();
   }
 };
 
@@ -1710,9 +2530,9 @@ public:
     // Generate hlfir.eval_in_mem to mimic the MATMUL implementation
     // from Fortran runtime. The implementation needs to operate
     // with the result array as an in-memory object.
-    hlfir::EvaluateInMemoryOp evalOp =
-        builder.create<hlfir::EvaluateInMemoryOp>(
-            loc, mlir::cast<hlfir::ExprType>(matmul.getType()), resultShape);
+    hlfir::EvaluateInMemoryOp evalOp = hlfir::EvaluateInMemoryOp::create(
+        builder, loc, mlir::cast<hlfir::ExprType>(matmul.getType()),
+        resultShape);
     builder.setInsertionPointToStart(&evalOp.getBody().front());
 
     // Embox the raw array pointer to simplify designating it.
@@ -1813,7 +2633,7 @@ private:
     llvm::SmallVector<mlir::Value> innerProductExtent =
         fir::factory::deduceOptimalExtents({innerProduct1Extent},
                                            {innerProduct2Extent});
-    return {builder.create<fir::ShapeOp>(loc, newExtents),
+    return {fir::ShapeOp::create(builder, loc, newExtents),
             innerProductExtent[0]};
   }
 
@@ -1853,7 +2673,7 @@ private:
         -> llvm::SmallVector<mlir::Value, 0> {
       hlfir::Entity resultElement =
           hlfir::getElementAt(loc, builder, result, oneBasedIndices);
-      builder.create<hlfir::AssignOp>(loc, initValue, resultElement);
+      hlfir::AssignOp::create(builder, loc, initValue, resultElement);
       return {};
     };
 
@@ -1887,7 +2707,7 @@ private:
         mlir::Value productValue =
             ProductFactory{loc, builder}.genAccumulateProduct(
                 resultElementValue, lhsElementValue, rhsElementValue);
-        builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
+        hlfir::AssignOp::create(builder, loc, productValue, resultElement);
         return {};
       };
 
@@ -1924,7 +2744,7 @@ private:
         mlir::Value productValue =
             ProductFactory{loc, builder}.genAccumulateProduct(
                 resultElementValue, lhsElementValue, rhsElementValue);
-        builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
+        hlfir::AssignOp::create(builder, loc, productValue, resultElement);
         return {};
       };
       hlfir::genLoopNestWithReductions(
@@ -1956,7 +2776,7 @@ private:
         mlir::Value productValue =
             ProductFactory{loc, builder}.genAccumulateProduct(
                 resultElementValue, lhsElementValue, rhsElementValue);
-        builder.create<hlfir::AssignOp>(loc, productValue, resultElement);
+        hlfir::AssignOp::create(builder, loc, productValue, resultElement);
         return {};
       };
       hlfir::genLoopNestWithReductions(
@@ -2172,7 +2992,7 @@ public:
       resultExtents.push_back(hlfir::loadElementAt(
           loc, builder, shape,
           builder.createIntegerConstant(loc, indexType, idx + 1)));
-    auto resultShape = builder.create<fir::ShapeOp>(loc, resultExtents);
+    auto resultShape = fir::ShapeOp::create(builder, loc, resultExtents);
 
     auto genKernel = [&](mlir::Location loc, fir::FirOpBuilder &builder,
                          mlir::ValueRange inputIndices) -> hlfir::Entity {
@@ -2181,10 +3001,11 @@ public:
       fir::IfOp ifOp;
       if (pad) {
         // PAD is present. Check if this element comes from the PAD array.
-        mlir::Value isInsideArray = builder.create<mlir::arith::CmpIOp>(
-            loc, mlir::arith::CmpIPredicate::ult, linearIndex, arraySize);
-        ifOp = builder.create<fir::IfOp>(loc, elementType, isInsideArray,
-                                         /*withElseRegion=*/true);
+        mlir::Value isInsideArray = mlir::arith::CmpIOp::create(
+            builder, loc, mlir::arith::CmpIPredicate::ult, linearIndex,
+            arraySize);
+        ifOp = fir::IfOp::create(builder, loc, elementType, isInsideArray,
+                                 /*withElseRegion=*/true);
 
         // In the 'else' block, return an element from the PAD.
         builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -2196,13 +3017,13 @@ public:
         // Subtract the ARRAY size from the zero-based linear index
         // to get the zero-based linear index into PAD.
         mlir::Value padLinearIndex =
-            builder.create<mlir::arith::SubIOp>(loc, linearIndex, arraySize);
+            mlir::arith::SubIOp::create(builder, loc, linearIndex, arraySize);
         llvm::SmallVector<mlir::Value, Fortran::common::maxRank> padIndices =
             delinearizeIndex(loc, builder, padExtents, padLinearIndex,
                              /*wrapAround=*/true);
         mlir::Value padElement =
             hlfir::loadElementAt(loc, builder, hlfir::Entity{pad}, padIndices);
-        builder.create<fir::ResultOp>(loc, padElement);
+        fir::ResultOp::create(builder, loc, padElement);
 
         // In the 'then' block, return an element from the ARRAY.
         builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -2215,7 +3036,7 @@ public:
           hlfir::loadElementAt(loc, builder, array, arrayIndices);
 
       if (ifOp) {
-        builder.create<fir::ResultOp>(loc, arrayElement);
+        fir::ResultOp::create(builder, loc, arrayElement);
         builder.setInsertionPointAfter(ifOp);
         arrayElement = ifOp.getResult(0);
       }
@@ -2252,12 +3073,12 @@ private:
     mlir::Value linearIndex = zero;
     std::size_t idx = 0;
     for (auto index : llvm::reverse(indices)) {
-      mlir::Value tmp = builder.create<mlir::arith::SubIOp>(
-          loc, builder.createConvert(loc, indexType, index), one);
-      tmp = builder.create<mlir::arith::AddIOp>(loc, linearIndex, tmp);
+      mlir::Value tmp = mlir::arith::SubIOp::create(
+          builder, loc, builder.createConvert(loc, indexType, index), one);
+      tmp = mlir::arith::AddIOp::create(builder, loc, linearIndex, tmp);
       if (idx + 1 < rank)
-        tmp = builder.create<mlir::arith::MulIOp>(
-            loc, tmp,
+        tmp = mlir::arith::MulIOp::create(
+            builder, loc, tmp,
             builder.createConvert(loc, indexType, extents[rank - idx - 2]));
 
       linearIndex = tmp;
@@ -2297,12 +3118,12 @@ private:
       mlir::Value currentIndex = linearIndex;
       if (dim != extents.size() - 1 || wrapAround)
         currentIndex =
-            builder.create<mlir::arith::RemUIOp>(loc, linearIndex, extent);
+            mlir::arith::RemUIOp::create(builder, loc, linearIndex, extent);
       // The result of the last division is unused, so it will be DCEd.
       linearIndex =
-          builder.create<mlir::arith::DivUIOp>(loc, linearIndex, extent);
+          mlir::arith::DivUIOp::create(builder, loc, linearIndex, extent);
       indices.push_back(
-          builder.create<mlir::arith::AddIOp>(loc, currentIndex, one));
+          mlir::arith::AddIOp::create(builder, loc, currentIndex, one));
     }
     return indices;
   }
@@ -2314,8 +3135,8 @@ private:
     mlir::Type indexType = builder.getIndexType();
     mlir::Value size = builder.createIntegerConstant(loc, indexType, 1);
     for (auto extent : extents)
-      size = builder.create<mlir::arith::MulIOp>(
-          loc, size, builder.createConvert(loc, indexType, extent));
+      size = mlir::arith::MulIOp::create(
+          builder, loc, size, builder.createConvert(loc, indexType, extent));
     return size;
   }
 };
@@ -2337,9 +3158,11 @@ public:
     mlir::RewritePatternSet patterns(context);
     patterns.insert<TransposeAsElementalConversion>(context);
     patterns.insert<ReductionConversion<hlfir::SumOp>>(context);
-    patterns.insert<CShiftConversion>(context);
+    patterns.insert<ArrayShiftConversion<hlfir::CShiftOp>>(context);
+    patterns.insert<ArrayShiftConversion<hlfir::EOShiftOp>>(context);
+    patterns.insert<CmpCharOpConversion>(context);
+    patterns.insert<IndexOpConversion>(context);
     patterns.insert<MatmulConversion<hlfir::MatmulTransposeOp>>(context);
-
     patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
     patterns.insert<ReductionConversion<hlfir::AllOp>>(context);

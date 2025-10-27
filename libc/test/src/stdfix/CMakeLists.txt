@@ -4,7 +4,6 @@ endif()
 
 add_custom_target(libc-stdfix-tests)
 
-
 foreach(suffix IN ITEMS hr r lr hk k lk)
   add_libc_test(
     abs${suffix}_test
@@ -84,6 +83,18 @@ foreach(suffix IN ITEMS hr r lr hk k lk uhr ur ulr uhk uk ulk)
     SRCS
       bits${suffix}_test.cpp
     DEPENDS
+      libc.include.llvm-libc-types.int_k_t
+      libc.include.llvm-libc-types.int_hr_t
+      libc.include.llvm-libc-types.int_lk_t
+      libc.include.llvm-libc-types.int_lr_t
+      libc.include.llvm-libc-types.int_r_t
+      libc.include.llvm-libc-types.uint_uhk_t
+      libc.include.llvm-libc-types.uint_uhr_t
+      libc.include.llvm-libc-types.uint_uk_t
+      libc.include.llvm-libc-types.uint_ulk_t
+      libc.include.llvm-libc-types.uint_ulr_t
+      libc.include.llvm-libc-types.uint_ur_t
+      libc.include.llvm-libc-types.int_hk_t
       libc.src.stdfix.bits${suffix}
       libc.src.__support.fixed_point.fx_rep
       libc.src.__support.fixed_point.fx_bits
@@ -115,6 +126,22 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
       idiv${suffix}_test.cpp
     DEPENDS
       libc.src.stdfix.idiv${suffix}
+      libc.src.__support.fixed_point.fx_bits
+      libc.hdr.signal_macros
+  )
+endforeach()
+
+foreach(suffix IN ITEMS r)
+  add_libc_test(
+    ${suffix}divi_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      DivITest.h
+    SRCS
+      ${suffix}divi_test.cpp
+    DEPENDS
+      libc.src.stdfix.${suffix}divi
       libc.src.__support.fixed_point.fx_bits
       libc.hdr.signal_macros
   )

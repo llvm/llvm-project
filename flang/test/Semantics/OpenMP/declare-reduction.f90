@@ -31,7 +31,7 @@ function func(x, n, init)
 end function func
 
 program main
-!CHECK-LABEL: MainProgram scope: main
+!CHECK-LABEL: MainProgram scope: MAIN
 
   !$omp declare reduction (my_add_red : integer : omp_out = omp_out + omp_in) initializer (omp_priv=0)
 

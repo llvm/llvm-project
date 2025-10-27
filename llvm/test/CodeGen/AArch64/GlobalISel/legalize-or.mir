@@ -84,16 +84,16 @@ body:             |
     ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s64) = G_AND [[OR4]], [[C1]]
     ; CHECK-NEXT: G_STORE [[AND]](s64), %ptr(p0) :: (store (s64), align 64)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C2]](s64)
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C2]](s64)
     ; CHECK-NEXT: G_STORE [[AND1]](s64), [[PTR_ADD]](p0) :: (store (s64) into unknown-address + 8)
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C3]](s64)
+    ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C3]](s64)
     ; CHECK-NEXT: G_STORE [[AND2]](s64), [[PTR_ADD1]](p0) :: (store (s64) into unknown-address + 16, align 16)
     ; CHECK-NEXT: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C4]](s64)
+    ; CHECK-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C4]](s64)
     ; CHECK-NEXT: G_STORE [[AND3]](s64), [[PTR_ADD2]](p0) :: (store (s64) into unknown-address + 24)
     ; CHECK-NEXT: [[C5:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
-    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C5]](s64)
+    ; CHECK-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C5]](s64)
     ; CHECK-NEXT: G_STORE [[AND4]](s64), [[PTR_ADD3]](p0) :: (store (s64) into unknown-address + 32, align 32)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s318) = G_IMPLICIT_DEF

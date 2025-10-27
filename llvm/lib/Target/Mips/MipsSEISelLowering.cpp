@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
@@ -209,6 +210,16 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       else
         addRegisterClass(MVT::f64, &Mips::AFGR64RegClass);
     }
+  }
+
+  // Targets with 64bits integer registers, but no 64bit floating point register
+  // do not support conversion between them
+  if (Subtarget.isGP64bit() && Subtarget.isSingleFloat() &&
+      !Subtarget.useSoftFloat()) {
+    setOperationAction(ISD::FP_TO_SINT, MVT::i64, Expand);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i64, Expand);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
   }
 
   setOperationAction(ISD::SMUL_LOHI,          MVT::i32, Custom);

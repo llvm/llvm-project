@@ -721,11 +721,11 @@ void ScriptParser::readTarget() {
 
 static int precedence(StringRef op) {
   return StringSwitch<int>(op)
-      .Cases("*", "/", "%", 11)
-      .Cases("+", "-", 10)
-      .Cases("<<", ">>", 9)
-      .Cases("<", "<=", ">", ">=", 8)
-      .Cases("==", "!=", 7)
+      .Cases({"*", "/", "%"}, 11)
+      .Cases({"+", "-"}, 10)
+      .Cases({"<<", ">>"}, 9)
+      .Cases({"<", "<=", ">", ">="}, 8)
+      .Cases({"==", "!="}, 7)
       .Case("&", 6)
       .Case("^", 5)
       .Case("|", 4)
@@ -1229,6 +1229,8 @@ SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef name) {
 // This is an operator-precedence parser to parse a linker
 // script expression.
 Expr ScriptParser::readExpr() {
+  if (atEOF())
+    return []() { return 0; };
   // Our lexer is context-aware. Set the in-expression bit so that
   // they apply different tokenization rules.
   SaveAndRestore saved(lexState, State::Expr);

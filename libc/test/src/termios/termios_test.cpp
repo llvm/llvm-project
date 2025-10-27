@@ -16,49 +16,52 @@
 #include "src/termios/tcgetsid.h"
 #include "src/termios/tcsetattr.h"
 #include "src/unistd/close.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <termios.h>
 
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcTermiosTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 // We just list a bunch of smoke tests here as it is not possible to
 // test functionality at the least because we want to run the tests
 // from ninja/make which change the terminal behavior.
 
-TEST(LlvmLibcTermiosTest, SpeedSmokeTest) {
+TEST_F(LlvmLibcTermiosTest, SpeedSmokeTest) {
   struct termios t;
-  libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, B50), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::cfgetispeed(&t), speed_t(B50));
   ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, B75), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::cfgetospeed(&t), speed_t(B75));
 
-  libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::cfsetispeed(&t, ~CBAUD), Fails(EINVAL));
-  libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::cfsetospeed(&t, ~CBAUD), Fails(EINVAL));
 }
 
-TEST(LlvmLibcTermiosTest, GetAttrSmokeTest) {
+TEST_F(LlvmLibcTermiosTest, GetAttrSmokeTest) {
   struct termios t;
-  libc_errno = 0;
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
-  if (fd < 0)
-    return; // When /dev/tty is not available, no point continuing.
+  if (fd < 0) {
+    // When /dev/tty is not available, no point continuing
+    libc_errno = 0;
+    return;
+  }
   ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::tcgetattr(fd, &t), Succeeds(0));
-  ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }
 
-TEST(LlvmLibcTermiosTest, TcGetSidSmokeTest) {
-  libc_errno = 0;
+TEST_F(LlvmLibcTermiosTest, TcGetSidSmokeTest) {
   int fd = LIBC_NAMESPACE::open("/dev/tty", O_RDONLY);
-  if (fd < 0)
-    return; // When /dev/tty is not available, no point continuing.
+  if (fd < 0) {
+    // When /dev/tty is not available, no point continuing
+    libc_errno = 0;
+    return;
+  }
   ASSERT_ERRNO_SUCCESS();
-  ASSERT_GT(LIBC_NAMESPACE::tcgetsid(fd), pid_t(0));
-  ASSERT_EQ(LIBC_NAMESPACE::close(fd), 0);
+  ASSERT_THAT(LIBC_NAMESPACE::tcgetsid(fd),
+              returns(GT(pid_t(0))).with_errno(EQ(0)));
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 }

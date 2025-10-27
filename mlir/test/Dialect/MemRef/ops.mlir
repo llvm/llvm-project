@@ -265,6 +265,17 @@ func.func @zero_dim_no_idx(%arg0 : memref<i32>, %arg1 : memref<i32>, %arg2 : mem
   // CHECK: memref.store %{{.*}}, %{{.*}}[] : memref<i32>
 }
 
+
+// CHECK-LABEL: func @load_store_alignment
+func.func @load_store_alignment(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.load {{.*}} {alignment = 16 : i64}
+  %val = memref.load %memref[%c0] { alignment = 16 } : memref<4xi32>
+  // CHECK: memref.store {{.*}} {alignment = 16 : i64}
+  memref.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>
+  return
+}
+
 // CHECK-LABEL: func @memref_view(%arg0
 func.func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
@@ -289,6 +300,15 @@ func.func @assume_alignment(%0: memref<4x4xf16>) {
   // CHECK: %{{.*}} = memref.assume_alignment %[[MEMREF]], 16 : memref<4x4xf16>
   %1 = memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
+}
+
+// CHECK-LABEL: func @distinct_objects
+// CHECK-SAME: (%[[ARG0:.*]]: memref<?xf16>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf64>)
+func.func @distinct_objects(%arg0: memref<?xf16>, %arg1: memref<?xf32>, %arg2: memref<?xf64>) -> (memref<?xf16>, memref<?xf32>, memref<?xf64>) {
+  // CHECK:  %[[RES:.*]]:3 = memref.distinct_objects %[[ARG0]], %[[ARG1]], %[[ARG2]] : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  %1, %2, %3 = memref.distinct_objects %arg0, %arg1, %arg2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  // CHECK:  return %[[RES]]#0, %[[RES]]#1, %[[RES]]#2 : memref<?xf16>, memref<?xf32>, memref<?xf64>
+  return %1, %2, %3 : memref<?xf16>, memref<?xf32>, memref<?xf64>
 }
 
 // CHECK-LABEL: func @expand_collapse_shape_static

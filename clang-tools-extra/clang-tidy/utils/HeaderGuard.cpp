@@ -1,4 +1,4 @@
-//===--- HeaderGuard.cpp - clang-tidy -------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -239,7 +239,9 @@ public:
 
       Check->diag(StartLoc, "header is missing header guard")
           << FixItHint::CreateInsertion(
-                 StartLoc, "#ifndef " + CPPVar + "\n#define " + CPPVar + "\n\n")
+                 StartLoc,
+                 (Twine("#ifndef ") + CPPVar + "\n#define " + CPPVar + "\n\n")
+                     .str())
           << FixItHint::CreateInsertion(
                  SM.getLocForEndOfFile(FID),
                  Check->shouldSuggestEndifComment(FileName)

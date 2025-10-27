@@ -17,7 +17,6 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -131,6 +130,11 @@ struct TestLinalgTransforms
       *this, "test-fold-into-pack-and-unpack",
       llvm::cl::desc("Test folding ops into linalg.pack and linalg.unpack"),
       llvm::cl::init(false)};
+  Option<bool> testFoldIntoPackAndUnpackWithControlFn{
+      *this, "test-fold-into-pack-and-unpack-control",
+      llvm::cl::desc(
+          "Test controlling folding ops into linalg.pack and linalg.unpack"),
+      llvm::cl::init(false)};
   Option<bool> testSimplifyPackUnpackPatterns{
       *this, "test-simplify-pack-unpack-patterns",
       llvm::cl::desc("Test patterns to simplify linalg.pack and linalg.unpack"),
@@ -223,9 +227,11 @@ static void applyDecomposeWinogradOps(func::FuncOp funcOp) {
   (void)applyPatternsGreedily(funcOp, std::move(patterns));
 }
 
-static void applyFoldIntoPackAndUnpackPatterns(Operation *rootOp) {
+static void applyFoldIntoPackAndUnpackPatterns(
+    Operation *rootOp,
+    linalg::ControlFoldIntoPackUnpackFn controlFn = nullptr) {
   RewritePatternSet patterns(rootOp->getContext());
-  linalg::populateFoldIntoPackAndUnpackPatterns(patterns);
+  linalg::populateFoldIntoPackAndUnpackPatterns(patterns, controlFn);
   (void)applyPatternsGreedily(rootOp, std::move(patterns));
 }
 
@@ -264,6 +270,17 @@ void TestLinalgTransforms::runOnOperation() {
   Operation *rootOp = getOperation();
   if (testFoldIntoPackAndUnpack)
     applyFoldIntoPackAndUnpackPatterns(rootOp);
+  if (testFoldIntoPackAndUnpackWithControlFn) {
+    linalg::ControlFoldIntoPackUnpackFn controlFn = [](OpOperand *opOperand) {
+      Operation *producer = opOperand->get().getDefiningOp();
+      Operation *consumer = opOperand->getOwner();
+      // If we have a pack/unpack consumer and a producer that has multiple
+      // uses, do not apply the folding patterns.
+      return !(isa<linalg::PackOp, linalg::UnPackOp>(consumer) &&
+               isa<TilingInterface>(producer) && !producer->hasOneUse());
+    };
+    applyFoldIntoPackAndUnpackPatterns(rootOp, controlFn);
+  }
   if (testSimplifyPackUnpackPatterns)
     applySimplifyPackUnpackPatterns(rootOp);
 }

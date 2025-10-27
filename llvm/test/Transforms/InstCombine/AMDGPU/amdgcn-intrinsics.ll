@@ -6527,15 +6527,15 @@ define ptr addrspace(8) @make_buffer_rsrc_poison() {
 ; CHECK-LABEL: @make_buffer_rsrc_poison(
 ; CHECK-NEXT:    ret ptr addrspace(8) poison
 ;
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) poison, i16 0, i32 1234, i32 5678)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) poison, i16 0, i64 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
 }
 
 define ptr addrspace(8) @make_buffer_rsrc_undef() {
 ; CHECK-LABEL: @make_buffer_rsrc_undef(
-; CHECK-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i32 1234, i32 5678)
+; CHECK-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i64 1234, i32 5678)
 ; CHECK-NEXT:    ret ptr addrspace(8) [[RSRC]]
 ;
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i32 1234, i32 5678)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i64 1234, i32 5678)
   ret ptr addrspace(8) %rsrc
 }

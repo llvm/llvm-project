@@ -778,9 +778,9 @@ define <16 x i8> @combine_shl_pshufb(<4 x i32> %a0) {
 ; SSSE3-LABEL: combine_shl_pshufb:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; SSSE3-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSSE3-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,256,65536,65536]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSSE3-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSSE3-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [256,u,65536,u]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
@@ -788,13 +788,13 @@ define <16 x i8> @combine_shl_pshufb(<4 x i32> %a0) {
 ;
 ; SSE41-LABEL: combine_shl_pshufb:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,256,65536,65536]
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_shl_pshufb:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,256,65536,65536]
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,2,3,0,5,6,7,4,9,10,11,8,12,13,14,15]
 ; AVX1-NEXT:    retq
 ;
@@ -894,6 +894,16 @@ define i32 @mask_z1z3_v16i8(<16 x i8> %a0) {
   %3 = extractelement <4 x i32> %2, i32 3
   %4 = and i32 %3, 4278255360
   ret i32 %4
+}
+
+define <16 x i8> @freeze_pshufb_v16i8(<16 x i8> %a0) {
+; CHECK-LABEL: freeze_pshufb_v16i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retq
+  %s0 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+  %f0 = freeze <16 x i8> %s0
+  %s1 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %f0, <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>)
+  ret <16 x i8> %s1
 }
 
 define i32 @PR22415(double %a0) {

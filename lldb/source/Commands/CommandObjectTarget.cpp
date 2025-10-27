@@ -418,7 +418,11 @@ protected:
         if (process_sp) {
           // Seems weird that we Launch a core file, but that is what we
           // do!
-          error = process_sp->LoadCore();
+          {
+            ElapsedTime load_core_time(
+                target_sp->GetStatistics().GetLoadCoreTime());
+            error = process_sp->LoadCore();
+          }
 
           if (error.Fail()) {
             result.AppendError(error.AsCString("unknown core file format"));
@@ -1412,11 +1416,13 @@ static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
 }
 
 static bool GetSeparateDebugInfoList(StructuredData::Array &list,
-                                     Module *module, bool errors_only) {
+                                     Module *module, bool errors_only,
+                                     bool load_all_debug_info) {
   if (module) {
     if (SymbolFile *symbol_file = module->GetSymbolFile(/*can_create=*/true)) {
       StructuredData::Dictionary d;
-      if (symbol_file->GetSeparateDebugInfo(d, errors_only)) {
+      if (symbol_file->GetSeparateDebugInfo(d, errors_only,
+                                            load_all_debug_info)) {
         list.AddItem(
             std::make_shared<StructuredData::Dictionary>(std::move(d)));
         return true;
@@ -2208,7 +2214,9 @@ protected:
 
     const char *clang_args[] = {"clang", pcm_path};
     clang::CompilerInstance compiler(clang::createInvocation(clang_args));
-    compiler.createDiagnostics(*FileSystem::Instance().GetVirtualFileSystem());
+    compiler.setVirtualFileSystem(
+        FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
 
     // Pass empty deleter to not attempt to free memory that was allocated
     // outside of the current scope, possibly statically.
@@ -2273,7 +2281,8 @@ protected:
         if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping clang ast"))
           break;
         if (SymbolFile *sf = module_sp->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream(), filter);
+          sf->DumpClangAST(result.GetOutputStream(), filter,
+                           GetCommandInterpreter().GetDebugger().GetUseColor());
       }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return;
@@ -2302,7 +2311,8 @@ protected:
 
         Module *m = module_list.GetModulePointerAtIndex(i);
         if (SymbolFile *sf = m->GetSymbolFile())
-          sf->DumpClangAST(result.GetOutputStream(), filter);
+          sf->DumpClangAST(result.GetOutputStream(), filter,
+                           GetCommandInterpreter().GetDebugger().GetUseColor());
       }
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -2418,7 +2428,7 @@ protected:
     result.GetErrorStream().SetAddressByteSize(addr_byte_size);
 
     if (command.GetArgumentCount() == 0) {
-      result.AppendError("file option must be specified.");
+      result.AppendError("file option must be specified");
       return;
     } else {
       // Dump specified images (by basename or fullpath)
@@ -2522,6 +2532,10 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'f':
+        m_load_all_debug_info.SetCurrentValue(true);
+        m_load_all_debug_info.SetOptionWasSet();
+        break;
       case 'j':
         m_json.SetCurrentValue(true);
         m_json.SetOptionWasSet();
@@ -2539,6 +2553,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json.Clear();
       m_errors_only.Clear();
+      m_load_all_debug_info.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2547,6 +2562,7 @@ public:
 
     OptionValueBoolean m_json = false;
     OptionValueBoolean m_errors_only = false;
+    OptionValueBoolean m_load_all_debug_info = false;
   };
 
 protected:
@@ -2578,7 +2594,8 @@ protected:
 
         if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
                                      module_sp.get(),
-                                     bool(m_options.m_errors_only)))
+                                     bool(m_options.m_errors_only),
+                                     bool(m_options.m_load_all_debug_info)))
           num_dumped++;
       }
     } else {
@@ -2599,7 +2616,8 @@ protected:
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                         module, bool(m_options.m_errors_only)))
+                                         module, bool(m_options.m_errors_only),
+                                         bool(m_options.m_load_all_debug_info)))
               num_dumped++;
           }
         } else
@@ -3555,13 +3573,13 @@ protected:
 
     ThreadList threads(process->GetThreadList());
     if (threads.GetSize() == 0) {
-      result.AppendError("The process must be paused to use this command.");
+      result.AppendError("the process must be paused to use this command");
       return;
     }
 
     ThreadSP thread(threads.GetThreadAtIndex(0));
     if (!thread) {
-      result.AppendError("The process must be paused to use this command.");
+      result.AppendError("the process must be paused to use this command");
       return;
     }
 
@@ -4065,7 +4083,8 @@ public:
     default:
       m_options.GenerateOptionUsage(
           result.GetErrorStream(), *this,
-          GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+          GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+          GetCommandInterpreter().GetDebugger().GetUseColor());
       syntax_error = true;
       break;
     }
@@ -4086,8 +4105,6 @@ protected:
     // Dump all sections for all modules images
 
     if (command.GetArgumentCount() == 0) {
-      ModuleSP current_module;
-
       // Where it is possible to look in the current symbol context first,
       // try that.  If this search was successful and --all was not passed,
       // don't print anything else.
@@ -4110,8 +4127,7 @@ protected:
       }
 
       for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-        if (module_sp != current_module &&
-            LookupInModule(m_interpreter, module_sp.get(), result,
+        if (LookupInModule(m_interpreter, module_sp.get(), result,
                            syntax_error)) {
           result.GetOutputStream().EOL();
           num_successful_lookups++;
@@ -5207,33 +5223,72 @@ private:
 #pragma mark CommandObjectTargetStopHookList
 
 // CommandObjectTargetStopHookList
+#define LLDB_OPTIONS_target_stop_hook_list
+#include "CommandOptions.inc"
 
 class CommandObjectTargetStopHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetStopHookList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook list",
-                            "List all stop-hooks.", "target stop-hook list") {}
+                            "List all stop-hooks.") {}
 
   ~CommandObjectTargetStopHookList() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'i':
+        m_internal = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_internal = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_stop_hook_list_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    bool m_internal = false;
+  };
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    size_t num_hooks = target.GetNumStopHooks();
-    if (num_hooks == 0) {
-      result.GetOutputStream().PutCString("No stop hooks.\n");
-    } else {
-      for (size_t i = 0; i < num_hooks; i++) {
-        Target::StopHookSP this_hook = target.GetStopHookAtIndex(i);
-        if (i > 0)
-          result.GetOutputStream().PutCString("\n");
-        this_hook->GetDescription(result.GetOutputStream(),
-                                  eDescriptionLevelFull);
-      }
+    bool printed_hook = false;
+    for (auto &hook : target.GetStopHooks(m_options.m_internal)) {
+      if (printed_hook)
+        result.GetOutputStream().PutCString("\n");
+      hook->GetDescription(result.GetOutputStream(), eDescriptionLevelFull);
+      printed_hook = true;
     }
+
+    if (!printed_hook)
+      result.GetOutputStream().PutCString("No stop hooks.\n");
+
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
+
+private:
+  CommandOptions m_options;
 };
 
 #pragma mark CommandObjectMultiwordTargetStopHooks
@@ -5286,7 +5341,8 @@ protected:
     // Go over every scratch TypeSystem and dump to the command output.
     for (lldb::TypeSystemSP ts : GetTarget().GetScratchTypeSystems())
       if (ts)
-        ts->Dump(result.GetOutputStream().AsRawOstream(), "");
+        ts->Dump(result.GetOutputStream().AsRawOstream(), "",
+                 GetCommandInterpreter().GetDebugger().GetUseColor());
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }

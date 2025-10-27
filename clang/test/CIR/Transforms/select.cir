@@ -10,7 +10,7 @@ module {
     cir.return %1 : !s32i
   }
 
-  //      CHECK: cir.func @fold_true(%[[ARG0:.+]]: !s32i, %[[ARG1:.+]]: !s32i) -> !s32i {
+  //      CHECK: cir.func{{.*}} @fold_true(%[[ARG0:.+]]: !s32i, %[[ARG1:.+]]: !s32i) -> !s32i {
   // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
   // CHECK-NEXT: }
 
@@ -20,7 +20,7 @@ module {
     cir.return %1 : !s32i
   }
 
-  //      CHECK: cir.func @fold_false(%[[ARG0:.+]]: !s32i, %[[ARG1:.+]]: !s32i) -> !s32i {
+  //      CHECK: cir.func{{.*}} @fold_false(%[[ARG0:.+]]: !s32i, %[[ARG1:.+]]: !s32i) -> !s32i {
   // CHECK-NEXT:   cir.return %[[ARG1]] : !s32i
   // CHECK-NEXT: }
 
@@ -30,7 +30,7 @@ module {
     cir.return %1 : !s32i
   }
 
-  //      CHECK: cir.func @fold_to_const(%{{.+}}: !cir.bool) -> !s32i {
+  //      CHECK: cir.func{{.*}} @fold_to_const(%{{.+}}: !cir.bool) -> !s32i {
   // CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<42> : !s32i
   // CHECK-NEXT:   cir.return %[[#A]] : !s32i
   // CHECK-NEXT: }
@@ -42,7 +42,7 @@ module {
     cir.return %2 : !cir.bool
   }
 
-  //      CHECK: cir.func @simplify_1(%[[ARG0:.+]]: !cir.bool) -> !cir.bool {
+  //      CHECK: cir.func{{.*}} @simplify_1(%[[ARG0:.+]]: !cir.bool) -> !cir.bool {
   // CHECK-NEXT:   cir.return %[[ARG0]] : !cir.bool
   // CHECK-NEXT: }
 
@@ -53,7 +53,7 @@ module {
     cir.return %2 : !cir.bool
   }
 
-  //      CHECK: cir.func @simplify_2(%[[ARG0:.+]]: !cir.bool) -> !cir.bool {
+  //      CHECK: cir.func{{.*}} @simplify_2(%[[ARG0:.+]]: !cir.bool) -> !cir.bool {
   // CHECK-NEXT:   %[[#A:]] = cir.unary(not, %[[ARG0]]) : !cir.bool, !cir.bool
   // CHECK-NEXT:   cir.return %[[#A]] : !cir.bool
   // CHECK-NEXT: }

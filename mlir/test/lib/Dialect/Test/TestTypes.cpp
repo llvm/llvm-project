@@ -245,6 +245,10 @@ void TestType::printTypeC(Location loc) const {
   emitRemark(loc) << *this << " - TestC";
 }
 
+void TestType::printTypeC(Location loc, int value) const {
+  emitRemark(loc) << *this << " - " << value << " - Int TestC";
+}
+
 //===----------------------------------------------------------------------===//
 // TestTypeWithLayout
 //===----------------------------------------------------------------------===//
@@ -390,6 +394,14 @@ getCustomAssemblyFormatDynamicType(TestDialect *testDialect) {
   return DynamicTypeDefinition::get("dynamic_custom_assembly_format",
                                     testDialect, std::move(verifier),
                                     std::move(parser), std::move(printer));
+}
+
+test::detail::TestCustomStorageCtorTypeStorage *
+test::detail::TestCustomStorageCtorTypeStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

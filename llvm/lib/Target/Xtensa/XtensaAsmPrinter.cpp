@@ -13,7 +13,7 @@
 
 #include "XtensaAsmPrinter.h"
 #include "MCTargetDesc/XtensaInstPrinter.h"
-#include "MCTargetDesc/XtensaMCExpr.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "MCTargetDesc/XtensaTargetStreamer.h"
 #include "TargetInfo/XtensaTargetInfo.h"
 #include "XtensaConstantPoolValue.h"

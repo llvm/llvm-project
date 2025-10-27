@@ -16,7 +16,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CaptureTracking.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -276,13 +275,6 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::Call:
   case Instruction::Invoke: {
     auto *Call = cast<CallBase>(I);
-    // Not captured if the callee is readonly, doesn't return a copy through
-    // its return value and doesn't unwind or diverge (a readonly function can
-    // leak bits by throwing an exception or not depending on the input value).
-    if (Call->onlyReadsMemory() && Call->doesNotThrow() && Call->willReturn() &&
-        Call->getType()->isVoidTy())
-      return CaptureComponents::None;
-
     // The pointer is not captured if returned pointer is not captured.
     // NOTE: CaptureTracking users should not assume that only functions
     // marked with nocapture do not capture. This means that places like
@@ -306,10 +298,17 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     if (Call->isCallee(&U))
       return CaptureComponents::None;
 
-    // Not captured if only passed via 'nocapture' arguments.
     assert(Call->isDataOperand(&U) && "Non-callee must be data operand");
     CaptureInfo CI = Call->getCaptureInfo(Call->getDataOperandNo(&U));
-    return UseCaptureInfo(CI.getOtherComponents(), CI.getRetComponents());
+
+    // If the call is readonly and doesn't return a value, only the address
+    // may be captured.
+    CaptureComponents Mask = CaptureComponents::All;
+    if (Call->onlyReadsMemory() && Call->getType()->isVoidTy())
+      Mask = CaptureComponents::Address;
+
+    return UseCaptureInfo(CI.getOtherComponents() & Mask,
+                          CI.getRetComponents());
   }
   case Instruction::Load:
     // Volatile loads make the address observable.
@@ -321,8 +320,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
     return CaptureComponents::None;
   case Instruction::Store:
     // Stored the pointer - conservatively assume it may be captured.
+    if (U.getOperandNo() == 0)
+      return MDNode::toCaptureComponents(
+          I->getMetadata(LLVMContext::MD_captures));
+
     // Volatile stores make the address observable.
-    if (U.getOperandNo() == 0 || cast<StoreInst>(I)->isVolatile())
+    if (cast<StoreInst>(I)->isVolatile())
       return CaptureComponents::All;
     return CaptureComponents::None;
   case Instruction::AtomicRMW: {
@@ -359,6 +362,12 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::AddrSpaceCast:
     // The original value is not captured via this if the new value isn't.
     return UseCaptureInfo::passthrough();
+  case Instruction::PtrToAddr:
+    // We treat ptrtoaddr as a location-independent capture of the address even
+    // if it is ultimately not used. Continuing recursive analysis after
+    // ptrtoaddr would be possible, but we'd need logic to do that correctly,
+    // which is not the same as the current pointer following logic.
+    return CaptureComponents::Address;
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
@@ -399,7 +408,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
 
   SmallVector<const Use *, 20> Worklist;
   Worklist.reserve(getDefaultMaxUsesToExploreForCaptureTracking());
-  SmallSet<const Use *, 20> Visited;
+  SmallPtrSet<const Use *, 20> Visited;
 
   auto AddUses = [&](const Value *V) {
     for (const Use &U : V->uses()) {

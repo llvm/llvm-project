@@ -16,6 +16,7 @@
 #include "rtl.h"
 
 #include "OpenMP/InternalTypes.h"
+#include "OpenMP/InteropAPI.h"
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "OpenMP/omp.h"
@@ -46,29 +47,6 @@ void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
 void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
                          const char *Name);
 void targetUnlockExplicit(void *HostPtr, int DeviceNum, const char *Name);
-
-// Implemented in libomp, they are called from within __tgt_* functions.
-extern "C" {
-int __kmpc_get_target_offload(void) __attribute__((weak));
-kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
-                                  size_t sizeof_kmp_task_t,
-                                  size_t sizeof_shareds,
-                                  kmp_routine_entry_t task_entry)
-    __attribute__((weak));
-
-kmp_task_t *
-__kmpc_omp_target_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
-                             size_t sizeof_kmp_task_t, size_t sizeof_shareds,
-                             kmp_routine_entry_t task_entry, int64_t device_id)
-    __attribute__((weak));
-
-int32_t __kmpc_omp_task_with_deps(ident_t *loc_ref, int32_t gtid,
-                                  kmp_task_t *new_task, int32_t ndeps,
-                                  kmp_depend_info_t *dep_list,
-                                  int32_t ndeps_noalias,
-                                  kmp_depend_info_t *noalias_dep_list)
-    __attribute__((weak));
-}
 
 EXTERN int omp_get_num_devices(void) {
   TIMESCOPE();
@@ -193,6 +171,34 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
+}
+
+/// Check whether a pointer is accessible from a device.
+/// Returns true when accessibility is guaranteed otherwise returns false.
+EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
+                                    int DeviceNum) {
+  TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  DP("Call to omp_target_is_accessible for device %d, address " DPxMOD
+     ", size %zu\n",
+     DeviceNum, DPxPTR(Ptr), Size);
+
+  if (!Ptr) {
+    DP("Call to omp_target_is_accessible with NULL ptr returning false\n");
+    return false;
+  }
+
+  if (DeviceNum == omp_get_initial_device() || DeviceNum == -1) {
+    DP("Call to omp_target_is_accessible on host, returning true\n");
+    return true;
+  }
+
+  // The device number must refer to a valid device
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  return DeviceOrErr->isAccessiblePtr(Ptr, Size);
 }
 
 EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
@@ -682,4 +688,22 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
   DP("omp_get_mapped_ptr returns " DPxMOD ".\n", DPxPTR(TPR.TargetPointer));
 
   return TPR.TargetPointer;
+}
+
+// This routine gets called from the Host RTL at sync points (taskwait, barrier,
+// ...) so we can synchronize the necessary objects from the offload side.
+EXTERN void __tgt_target_sync(ident_t *loc_ref, int gtid, void *current_task,
+                              void *event) {
+  if (!RTLAlive)
+    return;
+
+  RTLOngoingSyncs++;
+  if (!RTLAlive) {
+    RTLOngoingSyncs--;
+    return;
+  }
+
+  syncImplicitInterops(gtid, event);
+
+  RTLOngoingSyncs--;
 }

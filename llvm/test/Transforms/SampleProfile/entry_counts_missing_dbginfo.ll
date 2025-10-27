@@ -53,7 +53,7 @@ entry:
   %a = alloca i32, align 4
   store ptr %p, ptr %p.addr, align 8, !tbaa !15
   call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !33, metadata !DIExpression()), !dbg !35
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a) #4, !dbg !36
+  call void @llvm.lifetime.start.p0(ptr %a) #4, !dbg !36
   call void @llvm.dbg.declare(metadata ptr %a, metadata !34, metadata !DIExpression()), !dbg !37
   %0 = load ptr, ptr %p.addr, align 8, !dbg !38, !tbaa !15
   %arrayidx = getelementptr inbounds i32, ptr %0, i64 3, !dbg !38
@@ -68,7 +68,7 @@ entry:
   store i32 %call, ptr %a, align 4, !dbg !43, !tbaa !25
   %5 = load i32, ptr %a, align 4, !dbg !44, !tbaa !25
   %add2 = add nsw i32 %5, 1, !dbg !45
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a) #4, !dbg !46
+  call void @llvm.lifetime.end.p0(ptr %a) #4, !dbg !46
   ret i32 %add2, !dbg !47
 }
 
@@ -96,17 +96,16 @@ entry:
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
-declare void @baz(...) #3
+declare void @baz(...)
 
-attributes #0 = { nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
+attributes #0 = { nounwind ssp uwtable "use-sample-profile" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { argmemonly nounwind }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sahf,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #4 = { nounwind }
 
 !llvm.dbg.cu = !{!0}

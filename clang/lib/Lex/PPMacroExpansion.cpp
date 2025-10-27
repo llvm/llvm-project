@@ -431,9 +431,6 @@ bool Preprocessor::HandleMacroExpandedIdentifier(Token &Identifier,
   // to disable the optimization in this case.
   if (CurPPLexer) CurPPLexer->MIOpt.ExpandedMacro();
 
-  if (!hasSeenMainFileFirstPPToken())
-    HandleMainFileFirstPPToken(Identifier);
-
   // If this is a builtin macro, like __LINE__ or _Pragma, handle it specially.
   if (MI->isBuiltinMacro()) {
     if (Callbacks)
@@ -1265,16 +1262,11 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
 
   std::optional<LexEmbedParametersResult> Params =
       this->LexEmbedParameters(Tok, /*ForHasEmbed=*/true);
-  assert((Params || Tok.is(tok::eod)) &&
-         "expected success or to be at the end of the directive");
 
   if (!Params)
     return EmbedResult::Invalid;
 
-  if (Params->UnrecognizedParams > 0)
-    return EmbedResult::NotFound;
-
-  if (!Tok.is(tok::r_paren)) {
+  if (Tok.isNot(tok::r_paren)) {
     Diag(this->getLocForEndOfToken(FilenameLoc), diag::err_pp_expected_after)
         << II << tok::r_paren;
     Diag(LParenLoc, diag::note_matching) << tok::l_paren;
@@ -1283,13 +1275,18 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
     return EmbedResult::Invalid;
   }
 
+  if (Params->UnrecognizedParams > 0)
+    return EmbedResult::NotFound;
+
   SmallString<128> FilenameBuffer;
   StringRef Filename = this->getSpelling(FilenameTok, FilenameBuffer);
+  if (Filename.empty())
+    return EmbedResult::Empty;
+
   bool isAngled =
       this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  assert(!Filename.empty());
   const FileEntry *LookupFromFile =
       this->getCurrentFileLexer() ? *this->getCurrentFileLexer()->getFileEntry()
                                   : static_cast<FileEntry *>(nullptr);
@@ -1464,8 +1461,7 @@ static IdentifierInfo *ExpectFeatureIdentifierInfo(Token &Tok,
 
 /// Implements the __is_target_arch builtin macro.
 static bool isTargetArch(const TargetInfo &TI, const IdentifierInfo *II) {
-  std::string ArchName = II->getName().lower() + "--";
-  llvm::Triple Arch(ArchName);
+  llvm::Triple Arch(II->getName().lower() + "--");
   const llvm::Triple &TT = TI.getTriple();
   if (TT.isThumb()) {
     // arm matches thumb or thumbv7. armv7 matches thumbv7.
@@ -1494,9 +1490,7 @@ static bool isTargetVendor(const TargetInfo &TI, const IdentifierInfo *II) {
 
 /// Implements the __is_target_os builtin macro.
 static bool isTargetOS(const TargetInfo &TI, const IdentifierInfo *II) {
-  std::string OSName =
-      (llvm::Twine("unknown-unknown-") + II->getName().lower()).str();
-  llvm::Triple OS(OSName);
+  llvm::Triple OS(llvm::Twine("unknown-unknown-") + II->getName().lower());
   if (OS.getOS() == llvm::Triple::Darwin) {
     // Darwin matches macos, ios, etc.
     return TI.getTriple().isOSDarwin();
@@ -1507,12 +1501,11 @@ static bool isTargetOS(const TargetInfo &TI, const IdentifierInfo *II) {
 /// Implements the __is_target_environment builtin macro.
 static bool isTargetEnvironment(const TargetInfo &TI,
                                 const IdentifierInfo *II) {
-  std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
-  llvm::Triple Env(EnvName);
+  llvm::Triple Env(llvm::Twine("---") + II->getName().lower());
   // The unknown environment is matched only if
   // '__is_target_environment(unknown)' is used.
   if (Env.getEnvironment() == llvm::Triple::UnknownEnvironment &&
-      EnvName != "---unknown")
+      Env.getEnvironmentName() != "unknown")
     return false;
   return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
@@ -1524,9 +1517,7 @@ static bool isTargetVariantOS(const TargetInfo &TI, const IdentifierInfo *II) {
     if (!VariantTriple)
       return false;
 
-    std::string OSName =
-        (llvm::Twine("unknown-unknown-") + II->getName().lower()).str();
-    llvm::Triple OS(OSName);
+    llvm::Triple OS(llvm::Twine("unknown-unknown-") + II->getName().lower());
     if (OS.getOS() == llvm::Triple::Darwin) {
       // Darwin matches macos, ios, etc.
       return VariantTriple->isOSDarwin();
@@ -1543,8 +1534,7 @@ static bool isTargetVariantEnvironment(const TargetInfo &TI,
     const llvm::Triple *VariantTriple = TI.getDarwinTargetVariantTriple();
     if (!VariantTriple)
       return false;
-    std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
-    llvm::Triple Env(EnvName);
+    llvm::Triple Env(llvm::Twine("---") + II->getName().lower());
     return VariantTriple->getEnvironment() == Env.getEnvironment();
   }
   return false;
@@ -1770,7 +1760,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               Tok, *this, diag::err_feature_check_malformed);
           if (!II)
             return false;
-          else if (II->getBuiltinID() != 0) {
+          unsigned BuiltinID = II->getBuiltinID();
+          if (BuiltinID != 0) {
             switch (II->getBuiltinID()) {
             case Builtin::BI__builtin_cpu_is:
               return getTargetInfo().supportsCpuIs();
@@ -1784,8 +1775,11 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               // usual allocation and deallocation functions. Required by libc++
               return 201802;
             default:
+              // __has_builtin should return false for aux builtins.
+              if (getBuiltinInfo().isAuxBuiltinID(BuiltinID))
+                return false;
               return Builtin::evaluateRequiredTargetFeatures(
-                  getBuiltinInfo().getRequiredFeatures(II->getBuiltinID()),
+                  getBuiltinInfo().getRequiredFeatures(BuiltinID),
                   getTargetInfo().getTargetOpts().FeatureMap);
             }
             return true;

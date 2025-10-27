@@ -195,7 +195,7 @@ public:
   }
   ::llvm::StringRef getArgument() const override { return "{2}"; }
 
-  ::llvm::StringRef getDescription() const override { return "{3}"; }
+  ::llvm::StringRef getDescription() const override { return R"PD({3})PD"; }
 
   /// Returns the derived pass name.
   static constexpr ::llvm::StringLiteral getPassName() {
@@ -271,9 +271,9 @@ static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
     os.indent(2) << "::mlir::Pass::"
                  << (opt.isListOption() ? "ListOption" : "Option");
 
-    os << formatv(R"(<{0}> {1}{{*this, "{2}", ::llvm::cl::desc("{3}"))",
+    os << formatv(R"(<{0}> {1}{{*this, "{2}", ::llvm::cl::desc(R"PO({3})PO"))",
                   opt.getType(), opt.getCppVariableName(), opt.getArgument(),
-                  opt.getDescription());
+                  opt.getDescription().trim());
     if (std::optional<StringRef> defaultVal = opt.getDefaultValue())
       os << ", ::llvm::cl::init(" << defaultVal << ")";
     if (std::optional<StringRef> additionalFlags = opt.getAdditionalFlags())
@@ -285,9 +285,10 @@ static void emitPassOptionDecls(const Pass &pass, raw_ostream &os) {
 /// Emit the declarations for each of the pass statistics.
 static void emitPassStatisticDecls(const Pass &pass, raw_ostream &os) {
   for (const PassStatistic &stat : pass.getStatistics()) {
-    os << formatv("  ::mlir::Pass::Statistic {0}{{this, \"{1}\", \"{2}\"};\n",
-                  stat.getCppVariableName(), stat.getName(),
-                  stat.getDescription());
+    os << formatv(
+        "  ::mlir::Pass::Statistic {0}{{this, \"{1}\", R\"PS({2})PS\"};\n",
+        stat.getCppVariableName(), stat.getName(),
+        stat.getDescription().trim());
   }
 }
 
@@ -320,7 +321,7 @@ static void emitPassDefs(const Pass &pass, raw_ostream &os) {
 
   os << "namespace impl {\n";
   os << formatv(baseClassBegin, passName, pass.getBaseClass(),
-                pass.getArgument(), pass.getSummary(),
+                pass.getArgument(), pass.getSummary().trim(),
                 dependentDialectRegistrations);
 
   if (ArrayRef<PassOption> options = pass.getOptions(); !options.empty()) {
@@ -393,7 +394,7 @@ public:
   }
   ::llvm::StringRef getArgument() const override { return "{2}"; }
 
-  ::llvm::StringRef getDescription() const override { return "{3}"; }
+  ::llvm::StringRef getDescription() const override { return R"PD({3})PD"; }
 
   /// Returns the derived pass name.
   static constexpr ::llvm::StringLiteral getPassName() {
@@ -439,7 +440,7 @@ static void emitOldPassDecl(const Pass &pass, raw_ostream &os) {
         "\n    ");
   }
   os << formatv(oldPassDeclBegin, defName, pass.getBaseClass(),
-                pass.getArgument(), pass.getSummary(),
+                pass.getArgument(), pass.getSummary().trim(),
                 dependentDialectRegistrations);
   emitPassOptionDecls(pass, os);
   emitPassStatisticDecls(pass, os);

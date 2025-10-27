@@ -15,6 +15,7 @@
 #include "lldb/Utility/UriParser.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatAdapters.h"
+#include <string>
 
 using namespace llvm;
 using namespace lldb;
@@ -23,26 +24,12 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_mcp
 #include "CommandOptions.inc"
 
-static std::vector<llvm::StringRef> GetSupportedProtocols() {
-  std::vector<llvm::StringRef> supported_protocols;
-  size_t i = 0;
-
-  for (llvm::StringRef protocol_name =
-           PluginManager::GetProtocolServerPluginNameAtIndex(i++);
-       !protocol_name.empty();
-       protocol_name = PluginManager::GetProtocolServerPluginNameAtIndex(i++)) {
-    supported_protocols.push_back(protocol_name);
-  }
-
-  return supported_protocols;
-}
-
 class CommandObjectProtocolServerStart : public CommandObjectParsed {
 public:
   CommandObjectProtocolServerStart(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "protocol-server start",
                             "start protocol server",
-                            "protocol-server start <protocol> <connection>") {
+                            "protocol-server start <protocol> [<connection>]") {
     AddSimpleArgumentList(lldb::eArgTypeProtocol, eArgRepeatPlain);
     AddSimpleArgumentList(lldb::eArgTypeConnectURL, eArgRepeatPlain);
   }
@@ -57,28 +44,21 @@ protected:
     }
 
     llvm::StringRef protocol = args.GetArgumentAtIndex(0);
-    std::vector<llvm::StringRef> supported_protocols = GetSupportedProtocols();
-    if (llvm::find(supported_protocols, protocol) ==
-        supported_protocols.end()) {
+    ProtocolServer *server = ProtocolServer::GetOrCreate(protocol);
+    if (!server) {
       result.AppendErrorWithFormatv(
           "unsupported protocol: {0}. Supported protocols are: {1}", protocol,
-          llvm::join(GetSupportedProtocols(), ", "));
+          llvm::join(ProtocolServer::GetSupportedProtocols(), ", "));
       return;
     }
 
-    if (args.GetArgumentCount() < 2) {
-      result.AppendError("no connection specified");
-      return;
-    }
-    llvm::StringRef connection_uri = args.GetArgumentAtIndex(1);
-
-    ProtocolServerSP server_sp = GetDebugger().GetProtocolServer(protocol);
-    if (!server_sp)
-      server_sp = ProtocolServer::Create(protocol, GetDebugger());
+    std::string connection_uri = "listen://[localhost]:0";
+    if (args.GetArgumentCount() >= 2)
+      connection_uri = args.GetArgumentAtIndex(1);
 
     const char *connection_error =
-        "unsupported connection specifier, expected 'accept:///path' or "
-        "'listen://[host]:port', got '{0}'.";
+        "unsupported connection specifier, expected 'accept:///path' "
+        "or 'listen://[host]:port', got '{0}'.";
     auto uri = lldb_private::URI::Parse(connection_uri);
     if (!uri) {
       result.AppendErrorWithFormatv(connection_error, connection_uri);
@@ -94,23 +74,25 @@ protected:
 
     ProtocolServer::Connection connection;
     connection.protocol = protocol_and_mode->first;
-    connection.name =
-        formatv("[{0}]:{1}", uri->hostname.empty() ? "0.0.0.0" : uri->hostname,
-                uri->port.value_or(0));
+    if (connection.protocol == Socket::SocketProtocol::ProtocolUnixDomain)
+      connection.name = uri->path;
+    else
+      connection.name = formatv(
+          "[{0}]:{1}", uri->hostname.empty() ? "0.0.0.0" : uri->hostname,
+          uri->port.value_or(0));
 
-    if (llvm::Error error = server_sp->Start(connection)) {
+    if (llvm::Error error = server->Start(connection)) {
       result.AppendErrorWithFormatv("{0}", llvm::fmt_consume(std::move(error)));
       return;
     }
 
-    GetDebugger().AddProtocolServer(server_sp);
-
-    if (Socket *socket = server_sp->GetSocket()) {
+    if (Socket *socket = server->GetSocket()) {
       std::string address =
           llvm::join(socket->GetListeningConnectionURI(), ", ");
       result.AppendMessageWithFormatv(
           "{0} server started with connection listeners: {1}", protocol,
           address);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
 };
@@ -134,42 +116,72 @@ protected:
     }
 
     llvm::StringRef protocol = args.GetArgumentAtIndex(0);
-    std::vector<llvm::StringRef> supported_protocols = GetSupportedProtocols();
-    if (llvm::find(supported_protocols, protocol) ==
-        supported_protocols.end()) {
+    ProtocolServer *server = ProtocolServer::GetOrCreate(protocol);
+    if (!server) {
       result.AppendErrorWithFormatv(
           "unsupported protocol: {0}. Supported protocols are: {1}", protocol,
-          llvm::join(GetSupportedProtocols(), ", "));
+          llvm::join(ProtocolServer::GetSupportedProtocols(), ", "));
       return;
     }
 
-    Debugger &debugger = GetDebugger();
-
-    ProtocolServerSP server_sp = debugger.GetProtocolServer(protocol);
-    if (!server_sp) {
-      result.AppendError(
-          llvm::formatv("no {0} protocol server running", protocol).str());
-      return;
-    }
-
-    if (llvm::Error error = server_sp->Stop()) {
+    if (llvm::Error error = server->Stop()) {
       result.AppendErrorWithFormatv("{0}", llvm::fmt_consume(std::move(error)));
       return;
     }
+  }
+};
 
-    debugger.RemoveProtocolServer(server_sp);
+class CommandObjectProtocolServerGet : public CommandObjectParsed {
+public:
+  CommandObjectProtocolServerGet(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "protocol-server get",
+                            "get protocol server connection information",
+                            "protocol-server get <protocol>") {
+    AddSimpleArgumentList(lldb::eArgTypeProtocol, eArgRepeatPlain);
+  }
+
+  ~CommandObjectProtocolServerGet() override = default;
+
+protected:
+  void DoExecute(Args &args, CommandReturnObject &result) override {
+    if (args.GetArgumentCount() < 1) {
+      result.AppendError("no protocol specified");
+      return;
+    }
+
+    llvm::StringRef protocol = args.GetArgumentAtIndex(0);
+    ProtocolServer *server = ProtocolServer::GetOrCreate(protocol);
+    if (!server) {
+      result.AppendErrorWithFormatv(
+          "unsupported protocol: {0}. Supported protocols are: {1}", protocol,
+          llvm::join(ProtocolServer::GetSupportedProtocols(), ", "));
+      return;
+    }
+
+    Socket *socket = server->GetSocket();
+    if (!socket) {
+      result.AppendErrorWithFormatv("{0} server is not running", protocol);
+      return;
+    }
+
+    std::string address = llvm::join(socket->GetListeningConnectionURI(), ", ");
+    result.AppendMessageWithFormatv("{0} server connection listeners: {1}",
+                                    protocol, address);
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 };
 
 CommandObjectProtocolServer::CommandObjectProtocolServer(
     CommandInterpreter &interpreter)
     : CommandObjectMultiword(interpreter, "protocol-server",
-                             "Start and stop a protocol server.",
+                             "Start, stop, and query protocol servers.",
                              "protocol-server") {
   LoadSubCommand("start", CommandObjectSP(new CommandObjectProtocolServerStart(
                               interpreter)));
   LoadSubCommand("stop", CommandObjectSP(
                              new CommandObjectProtocolServerStop(interpreter)));
+  LoadSubCommand(
+      "get", CommandObjectSP(new CommandObjectProtocolServerGet(interpreter)));
 }
 
 CommandObjectProtocolServer::~CommandObjectProtocolServer() = default;

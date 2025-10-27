@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/workitem/get_local_id.h>
 
 _CLC_DEF _CLC_OVERLOAD uint get_local_id(uint dim) {
   switch (dim) {

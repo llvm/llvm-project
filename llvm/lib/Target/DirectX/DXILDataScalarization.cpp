@@ -117,19 +117,23 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
   return nullptr; // Not found
 }
 
-static bool isArrayOfVectors(Type *T) {
+// Helper function to check if a type is a vector or an array of vectors
+static bool isVectorOrArrayOfVectors(Type *T) {
+  if (isa<VectorType>(T))
+    return true;
   if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
-    return isa<VectorType>(ArrType->getElementType());
+    return isa<VectorType>(ArrType->getElementType()) ||
+           isVectorOrArrayOfVectors(ArrType->getElementType());
   return false;
 }
 
 bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
-  if (!isArrayOfVectors(AI.getAllocatedType()))
+  Type *AllocatedType = AI.getAllocatedType();
+  if (!isVectorOrArrayOfVectors(AllocatedType))
     return false;
 
-  ArrayType *ArrType = cast<ArrayType>(AI.getAllocatedType());
   IRBuilder<> Builder(&AI);
-  Type *NewType = equivalentArrayTypeFromVector(ArrType);
+  Type *NewType = equivalentArrayTypeFromVector(AllocatedType);
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarize");
   ArrAlloca->setAlignment(AI.getAlign());
@@ -198,7 +202,7 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   // original vector's defining instruction if available, else immediately after
   // the alloca
   if (auto *Instr = dyn_cast<Instruction>(Vec))
-    Builder.SetInsertPoint(Instr->getNextNonDebugInstruction());
+    Builder.SetInsertPoint(Instr->getNextNode());
   SmallVector<Value *, 4> GEPs(ArrNumElems);
   for (unsigned I = 0; I < ArrNumElems; ++I) {
     Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
@@ -297,10 +301,20 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 }
 
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  Value *PtrOperand = GEPI.getPointerOperand();
-  Type *OrigGEPType = GEPI.getPointerOperandType();
-  Type *NewGEPType = OrigGEPType;
+  GEPOperator *GOp = cast<GEPOperator>(&GEPI);
+  Value *PtrOperand = GOp->getPointerOperand();
+  Type *NewGEPType = GOp->getSourceElementType();
   bool NeedsTransform = false;
+
+  // Unwrap GEP ConstantExprs to find the base operand and element type
+  while (auto *CE = dyn_cast<ConstantExpr>(PtrOperand)) {
+    if (auto *GEPCE = dyn_cast<GEPOperator>(CE)) {
+      GOp = GEPCE;
+      PtrOperand = GEPCE->getPointerOperand();
+      NewGEPType = GEPCE->getSourceElementType();
+    } else
+      break;
+  }
 
   if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
     NewGEPType = NewGlobal->getValueType();
@@ -308,26 +322,30 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     NeedsTransform = true;
   } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
     Type *AllocatedType = Alloca->getAllocatedType();
-    // OrigGEPType might just be a pointer lets make sure
-    // to add the allocated type so we have a size
-    if (AllocatedType != OrigGEPType) {
+    if (isa<ArrayType>(AllocatedType) &&
+        AllocatedType != GOp->getResultElementType()) {
       NewGEPType = AllocatedType;
       NeedsTransform = true;
     }
   }
 
-  // Note: We bail if this isn't a gep touched via alloca or global
-  // transformations
   if (!NeedsTransform)
     return false;
 
-  IRBuilder<> Builder(&GEPI);
-  SmallVector<Value *, MaxVecSize> Indices(GEPI.indices());
+  // Keep scalar GEPs scalar; dxil-flatten-arrays will do flattening later
+  if (!isa<ArrayType>(GOp->getSourceElementType()))
+    NewGEPType = GOp->getSourceElementType();
 
+  IRBuilder<> Builder(&GEPI);
+  SmallVector<Value *, MaxVecSize> Indices(GOp->indices());
   Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
-                                    GEPI.getName(), GEPI.getNoWrapFlags());
-  GEPI.replaceAllUsesWith(NewGEP);
-  GEPI.eraseFromParent();
+                                    GOp->getName(), GOp->getNoWrapFlags());
+
+  GOp->replaceAllUsesWith(NewGEP);
+
+  if (auto *OldGEPI = dyn_cast<GetElementPtrInst>(GOp))
+    OldGEPI->eraseFromParent();
+
   return true;
 }
 

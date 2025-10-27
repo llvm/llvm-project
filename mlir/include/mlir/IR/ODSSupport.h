@@ -118,6 +118,9 @@ convertFromAttribute(SmallVectorImpl<int32_t> &storage, Attribute attr,
 /// Convert the provided ArrayRef<int64_t> to a DenseI64ArrayAttr attribute.
 Attribute convertToAttribute(MLIRContext *ctx, ArrayRef<int64_t> storage);
 
+/// Convert the provided ArrayRef<int32_t> to a DenseI32ArrayAttr attribute.
+Attribute convertToAttribute(MLIRContext *ctx, ArrayRef<int32_t> storage);
+
 } // namespace mlir
 
 #endif // MLIR_IR_ODSSUPPORT_H

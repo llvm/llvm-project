@@ -29,8 +29,8 @@
 
 namespace llvm {
 
-AVRInstrInfo::AVRInstrInfo(AVRSubtarget &STI)
-    : AVRGenInstrInfo(AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
+AVRInstrInfo::AVRInstrInfo(const AVRSubtarget &STI)
+    : AVRGenInstrInfo(STI, AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
       STI(STI) {}
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,

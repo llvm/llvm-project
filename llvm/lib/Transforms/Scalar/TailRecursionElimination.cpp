@@ -192,7 +192,7 @@ struct AllocaDerivedValueTracker {
   SmallPtrSet<Instruction *, 32> AllocaUsers;
   SmallPtrSet<Instruction *, 32> EscapePoints;
 };
-}
+} // namespace
 
 static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
   if (F.callsFunctionThatReturnsTwice())
@@ -343,8 +343,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 ///
 static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::lifetime_end &&
-        llvm::findAllocaForValue(II->getArgOperand(1)))
+    if (II->getIntrinsicID() == Intrinsic::lifetime_end)
       return true;
 
   // FIXME: We can move load/store/call/free instructions above the call if the
@@ -968,7 +967,7 @@ struct TailCallElim : public FunctionPass {
         /*BFI=*/nullptr);
   }
 };
-}
+} // namespace
 
 char TailCallElim::ID = 0;
 INITIALIZE_PASS_BEGIN(TailCallElim, "tailcallelim", "Tail Call Elimination",

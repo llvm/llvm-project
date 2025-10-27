@@ -55,6 +55,7 @@ void test() {
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
+      // expected-error@*:* 0-1{{excess elements in struct initializer}}
     }
 
     // !std::is_same_v<U:error_type, E>
@@ -74,6 +75,7 @@ void test() {
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
+      // expected-error@*:* 0-1{{excess elements in struct initializer}}
     }
 
     // !std::is_same_v<U:error_type, E>
@@ -93,6 +95,7 @@ void test() {
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
+      // expected-error@*:* 0-1{{excess elements in struct initializer}}
     }
 
     // !std::is_same_v<U:error_type, E>
@@ -112,6 +115,7 @@ void test() {
       // expected-error-re@*:* {{static assertion failed {{.*}}The result of f() must be a specialization of std::expected}}
       // expected-error-re@*:* {{{{.*}}cannot be used prior to '::' because it has no members}}
       // expected-error-re@*:* {{no matching constructor for initialization of{{.*}}}}
+      // expected-error@*:* 0-1{{excess elements in struct initializer}}
     }
 
     // !std::is_same_v<U:error_type, E>

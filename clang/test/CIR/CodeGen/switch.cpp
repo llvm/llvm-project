@@ -19,7 +19,7 @@ void sw1(int a) {
   }
 }
 
-// CIR: cir.func @_Z3sw1i
+// CIR: cir.func{{.*}} @_Z3sw1i
 // CIR: cir.switch (%[[COND:.*]] : !s32i) {
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR: cir.break
@@ -30,7 +30,7 @@ void sw1(int a) {
 // CIR: cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
 // CIR: cir.break
 
-// LLVM: define void @_Z3sw1i
+// LLVM: define{{.*}} void @_Z3sw1i
 // LLVM:   store i32 1, ptr %[[B_ADDR:.*]], align 4
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
 // LLVM:   br label %[[BB7:.*]]
@@ -60,7 +60,7 @@ void sw1(int a) {
 // LLVM: [[DEFAULT]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw1i
+// OGCG: define{{.*}} void @_Z3sw1i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[B:.*]] = alloca i32, align 4
@@ -97,7 +97,7 @@ void sw2(int a) {
   }
 }
 
-// CIR: cir.func @_Z3sw2i
+// CIR: cir.func{{.*}} @_Z3sw2i
 // CIR: cir.scope {
 // CIR-NEXT:   %[[YOLO:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
 // CIR-NEXT:   %[[FOMO:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["fomo", init]
@@ -106,7 +106,7 @@ void sw2(int a) {
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-NEXT:     cir.store{{.*}} %[[ZERO]], %[[FOMO]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: define void @_Z3sw2i
+// LLVM: define{{.*}} void @_Z3sw2i
 // LLVM:   store i32 2, ptr %[[YOLO_ADDR:.*]], align 4
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
 // LLVM:   br label %[[SWITCH:.*]]
@@ -126,7 +126,7 @@ void sw2(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw2i
+// OGCG: define{{.*}} void @_Z3sw2i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[YOLO:.*]] = alloca i32, align 4
@@ -151,7 +151,7 @@ void sw3(int a) {
   }
 }
 
-// CIR: cir.func @_Z3sw3i
+// CIR: cir.func{{.*}} @_Z3sw3i
 // CIR: cir.scope {
 // CIR-NEXT:   %[[COND:.*]] = cir.load{{.*}} %[[A:.*]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.switch (%[[COND]] : !s32i) {
@@ -161,7 +161,7 @@ void sw3(int a) {
 // CIR-NEXT:   cir.yield
 // CIR-NEXT:   }
 
-// LLVM-LABEL: define void @_Z3sw3i
+// LLVM-LABEL: define{{.*}} void @_Z3sw3i
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
 // LLVM:   br label %[[SWITCH:.*]]
 // LLVM: [[SWITCH]]:
@@ -174,7 +174,7 @@ void sw3(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw3i
+// OGCG: define{{.*}} void @_Z3sw3i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -195,7 +195,7 @@ int sw4(int a) {
   return 0;
 }
 
-// CIR: cir.func @_Z3sw4i
+// CIR: cir.func{{.*}} @_Z3sw4i
 // CIR:       cir.switch (%[[COND:.*]] : !s32i) {
 // CIR-NEXT:       cir.case(equal, [#cir.int<42> : !s32i]) {
 // CIR-NEXT:         cir.scope {
@@ -215,7 +215,7 @@ int sw4(int a) {
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:  }
 
-// LLVM: define i32 @_Z3sw4i
+// LLVM: define{{.*}} i32 @_Z3sw4i
 // LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   br label %[[ENTRY:.*]]
@@ -241,7 +241,7 @@ int sw4(int a) {
 // LLVM:   %[[RET0:.*]] = load i32, ptr %[[RET_ADDR]], align 4
 // LLVM:   ret i32 %[[RET0]]
 
-// OGCG: define dso_local noundef i32 @_Z3sw4i
+// OGCG: define{{.*}} i32 @_Z3sw4i
 // OGCG: entry:
 // OGCG:   %[[RETVAL:.*]] = alloca i32, align 4
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
@@ -263,7 +263,7 @@ void sw5(int a) {
   }
 }
 
-// CIR: cir.func @_Z3sw5i
+// CIR: cir.func{{.*}} @_Z3sw5i
 // CIR: cir.switch (%[[A:.*]] : !s32i) {
 // CIR-NEXT:   cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT:     cir.yield
@@ -271,7 +271,7 @@ void sw5(int a) {
 // CIR-NEXT:   cir.yield
 // CIR-NEXT:   }
 
-// LLVM-LABEL: define void @_Z3sw5i
+// LLVM-LABEL: define{{.*}} void @_Z3sw5i
 // LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   br label %[[ENTRY:.*]]
 // LLVM: [[ENTRY]]:
@@ -288,7 +288,7 @@ void sw5(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw5i
+// OGCG: define{{.*}} void @_Z3sw5i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -313,7 +313,7 @@ void sw6(int a) {
   }
 }
 
-// CIR: cir.func @_Z3sw6i
+// CIR: cir.func{{.*}} @_Z3sw6i
 // CIR: cir.switch (%[[A:.*]] : !s32i) {
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR-NEXT:     cir.yield
@@ -334,7 +334,7 @@ void sw6(int a) {
 // CIR-NEXT:     cir.break
 // CIR-NEXT: }
 
-// LLVM: define void @_Z3sw6i
+// LLVM: define{{.*}} void @_Z3sw6i
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
 // LLVM:   br label %[[SWITCH:.*]]
 // LLVM: [[SWITCH]]:
@@ -371,7 +371,7 @@ void sw6(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw6i
+// OGCG: define{{.*}} void @_Z3sw6i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   store i32 %a, ptr %[[A_ADDR]], align 4
@@ -404,7 +404,7 @@ void sw7(int a) {
   }
 }
 
-// CIR: cir.func @_Z3sw7i
+// CIR: cir.func{{.*}} @_Z3sw7i
 // CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"]
 // CIR: cir.switch (%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
@@ -428,7 +428,7 @@ void sw7(int a) {
 // CIR-NEXT: cir.yield
 // CIR: }
 
-// LLVM: define void @_Z3sw7i
+// LLVM: define{{.*}} void @_Z3sw7i
 // LLVM:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
 // LLVM:   br label %[[SWITCH:.*]]
 // LLVM: [[SWITCH]]:
@@ -467,7 +467,7 @@ void sw7(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw7i
+// OGCG: define{{.*}} void @_Z3sw7i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -498,7 +498,7 @@ void sw8(int a) {
   }
 }
 
-// CIR:    cir.func @_Z3sw8i
+// CIR:    cir.func{{.*}} @_Z3sw8i
 // CIR:    cir.switch (%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
@@ -510,7 +510,7 @@ void sw8(int a) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
-// LLVM: define void @_Z3sw8i
+// LLVM: define{{.*}} void @_Z3sw8i
 // LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
 // LLVM-DAG:  i32 3, label %[[CASE3:.*]]
 // LLVM-DAG:  i32 4, label %[[CASE4:.*]]
@@ -528,7 +528,7 @@ void sw8(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw8i
+// OGCG: define{{.*}} void @_Z3sw8i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -556,7 +556,7 @@ void sw9(int a) {
   }
 }
 
-// CIR:    cir.func @_Z3sw9i
+// CIR:    cir.func{{.*}} @_Z3sw9i
 // CIR:    cir.switch (%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
@@ -568,7 +568,7 @@ void sw9(int a) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
-// LLVM: define void @_Z3sw9i
+// LLVM: define{{.*}} void @_Z3sw9i
 // LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
 // LLVM-DAG:     i32 3, label %[[CASE3:.*]]
 // LLVM-DAG:     i32 4, label %[[CASE4:.*]]
@@ -586,7 +586,7 @@ void sw9(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z3sw9i
+// OGCG: define{{.*}} void @_Z3sw9i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -615,7 +615,7 @@ void sw10(int a) {
   }
 }
 
-// CIR:    cir.func @_Z4sw10i
+// CIR:    cir.func{{.*}} @_Z4sw10i
 // CIR:    cir.switch (%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
@@ -630,7 +630,7 @@ void sw10(int a) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
-// LLVM: define void @_Z4sw10i
+// LLVM: define{{.*}} void @_Z4sw10i
 // LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
 // LLVM-DAG:     i32 3, label %[[CASE_3:.*]]
 // LLVM-DAG:     i32 4, label %[[CASE_4:.*]]
@@ -653,7 +653,7 @@ void sw10(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z4sw10i
+// OGCG: define{{.*}} void @_Z4sw10i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -687,7 +687,7 @@ void sw11(int a) {
   }
 }
 
-// CIR:    cir.func @_Z4sw11i
+// CIR:    cir.func{{.*}} @_Z4sw11i
 // CIR:    cir.switch (%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:   cir.break
@@ -708,7 +708,7 @@ void sw11(int a) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
-// LLVM: define void @_Z4sw11i
+// LLVM: define{{.*}} void @_Z4sw11i
 // LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
 // LLVM-DAG:     i32 3, label %[[CASE_3:.*]]
 // LLVM-DAG:     i32 4, label %[[CASE_4:.*]]
@@ -741,7 +741,7 @@ void sw11(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z4sw11i
+// OGCG: define{{.*}} void @_Z4sw11i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -772,7 +772,7 @@ void sw12(int a) {
   }
 }
 
-//      CIR: cir.func @_Z4sw12i
+//      CIR: cir.func{{.*}} @_Z4sw12i
 //      CIR:   cir.scope {
 //      CIR:     cir.switch
 // CIR-NEXT:     cir.case(equal, [#cir.int<3> : !s32i]) {
@@ -781,7 +781,7 @@ void sw12(int a) {
 // CIR-NEXT:       cir.break
 // CIR-NEXT:     }
 
-// LLVM: define void @_Z4sw12i
+// LLVM: define{{.*}} void @_Z4sw12i
 // LLVM:   switch i32 %[[COND:.*]], label %[[EXIT:.*]] [
 // LLVM-DAG:     i32 3, label %[[CASE_3:.*]]
 // LLVM:   ]
@@ -794,7 +794,7 @@ void sw12(int a) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z4sw12i
+// OGCG: define{{.*}} void @_Z4sw12i
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
@@ -816,7 +816,7 @@ void sw13(int a, int b) {
   }
 }
 
-//      CIR:  cir.func @_Z4sw13ii
+//      CIR:  cir.func{{.*}} @_Z4sw13ii
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
 // CIR-NEXT:      cir.case(equal, [#cir.int<1> : !s32i]) {
@@ -832,7 +832,7 @@ void sw13(int a, int b) {
 //      CIR:    }
 //      CIR:    cir.return
 
-// LLVM: define void @_Z4sw13ii
+// LLVM: define{{.*}} void @_Z4sw13ii
 // LLVM:   switch i32 %[[COND:.*]], label %[[OUTER_EXIT:.*]] [
 // LLVM-DAG:     i32 1, label %[[CASE_A_1:.*]]
 // LLVM:   ]
@@ -858,7 +858,7 @@ void sw13(int a, int b) {
 // LLVM: [[EXIT]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z4sw13ii
+// OGCG: define{{.*}} void @_Z4sw13ii
 // OGCG: entry:
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[B_ADDR:.*]] = alloca i32, align 4
@@ -890,7 +890,7 @@ void sw14(int x) {
   }
 }
 
-// CIR:      cir.func @_Z4sw14i
+// CIR:      cir.func{{.*}} @_Z4sw14i
 // CIR:      cir.switch
 // CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT:   cir.yield
@@ -908,7 +908,7 @@ void sw14(int x) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
-// LLVM: define void @_Z4sw14i
+// LLVM: define{{.*}} void @_Z4sw14i
 // LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
 // LLVM-DAG:     i32 1, label %[[CASE1:.*]]
 // LLVM-DAG:     i32 2, label %[[CASE2:.*]]
@@ -939,7 +939,7 @@ void sw14(int x) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z4sw14i
+// OGCG: define{{.*}} void @_Z4sw14i
 // OGCG: entry:
 // OGCG:   %[[X_ADDR:.*]] = alloca i32, align 4
 // OGCG:   store i32 %x, ptr %[[X_ADDR]], align 4
@@ -977,7 +977,7 @@ void sw15(int x) {
   }
 }
 
-// CIR:      cir.func @_Z4sw15i
+// CIR:      cir.func{{.*}} @_Z4sw15i
 // CIR:      %[[Y:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y"]
 // CIR:      cir.switch
 // CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
@@ -995,7 +995,7 @@ void sw15(int x) {
 // CIR-NEXT:   cir.break
 // CIR-NEXT: }
 
-// LLVM: define void @_Z4sw15i
+// LLVM: define{{.*}} void @_Z4sw15i
 // LLVM:   switch i32 %[[COND:.*]], label %[[DEFAULT:.*]] [
 // LLVM-DAG:     i32 1, label %[[CASE1:.*]]
 // LLVM-DAG:     i32 2, label %[[CASE2:.*]]
@@ -1019,7 +1019,7 @@ void sw15(int x) {
 // LLVM: [[RET]]:
 // LLVM:   ret void
 
-// OGCG: define dso_local void @_Z4sw15i
+// OGCG: define{{.*}} void @_Z4sw15i
 // OGCG: entry:
 // OGCG:   %[[X_ADDR:.*]] = alloca i32, align 4
 // OGCG:   %[[Y:.*]] = alloca i32, align 4
@@ -1081,7 +1081,7 @@ int nested_switch(int a) {
 // CIR:           cir.case(equal, [#cir.int<7> : !s32i]) {
 // CIR:           cir.return
 
-// LLVM: define i32 @_Z13nested_switchi
+// LLVM: define{{.*}} i32 @_Z13nested_switchi
 // LLVM:   %[[B_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   %[[RES_ADDR:.*]] = alloca i32, i64 1, align 4
@@ -1136,7 +1136,7 @@ int nested_switch(int a) {
 // LLVM:   %[[RET0:.*]] = load i32, ptr %[[RES_ADDR]], align 4
 // LLVM:   ret i32 %[[RET0]]
 
-// OGCG: define dso_local noundef i32 @_Z13nested_switchi
+// OGCG: define{{.*}} i32 @_Z13nested_switchi
 // OGCG: entry:
 // OGCG:   %[[RETVAL:.*]] = alloca i32, align 4
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4

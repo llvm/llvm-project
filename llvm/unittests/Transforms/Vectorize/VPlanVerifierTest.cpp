@@ -32,7 +32,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(CanIV);
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -71,7 +71,7 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPBB2->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
@@ -103,7 +103,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
-  auto *Blend = new VPBlendRecipe(Phi, {DefI});
+  auto *Blend = new VPBlendRecipe(Phi, {DefI}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -117,7 +117,7 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB3, VPBB4);
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB4, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB4);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -160,7 +160,7 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPBB3->appendRecipe(CanIV);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB3, VPBB3, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB3, VPBB3);
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
   VPBlockUtils::connectBlocks(VPBB2, R1);
   VPBlockUtils::connectBlocks(VPBB4, Plan.getScalarHeader());
@@ -170,15 +170,14 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n"
+  EXPECT_STREQ("Incoming def does not dominate incoming block!\n"
                "  EMIT vp<%2> = add ir<0>\n"
                "  does not dominate preheader for\n"
                "  EMIT-SCALAR vp<%1> = phi [ vp<%2>, preheader ]",
                ::testing::internal::GetCapturedStderr().c_str());
 #else
-  EXPECT_STREQ("Incoming def at index 0 does not dominate incoming block!\n", ::
-                   testing::internal::GetCapturedStderr()
-                       .c_str());
+  EXPECT_STREQ("Incoming def does not dominate incoming block!\n",
+               ::testing::internal::GetCapturedStderr().c_str());
 #endif
 #endif
 }
@@ -201,7 +200,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPBB2->appendRecipe(CanIV);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
@@ -238,7 +237,7 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
 
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB2, VPBB3);
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB3, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB3);
   VPBlockUtils::connectBlocks(VPBB1, R1);
   VPBB3->setParent(R1);
 
@@ -271,7 +270,7 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   VPBB1->appendRecipe(DefI);
   VPBB2->appendRecipe(BranchOnCond);
 
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB2, VPBB2, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
   VPBlockUtils::connectBlocks(VPBB1, R1);
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
@@ -285,6 +284,44 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   EXPECT_STREQ("Predecessor is not in the same region.\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
+}
+
+TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
+  VPlan &Plan = getPlan();
+  VPValue *Zero = Plan.getOrAddLiveIn(ConstantInt::get(Type::getInt32Ty(C), 0));
+  auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
+  auto *BranchOnCond = new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
+
+  VPBasicBlock *VPBB1 = Plan.getEntry();
+  VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("header");
+
+  VPBB2->appendRecipe(CanIV);
+
+  PHINode *PHINode = PHINode::Create(Type::getInt32Ty(C), 2);
+  auto *IRPhi = new VPIRPhi(*PHINode);
+  VPBB2->appendRecipe(IRPhi);
+  VPBB2->appendRecipe(BranchOnCond);
+
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB2, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB1, R1);
+  VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
+
+#if GTEST_HAS_STREAM_REDIRECTION
+  ::testing::internal::CaptureStderr();
+#endif
+  EXPECT_FALSE(verifyVPlanIsValid(Plan));
+#if GTEST_HAS_STREAM_REDIRECTION
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  EXPECT_STREQ(
+      "Found non-header PHI recipe in header VPBB: IR   <badref> = phi i32 \n",
+      ::testing::internal::GetCapturedStderr().c_str());
+#else
+  EXPECT_STREQ("Found non-header PHI recipe in header VPBB",
+               ::testing::internal::GetCapturedStderr().c_str());
+#endif
+#endif
+
+  delete PHINode;
 }
 
 class VPIRVerifierTest : public VPlanTestIRBase {};

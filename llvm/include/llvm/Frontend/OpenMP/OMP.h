@@ -48,8 +48,32 @@ static constexpr inline bool canHaveIterator(Clause C) {
   }
 }
 
+// Can clause C create a private copy of a variable.
+static constexpr inline bool isPrivatizingClause(Clause C) {
+  switch (C) {
+  case OMPC_detach:
+  case OMPC_firstprivate:
+  // TODO case OMPC_induction:
+  case OMPC_in_reduction:
+  case OMPC_is_device_ptr:
+  case OMPC_lastprivate:
+  case OMPC_linear:
+  case OMPC_private:
+  case OMPC_reduction:
+  case OMPC_task_reduction:
+  case OMPC_use_device_ptr:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static constexpr unsigned FallbackVersion = 52;
 LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
+
+/// Can directive D, under some circumstances, create a private copy
+/// of a variable in given OpenMP version?
+bool isPrivatizingConstruct(Directive D, unsigned Version);
 
 /// Create a nicer version of a function name for humans to look at.
 LLVM_ABI std::string prettifyFunctionName(StringRef FunctionName);
