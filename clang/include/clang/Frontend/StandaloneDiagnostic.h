@@ -42,7 +42,6 @@ struct StandaloneDiagnostic {
 
     unsigned Begin = 0;
     unsigned End = 0;
-    bool IsTokenRange = false;
   };
 
   /// Represents a FixItHint within a StandaloneDiagnostic.
@@ -77,9 +76,6 @@ struct StandaloneDiagnostic {
 StoredDiagnostic translateStandaloneDiag(FileManager &FileMgr,
                                          SourceManager &SrcMgr,
                                          StandaloneDiagnostic &&StandaloneDiag);
-
-// Simple debug printing of StandaloneDiagnostic.
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 
 } // namespace clang
 
