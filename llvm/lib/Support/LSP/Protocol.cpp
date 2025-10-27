@@ -96,10 +96,6 @@ static void percentEncode(StringRef Content, std::string &Out) {
 static std::string percentDecode(StringRef Content) {
   std::string Result;
   for (auto I = Content.begin(), E = Content.end(); I != E; ++I) {
-    if (*I != '%') {
-      Result += *I;
-      continue;
-    }
     if (*I == '%' && I + 2 < Content.end() && llvm::isHexDigit(*(I + 1)) &&
         llvm::isHexDigit(*(I + 2))) {
       Result.push_back(llvm::hexFromNibbles(*(I + 1), *(I + 2)));

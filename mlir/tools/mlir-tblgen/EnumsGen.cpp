@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -46,8 +47,7 @@ static std::string makeIdentifier(StringRef str) {
 
 static void emitEnumClass(const Record &enumDef, StringRef enumName,
                           StringRef underlyingType, StringRef description,
-                          const std::vector<EnumCase> &enumerants,
-                          raw_ostream &os) {
+                          ArrayRef<EnumCase> enumerants, raw_ostream &os) {
   os << "// " << description << "\n";
   os << "enum class " << enumName;
 
@@ -55,14 +55,13 @@ static void emitEnumClass(const Record &enumDef, StringRef enumName,
     os << " : " << underlyingType;
   os << " {\n";
 
-  for (const auto &enumerant : enumerants) {
+  for (const EnumCase &enumerant : enumerants) {
     auto symbol = makeIdentifier(enumerant.getSymbol());
     auto value = enumerant.getValue();
-    if (value >= 0) {
+    if (value >= 0)
       os << formatv("  {0} = {1},\n", symbol, value);
-    } else {
+    else
       os << formatv("  {0},\n", symbol);
-    }
   }
   os << "};\n\n";
 }
@@ -703,11 +702,7 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   StringRef underlyingToSymFnName = enumInfo.getUnderlyingToSymbolFnName();
   auto enumerants = enumInfo.getAllCases();
 
-  SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
+  llvm::NamespaceEmitter ns(os, cppNamespace);
 
   // Emit the enum class definition
   emitEnumClass(enumDef, enumName, underlyingType, description, enumerants, os);
@@ -768,8 +763,7 @@ public:
     os << formatv(attrClassDecl, enumName, attrClassName, baseAttrClassName);
   }
 
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
+  ns.close();
 
   // Generate a generic parser and printer for the enum.
   std::string qualName =
@@ -792,13 +786,8 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 
 static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
-  StringRef cppNamespace = enumInfo.getCppNamespace();
 
-  SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
 
   if (enumInfo.isBitEnum()) {
     emitSymToStrFnForBitEnum(enumDef, os);
@@ -812,10 +801,6 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
 
   if (enumInfo.genSpecializedAttr())
     emitSpecializedAttrDef(enumDef, os);
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
-  os << "\n";
 }
 
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {

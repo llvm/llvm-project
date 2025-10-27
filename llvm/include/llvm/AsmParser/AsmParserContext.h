@@ -1,4 +1,4 @@
-//===-- AsmParserContext.h --------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,14 +9,14 @@
 #ifndef LLVM_ASMPARSER_ASMPARSERCONTEXT_H
 #define LLVM_ASMPARSER_ASMPARSERCONTEXT_H
 
-#include "FileLoc.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/AsmParser/FileLoc.h"
 #include "llvm/IR/Value.h"
 #include <optional>
 
 namespace llvm {
 
-/// Registry of file location information for LLVM IR constructs
+/// Registry of file location information for LLVM IR constructs.
 ///
 /// This class provides access to the file location information
 /// for various LLVM IR constructs. Currently, it supports Function,

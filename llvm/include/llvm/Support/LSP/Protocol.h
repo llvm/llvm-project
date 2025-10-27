@@ -449,7 +449,7 @@ struct ReferenceContext {
 bool fromJSON(const llvm::json::Value &value, ReferenceContext &result,
               llvm::json::Path path);
 
-struct ReferenceParams : public TextDocumentPositionParams {
+struct ReferenceParams : TextDocumentPositionParams {
   ReferenceContext context;
 };
 

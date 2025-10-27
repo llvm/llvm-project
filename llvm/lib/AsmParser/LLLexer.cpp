@@ -203,8 +203,7 @@ void LLLexer::advancePositionTo(const char *Ptr) {
 }
 
 lltok::Kind LLLexer::LexToken() {
-  // Set token end to next location, since the end is
-  // exclusive
+  // Set token end to next location, since the end is exclusive.
   PrevTokEnd = CurPtr;
   while (true) {
     TokStart = CurPtr;
@@ -999,6 +998,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(ATE, DwarfAttEncoding);
   DWKEYWORD(VIRTUALITY, DwarfVirtuality);
   DWKEYWORD(LANG, DwarfLang);
+  DWKEYWORD(LNAME, DwarfSourceLangName);
   DWKEYWORD(CC, DwarfCC);
   DWKEYWORD(OP, DwarfOp);
   DWKEYWORD(MACINFO, DwarfMacinfo);

@@ -48,7 +48,7 @@ public:
 };
 
 Error BuildIDRewriter::sectionInitializer() {
-  // Typically, build ID will reside in .note.gnu.build-id section. Howerver,
+  // Typically, build ID will reside in .note.gnu.build-id section. However,
   // a linker script can change the section name and such is the case with
   // the Linux kernel. Hence, we iterate over all note sections.
   for (BinarySection &NoteSection : BC.sections()) {

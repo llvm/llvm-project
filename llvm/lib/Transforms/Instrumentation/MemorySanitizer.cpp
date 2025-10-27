@@ -226,6 +226,7 @@ static const Align kMinOriginAlignment = Align(4);
 static const Align kShadowTLSAlignment = Align(8);
 
 // These constants must be kept in sync with the ones in msan.h.
+// TODO: increase size to match SVE/SVE2/SME/SME2 limits
 static const unsigned kParamTLSSize = 800;
 static const unsigned kRetvalTLSSize = 800;
 
@@ -1544,6 +1545,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  static bool isAArch64SVCount(Type *Ty) {
+    if (TargetExtType *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "aarch64.svcount";
+    return false;
+  }
+
+  // This is intended to match the "AArch64 Predicate-as-Counter Type" (aka
+  // 'target("aarch64.svcount")', but not e.g., <vscale x 4 x i32>.
+  static bool isScalableNonVectorType(Type *Ty) {
+    if (!isAArch64SVCount(Ty))
+      LLVM_DEBUG(dbgs() << "isScalableNonVectorType: Unexpected type " << *Ty
+                        << "\n");
+
+    return Ty->isScalableTy() && !isa<VectorType>(Ty);
+  }
+
   void materializeChecks() {
 #ifndef NDEBUG
     // For assert below.
@@ -1672,6 +1689,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       LLVM_DEBUG(dbgs() << "getShadowTy: " << *ST << " ===> " << *Res << "\n");
       return Res;
     }
+    if (isScalableNonVectorType(OrigTy)) {
+      LLVM_DEBUG(dbgs() << "getShadowTy: Scalable non-vector type: " << *OrigTy
+                        << "\n");
+      return OrigTy;
+    }
+
     uint32_t TypeSize = DL.getTypeSizeInBits(OrigTy);
     return IntegerType::get(*MS.C, TypeSize);
   }
@@ -1923,20 +1946,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Shadow = ParamTLS+ArgOffset.
   Value *getShadowPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
-    Value *Base = IRB.CreatePointerCast(MS.ParamTLS, MS.IntptrTy);
-    if (ArgOffset)
-      Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, IRB.getPtrTy(0), "_msarg");
+    return IRB.CreatePtrAdd(MS.ParamTLS,
+                            ConstantInt::get(MS.IntptrTy, ArgOffset), "_msarg");
   }
 
   /// Compute the origin address for a given function argument.
   Value *getOriginPtrForArgument(IRBuilder<> &IRB, int ArgOffset) {
     if (!MS.TrackOrigins)
       return nullptr;
-    Value *Base = IRB.CreatePointerCast(MS.ParamOriginTLS, MS.IntptrTy);
-    if (ArgOffset)
-      Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, IRB.getPtrTy(0), "_msarg_o");
+    return IRB.CreatePtrAdd(MS.ParamOriginTLS,
+                            ConstantInt::get(MS.IntptrTy, ArgOffset),
+                            "_msarg_o");
   }
 
   /// Compute the shadow address for a retval.
@@ -2188,8 +2208,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                         << *OrigIns << "\n");
       return;
     }
-#ifndef NDEBUG
+
     Type *ShadowTy = Shadow->getType();
+    if (isScalableNonVectorType(ShadowTy)) {
+      LLVM_DEBUG(dbgs() << "Skipping check of scalable non-vector " << *Shadow
+                        << " before " << *OrigIns << "\n");
+      return;
+    }
+#ifndef NDEBUG
     assert((isa<IntegerType>(ShadowTy) || isa<VectorType>(ShadowTy) ||
             isa<StructType>(ShadowTy) || isa<ArrayType>(ShadowTy)) &&
            "Can only insert checks for integer, vector, and aggregate shadow "
@@ -3110,7 +3136,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// If we don't instrument it and it gets inlined,
   /// our interceptor will not kick in and we will lose the memmove.
   /// If we instrument the call here, but it does not get inlined,
-  /// we will memove the shadow twice: which is bad in case
+  /// we will memmove the shadow twice: which is bad in case
   /// of overlapping regions. So, we simply lower the intrinsic to a call.
   ///
   /// Similar situation exists for memcpy and memset.
@@ -4194,10 +4220,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleMaskedGather(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Ptrs = I.getArgOperand(0);
-    const Align Alignment(
-        cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
-    Value *Mask = I.getArgOperand(2);
-    Value *PassThru = I.getArgOperand(3);
+    const Align Alignment = I.getParamAlign(0).valueOrOne();
+    Value *Mask = I.getArgOperand(1);
+    Value *PassThru = I.getArgOperand(2);
 
     Type *PtrsShadowTy = getShadowTy(Ptrs);
     if (ClCheckAccessAddress) {
@@ -4233,9 +4258,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *Values = I.getArgOperand(0);
     Value *Ptrs = I.getArgOperand(1);
-    const Align Alignment(
-        cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
-    Value *Mask = I.getArgOperand(3);
+    const Align Alignment = I.getParamAlign(1).valueOrOne();
+    Value *Mask = I.getArgOperand(2);
 
     Type *PtrsShadowTy = getShadowTy(Ptrs);
     if (ClCheckAccessAddress) {
@@ -4265,9 +4289,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *V = I.getArgOperand(0);
     Value *Ptr = I.getArgOperand(1);
-    const Align Alignment(
-        cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
-    Value *Mask = I.getArgOperand(3);
+    const Align Alignment = I.getParamAlign(1).valueOrOne();
+    Value *Mask = I.getArgOperand(2);
     Value *Shadow = getShadow(V);
 
     if (ClCheckAccessAddress) {
@@ -4298,10 +4321,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleMaskedLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Ptr = I.getArgOperand(0);
-    const Align Alignment(
-        cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
-    Value *Mask = I.getArgOperand(2);
-    Value *PassThru = I.getArgOperand(3);
+    const Align Alignment = I.getParamAlign(0).valueOrOne();
+    Value *Mask = I.getArgOperand(1);
+    Value *PassThru = I.getArgOperand(2);
 
     if (ClCheckAccessAddress) {
       insertCheckShadowOf(Ptr, &I);
@@ -4753,7 +4775,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // _mm_round_ps / _mm_round_ps.
   // Similar to maybeHandleSimpleNomemIntrinsic except
-  // the second argument is guranteed to be a constant integer.
+  // the second argument is guaranteed to be a constant integer.
   void handleRoundPdPsIntrinsic(IntrinsicInst &I) {
     assert(I.getArgOperand(0)->getType() == I.getType());
     assert(I.arg_size() == 2);
@@ -6979,6 +7001,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // an extra "select". This results in much more compact IR.
       // Sa = select Sb, poisoned, (select b, Sc, Sd)
       Sa1 = getPoisonedShadow(getShadowTy(I.getType()));
+    } else if (isScalableNonVectorType(I.getType())) {
+      // This is intended to handle target("aarch64.svcount"), which can't be
+      // handled in the else branch because of incompatibility with CreateXor
+      // ("The supported LLVM operations on this type are limited to load,
+      // store, phi, select and alloca instructions").
+
+      // TODO: this currently underapproximates. Use Arm SVE EOR in the else
+      //       branch as needed instead.
+      Sa1 = getCleanShadow(getShadowTy(I.getType()));
     } else {
       // Sa = select Sb, [ (c^d) | Sc | Sd ], [ b ? Sc : Sd ]
       // If Sb (condition is poisoned), look for bits in c and d that are equal
@@ -7219,9 +7250,8 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the shadow address for a given va_arg.
   Value *getShadowPtrForVAArgument(IRBuilder<> &IRB, unsigned ArgOffset) {
-    Value *Base = IRB.CreatePointerCast(MS.VAArgTLS, MS.IntptrTy);
-    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, MS.PtrTy, "_msarg_va_s");
+    return IRB.CreatePtrAdd(
+        MS.VAArgTLS, ConstantInt::get(MS.IntptrTy, ArgOffset), "_msarg_va_s");
   }
 
   /// Compute the shadow address for a given va_arg.
@@ -7235,12 +7265,12 @@ struct VarArgHelperBase : public VarArgHelper {
 
   /// Compute the origin address for a given va_arg.
   Value *getOriginPtrForVAArgument(IRBuilder<> &IRB, int ArgOffset) {
-    Value *Base = IRB.CreatePointerCast(MS.VAArgOriginTLS, MS.IntptrTy);
     // getOriginPtrForVAArgument() is always called after
     // getShadowPtrForVAArgument(), so __msan_va_arg_origin_tls can never
     // overflow.
-    Base = IRB.CreateAdd(Base, ConstantInt::get(MS.IntptrTy, ArgOffset));
-    return IRB.CreateIntToPtr(Base, MS.PtrTy, "_msarg_va_o");
+    return IRB.CreatePtrAdd(MS.VAArgOriginTLS,
+                            ConstantInt::get(MS.IntptrTy, ArgOffset),
+                            "_msarg_va_o");
   }
 
   void CleanUnusedTLS(IRBuilder<> &IRB, Value *ShadowBase,
@@ -7467,10 +7497,8 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
 
-      Value *RegSaveAreaPtrPtr = IRB.CreateIntToPtr(
-          IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                        ConstantInt::get(MS.IntptrTy, 16)),
-          MS.PtrTy);
+      Value *RegSaveAreaPtrPtr =
+          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 16));
       Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
       Value *RegSaveAreaShadowPtr, *RegSaveAreaOriginPtr;
       const Align Alignment = Align(16);
@@ -7482,10 +7510,8 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
       if (MS.TrackOrigins)
         IRB.CreateMemCpy(RegSaveAreaOriginPtr, Alignment, VAArgTLSOriginCopy,
                          Alignment, AMD64FpEndOffset);
-      Value *OverflowArgAreaPtrPtr = IRB.CreateIntToPtr(
-          IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                        ConstantInt::get(MS.IntptrTy, 8)),
-          MS.PtrTy);
+      Value *OverflowArgAreaPtrPtr =
+          IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, 8));
       Value *OverflowArgAreaPtr =
           IRB.CreateLoad(MS.PtrTy, OverflowArgAreaPtrPtr);
       Value *OverflowArgAreaShadowPtr, *OverflowArgAreaOriginPtr;
@@ -7615,19 +7641,15 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
 
   // Retrieve a va_list field of 'void*' size.
   Value *getVAField64(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtrPtr = IRB.CreateIntToPtr(
-        IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                      ConstantInt::get(MS.IntptrTy, offset)),
-        MS.PtrTy);
+    Value *SaveAreaPtrPtr =
+        IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, offset));
     return IRB.CreateLoad(Type::getInt64Ty(*MS.C), SaveAreaPtrPtr);
   }
 
   // Retrieve a va_list field of 'int' size.
   Value *getVAField32(IRBuilder<> &IRB, Value *VAListTag, int offset) {
-    Value *SaveAreaPtr = IRB.CreateIntToPtr(
-        IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
-                      ConstantInt::get(MS.IntptrTy, offset)),
-        MS.PtrTy);
+    Value *SaveAreaPtr =
+        IRB.CreatePtrAdd(VAListTag, ConstantInt::get(MS.IntptrTy, offset));
     Value *SaveArea32 = IRB.CreateLoad(IRB.getInt32Ty(), SaveAreaPtr);
     return IRB.CreateSExt(SaveArea32, MS.IntptrTy);
   }

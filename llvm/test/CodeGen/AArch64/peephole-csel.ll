@@ -5,10 +5,9 @@ define void @peephole_csel(ptr %dst, i1 %0, i1 %cmp) {
 ; CHECK-LABEL: peephole_csel:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tst w2, #0x1
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    tst w1, #0x1
-; CHECK-NEXT:    csel x8, x8, x9, eq
+; CHECK-NEXT:    csinc x8, x8, xzr, ne
 ; CHECK-NEXT:    str x8, [x0]
 ; CHECK-NEXT:    ret
 entry:
