@@ -92,8 +92,7 @@ enum KeywordStatus {
   KS_Enabled,   // Enabled
 };
 
-KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
-                               unsigned Flags);
+KeywordStatus getKeywordStatus(const LangOptions &LangOpts, unsigned Flags);
 
 enum class ReservedIdentifierStatus {
   NotReserved = 0,
