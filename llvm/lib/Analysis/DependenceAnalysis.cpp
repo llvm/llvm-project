@@ -1132,13 +1132,9 @@ bool DependenceInfo::haveSameSD(const Loop *SrcLoop,
     DstUP = SE->getBackedgeTakenCount(DstLoop);
 
   if (SrcUB != nullptr && DstUP != nullptr) {
-    unsigned SrcBitWidth = SE->getTypeSizeInBits(SrcUB->getType());
-    unsigned DstBitWidth = SE->getTypeSizeInBits(DstUP->getType());
-    if (SrcBitWidth < DstBitWidth) {
-      SrcUB = SE->getZeroExtendExpr(SrcUB, DstUP->getType());
-    } else if (SrcBitWidth > DstBitWidth) {
-      DstUP = SE->getZeroExtendExpr(DstUP, SrcUB->getType());
-    }
+    Type *WiderType = SE->getWiderType(SrcUB->getType(), DstUP->getType());
+    SrcUB = SE->getNoopOrZeroExtend(SrcUB, WiderType);
+    DstUP = SE->getNoopOrZeroExtend(DstUP, WiderType);
 
     if (SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcUB, DstUP))
       return true;
