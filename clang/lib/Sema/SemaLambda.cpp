@@ -100,8 +100,9 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
     // innermost nested lambda are dependent (otherwise we wouldn't have
     // arrived here) - so we don't yet have a lambda that can capture the
     // variable.
-    if (IsCapturingVariable &&
-        VarToCapture->getDeclContext()->getEnclosingNonExpansionStatementContext()->Equals(EnclosingDC))
+    if (IsCapturingVariable && VarToCapture->getDeclContext()
+                                   ->getEnclosingNonExpansionStatementContext()
+                                   ->Equals(EnclosingDC))
       return NoLambdaIsCaptureReady;
 
     // For an enclosing lambda to be capture ready for an entity, all
@@ -126,7 +127,8 @@ static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
       if (IsCapturingThis && !LSI->isCXXThisCaptured())
         return NoLambdaIsCaptureReady;
     }
-    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC)->getEnclosingNonExpansionStatementContext();
+    EnclosingDC = getLambdaAwareParentOfDeclContext(EnclosingDC)
+                      ->getEnclosingNonExpansionStatementContext();
 
     assert(CurScopeIndex);
     --CurScopeIndex;
@@ -2516,9 +2518,12 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   while (FDPattern && FD) {
     InstantiationAndPatterns.emplace_back(FDPattern, FD);
 
-    FDPattern =
-        dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern)->getEnclosingNonExpansionStatementContext());
-    FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD)->getEnclosingNonExpansionStatementContext());
+    FDPattern = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FDPattern)
+            ->getEnclosingNonExpansionStatementContext());
+    FD = dyn_cast<FunctionDecl>(
+        getLambdaAwareParentOfDeclContext(FD)
+            ->getEnclosingNonExpansionStatementContext());
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the

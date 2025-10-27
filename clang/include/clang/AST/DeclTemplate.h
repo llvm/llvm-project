@@ -3355,7 +3355,7 @@ public:
 class ExpansionStmtDecl : public Decl, public DeclContext {
   CXXExpansionStmt *Expansion = nullptr;
   TemplateParameterList *TParams;
-  CXXExpansionInstantiationStmt* Instantiations = nullptr;
+  CXXExpansionInstantiationStmt *Instantiations = nullptr;
 
   ExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
                     TemplateParameterList *TParams);
@@ -3377,7 +3377,9 @@ public:
     return Instantiations;
   }
 
-  void setInstantiations(CXXExpansionInstantiationStmt *S) { Instantiations = S; }
+  void setInstantiations(CXXExpansionInstantiationStmt *S) {
+    Instantiations = S;
+  }
 
   NonTypeTemplateParmDecl *getIndexTemplateParm() const {
     return cast<NonTypeTemplateParmDecl>(TParams->getParam(0));

@@ -1795,15 +1795,16 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
 
 ExpansionStmtDecl::ExpansionStmtDecl(DeclContext *DC, SourceLocation Loc,
                                      TemplateParameterList *TParams)
-    : Decl(ExpansionStmt, DC, Loc), DeclContext(ExpansionStmt), TParams(TParams) {}
-
+    : Decl(ExpansionStmt, DC, Loc), DeclContext(ExpansionStmt),
+      TParams(TParams) {}
 
 ExpansionStmtDecl *ExpansionStmtDecl::Create(ASTContext &C, DeclContext *DC,
-                                 SourceLocation Loc,
-                                 TemplateParameterList *TParams) {
+                                             SourceLocation Loc,
+                                             TemplateParameterList *TParams) {
   return new (C, DC) ExpansionStmtDecl(DC, Loc, TParams);
 }
-ExpansionStmtDecl *ExpansionStmtDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+ExpansionStmtDecl *ExpansionStmtDecl::CreateDeserialized(ASTContext &C,
+                                                         GlobalDeclID ID) {
   return new (C, ID) ExpansionStmtDecl(nullptr, SourceLocation(), nullptr);
 }
 

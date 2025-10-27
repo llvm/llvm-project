@@ -5546,7 +5546,7 @@ public:
   }
 
   const_child_range children() const {
-    Stmt** Stmts = getTrailingStmts();
+    Stmt **Stmts = getTrailingStmts();
     return const_child_range(Stmts, Stmts + NumExprs);
   }
 
@@ -5555,8 +5555,8 @@ public:
   }
 
 private:
-  Stmt** getTrailingStmts() const {
-    return reinterpret_cast<Stmt**>(const_cast<Expr**>(getTrailingObjects()));
+  Stmt **getTrailingStmts() const {
+    return reinterpret_cast<Stmt **>(const_cast<Expr **>(getTrailingObjects()));
   }
 };
 
@@ -5581,13 +5581,11 @@ public:
     return cast<CXXExpansionInitListExpr>(SubExprs[RANGE]);
   }
 
-  void setRangeExpr(CXXExpansionInitListExpr* E) {
-    SubExprs[RANGE] = E;
-  }
+  void setRangeExpr(CXXExpansionInitListExpr *E) { SubExprs[RANGE] = E; }
 
   Expr *getIndexExpr() { return SubExprs[INDEX]; }
   const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
-  void setIndexExpr(Expr* E) { SubExprs[INDEX] = E; }
+  void setIndexExpr(Expr *E) { SubExprs[INDEX] = E; }
 
   SourceLocation getBeginLoc() const { return getRangeExpr()->getBeginLoc(); }
   SourceLocation getEndLoc() const { return getRangeExpr()->getEndLoc(); }
@@ -5599,8 +5597,8 @@ public:
 
   const_child_range children() const {
     return const_child_range(
-            reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs)),
-            reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs + COUNT)));
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs)),
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs + COUNT)));
   }
 
   static bool classof(const Stmt *T) {

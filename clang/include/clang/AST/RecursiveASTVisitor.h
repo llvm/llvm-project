@@ -1882,8 +1882,9 @@ DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
 
 DEF_TRAVERSE_DECL(ExpansionStmtDecl, {
-  if (D->getInstantiations() && getDerived().shouldVisitTemplateInstantiations())
-      TRY_TO(TraverseStmt(D->getInstantiations()));
+  if (D->getInstantiations() &&
+      getDerived().shouldVisitTemplateInstantiations())
+    TRY_TO(TraverseStmt(D->getInstantiations()));
 
   TRY_TO(TraverseStmt(D->getExpansionPattern()));
 })

@@ -2195,9 +2195,7 @@ public:
     return getDeclKind() == Decl::RequiresExprBody;
   }
 
-  bool isExpansionStmt() const {
-    return getDeclKind() == Decl::ExpansionStmt;
-  }
+  bool isExpansionStmt() const { return getDeclKind() == Decl::ExpansionStmt; }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 

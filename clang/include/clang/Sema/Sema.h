@@ -15690,10 +15690,12 @@ public:
   ExprResult BuildCXXExpansionInitializer(ExpansionStmtDecl *ESD,
                                           Expr *ExpansionInitializer);
 
-  StmtResult BuildCXXEnumeratingExpansionStmt(
-      Decl *ESD, Stmt *Init, Stmt *ExpansionVar, SourceLocation ForLoc,
-      SourceLocation LParenLoc, SourceLocation ColonLoc,
-      SourceLocation RParenLoc);
+  StmtResult BuildCXXEnumeratingExpansionStmt(Decl *ESD, Stmt *Init,
+                                              Stmt *ExpansionVar,
+                                              SourceLocation ForLoc,
+                                              SourceLocation LParenLoc,
+                                              SourceLocation ColonLoc,
+                                              SourceLocation RParenLoc);
 
   ExprResult
   BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,

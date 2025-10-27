@@ -398,7 +398,7 @@ StmtResult Sema::BuildNonEnumeratingCXXExpansionStmt(
       ESD, Init, ExpansionVarStmt, DS, ForLoc, LParenLoc, ColonLoc, RParenLoc);
 }
 
-StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
+StmtResult Sema::FinishCXXExpansionStmt(Stmt *Exp, Stmt *Body) {
   if (!Exp || !Body)
     return StmtError();
 
@@ -419,7 +419,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
     return StmtError();
 
   // Collect shared statements.
-  SmallVector<Stmt*, 1> Shared;
+  SmallVector<Stmt *, 1> Shared;
   if (Expansion->getInit())
     Shared.push_back(Expansion->getInit());
 

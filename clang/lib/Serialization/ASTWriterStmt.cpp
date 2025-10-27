@@ -1763,7 +1763,7 @@ void ASTStmtWriter::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
   Record.push_back(E->getNumExprs());
   Record.AddSourceLocation(E->getLBraceLoc());
   Record.AddSourceLocation(E->getRBraceLoc());
-  for (Expr* SubExpr : E->getExprs())
+  for (Expr *SubExpr : E->getExprs())
     Record.AddStmt(SubExpr);
   Code = serialization::EXPR_CXX_EXPANSION_INIT_LIST;
 }

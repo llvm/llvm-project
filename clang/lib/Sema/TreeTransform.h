@@ -9419,9 +9419,8 @@ ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListExpr(
     CXXExpansionInitListExpr *E) {
   bool ArgChanged = false;
   SmallVector<Expr *> SubExprs;
-  if (getDerived().TransformExprs(E->getExprs().data(),
-                                  E->getExprs().size(), false, SubExprs,
-                                  &ArgChanged))
+  if (getDerived().TransformExprs(E->getExprs().data(), E->getExprs().size(),
+                                  false, SubExprs, &ArgChanged))
     return ExprError();
 
   if (!getDerived().AlwaysRebuild() && !ArgChanged)
@@ -9449,8 +9448,8 @@ StmtResult TreeTransform<Derived>::TransformCXXExpansionInstantiationStmt(
     return false;
   };
 
-  SmallVector<Stmt*> SharedStmts;
-  SmallVector<Stmt*> Instantiations;
+  SmallVector<Stmt *> SharedStmts;
+  SmallVector<Stmt *> Instantiations;
 
   // Apply lifetime extension to the shared statements in case this is a
   // destructuring expansion statement (for other kinds of expansion
@@ -9495,7 +9494,7 @@ ExprResult TreeTransform<Derived>::TransformCXXExpansionInitListSelectExpr(
     return E;
 
   return SemaRef.BuildCXXExpansionInitListSelectExpr(
-          Range.getAs<CXXExpansionInitListExpr>(), Idx.get());
+      Range.getAs<CXXExpansionInitListExpr>(), Idx.get());
 }
 
 template <typename Derived>

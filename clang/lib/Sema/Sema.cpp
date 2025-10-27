@@ -1638,7 +1638,8 @@ DeclContext *Sema::getFunctionLevelDeclContext(bool AllowLambda) const {
                cast<CXXMethodDecl>(DC)->getOverloadedOperator() == OO_Call &&
                cast<CXXRecordDecl>(DC->getParent())->isLambda()) {
       DC = DC->getParent()->getParent();
-    } else break;
+    } else
+      break;
   }
 
   return DC;

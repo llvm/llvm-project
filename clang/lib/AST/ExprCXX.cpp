@@ -2039,7 +2039,7 @@ CXXExpansionInitListExpr *
 CXXExpansionInitListExpr::Create(const ASTContext &C, ArrayRef<Expr *> Exprs,
                                  SourceLocation LBraceLoc,
                                  SourceLocation RBraceLoc) {
-  void* Mem = C.Allocate(totalSizeToAlloc<Expr *>(Exprs.size()));
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(Exprs.size()));
   return new (Mem) CXXExpansionInitListExpr(Exprs, LBraceLoc, RBraceLoc);
 }
 
@@ -2051,8 +2051,7 @@ CXXExpansionInitListExpr::CreateEmpty(const ASTContext &C, EmptyShell Empty,
 }
 
 CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(EmptyShell Empty)
-    : Expr(CXXExpansionInitListSelectExprClass, Empty) {
-}
+    : Expr(CXXExpansionInitListSelectExprClass, Empty) {}
 
 CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(
     const ASTContext &C, CXXExpansionInitListExpr *Range, Expr *Idx)

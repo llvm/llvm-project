@@ -2070,7 +2070,8 @@ Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {
       InstantiatedMessageExpr.get(), D->getRParenLoc(), D->isFailed());
 }
 
-Decl *TemplateDeclInstantiator::VisitExpansionStmtDecl(ExpansionStmtDecl *OldESD) {
+Decl *
+TemplateDeclInstantiator::VisitExpansionStmtDecl(ExpansionStmtDecl *OldESD) {
   Decl *Index = VisitNonTypeTemplateParmDecl(OldESD->getIndexTemplateParm());
   ExpansionStmtDecl *NewESD = SemaRef.BuildExpansionStmtDecl(
       Owner, OldESD->getBeginLoc(), cast<NonTypeTemplateParmDecl>(Index));

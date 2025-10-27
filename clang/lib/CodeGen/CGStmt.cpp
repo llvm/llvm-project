@@ -1578,7 +1578,7 @@ void CodeGenFunction::EmitCXXExpansionInstantiationStmt(
   LexicalScope Scope(*this, S.getSourceRange());
   LexicalScope Scope2(*this, S.getSourceRange());
 
-  for (const Stmt* DS : S.getSharedStmts())
+  for (const Stmt *DS : S.getSharedStmts())
     EmitStmt(DS);
 
   if (S.getInstantiations().empty() || !HaveInsertPoint())
@@ -1594,14 +1594,14 @@ void CodeGenFunction::EmitCXXExpansionInstantiationStmt(
 
     if (N == S.getInstantiations().size() - 1)
       ContinueDest = ExpandExit;
-     else
+    else
       ContinueDest = getJumpDestInCurrentScope("expand.next");
 
-     LexicalScope ExpansionScope(*this, S.getSourceRange());
-     BreakContinueStack.push_back(BreakContinue(S, ExpandExit, ContinueDest));
-     EmitStmt(Inst);
-     BreakContinueStack.pop_back();
-     EmitBlock(ContinueDest.getBlock(), true);
+    LexicalScope ExpansionScope(*this, S.getSourceRange());
+    BreakContinueStack.push_back(BreakContinue(S, ExpandExit, ContinueDest));
+    EmitStmt(Inst);
+    BreakContinueStack.pop_back();
+    EmitBlock(ContinueDest.getBlock(), true);
   }
 }
 

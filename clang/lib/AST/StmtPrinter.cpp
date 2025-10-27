@@ -493,7 +493,7 @@ void StmtPrinter::VisitCXXExpansionInstantiationStmt(
 void StmtPrinter::VisitCXXExpansionInitListExpr(
     CXXExpansionInitListExpr *Node) {
   OS << "{ ";
-  llvm::interleaveComma(Node->getExprs(), OS, [&](Expr* E) { PrintExpr(E); });
+  llvm::interleaveComma(Node->getExprs(), OS, [&](Expr *E) { PrintExpr(E); });
   OS << " }";
 }
 

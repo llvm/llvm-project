@@ -583,12 +583,12 @@ public:
 
   bool hasDependentSize() const;
 
-  ExpansionStmtDecl* getDecl() { return ParentDecl; }
-  const ExpansionStmtDecl* getDecl() const { return ParentDecl; }
+  ExpansionStmtDecl *getDecl() { return ParentDecl; }
+  const ExpansionStmtDecl *getDecl() const { return ParentDecl; }
 
   Stmt *getInit() { return SubStmts[INIT]; }
   const Stmt *getInit() const { return SubStmts[INIT]; }
-  void setInit(Stmt* S) { SubStmts[INIT] = S; }
+  void setInit(Stmt *S) { SubStmts[INIT] = S; }
 
   VarDecl *getExpansionVariable();
   const VarDecl *getExpansionVariable() const {
@@ -600,11 +600,11 @@ public:
     return cast<DeclStmt>(SubStmts[VAR]);
   }
 
-  void setExpansionVarStmt(Stmt* S) { SubStmts[VAR] = S; }
+  void setExpansionVarStmt(Stmt *S) { SubStmts[VAR] = S; }
 
   Stmt *getBody() { return SubStmts[BODY]; }
   const Stmt *getBody() const { return SubStmts[BODY]; }
-  void setBody(Stmt* S) { SubStmts[BODY] = S; }
+  void setBody(Stmt *S) { SubStmts[BODY] = S; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() >= firstCXXExpansionStmtConstant &&
@@ -829,23 +829,21 @@ public:
                                                     unsigned NumInstantiations,
                                                     unsigned NumSharedStmts);
 
-  ArrayRef<Stmt*> getAllSubStmts() const {
+  ArrayRef<Stmt *> getAllSubStmts() const {
     return getTrailingObjects(getNumSubStmts());
   }
 
-  MutableArrayRef<Stmt*> getAllSubStmts() {
+  MutableArrayRef<Stmt *> getAllSubStmts() {
     return getTrailingObjects(getNumSubStmts());
   }
 
-  unsigned getNumSubStmts() const {
-    return NumInstantiations + NumSharedStmts;
-  }
+  unsigned getNumSubStmts() const { return NumInstantiations + NumSharedStmts; }
 
-  ArrayRef<Stmt*> getInstantiations() const {
+  ArrayRef<Stmt *> getInstantiations() const {
     return getTrailingObjects(NumInstantiations);
   }
 
-  ArrayRef<Stmt*> getSharedStmts() const {
+  ArrayRef<Stmt *> getSharedStmts() const {
     return getAllSubStmts().drop_front(NumInstantiations);
   }
 

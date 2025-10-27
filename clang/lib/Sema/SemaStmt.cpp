@@ -2454,7 +2454,6 @@ VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
     Decl->setConstexpr(true);
   return Decl;
 }
-
 }
 
 static bool ObjCEnumerationCollection(Expr *Collection) {
@@ -2727,20 +2726,19 @@ static StmtResult RebuildForRangeWithDereference(Sema &SemaRef, Scope *S,
 
 void Sema::ApplyForRangeOrExpansionStatementLifetimeExtension(
     VarDecl *RangeVar, ArrayRef<MaterializeTemporaryExpr *> Temporaries) {
-    if (Temporaries.empty())
-      return;
+  if (Temporaries.empty())
+    return;
 
-    InitializedEntity Entity = InitializedEntity::InitializeVariable(RangeVar);
-    for (auto *MTE : Temporaries)
-      MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(RangeVar);
+  for (auto *MTE : Temporaries)
+    MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
 }
 
 Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
     Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
     SourceLocation CoawaitLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
-    BuildForRangeKind Kind, bool ForExpansionStmt,
-    StmtResult *RebuildResult,
+    BuildForRangeKind Kind, bool ForExpansionStmt, StmtResult *RebuildResult,
     llvm::function_ref<StmtResult()> RebuildWithDereference) {
   QualType RangeVarType = RangeVar->getType();
   SourceLocation RangeLoc = RangeVar->getLocation();
@@ -3038,7 +3036,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
           ActOnFinishFullExpr(NotEqExpr.get(), /*DiscardedValue*/ false);
     if (NotEqExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 0 << BeginRangeRefTy;
+          << RangeLoc << 0 << BeginRangeRefTy;
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       if (!Context.hasSameType(BeginType, EndType))
         NoteForRangeBeginEndFunction(*this, EndExpr, BEF_end);
@@ -3061,7 +3059,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
       IncrExpr = ActOnFinishFullExpr(IncrExpr.get(), /*DiscardedValue*/ false);
     if (IncrExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 2 << BeginRangeRefTy ;
+          << RangeLoc << 2 << BeginRangeRefTy;
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       return StmtError();
     }
@@ -3075,7 +3073,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
     ExprResult DerefExpr = ActOnUnaryOp(S, ColonLoc, tok::star, BeginRef.get());
     if (DerefExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 1 << BeginRangeRefTy;
+          << RangeLoc << 1 << BeginRangeRefTy;
       NoteForRangeBeginEndFunction(*this, BeginExpr, BEF_begin);
       return StmtError();
     }

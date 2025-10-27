@@ -1900,7 +1900,8 @@ bool Parser::isForRangeIdentifier() {
   return false;
 }
 
-void Parser::ParseForRangeInitializerAfterColon(ForRangeInit& FRI, ParsingDeclSpec *VarDeclSpec) {
+void Parser::ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
+                                                ParsingDeclSpec *VarDeclSpec) {
   // Use an immediate function context if this is the initializer for a
   // constexpr variable in an expansion statement.
   auto Ctx = Sema::ExpressionEvaluationContext::PotentiallyEvaluated;
@@ -1944,9 +1945,10 @@ void Parser::ParseForRangeInitializerAfterColon(ForRangeInit& FRI, ParsingDeclSp
       std::move(Actions.ExprEvalContexts.back().ForRangeLifetimeExtendTemps);
 }
 
-StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
-                                     LabelDecl *PrecedingLabel,
-                                     ExpansionStmtDecl *ExpansionStmtDeclaration) {
+StmtResult
+Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
+                          LabelDecl *PrecedingLabel,
+                          ExpansionStmtDecl *ExpansionStmtDeclaration) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -2031,10 +2033,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
     ParseForRangeInitializerAfterColon(ForRangeInfo, /*VarDeclSpec=*/nullptr);
 
     Diag(Loc, diag::err_for_range_identifier)
-      << ForRangeInfo.ExpansionStmt
-      << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus17)
-              ? FixItHint::CreateInsertion(Loc, "auto &&")
-              : FixItHint());
+        << ForRangeInfo.ExpansionStmt
+        << ((getLangOpts().CPlusPlus11 && !getLangOpts().CPlusPlus17)
+                ? FixItHint::CreateInsertion(Loc, "auto &&")
+                : FixItHint());
 
     if (!ForRangeInfo.ExpansionStmt)
       ForRangeInfo.LoopVar =

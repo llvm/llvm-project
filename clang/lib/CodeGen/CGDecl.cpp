@@ -144,7 +144,7 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     return;
 
   case Decl::ExpansionStmt: {
-    const auto* ESD = cast<ExpansionStmtDecl>(&D);
+    const auto *ESD = cast<ExpansionStmtDecl>(&D);
     assert(ESD->getInstantiations() && "expansion statement not expanded?");
     EmitStmt(ESD->getInstantiations());
     return;

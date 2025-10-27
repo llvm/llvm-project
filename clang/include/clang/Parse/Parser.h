@@ -7469,9 +7469,9 @@ public:
   /// [C++0x]   expression
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
-  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
-                               LabelDecl *PrecedingLabel,
-                               ExpansionStmtDecl *ExpansionStmtDeclaration = nullptr);
+  StmtResult
+  ParseForStatement(SourceLocation *TrailingElseLoc, LabelDecl *PrecedingLabel,
+                    ExpansionStmtDecl *ExpansionStmtDeclaration = nullptr);
 
   void ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
                                           ParsingDeclSpec *VarDeclSpec);
