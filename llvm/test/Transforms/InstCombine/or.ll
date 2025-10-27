@@ -2114,30 +2114,53 @@ define <4 x i32> @or_zext_nneg_minus_constant_splat(<4 x i8> %a) {
   ret <4 x i32> %or
 }
 
-define i8 @or_positive_minus_non_positive_to_abs(i8 noundef %0){
+define i8 @or_positive_minus_non_positive_to_abs(i8 %a){
 ; CHECK-LABEL: @or_positive_minus_non_positive_to_abs(
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP0:%.*]], i1 false)
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
-  %2 = icmp sgt i8 %0, zeroinitializer
-  %3 = sext i1 %2 to i8
-  %4 = sub i8 zeroinitializer, %0
-  %5 = xor i8 %3, -1
-  %6 = and i8 %4, %5
-  %7 = and i8 %0, %3
-  %8 = or i8 %6, %7
-  ret i8 %8
+  %b = icmp sgt i8 %a, zeroinitializer
+  %mask = sext i1 %b to i8
+  %neg = sub i8 zeroinitializer, %a
+  %mask_inv = xor i8 %mask, -1
+  %c = and i8 %neg, %mask_inv
+  %d = and i8 %a, %mask
+  %or = or i8 %c, %d
+  ret i8 %or
 }
 
-define <2 x i8> @or_select_smax_to_abs(<2 x i8> %0){
+define <2 x i8> @or_select_smax_to_abs(<2 x i8> %a){
 ; CHECK-LABEL: @or_select_smax_to_abs(
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[TMP0:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
 ;
-  %2 = icmp sgt <2 x i8> %0, zeroinitializer
-  %3 = sub <2 x i8> zeroinitializer, %0
-  %4 = select <2 x i1> %2, <2 x i8> zeroinitializer, <2 x i8> %3
-  %5 = tail call <2 x i8> @llvm.smax.v2i8(<2 x i8> %0, <2 x i8> zeroinitializer)
-  %6 = or <2 x i8> %4, %5
-  ret <2 x i8> %6
+  %sgt0 = icmp sgt <2 x i8> %a, zeroinitializer
+  %neg = sub <2 x i8> zeroinitializer, %a
+  %sel = select <2 x i1> %sgt0, <2 x i8> zeroinitializer, <2 x i8> %neg
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
+  %or = or <2 x i8> %sel, %max
+  ret <2 x i8> %or
+}
+
+declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
+
+; negative test - %d has multiple uses. %or is not folded to abs.
+
+define <2 x i8> @or_select_smax_multi_uses(<2 x i8> %a){
+; CHECK-LABEL: @or_select_smax_multi_uses(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[A]]
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[B]], <2 x i8> zeroinitializer, <2 x i8> [[NEG]]
+; CHECK-NEXT:    [[D:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[A]], <2 x i8> zeroinitializer)
+; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i8> [[C]], [[D]]
+; CHECK-NEXT:    [[OR:%.*]] = add <2 x i8> [[OR1]], [[D]]
+; CHECK-NEXT:    ret <2 x i8> [[OR]]
+;
+  %sgt0 = icmp sgt <2 x i8> %a, zeroinitializer
+  %neg = sub <2 x i8> zeroinitializer, %a
+  %sel = select <2 x i1> %sgt0, <2 x i8> zeroinitializer, <2 x i8> %neg
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
+  %or = or <2 x i8> %sel, %max
+  %e = add <2 x i8> %or, %max
+  ret <2 x i8> %e
 }
