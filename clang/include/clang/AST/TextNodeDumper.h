@@ -125,6 +125,8 @@ public:
       : OS(OS), ShowColors(ShowColors) {}
 };
 
+/// Dumps additional data associated with a single AST node; recursive traversal
+/// of AST nodes is handled via 'children()' or manually in ASTNodeTraverser.h.
 class TextNodeDumper
     : public TextTreeStructure,
       public comments::ConstCommentVisitor<TextNodeDumper, void,
@@ -266,6 +268,8 @@ public:
   void VisitCoawaitExpr(const CoawaitExpr *Node);
   void VisitCoreturnStmt(const CoreturnStmt *Node);
   void VisitCompoundStmt(const CompoundStmt *Node);
+  void VisitCXXExpansionInstantiationStmt(
+      const CXXExpansionInstantiationStmt *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);

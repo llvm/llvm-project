@@ -438,8 +438,10 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
   // Return an empty statement if the range is empty.
   if (*NumInstantiations == 0) {
     Expansion->getDecl()->setInstantiations(
-        CXXExpansionInstantiationStmt::Create(Context, Expansion->getBeginLoc(),
-                                              /*Instantiations=*/{}, Shared));
+        CXXExpansionInstantiationStmt::Create(
+            Context, Expansion->getBeginLoc(), Expansion->getEndLoc(),
+            /*Instantiations=*/{}, Shared,
+            isa<CXXDestructuringExpansionStmt>(Expansion)));
     return Expansion;
   }
 
@@ -447,7 +449,7 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
   Stmt *VarAndBody[] = {Expansion->getExpansionVarStmt(), Body};
   Stmt *CombinedBody =
       CompoundStmt::Create(Context, VarAndBody, FPOptionsOverride(),
-                           Expansion->getBeginLoc(), Expansion->getEndLoc());
+                           Body->getBeginLoc(), Body->getEndLoc());
 
   // Expand the body for each instantiation.
   SmallVector<Stmt *, 4> Instantiations;
@@ -477,7 +479,8 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
   }
 
   auto *InstantiationsStmt = CXXExpansionInstantiationStmt::Create(
-      Context, Expansion->getBeginLoc(), Instantiations, Shared);
+      Context, Expansion->getBeginLoc(), Expansion->getEndLoc(), Instantiations,
+      Shared, isa<CXXDestructuringExpansionStmt>(Expansion));
 
   Expansion->getDecl()->setInstantiations(InstantiationsStmt);
   return Expansion;

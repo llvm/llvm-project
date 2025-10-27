@@ -1722,8 +1722,10 @@ void ASTStmtWriter::VisitCXXExpansionInstantiationStmt(
   Record.push_back(S->getInstantiations().size());
   Record.push_back(S->getSharedStmts().size());
   Record.AddSourceLocation(S->getBeginLoc());
+  Record.AddSourceLocation(S->getEndLoc());
   for (Stmt *St : S->getAllSubStmts())
     Record.AddStmt(St);
+  Record.push_back(S->shouldApplyLifetimeExtensionToSharedStmts());
   Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
 }
 

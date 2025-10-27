@@ -800,22 +800,27 @@ class CXXExpansionInstantiationStmt final
   friend class ASTStmtReader;
   friend TrailingObjects;
 
-  SourceLocation Loc;
+  SourceLocation BeginLoc;
+  SourceLocation EndLoc;
 
   // Instantiations are stored first, then shared statements.
   const unsigned NumInstantiations : 20;
   const unsigned NumSharedStmts : 3;
+  unsigned ShouldApplyLifetimeExtensionToSharedStmts : 1;
 
   CXXExpansionInstantiationStmt(EmptyShell Empty, unsigned NumInstantiations,
                                 unsigned NumSharedStmts);
-  CXXExpansionInstantiationStmt(SourceLocation Loc,
-                                ArrayRef<Stmt *> Instantiations,
-                                ArrayRef<Stmt *> SharedStmts);
+  CXXExpansionInstantiationStmt(
+      SourceLocation BeginLoc,
+      SourceLocation EndLoc, ArrayRef<Stmt *> Instantiations,
+      ArrayRef<Stmt *> SharedStmts,
+      bool ShouldApplyLifetimeExtensionToSharedStmts);
 
 public:
   static CXXExpansionInstantiationStmt *
-  Create(ASTContext &C, SourceLocation Loc, ArrayRef<Stmt *> Instantiations,
-         ArrayRef<Stmt *> SharedStmts);
+  Create(ASTContext &C, SourceLocation BeginLoc, SourceLocation EndLoc,
+         ArrayRef<Stmt *> Instantiations, ArrayRef<Stmt *> SharedStmts,
+         bool ShouldApplyLifetimeExtensionToSharedStmts);
 
   static CXXExpansionInstantiationStmt *CreateEmpty(ASTContext &C,
                                                     EmptyShell Empty,
@@ -842,8 +847,16 @@ public:
     return getAllSubStmts().drop_front(NumInstantiations);
   }
 
-  SourceLocation getBeginLoc() const { return Loc; }
-  SourceLocation getEndLoc() const { return Loc; }
+  bool shouldApplyLifetimeExtensionToSharedStmts() const {
+    return ShouldApplyLifetimeExtensionToSharedStmts;
+  }
+
+  void setShouldApplyLifetimeExtensionToSharedStmts(bool Apply) {
+    ShouldApplyLifetimeExtensionToSharedStmts = Apply;
+  }
+
+  SourceLocation getBeginLoc() const { return BeginLoc; }
+  SourceLocation getEndLoc() const { return EndLoc; }
 
   child_range children() {
     Stmt **S = getTrailingObjects();

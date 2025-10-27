@@ -1746,9 +1746,11 @@ void ASTStmtReader::VisitCXXExpansionInstantiationStmt(
     CXXExpansionInstantiationStmt *S) {
   VisitStmt(S);
   Record.skipInts(2);
-  S->Loc = readSourceLocation();
+  S->BeginLoc = readSourceLocation();
+  S->EndLoc = readSourceLocation();
   for (unsigned I = 0; I < S->getNumSubStmts(); ++I)
     S->getAllSubStmts()[I] = Record.readSubStmt();
+  S->setShouldApplyLifetimeExtensionToSharedStmts(Record.readBool());
 }
 
 void ASTStmtReader::VisitCXXEnumeratingExpansionStmt(

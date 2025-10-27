@@ -239,25 +239,30 @@ CXXExpansionInstantiationStmt::CXXExpansionInstantiationStmt(
 }
 
 CXXExpansionInstantiationStmt::CXXExpansionInstantiationStmt(
-    SourceLocation Loc, ArrayRef<Stmt *> Instantiations,
-    ArrayRef<Stmt *> SharedStmts)
-    : Stmt(CXXExpansionInstantiationStmtClass), Loc(Loc),
-      NumInstantiations(unsigned(Instantiations.size())),
-      NumSharedStmts(unsigned(SharedStmts.size())) {
+    SourceLocation BeginLoc, SourceLocation EndLoc,
+    ArrayRef<Stmt *> Instantiations, ArrayRef<Stmt *> SharedStmts,
+    bool ShouldApplyLifetimeExtensionToSharedStmts)
+    : Stmt(CXXExpansionInstantiationStmtClass), BeginLoc(BeginLoc),
+      EndLoc(EndLoc), NumInstantiations(unsigned(Instantiations.size())),
+      NumSharedStmts(unsigned(SharedStmts.size())),
+      ShouldApplyLifetimeExtensionToSharedStmts(
+          ShouldApplyLifetimeExtensionToSharedStmts) {
   assert(NumSharedStmts <= 4 && "might have to allocate more bits for this");
   llvm::uninitialized_copy(Instantiations, getTrailingObjects());
-  llvm::uninitialized_copy(SharedStmts, getTrailingObjects() + NumInstantiations);
+  llvm::uninitialized_copy(SharedStmts,
+                           getTrailingObjects() + NumInstantiations);
 }
 
-CXXExpansionInstantiationStmt *
-CXXExpansionInstantiationStmt::Create(ASTContext &C, SourceLocation Loc,
-                                      ArrayRef<Stmt *> Instantiations,
-                                      ArrayRef<Stmt *> SharedStmts) {
+CXXExpansionInstantiationStmt *CXXExpansionInstantiationStmt::Create(
+    ASTContext &C, SourceLocation BeginLoc, SourceLocation EndLoc,
+    ArrayRef<Stmt *> Instantiations, ArrayRef<Stmt *> SharedStmts,
+    bool ShouldApplyLifetimeExtensionToSharedStmts) {
   void *Mem = C.Allocate(
       totalSizeToAlloc<Stmt *>(Instantiations.size() + SharedStmts.size()),
       alignof(CXXExpansionInstantiationStmt));
-  return new (Mem)
-      CXXExpansionInstantiationStmt(Loc, Instantiations, SharedStmts);
+  return new (Mem) CXXExpansionInstantiationStmt(
+      BeginLoc, EndLoc, Instantiations, SharedStmts,
+      ShouldApplyLifetimeExtensionToSharedStmts);
 }
 
 CXXExpansionInstantiationStmt *

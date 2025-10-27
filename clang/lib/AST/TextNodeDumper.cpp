@@ -1499,6 +1499,12 @@ void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
     OS << " implicit";
 }
 
+void TextNodeDumper::VisitCXXExpansionInstantiationStmt(
+    const CXXExpansionInstantiationStmt *Node) {
+  if (Node->shouldApplyLifetimeExtensionToSharedStmts())
+    OS << " applies_lifetime_extension";
+}
+
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->hasAPValueResult())
     AddChild("value",

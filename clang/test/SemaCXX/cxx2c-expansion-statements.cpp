@@ -880,5 +880,41 @@ constexpr int lifetime_extension() {
   return sum + x;
 }
 
+template <typename T>
+constexpr int lifetime_extension_instantiate_expansions() {
+  int x = 5;
+  int sum  = 0;
+  template for (T e : f(g(x))) {
+    sum += x;
+  }
+  return sum + x;
+}
+
+template <typename T>
+constexpr int lifetime_extension_dependent_expansion_stmt() {
+  int x = 5;
+  int sum  = 0;
+  template for (int e : f(g((T&)x))) {
+    sum += x;
+  }
+  return sum + x;
+}
+
+template <typename U>
+struct foo {
+  template <typename T>
+  constexpr int lifetime_extension_multiple_instantiations() {
+      int x = 5;
+      int sum  = 0;
+      template for (T e : f(g((U&)x))) {
+        sum += x;
+      }
+      return sum + x;
+  }
+};
+
 static_assert(lifetime_extension() == 47);
+static_assert(lifetime_extension_instantiate_expansions<int>() == 47);
+static_assert(lifetime_extension_dependent_expansion_stmt<int>() == 47);
+static_assert(foo<int>().lifetime_extension_multiple_instantiations<int>() == 47);
 }

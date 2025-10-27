@@ -58,6 +58,45 @@ int lifetime_extension() {
   }
   return sum + x;
 }
+
+template <typename T>
+int lifetime_extension_instantiate_expansions() {
+  int x = 5;
+  int sum  = 0;
+  template for (T e : f(g(x))) {
+    sum += x;
+  }
+  return sum + x;
+}
+
+template <typename T>
+int lifetime_extension_dependent_expansion_stmt() {
+  int x = 5;
+  int sum  = 0;
+  template for (int e : f(g((T&)x))) {
+    sum += x;
+  }
+  return sum + x;
+}
+
+template <typename U>
+struct foo {
+  template <typename T>
+  int lifetime_extension_multiple_instantiations() {
+    int x = 5;
+    int sum  = 0;
+    template for (T e : f(g((U&)x))) {
+      sum += x;
+    }
+    return sum + x;
+  }
+};
+
+void instantiate() {
+  lifetime_extension_instantiate_expansions<int>();
+  lifetime_extension_dependent_expansion_stmt<int>();
+  foo<int>().lifetime_extension_multiple_instantiations<int>();
+}
 }
 
 // CHECK: @_ZZ5emptyvE1a = internal constant %struct.A zeroinitializer, align 1
@@ -337,3 +376,96 @@ int lifetime_extension() {
 // CHECK-NEXT:   %7 = load i32, ptr %x, align 4
 // CHECK-NEXT:   %add2 = add nsw i32 %6, %7
 // CHECK-NEXT:   ret i32 %add2
+
+
+// CHECK-LABEL: define {{.*}} i32 @_ZN24apply_lifetime_extension41lifetime_extension_instantiate_expansionsIiEEiv()
+// CHECK: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %sum = alloca i32, align 4
+// CHECK-NEXT:   %0 = alloca ptr, align 8
+// CHECK: %ref.tmp = alloca %"struct.apply_lifetime_extension::T", align 8
+// CHECK-NEXT:   %e = alloca i32, align 4
+// CHECK-NEXT:   store i32 5, ptr %x, align 4
+// CHECK-NEXT:   store i32 0, ptr %sum, align 4
+// CHECK: call void @_ZN24apply_lifetime_extension1gERi(ptr dead_on_unwind writable sret(%"struct.apply_lifetime_extension::T") align 8 %ref.tmp, ptr {{.*}} %x)
+// CHECK-NEXT:   %call = call {{.*}} ptr @_ZN24apply_lifetime_extension1fERKNS_1TE(ptr {{.*}} %ref.tmp)
+// CHECK-NEXT:   store ptr %call, ptr %0, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
+// CHECK: %x1 = getelementptr inbounds nuw %"struct.apply_lifetime_extension::T", ptr %1, i32 0, i32 0
+// CHECK-NEXT:   %2 = load ptr, ptr %x1, align 8
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   store i32 %3, ptr %e, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %5 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add = add nsw i32 %5, %4
+// CHECK-NEXT:   store i32 %add, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.end
+// CHECK: expand.end:
+// CHECK-NEXT:   call void @_ZN24apply_lifetime_extension1TD1Ev(ptr {{.*}} %ref.tmp)
+// CHECK-NEXT:   %6 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %add2 = add nsw i32 %6, %7
+// CHECK-NEXT:   ret i32 %add2
+
+
+// CHECK-LABEL: define {{.*}} i32 @_ZN24apply_lifetime_extension43lifetime_extension_dependent_expansion_stmtIiEEiv()
+// CHECK: entry:
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %sum = alloca i32, align 4
+// CHECK-NEXT:   %0 = alloca ptr, align 8
+// CHECK: %ref.tmp = alloca %"struct.apply_lifetime_extension::T", align 8
+// CHECK-NEXT:   %e = alloca i32, align 4
+// CHECK-NEXT:   store i32 5, ptr %x, align 4
+// CHECK-NEXT:   store i32 0, ptr %sum, align 4
+// CHECK: call void @_ZN24apply_lifetime_extension1gERi(ptr dead_on_unwind writable sret(%"struct.apply_lifetime_extension::T") align 8 %ref.tmp, ptr {{.*}} %x)
+// CHECK-NEXT:   %call = call {{.*}} ptr @_ZN24apply_lifetime_extension1fERKNS_1TE(ptr {{.*}} %ref.tmp)
+// CHECK-NEXT:   store ptr %call, ptr %0, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
+// CHECK: %x1 = getelementptr inbounds nuw %"struct.apply_lifetime_extension::T", ptr %1, i32 0, i32 0
+// CHECK-NEXT:   %2 = load ptr, ptr %x1, align 8
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   store i32 %3, ptr %e, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %5 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add = add nsw i32 %5, %4
+// CHECK-NEXT:   store i32 %add, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.end
+// CHECK: expand.end:
+// CHECK-NEXT:   call void @_ZN24apply_lifetime_extension1TD1Ev(ptr {{.*}} %ref.tmp)
+// CHECK-NEXT:   %6 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %add2 = add nsw i32 %6, %7
+// CHECK-NEXT:   ret i32 %add2
+
+
+// CHECK-LABEL: define {{.*}} i32 @_ZN24apply_lifetime_extension3fooIiE42lifetime_extension_multiple_instantiationsIiEEiv(ptr {{.*}} %this)
+// CHECK: entry:
+// CHECK-NEXT:   %this.addr = alloca ptr, align 8
+// CHECK-NEXT:   %x = alloca i32, align 4
+// CHECK-NEXT:   %sum = alloca i32, align 4
+// CHECK-NEXT:   %0 = alloca ptr, align 8
+// CHECK: %ref.tmp = alloca %"struct.apply_lifetime_extension::T", align 8
+// CHECK-NEXT:   %e = alloca i32, align 4
+// CHECK-NEXT:   store ptr %this, ptr %this.addr, align 8
+// CHECK-NEXT:   %this1 = load ptr, ptr %this.addr, align 8
+// CHECK-NEXT:   store i32 5, ptr %x, align 4
+// CHECK-NEXT:   store i32 0, ptr %sum, align 4
+// CHECK: call void @_ZN24apply_lifetime_extension1gERi(ptr dead_on_unwind writable sret(%"struct.apply_lifetime_extension::T") align 8 %ref.tmp, ptr {{.*}} %x)
+// CHECK-NEXT:   %call = call {{.*}} ptr @_ZN24apply_lifetime_extension1fERKNS_1TE(ptr {{.*}} %ref.tmp)
+// CHECK-NEXT:   store ptr %call, ptr %0, align 8
+// CHECK-NEXT:   %1 = load ptr, ptr %0, align 8
+// CHECK: %x2 = getelementptr inbounds nuw %"struct.apply_lifetime_extension::T", ptr %1, i32 0, i32 0
+// CHECK-NEXT:   %2 = load ptr, ptr %x2, align 8
+// CHECK-NEXT:   %3 = load i32, ptr %2, align 4
+// CHECK-NEXT:   store i32 %3, ptr %e, align 4
+// CHECK-NEXT:   %4 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %5 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %add = add nsw i32 %5, %4
+// CHECK-NEXT:   store i32 %add, ptr %sum, align 4
+// CHECK-NEXT:   br label %expand.end
+// CHECK: expand.end:
+// CHECK-NEXT:   call void @_ZN24apply_lifetime_extension1TD1Ev(ptr {{.*}} %ref.tmp)
+// CHECK-NEXT:   %6 = load i32, ptr %sum, align 4
+// CHECK-NEXT:   %7 = load i32, ptr %x, align 4
+// CHECK-NEXT:   %add3 = add nsw i32 %6, %7
+// CHECK-NEXT:   ret i32 %add3

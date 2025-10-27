@@ -391,6 +391,7 @@ void StmtProfiler::VisitCXXDependentExpansionStmt(
 void StmtProfiler::VisitCXXExpansionInstantiationStmt(
     const CXXExpansionInstantiationStmt *S) {
   VisitStmt(S);
+  ID.AddBoolean(S->shouldApplyLifetimeExtensionToSharedStmts());
 }
 
 void StmtProfiler::VisitMSDependentExistsStmt(const MSDependentExistsStmt *S) {

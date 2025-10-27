@@ -1569,7 +1569,14 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
 void CodeGenFunction::EmitCXXExpansionInstantiationStmt(
     const CXXExpansionInstantiationStmt &S) {
+  // FIXME: For reasons beyond my understanding, two scopes are required to emit
+  // the destructors of lifetime-extended temporaries in the right place, but
+  // only in some templates. There are some other issues with lifetime-extended
+  // temporaries currently (https://github.com/llvm/llvm-project/issues/165182);
+  // perhaps resolving those will allow us to remove the second scope here
+  // because there really ought to be a better way of doing this.
   LexicalScope Scope(*this, S.getSourceRange());
+  LexicalScope Scope2(*this, S.getSourceRange());
 
   for (const Stmt* DS : S.getSharedStmts())
     EmitStmt(DS);
