@@ -281,21 +281,12 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::trunc, FTZ_MustBeOn};
 
     // NVVM intrinsics that map to LLVM cast operations.
-    //
-    // Note that llvm's target-generic conversion operators correspond to the rz
-    // (round to zero) versions of the nvvm conversion intrinsics, even though
-    // most everything else here uses the rn (round to nearest even) nvvm ops.
-    case Intrinsic::nvvm_d2i_rz:
-    case Intrinsic::nvvm_f2i_rz:
-    case Intrinsic::nvvm_d2ll_rz:
-    case Intrinsic::nvvm_f2ll_rz:
-      return {Instruction::FPToSI};
-    case Intrinsic::nvvm_d2ui_rz:
-    case Intrinsic::nvvm_f2ui_rz:
-    case Intrinsic::nvvm_d2ull_rz:
-    case Intrinsic::nvvm_f2ull_rz:
-      return {Instruction::FPToUI};
-    // Integer to floating-point uses RN rounding, not RZ
+    // Note - we cannot map intrinsics like nvvm_d2ll_rz to LLVM's
+    // FPToSI, as NaN to int conversion with FPToSI is considered UB and is
+    // eliminated. NVVM conversion intrinsics are translated to PTX cvt
+    // instructions which define the outcome for NaN rather than leaving as UB.
+    // Therefore, translate NVVM intrinsics to sitofp/uitofp, but not to
+    // fptosi/fptoui.
     case Intrinsic::nvvm_i2d_rn:
     case Intrinsic::nvvm_i2f_rn:
     case Intrinsic::nvvm_ll2d_rn:
@@ -564,7 +555,8 @@ bool NVPTXTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::nvvm_isspacep_global:
   case Intrinsic::nvvm_isspacep_local:
   case Intrinsic::nvvm_isspacep_shared:
-  case Intrinsic::nvvm_isspacep_shared_cluster: {
+  case Intrinsic::nvvm_isspacep_shared_cluster:
+  case Intrinsic::nvvm_prefetch_tensormap: {
     OpIndexes.push_back(0);
     return true;
   }
@@ -585,6 +577,15 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     if (const auto R = evaluateIsSpace(IID, NewAS))
       return ConstantInt::get(II->getType(), *R);
+    return nullptr;
+  }
+  case Intrinsic::nvvm_prefetch_tensormap: {
+    IRBuilder<> Builder(II);
+    const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
+        NewAS == NVPTXAS::ADDRESS_SPACE_PARAM)
+      return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
+                                          NewV);
     return nullptr;
   }
   }

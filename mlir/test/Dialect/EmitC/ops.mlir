@@ -188,17 +188,27 @@ func.func @test_assign(%arg1: f32) {
 
 func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
   %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
-  %q = emitc.expression : i32 {
+  %q = emitc.expression %arg1, %c7 : (i32, i32) -> i32 {
     %a = emitc.rem %arg1, %c7 : (i32, i32) -> i32
     emitc.yield %a : i32
   }
-  %r = emitc.expression noinline : i32 {
+  %r = emitc.expression %arg0, %arg1, %arg2, %arg3, %arg4, %q noinline : (i32, i32, i32, f32, f32, i32) -> i32 {
     %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
     %b = emitc.call_opaque "bar" (%a, %arg2, %q) : (i32, i32, i32) -> (i32)
     %c = emitc.mul %arg3, %arg4 : (f32, f32) -> f32
     %d = emitc.cast %c : f32 to i32
     %e = emitc.sub %b, %d : (i32, i32) -> i32
     emitc.yield %e : i32
+  }
+  return %r : i32
+}
+
+func.func @test_expression_multiple_uses(%arg0: i32, %arg1: i32) -> i32 {
+  %r = emitc.expression %arg0, %arg1 : (i32, i32) -> i32 {
+    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
   }
   return %r : i32
 }
@@ -286,8 +296,11 @@ func.func @assign_global(%arg0 : i32) {
 
 func.func @member_access(%arg0: !emitc.lvalue<!emitc.opaque<"mystruct">>, %arg1: !emitc.lvalue<!emitc.opaque<"mystruct_ptr">>, %arg2: !emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) {
   %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
-  %1 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
-  %2 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %1 = "emitc.member" (%arg0) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
+  %2 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.lvalue<i32>
+  %3 = "emitc.member_of_ptr" (%arg1) {member = "b"} : (!emitc.lvalue<!emitc.opaque<"mystruct_ptr">>) -> !emitc.array<2xi32>
+  %4 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.lvalue<i32>
+  %5 = "emitc.member_of_ptr" (%arg2) {member = "b"} : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>) -> !emitc.array<2xi32>
   return
 }
 
@@ -309,4 +322,36 @@ func.func @switch() {
   }
 
   return 
+}
+
+emitc.class final @finalClass {
+  emitc.field @fieldName0 : !emitc.array<1xf32>
+  emitc.field @fieldName1 : !emitc.array<1xf32>
+  emitc.func @execute() {
+    %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
+    %1 = get_field @fieldName0 : !emitc.array<1xf32>
+    %2 = get_field @fieldName1 : !emitc.array<1xf32>
+    %3 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
+    return
+  }
+}
+
+func.func @do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+  %3 = emitc.literal "3" : i32
+
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2, %3 : (i32, i32, i32) -> i1 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      %cmp = emitc.cmp eq, %add, %3 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+    
+    emitc.yield %r : i1
+  }
+
+  return
 }

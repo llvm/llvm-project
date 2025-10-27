@@ -80,3 +80,27 @@ define i32 @test_second_arg(i32 %a, i32 %b) {
     %call = call i32 @do_something_else(i32 %a, i32 %b)
     ret i32 %b
 }
+
+define void @test() {
+; CHECK-LABEL: test:
+; CHECK:         .functype test () -> ()
+; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    global.get $push0=, __stack_pointer
+; CHECK-NEXT:    i32.const $push1=, 16
+; CHECK-NEXT:    i32.sub $push7=, $pop0, $pop1
+; CHECK-NEXT:    local.tee $push6=, $0=, $pop7
+; CHECK-NEXT:    global.set __stack_pointer, $pop6
+; CHECK-NEXT:    i32.const $push4=, 12
+; CHECK-NEXT:    i32.add $push5=, $0, $pop4
+; CHECK-NEXT:    call $drop=, returns_arg, $pop5
+; CHECK-NEXT:    i32.const $push2=, 16
+; CHECK-NEXT:    i32.add $push3=, $0, $pop2
+; CHECK-NEXT:    global.set __stack_pointer, $pop3
+; CHECK-NEXT:    return
+entry:
+  %a = alloca i32
+  call void @llvm.lifetime.start.p0(ptr %a)
+  %ret = call ptr @returns_arg(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
+  ret void
+}

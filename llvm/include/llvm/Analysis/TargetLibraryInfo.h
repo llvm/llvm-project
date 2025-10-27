@@ -136,7 +136,7 @@ public:
     AMDLIBM      // AMD Math Vector library.
   };
 
-  LLVM_ABI TargetLibraryInfoImpl();
+  TargetLibraryInfoImpl() = delete;
   LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
 
   // Provide value semantics.
@@ -294,6 +294,8 @@ class TargetLibraryInfo {
   std::bitset<NumLibFuncs> OverrideAsUnavailable;
 
 public:
+  TargetLibraryInfo() = delete;
+
   explicit TargetLibraryInfo(const TargetLibraryInfoImpl &Impl,
                              std::optional<const Function *> F = std::nullopt)
       : Impl(&Impl) {
@@ -371,12 +373,10 @@ public:
   /// Disables all builtins.
   ///
   /// This can be used for options like -fno-builtin.
-  void disableAllFunctions() LLVM_ATTRIBUTE_UNUSED {
-    OverrideAsUnavailable.set();
-  }
+  [[maybe_unused]] void disableAllFunctions() { OverrideAsUnavailable.set(); }
 
   /// Forces a function to be marked as unavailable.
-  void setUnavailable(LibFunc F) LLVM_ATTRIBUTE_UNUSED {
+  [[maybe_unused]] void setUnavailable(LibFunc F) {
     assert(F < OverrideAsUnavailable.size() && "out-of-bounds LibFunc");
     OverrideAsUnavailable.set(F);
   }
@@ -450,6 +450,12 @@ public:
       return true;
     }
     return false;
+  }
+
+  /// Return the canonical name for a LibFunc. This should not be used for
+  /// semantic purposes, use getName instead.
+  static StringRef getStandardName(LibFunc F) {
+    return TargetLibraryInfoImpl::StandardNames[F];
   }
 
   StringRef getName(LibFunc F) const {
@@ -649,7 +655,11 @@ class LLVM_ABI TargetLibraryInfoWrapperPass : public ImmutablePass {
 
 public:
   static char ID;
+
+  /// The default constructor should not be used and is only for pass manager
+  /// initialization purposes.
   TargetLibraryInfoWrapperPass();
+
   explicit TargetLibraryInfoWrapperPass(const Triple &T);
   explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfoImpl &TLI);
 

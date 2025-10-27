@@ -171,3 +171,20 @@ struct NoInstantiation<int, U>{
     };
 };
 } // namespace PartialSpecializationNoInstantiation
+
+namespace PureVirtual {
+
+template<typename T>
+struct Base {
+    virtual void foo() = 0;
+};
+
+struct Derived : public Base<int> {
+    void foo() {}
+};
+
+void test() {
+    Derived{}.foo();
+}
+
+}

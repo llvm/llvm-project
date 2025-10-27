@@ -2,10 +2,10 @@
 // # RUN: mlir-opt %s -mlir-print-op-generic -split-input-file  | mlir-opt -mlir-print-op-generic | FileCheck %s --check-prefix=GENERIC
 
 // CHECK:   test.with_properties
-// CHECK-SAME: a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]{{$}}
+// CHECK-SAME: a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4], array32 = [5, 6]{{$}}
 // GENERIC:   "test.with_properties"()
-// GENERIC-SAME: <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, b = "foo", c = "bar", flag = true}> : () -> ()
-test.with_properties a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4]
+// GENERIC-SAME: <{a = 32 : i64, array = array<i64: 1, 2, 3, 4>, array32 = array<i32: 5, 6>, b = "foo", c = "bar", flag = true}> : () -> ()
+test.with_properties a = 32, b = "foo", c = "bar", flag = true, array = [1, 2, 3, 4], array32 = [5, 6]
 
 // CHECK:   test.with_nice_properties
 // CHECK-SAME:    "foo bar" is -3{{$}}

@@ -350,12 +350,15 @@ define half @select_loadfpimm(half %x) nounwind {
 ; ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; ZFHMIN-NEXT:    fmv.w.x fa4, zero
 ; ZFHMIN-NEXT:    fle.s a0, fa4, fa5
-; ZFHMIN-NEXT:    xori a0, a0, 1
-; ZFHMIN-NEXT:    slli a0, a0, 1
-; ZFHMIN-NEXT:    lui a1, %hi(.LCPI17_0)
-; ZFHMIN-NEXT:    addi a1, a1, %lo(.LCPI17_0)
-; ZFHMIN-NEXT:    add a0, a1, a0
-; ZFHMIN-NEXT:    flh fa0, 0(a0)
+; ZFHMIN-NEXT:    beqz a0, .LBB17_2
+; ZFHMIN-NEXT:  # %bb.1: # %entry
+; ZFHMIN-NEXT:    li a0, 7
+; ZFHMIN-NEXT:    j .LBB17_3
+; ZFHMIN-NEXT:  .LBB17_2:
+; ZFHMIN-NEXT:    li a0, -9
+; ZFHMIN-NEXT:  .LBB17_3: # %entry
+; ZFHMIN-NEXT:    slli a0, a0, 11
+; ZFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZFHMIN-NEXT:    ret
 entry:
   %cmp = fcmp ult half %x, 0.000000e+00

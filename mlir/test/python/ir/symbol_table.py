@@ -56,6 +56,7 @@ def testSymbolTableInsert():
         print(m1)
         assert "bar" not in symbol_table
 
+        bar._set_invalid()
         try:
             print(bar)
         except RuntimeError as e:

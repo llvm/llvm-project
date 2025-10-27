@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/CommentParser.h"
+#include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
@@ -569,6 +570,8 @@ BlockCommandComment *Parser::parseBlockCommand() {
 
 InlineCommandComment *Parser::parseInlineCommand() {
   assert(Tok.is(tok::backslash_command) || Tok.is(tok::at_command));
+  CommandMarkerKind CMK =
+      Tok.is(tok::backslash_command) ? CMK_Backslash : CMK_At;
   const CommandInfo *Info = Traits.getCommandInfo(Tok.getCommandID());
 
   const Token CommandTok = Tok;
@@ -580,7 +583,7 @@ InlineCommandComment *Parser::parseInlineCommand() {
 
   InlineCommandComment *IC = S.actOnInlineCommand(
       CommandTok.getLocation(), CommandTok.getEndLocation(),
-      CommandTok.getCommandID(), Args);
+      CommandTok.getCommandID(), CMK, Args);
 
   if (Args.size() < Info->NumArgs) {
     Diag(CommandTok.getEndLocation().getLocWithOffset(1),

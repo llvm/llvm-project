@@ -78,7 +78,7 @@ define void @test5(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EARLY_DATA:%.*]] = alloca [128 x i8], align 8
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr [[EARLY_DATA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[EARLY_DATA]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    call fastcc void @decompose(ptr [[TMP]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[EARLY_DATA]], ptr [[TMP]], i64 32, i1 false)
@@ -87,26 +87,11 @@ define void @test5(ptr %ptr) {
 entry:
   %early_data = alloca [128 x i8], align 8
   %tmp = alloca %t, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %early_data)
+  call void @llvm.lifetime.start.p0(ptr %early_data)
   %0 = load i32, ptr %ptr, align 8
   call fastcc void @decompose(ptr %tmp)
   call void @llvm.memcpy.p0.p0.i64(ptr %early_data, ptr %tmp, i64 32, i1 false)
   ret void
-}
-
-define i8 @test6(ptr %ptr, ptr noalias %ptr.1) {
-; CHECK-LABEL: @test6(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr [[PTR:%.*]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[PTR]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[PTR]], ptr [[PTR_1:%.*]], i64 24, i1 false)
-; CHECK-NEXT:    ret i8 [[TMP0]]
-;
-entry:
-  call void @llvm.lifetime.start.p0(i64 24, ptr %ptr)
-  %0 = load i8, ptr %ptr, align 8
-  call void @llvm.memmove.p0.p0.i64(ptr %ptr, ptr %ptr.1, i64 24, i1 false)
-  ret i8 %0
 }
 
 define void @test7(ptr %ptr) {
@@ -146,7 +131,7 @@ define void @test8(ptr noalias %src, ptr %dst) {
 declare void @clobber()
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #0
+declare void @llvm.lifetime.start.p0(ptr nocapture) #0
 
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #0

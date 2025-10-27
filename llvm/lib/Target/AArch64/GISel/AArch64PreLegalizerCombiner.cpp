@@ -44,31 +44,6 @@ namespace {
 #include "AArch64GenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
 
-/// Return true if a G_FCONSTANT instruction is known to be better-represented
-/// as a G_CONSTANT.
-bool matchFConstantToConstant(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
-  Register DstReg = MI.getOperand(0).getReg();
-  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
-  if (DstSize != 32 && DstSize != 64)
-    return false;
-
-  // When we're storing a value, it doesn't matter what register bank it's on.
-  // Since not all floating point constants can be materialized using a fmov,
-  // it makes more sense to just use a GPR.
-  return all_of(MRI.use_nodbg_instructions(DstReg),
-                [](const MachineInstr &Use) { return Use.mayStore(); });
-}
-
-/// Change a G_FCONSTANT into a G_CONSTANT.
-void applyFConstantToConstant(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
-  MachineIRBuilder MIB(MI);
-  const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
-  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
-  MI.eraseFromParent();
-}
-
 /// Try to match a G_ICMP of a G_TRUNC with zero, in which the truncated bits
 /// are sign bits. In this case, we can transform the G_ICMP to directly compare
 /// the wide value with a zero.
@@ -228,12 +203,13 @@ void applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
       B.buildConstant(LLT::scalar(64), -static_cast<int64_t>(MinOffset)));
 }
 
-// Combines vecreduce_add(mul(ext(x), ext(y))) -> vecreduce_add(udot(x, y))
-// Or vecreduce_add(ext(x)) -> vecreduce_add(udot(x, 1))
+// Combines vecreduce_add(mul(ext(x), ext(y))) -> vecreduce_add([us]dot(x, y))
+// Or vecreduce_add(ext(mul(ext(x), ext(y)))) -> vecreduce_add([us]dot(x, y))
+// Or vecreduce_add(ext(x)) -> vecreduce_add([us]dot(x, 1))
 // Similar to performVecReduceAddCombine in SelectionDAG
-bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            const AArch64Subtarget &STI,
-                            std::tuple<Register, Register, bool> &MatchInfo) {
+bool matchExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           const AArch64Subtarget &STI,
+                           std::tuple<Register, Register, bool> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
          "Expected a G_VECREDUCE_ADD instruction");
   assert(STI.hasDotProd() && "Target should have Dot Product feature");
@@ -246,31 +222,57 @@ bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (DstTy.getScalarSizeInBits() != 32 || MidTy.getScalarSizeInBits() != 32)
     return false;
 
-  LLT SrcTy;
-  auto I1Opc = I1->getOpcode();
-  if (I1Opc == TargetOpcode::G_MUL) {
+  // Detect mul(ext, ext) with symmetric ext's. If I1Opc is G_ZEXT or G_SEXT
+  // then the ext's must match the same opcode. It is set to the ext opcode on
+  // output.
+  auto tryMatchingMulOfExt = [&MRI](MachineInstr *MI, Register &Out1,
+                                    Register &Out2, unsigned &I1Opc) {
     // If result of this has more than 1 use, then there is no point in creating
-    // udot instruction
-    if (!MRI.hasOneNonDBGUse(MidReg))
+    // a dot instruction
+    if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
       return false;
 
     MachineInstr *ExtMI1 =
-        getDefIgnoringCopies(I1->getOperand(1).getReg(), MRI);
+        getDefIgnoringCopies(MI->getOperand(1).getReg(), MRI);
     MachineInstr *ExtMI2 =
-        getDefIgnoringCopies(I1->getOperand(2).getReg(), MRI);
+        getDefIgnoringCopies(MI->getOperand(2).getReg(), MRI);
     LLT Ext1DstTy = MRI.getType(ExtMI1->getOperand(0).getReg());
     LLT Ext2DstTy = MRI.getType(ExtMI2->getOperand(0).getReg());
 
     if (ExtMI1->getOpcode() != ExtMI2->getOpcode() || Ext1DstTy != Ext2DstTy)
       return false;
+    if ((I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_SEXT) &&
+        I1Opc != ExtMI1->getOpcode())
+      return false;
+    Out1 = ExtMI1->getOperand(1).getReg();
+    Out2 = ExtMI2->getOperand(1).getReg();
     I1Opc = ExtMI1->getOpcode();
-    SrcTy = MRI.getType(ExtMI1->getOperand(1).getReg());
-    std::get<0>(MatchInfo) = ExtMI1->getOperand(1).getReg();
-    std::get<1>(MatchInfo) = ExtMI2->getOperand(1).getReg();
+    return true;
+  };
+
+  LLT SrcTy;
+  unsigned I1Opc = I1->getOpcode();
+  if (I1Opc == TargetOpcode::G_MUL) {
+    Register Out1, Out2;
+    if (!tryMatchingMulOfExt(I1, Out1, Out2, I1Opc))
+      return false;
+    SrcTy = MRI.getType(Out1);
+    std::get<0>(MatchInfo) = Out1;
+    std::get<1>(MatchInfo) = Out2;
   } else if (I1Opc == TargetOpcode::G_ZEXT || I1Opc == TargetOpcode::G_SEXT) {
-    SrcTy = MRI.getType(I1->getOperand(1).getReg());
-    std::get<0>(MatchInfo) = I1->getOperand(1).getReg();
-    std::get<1>(MatchInfo) = 0;
+    Register I1Op = I1->getOperand(1).getReg();
+    MachineInstr *M = getDefIgnoringCopies(I1Op, MRI);
+    Register Out1, Out2;
+    if (M->getOpcode() == TargetOpcode::G_MUL &&
+        tryMatchingMulOfExt(M, Out1, Out2, I1Opc)) {
+      SrcTy = MRI.getType(Out1);
+      std::get<0>(MatchInfo) = Out1;
+      std::get<1>(MatchInfo) = Out2;
+    } else {
+      SrcTy = MRI.getType(I1Op);
+      std::get<0>(MatchInfo) = I1Op;
+      std::get<1>(MatchInfo) = 0;
+    }
   } else {
     return false;
   }
@@ -288,11 +290,11 @@ bool matchExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-void applyExtAddvToUdotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
-                            MachineIRBuilder &Builder,
-                            GISelChangeObserver &Observer,
-                            const AArch64Subtarget &STI,
-                            std::tuple<Register, Register, bool> &MatchInfo) {
+void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &Builder,
+                           GISelChangeObserver &Observer,
+                           const AArch64Subtarget &STI,
+                           std::tuple<Register, Register, bool> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_VECREDUCE_ADD &&
          "Expected a G_VECREDUCE_ADD instruction");
   assert(STI.hasDotProd() && "Target should have Dot Product feature");
@@ -553,15 +555,15 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-// Pushes ADD/SUB through extend instructions to decrease the number of extend
-// instruction at the end by allowing selection of {s|u}addl sooner
-
+// Pushes ADD/SUB/MUL through extend instructions to decrease the number of
+// extend instruction at the end by allowing selection of {s|u}addl sooner
 // i32 add(i32 ext i8, i32 ext i8) => i32 ext(i16 add(i16 ext i8, i16 ext i8))
 bool matchPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
                         Register DstReg, Register SrcReg1, Register SrcReg2) {
   assert((MI.getOpcode() == TargetOpcode::G_ADD ||
-          MI.getOpcode() == TargetOpcode::G_SUB) &&
-         "Expected a G_ADD or G_SUB instruction\n");
+          MI.getOpcode() == TargetOpcode::G_SUB ||
+          MI.getOpcode() == TargetOpcode::G_MUL) &&
+         "Expected a G_ADD, G_SUB or G_MUL instruction\n");
 
   // Deal with vector types only
   LLT DstTy = MRI.getType(DstReg);
@@ -594,9 +596,10 @@ void applyPushAddSubExt(MachineInstr &MI, MachineRegisterInfo &MRI,
       B.buildInstr(MI.getOpcode(), {MidTy}, {Ext1Reg, Ext2Reg}).getReg(0);
 
   // G_SUB has to sign-extend the result.
-  // G_ADD needs to sext from sext and can sext or zext from zext, so the
-  // original opcode is used.
-  if (MI.getOpcode() == TargetOpcode::G_ADD)
+  // G_ADD needs to sext from sext and can sext or zext from zext, and G_MUL
+  // needs to use the original opcode so the original opcode is used for both.
+  if (MI.getOpcode() == TargetOpcode::G_ADD ||
+      MI.getOpcode() == TargetOpcode::G_MUL)
     B.buildInstr(Opc, {DstReg}, {AddReg});
   else
     B.buildSExt(DstReg, AddReg);

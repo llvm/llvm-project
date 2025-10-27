@@ -70,6 +70,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_PT>::enumeration(
   ECase(PT_GNU_STACK);
   ECase(PT_GNU_RELRO);
   ECase(PT_GNU_PROPERTY);
+  ECase(PT_GNU_SFRAME);
 #undef ECase
   IO.enumFallback<Hex32>(Value);
 }
@@ -358,6 +359,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_VE);
   ECase(EM_CSKY);
   ECase(EM_LOONGARCH);
+  ECase(EM_INTELGT);
 #undef ECase
   IO.enumFallback<Hex16>(Value);
 }
@@ -486,6 +488,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_MACH_V5, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V55, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V60, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V61, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V62, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V65, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V66, EF_HEXAGON_MACH);
@@ -497,12 +500,21 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_MACH_V71T, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V73, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V75, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V77, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V79, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V81, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V83, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V85, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V87, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V89, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V91, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_ISA_V2, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V3, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V4, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V5, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V55, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V60, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V61, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V62, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V65, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V66, EF_HEXAGON_ISA);
@@ -512,6 +524,14 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_ISA_V71, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V73, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V75, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V77, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V79, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V81, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V83, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V85, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V87, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V89, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V91, EF_HEXAGON_ISA);
     break;
   case ELF::EM_AVR:
     BCaseMask(EF_AVR_ARCH_AVR1, EF_AVR_ARCH_MASK);
@@ -633,6 +653,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1250, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1251, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, EF_AMDGPU_MACH);
@@ -720,10 +741,11 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_SYMPART);
   ECase(SHT_LLVM_PART_EHDR);
   ECase(SHT_LLVM_PART_PHDR);
-  ECase(SHT_LLVM_BB_ADDR_MAP_V0);
   ECase(SHT_LLVM_BB_ADDR_MAP);
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
+  ECase(SHT_LLVM_CALL_GRAPH);
+  ECase(SHT_GNU_SFRAME);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);
   ECase(SHT_GNU_verdef);
@@ -1159,7 +1181,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapOptional("ABIVersion", FileHdr.ABIVersion, Hex8(0));
   IO.mapRequired("Type", FileHdr.Type);
   IO.mapOptional("Machine", FileHdr.Machine);
-  IO.mapOptional("Flags", FileHdr.Flags, ELFYAML::ELF_EF(0));
+  IO.mapOptional("Flags", FileHdr.Flags);
   IO.mapOptional("Entry", FileHdr.Entry, Hex64(0));
   IO.mapOptional("SectionHeaderStringTable", FileHdr.SectionHeaderStringTable);
 
@@ -1883,7 +1905,8 @@ void MappingTraits<ELFYAML::BBAddrMapEntry::BBEntry>::mapping(
   IO.mapRequired("AddressOffset", E.AddressOffset);
   IO.mapRequired("Size", E.Size);
   IO.mapRequired("Metadata", E.Metadata);
-  IO.mapOptional("CallsiteOffsets", E.CallsiteOffsets);
+  IO.mapOptional("CallsiteEndOffsets", E.CallsiteEndOffsets);
+  IO.mapOptional("Hash", E.Hash);
 }
 
 void MappingTraits<ELFYAML::PGOAnalysisMapEntry>::mapping(

@@ -272,10 +272,10 @@ func.func @materialize_in_dest_raw(%f: f32, %f2: f32, %idx: index) -> (tensor<5x
 
 // -----
 
-// CHECK-LABEL: func.func @test_dialect_op(
+// CHECK:       func.func @custom_op(
 // CHECK-SAME:    %[[ARG:.*]]: !test.test_tensor<[32, 64], f64>
 // CHECK-SAME:  ) -> !test.test_tensor<[32, 128], f64> {
-func.func @test_dialect_op(%arg: !test.test_tensor<[32, 64], f64>)
+func.func @custom_op(%arg: !test.test_tensor<[32, 64], f64>)
     -> !test.test_tensor<[32, 128], f64> {
   // CHECK: %[[MEMREF:.*]] = bufferization.to_buffer %[[ARG]]
   // CHECK: %[[DUMMY:.*]] = "test.dummy_memref_op"(%[[MEMREF]])
@@ -287,4 +287,23 @@ func.func @test_dialect_op(%arg: !test.test_tensor<[32, 64], f64>)
 
   // CHECK: return %[[OUT]]
   return %out : !test.test_tensor<[32, 128], f64>
+}
+
+// -----
+
+// CHECK:       func.func @custom_origin_op()
+// CHECK-SAME:  -> !test.test_tensor<[42], f64> {
+func.func @custom_origin_op() -> !test.test_tensor<[42], f64> {
+  // CHECK: %[[MEMREF:.*]] = "test.create_memref_op"() : ()
+  // CHECK-SAME: -> !test.test_memref<[21], f64>
+  // CHECK: %[[DUMMY:.*]] = "test.dummy_memref_op"(%[[MEMREF]])
+  // CHECK-SAME: : (!test.test_memref<[21], f64>)
+  // CHECK-SAME: -> !test.test_memref<[42], f64>
+  %in = "test.create_tensor_op"() : () -> !test.test_tensor<[21], f64>
+  %out = "test.dummy_tensor_op"(%in) : (!test.test_tensor<[21], f64>)
+    -> !test.test_tensor<[42], f64>
+
+  // CHECK: %[[OUT:.*]] = bufferization.to_tensor %[[DUMMY]]
+  // CHECK: return %[[OUT]]
+  return %out : !test.test_tensor<[42], f64>
 }

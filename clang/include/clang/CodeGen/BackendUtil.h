@@ -10,7 +10,9 @@
 #define LLVM_CLANG_CODEGEN_BACKENDUTIL_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Registry.h"
 #include <memory>
 
 namespace llvm {
@@ -49,7 +51,28 @@ void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
                   llvm::MemoryBufferRef Buf);
 
 void EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
-                 DiagnosticsEngine &Diags);
+                 llvm::vfs::FileSystem &VFS, DiagnosticsEngine &Diags);
+
+class BackendPlugin {
+public:
+  BackendPlugin() = default;
+  virtual ~BackendPlugin();
+
+  // Hook to run before codegen passes are executed. Return true if codegen
+  // passes should get executed as usual; return false if output was written or
+  // an error was emitted.
+  virtual bool preCodeGenModuleHook(CompilerInstance &CI, raw_pwrite_stream &OS,
+                                    llvm::Module &M) {
+    return true;
+  }
+};
+
+/// The backend plugin registry.
+using BackendPluginRegistry = llvm::Registry<BackendPlugin>;
 } // namespace clang
+
+namespace llvm {
+extern template class CLANG_TEMPLATE_ABI Registry<clang::BackendPlugin>;
+} // namespace llvm
 
 #endif

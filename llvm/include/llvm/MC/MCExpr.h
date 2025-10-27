@@ -33,6 +33,10 @@ class MCSymbolRefExpr;
 /// needed for parsing.
 class MCExpr {
 public:
+  // Allow MC classes to access the private `print` function.
+  friend class MCAsmInfo;
+  friend class MCFragment;
+  friend class MCOperand;
   enum ExprKind : uint8_t {
     Binary,    ///< Binary expressions.
     Constant,  ///< Constant expressions.
@@ -53,10 +57,13 @@ private:
   unsigned SubclassData : NumSubclassDataBits;
   SMLoc Loc;
 
+  void print(raw_ostream &OS, const MCAsmInfo *MAI,
+             int SurroundingPrec = 0) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
                           bool InSet) const;
 
 protected:
+  using Spec = uint16_t;
   explicit MCExpr(ExprKind Kind, SMLoc Loc, unsigned SubclassData = 0)
       : Kind(Kind), SubclassData(SubclassData), Loc(Loc) {
     assert(SubclassData < (1 << NumSubclassDataBits) &&
@@ -82,9 +89,6 @@ public:
   /// \name Utility Methods
   /// @{
 
-  // TODO: Make this private. Users should call MCAsmInfo::printExpr instead.
-  LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI,
-                      int SurroundingPrec = 0) const;
   LLVM_ABI void dump() const;
 
   /// @}
@@ -133,11 +137,6 @@ public:
                                            const MCValue &, const MCValue &,
                                            MCValue &);
 };
-
-inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
-  E.print(OS, nullptr);
-  return OS;
-}
 
 ////  Represent a constant integer expression.
 class MCConstantExpr : public MCExpr {
@@ -193,15 +192,10 @@ public:
   // VariantKind isn't ideal for encoding relocation operators because:
   // (a) other expressions, like MCConstantExpr (e.g., 4@l) and MCBinaryExpr
   // (e.g., (a+1)@l), also need it; (b) semantics become unclear (e.g., folding
-  // expressions with @). MCTargetExpr, as used by AArch64 and RISC-V, offers a
-  // cleaner approach.
+  // expressions with @). MCSpecifierExpr, as used by AArch64 and RISC-V, offers
+  // a cleaner approach.
   enum VariantKind : uint16_t {
-    VK_None,
-
-    VK_SECREL,
-    VK_WEAKREF, // The link between the symbols in .weakref foo, bar
-
-    VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
+    VK_COFF_IMGREL32 = 3, // symbol@imgrel (image-relative)
 
     FirstTargetSpecifier,
   };
@@ -210,7 +204,7 @@ private:
   /// The symbol being referenced.
   const MCSymbol *Symbol;
 
-  explicit MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
+  explicit MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
                            const MCAsmInfo *MAI, SMLoc Loc = SMLoc());
 
 public:
@@ -219,17 +213,12 @@ public:
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, MCContext &Ctx,
                                        SMLoc Loc = SMLoc()) {
-    return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
+    return MCSymbolRefExpr::create(Symbol, 0, Ctx, Loc);
   }
 
   LLVM_ABI static const MCSymbolRefExpr *create(const MCSymbol *Symbol,
-                                                VariantKind Kind,
-                                                MCContext &Ctx,
+                                                Spec specifier, MCContext &Ctx,
                                                 SMLoc Loc = SMLoc());
-  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, uint16_t Kind,
-                                       MCContext &Ctx, SMLoc Loc = SMLoc()) {
-    return MCSymbolRefExpr::create(Symbol, VariantKind(Kind), Ctx, Loc);
-  }
 
   /// @}
   /// \name Accessors
@@ -352,8 +341,8 @@ public:
                                              SMLoc Loc = SMLoc());
 
   static const MCBinaryExpr *createAdd(const MCExpr *LHS, const MCExpr *RHS,
-                                       MCContext &Ctx) {
-    return create(Add, LHS, RHS, Ctx);
+                                       MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return create(Add, LHS, RHS, Ctx, Loc);
   }
 
   static const MCBinaryExpr *createAnd(const MCExpr *LHS, const MCExpr *RHS,
@@ -505,13 +494,10 @@ public:
 /// MCExprs are bump pointer allocated and not destructed.
 class LLVM_ABI MCSpecifierExpr : public MCExpr {
 protected:
-  using Spec = uint16_t;
   const MCExpr *Expr;
-  // Target-specific relocation specifier code
-  const Spec specifier;
 
   explicit MCSpecifierExpr(const MCExpr *Expr, Spec S, SMLoc Loc = SMLoc())
-      : MCExpr(Specifier, Loc), Expr(Expr), specifier(S) {}
+      : MCExpr(Specifier, Loc, S), Expr(Expr) {}
 
 public:
   static const MCSpecifierExpr *create(const MCExpr *Expr, Spec S,
@@ -519,7 +505,7 @@ public:
   static const MCSpecifierExpr *create(const MCSymbol *Sym, Spec S,
                                        MCContext &Ctx, SMLoc Loc = SMLoc());
 
-  Spec getSpecifier() const { return specifier; }
+  Spec getSpecifier() const { return getSubclassData(); }
   const MCExpr *getSubExpr() const { return Expr; }
 
   static bool classof(const MCExpr *E) {

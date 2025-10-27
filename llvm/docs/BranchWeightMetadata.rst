@@ -9,16 +9,16 @@ Introduction
 ============
 
 Branch Weight Metadata represents branch weights as its likeliness to be taken
-(see :doc:`BlockFrequencyTerminology`). Metadata is assigned to an
-``Instruction`` that is a terminator as a ``MDNode`` of the ``MD_prof`` kind.
-The first operator is always a ``MDString`` node with the string
-"branch_weights".  Number of operators depends on the terminator type.
+(see :doc:`BlockFrequencyTerminology`). Metadata is assigned to a
+terminator ``Instruction`` as an ``MDNode`` of the ``MD_prof`` kind.
+The first operand is always an ``MDString`` node with the string
+"branch_weights".  The number of operands depends on the terminator type.
 
-Branch weights might be fetch from the profiling file, or generated based on
-`__builtin_expect`_ and `__builtin_expect_with_probability`_ instruction.
+Branch weights might be fetched from the profiling file or generated based on
+`__builtin_expect`_ and `__builtin_expect_with_probability`_ instructions.
 
-All weights are represented as an unsigned 32-bit values, where higher value
-indicates greater chance to be taken.
+All weights are represented as unsigned 32-bit values, where a higher value
+indicates a greater chance of being taken.
 
 Supported Instructions
 ======================
@@ -26,7 +26,7 @@ Supported Instructions
 ``BranchInst``
 ^^^^^^^^^^^^^^
 
-Metadata is only assigned to the conditional branches. There are two extra
+Metadata is only assigned to conditional branches. There are two extra
 operands for the true and the false branch.
 We optionally track if the metadata was added by ``__builtin_expect`` or
 ``__builtin_expect_with_probability`` with an optional field ``!"expected"``.
@@ -43,7 +43,7 @@ We optionally track if the metadata was added by ``__builtin_expect`` or
 ``SwitchInst``
 ^^^^^^^^^^^^^^
 
-Branch weights are assigned to every case (including the ``default`` case which
+Branch weights are assigned to every case (including the ``default`` case, which
 is always case #0).
 
 .. code-block:: none
@@ -74,7 +74,7 @@ Branch weights are assigned to every destination.
 
 Calls may have branch weight metadata, containing the execution count of
 the call. It is currently used in SamplePGO mode only, to augment the
-block and entry counts which may not be accurate with sampling.
+block and entry counts, which may not be accurate with sampling.
 
 .. code-block:: none
 
@@ -89,9 +89,9 @@ block and entry counts which may not be accurate with sampling.
 
 Invoke instruction may have branch weight metadata with one or two weights.
 The second weight is optional and corresponds to the unwind branch.
-If only one weight is set then it contains the execution count of the call
+If only one weight is set, then it contains the execution count of the call
 and used in SamplePGO mode only as described for the call instruction. If both
-weights are specified then the second weight contains count of unwind branch
+weights are specified then the second weight contains the count of unwind branch
 taken and the first weights contains the execution count of the call minus
 the count of unwind branch taken. Both weights specified are used to calculate
 BranchProbability as for BranchInst and for SamplePGO the sum of both weights
@@ -139,7 +139,7 @@ true, in other case condition is likely to be false. For example:
 ^^^^^^^^^^^^^^^^^^^^
 
 The ``exp`` parameter is the value. The ``c`` parameter is the expected
-value. If the expected value doesn't show on the cases list, the ``default``
+value. If the expected value doesn't appear in the cases list, the ``default``
 case is assumed to be likely taken.
 
 .. code-block:: c++
@@ -159,15 +159,15 @@ Built-in ``expect.with.probability`` Instruction
 ``__builtin_expect_with_probability(long exp, long c, double probability)`` has
 the same semantics as ``__builtin_expect``, but the caller provides the
 probability that ``exp == c``. The last argument ``probability`` must be
-constant floating-point expression and be in the range [0.0, 1.0] inclusive.
+a constant floating-point expression and be in the range [0.0, 1.0] inclusive.
 The usage is also similar as ``__builtin_expect``, for example:
 
 ``if`` statement
 ^^^^^^^^^^^^^^^^
 
-If the expect comparison value ``c`` is equal to 1(true), and probability
+If the expected comparison value ``c`` is equal to 1(true), and probability
 value ``probability`` is set to 0.8, that means the probability of condition
-to be true is 80% while that of false is 20%.
+being true is 80% while that of false is 20%.
 
 .. code-block:: c++
 
@@ -178,8 +178,8 @@ to be true is 80% while that of false is 20%.
 ``switch`` statement
 ^^^^^^^^^^^^^^^^^^^^
 
-This is basically the same as ``switch`` statement in ``__builtin_expect``.
-The probability that ``exp`` is equal to the expect value is given in
+This is similar to the ``switch`` statement in ``__builtin_expect``.
+The probability that ``exp`` is equal to the expected value is given in
 the third argument ``probability``, while the probability of other value is
 the average of remaining probability(``1.0 - probability``). For example:
 
@@ -195,8 +195,8 @@ the average of remaining probability(``1.0 - probability``). For example:
 CFG Modifications
 =================
 
-Branch Weight Metatada is not proof against CFG changes. If terminator operands'
-are changed some action should be taken. In other case some misoptimizations may
+Branch Weight Metadata is not proof against CFG changes. If terminator operands'
+are changed, some action should be taken. Otherwise, misoptimizations may
 occur due to incorrect branch prediction information.
 
 Function Entry Counts
@@ -212,7 +212,7 @@ invoked (in the case of instrumentation-based profiles). In the case of
 sampling-based profiles, this operand is an approximation of how many times
 the function was invoked.
 
-For example, in the code below, the instrumentation for function foo()
+For example, in the code below, the instrumentation for function ``foo()``
 indicates that it was called 2,590 times at runtime.
 
 .. code-block:: llvm
@@ -222,12 +222,12 @@ indicates that it was called 2,590 times at runtime.
   }
   !1 = !{!"function_entry_count", i64 2590}
 
-If "function_entry_count" has more than 2 operands, the later operands are
+If "function_entry_count" has more than 2 operands, the subsequent operands are
 the GUID of the functions that needs to be imported by ThinLTO. This is only
-set by sampling based profile. It is needed because the sampling based profile
+set by sampling-based profile. It is needed because the sampling-based profile
 was collected on a binary that had already imported and inlined these functions,
 and we need to ensure the IR matches in the ThinLTO backends for profile
 annotation. The reason why we cannot annotate this on the callsite is that it
-can only goes down 1 level in the call chain. For the cases where
-foo_in_a_cc()->bar_in_b_cc()->baz_in_c_cc(), we will need to go down 2 levels
-in the call chain to import both bar_in_b_cc and baz_in_c_cc.
+can only go down 1 level in the call chain. For the cases where
+``foo_in_a_cc()->bar_in_b_cc()->baz_in_c_cc()``, we will need to go down 2 levels
+in the call chain to import both ``bar_in_b_cc`` and ``baz_in_c_cc``.

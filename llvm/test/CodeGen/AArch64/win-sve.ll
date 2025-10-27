@@ -65,16 +65,18 @@ define i32 @f(<vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .seh_save_fplr_x 16
+; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    mov w0, #3 // =0x3
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldp x29, x30, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    .seh_save_fplr 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    ldr x28, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -230,10 +232,8 @@ define void @f2(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_fplr 16
 ; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x19, 0
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr x19, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x19, 32
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -365,8 +365,10 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .seh_save_fplr_x 16
+; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    .seh_endprologue
@@ -376,10 +378,10 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    ldp x29, x30, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    .seh_save_fplr 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    ldr x28, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -511,8 +513,10 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .seh_save_fplr_x 16
+; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    addvl sp, sp, #-1
@@ -526,10 +530,10 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    ldp x29, x30, [sp] // 16-byte Folded Reload
-; CHECK-NEXT:    .seh_save_fplr 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    ldr x28, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -690,10 +694,8 @@ define void @f5(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_fplr 16
 ; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x19, 0
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr x19, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x19, 32
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -848,10 +850,10 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    stur x0, [x8, #16]
 ; CHECK-NEXT:    addvl x8, x29, #18
 ; CHECK-NEXT:    ldr x1, [x8, #32]
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: // EH_LABEL
 ; CHECK-NEXT:    add x0, x19, #0
 ; CHECK-NEXT:    bl g6
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: // EH_LABEL
 ; CHECK-NEXT:  // %bb.1: // %invoke.cont
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    add sp, sp, #64
@@ -860,10 +862,8 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_save_fplr 16
 ; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x19, 0
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr x19, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x19, 32
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -920,8 +920,6 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_save_preg p14, 10
 ; CHECK-NEXT:    ldr p15, [sp, #11, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_preg p15, 11
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    addvl sp, sp, #18
 ; CHECK-NEXT:    .seh_allocz 18
 ; CHECK-NEXT:    add sp, sp, #16
@@ -1012,10 +1010,8 @@ define void @f6(<vscale x 2 x i64> %x, [8 x i64] %pad, i64 %n9) personality ptr 
 ; CHECK-NEXT:    .seh_save_fplr 16
 ; CHECK-NEXT:    ldr x28, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x28, 8
-; CHECK-NEXT:    ldr x19, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x19, 0
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr x19, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x19, 32
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1093,8 +1089,10 @@ define void @f7(i64 %n) {
 ; CHECK-LABEL: f7:
 ; CHECK:       .seh_proc f7
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .seh_save_fplr_x 16
+; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
+; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
+; CHECK-NEXT:    .seh_save_reg x30, 8
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    .seh_endprologue
@@ -1103,8 +1101,10 @@ define void @f7(i64 %n) {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
-; CHECK-NEXT:    .seh_save_fplr_x 16
+; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    ldr x28, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .seh_endfunclet
@@ -1128,10 +1128,8 @@ define void @f8(<vscale x 2 x i64> %v) {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x30, 16
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -1180,14 +1178,10 @@ define void @f9(<vscale x 2 x i64> %v, ...) {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x30, 16
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
-; CHECK-NEXT:    add sp, sp, #64
-; CHECK-NEXT:    .seh_stackalloc 64
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    add sp, sp, #64
@@ -1285,10 +1279,8 @@ define void @f10(i64 %n, <vscale x 2 x i64> %x) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x28, 0
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr x28, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 32
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 2
 ; CHECK-NEXT:    ldr z9, [sp, #3, mul vl] // 16-byte Folded Reload
@@ -1374,10 +1366,8 @@ define i32 @f11(double %d, <vscale x 4 x i32> %vs) "aarch64_pstate_sm_compatible
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    str d0, [sp, #8]
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x30, 16
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -1415,10 +1405,8 @@ define i32 @f12(double %d, <vscale x 4 x i32> %vs) "aarch64_pstate_sm_compatible
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1
-; CHECK-NEXT:    ldr x30, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x30, 16
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -1459,10 +1447,8 @@ define i32 @f13(double %d, <vscale x 4 x i32> %vs) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x28, 0
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr x28, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 32
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -1505,10 +1491,8 @@ define i32 @f14(double %d, <vscale x 4 x i32> %vs) "frame-pointer"="all" {
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x28, 0
-; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr x28, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 32
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -1556,10 +1540,8 @@ define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64], i32 %i) {
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x28, 0
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldr x28, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    .seh_save_reg_x x28, 16
 ; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_zreg z8, 0
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -1576,5 +1558,55 @@ define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64], i32 %i) {
   store double %d, ptr %a
   store double %d, ptr %b
   store i32 %i, ptr %a
+  ret void
+}
+
+declare ptr @llvm.swift.async.context.addr()
+
+define void @f16(ptr swiftasync %ctx, <vscale x 2 x i64> %foo) {
+; CHECK-LABEL: f16:
+; CHECK:       .seh_proc f16
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    orr x29, x29, #0x1000000000000000
+; CHECK-NEXT:    .seh_nop
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    str z8, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_zreg z8, 0
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    stp x29, x30, [sp, #8] // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_fplr 8
+; CHECK-NEXT:    str x22, [sp]
+; CHECK-NEXT:    .seh_nop
+; CHECK-NEXT:    add x29, sp, #8
+; CHECK-NEXT:    .seh_add_fp 8
+; CHECK-NEXT:    .seh_endprologue
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    ldr x8, [x22]
+; CHECK-NEXT:    stur x8, [x29, #-8]
+; CHECK-NEXT:    .seh_startepilogue
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    .seh_stackalloc 16
+; CHECK-NEXT:    ldp x29, x30, [sp, #8] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_fplr 8
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    .seh_stackalloc 32
+; CHECK-NEXT:    ldr z8, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_zreg z8, 0
+; CHECK-NEXT:    and x29, x29, #0xefffffffffffffff
+; CHECK-NEXT:    .seh_nop
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    .seh_allocz 1
+; CHECK-NEXT:    .seh_endepilogue
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .seh_endfunclet
+; CHECK-NEXT:    .seh_endproc
+  tail call void asm sideeffect "", "~{z8}"()
+  %1 = load ptr, ptr %ctx, align 8
+  %2 = tail call ptr @llvm.swift.async.context.addr()
+  store ptr %1, ptr %2, align 8
   ret void
 }

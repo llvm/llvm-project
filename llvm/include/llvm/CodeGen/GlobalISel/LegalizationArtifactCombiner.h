@@ -1067,13 +1067,15 @@ public:
                                GISelChangeObserver &Observer) {
     unsigned NumDefs = MI.getNumDefs();
     Register SrcReg = MI.getSourceReg();
-    MachineInstr *SrcDef = getDefIgnoringCopies(SrcReg, MRI);
-    if (!SrcDef)
+    std::optional<DefinitionAndSourceRegister> DefSrcReg =
+        getDefSrcRegIgnoringCopies(SrcReg, MRI);
+    if (!DefSrcReg)
       return false;
+    MachineInstr *SrcDef = DefSrcReg->MI;
 
     LLT OpTy = MRI.getType(SrcReg);
     LLT DestTy = MRI.getType(MI.getReg(0));
-    unsigned SrcDefIdx = getDefIndex(*SrcDef, SrcReg);
+    unsigned SrcDefIdx = getDefIndex(*SrcDef, DefSrcReg->Reg);
 
     Builder.setInstrAndDebugLoc(MI);
 

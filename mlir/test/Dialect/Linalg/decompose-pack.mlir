@@ -31,6 +31,25 @@ func.func @simple_KCRS_to_KCRSsr(%arg0: tensor<?x?xi32>, %arg1: tensor<1x1x?x1xi
 
 // -----
 
+func.func @NCHW_to_NCHWc(%src: tensor<2x32x16x8xf32>, %dest: tensor<2x1x16x8x32xf32>) ->  tensor<2x1x16x8x32xf32> {
+  %pack = linalg.pack %src
+    inner_dims_pos = [1]
+    inner_tiles = [32] into %dest
+    : tensor<2x32x16x8xf32> -> tensor<2x1x16x8x32xf32>
+  return %pack : tensor<2x1x16x8x32xf32>
+}
+// CHECK-LABEL:   func.func @NCHW_to_NCHWc(
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:           %[[INIT:.*]] = tensor.empty() : tensor<2x16x8x32xf32>
+// CHECK:           %[[TR:.*]] = linalg.transpose ins(%[[SRC]] : tensor<2x32x16x8xf32>) outs(%[[INIT]] : tensor<2x16x8x32xf32>) permutation = [0, 2, 3, 1]
+// CHECK:           %[[RES:.*]] = tensor.insert_slice %[[TR]] into %[[DEST]]
+// CHECK-SAME:        [0, 0, 0, 0, 0] [2, 1, 16, 8, 32] [1, 1, 1, 1, 1]
+// CHECK-SAME:        : tensor<2x16x8x32xf32> into tensor<2x1x16x8x32xf32>
+// CHECK:           return %[[RES]] : tensor<2x1x16x8x32xf32>
+
+// -----
+
 func.func @simple_pad_and_pack_static_tiles(%input: tensor<5x1xf32>, %output: tensor<1x1x8x2xf32>, %pad: f32) -> tensor<1x1x8x2xf32> {
   %0 = linalg.pack %input padding_value(%pad : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 2] into %output : tensor<5x1xf32> -> tensor<1x1x8x2xf32>
   return %0 : tensor<1x1x8x2xf32>
@@ -157,6 +176,8 @@ func.func @simple_pad_and_pack_dynamic_tiles(%input: tensor<5x1xf32>, %output: t
 
 // -----
 
+// Note - un-tiled outer dims are permueted. However, these are unit dims, which is supported.
+
 func.func @simple_pad_and_pack_dynamic_tile_not_all_dims_tiled(%input: tensor<1x1x5x1xf32>, %output: tensor<1x1x1x1x2x?xf32>, %pad: f32, %high: index) -> tensor<1x1x1x1x2x?xf32> {
   %0 = linalg.pack %input padding_value(%pad : f32) outer_dims_perm = [1, 0, 2, 3] inner_dims_pos = [3, 2] inner_tiles = [2, %high] into %output : tensor<1x1x5x1xf32> -> tensor<1x1x1x1x2x?xf32>
   return %0 : tensor<1x1x1x1x2x?xf32>
@@ -179,6 +200,28 @@ func.func @simple_pad_and_pack_dynamic_tile_not_all_dims_tiled(%input: tensor<1x
 // CHECK-SAME:        permutation = [0, 1, 3, 2]
 // CHECK:           %[[VAL_13:.*]] = tensor.insert_slice %[[VAL_11]] into %[[VAL_1]][0, 0, 0, 0, 0, 0] [1, 1, 1, 1, 2, %[[VAL_3]]] [1, 1, 1, 1, 1, 1] : tensor<1x1x2x?xf32> into tensor<1x1x1x1x2x?xf32>
 // CHECK:           return %[[VAL_13]] : tensor<1x1x1x1x2x?xf32>
+
+// -----
+
+// Similar as the example above, but one of the un-tiled outer dims that are permuted is non-unit: (7,1) -> (1, 7)
+
+func.func @negative_not_all_dims_tiled_outer_dim_0_permuted(%input: tensor<7x1x5x1xf32>, %output: tensor<1x7x1x1x2x?xf32>, %pad: f32, %high: index) -> tensor<1x7x1x1x2x?xf32> {
+  %0 = linalg.pack %input padding_value(%pad : f32) outer_dims_perm = [1, 0, 2, 3] inner_dims_pos = [3, 2] inner_tiles = [2, %high] into %output : tensor<7x1x5x1xf32> -> tensor<1x7x1x1x2x?xf32>
+  return %0 : tensor<1x7x1x1x2x?xf32>
+}
+// CHECK-LABEL:   func.func @negative_not_all_dims_tiled_outer_dim_0_permuted
+// CHECK: linalg.pack
+
+// -----
+
+// Similar as the example above, but one of the un-tiled outer dims that are permuted is non-unit: (1, 7) -> (7, 1).
+
+func.func @negative_not_all_dims_tiled_outer_dim_1_permuted(%input: tensor<1x7x5x1xf32>, %output: tensor<7x1x1x1x2x?xf32>, %pad: f32, %high: index) -> tensor<7x1x1x1x2x?xf32> {
+  %0 = linalg.pack %input padding_value(%pad : f32) outer_dims_perm = [1, 0, 2, 3] inner_dims_pos = [3, 2] inner_tiles = [2, %high] into %output : tensor<1x7x5x1xf32> -> tensor<7x1x1x1x2x?xf32>
+  return %0 : tensor<7x1x1x1x2x?xf32>
+}
+// CHECK-LABEL:   func.func @negative_not_all_dims_tiled_outer_dim_1_permuted
+// CHECK: linalg.pack
 
 // -----
 
@@ -229,3 +272,87 @@ func.func @simple_KCRS_to_KRSCsr(%arg0: tensor<1x1x32x8xf32>, %arg1: tensor<1x1x
 // CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[TRANSP]] into %[[DEST]]
 // CHECK-SAME:      [0, 0, 0, 0, 0, 0] [1, 1, 1, 1, 8, 32] [1, 1, 1, 1, 1, 1]
 // CHECK:         return %[[INSERT]]
+
+// -----
+
+// The following example shows a pack operation that is defined with inner
+// dimension positions that are not adjacent, i.e. `[2, 0]`. And the outer
+// dimensions of the packed tensor are of unit values, i.e. `1x1x1`.
+func.func @pack_with_non_adjacent_inner_dims_pos_and_unit_outer(%arg0: tensor<1x1x4xf32>, %arg1: tensor<1x1x1x4x1xf32>) -> tensor<1x1x1x4x1xf32> {
+  %pack = linalg.pack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 0] inner_tiles = [4, 1] into %arg1 : tensor<1x1x4xf32> -> tensor<1x1x1x4x1xf32>
+  return %pack : tensor<1x1x1x4x1xf32>
+}
+// CHECK-LABEL: func.func @pack_with_non_adjacent_inner_dims_pos_and_unit_outer
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x4x1xf32>
+// CHECK:         %[[TRANSP:.+]] = linalg.transpose
+// CHECK-SAME:      ins(%[[SRC]] : tensor<1x1x4xf32>)
+// CHECK-SAME:      outs(%[[EMPTY]] : tensor<1x4x1xf32>)
+// CHECK-SAME:      permutation = [1, 2, 0]
+// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[TRANSP]] into %[[DEST]]
+// CHECK-SAME:      [0, 0, 0, 0, 0] [1, 1, 1, 4, 1] [1, 1, 1, 1, 1] : tensor<1x4x1xf32> into tensor<1x1x1x4x1xf32>
+// CHECK:         return %[[INSERT]]
+
+// -----
+
+// The following example shows a pack operation where the inner dimension
+// positions are specified as [2, 1] which are termed adjacent trailing
+// dimensions as they contain the last dimension of the source tensor with a
+// neighboring dimension. [1, 2] would also be considered trailing adjacent.
+// And the outer dimensions of the packed tensor are all set to unit values
+// of `1x1x1`.
+func.func @pack_with_adjacent_trailing_dimensions_inner_dims_pos_and_unit_outer(%arg0: tensor<1x1x4xf32>, %arg1: tensor<1x1x1x4x1xf32>) -> tensor<1x1x1x4x1xf32> {
+  %pack = linalg.pack %arg0 outer_dims_perm = [1, 2, 0] inner_dims_pos = [2, 1] inner_tiles = [4, 1] into %arg1 : tensor<1x1x4xf32> -> tensor<1x1x1x4x1xf32>
+  return %pack : tensor<1x1x1x4x1xf32>
+}
+// CHECK-LABEL: func.func @pack_with_adjacent_trailing_dimensions_inner_dims_pos_and_unit_outer
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x4x1xf32>
+// CHECK:         %[[TRANSP:.+]] = linalg.transpose
+// CHECK-SAME:      ins(%[[SRC]] : tensor<1x1x4xf32>)
+// CHECK-SAME:      outs(%[[EMPTY]] : tensor<1x4x1xf32>)
+// CHECK-SAME:      permutation = [0, 2, 1]
+// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[TRANSP]] into %[[DEST]]
+// CHECK-SAME:      [0, 0, 0, 0, 0] [1, 1, 1, 4, 1] [1, 1, 1, 1, 1] : tensor<1x4x1xf32> into tensor<1x1x1x4x1xf32>
+// CHECK:         return %[[INSERT]]
+
+// -----
+
+// The following example shows a pack operation where the inner dims
+// positions are non-adjacent and non-permuted.
+func.func @pack_with_non_adjacent_and_non_permuted_inner_dims(%arg0: tensor<8x1x1x1xf32>, %arg1:tensor<1x1x1x1x8x1xf32>) -> tensor<1x1x1x1x8x1xf32> {
+  %pack = linalg.pack %arg0 outer_dims_perm = [0, 1, 2, 3] inner_dims_pos = [0, 3] inner_tiles = [8, 1] into %arg1: tensor<8x1x1x1xf32> -> tensor<1x1x1x1x8x1xf32>
+  return %pack : tensor<1x1x1x1x8x1xf32>
+}
+
+// CHECK-LABEL: func.func @pack_with_non_adjacent_and_non_permuted_inner_dims
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<1x1x8x1xf32>
+// CHECK:         %[[TRANSP:.+]] = linalg.transpose
+// CHECK-SAME:      ins(%[[SRC]] : tensor<8x1x1x1xf32>)
+// CHECK-SAME:      outs(%[[EMPTY]] : tensor<1x1x8x1xf32>)
+// CHECK-SAME:      permutation = [1, 2, 0, 3]
+// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[TRANSP]] into %[[DEST]]
+// CHECK-SAME:      [0, 0, 0, 0, 0, 0] [1, 1, 1, 1, 8, 1] [1, 1, 1, 1, 1, 1] : tensor<1x1x8x1xf32> into tensor<1x1x1x1x8x1xf32>
+// CHECK:         return %[[INSERT]]
+
+// -----
+
+/// Note "126", which is a non-unit tiled-outer-dim. This is not supported.
+
+func.func @negative_non_unit_tiled_outer_dim(%dest: tensor<1x126x1x1x8xf32>, %src: tensor<1x1x1x1001xf32>, %pad: f32) -> tensor<1x126x1x1x8xf32> {
+  %pack = linalg.pack %src
+    padding_value(%pad : f32)
+    outer_dims_perm = [0, 3, 2, 1]
+    inner_dims_pos = [3]
+    inner_tiles = [8]
+    into %dest
+    : tensor<1x1x1x1001xf32> -> tensor<1x126x1x1x8xf32>
+
+  return %pack : tensor<1x126x1x1x8xf32>
+}
+// CHECK-LABEL: @negative_non_unit_tiled_outer_dim(
+// CHECK: linalg.pack

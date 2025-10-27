@@ -1,4 +1,4 @@
-//===--- LoopConvertCheck.cpp - clang-tidy---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -499,7 +499,7 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
     return true;
   if (const auto *Cast = Parents[0].get<ImplicitCastExpr>()) {
     if ((Cast->getCastKind() == CK_NoOp &&
-         Context->hasSameType(Cast->getType(), E->getType().withConst())) ||
+         ASTContext::hasSameType(Cast->getType(), E->getType().withConst())) ||
         (Cast->getCastKind() == CK_LValueToRValue &&
          !Cast->getType().isNull() && Cast->getType()->isFundamentalType()))
       return false;
@@ -664,7 +664,8 @@ void LoopConvertCheck::doConversion(
         AliasVarIsRef = true;
       }
       if (Descriptor.ElemType.isNull() ||
-          !Context->hasSameUnqualifiedType(AliasVarType, Descriptor.ElemType))
+          !ASTContext::hasSameUnqualifiedType(AliasVarType,
+                                              Descriptor.ElemType))
         Descriptor.ElemType = AliasVarType;
     }
 
@@ -925,7 +926,7 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
   // do any further updates on this iteration.
   if (areDiagsSelfContained())
     TUInfo = std::make_unique<TUTrackingInfo>();
-  else if (TUInfo->getReplacedVars().count(Loop))
+  else if (TUInfo->getReplacedVars().contains(Loop))
     return false;
 
   // Check that we have exactly one index variable and at most one end variable.
@@ -944,7 +945,7 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
         CanonicalInitVarType->isPointerType()) {
       // If the initializer and the variable are both pointers check if the
       // un-qualified pointee types match, otherwise we don't use auto.
-      return Context->hasSameUnqualifiedType(
+      return ASTContext::hasSameUnqualifiedType(
           CanonicalBeginType->getPointeeType(),
           CanonicalInitVarType->getPointeeType());
     }

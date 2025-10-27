@@ -1,4 +1,4 @@
-//===--- CloexecAcceptCheck.h - clang-tidy-----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// accept() is better to be replaced by accept4().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-accept.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-accept.html
 class CloexecAcceptCheck : public CloexecCheck {
 public:
   CloexecAcceptCheck(StringRef Name, ClangTidyContext *Context)

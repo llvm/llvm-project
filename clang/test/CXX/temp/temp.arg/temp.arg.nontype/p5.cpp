@@ -238,9 +238,9 @@ namespace pointer_to_member_data {
   X0<&Y::y> x0a;
   X0<&Y::x> x0b;
 #if __cplusplus <= 201402L
-  // expected-error@-2 {{non-type template argument of type 'int Y::*' (aka 'int X::*') cannot be converted to a value of type 'int Y::*'}}
+  // expected-error@-2 {{non-type template argument of type 'int Y::*' (aka 'int pointer_to_member_data::X::*') cannot be converted to a value of type 'int Y::*'}}
 #else
-  // expected-error@-4 {{conversion from 'int Y::*' (aka 'int X::*') to 'int Y::*' is not allowed in a converted constant expression}}
+  // expected-error@-4 {{conversion from 'int Y::*' (aka 'int pointer_to_member_data::X::*') to 'int Y::*' (aka 'int pointer_to_member_data::Y::*') is not allowed in a converted constant expression}}
 #endif
 
   // Test qualification conversions

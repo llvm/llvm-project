@@ -30,6 +30,14 @@ using namespace llvm;
 #define AARCH64_BRANCH_TARGETS_NAME "AArch64 Branch Targets"
 
 namespace {
+// BTI HINT encoding: base (32) plus 'c' (2) and/or 'j' (4).
+enum : unsigned {
+  BTIBase = 32,   // Base immediate for BTI HINT
+  BTIC = 1u << 1, // 2
+  BTIJ = 1u << 2, // 4
+  BTIMask = BTIC | BTIJ,
+};
+
 class AArch64BranchTargets : public MachineFunctionPass {
 public:
   static char ID;
@@ -39,9 +47,12 @@ public:
   StringRef getPassName() const override { return AARCH64_BRANCH_TARGETS_NAME; }
 
 private:
+  const AArch64Subtarget *Subtarget;
+
   void addBTI(MachineBasicBlock &MBB, bool CouldCall, bool CouldJump,
               bool NeedsWinCFI);
 };
+
 } // end anonymous namespace
 
 char AArch64BranchTargets::ID = 0;
@@ -62,10 +73,11 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     return false;
 
-  LLVM_DEBUG(
-      dbgs() << "********** AArch64 Branch Targets  **********\n"
-             << "********** Function: " << MF.getName() << '\n');
+  LLVM_DEBUG(dbgs() << "********** AArch64 Branch Targets  **********\n"
+                    << "********** Function: " << MF.getName() << '\n');
   const Function &F = MF.getFunction();
+
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
 
   // LLVM does not consider basic blocks which are the targets of jump tables
   // to be address-taken (the address can't escape anywhere else), but they are
@@ -92,9 +104,8 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
     // a BTI, and pointing the indirect branch at that. For non-ELF targets we
     // can't rely on that, so we assume that `CouldCall` is _always_ true due
     // to the risk of long-branch thunks at link time.
-    if (&MBB == &*MF.begin() &&
-        (!MF.getSubtarget<AArch64Subtarget>().isTargetELF() ||
-         (F.hasAddressTaken() || !F.hasLocalLinkage())))
+    if (&MBB == &*MF.begin() && (!Subtarget->isTargetELF() ||
+                                 (F.hasAddressTaken() || !F.hasLocalLinkage())))
       CouldCall = true;
 
     // If the block itself is address-taken, it could be indirectly branched
@@ -103,6 +114,12 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
         JumpTableTargets.count(&MBB))
       CouldJump = true;
 
+    if (MBB.isEHPad()) {
+      if (HasWinCFI && (MBB.isEHFuncletEntry() || MBB.isCleanupFuncletEntry()))
+        CouldCall = true;
+      else
+        CouldJump = true;
+    }
     if (CouldCall || CouldJump) {
       addBTI(MBB, CouldCall, CouldJump, HasWinCFI);
       MadeChange = true;
@@ -118,9 +135,6 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
                     << (CouldCall ? "c" : "") << " to " << MBB.getName()
                     << "\n");
 
-  const AArch64InstrInfo *TII = static_cast<const AArch64InstrInfo *>(
-      MBB.getParent()->getSubtarget().getInstrInfo());
-
   unsigned HintNum = 32;
   if (CouldCall)
     HintNum |= 2;
@@ -130,7 +144,12 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
 
   auto MBBI = MBB.begin();
 
-  // Skip the meta instructions, those will be removed anyway.
+  // If the block starts with EH_LABEL(s), skip them first.
+  while (MBBI != MBB.end() && MBBI->isEHLabel()) {
+    ++MBBI;
+  }
+
+  // Skip meta/CFI/etc. (and EMITBKEY) to reach the first executable insn.
   for (; MBBI != MBB.end() &&
          (MBBI->isMetaInstruction() || MBBI->getOpcode() == AArch64::EMITBKEY);
        ++MBBI)
@@ -138,16 +157,23 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
 
   // SCTLR_EL1.BT[01] is set to 0 by default which means
   // PACI[AB]SP are implicitly BTI C so no BTI C instruction is needed there.
-  if (MBBI != MBB.end() && HintNum == 34 &&
+  if (MBBI != MBB.end() && ((HintNum & BTIMask) == BTIC) &&
       (MBBI->getOpcode() == AArch64::PACIASP ||
        MBBI->getOpcode() == AArch64::PACIBSP))
     return;
 
-  if (HasWinCFI && MBBI->getFlag(MachineInstr::FrameSetup)) {
-    BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
-            TII->get(AArch64::SEH_Nop));
+  const AArch64InstrInfo *TII = Subtarget->getInstrInfo();
+
+  // Insert BTI exactly at the first executable instruction.
+  const DebugLoc DL = MBB.findDebugLoc(MBBI);
+  MachineInstr *BTI = BuildMI(MBB, MBBI, DL, TII->get(AArch64::HINT))
+                          .addImm(HintNum)
+                          .getInstr();
+
+  // WinEH: put .seh_nop after BTI when the first real insn is FrameSetup.
+  if (HasWinCFI && MBBI != MBB.end() &&
+      MBBI->getFlag(MachineInstr::FrameSetup)) {
+    auto AfterBTI = std::next(MachineBasicBlock::iterator(BTI));
+    BuildMI(MBB, AfterBTI, DL, TII->get(AArch64::SEH_Nop));
   }
-  BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
-          TII->get(AArch64::HINT))
-      .addImm(HintNum);
 }

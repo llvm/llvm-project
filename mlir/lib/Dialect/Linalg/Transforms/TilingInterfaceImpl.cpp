@@ -20,9 +20,13 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/Support/Debug.h"
 #include <optional>
+
+#define DEBUG_TYPE "linalg-tiling-interface-impl"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -41,7 +45,7 @@ static SmallVector<Value> getIndicesForAccess(OpBuilder &b, Location loc,
   for (auto result : indexingMap.getResults()) {
     AffineMap m = AffineMap::get(indexingMap.getNumDims(),
                                  indexingMap.getNumSymbols(), result);
-    Value v = b.create<affine::AffineApplyOp>(loc, m, ivs);
+    Value v = affine::AffineApplyOp::create(b, loc, m, ivs);
     indices.push_back(v);
   }
   return indices;
@@ -69,9 +73,9 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
     OpOperand *storeInto = linalgOp.getDpsInitOperand(operand.index());
     auto indices = getIndicesForAccess(
         b, loc, linalgOp.getMatchingIndexingMap(storeInto), ivs);
-    b.create<memref::StoreOp>(
-        loc, toStore, linalgOp.getDpsInitOperand(operand.index())->get(),
-        indices);
+    memref::StoreOp::create(b, loc, toStore,
+                            linalgOp.getDpsInitOperand(operand.index())->get(),
+                            indices);
   }
   return success();
 }
@@ -148,55 +152,82 @@ struct LinalgOpTilingInterface
   /// Utility to fetch the offsets and sizes when applied as per the indexing
   /// map of the linalg op. This helps in fusing the linalg op as a consumer of
   /// a given slice op.
-  void
-  getMappedOffsetAndSize(LinalgOp linalgOp, OpBuilder &b, AffineMap indexingMap,
-                         ArrayRef<OpFoldResult> offsets,
-                         ArrayRef<OpFoldResult> sizes,
-                         SmallVectorImpl<OpFoldResult> &mappedOffsets,
-                         SmallVectorImpl<OpFoldResult> &mappedSizes) const {
-    unsigned numLoops = linalgOp.getNumLoops();
-    auto tilingInterfaceOp = cast<TilingInterface>(linalgOp.getOperation());
-    mappedOffsets.resize(numLoops);
-    mappedSizes.resize(numLoops);
-    if (!indexingMap.isPermutation()) {
-      SmallVector<Range> iterationDomain =
-          tilingInterfaceOp.getIterationDomain(b);
-      for (const auto &&[index, value] : llvm::enumerate(iterationDomain)) {
-        mappedOffsets[index] = value.offset;
-        mappedSizes[index] = value.size;
+  static LogicalResult
+  getMappedOffsetAndSize(LinalgOp linalgOp, OpBuilder &b,
+                         ArrayRef<AffineMap> indexingMaps,
+                         ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+                         ArrayRef<SmallVector<OpFoldResult>> allSizes,
+                         SmallVectorImpl<OpFoldResult> &mappedOffsetsVec,
+                         SmallVectorImpl<OpFoldResult> &mappedSizesVec) {
+    DenseMap<unsigned, OpFoldResult> mappedOffsets, mappedSizes;
+
+    for (auto [indexingMap, offsets, sizes] :
+         llvm::zip_equal(indexingMaps, allOffsets, allSizes)) {
+      for (auto [resultExpr, offset, size] :
+           llvm::zip_equal(indexingMap.getResults(), offsets, sizes)) {
+        auto dimExpr = dyn_cast<AffineDimExpr>(resultExpr);
+        if (!dimExpr)
+          continue;
+        unsigned position = dimExpr.getPosition();
+        auto it = mappedOffsets.find(position);
+        if (it != mappedOffsets.end()) {
+          OpFoldResult seenOffset = it->second;
+          OpFoldResult seenSize = mappedSizes.lookup(position);
+          if (seenOffset != offset || seenSize != size) {
+            LLVM_DEBUG({
+              llvm::dbgs() << "inconsistent iteration space mapping from "
+                              "offsets/sizes of operands/results";
+            });
+            return failure();
+          }
+        } else {
+          mappedOffsets[position] = offset;
+          mappedSizes[position] = size;
+        }
       }
     }
-    for (const auto &&[index, value] :
-         llvm::enumerate(indexingMap.getResults())) {
-      unsigned dimPosition = cast<AffineDimExpr>(value).getPosition();
-      mappedOffsets[dimPosition] = offsets[index];
-      mappedSizes[dimPosition] = sizes[index];
+
+    // Aggregate from the given operand offsets and sizes, or default to
+    // iteration space values.
+    SmallVector<Range> iterationDomain =
+        cast<TilingInterface>(linalgOp.getOperation()).getIterationDomain(b);
+    mappedOffsetsVec.resize(iterationDomain.size());
+    mappedSizesVec.resize(iterationDomain.size());
+    for (auto [index, domain] : llvm::enumerate(iterationDomain)) {
+      auto it = mappedOffsets.find(index);
+      if (it != mappedOffsets.end()) {
+        mappedOffsetsVec[index] = it->second;
+        mappedSizesVec[index] = mappedSizes.lookup(index);
+        continue;
+      }
+      mappedOffsetsVec[index] = domain.offset;
+      mappedSizesVec[index] = domain.size;
     }
+    return success();
   }
 
   /// Method to return the position of the result tile computed by the tiled
   /// operation.
-  LogicalResult getIterationDomainTileFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &iterDomainOffsets,
       SmallVectorImpl<OpFoldResult> &iterDomainSizes) const {
     auto linalgOp = cast<LinalgOp>(op);
 
-    // Check that the indexing map used for the operand is a projected
-    // permutation. This could be relaxed with a more general approach that can
-    // map the offsets and sizes from the operand to iteration space tiles
-    // (filling in full extent for dimensions not used to access the result).
-    AffineMap indexingMap =
-        linalgOp.getMatchingIndexingMap(&op->getOpOperand(operandNumber));
-    if (!indexingMap.isProjectedPermutation()) {
-      return op->emitError()
-             << "unhandled get iter domain position when operand is not "
-                "accessed using a permuted projection";
+    std::optional<SmallVector<OpFoldResult>> iterationSpaceOffsets,
+        iterationSpaceSizes;
+    SmallVector<AffineMap> indexingMaps =
+        llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
+          OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);
+          return linalgOp.getMatchingIndexingMap(&opOperand);
+        });
+    if (failed(getMappedOffsetAndSize(linalgOp, b, indexingMaps, allOffsets,
+                                      allSizes, iterDomainOffsets,
+                                      iterDomainSizes))) {
+      return failure();
     }
-
-    getMappedOffsetAndSize(linalgOp, b, indexingMap, offsets, sizes,
-                           iterDomainOffsets, iterDomainSizes);
     return success();
   }
 
@@ -247,8 +278,13 @@ struct LinalgOpTilingInterface
           "accessed using a permuted projection");
     }
 
-    getMappedOffsetAndSize(linalgOp, b, indexingMap, offsets, sizes,
-                           iterDomainOffsets, iterDomainSizes);
+    SmallVector<OpFoldResult> allOffsets = llvm::to_vector(offsets);
+    SmallVector<OpFoldResult> allSizes = llvm::to_vector(sizes);
+    auto status =
+        getMappedOffsetAndSize(linalgOp, b, indexingMap, {allOffsets},
+                               {allSizes}, iterDomainOffsets, iterDomainSizes);
+    (void)status;
+    assert(succeeded(status) && "unexpected error in offset calculation");
     return success();
   }
 
@@ -279,12 +315,13 @@ struct LinalgOpTilingInterface
 
   /// Method to generate the tiled implementation of an operation from the tile
   /// of the operand.
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
     SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
-    if (failed(getIterationDomainTileFromOperandTile(
-            op, b, operandNumber, offsets, sizes, mappedOffsets,
+    if (failed(getIterationDomainTileFromOperandTiles(
+            op, b, operandNumbers, allOffsets, allSizes, mappedOffsets,
             mappedSizes))) {
       return failure();
     }
@@ -315,7 +352,7 @@ struct LinalgOpTilingInterface
       SmallVector<Value> indices = getIndicesForAccess(
           builder, linalgOpLoc, linalgOp.getMatchingIndexingMap(&operand), ivs);
       Value load =
-          builder.create<memref::LoadOp>(linalgOpLoc, operand.get(), indices);
+          memref::LoadOp::create(builder, linalgOpLoc, operand.get(), indices);
       indexedValues.push_back(load);
     }
 
@@ -483,10 +520,10 @@ struct LinalgOpPartialReductionInterface
 
       Type elType = getElementTypeOrSelf(result.getType());
       Value emptyTensor =
-          b.create<tensor::EmptyOp>(loc, partialResultShape, elType);
-      Value constantOp = b.create<arith::ConstantOp>(loc, *identity);
+          tensor::EmptyOp::create(b, loc, partialResultShape, elType);
+      Value constantOp = arith::ConstantOp::create(b, loc, *identity);
       auto identityTensor =
-          b.create<linalg::FillOp>(loc, constantOp, emptyTensor);
+          linalg::FillOp::create(b, loc, constantOp, emptyTensor);
       inits.push_back(identityTensor.getResult(0));
     }
 
@@ -538,9 +575,9 @@ struct LinalgOpPartialReductionInterface
       RankedTensorType sliceResultType = RankedTensorType::get(
           sliceInfo.resultShape, valueToTileType.getElementType(),
           valueToTileType.getEncoding());
-      auto sliceOp = b.create<tensor::ExtractSliceOp>(
-          loc, sliceResultType, valueToTile, sliceInfo.offsets, sliceInfo.sizes,
-          sliceInfo.strides);
+      auto sliceOp = tensor::ExtractSliceOp::create(
+          b, loc, sliceResultType, valueToTile, sliceInfo.offsets,
+          sliceInfo.sizes, sliceInfo.strides);
       tiledInits.push_back(sliceOp.getResult());
       generatedSlices.push_back(sliceOp);
     }
@@ -567,8 +604,8 @@ struct LinalgOpPartialReductionInterface
     auto resultTypes = ValueRange(tiledInits).getTypes();
     if (tilingStrategy ==
         ReductionTilingStrategy::PartialReductionOuterReduction) {
-      auto genericOp = b.create<GenericOp>(
-          loc, resultTypes, tiledInputs, tiledInits, newMaps, newIteratorTypes);
+      auto genericOp = GenericOp::create(b, loc, resultTypes, tiledInputs,
+                                         tiledInits, newMaps, newIteratorTypes);
       IRMapping mapping;
       op->getRegion(0).cloneInto(&genericOp.getRegion(),
                                  genericOp.getRegion().begin(), mapping);
@@ -612,8 +649,8 @@ struct LinalgOpPartialReductionInterface
         }
       }
 
-      auto reduction = b.create<linalg::ReduceOp>(
-          loc, partialResult, init, partialReductionDims,
+      auto reduction = linalg::ReduceOp::create(
+          b, loc, partialResult, init, partialReductionDims,
           [&linalgOp, &initIdx](OpBuilder &b, Location loc, ValueRange inputs) {
             // Get the combiner op.
             SmallVector<Operation *, 4> combinerOps;
@@ -623,7 +660,7 @@ struct LinalgOpPartialReductionInterface
             // Combine the input at idx and output at numInits + idx.
             clonedReductionOp->setOperand(0, inputs[0]);
             clonedReductionOp->setOperand(1, inputs[1]);
-            b.create<linalg::YieldOp>(loc, clonedReductionOp->getResult(0));
+            linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
           });
 
       mergeOperations.push_back(reduction);
@@ -754,8 +791,8 @@ struct PackOpTiling
     SmallVector<OpFoldResult> strides(inputRank, oneAttr);
 
     SmallVector<Value> tiledOperands;
-    auto sourceSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getSource(), inputIndices, inputSizes, strides);
+    auto sourceSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getSource(), inputIndices, inputSizes, strides);
     tiledOperands.push_back(sourceSlice);
 
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
@@ -764,8 +801,8 @@ struct PackOpTiling
       return {};
 
     strides.append(packOp.getDestRank() - inputRank, oneAttr);
-    auto outSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getDest(), outputOffsets, outputSizes, strides);
+    auto outSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(outSlice);
 
     if (auto val = packOp.getPaddingValue())
@@ -773,8 +810,8 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = b.create<PackOp>(
-        loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    Operation *tiledPackOp = PackOp::create(
+        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
 
     return TilingResult{
         {tiledPackOp},
@@ -837,33 +874,64 @@ struct PackOpTiling
   /// Method to return the position of iteration domain tile computed by the
   /// tiled operation. In current `tensor.pack` context, the `resultOffsets` and
   /// `resultSizes` only cover outer dimensions.
-  LogicalResult getIterationDomainTileFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
-    if (operandNumber != 0)
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG(
+          { llvm::dbgs() << "unsupported operands for consumer fusion"; });
       return failure();
+    }
 
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
     auto packOp = cast<PackOp>(op);
-    // It is not trivial to infer dest tile from source tile if `packOp` has
-    // padding semantic.
-    if (packOp.getPaddingValue())
-      return failure();
-
     Location loc = packOp.getLoc();
-
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         packOp.getDimAndTileMapping();
+    SmallVector<int64_t> outerShapeWithoutTranspose(
+        packOp.getDestType().getShape().take_front(packOp.getSourceRank()));
+    if (!packOp.getOuterDimsPerm().empty()) {
+      applyPermutationToVector(
+          outerShapeWithoutTranspose,
+          invertPermutationVector(packOp.getOuterDimsPerm()));
+    }
     for (auto dim : llvm::seq<int64_t>(packOp.getSourceRank())) {
       if (dimAndTileMapping.count(dim)) {
-        FailureOr<int64_t> cstSize =
+        FailureOr<int64_t> cstTileSize =
             ValueBoundsConstraintSet::computeConstantBound(
                 presburger::BoundType::UB, sizes[dim],
                 /*stopCondition=*/nullptr, /*closedUB=*/true);
         std::optional<int64_t> cstInnerSize =
             getConstantIntValue(dimAndTileMapping[dim]);
+
+        // If a dimension is not tiled, it is always valid to fuse the pack op,
+        // even if the op has padding semantics. Because it always generates a
+        // full slice along the dimension. The tile sizes are for unpacked
+        // domain, i.e., `srcDimSize`, so `tileSize < srcDimSize` means that the
+        // dimension is tiled.
+        // TODO: It could be untiled if the `srcDimSize` is dynamic. It is a
+        // hard check to determine if a dimension is tiled or not.
+        int64_t srcDimSize = packOp.getSourceType().getDimSize(dim);
+        int64_t destDimSize = outerShapeWithoutTranspose[dim];
+        bool isTiled = failed(cstTileSize) ||
+                       ShapedType::isDynamic(srcDimSize) ||
+                       cstTileSize.value() < srcDimSize;
+        if (!isTiled) {
+          outerDimOffsets.push_back(offsets[dim]);
+          if (ShapedType::isStatic(destDimSize)) {
+            outerDimSizes.push_back(b.getIndexAttr(destDimSize));
+          } else {
+            outerDimSizes.push_back(
+                b.createOrFold<tensor::DimOp>(loc, packOp.getDest(), dim));
+          }
+          continue;
+        }
+
         // Currently fusing `packOp` as consumer only expects perfect tiling
         // scenario because even if without padding semantic, the `packOp` may
         // also yield incomplete tiles. E.g. tensor<30xf32> -> tensor<5x6xf32>,
@@ -878,9 +946,9 @@ struct PackOpTiling
         // another word, we can only support tiling with consumer if the tile
         // size for the producer is a multiple of the inner tile size for the
         // packed dimensions at this moment.
-        if (failed(cstSize) || !cstInnerSize || *cstSize % *cstInnerSize != 0) {
+        if ((failed(cstTileSize) || !cstInnerSize ||
+             *cstTileSize % *cstInnerSize != 0))
           return failure();
-        }
 
         using AV = affine::AffineValueExpr;
         affine::AffineBuilder ab(b, loc);
@@ -904,11 +972,18 @@ struct PackOpTiling
   }
 
   /// Method to return the tiled implementation of tensor.pack as a consumer.
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
-    if (operandNumber != 0)
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG(
+          { llvm ::dbgs() << "unhandled operands for consumer fusion"; });
       return failure();
+    }
+
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
     Location loc = packOp.getLoc();
@@ -918,13 +993,13 @@ struct PackOpTiling
     SmallVector<OpFoldResult> strides(inputRank, oneAttr);
 
     SmallVector<Value> tiledOperands;
-    auto sourceSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getSource(), offsets, sizes, strides);
+    auto sourceSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getSource(), offsets, sizes, strides);
     tiledOperands.push_back(sourceSlice);
 
     SmallVector<OpFoldResult> outerDimOffsets, outerDimSizes;
-    if (failed(getIterationDomainTileFromOperandTile(
-            op, b, /*operandNumber=*/0, offsets, sizes, outerDimOffsets,
+    if (failed(getIterationDomainTileFromOperandTiles(
+            op, b, operandNumbers, allOffsets, allSizes, outerDimOffsets,
             outerDimSizes)))
       return failure();
 
@@ -934,16 +1009,17 @@ struct PackOpTiling
       return failure();
 
     strides.append(packOp.getDestRank() - inputRank, oneAttr);
-    auto outSlice = b.create<tensor::ExtractSliceOp>(
-        loc, packOp.getDest(), outputOffsets, outputSizes, strides);
+    auto outSlice = tensor::ExtractSliceOp::create(
+        b, loc, packOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(outSlice);
 
-    assert(!packOp.getPaddingValue() && "Expect no padding semantic");
+    if (auto val = packOp.getPaddingValue())
+      tiledOperands.push_back(val);
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = b.create<PackOp>(
-        loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    Operation *tiledPackOp = PackOp::create(
+        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
 
     return TilingResult{
         {tiledPackOp},
@@ -1122,37 +1198,37 @@ struct UnPackOpTiling
     sliceSrcSizes.append(unpackOp.getMixedTiles());
     sliceSrcStrides.append(numInnerTiles, oneAttr);
     SmallVector<Operation *> generatedSlices;
-    tensor::ExtractSliceOp sliceSource = b.create<tensor::ExtractSliceOp>(
-        loc, unpackOp.getSource(), sliceSrcIndices, sliceSrcSizes,
+    tensor::ExtractSliceOp sliceSource = tensor::ExtractSliceOp::create(
+        b, loc, unpackOp.getSource(), sliceSrcIndices, sliceSrcSizes,
         sliceSrcStrides);
     generatedSlices.push_back(sliceSource);
 
     SmallVector<OpFoldResult> destStrides(destRank, oneAttr);
     Value sliceDest;
     if (isPerfectTilingCase) {
-      auto destSliceOp = b.create<tensor::ExtractSliceOp>(
-          loc, unpackOp.getDest(), offsets, sizes, destStrides);
+      auto destSliceOp = tensor::ExtractSliceOp::create(
+          b, loc, unpackOp.getDest(), offsets, sizes, destStrides);
       sliceDest = destSliceOp;
       generatedSlices.push_back(destSliceOp);
     } else {
-      sliceDest = b.create<tensor::EmptyOp>(
-          loc, destExpandedSizes, unpackOp.getDestType().getElementType());
+      sliceDest = tensor::EmptyOp::create(
+          b, loc, destExpandedSizes, unpackOp.getDestType().getElementType());
     }
 
     SmallVector<Value> tiledOperands = {sliceSource.getResult(), sliceDest};
     for (auto tile : unpackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledUnpackOp = b.create<UnPackOp>(
-        loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
+    Operation *tiledUnpackOp = UnPackOp::create(
+        b, loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
 
     if (isPerfectTilingCase)
       return TilingResult{{tiledUnpackOp},
                           SmallVector<Value>(tiledUnpackOp->getResults()),
                           generatedSlices};
 
-    auto extractSlice = b.create<tensor::ExtractSliceOp>(
-        loc, tiledUnpackOp->getResult(0), resultOffsetsFromDest, sizes,
+    auto extractSlice = tensor::ExtractSliceOp::create(
+        b, loc, tiledUnpackOp->getResult(0), resultOffsetsFromDest, sizes,
         destStrides);
     return TilingResult{
         {tiledUnpackOp}, {extractSlice.getResult()}, generatedSlices};
@@ -1182,12 +1258,21 @@ struct UnPackOpTiling
 
   /// Method to return the position of iteration domain tile computed by the
   /// tiled operation.
-  LogicalResult getIterationDomainTileFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+  LogicalResult getIterationDomainTileFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes,
       SmallVectorImpl<OpFoldResult> &resultOffsets,
       SmallVectorImpl<OpFoldResult> &resultSizes) const {
+    if (operandNumbers.size() != 1) {
+      LLVM_DEBUG({ llvm::dbgs() << "unable to handle multiple operands"; });
+      return failure();
+    }
     auto unPackOp = cast<UnPackOp>(op);
+    unsigned operandNumber = operandNumbers[0];
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
+
     // If the operand tile is the dest, then no adjustment is needed.
     if (operandNumber == unPackOp.getDestMutable().getOperandNumber()) {
       resultOffsets = llvm::to_vector(offsets);
@@ -1241,10 +1326,18 @@ struct UnPackOpTiling
   }
 
   /// Method to return the tiled implementation of tensor.unpack as a consumer.
-  FailureOr<TilingResult> getTiledImplementationFromOperandTile(
-      Operation *op, OpBuilder &b, unsigned operandNumber,
-      ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes) const {
+  FailureOr<TilingResult> getTiledImplementationFromOperandTiles(
+      Operation *op, OpBuilder &b, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+    if (operandNumbers.size() != 1 || operandNumbers[0] != 0) {
+      LLVM_DEBUG({ llvm::dbgs() << "unhandled operands for consumer fusion"; });
+      return failure();
+    }
     auto unPackOp = cast<UnPackOp>(op);
+    ArrayRef<OpFoldResult> offsets(allOffsets[0]);
+    ArrayRef<OpFoldResult> sizes(allSizes[0]);
+
     // tensor.unpack op is fusible (as a consumer) only if inner dims are not
     // tiled.
     int64_t numTiles = unPackOp.getInnerDimsPos().size();
@@ -1259,8 +1352,8 @@ struct UnPackOpTiling
     // Fetch offset/size for creating the slice of the dest operand of
     // unpack op.
     SmallVector<OpFoldResult> outputOffsets, outputSizes;
-    if (failed(getIterationDomainTileFromOperandTile(
-            op, b, /*operandNumber=*/0, offsets, sizes, outputOffsets,
+    if (failed(getIterationDomainTileFromOperandTiles(
+            op, b, operandNumbers, allOffsets, allSizes, outputOffsets,
             outputSizes)))
       return failure();
 
@@ -1270,22 +1363,22 @@ struct UnPackOpTiling
 
     SmallVector<Value> tiledOperands;
     // Create slice of the dest operand.
-    auto extractDestSlice = b.create<tensor::ExtractSliceOp>(
-        loc, unPackOp.getDest(), outputOffsets, outputSizes, strides);
+    auto extractDestSlice = tensor::ExtractSliceOp::create(
+        b, loc, unPackOp.getDest(), outputOffsets, outputSizes, strides);
     tiledOperands.push_back(extractDestSlice);
 
     strides.append(unPackOp.getSourceRank() - outputRank, oneAttr);
     // Create slice of the source operand.
-    auto extractSourceSlice = b.create<tensor::ExtractSliceOp>(
-        loc, unPackOp.getSource(), offsets, sizes, strides);
+    auto extractSourceSlice = tensor::ExtractSliceOp::create(
+        b, loc, unPackOp.getSource(), offsets, sizes, strides);
     tiledOperands.insert(tiledOperands.begin(), extractSourceSlice);
     for (auto tile : unPackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
     // Create tiled unpack op.
     Operation *tiledUnPackOp =
-        b.create<UnPackOp>(loc, TypeRange{extractDestSlice.getType()},
-                           tiledOperands, op->getAttrs());
+        UnPackOp::create(b, loc, TypeRange{extractDestSlice.getType()},
+                         tiledOperands, op->getAttrs());
 
     return TilingResult{{tiledUnPackOp},
                         SmallVector<Value>(tiledUnPackOp->getResults()),

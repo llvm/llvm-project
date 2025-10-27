@@ -21,7 +21,7 @@ func.func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK: for {{.*}} step 128
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%[[C0]])
-// CHECK-NEXT: %{{.*}} = arith.constant 0.0{{.*}}: f32
+// CHECK-NEXT: %{{.*}} = ub.poison : f32
 // CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i0 = 0 to %M { // vectorized due to scalar -> vector
      %a0 = affine.load %A[%c0, %c0] : memref<?x?xf32>
@@ -47,7 +47,7 @@ func.func @vec1d_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
    %P = memref.dim %B, %c2 : memref<?x?x?xf32>
 
 // CHECK:for [[IV3:%[a-zA-Z0-9]+]] = 0 to [[ARG_M]] step 128
-// CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}}: f32
+// CHECK-NEXT: %[[CST:.*]] = ub.poison : f32
 // CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %[[CST]] : memref<?x?xf32>, vector<128xf32>
    affine.for %i3 = 0 to %M { // vectorized
      %a3 = affine.load %A[%c0, %i3] : memref<?x?xf32>
@@ -76,7 +76,7 @@ func.func @vec1d_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-NEXT:   for [[IV9:%[0-9a-zA-Z_]*]] = 0 to [[ARG_N]] {
 // CHECK-NEXT:   %[[APP9_0:[0-9a-zA-Z_]+]] = affine.apply {{.*}}([[IV9]], [[IV8]])
 // CHECK-NEXT:   %[[APP9_1:[0-9a-zA-Z_]+]] = affine.apply {{.*}}([[IV9]], [[IV8]])
-// CHECK-NEXT:   %[[CST:.*]] = arith.constant 0.0{{.*}}: f32
+// CHECK-NEXT:   %[[CST:.*]] = ub.poison : f32
 // CHECK-NEXT:   {{.*}} = vector.transfer_read %{{.*}}[%[[APP9_0]], %[[APP9_1]]], %[[CST]] : memref<?x?xf32>, vector<128xf32>
    affine.for %i8 = 0 to %M { // vectorized
      affine.for %i9 = 0 to %N {
@@ -280,7 +280,7 @@ func.func @vec_rejected_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // CHECK:for [[IV4:%[0-9a-zA-Z_]+]] = 0 to [[ARG_M]] step 128 {
 // CHECK-NEXT:   for [[IV5:%[0-9a-zA-Z_]*]] = 0 to [[ARG_N]] {
-// CHECK-NEXT:     %{{.*}} = arith.constant 0.0{{.*}}: f32
+// CHECK-NEXT:     %{{.*}} = ub.poison : f32
 // CHECK-NEXT:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
    affine.for %i4 = 0 to %M { // vectorized
      affine.for %i5 = 0 to %N { // not vectorized, would vectorize with --test-fastest-varying=1
@@ -424,7 +424,7 @@ func.func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK:   for [[IV18:%[a-zA-Z0-9]+]] = 0 to [[ARG_M]] step 128
 // CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK:     %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
-// CHECK:     %{{.*}} = arith.constant 0.0{{.*}}: f32
+// CHECK:     %{{.*}} = ub.poison : f32
 // CHECK:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %{{.*}} in DFS post-order prevents vectorizing %{{.*}}
      affine.for %i18 = 0 to %M { // vectorized due to scalar -> vector
@@ -458,7 +458,7 @@ func.func @vec_rejected_9(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK:   for [[IV18:%[a-zA-Z0-9]+]] = 0 to [[ARG_M]] step 128
 // CHECK:      %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
 // CHECK-NEXT: %{{.*}} = affine.apply #[[$map_id1]](%{{.*}})
-// CHECK-NEXT: %{{.*}} = arith.constant 0.0{{.*}}: f32
+// CHECK-NEXT: %{{.*}} = ub.poison : f32
 // CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[$map_proj_d0d1_0]]} : memref<?x?xf32>, vector<128xf32>
    affine.for %i17 = 0 to %M { // not vectorized, the 1-D pattern that matched %i18 in DFS post-order prevents vectorizing %{{.*}}
      affine.for %i18 = 0 to %M { // vectorized due to scalar -> vector

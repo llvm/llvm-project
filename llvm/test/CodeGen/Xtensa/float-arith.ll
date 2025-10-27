@@ -568,7 +568,6 @@ define float @round_f32(float %a) nounwind {
   ret float %res
 }
 
-
 define float @fneg_s(float %a) nounwind {
 ; XTENSA-LABEL: fneg_s:
 ; XTENSA:       # %bb.0:
@@ -601,3 +600,23 @@ define i32 @fptoui(float %f) {
   ret i32 %conv
 }
 
+define float @copysign_f32(float %a, float %b) {
+; XTENSA-LABEL: copysign_f32:
+; XTENSA:         .cfi_startproc
+; XTENSA-NEXT:  # %bb.0: # %entry
+; XTENSA-NEXT:    l32r a8, .LCPI35_0
+; XTENSA-NEXT:    and a8, a3, a8
+; XTENSA-NEXT:    l32r a9, .LCPI35_1
+; XTENSA-NEXT:    and a9, a2, a9
+; XTENSA-NEXT:    wfr f8, a9
+; XTENSA-NEXT:    movi a9, 0
+; XTENSA-NEXT:    beq a8, a9, .LBB35_2
+; XTENSA-NEXT:  # %bb.1:
+; XTENSA-NEXT:    neg.s f8, f8
+; XTENSA-NEXT:  .LBB35_2: # %entry
+; XTENSA-NEXT:    rfr a2, f8
+; XTENSA-NEXT:    ret
+entry:
+  %c = call float @llvm.copysign.f32(float %a, float %b)
+  ret float %c
+}

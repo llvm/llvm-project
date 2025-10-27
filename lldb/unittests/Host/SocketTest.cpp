@@ -199,9 +199,7 @@ TEST_P(SocketTest, TCPAcceptTimeout) {
   if (!HostSupportsProtocol())
     return;
 
-  const bool child_processes_inherit = false;
-  auto listen_socket_up =
-      std::make_unique<TCPSocket>(true, child_processes_inherit);
+  auto listen_socket_up = std::make_unique<TCPSocket>(true);
   Status error = listen_socket_up->Listen(
       llvm::formatv("[{0}]:0", GetParam().localhost_ip).str(), 5);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());

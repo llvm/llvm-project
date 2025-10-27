@@ -141,8 +141,7 @@ TEST_F(CommunicationTest, SynchronizeWhileClosing) {
 #if LLDB_ENABLE_POSIX
 TEST_F(CommunicationTest, WriteAll) {
   Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.CreateNew().ToError(), llvm::Succeeded());
 
   // Make the write end non-blocking in order to easily reproduce a partial
   // write.
