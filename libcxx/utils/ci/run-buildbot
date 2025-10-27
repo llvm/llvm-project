@@ -617,8 +617,7 @@ aarch64)
 aarch64-no-exceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
-                   -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-                   -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+                   -DRUNTIMES_ENABLE_EXCEPTIONS=OFF
     check-runtimes
 ;;
 # Aka Armv8 32 bit
@@ -650,10 +649,9 @@ armv7m-picolibc)
 armv7m-picolibc-no-exceptions)
     test-armv7m-picolibc \
         -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
-        -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
-        -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
-        -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-        -DLIBCXX_ENABLE_RTTI=OFF
+        -DRUNTIMES_ENABLE_EXCEPTIONS=OFF \
+        -DRUNTIMES_ENABLE_RTTI=OFF \
+        -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF
 ;;
 clang-cl-dll)
     clean

@@ -46,9 +46,6 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
-option(LIBCXXABI_ENABLE_EXCEPTIONS
-  "Provide support for exceptions in the runtime.
-  When disabled, libc++abi does not support stack unwinding and other exceptions-related features." ON)
 option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
@@ -324,19 +321,6 @@ add_definitions(-D_LIBCPP_BUILDING_LIBRARY)
 
 # Get feature flags.
 add_compile_flags_if_supported(-fstrict-aliasing)
-
-# Exceptions
-if (LIBCXXABI_ENABLE_EXCEPTIONS)
-  # Catches C++ exceptions only and tells the compiler to assume that extern C
-  # functions never throw a C++ exception.
-  add_compile_flags_if_supported(-EHsc)
-  # Do we really need to be run through the C compiler ?
-  add_c_compile_flags_if_supported(-funwind-tables)
-else()
-  add_compile_flags_if_supported(-fno-exceptions)
-  add_compile_flags_if_supported(-EHs-)
-  add_compile_flags_if_supported(-EHa-)
-endif()
 
 # Assert
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)

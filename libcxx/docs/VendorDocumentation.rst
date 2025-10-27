@@ -227,18 +227,7 @@ General purpose options
 
   Additional libraries libc++ is linked to which can be provided in cache.
 
-.. option:: LIBCXX_ENABLE_EXCEPTIONS:BOOL
-
-  **Default**: ``ON``
-
-  Build libc++ with exception support.
-
-.. option:: LIBCXX_ENABLE_RTTI:BOOL
-
-  **Default**: ``ON``
-
-  Build libc++ with run time type information.
-  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF.
+.. TODO: Where should we document the runtimes build options?
 
 .. option:: LIBCXX_INCLUDE_TESTS:BOOL
 

@@ -25,7 +25,7 @@ if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
   )
 endif()
 
-if (LIBCXXABI_ENABLE_EXCEPTIONS)
+if (RUNTIMES_ENABLE_EXCEPTIONS)
   list(APPEND LIBCXXABI_SOURCES
     cxa_exception.cpp
     cxa_personality.cpp
@@ -258,7 +258,7 @@ endif()
 # whether the exception runtime machinery is provided.
 reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/std-exceptions.exp")
 
-if (LIBCXXABI_ENABLE_EXCEPTIONS)
+if (RUNTIMES_ENABLE_EXCEPTIONS)
   reexport_symbols("${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-exceptions.exp")
 
   if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")

@@ -1,3 +1,9 @@
+#
+# This file defines legacy functions to detect and set compiler flags
+# used throughout the runtimes. Please move away from using these
+# functions in favour of using interface targets (see for example
+# LanguageFlags.cmake).
+#
 
 include(CheckCXXCompilerFlag)
 
