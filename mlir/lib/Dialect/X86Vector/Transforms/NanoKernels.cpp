@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements matmul rewrites as nanokernels with respect to target
-// machine for FP32 and BF16 (TODO) types.
+// machine for FP32 (for selective batch or batch-reduce matmul patterns) and
+// BF16 (TODO) types.
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,12 +32,18 @@ using namespace mlir;
 using namespace mlir::vector;
 using namespace mlir::x86vector;
 
+// Enum to represent the type of matmul operation
+enum class MatMulType { Batch, BatchReduce, Others };
+
 static FailureOr<SmallVector<scf::ForOp>>
-getNestedLoop(vector::ContractionOp contractOp, unsigned int dimCount) {
+getTiledMatmulLoopNest(vector::ContractionOp contractOp,
+                       MatMulType matmulType) {
   SmallVector<scf::ForOp> list;
   Operation *current = contractOp;
-  // It is register tiled loop structure on batch reduce matmul
-  // (M->N->Batch-reduce->K).
+  unsigned int dimCount = matmulType == MatMulType::BatchReduce ? 4 : 3;
+
+  // It is register tiled loop structure on batch (or reduce) matmul
+  // (M->N->(reduce)->K).
   for (unsigned int i = 0; i < dimCount; i++) {
     Operation *parent = current->getParentOfType<scf::ForOp>();
     if (!parent)
@@ -47,14 +54,14 @@ getNestedLoop(vector::ContractionOp contractOp, unsigned int dimCount) {
   return list;
 }
 
-static LogicalResult checkNestedLoop(SmallVector<scf::ForOp> loops,
-                                     SmallVector<memref::SubViewOp> subviews,
-                                     unsigned int dimCount) {
+static LogicalResult checkMatmulLoopAndSubviewOffsetsMatching(
+    SmallVector<scf::ForOp> loops, SmallVector<memref::SubViewOp> subviews,
+    MatMulType matmulType) {
   auto subviewOpLhsOffsets = subviews[0].getOffsets();
   auto subviewOpRhsOffsets = subviews[1].getOffsets();
   auto subviewOpAccOffsets = subviews[2].getOffsets();
 
-  if (dimCount == 4) {
+  if (matmulType == MatMulType::BatchReduce) {
     Value ivK = loops[0].getInductionVar();
     if (ivK != subviewOpLhsOffsets[2] || ivK != subviewOpRhsOffsets[1])
       return failure();
@@ -73,7 +80,7 @@ static LogicalResult checkNestedLoop(SmallVector<scf::ForOp> loops,
       return failure();
   }
 
-  if (dimCount == 3) {
+  if (matmulType == MatMulType::Batch) {
     Value ivK = loops[0].getInductionVar();
     if (ivK != subviewOpLhsOffsets[1] || ivK != subviewOpRhsOffsets[0])
       return failure();
@@ -96,13 +103,16 @@ loadAccumulatorBeforeGEMM(Location loc, RewriterBase &rewriter,
                           unsigned int vectorSize, Value subviewOpAcc) {
 
   SmallVector<Value> accumulators;
+
+  // Initialize local variable on assumption that M tile is larger than N
   unsigned int outerBound = M;
   unsigned int innerBound = N;
 
   unsigned int outerStep = 1;
   unsigned int innerStep = vectorSize;
 
-  if ((N / vectorSize) > M) {
+  bool isNTileLarge = (N / vectorSize) > M;
+  if (isNTileLarge) {
     outerBound = N;
     innerBound = M;
 
@@ -115,7 +125,7 @@ loadAccumulatorBeforeGEMM(Location loc, RewriterBase &rewriter,
       Value indexOp_A = arith::ConstantIndexOp::create(rewriter, loc, i);
       Value indexOp_B = arith::ConstantIndexOp::create(rewriter, loc, j);
 
-      if ((N / vectorSize) > M) {
+      if (isNTileLarge) {
         indexOp_A = indexOp_B;
         indexOp_B = arith::ConstantIndexOp::create(rewriter, loc, i);
       }
@@ -130,17 +140,18 @@ loadAccumulatorBeforeGEMM(Location loc, RewriterBase &rewriter,
   return accumulators;
 }
 
-// Function accepts A Matrix, B Matrix, C Matrix (as vectors) and generate
-// equivalent target specific nanokernels. Returns the final accumulator as
-// output. Based on M tile, N tile, and vector size it generated optimized
-// nanokernels with condition of reduction and K dimension of the input matrix
-// are 1.
+// This function takes matrices A, B, and C (represented as vectors)
+// and generates equivalent target-specific nanokernels.
+// It returns the final accumulator as output.
+// Based on the M tile, N tile, and vector size, it generates optimized
+// nanokernels under the condition that the reduction and K dimension
+// of the input matrices are equal to 1.
 //
 // Input: Matrix A, Matrix B, Accmulator as M*(N/vector size) vectors, M tile
 // size, N tile size, Vector size.
 //
 // Output:
-// case i: M > (N/vector size). For example, M=3; N=32; vector size = 16.
+// case i: M >= (N/vector size). For example, M=3; N=32; vector size = 16.
 //  load_B0 = load B[0-15] into vector<16xf32>
 //  load_B1 = load B[16-31] into vector<16xf32>
 //  bcst_A0 = load A[0] and broadcast it into vector<16xf32>
@@ -153,7 +164,7 @@ loadAccumulatorBeforeGEMM(Location loc, RewriterBase &rewriter,
 //  o/p_Acc[4] = vector.fma bcst_A2, load_B0, i/p_Acc[4]
 //  o/p_Acc[5] = vector.fma bcst_A2, load_B1, i/p_Acc[5]
 //
-// case ii: M <= (N/vector size). For example, M=2; N=48; vector size = 16.
+// case ii: M < (N/vector size). For example, M=2; N=48; vector size = 16.
 //  bcst_A0 = load A[0] and broadcast it into vector<16xf32>
 //  bcst_A1 = load A[1] and broadcast it into vector<16xf32>
 //  bcst_A2 = load A[2] and broadcast it into vector<16xf32>
@@ -172,7 +183,7 @@ SmallVector<Value>
 generateNanokernels(RewriterBase &rewriter, Location loc, Type elementType,
                     unsigned int vectorSize, unsigned int vnni, unsigned int M,
                     unsigned int N, ValueRange acc, Value matA, Value matB,
-                    unsigned int dimCount) {
+                    MatMulType matmulType) {
 
   SmallVector<Value> accumulators;
   SmallVector<Value> matLoad;
@@ -195,7 +206,8 @@ generateNanokernels(RewriterBase &rewriter, Location loc, Type elementType,
   unsigned int fmaBound = M;
 
   // update helper variables if N tile size is smaller
-  if ((N / vectorSize) < M) {
+  bool isNTileLarge = (N / vectorSize) > M;
+  if (!isNTileLarge) {
     outerBound = N;
     innerBound = M;
 
@@ -216,14 +228,14 @@ generateNanokernels(RewriterBase &rewriter, Location loc, Type elementType,
     Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
     Value valueRow;
 
-    if ((N / vectorSize) > M) {
+    if (isNTileLarge) {
 
       // With the assumption as batch-reduce matmul initialize reduction, M, and
       // K dimension.
       SmallVector<Value> index = {c0, indexOp_i, c0};
 
       // Remove reduction dimension if it is a batch matmul
-      if (dimCount == 3) {
+      if (matmulType == MatMulType::Batch) {
         index.erase(index.begin());
       }
 
@@ -241,7 +253,7 @@ generateNanokernels(RewriterBase &rewriter, Location loc, Type elementType,
       SmallVector<Value> index = {c0, c0, indexOp_i};
 
       // Remove reduction dimension if it is a batch matmul
-      if (dimCount == 3) {
+      if (matmulType == MatMulType::Batch) {
         index.erase(index.begin());
       }
 
@@ -259,9 +271,9 @@ generateNanokernels(RewriterBase &rewriter, Location loc, Type elementType,
     Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
     Value valueRow;
 
-    if ((N / vectorSize) < M) {
+    if (!isNTileLarge) {
       SmallVector<Value> index = {c0, indexOp_j, c0};
-      if (dimCount == 3) {
+      if (matmulType == MatMulType::Batch) {
         index.erase(index.begin());
       }
 
@@ -275,7 +287,7 @@ generateNanokernels(RewriterBase &rewriter, Location loc, Type elementType,
     } else {
 
       SmallVector<Value> index = {c0, c0, indexOp_j};
-      if (dimCount == 3) {
+      if (matmulType == MatMulType::Batch) {
         index.erase(index.begin());
       }
 
@@ -305,7 +317,7 @@ scf::ForOp createGEMMLoopsWithAccAsIterArgs(
     vector::TransferReadOp vectorReadOpRhs, Value ivNewReductionForOp,
     Type elementType, unsigned int vectorSize, unsigned int vnni,
     unsigned int M, unsigned int N, ValueRange iterArgsNewReductionForOp,
-    unsigned int dimCount) {
+    MatMulType matmulType) {
   auto newKForOp = scf::ForOp::create(
       rewriter, kForOp.getLoc(), kForOp.getLowerBound(), kForOp.getUpperBound(),
       kForOp.getStep(), iterArgsNewReductionForOp,
@@ -330,7 +342,7 @@ scf::ForOp createGEMMLoopsWithAccAsIterArgs(
         auto evenFMAs = generateNanokernels(
             rewriter, kForOp.getLoc(), elementType, vectorSize, vnni, M, N,
             iterArgsNewKForOp, lhsClone->getResult(0), rhsClone->getResult(0),
-            dimCount);
+            matmulType);
 
         scf::YieldOp::create(rewriterNewKForOp, locNewKForOp, evenFMAs);
       });
@@ -345,7 +357,7 @@ scf::ForOp createGEMMLoopsWithAccAsIterArgs(
     vector::TransferReadOp vectorReadOpLhs,
     vector::TransferReadOp vectorReadOpRhs, Type elementType,
     unsigned int vectorSize, unsigned int vnni, unsigned int M, unsigned int N,
-    ValueRange iterArgsNewReductionForOp, unsigned int dimCount) {
+    ValueRange iterArgsNewReductionForOp, MatMulType matmulType) {
 
   auto newKForOp = scf::ForOp::create(
       rewriter, kForOp.getLoc(), kForOp.getLowerBound(), kForOp.getUpperBound(),
@@ -367,7 +379,7 @@ scf::ForOp createGEMMLoopsWithAccAsIterArgs(
         auto evenFMAs =
             generateNanokernels(rewriter, loc, elementType, vectorSize, vnni, M,
                                 N, iterArgsNewKForOp, lhsClone->getResult(0),
-                                rhsClone->getResult(0), dimCount);
+                                rhsClone->getResult(0), matmulType);
 
         scf::YieldOp::create(rewriterNewKForOp, locNewKForOp, evenFMAs);
       });
@@ -378,14 +390,15 @@ scf::ForOp createGEMMLoopsWithAccAsIterArgs(
 Value mergeAccumulatedVectorAsMatrix(RewriterBase &rewriter, Location loc,
                                      VectorType vecType,
                                      SmallVector<Value> FMAs, Value accVec,
-                                     unsigned int vecSize, unsigned int M,
+                                     unsigned int vectorSize, unsigned int M,
                                      unsigned int N) {
 
   auto strides = rewriter.getI64ArrayAttr({1});
-  if ((N / vecSize) > M) {
-    for (unsigned int j = 0, k = 0; j < (N / vecSize); j++) {
+  bool isNTileLarge = (N / vectorSize) > M;
+  if (isNTileLarge) {
+    for (unsigned int j = 0, k = 0; j < (N / vectorSize); j++) {
       for (unsigned int i = 0; i < M; i++) {
-        unsigned int off = (j * vecSize) + (i * N);
+        unsigned int off = (j * vectorSize) + (i * N);
         auto offsets = rewriter.getI64ArrayAttr({off});
         accVec = vector::InsertStridedSliceOp::create(
             rewriter, loc, vecType, FMAs[k], accVec, offsets, strides);
@@ -394,7 +407,7 @@ Value mergeAccumulatedVectorAsMatrix(RewriterBase &rewriter, Location loc,
     }
 
   } else {
-    for (unsigned int i = 0, k = 0; i < M * N; i = i + vecSize) {
+    for (unsigned int i = 0, k = 0; i < M * N; i = i + vectorSize) {
       auto offsets = rewriter.getI64ArrayAttr({i});
       accVec = vector::InsertStridedSliceOp::create(
           rewriter, loc, vecType, FMAs[k], accVec, offsets, strides);
@@ -404,6 +417,53 @@ Value mergeAccumulatedVectorAsMatrix(RewriterBase &rewriter, Location loc,
   return accVec;
 }
 
+// Rewriter pattern for vector.contract operation.
+// Input: vector.contract with tiled dimensions (batch or batch-matmul)
+// Matching Pattern:
+//   scf.for (0 to M) step m_tile {
+//     scf.for (0 to N) step n_tile {
+//       - Subview of Accumulator matrix - eg., acc : memref<m_tilexn_tilexf32>
+//       - %read = vector.transfer_read memref<m_tilexn_tilexf32> to
+//       vector<m_tilexn_tilexf32> %1 = scf.for (0 to reduce)
+//       iter_args_reduce=%read step reduce_tile {
+//          %2 scf.for (0 to K) iter_args_k = %iter_args_reduce step k_tile {
+//	       - Subview of A and B matrix
+//	       - Vector transfer read of A and B
+//	       - %acc = Vector.contract %read_A %read_B %iter_args_k
+//	    scf.yield %acc
+//	    }
+//	 scf.yield %2
+//	 }
+//	 vector.transfer_write %2 into accmulator matrix
+//    }
+// }
+//
+//
+// Rewrite IR:
+//   scf.for (0 to M) step m_tile {
+//     scf.for (0 to N) step n_tile {
+//       - Subview of Accumulator matrix - eg., acc : memref<m_tilexn_tilexf32>
+//       - %a = (n_tile / vector_size) * m_tile;
+//       // load the accumulator matrix as vector
+//       - %0 = load acc[0][0-15] into vector<16xf32>
+//       - %1 = load acc[0][16-31] into vector<16xf32>
+//       - %2 = load acc[1][0-15] into vector<16xf32>
+//       .
+//       .
+//       .
+//       - %a = load acc[m_tile-1][*-n_tile-1] into vector<16xf32>
+//       %3 = scf.for (0 to reduce) iter_args_reduce=%0 to %a step reduce_tile {
+//          %4 scf.for (0 to K) iter_args_k = %iter_args_reduce step k_tile {
+//             - emit nano kernels (as shown in commnets above
+//             generateNanokernels function)
+//          scf.yield %acc[0] to %acc[a-1]
+//          }
+//       scf.yield %4: [0] to [a-1]
+//       }
+//       %5 = vector.insert %3: [0] to [a-1] into vector<m_tilexn_tilexf32>
+//       vector.transfer_write %5 into accmulator matrix
+//    }
+// }
 struct VectorContractNanokernelLowering
     : public OpRewritePattern<vector::ContractionOp> {
   VectorContractNanokernelLowering(MLIRContext *context,
@@ -417,7 +477,6 @@ struct VectorContractNanokernelLowering
     auto loc = contractOp.getLoc();
 
     unsigned int vectorSize = 8;
-
     if (userVectorSize)
       vectorSize = *userVectorSize;
 
@@ -426,14 +485,28 @@ struct VectorContractNanokernelLowering
                                          "Expects add combining kind");
     }
 
-    auto dimCount = contractOp.getRhsType().getRank() + 1;
+    SmallVector<vector::IteratorType> contractIteratorTypes =
+        contractOp.getIteratorTypesArray();
 
-    if ((dimCount != 3) && (dimCount != 4))
+    unsigned int reductionCount =
+        std::count(contractIteratorTypes.begin(), contractIteratorTypes.end(),
+                   vector::IteratorType::reduction);
+
+    MatMulType matmulType = MatMulType::Others;
+
+    if (reductionCount == 1)
+      matmulType = MatMulType::Batch;
+
+    if (reductionCount == 2)
+      matmulType = MatMulType::BatchReduce;
+
+    if ((matmulType != MatMulType::BatchReduce) &&
+        (matmulType != MatMulType::Batch))
       return rewriter.notifyMatchFailure(
           contractOp, "Expects batch-reduce or batch matmuls");
 
     // Get the M, N, K, and batch-reduce loops
-    auto loops = getNestedLoop(contractOp, dimCount);
+    auto loops = getTiledMatmulLoopNest(contractOp, matmulType);
     if (failed(loops))
       return rewriter.notifyMatchFailure(
           contractOp, "Invalid loop nest in contract pattern");
@@ -442,15 +515,21 @@ struct VectorContractNanokernelLowering
     scf::ForOp kForOp = nestedLoops[0];
     scf::ForOp reductionForOp;
 
+    if (contractOp.getAcc().getDefiningOp<vector::TransferReadOp>()) {
+      return rewriter.notifyMatchFailure(
+          contractOp, "The Accumulator matrix should be hoisted outside the K "
+                      "or reduction loop");
+    }
+
     vector::TransferReadOp vectorReadOpAcc;
 
-    if (dimCount == 4) {
+    if (matmulType == MatMulType::BatchReduce) {
       reductionForOp = nestedLoops[1];
       vectorReadOpAcc = reductionForOp.getInitArgs()[0]
                             .getDefiningOp<vector::TransferReadOp>();
     }
 
-    if (dimCount == 3) {
+    if (matmulType == MatMulType::Batch) {
       vectorReadOpAcc =
           kForOp.getInitArgs()[0].getDefiningOp<vector::TransferReadOp>();
     }
@@ -480,10 +559,11 @@ struct VectorContractNanokernelLowering
 
     // The M, N, K, and batch-reduce loop iv should match the iv's
     // used in the subviews
-    auto checkLoops = checkNestedLoop(*loops, subviews, dimCount);
+    auto checkLoops =
+        checkMatmulLoopAndSubviewOffsetsMatching(*loops, subviews, matmulType);
     if (failed(checkLoops))
       return rewriter.notifyMatchFailure(
-          contractOp, "Loops doesn't match the iv in subviews");
+          contractOp, "tiled loops doesn't match the iv in subviews");
 
     auto elementType =
         (cast<MemRefType>(subviewOpLhs.getType())).getElementType();
@@ -505,14 +585,15 @@ struct VectorContractNanokernelLowering
     if (K != 1)
       return rewriter.notifyMatchFailure(contractOp, "The k-dim should be 1");
 
-    if (dimCount == 4 && lhsType.getDimSize(lhsType.getRank() - 3) != 1)
+    if (matmulType == MatMulType::BatchReduce &&
+        lhsType.getDimSize(lhsType.getRank() - 3) != 1)
       return rewriter.notifyMatchFailure(contractOp,
                                          "The reduction-dim should be 1");
 
-    if (dimCount == 4)
+    if (matmulType == MatMulType::BatchReduce)
       rewriter.setInsertionPoint(reductionForOp);
 
-    if (dimCount == 3)
+    if (matmulType == MatMulType::Batch)
       rewriter.setInsertionPoint(kForOp);
 
     // Load  MxN C sub matrix into acc vectors (e.g, <vectorSizexf32>)
@@ -522,7 +603,7 @@ struct VectorContractNanokernelLowering
     // Create the batch-reduce and K-loop with acc vectors as the loop
     // iterargs (batch-reduce matmul) + nanokernel generation
     scf::ForOp newLoop;
-    if (dimCount == 4) {
+    if (matmulType == MatMulType::BatchReduce) {
       newLoop = scf::ForOp::create(
           rewriter, reductionForOp.getLoc(), reductionForOp.getLowerBound(),
           reductionForOp.getUpperBound(), reductionForOp.getStep(),
@@ -533,7 +614,7 @@ struct VectorContractNanokernelLowering
             scf::ForOp newKForOp = createGEMMLoopsWithAccAsIterArgs(
                 rewriter, loc, kForOp, vectorReadOpLhs, vectorReadOpRhs,
                 ivNewReductionForOp, elementType, vectorSize, vnni, M, N,
-                iterArgsNewReductionForOp, dimCount);
+                iterArgsNewReductionForOp, matmulType);
 
             scf::YieldOp::create(rewriterNewReductionForOp,
                                  locNewReductionForOp, newKForOp.getResults());
@@ -541,13 +622,13 @@ struct VectorContractNanokernelLowering
     }
 
     // Create only the K-loop (batch matmul) + nanokernel generation
-    if (dimCount == 3) {
+    if (matmulType == MatMulType::Batch) {
       newLoop = createGEMMLoopsWithAccAsIterArgs(
           rewriter, loc, kForOp, vectorReadOpLhs, vectorReadOpRhs, elementType,
-          vectorSize, vnni, M, N, accumulators, dimCount);
+          vectorSize, vnni, M, N, accumulators, matmulType);
     }
 
-    // Combine all acc vectors into a MxN C matrix
+    // Combine all output accumulator vectors into a m_tilexn_tile C matrix
     auto vecType = VectorType::get({M * N}, rewriter.getF32Type());
     auto zeroAttr =
         DenseElementsAttr::get(vecType, rewriter.getF32FloatAttr(0.0));
@@ -560,10 +641,10 @@ struct VectorContractNanokernelLowering
     auto reshapeAcc = vector::ShapeCastOp::create(rewriter, loc, accTy, accVec);
 
     // Replace all the use of vector.contract with results of nanokernels
-    if (dimCount == 4)
+    if (matmulType == MatMulType::BatchReduce)
       rewriter.replaceAllUsesWith(reductionForOp.getResult(0), reshapeAcc);
 
-    if (dimCount == 3)
+    if (matmulType == MatMulType::Batch)
       rewriter.replaceAllUsesWith(kForOp.getResult(0), reshapeAcc);
 
     return success();

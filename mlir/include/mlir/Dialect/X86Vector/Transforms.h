@@ -84,7 +84,10 @@ struct MaskHelper {
 };
 
 //===----------------------------------------------------------------------===//
-// Nano-kernels
+// Transforms a scheduled pattern to lower a tiled batch or batch-reduce
+// vector contraction into a sequence of nanokernels.
+// The transformation is tailored to the target machine architecture
+// and guided by the user-specified vector size.
 void populateVectorContractNanokernelLoweringPatterns(
     RewritePatternSet &patterns, std::optional<unsigned> vectorSize = 8);
 
