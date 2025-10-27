@@ -131,12 +131,14 @@ public:
   // Creation and assignment [stacktrace.basic.cons]
 
   _LIBCPP_ALWAYS_INLINE // Omit this function from the trace
-  static basic_stacktrace current(const allocator_type& __alloc = allocator_type()) noexcept {
+  static basic_stacktrace
+  current(const allocator_type& __alloc = allocator_type()) noexcept {
     return current(0, __default_max_depth, __alloc);
   }
 
   _LIBCPP_ALWAYS_INLINE // Omit this function from the trace
-  static basic_stacktrace current(size_type __skip, const allocator_type& __alloc = allocator_type()) noexcept {
+  static basic_stacktrace
+  current(size_type __skip, const allocator_type& __alloc = allocator_type()) noexcept {
     return current(__skip, __default_max_depth, __alloc);
   }
 
@@ -148,7 +150,7 @@ public:
     basic_stacktrace __ret{__alloc};
 
     if (__max_depth) {
-#  if defined(WIN32)
+#  if defined(_WIN32)
       __ret.windows_impl(__skip, __max_depth);
 #  else
       __ret.populate_addrs(__skip, __max_depth);
