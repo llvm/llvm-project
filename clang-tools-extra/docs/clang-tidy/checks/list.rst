@@ -90,7 +90,7 @@ Clang-Tidy Checks
    :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
-   :doc:`bugprone-copy-constructor-mutates-argument <bugprone/bugprone-copy-constructor-mutates-argument>`,
+   :doc:`bugprone-copy-constructor-mutates-argument <bugprone/copy-constructor-mutates-argument>`,
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
    :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,
