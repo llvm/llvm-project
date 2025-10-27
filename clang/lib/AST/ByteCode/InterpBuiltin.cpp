@@ -3293,7 +3293,8 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool evalICmpImm(uint8_t Imm, const APSInt &A, const APSInt &B, bool IsUnsigned) {
+static bool evalICmpImm(uint8_t Imm, const APSInt &A, const APSInt &B,
+                        bool IsUnsigned) {
   switch (Imm & 0x7) {
   case 0x00: // _MM_CMPINT_EQ
     return (A == B);
