@@ -56,6 +56,8 @@ public:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override;
+  void emitLargeCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                             Align ByteAlignment) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,

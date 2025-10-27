@@ -244,6 +244,23 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   return true;
 }
 
+void MCELFStreamer::emitLargeCommonSymbol(MCSymbol *S, uint64_t Size,
+                                          Align ByteAlignment) {
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
+  getAssembler().registerSymbol(*Symbol);
+
+  if (!Symbol->isBindingSet())
+    Symbol->setBinding(ELF::STB_GLOBAL);
+
+  Symbol->setType(ELF::STT_OBJECT);
+
+  if (Symbol->declareCommon(Size, ByteAlignment))
+    report_fatal_error(Twine("Symbol: ") + Symbol->getName() +
+                       " redeclared as different type");
+  Symbol->setIsLargeCommon();
+  Symbol->setSize(MCConstantExpr::create(Size, getContext()));
+}
+
 void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                      Align ByteAlignment) {
   auto *Symbol = static_cast<MCSymbolELF *>(S);
