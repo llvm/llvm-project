@@ -3136,7 +3136,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// If we don't instrument it and it gets inlined,
   /// our interceptor will not kick in and we will lose the memmove.
   /// If we instrument the call here, but it does not get inlined,
-  /// we will memove the shadow twice: which is bad in case
+  /// we will memmove the shadow twice: which is bad in case
   /// of overlapping regions. So, we simply lower the intrinsic to a call.
   ///
   /// Similar situation exists for memcpy and memset.
@@ -4775,7 +4775,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // _mm_round_ps / _mm_round_ps.
   // Similar to maybeHandleSimpleNomemIntrinsic except
-  // the second argument is guranteed to be a constant integer.
+  // the second argument is guaranteed to be a constant integer.
   void handleRoundPdPsIntrinsic(IntrinsicInst &I) {
     assert(I.getArgOperand(0)->getType() == I.getType());
     assert(I.arg_size() == 2);
