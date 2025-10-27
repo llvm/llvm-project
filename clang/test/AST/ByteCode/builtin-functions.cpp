@@ -1853,3 +1853,8 @@ namespace InitParam {
 }
 
 #endif
+
+namespace SAddOverflowInt {
+  int a;
+  void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
+}
