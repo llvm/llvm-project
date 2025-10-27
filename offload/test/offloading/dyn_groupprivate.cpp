@@ -75,9 +75,9 @@ int main() {
     map(tofrom : Failed)
   {
     int IsFallback;
-    if ((TmpPtr = omp_get_dyn_groupprivate_ptr(0, &IsFallback)))
+    if (omp_get_dyn_groupprivate_ptr(0, &IsFallback))
       ++Failed;
-    if ((TmpSize = omp_get_dyn_groupprivate_size()))
+    if (omp_get_dyn_groupprivate_size())
       ++Failed;
     if (!IsFallback)
       ++Failed;
