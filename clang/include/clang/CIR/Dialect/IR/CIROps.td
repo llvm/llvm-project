@@ -4090,6 +4090,24 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DeleteArrayOp
+//===----------------------------------------------------------------------===//
+
+def CIR_DeleteArrayOp : CIR_Op<"delete.array"> {
+  let summary = "Delete address representing an array";
+  let description = [{
+    `cir.delete.array` operation deletes an array. For example, `delete[] ptr;`
+    will be translated to `cir.delete.array %ptr`.
+  }];
+
+  let arguments = (ins CIR_PointerType:$address);
+
+  let assemblyFormat = [{
+    $address `:` type($address) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PtrDiffOp
 //===----------------------------------------------------------------------===//
 
