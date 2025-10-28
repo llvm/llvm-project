@@ -1297,6 +1297,14 @@ public:
 
   lldb::StackFrameListSP GetStackFrameList();
 
+  llvm::Error LoadScriptedFrameProvider();
+
+  void ClearScriptedFrameProvider();
+
+  lldb::SyntheticFrameProviderSP GetFrameProvider() const {
+    return m_frame_provider_sp;
+  }
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;
@@ -1399,6 +1407,9 @@ protected:
 
   /// The Thread backed by this thread, if any.
   lldb::ThreadWP m_backed_thread;
+
+  /// The Scripted Frame Provider, if any.
+  lldb::SyntheticFrameProviderSP m_frame_provider_sp;
 
 private:
   bool m_extended_info_fetched; // Have we tried to retrieve the m_extended_info
