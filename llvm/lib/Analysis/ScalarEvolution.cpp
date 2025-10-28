@@ -1019,11 +1019,10 @@ SCEVAddRecExpr::evaluateAtIteration(ArrayRef<const SCEV *> Operands,
 //                    SCEV Expression folder implementations
 //===----------------------------------------------------------------------===//
 
-const SCEV *ScalarEvolution::getLosslessPtrToIntOrAddrExpr(SCEVTypes Kind,
-                                                           const SCEV *Op,
-                                                           unsigned Depth) {
+const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
+                                                     unsigned Depth) {
   assert(Depth <= 1 &&
-         "getLosslessPtrToIntOrAddrExpr() should self-recurse at most once.");
+         "getLosslessPtrToIntExpr() should self-recurse at most once.");
 
   // We could be called with an integer-typed operands during SCEV rewrites.
   // Since the operand is an integer already, just perform zext/trunc/self cast.
@@ -1068,45 +1067,35 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntOrAddrExpr(SCEVTypes Kind,
     // Create an explicit cast node.
     // We can reuse the existing insert position since if we get here,
     // we won't have made any changes which would invalidate it.
-    SCEV *S;
-    if (Kind == scPtrToInt) {
-      S = new (SCEVAllocator)
-          SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
-    } else {
-      S = new (SCEVAllocator)
-          SCEVPtrToAddrExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
-    }
+    SCEV *S = new (SCEVAllocator)
+        SCEVPtrToIntExpr(ID.Intern(SCEVAllocator), Op, IntPtrTy);
     UniqueSCEVs.InsertNode(S, IP);
     registerUser(S, Op);
     return S;
   }
 
-  assert(Depth == 0 &&
-         "getLosslessPtrToIntOrAddrExpr() should not self-recurse for "
-         "non-SCEVUnknown's.");
+  assert(Depth == 0 && "getLosslessPtrToIntExpr() should not self-recurse for "
+                       "non-SCEVUnknown's.");
 
   // Otherwise, we've got some expression that is more complex than just a
-  // single SCEVUnknown. But we don't want to have a SCEVPtrTo(Int|Addr)Expr of
-  // an arbitrary expression, we want to have SCEVPtrTo(Int|Addr)Expr of an
+  // single SCEVUnknown. But we don't want to have a SCEVPtrToIntExpr of
+  // an arbitrary expression, we want to have SCEVPtrToIntExpr of an
   // SCEVUnknown only, and the expressions must otherwise be integer-typed. So
   // sink the cast down to the SCEVUnknown's.
 
-  /// The SCEVPtrToIntOrAddrSinkingRewriter takes a scalar evolution expression,
+  /// The SCEVPtrToIntSinkingRewriter takes a scalar evolution expression,
   /// which computes a pointer-typed value, and rewrites the whole expression
   /// tree so that *all* the computations are done on integers, and the only
   /// pointer-typed operands in the expression are SCEVUnknown.
-  class SCEVPtrToIntOrAddrSinkingRewriter
-      : public SCEVRewriteVisitor<SCEVPtrToIntOrAddrSinkingRewriter> {
-    using Base = SCEVRewriteVisitor<SCEVPtrToIntOrAddrSinkingRewriter>;
-    const SCEVTypes Kind;
-
+  class SCEVPtrToIntSinkingRewriter
+      : public SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter> {
+    using Base = SCEVRewriteVisitor<SCEVPtrToIntSinkingRewriter>;
   public:
-    SCEVPtrToIntOrAddrSinkingRewriter(SCEVTypes Kind, ScalarEvolution &SE)
-        : SCEVRewriteVisitor(SE), Kind(Kind) {}
+    SCEVPtrToIntSinkingRewriter(ScalarEvolution &SE)
+        : SCEVRewriteVisitor(SE) {}
 
-    static const SCEV *rewrite(const SCEV *Scev, SCEVTypes Kind,
-                               ScalarEvolution &SE) {
-      SCEVPtrToIntOrAddrSinkingRewriter Rewriter(Kind, SE);
+    static const SCEV *rewrite(const SCEV *Scev, ScalarEvolution &SE) {
+      SCEVPtrToIntSinkingRewriter Rewriter(SE);
       return Rewriter.visit(Scev);
     }
 
@@ -1142,32 +1131,50 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntOrAddrExpr(SCEVTypes Kind,
     const SCEV *visitUnknown(const SCEVUnknown *Expr) {
       assert(Expr->getType()->isPointerTy() &&
              "Should only reach pointer-typed SCEVUnknown's.");
-      return SE.getLosslessPtrToIntOrAddrExpr(Kind, Expr, /*Depth=*/1);
+      return SE.getLosslessPtrToIntExpr(Expr, /*Depth=*/1);
     }
   };
 
   // And actually perform the cast sinking.
-  const SCEV *IntOp =
-      SCEVPtrToIntOrAddrSinkingRewriter::rewrite(Op, Kind, *this);
+  const SCEV *IntOp = SCEVPtrToIntSinkingRewriter::rewrite(Op, *this);
   assert(IntOp->getType()->isIntegerTy() &&
          "We must have succeeded in sinking the cast, "
          "and ending up with an integer-typed expression!");
   return IntOp;
 }
 
-const SCEV *ScalarEvolution::getLosslessPtrToAddrExpr(const SCEV *Op) {
-  return getLosslessPtrToIntOrAddrExpr(scPtrToAddr, Op);
-}
+const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op, Type *Ty) {
+  assert(Op->getType()->isPointerTy() && "Op must be a pointer");
 
-const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
-  return getLosslessPtrToIntOrAddrExpr(scPtrToInt, Op);
-}
+  // What would be an ID for such a SCEV cast expression?
+  FoldingSetNodeID ID;
+  ID.AddInteger(scPtrToAddr);
+  ID.AddPointer(Op);
 
-const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
-  const SCEV *IntOp = getLosslessPtrToAddrExpr(Op);
-  assert(!isa<SCEVCouldNotCompute>(IntOp) &&
-         "Must be able to losslessly convert PtrToAddr");
-  return IntOp;
+  void *IP = nullptr;
+
+  // Is there already an expression for such a cast?
+  if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
+    return S;
+
+  // If not, is this expression something we can't reduce any further?
+  if (auto *U = dyn_cast<SCEVUnknown>(Op)) {
+    // Perform some basic constant folding. If the operand of the ptr2int cast
+    // is a null pointer, don't create a ptr2int SCEV expression (that will be
+    // left as-is), but produce a zero constant.
+    // NOTE: We could handle a more general case, but lack motivational cases.
+    if (isa<ConstantPointerNull>(U->getValue()))
+      return getZero(Ty);
+  }
+
+  // Create an explicit cast node.
+  // We can reuse the existing insert position since if we get here,
+  // we won't have made any changes which would invalidate it.
+  SCEV *S =
+      new (SCEVAllocator) SCEVPtrToAddrExpr(ID.Intern(SCEVAllocator), Op, Ty);
+  UniqueSCEVs.InsertNode(S, IP);
+  registerUser(S, Op);
+  return S;
 }
 
 const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
@@ -8202,7 +8209,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     // all possible pointer values.
     const SCEV *IntOp = U->getOpcode() == Instruction::PtrToInt
                             ? getPtrToIntExpr(Op, DstIntTy)
-                            : getPtrToAddrExpr(Op);
+                            : getPtrToAddrExpr(Op, DstIntTy);
     if (isa<SCEVCouldNotCompute>(IntOp))
       return getUnknown(V);
     return IntOp;

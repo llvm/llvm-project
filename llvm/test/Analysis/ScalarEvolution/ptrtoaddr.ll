@@ -2,7 +2,7 @@
 ; RUN: opt -passes='print<scalar-evolution>' -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout="p64:64:64:64"
-t
+
 define void @ptrtoaddr(ptr %in, ptr %out0, ptr %out1, ptr %out2, ptr %out3) {
 ; CHECK-LABEL: 'ptrtoaddr'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr
@@ -60,7 +60,7 @@ define void @ptrtoaddr_of_gep(ptr %in, ptr %out0) {
 ; CHECK-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; CHECK-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in_adj to i64
-; CHECK-NEXT:    --> (42 + (ptrtoaddr ptr %in to i64)) U: full-set S: full-set
+; CHECK-NEXT:    --> (ptrtoaddr ptr (42 + %in) to i64) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_gep
 ;
   %in_adj = getelementptr inbounds i8, ptr %in, i64 42
