@@ -144,7 +144,7 @@ private:
   /// \param OS The stream to render to.
   /// \param ParagraphText The text of the paragraph to render.
   void renderNewlinesMarkdown(llvm::raw_ostream &OS,
-                              std::string &ParagraphText) const;
+                              llvm::StringRef ParagraphText) const;
 
   /// \brief Go through the contents line by line to handle the newlines
   /// and required spacing correctly for plain text rendering.
@@ -169,7 +169,7 @@ private:
   /// \param OS The stream to render to.
   /// \param ParagraphText The text of the paragraph to render.
   void renderNewlinesPlaintext(llvm::raw_ostream &OS,
-                               std::string &ParagraphText) const;
+                               llvm::StringRef ParagraphText) const;
 };
 
 /// Represents a sequence of one or more documents. Knows how to print them in a

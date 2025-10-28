@@ -476,11 +476,10 @@ std::string Block::asPlainText() const {
 }
 
 void Paragraph::renderNewlinesMarkdown(llvm::raw_ostream &OS,
-                                       std::string &ParagraphText) const {
+                                       llvm::StringRef ParagraphText) const {
   llvm::StringRef Line, Rest;
 
-  for (std::tie(Line, Rest) =
-           llvm::StringRef(ParagraphText).ltrim("\n").rtrim().split('\n');
+  for (std::tie(Line, Rest) = ParagraphText.ltrim("\n").rtrim().split('\n');
        !(Line.empty() && Rest.empty());
        std::tie(Line, Rest) = Rest.split('\n')) {
 
@@ -614,11 +613,8 @@ bool Paragraph::isHardLineBreakIndicator(llvm::StringRef Rest,
   if (Rest.empty())
     return false;
 
-  if (IsMarkdown) {
-    if (LinebreakIndicatorsMarkdown.contains(Rest.front()))
-      return true;
-    return false;
-  }
+  if (IsMarkdown)
+    return LinebreakIndicatorsMarkdown.contains(Rest.front());
 
   if (LinebreakIndicatorsPlainText.contains(Rest.front()))
     return true;
@@ -634,15 +630,15 @@ bool Paragraph::isHardLineBreakIndicator(llvm::StringRef Rest,
 bool Paragraph::isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest,
                                      bool IsMarkdown) const {
   // Should we also consider whether Line is short?
-  return (punctuationIndicatesLineBreak(Line, IsMarkdown) ||
-          isHardLineBreakIndicator(Rest, IsMarkdown));
+  return punctuationIndicatesLineBreak(Line, IsMarkdown) ||
+         isHardLineBreakIndicator(Rest, IsMarkdown);
 }
 
 void Paragraph::renderNewlinesPlaintext(llvm::raw_ostream &OS,
-                                        std::string &ParagraphText) const {
+                                        llvm::StringRef ParagraphText) const {
   llvm::StringRef Line, Rest;
 
-  for (std::tie(Line, Rest) = llvm::StringRef(ParagraphText).trim().split('\n');
+  for (std::tie(Line, Rest) = ParagraphText.trim().split('\n');
        !(Line.empty() && Rest.empty());
        std::tie(Line, Rest) = Rest.split('\n')) {
 
