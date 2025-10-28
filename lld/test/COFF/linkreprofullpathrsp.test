@@ -1,0 +1,38 @@
+# REQUIRES: x86
+# Unsupported on Windows due to maximum path length limitations.
+
+# RUN: rm -rf %t.dir
+# RUN: split-file %s %t.dir
+# RUN: yaml2obj %p/Inputs/hello32.yaml -o %t.obj
+# RUN: llvm-mc -filetype=obj -triple=i386-windows %t.dir/drectve.s -o %t.dir/drectve.obj
+# RUN: echo '_main@0' > %t.order
+# RUN: touch %t.def
+# RUN: touch %t.cg
+
+
+
+Test link.exe-style /linkreprofullpathrsp: flag.
+# RUN: mkdir -p %t.dir/build1
+# RUN: cd %t.dir/build1
+# RUN: lld-link %t.obj %p/Inputs/std32.lib /subsystem:console /defaultlib:%p/Inputs/library.lib \
+# RUN:   /entry:main@0 /linkreprofullpathrsp:%t.rsp /out:%t.exe
+# RUN: FileCheck %s --check-prefix=RSP -DT=%t -DP=%p < %t.rsp
+
+# RSP: [[T]].obj
+# RSP-NEXT: "[[P]]/Inputs/std32.lib"
+# RSP-NEXT: "/defaultlib:[[P]]/Inputs/library.lib"
+
+#--- drectve.s
+        .section .drectve, "yn"
+        .ascii "/defaultlib:std32"
+
+#--- archive.s
+	.text
+	.intel_syntax noprefix
+	.globl	exportfn3
+	.p2align	4
+exportfn3:
+	ret
+
+	.section	.drectve,"yni"
+	.ascii	" /EXPORT:exportfn3"

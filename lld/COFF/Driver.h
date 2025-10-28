@@ -88,11 +88,12 @@ public:
   void enqueueArchiveMember(const Archive::Child &c, const Archive::Symbol &sym,
                             StringRef parentName);
 
-  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false); }
+  void enqueuePDB(StringRef Path) { enqueuePath(Path, false, false, nullptr); }
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
-  void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
+  void enqueuePath(StringRef path, bool wholeArchive, bool lazy,
+                   raw_ostream *reproFile, bool defaultlib = false);
 
   // Returns a list of chunks of selected symbols.
   std::vector<Chunk *> getChunks() const;

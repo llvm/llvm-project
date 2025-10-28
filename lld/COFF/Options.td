@@ -74,6 +74,9 @@ def libpath : P<"libpath", "Additional library search path">;
 def linkrepro : Joined<["/", "-", "/?", "-?"], "linkrepro:">,
     MetaVarName<"directory">,
     HelpText<"Write repro.tar containing inputs and command to reproduce link">;
+def linkreprofullpathrsp : Joined<["/", "-", "/?", "-?"], "linkreprofullpathrsp:">,
+    MetaVarName<"directory">,
+    HelpText<"Write .rsp file containing inputs used to link with full paths">;
 def lldignoreenv : F<"lldignoreenv">,
     HelpText<"Ignore environment variables like %LIB%">;
 def lldltocache : P<"lldltocache",
