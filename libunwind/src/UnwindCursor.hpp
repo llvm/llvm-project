@@ -475,8 +475,7 @@ public:
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
   __attribute__((noinline, disable_tail_calls))
 #endif
-  virtual void
-  jumpto() {
+  virtual void jumpto() {
     _LIBUNWIND_ABORT("jumpto not implemented");
   }
   virtual bool isSignalFrame() {
@@ -980,8 +979,9 @@ public:
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
   __attribute__((noinline, disable_tail_calls))
 #endif
-  virtual void
-  jumpto();
+  // clang-format off
+  virtual void        jumpto();
+  // clang-format on
   virtual bool        isSignalFrame();
   virtual bool        getFunctionName(char *buf, size_t len, unw_word_t *off);
   virtual void        setInfoBasedOnIPRegister(bool isReturnAddress = false);
@@ -1434,6 +1434,7 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
 
 template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
+  // clang-format off
   /*
 
   The value of `_walkedFrames` is computed in `unwind_phase2` and represents the
@@ -1467,6 +1468,7 @@ template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
   back to the landing pad, so we need to subtract 1 to the number of
   `_EXTRA_LIBUNWIND_FRAMES_WALKED`.
   */
+  // clang-format on
 
   static constexpr size_t _EXTRA_LIBUNWIND_FRAMES_WALKED = 5 - 1;
   _registers.returnto(_walkedFrames + _EXTRA_LIBUNWIND_FRAMES_WALKED);

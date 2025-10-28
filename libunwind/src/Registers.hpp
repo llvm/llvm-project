@@ -1857,10 +1857,12 @@ public:
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
-  __attribute__((noinline, disable_tail_calls)) void
-  returnto(unsigned walkedFrames) {
+  // clang-format off
+  __attribute__((noinline, disable_tail_calls))
+  void        returnto(unsigned walkedFrames) {
     __libunwind_Registers_arm64_jumpto(this, walkedFrames);
   }
+  // clang-format on
 #else
   void jumpto() { __libunwind_Registers_arm64_jumpto(this, 0); }
 #endif
