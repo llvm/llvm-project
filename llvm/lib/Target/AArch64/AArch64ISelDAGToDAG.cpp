@@ -1973,7 +1973,6 @@ void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  unsigned FirstVecIdx = HasPred ? 2 : 1;
   SDUse *OpsIter = N->op_begin() + 1; // Skip intrinsic ID
   SmallVector<SDValue, 4> Ops;
 
