@@ -237,3 +237,27 @@ define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(
   call void @use.i32(i32 %addr)
   ret ptr addrspace(1) %gep
 }
+
+define i64 @ptrtoaddr_of_ptrmask(ptr %p, i64 %mask) {
+; CHECK-LABEL: define i64 @ptrtoaddr_of_ptrmask(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[MASK:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[ADDR:%.*]] = and i64 [[MASK]], [[TMP1]]
+; CHECK-NEXT:    ret i64 [[ADDR]]
+;
+  %masked = call ptr @llvm.ptrmask(ptr %p, i64 %mask)
+  %addr = ptrtoaddr ptr %masked to i64
+  ret i64 %addr
+}
+
+define i32 @ptrtoaddr_of_ptrmask_addrsize(ptr addrspace(1) %p, i32 %mask) {
+; CHECK-LABEL: define i32 @ptrtoaddr_of_ptrmask_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[MASK:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr addrspace(1) [[P]] to i32
+; CHECK-NEXT:    [[ADDR:%.*]] = and i32 [[MASK]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[ADDR]]
+;
+  %masked = call ptr addrspace(1) @llvm.ptrmask(ptr addrspace(1) %p, i32 %mask)
+  %addr = ptrtoaddr ptr addrspace(1) %masked to i32
+  ret i32 %addr
+}
