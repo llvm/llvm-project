@@ -1161,10 +1161,7 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
 }
 
 const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
-  const SCEV *IntOp = getLosslessPtrToAddrExpr(Op);
-  assert(!isa<SCEVCouldNotCompute>(IntOp) &&
-         "Must be able to losslessly convert PtrToAddr");
-  return IntOp;
+  return getLosslessPtrToAddrExpr(Op);
 }
 
 const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
