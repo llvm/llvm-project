@@ -2119,15 +2119,48 @@ define i8 @or_positive_minus_non_positive_to_abs(i8 %a){
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP0:%.*]], i1 false)
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
-  %b = icmp sgt i8 %a, zeroinitializer
+  %b = icmp sgt i8 %a, 0
   %mask = sext i1 %b to i8
-  %neg = sub i8 zeroinitializer, %a
+  %neg = sub i8 0, %a
   %mask_inv = xor i8 %mask, -1
   %c = and i8 %neg, %mask_inv
   %d = and i8 %a, %mask
   %or = or i8 %c, %d
   ret i8 %or
 }
+
+; TODO Fold to smax https://alive2.llvm.org/ce/z/wDiDh2
+define i8 @or_select_smax_neg_to_abs(i8 %a){
+; CHECK-LABEL: @or_select_smax_neg_to_abs(
+; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[A:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[A]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[SGT0]], i8 0, i8 [[NEG]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %sgt0 = icmp sgt i8 %a, 0
+  %neg = sub nsw i8 0, %a
+  %sel = select i1 %sgt0, i8 0, i8 %neg
+  ret i8 %sel
+}
+
+; TODO Fold to abs https://alive2.llvm.org/ce/z/DybfHG
+define i8 @or_select_smax_smax_to_abs(i8 %a){
+; CHECK-LABEL: @or_select_smax_smax_to_abs(
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smax.i8(i8 [[NEG]], i8 0)
+; CHECK-NEXT:    [[MAX:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 0)
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[SEL]], [[MAX]]
+; CHECK-NEXT:    ret i8 [[OR]]
+;
+  %neg = sub nsw i8 0, %a
+  %sel = call i8 @llvm.smax.i8(i8 %neg, i8 0)
+  %max = call i8 @llvm.smax.i8(i8 %a, i8 0)
+  %or = or i8 %sel, %max
+  ret i8 %or
+}
+
+declare i8 @llvm.abs.i8(i8, i1)
+declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
 
 define <2 x i8> @or_select_smax_to_abs(<2 x i8> %a){
 ; CHECK-LABEL: @or_select_smax_to_abs(
@@ -2141,8 +2174,6 @@ define <2 x i8> @or_select_smax_to_abs(<2 x i8> %a){
   %or = or <2 x i8> %sel, %max
   ret <2 x i8> %or
 }
-
-declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
 
 ; negative test - %d has multiple uses. %or is not folded to abs.
 
