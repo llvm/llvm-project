@@ -2148,7 +2148,7 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   return nullptr;
 }
 
-Value *InstCombinerImpl::foldPtrToIntOfGEP(Type *IntTy, Value *Ptr) {
+Value *InstCombinerImpl::foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr) {
   // Look through chain of one-use GEPs.
   Type *PtrTy = Ptr->getType();
   SmallVector<GEPOperator *> GEPs;
@@ -2210,7 +2210,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
-  if (Value *V = foldPtrToIntOfGEP(Ty, SrcOp))
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
     return replaceInstUsesWith(CI, V);
 
   Value *Vec, *Scalar, *Index;
@@ -2239,6 +2239,9 @@ Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
                                                             m_Value(Mask)))) &&
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToAddr(Ptr), Mask);
+
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
+    return replaceInstUsesWith(CI, V);
 
   // FIXME: Implement variants of ptrtoint folds.
   return commonCastTransforms(CI);
