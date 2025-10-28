@@ -21,20 +21,36 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
 
-  SourceLocation OperandLoc = Tok.getLocation();
-
-  {
-    TentativeParsingAction TPA(*this);
-    // global namespace ::
-    if (Tok.is(tok::coloncolon)) {
-      ConsumeToken();
-      TPA.Commit();
-      Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
-      return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, SourceLocation(),
-                                         TUDecl);
-    }
-    TPA.Revert();
+  CXXScopeSpec SS;
+  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                     /*ObjectHasErrors=*/false,
+                                     /*EnteringContext=*/false)) {
+    SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
+    return ExprError();
   }
+
+  SourceLocation OperandLoc = Tok.getLocation();
+  TentativeParsingAction TPA(*this);
+
+  // Next, check for an unqualified-id.
+  if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::kw_template,
+                  tok::tilde, tok::annot_template_id)) {
+    // TODO(reflection) : support parsing for
+    // - type-name::
+    // - nested-name-specifier identifier ::
+    // - namespace-name ::
+    // - nested-name-specifier template_opt simple-template-id
+    Diag(OperandLoc, diag::err_cannot_reflect_operand);
+    return ExprError();
+  } else if (SS.isValid() &&
+             SS.getScopeRep().getKind() == NestedNameSpecifier::Kind::Global) {
+    // global namespace ::.
+    TPA.Commit();
+    Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
+    return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, SourceLocation(),
+                                       TUDecl);
+  }
+  TPA.Revert();
 
   if (isCXXTypeId(TentativeCXXTypeIdContext::AsReflectionOperand)) {
     TypeResult TR = ParseTypeName(/*TypeOf=*/nullptr);

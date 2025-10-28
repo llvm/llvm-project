@@ -1,13 +1,26 @@
 // RUN: %clang_cc1 %s -std=c++26 -freflection -fsyntax-only -verify
 
 namespace a {
-struct T {};
+struct X {
+    int y;
+    bool operator==(const X& other)
+    {
+        return y == other.y;
+    }
+};
+
 namespace b {
-struct U {};
-int x;
-}
+    struct Y {};
+    int x;
 }
 
+template<typename T>
+struct Z{
+    template<typename U>
+    using type = U;
+};
+
+}
 
 int main()
 {
@@ -30,11 +43,18 @@ int main()
     // Not supported yet.
     (void)^^a; // expected-error {{expected reflectable entity}}
     (void)^^a::; // expected-error {{expected reflectable entity}}
-    (void)^^a::b::T; // expected-error {{expected reflectable entity}}
-    (void)^^a::T::; // expected-error {{expected reflectable entity}}
+    (void)^^a::b::X; // expected-error {{expected reflectable entity}}
+    (void)^^a::X::; // expected-error {{expected reflectable entity}}
     (void)(^^a::b); // expected-error {{expected reflectable entity}}
     (void)^^a::b::; // expected-error {{expected reflectable entity}}
-    (void)^^a::b::U; // expected-error {{expected reflectable entity}}
+    (void)^^a::b::Y; // expected-error {{expected reflectable entity}}
     (void)^^a::b::x; // expected-error {{expected reflectable entity}}
-    (void)^^a::b::U::; // expected-error {{expected reflectable entity}}
+    (void)^^a::b::Y::; // expected-error {{expected reflectable entity}}
+    (void)(^^::a::); // expected-error {{expected reflectable entity}}
+    (void)(^^::a::X::operator==); // expected-error {{expected reflectable entity}}
+    (void)(^^::a::X::~X()); // expected-error {{expected reflectable entity}}
+    (void)(^^::a::Z<int>); // expected-error {{expected reflectable entity}}
+    (void)(^^::a::Z<int>::template type<int>); // expected-error {{expected reflectable entity}}
+    namespace c = a::b;
+    (void)(^^c); // expected-error {{expected reflectable entity}}
 }
