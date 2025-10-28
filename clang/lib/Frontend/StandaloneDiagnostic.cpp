@@ -55,17 +55,34 @@ StandaloneDiagnostic::StandaloneDiagnostic(const LangOptions &LangOpts,
 
 StoredDiagnostic
 translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
-                        StandaloneDiagnostic &&StandaloneDiag) {
+                        const StandaloneDiagnostic &StandaloneDiag,
+                        llvm::StringMap<SourceLocation> &SrcLocCache) {
   const auto FileRef = FileMgr.getOptionalFileRef(StandaloneDiag.Filename);
   if (!FileRef)
     return StoredDiagnostic(StandaloneDiag.Level, StandaloneDiag.ID,
-                            std::move(StandaloneDiag.Message));
+                            StandaloneDiag.Message);
 
-  const auto FileID =
-      SrcMgr.getOrCreateFileID(*FileRef, StandaloneDiag.FileKind);
-  const auto FileLoc = SrcMgr.getLocForStartOfFile(FileID);
-  assert(FileLoc.isValid() && "StandaloneDiagnostic should only use FilePath "
-                              "for encoding a valid source location.");
+  // Try to get FileLoc from cache first
+  SourceLocation FileLoc;
+  auto It = SrcLocCache.find(StandaloneDiag.Filename);
+  if (It != SrcLocCache.end()) {
+    FileLoc = It->getValue();
+  }
+
+  // Cache miss - compute the location
+  if (FileLoc.isInvalid()) {
+    const auto FileID =
+        SrcMgr.getOrCreateFileID(*FileRef, StandaloneDiag.FileKind);
+    FileLoc = SrcMgr.getLocForStartOfFile(FileID);
+
+    if (FileLoc.isInvalid())
+      return StoredDiagnostic(StandaloneDiag.Level, StandaloneDiag.ID,
+                              StandaloneDiag.Message);
+
+    // Store in cache
+    SrcLocCache[StandaloneDiag.Filename] = FileLoc;
+  }
+
   const auto DiagLoc = FileLoc.getLocWithOffset(StandaloneDiag.FileOffset);
   const FullSourceLoc Loc(DiagLoc, SrcMgr);
 
@@ -77,16 +94,16 @@ translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
             /*IsTokenRange*/ false);
       };
 
-  SmallVector<CharSourceRange, 0> TranslatedRanges;
+  SmallVector<CharSourceRange, 4> TranslatedRanges;
   TranslatedRanges.reserve(StandaloneDiag.Ranges.size());
   transform(StandaloneDiag.Ranges, std::back_inserter(TranslatedRanges),
             ConvertOffsetRange);
 
-  SmallVector<FixItHint, 0> TranslatedFixIts;
+  SmallVector<FixItHint, 2> TranslatedFixIts;
   TranslatedFixIts.reserve(StandaloneDiag.FixIts.size());
   for (const auto &FixIt : StandaloneDiag.FixIts) {
     FixItHint TranslatedFixIt;
-    TranslatedFixIt.CodeToInsert = std::string(FixIt.CodeToInsert);
+    TranslatedFixIt.CodeToInsert = FixIt.CodeToInsert;
     TranslatedFixIt.RemoveRange = ConvertOffsetRange(FixIt.RemoveRange);
     TranslatedFixIt.InsertFromRange = ConvertOffsetRange(FixIt.InsertFromRange);
     TranslatedFixIt.BeforePreviousInsertions = FixIt.BeforePreviousInsertions;
