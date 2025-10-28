@@ -762,7 +762,7 @@ public:
   /// Tests whether the OS is WASI.
   bool isOSWASI() const {
     return getOS() == Triple::WASI || getOS() == Triple::WASIp1 ||
-	   getOS() == Triple::WASIp2 || getOS() == Triple::WASIp3;
+           getOS() == Triple::WASIp2 || getOS() == Triple::WASIp3;
   }
 
   /// Tests whether the OS is Emscripten.
