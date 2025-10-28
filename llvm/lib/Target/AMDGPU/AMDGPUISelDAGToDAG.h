@@ -283,6 +283,7 @@ private:
   void SelectAddcSubb(SDNode *N);
   void SelectAddcSubbI64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
+  bool SelectABS(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
   void SelectMAD_64_32(SDNode *N);
   void SelectMUL_LOHI(SDNode *N);
