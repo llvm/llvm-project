@@ -671,8 +671,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       DemandedSrcElts =
           APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
 
-    computeKnownBitsImpl(InVec, Known2, DemandedSrcElts, Depth + 1);
-    Known = Known.intersectWith(Known2);
+    computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
     
     break;
   }
