@@ -2312,13 +2312,12 @@ exit:
 
 define i32 @test99(i32 %x, i32 %y) {
 ; ALL-LABEL: @test99(
-; ALL-NEXT:    [[TX:%.*]] = trunc i32 [[X:%.*]] to i16
-; ALL-NEXT:    [[TY:%.*]] = trunc i32 [[Y:%.*]] to i16
-; ALL-NEXT:    [[A:%.*]] = add i16 [[TX]], [[TY]]
-; ALL-NEXT:    [[B:%.*]] = add i16 [[A]], 5
-; ALL-NEXT:    [[C:%.*]] = mul i16 [[A]], 3
-; ALL-NEXT:    [[D:%.*]] = or i16 [[B]], [[C]]
-; ALL-NEXT:    [[S:%.*]] = sext i16 [[D]] to i32
+; ALL-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; ALL-NEXT:    [[B:%.*]] = add i32 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i32 [[A]], 3
+; ALL-NEXT:    [[D:%.*]] = or i32 [[B]], [[C]]
+; ALL-NEXT:    [[SEXT:%.*]] = shl i32 [[D]], 16
+; ALL-NEXT:    [[S:%.*]] = ashr exact i32 [[SEXT]], 16
 ; ALL-NEXT:    ret i32 [[S]]
 ;
   %tx = trunc i32 %x to i16
