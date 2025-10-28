@@ -1862,7 +1862,7 @@ Expr<TO> FoldOperation(
                 std::snprintf(buffer, sizeof buffer,
                     "INTEGER(%d) to REAL(%d) conversion", Operand::kind,
                     TO::kind);
-                RealFlagWarnings(ctx, converted.flags, buffer);
+                ctx.RealFlagWarnings(converted.flags, buffer);
               }
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
@@ -1871,7 +1871,7 @@ Expr<TO> FoldOperation(
               if (!converted.flags.empty()) {
                 std::snprintf(buffer, sizeof buffer,
                     "REAL(%d) to REAL(%d) conversion", Operand::kind, TO::kind);
-                RealFlagWarnings(ctx, converted.flags, buffer);
+                ctx.RealFlagWarnings(converted.flags, buffer);
               }
               if (ctx.targetCharacteristics().areSubnormalsFlushedToZero()) {
                 converted.value = converted.value.FlushSubnormalToZero();
@@ -2012,7 +2012,7 @@ Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
     } else {
       auto sum{folded->first.Add(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, sum.flags, "addition");
+      context.RealFlagWarnings(sum.flags, "addition");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         sum.value = sum.value.FlushSubnormalToZero();
       }
@@ -2041,7 +2041,7 @@ Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
     } else {
       auto difference{folded->first.Subtract(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, difference.flags, "subtraction");
+      context.RealFlagWarnings(difference.flags, "subtraction");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         difference.value = difference.value.FlushSubnormalToZero();
       }
@@ -2070,7 +2070,7 @@ Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
     } else {
       auto product{folded->first.Multiply(
           folded->second, context.targetCharacteristics().roundingMode())};
-      RealFlagWarnings(context, product.flags, "multiplication");
+      context.RealFlagWarnings(product.flags, "multiplication");
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         product.value = product.value.FlushSubnormalToZero();
       }
@@ -2141,7 +2141,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
         }
       }
       if (!isCanonicalNaNOrInf) {
-        RealFlagWarnings(context, quotient.flags, "division");
+        context.RealFlagWarnings(quotient.flags, "division");
       }
       if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
         quotient.value = quotient.value.FlushSubnormalToZero();
@@ -2201,7 +2201,7 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
       [&](auto &y) -> Expr<T> {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
           auto power{evaluate::IntPower(folded->first, folded->second)};
-          RealFlagWarnings(context, power.flags, "power with INTEGER exponent");
+          context.RealFlagWarnings(power.flags, "power with INTEGER exponent");
           if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
             power.value = power.value.FlushSubnormalToZero();
           }
