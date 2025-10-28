@@ -142,8 +142,8 @@ define void @multiple_incoming_phi_with_blend_mask(i64 %a, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> [[VEC_IND3]], <2 x i16> [[VEC_IND1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [32 x i16], ptr @src, i16 0, i16 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP5]], align 1

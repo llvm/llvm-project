@@ -71,6 +71,7 @@ CodeGen/Hexagon/autohvx/interleave.ll
 CodeGen/Hexagon/loop-idiom/hexagon-memmove1.ll
 CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
 CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
+CodeGen/Hexagon/masked_gather.ll
 CodeGen/NVPTX/lower-ctor-dtor.ll
 CodeGen/RISCV/zmmul.ll
 CodeGen/WebAssembly/memory-interleave.ll
@@ -107,6 +108,7 @@ Instrumentation/AddressSanitizer/asan-stack-safety.ll
 Instrumentation/AddressSanitizer/asan-struct-scalable.ll
 Instrumentation/AddressSanitizer/asan-vp-load-store.ll
 Instrumentation/AddressSanitizer/asan-vs-gvn.ll
+Instrumentation/AddressSanitizer/asan-win-dont-instrument-catchpad.ll
 Instrumentation/AddressSanitizer/basic.ll
 Instrumentation/AddressSanitizer/basic-msvc64.ll
 Instrumentation/AddressSanitizer/byref-args.ll
@@ -330,6 +332,10 @@ Instrumentation/MemorySanitizer/AArch64/arm64-vshift.ll
 Instrumentation/MemorySanitizer/AArch64/module-flags-aarch64.ll
 Instrumentation/MemorySanitizer/AArch64/neon_vst_float.ll
 Instrumentation/MemorySanitizer/AArch64/qshrn.ll
+Instrumentation/MemorySanitizer/AArch64/sme2-intrinsics-add.ll
+Instrumentation/MemorySanitizer/AArch64/sme2-intrinsics-add-mini.ll
+Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount.ll
+Instrumentation/MemorySanitizer/AArch64/sme-aarch64-svcount-mini.ll
 Instrumentation/MemorySanitizer/AArch64/vararg.ll
 Instrumentation/MemorySanitizer/AArch64/vararg_shadow.ll
 Instrumentation/MemorySanitizer/abs-vector.ll
@@ -544,6 +550,7 @@ tools/UpdateTestChecks/update_test_checks/stable_ir_values5.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values6.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values_funcs.test
 tools/UpdateTestChecks/update_test_checks/stable_ir_values.test
+tools/UpdateTestChecks/update_test_checks/switch_case.test
 tools/UpdateTestChecks/update_test_checks/tbaa-semantics-checks.test
 tools/UpdateTestChecks/update_test_checks/various_ir_values_dbgrecords.test
 Transforms/AtomicExpand/AArch64/atomicrmw-fp.ll
@@ -1310,14 +1317,8 @@ Transforms/SimpleLoopUnswitch/pr60736.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-freeze-individual-conditions.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-logical-and-or.ll
-Transforms/SROA/phi-gep.ll
-Transforms/SROA/scalable-vectors-with-known-vscale.ll
-Transforms/SROA/select-gep.ll
-Transforms/SROA/select-load.ll
-Transforms/SROA/slice-width.ll
-Transforms/SROA/vector-conversion.ll
-Transforms/SROA/vector-promotion-cannot-tree-structure-merge.ll
-Transforms/SROA/vector-promotion.ll
+Transforms/SimplifyCFG/RISCV/switch-of-powers-of-two.ll
+Transforms/SimplifyCFG/X86/switch-of-powers-of-two.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/StructurizeCFG/AMDGPU/uniform-regions.ll
 Transforms/StructurizeCFG/hoist-zerocost.ll

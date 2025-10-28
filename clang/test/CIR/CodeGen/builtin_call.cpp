@@ -82,7 +82,7 @@ void library_builtins() {
   __builtin_abort();
 }
 
-// CIR: cir.func{{.*}} @_Z16library_builtinsv() {
+// CIR: cir.func{{.*}} @_Z16library_builtinsv()
 // CIR: %[[NULL:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
 // CIR: cir.call @printf(%[[NULL]]) nothrow : (!cir.ptr<!s8i>) -> !s32i
 // CIR: cir.call @abort() nothrow : () -> ()

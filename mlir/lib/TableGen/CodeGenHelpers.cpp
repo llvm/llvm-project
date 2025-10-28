@@ -49,9 +49,7 @@ StaticVerifierFunctionEmitter::StaticVerifierFunctionEmitter(
     raw_ostream &os, const RecordKeeper &records, StringRef tag)
     : os(os), uniqueOutputLabel(getUniqueOutputLabel(records, tag)) {}
 
-void StaticVerifierFunctionEmitter::emitOpConstraints(
-    ArrayRef<const Record *> opDefs) {
-  NamespaceEmitter namespaceEmitter(os, Operator(*opDefs[0]).getCppNamespace());
+void StaticVerifierFunctionEmitter::emitOpConstraints() {
   emitTypeConstraints();
   emitAttrConstraints();
   emitPropConstraints();

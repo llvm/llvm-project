@@ -7695,6 +7695,11 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         }
         if (IsWellDefined)
           return true;
+      } else if (auto *Splat = isa<ShuffleVectorInst>(Opr) ? getSplatValue(Opr)
+                                                           : nullptr) {
+        // For splats we only need to check the value being splatted.
+        if (OpCheck(Splat))
+          return true;
       } else if (all_of(Opr->operands(), OpCheck))
         return true;
     }

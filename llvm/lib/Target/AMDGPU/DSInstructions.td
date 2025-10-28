@@ -1488,6 +1488,12 @@ let AssemblerPredicate = isGFX12Plus in {
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1250Plus]>;
 def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250Plus]>;
 
+// Additional aliases for ds load transpose instructions.
+def : MnemonicAlias<"ds_load_b64_tr_b8", "ds_load_tr8_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b128_tr_b16", "ds_load_tr16_b128">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b64_tr_b4", "ds_load_tr4_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b96_tr_b6", "ds_load_tr6_b96">, Requires<[isGFX125xOnly]>;
+
 //===----------------------------------------------------------------------===//
 // GFX11.
 //===----------------------------------------------------------------------===//

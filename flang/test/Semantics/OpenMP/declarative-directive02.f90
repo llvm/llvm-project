@@ -9,7 +9,7 @@ subroutine test_decl
   implicit none
   save :: x1, y1
   !$omp threadprivate(x1)
-  !$omp allocate(y1)
+  !$omp allocate(y1) allocator(0)
   integer :: x1, y1
 
   ! OMPv5.2 7.7 declare-simd
@@ -33,12 +33,12 @@ end subroutine
 subroutine test_decl2
   save x1, y1
   !$omp threadprivate(x1)
-  !$omp allocate(y1)
+  !$omp allocate(y1) allocator(0)
   integer :: x1, y1
 
   ! implicit decl
   !$omp threadprivate(x2)
-  !$omp allocate(y2)
+  !$omp allocate(y2) allocator(0)
   save x2, y2
 end subroutine
 

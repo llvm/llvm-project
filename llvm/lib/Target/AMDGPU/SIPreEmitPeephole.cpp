@@ -615,11 +615,12 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
     uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
+    bool IsUnpackable =
+        !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
     if (Instr.isMetaInstruction())
       continue;
     if ((Instr.isTerminator()) ||
-        (TII->isNeverCoissue(Instr) &&
-         (UnpackedOpCode == std::numeric_limits<uint16_t>::max())) ||
+        (TII->isNeverCoissue(Instr) && !IsUnpackable) ||
         (SIInstrInfo::modifiesModeRegister(Instr) &&
          Instr.modifiesRegister(AMDGPU::EXEC, TRI)))
       return;
@@ -643,7 +644,7 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
       if (TRI->regsOverlap(MFMADef, InstrMO.getReg()))
         return;
     }
-    if (UnpackedOpCode == std::numeric_limits<uint16_t>::max())
+    if (!IsUnpackable)
       continue;
 
     if (canUnpackingClobberRegister(Instr))
@@ -658,7 +659,6 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     if (TotalCyclesBetweenCandidates < NumMFMACycles - 1)
       InstrsToUnpack.insert(&Instr);
   }
-  return;
 }
 
 void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
@@ -707,7 +707,6 @@ void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
   HiDstOp.setIsRenamable(DstOp.isRenamable());
 
   I.eraseFromParent();
-  return;
 }
 
 MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
@@ -741,11 +740,11 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
   }
 
   if (AMDGPU::hasNamedOperand(OpCode, AMDGPU::OpName::src2)) {
-    const MachineOperand *SrcMO3 =
+    const MachineOperand *SrcMO2 =
         TII->getNamedOperand(I, AMDGPU::OpName::src2);
     unsigned Src2Mods =
         TII->getNamedOperand(I, AMDGPU::OpName::src2_modifiers)->getImm();
-    addOperandAndMods(NewMI, Src2Mods, IsHiBits, *SrcMO3);
+    addOperandAndMods(NewMI, Src2Mods, IsHiBits, *SrcMO2);
   }
   if (AMDGPU::hasNamedOperand(UnpackedOpcode, AMDGPU::OpName::clamp))
     NewMI.addImm(ClampVal); // clamp
@@ -824,24 +823,26 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
 
   // TODO: Fold this into previous block, if possible. Evaluate and handle any
   // side effects.
-  if (ST.hasGFX950Insts() || ST.hasGFX940Insts()) {
-    for (MachineBasicBlock &MBB : MF) {
-      // Unpack packed instructions overlapped by MFMAs. This allows the
-      // compiler to co-issue unpacked instructions with MFMA
-      auto SchedModel = TII->getSchedModel();
-      SetVector<MachineInstr *> InstrsToUnpack;
-      for (auto &MI : make_early_inc_range(MBB.instrs())) {
-        if (!SIInstrInfo::isMFMA(MI))
-          continue;
-        const MCSchedClassDesc *SchedClassDesc =
-            SchedModel.resolveSchedClass(&MI);
-        uint16_t NumMFMACycles =
-            SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-        collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
-      }
-      for (MachineInstr *MI : InstrsToUnpack) {
-        performF32Unpacking(*MI);
-      }
+
+  // Perform the extra MF scans only for supported archs
+  if (!ST.hasGFX940Insts())
+    return Changed;
+  for (MachineBasicBlock &MBB : MF) {
+    // Unpack packed instructions overlapped by MFMAs. This allows the
+    // compiler to co-issue unpacked instructions with MFMA
+    auto SchedModel = TII->getSchedModel();
+    SetVector<MachineInstr *> InstrsToUnpack;
+    for (auto &MI : make_early_inc_range(MBB.instrs())) {
+      if (!SIInstrInfo::isMFMA(MI))
+        continue;
+      const MCSchedClassDesc *SchedClassDesc =
+          SchedModel.resolveSchedClass(&MI);
+      uint16_t NumMFMACycles =
+          SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
+      collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
+    }
+    for (MachineInstr *MI : InstrsToUnpack) {
+      performF32Unpacking(*MI);
     }
   }
 

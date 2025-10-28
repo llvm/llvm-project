@@ -1407,7 +1407,7 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
   int NoIntegrals = 0, NoObjCIdPointers = 0;
   SmallVector<CXXConversionDecl *, 4> ConversionDecls;
 
-  for (NamedDecl *D : cast<CXXRecordDecl>(RecordTy->getOriginalDecl())
+  for (NamedDecl *D : cast<CXXRecordDecl>(RecordTy->getDecl())
                           ->getDefinitionOrSelf()
                           ->getVisibleConversionFunctions()) {
     if (CXXConversionDecl *Conversion =
@@ -1511,7 +1511,7 @@ bool SemaObjC::isCFStringType(QualType T) {
   if (!RT)
     return false;
 
-  const RecordDecl *RD = RT->getOriginalDecl();
+  const RecordDecl *RD = RT->getDecl();
   if (RD->getTagKind() != TagTypeKind::Struct)
     return false;
 
