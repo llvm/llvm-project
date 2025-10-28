@@ -151,3 +151,110 @@ llvm::LogicalResult mif::CoSumOp::verify() {
     return emitOpError("`A` shall be of numeric type.");
   return mlir::success();
 }
+
+//===----------------------------------------------------------------------===//
+// ChangeTeamOp
+//===----------------------------------------------------------------------===//
+
+void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value team,
+                              bool ensureTerminator,
+                              llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  build(builder, result, team, /*stat*/ mlir::Value{}, /*errmsg*/ mlir::Value{},
+        ensureTerminator, attributes);
+}
+
+void mif::ChangeTeamOp::build(mlir::OpBuilder &builder,
+                              mlir::OperationState &result, mlir::Value team,
+                              mlir::Value stat, mlir::Value errmsg,
+                              bool ensureTerminator,
+                              llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  std::int32_t argStat = 0, argErrmsg = 0;
+  result.addOperands(team);
+  if (stat) {
+    result.addOperands(stat);
+    argStat++;
+  }
+  if (errmsg) {
+    result.addOperands(errmsg);
+    argErrmsg++;
+  }
+
+  mlir::Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new mlir::Block{});
+  if (ensureTerminator)
+    ChangeTeamOp::ensureTerminator(*bodyRegion, builder, result.location);
+
+  result.addAttribute(getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({1, argStat, argErrmsg}));
+  result.addAttributes(attributes);
+}
+
+mlir::ParseResult mif::ChangeTeamOp::parse(mlir::OpAsmParser &parser,
+                                           mlir::OperationState &result) {
+  auto &builder = parser.getBuilder();
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> opers;
+  llvm::SmallVector<mlir::Type> types;
+  int32_t statArg = 0, errmsgArg = 0;
+  if (parser.parseOperand(opers.emplace_back()))
+    return mlir::failure();
+
+  if (mlir::succeeded(parser.parseOptionalKeyword("stat"))) {
+    if (*parser.parseOptionalOperand(opers.emplace_back()))
+      return mlir::failure();
+    statArg++;
+  }
+  if (mlir::succeeded(parser.parseOptionalKeyword("errmsg"))) {
+    if (*parser.parseOptionalOperand(opers.emplace_back()))
+      return mlir::failure();
+    errmsgArg++;
+  }
+
+  // Set the operandSegmentSizes attribute
+  result.addAttribute(getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr({1, statArg, errmsgArg}));
+
+  if (parser.parseColon())
+    return mlir::failure();
+
+  if (parser.parseLParen())
+    return mlir::failure();
+  if (parser.parseTypeList(types))
+    return mlir::failure();
+  if (parser.parseRParen())
+    return mlir::failure();
+
+  if (opers.size() != types.size())
+    return mlir::failure();
+
+  if (parser.resolveOperands(opers, types, parser.getCurrentLocation(),
+                             result.operands))
+    return mlir::failure();
+
+  auto *body = result.addRegion();
+  if (parser.parseRegion(*body))
+    return mlir::failure();
+
+  ChangeTeamOp::ensureTerminator(*body, builder, result.location);
+
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
+    return mlir::failure();
+
+  return mlir::success();
+}
+
+void mif::ChangeTeamOp::print(mlir::OpAsmPrinter &p) {
+  p << ' ' << getTeam();
+  if (getStat())
+    p << " stat " << getStat();
+  if (getErrmsg())
+    p << " errmsg " << getErrmsg();
+  p << " : (";
+  llvm::interleaveComma(getOperands(), p,
+                        [&](mlir::Value v) { p << v.getType(); });
+  p << ") ";
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/true,
+                /*printBlockTerminators=*/true);
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {ChangeTeamOp::getOperandSegmentSizeAttr()});
+}
