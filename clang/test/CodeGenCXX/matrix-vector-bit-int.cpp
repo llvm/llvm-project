@@ -70,27 +70,25 @@ i512x3 v3(i512x3 a) {
   return a + a;
 }
 
-// CHECK-LABEL: define dso_local i32 @_Z2v4Dv3_DB4_(
-// CHECK-SAME: i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local i16 @_Z2v4Dv3_DB4_(
+// CHECK-SAME: i16 [[A_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <3 x i4>, align 4
-// CHECK-NEXT:    [[A:%.*]] = alloca <3 x i4>, align 4
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x i4>, align 4
-// CHECK-NEXT:    [[RETVAL_COERCE:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[A_COERCE]], ptr [[A]], align 4
-// CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i4>, ptr [[A]], align 4
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <3 x i4>, align 2
+// CHECK-NEXT:    [[A:%.*]] = alloca <3 x i4>, align 2
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <3 x i4>, align 2
+// CHECK-NEXT:    store i16 [[A_COERCE]], ptr [[A]], align 2
+// CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x i4>, ptr [[A]], align 2
 // CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i4> [[LOADVECN]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>
 // CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i4> [[A1]], <3 x i4> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
-// CHECK-NEXT:    store <4 x i4> [[EXTRACTVEC]], ptr [[A_ADDR]], align 4
-// CHECK-NEXT:    [[LOADVECN2:%.*]] = load <4 x i4>, ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    store <4 x i4> [[EXTRACTVEC]], ptr [[A_ADDR]], align 2
+// CHECK-NEXT:    [[LOADVECN2:%.*]] = load <4 x i4>, ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <4 x i4> [[LOADVECN2]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>
-// CHECK-NEXT:    [[LOADVECN4:%.*]] = load <4 x i4>, ptr [[A_ADDR]], align 4
+// CHECK-NEXT:    [[LOADVECN4:%.*]] = load <4 x i4>, ptr [[A_ADDR]], align 2
 // CHECK-NEXT:    [[EXTRACTVEC5:%.*]] = shufflevector <4 x i4> [[LOADVECN4]], <4 x i4> poison, <3 x i32> <i32 0, i32 1, i32 2>
 // CHECK-NEXT:    [[ADD:%.*]] = add <3 x i4> [[EXTRACTVEC3]], [[EXTRACTVEC5]]
-// CHECK-NEXT:    store <3 x i4> [[ADD]], ptr [[RETVAL]], align 4
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RETVAL_COERCE]], ptr align 4 [[RETVAL]], i64 2, i1 false)
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RETVAL_COERCE]], align 4
-// CHECK-NEXT:    ret i32 [[TMP0]]
+// CHECK-NEXT:    store <3 x i4> [[ADD]], ptr [[RETVAL]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[RETVAL]], align 2
+// CHECK-NEXT:    ret i16 [[TMP0]]
 //
 i4x3 v4(i4x3 a) {
   return a + a;
