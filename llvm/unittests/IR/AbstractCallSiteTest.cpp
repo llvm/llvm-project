@@ -60,7 +60,7 @@ TEST(AbstractCallSite, CallbackCall) {
   // Though the callback metadata only specifies ONE unfixed argument No, the
   // callback callee is vararg, hence the third arg is also considered as
   // another arg for the callback.
-  EXPECT_EQ(ACS.getNumArgOperands(), 2);
+  EXPECT_EQ(ACS.getNumArgOperands(), 2u);
   Argument *Param0 = Callback->getArg(0), *Param1 = Callback->getArg(1);
   ASSERT_TRUE(Param0 && Param1);
   EXPECT_EQ(ACS.getCallArgOperandNo(*Param0), -1);
@@ -90,7 +90,7 @@ TEST(AbstractCallSite, DirectCall) {
   EXPECT_TRUE(ACS.isDirectCall());
   EXPECT_TRUE(ACS.isCallee(DirectCallUse));
   EXPECT_EQ(ACS.getCalledFunction(), Callee);
-  EXPECT_EQ(ACS.getNumArgOperands(), 2);
+  EXPECT_EQ(ACS.getNumArgOperands(), 2u);
   Argument *ArgX = Callee->getArg(0);
   ASSERT_NE(ArgX, nullptr);
   Value *CAO1 = ACS.getCallArgOperand(*ArgX);
@@ -102,7 +102,7 @@ TEST(AbstractCallSite, DirectCall) {
 
   ConstantInt *FirstArgInt = dyn_cast<ConstantInt>(CAO2);
   ASSERT_NE(FirstArgInt, nullptr);
-  EXPECT_EQ(FirstArgInt->getZExtValue(), 1);
+  EXPECT_EQ(FirstArgInt->getZExtValue(), 1ull);
 
   EXPECT_EQ(ACS.getCallArgOperandNo(*ArgX), 0);
   EXPECT_EQ(ACS.getCallArgOperandNo(0), 0);
@@ -135,12 +135,12 @@ TEST(AbstractCallSite, IndirectCall) {
   EXPECT_TRUE(ACS.isCallee(IndCallUse));
   EXPECT_EQ(ACS.getCalledFunction(), nullptr);
   EXPECT_EQ(ACS.getCalledOperand(), ArgAsCallee);
-  EXPECT_EQ(ACS.getNumArgOperands(), 2);
+  EXPECT_EQ(ACS.getNumArgOperands(), 2u);
   Value *CalledOperand = ACS.getCallArgOperand(0);
   ASSERT_NE(CalledOperand, nullptr);
   ConstantInt *FirstArgInt = dyn_cast<ConstantInt>(CalledOperand);
   ASSERT_NE(FirstArgInt, nullptr);
-  EXPECT_EQ(FirstArgInt->getZExtValue(), 1);
+  EXPECT_EQ(FirstArgInt->getZExtValue(), 1ull);
 
   EXPECT_EQ(ACS.getCallArgOperandNo(0), 0);
   EXPECT_EQ(ACS.getCallArgOperandNo(1), 1);
