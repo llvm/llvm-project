@@ -50,6 +50,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -357,6 +358,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"barrier_init",
      &I::genBarrierInit,
      {{{"barrier", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"barrier_try_wait",
+     &I::genBarrierTryWait,
+     {{{"barrier", asAddr}, {"token", asValue}}},
+     /*isElemental=*/false},
+    {"barrier_try_wait_sleep",
+     &I::genBarrierTryWaitSleep,
+     {{{"barrier", asAddr}, {"token", asValue}, {"ns", asValue}}},
      /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
@@ -3280,6 +3289,57 @@ void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   auto space = mlir::NVVM::SharedSpaceAttr::get(
       builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
   mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
+}
+
+// BARRIER_TRY_WAIT (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+  fir::StoreOp::create(builder, loc, zero, res);
+  mlir::Value ns =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 1000000);
+  mlir::Value load = fir::LoadOp::create(builder, loc, res);
+  auto whileOp = mlir::scf::WhileOp::create(
+      builder, loc, mlir::TypeRange{resultType}, mlir::ValueRange{load});
+  mlir::Block *beforeBlock = builder.createBlock(&whileOp.getBefore());
+  mlir::Value beforeArg = beforeBlock->addArgument(resultType, loc);
+  builder.setInsertionPointToStart(beforeBlock);
+  mlir::Value condition = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::ne, beforeArg, zero);
+  mlir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
+  mlir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
+  afterBlock->addArgument(resultType, loc);
+  builder.setInsertionPointToStart(afterBlock);
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
+  mlir::Value ret =
+      mlir::NVVM::InlinePtxOp::create(
+          builder, loc, {resultType}, {barrier, args[1], ns}, {},
+          ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%1], %2, %3; "
+          "selp.b32 %0, 1, 0, p;",
+          {})
+          .getResult(0);
+  mlir::scf::YieldOp::create(builder, loc, ret);
+  builder.setInsertionPointAfter(whileOp);
+  return whileOp.getResult(0);
+}
+
+// BARRIER_TRY_WAIT_SLEEP (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierTryWaitSleep(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
+  return mlir::NVVM::InlinePtxOp::create(
+             builder, loc, {resultType}, {barrier, args[1], args[2]}, {},
+             ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%1], %2, %3; "
+             "selp.b32 %0, 1, 0, p;",
+             {})
+      .getResult(0);
 }
 
 // BESSEL_JN
