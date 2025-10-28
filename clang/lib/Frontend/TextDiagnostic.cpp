@@ -677,7 +677,7 @@ void TextDiagnostic::emitDiagnosticMessage(
                          Message, OS.getColumn() - StartOfLocationInfo,
                          DiagOpts.MessageLength, DiagOpts.ShowColors);
   // We use a formatted ostream, which does its own buffering. Flush here
-  // so we keek the proper order of output.
+  // so we keep the proper order of output.
   OS.flush();
 }
 
