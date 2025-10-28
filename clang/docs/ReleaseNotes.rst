@@ -295,6 +295,8 @@ Lanai Support
 ^^^^^^^^^^^^^^
 - The option ``-mcmodel={small,medium,large}`` is supported again.
 
+- New Options ``-fpartial-inlining`` and ``-fno-partial-inlining`` added to adapt with GCC. 
+
 Deprecated Compiler Flags
 -------------------------
 
