@@ -486,7 +486,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         ArrayRef<Register> SourceRegs =
             GetOrCreateVRegs(*OpInfo.CallOperandVal);
         assert(SourceRegs.size() == 1 && "Expected the memory input to fit "
-                                          "into a single virtual register");
+                                         "into a single virtual register");
         MIRBuilder.buildStore(SourceRegs[0], Ptr,
                               MachinePointerInfo::getFixedStack(MF, FrameIdx),
                               Alignment);
