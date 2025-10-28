@@ -467,7 +467,7 @@ Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedB
 
 
 class DumpASTMatchersHelper(FormatHelper):
-    name = "dump_ast_matchers"
+    name = "dump_ast_matchers.py"
     friendly_name = "AST matchers documentation"
 
     output_html = "clang/docs/LibASTMatchersReference.html"
