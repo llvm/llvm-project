@@ -54653,7 +54653,7 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combinePMULH(Src, VT, DL, DAG, Subtarget))
     return V;
 
-  // Fold trunc(srl(load(p),amt) -> load(p+amt/8)
+  // Fold trunc(srl(load(p),amt)) -> load(p+amt/8)
   // If we're shifting down whole byte+pow2 aligned bit chunks from a larger
   // load for truncation, see if we can convert the shift into a pointer
   // offset instead. Limit this to normal (non-ext) scalar integer loads.
