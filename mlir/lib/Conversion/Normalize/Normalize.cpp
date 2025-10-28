@@ -38,9 +38,6 @@ struct NormalizePass : public impl::NormalizeBase<NormalizePass> {
 private:
   // Random constant for hashing, so the state isn't zero.
   const uint64_t magicHashConstant = 0x6acaa36bef8325c5ULL;
-  void
-  collectOutputOperations(Block &block,
-                          SmallVector<Operation *, 16> &outputs) const noexcept;
   bool isOutput(Operation &op) const noexcept;
   void reorderOperations(const SmallVector<Operation *, 16> &outputs);
   void reorderOperation(Operation *used, Operation *user,
@@ -69,16 +66,14 @@ void NormalizePass::runOnOperation() {
 
   ModuleOp module = getOperation();
 
-  for (auto &op : module.getOps()) {
-    SmallVector<Operation *, 16> outputs;
+  SmallVector<Operation *, 16> outputs;
+  module.walk([&](Operation *op) {
+    if (isOutput(*op))
+      outputs.push_back(op);
+  });
 
-    for (auto &region : op.getRegions())
-      for (auto &block : region)
-        collectOutputOperations(block, outputs);
-
-    reorderOperations(outputs);
-    renameOperations(outputs);
-  }
+  reorderOperations(outputs);
+  renameOperations(outputs);
 }
 
 void NormalizePass::renameOperations(
@@ -382,13 +377,6 @@ void NormalizePass::reorderOperation(
       if (Operation *defOp = operand.getDefiningOp())
         reorderOperation(defOp, used, visited);
   }
-}
-
-void NormalizePass::collectOutputOperations(
-    Block &block, SmallVector<Operation *, 16> &outputs) const noexcept {
-  for (auto &innerOp : block)
-    if (isOutput(innerOp))
-      outputs.emplace_back(&innerOp);
 }
 
 /// The following Operations are termed as output:
