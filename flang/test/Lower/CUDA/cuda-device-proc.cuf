@@ -649,3 +649,95 @@ end subroutine
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
 ! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xf64>>, !fir.ref<f64>, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
+
+attributes(global) subroutine test_tma_bulk_store_c4(c, n)
+  integer, value :: n
+  complex(4), device :: c(n)
+  complex(4), shared :: tmpa(1024)
+  integer(4) :: j, elem_count
+  call tma_bulk_store(tmpa, c(j), elem_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c4
+! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+attributes(global) subroutine test_tma_bulk_store_c8(c, n)
+  integer, value :: n
+  complex(8), device :: c(n)
+  complex(8), shared :: tmpa(1024)
+  integer(4) :: j, elem_count
+  call tma_bulk_store(tmpa, c(j), elem_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_c8
+! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+attributes(global) subroutine test_tma_bulk_store_i4(c, n)
+  integer, value :: n
+  integer(4), device :: c(n)
+  integer(4), shared :: tmpa(1024)
+  integer(4) :: j, elem_count
+  call tma_bulk_store(tmpa, c(j), elem_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i4
+! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+attributes(global) subroutine test_tma_bulk_store_i8(c, n)
+  integer, value :: n
+  integer(8), device :: c(n)
+  integer(8), shared :: tmpa(1024)
+  integer(4) :: j, elem_count
+  call tma_bulk_store(tmpa, c(j), elem_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_i8
+! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+
+attributes(global) subroutine test_tma_bulk_store_r2(c, n)
+  integer, value :: n
+  real(2), device :: c(n)
+  real(2), shared :: tmpa(1024)
+  integer(4) :: j, elem_count
+  call tma_bulk_store(tmpa, c(j), elem_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r2
+! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+attributes(global) subroutine test_tma_bulk_store_r4(c, n)
+  integer, value :: n
+  real(4), device :: c(n)
+  real(4), shared :: tmpa(1024)
+  integer(4) :: j, elem_count
+  call tma_bulk_store(tmpa, c(j), elem_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r4
+! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.cp.async.bulk.wait_group 0
+
+attributes(global) subroutine test_tma_bulk_store_r8(c, n)
+  integer, value :: n
+  real(8), device :: c(n)
+  real(8), shared :: tmpa(1024)
+  integer(4) :: j, elem_count
+  call tma_bulk_store(tmpa, c(j), elem_count)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_tma_bulk_store_r8
+! CHECK: nvvm.cp.async.bulk.global.shared.cta %{{.*}}, %{{.*}}, %{{.*}} : <1>, <3>
+! CHECK: nvvm.inline_ptx "cp.async.bulk.commit_group"
+! CHECK: nvvm.cp.async.bulk.wait_group 0

@@ -1098,6 +1098,34 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genTMABulkS2G,
      {{{"src", asAddr}, {"dst", asAddr}, {"nbytes", asValue}}},
      /*isElemental=*/false},
+    {"tma_bulk_store_c4",
+     &I::genTMABulkStoreC4,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_c8",
+     &I::genTMABulkStoreC8,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_i4",
+     &I::genTMABulkStoreI4,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_i8",
+     &I::genTMABulkStoreI8,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_r2",
+     &I::genTMABulkStoreR2,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_r4",
+     &I::genTMABulkStoreR4,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_r8",
+     &I::genTMABulkStoreR8,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
     {"tma_bulk_wait_group",
      &I::genTMABulkWaitGroup,
      {{}},
@@ -9428,6 +9456,92 @@ void IntrinsicLibrary::genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue> args) {
                                   "cp.async.bulk.commit_group", {});
   mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
                                              builder.getI32IntegerAttr(0), {});
+}
+
+static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value src, mlir::Value dst, mlir::Value count,
+                            mlir::Value eleSize) {
+  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, eleSize, count);
+  src = convertPtrToNVVMSpace(builder, loc, src,
+                              mlir::NVVM::NVVMMemorySpace::Shared);
+  dst = convertPtrToNVVMSpace(builder, loc, dst,
+                              mlir::NVVM::NVVMMemorySpace::Global);
+  mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(builder, loc, dst, src,
+                                                     size, {}, {});
+  mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
+                                  "cp.async.bulk.commit_group", {});
+  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
+                                             builder.getI32IntegerAttr(0), {});
+}
+
+// TMA_BULK_STORE_C4 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreC4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_C8 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreC8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 16);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_I4 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreI4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_I8 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreI8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_R2 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreR2(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 2);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_R4 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreR4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_R8 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreR8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
 }
 
 // TMA_BULK_WAIT_GROUP (CUDA)
