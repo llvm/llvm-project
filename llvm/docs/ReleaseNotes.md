@@ -62,6 +62,11 @@ Changes to the LLVM IR
 * The `ptrtoaddr` instruction was introduced. This instruction returns the
   address component of a pointer type variable but unlike `ptrtoint` does not
   capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
+* The alignment argument of the `@llvm.masked.load`, `@llvm.masked.store`,
+  `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
+  Instead, the `align` attribute should be placed on the pointer (or vector of
+  pointers) argument.
+* A `load atomic` may now be used with vector types on x86.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -88,6 +93,9 @@ Changes to Vectorizers
 
 Changes to the AArch64 Backend
 ------------------------------
+
+* Assembler/disassembler support has been added for Armv9.7-A (2025)
+  architecture extensions.
 
 Changes to the AMDGPU Backend
 -----------------------------

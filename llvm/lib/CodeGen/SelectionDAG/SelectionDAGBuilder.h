@@ -195,6 +195,11 @@ private:
   /// Update root to include all chains from the Pending list.
   SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
 
+  /// Given a node representing a floating-point operation and its specified
+  /// exception behavior, this either updates the root or stores the node in
+  /// a list to be added to chains latter.
+  void pushFPOpOutChain(SDValue Result, fp::ExceptionBehavior EB);
+
   /// A unique monotonically increasing number used to order the SDNodes we
   /// create.
   unsigned SDNodeOrder;
@@ -299,6 +304,13 @@ public:
   /// PendingLoad items. This must be done before emitting a store or any other
   /// memory node that may need to be ordered after any prior load instructions.
   SDValue getMemoryRoot();
+
+  /// Return the current virtual root of the Selection DAG, flushing
+  /// PendingConstrainedFP or PendingConstrainedFPStrict items if the new
+  /// exception behavior (specified by \p EB) differs from that of the pending
+  /// instructions. This must be done before emitting constrained FP operation
+  /// call.
+  SDValue getFPOperationRoot(fp::ExceptionBehavior EB);
 
   /// Similar to getMemoryRoot, but also flushes PendingConstrainedFP(Strict)
   /// items. This must be done before emitting any call other any other node

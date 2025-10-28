@@ -8,14 +8,20 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/sinhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcSinhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -79,9 +85,9 @@ TEST_F(LlvmLibcSinhfTest, Overflow) {
 TEST_F(LlvmLibcSinhfTest, ExceptionalValues) {
   float x = FPBits(uint32_t(0x3a12'85ffU)).get_val();
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinh, x,
-                                 LIBC_NAMESPACE::sinhf(x), 0.5);
+                                 LIBC_NAMESPACE::sinhf(x), TOLERANCE + 0.5);
 
   x = -FPBits(uint32_t(0x3a12'85ffU)).get_val();
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinh, x,
-                                 LIBC_NAMESPACE::sinhf(x), 0.5);
+                                 LIBC_NAMESPACE::sinhf(x), TOLERANCE + 0.5);
 }

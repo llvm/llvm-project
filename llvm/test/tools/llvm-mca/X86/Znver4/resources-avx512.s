@@ -1207,7 +1207,7 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      3     1.00                        vaddps	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      10    1.00    *                   vaddps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      10    1.00    *                   vaddps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      4     0.50                        valignd	$1, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  1      2     0.50                        valignd	$1, %zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  1      8     1.00    *                   valignd	$1, (%rax), %zmm17, %zmm19
 # CHECK-NEXT:  1      8     1.00    *                   valignd	$1, (%rax){1to16}, %zmm17, %zmm19
 # CHECK-NEXT:  1      1     1.00                        valignd	$1, %zmm16, %zmm17, %zmm19 {%k1}
@@ -1216,7 +1216,7 @@ vunpcklps         (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      1     1.00                        valignd	$1, %zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      8     1.00    *                   valignd	$1, (%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      8     1.00    *                   valignd	$1, (%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      4     0.50                        valignq	$1, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  1      2     0.50                        valignq	$1, %zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  1      8     1.00    *                   valignq	$1, (%rax), %zmm17, %zmm19
 # CHECK-NEXT:  1      8     1.00    *                   valignq	$1, (%rax){1to8}, %zmm17, %zmm19
 # CHECK-NEXT:  1      1     1.00                        valignq	$1, %zmm16, %zmm17, %zmm19 {%k1}

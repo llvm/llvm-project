@@ -139,7 +139,7 @@ cl::opt<bool> ConditionalCounterUpdate(
     cl::init(false));
 
 // If the option is not specified, the default behavior about whether
-// counter promotion is done depends on how instrumentaiton lowering
+// counter promotion is done depends on how instrumentation lowering
 // pipeline is setup, i.e., the default value of true of this option
 // does not mean the promotion will be done by default. Explicitly
 // setting this option can override the default behavior.
@@ -1052,7 +1052,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
   assert(It != ProfileDataMap.end() && It->second.DataVar &&
-         "value profiling detected in function with no counter incerement");
+         "value profiling detected in function with no counter increment");
 
   GlobalVariable *DataVar = It->second.DataVar;
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
