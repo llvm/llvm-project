@@ -8,7 +8,9 @@ import lldb
 import os
 import sys
 import socket
-import fcntl
+
+if os.name != "nt":
+    import fcntl
 
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
