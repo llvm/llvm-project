@@ -1,0 +1,2 @@
+// RUN: %python %S/../../docs/tools/dump_ast_matchers.py %t
+// RUN: diff %t %S/../../docs/LibASTMatchersReference.html
