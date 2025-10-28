@@ -235,7 +235,7 @@ define half @f12_half(half %dummy, half %val, ptr %dest) {
 ; CHECK-NEXT: blah %f0
 ; CHECK-NEXT: #NO_APP
 ; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
-; CHECK-NEXT: ltebr %f0, %f0
+; CHECK-NEXT: ltebr %f1, %f0
 ; CHECK-NEXT: jl .LBB11_2
 ; CHECK-NEXT:# %bb.1:
 ; CHECK-NEXT: lgdr %r0, %f8
@@ -344,7 +344,7 @@ define half @f15_half(half %val, half %dummy, ptr %dest) {
 ; CHECK-NEXT: blah %f2
 ; CHECK-NEXT: #NO_APP
 ; CHECK-NEXT: brasl %r14, __extendhfsf2@PLT
-; CHECK-NEXT: ltebr %f0, %f0
+; CHECK-NEXT: ltebr %f1, %f0
 ; CHECK-NEXT: jl .LBB15_2
 ; CHECK-NEXT:# %bb.1:
 ; CHECK-NEXT: lgdr %r0, %f8

@@ -23,9 +23,8 @@ end
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@com1_) : !fir.ref<!fir.array<28xi8>>
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_17:.*]] = omp.threadprivate %[[VAL_0]] : !fir.ref<!fir.array<28xi8>> -> !fir.ref<!fir.array<28xi8>>
-! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.array<28xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:             %[[VAL_19:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_18]], %[[VAL_19]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! CHECK:             %[[VAL_20:.*]] = fir.coordinate_of %[[VAL_17]], %[[VAL_19]] : (!fir.ref<!fir.array<28xi8>>, index) -> !fir.ref<i8>
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<i8>) -> !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:             %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_21]] {fortran_attrs = #{{.*}}<pointer>, uniq_name = "_QMmmmEnam1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
+! CHECK:             %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_21]] storage(%[[VAL_17]][0]) {fortran_attrs = #{{.*}}<pointer>, uniq_name = "_QMmmmEnam1"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.array<28xi8>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 

@@ -584,7 +584,7 @@ def GPU_DynamicSharedMemoryOp : GPU_Op<"dynamic_shared_memory", [Pure]>
     This operation provides a memref pointer to the start of dynamic shared
     memory, often referred to as workgroup memory. It's important to note that
     this dynamic shared memory needs to be allocated at kernel launch. One can
-    conveniently utilize `the dynamic_shared_memory_size` parameter of
+    conveniently utilize the `dynamic_shared_memory_size` parameter of
     `gpu.launch` for this purpose.
 
     Examples:
@@ -1517,7 +1517,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
-  
+
   let hasVerifier = 1;
 }
 
@@ -3213,6 +3213,46 @@ def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
     /// Get the terminator of the warp region.
     gpu::YieldOp getTerminator();
   }];
+}
+
+def GPU_BroadcastType : I32EnumAttr<"BroadcastType",
+    "a lane to broadcast from",
+    [
+      I32EnumAttrCase<"first_active_lane", 0>,
+      I32EnumAttrCase<"specific_lane", 1>
+    ]>{
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::gpu";
+}
+def GPU_BroadcastTypeAttr : EnumAttr<GPU_Dialect, GPU_BroadcastType, "broadcast">;
+
+def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
+    [NoMemoryEffect, AllTypesMatch<["result", "src"]>,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<ConditionallySpeculatable, ["getSpeculatability"]>] #
+    ElementwiseMappable.traits>,
+  Arguments<(ins AnyType:$src,
+                 Optional<I32>:$lane,
+                 GPU_BroadcastTypeAttr:$broadcast_type)> {
+  let summary = "Broadcasts a value from the specific lane across subgroup";
+  let description = [{
+      Broadcasts a value from one lane to all active lanes in a subgroup. The
+      result is guaranteed to be uniform across the active lanes in subgroup.
+
+      The possible broadcast types are:
+
+      * `first_active_lane` - broadcasts the value from the first active lane
+      in the subgroup.
+      * `specific_lane` - broadcasts from the specified lane. The lane index
+      must be uniform and within the subgroup size. The result is poison if the
+      lane index is invalid, non subgroup-uniform, or if the source lane is not
+      active.
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // GPU_OPS

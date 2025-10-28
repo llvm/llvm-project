@@ -778,6 +778,16 @@ void NVPTXToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadingKind) const {}
 
+void NVPTXToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                               ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+}
+
 bool NVPTXToolChain::supportsDebugInfoOption(const llvm::opt::Arg *A) const {
   const Option &O = A->getOption();
   return (O.matches(options::OPT_gN_Group) &&

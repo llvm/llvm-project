@@ -9,7 +9,7 @@ define amdgpu_ps void @flat_store_saddr_i8_zext_vgpr(ptr inreg %sbase, ptr %voff
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b8 v0, v2, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b8 v0, v2, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %voffset = load i32, ptr %voffset.ptr
   %zext.offset = zext i32 %voffset to i64
@@ -24,7 +24,7 @@ define amdgpu_ps void @flat_store_saddr_i8_zext_vgpr_offset_2047(ptr inreg %sbas
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b8 v0, v2, s[2:3] offset:2047 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b8 v0, v2, s[2:3] offset:2047
 ; GFX1250-NEXT:    s_endpgm
   %voffset = load i32, ptr %voffset.ptr
   %zext.offset = zext i32 %voffset to i64
@@ -40,7 +40,7 @@ define amdgpu_ps void @flat_store_saddr_i8_zext_vgpr_offset_neg2048(ptr inreg %s
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    flat_load_b32 v0, v[0:1]
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b8 v0, v2, s[2:3] offset:-2048 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b8 v0, v2, s[2:3] offset:-2048
 ; GFX1250-NEXT:    s_endpgm
   %voffset = load i32, ptr %voffset.ptr
   %zext.offset = zext i32 %voffset to i64
@@ -65,7 +65,7 @@ define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 %d
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-SDAG-NEXT:    flat_store_b8 v0, v1, s[0:1] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b8 v0, v1, s[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_uniform_ptr_in_vgprs:
@@ -76,7 +76,7 @@ define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 %d
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    flat_store_b8 v[2:3], v1 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b8 v[2:3], v1
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %sbase = load ptr, ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
@@ -94,7 +94,7 @@ define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs_immoffset(i32 %voff
 ; GFX1250-SDAG-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX1250-SDAG-NEXT:    flat_store_b8 v0, v1, s[0:1] offset:-120 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b8 v0, v1, s[0:1] offset:-120
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_uniform_ptr_in_vgprs_immoffset:
@@ -105,7 +105,7 @@ define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs_immoffset(i32 %voff
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    flat_store_b8 v[2:3], v1 offset:-120 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b8 v[2:3], v1 offset:-120
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %sbase = load ptr, ptr addrspace(3) @ptr.in.lds
   %zext.offset = zext i32 %voffset to i64
@@ -122,7 +122,7 @@ define amdgpu_ps void @flat_store_saddr_uniform_ptr_in_vgprs_immoffset(i32 %voff
 define amdgpu_ps void @flat_store_saddr_i16_zext_vgpr(ptr inreg %sbase, i32 %voffset, i16 %data) {
 ; GFX1250-LABEL: flat_store_saddr_i16_zext_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -133,7 +133,7 @@ define amdgpu_ps void @flat_store_saddr_i16_zext_vgpr(ptr inreg %sbase, i32 %vof
 define amdgpu_ps void @flat_store_saddr_i16_zext_vgpr_offset_neg128(ptr inreg %sbase, i32 %voffset, i16 %data) {
 ; GFX1250-LABEL: flat_store_saddr_i16_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3] offset:-128
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -145,7 +145,7 @@ define amdgpu_ps void @flat_store_saddr_i16_zext_vgpr_offset_neg128(ptr inreg %s
 define amdgpu_ps void @flat_store_saddr_f16_zext_vgpr(ptr inreg %sbase, i32 %voffset, half %data) {
 ; GFX1250-LABEL: flat_store_saddr_f16_zext_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -156,7 +156,7 @@ define amdgpu_ps void @flat_store_saddr_f16_zext_vgpr(ptr inreg %sbase, i32 %vof
 define amdgpu_ps void @flat_store_saddr_f16_zext_vgpr_offset_neg128(ptr inreg %sbase, i32 %voffset, half %data) {
 ; GFX1250-LABEL: flat_store_saddr_f16_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b16 v0, v1, s[2:3] offset:-128
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -168,7 +168,7 @@ define amdgpu_ps void @flat_store_saddr_f16_zext_vgpr_offset_neg128(ptr inreg %s
 define amdgpu_ps void @flat_store_saddr_i32_zext_vgpr(ptr inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX1250-LABEL: flat_store_saddr_i32_zext_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -179,7 +179,7 @@ define amdgpu_ps void @flat_store_saddr_i32_zext_vgpr(ptr inreg %sbase, i32 %vof
 define amdgpu_ps void @flat_store_saddr_i32_zext_vgpr_offset_neg128(ptr inreg %sbase, i32 %voffset, i32 %data) {
 ; GFX1250-LABEL: flat_store_saddr_i32_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] offset:-128
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -191,7 +191,7 @@ define amdgpu_ps void @flat_store_saddr_i32_zext_vgpr_offset_neg128(ptr inreg %s
 define amdgpu_ps void @flat_store_saddr_f32_zext_vgpr(ptr inreg %sbase, i32 %voffset, float %data) {
 ; GFX1250-LABEL: flat_store_saddr_f32_zext_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -202,7 +202,7 @@ define amdgpu_ps void @flat_store_saddr_f32_zext_vgpr(ptr inreg %sbase, i32 %vof
 define amdgpu_ps void @flat_store_saddr_f32_zext_vgpr_offset_neg128(ptr inreg %sbase, i32 %voffset, float %data) {
 ; GFX1250-LABEL: flat_store_saddr_f32_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] offset:-128
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -214,7 +214,7 @@ define amdgpu_ps void @flat_store_saddr_f32_zext_vgpr_offset_neg128(ptr inreg %s
 define amdgpu_ps void @flat_store_saddr_p3_zext_vgpr(ptr inreg %sbase, i32 %voffset, ptr addrspace(3) %data) {
 ; GFX1250-LABEL: flat_store_saddr_p3_zext_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -225,7 +225,7 @@ define amdgpu_ps void @flat_store_saddr_p3_zext_vgpr(ptr inreg %sbase, i32 %voff
 define amdgpu_ps void @flat_store_saddr_p3_zext_vgpr_offset_neg128(ptr inreg %sbase, i32 %voffset, ptr addrspace(3) %data) {
 ; GFX1250-LABEL: flat_store_saddr_p3_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[2:3] offset:-128
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -238,13 +238,13 @@ define amdgpu_ps void @flat_store_saddr_i64_zext_vgpr(ptr inreg %sbase, i32 %vof
 ; GFX1250-SDAG-LABEL: flat_store_saddr_i64_zext_vgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_i64_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -256,13 +256,13 @@ define amdgpu_ps void @flat_store_saddr_i64_zext_vgpr_offset_neg128(ptr inreg %s
 ; GFX1250-SDAG-LABEL: flat_store_saddr_i64_zext_vgpr_offset_neg128:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_i64_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -275,13 +275,13 @@ define amdgpu_ps void @flat_store_saddr_f64_zext_vgpr(ptr inreg %sbase, i32 %vof
 ; GFX1250-SDAG-LABEL: flat_store_saddr_f64_zext_vgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_f64_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -293,13 +293,13 @@ define amdgpu_ps void @flat_store_saddr_f64_zext_vgpr_offset_neg128(ptr inreg %s
 ; GFX1250-SDAG-LABEL: flat_store_saddr_f64_zext_vgpr_offset_neg128:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_f64_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -312,13 +312,13 @@ define amdgpu_ps void @flat_store_saddr_v2i32_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v2i32_zext_vgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2i32_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -330,13 +330,13 @@ define amdgpu_ps void @flat_store_saddr_v2i32_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v2i32_zext_vgpr_offset_neg128:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2i32_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -349,13 +349,13 @@ define amdgpu_ps void @flat_store_saddr_v2f32_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v2f32_zext_vgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2f32_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -367,13 +367,13 @@ define amdgpu_ps void @flat_store_saddr_v2f32_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v2f32_zext_vgpr_offset_neg128:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2f32_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -386,13 +386,13 @@ define amdgpu_ps void @flat_store_saddr_v4i16_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v4i16_zext_vgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4i16_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -404,13 +404,13 @@ define amdgpu_ps void @flat_store_saddr_v4i16_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v4i16_zext_vgpr_offset_neg128:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4i16_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -423,13 +423,13 @@ define amdgpu_ps void @flat_store_saddr_v4f16_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v4f16_zext_vgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4f16_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -441,13 +441,13 @@ define amdgpu_ps void @flat_store_saddr_v4f16_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG-LABEL: flat_store_saddr_v4f16_zext_vgpr_offset_neg128:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4f16_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -460,13 +460,13 @@ define amdgpu_ps void @flat_store_saddr_p1_zext_vgpr(ptr inreg %sbase, i32 %voff
 ; GFX1250-SDAG-LABEL: flat_store_saddr_p1_zext_vgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_p1_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -478,13 +478,13 @@ define amdgpu_ps void @flat_store_saddr_p1_zext_vgpr_offset_neg128(ptr inreg %sb
 ; GFX1250-SDAG-LABEL: flat_store_saddr_p1_zext_vgpr_offset_neg128:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v0, v[2:3], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_p1_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
-; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v0, v[4:5], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -498,14 +498,14 @@ define amdgpu_ps void @flat_store_saddr_v3i32_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v3i32_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -518,14 +518,14 @@ define amdgpu_ps void @flat_store_saddr_v3i32_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v3i32_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -539,14 +539,14 @@ define amdgpu_ps void @flat_store_saddr_v3f32_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v3f32_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -559,14 +559,14 @@ define amdgpu_ps void @flat_store_saddr_v3f32_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v3f32_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -580,14 +580,14 @@ define amdgpu_ps void @flat_store_saddr_v6i16_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v6i16_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -600,14 +600,14 @@ define amdgpu_ps void @flat_store_saddr_v6i16_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v6i16_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -621,14 +621,14 @@ define amdgpu_ps void @flat_store_saddr_v6f16_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v6f16_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -641,14 +641,14 @@ define amdgpu_ps void @flat_store_saddr_v6f16_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v3, v2
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b96 v0, v[2:4], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v6f16_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v6, v3
-; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b96 v0, v[4:6], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -662,14 +662,14 @@ define amdgpu_ps void @flat_store_saddr_v4i32_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4i32_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -682,14 +682,14 @@ define amdgpu_ps void @flat_store_saddr_v4i32_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4i32_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -703,14 +703,14 @@ define amdgpu_ps void @flat_store_saddr_v4f32_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4f32_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -723,14 +723,14 @@ define amdgpu_ps void @flat_store_saddr_v4f32_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4f32_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -744,14 +744,14 @@ define amdgpu_ps void @flat_store_saddr_v2i64_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2i64_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -764,14 +764,14 @@ define amdgpu_ps void @flat_store_saddr_v2i64_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2i64_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -785,14 +785,14 @@ define amdgpu_ps void @flat_store_saddr_v2f64_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2f64_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -805,14 +805,14 @@ define amdgpu_ps void @flat_store_saddr_v2f64_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2f64_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -826,14 +826,14 @@ define amdgpu_ps void @flat_store_saddr_v8i16_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v8i16_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -846,14 +846,14 @@ define amdgpu_ps void @flat_store_saddr_v8i16_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v8i16_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -867,14 +867,14 @@ define amdgpu_ps void @flat_store_saddr_v8f16_zext_vgpr(ptr inreg %sbase, i32 %v
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v8f16_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -887,14 +887,14 @@ define amdgpu_ps void @flat_store_saddr_v8f16_zext_vgpr_offset_neg128(ptr inreg 
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v8f16_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -908,14 +908,14 @@ define amdgpu_ps void @flat_store_saddr_v2p1_zext_vgpr(ptr inreg %sbase, i32 %vo
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2p1_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -928,14 +928,14 @@ define amdgpu_ps void @flat_store_saddr_v2p1_zext_vgpr_offset_neg128(ptr inreg %
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v2p1_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -949,14 +949,14 @@ define amdgpu_ps void @flat_store_saddr_v4p3_zext_vgpr(ptr inreg %sbase, i32 %vo
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4p3_zext_vgpr:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -969,14 +969,14 @@ define amdgpu_ps void @flat_store_saddr_v4p3_zext_vgpr_offset_neg128(ptr inreg %
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v1
-; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b128 v0, v[2:5], s[2:3] offset:-128
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: flat_store_saddr_v4p3_zext_vgpr_offset_neg128:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v2
 ; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v8, v3 :: v_dual_mov_b32 v9, v4
-; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b128 v0, v[6:9], s[2:3] offset:-128
 ; GFX1250-GISEL-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -1068,7 +1068,7 @@ define amdgpu_ps void @atomic_flat_store_saddr_i64_zext_vgpr_offset_neg128(ptr i
 define amdgpu_ps void @flat_store_saddr_i16_d16hi_zext_vgpr(ptr inreg %sbase, i32 %voffset, <2 x i16> %data) {
 ; GFX1250-LABEL: flat_store_saddr_i16_d16hi_zext_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_d16_hi_b16 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_d16_hi_b16 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -1080,7 +1080,7 @@ define amdgpu_ps void @flat_store_saddr_i16_d16hi_zext_vgpr(ptr inreg %sbase, i3
 define amdgpu_ps void @flat_store_saddr_i16_d16hi_zext_vgpr_offset_neg128(ptr inreg %sbase, i32 %voffset, <2 x i16> %data) {
 ; GFX1250-LABEL: flat_store_saddr_i16_d16hi_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_d16_hi_b16 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_d16_hi_b16 v0, v1, s[2:3] offset:-128
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -1093,7 +1093,7 @@ define amdgpu_ps void @flat_store_saddr_i16_d16hi_zext_vgpr_offset_neg128(ptr in
 define amdgpu_ps void @flat_store_saddr_i16_d16hi_trunci8_zext_vgpr(ptr inreg %sbase, i32 %voffset, <2 x i16> %data) {
 ; GFX1250-LABEL: flat_store_saddr_i16_d16hi_trunci8_zext_vgpr:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_d16_hi_b8 v0, v1, s[2:3] scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_d16_hi_b8 v0, v1, s[2:3]
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
@@ -1106,7 +1106,7 @@ define amdgpu_ps void @flat_store_saddr_i16_d16hi_trunci8_zext_vgpr(ptr inreg %s
 define amdgpu_ps void @flat_store_saddr_i16_d16hi_trunci8_zext_vgpr_offset_neg128(ptr inreg %sbase, i32 %voffset, <2 x i16> %data) {
 ; GFX1250-LABEL: flat_store_saddr_i16_d16hi_trunci8_zext_vgpr_offset_neg128:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    flat_store_d16_hi_b8 v0, v1, s[2:3] offset:-128 scope:SCOPE_SE
+; GFX1250-NEXT:    flat_store_d16_hi_b8 v0, v1, s[2:3] offset:-128
 ; GFX1250-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset

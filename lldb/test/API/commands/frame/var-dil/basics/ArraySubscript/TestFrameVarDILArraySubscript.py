@@ -66,14 +66,15 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var 'int_arr[1.0]'",
             error=True,
-            substrs=["expected 'r_square', got: <'.'"],
+            substrs=["failed to parse integer constant: <'1.0' (float_constant)>"],
         )
 
         # Test accessing bits in scalar types.
         self.expect_var_path("idx_1[0]", value="1")
         self.expect_var_path("idx_1[1]", value="0")
+        self.expect_var_path("1[0]", value="1")
 
-        # Bit adcess not valid for a reference.
+        # Bit access not valid for a reference.
         self.expect(
             "frame var 'idx_1_ref[0]'",
             error=True,
@@ -85,11 +86,6 @@ class TestFrameVarDILArraySubscript(TestBase):
             "frame var 'int_arr[int_ptr]'",
             error=True,
             substrs=["failed to parse integer constant"],
-        )
-        self.expect(
-            "frame var '1[2]'",
-            error=True,
-            substrs=["Unexpected token"],
         )
 
         # Base should not be a pointer to void

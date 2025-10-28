@@ -243,7 +243,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
       .Case<OperandPosition, OperandGroupPosition>([&](auto *pos) {
         getOperandTreePredicates(predList, val, builder, inputs, pos);
       })
-      .Default([](auto *) { llvm_unreachable("unexpected position kind"); });
+      .DefaultUnreachable("unexpected position kind");
 }
 
 static void getAttributePredicates(pdl::AttributeOp op,
@@ -800,9 +800,9 @@ static bool isSamePredicate(MatcherNode *node, OrderedPredicate *predicate) {
 
 /// Get or insert a child matcher for the given parent switch node, given a
 /// predicate and parent pattern.
-std::unique_ptr<MatcherNode> &getOrCreateChild(SwitchNode *node,
-                                               OrderedPredicate *predicate,
-                                               pdl::PatternOp pattern) {
+static std::unique_ptr<MatcherNode> &
+getOrCreateChild(SwitchNode *node, OrderedPredicate *predicate,
+                 pdl::PatternOp pattern) {
   assert(isSamePredicate(node, predicate) &&
          "expected matcher to equal the given predicate");
 

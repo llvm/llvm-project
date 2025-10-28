@@ -387,6 +387,12 @@ class OpaqueType<string dialect, string name, string summary>
 def FunctionType : Type<CPred<"::llvm::isa<::mlir::FunctionType>($_self)">,
                               "function type", "::mlir::FunctionType">;
 
+// Graph Type.
+
+// Any graph type.
+def GraphType : Type<CPred<"::llvm::isa<::mlir::GraphType>($_self)">,
+                              "graph type", "::mlir::GraphType">;
+
 // A container type is a type that has another type embedded within it.
 class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
                     string descr, string cppType = "::mlir::Type"> :
@@ -616,6 +622,14 @@ class VectorOfLengthAndType<list<int> allowedLengths,
   [VectorOfNonZeroRankOf<allowedTypes>, VectorOfLength<allowedLengths>],
    VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
+
+class FixedVectorOfShapeAndType<list<int> shape, Type elType>: ShapedContainerType<
+  [elType],
+  And<[IsVectorOfShape<shape>, IsFixedVectorOfAnyRankTypePred]>,
+  "vector<" # !interleave(shape, "x") # "x" # elType # ">",
+  "::mlir::VectorType">,
+  BuildableType<"::mlir::VectorType::get({" # !interleave(shape, " ,") # "} , " # elType.builderCall # " );">;
+
 
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list

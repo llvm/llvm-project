@@ -831,3 +831,20 @@ func.func @acc_loop_container() {
 %value = memref.alloc() : memref<f32>
 // expected-error @below {{invalid data clause modifiers: readonly}}
 %0 = acc.create varPtr(%value : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,zero,capture,always>}
+
+// -----
+
+func.func @verify_declare_enter(%arg0 : memref<i32>) {
+// expected-error @below {{expect valid declare data entry operation or acc.getdeviceptr as defining op}}
+  %0 = acc.declare_enter dataOperands(%arg0 : memref<i32>)
+  acc.declare_exit token(%0) dataOperands(%arg0 : memref<i32>)
+  return
+}
+
+func.func @verify_data(%arg0 : memref<i32>) {
+// expected-error @below {{expect data entry/exit operation or acc.getdeviceptr as defining op}}
+  acc.data dataOperands(%arg0 : memref<i32>) {
+    acc.terminator
+  }
+  return
+}

@@ -221,3 +221,94 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 
   func.func private @__tgt_acc_get_deviceptr() -> !fir.ref<!fir.box<none>>
 }
+
+// -----
+
+module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+  }
+  func.func @_QQmain() attributes {fir.bindc_name = "P", target_cpu = "x86-64", target_features = #llvm.target_features<["+cmov", "+mmx", "+sse", "+sse2", "+cx8", "+x87", "+fxsr"]>} {
+    %c64 = arith.constant 64 : index
+    %c1 = arith.constant 1 : index
+    %c0_i32 = arith.constant 0 : i32
+    %0 = fir.address_of(@_QMm1Eda) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %8 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %9 = fircg.ext_rebox %8 : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<!fir.array<?x?xf32>>
+    gpu.launch_func  @cuda_device_mod::@_QMm1Psub2 blocks in (%c1, %c1, %c1) threads in (%c64, %c1, %c1)  dynamic_shared_memory_size %c0_i32 args(%9 : !fir.box<!fir.array<?x?xf32>>) {cuf.proc_attr = #cuf.cuda_proc<global>}
+    return
+  }
+  gpu.module @cuda_device_mod {
+    fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    }
+    gpu.func @_QMm1Psub2(%arg0: !fir.box<!fir.array<?x?xf32>>) kernel {
+      gpu.return
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: llvm.call @_FortranACUFAllocDescriptor
+
+// -----
+
+module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+  }
+  gpu.module @cuda_device_mod {
+    fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    }
+    func.func @_QQxxx() {
+      %0 = fir.address_of(@_QMm1Eda) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+      %8 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+      return
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQxxx()
+// CHECK: llvm.alloca %{{.*}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor
+
+// -----
+
+module attributes {gpu.container_module, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  gpu.module @cuda_device_mod {
+    fir.global @_QMkernelsEinitial_val {data_attr = #cuf.cuda<constant>} : i32 {
+      %0 = fir.zero_bits i32
+      fir.has_value %0 : i32
+    }
+    gpu.func @_QMkernelsPassign(%arg0: !fir.ref<!fir.array<?xi32>>) kernel {
+      %c-1 = arith.constant -1 : index
+      %c1_i32 = arith.constant 1 : i32
+      %0 = arith.constant 1 : i32
+      %1 = arith.addi %0, %c1_i32 : i32
+      %2 = fir.address_of(@_QMkernelsEinitial_val) : !fir.ref<i32>
+      %4 = fir.load %2 : !fir.ref<i32>
+      %5 = fir.convert %1 : (i32) -> i64
+      %6 = fircg.ext_array_coor %arg0(%c-1)<%5> : (!fir.ref<!fir.array<?xi32>>, index, i64) -> !fir.ref<i32>
+      fir.store %4 to %6 : !fir.ref<i32>
+      gpu.return
+    }
+  }
+}
+
+// CHECK: llvm.mlir.global external @_QMkernelsEinitial_val() {addr_space = 4 : i32} : i32
+// CHECK-LABEL:  gpu.func @_QMkernelsPassign
+// CHECK: %[[ADDROF:.*]] = llvm.mlir.addressof @_QMkernelsEinitial_val : !llvm.ptr<4>
+// CHECK: %{{.*}} = llvm.addrspacecast %[[ADDROF]] : !llvm.ptr<4> to !llvm.ptr

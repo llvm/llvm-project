@@ -27,7 +27,7 @@ using namespace ento;
 //===----------------------------------------------------------------------===//
 
 static bool IsLLVMStringRef(QualType T) {
-  const RecordType *RT = T->getAs<RecordType>();
+  const RecordType *RT = T->getAsCanonical<RecordType>();
   if (!RT)
     return false;
 

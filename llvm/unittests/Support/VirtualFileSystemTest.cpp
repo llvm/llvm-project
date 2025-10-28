@@ -1941,7 +1941,30 @@ TEST_F(VFSFromYAMLTest, ReturnsExternalPathVFSHit) {
   EXPECT_EQ(0, NumDiagnostics);
 }
 
-TEST_F(VFSFromYAMLTest, RootRelativeTest) {
+TEST_F(VFSFromYAMLTest, RelativeFileDirWithOverlayRelativeSetting) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/foo/bar");
+  Lower->addRegularFile("//root/foo/bar/a");
+  Lower->setCurrentWorkingDirectory("//root/foo");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{\n"
+                        "  'case-sensitive': false,\n"
+                        "  'overlay-relative': true,\n"
+                        "  'roots': [\n"
+                        "    { 'name': '//root/foo/bar/b', 'type': 'file',\n"
+                        "      'external-contents': 'a'\n"
+                        "    }\n"
+                        "  ]\n"
+                        "}",
+                        Lower, "bar/overlay");
+
+  ASSERT_NE(FS.get(), nullptr);
+  ErrorOr<vfs::Status> S = FS->status("//root/foo/bar/b");
+  ASSERT_FALSE(S.getError());
+  EXPECT_EQ("//root/foo/bar/a", S->getName());
+}
+
+TEST_F(VFSFromYAMLTest, RootRelativeToOverlayDirTest) {
   auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
   Lower->addDirectory("//root/foo/bar");
   Lower->addRegularFile("//root/foo/bar/a");
@@ -2002,6 +2025,35 @@ TEST_F(VFSFromYAMLTest, RootRelativeTest) {
   ASSERT_FALSE(S.getError());
   EXPECT_EQ("\\\\root\\foo\\bar\\a", S->getName());
 #endif
+}
+
+TEST_F(VFSFromYAMLTest, RootRelativeToCWDTest) {
+  auto Lower = makeIntrusiveRefCnt<DummyFileSystem>();
+  Lower->addDirectory("//root/foo/bar");
+  Lower->addRegularFile("//root/foo/bar/a");
+  Lower->addDirectory("//root/foo/bar/cwd");
+  Lower->addRegularFile("//root/foo/bar/cwd/a");
+  Lower->setCurrentWorkingDirectory("//root/foo/bar/cwd");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{\n"
+                        "  'case-sensitive': false,\n"
+                        "  'root-relative': 'cwd',\n"
+                        "  'roots': [\n"
+                        "    { 'name': 'b', 'type': 'file',\n"
+                        "      'external-contents': '//root/foo/bar/a'\n"
+                        "    }\n"
+                        "  ]\n"
+                        "}",
+                        Lower, "//root/foo/bar/overlay");
+
+  ASSERT_NE(FS.get(), nullptr);
+
+  ErrorOr<vfs::Status> S1 = FS->status("//root/foo/bar/b");
+  ASSERT_TRUE(S1.getError());
+
+  ErrorOr<vfs::Status> S2 = FS->status("//root/foo/bar/cwd/b");
+  ASSERT_FALSE(S2.getError());
+  EXPECT_EQ("//root/foo/bar/a", S2->getName());
 }
 
 TEST_F(VFSFromYAMLTest, ReturnsInternalPathVFSHit) {
@@ -2489,6 +2541,7 @@ TEST_F(VFSFromYAMLTest, RelativePaths) {
   SmallString<128> CWD;
   EC = llvm::sys::fs::current_path(CWD);
   ASSERT_FALSE(EC);
+  Lower->setCurrentWorkingDirectory(CWD);
 
   // Filename at root level without a parent directory.
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(

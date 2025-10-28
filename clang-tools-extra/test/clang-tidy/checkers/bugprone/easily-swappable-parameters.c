@@ -6,7 +6,7 @@
 // RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
-// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 0 \
 // RUN:  }}' -- -Wno-strict-prototypes
 //
 // RUN: %check_clang_tidy -std=c23-or-later %s bugprone-easily-swappable-parameters %t \
@@ -17,7 +17,7 @@
 // RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
-// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 0 \
 // RUN:  }}' -- -Wno-strict-prototypes
 
 #define bool _Bool

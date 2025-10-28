@@ -1044,15 +1044,13 @@ struct AAPointerInfoImpl
     return AAPointerInfo::manifest(A);
   }
 
-  virtual const_bin_iterator begin() const override { return State::begin(); }
-  virtual const_bin_iterator end() const override { return State::end(); }
-  virtual int64_t numOffsetBins() const override {
-    return State::numOffsetBins();
-  }
-  virtual bool reachesReturn() const override {
+  const_bin_iterator begin() const override { return State::begin(); }
+  const_bin_iterator end() const override { return State::end(); }
+  int64_t numOffsetBins() const override { return State::numOffsetBins(); }
+  bool reachesReturn() const override {
     return !ReturnedOffsets.isUnassigned();
   }
-  virtual void addReturnedOffsetsTo(OffsetInfo &OI) const override {
+  void addReturnedOffsetsTo(OffsetInfo &OI) const override {
     if (ReturnedOffsets.isUnknown()) {
       OI.setUnknown();
       return;
@@ -6653,7 +6651,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   AAHeapToStackFunction(const IRPosition &IRP, Attributor &A)
       : AAHeapToStack(IRP, A) {}
 
-  ~AAHeapToStackFunction() {
+  ~AAHeapToStackFunction() override {
     // Ensure we call the destructor so we release any memory allocated in the
     // sets.
     for (auto &It : AllocationInfos)
@@ -8374,7 +8372,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
     AccessKind2Accesses.fill(nullptr);
   }
 
-  ~AAMemoryLocationImpl() {
+  ~AAMemoryLocationImpl() override {
     // The AccessSets are allocated via a BumpPtrAllocator, we call
     // the destructor manually.
     for (AccessSet *AS : AccessKind2Accesses)
@@ -8561,7 +8559,8 @@ protected:
   /// Mapping from *single* memory location kinds, e.g., LOCAL_MEM with the
   /// value of NO_LOCAL_MEM, to the accesses encountered for this memory kind.
   using AccessSet = SmallSet<AccessInfo, 2, AccessInfo>;
-  std::array<AccessSet *, llvm::CTLog2<VALID_STATE>()> AccessKind2Accesses;
+  std::array<AccessSet *, llvm::ConstantLog2<VALID_STATE>()>
+      AccessKind2Accesses;
 
   /// Categorize the pointer arguments of CB that might access memory in
   /// AccessedLoc and update the state and access map accordingly.

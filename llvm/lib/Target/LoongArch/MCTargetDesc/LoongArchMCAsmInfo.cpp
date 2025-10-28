@@ -32,6 +32,7 @@ static StringRef getLoongArchSpecifierName(uint16_t S) {
     return "b16";
   case ELF::R_LARCH_B21:
     return "b21";
+  case ELF::R_LARCH_MARK_LA:
   case ELF::R_LARCH_ABS_HI20:
     return "abs_hi20";
   case ELF::R_LARCH_ABS_LO12:

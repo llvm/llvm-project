@@ -796,9 +796,10 @@ namespace {
     /// Indicates that the AST file contains particular input file.
     ///
     /// \returns true to continue receiving the next input file, false to stop.
-    bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
-                        bool isSystem, bool isOverridden,
-                        bool isExplicitModule) override {
+    bool visitInputFileAsRequested(StringRef FilenameAsRequested,
+                                   StringRef Filename, bool isSystem,
+                                   bool isOverridden,
+                                   bool isExplicitModule) override {
 
       Out.indent(2) << "Input file: " << FilenameAsRequested;
 
@@ -970,14 +971,17 @@ void DumpModuleInfoAction::ExecuteAction() {
     // Emit the macro definitions in the module file so that we can know how
     // much definitions in the module file quickly.
     // TODO: Emit the macro definition bodies completely.
-    if (auto FilteredMacros = llvm::make_filter_range(
-            R->getPreprocessor().macros(),
-            [](const auto &Macro) { return Macro.first->isFromAST(); });
-        !FilteredMacros.empty()) {
-      Out << "   Macro Definitions:\n";
-      for (/*<IdentifierInfo *, MacroState> pair*/ const auto &Macro :
-           FilteredMacros)
-        Out << "     " << Macro.first->getName() << "\n";
+    {
+      std::vector<StringRef> MacroNames;
+      for (const auto &M : R->getPreprocessor().macros()) {
+        if (M.first->isFromAST())
+          MacroNames.push_back(M.first->getName());
+      }
+      llvm::sort(MacroNames);
+      if (!MacroNames.empty())
+        Out << "   Macro Definitions:\n";
+      for (StringRef Name : MacroNames)
+        Out << "     " << Name << "\n";
     }
 
     // Now let's print out any modules we did not see as part of the Primary.
@@ -1309,16 +1313,27 @@ void HLSLFrontendAction::ExecuteAction() {
                   /*CodeCompleteConsumer=*/nullptr);
   Sema &S = CI.getSema();
 
+  auto &TargetInfo = CI.getASTContext().getTargetInfo();
+  bool IsRootSignatureTarget =
+      TargetInfo.getTriple().getEnvironment() == llvm::Triple::RootSignature;
+  StringRef HLSLEntry = TargetInfo.getTargetOpts().HLSLEntry;
+
   // Register HLSL specific callbacks
   auto LangOpts = CI.getLangOpts();
+  StringRef RootSigName =
+      IsRootSignatureTarget ? HLSLEntry : LangOpts.HLSLRootSigOverride;
+
   auto MacroCallback = std::make_unique<InjectRootSignatureCallback>(
-      S, LangOpts.HLSLRootSigOverride, LangOpts.HLSLRootSigVer);
+      S, RootSigName, LangOpts.HLSLRootSigVer);
 
   Preprocessor &PP = CI.getPreprocessor();
   PP.addPPCallbacks(std::move(MacroCallback));
 
-  // Invoke as normal
-  WrapperFrontendAction::ExecuteAction();
+  // If we are targeting a root signature, invoke custom handling
+  if (IsRootSignatureTarget)
+    return hlsl::HandleRootSignatureTarget(S, HLSLEntry);
+  else // otherwise, invoke as normal
+    return WrapperFrontendAction::ExecuteAction();
 }
 
 HLSLFrontendAction::HLSLFrontendAction(

@@ -245,7 +245,7 @@ the configuration (without a prefix: ``Auto``).
     .. note::
 
      This currently only applies to braced initializer lists (when
-     ``Cpp11BracedListStyle`` is ``true``) and parentheses.
+     ``Cpp11BracedListStyle`` is not ``Block``) and parentheses.
 
 
 
@@ -1794,6 +1794,13 @@ the configuration (without a prefix: ``Auto``).
                    noexcept(baz(arg2)));
 
 
+
+.. _AllowBreakBeforeQtProperty:
+
+**AllowBreakBeforeQtProperty** (``Boolean``) :versionbadge:`clang-format 22` :ref:`¶ <AllowBreakBeforeQtProperty>`
+  Allow breaking before ``Q_Property`` keywords ``READ``, ``WRITE``, etc. as
+  if they were preceded by a comma (``,``). This allows them to be formatted
+  according to ``BinPackParameters``.
 
 .. _AllowShortBlocksOnASingleLine:
 
@@ -3809,29 +3816,72 @@ the configuration (without a prefix: ``Auto``).
 
 .. _Cpp11BracedListStyle:
 
-**Cpp11BracedListStyle** (``Boolean``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
-  If ``true``, format braced lists as best suited for C++11 braced
-  lists.
+**Cpp11BracedListStyle** (``BracedListStyle``) :versionbadge:`clang-format 3.4` :ref:`¶ <Cpp11BracedListStyle>`
+  The style to handle braced lists.
 
-  Important differences:
+  Possible values:
 
-  * No spaces inside the braced list.
-  * No line break before the closing brace.
-  * Indentation with the continuation indent, not with the block indent.
+  * ``BLS_Block`` (in configuration: ``Block``)
+    Best suited for pre C++11 braced lists.
 
-  Fundamentally, C++11 braced lists are formatted exactly like function
-  calls would be formatted in their place. If the braced list follows a name
-  (e.g. a type or variable name), clang-format formats as if the ``{}`` were
-  the parentheses of a function call with that name. If there is no name,
-  a zero-length name is assumed.
+    * Spaces inside the braced list.
+    * Line break before the closing brace.
+    * Indentation with the block indent.
 
-  .. code-block:: c++
 
-     true:                                  false:
-     vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
-     vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
-     f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
-     new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
+    .. code-block:: c++
+
+       vector<int> x{ 1, 2, 3, 4 };
+       vector<T> x{ {}, {}, {}, {} };
+       f(MyMap[{ composite, key }]);
+       new int[3]{ 1, 2, 3 };
+       Type name{ // Comment
+                  value
+       };
+
+  * ``BLS_FunctionCall`` (in configuration: ``FunctionCall``)
+    Best suited for C++11 braced lists.
+
+    * No spaces inside the braced list.
+    * No line break before the closing brace.
+    * Indentation with the continuation indent.
+
+    Fundamentally, C++11 braced lists are formatted exactly like function
+    calls would be formatted in their place. If the braced list follows a
+    name (e.g. a type or variable name), clang-format formats as if the
+    ``{}`` were the parentheses of a function call with that name. If there
+    is no name, a zero-length name is assumed.
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{ // Comment
+           value};
+
+  * ``BLS_AlignFirstComment`` (in configuration: ``AlignFirstComment``)
+    Same as ``FunctionCall``, except for the handling of a comment at the
+    begin, it then aligns everything following with the comment.
+
+    * No spaces inside the braced list. (Even for a comment at the first
+      position.)
+    * No line break before the closing brace.
+    * Indentation with the continuation indent, except when followed by a
+      line comment, then it uses the block indent.
+
+
+    .. code-block:: c++
+
+       vector<int> x{1, 2, 3, 4};
+       vector<T> x{{}, {}, {}, {}};
+       f(MyMap[{composite, key}]);
+       new int[3]{1, 2, 3};
+       Type name{// Comment
+                 value};
+
+
 
 .. _DeriveLineEnding:
 
@@ -4425,6 +4475,21 @@ the configuration (without a prefix: ``Auto``).
            #include <foo>
          #endif
        #endif
+
+  * ``PPDIS_Leave`` (in configuration: ``Leave``)
+    Leaves indentation of directives as-is.
+
+    .. note::
+
+     Ignores ``PPIndentWidth``.
+
+    .. code-block:: c++
+
+      #if FOO
+        #if BAR
+      #include <foo>
+        #endif
+      #endif
 
 
 
@@ -5078,6 +5143,113 @@ the configuration (without a prefix: ``Auto``).
     }
 
   For example: TESTSUITE
+
+.. _NumericLiteralCase:
+
+**NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 22` :ref:`¶ <NumericLiteralCase>`
+  Capitalization style for numeric literals.
+
+  Nested configuration flags:
+
+  Separate control for each numeric literal component.
+
+  For example, the config below will leave exponent letters alone, reformat
+  hexadecimal digits in lowercase, reformat numeric literal prefixes in
+  uppercase, and reformat suffixes in lowercase.
+
+  .. code-block:: c++
+
+    NumericLiteralCase:
+      ExponentLetter: Leave
+      HexDigit: Lower
+      Prefix: Upper
+      Suffix: Lower
+
+  * ``NumericLiteralComponentStyle ExponentLetter``
+    Format floating point exponent separator letter case.
+
+    .. code-block:: c++
+
+      float a = 6.02e23 + 1.0E10; // Leave
+      float a = 6.02E23 + 1.0E10; // Upper
+      float a = 6.02e23 + 1.0e10; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle HexDigit``
+    Format hexadecimal digit case.
+
+    .. code-block:: c++
+
+      a = 0xaBcDeF; // Leave
+      a = 0xABCDEF; // Upper
+      a = 0xabcdef; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle Prefix``
+    Format integer prefix case.
+
+    .. code-block:: c++
+
+       a = 0XF0 | 0b1; // Leave
+       a = 0XF0 | 0B1; // Upper
+       a = 0xF0 | 0b1; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
+  * ``NumericLiteralComponentStyle Suffix``
+    Format suffix case. This option excludes case-sensitive reserved
+    suffixes, such as ``min`` in C++.
+
+    .. code-block:: c++
+
+      a = 1uLL; // Leave
+      a = 1ULL; // Upper
+      a = 1ull; // Lower
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with uppercase characters.
+
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lowercase characters.
+
+
 
 .. _ObjCBinPackProtocolList:
 
@@ -6496,7 +6668,7 @@ the configuration (without a prefix: ``Auto``).
   .. note::
 
    This option doesn't apply to initializer braces if
-   ``Cpp11BracedListStyle`` is set to ``true``.
+   ``Cpp11BracedListStyle`` is not ``Block``.
 
   Possible values:
 

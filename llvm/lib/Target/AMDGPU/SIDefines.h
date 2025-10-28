@@ -237,15 +237,15 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_AC_FP32,
   OPERAND_REG_INLINE_AC_FP64,
 
+  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
+  // constants. Does not accept registers.
+  OPERAND_INLINE_C_AV64_PSEUDO,
+
   // Operand for source modifiers for VOP instructions
   OPERAND_INPUT_MODS,
 
   // Operand for SDWA instructions
   OPERAND_SDWA_VOPC_DST,
-
-  // Operand for AV_MOV_B64_IMM_PSEUDO, which is a pair of 32-bit inline
-  // constants.
-  OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
@@ -254,7 +254,7 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,
 
   OPERAND_REG_INLINE_AC_FIRST = OPERAND_REG_INLINE_AC_INT32,
-  OPERAND_REG_INLINE_AC_LAST = OPERAND_REG_INLINE_AC_FP64,
+  OPERAND_REG_INLINE_AC_LAST = OPERAND_INLINE_C_AV64_PSEUDO,
 
   OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
@@ -354,10 +354,11 @@ enum : unsigned {
 // Register codes as defined in the TableGen's HWEncoding field.
 namespace HWEncoding {
 enum : unsigned {
-  REG_IDX_MASK = 0xff,
-  IS_VGPR = 1 << 8,
-  IS_AGPR = 1 << 9,
-  IS_HI16 = 1 << 10,
+  REG_IDX_MASK = 0x3ff,
+  LO256_REG_IDX_MASK = 0xff,
+  IS_VGPR = 1 << 10,
+  IS_AGPR = 1 << 11,
+  IS_HI16 = 1 << 12,
 };
 } // namespace HWEncoding
 
@@ -422,6 +423,9 @@ enum CPol {
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
   VOLATILE = 1 << 31,
+  // The set of "cache policy" bits used for compiler features that
+  // do not correspond to handware features.
+  VIRTUAL_BITS = VOLATILE,
 };
 
 } // namespace CPol
@@ -456,6 +460,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA = 133,
   ID_RTN_GET_TBA_TO_PC = 134,
   ID_RTN_GET_SE_AID_ID = 135,
+
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -572,7 +578,17 @@ enum ModeRegisterMasks : uint32_t {
 
   GPR_IDX_EN_MASK = 1 << 27,
   VSKIP_MASK = 1 << 28,
-  CSP_MASK = 0x7u << 29 // Bits 29..31
+  CSP_MASK = 0x7u << 29, // Bits 29..31
+
+  // GFX1250
+  DST_VGPR_MSB = 1 << 12,
+  SRC0_VGPR_MSB = 1 << 13,
+  SRC1_VGPR_MSB = 1 << 14,
+  SRC2_VGPR_MSB = 1 << 15,
+  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+
+  REPLAY_MODE = 1 << 25,
+  FLAT_SCRATCH_IS_NV = 1 << 26,
 };
 
 } // namespace Hwreg
@@ -1095,7 +1111,14 @@ enum Register_Flag : uint8_t {
 namespace AMDGPU {
 namespace Barrier {
 
-enum Type { TRAP = -2, WORKGROUP = -1 };
+enum Type {
+  CLUSTER_TRAP = -4,
+  CLUSTER = -3,
+  TRAP = -2,
+  WORKGROUP = -1,
+  NAMED_BARRIER_FIRST = 1,
+  NAMED_BARRIER_LAST = 16,
+};
 
 enum {
   BARRIER_SCOPE_WORKGROUP = 0,

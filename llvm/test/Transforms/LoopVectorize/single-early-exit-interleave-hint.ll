@@ -8,7 +8,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:  [[ENTRY:.*:]]
 ; VF4IC4-NEXT:    [[SRC:%.*]] = alloca [128 x i32], align 4
 ; VF4IC4-NEXT:    call void @init_mem(ptr [[SRC]])
-; VF4IC4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4IC4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4IC4:       [[VECTOR_PH]]:
 ; VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4IC4:       [[VECTOR_BODY]]:
@@ -43,24 +43,10 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    br label %[[E2:.*]]
 ; VF4IC4:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC4-NEXT:    br label %[[E1:.*]]
-; VF4IC4:       [[SCALAR_PH]]:
-; VF4IC4-NEXT:    br label %[[LOOP_HEADER:.*]]
-; VF4IC4:       [[LOOP_HEADER]]:
-; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[SCALAR_PH]] ]
-; VF4IC4-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
-; VF4IC4-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
-; VF4IC4-NEXT:    [[C_1:%.*]] = icmp eq i32 [[L]], 10
-; VF4IC4-NEXT:    br i1 [[C_1]], label %[[E1]], label %[[LOOP_LATCH]]
-; VF4IC4:       [[LOOP_LATCH]]:
-; VF4IC4-NEXT:    [[INC]] = add nuw i64 [[IV]], 1
-; VF4IC4-NEXT:    [[C_2:%.*]] = icmp eq i64 [[INC]], 128
-; VF4IC4-NEXT:    br i1 [[C_2]], label %[[E2]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF4IC4:       [[E1]]:
-; VF4IC4-NEXT:    [[P1:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ 0, %[[VECTOR_EARLY_EXIT]] ]
-; VF4IC4-NEXT:    ret i64 [[P1]]
+; VF4IC4-NEXT:    ret i64 0
 ; VF4IC4:       [[E2]]:
-; VF4IC4-NEXT:    [[P2:%.*]] = phi i64 [ 1, %[[LOOP_LATCH]] ], [ 1, %[[MIDDLE_BLOCK]] ]
-; VF4IC4-NEXT:    ret i64 [[P2]]
+; VF4IC4-NEXT:    ret i64 1
 ;
 entry:
   %src = alloca [128 x i32]
@@ -94,5 +80,4 @@ e2:
 ; VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF4IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VF4IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; VF4IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

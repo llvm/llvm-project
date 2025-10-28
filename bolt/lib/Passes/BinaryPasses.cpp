@@ -60,7 +60,12 @@ static cl::opt<DynoStatsSortOrder> DynoStatsSortOrderOpt(
     "print-sorted-by-order",
     cl::desc("use ascending or descending order when printing functions "
              "ordered by dyno stats"),
-    cl::init(DynoStatsSortOrder::Descending), cl::cat(BoltOptCategory));
+    cl::init(DynoStatsSortOrder::Descending),
+    cl::values(clEnumValN(DynoStatsSortOrder::Ascending, "ascending",
+                          "Ascending order"),
+               clEnumValN(DynoStatsSortOrder::Descending, "descending",
+                          "Descending order")),
+    cl::cat(BoltOptCategory));
 
 cl::list<std::string>
 HotTextMoveSections("hot-text-move-sections",
@@ -341,13 +346,16 @@ void EliminateUnreachableBlocks::runOnFunction(BinaryFunction &Function) {
   uint64_t Bytes;
   Function.markUnreachableBlocks();
   LLVM_DEBUG({
+    bool HasInvalidBB = false;
     for (BinaryBasicBlock &BB : Function) {
       if (!BB.isValid()) {
+        HasInvalidBB = true;
         dbgs() << "BOLT-INFO: UCE found unreachable block " << BB.getName()
                << " in function " << Function << "\n";
-        Function.dump();
       }
     }
+    if (HasInvalidBB)
+      Function.dump();
   });
   BinaryContext::IndependentCodeEmitter Emitter =
       BC.createIndependentMCCodeEmitter();
@@ -1843,7 +1851,7 @@ Error StripRepRet::runOnFunctions(BinaryContext &BC) {
 }
 
 Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
-  if (!BC.isX86())
+  if (!BC.isX86() && !BC.isAArch64())
     return Error::success();
 
   uint64_t NumInlined = 0;
@@ -1866,8 +1874,16 @@ Error InlineMemcpy::runOnFunctions(BinaryContext &BC) {
         const bool IsMemcpy8 = (CalleeSymbol->getName() == "_memcpy8");
         const bool IsTailCall = BC.MIB->isTailCall(Inst);
 
+        // Extract size from preceding instructions (AArch64 only).
+        // Pattern: MOV X2, #nb-bytes; BL memcpy src, dest, X2.
+        std::optional<uint64_t> KnownSize =
+            BC.MIB->findMemcpySizeInBytes(BB, II);
+
+        if (BC.isAArch64() && (!KnownSize.has_value() || *KnownSize > 64))
+          continue;
+
         const InstructionListType NewCode =
-            BC.MIB->createInlineMemcpy(IsMemcpy8);
+            BC.MIB->createInlineMemcpy(IsMemcpy8, KnownSize);
         II = BB.replaceInstruction(II, NewCode);
         std::advance(II, NewCode.size() - 1);
         if (IsTailCall) {

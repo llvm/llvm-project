@@ -1364,6 +1364,27 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 }
 
+TEST_F(FormatTest, WrapMultipleStatementIfAndElseBraces) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_AllIfsAndElse;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  Style.BraceWrapping.BeforeElse = true;
+
+  verifyFormat("if (x)\n"
+               "{\n"
+               "  ++x;\n"
+               "  --y;\n"
+               "}\n"
+               "else\n"
+               "{\n"
+               "  --x;\n"
+               "  ++y;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
   verifyFormat("while (true)\n"
                "  ;");
@@ -5563,6 +5584,63 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "  x;      \\\n"
                " }",
                style);
+
+  style.IndentPPDirectives = FormatStyle::PPDIS_Leave;
+  style.IndentWidth = 4;
+  verifyNoChange("#ifndef foo\n"
+                 "#define foo\n"
+                 "if (emacs) {\n"
+                 "#ifdef is\n"
+                 "#define lit           \\\n"
+                 "    if (af) {         \\\n"
+                 "        return duh(); \\\n"
+                 "    }\n"
+                 "#endif\n"
+                 "}\n"
+                 "#endif",
+                 style);
+  verifyNoChange("#ifndef foo\n"
+                 "  #define foo\n"
+                 "if (emacs) {\n"
+                 "  #ifdef is\n"
+                 "#define lit           \\\n"
+                 "    if (af) {         \\\n"
+                 "        return duh(); \\\n"
+                 "    }\n"
+                 "  #endif\n"
+                 "}\n"
+                 "#endif",
+                 style);
+  verifyNoChange("  #ifndef foo\n"
+                 "#  define foo\n"
+                 "if (emacs) {\n"
+                 "#ifdef is\n"
+                 "  #  define lit       \\\n"
+                 "    if (af) {         \\\n"
+                 "        return duh(); \\\n"
+                 "    }\n"
+                 "#endif\n"
+                 "}\n"
+                 "  #endif",
+                 style);
+  verifyNoChange("#ifdef foo\n"
+                 "#else\n"
+                 "/* This is a comment */\n"
+                 "#ifdef BAR\n"
+                 "#endif\n"
+                 "#endif",
+                 style);
+
+  style.IndentWidth = 1;
+  style.PPIndentWidth = 4;
+  verifyNoChange("# if 1\n"
+                 "  #define X \\\n"
+                 " {          \\\n"
+                 "  x;        \\\n"
+                 "  x;        \\\n"
+                 " }\n"
+                 "# endif",
+                 style);
 
   style.IndentWidth = 4;
   style.PPIndentWidth = 1;
@@ -14285,7 +14363,7 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
       BreakBeforeLambdaBody);
 
   FormatStyle ExtraSpaces = getLLVMStyle();
-  ExtraSpaces.Cpp11BracedListStyle = false;
+  ExtraSpaces.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   ExtraSpaces.ColumnLimit = 75;
   verifyFormat("vector<int> x{ 1, 2, 3, 4 };", ExtraSpaces);
   verifyFormat("vector<T> x{ {}, {}, {}, {} };", ExtraSpaces);
@@ -14993,6 +15071,18 @@ TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
                "  {\n"
                "  }\n"
                "};",
+               Style);
+}
+
+TEST_F(FormatTest, MergeShortFunctionBody) {
+  auto Style = getLLVMStyle();
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+
+  verifyFormat("int foo()\n"
+               "{ return 1; }",
                Style);
 }
 
@@ -18469,6 +18559,11 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "#define bbbb 4\n"
                "#define ccc       (5)",
                Style);
+
+  Style.ColumnLimit = 30;
+  verifyFormat("#define MY_FUNC(x) callMe(X)\n"
+               "#define MY_LONG_CONSTANT 17",
+               Style);
 }
 
 TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLines) {
@@ -19449,6 +19544,15 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
       "int j      = 2;",
       Alignment);
 
+  verifyFormat("int abcdefghijk = 111;\n"
+               "auto lambda     = [] {\n"
+               "  int c = call(1, //\n"
+               "               2, //\n"
+               "               3, //\n"
+               "               4);\n"
+               "};",
+               Alignment);
+
   verifyFormat("template <typename T, typename T_0 = very_long_type_name_0,\n"
                "          typename B   = very_long_type_name_1,\n"
                "          typename T_2 = very_long_type_name_2>\n"
@@ -19487,6 +19591,12 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                Alignment);
   verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
                "auto b                     = g([] {\n"
+               "  return \"Hello \"\n"
+               "         \"World\";\n"
+               "});",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = g([] {\n"
                "  f();\n"
                "  return;\n"
                "});",
@@ -19505,16 +19615,34 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "};",
                Alignment);
 
+  // Aligning lines should not mess up the comments. However, feel free to
+  // change the test if it turns out that comments inside the closure should not
+  // be aligned with those outside it.
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};  //\n"
+               "auto b                     = [] { //\n"
+               "  return;                         //\n"
+               "};",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};  //\n"
+               "auto b                     = [] { //\n"
+               "  return aaaaaaaaaaaaaaaaaaaaa;   //\n"
+               "};",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaa = {};      //\n"
+               "auto b               = [] {     //\n"
+               "  return aaaaaaaaaaaaaaaaaaaaa; //\n"
+               "};",
+               Alignment);
+
   verifyFormat("auto b = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "           ccc ? aaaaa : bbbbb,\n"
                "           dddddddddddddddddddddddddd);",
                Alignment);
-  // FIXME: https://llvm.org/PR53497
-  // verifyFormat("auto aaaaaaaaaaaa = f();\n"
-  //              "auto b            = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-  //              "    ccc ? aaaaa : bbbbb,\n"
-  //              "    dddddddddddddddddddddddddd);",
-  //              Alignment);
+  verifyFormat("auto aaaaaaaaaaaa = f();\n"
+               "auto b            = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "                      ccc ? aaaaa : bbbbb,\n"
+               "                      dddddddddddddddddddddddddd);",
+               Alignment);
 
   // Confirm proper handling of AlignConsecutiveAssignments with
   // BinPackArguments.
@@ -20102,6 +20230,11 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "    i = 3    //\n"
                "};",
                Alignment);
+  // When assignments are nested, each level should be aligned.
+  verifyFormat("float i2 = 0;\n"
+               "auto  v  = type{i2 = 1, //\n"
+               "                i  = 3};",
+               Alignment);
   Alignment.AlignConsecutiveAssignments.Enabled = false;
 
   verifyFormat(
@@ -20237,8 +20370,13 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 0;\n"
                "}()};",
                BracedAlign);
-  BracedAlign.Cpp11BracedListStyle = false;
+  BracedAlign.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat("const auto result{ []() {\n"
+               "  const auto something = 1;\n"
+               "  return 2;\n"
+               "} };",
+               BracedAlign);
+  verifyFormat("const volatile auto result{ []() {\n"
                "  const auto something = 1;\n"
                "  return 2;\n"
                "} };",
@@ -20586,6 +20724,21 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
 
+  verifyFormat("void foo() {\n"
+               "  int    myVar = 5;\n"
+               "  double x     = 3.14;\n"
+               "  auto   str   = (\"Hello \"\n"
+               "                  \"World\");\n"
+               "  auto   s     = (\"Hello \"\n"
+               "                  \"Again\");\n"
+               "}",
+               Style);
+
+  verifyFormat("A    B       = {\"Hello \"\n"
+               "                \"World\"};\n"
+               "BYTE payload = 2;",
+               Style);
+
   // clang-format off
   verifyFormat("void foo() {\n"
                "  const int  capacityBefore = Entries.capacity();\n"
@@ -20643,6 +20796,30 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
   // clang-format on
+
+  Style = getLLVMStyleWithColumns(70);
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  verifyFormat(
+      "ReturnType\n"
+      "MyFancyIntefaceFunction(Context       *context,\n"
+      "                        ALongTypeName *response) noexcept override;\n"
+      "ReturnType func();",
+      Style);
+
+  verifyFormat(
+      "ReturnType\n"
+      "MyFancyIntefaceFunction(B<int>          *context,\n"
+      "                        decltype(AFunc) *response) noexcept override;\n"
+      "ReturnType func();",
+      Style);
+
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  Style.ColumnLimit = 15;
+  verifyFormat("int i1 = 1;\n"
+               "k      = bar(\n"
+               "    argument1,\n"
+               "    argument2);",
+               Style);
 }
 
 TEST_F(FormatTest, AlignWithInitializerPeriods) {
@@ -20666,6 +20843,28 @@ TEST_F(FormatTest, AlignWithInitializerPeriods) {
                "                  .three_fooooooooooooo  = 4};\n"
                "  BYTE payload = 2;\n"
                "}",
+               Style);
+
+  // The lines inside the braces are supposed to be indented by
+  // BracedInitializerIndentWidth from the start of the line. They should not
+  // move with the opening brace.
+  verifyFormat("void foo2(void) {\n"
+               "  BYTE p[1] = 1;\n"
+               "  A B       = {\n"
+               "      .one_foooooooooooooooo = 2,\n"
+               "      .two_fooooooooooooo    = 3,\n"
+               "      .three_fooooooooooooo  = 4,\n"
+               "  };\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = g([] {\n"
+               "  x = {.one_foooooooooooooooo = 2, //\n"
+               "       .two_fooooooooooooo    = 3, //\n"
+               "       .three_fooooooooooooo  = 4};\n"
+               "});",
                Style);
 
   Style.AlignConsecutiveAssignments.Enabled = false;
@@ -21802,14 +22001,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "});",
                Style);
 
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat("struct test demo[] = {\n"
                "  { 56,    23, \"hello\" },\n"
                "  { -1, 93463, \"world\" },\n"
                "  {  7,     5,    \"!!\" }\n"
                "};",
                Style);
-  Style.Cpp11BracedListStyle = true;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
 
   Style.ColumnLimit = 0;
   verifyFormat(
@@ -22069,14 +22268,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "  };",
                Style);
 
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat("struct test demo[] = {\n"
                "  { 56, 23,    \"hello\" },\n"
                "  { -1, 93463, \"world\" },\n"
                "  { 7,  5,     \"!!\"    }\n"
                "};",
                Style);
-  Style.Cpp11BracedListStyle = true;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
 
   Style.ColumnLimit = 0;
   verifyFormat(
@@ -24748,6 +24947,11 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                " } while (0 )",
                Style);
 
+  Style.OneLineFormatOffRegex = "MACRO_TEST";
+  verifyNoChange(" MACRO_TEST1 ( ) ;\n"
+                 "   MACRO_TEST2( );",
+                 Style);
+
   Style.ColumnLimit = 50;
   Style.OneLineFormatOffRegex = "^LogErrorPrint$";
   verifyFormat(" myproject::LogErrorPrint(logger, \"Don't split me!\");\n"
@@ -25583,6 +25787,20 @@ TEST_F(FormatTest, SkipMacroDefinitionBody) {
                  "a a \\\n"
                  "a        \\\n"
                  "a",
+                 Style);
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_Leave;
+  verifyNoChange("#if A\n"
+                 "#define A a\n"
+                 "#endif",
+                 Style);
+  verifyNoChange("#if A\n"
+                 "  #define A a\n"
+                 "#endif",
+                 Style);
+  verifyNoChange("#if A\n"
+                 "#  define A a\n"
+                 "#endif",
                  Style);
 
   // Adjust indendations but don't change the definition.
@@ -28687,6 +28905,36 @@ TEST_F(FormatTest, WrapNamespaceBodyWithEmptyLinesAlways) {
 TEST_F(FormatTest, BreakBeforeClassName) {
   verifyFormat("class ABSL_ATTRIBUTE_TRIVIAL_ABI ABSL_NULLABILITY_COMPATIBLE\n"
                "    ArenaSafeUniquePtr {};");
+}
+
+TEST_F(FormatTest, KeywordedFunctionLikeMacros) {
+  constexpr StringRef Code("Q_PROPERTY(int name\n"
+                           "           READ name\n"
+                           "           WRITE setName\n"
+                           "           NOTIFY nameChanged)");
+  constexpr StringRef Code2("class A {\n"
+                            "  Q_PROPERTY(int name\n"
+                            "             READ name\n"
+                            "             WRITE setName\n"
+                            "             NOTIFY nameChanged)\n"
+                            "};");
+
+  auto Style = getLLVMStyle();
+  Style.AllowBreakBeforeQtProperty = true;
+
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat(Code, Style);
+  verifyFormat(Code2, Style);
+
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.ColumnLimit = 40;
+  verifyFormat(Code, Style);
+  verifyFormat(Code2, Style);
+  verifyFormat("/* sdf */ Q_PROPERTY(int name\n"
+               "                     READ name\n"
+               "                     WRITE setName\n"
+               "                     NOTIFY nameChanged)",
+               Style);
 }
 
 } // namespace

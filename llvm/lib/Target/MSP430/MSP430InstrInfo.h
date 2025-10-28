@@ -27,7 +27,7 @@ class MSP430InstrInfo : public MSP430GenInstrInfo {
   const MSP430RegisterInfo RI;
   virtual void anchor();
 public:
-  explicit MSP430InstrInfo(MSP430Subtarget &STI);
+  explicit MSP430InstrInfo(const MSP430Subtarget &STI);
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should

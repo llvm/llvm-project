@@ -17,12 +17,14 @@ source .ci/utils.sh
 
 projects="${1}"
 targets="${2}"
+runtimes="${3}"
+runtimes_targets="${4}"
 
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-export CC=cl
-export CXX=cl
+export CC=C:/clang/clang-msvc/bin/clang-cl.exe
+export CXX=C:/clang/clang-msvc/bin/clang-cl.exe
 export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
@@ -46,9 +48,19 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO"
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_CXX_FLAGS="-Wno-c++98-compat -Wno-c++14-compat -Wno-unsafe-buffer-usage -Wno-old-style-cast" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
 start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+
+if [[ "${runtime_targets}" != "" ]]; then
+  start-group "ninja runtimes"
+  
+  ninja -C "${BUILD_DIR}" -k 0 ${runtimes_targets} |& tee ninja_runtimes.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes.ninja_log
+fi

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -179,6 +180,7 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         if self.getPlatform() != "windows":
@@ -291,6 +293,7 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -331,6 +334,7 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
 
@@ -385,6 +389,7 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -407,6 +412,7 @@ class TestCase(TestBase):
             "symbolTableSavedToCache",
             "dwoFileCount",
             "loadedDwoFileCount",
+            "dwoErrorCount",
             "triple",
             "uuid",
         ]
@@ -497,6 +503,7 @@ class TestCase(TestBase):
             "totalDebugInfoByteSize",
             "totalDwoFileCount",
             "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         target_stats = debug_stats["targets"][0]
@@ -654,6 +661,99 @@ class TestCase(TestBase):
         debug_stats = self.get_stats()
         self.assertEqual(debug_stats["totalDwoFileCount"], 2)
         self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
+
+    @add_test_categories(["dwo"])
+    def test_dwo_missing_error_stats(self):
+        """
+        Test that DWO missing errors are reported correctly in statistics.
+        This test:
+        1) Builds a program with split DWARF (.dwo files)
+        2) Delete one of the two .dwo files
+        3) Verify that 1 DWO error is reported in statistics
+        """
+        da = {
+            "CXX_SOURCES": "dwo_error_main.cpp dwo_error_foo.cpp",
+            "EXE": self.getBuildArtifact("a.out"),
+        }
+        # -gsplit-dwarf creates separate .dwo files,
+        # Expected output: dwo_error_main.dwo (contains main) and dwo_error_foo.dwo (contains foo struct/function)
+        self.build(dictionary=da, debug_info="dwo")
+        exe = self.getBuildArtifact("a.out")
+
+        expected_dwo_files = [
+            self.getBuildArtifact("dwo_error_main.dwo"),
+            self.getBuildArtifact("dwo_error_foo.dwo"),
+        ]
+
+        # Verify expected files exist
+        for dwo_file in expected_dwo_files:
+            self.assertTrue(
+                os.path.exists(dwo_file),
+                f"Expected .dwo file does not exist: {dwo_file}",
+            )
+
+        # Remove one of .dwo files to trigger DWO load error
+        dwo_main_file = self.getBuildArtifact("dwo_error_main.dwo")
+        os.remove(dwo_main_file)
+
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # Check DWO load error statistics are reported
+        self.assertIn("totalDwoErrorCount", debug_stats)
+        self.assertEqual(debug_stats["totalDwoErrorCount"], 1)
+
+        # Since there's only one module, module stats should have the same count as total count
+        self.assertIn("dwoErrorCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
+
+    @add_test_categories(["dwo"])
+    def test_dwo_id_mismatch_error_stats(self):
+        """
+        Test that DWO ID mismatch errors are reported correctly in statistics.
+        This test:
+        1) Builds a program with split DWARF (.dwo files)
+        2) Replace one of the .dwo files with a mismatched one to cause a DWO ID mismatch error
+        3) Verifies that a DWO error is reported in statistics
+        """
+        da = {
+            "CXX_SOURCES": "dwo_error_main.cpp dwo_error_foo.cpp",
+            "EXE": self.getBuildArtifact("a.out"),
+        }
+        # -gsplit-dwarf creates separate .dwo files,
+        # Expected output: dwo_error_main.dwo (contains main) and dwo_error_foo.dwo (contains foo struct/function)
+        self.build(dictionary=da, debug_info="dwo")
+        exe = self.getBuildArtifact("a.out")
+
+        expected_dwo_files = [
+            self.getBuildArtifact("dwo_error_main.dwo"),
+            self.getBuildArtifact("dwo_error_foo.dwo"),
+        ]
+
+        # Verify expected files exist
+        for dwo_file in expected_dwo_files:
+            self.assertTrue(
+                os.path.exists(dwo_file),
+                f"Expected .dwo file does not exist: {dwo_file}",
+            )
+
+        # Replace one of the original .dwo file content with another one to trigger DWO ID mismatch error
+        dwo_foo_file = self.getBuildArtifact("dwo_error_foo.dwo")
+        dwo_main_file = self.getBuildArtifact("dwo_error_main.dwo")
+
+        shutil.copy(dwo_main_file, dwo_foo_file)
+
+        # Create a new target and get stats
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # Check that DWO load error statistics are reported
+        self.assertIn("totalDwoErrorCount", debug_stats)
+        self.assertEqual(debug_stats["totalDwoErrorCount"], 1)
+
+        # Since there's only one module, module stats should have the same count as total count
+        self.assertIn("dwoErrorCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
 
     @skipUnlessDarwin
     @no_debug_info_test

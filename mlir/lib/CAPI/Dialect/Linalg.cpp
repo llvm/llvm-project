@@ -59,7 +59,7 @@ mlirLinalgInferContractionDimensions(MlirOperation op) {
   if (failed(maybeDims))
     return result;
 
-  linalg::ContractionDimensions contractionDims = *maybeDims;
+  const linalg::ContractionDimensions &contractionDims = *maybeDims;
   MLIRContext *ctx = linalgOp.getContext();
 
   auto toAttr = [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
@@ -95,7 +95,7 @@ mlirLinalgInferConvolutionDimensions(MlirOperation op) {
   if (failed(maybeDims))
     return result;
 
-  linalg::ConvolutionDimensions dims = *maybeDims;
+  const linalg::ConvolutionDimensions &dims = *maybeDims;
   MLIRContext *ctx = linalgOp.getContext();
 
   auto toI32Attr =

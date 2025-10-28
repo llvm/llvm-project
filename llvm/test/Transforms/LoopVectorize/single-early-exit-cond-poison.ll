@@ -10,7 +10,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-LABEL: define noundef i32 @f(
 ; VF4IC2-SAME: i32 noundef [[G:%.*]]) {
 ; VF4IC2-NEXT:  [[ENTRY:.*:]]
-; VF4IC2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4IC2:       [[VECTOR_PH]]:
 ; VF4IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[G]], i64 0
 ; VF4IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -40,26 +40,14 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP15:%.*]] = trunc i64 [[TMP14]] to i32
 ; VF4IC2-NEXT:    [[TMP16:%.*]] = add i32 0, [[TMP15]]
 ; VF4IC2-NEXT:    br label %[[RETURN]]
-; VF4IC2:       [[SCALAR_PH]]:
-; VF4IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
-; VF4IC2:       [[LOOP_HEADER]]:
-; VF4IC2-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; VF4IC2-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IV]], 3
-; VF4IC2-NEXT:    [[SHR:%.*]] = ashr i32 [[G]], [[MUL]]
-; VF4IC2-NEXT:    [[EARLY_COND:%.*]] = icmp eq i32 [[SHR]], 0
-; VF4IC2-NEXT:    br i1 [[EARLY_COND]], label %[[LOOP_LATCH]], label %[[RETURN]]
-; VF4IC2:       [[LOOP_LATCH]]:
-; VF4IC2-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF4IC2-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 8
-; VF4IC2-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4IC2:       [[RETURN]]:
-; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[SHR]], %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ]
+; VF4IC2-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF4IC2-NEXT:    ret i32 [[RES]]
 ;
 ; VF8IC1-LABEL: define noundef i32 @f(
 ; VF8IC1-SAME: i32 noundef [[G:%.*]]) {
 ; VF8IC1-NEXT:  [[ENTRY:.*:]]
-; VF8IC1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF8IC1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF8IC1:       [[VECTOR_PH]]:
 ; VF8IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[G]], i64 0
 ; VF8IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
@@ -80,20 +68,8 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
 ; VF8IC1-NEXT:    [[TMP7:%.*]] = add i32 0, [[TMP6]]
 ; VF8IC1-NEXT:    br label %[[RETURN]]
-; VF8IC1:       [[SCALAR_PH]]:
-; VF8IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
-; VF8IC1:       [[LOOP_HEADER]]:
-; VF8IC1-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; VF8IC1-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[IV]], 3
-; VF8IC1-NEXT:    [[SHR:%.*]] = ashr i32 [[G]], [[MUL]]
-; VF8IC1-NEXT:    [[EARLY_COND:%.*]] = icmp eq i32 [[SHR]], 0
-; VF8IC1-NEXT:    br i1 [[EARLY_COND]], label %[[LOOP_LATCH]], label %[[RETURN]]
-; VF8IC1:       [[LOOP_LATCH]]:
-; VF8IC1-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; VF8IC1-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 8
-; VF8IC1-NEXT:    br i1 [[EC]], label %[[RETURN]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF8IC1:       [[RETURN]]:
-; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[SHR]], %[[LOOP_LATCH]] ], [ [[IV]], %[[LOOP_HEADER]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP7]], %[[VECTOR_EARLY_EXIT]] ]
+; VF8IC1-NEXT:    [[RES:%.*]] = phi i32 [ [[TMP4]], %[[MIDDLE_BLOCK]] ], [ [[TMP7]], %[[VECTOR_EARLY_EXIT]] ]
 ; VF8IC1-NEXT:    ret i32 [[RES]]
 ;
 entry:

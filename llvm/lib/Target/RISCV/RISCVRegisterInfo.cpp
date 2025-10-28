@@ -178,6 +178,10 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Shadow stack pointer.
   markSuperRegs(Reserved, RISCV::SSP);
 
+  // XSfmmbase
+  for (MCPhysReg Reg = RISCV::T0; Reg <= RISCV::T15; Reg++)
+    markSuperRegs(Reserved, Reg);
+
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
 }
@@ -966,7 +970,9 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       }
     }
 
-    // Add a hint if it would allow auipc/lui+addi(w) fusion.
+    // Add a hint if it would allow auipc/lui+addi(w) fusion.  We do this even
+    // without the fusions explicitly enabled as the impact is rarely negative
+    // and some cores do implement this fusion.
     if ((MI.getOpcode() == RISCV::ADDIW || MI.getOpcode() == RISCV::ADDI) &&
         MI.getOperand(1).isReg()) {
       const MachineBasicBlock &MBB = *MI.getParent();
@@ -974,9 +980,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
       // Is the previous instruction a LUI or AUIPC that can be fused?
       if (I != MBB.begin()) {
         I = skipDebugInstructionsBackward(std::prev(I), MBB.begin());
-        if (((I->getOpcode() == RISCV::LUI && Subtarget.hasLUIADDIFusion()) ||
-             (I->getOpcode() == RISCV::AUIPC &&
-              Subtarget.hasAUIPCADDIFusion())) &&
+        if ((I->getOpcode() == RISCV::LUI || I->getOpcode() == RISCV::AUIPC) &&
             I->getOperand(0).getReg() == MI.getOperand(1).getReg()) {
           if (OpIdx == 0)
             tryAddHint(MO, MI.getOperand(1), /*NeedGPRC=*/false);

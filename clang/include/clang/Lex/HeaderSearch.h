@@ -986,6 +986,9 @@ void ApplyHeaderSearchOptions(HeaderSearch &HS,
                               const LangOptions &Lang,
                               const llvm::Triple &triple);
 
+void normalizeModuleCachePath(FileManager &FileMgr, StringRef Path,
+                              SmallVectorImpl<char> &NormalizedPath);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_LEX_HEADERSEARCH_H

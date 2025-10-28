@@ -10,8 +10,8 @@ declare void @llvm.assume(i1) #1
 
 ; Check that the assume has not been removed:
 
-define i32 @foo1(ptr %a) #0 {
-; DEFAULT-LABEL: @foo1(
+define i32 @align_to_bundle(ptr %a) #0 {
+; DEFAULT-LABEL: @align_to_bundle(
 ; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
@@ -19,13 +19,35 @@ define i32 @foo1(ptr %a) #0 {
 ; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; DEFAULT-NEXT:    ret i32 [[T0]]
 ;
-; BUNDLES-LABEL: @foo1(
+; BUNDLES-LABEL: @align_to_bundle(
 ; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; BUNDLES-NEXT:    ret i32 [[T0]]
 ;
   %t0 = load i32, ptr %a, align 4
   %ptrint = ptrtoint ptr %a to i64
+  %maskedptr = and i64 %ptrint, 31
+  %maskcond = icmp eq i64 %maskedptr, 0
+  tail call void @llvm.assume(i1 %maskcond)
+  ret i32 %t0
+}
+
+define i32 @align_to_bundle_ptrtoaddr(ptr %a) #0 {
+; DEFAULT-LABEL: @align_to_bundle_ptrtoaddr(
+; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoaddr ptr [[A]] to i64
+; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
+; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
+; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; DEFAULT-NEXT:    ret i32 [[T0]]
+;
+; BUNDLES-LABEL: @align_to_bundle_ptrtoaddr(
+; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 4
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
+; BUNDLES-NEXT:    ret i32 [[T0]]
+;
+  %t0 = load i32, ptr %a, align 4
+  %ptrint = ptrtoaddr ptr %a to i64
   %maskedptr = and i64 %ptrint, 31
   %maskcond = icmp eq i64 %maskedptr, 0
   tail call void @llvm.assume(i1 %maskcond)
@@ -498,13 +520,13 @@ not_taken:
 define i1 @nonnull3B(ptr %a, i1 %control) {
 ; CHECK-LABEL: @nonnull3B(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(ptr [[LOAD]]) ]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       not_taken:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -512,10 +534,10 @@ entry:
   %cmp = icmp ne ptr %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %load)]
   ret i1 %cmp
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %load)]
   ret i1 %control
 }
 
@@ -544,7 +566,7 @@ taken:
   br label %exit
 exit:
   ; FIXME: this shouldn't be dropped because it is still dominated by the new position of %load
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 %cmp)
   ret i1 %cmp2
 not_taken:
   call void @llvm.assume(i1 %cmp)
@@ -575,7 +597,7 @@ taken:
 exit:
   ret i1 %cmp2
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
+  call void @llvm.assume(i1 %cmp)
   ret i1 %control
 }
 

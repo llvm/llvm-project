@@ -13,7 +13,6 @@
 define void @foo(ptr %A, i64 %i2, i64 %arg, i1 %c) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store float 0.000000e+00, ptr %arrayidx, align 4
-; CHECK-NEXT:  In Loop with Header: inner.loop
 ; CHECK-NEXT:  AccessFunction: ({0,+,%i2}<%outer.loop> + %unknown)
 ; CHECK-NEXT:  failed to delinearize
 ;

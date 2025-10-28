@@ -401,7 +401,7 @@ define <4 x half> @vfmin_v2f16_vv_nnan_insert_subvector(<2 x half> %a, <2 x half
 ; ZVFHMIN-NEXT:    ret
   %d = fadd nnan <2 x half> %a, %a
   %e = fadd nnan <2 x half> %b, %b
-  %f = call <4 x half> @llvm.vector.insert.v2f32.v4f32(<4 x half> undef, <2 x half> %d, i64 0)
+  %f = call <4 x half> @llvm.vector.insert.v2f32.v4f32(<4 x half> poison, <2 x half> %d, i64 0)
   %g = call <4 x half> @llvm.vector.insert.v2f32.v4f32(<4 x half> %f, <2 x half> %e, i64 2)
   %v = call <4 x half> @llvm.minimum.v4f16(<4 x half> %g, <4 x half> %c)
   ret <4 x half> %v

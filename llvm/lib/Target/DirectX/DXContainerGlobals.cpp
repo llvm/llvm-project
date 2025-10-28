@@ -28,6 +28,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <cstdint>
 #include <optional>
 
 using namespace llvm;
@@ -158,12 +159,15 @@ void DXContainerGlobals::addRootSignature(Module &M,
   if (MMI.ShaderProfile == llvm::Triple::Library)
     return;
 
-  assert(MMI.EntryPropertyVec.size() == 1);
-
   auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
-  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
-  const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
+  const Function *EntryFunction = nullptr;
 
+  if (MMI.ShaderProfile != llvm::Triple::RootSignature) {
+    assert(MMI.EntryPropertyVec.size() == 1);
+    EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  }
+
+  const mcdxbc::RootSignatureDesc *RS = RSA.getDescForFunction(EntryFunction);
   if (!RS)
     return;
 
@@ -190,7 +194,12 @@ void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {
         dxbc::PSV::v2::ResourceBindInfo BindInfo;
         BindInfo.Type = Type;
         BindInfo.LowerBound = Binding.LowerBound;
-        BindInfo.UpperBound = Binding.LowerBound + Binding.Size - 1;
+        assert(Binding.Size == UINT32_MAX ||
+               (uint64_t)Binding.LowerBound + Binding.Size - 1 <= UINT32_MAX &&
+                   "Resource range is too large");
+        BindInfo.UpperBound = (Binding.Size == UINT32_MAX)
+                                  ? UINT32_MAX
+                                  : Binding.LowerBound + Binding.Size - 1;
         BindInfo.Space = Binding.Space;
         BindInfo.Kind = static_cast<dxbc::PSV::ResourceKind>(Kind);
         BindInfo.Flags = Flags;
@@ -258,7 +267,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
   assert(MMI.EntryPropertyVec.size() == 1 ||
-         MMI.ShaderProfile == Triple::Library);
+         MMI.ShaderProfile == Triple::Library ||
+         MMI.ShaderProfile == Triple::RootSignature);
   PSV.BaseData.ShaderStage =
       static_cast<uint8_t>(MMI.ShaderProfile - Triple::Pixel);
 
@@ -279,7 +289,8 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
     break;
   }
 
-  if (MMI.ShaderProfile != Triple::Library)
+  if (MMI.ShaderProfile != Triple::Library &&
+      MMI.ShaderProfile != Triple::RootSignature)
     PSV.EntryName = MMI.EntryPropertyVec[0].Entry->getName();
 
   PSV.finalize(MMI.ShaderProfile);

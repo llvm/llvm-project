@@ -238,8 +238,8 @@ define i64 @cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:  # %bb.1: # %cond.false
 ; RV32I-NEXT:    neg a1, a0
 ; RV32I-NEXT:    and a1, a0, a1
-; RV32I-NEXT:    lui a2, 30667
-; RV32I-NEXT:    addi s2, a2, 1329
+; RV32I-NEXT:    lui s2, 30667
+; RV32I-NEXT:    addi s2, s2, 1329
 ; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    mv a1, s2

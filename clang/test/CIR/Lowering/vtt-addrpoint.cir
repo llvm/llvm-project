@@ -24,7 +24,7 @@ module {
     %5 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
     cir.call @_ZN1BC2Ev(%4, %5) : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
     %6 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
-    %7 = cir.cast(bitcast, %6 : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+    %7 = cir.cast bitcast %6 : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
     %8 = cir.load align(8) %7 : !cir.ptr<!cir.vptr>, !cir.vptr
     %9 = cir.vtable.get_vptr %2 : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
     cir.store align(8) %8, %9 : !cir.vptr, !cir.ptr<!cir.vptr>
@@ -32,7 +32,7 @@ module {
   }
 
 // CHECK: define{{.*}} void @_ZN1CC2Ev
-// CHECK:   %[[VTT:.*]] = getelementptr inbounds i8, ptr %{{.*}}, i32 1
+// CHECK:   %[[VTT:.*]] = getelementptr inbounds ptr, ptr %{{.*}}, i32 1
 // CHECK:   call void @_ZN1BC2Ev(ptr %{{.*}}, ptr %[[VTT]])
 
   cir.global linkonce_odr dso_local @_ZTV1C = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>, #cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 3>}> : !rec_anon_struct {alignment = 8 : i64}

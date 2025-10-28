@@ -70,8 +70,8 @@
 
 using namespace llvm;
 
-static std::unique_ptr<llvm::MemoryBuffer>
-    LLVM_ATTRIBUTE_UNUSED getProcCpuinfoContent() {
+[[maybe_unused]] static std::unique_ptr<llvm::MemoryBuffer>
+getProcCpuinfoContent() {
   const char *CPUInfoFile = "/proc/cpuinfo";
   if (const char *CpuinfoIntercept = std::getenv("LLVM_CPUINFO"))
     CPUInfoFile = CpuinfoIntercept;
@@ -369,6 +369,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
+        .Case("0xd25", "star-mc3")
         .Default("generic");
   }
 
@@ -964,6 +965,13 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
       break;
 
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Graniterapids:
     case 0xad:
       CPU = "graniterapids";
@@ -1145,6 +1153,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    // Novalake:
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1302,16 +1324,17 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   case 26:
     CPU = "znver5";
     *Type = X86::AMDFAM1AH;
-    if (Model <= 0x77) {
+    if (Model <= 0x4f || (Model >= 0x60 && Model <= 0x77) ||
+        (Model >= 0xd0 && Model <= 0xd7)) {
       // Models 00h-0Fh (Breithorn).
       // Models 10h-1Fh (Breithorn-Dense).
       // Models 20h-2Fh (Strix 1).
       // Models 30h-37h (Strix 2).
       // Models 38h-3Fh (Strix 3).
       // Models 40h-4Fh (Granite Ridge).
-      // Models 50h-5Fh (Weisshorn).
       // Models 60h-6Fh (Krackan1).
       // Models 70h-77h (Sarlak).
+      // Models D0h-D7h (Annapurna).
       CPU = "znver5";
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
@@ -1396,7 +1419,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(X86::FEATURE_AVX512F);
-    setFeature(X86::FEATURE_EVEX512);
   }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512DQ);
@@ -2050,6 +2072,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["rdpru"]    = HasExtLeaf8 && ((EBX >> 4) & 1);
   Features["wbnoinvd"] = HasExtLeaf8 && ((EBX >> 9) & 1);
 
+  bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
+                      !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
+  // AMD cpuid bit for prefetchi is different from Intel
+  Features["prefetchi"] = HasExtLeaf21 && ((EAX >> 20) & 1);
+
   bool HasLeaf7 =
       MaxLevel >= 7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
@@ -2063,8 +2090,6 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
-  if (Features["avx512f"])
-    Features["evex512"]  = true;
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);
@@ -2134,7 +2159,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
   Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
-  Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
+  Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
@@ -2176,11 +2201,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
       MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
 
   int AVX10Ver = HasLeaf24 && (EBX & 0xff);
-  int Has512Len = HasLeaf24 && ((EBX >> 18) & 1);
-  Features["avx10.1-256"] = HasAVX10 && AVX10Ver >= 1;
-  Features["avx10.1-512"] = HasAVX10 && AVX10Ver >= 1 && Has512Len;
-  Features["avx10.2-256"] = HasAVX10 && AVX10Ver >= 2;
-  Features["avx10.2-512"] = HasAVX10 && AVX10Ver >= 2 && Has512Len;
+  Features["avx10.1"] = HasAVX10 && AVX10Ver >= 1;
+  Features["avx10.2"] = HasAVX10 && AVX10Ver >= 2;
 
   return Features;
 }
