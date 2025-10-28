@@ -545,15 +545,18 @@ body:             |
     ; CHECK-LABEL: name: store_6xs64
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]](s64), [[DEF]](s64)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]](s64), [[DEF]](s64)
+    ; CHECK-NEXT: [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]](s64), [[DEF]](s64)
     ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
-    ; CHECK-NEXT: G_STORE [[DEF]](<2 x s64>), %ptr(p0) :: (store (<2 x s64>))
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR]](<2 x s64>), %ptr(p0) :: (store (<2 x s64>))
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
     ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C]](s64)
-    ; CHECK-NEXT: G_STORE [[DEF]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR1]](<2 x s64>), [[PTR_ADD]](p0) :: (store (<2 x s64>) into unknown-address + 16)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
     ; CHECK-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD %ptr, [[C1]](s64)
-    ; CHECK-NEXT: G_STORE [[DEF]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into unknown-address + 32)
+    ; CHECK-NEXT: G_STORE [[BUILD_VECTOR2]](<2 x s64>), [[PTR_ADD1]](p0) :: (store (<2 x s64>) into unknown-address + 32)
     ; CHECK-NEXT: RET_ReallyLR
     %val:_(<6 x s64>) = G_IMPLICIT_DEF
     %ptr:_(p0) = COPY $x0

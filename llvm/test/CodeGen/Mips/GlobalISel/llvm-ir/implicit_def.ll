@@ -29,8 +29,8 @@ define void @g_i64() {
 ; MIPS32-NEXT:    .cfi_def_cfa_offset 24
 ; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; MIPS32-NEXT:    .cfi_offset 31, -4
-; MIPS32-NEXT:    # implicit-def: $a0
 ; MIPS32-NEXT:    # implicit-def: $a1
+; MIPS32-NEXT:    move $4, $5
 ; MIPS32-NEXT:    jal f_i64
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
