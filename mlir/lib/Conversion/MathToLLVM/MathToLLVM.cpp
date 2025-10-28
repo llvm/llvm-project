@@ -142,8 +142,8 @@ struct SincosOpLowering : public ConvertOpToLLVMPattern<math::SincosOp> {
     auto structType = LLVM::LLVMStructType::getLiteral(
         rewriter.getContext(), {llvmOperandType, llvmOperandType});
 
-    auto sincosOp = rewriter.create<LLVM::SincosOp>(
-        loc, structType, adaptor.getOperand(), attrs.getAttrs());
+    auto sincosOp = LLVM::SincosOp::create(
+        rewriter, loc, structType, adaptor.getOperand(), attrs.getAttrs());
 
     auto sinValue = LLVM::ExtractValueOp::create(rewriter, loc, sincosOp, 0);
     auto cosValue = LLVM::ExtractValueOp::create(rewriter, loc, sincosOp, 1);

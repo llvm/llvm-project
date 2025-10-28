@@ -277,7 +277,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_2_LCSSA:%.*]] = phi i32 [ [[INEWCHUNKS_2]], [[FOR_INC23]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_INC26]]
 ; UNROLL-NOSIMPLIFY:       for.inc26:
-; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_1_LCSSA:%.*]] = phi i32 [ undef, [[FOR_BODY9]] ], [ [[INEWCHUNKS_2_LCSSA]], [[FOR_INC26_LOOPEXIT]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_1_LCSSA:%.*]] = phi i32 [ 0, [[FOR_BODY9]] ], [ [[INEWCHUNKS_2_LCSSA]], [[FOR_INC26_LOOPEXIT]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    unreachable
 ;
 ; VEC-LABEL: @bug18724(
@@ -376,7 +376,7 @@ for.inc23:
   br i1 %cmp13, label %for.body14, label %for.inc26
 
 for.inc26:
-  %iNewChunks.1.lcssa = phi i32 [ undef, %for.body9 ], [ %iNewChunks.2, %for.inc23 ]
+  %iNewChunks.1.lcssa = phi i32 [ 0, %for.body9 ], [ %iNewChunks.2, %for.inc23 ]
   unreachable
 }
 

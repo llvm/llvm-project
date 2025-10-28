@@ -20,9 +20,8 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math/common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
 #include "src/__support/math/exp10f.h" // Speedup for powf(10, y) = exp10f(y)
+#include "src/__support/math/exp2f.h"  // Speedup for powf(2, y) = exp2f(y)
 #include "src/__support/math/exp_constants.h"
-
-#include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -779,7 +778,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     case 0x4000'0000: // x = 2.0f
       // pow(2, y) = exp2(y)
-      return generic::exp2f(y);
+      return math::exp2f(y);
     case 0x4120'0000: // x = 10.0f
       // pow(10, y) = exp10(y)
       return math::exp10f(y);

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-make-shared %t -- -- -I %S/Inputs/smart-ptr
+// RUN: %check_clang_tidy %s modernize-make-shared %t -- -- -I %S/Inputs/smart-ptr
 
 #include "shared_ptr.h"
 // CHECK-FIXES: #include <memory>
@@ -226,7 +226,7 @@ void initialization(int T, Base b) {
   // CHECK-FIXES: std::shared_ptr<APair> PAggr = std::make_shared<APair>(APair{T, 1});
   PAggr.reset(new APair{T, 1});
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use std::make_shared instead
-  // CHECK-FIXES: std::make_shared<APair>(APair{T, 1});
+  // CHECK-FIXES: PAggr = std::make_shared<APair>(APair{T, 1});
 
   // Test different kinds of initialization of the pointee, when the shared_ptr
   // is initialized with braces.

@@ -16,8 +16,7 @@
 # CHECK-DAG: Symbols: { _foo }, Dependencies: { (main, { _external_func }) }
 # CHECK-DAG: Symbols: { _baz }, Dependencies: { (main, { _foo }) }
 # CHECK: Simplified dependencies:
-# CHECK-DAG: Symbols: { _foo }, Dependencies: { (main, { _external_func }) }
-# CHECK-DAG: Symbols: { _baz }, Dependencies: { (main, { _external_func }) }
+# CHECK-DAG: Defs: { (main, [ _baz _foo ]) }, Deps: { (main, [ _external_func ]) }
 
         .section	__TEXT,__text,regular,pure_instructions
 
