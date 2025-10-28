@@ -54,6 +54,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/LogicalResult.h"
 #include <cassert>
 #include <cstddef>
 #include <memory>
@@ -887,12 +888,12 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 /// }
 ///
 /// Returns true if any IR changes were made, false otherwise.
-static bool processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
-                          RunLivenessAnalysis &la) {
+static LogicalResult processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
+                                   RunLivenessAnalysis &la, bool &changed) {
   Operation *callableOp = callOp.resolveCallable();
   auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
   if (!funcOp || !funcOp.isPublic())
-    return false;
+    return LogicalResult::success();
 
   LDBG() << "Processing callOp " << callOp << " target is a public function: "
          << funcOp.getOperation()->getName();
@@ -924,8 +925,10 @@ static bool processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
         funcOp, clonedFunc.getNameAttr(), moduleOp);
 
     if (result.failed()) {
-      LDBG() << "Failed to replace all symbol uses for " << funcOp.getName();
-      return false;
+      callOp.emitError(
+          "Failed to replace all symbol uses when privatizing function ")
+          << funcOp.getName();
+      return result;
     }
 
     LDBG() << "Redirected all callsites from " << funcOp.getName() << " to "
@@ -980,10 +983,10 @@ static bool processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
       newReturnOp->setLoc(funcOp.getLoc());
       rewriter.insert(newReturnOp);
     }
-    return true; // Changes were made
+    changed = true; // Changes were made
   }
 
-  return false;
+  return LogicalResult::success();
 }
 
 void RemoveDeadValues::runOnOperation() {
@@ -991,14 +994,19 @@ void RemoveDeadValues::runOnOperation() {
   RunLivenessAnalysis *la = &am.getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
 
-  // Only privatize public functions if liveness analysis is inter-procedural.
-  if (la->getSolverConfig().isInterprocedural()) {
+  // In a module, only privatize public functions if liveness analysis is
+  // inter-procedural.
+  if (la->getSolverConfig().isInterprocedural() && isa<ModuleOp>(module)) {
     bool changed = false;
-    module->walk([&](CallOpInterface callOp) {
-      if (processCallOp(callOp, cast<ModuleOp>(module), *la)) {
-        changed = true;
-      }
-    });
+    WalkResult walkResult =
+        module->walk([&](CallOpInterface callOp) -> WalkResult {
+          return processCallOp(callOp, cast<ModuleOp>(module), *la, changed);
+        });
+
+    if (walkResult.wasInterrupted()) {
+      signalPassFailure();
+      return;
+    }
 
     if (changed) {
       LDBG() << "IR has changed, invalidate RunLivenessAnalysis only";
@@ -1009,9 +1017,8 @@ void RemoveDeadValues::runOnOperation() {
       la = &am.getAnalysis<RunLivenessAnalysis>();
       // If RunLivenessAnalysis was previously preserved, preserved the updated
       // results.
-      if (preserved) {
+      if (preserved)
         pa.preserve<RunLivenessAnalysis>();
-      }
     }
   }
 
