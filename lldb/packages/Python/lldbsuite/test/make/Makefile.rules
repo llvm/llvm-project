@@ -388,10 +388,7 @@ ifeq (,$(filter 1, $(USE_LIBSTDCPP) $(USE_LIBCPP) $(USE_SYSTEM_STDLIB)))
     endif
 
 	# If `-nostdlib++` is not passed, clang will link to the system's stdlib.
-	ifeq ($(LDC), clang)
-		LDFLAGS += -nostdlib++ -nostdinc++
-	endif
-    LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+    LDFLAGS += -nostdlib++ -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
   else
     USE_SYSTEM_STDLIB := 1
   endif
@@ -412,7 +409,8 @@ ifeq (1,$(USE_LIBCPP))
 		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
 				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
 		endif
-		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+		# If `-nostdlib++` is not passed, clang will link to the system's stdlib.
+		LDFLAGS += -nostdlib++ -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
 	else
 		ifeq "$(OS)" "Android"
 				# Nothing to do, this is already handled in
