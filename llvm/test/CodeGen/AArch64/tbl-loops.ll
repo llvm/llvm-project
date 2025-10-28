@@ -23,7 +23,7 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    add x13, x1, #16
 ; CHECK-NEXT:    add x8, x1, x10, lsl #2
 ; CHECK-NEXT:    add x9, x0, x10
-; CHECK-NEXT:    mov x14, x10
+; CHECK-NEXT:    and x14, x11, #0x1fffffff8
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp q1, q2, [x13, #-16]
@@ -194,9 +194,9 @@ define void @loop2(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
 ; CHECK-NEXT:    and x10, x11, #0x1fffffffc
 ; CHECK-NEXT:    dup v0.4s, w8
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:    add x8, x1, x10, lsl #3
 ; CHECK-NEXT:    add x9, x0, x10, lsl #1
-; CHECK-NEXT:    mov x12, x10
 ; CHECK-NEXT:  .LBB1_9: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld2 { v1.4s, v2.4s }, [x1], #32
@@ -341,7 +341,7 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    dup v0.4s, w8
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI2_0]
 ; CHECK-NEXT:    add x9, x10, x10, lsl #1
-; CHECK-NEXT:    mov x12, x10
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:    add x8, x1, x9, lsl #2
 ; CHECK-NEXT:    add x9, x0, x9
 ; CHECK-NEXT:  .LBB2_4: // %vector.body
@@ -597,7 +597,7 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    ldr q1, [x12, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    add x8, x1, x10, lsl #4
 ; CHECK-NEXT:    add x9, x0, x10, lsl #2
-; CHECK-NEXT:    mov x12, x10
+; CHECK-NEXT:    and x12, x11, #0x1fffffffc
 ; CHECK-NEXT:  .LBB3_9: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld4 { v2.4s, v3.4s, v4.4s, v5.4s }, [x1], #64

@@ -2490,7 +2490,8 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
     DSAStackTy::DSAVarData DVarTop =
         DSAStack->getTopDSA(D, DSAStack->isClauseParsingMode());
     if (DVarTop.CKind != OMPC_unknown && isOpenMPPrivate(DVarTop.CKind) &&
-        (!VD || VD->hasLocalStorage() || !DVarTop.AppliedToPointee))
+        (!VD || VD->hasLocalStorage() ||
+         !(DVarTop.AppliedToPointee && DVarTop.CKind != OMPC_reduction)))
       return VD ? VD : cast<VarDecl>(DVarTop.PrivateCopy->getDecl());
     // Threadprivate variables must not be captured.
     if (isOpenMPThreadPrivate(DVarTop.CKind))
@@ -7245,7 +7246,9 @@ void SemaOpenMP::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
     FunctionDecl *UDecl = nullptr;
     if (IsTemplated && isa<FunctionTemplateDecl>(CandidateDecl)) {
       auto *FTD = cast<FunctionTemplateDecl>(CandidateDecl);
-      if (FTD->getTemplateParameters()->size() == TemplateParamLists.size())
+      // FIXME: Should this compare the template parameter lists on all levels?
+      if (SemaRef.Context.isSameTemplateParameterList(
+              FTD->getTemplateParameters(), TemplateParamLists.back()))
         UDecl = FTD->getTemplatedDecl();
     } else if (!IsTemplated)
       UDecl = dyn_cast<FunctionDecl>(CandidateDecl);
@@ -16490,6 +16493,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_ordered:
     Res = ActOnOpenMPOrderedClause(StartLoc, EndLoc, LParenLoc, Expr);
     break;
+  case OMPC_nowait:
+    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc, LParenLoc, Expr);
+    break;
   case OMPC_priority:
     Res = ActOnOpenMPPriorityClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
@@ -16545,7 +16551,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,
   case OMPC_aligned:
   case OMPC_copyin:
   case OMPC_copyprivate:
-  case OMPC_nowait:
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
@@ -17954,7 +17959,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPOrderedClause(StartLoc, EndLoc);
     break;
   case OMPC_nowait:
-    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc);
+    Res = ActOnOpenMPNowaitClause(StartLoc, EndLoc,
+                                  /*LParenLoc=*/SourceLocation(),
+                                  /*Condition=*/nullptr);
     break;
   case OMPC_untied:
     Res = ActOnOpenMPUntiedClause(StartLoc, EndLoc);
@@ -18106,9 +18113,24 @@ OMPClause *SemaOpenMP::ActOnOpenMPClause(OpenMPClauseKind Kind,
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPNowaitClause(SourceLocation StartLoc,
-                                               SourceLocation EndLoc) {
+                                               SourceLocation EndLoc,
+                                               SourceLocation LParenLoc,
+                                               Expr *Condition) {
+  Expr *ValExpr = Condition;
+  if (Condition && LParenLoc.isValid()) {
+    if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
+        !Condition->isInstantiationDependent() &&
+        !Condition->containsUnexpandedParameterPack()) {
+      ExprResult Val = SemaRef.CheckBooleanCondition(StartLoc, Condition);
+      if (Val.isInvalid())
+        return nullptr;
+
+      ValExpr = Val.get();
+    }
+  }
   DSAStack->setNowaitRegion();
-  return new (getASTContext()) OMPNowaitClause(StartLoc, EndLoc);
+  return new (getASTContext())
+      OMPNowaitClause(ValExpr, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPUntiedClause(SourceLocation StartLoc,

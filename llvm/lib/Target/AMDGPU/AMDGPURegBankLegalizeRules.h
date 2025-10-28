@@ -212,6 +212,7 @@ enum LoweringMethodID {
   VccExtToSel,
   UniExtToSel,
   UnpackBitShift,
+  UnpackMinMax,
   S_BFE,
   V_BFE,
   VgprToVccCopy,

@@ -1867,6 +1867,13 @@ public:
             [&](const CompilerDirective::NoUnrollAndJam &) {
               Word("!DIR$ NOUNROLL_AND_JAM");
             },
+            [&](const CompilerDirective::ForceInline &) {
+              Word("!DIR$ FORCEINLINE");
+            },
+            [&](const CompilerDirective::Inline &) { Word("!DIR$ INLINE"); },
+            [&](const CompilerDirective::NoInline &) {
+              Word("!DIR$ NOINLINE");
+            },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2111,7 +2118,7 @@ public:
     Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpTypeNameList>(x.t));
-    Walk(": ", std::get<std::optional<OmpReductionCombiner>>(x.t));
+    Walk(": ", std::get<std::optional<OmpCombinerExpression>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
@@ -2384,6 +2391,11 @@ public:
     Walk(x.v);
     Put(")");
   }
+  void Unparse(const OmpAttachModifier &x) {
+    Word("ATTACH(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpOrderClause &x) {
     using Modifier = OmpOrderClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
@@ -2514,7 +2526,7 @@ public:
       Walk(x.u);
     }
   }
-  void Unparse(const OmpReductionCombiner &x) {
+  void Unparse(const OmpCombinerExpression &x) {
     // Don't let the visitor go to the normal AssignmentStmt Unparse function,
     // it adds an extra newline that we don't want.
     if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
@@ -2820,6 +2832,7 @@ public:
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
   WALK_NESTED_ENUM(OmpAlwaysModifier, Value)
+  WALK_NESTED_ENUM(OmpAttachModifier, Value)
   WALK_NESTED_ENUM(OmpCloseModifier, Value)
   WALK_NESTED_ENUM(OmpDeleteModifier, Value)
   WALK_NESTED_ENUM(OmpPresentModifier, Value)

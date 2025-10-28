@@ -152,7 +152,7 @@ void test_amdgcn_ds_atomic_async_barrier_arrive_b64(local long* addr)
 // CHECK-GFX1250-SAME: ptr addrspace(3) noundef captures(none) [[ADDR:%.*]], i64 noundef [[DATA:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // CHECK-GFX1250-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64(ptr addrspace(3) [[ADDR]], i64 [[DATA]])
-// CHECK-GFX1250-NEXT:    store i64 [[TMP0]], ptr [[OUT]], align 8, !tbaa [[LONG_TBAA4:![0-9]+]]
+// CHECK-GFX1250-NEXT:    store i64 [[TMP0]], ptr [[OUT]], align 8, !tbaa [[LONG_TBAA8:![0-9]+]]
 // CHECK-GFX1250-NEXT:    ret void
 //
 void test_amdgcn_ds_atomic_barrier_arrive_rtn_b64(local long* addr, long data, long *out)
@@ -160,8 +160,8 @@ void test_amdgcn_ds_atomic_barrier_arrive_rtn_b64(local long* addr, long data, l
   *out = __builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64(addr, data);
 }
 //.
-// CHECK-GFX1250: [[LONG_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// CHECK-GFX1250: [[META5]] = !{!"long", [[META6:![0-9]+]], i64 0}
-// CHECK-GFX1250: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
+// CHECK-GFX1250: [[META6:![0-9]+]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
 // CHECK-GFX1250: [[META7]] = !{!"Simple C/C++ TBAA"}
+// CHECK-GFX1250: [[LONG_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+// CHECK-GFX1250: [[META9]] = !{!"long", [[META6]], i64 0}
 //.

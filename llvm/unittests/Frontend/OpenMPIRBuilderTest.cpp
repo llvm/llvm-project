@@ -11,6 +11,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -212,8 +213,8 @@ protected:
     DIBuilder DIB(*M);
     auto File = DIB.createFile("test.dbg", "/src", std::nullopt,
                                std::optional<StringRef>("/src/test.dbg"));
-    auto CU =
-        DIB.createCompileUnit(dwarf::DW_LANG_C, File, "llvm-C", true, "", 0);
+    auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C),
+                                    File, "llvm-C", true, "", 0);
     auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,

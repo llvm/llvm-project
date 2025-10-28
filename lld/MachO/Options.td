@@ -1091,6 +1091,10 @@ defm separate_cstring_literal_sections
          "Emit all cstring literals into the __cstring section. As a special "
          "case, the __objc_methname section will still be emitted. (default)">,
       Group<grp_rare>;
+defm tail_merge_strings
+    : BB<"tail-merge-strings", "Enable string tail merging",
+         "Disable string tail merging to improve link-time performance">,
+      Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 

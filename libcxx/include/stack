@@ -306,7 +306,7 @@ stack(_Container, _Alloc) -> stack<typename _Container::value_type, _Container>;
 
 #  if _LIBCPP_STD_VER >= 23
 template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
-stack(_InputIterator, _InputIterator) -> stack<__iter_value_type<_InputIterator>>;
+stack(_InputIterator, _InputIterator) -> stack<__iterator_value_type<_InputIterator>>;
 
 template <ranges::input_range _Range>
 stack(from_range_t, _Range&&) -> stack<ranges::range_value_t<_Range>>;
@@ -316,7 +316,7 @@ template <class _InputIterator,
           __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0,
           __enable_if_t<__is_allocator_v<_Alloc>, int>                             = 0>
 stack(_InputIterator, _InputIterator, _Alloc)
-    -> stack<__iter_value_type<_InputIterator>, deque<__iter_value_type<_InputIterator>, _Alloc>>;
+    -> stack<__iterator_value_type<_InputIterator>, deque<__iterator_value_type<_InputIterator>, _Alloc>>;
 
 template <ranges::input_range _Range, class _Alloc, __enable_if_t<__is_allocator_v<_Alloc>, int> = 0>
 stack(from_range_t, _Range&&, _Alloc)

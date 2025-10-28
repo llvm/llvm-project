@@ -133,26 +133,7 @@ define void @ext_cmp(ptr %src.1, ptr %src.2, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds i16, ptr [[SRC_1]], i64 [[IV]]
-; CHECK-NEXT:    [[I2:%.*]] = load i16, ptr [[GEP_SRC_1]], align 2
-; CHECK-NEXT:    [[I3:%.*]] = sext i16 [[I2]] to i32
-; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 0, [[I3]]
-; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds i8, ptr [[SRC_2]], i64 [[IV]]
-; CHECK-NEXT:    [[I4:%.*]] = load i8, ptr [[GEP_SRC_2]], align 2
-; CHECK-NEXT:    [[I5:%.*]] = zext i8 [[I4]] to i32
-; CHECK-NEXT:    [[I6:%.*]] = select i1 [[C_1]], i32 0, i32 [[I5]]
-; CHECK-NEXT:    [[I7:%.*]] = and i32 [[I6]], 0
-; CHECK-NEXT:    [[I8:%.*]] = trunc nuw nsw i32 [[I7]] to i16
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i16 [[I8]], ptr [[GEP_DST]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
