@@ -24,22 +24,22 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: load_nd_tdesc_with_offset
   gpu.func @load_nd_tdesc_with_offset(%src: memref<256x128xf32>) {
-    //CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
-    //CHECK: %[[C4:.*]] = arith.constant 4 : index
-    //CHECK: %[[SGIDX:.*]] = index.remu %[[SGID]], %[[C4]]
-    //CHECK: %[[SGIDY_TMP:.*]] = index.divu %[[SGID]], %[[C4]]
-    //CHECK: %[[C8:.*]] = arith.constant 8 : index
-    //CHECK: %[[SGIDY:.*]] = index.remu %[[SGIDY_TMP]], %[[C8]]
-    //CHECK: %[[C32:.*]] = arith.constant 32 : index
-    //CHECK: %[[L_OFF_Y:.*]] = index.mul %[[SGIDY]], %[[C32]]
-    //CHECK: %[[L_OFF_X:.*]] = index.mul %[[SGIDX]], %[[C32]]
-    //CHECK: %[[C256:.*]] = arith.constant 256 : index
-    //CHECK: %[[OFF_Y:.*]] = index.remu %[[L_OFF_Y]], %[[C256]]
-    //CHECK: %[[C128:.*]] = arith.constant 128 : index
-    //CHECK: %[[OFF_X:.*]] = index.remu %[[L_OFF_X]], %[[C128]]
-    //CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %{{.*}}[%[[OFF_Y]], %[[OFF_X]]] : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    //CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<32x32xf32>
-    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
+    //CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    //CHECK-DAG: %[[SGID:.*]] = gpu.subgroup_id : index
+    //CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+    //CHECK-DAG: %[[SGIDX:.*]] = index.remu %[[SGID]], %[[C4]]
+    //CHECK-DAG: %[[SGIDY_TMP:.*]] = index.divu %[[SGID]], %[[C4]]
+    //CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
+    //CHECK-DAG: %[[SGIDY:.*]] = index.remu %[[SGIDY_TMP]], %[[C8]]
+    //CHECK-DAG: %[[C32:.*]] = arith.constant 32 : index
+    //CHECK-DAG: %[[L_OFF_Y:.*]] = index.mul %[[SGIDY]], %[[C32]]
+    //CHECK-DAG: %[[L_OFF_X:.*]] = index.mul %[[SGIDX]], %[[C32]]
+    //CHECK-DAG: %[[C256:.*]] = arith.constant 256 : index
+    //CHECK-DAG: %[[OFF_Y:.*]] = index.remu %[[L_OFF_Y]], %[[C256]]
+    //CHECK-DAG: %[[C128:.*]] = arith.constant 128 : index
+    //CHECK-DAG: %[[OFF_X:.*]] = index.remu %[[L_OFF_X]], %[[C128]]
+    //CHECK-DAG: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<32x32xf32>
+    %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
     %load =  xegpu.load_nd %tdesc[0, 0]
       : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
