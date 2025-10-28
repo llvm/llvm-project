@@ -1588,6 +1588,7 @@ module std [system] {
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"
+      textual header "__locale_dir/support/zos.h"
     }
 
     module locale_base_api {
