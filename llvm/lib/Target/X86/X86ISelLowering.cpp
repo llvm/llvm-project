@@ -54654,9 +54654,9 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
     return V;
 
   // Fold trunc(srl(load(p),amt)) -> load(p+amt/8)
-  // If we're shifting down whole byte+pow2 aligned bit chunks from a larger
-  // load for truncation, see if we can convert the shift into a pointer
-  // offset instead. Limit this to normal (non-ext) scalar integer loads.
+  // If we're shifting down byte aligned bit chunks from a larger load for
+  // truncation, see if we can convert the shift into a pointer offset instead.
+  // Limit this to normal (non-ext) scalar integer loads.
   if (SrcVT.isScalarInteger() && Src.getOpcode() == ISD::SRL &&
       Src.hasOneUse() && Src.getOperand(0).hasOneUse() &&
       ISD::isNormalLoad(Src.getOperand(0).getNode())) {
@@ -54665,9 +54665,9 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
         isPowerOf2_64(VT.getSizeInBits())) {
       SDValue ShAmt = Src.getOperand(1);
       KnownBits KnownAmt = DAG.computeKnownBits(ShAmt);
-      // Check the shift amount is aligned to the truncated size.
+      // Check the shift amount is byte aligned.
       // Check the truncation doesn't use any shifted in (zero) top bits.
-      if (KnownAmt.countMinTrailingZeros() >= Log2_64(VT.getSizeInBits()) &&
+      if (KnownAmt.countMinTrailingZeros() >= 3 &&
           KnownAmt.getMaxValue().ule(SrcVT.getSizeInBits() -
                                      VT.getSizeInBits())) {
         EVT PtrVT = Ld->getBasePtr().getValueType();
