@@ -87,6 +87,11 @@ jobs:
         echo "set(BUILD_SHARED_LIBS OFF)" >> custom-triplets/x64-windows-static-release.cmake
         vcpkg --debug install libxml2:x64-windows-static-release --overlay-triplets=custom-triplets
         find /c/vcpkg -iname 'libxml*.lib'
+    
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      name: ${{ runner.os }}-${{ runner.arch }}-nsis-log
+      path: |
+        C:\vcpkg\installed\x64-windows-static-release\lib\libxml2.lib
 
     - name: Checkout LLVM
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -168,8 +173,8 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           #libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows-static/"
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/s/libxml-install/"
-          #target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/c/vcpkg/packages/libxml2_x64-windows-static/"
+          #target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/s/libxml-install/"
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/c/vcpkg/packages/libxml2_x64-windows-static/"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
@@ -206,7 +211,7 @@ jobs:
   build-release-package:
     name: "Build Release Package"
     needs: prepare
-    if: github.repository_owner == 'llvm'
+    if: false && github.repository_owner == 'llvm'
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
@@ -269,7 +274,6 @@ jobs:
         ninja -v -C libxml-build install
 
     - name: Install libxml2
-      if: false
       shell: bash
       env:
         VCPKG_BUILD_TYPE: release
