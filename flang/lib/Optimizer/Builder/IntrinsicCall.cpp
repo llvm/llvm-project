@@ -553,6 +553,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"get_team",
+     &I::genGetTeam,
+     {{{"level", asValue, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"getcwd",
      &I::genGetCwd,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -1012,6 +1016,10 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"tand", &I::genTand},
     {"tanpi", &I::genTanpi},
+    {"team_number",
+     &I::genTeamNumber,
+     {{{"team", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"this_grid", &I::genThisGrid, {}, /*isElemental=*/false},
     {"this_image",
      &I::genThisImage,
@@ -4541,6 +4549,15 @@ IntrinsicLibrary::genFtell(std::optional<mlir::Type> resultType,
     }
     return {};
   }
+}
+
+// GET_TEAM
+mlir::Value IntrinsicLibrary::genGetTeam(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::GetTeamOp::create(builder, loc, fir::BoxType::get(resultType),
+                                /*level*/ args[0]);
 }
 
 // GETCWD
@@ -8651,6 +8668,16 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
     TODO(loc, "this_image with coarray argument.");
   mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
+}
+
+// TEAM_NUMBER
+fir::ExtendedValue
+IntrinsicLibrary::genTeamNumber(mlir::Type,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  converter->checkCoarrayEnabled();
+  assert(args.size() == 1);
+  return mif::TeamNumberOp::create(builder, loc,
+                                   /*team*/ fir::getBase(args[0]));
 }
 
 // THIS_THREAD_BLOCK

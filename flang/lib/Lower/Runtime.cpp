@@ -257,8 +257,25 @@ void Fortran::lower::genSyncMemoryStatement(
 
 void Fortran::lower::genSyncTeamStatement(
     Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::SyncTeamStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: SYNC TEAM runtime");
+    const Fortran::parser::SyncTeamStmt &stmt) {
+  mlir::Location loc = converter.getCurrentLocation();
+  converter.checkCoarrayEnabled();
+
+  // Handle TEAM
+  Fortran::lower::StatementContext stmtCtx;
+  const Fortran::parser::TeamValue &teamValue =
+      std::get<Fortran::parser::TeamValue>(stmt.t);
+  const SomeExpr *teamExpr = Fortran::semantics::GetExpr(teamValue);
+  mlir::Value team =
+      fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+
+  // Handle STAT and ERRMSG values
+  const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
+      std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t);
+  auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mif::SyncTeamOp::create(builder, loc, team, statAddr, errMsgAddr);
 }
 
 void Fortran::lower::genPauseStatement(
