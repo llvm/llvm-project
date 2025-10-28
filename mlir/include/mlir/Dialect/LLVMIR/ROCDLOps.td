@@ -713,7 +713,7 @@ class ROCDL_TensorLDSIntrOp<string mnemonic> :
     This op is for gfx1250+ architectures.
   }];
   let assemblyFormat = [{
-    attr-dict operands `cachepolicy` $cachePolicy
+    attr-dict operands `cachepolicy` $cachePolicy `:` type($dgroup0) `,` type($dgroup1)
   }];
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
@@ -739,7 +739,7 @@ class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
     This op is for gfx1250+ architectures.
   }];
   let assemblyFormat = [{
-    attr-dict operands `cachepolicy` $cachePolicy
+    attr-dict operands `cachepolicy` $cachePolicy `:` type($dgroup0) `,` type($dgroup1)
   }];
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
