@@ -484,20 +484,26 @@ struct AttachMapInfo {
         MapType(Type), Pointername(Name) {}
 };
 
-/// Structure to track ATTACH entries and new allocations across recursive calls
-/// (for handling mappers) to targetDataBegin for a given construct.
-struct AttachInfoTy {
-  /// ATTACH map entries for deferred processing.
+/// Structure to track new allocations, ATTACH entries and deferred data
+/// transfer information for a given construct, across recursive calls (for
+/// handling mappers) to targetDataBegin/targetDataEnd.
+struct StateInfoTy {
+  /// ATTACH map entries for deferred processing until all other maps are done.
   llvm::SmallVector<AttachMapInfo> AttachEntries;
 
+  /// Host pointers for which new memory was allocated.
   /// Key: host pointer, Value: allocation size.
   llvm::DenseMap<void *, int64_t> NewAllocations;
 
-  AttachInfoTy() = default;
+  /// Host pointers that had a FROM entry, but for which a data transfer didn't
+  /// occur due to the ref-count not being zero.
+  llvm::SmallSet<void *, 32> DeferredFromPtrs;
+
+  StateInfoTy() = default;
 
   // Delete copy constructor and copy assignment operator to prevent copying
-  AttachInfoTy(const AttachInfoTy &) = delete;
-  AttachInfoTy &operator=(const AttachInfoTy &) = delete;
+  StateInfoTy(const StateInfoTy &) = delete;
+  StateInfoTy &operator=(const StateInfoTy &) = delete;
 };
 
 // Function pointer type for targetData* functions (targetDataBegin,
@@ -505,7 +511,7 @@ struct AttachInfoTy {
 typedef int (*TargetDataFuncPtrTy)(ident_t *, DeviceTy &, int32_t, void **,
                                    void **, int64_t *, int64_t *,
                                    map_var_info_t *, void **, AsyncInfoTy &,
-                                   AttachInfoTy *, bool);
+                                   StateInfoTy *, bool);
 
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
                                bool toStdOut = false);
@@ -514,24 +520,22 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgsBase, void **Args, int64_t *ArgSizes,
                     int64_t *ArgTypes, map_var_info_t *ArgNames,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                    AttachInfoTy *AttachInfo = nullptr,
-                    bool FromMapper = false);
+                    StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                   void **ArgBases, void **Args, int64_t *ArgSizes,
                   int64_t *ArgTypes, map_var_info_t *ArgNames,
                   void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                  AttachInfoTy *AttachInfo = nullptr, bool FromMapper = false);
+                  StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                      void **ArgsBase, void **Args, int64_t *ArgSizes,
                      int64_t *ArgTypes, map_var_info_t *ArgNames,
                      void **ArgMappers, AsyncInfoTy &AsyncInfo,
-                     AttachInfoTy *AttachInfo = nullptr,
-                     bool FromMapper = false);
+                     StateInfoTy *StateInfo = nullptr, bool FromMapper = false);
 
 // Process deferred ATTACH map entries collected during targetDataBegin.
-int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
+int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo);
 
 struct MappingInfoTy {
@@ -572,7 +576,7 @@ struct MappingInfoTy {
       bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
       bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
       AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
-      bool ReleaseHDTTMap = true);
+      bool ReleaseHDTTMap = true, StateInfoTy *StateInfo = nullptr);
 
   /// Return the target pointer for \p HstPtrBegin in \p HDTTMap. The accessor
   /// ensures exclusive access to the HDTT map.

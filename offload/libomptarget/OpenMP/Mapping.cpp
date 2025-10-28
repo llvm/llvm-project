@@ -202,7 +202,8 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName, bool HasFlagTo,
     bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
     bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
-    AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR, bool ReleaseHDTTMap) {
+    AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR, bool ReleaseHDTTMap,
+    StateInfoTy *StateInfo) {
 
   LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size, OwnedTPR);
   LR.TPR.Flags.IsPresent = true;
@@ -324,8 +325,18 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
 
   // If the target pointer is valid, and we need to transfer data, issue the
   // data transfer.
+  auto WasNewlyAllocatedOnCurrentConstruct = [&]() {
+    if (!StateInfo)
+      return false;
+    return StateInfo->NewAllocations.contains(HstPtrBegin);
+  };
+
+  // Even if this isn't a new entry, we still need to do a data-transfer if
+  // the pointer was newly allocated previously on the same construct.
   if (LR.TPR.TargetPointer && !LR.TPR.Flags.IsHostPointer && HasFlagTo &&
-      (LR.TPR.Flags.IsNewEntry || HasFlagAlways) && Size != 0) {
+      (LR.TPR.Flags.IsNewEntry || HasFlagAlways ||
+       WasNewlyAllocatedOnCurrentConstruct()) &&
+      Size != 0) {
 
     // If we have something like:
     //   #pragma omp target map(to: s.myarr[0:10]) map(to: s.myarr[0:10])
