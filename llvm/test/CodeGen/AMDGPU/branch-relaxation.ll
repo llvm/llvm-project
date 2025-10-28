@@ -1387,7 +1387,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
-; GFX11-NEXT:    s_waitcnt_depctr 0xfffe
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_u32 s0, s2, s0
 ; GFX11-NEXT:    s_addc_u32 s1, s3, s1
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
