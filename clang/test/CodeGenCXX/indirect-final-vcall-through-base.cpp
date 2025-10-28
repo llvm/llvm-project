@@ -7,8 +7,8 @@
 using size_t = unsigned long;
 using int64_t = long;
 
-class Base {
-  public:
+struct Base {
+    virtual int64_t sharedGet(size_t i) const = 0;
     virtual int64_t get(size_t i) const = 0;
     virtual int64_t getBatch(size_t offset, size_t len, int64_t arr[]) const {
       int64_t result = 0;
@@ -25,10 +25,14 @@ class Base {
       }
       return result;
     }
+    virtual int64_t useSharedGet(size_t i) {
+      return sharedGet(i);
+    }
 };
   
-class Derived1 final : public Base {
+struct Derived1 final : public Base {
 public:
+    virtual int64_t sharedGet(size_t i) const override { return 17; }
     int64_t get(size_t i) const override {
         return i;
     }
@@ -37,6 +41,58 @@ public:
     virtual int64_t getSumLen(size_t offset, size_t len) const override;
     int64_t directCall(size_t offset, size_t len);
     int64_t directBaseCall(size_t offset, size_t len);
+    virtual int64_t useSharedGet(size_t i) override;
+};
+
+struct Base2 {
+    virtual int64_t sharedGet(size_t i) const = 0;
+    virtual int64_t get2(size_t i) const = 0;
+    virtual int64_t getBatch2(size_t offset, size_t len, int64_t arr[]) const {
+      int64_t result = 0;
+      for (size_t i = 0; i < len; ++i) {
+        result += get2(offset + i);
+        arr[i] = get2(offset + i);
+      }
+      return result;
+    }
+};
+
+struct Derived2 final : Base, Base2 {
+    virtual int64_t sharedGet(size_t i) const override { return 19; };
+    virtual int64_t get(size_t i) const override {
+      return 7;
+    };
+    virtual int64_t get2(size_t i) const override {
+      return 13;
+    };
+    int64_t getBatch(size_t offset, size_t len, int64_t arr[]) const override;
+    virtual int64_t getSumLen(size_t offset, size_t len) const override;
+    int64_t getBatch2(size_t offset, size_t len, int64_t arr[]) const override;
+    virtual int64_t useSharedGet(size_t i) override;
+};
+
+struct IntermediateA: virtual Base {
+
+};
+struct IntermediateB: virtual Base2 {
+
+};
+
+struct Derived3Part1: IntermediateA {
+
+};
+
+struct Derived3Part2: IntermediateB {
+
+};
+
+struct Derived3 final: Derived3Part1, Derived3Part2 {
+    virtual int64_t sharedGet(size_t i) const override { return 23; }
+    virtual int64_t get(size_t i) const override { return 27; }
+    virtual int64_t getBatch(size_t offset, size_t len, int64_t arr[]) const override;
+    virtual int64_t get2(size_t i) const override { return 29; }
+    virtual int64_t getBatch2(size_t offset, size_t len, int64_t arr[]) const override;
+    virtual int64_t useSharedGet(size_t i) override;
 };
 
 int64_t Derived1::directCall(size_t offset, size_t len) {
@@ -55,29 +111,186 @@ int64_t Derived1::getSumLen(size_t offset, size_t len) const {
   return Base::getSumLen(offset, len);
 }
 
+int64_t Derived1::useSharedGet(size_t i) {
+  return Base::useSharedGet(i);
+}
+
+int64_t Derived2::getBatch(size_t offset, size_t len, int64_t arr[]) const {
+    return Base::getBatch(offset, len, arr);
+}
+
+int64_t Derived2::getBatch2(size_t offset, size_t len, int64_t arr[]) const {
+    return Base2::getBatch2(offset, len, arr);
+}
+
+int64_t Derived2::getSumLen(size_t offset, size_t len) const {
+  return Base::getSumLen(offset, len);
+}
+
+int64_t Derived2::useSharedGet(size_t i) {
+  return Base::useSharedGet(i);
+}
+
+int64_t Derived3::getBatch(size_t offset, size_t len, int64_t arr[]) const {
+  return Base::getBatch(offset, len, arr);
+}
+int64_t Derived3::getBatch2(size_t offset, size_t len, int64_t arr[]) const {
+  return Base2::getBatch2(offset, len, arr);
+}
+
+int64_t Derived3::useSharedGet(size_t i) {
+  return Base::useSharedGet(i);
+}
+
 // CHECK-LABEL: i64 @_ZN8Derived110directCallEmm(
 // CHECK: for.body
-// CHECK: %[[VCALL_SLOT1:.*]] = load ptr, ptr %vtable
-// CHECK: tail call noundef i64 %[[VCALL_SLOT1]](
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE]]
+// CHECK: [[VFN:%.*]] = load ptr, ptr [[VFN_SLOT]]
+// CHECK: tail call noundef i64 [[VFN]](
 // CHECK: ret i64
 
-// CHECK-LABEL: i64 @_ZNK8Derived19getSumLenEmm
-// CHECK: %[[VCALL_SLOT1:.*]] = load ptr, ptr %vtable
-// CHECK: tail call noundef i64 %[[VCALL_SLOT1]](
+// CHECK-LABEL: i64 @_ZNK8Derived19getSumLenEmm(
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE]]
+// CHECK: [[VFN:%.*]] = load ptr, ptr [[VFN_SLOT]]
+// CHECK: tail call noundef i64 [[VFN]](
 // CHECK: ret i64
 
-// CHECK-LABEL: i64 @_ZN8Derived114directBaseCallEmm
+// CHECK-LABEL: i64 @_ZN8Derived114directBaseCallEmm(
 // CHECK: for.body
-// CHECK: %[[VCALL_SLOT1:.*]] = load ptr, ptr %vtable
-// CHECK: tail call noundef i64 %[[VCALL_SLOT1]](
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE]]
+// CHECK: [[VFN:%.*]] = load ptr, ptr [[VFN_SLOT]]
+// CHECK: tail call noundef i64 [[VFN]](
 // CHECK: ret i64
 
-// CHECK-LABEL: i64 @_ZNK8Derived18getBatchEmmPl
+// CHECK-LABEL: i64 @_ZNK8Derived18getBatchEmmPl(
 // CHECK: for.
-// CHECK: %[[VCALL_SLOT1:.*]] = load ptr, ptr %vtable
-// CHECK: tail call noundef i64 %[[VCALL_SLOT1]](
-// CHECK: %[[VCALL_SLOT2:.*]] = load ptr, ptr %vtable
-// CHECK: tail call noundef i64 %[[VCALL_SLOT2]](
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: tail call noundef i64 [[VFN1]](
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZNK8Derived28getBatchEmmPl(
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: tail call noundef i64 [[VFN1]](
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZNK8Derived29getBatch2EmmPl(
+// CHECK: [[OFFSETBASE:%.*]] = getelementptr inbounds nuw i8, ptr %this
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr [[OFFSETBASE]]
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: tail call noundef i64 [[VFN1]](
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr [[OFFSETBASE]]
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZThn8_NK8Derived29getBatch2EmmPl(
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: tail call noundef i64 [[VFN1]](
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZNK8Derived29getSumLenEmm(
+// CHECK: for.body
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE]]
+// CHECK: [[VFN:%.*]] = load ptr, ptr [[VFN_SLOT]]
+// CHECK: tail call noundef i64 [[VFN]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZN8Derived212useSharedGetEm(
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN:%.*]] = load ptr, ptr [[VTABLE]]
+// CHECK: tail call noundef i64 [[VFN]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZNK8Derived38getBatchEmmPl
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: tail call noundef i64 [[VFN1]](
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZTv0_n40_NK8Derived38getBatchEmmPl
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[THISOFFSET_VSLOT:%.*]] = getelementptr inbounds i8, ptr [[VTABLE]], i64 -40
+// CHECK: [[THIS_OFFSET:%.*]] = load i64, ptr [[THISOFFSET_VSLOT]]
+// CHECK: [[THIS:%.*]] = getelementptr inbounds i8, ptr %this, i64 [[THIS_OFFSET]]
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr [[THIS]]
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr [[THIS]]
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZNK8Derived39getBatch2EmmPl
+// CHECK: [[OFFSETBASE:%.*]] = getelementptr inbounds nuw i8, ptr %this
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr [[OFFSETBASE]]
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: tail call noundef i64 [[VFN1]](
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr [[OFFSETBASE]]
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZTv0_n40_NK8Derived39getBatch2EmmPl
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[THISOFFSET_VSLOT:%.*]] = getelementptr inbounds i8, ptr [[VTABLE]], i64 -40
+// CHECK: [[THIS_OFFSET:%.*]] = load i64, ptr [[THISOFFSET_VSLOT]]
+// CHECK: [[THIS:%.*]] = getelementptr inbounds i8, ptr %this, i64 [[THIS_OFFSET]]
+// CHECK: [[VTABLE_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[THIS]], i64 8
+// CHECK: [[VTABLE1:%.*]] = load ptr, ptr [[VTABLE_ADDR]]
+// CHECK: [[VFN_SLOT1:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE1]]
+// CHECK: [[VFN1:%.*]] = load ptr, ptr [[VFN_SLOT1]]
+// CHECK: [[VTABLE2:%.*]] = load ptr, ptr [[VTABLE_ADDR]]
+// CHECK: [[VFN_SLOT2:%.*]] = getelementptr inbounds nuw i8, ptr [[VTABLE2]]
+// CHECK: [[VFN2:%.*]] = load ptr, ptr [[VFN_SLOT2]]
+// CHECK: tail call noundef i64 [[VFN2]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZN8Derived312useSharedGetEm
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[VFN:%.*]] = load ptr, ptr [[VTABLE]]
+// CHECK: tail call noundef i64 [[VFN]](
+// CHECK: ret i64
+
+// CHECK-LABEL: i64 @_ZTv0_n56_N8Derived312useSharedGetEm
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr %this
+// CHECK: [[THISOFFSET_VSLOT:%.*]] = getelementptr inbounds i8, ptr [[VTABLE]], i64 -56
+// CHECK: [[THIS_OFFSET:%.*]] = load i64, ptr [[THISOFFSET_VSLOT]]
+// CHECK: [[THIS:%.*]] = getelementptr inbounds i8, ptr %this, i64 [[THIS_OFFSET]]
+// CHECK: [[VTABLE:%.*]] = load ptr, ptr [[THIS]]
+// CHECK: [[VFN:%.*]] = load ptr, ptr [[VTABLE]]
+// CHECK: tail call noundef i64 [[VFN]](
 // CHECK: ret i64
 
 
@@ -94,5 +307,37 @@ int64_t Derived1::getSumLen(size_t offset, size_t len) const {
 // STRICT: ret i64
 
 // STRICT-LABEL: i64 @_ZNK8Derived18getBatchEmmPl
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZNK8Derived29getSumLenEmm(
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZN8Derived212useSharedGetEm(
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZNK8Derived38getBatchEmmPl
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZTv0_n40_NK8Derived38getBatchEmmPl
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZNK8Derived39getBatch2EmmPl
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZTv0_n40_NK8Derived39getBatch2EmmPl
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZN8Derived312useSharedGetEm
+// STRICT-NOT: call
+// STRICT: ret i64
+
+// STRICT-LABEL: i64 @_ZTv0_n56_N8Derived312useSharedGetEm
 // STRICT-NOT: call
 // STRICT: ret i64
