@@ -26,6 +26,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -206,7 +207,8 @@ private:
   /// specified architecture that is present inside an archive file.
   Expected<ObjectFile *> getOrCreateObjectFromArchive(StringRef ArchivePath,
                                                       StringRef MemberName,
-                                                      StringRef ArchName);
+                                                      StringRef ArchName,
+                                                      StringRef FullPath);
 
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
@@ -222,33 +224,39 @@ private:
   /// Contains parsed binary for each path, or parsing error.
   std::map<std::string, CachedBinary, std::less<>> BinaryForPath;
 
+  /// Store the archive path for the object file
+  std::unordered_map<const object::ObjectFile *, std::string>
+      ObjectToArchivePath;
+
   /// A list of cached binaries in LRU order.
   simple_ilist<CachedBinary> LRUBinaries;
   /// Sum of the sizes of the cached binaries.
   size_t CacheSize = 0;
 
-  struct ArchiveCacheKey {
-    std::string ArchivePath;
+  struct ContainerCacheKey {
+    std::string Path;
     std::string MemberName;
     std::string ArchName;
 
     // Required for map comparison.
-    bool operator<(const ArchiveCacheKey &Other) const {
-      return std::tie(ArchivePath, MemberName, ArchName) <
-             std::tie(Other.ArchivePath, Other.MemberName, Other.ArchName);
+    bool operator<(const ContainerCacheKey &Other) const {
+      return std::tie(Path, MemberName, ArchName) <
+             std::tie(Other.Path, Other.MemberName, Other.ArchName);
     }
   };
 
   /// Parsed object file for path/object/architecture pair, where
   /// "path" refers to Mach-O universal binary.
-  std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
+  std::map<ContainerCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
 
   /// Helper function to load binary.
-  Expected<object::Binary *> loadOrGetBinary(const std::string &Path);
+  Expected<object::Binary *>
+  loadOrGetBinary(const std::string &OpenPath,
+                  const std::string *FullPathKeyOpt = nullptr);
 
   /// Helper function to find and get object.
   Expected<ObjectFile *> findOrCacheObject(
-      const ArchiveCacheKey &Key,
+      const ContainerCacheKey &Key,
       llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,
       const std::string &PathForBinaryCache);
 
