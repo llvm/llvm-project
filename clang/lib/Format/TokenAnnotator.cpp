@@ -2646,9 +2646,9 @@ private:
         return false;
     }
 
-    bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
-                       PreviousNotConst->Previous &&
-                       PreviousNotConst->Previous->is(tok::hash);
+    const auto *PrevPrev = PreviousNotConst->Previous;
+    const bool IsPPKeyword = PreviousNotConst->is(tok::identifier) &&
+                             PrevPrev && PrevPrev->is(tok::hash);
 
     if (PreviousNotConst->is(TT_TemplateCloser)) {
       return PreviousNotConst && PreviousNotConst->MatchingParen &&
@@ -2674,8 +2674,11 @@ private:
     }
 
     // *a or &a or &&a.
-    if (PreviousNotConst->is(TT_PointerOrReference))
+    if (PreviousNotConst->is(TT_PointerOrReference) ||
+        (PreviousNotConst->is(tok::coloncolon) && PrevPrev &&
+         PrevPrev->is(TT_PointerOrReference))) {
       return true;
+    }
 
     // MyClass a;
     if (PreviousNotConst->isTypeName(LangOpts))

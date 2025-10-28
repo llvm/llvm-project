@@ -2344,6 +2344,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
   EXPECT_TOKEN(Tokens[2], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
 
+  Tokens = annotate("::foo::bar& ::foo::bar::operator=(::foo::bar& other);");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[17], tok::amp, TT_PointerOrReference);
+
   Tokens = annotate("int iso_time(time_t);");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
