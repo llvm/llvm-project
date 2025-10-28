@@ -1040,17 +1040,17 @@ llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.tensor.load.to.lds
 llvm.func @rocdl.tensor.load.to.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
-                                     %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
-  // CHECK-LABEL: rocdl.tensor.load.to.lds
+                                    %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
   // CHECK: call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %{{.*}}, <8 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3, 0 : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32>
   llvm.return
 }
 
+// CHECK-LABEL: rocdl.tensor.store.from.lds
 llvm.func @rocdl.tensor.store.from.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
-                                        %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
-  // CHECK-LABEL: rocdl.tensor.store.from.lds
+                                       %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
   // CHECK: call void @llvm.amdgcn.tensor.store.from.lds(<4 x i32> %{{.*}}, <8 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, i32 0)
   rocdl.tensor.store.from.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3, 0 : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32>
   llvm.return

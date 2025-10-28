@@ -667,13 +667,22 @@ def ROCDL_GlobalLoadLDSOp :
 // Tensor load/store intrinsics (available in GFX1250)
 //===---------------------------------------------------------------------===//
 
-// Base class for tensor load/store operations with 4 descriptor groups
+// Base class for tensor load/store operations with 4 descriptor groups.
 class ROCDL_TensorLDSIntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
   dag args = (ins LLVM_VectorOf<I32>:$dgroup0, LLVM_VectorOf<I32>:$dgroup1,
                   LLVM_VectorOf<I32>:$dgroup2, LLVM_VectorOf<I32>:$dgroup3,
                   I32Attr:$cachePolicy);
   let arguments = !con(args, baseArgs);
+  let summary = "Base class for ROCDL tensor load/store to/from LDS.";
+  let description = [{
+    Moves tiles of tensor data between global memory and LDS. The tile is
+    described by the $dgroup descriptors. 4 $dgroup descriptors allows for
+    movement of up to 5D tensors. $cachePolicy describes the memory scope and an
+    indicator of expected data re-use.
+
+    This op is for gfx1250+ architectures.
+  }];
   let assemblyFormat = [{
     $dgroup0 `,` $dgroup1 `,` $dgroup2 `,` $dgroup3 `,` $cachePolicy
     attr-dict `:` type($dgroup0) `,` type($dgroup1) `,` type($dgroup2) `,` type($dgroup3)
@@ -686,12 +695,21 @@ class ROCDL_TensorLDSIntrOp<string mnemonic> :
 }
 
 // Base class for tensor load/store operations with 2 descriptor groups
-// (D2 variant)
+// (D2 variant).
 class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
   dag args = (ins LLVM_VectorOf<I32>:$dgroup0, LLVM_VectorOf<I32>:$dgroup1,
                   I32Attr:$cachePolicy);
   let arguments = !con(args, baseArgs);
+  let summary = "Base class for ROCDL tensor load/store to/from LDS (D2 variant).";
+  let description = [{
+    Moves tiles of tensor data between global memory and LDS. The tile is
+    described by the $dgroup descriptors. 2 $dgroup descriptors allows for
+    movement of up to 2D tensors. $cachePolicy describes the memory scope and an
+    indicator of expected data re-use.
+
+    This op is for gfx1250+ architectures.
+  }];
   let assemblyFormat = [{
     $dgroup0 `,` $dgroup1 `,` $cachePolicy
     attr-dict `:` type($dgroup0) `,` type($dgroup1)
