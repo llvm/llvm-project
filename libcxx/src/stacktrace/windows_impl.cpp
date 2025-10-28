@@ -10,16 +10,17 @@
 
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
-//
-#  include <dbghelp.h>
-#  include <psapi.h>
-//
+
 #  include <cstring>
+#  include <dbghelp.h>
 #  include <mutex>
+#  include <psapi.h>
 #  include <stacktrace>
 
-#  pragma comment(lib, "dbghelp.lib")
-#  pragma comment(lib, "psapi.lib")
+#  if defined(_MSC_VER)
+#    pragma comment(lib, "dbghelp.lib")
+#    pragma comment(lib, "psapi.lib")
+#  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
