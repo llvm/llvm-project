@@ -166,15 +166,13 @@ inline constexpr weekday Saturday{6};
 
 template <>
 struct hash<chrono::weekday> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::weekday& __w) noexcept {
-    return hash<unsigned>{}(__w.c_encoding());
-  }
+  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::weekday& __w) noexcept { return __w.c_encoding(); }
 };
 
 template <>
 struct hash<chrono::weekday_indexed> {
   _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::weekday_indexed& __wi) noexcept {
-    return std::__hash_combine(hash<chrono::weekday>{}(__wi.weekday()), hash<unsigned>{}(__wi.index()));
+    return std::__hash_combine(hash<chrono::weekday>{}(__wi.weekday()), __wi.index());
   }
 };
 

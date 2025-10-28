@@ -115,7 +115,7 @@ inline constexpr month December{12};
 template <>
 struct hash<chrono::month> {
   _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::month& __m) noexcept {
-    return hash<unsigned>{}(static_cast<unsigned>(__m));
+    return static_cast<unsigned>(__m);
   }
 };
 
