@@ -281,6 +281,7 @@ jobs:
       shell: bash
       env:
         VCPKG_BUILD_TYPE: release
+        VCPKG_CMAKE_CONFIGURE_OPTIONS: -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_ICONV=OFF 
       run: |
         vcpkg install libxml2:x64-windows-static
         #find / -iname 'libxml*.lib'
