@@ -269,6 +269,12 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
     break;
+  case CK_BaseToDerived:
+    if (!needsConstCast(SourceType, DestType)) {
+      ReplaceWithNamedCast("static_cast");
+      return;
+    }
+    break;
   default:
     break;
   }
