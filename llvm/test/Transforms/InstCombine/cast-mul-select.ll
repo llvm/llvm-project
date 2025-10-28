@@ -91,22 +91,18 @@ define i8 @select2(i1 %cond, i8 %x, i8 %y, i8 %z) {
 
 define i32 @eval_trunc_multi_use_in_one_inst(i32 %x) {
 ; CHECK-LABEL: @eval_trunc_multi_use_in_one_inst(
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i64 [[Z]], 15
-; CHECK-NEXT:    [[M:%.*]] = mul i64 [[A]], [[A]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[M]] to i32
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 15
+; CHECK-NEXT:    [[T:%.*]] = mul i32 [[A]], [[A]]
 ; CHECK-NEXT:    ret i32 [[T]]
 ;
 ; DBGINFO-LABEL: @eval_trunc_multi_use_in_one_inst(
-; DBGINFO-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i64, !dbg [[DBG57:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i64 [[Z]], [[META52:![0-9]+]], !DIExpression(), [[DBG57]])
-; DBGINFO-NEXT:    [[A:%.*]] = add nuw nsw i64 [[Z]], 15, !dbg [[DBG58:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i64 [[A]], [[META54:![0-9]+]], !DIExpression(), [[DBG58]])
-; DBGINFO-NEXT:    [[M:%.*]] = mul i64 [[A]], [[A]], !dbg [[DBG59:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i64 [[M]], [[META55:![0-9]+]], !DIExpression(), [[DBG59]])
-; DBGINFO-NEXT:    [[T:%.*]] = trunc i64 [[M]] to i32, !dbg [[DBG60:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i32 [[T]], [[META56:![0-9]+]], !DIExpression(), [[DBG60]])
-; DBGINFO-NEXT:    ret i32 [[T]], !dbg [[DBG61:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 [[X:%.*]], [[META52:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_stack_value), [[META57:![0-9]+]])
+; DBGINFO-NEXT:    [[A:%.*]] = add i32 [[X]], 15, !dbg [[DBG58:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 [[X]], [[META54:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_plus_uconst, 15, DW_OP_stack_value), [[DBG58]])
+; DBGINFO-NEXT:    [[M:%.*]] = mul i32 [[A]], [[A]], !dbg [[DBG59:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(!DIArgList(i32 [[X]], i32 [[X]]), [[META55:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_plus_uconst, 15, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 64, DW_ATE_unsigned, DW_OP_plus_uconst, 15, DW_OP_mul, DW_OP_stack_value), [[DBG59]])
+; DBGINFO-NEXT:      #dbg_value(i32 [[M]], [[META56:![0-9]+]], !DIExpression(), [[META60:![0-9]+]])
+; DBGINFO-NEXT:    ret i32 [[M]], !dbg [[DBG61:![0-9]+]]
 ;
   %z = zext i32 %x to i64
   %a = add nsw nuw i64 %z, 15

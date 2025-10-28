@@ -2241,13 +2241,10 @@ define i32 @test95(i32 %x) {
 
 define i16 @test96(i16 %x, i16 %y) {
 ; ALL-LABEL: @test96(
-; ALL-NEXT:    [[ZX:%.*]] = zext i16 [[X:%.*]] to i32
-; ALL-NEXT:    [[ZY:%.*]] = zext i16 [[Y:%.*]] to i32
-; ALL-NEXT:    [[A:%.*]] = add nuw nsw i32 [[ZX]], [[ZY]]
-; ALL-NEXT:    [[B:%.*]] = add nuw nsw i32 [[A]], 5
-; ALL-NEXT:    [[C:%.*]] = mul nuw nsw i32 [[A]], 3
-; ALL-NEXT:    [[D:%.*]] = or i32 [[B]], [[C]]
-; ALL-NEXT:    [[T:%.*]] = trunc i32 [[D]] to i16
+; ALL-NEXT:    [[A:%.*]] = add i16 [[X:%.*]], [[Y:%.*]]
+; ALL-NEXT:    [[B:%.*]] = add i16 [[A]], 5
+; ALL-NEXT:    [[C:%.*]] = mul i16 [[A]], 3
+; ALL-NEXT:    [[T:%.*]] = or i16 [[B]], [[C]]
 ; ALL-NEXT:    ret i16 [[T]]
 ;
   %zx = zext i16 %x to i32
