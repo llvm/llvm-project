@@ -1,7 +1,7 @@
 ## Tests env command for setting the PATH variable.
 
 # The test is using /bin/sh. Limit to system known to have /bin/sh.
-# REQUIRED: system-linux
+# REQUIRES: system-linux
 
 # RUN: %{lit} -a -v %{inputs}/shtest-env-path/path.txt \
 # RUN:   | FileCheck -match-full-lines %s
