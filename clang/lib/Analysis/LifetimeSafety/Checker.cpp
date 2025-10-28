@@ -21,6 +21,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -61,10 +62,23 @@ public:
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
         Reporter(Reporter) {
-    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
-      for (const Fact *F : FactMgr.getFacts(B))
-        if (const auto *EF = F->getAs<ExpireFact>())
+    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>()) {
+      llvm::SmallVector<const ExpireFact *> BlockExpires;
+      llvm::SmallVector<const OriginEscapesFact *> BlockEscapes;
+      for (const Fact *F : FactMgr.getFacts(B)) {
+        if (const auto *EF = F->getAs<ExpireFact>()) {
           checkExpiry(EF);
+          BlockExpires.push_back(EF);
+        } else if (const auto *OEF = F->getAs<OriginEscapesFact>()) {
+          BlockEscapes.push_back(OEF);
+        }
+      }
+      if (Reporter) {
+        for (const OriginEscapesFact *OEF : BlockEscapes) {
+          checkEscape(OEF, BlockExpires);
+        }
+      }
+    }
     issuePendingWarnings();
   }
 
@@ -104,6 +118,63 @@ public:
     FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
                                      /*UseExpr=*/BadUse->getUseExpr(),
                                      /*ConfidenceLevel=*/CurConfidence};
+  }
+
+  void checkEscape(const OriginEscapesFact *OEF,
+                   llvm::ArrayRef<const ExpireFact *> BlockExpires) {
+
+    if (!Reporter) {
+      return;
+    }
+
+    OriginID returnedOID = OEF->getEscapedOriginID();
+    ProgramPoint PP = OEF;
+
+    LoanSet HeldLoans = LoanPropagation.getLoans(returnedOID, PP);
+    if (HeldLoans.isEmpty()) {
+      return;
+    }
+
+    llvm::SmallSet<LoanID, 4> ExpiredLoansInBlock;
+    llvm::DenseMap<LoanID, SourceLocation> ExpiryLocs;
+
+    for (const ExpireFact *EF : BlockExpires) {
+      ExpiredLoansInBlock.insert(EF->getLoanID());
+      ExpiryLocs[EF->getLoanID()] = EF->getExpiryLoc();
+    }
+
+    bool hasExpiredDependency = false;
+    bool allHeldLoansExpired = true;
+    LoanID exampleExpiredLoan = LoanID();
+
+    for (LoanID heldLoan : HeldLoans) {
+      if (ExpiredLoansInBlock.count(heldLoan)) {
+        hasExpiredDependency = true;
+        if (exampleExpiredLoan.Value == LoanID().Value) {
+          exampleExpiredLoan = heldLoan;
+        }
+      } else {
+        allHeldLoansExpired = false;
+      }
+    }
+
+    if (!hasExpiredDependency) {
+      return;
+    }
+
+    Confidence FinalConfidence;
+    if (allHeldLoansExpired) {
+      FinalConfidence = Confidence::Definite;
+    } else {
+      FinalConfidence = Confidence::Maybe;
+    }
+
+    const Loan &L = FactMgr.getLoanMgr().getLoan(exampleExpiredLoan);
+    SourceLocation ExpiryLoc = ExpiryLocs[exampleExpiredLoan];
+    const Stmt *EscapeSource = OEF->getEscapeSource();
+
+    Reporter->reportUseAfterReturn(L.IssueExpr, EscapeSource, ExpiryLoc,
+                                   FinalConfidence);
   }
 
   void issuePendingWarnings() {

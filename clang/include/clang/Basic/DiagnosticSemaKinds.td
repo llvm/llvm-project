@@ -10730,6 +10730,7 @@ def warn_lifetime_safety_loan_expires_strict : Warning<
    InGroup<LifetimeSafetyStrict>, DefaultIgnore;
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
+def note_lifetime_safety_returned_here : Note<"returned here">;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
