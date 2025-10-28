@@ -1016,7 +1016,8 @@ struct PGOAnalysisMap {
       uint32_t ID;
       /// Branch Probability of the edge to this successor taken from MBPI.
       BranchProbability Prob;
-      /// Raw edge count from the post link profile.
+      /// Raw edge count from the post link profile (e.g., from bolt or
+      /// propeller).
       uint64_t PostLinkFreq;
 
       bool operator==(const SuccessorEntry &Other) const {
@@ -1027,7 +1028,8 @@ struct PGOAnalysisMap {
 
     /// Block frequency taken from MBFI
     BlockFrequency BlockFreq;
-    /// Raw block count taken from the post linke profile
+    /// Raw block count taken from the post link profile (e.g., from bolt or
+    /// propeller).
     uint64_t PostLinkBlockFreq = 0;
     /// List of successors of the current block
     llvm::SmallVector<SuccessorEntry, 2> Successors;
