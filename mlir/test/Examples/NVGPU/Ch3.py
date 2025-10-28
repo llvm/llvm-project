@@ -1,8 +1,9 @@
 # RUN: env SUPPORT_LIB=%mlir_cuda_runtime \
-# RUN: env MLIR_RUN_CUDA_SM90_TESTS=%mlir_run_cuda_sm90_tests \
-# RUN: sh -c 'if [[ "$MLIR_RUN_CUDA_SM90_TESTS" == "1" ]]; \
+# RUN: sh -c 'if [[ "%mlir_run_cuda_sm90_tests" == "1" ]]; \
 # RUN: then %PYTHON %s | FileCheck %s; \
-# RUN: else %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+# RUN: else export MLIR_NVDSL_PRINT_IR=1; \
+# RUN: %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+
 
 # ===----------------------------------------------------------------------===//
 #  Chapter 3 : GEMM 128x128x64 with Tensor Core
@@ -23,8 +24,6 @@ from mlir.dialects import nvgpu, scf, arith, memref, vector, gpu
 from tools.nvdsl import *
 from mlir.extras import types as T
 import numpy as np
-
-dump_only = os.getenv("MLIR_RUN_CUDA_SM90_TESTS") != "1"
 
 def tma_load(
     mbar_group: Mbarriers,
@@ -61,7 +60,7 @@ def tma_load(
     b_tma.load(b2, mbar_group[0], coords=[64, 0], predicate=p)
 
 
-@NVDSL.mlir_func(dump_only)
+@NVDSL.mlir_func
 def gemm_128_128_64(a, b, d):
     token_ty = gpu.AsyncTokenType.get()
     t1 = gpu.wait(token_ty, [])
@@ -127,7 +126,7 @@ b = np.random.randn(K, N).astype(np.float16)
 d = np.zeros((M, N), np.float32)
 gemm_128_128_64(a, b, d)
 
-if not dump_only:
+if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
     # Verify MLIR program with reference computation in python
     ref_d = a.astype(np.float16) @ b.astype(np.float16)
     np.testing.assert_allclose(d, ref_d, rtol=5e-03, atol=1e-01)

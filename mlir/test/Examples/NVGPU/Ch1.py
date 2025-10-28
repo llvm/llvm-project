@@ -1,8 +1,9 @@
 # RUN: env SUPPORT_LIB=%mlir_cuda_runtime \
-# RUN: env MLIR_RUN_CUDA_SM90_TESTS=%mlir_run_cuda_sm90_tests \
-# RUN: sh -c 'if [[ "$MLIR_RUN_CUDA_SM90_TESTS" == "1" ]]; \
+# RUN: sh -c 'if [[ "%mlir_run_cuda_sm90_tests" == "1" ]]; \
 # RUN: then %PYTHON %s | FileCheck %s; \
-# RUN: else %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+# RUN: else export MLIR_NVDSL_PRINT_IR=1; \
+# RUN: %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+
 
 # ===----------------------------------------------------------------------===//
 #  Chapter 1 : 2D Saxpy
@@ -22,9 +23,9 @@ from mlir.dialects import gpu, memref
 from tools.nvdsl import *
 import numpy as np
 
-dump_only = os.getenv("MLIR_RUN_CUDA_SM90_TESTS") != "1"
 
-@NVDSL.mlir_func(dump_only)
+
+@NVDSL.mlir_func
 def saxpy(x, y, alpha):
     # 1. Use MLIR GPU dialect to allocate and copy memory
     token_ty = gpu.AsyncTokenType.get()
@@ -63,7 +64,7 @@ y = np.ones((M, N), np.float32)
 
 saxpy(x, y, alpha)
 
-if not dump_only:
+if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
     # 4. Verify MLIR with reference computation
     ref = np.ones((M, N), np.float32)
     ref += x * alpha
