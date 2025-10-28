@@ -35,7 +35,7 @@ exit:
 
 ;--- bad-count.ll
 
-; CHECK: Second operand of "llvm.loop.unroll.count" must be a constant integer
+; CHECK: "llvm.loop.unroll.count" must have 2 operands and the second must be a constant integer
 
 target triple = "dxilv1.0-unknown-shadermodel6.0-library"
 
