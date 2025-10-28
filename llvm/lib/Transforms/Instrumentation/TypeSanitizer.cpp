@@ -643,7 +643,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
   // doesn't match, then we call the runtime (which may yet determine that
   // the mismatch is okay).
   //
-  // The checks generated below have the following strucutre.
+  // The checks generated below have the following structure.
   //
   //   ; First we load the descriptor for the load from shadow memory and
   //   ; compare it against the type descriptor for the current access type.

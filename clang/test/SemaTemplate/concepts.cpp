@@ -1632,3 +1632,29 @@ void fn3() {
 }
 
 }
+
+namespace GH165238 {
+
+namespace std {
+template <typename, typename _Tp>
+concept output_iterator = requires(_Tp __t) { __t; };
+template <typename _Out> struct basic_format_context {
+  static_assert(output_iterator<_Out, int>);
+  using char_type = _Out;
+};
+template <typename> class basic_format_parse_context;
+template <typename, typename _Context, typename _Formatter,
+          typename = basic_format_parse_context<typename _Context::char_type>>
+concept __parsable_with = requires(_Formatter __f) { __f; };
+template <typename _Tp, typename _CharT,
+          typename _Context = basic_format_context<_CharT>>
+concept __formattable_impl = __parsable_with<_Tp, _Context, _Context>;
+template <typename _Tp, typename _CharT>
+concept formattable = __formattable_impl<_Tp, _CharT>;
+} // namespace std
+struct {
+  void operator()(std::formattable<char> auto);
+} call;
+void foo() { call(""); }
+
+}
