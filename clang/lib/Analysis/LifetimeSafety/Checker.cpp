@@ -63,11 +63,9 @@ public:
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
         Reporter(Reporter) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>()) {
-      llvm::SmallVector<const ExpireFact *> BlockExpires;
       for (const Fact *F : FactMgr.getFacts(B)) {
         if (const auto *EF = F->getAs<ExpireFact>()) {
           checkExpiry(EF);
-          BlockExpires.push_back(EF);
         }
       }
     }

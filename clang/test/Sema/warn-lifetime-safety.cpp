@@ -485,6 +485,13 @@ View direct_return_of_local(){
                     // expected-note@-1 {{returned here}}
 }
 
+MyObj& reference_return_of_local(){
+  MyObj stack;      
+  return stack;     // expected-warning {{returning reference to stack allocated object}}
+                    // expected-note@-1 {{returned here}}
+                    // expected-warning@-2 {{reference to stack memory associated with local variable 'stack' returned}}
+}
+
 //===----------------------------------------------------------------------===//
 // Use-After-Scope & Use-After-Return (Return-Stack-Address) Combined
 // These are cases where the diagnostic kind is determined by location
@@ -564,6 +571,7 @@ MyObj* safe_return(MyObj safe){
 //===----------------------------------------------------------------------===//
 
 View Identity(View v [[clang::lifetimebound]]);
+const MyObj& IdentityRef(const MyObj& obj [[clang::lifetimebound]]);
 View Choose(bool cond, View a [[clang::lifetimebound]], View b [[clang::lifetimebound]]);
 MyObj* GetPointer(const MyObj& obj [[clang::lifetimebound]]);
 
@@ -711,6 +719,13 @@ View lifetimebound_return_of_local(){
   MyObj stack;
   return Identity(stack); // expected-warning {{returning reference to stack allocated object}}
                           // expected-note@-1 {{returned here}}
+}
+
+const MyObj& lifetimebound_return_ref_to_local() {
+  MyObj stack;
+  return IdentityRef(stack); // expected-warning {{returning reference to stack allocated object}}
+                             // expected-note@-1 {{returned here}}
+                             // expected-warning@-2 {{reference to stack memory associated with local variable 'stack' returned}}
 }
 
 // FIXME: The analysis does not currently model the lifetime of by-value
