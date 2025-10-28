@@ -476,7 +476,7 @@ class DumpASTMatchersHelper(FormatHelper):
 
     @property
     def instructions(self) -> str:
-        return f"cd {self.script_dir} && python {self.script_name}"
+        return f"cd {self.script_dir} && python3 {self.script_name}"
 
     def should_run(self, changed_files: List[str]) -> List[str]:
         for file in changed_files:
@@ -498,7 +498,7 @@ class DumpASTMatchersHelper(FormatHelper):
 
         # Run the 'dump_ast_matchers.py' from its directory as specified in the script doc
         proc = subprocess.run(
-            ["python", self.script_name],
+            ["python3", self.script_name],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             encoding="utf-8",
@@ -506,7 +506,7 @@ class DumpASTMatchersHelper(FormatHelper):
         )
 
         if proc.returncode != 0:
-            return f"Execution of 'dump_ast_matchers.py' failed:\n{proc.stderr}\n{proc.stdout}"
+            return f"dump_ast_matchers.py failed with code {proc.returncode}:\n{proc.stderr}\n{proc.stdout}"
 
         # Check if 'LibASTMatchersReference.html' file was modified
         cmd = ["git", "diff", "--exit-code", self.output_html]
@@ -518,8 +518,8 @@ class DumpASTMatchersHelper(FormatHelper):
         if proc.returncode != 0:
             if args.verbose:
                 print(f"error: {self.name} exited with code {proc.returncode}")
-                print(proc.stdout.decode("utf-8"))
-            return proc.stdout.decode("utf-8")
+                print(proc.stdout)
+            return proc.stdout
         else:
             return None
 
