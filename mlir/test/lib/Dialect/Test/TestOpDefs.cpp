@@ -633,9 +633,8 @@ ParseResult RegionIfOp::parse(OpAsmParser &parser, OperationState &result) {
                                 parser.getCurrentLocation(), result.operands);
 }
 
-OperandRange RegionIfOp::getEntrySuccessorOperands(RegionSuccessor successor) {
-  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()},
-                            successor.getSuccessor()) &&
+OperandRange RegionIfOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert(llvm::is_contained({&getThenRegion(), &getElseRegion()}, point) &&
          "invalid region index");
   return getOperands();
 }
@@ -644,11 +643,10 @@ void RegionIfOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // We always branch to the join region.
   if (!point.isParent()) {
-    if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
-        &getJoinRegion())
+    if (point != getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
     else
-      regions.push_back(RegionSuccessor(getOperation(), getResults()));
+      regions.push_back(RegionSuccessor(getResults()));
     return;
   }
 
@@ -675,7 +673,7 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.emplace_back(getOperation(), getResults());
+    regions.emplace_back(getResults());
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -1109,11 +1107,11 @@ void LoopBlockOp::getSuccessorRegions(
   if (point.isParent())
     return;
 
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.emplace_back((*this)->getResults());
 }
 
-OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
-  assert(successor.getSuccessor() == &getBody());
+OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+  assert(point == getBody());
   return MutableOperandRange(getInitMutable());
 }
 
@@ -1122,8 +1120,8 @@ OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
 //===----------------------------------------------------------------------===//
 
 MutableOperandRange
-LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
-  if (successor.isParent())
+LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+  if (point.isParent())
     return getExitArgMutable();
   return getNextIterArgMutable();
 }
@@ -1215,7 +1213,7 @@ void TestStoreWithARegion::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody(), getBody().front().getArguments());
   else
-    regions.emplace_back(getOperation(), getOperation()->getResults());
+    regions.emplace_back();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1229,7 +1227,7 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // enter the body.
   regions.emplace_back(
       RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.emplace_back(getOperation(), getOperation()->getResults());
+  regions.emplace_back();
 }
 
 //===----------------------------------------------------------------------===//

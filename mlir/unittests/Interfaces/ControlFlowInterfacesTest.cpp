@@ -13,24 +13,17 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Parser/Parser.h"
-#include "llvm/Support/DebugLog.h"
 
 #include <gtest/gtest.h>
 
 using namespace mlir;
 
 /// A dummy op that is also a terminator.
-struct DummyOp : public Op<DummyOp, OpTrait::IsTerminator, OpTrait::ZeroResults,
-                           OpTrait::ZeroSuccessors,
-                           RegionBranchTerminatorOpInterface::Trait> {
+struct DummyOp : public Op<DummyOp, OpTrait::IsTerminator> {
   using Op::Op;
   static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
   static StringRef getOperationName() { return "cftest.dummy_op"; }
-
-  MutableOperandRange getMutableSuccessorOperands(RegionSuccessor point) {
-    return MutableOperandRange(getOperation(), 0, 0);
-  }
 };
 
 /// All regions of this op are mutually exclusive.
@@ -46,8 +39,6 @@ struct MutuallyExclusiveRegionsOp
   // Regions have no successors.
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {}
-  using RegionBranchOpInterface::Trait<
-      MutuallyExclusiveRegionsOp>::getSuccessorRegions;
 };
 
 /// All regions of this op call each other in a large circle.
@@ -62,18 +53,13 @@ struct LoopRegionsOp
 
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (point.getTerminatorPredecessorOrNull()) {
-      Region *region =
-          point.getTerminatorPredecessorOrNull()->getParentRegion();
-      if (region == &(*this)->getRegion(1))
+    if (Region *region = point.getRegionOrNull()) {
+      if (point == (*this)->getRegion(1))
         // This region also branches back to the parent.
-        regions.push_back(
-            RegionSuccessor(getOperation()->getParentOp(),
-                            getOperation()->getParentOp()->getResults()));
+        regions.push_back(RegionSuccessor());
       regions.push_back(RegionSuccessor(region));
     }
   }
-  using RegionBranchOpInterface::Trait<LoopRegionsOp>::getSuccessorRegions;
 };
 
 /// Each region branches back it itself or the parent.
@@ -89,17 +75,11 @@ struct DoubleLoopRegionsOp
 
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (point.getTerminatorPredecessorOrNull()) {
-      Region *region =
-          point.getTerminatorPredecessorOrNull()->getParentRegion();
-      regions.push_back(
-          RegionSuccessor(getOperation()->getParentOp(),
-                          getOperation()->getParentOp()->getResults()));
+    if (Region *region = point.getRegionOrNull()) {
+      regions.push_back(RegionSuccessor());
       regions.push_back(RegionSuccessor(region));
     }
   }
-  using RegionBranchOpInterface::Trait<
-      DoubleLoopRegionsOp>::getSuccessorRegions;
 };
 
 /// Regions are executed sequentially.
@@ -113,15 +93,11 @@ struct SequentialRegionsOp
   // Region 0 has Region 1 as a successor.
   void getSuccessorRegions(RegionBranchPoint point,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (point.getTerminatorPredecessorOrNull() &&
-        point.getTerminatorPredecessorOrNull()->getParentRegion() ==
-            &(*this)->getRegion(0)) {
+    if (point == (*this)->getRegion(0)) {
       Operation *thisOp = this->getOperation();
       regions.push_back(RegionSuccessor(&thisOp->getRegion(1)));
     }
   }
-  using RegionBranchOpInterface::Trait<
-      SequentialRegionsOp>::getSuccessorRegions;
 };
 
 /// A dialect putting all the above together.

@@ -138,10 +138,6 @@ Diagnostic &Diagnostic::operator<<(Operation &op) {
   return appendOp(op, OpPrintingFlags());
 }
 
-Diagnostic &Diagnostic::operator<<(OpWithFlags op) {
-  return appendOp(*op.getOperation(), op.flags());
-}
-
 Diagnostic &Diagnostic::appendOp(Operation &op, const OpPrintingFlags &flags) {
   std::string str;
   llvm::raw_string_ostream os(str);
