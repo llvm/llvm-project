@@ -1,8 +1,9 @@
 # RUN: env SUPPORT_LIB=%mlir_cuda_runtime \
-# RUN: env MLIR_RUN_CUDA_SM90_TESTS=%mlir_run_cuda_sm90_tests \
-# RUN: sh -c 'if [[ "$MLIR_RUN_CUDA_SM90_TESTS" == "1" ]]; \
+# RUN: sh -c 'if [[ "%mlir_run_cuda_sm90_tests" == "1" ]]; \
 # RUN: then %PYTHON %s | FileCheck %s; \
-# RUN: else %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+# RUN: else export MLIR_NVDSL_PRINT_IR=1; \
+# RUN: %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+
 
 # ===----------------------------------------------------------------------===//
 #  Chapter 0 : Hello World
@@ -21,12 +22,10 @@ from mlir.dialects import gpu
 from tools.nvdsl import *
 
 
-dump_only = os.getenv("MLIR_RUN_CUDA_SM90_TESTS") != "1"
-
 # 1. The decorator generates a MLIR func.func.
 # Everything inside the Python function becomes the body of the func.
 # The decorator also translates `alpha` to an `index` type.
-@NVDSL.mlir_func(dump_only)
+@NVDSL.mlir_func
 def main(alpha):
     # 2. The decorator generates a MLIR gpu.launch.
     # Everything inside the Python function becomes the body of the gpu.launch.

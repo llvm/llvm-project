@@ -1,8 +1,9 @@
 # RUN: env SUPPORT_LIB=%mlir_cuda_runtime \
-# RUN: env MLIR_RUN_CUDA_SM90_TESTS=%mlir_run_cuda_sm90_tests \
-# RUN: sh -c 'if [[ "$MLIR_RUN_CUDA_SM90_TESTS" == "1" ]]; \
+# RUN: sh -c 'if [[ "%mlir_run_cuda_sm90_tests" == "1" ]]; \
 # RUN: then %PYTHON %s | FileCheck %s; \
-# RUN: else %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+# RUN: else export MLIR_NVDSL_PRINT_IR=1; \
+# RUN: %PYTHON %s | FileCheck %s --check-prefix=DUMPIR; fi'
+
 
 # ===----------------------------------------------------------------------===//
 #  Chapter 5 : Warp Specialized GEMM with Tensor Core
@@ -50,7 +51,7 @@ from mlir.extras import types as T
 from tools.nvdsl import *
 import numpy as np
 
-dump_only = os.getenv("MLIR_RUN_CUDA_SM90_TESTS") != "1"
+
 
 def partition_shape():
     """
@@ -254,7 +255,7 @@ def epilogue(D: WGMMAMatrix, d_dev):
         scf.yield_([])
 
 
-@NVDSL.mlir_func(dump_only)
+@NVDSL.mlir_func
 def gemm_warp_specialized(a, b, d, num_stages):
     token_ty = gpu.AsyncTokenType.get()
     t1 = gpu.wait(token_ty, [])
@@ -315,7 +316,7 @@ d = np.zeros((M, N), np.float32)
 
 gemm_warp_specialized(a, b, d, num_stages=7)
 
-if not dump_only:
+if os.getenv("MLIR_NVDSL_PRINT_IR") != "1":
     # Verify MLIR with reference computation
     ref_d = a.astype(np.float16) @ b.astype(np.float16)
     np.testing.assert_allclose(d, ref_d, rtol=5e-03, atol=1e-01)
