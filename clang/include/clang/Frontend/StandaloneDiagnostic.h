@@ -73,9 +73,10 @@ struct StandaloneDiagnostic {
 ///
 /// This allows the diagnostic to be emitted using the diagnostics engine, since
 /// StandaloneDiagnostics themselfs cannot be emitted directly.
-StoredDiagnostic translateStandaloneDiag(FileManager &FileMgr,
-                                         SourceManager &SrcMgr,
-                                         StandaloneDiagnostic &&StandaloneDiag);
+StoredDiagnostic
+translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
+                        const StandaloneDiagnostic &StandaloneDiag,
+                        llvm::StringMap<SourceLocation> &SrcLocCache);
 
 } // namespace clang
 

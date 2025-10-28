@@ -1223,13 +1223,15 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     return true;
 
   if (SavedMainFileBuffer) {
+    StoredDiagnostics.clear();
     StoredDiagnostics.reserve(PreambleDiagnostics.size());
-    llvm::transform(
-        std::move(PreambleDiagnostics), std::back_inserter(StoredDiagnostics),
-        [&](auto &&StandaloneDiag) {
-          return translateStandaloneDiag(getFileManager(), getSourceManager(),
-                                         std::move(StandaloneDiag));
-        });
+    llvm::transform(std::move(PreambleDiagnostics),
+                    std::back_inserter(StoredDiagnostics),
+                    [&](auto &&StandaloneDiag) {
+                      return translateStandaloneDiag(
+                          getFileManager(), getSourceManager(),
+                          std::move(StandaloneDiag), PreambleSrcLocCache);
+                    });
   } else
     PreambleSrcLocCache.clear();
 
