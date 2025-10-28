@@ -407,6 +407,12 @@ MyObj* simple_return_stack_address() {
   return p;      // expected-note {{returned here}}
 }
 
+MyObj* direct_return() {
+  MyObj s;      
+  return &s;     // expected-warning {{address of stack memory is returned later}}
+                 // expected-note@-1 {{returned here}}
+}
+
 const MyObj* conditional_assign_unconditional_return(const MyObj& safe, bool c) {
   MyObj s; 
   const MyObj* p = &safe;

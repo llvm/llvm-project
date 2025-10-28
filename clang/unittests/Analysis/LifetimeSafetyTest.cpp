@@ -20,6 +20,7 @@ namespace clang::lifetimes::internal {
 namespace {
 
 using namespace ast_matchers;
+using ::testing::Not;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
 
@@ -122,6 +123,9 @@ public:
     return LID;
   }
 
+  // Gets the set of loans that are live at the given program point. A loan is
+  // considered live at point P if there is a live origin which contains this
+  // loan.
   std::optional<LoanSet> getLiveLoansAtPoint(ProgramPoint P) const {
     const auto &LiveOriginsAnalysis = Runner.getAnalysis().getLiveOrigins();
     const auto &LoanPropagation = Runner.getAnalysis().getLoanPropagation();
@@ -132,10 +136,8 @@ public:
     LoanSet Result = F.getEmptySet();
 
     for (const auto &[OID, LI] : LiveOriginsMap) {
-      if (LI.Kind != LivenessKind::Dead) {
-        LoanSet Loans = LoanPropagation.getLoans(OID, P);
-        Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
-      }
+      LoanSet Loans = LoanPropagation.getLoans(OID, P);
+      Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
     }
 
     if (Result.isEmpty())
@@ -1296,6 +1298,17 @@ TEST_F(LifetimeAnalysisTest, SimpleReturnStackAddress) {
   EXPECT_THAT("s", HasLiveLoanAtExpiry("p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, DirectReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s;
+      POINT(P);
+      return &s;
+    }
+  )");
+  EXPECT_THAT("s", HasLiveLoanAtExpiry("P"));
+}
+
 TEST_F(LifetimeAnalysisTest, ConditionalAssignUnconditionalReturn) {
   SetupTest(R"(
     MyObj* target(bool c) {
@@ -1397,8 +1410,8 @@ TEST_F(LifetimeAnalysisTest, MultipleAssignmentMultipleReturn) {
   EXPECT_THAT("local_obj1", HasLiveLoanAtExpiry("C1"));
   EXPECT_THAT("local_obj2", HasLiveLoanAtExpiry("C2"));
 
-  EXPECT_THAT("local_obj1", testing::Not(HasLiveLoanAtExpiry("C3")));
-  EXPECT_THAT("local_obj2", testing::Not(HasLiveLoanAtExpiry("C3")));
+  EXPECT_THAT("local_obj1", Not(HasLiveLoanAtExpiry("C3")));
+  EXPECT_THAT("local_obj2", Not(HasLiveLoanAtExpiry("C3")));
 }
 
 TEST_F(LifetimeAnalysisTest, MultipleAssignmentsSingleReturn) {
