@@ -4,8 +4,8 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK:     %[[#Int:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstant %[[#Int]] 0{{$}}
+; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
 ; CHECK-DAG: %[[#MemSem_Acquire:]] = OpConstant %[[#Int]] 2
 ; CHECK-DAG: %[[#MemSem_Release:]] = OpConstant %[[#Int]] 4{{$}}
 ; CHECK-DAG: %[[#MemSem_AcquireRelease:]] = OpConstant %[[#Int]] 8

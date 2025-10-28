@@ -1,33 +1,39 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx17 %std_cxx98-14 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 -std=c++17 %s
 
-template<template<typename T> class X> struct A; // expected-note 2{{previous template template parameter is here}}
+template<template<typename T> class X> struct A; // #A
+// expected-note@-1 2{{previous template template parameter is here}}
 
 template<template<typename T, int I> class X> struct B; // expected-note{{previous template template parameter is here}}
 
-template<template<int I> class X> struct C;  // expected-note {{previous non-type template parameter with type 'int' is here}}
+template<template<int I> class X> struct C;
+// expected-error@-1 {{conversion from 'int' to 'const int &' in converted constant expression would bind reference to a temporary}}
+// expected-note@-2 {{previous template template parameter is here}}
 
-template<class> struct X; // expected-note{{too few template parameters in template template argument}}
-template<int N> struct Y; // expected-note{{template parameter has a different kind in template argument}}
+template<class> struct X; // expected-note {{template is declared here}}
+template<int N> struct Y; // expected-note {{template parameter is declared here}}
 template<long N> struct Ylong;
-template<const int &N> struct Yref; // expected-note{{template non-type parameter has a different type 'const int &' in template argument}}
+template<const int &N> struct Yref; // expected-note {{template parameter is declared here}}
 
 namespace N {
   template<class> struct Z;
 }
-template<class, class> struct TooMany; // expected-note{{too many template parameters in template template argument}}
+template<class, class> struct TooMany; // expected-note{{template is declared here}}
 
 
 A<X> *a1;
 A<N::Z> *a2;
 A< ::N::Z> *a3;
 
-A<Y> *a4; // expected-error{{template template argument has different template parameters than its corresponding template template parameter}}
-A<TooMany> *a5; // expected-error{{template template argument has different template parameters than its corresponding template template parameter}}
-B<X> *a6; // expected-error{{template template argument has different template parameters than its corresponding template template parameter}}
+A<Y> *a4; // expected-error@#A {{template argument for non-type template parameter must be an expression}}
+          // expected-note@-1 {{different template parameters}}
+A<TooMany> *a5; // expected-error {{too few template arguments for class template 'TooMany'}}
+                // expected-note@-1 {{different template parameters}}
+B<X> *a6; // expected-error {{too many template arguments for class template 'X'}}
+          // expected-note@-1 {{different template parameters}}
 C<Y> *a7;
 C<Ylong> *a8;
-C<Yref> *a9; // expected-error{{template template argument has different template parameters than its corresponding template template parameter}}
+C<Yref> *a9; // expected-note {{different template parameters}}
 
 template<typename T> void f(int);
 
@@ -103,39 +109,52 @@ void foo() {
 
 namespace CheckDependentNonTypeParamTypes {
   template<template<typename T, typename U, T v> class X> struct A {
+    // expected-note@-1 {{previous template template parameter is here}}
     void f() {
-      X<int, void*, 3> x; // precxx17-error {{does not refer to any declaration}} \
-                             cxx17-error {{value of type 'int' is not implicitly convertible to 'void *'}}
+      X<int, void*, 3> x;
     }
     void g() {
       X<int, long, 3> x;
     }
     void h() {
-      // FIXME: If we accept A<B> at all, it's not obvious what should happen
-      // here. While parsing the template, we form
-      //   X<unsigned char, int, (unsigned char)1234>
-      // but in the final instantiation do we get
-      //   B<unsigned char, int, (int)1234>
-      // or
-      //   B<unsigned char, int, (int)(unsigned char)1234>
-      // ?
       X<unsigned char, int, 1234> x;
-      int check[x.value == 1234 ? 1 : -1];
+      // expected-error@-1 {{evaluates to 1234, which cannot be narrowed to type 'unsigned char'}}
     }
   };
 
-  template<typename T, typename U, U v> struct B { // precxx17-note {{parameter}}
+  template<typename T, typename U, U v> struct B {
+    // expected-error@-1 {{conflicting deduction 'U' against 'T' for parameter}}
     static const U value = v;
   };
 
   // FIXME: This should probably be rejected, but the rules are at best unclear.
-  A<B> ab;
+  A<B> ab; // expected-note {{different template parameters}}
 
   void use() {
-    ab.f(); // expected-note {{instantiation of}}
+    ab.f();
     ab.g();
     ab.h();
   }
+
+  template<class> struct C {
+    template<class T, T V> struct D {};
+    using T = D<char, 1234>;
+    // expected-error@-1 {{evaluates to 1234, which cannot be narrowed to type 'char'}}
+  };
+
+  template<class T> struct E {
+    template <template <T V> class TT> struct F {
+      using X = TT<1234>;
+    };
+  };
+  // FIXME: This should be rejected, as there are no valid instantiations for E<char>::F
+  template struct E<char>;
+
+#if __cplusplus >= 201703L
+  template<template<auto> class TT, class V> struct G {
+    using type = TT<((void)0, V::value)>;
+  };
+#endif
 }
 
 namespace PR32185 {
@@ -149,3 +168,26 @@ namespace PR10147 {
   template<template<typename...> class A> void f(A<int>*) { A<> a; } // expected-warning 0-1{{extension}}
   void g() { f((A<>*)0); }
 }
+
+#if __cplusplus >= 201703L
+namespace multiple_conversions {
+  constexpr int g = 1;
+  struct Z {
+      constexpr operator const int&() const { return g; }
+      constexpr operator int() { return 2; }
+  } z;
+
+  template<template<const int&> class TT> struct A {
+    static constexpr int value = TT<z>::value;
+  };
+
+  template<int I> struct B {
+    static constexpr int value = I;
+  };
+  // FIXME: This should probably convert z to (const int &) first, then
+  // convert that to int.
+  static_assert(A<B>::value == 1);
+  // cxx17-error@-1 {{static assertion failed}}
+  // cxx17-note@-2 {{expression evaluates to '2 == 1'}}
+} // namespace multiple_conversions
+#endif

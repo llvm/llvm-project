@@ -20,6 +20,11 @@
 
 // RUN: %clang --target=sparc -mvis2 %s -### 2>&1 | FileCheck -check-prefix=VIS2 %s
 // RUN: %clang --target=sparc -mno-vis2 %s -### 2>&1 | FileCheck -check-prefix=NO-VIS2 %s
+/// Solaris/SPARC defaults to -mvis2
+// RUN: %clang --target=sparc-sun-solaris2.11 %s -### 2>&1 | FileCheck -check-prefix=VIS2 %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -mno-vis2 %s -### 2>&1 | FileCheck -check-prefix=NO-VIS2 %s
+// RUN: %clang --target=sparcv9-sun-solaris2.11 %s -### 2>&1 | FileCheck -check-prefix=VIS2 %s
+// RUN: %clang --target=sparcv9-sun-solaris2.11 -mno-vis2 %s -### 2>&1 | FileCheck -check-prefix=NO-VIS2 %s
 // VIS2: "-target-feature" "+vis2"
 // NO-VIS2: "-target-feature" "-vis2"
 
@@ -34,4 +39,8 @@
 // SOFT-QUAD-FLOAT: "-target-feature" "-hard-quad-float"
 
 // RUN: %clang --target=sparc -mv8plus %s -### 2>&1 | FileCheck -check-prefix=V8PLUS %s
+/// 32-bit Solaris/SPARC defaults to -mv8plus
+// RUN: %clang --target=sparc-sun-solaris2.11 %s -### 2>&1 | FileCheck -check-prefix=V8PLUS %s
+// RUN: %clang --target=sparc-sun-solaris2.11 -mno-v8plus %s -### 2>&1 | FileCheck -check-prefix=NO-V8PLUS %s
 // V8PLUS: "-target-feature" "+v8plus"
+// NO-V8PLUS-NOT: "-target-feature" "+v8plus"

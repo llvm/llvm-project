@@ -51,23 +51,50 @@ public:
     EXPECT_FP_EQ(default_snan_payload, funcWrapper(func, sNaN));
     EXPECT_FP_EQ(default_snan_payload, funcWrapper(func, neg_sNaN));
 
-    T qnan_42 = FPBits::quiet_nan(Sign::POS, 0x42).get_val();
-    T neg_qnan_42 = FPBits::quiet_nan(Sign::NEG, 0x42).get_val();
-    T snan_42 = FPBits::signaling_nan(Sign::POS, 0x42).get_val();
-    T neg_snan_42 = FPBits::signaling_nan(Sign::NEG, 0x42).get_val();
-    EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, qnan_42));
-    EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, neg_qnan_42));
-    EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, snan_42));
-    EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, neg_snan_42));
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 6) {
+      // [S] [E..E] [QM..M] -> number of M bits should be at least 6
+      // 0x31 = 0b110001 = 6 bits
+      T qnan_31 = FPBits::quiet_nan(Sign::POS, 0x31).get_val();
+      T neg_qnan_31 = FPBits::quiet_nan(Sign::NEG, 0x31).get_val();
+      T snan_31 = FPBits::signaling_nan(Sign::POS, 0x31).get_val();
+      T neg_snan_31 = FPBits::signaling_nan(Sign::NEG, 0x31).get_val();
+      EXPECT_FP_EQ(T(0x31.0p+0), funcWrapper(func, qnan_31));
+      EXPECT_FP_EQ(T(0x31.0p+0), funcWrapper(func, neg_qnan_31));
+      EXPECT_FP_EQ(T(0x31.0p+0), funcWrapper(func, snan_31));
+      EXPECT_FP_EQ(T(0x31.0p+0), funcWrapper(func, neg_snan_31));
 
-    T qnan_123 = FPBits::quiet_nan(Sign::POS, 0x123).get_val();
-    T neg_qnan_123 = FPBits::quiet_nan(Sign::NEG, 0x123).get_val();
-    T snan_123 = FPBits::signaling_nan(Sign::POS, 0x123).get_val();
-    T neg_snan_123 = FPBits::signaling_nan(Sign::NEG, 0x123).get_val();
-    EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, qnan_123));
-    EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, neg_qnan_123));
-    EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, snan_123));
-    EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, neg_snan_123));
+      // 0x15 = 0b10101 = 5 bits
+      T qnan_15 = FPBits::quiet_nan(Sign::POS, 0x15).get_val();
+      T neg_qnan_15 = FPBits::quiet_nan(Sign::NEG, 0x15).get_val();
+      T snan_15 = FPBits::signaling_nan(Sign::POS, 0x15).get_val();
+      T neg_snan_15 = FPBits::signaling_nan(Sign::NEG, 0x15).get_val();
+      EXPECT_FP_EQ(T(0x15.0p+0), funcWrapper(func, qnan_15));
+      EXPECT_FP_EQ(T(0x15.0p+0), funcWrapper(func, neg_qnan_15));
+      EXPECT_FP_EQ(T(0x15.0p+0), funcWrapper(func, snan_15));
+      EXPECT_FP_EQ(T(0x15.0p+0), funcWrapper(func, neg_snan_15));
+    }
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 7) {
+      T qnan_42 = FPBits::quiet_nan(Sign::POS, 0x42).get_val();
+      T neg_qnan_42 = FPBits::quiet_nan(Sign::NEG, 0x42).get_val();
+      T snan_42 = FPBits::signaling_nan(Sign::POS, 0x42).get_val();
+      T neg_snan_42 = FPBits::signaling_nan(Sign::NEG, 0x42).get_val();
+      EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, qnan_42));
+      EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, neg_qnan_42));
+      EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, snan_42));
+      EXPECT_FP_EQ(T(0x42.0p+0), funcWrapper(func, neg_snan_42));
+    }
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 9) {
+      T qnan_123 = FPBits::quiet_nan(Sign::POS, 0x123).get_val();
+      T neg_qnan_123 = FPBits::quiet_nan(Sign::NEG, 0x123).get_val();
+      T snan_123 = FPBits::signaling_nan(Sign::POS, 0x123).get_val();
+      T neg_snan_123 = FPBits::signaling_nan(Sign::NEG, 0x123).get_val();
+      EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, qnan_123));
+      EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, neg_qnan_123));
+      EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, snan_123));
+      EXPECT_FP_EQ(T(0x123.0p+0), funcWrapper(func, neg_snan_123));
+    }
   }
 };
 

@@ -10,16 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ARMTargetMachine.h"
 #include "ARMTargetTransformInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-selectiondag-info"
 
-cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
+static cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
     "arm-memtransfer-tploop", cl::Hidden,
     cl::desc("Control conversion of memcpy to "
              "Tail predicated loops (WLSTP)"),
@@ -31,6 +29,11 @@ cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
                clEnumValN(TPLoop::Allow, "allow",
                           "Allow (may be subject to certain conditions) "
                           "conversion of memcpy to TP loop.")));
+
+bool ARMSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= ARMISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= ARMISD::LAST_MEMORY_OPCODE;
+}
 
 // Emit, if possible, a specialized version of the given Libcall. Typically this
 // means selecting the appropriately aligned version, but we also convert memset
@@ -86,19 +89,15 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     AlignVariant = ALIGN1;
 
   TargetLowering::ArgListTy Args;
-  TargetLowering::ArgListEntry Entry;
-  Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-  Entry.Node = Dst;
-  Args.push_back(Entry);
+  Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+  Args.emplace_back(Dst, IntPtrTy);
   if (AEABILibcall == AEABI_MEMCLR) {
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Size, IntPtrTy);
   } else if (AEABILibcall == AEABI_MEMSET) {
     // Adjust parameters for memset, EABI uses format (ptr, size, value),
     // GNU library uses (ptr, value, size)
     // See RTABI section 4.3.4
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Size, IntPtrTy);
 
     // Extend or truncate the argument to be an i32 value for the call.
     if (Src.getValueType().bitsGT(MVT::i32))
@@ -106,30 +105,29 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     else if (Src.getValueType().bitsLT(MVT::i32))
       Src = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Src);
 
-    Entry.Node = Src;
-    Entry.Ty = Type::getInt32Ty(*DAG.getContext());
+    TargetLowering::ArgListEntry Entry(Src,
+                                       Type::getInt32Ty(*DAG.getContext()));
     Entry.IsSExt = false;
     Args.push_back(Entry);
   } else {
-    Entry.Node = Src;
-    Args.push_back(Entry);
-
-    Entry.Node = Size;
-    Args.push_back(Entry);
+    Args.emplace_back(Src, IntPtrTy);
+    Args.emplace_back(Size, IntPtrTy);
   }
 
-  char const *FunctionNames[4][3] = {
-    { "__aeabi_memcpy",  "__aeabi_memcpy4",  "__aeabi_memcpy8"  },
-    { "__aeabi_memmove", "__aeabi_memmove4", "__aeabi_memmove8" },
-    { "__aeabi_memset",  "__aeabi_memset4",  "__aeabi_memset8"  },
-    { "__aeabi_memclr",  "__aeabi_memclr4",  "__aeabi_memclr8"  }
-  };
+  static const RTLIB::Libcall FunctionImpls[4][3] = {
+      {RTLIB::MEMCPY, RTLIB::AEABI_MEMCPY4, RTLIB::AEABI_MEMCPY8},
+      {RTLIB::MEMMOVE, RTLIB::AEABI_MEMMOVE4, RTLIB::AEABI_MEMMOVE8},
+      {RTLIB::MEMSET, RTLIB::AEABI_MEMSET4, RTLIB::AEABI_MEMSET8},
+      {RTLIB::AEABI_MEMCLR, RTLIB::AEABI_MEMCLR4, RTLIB::AEABI_MEMCLR8}};
+
+  RTLIB::Libcall NewLC = FunctionImpls[AEABILibcall][AlignVariant];
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
-          DAG.getExternalSymbol(FunctionNames[AEABILibcall][AlignVariant],
+          TLI->getLibcallCallingConv(NewLC), Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(TLI->getLibcallName(NewLC),
                                 TLI->getPointerTy(DAG.getDataLayout())),
           std::move(Args))
       .setDiscardResult();

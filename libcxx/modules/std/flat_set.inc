@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
+#if _LIBCPP_STD_VER >= 23
   // [flat.set], class template flat_­set
   using std::flat_set;
 
@@ -25,5 +25,5 @@ export namespace std {
 
   using std::sorted_equivalent;
   using std::sorted_equivalent_t;
-#endif
+#endif // _LIBCPP_STD_VER >= 23
 } // namespace std

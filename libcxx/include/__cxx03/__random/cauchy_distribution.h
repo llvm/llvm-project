@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_CAUCHY_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_CAUCHY_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_CAUCHY_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_CAUCHY_DISTRIBUTION_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/is_valid.h>
@@ -57,14 +57,8 @@ private:
 
 public:
   // constructor and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI cauchy_distribution() : cauchy_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit cauchy_distribution(result_type __a, result_type __b = 1)
-      : __p_(param_type(__a, __b)) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit cauchy_distribution(result_type __a = 0, result_type __b = 1)
       : __p_(param_type(__a, __b)) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit cauchy_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 
@@ -136,4 +130,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_CAUCHY_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_CAUCHY_DISTRIBUTION_H

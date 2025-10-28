@@ -18,6 +18,7 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgOps.td"
+include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.td"
 include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.td"
 
 #endif // LINALG_DOC

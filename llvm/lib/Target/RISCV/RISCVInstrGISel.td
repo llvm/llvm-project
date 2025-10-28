@@ -17,6 +17,54 @@ class RISCVGenericInstruction : GenericInstruction {
   let Namespace = "RISCV";
 }
 
+// Pseudo equivalent to a RISCVISD::SRAW.
+def G_SRAW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_SRAW, riscv_sraw>;
+
+// Pseudo equivalent to a RISCVISD::SRLW.
+def G_SRLW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_SRLW, riscv_srlw>;
+
+// Pseudo equivalent to a RISCVISD::SLLW.
+def G_SLLW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_SLLW, riscv_sllw>;
+
+// Pseudo equivalent to a RISCVISD::DIVW.
+def G_DIVW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_DIVW, riscv_divw>;
+
+// Pseudo equivalent to a RISCVISD::DIVUW.
+def G_DIVUW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_DIVUW, riscv_divuw>;
+
+// Pseudo equivalent to a RISCVISD::REMUW.
+def G_REMUW : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_REMUW, riscv_remuw>;
+
 // Pseudo equivalent to a RISCVISD::RORW.
 def G_RORW : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -97,14 +145,12 @@ def G_VMSET_VL : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_VMSET_VL, riscv_vmset_vl>;
 
-// Pseudo equivalent to a RISCVISD::SPLAT_VECTOR_SPLIT_I64_VL. There is no
-// record to mark as equivalent to using GINodeEquiv because it gets lowered
-// before instruction selection.
 def G_SPLAT_VECTOR_SPLIT_I64_VL : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$passthru, type1:$hi, type1:$lo, type2:$vl);
   let hasSideEffects = false;
 }
+def : GINodeEquiv<G_SPLAT_VECTOR_SPLIT_I64_VL, riscv_splat_vector_split_i64_vl>;
 
 // Pseudo equivalent to a RISCVISD::VSLIDEDOWN_VL
 def G_VSLIDEDOWN_VL : RISCVGenericInstruction {

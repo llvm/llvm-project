@@ -1,29 +1,67 @@
 ## Ensures that a call continuation fallthrough count is set when using
 ## pre-aggregated perf data.
 
-# RUN: %clangxx %cxxflags %s -o %t -Wl,-q -nostdlib
-# RUN: link_fdata %s %t %t.pa1 PREAGG
-# RUN: link_fdata %s %t %t.pa2 PREAGG2
-# RUN: link_fdata %s %t %t.pa3 PREAGG3
-# RUN: link_fdata %s %t %t.pa4 PREAGG4
+# RUN: %clang %cflags -fpic -shared -xc /dev/null -o %t.so
+## Link against a DSO to ensure PLT entries.
+# RUN: %clangxx %cxxflags %s %t.so -o %t -Wl,-q -nostdlib
+# Trace to a call continuation, not a landing pad/entry point
+# RUN: link_fdata %s %t %t.pa-base PREAGG-BASE
+# Trace from a return to a landing pad/entry point call continuation
+# RUN: link_fdata %s %t %t.pa-ret PREAGG-RET
+# Trace from an external location to a landing pad/entry point call continuation
+# RUN: link_fdata %s %t %t.pa-ext PREAGG-EXT
+# Return trace to a landing pad/entry point call continuation
+# RUN: link_fdata %s %t %t.pa-pret PREAGG-PRET
+# External return to a landing pad/entry point call continuation
+# RUN: link_fdata %s %t %t.pa-eret PREAGG-ERET
+# RUN-DISABLED: link_fdata %s %t %t.pa-plt PREAGG-PLT
 
-## Check normal case: fallthrough is not LP or secondary entry.
-# RUN: llvm-strip --strip-unneeded %t -o %t.exe
-# RUN: llvm-bolt %t.exe --pa -p %t.pa1 -o %t.out \
-# RUN:   --print-cfg --print-only=main | FileCheck %s
+# RUN: llvm-strip --strip-unneeded %t -o %t.strip
+# RUN: llvm-objcopy --remove-section=.eh_frame %t.strip %t.noeh
 
-## Check that getFallthroughsInTrace correctly handles a trace starting at plt
-## call continuation
-# RUN: llvm-bolt %t.exe --pa -p %t.pa2 -o %t.out2 \
-# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK2
+## Check pre-aggregated traces attach call continuation fallthrough count
+## in the basic case (not an entry point, not a landing pad).
+# RUN: llvm-bolt %t.noeh --pa -p %t.pa-base -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-BASE
 
-## Check that we don't treat secondary entry points as call continuation sites.
-# RUN: llvm-bolt %t --pa -p %t.pa3 -o %t.out \
-# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK3
+## Check pre-aggregated traces from a return attach call continuation
+## fallthrough count to secondary entry point (unstripped)
+# RUN: llvm-bolt %t --pa -p %t.pa-ret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+## Check pre-aggregated traces from a return attach call continuation
+## fallthrough count to landing pad (stripped, landing pad)
+# RUN: llvm-bolt %t.strip --pa -p %t.pa-ret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
 
-## Check fallthrough to a landing pad case.
-# RUN: llvm-bolt %t.exe --pa -p %t.pa4 -o %t.out \
-# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK4
+## Check pre-aggregated traces from external location don't attach call
+## continuation fallthrough count to secondary entry point (unstripped)
+# RUN: llvm-bolt %t --pa -p %t.pa-ext -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-SKIP
+## Check pre-aggregated traces from external location don't attach call
+## continuation fallthrough count to landing pad (stripped, landing pad)
+# RUN: llvm-bolt %t.strip --pa -p %t.pa-ext -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-SKIP
+
+## Check pre-aggregated return traces from external location attach call
+## continuation fallthrough count to secondary entry point (unstripped)
+# RUN: llvm-bolt %t --pa -p %t.pa-pret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+## Check pre-aggregated return traces from external location attach call
+## continuation fallthrough count to landing pad (stripped, landing pad)
+# RUN: llvm-bolt %t.strip --pa -p %t.pa-pret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+
+## Same for external return type
+# RUN: llvm-bolt %t --pa -p %t.pa-eret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+# RUN: llvm-bolt %t.strip --pa -p %t.pa-eret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+
+## Check pre-aggregated traces don't report zero-sized PLT fall-through as
+## invalid trace
+# RUN-DISABLED: llvm-bolt %t.strip --pa -p %t.pa-plt -o %t.out | FileCheck %s \
+# RUN-DISABLED:   --check-prefix=CHECK-PLT
+# CHECK-PLT: traces mismatching disassembled function contents: 0
 
   .globl foo
   .type foo, %function
@@ -48,11 +86,14 @@ main:
 	movl	$0x0, -0x4(%rbp)
 	movl	%edi, -0x8(%rbp)
 	movq	%rsi, -0x10(%rbp)
+Ltmp0_br:
 	callq	puts@PLT
-## Target is a call continuation
-# PREAGG: B X:0 #Ltmp1# 2 0
-# CHECK:      callq puts@PLT
-# CHECK-NEXT: count: 2
+## Check PLT traces are accepted
+# PREAGG-PLT: T #Ltmp0_br# #puts@plt# #puts@plt# 3
+## Target is an external-origin call continuation
+# PREAGG-BASE: T X:0 #Ltmp1# #Ltmp4_br# 2
+# CHECK-BASE:      callq puts@PLT
+# CHECK-BASE-NEXT: count: 2
 
 Ltmp1:
 	movq	-0x10(%rbp), %rax
@@ -61,31 +102,24 @@ Ltmp1:
 
 Ltmp4:
 	cmpl	$0x0, -0x14(%rbp)
+Ltmp4_br:
 	je	Ltmp0
-# CHECK2:      je .Ltmp0
-# CHECK2-NEXT: count: 3
 
 	movl	$0xa, -0x18(%rbp)
 	callq	foo
-## Target is a call continuation
-# PREAGG: B #Lfoo_ret# #Ltmp3# 1 0
-# CHECK:      callq foo
-# CHECK-NEXT: count: 1
+## Target is a binary-local call continuation
+# PREAGG-RET: T #Lfoo_ret# #Ltmp3# #Ltmp3_br# 1
+## Target is a secondary entry point (unstripped) or a landing pad (stripped)
+# PREAGG-EXT: T X:0 #Ltmp3# #Ltmp3_br# 1
+## Pre-aggregated return trace
+# PREAGG-PRET: R X:0 #Ltmp3# #Ltmp3_br# 1
+## External return
+# PREAGG-ERET: r #Ltmp3# #Ltmp3_br# 1
 
-## PLT call continuation fallthrough spanning the call
-# PREAGG2: F #Ltmp1# #Ltmp3_br# 3
-# CHECK2:      callq foo
-# CHECK2-NEXT: count: 3
-
-## Target is a secondary entry point
-# PREAGG3: B X:0 #Ltmp3# 2 0
-# CHECK3:      callq foo
-# CHECK3-NEXT: count: 0
-
-## Target is a landing pad
-# PREAGG4: B X:0 #Ltmp3# 2 0
-# CHECK4:      callq puts@PLT
-# CHECK4-NEXT: count: 0
+# CHECK-ATTACH:      callq foo
+# CHECK-ATTACH-NEXT: count: 1
+# CHECK-SKIP:        callq foo
+# CHECK-SKIP-NEXT:   count: 0
 
 Ltmp3:
 	cmpl	$0x0, -0x18(%rbp)

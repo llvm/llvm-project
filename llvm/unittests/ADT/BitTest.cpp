@@ -297,6 +297,14 @@ TEST(BitTest, CountrZero) {
   EXPECT_EQ(1, llvm::countr_zero(NZ16));
   EXPECT_EQ(1, llvm::countr_zero(NZ32));
   EXPECT_EQ(1, llvm::countr_zero(NZ64));
+
+  EXPECT_EQ(0, llvm::countr_zero(uint8_t(1)));
+  EXPECT_EQ(3, llvm::countr_zero(uint8_t(8)));
+  EXPECT_EQ(7, llvm::countr_zero(uint8_t(128)));
+
+  EXPECT_EQ(0, llvm::countr_zero(uint16_t(1)));
+  EXPECT_EQ(8, llvm::countr_zero(uint16_t(256)));
+  EXPECT_EQ(15, llvm::countr_zero(uint16_t(32768)));
 }
 
 TEST(BitTest, CountlOne) {

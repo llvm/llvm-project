@@ -1,0 +1,9 @@
+static_library("LSP") {
+  output_name = "LLVMSupportLSP"
+  deps = [ "//llvm/lib/Support" ]
+  sources = [
+    "Logging.cpp",
+    "Protocol.cpp",
+    "Transport.cpp",
+  ]
+}

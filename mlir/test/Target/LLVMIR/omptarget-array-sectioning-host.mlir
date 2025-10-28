@@ -48,7 +48,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[OFFLOADBASEPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
 // CHECK: store ptr @_QFEinarray, ptr %[[OFFLOADBASEPTRS]], align 8
 // CHECK: %[[OFFLOADPTRS:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-// CHECK: store ptr getelementptr inbounds ([3 x [3 x [3 x i32]]], ptr @_QFEinarray, i64 0, i64 1, i64 0, i64 0), ptr %[[OFFLOADPTRS]], align 8
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr @_QFEinarray, i64 36), ptr %[[OFFLOADPTRS]], align 8
 
 // CHECK: %[[OFFLOADBASEPTRS2:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
 // CHECK: store ptr @_QFEoutarray, ptr %[[OFFLOADBASEPTRS2]], align 8

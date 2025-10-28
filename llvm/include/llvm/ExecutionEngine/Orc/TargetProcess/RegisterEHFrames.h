@@ -24,20 +24,21 @@ namespace llvm {
 namespace orc {
 
 /// Register frames in the given eh-frame section with libunwind.
-Error registerEHFrameSection(const void *EHFrameSectionAddr,
-                             size_t EHFrameSectionSize);
+LLVM_ABI Error registerEHFrameSection(const void *EHFrameSectionAddr,
+                                      size_t EHFrameSectionSize);
 
 /// Unregister frames in the given eh-frame section with libunwind.
-Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
-                               size_t EHFrameSectionSize);
+LLVM_ABI Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
+                                        size_t EHFrameSectionSize);
 
 } // end namespace orc
 } // end namespace llvm
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size);
+llvm_orc_registerEHFrameSectionAllocAction(const char *ArgData, size_t ArgSize);
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size);
+llvm_orc_deregisterEHFrameSectionAllocAction(const char *ArgData,
+                                             size_t ArgSize);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REGISTEREHFRAMES_H

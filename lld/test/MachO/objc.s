@@ -7,12 +7,13 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-swift.s -o %t/has-swift.o
 # RUN: llvm-as %t/has-swift-ir-loaded.ll -o %t/has-swift-ir-loaded.o
 # RUN: llvm-as %t/has-swift-ir-not-loaded.ll -o %t/has-swift-ir-not-loaded.o
+# RUN: llvm-as %t/has-swift-with-space-ir-loaded.ll -o %t/has-swift-with-space-ir-loaded.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/has-swift-proto.s -o %t/has-swift-proto.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-objc.s -o %t/no-objc.o
 ## Make sure we don't mis-parse a 32-bit file as 64-bit
 # RUN: llvm-mc -filetype=obj -triple=armv7-apple-watchos %t/no-objc.s -o %t/wrong-arch.o
-# RUN: llvm-ar rcs %t/libHasSomeObjC.a %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/has-swift-ir-loaded.o %t/has-swift-ir-not-loaded.o %t/wrong-arch.o
-# RUN: llvm-ar rcs %t/libHasSomeObjC2.a %t/no-objc.o %t/has-objc-symbol-and-category.o %t/has-swift.o %t/has-swift-proto.o %t/has-swift-ir-loaded.o %t/has-swift-ir-not-loaded.o %t/wrong-arch.o
+# RUN: llvm-ar rcs %t/libHasSomeObjC.a %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/has-swift-ir-loaded.o %t/has-swift-ir-not-loaded.o %t/has-swift-with-space-ir-loaded.o %t/wrong-arch.o
+# RUN: llvm-ar rcs %t/libHasSomeObjC2.a %t/no-objc.o %t/has-objc-symbol-and-category.o %t/has-swift.o %t/has-swift-proto.o %t/has-swift-ir-loaded.o %t/has-swift-ir-not-loaded.o %t/has-swift-with-space-ir-loaded.o %t/wrong-arch.o
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 
@@ -22,7 +23,7 @@
 # RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC2 -ObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
-# RUN: %no-fatal-warnings-lld -lSystem %t/test.o -o %t/test --start-lib %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/has-swift-ir-loaded.o %t/has-swift-ir-not-loaded.o %t/wrong-arch.o --end-lib -ObjC 2>&1 \
+# RUN: %no-fatal-warnings-lld -lSystem %t/test.o -o %t/test --start-lib %t/no-objc.o %t/has-objc-symbol.o %t/has-objc-category.o %t/has-swift.o %t/has-swift-proto.o %t/has-swift-ir-loaded.o %t/has-swift-ir-not-loaded.o %t/has-swift-with-space-ir-loaded.o %t/wrong-arch.o --end-lib -ObjC 2>&1 \
 # RUN:     | FileCheck -check-prefix=WARNING %s
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=OBJC
 
@@ -34,14 +35,16 @@
 # OBJC-NEXT:    0 __text          {{.*}}      TEXT
 # OBJC-NEXT:    1 __swift         {{.*}}      DATA
 # OBJC-NEXT:    2 __swift5_fieldmd{{.*}}      DATA
-# OBJC-NEXT:    3 __objc_catlist  {{.*}}      DATA
-# OBJC-NEXT:    4 has_objc_symbol {{.*}}      DATA
+# OBJC-NEXT:    3 __swift5_proto  {{.*}}      DATA
+# OBJC-NEXT:    4 __objc_catlist  {{.*}}      DATA
+# OBJC-NEXT:    5 has_objc_symbol {{.*}}      DATA
 # OBJC-EMPTY:
 # OBJC-NEXT:  SYMBOL TABLE:
 # OBJC-DAG:   g     O __TEXT,__swift _foo
 # OBJC-DAG:   g     F __TEXT,__text _main
 # OBJC-DAG:   g     F __TEXT,__text _OBJC_CLASS_$_MyObject
 # OBJC-DAG:   g     O __TEXT,__swift5_fieldmd $s7somelib4Blah_pMF
+# OBJC-DAG:   g     O __TEXT,__swift5_proto _baz
 
 # RUN: %lld -lSystem %t/test.o -o %t/test -L%t -lHasSomeObjC
 # RUN: llvm-objdump --section-headers --syms %t/test | FileCheck %s --check-prefix=NO-OBJC
@@ -116,6 +119,13 @@ target triple = "x86_64-apple-darwin"
 
 @bar = global i64 1234
 @llvm.used = appending global [1 x ptr] [ptr @bar]
+
+#--- has-swift-with-space-ir-loaded.ll
+target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+target triple = "x86_64-apple-darwin"
+
+@baz = global i64 1234, section "__TEXT, __swift5_proto"
+@llvm.used = appending global [1 x ptr] [ptr @baz]
 
 #--- has-swift-proto.s
 .section __TEXT,__swift5_fieldmd

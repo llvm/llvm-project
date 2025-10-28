@@ -1,14 +1,14 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; Ensure source scheduling is working
 
 define void @foo(ptr %a) {
 ; CHECK: .func foo
-; CHECK: ld.u32
-; CHECK-NEXT: ld.u32
-; CHECK-NEXT: ld.u32
-; CHECK-NEXT: ld.u32
+; CHECK: ld.b32
+; CHECK-NEXT: ld.b32
+; CHECK-NEXT: ld.b32
+; CHECK-NEXT: ld.b32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32

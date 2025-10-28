@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -no-integrated-as < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -no-integrated-as < %s | FileCheck %s
 
 ; Check that constraints q and v are handled correctly.
 ; CHECK: q{{.}} = vgtw(v{{.}}.w,v{{.}}.w)

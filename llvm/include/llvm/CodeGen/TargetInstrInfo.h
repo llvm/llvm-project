@@ -30,7 +30,9 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TypeSize.h"
 #include <array>
 #include <cassert>
 #include <cstddef>
@@ -109,13 +111,22 @@ struct ExtAddrMode {
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
 ///
-class TargetInstrInfo : public MCInstrInfo {
-public:
+class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
+protected:
+  /// Subtarget specific sub-array of MCInstrInfo's RegClassByHwModeTables
+  /// (i.e. the table for the active HwMode). This should be indexed by
+  /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
+  const int16_t *const RegClassByHwMode;
+
   TargetInstrInfo(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u,
-                  unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u)
-      : CallFrameSetupOpcode(CFSetupOpcode),
+                  unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u,
+                  const int16_t *const RegClassByHwModeTable = nullptr)
+      : RegClassByHwMode(RegClassByHwModeTable),
+        CallFrameSetupOpcode(CFSetupOpcode),
         CallFrameDestroyOpcode(CFDestroyOpcode), CatchRetOpcode(CatchRetOpcode),
         ReturnOpcode(ReturnOpcode) {}
+
+public:
   TargetInstrInfo(const TargetInstrInfo &) = delete;
   TargetInstrInfo &operator=(const TargetInstrInfo &) = delete;
   virtual ~TargetInstrInfo();
@@ -129,12 +140,27 @@ public:
            Opc <= TargetOpcode::GENERIC_ATOMICRMW_OP_END;
   }
 
+  /// \returns the subtarget appropriate RegClassID for \p OpInfo
+  ///
+  /// Note this shadows a version of getOpRegClassID in MCInstrInfo which takes
+  /// an additional argument for the subtarget's HwMode, since TargetInstrInfo
+  /// is owned by a subtarget in CodeGen but MCInstrInfo is a TargetMachine
+  /// constant.
+  int16_t getOpRegClassID(const MCOperandInfo &OpInfo) const {
+    if (OpInfo.isLookupRegClassByHwMode())
+      return RegClassByHwMode[OpInfo.RegClass];
+    return OpInfo.RegClass;
+  }
+
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
-  virtual
-  const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-                                         const TargetRegisterInfo *TRI,
-                                         const MachineFunction &MF) const;
+  virtual const TargetRegisterClass *
+  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
+              const TargetRegisterInfo *TRI) const;
+
+  /// Returns true if MI is an instruction we are unable to reason about
+  /// (like a call or something with unmodeled side effects).
+  virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
 
   /// Return true if the instruction is trivially rematerializable, meaning it
   /// has no side effects and requires no operands that aren't always available.
@@ -142,10 +168,22 @@ public:
   /// registers so that the instructions result is independent of the place
   /// in the function.
   bool isTriviallyReMaterializable(const MachineInstr &MI) const {
+    if (!isReMaterializable(MI))
+      return false;
+    for (const MachineOperand &MO : MI.all_uses()) {
+      if (MO.getReg().isVirtual())
+        return false;
+    }
+    return true;
+  }
+
+  /// Return true if the instruction would be materializable at a point
+  /// in the containing function where all virtual register uses were
+  /// known to be live and available in registers.
+  bool isReMaterializable(const MachineInstr &MI) const {
     return (MI.getOpcode() == TargetOpcode::IMPLICIT_DEF &&
             MI.getNumOperands() == 1) ||
-           (MI.getDesc().isRematerializable() &&
-            isReallyTriviallyReMaterializable(MI));
+           (MI.getDesc().isRematerializable() && isReMaterializableImpl(MI));
   }
 
   /// Given \p MO is a PhysReg use return if it can be ignored for the purpose
@@ -159,14 +197,19 @@ public:
     return true;
   }
 
+  /// For a "cheap" instruction which doesn't enable additional sinking,
+  /// should MachineSink break a critical edge to sink it anyways?
+  virtual bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const {
+    return false;
+  }
+
 protected:
   /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is
   /// set, this hook lets the target specify whether the instruction is actually
-  /// trivially rematerializable, taking into consideration its operands. This
+  /// rematerializable, taking into consideration its operands. This
   /// predicate must return false if the instruction has any side effects other
-  /// than producing a value, or if it requres any address registers that are
-  /// not always available.
-  virtual bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const;
+  /// than producing a value.
+  virtual bool isReMaterializableImpl(const MachineInstr &MI) const;
 
   /// This method commutes the operands of the given machine instruction MI.
   /// The operands to be commuted are specified by their indices OpIdx1 and
@@ -283,8 +326,8 @@ public:
   /// what the load does.
   virtual Register isLoadFromStackSlot(const MachineInstr &MI,
                                        int &FrameIndex,
-                                       unsigned &MemBytes) const {
-    MemBytes = 0;
+                                       TypeSize &MemBytes) const {
+    MemBytes = TypeSize::getZero();
     return isLoadFromStackSlot(MI, FrameIndex);
   }
 
@@ -321,8 +364,8 @@ public:
   /// what the store does.
   virtual Register isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex,
-                                      unsigned &MemBytes) const {
-    MemBytes = 0;
+                                      TypeSize &MemBytes) const {
+    MemBytes = TypeSize::getZero();
     return isStoreToStackSlot(MI, FrameIndex);
   }
 
@@ -498,6 +541,16 @@ public:
   virtual bool hasCommutePreference(MachineInstr &MI, bool &Commute) const {
     return false;
   }
+
+  /// If possible, converts the instruction to a simplified/canonical form.
+  /// Returns true if the instruction was modified.
+  ///
+  /// This function is only called after register allocation. The MI will be
+  /// modified in place. This is called by passes such as
+  /// MachineCopyPropagation, where their mutation of the MI operands may
+  /// expose opportunities to convert the instruction to a simpler form (e.g.
+  /// a load of 0).
+  virtual bool simplifyInstruction(MachineInstr &MI) const { return false; }
 
   /// A pair composed of a register and a sub-register index.
   /// Used to give some type checking when modeling Reg:SubReg.
@@ -738,7 +791,7 @@ public:
   /// Object returned by analyzeLoopForPipelining. Allows software pipelining
   /// implementations to query attributes of the loop being pipelined and to
   /// apply target-specific updates to the loop once pipelining is complete.
-  class PipelinerLoopInfo {
+  class LLVM_ABI PipelinerLoopInfo {
   public:
     virtual ~PipelinerLoopInfo();
     /// Return true if the given instruction should not be pipelined and should
@@ -800,7 +853,7 @@ public:
     ///
     /// Once this function is called, no other functions on this object are
     /// valid; the loop has been removed.
-    virtual void disposed() = 0;
+    virtual void disposed(LiveIntervals *LIS = nullptr) {}
 
     /// Return true if the target can expand pipelined schedule with modulo
     /// variable expansion.
@@ -1025,7 +1078,7 @@ public:
   /// marked renamable.
   virtual void copyPhysReg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
-                           MCRegister DestReg, MCRegister SrcReg, bool KillSrc,
+                           Register DestReg, Register SrcReg, bool KillSrc,
                            bool RenamableDest = false,
                            bool RenamableSrc = false) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
@@ -1132,13 +1185,14 @@ public:
   /// register, \p VReg is the register being assigned. This additional register
   /// argument is needed for certain targets when invoked from RegAllocFast to
   /// map the spilled physical register to its virtual register. A null register
-  /// can be passed elsewhere.
-  virtual void storeRegToStackSlot(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MI,
-                                   Register SrcReg, bool isKill, int FrameIndex,
-                                   const TargetRegisterClass *RC,
-                                   const TargetRegisterInfo *TRI,
-                                   Register VReg) const {
+  /// can be passed elsewhere. The \p Flags is used to set appropriate machine
+  /// flags on the spill instruction e.g. FrameSetup flag on a callee saved
+  /// register spill instruction, part of prologue, during the frame lowering.
+  virtual void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
   }
@@ -1150,13 +1204,14 @@ public:
   /// register, \p VReg is the register being assigned. This additional register
   /// argument is needed for certain targets when invoked from RegAllocFast to
   /// map the loaded physical register to its virtual register. A null register
-  /// can be passed elsewhere.
-  virtual void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MI,
-                                    Register DestReg, int FrameIndex,
-                                    const TargetRegisterClass *RC,
-                                    const TargetRegisterInfo *TRI,
-                                    Register VReg) const {
+  /// can be passed elsewhere. The \p Flags is used to set appropriate machine
+  /// flags on the spill instruction e.g. FrameDestroy flag on a callee saved
+  /// register reload instruction, part of epilogue, during the frame lowering.
+  virtual void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");
   }
@@ -1263,6 +1318,41 @@ public:
     return false;
   }
 
+  /// Find chains of accumulations that can be rewritten as a tree for increased
+  /// ILP.
+  bool getAccumulatorReassociationPatterns(
+      MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns) const;
+
+  /// Find the chain of accumulator instructions in \P MBB and return them in
+  /// \P Chain.
+  void getAccumulatorChain(MachineInstr *CurrentInstr,
+                           SmallVectorImpl<Register> &Chain) const;
+
+  /// Return true when \P OpCode is an instruction which performs
+  /// accumulation into one of its operand registers.
+  virtual bool isAccumulationOpcode(unsigned Opcode) const { return false; }
+
+  /// Returns an opcode which defines the accumulator used by \P Opcode.
+  virtual unsigned getAccumulationStartOpcode(unsigned Opcode) const {
+    llvm_unreachable("Function not implemented for target!");
+    return 0;
+  }
+
+  /// Returns the opcode that should be use to reduce accumulation registers.
+  virtual unsigned
+  getReduceOpcodeForAccumulator(unsigned int AccumulatorOpCode) const {
+    llvm_unreachable("Function not implemented for target!");
+    return 0;
+  }
+
+  /// Reduces branches of the accumulator tree into a single register.
+  void reduceAccumulatorTree(SmallVectorImpl<Register> &RegistersToReduce,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             MachineFunction &MF, MachineInstr &Root,
+                             MachineRegisterInfo &MRI,
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg,
+                             Register ResultReg) const;
+
   /// Return the inverse operation opcode if it exists for \P Opcode (e.g. add
   /// for sub and vice versa).
   virtual std::optional<unsigned> getInverseOpcode(unsigned Opcode) const {
@@ -1294,7 +1384,7 @@ public:
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstIdxForVirtReg) const;
+      DenseMap<Register, unsigned> &InstIdxForVirtReg) const;
 
   /// When calculate the latency of the root instruction, accumulate the
   /// latency of the sequence to the root latency.
@@ -1317,7 +1407,7 @@ public:
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
                       ArrayRef<unsigned> OperandIndices,
-                      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
+                      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const;
 
   /// Reassociation of some instructions requires inverse operations (e.g.
   /// (X + A) - Y => (X - Y) + A). This method returns a pair of new opcodes
@@ -1421,7 +1511,7 @@ public:
   /// a store or a load and a store into two or more instruction. If this is
   /// possible, returns true as well as the new instructions by reference.
   virtual bool
-  unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, unsigned Reg,
+  unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, Register Reg,
                       bool UnfoldLoad, bool UnfoldStore,
                       SmallVectorImpl<MachineInstr *> &NewMIs) const {
     return false;
@@ -1554,7 +1644,7 @@ public:
   ///   DAG->addMutation(createLoadClusterDAGMutation(DAG->TII, DAG->TRI));
   /// or
   ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
-  /// to TargetPassConfig::createMachineScheduler() to have an effect.
+  /// to TargetMachine::createMachineScheduler() to have an effect.
   ///
   /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
   /// \p Offset1 and \p Offset2 are the byte offsets for the memory
@@ -1743,9 +1833,7 @@ public:
   virtual MachineInstr *optimizeLoadInstr(MachineInstr &MI,
                                           const MachineRegisterInfo *MRI,
                                           Register &FoldAsLoadDefReg,
-                                          MachineInstr *&DefMI) const {
-    return nullptr;
-  }
+                                          MachineInstr *&DefMI) const;
 
   /// 'Reg' is known to be defined by a move immediate instruction,
   /// try to fold the immediate into the use instruction.

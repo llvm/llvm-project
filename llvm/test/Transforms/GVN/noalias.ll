@@ -2,8 +2,7 @@
 
 define i32 @test1(ptr %p, ptr %q) {
 ; CHECK-LABEL: @test1(ptr %p, ptr %q)
-; CHECK: load i32, ptr %p
-; CHECK-NOT: noalias
+; CHECK: load i32, ptr %p, align 4, !noalias ![[SCOPE1:[0-9]+]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, ptr %p, !noalias !3
   %b = load i32, ptr %p
@@ -13,7 +12,7 @@ define i32 @test1(ptr %p, ptr %q) {
 
 define i32 @test2(ptr %p, ptr %q) {
 ; CHECK-LABEL: @test2(ptr %p, ptr %q)
-; CHECK: load i32, ptr %p, align 4, !alias.scope ![[SCOPE1:[0-9]+]]
+; CHECK: load i32, ptr %p, align 4, !alias.scope ![[SCOPE1]]
 ; CHECK: %c = add i32 %a, %a
   %a = load i32, ptr %p, !alias.scope !3
   %b = load i32, ptr %p, !alias.scope !3
@@ -32,7 +31,7 @@ define i32 @test3(ptr %p, ptr %q) {
 }
 
 ; CHECK:   ![[SCOPE1]] = !{!{{[0-9]+}}}
-; CHECK:   ![[SCOPE2]] = !{!{{[0-9]+}}, !{{[0-9]+}}}
+; CHECK:   ![[SCOPE2]] = !{!{{[0-9]+}}}
 declare i32 @foo(ptr) readonly
 
 !0 = distinct !{!0, !2, !"callee0: %a"}

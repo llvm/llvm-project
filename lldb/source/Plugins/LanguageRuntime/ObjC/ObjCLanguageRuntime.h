@@ -386,16 +386,8 @@ private:
     }
 
     bool operator<(const ClassAndSel &rhs) const {
-      if (class_addr < rhs.class_addr)
-        return true;
-      else if (class_addr > rhs.class_addr)
-        return false;
-      else {
-        if (sel_addr < rhs.sel_addr)
-          return true;
-        else
-          return false;
-      }
+      return std::tie(class_addr, sel_addr) <
+             std::tie(rhs.class_addr, rhs.sel_addr);
     }
 
     lldb::addr_t class_addr = LLDB_INVALID_ADDRESS;

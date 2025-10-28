@@ -16,10 +16,11 @@
 
 #include <__algorithm/ranges_copy.h>
 #include <__chrono/statically_widen.h>
-#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
+#include <__format/fmt_pair_like.h>
 #include <__format/formatter.h>
+#include <__format/range_format.h>
 #include <__format/range_formatter.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__ranges/concepts.h>
@@ -40,62 +41,22 @@ concept __const_formattable_range =
     ranges::input_range<const _Rp> && formattable<ranges::range_reference_t<const _Rp>, _CharT>;
 
 template <class _Rp, class _CharT>
-using __fmt_maybe_const = conditional_t<__const_formattable_range<_Rp, _CharT>, const _Rp, _Rp>;
-
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wshadow")
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wshadow")
-// This shadows map, set, and string.
-enum class range_format { disabled, map, set, sequence, string, debug_string };
-_LIBCPP_DIAGNOSTIC_POP
+using __fmt_maybe_const _LIBCPP_NODEBUG = conditional_t<__const_formattable_range<_Rp, _CharT>, const _Rp, _Rp>;
 
 // There is no definition of this struct, it's purely intended to be used to
 // generate diagnostics.
 template <class _Rp>
-struct _LIBCPP_TEMPLATE_VIS __instantiated_the_primary_template_of_format_kind;
-
-template <class _Rp>
-constexpr range_format format_kind = [] {
-  // [format.range.fmtkind]/1
-  // A program that instantiates the primary template of format_kind is ill-formed.
-  static_assert(sizeof(_Rp) != sizeof(_Rp), "create a template specialization of format_kind for your type");
-  return range_format::disabled;
-}();
-
-template <ranges::input_range _Rp>
-  requires same_as<_Rp, remove_cvref_t<_Rp>>
-inline constexpr range_format format_kind<_Rp> = [] {
-  // [format.range.fmtkind]/2
-
-  // 2.1 If same_as<remove_cvref_t<ranges::range_reference_t<R>>, R> is true,
-  // Otherwise format_kind<R> is range_format::disabled.
-  if constexpr (same_as<remove_cvref_t<ranges::range_reference_t<_Rp>>, _Rp>)
-    return range_format::disabled;
-  // 2.2 Otherwise, if the qualified-id R::key_type is valid and denotes a type:
-  else if constexpr (requires { typename _Rp::key_type; }) {
-    // 2.2.1 If the qualified-id R::mapped_type is valid and denotes a type ...
-    if constexpr (requires { typename _Rp::mapped_type; } &&
-                  // 2.2.1 ... If either U is a specialization of pair or U is a specialization
-                  // of tuple and tuple_size_v<U> == 2
-                  __fmt_pair_like<remove_cvref_t<ranges::range_reference_t<_Rp>>>)
-      return range_format::map;
-    else
-      // 2.2.2 Otherwise format_kind<R> is range_format::set.
-      return range_format::set;
-  } else
-    // 2.3 Otherwise, format_kind<R> is range_format::sequence.
-    return range_format::sequence;
-}();
+struct __instantiated_the_primary_template_of_format_kind;
 
 template <range_format _Kp, ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __range_default_formatter;
+struct __range_default_formatter;
 
 // Required specializations
 
 template <ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<range_format::sequence, _Rp, _CharT> {
+struct __range_default_formatter<range_format::sequence, _Rp, _CharT> {
 private:
-  using __maybe_const_r = __fmt_maybe_const<_Rp, _CharT>;
+  using __maybe_const_r _LIBCPP_NODEBUG = __fmt_maybe_const<_Rp, _CharT>;
   range_formatter<remove_cvref_t<ranges::range_reference_t<__maybe_const_r>>, _CharT> __underlying_;
 
 public:
@@ -120,10 +81,10 @@ public:
 };
 
 template <ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<range_format::map, _Rp, _CharT> {
+struct __range_default_formatter<range_format::map, _Rp, _CharT> {
 private:
-  using __maybe_const_map = __fmt_maybe_const<_Rp, _CharT>;
-  using __element_type    = remove_cvref_t<ranges::range_reference_t<__maybe_const_map>>;
+  using __maybe_const_map _LIBCPP_NODEBUG = __fmt_maybe_const<_Rp, _CharT>;
+  using __element_type _LIBCPP_NODEBUG    = remove_cvref_t<ranges::range_reference_t<__maybe_const_map>>;
   range_formatter<__element_type, _CharT> __underlying_;
 
 public:
@@ -148,10 +109,10 @@ public:
 };
 
 template <ranges::input_range _Rp, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<range_format::set, _Rp, _CharT> {
+struct __range_default_formatter<range_format::set, _Rp, _CharT> {
 private:
-  using __maybe_const_set = __fmt_maybe_const<_Rp, _CharT>;
-  using __element_type    = remove_cvref_t<ranges::range_reference_t<__maybe_const_set>>;
+  using __maybe_const_set _LIBCPP_NODEBUG = __fmt_maybe_const<_Rp, _CharT>;
+  using __element_type _LIBCPP_NODEBUG    = remove_cvref_t<ranges::range_reference_t<__maybe_const_set>>;
   range_formatter<__element_type, _CharT> __underlying_;
 
 public:
@@ -173,7 +134,7 @@ public:
 
 template <range_format _Kp, ranges::input_range _Rp, class _CharT>
   requires(_Kp == range_format::string || _Kp == range_format::debug_string)
-struct _LIBCPP_TEMPLATE_VIS __range_default_formatter<_Kp, _Rp, _CharT> {
+struct __range_default_formatter<_Kp, _Rp, _CharT> {
 private:
   // This deviates from the Standard, there the exposition only type is
   //   formatter<basic_string<charT>, charT> underlying_;
@@ -205,7 +166,7 @@ public:
 
 template <ranges::input_range _Rp, class _CharT>
   requires(format_kind<_Rp> != range_format::disabled && formattable<ranges::range_reference_t<_Rp>, _CharT>)
-struct _LIBCPP_TEMPLATE_VIS formatter<_Rp, _CharT> : __range_default_formatter<format_kind<_Rp>, _Rp, _CharT> {};
+struct formatter<_Rp, _CharT> : __range_default_formatter<format_kind<_Rp>, _Rp, _CharT> {};
 
 #endif // _LIBCPP_STD_VER >= 23
 

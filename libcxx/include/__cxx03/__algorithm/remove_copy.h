@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REMOVE_COPY_H
-#define _LIBCPP___ALGORITHM_REMOVE_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_REMOVE_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_REMOVE_COPY_H
 
 #include <__cxx03/__config>
 
@@ -18,7 +18,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator
 remove_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result, const _Tp& __value) {
   for (; __first != __last; ++__first) {
     if (!(*__first == __value)) {
@@ -31,4 +31,4 @@ remove_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_REMOVE_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_REMOVE_COPY_H

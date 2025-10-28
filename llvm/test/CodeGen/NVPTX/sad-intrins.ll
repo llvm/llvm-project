@@ -9,9 +9,9 @@ define i16 @test_sad_i16(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [test_sad_i16_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [test_sad_i16_param_1];
-; CHECK-NEXT:    ld.param.u16 %rs3, [test_sad_i16_param_2];
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_sad_i16_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [test_sad_i16_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs3, [test_sad_i16_param_2];
 ; CHECK-NEXT:    sad.s16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -27,9 +27,9 @@ define i16 @test_sad_u16(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u16 %rs1, [test_sad_u16_param_0];
-; CHECK-NEXT:    ld.param.u16 %rs2, [test_sad_u16_param_1];
-; CHECK-NEXT:    ld.param.u16 %rs3, [test_sad_u16_param_2];
+; CHECK-NEXT:    ld.param.b16 %rs1, [test_sad_u16_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs2, [test_sad_u16_param_1];
+; CHECK-NEXT:    ld.param.b16 %rs3, [test_sad_u16_param_2];
 ; CHECK-NEXT:    sad.u16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -44,9 +44,9 @@ define i32 @test_sad_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_sad_i32_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_sad_i32_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test_sad_i32_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_sad_i32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_sad_i32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test_sad_i32_param_2];
 ; CHECK-NEXT:    sad.s32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
@@ -60,9 +60,9 @@ define i32 @test_sad_u32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [test_sad_u32_param_0];
-; CHECK-NEXT:    ld.param.u32 %r2, [test_sad_u32_param_1];
-; CHECK-NEXT:    ld.param.u32 %r3, [test_sad_u32_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [test_sad_u32_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_sad_u32_param_1];
+; CHECK-NEXT:    ld.param.b32 %r3, [test_sad_u32_param_2];
 ; CHECK-NEXT:    sad.u32 %r4, %r1, %r2, %r3;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
 ; CHECK-NEXT:    ret;
@@ -76,9 +76,9 @@ define i64 @test_sad_i64(i64 %x, i64 %y, i64 %z) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_sad_i64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [test_sad_i64_param_1];
-; CHECK-NEXT:    ld.param.u64 %rd3, [test_sad_i64_param_2];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_sad_i64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_sad_i64_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd3, [test_sad_i64_param_2];
 ; CHECK-NEXT:    sad.s64 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
@@ -92,9 +92,9 @@ define i64 @test_sad_u64(i64 %x, i64 %y, i64 %z) {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [test_sad_u64_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [test_sad_u64_param_1];
-; CHECK-NEXT:    ld.param.u64 %rd3, [test_sad_u64_param_2];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_sad_u64_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_sad_u64_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd3, [test_sad_u64_param_2];
 ; CHECK-NEXT:    sad.u64 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;

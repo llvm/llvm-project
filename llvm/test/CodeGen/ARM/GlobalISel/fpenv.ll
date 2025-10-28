@@ -165,5 +165,22 @@ entry:
   ret void
 }
 
+define void @reset_fpmode() nounwind {
+; CHECK-LABEL: reset_fpmode:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmrs r0, fpscr
+; CHECK-NEXT:    ldr r1, .LCPI11_0
+; CHECK-NEXT:    and r0, r0, r1
+; CHECK-NEXT:    vmsr fpscr, r0
+; CHECK-NEXT:    mov pc, lr
+; CHECK-NEXT:    .p2align 2
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI11_0:
+; CHECK-NEXT:    .long 4160774399 @ 0xf80060ff
+entry:
+  call void @llvm.reset.fpmode()
+  ret void
+}
+
 attributes #0 = { nounwind "use-soft-float"="true" }
 

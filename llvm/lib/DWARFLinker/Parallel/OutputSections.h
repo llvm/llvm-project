@@ -181,6 +181,11 @@ struct SectionDescriptor : SectionDescriptorBase {
   /// to the debug section, corresponding to this object.
   uint64_t StartOffset = 0;
 
+protected:
+  /// Section data bits.
+  OutSectionDataTy Contents;
+
+public:
   /// Stream which stores data to the Contents.
   raw_svector_ostream OS;
 
@@ -286,9 +291,6 @@ protected:
   }
 
   LinkingGlobalData &GlobalData;
-
-  /// Section data bits.
-  OutSectionDataTy Contents;
 
   /// Some sections are generated using AsmPrinter. The real section data
   /// located inside elf file in that case. Following fields points to the

@@ -18,7 +18,12 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import Optional, Sequence, Union, NewType
+from typing import Dict, Optional, Sequence, Union, NewType
+
+
+@register_attribute_builder("ParamOperandAttr")
+def _paramOperandAttr(x: int, context) -> Attribute:
+    return Attribute.parse(f"#transform.param_operand<index={x}>", context=context)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -212,6 +217,86 @@ class YieldOp(YieldOp):
         if operands is None:
             operands = []
         super().__init__(_get_op_results_or_values(operands), loc=loc, ip=ip)
+
+
+OptionValueTypes = Union[
+    Sequence["OptionValueTypes"], Attribute, Value, Operation, OpView, str, int, bool
+]
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ApplyRegisteredPassOp(ApplyRegisteredPassOp):
+    def __init__(
+        self,
+        result: Type,
+        target: Union[Operation, Value, OpView],
+        pass_name: Union[str, StringAttr],
+        *,
+        options: Optional[Dict[Union[str, StringAttr], OptionValueTypes]] = None,
+        loc=None,
+        ip=None,
+    ):
+        options_dict = {}
+        dynamic_options = []
+
+        ParamOperandAttr = AttrBuilder.get("ParamOperandAttr")
+        context = (loc and loc.context) or Context.current
+
+        cur_param_operand_idx = 0
+
+        def option_value_to_attr(value):
+            nonlocal cur_param_operand_idx
+            if isinstance(value, (Value, Operation, OpView)):
+                dynamic_options.append(_get_op_result_or_value(value))
+                cur_param_operand_idx += 1
+                return ParamOperandAttr(cur_param_operand_idx - 1, context)
+            elif isinstance(value, Attribute):
+                return value
+            # The following cases auto-convert Python values to attributes.
+            elif isinstance(value, bool):
+                return BoolAttr.get(value)
+            elif isinstance(value, int):
+                default_int_type = IntegerType.get_signless(64, context)
+                return IntegerAttr.get(default_int_type, value)
+            elif isinstance(value, str):
+                return StringAttr.get(value)
+            elif isinstance(value, Sequence):
+                return ArrayAttr.get([option_value_to_attr(elt) for elt in value])
+            else:
+                raise TypeError(f"Unsupported option type: {type(value)}")
+
+        for key, value in options.items() if options is not None else {}:
+            if isinstance(key, StringAttr):
+                key = key.value
+            options_dict[key] = option_value_to_attr(value)
+        super().__init__(
+            result,
+            _get_op_result_or_value(target),
+            pass_name,
+            dynamic_options,
+            options=DictAttr.get(options_dict),
+            loc=loc,
+            ip=ip,
+        )
+
+
+def apply_registered_pass(
+    result: Type,
+    target: Union[Operation, Value, OpView],
+    pass_name: Union[str, StringAttr],
+    *,
+    options: Optional[Dict[Union[str, StringAttr], OptionValueTypes]] = None,
+    loc=None,
+    ip=None,
+) -> Value:
+    return ApplyRegisteredPassOp(
+        result=result,
+        pass_name=pass_name,
+        target=target,
+        options=options,
+        loc=loc,
+        ip=ip,
+    ).result
 
 
 AnyOpTypeT = NewType("AnyOpType", AnyOpType)

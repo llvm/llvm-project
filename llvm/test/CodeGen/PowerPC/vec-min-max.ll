@@ -79,7 +79,7 @@ define <4 x float> @getsmaxf32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz oge <4 x float> %a, %b
-  %1 = select <4 x i1> %0, <4 x float> %a, <4 x float> %b
+  %1 = select nsz <4 x i1> %0, <4 x float> %a, <4 x float> %b
   ret <4 x float> %1
 }
 
@@ -90,7 +90,7 @@ define <2 x double> @getsmaxf64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz oge <2 x double> %a, %b
-  %1 = select <2 x i1> %0, <2 x double> %a, <2 x double> %b
+  %1 = select nsz <2 x i1> %0, <2 x double> %a, <2 x double> %b
   ret <2 x double> %1
 }
 
@@ -171,7 +171,7 @@ define <4 x float> @getsminf32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz ole <4 x float> %a, %b
-  %1 = select <4 x i1> %0, <4 x float> %a, <4 x float> %b
+  %1 = select nsz <4 x i1> %0, <4 x float> %a, <4 x float> %b
   ret <4 x float> %1
 }
 
@@ -182,7 +182,7 @@ define <2 x double> @getsminf64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-NEXT:    blr
 entry:
   %0 = fcmp nnan nsz ole <2 x double> %a, %b
-  %1 = select <2 x i1> %0, <2 x double> %a, <2 x double> %b
+  %1 = select nsz <2 x i1> %0, <2 x double> %a, <2 x double> %b
   ret <2 x double> %1
 }
 

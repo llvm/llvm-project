@@ -8,6 +8,11 @@
 ; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
 ; RUN: cat %t | FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s
 
+; RUN: opt < %s -S -passes=inline -pass-remarks-output=%t.bitstream -pass-remarks=inline \
+; RUN:    -pass-remarks-missed=inline -pass-remarks-analysis=inline \
+; RUN:    -pass-remarks-with-hotness -pass-remarks-format=bitstream 2>&1 | FileCheck %s
+; RUN: llvm-remarkutil bitstream2yaml %t.bitstream | FileCheck -check-prefixes=YAML,YAML-NO-ANNOTATE %s
+
 ; RUN: opt < %s -S -passes=inliner-wrapper -pass-remarks-output=%t -pass-remarks=inline \
 ; RUN:    -pass-remarks-missed=inline -pass-remarks-analysis=inline \
 ; RUN:    -annotate-inline-phase=false \

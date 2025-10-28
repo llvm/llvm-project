@@ -10,10 +10,10 @@ target triple = "aarch64"
 ; due to invalid cost decisions. The loop below has a low maximum trip count,
 ; so will be masked.
 
-; COST: LV: Found an estimated cost of 3000000 for VF 2 For instruction:   %0 = load
-; COST: LV: Found an estimated cost of 3000000 for VF 4 For instruction:   %0 = load
-; COST: LV: Found an estimated cost of 3000000 for VF 8 For instruction:   %0 = load
-; COST: LV: Found an estimated cost of 3000000 for VF 16 For instruction:   %0 = load
+; COST: Cost of 3000000 for VF 2: REPLICATE ir<%0> = load
+; COST: Cost of 3000000 for VF 4: REPLICATE ir<%0> = load
+; COST: Cost of 3000000 for VF 8: REPLICATE ir<%0> = load
+; COST: Cost of 3000000 for VF 16: REPLICATE ir<%0> = load
 ; COST: LV: Selecting VF: 1.
 
 define i32 @test(ptr nocapture noundef readonly %pInVec, ptr nocapture noundef readonly %pInA1, ptr nocapture noundef readonly %pInA2, ptr nocapture noundef readonly %pInA3, ptr nocapture noundef readonly %pInA4, i32 noundef %numCols) {

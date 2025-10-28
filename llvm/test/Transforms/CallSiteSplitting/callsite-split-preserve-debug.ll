@@ -1,5 +1,4 @@
-; RUN: opt -passes=callsite-splitting -S < %s | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt -passes=callsite-splitting -S < %s --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt -passes=callsite-splitting -S < %s | FileCheck %s --implicit-check-not=dbg_value
 
 ;; Test that DebugLocs are preserved, and that dbg.values are duplicated.
 
@@ -15,9 +14,9 @@
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
-define i32 @test1(ptr dereferenceable(4) %cc, i32 %dd) !dbg !6 {
+define i32 @test1(ptr dereferenceable(4) %cc, i32 %dd, i1 %arg) !dbg !6 {
 entry:
-  br i1 undef, label %CallSite, label %land.rhs
+  br i1 %arg, label %CallSite, label %land.rhs
 
 land.rhs:                                         ; preds = %entry
   br label %CallSite
@@ -42,13 +41,13 @@ CallSite:                                         ; preds = %land.rhs, %entry
 ; CHECK-NEXT:    phi i32 [ [[R1]], %Header.split ], [ [[R2]], %TBB.split ], !dbg [[DBG_CALL]]
 ; CHECK-NEXT:    #dbg_value(i32 1,
 
-define void @test2(ptr %ptr, i32 %i) !dbg !19 {
+define void @test2(ptr %ptr, i32 %i, i1 %arg) !dbg !19 {
 Header:
   %tobool = icmp ne i32 %i, 10
   br i1 %tobool, label %TBB, label %CallSite
 
 TBB:                                              ; preds = %Header
-  br i1 undef, label %CallSite, label %End
+  br i1 %arg, label %CallSite, label %End
 
 CallSite:                                         ; preds = %TBB, %Header
   %lv = load i32, ptr %ptr, align 4, !dbg !25

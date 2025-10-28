@@ -282,7 +282,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   }
 
   Builder.CreateBr(CheckNextBB);
-  Builder.SetInsertPoint(&*--Builder.GetInsertPoint());
+  Builder.SetInsertPoint(--Builder.GetInsertPoint());
   BasicBlock *AfterBB;
   Value *IV = createLoop(LB, UB, SequentialLoopStride, Builder, *SubFnLI,
                          *SubFnDT, AfterBB, ICmpInst::ICMP_SLE, nullptr, true,
@@ -298,7 +298,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
     createCallStaticFini(ID);
   }
   Builder.CreateRetVoid();
-  Builder.SetInsertPoint(&*LoopBody);
+  Builder.SetInsertPoint(LoopBody);
 
   // FIXME: Call SubFnDT->verify() and SubFnLI->verify() to check that the
   // DominatorTree/LoopInfo has been created correctly. Alternatively, recreate

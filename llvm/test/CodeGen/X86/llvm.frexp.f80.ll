@@ -3,52 +3,46 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck -check-prefixes=X64 %s
 ; XUN: llc -mtriple=i386-pc-win32 < %s | FileCheck -check-prefix=X64 %s
 
-define { x86_fp80, i32 } @test_frexp_f80_i32(x86_fp80 %a) {
+define { x86_fp80, i32 } @test_frexp_f80_i32(x86_fp80 %a) nounwind {
 ; X64-LABEL: test_frexp_f80_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpl@PLT
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %a)
   ret { x86_fp80, i32 } %result
 }
 
-define x86_fp80 @test_frexp_f80_i32_only_use_fract(x86_fp80 %a) {
+define x86_fp80 @test_frexp_f80_i32_only_use_fract(x86_fp80 %a) nounwind {
 ; X64-LABEL: test_frexp_f80_i32_only_use_fract:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpl@PLT
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %a)
   %result.0 = extractvalue { x86_fp80, i32 } %result, 0
   ret x86_fp80 %result.0
 }
 
-define x86_fp80 @test_frexp_f80_i32_only_use_fract_math(x86_fp80 %a) {
+define x86_fp80 @test_frexp_f80_i32_only_use_fract_math(x86_fp80 %a) nounwind {
 ; X64-LABEL: test_frexp_f80_i32_only_use_fract_math:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpl@PLT
 ; X64-NEXT:    fadd %st, %st(0)
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %a)
   %result.0 = extractvalue { x86_fp80, i32 } %result, 0
@@ -56,11 +50,10 @@ define x86_fp80 @test_frexp_f80_i32_only_use_fract_math(x86_fp80 %a) {
   ret x86_fp80 %add
 }
 
-define i32 @test_frexp_f80_i32_only_use_exp(x86_fp80 %a) {
+define i32 @test_frexp_f80_i32_only_use_exp(x86_fp80 %a) nounwind {
 ; X64-LABEL: test_frexp_f80_i32_only_use_exp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 32
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
@@ -68,7 +61,6 @@ define i32 @test_frexp_f80_i32_only_use_exp(x86_fp80 %a) {
 ; X64-NEXT:    fstp %st(0)
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    addq $24, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
   %result = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %a)
   %result.0 = extractvalue { x86_fp80, i32 } %result, 1

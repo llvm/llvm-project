@@ -198,6 +198,7 @@ FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
 
+void initializeSystemZAsmPrinterPass(PassRegistry &);
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
 void initializeSystemZDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSystemZElimComparePass(PassRegistry &);

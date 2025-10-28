@@ -14,9 +14,9 @@
 ; CHECK: define {{.*}}@fun.cold.1{{.*}} [[cold_attr:#[0-9]+]] section "__cold_custom"
 ; CHECK: attributes [[cold_attr]] = { {{.*}}noreturn
 
-define void @fun() {
+define void @fun(i1 %arg) {
 entry:
-  br i1 undef, label %if.then, label %if.else
+  br i1 %arg, label %if.then, label %if.else
 
 if.then:
   ret void
@@ -25,7 +25,7 @@ if.else:
   br label %if.then4
 
 if.then4:
-  br i1 undef, label %if.then5, label %if.end
+  br i1 %arg, label %if.then5, label %if.end
 
 if.then5:
   br label %cleanup

@@ -6,7 +6,9 @@
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
-namespace std { struct type_info; }
+namespace std {
+struct type_info;
+} // namespace std
 
 namespace cwg1900 { // cwg1900: 2.7
 // See the test for CWG1477 for detailed analysis
@@ -16,7 +18,7 @@ struct A {
 };
 }
 int N::f() { return 0; }
-int N::g() { return 0; } 
+int N::g() { return 0; }
 // expected-error@-1 {{out-of-line definition of 'g' does not match any declaration in namespace 'cwg1900::N'}}
 } // namespace cwg1900
 
@@ -44,7 +46,7 @@ namespace cwg1902 { // cwg1902: 3.7
   //   since-cxx11-note@#cwg1902-B-A {{candidate constructor}}
   //   since-cxx11-note@#cwg1902-B-copy-ctor {{candidate constructor has been explicitly deleted}}
 #endif
-}
+} // namespace cwg1902
 
 namespace cwg1903 { // cwg1903: 2.7
   namespace A {
@@ -69,7 +71,7 @@ namespace cwg1903 { // cwg1903: 2.7
     using A::d;
     struct a *p;
   }
-}
+} // namespace cwg1903
 
 namespace cwg1909 { // cwg1909: 3.7
   struct A {
@@ -82,7 +84,7 @@ namespace cwg1909 { // cwg1909: 3.7
   };
   struct C {
     template<typename T> static int C;
-    // expected-error@-1 {{member 'C' has the same name as its class}} 
+    // expected-error@-1 {{member 'C' has the same name as its class}}
     // cxx98-11-error@-2 {{variable templates are a C++14 extension}}
   };
   struct D {
@@ -90,7 +92,7 @@ namespace cwg1909 { // cwg1909: 3.7
     // cxx98-error@-1 {{alias declarations are a C++11 extension}}
     // expected-error@-2 {{member 'D' has the same name as its class}}
   };
-}
+} // namespace cwg1909
 
 namespace cwg1918 { // cwg1918: no
 template<typename T> struct A {
@@ -103,7 +105,7 @@ class X {
   // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B::' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
 };
 template<> struct A<int> {
   typedef struct Q B;
@@ -125,7 +127,7 @@ static union {
   int not_empty;
 };
 #endif
-}
+} // namespace cwg1918
 
 namespace cwg1941 { // cwg1941: 3.9
 #if __cplusplus >= 201402L
@@ -155,7 +157,7 @@ struct iter {
 derived d1(it, end);
 derived d2(42, 9);
 #endif
-}
+} // namespace cwg1941
 
 namespace cwg1945 { // cwg1945: no
 template<typename T> struct A {
@@ -168,7 +170,7 @@ class X {
   // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
   friend class A<T>::B::C;
-  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B::' for friend class declaration is not supported; turning off access control for 'X'}}
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B' for friend class declaration is not supported; turning off access control for 'X'}}
 };
 } // namespace cwg1945
 
@@ -180,7 +182,7 @@ unsigned b = 0b'01;
 unsigned x = 0x'01;
 // since-cxx14-error@-1 {{invalid suffix 'x'01' on integer constant}}
 #endif
-}
+} // namespace cwg1947
 
 #if __cplusplus >= 201103L
 // cwg1948: 3.5
@@ -230,7 +232,7 @@ namespace cwg1959 { // cwg1959: 3.9
   // where the base class is reference-related to the argument type.
   c q(static_cast<c&&>(q));
 #endif
-}
+} // namespace cwg1959
 
 namespace cwg1960 { // cwg1960: no
 struct A {
@@ -251,7 +253,7 @@ struct C : B {
 using A::f;
 using A::g;
 };
-}
+} // namespace cwg1960
 
 namespace cwg1966 { // cwg1966: 11
 #if __cplusplus >= 201103L
@@ -280,7 +282,7 @@ namespace cwg1966 { // cwg1966: 11
     // since-cxx11-error@-3 {{anonymous bit-field cannot have a default member initializer}}
   };
 #endif
-}
+} // namespace cwg1966
 
 namespace cwg1968 { // cwg1968: no
 #if __cplusplus >= 201103L
@@ -291,7 +293,7 @@ namespace cwg1968 { // cwg1968: no
   constexpr const std::type_info *f() { return &typeid(int); }
   static_assert(f() == f(), "");
 #endif
-}
+} // namespace cwg1968
 
 namespace cwg1991 { // cwg1991: 3.9
 #if __cplusplus >= 201103L
@@ -309,6 +311,6 @@ namespace cwg1991 { // cwg1991: 3.9
   // of ambiguity.
   B b(0, 0); // ok, calls B constructor
 #endif
-}
+} // namespace cwg1991
 
 // cwg1994: dup 529

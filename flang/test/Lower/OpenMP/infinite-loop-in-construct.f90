@@ -8,8 +8,10 @@
 ! CHECK:            cf.cond_br %{{[0-9]+}}, ^bb1, ^bb2
 ! CHECK-NEXT:     ^bb1:  // pred: ^bb0
 ! CHECK:            cf.br ^bb2
-! CHECK-NEXT:     ^bb2:  // 3 preds: ^bb0, ^bb1, ^bb2
-! CHECK-NEXT:       cf.br ^bb2
+! CHECK-NEXT:     ^bb2:  // 2 preds: ^bb0, ^bb1
+! CHECK:            cf.br ^bb3
+! CHECK-NEXT:     ^bb3:  // 2 preds: ^bb2, ^bb3
+! CHECK:            cf.br ^bb3
 ! CHECK-NEXT:     }
 
 subroutine sb(ninter, numnod)

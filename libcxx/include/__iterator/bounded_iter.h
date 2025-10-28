@@ -16,9 +16,13 @@
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/pointer_traits.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/disjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/make_const_lvalue_ref.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -70,7 +74,12 @@ struct __bounded_iter {
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter const&) = default;
   _LIBCPP_HIDE_FROM_ABI __bounded_iter(__bounded_iter&&)      = default;
 
-  template <class _OtherIterator, __enable_if_t< is_convertible<_OtherIterator, _Iterator>::value, int> = 0>
+  template < class _OtherIterator,
+             __enable_if_t<
+                 _And< is_convertible<const _OtherIterator&, _Iterator>,
+                       _Or<is_same<reference, __iter_reference<_OtherIterator> >,
+                           is_same<reference, __make_const_lvalue_ref<__iter_reference<_OtherIterator> > > > >::value,
+                 int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter(__bounded_iter<_OtherIterator> const& __other) _NOEXCEPT
       : __current_(__other.__current_),
         __begin_(__other.__begin_),
@@ -107,8 +116,7 @@ public:
   // These operations check that the iterator is dereferenceable. Since the class invariant is
   // that the iterator is always within `[begin, end]`, we only need to check it's not pointing to
   // `end`. This is easier for the optimizer because it aligns with the `iter != container.end()`
-  // checks that typical callers already use (see
-  // https://github.com/llvm/llvm-project/issues/78829).
+  // checks that typical callers already use (see https://llvm.org/PR78829).
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __current_ != __end_, "__bounded_iter::operator*: Attempt to dereference an iterator at the end");

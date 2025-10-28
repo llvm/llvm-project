@@ -8,6 +8,8 @@
 
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
+#include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/semantics.h"
 
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
@@ -26,7 +28,8 @@ class CanonicalizationOfOmp {
 public:
   template <typename T> bool Pre(T &) { return true; }
   template <typename T> void Post(T &) {}
-  CanonicalizationOfOmp(parser::Messages &messages) : messages_{messages} {}
+  CanonicalizationOfOmp(SemanticsContext &context)
+      : context_{context}, messages_{context.messages()} {}
 
   void Post(parser::Block &block) {
     for (auto it{block.begin()}; it != block.end(); ++it) {
@@ -39,16 +42,55 @@ public:
       } else if (auto *endDir{
                      GetConstructIf<parser::OmpEndLoopDirective>(*it)}) {
         // Unmatched OmpEndLoopDirective
-        auto &dir{std::get<parser::OmpLoopDirective>(endDir->t)};
-        messages_.Say(dir.source,
+        const parser::OmpDirectiveName &endName{endDir->DirName()};
+        messages_.Say(endName.source,
             "The %s directive must follow the DO loop associated with the "
             "loop construct"_err_en_US,
-            parser::ToUpperCaseLetters(dir.source.ToString()));
+            parser::ToUpperCaseLetters(endName.source.ToString()));
       }
     } // Block list
   }
 
   void Post(parser::ExecutionPart &body) { RewriteOmpAllocations(body); }
+
+  // Pre-visit all constructs that have both a specification part and
+  // an execution part, and store the connection between the two.
+  bool Pre(parser::BlockConstruct &x) {
+    auto *spec = &std::get<parser::BlockSpecificationPart>(x.t).v;
+    auto *block = &std::get<parser::Block>(x.t);
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::MainProgram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::FunctionSubprogram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::SubroutineSubprogram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+  bool Pre(parser::SeparateModuleSubprogram &x) {
+    auto *spec = &std::get<parser::SpecificationPart>(x.t);
+    auto *block = &std::get<parser::ExecutionPart>(x.t).v;
+    blockForSpec_.insert(std::make_pair(spec, block));
+    return true;
+  }
+
+  void Post(parser::SpecificationPart &spec) {
+    CanonicalizeUtilityConstructs(spec);
+  }
+
+  void Post(parser::OmpMapClause &map) { CanonicalizeMapModifiers(map); }
 
 private:
   template <typename T> T *GetConstructIf(parser::ExecutionPartConstruct &x) {
@@ -86,8 +128,21 @@ private:
     //     DoConstruct
     //     OmpEndLoopDirective (if available)
     parser::Block::iterator nextIt;
-    auto &beginDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
-    auto &dir{std::get<parser::OmpLoopDirective>(beginDir.t)};
+    const parser::OmpDirectiveSpecification &beginDir{x.BeginDir()};
+    const parser::OmpDirectiveName &beginName{beginDir.DirName()};
+
+    auto missingDoConstruct = [](const parser::OmpDirectiveName &dirName,
+                                  parser::Messages &messages) {
+      messages.Say(dirName.source,
+          "A DO loop must follow the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(dirName.source.ToString()));
+    };
+    auto tileUnrollError = [](const parser::OmpDirectiveName &dirName,
+                               parser::Messages &messages) {
+      messages.Say(dirName.source,
+          "If a loop construct has been fully unrolled, it cannot then be tiled"_err_en_US,
+          parser::ToUpperCaseLetters(dirName.source.ToString()));
+    };
 
     nextIt = it;
     while (++nextIt != block.end()) {
@@ -98,7 +153,8 @@ private:
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
-          std::get<std::optional<parser::DoConstruct>>(x.t) =
+          std::get<std::optional<std::variant<parser::DoConstruct,
+              common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t) =
               std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
@@ -107,21 +163,79 @@ private:
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
               std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
                   std::move(*endDir);
-              block.erase(nextIt);
+              nextIt = block.erase(nextIt);
             }
           }
         } else {
-          messages_.Say(dir.source,
+          messages_.Say(beginName.source,
               "DO loop after the %s directive must have loop control"_err_en_US,
-              parser::ToUpperCaseLetters(dir.source.ToString()));
+              parser::ToUpperCaseLetters(beginName.source.ToString()));
+        }
+      } else if (auto *ompLoopCons{
+                     GetOmpIf<parser::OpenMPLoopConstruct>(*nextIt)}) {
+        // We should allow UNROLL and TILE constructs to be inserted between an
+        // OpenMP Loop Construct and the DO loop itself
+        auto &nestedBeginDirective = ompLoopCons->BeginDir();
+        auto &nestedBeginName = nestedBeginDirective.DirName();
+        if ((nestedBeginName.v == llvm::omp::Directive::OMPD_unroll ||
+                nestedBeginName.v == llvm::omp::Directive::OMPD_tile) &&
+            !(nestedBeginName.v == llvm::omp::Directive::OMPD_unroll &&
+                beginName.v == llvm::omp::Directive::OMPD_tile)) {
+          // iterate through the remaining block items to find the end directive
+          // for the unroll/tile directive.
+          parser::Block::iterator endIt;
+          endIt = nextIt;
+          while (endIt != block.end()) {
+            if (auto *endDir{
+                    GetConstructIf<parser::OmpEndLoopDirective>(*endIt)}) {
+              auto &endDirName = endDir->DirName();
+              if (endDirName.v == beginName.v) {
+                std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
+                    std::move(*endDir);
+                endIt = block.erase(endIt);
+                continue;
+              }
+            }
+            ++endIt;
+          }
+          RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
+          auto &ompLoop = std::get<std::optional<parser::NestedConstruct>>(x.t);
+          ompLoop =
+              std::optional<parser::NestedConstruct>{parser::NestedConstruct{
+                  common::Indirection{std::move(*ompLoopCons)}}};
+          nextIt = block.erase(nextIt);
+        } else if (nestedBeginName.v == llvm::omp::Directive::OMPD_unroll &&
+            beginName.v == llvm::omp::Directive::OMPD_tile) {
+          // if a loop has been unrolled, the user can not then tile that loop
+          // as it has been unrolled
+          const parser::OmpClauseList &unrollClauseList{
+              nestedBeginDirective.Clauses()};
+          if (unrollClauseList.v.empty()) {
+            // if the clause list is empty for an unroll construct, we assume
+            // the loop is being fully unrolled
+            tileUnrollError(beginName, messages_);
+          } else {
+            // parse the clauses for the unroll directive to find the full
+            // clause
+            for (auto &clause : unrollClauseList.v) {
+              if (clause.Id() == llvm::omp::OMPC_full) {
+                tileUnrollError(beginName, messages_);
+              }
+            }
+          }
+        } else {
+          messages_.Say(nestedBeginName.source,
+              "Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs"_err_en_US,
+              parser::ToUpperCaseLetters(nestedBeginName.source.ToString()));
         }
       } else {
-        messages_.Say(dir.source,
-            "A DO loop must follow the %s directive"_err_en_US,
-            parser::ToUpperCaseLetters(dir.source.ToString()));
+        missingDoConstruct(beginName, messages_);
       }
       // If we get here, we either found a loop, or issued an error message.
       return;
+    }
+    if (nextIt == block.end()) {
+      missingDoConstruct(beginName, messages_);
     }
   }
 
@@ -155,12 +269,179 @@ private:
     }
   }
 
+  // Canonicalization of utility constructs.
+  //
+  // This addresses the issue of utility constructs that appear at the
+  // boundary between the specification and the execution parts, e.g.
+  //   subroutine foo
+  //     integer :: x     ! Specification
+  //     !$omp nothing
+  //     x = 1            ! Execution
+  //     ...
+  //   end
+  //
+  // Utility constructs (error and nothing) can appear in both the
+  // specification part and the execution part, except "error at(execution)",
+  // which cannot be present in the specification part (whereas any utility
+  // construct can be in the execution part).
+  // When a utility construct is at the boundary, it should preferably be
+  // parsed as an element of the execution part, but since the specification
+  // part is parsed first, the utility construct ends up belonging to the
+  // specification part.
+  //
+  // To allow the likes of the following code to compile, move all utility
+  // construct that are at the end of the specification part to the beginning
+  // of the execution part.
+  //
+  // subroutine foo
+  //   !$omp error at(execution)  ! Initially parsed as declarative construct.
+  //                              ! Move it to the execution part.
+  // end
+
+  void CanonicalizeUtilityConstructs(parser::SpecificationPart &spec) {
+    auto found = blockForSpec_.find(&spec);
+    if (found == blockForSpec_.end()) {
+      // There is no corresponding execution part, so there is nothing to do.
+      return;
+    }
+    parser::Block &block = *found->second;
+
+    // There are two places where an OpenMP declarative construct can
+    // show up in the tuple in specification part:
+    // (1) in std::list<OpenMPDeclarativeConstruct>, or
+    // (2) in std::list<DeclarationConstruct>.
+    // The case (1) is only possible is the list (2) is empty.
+
+    auto &omps =
+        std::get<std::list<parser::OpenMPDeclarativeConstruct>>(spec.t);
+    auto &decls = std::get<std::list<parser::DeclarationConstruct>>(spec.t);
+
+    if (!decls.empty()) {
+      MoveUtilityConstructsFromDecls(decls, block);
+    } else {
+      MoveUtilityConstructsFromOmps(omps, block);
+    }
+  }
+
+  void MoveUtilityConstructsFromDecls(
+      std::list<parser::DeclarationConstruct> &decls, parser::Block &block) {
+    // Find the trailing range of DeclarationConstructs that are OpenMP
+    // utility construct, that are to be moved to the execution part.
+    std::list<parser::DeclarationConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = decls.rbegin(), rend = decls.rend(); rit != rend; ++rit) {
+        parser::DeclarationConstruct &dc = *rit;
+        if (!std::holds_alternative<parser::SpecificationConstruct>(dc.u)) {
+          return rit;
+        }
+        auto &sc = std::get<parser::SpecificationConstruct>(dc.u);
+        using OpenMPDeclarativeConstruct =
+            common::Indirection<parser::OpenMPDeclarativeConstruct>;
+        if (!std::holds_alternative<OpenMPDeclarativeConstruct>(sc.u)) {
+          return rit;
+        }
+        // Got OpenMPDeclarativeConstruct. If it's not a utility construct
+        // then stop.
+        auto &odc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
+        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(odc.u)) {
+          return rit;
+        }
+      }
+      return decls.rend();
+    }();
+
+    std::transform(decls.rbegin(), rlast, std::front_inserter(block),
+        [](parser::DeclarationConstruct &dc) {
+          auto &sc = std::get<parser::SpecificationConstruct>(dc.u);
+          using OpenMPDeclarativeConstruct =
+              common::Indirection<parser::OpenMPDeclarativeConstruct>;
+          auto &oc = std::get<OpenMPDeclarativeConstruct>(sc.u).value();
+          auto &ut = std::get<parser::OpenMPUtilityConstruct>(oc.u);
+
+          return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
+              common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
+        });
+
+    decls.erase(rlast.base(), decls.end());
+  }
+
+  void MoveUtilityConstructsFromOmps(
+      std::list<parser::OpenMPDeclarativeConstruct> &omps,
+      parser::Block &block) {
+    using OpenMPDeclarativeConstruct = parser::OpenMPDeclarativeConstruct;
+    // Find the trailing range of OpenMPDeclarativeConstruct that are OpenMP
+    // utility construct, that are to be moved to the execution part.
+    std::list<OpenMPDeclarativeConstruct>::reverse_iterator rlast = [&]() {
+      for (auto rit = omps.rbegin(), rend = omps.rend(); rit != rend; ++rit) {
+        OpenMPDeclarativeConstruct &dc = *rit;
+        if (!std::holds_alternative<parser::OpenMPUtilityConstruct>(dc.u)) {
+          return rit;
+        }
+      }
+      return omps.rend();
+    }();
+
+    std::transform(omps.rbegin(), rlast, std::front_inserter(block),
+        [](parser::OpenMPDeclarativeConstruct &dc) {
+          auto &ut = std::get<parser::OpenMPUtilityConstruct>(dc.u);
+          return parser::ExecutionPartConstruct(parser::ExecutableConstruct(
+              common::Indirection(parser::OpenMPConstruct(std::move(ut)))));
+        });
+
+    omps.erase(rlast.base(), omps.end());
+  }
+
+  // Map clause modifiers are parsed as per OpenMP 6.0 spec. That spec has
+  // changed properties of some of the modifiers, for example it has expanded
+  // map-type-modifier into 3 individual modifiers (one for each of the
+  // possible values of the original modifier), and the "map-type" modifier
+  // is no longer ultimate.
+  // To utilize the modifier validation framework for semantic checks,
+  // if the specified OpenMP version is less than 6.0, rewrite the affected
+  // modifiers back into the pre-6.0 forms.
+  void CanonicalizeMapModifiers(parser::OmpMapClause &map) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    if (version >= 60) {
+      return;
+    }
+
+    // Omp{Always, Close, Present, xHold}Modifier -> OmpMapTypeModifier
+    // OmpDeleteModifier -> OmpMapType
+    using Modifier = parser::OmpMapClause::Modifier;
+    using Modifiers = std::optional<std::list<Modifier>>;
+    auto &modifiers{std::get<Modifiers>(map.t)};
+    if (!modifiers) {
+      return;
+    }
+
+    using MapTypeModifier = parser::OmpMapTypeModifier;
+    using MapType = parser::OmpMapType;
+
+    for (auto &mod : *modifiers) {
+      if (std::holds_alternative<parser::OmpAlwaysModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Always);
+      } else if (std::holds_alternative<parser::OmpCloseModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Close);
+      } else if (std::holds_alternative<parser::OmpPresentModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Present);
+      } else if (std::holds_alternative<parser::OmpxHoldModifier>(mod.u)) {
+        mod.u = MapTypeModifier(MapTypeModifier::Value::Ompx_Hold);
+      } else if (std::holds_alternative<parser::OmpDeleteModifier>(mod.u)) {
+        mod.u = MapType(MapType::Value::Delete);
+      }
+    }
+  }
+
+  // Mapping from the specification parts to the blocks that follow in the
+  // same construct. This is for converting utility constructs to executable
+  // constructs.
+  std::map<parser::SpecificationPart *, parser::Block *> blockForSpec_;
+  SemanticsContext &context_;
   parser::Messages &messages_;
 };
 
-bool CanonicalizeOmp(parser::Messages &messages, parser::Program &program) {
-  CanonicalizationOfOmp omp{messages};
+bool CanonicalizeOmp(SemanticsContext &context, parser::Program &program) {
+  CanonicalizationOfOmp omp{context};
   Walk(program, omp);
-  return !messages.AnyFatalError();
+  return !context.messages().AnyFatalError();
 }
 } // namespace Fortran::semantics

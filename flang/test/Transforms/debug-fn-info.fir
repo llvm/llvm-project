@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
     %0 = fir.alloca i32 {bindc_name = "i4", uniq_name = "_QFEi4"}
     %1 = fircg.ext_declare %0 {uniq_name = "_QFEi4"} : (!fir.ref<i32>) -> !fir.ref<i32>
@@ -64,10 +64,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 #loc4 = loc("test2.f90":53:22)
 
 
-// CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 64, encoding = DW_ATE_signed>
+// CHECK-DAG: #[[INT8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=8)", sizeInBits = 64, encoding = DW_ATE_signed>
 // CHECK-DAG: #[[INT4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
-// CHECK-DAG: #[[REAL8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 64, encoding = DW_ATE_float>
-// CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 8, encoding = DW_ATE_boolean>
+// CHECK-DAG: #[[REAL8:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=8)", sizeInBits = 64, encoding = DW_ATE_float>
+// CHECK-DAG: #[[LOG1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical(kind=1)", sizeInBits = 8, encoding = DW_ATE_boolean>
 // CHECK-DAG: #[[REAL4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
 // CHECK-DAG: #[[LOG4:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "logical", sizeInBits = 32, encoding = DW_ATE_boolean>
 // CHECK: #[[TY0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_program, types = #di_null_type>

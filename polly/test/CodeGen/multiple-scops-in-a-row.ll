@@ -6,7 +6,7 @@
 
 ; We explicitly check here that the second scop is not code generated. Later
 ; improvements may make this possible (e.g., Polly gaining support for
-; parameteric conditional expressions or a changed code generation order).
+; parametric conditional expressions or a changed code generation order).
 ; However, in case this happens, we want to ensure this test case is been
 ; reasoned about and updated accordingly.
 

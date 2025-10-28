@@ -238,11 +238,8 @@ define <2 x i1> @extract_v2i1_nxv2i1(<vscale x 2 x i1> %inmask) {
 ; CHECK-LABEL: extract_v2i1_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov v0.s[1], v0.s[2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = call <2 x i1> @llvm.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %inmask, i64 0)
   ret <2 x i1> %mask
@@ -334,8 +331,7 @@ define void @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, ptr %p) nounwi
 ; CHECK-LABEL: extract_fixed_v4i64_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #32
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %retval = call <4 x i64> @llvm.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %vec, i64 4)
   store <4 x i64> %retval, ptr %p

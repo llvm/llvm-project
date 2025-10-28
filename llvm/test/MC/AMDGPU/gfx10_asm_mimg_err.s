@@ -359,3 +359,130 @@ image_sample_c_d_cl_o v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_
 
 image_load v[0:1], v0, s[0:7] dmask:0x9 dim:1 D
 // NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid dim value
+
+// null is not allowed as SRSRC or SSAMP
+image_atomic_add v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_and v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_cmpswap v[0:1], v[10:11], null dmask:0x3 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_dec v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_fcmpswap v[1:2], v[2:3], null dmask:0x3 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_fmax v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_fmin v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_inc v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_or v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_smax v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_smin v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_sub v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_swap v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_umax v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_umin v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_atomic_xor v1, v[10:11], null dmask:0x1 dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4 v[64:67], v32, null, s[4:11], dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4 v[64:67], v32, s[4:11], null dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_b v[64:67], v[32:33], null, s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_b v[64:67], v[32:33], s[4:11], null dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_c v[64:67], v[32:33], null, s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_c v[64:67], v[32:33], s[4:11], null dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4h v[64:67], v32, null, s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4h v[64:67], v32, s[4:11], null dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_l v[64:67], v[32:33], null, s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_l v[64:67], v[32:33], s[4:11], null dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_o v[64:67], v[32:33], null, s[100:103] dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_gather4_o v[64:67], v[32:33], s[4:11], null dmask:0x1 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_load v[4:7], v0, null dmask:0xf dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_store v[0:3], v[254:255], null dmask:0xf dim:SQ_RSRC_IMG_2D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample v[5:6], v1, null, s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample v[5:6], v1, s[8:15], null dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_b v[5:6], v[1:2], null, s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_b v[5:6], v[1:2], s[8:15], null dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_c v[5:6], v[1:2], null, s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_c v[5:6], v[1:2], s[8:15], null dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_d v[5:6], v[1:3], null, s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_d v[5:6], v[1:3], s[8:15], null dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_l v[5:6], v[1:2], null, s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_l v[5:6], v[1:2], s[8:15], null dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_o v[5:6], v[1:2], null, s[12:15] dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_sample_o v[5:6], v[1:2], s[8:15], null dmask:0x3 dim:SQ_RSRC_IMG_1D
+// NOGFX10: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

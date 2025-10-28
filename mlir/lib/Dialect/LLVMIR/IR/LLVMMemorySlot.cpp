@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "sroa"
 
@@ -37,7 +38,7 @@ llvm::SmallVector<MemorySlot> LLVM::AllocaOp::getPromotableSlots() {
 
 Value LLVM::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                       OpBuilder &builder) {
-  return builder.create<LLVM::UndefOp>(getLoc(), slot.elemType);
+  return LLVM::UndefOp::create(builder, getLoc(), slot.elemType);
 }
 
 void LLVM::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -45,9 +46,9 @@ void LLVM::AllocaOp::handleBlockArgument(const MemorySlot &slot,
                                          OpBuilder &builder) {
   for (Operation *user : getOperation()->getUsers())
     if (auto declareOp = llvm::dyn_cast<LLVM::DbgDeclareOp>(user))
-      builder.create<LLVM::DbgValueOp>(declareOp.getLoc(), argument,
-                                       declareOp.getVarInfo(),
-                                       declareOp.getLocationExpr());
+      LLVM::DbgValueOp::create(builder, declareOp.getLoc(), argument,
+                               declareOp.getVarInfo(),
+                               declareOp.getLocationExpr());
 }
 
 std::optional<PromotableAllocationOpInterface>
@@ -89,8 +90,8 @@ DenseMap<Attribute, MemorySlot> LLVM::AllocaOp::destructure(
   for (Attribute index : usedIndices) {
     Type elemType = destructurableType.getTypeAtIndex(index);
     assert(elemType && "used index must exist");
-    auto subAlloca = builder.create<LLVM::AllocaOp>(
-        getLoc(), LLVM::LLVMPointerType::get(getContext()), elemType,
+    auto subAlloca = LLVM::AllocaOp::create(
+        builder, getLoc(), LLVM::LLVMPointerType::get(getContext()), elemType,
         getArraySize());
     newAllocators.push_back(subAlloca);
     slotMap.try_emplace<MemorySlot>(index, {subAlloca.getResult(), elemType});
@@ -134,15 +135,13 @@ static bool isSupportedTypeForConversion(Type type) {
   if (isa<LLVM::LLVMStructType, LLVM::LLVMArrayType>(type))
     return false;
 
-  // LLVM vector types are only used for either pointers or target specific
-  // types. These types cannot be casted in the general case, thus the memory
-  // optimizations do not support them.
-  if (isa<LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType>(type))
-    return false;
-
-  // Scalable types are not supported.
-  if (auto vectorType = dyn_cast<VectorType>(type))
+  if (auto vectorType = dyn_cast<VectorType>(type)) {
+    // Vectors of pointers cannot be casted.
+    if (isa<LLVM::LLVMPointerType>(vectorType.getElementType()))
+      return false;
+    // Scalable types are not supported.
     return !vectorType.isScalable();
+  }
   return true;
 }
 
@@ -262,14 +261,14 @@ static Value createExtractAndCast(OpBuilder &builder, Location loc,
   // Truncate the integer if the size of the target is less than the value.
   if (isBigEndian(dataLayout)) {
     uint64_t shiftAmount = srcTypeSize - targetTypeSize;
-    auto shiftConstant = builder.create<LLVM::ConstantOp>(
-        loc, builder.getIntegerAttr(srcType, shiftAmount));
+    auto shiftConstant = LLVM::ConstantOp::create(
+        builder, loc, builder.getIntegerAttr(srcType, shiftAmount));
     replacement =
         builder.createOrFold<LLVM::LShrOp>(loc, srcValue, shiftConstant);
   }
 
-  replacement = builder.create<LLVM::TruncOp>(
-      loc, builder.getIntegerType(targetTypeSize), replacement);
+  replacement = LLVM::TruncOp::create(
+      builder, loc, builder.getIntegerType(targetTypeSize), replacement);
 
   // Now cast the integer to the actual target type if required.
   return castIntValueToSameSizedType(builder, loc, replacement, targetType);
@@ -306,8 +305,9 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
     // On big endian systems, a store to the base pointer overwrites the most
     // significant bits. To accomodate for this, the stored value needs to be
     // shifted into the according position.
-    Value bigEndianShift = builder.create<LLVM::ConstantOp>(
-        loc, builder.getIntegerAttr(defAsInt.getType(), sizeDifference));
+    Value bigEndianShift = LLVM::ConstantOp::create(
+        builder, loc,
+        builder.getIntegerAttr(defAsInt.getType(), sizeDifference));
     valueAsInt =
         builder.createOrFold<LLVM::ShlOp>(loc, valueAsInt, bigEndianShift);
   }
@@ -327,8 +327,8 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
   }
 
   // Mask out the affected bits ...
-  Value mask = builder.create<LLVM::ConstantOp>(
-      loc, builder.getIntegerAttr(defAsInt.getType(), maskValue));
+  Value mask = LLVM::ConstantOp::create(
+      builder, loc, builder.getIntegerAttr(defAsInt.getType(), maskValue));
   Value masked = builder.createOrFold<LLVM::AndOp>(loc, defAsInt, mask);
 
   // ... and combine the result with the new value.
@@ -590,6 +590,30 @@ DeletionKind LLVM::InvariantEndOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::LaunderInvariantGroupOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return forwardToUsers(*this, newBlockingUses);
+}
+
+DeletionKind LLVM::LaunderInvariantGroupOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+bool LLVM::StripInvariantGroupOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return forwardToUsers(*this, newBlockingUses);
+}
+
+DeletionKind LLVM::StripInvariantGroupOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
 bool LLVM::DbgDeclareOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
@@ -622,7 +646,7 @@ DeletionKind LLVM::DbgValueOp::removeBlockingUses(
   // debug local variable info. This allows the debugger to inform the user that
   // the variable has been optimized out.
   auto undef =
-      builder.create<UndefOp>(getValue().getLoc(), getValue().getType());
+      UndefOp::create(builder, getValue().getLoc(), getValue().getType());
   getValueMutable().assign(undef);
   return DeletionKind::Keep;
 }
@@ -633,8 +657,8 @@ void LLVM::DbgDeclareOp::visitReplacedValues(
     ArrayRef<std::pair<Operation *, Value>> definitions, OpBuilder &builder) {
   for (auto [op, value] : definitions) {
     builder.setInsertionPointAfter(op);
-    builder.create<LLVM::DbgValueOp>(getLoc(), value, getVarInfo(),
-                                     getLocationExpr());
+    LLVM::DbgValueOp::create(builder, getLoc(), value, getVarInfo(),
+                             getLocationExpr());
   }
 }
 
@@ -711,9 +735,8 @@ static std::optional<uint64_t> gepToByteOffset(const DataLayout &dataLayout,
               return false;
             })
             .Default([&](Type type) {
-              LLVM_DEBUG(llvm::dbgs()
-                         << "[sroa] Unsupported type for offset computations"
-                         << type << "\n");
+              LDBG() << "[sroa] Unsupported type for offset computations"
+                     << type;
               return true;
             });
 
@@ -869,7 +892,7 @@ DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
   auto byteType = IntegerType::get(builder.getContext(), 8);
   auto newPtr = builder.createOrFold<LLVM::GEPOp>(
       getLoc(), getResult().getType(), byteType, newSlot.ptr,
-      ArrayRef<GEPArg>(accessInfo->subslotOffset), getInbounds());
+      ArrayRef<GEPArg>(accessInfo->subslotOffset), getNoWrapFlags());
   getResult().replaceAllUsesWith(newPtr);
   return DeletionKind::Delete;
 }
@@ -904,6 +927,75 @@ std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemcpyInlineOp op) {
   return memIntrLen.getZExtValue();
 }
 
+/// Returns the length of the given memory intrinsic in bytes if it can be known
+/// at compile-time on a best-effort basis, nothing otherwise.
+/// Because MemsetInlineOp has its length encoded as an attribute, this requires
+/// specialized handling.
+template <>
+std::optional<uint64_t> getStaticMemIntrLen(LLVM::MemsetInlineOp op) {
+  APInt memIntrLen = op.getLen();
+  if (memIntrLen.getBitWidth() > 64)
+    return {};
+  return memIntrLen.getZExtValue();
+}
+
+/// Returns an integer attribute representing the length of a memset intrinsic
+template <class MemsetIntr>
+IntegerAttr createMemsetLenAttr(MemsetIntr op) {
+  IntegerAttr memsetLenAttr;
+  bool successfulMatch =
+      matchPattern(op.getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
+  (void)successfulMatch;
+  assert(successfulMatch);
+  return memsetLenAttr;
+}
+
+/// Returns an integer attribute representing the length of a memset intrinsic
+/// Because MemsetInlineOp has its length encoded as an attribute, this requires
+/// specialized handling.
+template <>
+IntegerAttr createMemsetLenAttr(LLVM::MemsetInlineOp op) {
+  return op.getLenAttr();
+}
+
+/// Creates a memset intrinsic of that matches the `toReplace` intrinsic
+/// using the provided parameters. There are template specializations for
+/// MemsetOp and MemsetInlineOp.
+template <class MemsetIntr>
+void createMemsetIntr(OpBuilder &builder, MemsetIntr toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index);
+
+template <>
+void createMemsetIntr(OpBuilder &builder, LLVM::MemsetOp toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index) {
+  Value newMemsetSizeValue =
+      LLVM::ConstantOp::create(
+          builder, toReplace.getLen().getLoc(),
+          IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize))
+          .getResult();
+
+  LLVM::MemsetOp::create(builder, toReplace.getLoc(), subslots.at(index).ptr,
+                         toReplace.getVal(), newMemsetSizeValue,
+                         toReplace.getIsVolatile());
+}
+
+template <>
+void createMemsetIntr(OpBuilder &builder, LLVM::MemsetInlineOp toReplace,
+                      IntegerAttr memsetLenAttr, uint64_t newMemsetSize,
+                      DenseMap<Attribute, MemorySlot> &subslots,
+                      Attribute index) {
+  auto newMemsetSizeValue =
+      IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize);
+
+  LLVM::MemsetInlineOp::create(builder, toReplace.getLoc(),
+                               subslots.at(index).ptr, toReplace.getVal(),
+                               newMemsetSizeValue, toReplace.getIsVolatile());
+}
+
 } // namespace
 
 /// Returns whether one can be sure the memory intrinsic does not write outside
@@ -931,90 +1023,18 @@ static bool areAllIndicesI32(const DestructurableMemorySlot &slot) {
 }
 
 //===----------------------------------------------------------------------===//
-// Interfaces for memset
+// Interfaces for memset and memset.inline
 //===----------------------------------------------------------------------===//
 
-bool LLVM::MemsetOp::loadsFrom(const MemorySlot &slot) { return false; }
-
-bool LLVM::MemsetOp::storesTo(const MemorySlot &slot) {
-  return getDst() == slot.ptr;
-}
-
-Value LLVM::MemsetOp::getStored(const MemorySlot &slot, OpBuilder &builder,
-                                Value reachingDef,
-                                const DataLayout &dataLayout) {
-  // TODO: Support non-integer types.
-  return TypeSwitch<Type, Value>(slot.elemType)
-      .Case([&](IntegerType intType) -> Value {
-        if (intType.getWidth() == 8)
-          return getVal();
-
-        assert(intType.getWidth() % 8 == 0);
-
-        // Build the memset integer by repeatedly shifting the value and
-        // or-ing it with the previous value.
-        uint64_t coveredBits = 8;
-        Value currentValue =
-            builder.create<LLVM::ZExtOp>(getLoc(), intType, getVal());
-        while (coveredBits < intType.getWidth()) {
-          Value shiftBy =
-              builder.create<LLVM::ConstantOp>(getLoc(), intType, coveredBits);
-          Value shifted =
-              builder.create<LLVM::ShlOp>(getLoc(), currentValue, shiftBy);
-          currentValue =
-              builder.create<LLVM::OrOp>(getLoc(), currentValue, shifted);
-          coveredBits *= 2;
-        }
-
-        return currentValue;
-      })
-      .Default([](Type) -> Value {
-        llvm_unreachable(
-            "getStored should not be called on memset to unsupported type");
-      });
-}
-
-bool LLVM::MemsetOp::canUsesBeRemoved(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    SmallVectorImpl<OpOperand *> &newBlockingUses,
-    const DataLayout &dataLayout) {
-  // TODO: Support non-integer types.
-  bool canConvertType =
-      TypeSwitch<Type, bool>(slot.elemType)
-          .Case([](IntegerType intType) {
-            return intType.getWidth() % 8 == 0 && intType.getWidth() > 0;
-          })
-          .Default([](Type) { return false; });
-  if (!canConvertType)
+template <class MemsetIntr>
+static bool memsetCanRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
+                            SmallPtrSetImpl<Attribute> &usedIndices,
+                            SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                            const DataLayout &dataLayout) {
+  if (&slot.elemType.getDialect() != op.getOperation()->getDialect())
     return false;
 
-  if (getIsVolatile())
-    return false;
-
-  return getStaticMemIntrLen(*this) == dataLayout.getTypeSize(slot.elemType);
-}
-
-DeletionKind LLVM::MemsetOp::removeBlockingUses(
-    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder, Value reachingDefinition,
-    const DataLayout &dataLayout) {
-  return DeletionKind::Delete;
-}
-
-LogicalResult LLVM::MemsetOp::ensureOnlySafeAccesses(
-    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
-    const DataLayout &dataLayout) {
-  return success(definitelyWritesOnlyWithinSlot(*this, slot, dataLayout));
-}
-
-bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
-                               SmallPtrSetImpl<Attribute> &usedIndices,
-                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
-                               const DataLayout &dataLayout) {
-  if (&slot.elemType.getDialect() != getOperation()->getDialect())
-    return false;
-
-  if (getIsVolatile())
+  if (op.getIsVolatile())
     return false;
 
   if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
@@ -1023,27 +1043,102 @@ bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
   if (!areAllIndicesI32(slot))
     return false;
 
-  return definitelyWritesOnlyWithinSlot(*this, slot, dataLayout);
+  return definitelyWritesOnlyWithinSlot(op, slot, dataLayout);
 }
 
-DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
-                                    DenseMap<Attribute, MemorySlot> &subslots,
-                                    OpBuilder &builder,
-                                    const DataLayout &dataLayout) {
+template <class MemsetIntr>
+static Value memsetGetStored(MemsetIntr op, const MemorySlot &slot,
+                             OpBuilder &builder) {
+  /// Returns an integer value that is `width` bits wide representing the value
+  /// assigned to the slot by memset.
+  auto buildMemsetValue = [&](unsigned width) -> Value {
+    assert(width % 8 == 0);
+    auto intType = IntegerType::get(op.getContext(), width);
+
+    // If we know the pattern at compile time, we can compute and assign a
+    // constant directly.
+    IntegerAttr constantPattern;
+    if (matchPattern(op.getVal(), m_Constant(&constantPattern))) {
+      assert(constantPattern.getValue().getBitWidth() == 8);
+      APInt memsetVal(/*numBits=*/width, /*val=*/0);
+      for (unsigned loBit = 0; loBit < width; loBit += 8)
+        memsetVal.insertBits(constantPattern.getValue(), loBit);
+      return LLVM::ConstantOp::create(builder, op.getLoc(),
+                                      IntegerAttr::get(intType, memsetVal));
+    }
+
+    // If the output is a single byte, we can return the pattern directly.
+    if (width == 8)
+      return op.getVal();
+
+    // Otherwise build the memset integer at runtime by repeatedly shifting the
+    // value and or-ing it with the previous value.
+    uint64_t coveredBits = 8;
+    Value currentValue =
+        LLVM::ZExtOp::create(builder, op.getLoc(), intType, op.getVal());
+    while (coveredBits < width) {
+      Value shiftBy =
+          LLVM::ConstantOp::create(builder, op.getLoc(), intType, coveredBits);
+      Value shifted =
+          LLVM::ShlOp::create(builder, op.getLoc(), currentValue, shiftBy);
+      currentValue =
+          LLVM::OrOp::create(builder, op.getLoc(), currentValue, shifted);
+      coveredBits *= 2;
+    }
+
+    return currentValue;
+  };
+  return TypeSwitch<Type, Value>(slot.elemType)
+      .Case([&](IntegerType type) -> Value {
+        return buildMemsetValue(type.getWidth());
+      })
+      .Case([&](FloatType type) -> Value {
+        Value intVal = buildMemsetValue(type.getWidth());
+        return LLVM::BitcastOp::create(builder, op.getLoc(), type, intVal);
+      })
+      .Default([](Type) -> Value {
+        llvm_unreachable(
+            "getStored should not be called on memset to unsupported type");
+      });
+}
+
+template <class MemsetIntr>
+static bool
+memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
+                       const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                       SmallVectorImpl<OpOperand *> &newBlockingUses,
+                       const DataLayout &dataLayout) {
+  bool canConvertType =
+      TypeSwitch<Type, bool>(slot.elemType)
+          .Case<IntegerType, FloatType>([](auto type) {
+            return type.getWidth() % 8 == 0 && type.getWidth() > 0;
+          })
+          .Default([](Type) { return false; });
+  if (!canConvertType)
+    return false;
+
+  if (op.getIsVolatile())
+    return false;
+
+  return getStaticMemIntrLen(op) == dataLayout.getTypeSize(slot.elemType);
+}
+
+template <class MemsetIntr>
+static DeletionKind
+memsetRewire(MemsetIntr op, const DestructurableMemorySlot &slot,
+             DenseMap<Attribute, MemorySlot> &subslots, OpBuilder &builder,
+             const DataLayout &dataLayout) {
+
   std::optional<DenseMap<Attribute, Type>> types =
       cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
 
-  IntegerAttr memsetLenAttr;
-  bool successfulMatch =
-      matchPattern(getLen(), m_Constant<IntegerAttr>(&memsetLenAttr));
-  (void)successfulMatch;
-  assert(successfulMatch);
+  IntegerAttr memsetLenAttr = createMemsetLenAttr(op);
 
   bool packed = false;
   if (auto structType = dyn_cast<LLVM::LLVMStructType>(slot.elemType))
     packed = structType.isPacked();
 
-  Type i32 = IntegerType::get(getContext(), 32);
+  Type i32 = IntegerType::get(op.getContext(), 32);
   uint64_t memsetLen = memsetLenAttr.getValue().getZExtValue();
   uint64_t covered = 0;
   for (size_t i = 0; i < types->size(); i++) {
@@ -1063,22 +1158,111 @@ DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
     // Otherwise, only compute its offset within the original memset.
     if (subslots.contains(index)) {
       uint64_t newMemsetSize = std::min(memsetLen - covered, typeSize);
-
-      Value newMemsetSizeValue =
-          builder
-              .create<LLVM::ConstantOp>(
-                  getLen().getLoc(),
-                  IntegerAttr::get(memsetLenAttr.getType(), newMemsetSize))
-              .getResult();
-
-      builder.create<LLVM::MemsetOp>(getLoc(), subslots.at(index).ptr, getVal(),
-                                     newMemsetSizeValue, getIsVolatile());
+      createMemsetIntr(builder, op, memsetLenAttr, newMemsetSize, subslots,
+                       index);
     }
 
     covered += typeSize;
   }
 
   return DeletionKind::Delete;
+}
+
+bool LLVM::MemsetOp::loadsFrom(const MemorySlot &slot) { return false; }
+
+bool LLVM::MemsetOp::storesTo(const MemorySlot &slot) {
+  return getDst() == slot.ptr;
+}
+
+Value LLVM::MemsetOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                                Value reachingDef,
+                                const DataLayout &dataLayout) {
+  return memsetGetStored(*this, slot, builder);
+}
+
+bool LLVM::MemsetOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return memsetCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses,
+                                dataLayout);
+}
+
+DeletionKind LLVM::MemsetOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+LogicalResult LLVM::MemsetOp::ensureOnlySafeAccesses(
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
+  return success(definitelyWritesOnlyWithinSlot(*this, slot, dataLayout));
+}
+
+bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
+                               SmallPtrSetImpl<Attribute> &usedIndices,
+                               SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+                               const DataLayout &dataLayout) {
+  return memsetCanRewire(*this, slot, usedIndices, mustBeSafelyUsed,
+                         dataLayout);
+}
+
+DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
+                                    DenseMap<Attribute, MemorySlot> &subslots,
+                                    OpBuilder &builder,
+                                    const DataLayout &dataLayout) {
+  return memsetRewire(*this, slot, subslots, builder, dataLayout);
+}
+
+bool LLVM::MemsetInlineOp::loadsFrom(const MemorySlot &slot) { return false; }
+
+bool LLVM::MemsetInlineOp::storesTo(const MemorySlot &slot) {
+  return getDst() == slot.ptr;
+}
+
+Value LLVM::MemsetInlineOp::getStored(const MemorySlot &slot,
+                                      OpBuilder &builder, Value reachingDef,
+                                      const DataLayout &dataLayout) {
+  return memsetGetStored(*this, slot, builder);
+}
+
+bool LLVM::MemsetInlineOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return memsetCanUsesBeRemoved(*this, slot, blockingUses, newBlockingUses,
+                                dataLayout);
+}
+
+DeletionKind LLVM::MemsetInlineOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+LogicalResult LLVM::MemsetInlineOp::ensureOnlySafeAccesses(
+    const MemorySlot &slot, SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
+  return success(definitelyWritesOnlyWithinSlot(*this, slot, dataLayout));
+}
+
+bool LLVM::MemsetInlineOp::canRewire(
+    const DestructurableMemorySlot &slot,
+    SmallPtrSetImpl<Attribute> &usedIndices,
+    SmallVectorImpl<MemorySlot> &mustBeSafelyUsed,
+    const DataLayout &dataLayout) {
+  return memsetCanRewire(*this, slot, usedIndices, mustBeSafelyUsed,
+                         dataLayout);
+}
+
+DeletionKind
+LLVM::MemsetInlineOp::rewire(const DestructurableMemorySlot &slot,
+                             DenseMap<Attribute, MemorySlot> &subslots,
+                             OpBuilder &builder, const DataLayout &dataLayout) {
+  return memsetRewire(*this, slot, subslots, builder, dataLayout);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1098,7 +1282,7 @@ static bool memcpyStoresTo(MemcpyLike op, const MemorySlot &slot) {
 template <class MemcpyLike>
 static Value memcpyGetStored(MemcpyLike op, const MemorySlot &slot,
                              OpBuilder &builder) {
-  return builder.create<LLVM::LoadOp>(op.getLoc(), slot.elemType, op.getSrc());
+  return LLVM::LoadOp::create(builder, op.getLoc(), slot.elemType, op.getSrc());
 }
 
 template <class MemcpyLike>
@@ -1125,7 +1309,8 @@ memcpyRemoveBlockingUses(MemcpyLike op, const MemorySlot &slot,
                          const SmallPtrSetImpl<OpOperand *> &blockingUses,
                          OpBuilder &builder, Value reachingDefinition) {
   if (op.loadsFrom(slot))
-    builder.create<LLVM::StoreOp>(op.getLoc(), reachingDefinition, op.getDst());
+    LLVM::StoreOp::create(builder, op.getLoc(), reachingDefinition,
+                          op.getDst());
   return DeletionKind::Delete;
 }
 
@@ -1159,8 +1344,7 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
     return false;
 
   if (op.getSrc() == slot.ptr)
-    for (Attribute index : llvm::make_first_range(slot.subelementTypes))
-      usedIndices.insert(index);
+    usedIndices.insert_range(llvm::make_first_range(slot.subelementTypes));
 
   return true;
 }
@@ -1171,11 +1355,12 @@ template <class MemcpyLike>
 void createMemcpyLikeToReplace(OpBuilder &builder, const DataLayout &layout,
                                MemcpyLike toReplace, Value dst, Value src,
                                Type toCpy, bool isVolatile) {
-  Value memcpySize = builder.create<LLVM::ConstantOp>(
-      toReplace.getLoc(), IntegerAttr::get(toReplace.getLen().getType(),
-                                           layout.getTypeSize(toCpy)));
-  builder.create<MemcpyLike>(toReplace.getLoc(), dst, src, memcpySize,
-                             isVolatile);
+  Value memcpySize =
+      LLVM::ConstantOp::create(builder, toReplace.getLoc(),
+                               IntegerAttr::get(toReplace.getLen().getType(),
+                                                layout.getTypeSize(toCpy)));
+  MemcpyLike::create(builder, toReplace.getLoc(), dst, src, memcpySize,
+                     isVolatile);
 }
 
 template <>
@@ -1184,8 +1369,8 @@ void createMemcpyLikeToReplace(OpBuilder &builder, const DataLayout &layout,
                                Value src, Type toCpy, bool isVolatile) {
   Type lenType = IntegerType::get(toReplace->getContext(),
                                   toReplace.getLen().getBitWidth());
-  builder.create<LLVM::MemcpyInlineOp>(
-      toReplace.getLoc(), dst, src,
+  LLVM::MemcpyInlineOp::create(
+      builder, toReplace.getLoc(), dst, src,
       IntegerAttr::get(lenType, layout.getTypeSize(toCpy)), isVolatile);
 }
 
@@ -1226,9 +1411,9 @@ memcpyRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
     SmallVector<LLVM::GEPArg> gepIndices{
         0, static_cast<int32_t>(
                cast<IntegerAttr>(index).getValue().getZExtValue())};
-    Value subslotPtrInOther = builder.create<LLVM::GEPOp>(
-        op.getLoc(), LLVM::LLVMPointerType::get(op.getContext()), slot.elemType,
-        isDst ? op.getSrc() : op.getDst(), gepIndices);
+    Value subslotPtrInOther = LLVM::GEPOp::create(
+        builder, op.getLoc(), LLVM::LLVMPointerType::get(op.getContext()),
+        slot.elemType, isDst ? op.getSrc() : op.getDst(), gepIndices);
 
     // Then create a new memcpy out of this source pointer.
     createMemcpyLikeToReplace(builder, dataLayout, op,
@@ -1401,7 +1586,7 @@ DeletionKind LLVM::MemmoveOp::rewire(const DestructurableMemorySlot &slot,
 //===----------------------------------------------------------------------===//
 
 std::optional<DenseMap<Attribute, Type>>
-LLVM::LLVMStructType::getSubelementIndexMap() {
+LLVM::LLVMStructType::getSubelementIndexMap() const {
   Type i32 = IntegerType::get(getContext(), 32);
   DenseMap<Attribute, Type> destructured;
   for (const auto &[index, elemType] : llvm::enumerate(getBody()))
@@ -1409,7 +1594,7 @@ LLVM::LLVMStructType::getSubelementIndexMap() {
   return destructured;
 }
 
-Type LLVM::LLVMStructType::getTypeAtIndex(Attribute index) {
+Type LLVM::LLVMStructType::getTypeAtIndex(Attribute index) const {
   auto indexAttr = llvm::dyn_cast<IntegerAttr>(index);
   if (!indexAttr || !indexAttr.getType().isInteger(32))
     return {};

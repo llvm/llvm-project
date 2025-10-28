@@ -117,7 +117,7 @@ namespace null_ptr {
 
 namespace ref_counted_lookalike {
   struct Decoy {
-    CheckedObj* get() { return nullptr; }
+    CheckedObj* get();
   };
 
   void foo() {
@@ -173,14 +173,14 @@ namespace param_formarding_function {
 
   namespace casts {
 
-  CheckedObj* downcast(CheckedObj*) { return nullptr; }
-
-  template<class T>
-  T* bitwise_cast(T*) { return nullptr; }
+  CheckedObj* downcast(CheckedObj*);
+  template<class T> T* bitwise_cast(T*);
+  template<class T> T* bit_cast(T*);
 
     void foo(CheckedObj* param) {
       consume_ref_countable_ptr(downcast(param));
       consume_ref_countable_ptr(bitwise_cast(param));
+      consume_ref_countable_ptr(bit_cast(param));
      }
   }
 }
@@ -364,4 +364,23 @@ namespace call_with_explicit_temporary_obj {
     CheckedRef { *provide() }->method();
     CheckedPtr { provide() }->method();
   }
+}
+
+namespace call_with_checked_ptr {
+
+  class Foo : public CheckedObj {
+  public:
+    CheckedPtr<CheckedObj> obj1() { return m_obj; }
+    CheckedRef<CheckedObj> obj2() { return *m_obj; }
+  private:
+    CheckedObj* m_obj;
+  };
+
+  Foo* getFoo();
+
+  void bar() {
+    getFoo()->obj1()->method();
+    getFoo()->obj2()->method();
+  }
+
 }

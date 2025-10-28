@@ -2,13 +2,13 @@
 
 subroutine f01(x)
   integer :: x(10)
-!ERROR: Only one iterator-modifier is allowed
+!ERROR: 'iterator' modifier cannot occur multiple times
   !$omp target update from(iterator(i = 1:5), iterator(j = 1:5): x(i + j))
 end
 
 subroutine f03(x)
   integer :: x(10)
-!ERROR: Only one PRESENT modifier is allowed
+!ERROR: 'expectation' modifier cannot occur multiple times
   !$omp target update from(present, present: x)
 end
 

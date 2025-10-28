@@ -7,7 +7,6 @@
 ; RUN: opt < %s -passes=instcombine -S -mtriple "x86_64-pc-mingw32" | FileCheck %s --check-prefixes=CHECK,DOUBLE-8BYTE-ALIGN
 ; RUN: opt < %s -passes=instcombine -S -mtriple "sparc-sun-solaris" | FileCheck %s --check-prefixes=CHECK,DOUBLE-8BYTE-ALIGN
 ; RUN: opt < %s -passes=instcombine -S -mtriple "x86_64-pc-win32" -enable-debugify 2>&1 | FileCheck --check-prefix=DBG-VALID %s
-; RUN: opt < %s -passes=instcombine -S -mtriple "x86_64-pc-win32" -enable-debugify 2>&1 --try-experimental-debuginfo-iterators | FileCheck --check-prefix=DBG-VALID %s
 
 declare double @floor(double)
 declare double @ceil(double)
@@ -450,7 +449,7 @@ define float @test_shrink_intrin_fabs_fast_double_src(double %D) {
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %E = call fast double @llvm.fabs.f64(double %D)
-  %F = fptrunc double %E to float
+  %F = fptrunc fast double %E to float
   ret float %F
 }
 
@@ -612,7 +611,7 @@ define half @test_mismatched_type_intrin_fabs_fast_double_src(double %D) {
 ; CHECK-NEXT:    ret half [[F]]
 ;
   %E = call fast double @llvm.fabs.f64(double %D)
-  %F = fptrunc double %E to half
+  %F = fptrunc fast double %E to half
   ret half %F
 }
 

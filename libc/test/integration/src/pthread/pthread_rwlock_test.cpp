@@ -324,8 +324,8 @@ struct ThreadGuard {
   ~ThreadGuard() {
     if (!LIBC_NAMESPACE::getenv("LIBC_PTHREAD_RWLOCK_TEST_VERBOSE"))
       return;
-    pid_t pid = LIBC_NAMESPACE::syscall_impl(SYS_getpid);
-    pid_t tid = LIBC_NAMESPACE::syscall_impl(SYS_gettid);
+    pid_t pid = static_cast<pid_t>(LIBC_NAMESPACE::syscall_impl(SYS_getpid));
+    pid_t tid = static_cast<pid_t>(LIBC_NAMESPACE::syscall_impl(SYS_gettid));
     io_mutex->lock(LIBC_NAMESPACE::cpp::nullopt, true);
     LIBC_NAMESPACE::printf("process %d thread %d: ", pid, tid);
     for (size_t i = 0; i < cursor; ++i)

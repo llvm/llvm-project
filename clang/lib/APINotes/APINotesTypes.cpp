@@ -18,6 +18,21 @@ LLVM_DUMP_METHOD void CommonEntityInfo::dump(llvm::raw_ostream &OS) const {
     OS << "[UnavailableInSwift] ";
   if (SwiftPrivateSpecified)
     OS << (SwiftPrivate ? "[SwiftPrivate] " : "");
+  if (SwiftSafetyAudited) {
+    switch (*getSwiftSafety()) {
+    case SwiftSafetyKind::Safe:
+      OS << "[Safe] ";
+      break;
+    case SwiftSafetyKind::Unsafe:
+      OS << "[Unsafe] ";
+      break;
+    case SwiftSafetyKind::Unspecified:
+      OS << "[Unspecified] ";
+      break;
+    case SwiftSafetyKind::None:
+      break;
+    }
+  }
   if (!SwiftName.empty())
     OS << "Swift Name: " << SwiftName << ' ';
   OS << '\n';
@@ -77,6 +92,8 @@ LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
      << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   if (!ResultType.empty())
     OS << "Result Type: " << ResultType << ' ';
+  if (!SwiftReturnOwnership.empty())
+    OS << "SwiftReturnOwnership: " << SwiftReturnOwnership << ' ';
   if (!Params.empty())
     OS << '\n';
   for (auto &PI : Params)
@@ -104,6 +121,10 @@ LLVM_DUMP_METHOD void TagInfo::dump(llvm::raw_ostream &OS) {
   if (EnumExtensibility)
     OS << "Enum Extensibility: " << static_cast<long>(*EnumExtensibility)
        << ' ';
+  if (SwiftCopyableSpecified)
+    OS << (SwiftCopyable ? "[SwiftCopyable] " : "[~SwiftCopyable]");
+  if (SwiftEscapableSpecified)
+    OS << (SwiftEscapable ? "[SwiftEscapable] " : "[~SwiftEscapable]");
   OS << '\n';
 }
 

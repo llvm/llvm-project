@@ -1,4 +1,4 @@
-if config.host_os not in ["Darwin", "FreeBSD", "Linux", "NetBSD"]:
+if config.target_os not in ["Darwin", "FreeBSD", "Linux", "NetBSD"]:
     config.unsupported = True
 # Work around "Cannot represent a difference across sections"
 if config.target_arch == "powerpc64":

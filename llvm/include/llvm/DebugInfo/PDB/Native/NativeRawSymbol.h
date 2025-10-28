@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_NATIVERAWSYMBOL_H
 
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 
@@ -18,7 +19,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeRawSymbol : public IPDBRawSymbol {
+class LLVM_ABI NativeRawSymbol : public IPDBRawSymbol {
   friend class SymbolCache;
   virtual void initialize() {}
 

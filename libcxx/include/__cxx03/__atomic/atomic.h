@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_H
-#define _LIBCPP___ATOMIC_ATOMIC_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_H
 
 #include <__cxx03/__atomic/atomic_base.h>
 #include <__cxx03/__atomic/check_memory_order.h>
@@ -38,13 +38,9 @@ struct atomic : public __atomic_base<_Tp> {
   using value_type      = _Tp;
   using difference_type = value_type;
 
-#if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI atomic() = default;
-#else
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
-#endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
+  _LIBCPP_HIDE_FROM_ABI atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile _NOEXCEPT {
     __base::store(__d);
@@ -69,7 +65,7 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
 
   _LIBCPP_HIDE_FROM_ABI atomic() _NOEXCEPT = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
+  _LIBCPP_HIDE_FROM_ABI atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp* operator=(_Tp* __d) volatile _NOEXCEPT {
     __base::store(__d);
@@ -121,136 +117,6 @@ struct atomic<_Tp*> : public __atomic_base<_Tp*> {
   atomic& operator=(const atomic&) volatile = delete;
 };
 
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-  requires is_floating_point_v<_Tp>
-struct atomic<_Tp> : __atomic_base<_Tp> {
-private:
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __is_fp80_long_double() {
-    // Only x87-fp80 long double has 64-bit mantissa
-    return __LDBL_MANT_DIG__ == 64 && std::is_same_v<_Tp, long double>;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __has_rmw_builtin() {
-#  ifndef _LIBCPP_COMPILER_CLANG_BASED
-    return false;
-#  else
-    // The builtin __cxx_atomic_fetch_add errors during compilation for
-    // long double on platforms with fp80 format.
-    // For more details, see
-    // lib/Sema/SemaChecking.cpp function IsAllowedValueType
-    // LLVM Parser does not allow atomicrmw with x86_fp80 type.
-    // if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-    //    &Context.getTargetInfo().getLongDoubleFormat() ==
-    //        &llvm::APFloat::x87DoubleExtended())
-    // For more info
-    // https://github.com/llvm/llvm-project/issues/68602
-    // https://reviews.llvm.org/D53965
-    return !__is_fp80_long_double();
-#  endif
-  }
-
-  template <class _This, class _Operation, class _BuiltinOp>
-  _LIBCPP_HIDE_FROM_ABI static _Tp
-  __rmw_op(_This&& __self, _Tp __operand, memory_order __m, _Operation __operation, _BuiltinOp __builtin_op) {
-    if constexpr (__has_rmw_builtin()) {
-      return __builtin_op(std::addressof(std::forward<_This>(__self).__a_), __operand, __m);
-    } else {
-      _Tp __old = __self.load(memory_order_relaxed);
-      _Tp __new = __operation(__old, __operand);
-      while (!__self.compare_exchange_weak(__old, __new, __m, memory_order_relaxed)) {
-#  ifdef _LIBCPP_COMPILER_CLANG_BASED
-        if constexpr (__is_fp80_long_double()) {
-          // https://github.com/llvm/llvm-project/issues/47978
-          // clang bug: __old is not updated on failure for atomic<long double>::compare_exchange_weak
-          // Note __old = __self.load(memory_order_relaxed) will not work
-          std::__cxx_atomic_load_inplace(std::addressof(__self.__a_), &__old, memory_order_relaxed);
-        }
-#  endif
-        __new = __operation(__old, __operand);
-      }
-      return __old;
-    }
-  }
-
-  template <class _This>
-  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_add(_This&& __self, _Tp __operand, memory_order __m) {
-    auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
-      return std::__cxx_atomic_fetch_add(__a, __builtin_operand, __order);
-    };
-    return __rmw_op(std::forward<_This>(__self), __operand, __m, std::plus<>{}, __builtin_op);
-  }
-
-  template <class _This>
-  _LIBCPP_HIDE_FROM_ABI static _Tp __fetch_sub(_This&& __self, _Tp __operand, memory_order __m) {
-    auto __builtin_op = [](auto __a, auto __builtin_operand, auto __order) {
-      return std::__cxx_atomic_fetch_sub(__a, __builtin_operand, __order);
-    };
-    return __rmw_op(std::forward<_This>(__self), __operand, __m, std::minus<>{}, __builtin_op);
-  }
-
-public:
-  using __base          = __atomic_base<_Tp>;
-  using value_type      = _Tp;
-  using difference_type = value_type;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr atomic() noexcept = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr atomic(_Tp __d) noexcept : __base(__d) {}
-
-  atomic(const atomic&)                     = delete;
-  atomic& operator=(const atomic&)          = delete;
-  atomic& operator=(const atomic&) volatile = delete;
-
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) volatile noexcept
-    requires __base::is_always_lock_free
-  {
-    __base::store(__d);
-    return __d;
-  }
-  _LIBCPP_HIDE_FROM_ABI _Tp operator=(_Tp __d) noexcept {
-    __base::store(__d);
-    return __d;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
-    requires __base::is_always_lock_free
-  {
-    return __fetch_add(*this, __op, __m);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
-    return __fetch_add(*this, __op, __m);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) volatile noexcept
-    requires __base::is_always_lock_free
-  {
-    return __fetch_sub(*this, __op, __m);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __op, memory_order __m = memory_order_seq_cst) noexcept {
-    return __fetch_sub(*this, __op, __m);
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) volatile noexcept
-    requires __base::is_always_lock_free
-  {
-    return fetch_add(__op) + __op;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __op) noexcept { return fetch_add(__op) + __op; }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) volatile noexcept
-    requires __base::is_always_lock_free
-  {
-    return fetch_sub(__op) - __op;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI _Tp operator-=(_Tp __op) noexcept { return fetch_sub(__op) - __op; }
-};
-
-#endif // _LIBCPP_STD_VER >= 20
-
 // atomic_is_lock_free
 
 template <class _Tp>
@@ -266,14 +132,12 @@ _LIBCPP_HIDE_FROM_ABI bool atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT
 // atomic_init
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
-atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
   std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 
 template <class _Tp>
-_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_HIDE_FROM_ABI void
-atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI void atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT {
   std::__cxx_atomic_init(std::addressof(__o->__a_), __d);
 }
 
@@ -619,4 +483,4 @@ atomic_fetch_xor_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __o
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_H

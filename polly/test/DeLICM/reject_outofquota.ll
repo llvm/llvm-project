@@ -66,7 +66,7 @@ return:
 ; CHECK: maximal number of operations exceeded during zone analysis
 
 ; Check that even if the quota was exceeded in DeLICM, DependenceInfo is still
-; successfull since it uses a different operations counter.
+; successful since it uses a different operations counter.
 ;
 ; DEP:     RAW dependences:
 ; DEP-NOT:        n/a

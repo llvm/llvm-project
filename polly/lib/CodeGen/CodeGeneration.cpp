@@ -41,6 +41,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "isl/ast.h"
 #include <cassert>
 
@@ -76,8 +77,8 @@ namespace polly {
 /// Marks the basic block @p Block unreachable by equipping it with an
 /// UnreachableInst.
 void markBlockUnreachable(BasicBlock &Block, PollyIRBuilder &Builder) {
-  auto *OrigTerminator = Block.getTerminator();
-  Builder.SetInsertPoint(OrigTerminator);
+  auto OrigTerminator = Block.getTerminator()->getIterator();
+  Builder.SetInsertPoint(&Block, OrigTerminator);
   Builder.CreateUnreachable();
   OrigTerminator->eraseFromParent();
 }
@@ -210,7 +211,8 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   assert(EnteringBB);
   PollyIRBuilder Builder(EnteringBB->getContext(), ConstantFolder(),
                          IRInserter(Annotator));
-  Builder.SetInsertPoint(EnteringBB->getTerminator());
+  Builder.SetInsertPoint(EnteringBB,
+                         EnteringBB->getTerminator()->getIterator());
 
   // Only build the run-time condition and parameters _after_ having
   // introduced the conditional branch. This is important as the conditional
@@ -233,6 +235,15 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   NodeBuilder.allocateNewArrays(StartExitBlocks);
   Annotator.buildAliasScopes(S);
 
+  // The code below annotates the "llvm.loop.vectorize.enable" to false
+  // for the code flow taken when RTCs fail. Because we don't want the
+  // Loop Vectorizer to come in later and vectorize the original fall back
+  // loop when Polly is enabled.
+  for (Loop *L : LI.getLoopsInPreorder()) {
+    if (S.contains(L))
+      addStringMetadataToLoop(L, "llvm.loop.vectorize.enable", 0);
+  }
+
   if (PerfMonitoring) {
     PerfMonitor P(S, EnteringBB->getParent()->getParent());
     P.initialize();
@@ -247,7 +258,8 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   // might reference the hoisted loads. Finally, build the runtime check
   // that might reference both hoisted loads as well as parameters.
   // If the hoisting fails we have to bail and execute the original code.
-  Builder.SetInsertPoint(SplitBlock->getTerminator());
+  Builder.SetInsertPoint(SplitBlock,
+                         SplitBlock->getTerminator()->getIterator());
   if (!NodeBuilder.preloadInvariantLoads()) {
     // Patch the introduced branch condition to ensure that we always execute
     // the original SCoP.
@@ -279,7 +291,8 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
     // Ideally we would just split the block during allocation of the new
     // arrays, but this would break the assumption that there are no blocks
     // between polly.start and polly.exiting (at this point).
-    Builder.SetInsertPoint(StartBlock->getTerminator());
+    Builder.SetInsertPoint(StartBlock,
+                           StartBlock->getTerminator()->getIterator());
 
     NodeBuilder.create(AstRoot.release());
     NodeBuilder.finalize();

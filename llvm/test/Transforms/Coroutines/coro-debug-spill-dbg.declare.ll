@@ -1,7 +1,6 @@
 ; Test spilling a temp generates dbg.declare in resume/destroy/cleanup functions.
 ;
 ; RUN: opt < %s -passes='cgscc(coro-split)' -S | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='cgscc(coro-split)' -S | FileCheck %s
 ;
 ; The test case simulates a coroutine method in a class.
 ;
@@ -75,7 +74,7 @@ cleanup:                                          ; preds = %resume, %coro.begin
   br label %suspend
 
 suspend:                                          ; preds = %cleanup, %coro.begin
-  %2 = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)
   ret ptr %hdl
 }
 
@@ -105,7 +104,7 @@ declare i1 @llvm.coro.alloc(token) #4
 declare ptr @llvm.coro.begin(token, ptr writeonly) #4
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1, token) #4
+declare void @llvm.coro.end(ptr, i1, token) #4
 
 declare noalias ptr @malloc(i32)
 

@@ -8,7 +8,7 @@
 ; YAML-NEXT: Function:        test
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '-1'
+; YAML-NEXT:   - Cost:            '-2'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '2'
 define void @test(ptr %h) {
@@ -17,16 +17,9 @@ define void @test(ptr %h) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[DCT2X211:%.*]] = alloca [0 x [0 x [8 x i64]]], i32 0, align 16
 ; CHECK-NEXT:    [[CHROMA_DC209:%.*]] = getelementptr i8, ptr [[H]], i64 0
-; CHECK-NEXT:    [[ARRAYIDX33_I:%.*]] = getelementptr i8, ptr [[DCT2X211]], i64 8
-; CHECK-NEXT:    [[ARRAYIDX36_I181:%.*]] = getelementptr i8, ptr [[DCT2X211]], i64 24
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.experimental.vp.strided.load.v2i64.p0.i64(ptr align 4 [[DCT2X211]], i64 16, <2 x i1> splat (i1 true), i32 2)
-; CHECK-NEXT:    store <2 x i64> [[TMP0]], ptr [[CHROMA_DC209]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARRAYIDX33_I]], align 2
-; CHECK-NEXT:    [[ARRAYIDX5_I226:%.*]] = getelementptr i8, ptr [[H]], i64 16
-; CHECK-NEXT:    store i64 [[TMP2]], ptr [[ARRAYIDX5_I226]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX36_I181]], align 2
-; CHECK-NEXT:    [[ARRAYIDX7_I228:%.*]] = getelementptr i8, ptr [[H]], i64 24
-; CHECK-NEXT:    store i64 [[TMP3]], ptr [[ARRAYIDX7_I228]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[DCT2X211]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x i64> [[TMP1]], ptr [[CHROMA_DC209]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:

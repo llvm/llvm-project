@@ -1,8 +1,8 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
-; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45}
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45, !46, !47, !48}
+; CHECK: !named = !{!0, !0, !1, !2, !3, !4, !5, !6, !7, !8, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45, !46, !47}
+!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22, !23, !24, !25, !26, !27, !28, !29, !30, !31, !32, !33, !34, !35, !36, !37, !38, !39, !40, !41, !42, !43, !44, !45, !46, !47, !48, !49, !50}
 
 ; CHECK:      !0 = !DISubrange(count: 3, lowerBound: 0)
 ; CHECK-NEXT: !1 = !DISubrange(count: 3, lowerBound: 4)
@@ -117,3 +117,8 @@
 
 ;CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ExtraInhabitantCompositeType", file: !10, size: 64, num_extra_inhabitants: 66, identifier: "MangledExtraInhabitantCompositeType")
 !48 = !DICompositeType(tag: DW_TAG_structure_type, name: "ExtraInhabitantCompositeType", file: !12, size: 64, num_extra_inhabitants: 66, identifier: "MangledExtraInhabitantCompositeType")
+
+!49 = !DICompositeType(tag: DW_TAG_structure_type, name: "BaseType", file: !12, size: 64, identifier: "BaseType")
+
+; CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "SpecificationType", file: !10, size: 64, identifier: "SpecificationType", specification: !46)
+!50 = !DICompositeType(tag: DW_TAG_structure_type, name: "SpecificationType", file: !12, size: 64, identifier: "SpecificationType", specification: !49)

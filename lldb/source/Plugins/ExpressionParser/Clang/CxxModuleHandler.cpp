@@ -42,7 +42,7 @@ CxxModuleHandler::CxxModuleHandler(ASTImporter &importer, ASTContext *target)
       "allocator",
       "pair",
   };
-  m_supported_templates.insert(supported_names.begin(), supported_names.end());
+  m_supported_templates.insert_range(supported_names);
 }
 
 /// Builds a list of scopes that point into the given context.
@@ -280,7 +280,8 @@ std::optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
       new_class_template->getDeclContext(),
       new_class_template->getTemplatedDecl()->getLocation(),
       new_class_template->getLocation(), new_class_template, imported_args,
-      nullptr);
+      td->hasStrictPackMatch(),
+      /*PrevDecl=*/nullptr);
 
   new_class_template->AddSpecialization(result, InsertPos);
   if (new_class_template->isOutOfLine())

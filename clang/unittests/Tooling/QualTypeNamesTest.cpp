@@ -11,12 +11,12 @@
 using namespace clang;
 
 namespace {
-struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
+struct TypeNameVisitor : TestVisitor {
   llvm::StringMap<std::string> ExpectedQualTypeNames;
   bool WithGlobalNsPrefix = false;
 
   // ValueDecls are the least-derived decl with both a qualtype and a name.
-  bool VisitValueDecl(const ValueDecl *VD) {
+  bool VisitValueDecl(ValueDecl *VD) override {
     std::string ExpectedName =
         ExpectedQualTypeNames.lookup(VD->getNameAsString());
     if (ExpectedName != "") {
@@ -265,6 +265,98 @@ TEST(QualTypeNameTest, InlineNamespace) {
                           TypeNameVisitor::Lang_CXX11);
 }
 
+TEST(QualTypeNameTest, TemplatedClass) {
+  std::unique_ptr<ASTUnit> AST =
+      tooling::buildASTFromCode("template <unsigned U1> struct A {\n"
+                                "  template <unsigned U2> struct B {};\n"
+                                "};\n"
+                                "template struct A<1>;\n"
+                                "template struct A<2u>;\n"
+                                "template struct A<1>::B<3>;\n"
+                                "template struct A<2u>::B<4u>;\n");
+
+  auto &Context = AST->getASTContext();
+  auto &Policy = Context.getPrintingPolicy();
+  auto getFullyQualifiedName = [&](QualType QT) {
+    return TypeName::getFullyQualifiedName(QT, Context, Policy);
+  };
+
+  auto *A = Context.getTranslationUnitDecl()
+                ->lookup(&Context.Idents.get("A"))
+                .find_first<ClassTemplateDecl>();
+  ASSERT_NE(A, nullptr);
+
+  // A has two explicit instantiations: A<1> and A<2u>
+  auto ASpec = A->spec_begin();
+  ASSERT_NE(ASpec, A->spec_end());
+  auto *A1 = *ASpec;
+  ASpec++;
+  ASSERT_NE(ASpec, A->spec_end());
+  auto *A2 = *ASpec;
+
+  // Their type names follow the records.
+  CanQualType A1RecordTy = Context.getCanonicalTagType(A1);
+  EXPECT_EQ(getFullyQualifiedName(A1RecordTy), "A<1>");
+  CanQualType A2RecordTy = Context.getCanonicalTagType(A2);
+  EXPECT_EQ(getFullyQualifiedName(A2RecordTy), "A<2U>");
+
+  // getTemplateSpecializationType() gives types that print the integral
+  // argument directly.
+  TemplateArgument Args1[] = {
+      {Context, llvm::APSInt::getUnsigned(1u), Context.UnsignedIntTy}};
+  QualType A1TemplateSpecTy = Context.getTemplateSpecializationType(
+      ElaboratedTypeKeyword::None, TemplateName(A), Args1, Args1, A1RecordTy);
+  EXPECT_EQ(A1TemplateSpecTy.getAsString(), "A<1>");
+
+  TemplateArgument Args2[] = {
+      {Context, llvm::APSInt::getUnsigned(2u), Context.UnsignedIntTy}};
+  QualType A2TemplateSpecTy = Context.getTemplateSpecializationType(
+      ElaboratedTypeKeyword::None, TemplateName(A), Args2, Args2, A2RecordTy);
+  EXPECT_EQ(A2TemplateSpecTy.getAsString(), "A<2>");
+
+  // Find A<1>::B and its specialization B<3>.
+  auto *A1B =
+      A1->lookup(&Context.Idents.get("B")).find_first<ClassTemplateDecl>();
+  ASSERT_NE(A1B, nullptr);
+  auto A1BSpec = A1B->spec_begin();
+  ASSERT_NE(A1BSpec, A1B->spec_end());
+  auto *A1B3 = *A1BSpec;
+  CanQualType A1B3RecordTy = Context.getCanonicalTagType(A1B3);
+  EXPECT_EQ(getFullyQualifiedName(A1B3RecordTy), "A<1>::B<3>");
+
+  // Construct A<1>::B<3> and check name.
+  NestedNameSpecifier A1Nested(A1TemplateSpecTy.getTypePtr());
+  TemplateName A1B3Name = Context.getQualifiedTemplateName(
+      A1Nested, /*TemplateKeyword=*/false, TemplateName(A1B));
+
+  TemplateArgument Args3[] = {
+      {Context, llvm::APSInt::getUnsigned(3u), Context.UnsignedIntTy}};
+  QualType A1B3TemplateSpecTy = Context.getTemplateSpecializationType(
+      ElaboratedTypeKeyword::None, A1B3Name, Args3, Args3, A1B3RecordTy);
+  EXPECT_EQ(A1B3TemplateSpecTy.getAsString(), "A<1>::B<3>");
+
+  // Find A<2u>::B and its specialization B<4u>.
+  auto *A2B =
+      A2->lookup(&Context.Idents.get("B")).find_first<ClassTemplateDecl>();
+  ASSERT_NE(A2B, nullptr);
+  auto A2BSpec = A2B->spec_begin();
+  ASSERT_NE(A2BSpec, A2B->spec_end());
+  auto *A2B4 = *A2BSpec;
+  CanQualType A2B4RecordTy = Context.getCanonicalTagType(A2B4);
+  EXPECT_EQ(getFullyQualifiedName(A2B4RecordTy), "A<2U>::B<4U>");
+
+  // Construct A<2>::B<4> and check name.
+  NestedNameSpecifier A2Nested(A2TemplateSpecTy.getTypePtr());
+  TemplateName A2B4Name = Context.getQualifiedTemplateName(
+      A2Nested, /*TemplateKeyword=*/false, TemplateName(A2B));
+
+  TemplateArgument Args4[] = {
+      {Context, llvm::APSInt::getUnsigned(4u), Context.UnsignedIntTy}};
+  QualType A2B4TemplateSpecTy = Context.getTemplateSpecializationType(
+      ElaboratedTypeKeyword::None, A2B4Name, Args4, Args4, A2B4RecordTy);
+  EXPECT_EQ(A2B4TemplateSpecTy.getAsString(), "A<2>::B<4>");
+}
+
 TEST(QualTypeNameTest, AnonStrucs) {
   TypeNameVisitor AnonStrucs;
   AnonStrucs.ExpectedQualTypeNames["a"] = "short";
@@ -296,5 +388,32 @@ TEST(QualTypeNameTest, ConstUsing) {
                         }
                         using ::A::S;
                         void foo(const S& param1, const S param2);)");
+}
+
+TEST(QualTypeNameTest, NullableAttributesWithGlobalNs) {
+  TypeNameVisitor Visitor;
+  Visitor.WithGlobalNsPrefix = true;
+  Visitor.ExpectedQualTypeNames["param1"] = "::std::unique_ptr<int> _Nullable";
+  Visitor.ExpectedQualTypeNames["param2"] = "::std::unique_ptr<int> _Nonnull";
+  Visitor.ExpectedQualTypeNames["param3"] =
+      "::std::unique_ptr< ::std::unique_ptr<int> _Nullable> _Nonnull";
+  Visitor.ExpectedQualTypeNames["param4"] =
+      "::std::unique_ptr<int>  _Nullable const *";
+  Visitor.ExpectedQualTypeNames["param5"] =
+      "::std::unique_ptr<int>  _Nullable const *";
+  Visitor.ExpectedQualTypeNames["param6"] =
+      "::std::unique_ptr<int>  _Nullable const *";
+  Visitor.runOver(R"(namespace std {
+                        template<class T> class unique_ptr {};
+                     }
+                     void foo(
+                      std::unique_ptr<int> _Nullable param1,
+                      _Nonnull std::unique_ptr<int> param2,
+                      std::unique_ptr<std::unique_ptr<int> _Nullable> _Nonnull param3,
+                      const std::unique_ptr<int> _Nullable *param4,
+                      _Nullable std::unique_ptr<int> const *param5,
+                      std::unique_ptr<int> _Nullable const *param6
+                      );
+                     )");
 }
 }  // end anonymous namespace

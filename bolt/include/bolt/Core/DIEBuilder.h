@@ -20,8 +20,8 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Allocator.h"
 
 #include <list>
@@ -137,7 +137,7 @@ private:
   std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
-  State &getState() { return *BuilderState.get(); }
+  State &getState() { return *BuilderState; }
 
   /// Resolve the reference in DIE, if target is not loaded into IR,
   /// pre-allocate it. \p RefCU will be updated to the Unit specific by \p
@@ -162,7 +162,7 @@ private:
 
   /// Clone an attribute in reference format.
   void cloneDieOffsetReferenceAttribute(
-      DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
+      DIE &Die, DWARFUnit &U, const DWARFDie &InputDIE,
       const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec, uint64_t Ref);
 
   /// Clone an attribute in block format.
@@ -217,7 +217,8 @@ private:
                                std::optional<BOLTDWARF5AccelTableData *> Parent,
                                uint32_t NumberParentsInChain);
 
-  void registerUnit(DWARFUnit &DU, bool NeedSort);
+  /// Returns true if DWARFUnit is registered successfully.
+  bool registerUnit(DWARFUnit &DU, bool NeedSort);
 
   /// \return the unique ID of \p U if it exists.
   std::optional<uint32_t> getUnitId(const DWARFUnit &DU);

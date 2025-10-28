@@ -15,8 +15,6 @@
 
 #include <ranges>
 
-#include "test_macros.h"
-
 // The type would be a view, but it's not moveable.
 struct NotMoveable : std::ranges::view_base {
   NotMoveable() = default;
@@ -90,3 +88,98 @@ static_assert(std::movable<View>);
 static_assert(std::default_initializable<View>);
 static_assert(std::ranges::enable_view<View>);
 static_assert(std::ranges::view<View>);
+
+// const view types
+
+struct ConstView1 : std::ranges::view_base {
+  ConstView1(const ConstView1&&);
+  const ConstView1& operator=(const ConstView1&&) const;
+
+  friend void swap(const ConstView1&, const ConstView1&);
+
+  friend int* begin(const ConstView1&);
+  friend int* end(const ConstView1&);
+};
+static_assert(std::ranges::range<const ConstView1>);
+static_assert(std::movable<const ConstView1>);
+static_assert(!std::default_initializable<const ConstView1>);
+static_assert(std::ranges::enable_view<const ConstView1>);
+static_assert(std::ranges::view<const ConstView1>);
+
+struct ConstView2 : std::ranges::view_interface<ConstView2> {
+  ConstView2(const ConstView2&&);
+  const ConstView2& operator=(const ConstView2&&) const;
+
+  friend void swap(const ConstView2&, const ConstView2&);
+
+  friend int* begin(const ConstView2&);
+  friend int* end(const ConstView2&);
+};
+static_assert(std::ranges::range<const ConstView2>);
+static_assert(std::movable<const ConstView2>);
+static_assert(!std::default_initializable<const ConstView2>);
+static_assert(std::ranges::enable_view<const ConstView2>);
+static_assert(std::ranges::view<const ConstView2>);
+
+// volatile view types
+struct VolatileView1 : std::ranges::view_base {
+  VolatileView1(volatile VolatileView1&&);
+  volatile VolatileView1& operator=(volatile VolatileView1&&) volatile;
+
+  friend void swap(volatile VolatileView1&, volatile VolatileView1&);
+
+  friend int* begin(volatile VolatileView1&);
+  friend int* end(volatile VolatileView1&);
+};
+static_assert(std::ranges::range<volatile VolatileView1>);
+static_assert(std::movable<volatile VolatileView1>);
+static_assert(!std::default_initializable<volatile VolatileView1>);
+static_assert(std::ranges::enable_view<volatile VolatileView1>);
+static_assert(std::ranges::view<volatile VolatileView1>);
+
+struct VolatileView2 : std::ranges::view_interface<VolatileView2> {
+  VolatileView2(volatile VolatileView2&&);
+  volatile VolatileView2& operator=(volatile VolatileView2&&) volatile;
+
+  friend void swap(volatile VolatileView2&, volatile VolatileView2&);
+
+  friend int* begin(volatile VolatileView2&);
+  friend int* end(volatile VolatileView2&);
+};
+static_assert(std::ranges::range<volatile VolatileView2>);
+static_assert(std::movable<volatile VolatileView2>);
+static_assert(!std::default_initializable<volatile VolatileView2>);
+static_assert(std::ranges::enable_view<volatile VolatileView2>);
+static_assert(std::ranges::view<volatile VolatileView2>);
+
+// const-volatile view types
+
+struct ConstVolatileView1 : std::ranges::view_base {
+  ConstVolatileView1(const volatile ConstVolatileView1&&);
+  const volatile ConstVolatileView1& operator=(const volatile ConstVolatileView1&&) const volatile;
+
+  friend void swap(const volatile ConstVolatileView1&, const volatile ConstVolatileView1&);
+
+  friend int* begin(const volatile ConstVolatileView1&);
+  friend int* end(const volatile ConstVolatileView1&);
+};
+static_assert(std::ranges::range<const volatile ConstVolatileView1>);
+static_assert(std::movable<const volatile ConstVolatileView1>);
+static_assert(!std::default_initializable<const volatile ConstVolatileView1>);
+static_assert(std::ranges::enable_view<const volatile ConstVolatileView1>);
+static_assert(std::ranges::view<const volatile ConstVolatileView1>);
+
+struct ConstVolatileView2 : std::ranges::view_interface<ConstVolatileView2> {
+  ConstVolatileView2(const volatile ConstVolatileView2&&);
+  const volatile ConstVolatileView2& operator=(const volatile ConstVolatileView2&&) const volatile;
+
+  friend void swap(const volatile ConstVolatileView2&, const volatile ConstVolatileView2&);
+
+  friend int* begin(const volatile ConstVolatileView2&);
+  friend int* end(const volatile ConstVolatileView2&);
+};
+static_assert(std::ranges::range<const volatile ConstVolatileView2>);
+static_assert(std::movable<const volatile ConstVolatileView2>);
+static_assert(!std::default_initializable<const volatile ConstVolatileView2>);
+static_assert(std::ranges::enable_view<const volatile ConstVolatileView2>);
+static_assert(std::ranges::view<const volatile ConstVolatileView2>);

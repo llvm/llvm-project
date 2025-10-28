@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CERRNO
-#define _LIBCPP_CERRNO
+#ifndef _LIBCPP___CXX03_CERRNO
+#define _LIBCPP___CXX03_CERRNO
 
 /*
     cerrno synopsis
@@ -26,7 +26,7 @@ Macros:
 
 #include <__cxx03/errno.h>
 
-#ifndef _LIBCPP_ERRNO_H
+#ifndef _LIBCPP___CXX03_ERRNO_H
 #   error <cerrno> tried including <errno.h> but didn't find libc++'s <errno.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \
@@ -45,4 +45,4 @@ Macros:
 // Based on the post commit feedback the macro are no longer deprecated.
 // Instead libc++ leaves the deprecation to the provider of errno.h.
 
-#endif // _LIBCPP_CERRNO
+#endif // _LIBCPP___CXX03_CERRNO

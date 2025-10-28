@@ -30,8 +30,6 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
-#include "Utility/ARM64_DWARF_Registers.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -60,6 +58,64 @@ ABISysV_arm64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) 
   return ABISP();
 }
 
+static Status PushToLinuxGuardedControlStack(addr_t return_addr,
+                                             RegisterContext *reg_ctx,
+                                             Thread &thread) {
+  Status err;
+
+  // If the Guarded Control Stack extension is present we may need to put the
+  // return address onto that stack.
+  const RegisterInfo *gcs_features_enabled_info =
+      reg_ctx->GetRegisterInfoByName("gcs_features_enabled");
+  if (!gcs_features_enabled_info)
+    return err;
+
+  uint64_t gcs_features_enabled = reg_ctx->ReadRegisterAsUnsigned(
+      gcs_features_enabled_info, LLDB_INVALID_ADDRESS);
+  if (gcs_features_enabled == LLDB_INVALID_ADDRESS)
+    return Status("Could not read GCS features enabled register.");
+
+  // Only attempt this if GCS is enabled. If it's not enabled then gcspr_el0
+  // may point to unmapped memory.
+  if ((gcs_features_enabled & 1) == 0)
+    return err;
+
+  const RegisterInfo *gcspr_el0_info =
+      reg_ctx->GetRegisterInfoByName("gcspr_el0");
+  if (!gcspr_el0_info)
+    return Status("Could not get register info for gcspr_el0.");
+
+  uint64_t gcspr_el0 =
+      reg_ctx->ReadRegisterAsUnsigned(gcspr_el0_info, LLDB_INVALID_ADDRESS);
+  if (gcspr_el0 == LLDB_INVALID_ADDRESS)
+    return Status("Could not read gcspr_el0.");
+
+  // A link register entry on the GCS is 8 bytes.
+  gcspr_el0 -= 8;
+  if (!reg_ctx->WriteRegisterFromUnsigned(gcspr_el0_info, gcspr_el0))
+    return Status(
+        "Attempted to decrement gcspr_el0, but could not write to it.");
+
+  Status error;
+  size_t wrote = thread.GetProcess()->WriteMemory(gcspr_el0, &return_addr,
+                                                  sizeof(return_addr), error);
+  if ((wrote != sizeof(return_addr) || error.Fail())) {
+    // gcspr_el0 will be restored by the ThreadPlan's DoTakedown.
+    return Status("Failed to write new Guarded Control Stack entry.");
+  }
+
+  Log *log = GetLog(LLDBLog::Expressions);
+  LLDB_LOGF(log,
+            "Pushed return address 0x%" PRIx64 " to Guarded Control Stack. "
+            "gcspr_el0 was 0%" PRIx64 ", is now 0x%" PRIx64 ".",
+            return_addr, gcspr_el0 - 8, gcspr_el0);
+
+  // gcspr_el0 will be restored to the original value by lldb-server after
+  // the call has finished, which serves as the "pop".
+
+  return err;
+}
+
 bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
                                        addr_t func_addr, addr_t return_addr,
                                        llvm::ArrayRef<addr_t> args) const {
@@ -86,6 +142,16 @@ bool ABISysV_arm64::PrepareTrivialCall(Thread &thread, addr_t sp,
   // x0 - x7 contain first 8 simple args
   if (args.size() > 8)
     return false;
+
+  if (GetProcessSP()->GetTarget().GetArchitecture().GetTriple().isOSLinux()) {
+    Status err = PushToLinuxGuardedControlStack(return_addr, reg_ctx, thread);
+    // If we could not manage the GCS, the expression will certainly fail,
+    // and if we just carried on, that failure would be a lot more cryptic.
+    if (err.Fail()) {
+      LLDB_LOGF(log, "Failed to setup Guarded Call Stack: %s", err.AsCString());
+      return false;
+    }
+  }
 
   for (size_t i = 0; i < args.size(); ++i) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(
@@ -147,7 +213,8 @@ bool ABISysV_arm64::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (value_type) {
       bool is_signed = false;
       size_t bit_width = 0;
-      std::optional<uint64_t> bit_size = value_type.GetBitSize(&thread);
+      std::optional<uint64_t> bit_size =
+          llvm::expectedToOptional(value_type.GetBitSize(&thread));
       if (!bit_size)
         return false;
       if (value_type.IsIntegerOrEnumerationType(is_signed)) {
@@ -316,57 +383,6 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   return error;
 }
 
-bool ABISysV_arm64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
-  uint32_t lr_reg_num = arm64_dwarf::lr;
-  uint32_t sp_reg_num = arm64_dwarf::sp;
-
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-
-  // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
-
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetReturnAddressRegister(lr_reg_num);
-
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("arm64 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-
-  return true;
-}
-
-bool ABISysV_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
-  uint32_t fp_reg_num = arm64_dwarf::fp;
-  uint32_t pc_reg_num = arm64_dwarf::pc;
-
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
-  const int32_t ptr_size = 8;
-
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
-
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("arm64 default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-
-  return true;
-}
-
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says
 // registers x19 through x28 and sp are callee preserved. v8-v15 are non-
 // volatile (and specifically only the lower 8 bytes of these regs), the rest
@@ -464,8 +480,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     uint32_t &NGRN,       // NGRN (see ABI documentation)
     uint32_t &NSRN,       // NSRN (see ABI documentation)
     DataExtractor &data) {
-  std::optional<uint64_t> byte_size =
-      value_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> byte_size = llvm::expectedToOptional(
+      value_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
 
   if (byte_size || *byte_size == 0)
     return false;
@@ -483,8 +499,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     if (NSRN < 8 && (8 - NSRN) >= homogeneous_count) {
       if (!base_type)
         return false;
-      std::optional<uint64_t> base_byte_size =
-          base_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+      std::optional<uint64_t> base_byte_size = llvm::expectedToOptional(
+          base_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
       if (!base_byte_size)
         return false;
       uint32_t data_offset = 0;
@@ -613,7 +629,8 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
   if (!reg_ctx)
     return return_valobj_sp;
 
-  std::optional<uint64_t> byte_size = return_compiler_type.GetByteSize(&thread);
+  std::optional<uint64_t> byte_size =
+      llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
   if (!byte_size)
     return return_valobj_sp;
 

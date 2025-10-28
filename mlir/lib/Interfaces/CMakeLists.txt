@@ -2,15 +2,16 @@ set(LLVM_OPTIONAL_SOURCES
   CallInterfaces.cpp
   CastInterfaces.cpp
   ControlFlowInterfaces.cpp
-  CopyOpInterface.cpp
   DataLayoutInterfaces.cpp
   DerivedAttributeOpInterface.cpp
   DestinationStyleOpInterface.cpp
   FunctionImplementation.cpp
   FunctionInterfaces.cpp
+  IndexingMapOpInterface.cpp
   InferIntRangeInterface.cpp
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
+  MemOpInterfaces.cpp
   MemorySlotInterfaces.cpp
   ParallelCombiningOpInterface.cpp
   RuntimeVerifiableOpInterface.cpp
@@ -42,7 +43,6 @@ endfunction(add_mlir_interface_library)
 add_mlir_interface_library(CallInterfaces)
 add_mlir_interface_library(CastInterfaces)
 add_mlir_interface_library(ControlFlowInterfaces)
-add_mlir_interface_library(CopyOpInterface)
 add_mlir_interface_library(DataLayoutInterfaces)
 add_mlir_interface_library(DerivedAttributeOpInterface)
 add_mlir_interface_library(DestinationStyleOpInterface)
@@ -58,9 +58,11 @@ add_mlir_library(MLIRFunctionInterfaces
   MLIRFunctionInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRCallInterfaces
   MLIRIR
 )
 
+add_mlir_interface_library(IndexingMapOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
 add_mlir_interface_library(InferTypeOpInterface)
 
@@ -78,6 +80,7 @@ add_mlir_library(MLIRLoopLikeInterface
   MLIRFunctionInterfaces
 )
 
+add_mlir_interface_library(MemOpInterfaces)
 add_mlir_interface_library(MemorySlotInterfaces)
 add_mlir_interface_library(ParallelCombiningOpInterface)
 add_mlir_interface_library(RuntimeVerifiableOpInterface)

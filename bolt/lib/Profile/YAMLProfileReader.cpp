@@ -28,7 +28,7 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> InferStaleProfile;
 extern cl::opt<bool> Lite;
 
-cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
+static cl::opt<unsigned> NameSimilarityFunctionMatchingThreshold(
     "name-similarity-function-matching-threshold",
     cl::desc("Match functions using namespace and edit distance"), cl::init(0),
     cl::Hidden, cl::cat(BoltOptCategory));
@@ -38,11 +38,11 @@ static llvm::cl::opt<bool>
                cl::desc("ignore hash while reading function profile"),
                cl::Hidden, cl::cat(BoltOptCategory));
 
-llvm::cl::opt<bool>
+static llvm::cl::opt<bool>
     MatchProfileWithFunctionHash("match-profile-with-function-hash",
                                  cl::desc("Match profile with function hash"),
                                  cl::Hidden, cl::cat(BoltOptCategory));
-llvm::cl::opt<bool>
+static llvm::cl::opt<bool>
     MatchWithCallGraph("match-with-call-graph",
                        cl::desc("Match functions with call graph"), cl::Hidden,
                        cl::cat(BoltOptCategory));
@@ -176,12 +176,13 @@ bool YAMLProfileReader::parseFunctionProfile(
   uint64_t FunctionExecutionCount = 0;
 
   BF.setExecutionCount(YamlBF.ExecCount);
+  BF.setExternEntryCount(YamlBF.ExternEntryCount);
 
   uint64_t FuncRawBranchCount = 0;
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks)
     for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors)
       FuncRawBranchCount += YamlSI.Count;
-  BF.setRawBranchCount(FuncRawBranchCount);
+  BF.setRawSampleCount(FuncRawBranchCount);
 
   if (BF.empty())
     return true;
@@ -221,7 +222,7 @@ bool YAMLProfileReader::parseFunctionProfile(
 
     // Basic samples profile (without LBR) does not have branches information
     // and needs a special processing.
-    if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE) {
+    if (YamlBP.Header.Flags & BinaryFunction::PF_BASIC) {
       if (!YamlBB.EventCount) {
         BB.setExecutionCount(0);
         continue;
@@ -338,7 +339,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     if (BB.getExecutionCount() == BinaryBasicBlock::COUNT_NO_PROFILE)
       BB.setExecutionCount(0);
 
-  if (YamlBP.Header.Flags & BinaryFunction::PF_SAMPLE)
+  if (YamlBP.Header.Flags & BinaryFunction::PF_BASIC)
     BF.setExecutionCount(FunctionExecutionCount);
 
   ProfileMatched &= !MismatchedBlocks && !MismatchedCalls && !MismatchedEdges;
@@ -348,9 +349,6 @@ bool YAMLProfileReader::parseFunctionProfile(
       errs() << "BOLT-WARNING: " << MismatchedBlocks << " blocks, "
              << MismatchedCalls << " calls, and " << MismatchedEdges
              << " edges in profile did not match function " << BF << '\n';
-
-    if (YamlBF.NumBasicBlocks != BF.size())
-      ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
 
     if (!opts::InferStaleProfile)
       return false;
@@ -450,7 +448,8 @@ size_t YAMLProfileReader::matchWithExactName() {
     // the profile.
     Function.setExecutionCount(BinaryFunction::COUNT_NO_PROFILE);
 
-    if (profileMatches(YamlBF, Function)) {
+    // Allow mismatching profile when stale matching is enabled.
+    if (profileMatches(YamlBF, Function) || opts::InferStaleProfile) {
       matchProfileToFunction(YamlBF, Function);
       ++MatchedWithExactName;
     }
@@ -837,7 +836,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   const size_t MatchedWithLTOCommonName = matchWithLTOCommonName();
   const size_t MatchedWithCallGraph = matchWithCallGraph(BC);
   const size_t MatchedWithNameSimilarity = matchWithNameSimilarity(BC);
-  const size_t MatchedWithPseudoProbes = matchWithPseudoProbes(BC);
+  [[maybe_unused]] const size_t MatchedWithPseudoProbes =
+      matchWithPseudoProbes(BC);
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
     if (!YamlBF.Used && BF && !ProfiledFunctions.count(BF))
@@ -886,7 +886,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 }
 
 bool YAMLProfileReader::usesEvent(StringRef Name) const {
-  return YamlBP.Header.EventNames.find(std::string(Name)) != StringRef::npos;
+  return StringRef(YamlBP.Header.EventNames).contains(Name);
 }
 
 } // end namespace bolt

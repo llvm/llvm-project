@@ -44,7 +44,7 @@ void Test() {
 #pragma acc parallel vector_length(Convert)
   while(1);
 
-  // expected-error@+2{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc kernels vector_length(Explicit)
   while(1);
@@ -90,12 +90,12 @@ void TestInst() {
 #pragma acc kernels vector_length(T::ACValue)
   while (1);
 
-  // expected-error@+2{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc parallel vector_length(HasInt::EXValue)
   while (1);
 
-  // expected-error@+2{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc kernels vector_length(T::EXValue)
   while (1);

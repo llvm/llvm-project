@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_SAME_H
-#define _LIBCPP___TYPE_TRAITS_IS_SAME_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_IS_SAME_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_IS_SAME_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -20,11 +20,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Up>
 struct _LIBCPP_TEMPLATE_VIS is_same : _BoolConstant<__is_same(_Tp, _Up)> {};
-
-#if _LIBCPP_STD_VER >= 17
-template <class _Tp, class _Up>
-inline constexpr bool is_same_v = __is_same(_Tp, _Up);
-#endif
 
 // _IsSame<T,U> has the same effect as is_same<T,U> but instantiates fewer types:
 // is_same<A,B> and is_same<C,D> are guaranteed to be different types, but
@@ -41,4 +36,4 @@ using _IsNotSame = _BoolConstant<!__is_same(_Tp, _Up)>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_SAME_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_IS_SAME_H

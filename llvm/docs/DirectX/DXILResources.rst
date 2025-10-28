@@ -154,7 +154,7 @@ We provide a few different ways to instantiate resources in the IR via the
 type, returning an appropriate handle for the resource, and represent binding
 information in the arguments to the intrinsic.
 
-The three operations we need are ``llvm.dx.handle.fromBinding``,
+The three operations we need are ``llvm.dx.resource.handlefrombinding``,
 ``llvm.dx.handle.fromHeap``, and ``llvm.dx.handle.fromPointer``. These are
 rougly equivalent to the DXIL operations ``dx.op.createHandleFromBinding``,
 ``dx.op.createHandleFromHeap``, and ``dx.op.createHandleForLib``, but they fold
@@ -162,13 +162,14 @@ the subsequent ``dx.op.annotateHandle`` operation in. Note that we don't have
 an analogue for `dx.op.createHandle`_, since ``dx.op.createHandleFromBinding``
 subsumes it.
 
-For simplicity of lowering, we match DXIL in using an index from the beginning
-of the binding space rather than an index from the lower bound of the binding
-itself.
+We diverge from DXIL and index from the beginning of the binding rather than
+indexing from the beginning of the binding space. This matches the semantics
+more clearly and avoids a non-obvious invariant in what constitutes valid
+arguments.
 
 .. _dx.op.createHandle: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-handles
 
-.. list-table:: ``@llvm.dx.handle.fromBinding``
+.. list-table:: ``@llvm.dx.resource.handlefrombinding``
    :header-rows: 1
 
    * - Argument
@@ -194,7 +195,7 @@ itself.
    * - ``%index``
      - 4
      - ``i32``
-     - Index from the beginning of the binding space to access.
+     - Index from the beginning of the binding.
    * - ``%non-uniform``
      - 5
      - i1
@@ -209,29 +210,35 @@ Examples:
 
    ; RWBuffer<float4> Buf : register(u5, space3)
    %buf = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_f32_1_0(
-                   i32 3, i32 5, i32 1, i32 0, i1 false)
+        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
+            i32 3, i32 5, i32 1, i32 0, i1 false)
 
    ; RWBuffer<int> Buf : register(u7, space2)
    %buf = call target("dx.TypedBuffer", i32, 1, 0, 1)
-               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_1_0t(
-                   i32 2, i32 7, i32 1, i32 0, i1 false)
+        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(
+            i32 2, i32 7, i32 1, i32 0, i1 false)
 
    ; Buffer<uint4> Buf[24] : register(t3, space5)
    %buf = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.TypedBuffer_i32_0_0t(
-                   i32 2, i32 7, i32 24, i32 0, i1 false)
+        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0t(
+            i32 2, i32 7, i32 24, i32 0, i1 false)
 
    ; struct S { float4 a; uint4 b; };
    ; StructuredBuffer<S> Buf : register(t2, space4)
    %buf = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
-                   i32 4, i32 2, i32 1, i32 0, i1 false)
+       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
+           i32 4, i32 2, i32 1, i32 0, i1 false)
 
    ; ByteAddressBuffer Buf : register(t8, space1)
    %buf = call target("dx.RawBuffer", i8, 0, 0)
-               @llvm.dx.handle.fromBinding.tdx.RawBuffer_i8_0_0t(
-                   i32 1, i32 8, i32 1, i32 0, i1 false)
+       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
+           i32 1, i32 8, i32 1, i32 0, i1 false)
+
+   ; RWBuffer<float4> Global[3] : register(u6, space5)
+   ; RWBuffer<float4> Buf = Global[2];
+   %buf = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
+           i32 5, i32 6, i32 3, i32 2, i1 false)
 
 .. list-table:: ``@llvm.dx.handle.fromHeap``
    :header-rows: 1
@@ -267,41 +274,24 @@ Examples:
                @llvm.dx.handle.fromHeap.tdx.RawBuffer_v4f32_1_0(
                    i32 2, i1 false)
 
-16-byte Loads, Samples, and Gathers
------------------------------------
+Accessing Resources as Memory
+-----------------------------
 
-*relevant types: TypedBuffer, CBuffer, and Textures*
+*relevant types: Buffers and Textures*
 
-TypedBuffer, CBuffer, and Texture loads, as well as samples and gathers, can
-return 1 to 4 elements from the given resource, to a maximum of 16 bytes of
-data. DXIL's modeling of this is influenced by DirectX and DXBC's history and
-it generally treats these operations as returning 4 32-bit values. For 16-bit
-elements the values are 16-bit values, and for 64-bit values the operations
-return 4 32-bit integers and emit further code to construct the double.
+Loading and storing from resources is generally represented in LLVM using
+operations on memory that is only accessible via a handle object. Given a
+handle, `llvm.dx.resource.getpointer` gives a pointer that can be used to read
+and (depending on type) write to the resource.
 
-In DXIL, these operations return `ResRet`_ and `CBufRet`_ values, are structs
-containing 4 elements of the same type, and in the case of `ResRet` a 5th
-element that is used by the `CheckAccessFullyMapped`_ operation.
+Accesses using `llvm.dx.resource.getpointer` are replaced with direct load and
+store operations in the `DXILResourceAccess` pass. These direct loads and
+stores are described later in this document.
 
-In LLVM IR the intrinsics will return the contained type of the resource
-instead. That is, ``llvm.dx.typedBufferLoad`` from a ``Buffer<float>`` would
-return a single float, from ``Buffer<float4>`` a vector of 4 floats, and from
-``Buffer<double2>`` a vector of two doubles, etc. The operations are then
-expanded out to match DXIL's format during lowering.
+.. note:: Currently the pointers returned by `dx.resource.getpointer` are in
+          the default address space, but that will likely change in the future.
 
-In cases where we need ``CheckAccessFullyMapped``, we have a second intrinsic
-that returns an anonymous struct with element-0 being the contained type, and
-element-1 being the ``i1`` result of a ``CheckAccessFullyMapped`` call. We
-don't have a separate call to ``CheckAccessFullyMapped`` at all, since that's
-the only operation that can possibly be done on this value. In practice this
-may mean we insert a DXIL operation for the check when this was missing in the
-HLSL source, but this actually matches DXC's behaviour in practice.
-
-.. _ResRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
-.. _CBufRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
-.. _CheckAccessFullyMapped: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/checkaccessfullymapped
-
-.. list-table:: ``@llvm.dx.typedBufferLoad``
+.. list-table:: ``@llvm.dx.resource.getpointer``
    :header-rows: 1
 
    * - Argument
@@ -310,12 +300,12 @@ HLSL source, but this actually matches DXC's behaviour in practice.
      - Description
    * - Return value
      -
-     - The contained type of the buffer
-     - The data loaded from the buffer
+     - Pointer
+     - A pointer to an object in the buffer
    * - ``%buffer``
      - 0
      - ``target(dx.TypedBuffer, ...)``
-     - The buffer to load from
+     - The buffer to access
    * - ``%index``
      - 1
      - ``i32``
@@ -325,23 +315,47 @@ Examples:
 
 .. code-block:: llvm
 
-   %ret = call <4 x float>
-       @llvm.dx.typedBufferLoad.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
-           target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
-   %ret = call float
-       @llvm.dx.typedBufferLoad.f32.tdx.TypedBuffer_f32_0_0_0t(
-           target("dx.TypedBuffer", float, 0, 0, 0) %buffer, i32 %index)
-   %ret = call <4 x i32>
-       @llvm.dx.typedBufferLoad.v4i32.tdx.TypedBuffer_v4i32_0_0_0t(
-           target("dx.TypedBuffer", <4 x i32>, 0, 0, 0) %buffer, i32 %index)
-   %ret = call <4 x half>
-       @llvm.dx.typedBufferLoad.v4f16.tdx.TypedBuffer_v4f16_0_0_0t(
-           target("dx.TypedBuffer", <4 x half>, 0, 0, 0) %buffer, i32 %index)
-   %ret = call <2 x double>
-       @llvm.dx.typedBufferLoad.v2f64.tdx.TypedBuffer_v2f64_0_0t(
-           target("dx.TypedBuffer", <2 x double>, 0, 0, 0) %buffer, i32 %index)
+   %ptr = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4f32_0_0_0t(
+       target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
 
-.. list-table:: ``@llvm.dx.typedBufferLoad.checkbit``
+Loads, Samples, and Gathers
+---------------------------
+
+*relevant types: Buffers and Textures*
+
+All load, sample, and gather operations in DXIL return a `ResRet`_ type. These
+types are structs containing 4 elements of some basic type, and a 5th element
+that is used by the `CheckAccessFullyMapped`_ operation. Some of these
+operations, like `RawBufferLoad`_ include a mask and/or alignment that tell us
+some information about how to interpret those four values.
+
+In the LLVM IR representations of these operations we instead return scalars or
+vectors, but we keep the requirement that we only return up to 4 elements of a
+basic type. This avoids some unnecessary casting and structure manipulation in
+the intermediate format while also keeping lowering to DXIL straightforward.
+
+LLVM intrinsics that map to operations returning `ResRet` return an anonymous
+struct with element-0 being the scalar or vector type, and element-1 being the
+``i1`` result of a ``CheckAccessFullyMapped`` call. We don't have a separate
+call to ``CheckAccessFullyMapped`` at all, since that's the only operation that
+can possibly be done on this value. In practice this may mean we insert a DXIL
+operation for the check when this was missing in the HLSL source, but this
+actually matches DXC's behaviour in practice.
+
+For TypedBuffer and Texture, we map directly from the contained type of the
+resource to the return value of the intrinsic. Since these resources are
+constrained to contain only scalars and vectors of up to 4 elements, the
+lowering to DXIL ops is generally straightforward. The one exception we have
+here is that `double` types in the elements are special - these are allowed in
+the LLVM intrinsics, but are lowered to pairs of `i32` followed by
+``MakeDouble`` operations for DXIL.
+
+.. _ResRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
+.. _CBufRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
+.. _CheckAccessFullyMapped: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/checkaccessfullymapped
+.. _RawBufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferload
+
+.. list-table:: ``@llvm.dx.resource.load.typedbuffer``
    :header-rows: 1
 
    * - Argument
@@ -361,36 +375,147 @@ Examples:
      - ``i32``
      - Index into the buffer
 
+Examples:
+
 .. code-block:: llvm
 
    %ret = call {<4 x float>, i1}
-       @llvm.dx.typedBufferLoad.checkbit.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
+       @llvm.dx.resource.load.typedbuffer.v4f32.tdx.TypedBuffer_v4f32_0_0_0t(
            target("dx.TypedBuffer", <4 x float>, 0, 0, 0) %buffer, i32 %index)
+   %ret = call {float, i1}
+       @llvm.dx.resource.load.typedbuffer.f32.tdx.TypedBuffer_f32_0_0_0t(
+           target("dx.TypedBuffer", float, 0, 0, 0) %buffer, i32 %index)
+   %ret = call {<4 x i32>, i1}
+       @llvm.dx.resource.load.typedbuffer.v4i32.tdx.TypedBuffer_v4i32_0_0_0t(
+           target("dx.TypedBuffer", <4 x i32>, 0, 0, 0) %buffer, i32 %index)
+   %ret = call {<4 x half>, i1}
+       @llvm.dx.resource.load.typedbuffer.v4f16.tdx.TypedBuffer_v4f16_0_0_0t(
+           target("dx.TypedBuffer", <4 x half>, 0, 0, 0) %buffer, i32 %index)
+   %ret = call {<2 x double>, i1}
+       @llvm.dx.resource.load.typedbuffer.v2f64.tdx.TypedBuffer_v2f64_0_0t(
+           target("dx.TypedBuffer", <2 x double>, 0, 0, 0) %buffer, i32 %index)
 
-Texture and Typed Buffer Stores
--------------------------------
+For RawBuffer, an HLSL load operation may return an arbitrarily sized result,
+but we still constrain the LLVM intrinsic to return only up to 4 elements of a
+basic type. This means that larger loads are represented as a series of loads,
+which matches DXIL. Unlike in the `RawBufferLoad`_ operation, we do not need
+arguments for the mask/type size and alignment, since we can calculate these
+from the return type of the load during lowering.
 
-*relevant types: Textures and TypedBuffer*
+.. _RawBufferLoad: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferload
 
-The `TextureStore`_ and `BufferStore`_ DXIL operations always write all four
-32-bit components to a texture or a typed buffer. While both operations include
-a mask parameter, it is specified that the mask must cover all components when
-used with these types.
+.. list-table:: ``@llvm.dx.resource.load.rawbuffer``
+   :header-rows: 1
 
-The store operations that we define as intrinsics behave similarly, and will
-only accept writes to the whole of the contained type. This differs from the
-loads above, but this makes sense to do from a semantics preserving point of
-view. Thus, texture and buffer stores may only operate on 4-element vectors of
-types that are 32-bits or fewer, such as ``<4 x i32>``, ``<4 x float>``, and
-``<4 x half>``, and 2 element vectors of 64-bit types like ``<2 x double>`` and
-``<2 x i64>``.
-
-.. _BufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
-.. _TextureStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#texturestore
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A structure of a scalar or vector and the check bit
+     - The data loaded from the buffer and the check bit
+   * - ``%buffer``
+     - 0
+     - ``target(dx.RawBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+   * - ``%offset``
+     - 2
+     - ``i32``
+     - Offset into the structure at the given index
 
 Examples:
 
-.. list-table:: ``@llvm.dx.typedBufferStore``
+.. code-block:: llvm
+
+   ; float
+   %ret = call {float, i1}
+       @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_f32_0_0_0t(
+           target("dx.RawBuffer", float, 0, 0, 0) %buffer,
+           i32 %index,
+           i32 0)
+   %ret = call {float, i1}
+       @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_i8_0_0_0t(
+           target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
+           i32 %byte_offset,
+           i32 0)
+
+   ; float4
+   %ret = call {<4 x float>, i1}
+       @llvm.dx.resource.load.rawbuffer.v4f32.tdx.RawBuffer_v4f32_0_0_0t(
+           target("dx.RawBuffer", float, 0, 0, 0) %buffer,
+           i32 %index,
+           i32 0)
+   %ret = call {float, i1}
+       @llvm.dx.resource.load.rawbuffer.v4f32.tdx.RawBuffer_i8_0_0_0t(
+           target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
+           i32 %byte_offset,
+           i32 0)
+
+   ; struct S0 { float4 f; int4 i; };
+   %ret = call {<4 x float>, i1}
+       @llvm.dx.resource.load.rawbuffer.v4f32.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
+           target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0, 0) %buffer,
+           i32 %index,
+           i32 0)
+   %ret = call {<4 x i32>, i1}
+       @llvm.dx.resource.load.rawbuffer.v4i32.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
+           target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0, 0) %buffer,
+           i32 %index,
+           i32 1)
+
+   ; struct Q { float4 f; int3 i; }
+   ; struct R { int z; S x; }
+   %ret = call {i32, i1}
+       @llvm.dx.resource.load.rawbuffer.i32(
+           target("dx.RawBuffer", {i32, {<4 x float>, <3 x i32>}}, 0, 0, 0)
+               %buffer, i32 %index, i32 0)
+   %ret = call {<4 x float>, i1}
+       @llvm.dx.resource.load.rawbuffer.i32(
+           target("dx.RawBuffer", {i32, {<4 x float>, <3 x i32>}}, 0, 0, 0)
+               %buffer, i32 %index, i32 4)
+   %ret = call {<3 x i32>, i1}
+       @llvm.dx.resource.load.rawbuffer.i32(
+           target("dx.RawBuffer", {i32, {<4 x float>, <3 x i32>}}, 0, 0, 0)
+               %buffer, i32 %index, i32 20)
+
+   ; byteaddressbuf.Load<int64_t4>
+   %ret = call {<4 x i64>, i1}
+       @llvm.dx.resource.load.rawbuffer.v4i64.tdx.RawBuffer_i8_0_0t(
+           target("dx.RawBuffer", i8, 0, 0, 0) %buffer,
+           i32 %byte_offset,
+           i32 0)
+
+Stores
+------
+
+*relevant types: Textures and Buffer*
+
+The `TextureStore`_, `BufferStore`_, and `RawBufferStore`_ DXIL operations
+write four components to a texture or a buffer. These include a mask argument
+that is used when fewer than 4 components are written, but notably this only
+takes on the contiguous x, xy, xyz, and xyzw values.
+
+We define the LLVM store intrinsics to accept vectors when storing multiple
+components rather than using `undef` and a mask, but otherwise match the DXIL
+ops fairly closely.
+
+.. _TextureStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#texturestore
+.. _BufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#bufferstore
+.. _RawBufferStore: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#rawbufferstore
+
+For TypedBuffer, we only need one coordinate, and we must always write a vector
+since partial writes aren't possible. Similarly to the load operations
+described above, we handle 64-bit types specially and only handle 2-element
+vectors rather than 4.
+
+Examples:
+
+.. list-table:: ``@llvm.dx.resource.store.typedbuffer``
    :header-rows: 1
 
    * - Argument
@@ -418,9 +543,206 @@ Examples:
 
 .. code-block:: llvm
 
-   call void @llvm.dx.typedBufferStore.tdx.Buffer_v4f32_1_0_0t(
+   call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v4f32_1_0_0t(
        target("dx.TypedBuffer", f32, 1, 0) %buf, i32 %index, <4 x f32> %data)
-   call void @llvm.dx.typedBufferStore.tdx.Buffer_v4f16_1_0_0t(
+   call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v4f16_1_0_0t(
        target("dx.TypedBuffer", f16, 1, 0) %buf, i32 %index, <4 x f16> %data)
-   call void @llvm.dx.typedBufferStore.tdx.Buffer_v2f64_1_0_0t(
+   call void @llvm.dx.resource.store.typedbuffer.tdx.Buffer_v2f64_1_0_0t(
        target("dx.TypedBuffer", f64, 1, 0) %buf, i32 %index, <2 x f64> %data)
+
+For RawBuffer, we need two indices and we accept scalars and vectors of 4 or
+fewer elements. Note that we do allow vectors of 4 64-bit elements here.
+
+Examples:
+
+.. list-table:: ``@llvm.dx.resource.store.rawbuffer``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - ``void``
+     -
+   * - ``%buffer``
+     - 0
+     - ``target(dx.RawBuffer, ...)``
+     - The buffer to store into
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+   * - ``%offset``
+     - 2
+     - ``i32``
+     - Byte offset into structured buffer elements
+   * - ``%data``
+     - 3
+     - Scalar or vector
+     - The data to store
+
+Examples:
+
+.. code-block:: llvm
+
+   ; float
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_f32_1_0_0t.f32(
+       target("dx.RawBuffer", float, 1, 0, 0) %buffer,
+       i32 %index, i32 0, float %data)
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.f32(
+       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
+       i32 %index, i32 0, float %data)
+
+   ; float4
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_v4f32_1_0_0t.v4f32(
+       target("dx.RawBuffer", <4 x float>, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x float> %data)
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f32(
+       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x float> %data)
+
+   ; struct S0 { float4 f; int4 i; }
+   call void @llvm.dx.resource.store.rawbuffer.v4f32(
+       target("dx.RawBuffer", { <4 x float>, <4 x i32> }, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x float> %data0)
+   call void @llvm.dx.resource.store.rawbuffer.v4i32(
+       target("dx.RawBuffer", { <4 x float>, <4 x i32> }, 1, 0, 0) %buffer,
+       i32 %index, i32 16, <4 x i32> %data1)
+
+   ; struct Q { float4 f; int3 i; }
+   ; struct R { int z; S x; }
+   call void @llvm.dx.resource.store.rawbuffer.i32(
+       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
+           %buffer,
+       i32 %index, i32 0, i32 %data0)
+   call void @llvm.dx.resource.store.rawbuffer.v4f32(
+       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
+           %buffer,
+       i32 %index, i32 4, <4 x float> %data1)
+   call void @llvm.dx.resource.store.rawbuffer.v3f16(
+       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 1, 0, 0)
+           %buffer,
+       i32 %index, i32 20, <3 x half> %data2)
+
+   ; byteaddressbuf.Store<int64_t4>
+   call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i8_1_0_0t.v4f64(
+       target("dx.RawBuffer", i8, 1, 0, 0) %buffer,
+       i32 %index, i32 0, <4 x double> %data)
+
+Constant Buffer Loads
+---------------------
+
+*relevant types: CBuffers*
+
+The `CBufferLoadLegacy`_ operation, which despite the name is the only
+supported way to load from a cbuffer in any DXIL version, loads a single "row"
+of a cbuffer, which is exactly 16 bytes. The return value of the operation is
+represented by a `CBufRet`_ type, which has variants for 2 64-bit values, 4
+32-bit values, and 8 16-bit values.
+
+We represent these in LLVM IR with 3 separate operations, which return a
+2-element, 4-element, or 8-element struct respectively.
+
+.. _CBufferLoadLegacy: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferLoadLegacy
+.. _CBufRet: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#cbufferloadlegacy
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.4``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 4 32-bit values
+     - A single row of a cbuffer, interpreted as 4 32-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {float, float, float, float}
+       @llvm.dx.resource.load.cbufferrow.4(
+           target("dx.CBuffer", target("dx.Layout", {float}, 4, 0)) %buffer,
+           i32 %index)
+   %ret = call {i32, i32, i32, i32}
+       @llvm.dx.resource.load.cbufferrow.4(
+           target("dx.CBuffer", target("dx.Layout", {i32}, 4, 0)) %buffer,
+           i32 %index)
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.2``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 2 64-bit values
+     - A single row of a cbuffer, interpreted as 2 64-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {double, double}
+       @llvm.dx.resource.load.cbufferrow.2(
+           target("dx.CBuffer", target("dx.Layout", {double}, 8, 0)) %buffer,
+           i32 %index)
+   %ret = call {i64, i64}
+       @llvm.dx.resource.load.cbufferrow.2(
+           target("dx.CBuffer", target("dx.Layout", {i64}, 4, 0)) %buffer,
+           i32 %index)
+
+.. list-table:: ``@llvm.dx.resource.load.cbufferrow.8``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - A struct of 8 16-bit values
+     - A single row of a cbuffer, interpreted as 8 16-bit values
+   * - ``%buffer``
+     - 0
+     - ``target(dx.CBuffer, ...)``
+     - The buffer to load from
+   * - ``%index``
+     - 1
+     - ``i32``
+     - Index into the buffer
+
+Examples:
+
+.. code-block:: llvm
+
+   %ret = call {half, half, half, half, half, half, half, half}
+       @llvm.dx.resource.load.cbufferrow.8(
+           target("dx.CBuffer", target("dx.Layout", {half}, 2, 0)) %buffer,
+           i32 %index)
+   %ret = call {i16, i16, i16, i16, i16, i16, i16, i16}
+       @llvm.dx.resource.load.cbufferrow.8(
+           target("dx.CBuffer", target("dx.Layout", {i16}, 2, 0)) %buffer,
+           i32 %index)

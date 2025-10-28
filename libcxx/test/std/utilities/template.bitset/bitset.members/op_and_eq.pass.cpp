@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
+
 // bitset<N>& operator&=(const bitset<N>& rhs); // constexpr since C++23
 
 #include <bitset>

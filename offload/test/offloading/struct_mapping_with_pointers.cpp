@@ -32,7 +32,7 @@ int main() {
   dat.datum[dat.arr[0][0]] = 0;
 
   /// The struct is mapped with type 0x0 when the pointer fields are mapped.
-  /// The struct is also map explicitely by the user. The second mapping by
+  /// The struct is also map explicitly by the user. The second mapping by
   /// the user must not overwrite the mapping set up for the pointer fields
   /// when mapping the struct happens after the mapping of the pointers.
 

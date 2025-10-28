@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_SANITIZERCOVERAGE_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
@@ -43,7 +44,7 @@ public:
       Blocklist = SpecialCaseList::createOrDie(BlocklistFiles,
                                                *vfs::getRealFileSystem());
   }
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   static bool isRequired() { return true; }
 
 private:

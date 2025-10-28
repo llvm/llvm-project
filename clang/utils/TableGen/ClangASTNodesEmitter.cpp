@@ -1,4 +1,4 @@
-//=== ClangASTNodesEmitter.cpp - Generate Clang AST node tables -*- C++ -*-===//
+//===-- ClangASTNodesEmitter.cpp - Generate Clang AST node tables ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -207,8 +207,9 @@ void clang::EmitClangASTNodes(const RecordKeeper &RK, raw_ostream &OS,
   ClangASTNodesEmitter(RK, N, S, PriorizeIfSubclassOf).run(OS);
 }
 
-void printDeclContext(const std::multimap<const Record *, const Record *> &Tree,
-                      const Record *DeclContext, raw_ostream &OS) {
+static void
+printDeclContext(const std::multimap<const Record *, const Record *> &Tree,
+                 const Record *DeclContext, raw_ostream &OS) {
   if (!DeclContext->getValueAsBit(AbstractFieldName))
     OS << "DECL_CONTEXT(" << DeclContext->getName() << ")\n";
   auto [II, E] = Tree.equal_range(DeclContext);

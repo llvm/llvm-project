@@ -18,24 +18,21 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Connection.h"
-#include "lldb/Utility/IOObject.h"
 
 namespace lldb_private {
 
 class Status;
-class Socket;
-class SocketAddress;
 
 class ConnectionFileDescriptor : public Connection {
 public:
   typedef llvm::function_ref<void(llvm::StringRef local_socket_id)>
       socket_id_callback_type;
 
-  ConnectionFileDescriptor(bool child_processes_inherit = false);
+  ConnectionFileDescriptor();
 
   ConnectionFileDescriptor(int fd, bool owns_fd);
 
-  ConnectionFileDescriptor(Socket *socket);
+  ConnectionFileDescriptor(std::unique_ptr<Socket> socket_up);
 
   ~ConnectionFileDescriptor() override;
 
@@ -64,9 +61,6 @@ public:
   bool InterruptRead() override;
 
   lldb::IOObjectSP GetReadObject() override { return m_io_sp; }
-
-  bool GetChildProcessesInherit() const;
-  void SetChildProcessesInherit(bool child_processes_inherit);
 
 protected:
   void OpenCommandPipe();
@@ -135,13 +129,10 @@ protected:
   std::atomic<bool> m_shutting_down; // This marks that we are shutting down so
                                      // if we get woken up from
   // BytesAvailable to disconnect, we won't try to read again.
-  bool m_child_processes_inherit;
 
   std::string m_uri;
 
 private:
-  void InitializeSocket(Socket *socket);
-
   ConnectionFileDescriptor(const ConnectionFileDescriptor &) = delete;
   const ConnectionFileDescriptor &
   operator=(const ConnectionFileDescriptor &) = delete;

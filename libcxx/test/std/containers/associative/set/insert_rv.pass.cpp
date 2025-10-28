@@ -21,64 +21,63 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef std::set<MoveOnly> M;
-        typedef std::pair<M::iterator, bool> R;
-        M m;
-        R r = m.insert(M::value_type(2));
-        assert(r.second);
-        assert(r.first == m.begin());
-        assert(m.size() == 1);
-        assert(*r.first == 2);
+int main(int, char**) {
+  {
+    typedef std::set<MoveOnly> M;
+    typedef std::pair<M::iterator, bool> R;
+    M m;
+    R r = m.insert(M::value_type(2));
+    assert(r.second);
+    assert(r.first == m.begin());
+    assert(m.size() == 1);
+    assert(*r.first == 2);
 
-        r = m.insert(M::value_type(1));
-        assert(r.second);
-        assert(r.first == m.begin());
-        assert(m.size() == 2);
-        assert(*r.first == 1);
+    r = m.insert(M::value_type(1));
+    assert(r.second);
+    assert(r.first == m.begin());
+    assert(m.size() == 2);
+    assert(*r.first == 1);
 
-        r = m.insert(M::value_type(3));
-        assert(r.second);
-        assert(r.first == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r.first == 3);
+    r = m.insert(M::value_type(3));
+    assert(r.second);
+    assert(r.first == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r.first == 3);
 
-        r = m.insert(M::value_type(3));
-        assert(!r.second);
-        assert(r.first == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r.first == 3);
-    }
-    {
-        typedef std::set<MoveOnly, std::less<MoveOnly>, min_allocator<MoveOnly>> M;
-        typedef std::pair<M::iterator, bool> R;
-        M m;
-        R r = m.insert(M::value_type(2));
-        assert(r.second);
-        assert(r.first == m.begin());
-        assert(m.size() == 1);
-        assert(*r.first == 2);
+    r = m.insert(M::value_type(3));
+    assert(!r.second);
+    assert(r.first == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r.first == 3);
+  }
+  {
+    typedef std::set<MoveOnly, std::less<MoveOnly>, min_allocator<MoveOnly>> M;
+    typedef std::pair<M::iterator, bool> R;
+    M m;
+    R r = m.insert(M::value_type(2));
+    assert(r.second);
+    assert(r.first == m.begin());
+    assert(m.size() == 1);
+    assert(*r.first == 2);
 
-        r = m.insert(M::value_type(1));
-        assert(r.second);
-        assert(r.first == m.begin());
-        assert(m.size() == 2);
-        assert(*r.first == 1);
+    r = m.insert(M::value_type(1));
+    assert(r.second);
+    assert(r.first == m.begin());
+    assert(m.size() == 2);
+    assert(*r.first == 1);
 
-        r = m.insert(M::value_type(3));
-        assert(r.second);
-        assert(r.first == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r.first == 3);
+    r = m.insert(M::value_type(3));
+    assert(r.second);
+    assert(r.first == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r.first == 3);
 
-        r = m.insert(M::value_type(3));
-        assert(!r.second);
-        assert(r.first == std::prev(m.end()));
-        assert(m.size() == 3);
-        assert(*r.first == 3);
-    }
+    r = m.insert(M::value_type(3));
+    assert(!r.second);
+    assert(r.first == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(*r.first == 3);
+  }
 
   return 0;
 }

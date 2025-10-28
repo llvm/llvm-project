@@ -1,4 +1,4 @@
-# RUN: llc  -o - %s -march=x86-64 -run-pass none | FileCheck %s
+# RUN: llc -o - %s -mtriple=x86_64 -run-pass none | FileCheck %s
 # Test various aspects of register class specification on machine operands.
 --- |
   define void @func() { ret void }

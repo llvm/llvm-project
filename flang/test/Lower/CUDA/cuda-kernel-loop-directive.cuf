@@ -25,7 +25,7 @@ subroutine sub1()
 ! CHECK: cuf.kernel<<<%c1_i32, %c2_i32>>> (%[[ARG0:.*]] : index) = (%[[LB]] : index) to (%[[UB]] : index)  step (%[[STEP]] : index)
 ! CHECK-NOT: fir.do_loop
 ! CHECK: %[[ARG0_I32:.*]] = fir.convert %[[ARG0]] : (index) -> i32
-! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#1 : !fir.ref<i32>
+! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#0 : !fir.ref<i32>
 ! CHECK: hlfir.assign
 
 
@@ -45,9 +45,9 @@ subroutine sub1()
 
 ! CHECK: cuf.kernel<<<%c1{{.*}}, (%c256{{.*}}, %c1{{.*}})>>> (%[[ARG0:.*]] : index, %[[ARG1:.*]] : index) = (%{{.*}}, %{{.*}} : index, index) to (%{{.*}}, %{{.*}} : index, index) step (%{{.*}}, %{{.*}} : index, index)
 ! CHECK: %[[ARG0_I32:.*]] = fir.convert %[[ARG0]] : (index) -> i32
-! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#1 : !fir.ref<i32>
+! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#0 : !fir.ref<i32>
 ! CHECK: %[[ARG1_I32:.*]] = fir.convert %[[ARG1]] : (index) -> i32
-! CHECK: fir.store %[[ARG1_I32]] to %[[IV_J]]#1 : !fir.ref<i32>
+! CHECK: fir.store %[[ARG1_I32]] to %[[IV_J]]#0 : !fir.ref<i32>
 ! CHECK: {n = 2 : i64}
 
   !$cuf kernel do(2) <<< (1,*), (256,1) >>>
@@ -75,9 +75,7 @@ subroutine sub1()
   end do
 end
 
-! CHECK: %[[STREAM_LOAD:.*]] = fir.load %[[STREAM]]#0 : !fir.ref<i64>
-! CHECK: %[[STREAM_I32:.*]] = fir.convert %[[STREAM_LOAD]] : (i64) -> i32
-! CHECK: cuf.kernel<<<*, *, stream = %[[STREAM_I32]]>>>
+! CHECK: cuf.kernel<<<*, *, stream = %[[STREAM]]#0 : !fir.ref<i64>>>>
 
 
 ! Test lowering with unstructured construct inside.
@@ -97,4 +95,19 @@ subroutine sub2(m,a,b)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub2
+! CHECK: cuf.kernel
+
+subroutine sub3()
+  integer, device :: a(10), b(10)
+  integer :: lb = 1
+  integer :: n = 10
+  integer :: s = 1
+
+  !$cuf kernel do <<< *, * >>>
+  do i = lb, n, s
+    a(i) = a(i) * b(i)
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPsub3
 ! CHECK: cuf.kernel

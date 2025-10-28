@@ -7,3 +7,7 @@ module PrivateFoo {
     export_as Wibble
   }
 }
+
+module B {
+  export_as C.B
+}

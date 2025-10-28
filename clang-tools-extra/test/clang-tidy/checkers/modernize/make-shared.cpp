@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-make-shared %t -- -- -I %S/Inputs/smart-ptr
+// RUN: %check_clang_tidy --match-partial-fixes %s modernize-make-shared %t -- -- -I %S/Inputs/smart-ptr
 
 #include "shared_ptr.h"
 // CHECK-FIXES: #include <memory>
@@ -109,6 +109,8 @@ void basic() {
   }
 
   std::shared_ptr<int> R(new int());
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use std::make_shared instead
+  // CHECK-FIXES: std::shared_ptr<int> R = std::make_shared<int>();
   std::shared_ptr<int> S(new int);
 
   // Create the shared_ptr as a parameter to a function.

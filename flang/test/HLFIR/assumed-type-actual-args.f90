@@ -106,7 +106,7 @@ end subroutine
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<none> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[DSCOPE]] {uniq_name = "_QFtest1Ex"} : (!fir.ref<none>, !fir.dscope) -> (!fir.ref<none>, !fir.ref<none>)
-! CHECK:           fir.call @_QPs1(%[[VAL_1]]#1) fastmath<contract> : (!fir.ref<none>) -> ()
+! CHECK:           fir.call @_QPs1(%[[VAL_1]]#0) fastmath<contract> : (!fir.ref<none>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 

@@ -32,14 +32,17 @@ def FIRpointer      : I32BitEnumAttrCaseBit<"pointer", 9>;
 def FIRtarget       : I32BitEnumAttrCaseBit<"target", 10>;
 def FIRvalue        : I32BitEnumAttrCaseBit<"value", 11>;
 def FIRvolatile     : I32BitEnumAttrCaseBit<"fortran_volatile", 12, "volatile">;
+// Used inside internal procedure to flag variables host associated from parent procedure.
 def FIRHostAssoc    : I32BitEnumAttrCaseBit<"host_assoc", 13>;
+// Used inside parent procedure to flag variables host associated in internal procedure.
+def FIRInternalAssoc    : I32BitEnumAttrCaseBit<"internal_assoc", 14>;
 
 def fir_FortranVariableFlagsEnum : I32BitEnumAttr<
     "FortranVariableFlagsEnum",
     "Fortran variable attributes",
     [FIRnoAttributes, FIRallocatable, FIRasynchronous, FIRbind_c, FIRcontiguous,
      FIRintent_in, FIRintent_inout, FIRintent_out, FIRoptional, FIRparameter,
-     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc]> {
+     FIRpointer, FIRtarget, FIRvalue, FIRvolatile, FIRHostAssoc, FIRInternalAssoc]> {
   let separator = ", ";
   let cppNamespace = "::fir";
   let printBitEnumPrimaryGroups = 1;
@@ -109,7 +112,7 @@ def fir_ReduceOperationEnum : I32BitEnumAttr<"ReduceOperationEnum",
       I32BitEnumAttrCaseBit<"MIN", 7, "min">,
       I32BitEnumAttrCaseBit<"IAND", 8, "iand">,
       I32BitEnumAttrCaseBit<"IOR", 9, "ior">,
-      I32BitEnumAttrCaseBit<"EIOR", 10, "eior">
+      I32BitEnumAttrCaseBit<"IEOR", 10, "ieor">
     ]> {
   let separator = ", ";
   let cppNamespace = "::fir";
@@ -152,5 +155,68 @@ def fir_LocationKindAttr : EnumAttr<FIROpsDialect, fir_LocationKind, "loc_kind">
 
 def LocationKindArrayAttr : ArrayOfAttr<FIROpsDialect, "LocationKindArray",
     "loc_kind_array", "LocationKindAttr">;
+
+/// Optimization heuristics for fir.pack_array operation.
+def fir_PackArrayHeuristics
+    : I32BitEnumAttr<"PackArrayHeuristics", "",
+                     [
+                         /// fir.pack_array cannot be optimized based on the
+                         /// array usage pattern.
+                         I32BitEnumAttrCaseNone<"None", "none">,
+                         /// fir.pack_array can be optimized away, if the array
+                         /// is not used in a loop.
+                         I32BitEnumAttrCaseBit<"LoopOnly", 0, "loop_only">,
+]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let genSpecializedAttr = 0;
+}
+
+def fir_PackArrayHeuristicsAttr
+    : EnumAttr<FIROpsDialect, fir_PackArrayHeuristics,
+               "pack_array_heuristics"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def fir_OpenACCSafeTempArrayCopyAttr : fir_Attr<"OpenACCSafeTempArrayCopy"> {
+  let mnemonic = "acc_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenACC.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
+def fir_OpenMPSafeTempArrayCopyAttr : fir_Attr<"OpenMPSafeTempArrayCopy"> {
+  let mnemonic = "omp_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenMP.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
+def LocalitySpecTypeLocal : I32EnumAttrCase<"Local", 0, "local">;
+def LocalitySpecTypeLocalInit
+    : I32EnumAttrCase<"LocalInit", 1, "local_init">;
+
+def LocalitySpecifierType : I32EnumAttr<
+    "LocalitySpecifierType",
+    "Type of a locality specifier", [
+      LocalitySpecTypeLocal,
+      LocalitySpecTypeLocalInit
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::fir";
+}
+
+def LocalitySpecifierTypeAttr : EnumAttr<FIROpsDialect, LocalitySpecifierType,
+                                                "locality_specifier_type"> {
+  let assemblyFormat = "`{` `type` `=` $value `}`";
+}
 
 #endif // FIR_DIALECT_FIR_ATTRS

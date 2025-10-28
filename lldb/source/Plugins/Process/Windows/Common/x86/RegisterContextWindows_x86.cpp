@@ -51,12 +51,6 @@ enum RegisterIndex {
 
 // Array of all register information supported by Windows x86
 RegisterInfo g_register_infos[] = {
-    //  Macro auto defines most stuff   eh_frame                DWARF
-    //  GENERIC                    GDB                   LLDB
-    //  VALUE REGS    INVALIDATE REGS
-    //  ==============================  =======================
-    //  ===================  =========================  ===================
-    //  =================  ==========    ===============
     {DEFINE_GPR(eax, nullptr),
      {ehframe_eax_i386, dwarf_eax_i386, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, lldb_eax_i386},

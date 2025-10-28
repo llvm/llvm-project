@@ -17,32 +17,29 @@
 #include "test_macros.h"
 
 template <class Container>
-TEST_CONSTEXPR_CXX14 void assert_contiguous(Container const& c)
-{
-    for (std::size_t i = 0; i < c.size(); ++i)
-        assert(*(c.begin() + i) == *(std::addressof(*c.begin()) + i));
+TEST_CONSTEXPR_CXX14 void assert_contiguous(Container const& c) {
+  for (std::size_t i = 0; i < c.size(); ++i)
+    assert(*(c.begin() + i) == *(std::addressof(*c.begin()) + i));
 }
 
-TEST_CONSTEXPR_CXX17 bool tests()
-{
-    assert_contiguous(std::array<double, 0>());
-    assert_contiguous(std::array<double, 1>());
-    assert_contiguous(std::array<double, 2>());
-    assert_contiguous(std::array<double, 3>());
+TEST_CONSTEXPR_CXX17 bool tests() {
+  assert_contiguous(std::array<double, 0>());
+  assert_contiguous(std::array<double, 1>());
+  assert_contiguous(std::array<double, 2>());
+  assert_contiguous(std::array<double, 3>());
 
-    assert_contiguous(std::array<char, 0>());
-    assert_contiguous(std::array<char, 1>());
-    assert_contiguous(std::array<char, 2>());
-    assert_contiguous(std::array<char, 3>());
+  assert_contiguous(std::array<char, 0>());
+  assert_contiguous(std::array<char, 1>());
+  assert_contiguous(std::array<char, 2>());
+  assert_contiguous(std::array<char, 3>());
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER >= 17 // begin() & friends are constexpr in >= C++17 only
-    static_assert(tests(), "");
+  static_assert(tests(), "");
 #endif
-    return 0;
+  return 0;
 }

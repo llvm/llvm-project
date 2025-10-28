@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_COMPLEX_H
-#define _LIBCPP_COMPLEX_H
+#ifndef _LIBCPP___CXX03_COMPLEX_H
+#define _LIBCPP___CXX03_COMPLEX_H
 
 /*
     complex.h synopsis
@@ -29,4 +29,4 @@
 #  include_next <complex.h>
 #endif
 
-#endif // _LIBCPP_COMPLEX_H
+#endif // _LIBCPP___CXX03_COMPLEX_H

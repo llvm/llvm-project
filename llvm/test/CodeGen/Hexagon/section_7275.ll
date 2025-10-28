@@ -5,7 +5,7 @@
 ; and that section is not sdata*/sbss* then the variable
 ; cannot use GPREL addressing, i.e. memw(#variablename).
 
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-LABEL: foo
 ; CHECK-DAG: memw(##b)
 ; CHECK-DAG: memw(gp+#d)

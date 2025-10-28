@@ -100,11 +100,6 @@ void transform::ApplyFoldTensorEmptyPatternsOp::populatePatterns(
   tensor::populateFoldTensorEmptyPatterns(patterns, getFoldSingleUseOnly());
 }
 
-void transform::ApplyFoldIntoPackAndUnpackPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  tensor::populateFoldIntoPackAndUnpackPatterns(patterns);
-}
-
 void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
@@ -123,6 +118,11 @@ void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::
 void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
+}
+
+void transform::ApplyBubbleUpExtractSlicePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  tensor::populateBubbleUpExtractSliceOpPatterns(patterns);
 }
 
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
@@ -165,7 +165,7 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
       return Value();
     }
-    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+    return tensor::CastOp::create(builder, loc, resultType, input).getResult();
   });
   converter.addTargetMaterialization([](OpBuilder &builder, Type resultType,
                                         ValueRange inputs,
@@ -177,7 +177,7 @@ void transform::TypeConversionCastShapeDynamicDimsOp::
     if (!tensor::CastOp::areCastCompatible(input.getType(), resultType)) {
       return Value();
     }
-    return builder.create<tensor::CastOp>(loc, resultType, input).getResult();
+    return tensor::CastOp::create(builder, loc, resultType, input).getResult();
   });
 }
 
