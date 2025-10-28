@@ -330,6 +330,7 @@ class LLVM_LIBRARY_VISIBILITY CoroIdRetconOnceDynamicInst
     DeallocArg,
     AllocFrameArg,
     DeallocFrameArg,
+    TypeIdArg,
   };
 
 public:
@@ -384,6 +385,13 @@ public:
   }
 
   Value *getAllocator() const { return getArgOperand(AllocatorArg); }
+
+  /// The TypeId to be used for allocating memory.
+  ConstantInt *getTypeId() const {
+    if (arg_size() <= TypeIdArg)
+      return nullptr;
+    return cast<ConstantInt>(getArgOperand(TypeIdArg));
+  }
 
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
@@ -869,7 +877,16 @@ public:
 
 /// This represents the llvm.coro.alloca.alloc.frame instruction.
 class CoroAllocaAllocFrameInst : public AnyCoroAllocaAllocInst {
+  enum { TypeIdArg = 2 };
+
 public:
+  /// Return the TypeId to be used for allocating typed memory
+  Value *getTypeId() const {
+    if (arg_size() <= TypeIdArg)
+      return nullptr;
+    return getArgOperand(TypeIdArg);
+  }
+
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_alloca_alloc_frame;
