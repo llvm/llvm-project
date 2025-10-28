@@ -90,6 +90,8 @@ def find_python_interpreter():
     )
 
     shutil.copy(real_python, copied_python)
+    # macOS 15+ restricts injecting the ASAN runtime to only user-compiled code.
+    subprocess.check_call(["/usr/bin/codesign", "--remove-signature", copied_python])
 
     # Now make sure the copied Python works. The Python in Xcode has a relative
     # RPATH and cannot be copied.

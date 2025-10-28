@@ -53,6 +53,14 @@ A list of non-standard directives supported by Flang
 * `!dir$ novector` disabling vectorization on the following loop.
 * `!dir$ nounroll` disabling unrolling on the following loop.
 * `!dir$ nounroll_and_jam` disabling unrolling and jamming on the following loop.
+* `!dir$ inline` instructs the compiler to attempt to inline the called routines if the 
+  directive is specified before a call statement or all call statements within the loop 
+  body if specified before a DO LOOP or all function references if specified before an 
+  assignment statement.
+* `!dir$ forceinline` works in the same way as the `inline` directive, but it forces 
+   inlining by the compiler on a function call statement.
+* `!dir$ noinline` works in the same way as the `inline` directive, but prevents 
+  any attempt of inlining by the compiler on a function call statement.
 
 # Directive Details
 
