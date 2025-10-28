@@ -487,8 +487,8 @@ template <typename Op>
 struct ConvertMultipleAsyncDepsToGpuWaitPattern final : OpRewritePattern<Op> {
   using OpRewritePattern<Op>::OpRewritePattern;
 
-  LogicalResult
-  matchAndRewrite(Op op, PatternRewriter &rewriter) const override;
+  LogicalResult matchAndRewrite(Op op,
+                                PatternRewriter &rewriter) const override;
 };
 
 /// Generic rewriting rule for operation on sparse matrices.
@@ -556,11 +556,12 @@ void GpuToLLVMConversionPass::runOnOperation() {
       return signalPassFailure();
     }
 
-    LLVM_DEBUG(llvm::dbgs() << "--- IR After Adding Additional gpu.waits: ---\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "--- IR After Adding Additional gpu.waits: ---\n");
     LLVM_DEBUG(getOperation()->print(llvm::dbgs()));
-    LLVM_DEBUG(llvm::dbgs() << "---------------------------------------------\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "---------------------------------------------\n");
   }
-
 
   LowerToLLVMOptions options(context);
   options.useBarePtrCallConv = hostBarePtrCallConv;
@@ -1810,16 +1811,18 @@ LogicalResult ConvertCreateBsrOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-template<class Op>
+template <class Op>
 LogicalResult ConvertMultipleAsyncDepsToGpuWaitPattern<Op>::matchAndRewrite(
-  Op op, PatternRewriter &rewriter) const {
+    Op op, PatternRewriter &rewriter) const {
   if (op.getAsyncDependencies().size() <= 1)
     return rewriter.notifyMatchFailure(
         op, "Can only convert ops with multiple async dependencies.");
 
   // Create a new gpu.wait with the original async deps.
   Type tokenType = rewriter.getType<gpu::AsyncTokenType>();
-  Value waitToken = gpu::WaitOp::create(rewriter, op.getLoc(), tokenType, op.getAsyncDependencies()).getAsyncToken();
+  Value waitToken = gpu::WaitOp::create(rewriter, op.getLoc(), tokenType,
+                                        op.getAsyncDependencies())
+                        .getAsyncToken();
 
   // TODO is it safe to just do getAsyncDependenciesMutable on the original op?
   Operation *newOp = rewriter.clone(*op.getOperation());
@@ -1876,7 +1879,7 @@ void mlir::populateGpuToLLVMConversionPatterns(
 
 void mlir::populateGpuMultipleAsyncDepsConversionPatterns(
     RewritePatternSet &patterns) {
-  // TODO: Other ops to consider handling: 
+  // TODO: Other ops to consider handling:
   // - gpu::AllocOp,
   // - gpu::DeallocOp,
   // - gpu::MemcpyOp,
@@ -1903,9 +1906,8 @@ void mlir::populateGpuMultipleAsyncDepsConversionPatterns(
   // - gpu::CreateCscOp,
   // - gpu::CreateBsrOp,
   // - gpu::LaunchFuncOp
-  patterns.add<
-    ConvertMultipleAsyncDepsToGpuWaitPattern<gpu::LaunchFuncOp>
-  >(patterns.getContext());
+  patterns.add<ConvertMultipleAsyncDepsToGpuWaitPattern<gpu::LaunchFuncOp>>(
+      patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
