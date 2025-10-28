@@ -73,7 +73,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(resp["success"], "Expected failure in response {resp!r}")
         error_msg = resp["body"]["error"]["format"]
 
-        # attach my fail for mutilple reasons.
+        # attach may fail for mutilple reasons.
         self.assertEqual(error_msg, "Failed to create the process")
 
     @skipIfLLVMTargetMissing("X86")
