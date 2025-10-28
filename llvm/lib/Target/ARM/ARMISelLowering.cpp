@@ -1298,12 +1298,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
 
-  // Use __sincos_stret if available.
-  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
-      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
-    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-  }
+  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
   if (Subtarget->hasFPARMv8Base()) {
@@ -9835,13 +9831,18 @@ static SDValue LowerUADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
 }
 
 SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetDarwin());
-
   // For iOS, we want to call an alternative entry point: __sincos_stret,
   // return values are passed via sret.
   SDLoc dl(Op);
   SDValue Arg = Op.getOperand(0);
   EVT ArgVT = Arg.getValueType();
+  RTLIB::Libcall LC = RTLIB::getSINCOS_STRET(ArgVT);
+  RTLIB::LibcallImpl SincosStret = getLibcallImpl(LC);
+  if (SincosStret == RTLIB::Unsupported)
+    return SDValue();
+
+  assert(Subtarget->isTargetDarwin());
+
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
@@ -9871,11 +9872,9 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
 
   Args.emplace_back(Arg, ArgTy);
 
-  RTLIB::Libcall LC =
-      (ArgVT == MVT::f64) ? RTLIB::SINCOS_STRET_F64 : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = getLibcallName(LC);
-  CallingConv::ID CC = getLibcallCallingConv(LC);
-  SDValue Callee = DAG.getExternalSymbol(LibcallName, getPointerTy(DL));
+  StringRef LibcallName = getLibcallImplName(SincosStret);
+  CallingConv::ID CC = getLibcallImplCallingConv(SincosStret);
+  SDValue Callee = DAG.getExternalSymbol(LibcallName.data(), getPointerTy(DL));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
