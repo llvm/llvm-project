@@ -2187,8 +2187,7 @@ void OmpAttributeVisitor::CollectNumAffectedLoopsFromInnerLoopContruct(
       "Expected a DoConstruct or OpenMPLoopConstruct");
   for (auto &nest : nestedList) {
     const auto *innerConstruct =
-        std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-            &nest);
+        std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(&nest);
 
     if (innerConstruct) {
       CollectNumAffectedLoopsFromLoopConstruct(
@@ -2380,9 +2379,9 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     const parser::NestedConstruct *innerMostNest = nullptr;
     if (const auto &innerloop{std::get_if<parser::DoConstruct>(&loopCons)}) {
       innerMostNest = &loopCons;
-    } else if (const auto *innerLoop{
-        std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
-            &loopCons)}) {
+    } else if (const auto *innerLoop{std::get_if<
+                   common::Indirection<parser::OpenMPLoopConstruct>>(
+                   &loopCons)}) {
       PrivatizeAssociatedLoopIndexAndCheckLoopLevel(innerLoop->value());
     }
 
@@ -2391,8 +2390,8 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         for (const parser::DoConstruct *loop{&*outer}; loop && curLevel > 0;
             --curLevel) {
           if (loop->IsDoConcurrent()) {
-            // DO CONCURRENT is explicitly allowed for the LOOP construct so long
-            // as there isn't a COLLAPSE clause
+            // DO CONCURRENT is explicitly allowed for the LOOP construct so
+            // long as there isn't a COLLAPSE clause
             if (isLoopConstruct) {
               if (hasCollapseClause) {
                 // hasCollapseClause implies clause != nullptr
@@ -2401,7 +2400,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
               }
             } else {
               auto &stmt =
-                std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
+                  std::get<parser::Statement<parser::NonLabelDoStmt>>(loop->t);
               context_.Say(stmt.source,
                   "DO CONCURRENT loops cannot form part of a loop nest."_err_en_US);
             }
@@ -2422,26 +2421,26 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
         }
         CheckAssocLoopLevel(curLevel, GetAssociatedClause());
       } else if (const auto *loop{std::get_if<
-          common::Indirection<parser::OpenMPLoopConstruct>>(
-              innerMostNest)}) {
+                     common::Indirection<parser::OpenMPLoopConstruct>>(
+                     innerMostNest)}) {
         const parser::OmpDirectiveSpecification &beginSpec{
-          loop->value().BeginDir()};
+            loop->value().BeginDir()};
         const parser::OmpDirectiveName &beginName{beginSpec.DirName()};
         if (!llvm::omp::loopTransformationSet.test(beginName.v)) {
           context_.Say(GetContext().directiveSource,
               "Only Loop Transformation Constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
               parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   GetContext().directive, version)
-                .str()));
+                      .str()));
         } else {
           PrivatizeAssociatedLoopIndexAndCheckLoopLevel(loop->value());
         }
       } else {
         context_.Say(GetContext().directiveSource,
             "A DO loop must follow the %s directive"_err_en_US,
-            parser::ToUpperCaseLetters(
-              llvm::omp::getOpenMPDirectiveName(GetContext().directive, version)
-              .str()));
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                GetContext().directive, version)
+                    .str()));
       }
     }
   }

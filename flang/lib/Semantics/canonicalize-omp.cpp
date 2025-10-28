@@ -9,8 +9,8 @@
 #include "canonicalize-omp.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/semantics.h"
 
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
@@ -139,7 +139,7 @@ private:
           parser::ToUpperCaseLetters(dirName.source.ToString()));
     };
     auto transformUnrollError = [](const parser::OmpDirectiveName &dirName,
-                               parser::Messages &messages) {
+                                    parser::Messages &messages) {
       messages.Say(dirName.source,
           "If a loop construct has been fully unrolled, it cannot then be further transformed"_err_en_US,
           parser::ToUpperCaseLetters(dirName.source.ToString()));
@@ -196,7 +196,7 @@ private:
             // if a loop has been unrolled, the user can not then transform that
             // loop as it has been unrolled
             const parser::OmpClauseList &unrollClauseList{
-              nestedBeginDirective.Clauses()};
+                nestedBeginDirective.Clauses()};
             if (unrollClauseList.v.empty()) {
               // if the clause list is empty for an unroll construct, we assume
               // the loop is being fully unrolled
