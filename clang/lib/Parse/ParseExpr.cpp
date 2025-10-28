@@ -333,6 +333,27 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
     Token OpToken = Tok;
     ConsumeToken();
 
+    // the reflection operator can't be in a binary expression
+    // so if reflection and blocks are enabled, we need to
+    // split caretcaret into two caret's
+    if (OpToken.is(tok::caretcaret)) {
+      assert(getLangOpts().Reflection &&
+             "reflection support disabled - compile with -freflection");
+      if (getLangOpts().Blocks) {
+        OpToken.setKind(tok::caret);
+        Token Caret;
+        {
+          Caret.startToken();
+          Caret.setKind(tok::caret);
+          Caret.setLocation(Tok.getLocation());
+          Caret.setLength(1);
+        }
+        UnconsumeToken(OpToken);
+        PP.EnterToken(Caret, /*IsReinject=*/true);
+        return ParseRHSOfBinaryExpression(LHS, MinPrec);
+      }
+    }
+
     // If we're potentially in a template-id, we may now be able to determine
     // whether we're actually in one or not.
     if (OpToken.isOneOf(tok::comma, tok::greater, tok::greatergreater,
@@ -1209,10 +1230,15 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     Res = ParseUnaryExprOrTypeTraitExpression();
     break;
   case tok::caretcaret: {
-    if (getLangOpts().Reflection) {
-      SourceLocation DoubleCaret = ConsumeToken();
-      Res = ParseCXXReflectExpression(/*OpLoc=*/DoubleCaret);
+    if (!getLangOpts().Reflection) {
+      NotCastExpr = true;
+      return ExprError();
     }
+
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    AllowSuffix = false;
+    Res = ParseUnaryExprOrTypeTraitExpression();
     break;
   }
   case tok::ampamp: {      // unary-expression: '&&' identifier
