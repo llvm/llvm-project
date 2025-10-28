@@ -5782,6 +5782,15 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
         VTy->getPrimitiveSizeInBits() / AArch64::SVEBitsPerBlock;
     unsigned SegmentElts = VTy->getNumElements() / Segments;
 
+    // Check for identity masks when SVE is available, which we can treat as
+    // free.
+    if (LT.second.isFixedLengthVector() && ST->isSVEorStreamingSVEAvailable() &&
+        (Kind == TTI::SK_PermuteTwoSrc || Kind == TTI::SK_PermuteSingleSrc) &&
+        all_of(enumerate(Mask), [](const auto &M) {
+          return M.value() < 0 || M.value() == (int)M.index();
+        }))
+      return 0;
+
     // dupq zd.t, zn.t[idx]
     if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
         ST->isSVEorStreamingSVEAvailable() &&
