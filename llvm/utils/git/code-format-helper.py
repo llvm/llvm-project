@@ -466,70 +466,7 @@ Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedB
         return report
 
 
-class DumpASTMatchersHelper(FormatHelper):
-    name = "dump_ast_matchers.py"
-    friendly_name = "AST matchers documentation"
-
-    output_html = "clang/docs/LibASTMatchersReference.html"
-    script_dir = "clang/docs/tools"
-    script_name = "dump_ast_matchers.py"
-
-    @property
-    def instructions(self) -> str:
-        return f"cd {self.script_dir} && python3 {self.script_name}"
-
-    def should_run(self, changed_files: List[str]) -> List[str]:
-        for file in changed_files:
-            if file == "clang/include/clang/ASTMatchers/ASTMatchers.h":
-                return True
-        return False
-
-    def has_tool(self) -> bool:
-        if not os.path.exists(os.path.join(self.script_dir, self.script_name)):
-            return False
-        return True
-
-    def format_run(self, changed_files: List[str], args: FormatArgs) -> Optional[str]:
-        if not self.should_run(changed_files):
-            return None
-
-        if args.verbose:
-            print(f"Running: {self.instructions}")
-
-        # Run the 'dump_ast_matchers.py' from its directory as specified in the script doc
-        proc = subprocess.run(
-            ["python3", self.script_name],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding="utf-8",
-            cwd=self.script_dir,
-        )
-
-        if proc.returncode != 0:
-            return f"dump_ast_matchers.py failed with code {proc.returncode}:\n{proc.stderr}\n{proc.stdout}"
-
-        # Check if 'LibASTMatchersReference.html' file was modified
-        cmd = ["git", "diff", "--exit-code", self.output_html]
-        proc = subprocess.run(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8"
-        )
-
-        # 'LibASTMatchersReference.html' was modified - count as failure
-        if proc.returncode != 0:
-            if args.verbose:
-                print(f"error: {self.name} exited with code {proc.returncode}")
-                print(proc.stdout)
-            return proc.stdout
-        else:
-            return None
-
-
-ALL_FORMATTERS = (
-    DarkerFormatHelper(),
-    ClangFormatHelper(),
-    UndefGetFormatHelper(),
-    DumpASTMatchersHelper(),
-)
+ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper())
 
 
 def hook_main():
