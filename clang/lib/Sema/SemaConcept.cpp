@@ -2412,6 +2412,7 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
       NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
       return nullptr;
     }
+    // substitute() can invalidate iterators of NormalizationCache.
     bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
