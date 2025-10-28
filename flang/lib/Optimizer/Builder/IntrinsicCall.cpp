@@ -1045,6 +1045,55 @@ static constexpr IntrinsicHandler handlers[]{
        {"dst", asAddr},
        {"nbytes", asValue}}},
      /*isElemental=*/false},
+    {"tma_bulk_ldc4",
+     &I::genTMABulkLoadC4,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldc8",
+     &I::genTMABulkLoadC8,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldi4",
+     &I::genTMABulkLoadI4,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldi8",
+     &I::genTMABulkLoadI8,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldr2",
+     &I::genTMABulkLoadR2,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldr4",
+     &I::genTMABulkLoadR4,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldr8",
+     &I::genTMABulkLoadR8,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
     {"tma_bulk_s2g",
      &I::genTMABulkS2G,
      {{{"src", asAddr}, {"dst", asAddr}, {"nbytes", asValue}}},
@@ -9276,6 +9325,93 @@ void IntrinsicLibrary::genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           mlir::NVVM::NVVMMemorySpace::Global);
   mlir::NVVM::CpAsyncBulkGlobalToSharedClusterOp::create(
       builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
+}
+
+static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value barrier, mlir::Value src,
+                           mlir::Value dst, mlir::Value nelem,
+                           mlir::Value eleSize) {
+  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, nelem, eleSize);
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  barrier = builder.createConvert(loc, llvmPtrTy, barrier);
+  mlir::NVVM::InlinePtxOp::create(
+      builder, loc, mlir::TypeRange{}, {dst, src, size, barrier}, {},
+      "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], "
+      "[%1], %2, [%3];",
+      {});
+  mlir::NVVM::InlinePtxOp::create(
+      builder, loc, mlir::TypeRange{}, {barrier, size}, {},
+      "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;", {});
+}
+
+// TMA_BULK_LOADC4
+void IntrinsicLibrary::genTMABulkLoadC4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADC8
+void IntrinsicLibrary::genTMABulkLoadC8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 16);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADI4
+void IntrinsicLibrary::genTMABulkLoadI4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADI8
+void IntrinsicLibrary::genTMABulkLoadI8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADR2
+void IntrinsicLibrary::genTMABulkLoadR2(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 2);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADR4
+void IntrinsicLibrary::genTMABulkLoadR4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADR8
+void IntrinsicLibrary::genTMABulkLoadR8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
 }
 
 // TMA_BULK_S2G (CUDA)
