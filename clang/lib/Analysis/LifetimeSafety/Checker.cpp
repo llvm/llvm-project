@@ -43,8 +43,7 @@ namespace {
 /// Struct to store the complete context for a potential lifetime violation.
 struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
-  llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
-      CausingFact; // If the use is a UseFact or OriginEscapeFact
+  llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
   Confidence ConfidenceLevel;
 };
 
@@ -84,6 +83,8 @@ public:
     LoanID ExpiredLoan = EF->getLoanID();
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
     Confidence CurConfidence = Confidence::None;
+    // The UseFact or OriginEscapesFact most indicative of a lifetime error,
+    // prioritized by earlier source location.
     llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
         BestCausingFact = nullptr;
 

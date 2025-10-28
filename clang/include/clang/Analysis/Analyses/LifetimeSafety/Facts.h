@@ -38,11 +38,11 @@ public:
     /// it. Otherwise, the source's loan set is merged into the destination's
     /// loan set.
     OriginFlow,
-    /// An origin escapes the function by flowing into the return value.
+    /// An origin is used (eg. appears as l-value expression like DeclRefExpr).
     Use,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
-    /// Indicates that an origin escapes the function scope (e.g., via return).
+    /// An origin that escapes the function scope (e.g., via return).
     OriginEscapes,
   };
 
@@ -222,6 +222,7 @@ public:
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
+  llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) const;
 
 private:
   LoanManager LoanMgr;

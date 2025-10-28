@@ -100,4 +100,16 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC) const {
   }
 }
 
+llvm::ArrayRef<const Fact *>
+FactManager::getBlockContaining(ProgramPoint P) const {
+  for (const auto &Entry : BlockToFactsMap) {
+    const auto &Facts = Entry.second;
+    for (const Fact *F : Facts) {
+      if (F == P)
+        return Facts;
+    }
+  }
+  return {};
+}
+
 } // namespace clang::lifetimes::internal

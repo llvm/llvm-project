@@ -93,8 +93,6 @@ private:
   FactManager &FactMgr;
   AnalysisDeclContext &AC;
   llvm::SmallVector<Fact *> CurrentBlockFacts;
-  // Collect origins that escape the function in this block (OriginEscapesFact),
-  // appended at the end to ensure they appear after ExpireFact entries.
   llvm::SmallVector<Fact *> EscapesInCurrentBlock;
   // To distinguish between reads and writes for use-after-free checks, this map
   // stores the `UseFact` for each `DeclRefExpr`. We initially identify all

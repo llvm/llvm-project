@@ -10734,7 +10734,7 @@ def warn_lifetime_safety_return_stack_addr_permissive
       InGroup<LifetimeSafetyPermissive>,
       DefaultIgnore;
 def warn_lifetime_safety_return_stack_addr_strict
-    : Warning<"address of stack memory maybe returned later">,
+    : Warning<"address of stack memory may be returned later">,
       InGroup<LifetimeSafetyStrict>,
       DefaultIgnore;
 
