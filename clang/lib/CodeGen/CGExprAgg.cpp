@@ -2252,20 +2252,18 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   // Sanitizer checks to verify source and destination pointers are
   // non-null and properly aligned before copying.
   // Without these checks, undefined behavior from invalid pointers goes undetected.
-  if (SanOpts.hasOneOf(SanitizerKind::Null | SanitizerKind::Alignment)) {
-    Address SrcAddr = Src.getAddress();
-    Address DestAddr = Dest.getAddress();
+  Address SrcAddr = Src.getAddress();
+  Address DestAddr = Dest.getAddress();
 
-    // Check source pointer for null and alignment violations
-    EmitTypeCheck(TCK_Load, SourceLocation(),
-                  SrcAddr.emitRawPointer(*this), Ty, SrcAddr.getAlignment(),
-                  SanitizerSet());
+  // Check source pointer for null and alignment violations
+  EmitTypeCheck(TCK_Load, SourceLocation(),
+                SrcAddr.emitRawPointer(*this), Ty, SrcAddr.getAlignment(),
+                SanitizerSet());
 
-    // Check destination pointer for null and alignment violations
-    EmitTypeCheck(TCK_Store, SourceLocation(),
-                  DestAddr.emitRawPointer(*this), Ty, DestAddr.getAlignment(),
-                  SanitizerSet());
-  }
+  // Check destination pointer for null and alignment violations
+  EmitTypeCheck(TCK_Store, SourceLocation(),
+                DestAddr.emitRawPointer(*this), Ty, DestAddr.getAlignment(),
+                SanitizerSet());
 
   Address DestPtr = Dest.getAddress();
   Address SrcPtr = Src.getAddress();
