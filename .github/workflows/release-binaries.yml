@@ -284,7 +284,7 @@ jobs:
         VCPKG_CMAKE_CONFIGURE_OPTIONS: -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_ICONV=OFF 
         VCPKG_ENV_PASSTHROUGH: VCPKG_CMAKE_CONFIGURE_OPTIONS
       run: |
-        vcpkg install libxml2:x64-windows-static
+        vcpkg install libxml2[core]:x64-windows-static
         #find / -iname 'libxml*.lib'
 
     - name: Configure
@@ -301,6 +301,7 @@ jobs:
         cmake --debug-trycompile  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -DLLVM_ENABLE_LIBXML2=FORCE_ON \
+            -DLIBXML2_LIBRARIES=/c/vcpkg/packages/libxml2_x64-windows-static/lib/libxml2.lib \
             -DLIBXML2_INCLUDE_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2 \
             -DLIBXML2_DEFINITIONS=-DLIBXML_STATIC \
             -C clang/cmake/caches/Release.cmake \
