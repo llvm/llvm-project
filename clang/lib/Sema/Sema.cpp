@@ -276,10 +276,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
       SourceMgr(PP.getSourceManager()), APINotes(SourceMgr, LangOpts),
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
-      LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
-      OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
-      StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
-      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      LateTemplateParser(nullptr), OpaqueParser(nullptr), CurContext(nullptr),
+      ExternalSource(nullptr), StackHandler(Diags), CurScope(nullptr),
+      Ident_super(nullptr), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
@@ -1247,9 +1246,6 @@ void Sema::ActOnEndOfTranslationUnit() {
                                      Module::PrivateModuleFragment
             ? TUFragmentKind::Private
             : TUFragmentKind::Normal);
-
-    if (LateTemplateParserCleanup)
-      LateTemplateParserCleanup(OpaqueParser);
 
     CheckDelayedMemberExceptionSpecs();
   } else {

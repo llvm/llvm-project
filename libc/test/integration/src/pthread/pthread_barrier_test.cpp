@@ -26,7 +26,7 @@
 pthread_barrier_t barrier;
 LIBC_NAMESPACE::cpp::Atomic<int> counter;
 
-void *increment_counter_and_wait([[maybe_unused]] void *args) {
+void *increment_counter_and_wait(void *args) {
   counter.fetch_add(1);
   return reinterpret_cast<void *>(
       LIBC_NAMESPACE::pthread_barrier_wait(&barrier));
@@ -102,7 +102,7 @@ void reused_barrier_test() {
   LIBC_NAMESPACE::pthread_barrier_destroy(&barrier);
 }
 
-void *barrier_wait([[maybe_unused]] void *in) {
+void *barrier_wait(void *in) {
   return reinterpret_cast<void *>(
       LIBC_NAMESPACE::pthread_barrier_wait(&barrier));
 }
