@@ -1620,9 +1620,9 @@ void AccessAnalysis::processMemAccesses() {
 /// Check whether the access through \p Ptr has a constant stride.
 std::optional<int64_t>
 llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
-                   const Loop *Lp,
+                   const Loop *Lp, const DominatorTree &DT,
                    const DenseMap<Value *, const SCEV *> &StridesMap,
-                   bool Assume, bool ShouldCheckWrap, DominatorTree *DT) {
+                   bool Assume, bool ShouldCheckWrap) {
   const SCEV *PtrScev = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
   if (PSE.getSE()->isLoopInvariant(PtrScev, Lp))
     return 0;
@@ -1644,7 +1644,7 @@ llvm::getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
   if (!ShouldCheckWrap || !Stride)
     return Stride;
 
-  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, *DT, Stride))
+  if (isNoWrap(PSE, AR, Ptr, AccessTy, Lp, Assume, DT, Stride))
     return Stride;
 
   LLVM_DEBUG(
@@ -2062,9 +2062,9 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
 
   std::optional<int64_t> StrideAPtr = getPtrStride(
-      PSE, ATy, APtr, InnermostLoop, SymbolicStrides, true, true, DT);
+      PSE, ATy, APtr, InnermostLoop, *DT, SymbolicStrides, true, true);
   std::optional<int64_t> StrideBPtr = getPtrStride(
-      PSE, BTy, BPtr, InnermostLoop, SymbolicStrides, true, true, DT);
+      PSE, BTy, BPtr, InnermostLoop, *DT, SymbolicStrides, true, true);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -2706,8 +2706,8 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
     bool IsReadOnlyPtr = false;
     Type *AccessTy = getLoadStoreType(LD);
     if (Seen.insert({Ptr, AccessTy}).second ||
-        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, SymbolicStrides, false,
-                      true, DT)) {
+        !getPtrStride(*PSE, AccessTy, Ptr, TheLoop, *DT, SymbolicStrides, false,
+                      true)) {
       ++NumReads;
       IsReadOnlyPtr = true;
     }

@@ -6122,7 +6122,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 }
 
 static bool containsDecreasingPointers(Loop *TheLoop,
-                                       PredicatedScalarEvolution *PSE) {
+                                       PredicatedScalarEvolution *PSE,
+                                       const DominatorTree &DT) {
   const auto &Strides = DenseMap<Value *, const SCEV *>();
   for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the instructions in the block and look for addresses that are
@@ -6131,8 +6132,8 @@ static bool containsDecreasingPointers(Loop *TheLoop,
       if (isa<LoadInst>(&I) || isa<StoreInst>(&I)) {
         Value *Ptr = getLoadStorePointerOperand(&I);
         Type *AccessTy = getLoadStoreType(&I);
-        if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, Strides, /*Assume=*/true,
-                         /*ShouldCheckWrap=*/false)
+        if (getPtrStride(*PSE, AccessTy, Ptr, TheLoop, DT, Strides,
+                         /*Assume=*/true, /*ShouldCheckWrap=*/false)
                 .value_or(0) < 0)
           return true;
       }
@@ -6177,7 +6178,8 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // negative strides. This will require extra work to reverse the loop
   // predicate, which may be expensive.
   if (containsDecreasingPointers(TFI->LVL->getLoop(),
-                                 TFI->LVL->getPredicatedScalarEvolution()))
+                                 TFI->LVL->getPredicatedScalarEvolution(),
+                                 *TFI->LVL->getDominatorTree()))
     Required |= TailFoldingOpts::Reverse;
   if (Required == TailFoldingOpts::Disabled)
     Required |= TailFoldingOpts::Simple;
