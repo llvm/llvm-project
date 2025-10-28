@@ -3313,7 +3313,6 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FP_ROUND:   R = SoftPromoteHalfRes_FP_ROUND(N); break;
 
   // Unary FP Operations
-  case ISD::FABS:
   case ISD::FACOS:
   case ISD::FASIN:
   case ISD::FATAN:
@@ -3329,7 +3328,6 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG2:
   case ISD::FLOG10:
   case ISD::FNEARBYINT:
-  case ISD::FNEG:
   case ISD::FREEZE:
   case ISD::FRINT:
   case ISD::FROUND:
@@ -3341,6 +3339,12 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
   case ISD::FTAN:
   case ISD::FTANH:
   case ISD::FCANONICALIZE: R = SoftPromoteHalfRes_UnaryOp(N); break;
+  case ISD::FABS:
+    R = SoftPromoteHalfRes_FABS(N);
+    break;
+  case ISD::FNEG:
+    R = SoftPromoteHalfRes_FNEG(N);
+    break;
   case ISD::AssertNoFPClass:
     R = SoftPromoteHalfRes_AssertNoFPClass(N);
     break;
@@ -3670,6 +3674,24 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_UnaryOp(SDNode *N) {
   return DAG.getNode(GetPromotionOpcode(NVT, OVT), dl, MVT::i16, Res);
 }
 
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FABS(SDNode *N) {
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Clear the sign bit.
+  return DAG.getNode(ISD::AND, dl, MVT::i16, Op,
+                     DAG.getConstant(0x7fff, dl, MVT::i16));
+}
+
+SDValue DAGTypeLegalizer::SoftPromoteHalfRes_FNEG(SDNode *N) {
+  SDValue Op = GetSoftPromotedHalf(N->getOperand(0));
+  SDLoc dl(N);
+
+  // Invert the sign bit.
+  return DAG.getNode(ISD::XOR, dl, MVT::i16, Op,
+                     DAG.getConstant(0x8000, dl, MVT::i16));
+}
+
 SDValue DAGTypeLegalizer::SoftPromoteHalfRes_AssertNoFPClass(SDNode *N) {
   return GetSoftPromotedHalf(N->getOperand(0));
 }
@@ -3743,6 +3765,8 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_UINT:
   case ISD::LRINT:
   case ISD::LLRINT:
+  case ISD::LROUND:
+  case ISD::LLROUND:
     Res = SoftPromoteHalfOp_Op0WithStrict(N);
     break;
   case ISD::FP_TO_SINT_SAT:

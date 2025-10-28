@@ -298,7 +298,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC,
                      {MVT::i1, MVT::i32, MVT::i64, MVT::f32, MVT::f64}, Expand);
 
-  setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Legal);
+  setOperationAction({ISD::ABS, ISD::UADDO, ISD::USUBO}, MVT::i32, Legal);
 
   setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i32, Legal);
 
@@ -1651,6 +1651,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
     Info.ptrVal = CI.getArgOperand(1);
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
+    if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
+      Info.flags |= MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
@@ -11219,8 +11222,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     MachinePointerInfo StorePtrI = LoadPtrI;
     LoadPtrI.V = PoisonValue::get(
-        PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
-    LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
+        PointerType::get(*DAG.getContext(), AMDGPUAS::BUFFER_RESOURCE));
+    LoadPtrI.AddrSpace = AMDGPUAS::BUFFER_RESOURCE;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
 
     auto F = LoadMMO->getFlags() &
@@ -11307,7 +11310,11 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     Ops.push_back(Op.getOperand(5));  // Offset
-    Ops.push_back(Op.getOperand(6));  // CPol
+
+    unsigned Aux = Op.getConstantOperandVal(6);
+    Ops.push_back(DAG.getTargetConstant(Aux & ~AMDGPU::CPol::VIRTUAL_BITS, DL,
+                                        MVT::i32)); // CPol
+
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
 
@@ -18168,7 +18175,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   return CacheLineAlign;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   assert(N->getOpcode() == ISD::CopyFromReg);
   do {
