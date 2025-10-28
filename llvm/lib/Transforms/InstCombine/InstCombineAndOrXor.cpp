@@ -4002,7 +4002,8 @@ static Value *FoldOrOfSelectSmaxToAbs(BinaryOperator &I,
                                       InstCombiner::BuilderTy &Builder) {
   CmpPredicate Pred;
   Value *X;
-  if (match(&I, m_c_Or(m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(X), m_ZeroInt()),
+  if (match(&I, m_c_Or(m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(X),
+                                               m_ZeroInt()),
                                 m_ZeroInt(), m_Sub(m_ZeroInt(), m_Deferred(X))),
                        m_OneUse(m_Intrinsic<Intrinsic::smax>(m_Deferred(X),
                                                              m_ZeroInt())))))
