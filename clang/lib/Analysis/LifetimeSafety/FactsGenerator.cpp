@@ -58,9 +58,6 @@ void FactsGenerator::run() {
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
-    // Collect origins that escape the function in this block
-    // (OriginEscapesFact),
-    // appended at the end to ensure they appear after ExpireFact entries.
     EscapesInCurrentBlock.clear();
     for (unsigned I = 0; I < Block->size(); ++I) {
       const CFGElement &Element = Block->Elements[I];
