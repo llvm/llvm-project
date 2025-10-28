@@ -159,7 +159,7 @@ func.func @manual_deallocation(%c: i1, %f: f32, %idx: index) -> f32 {
 
 // -----
 
-// CHECK-LABEL: func.func private @properly_creats_deallocations_in_execute_region(
+// CHECK-LABEL: func.func private @properly_creates_deallocations_in_execute_region(
 // CHECK:           %[[true:.*]] = arith.constant true
 // CHECK:           scf.execute_region no_inline {
 // CHECK:             %[[alloc:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1x63x378x16xui8>
