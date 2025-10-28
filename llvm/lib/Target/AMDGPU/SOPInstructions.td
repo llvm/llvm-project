@@ -1896,11 +1896,6 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i32 (UniformUnaryFrag<anyext> (i16 (UniformBinFrag<smax> i16:$src, (i16 (UniformBinFrag<sub> 0, i16:$src)))))),
-  (S_ABS_I32 (i32 (S_SEXT_I32_I16 $src)))
->;
-
-def : GCNPat <
   (v2i32 (UniformBinFrag<and> v2i32:$x, v2i32:$y)),
   (S_AND_B64 SReg_64:$x, SReg_64:$y)
 >;
