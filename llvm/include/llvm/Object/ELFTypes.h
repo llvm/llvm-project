@@ -869,8 +869,7 @@ struct BBAddrMap {
 
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      OmitBBEntries, CallsiteEndOffsets, BBHash,
-                      PostLinkCfg) ==
+                      OmitBBEntries, CallsiteEndOffsets, BBHash, PostLinkCfg) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
                       Other.MultiBBRange, Other.OmitBBEntries,
                       Other.CallsiteEndOffsets, Other.BBHash,
