@@ -903,6 +903,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_READSTEADYCOUNTER}, Standard).Uni(S64, {{Sgpr64}, {}});
 
+  addRulesForGOpcs({G_BLOCK_ADDR}).Any({{UniP0}, {{SgprP0}, {}}});
+
+  addRulesForGOpcs({G_GLOBAL_VALUE}).Any({{UniP3}, {{SgprP3}, {}}});
+
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
   addRulesForGOpcs({G_FADD}, Standard)
