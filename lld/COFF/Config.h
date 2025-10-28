@@ -201,6 +201,9 @@ struct Configuration {
   // Used for /thinlto-remote-compiler:<path>
   StringRef dtltoCompiler;
 
+  // Used for /thinlto-remote-compiler-prepend-arg:<arg>
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
+
   // Used for /thinlto-remote-compiler-arg:<arg>
   llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
 
@@ -322,6 +325,7 @@ struct Configuration {
   bool largeAddressAware = false;
   bool highEntropyVA = false;
   bool appContainer = false;
+  bool mergeDebugDirectory = true;
   bool mingw = false;
   bool warnMissingOrderSymbol = true;
   bool warnLocallyDefinedImported = true;

@@ -22,8 +22,9 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
     llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
-    mlir::Type retTy, bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
+    mlir::omp::ClauseMapFlags mapType,
+    mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
+    bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
 
   if (auto boxTy = llvm::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
     baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
@@ -42,7 +43,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
 
   mlir::omp::MapInfoOp op =
       mlir::omp::MapInfoOp::create(builder, loc, retTy, baseAddr, varType,
-          builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
+          builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
           builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
           varPtrPtr, members, membersIndex, bounds, mapperId,
           builder.getStringAttr(name), builder.getBoolAttr(partialMap));
@@ -75,8 +76,7 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 
   firOpBuilder.setInsertionPoint(targetOp);
 
-  llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::implicit;
   mlir::omp::VariableCaptureKind captureKind =
       mlir::omp::VariableCaptureKind::ByRef;
 
@@ -88,16 +88,14 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
   if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
     captureKind = mlir::omp::VariableCaptureKind::ByCopy;
   } else if (!fir::isa_builtin_cptr_type(eleType)) {
-    mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+    mapFlag |= mlir::omp::ClauseMapFlags::to;
   }
 
   mlir::Value mapOp = createMapInfoOp(firOpBuilder, copyVal.getLoc(), copyVal,
       /*varPtrPtr=*/mlir::Value{}, name.str(), bounds,
       /*members=*/llvm::SmallVector<mlir::Value>{},
-      /*membersIndex=*/mlir::ArrayAttr{},
-      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          mapFlag),
-      captureKind, copyVal.getType());
+      /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind,
+      copyVal.getType());
 
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
   mlir::Region &region = targetOp.getRegion();
@@ -114,7 +112,7 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
   mlir::Block *entryBlock = &region.getBlocks().front();
   firOpBuilder.setInsertionPointToStart(entryBlock);
   auto loadOp =
-      firOpBuilder.create<fir::LoadOp>(clonedValArg.getLoc(), clonedValArg);
+      fir::LoadOp::create(firOpBuilder, clonedValArg.getLoc(), clonedValArg);
   return loadOp.getResult();
 }
 

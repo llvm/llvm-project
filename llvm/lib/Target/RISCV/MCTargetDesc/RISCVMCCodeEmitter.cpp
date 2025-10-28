@@ -698,6 +698,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCI) {
       FixupKind = RISCV::fixup_riscv_rvc_imm;
+      AsmRelaxToLinkerRelaxableWithFeature(RISCV::FeatureVendorXqcili);
     } else if (MIFrm == RISCVII::InstFormatI) {
       FixupKind = RISCV::fixup_riscv_12_i;
     } else if (MIFrm == RISCVII::InstFormatQC_EB) {

@@ -465,6 +465,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         ":UtilityPrivateHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:DebugInfo",
         "//llvm:DebugInfoDWARF",
         "//llvm:DebugInfoDWARFLowLevel",

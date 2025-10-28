@@ -60,6 +60,45 @@ static void BM_StringFindMatch2(benchmark::State& state) {
 }
 BENCHMARK(BM_StringFindMatch2)->Range(1, MAX_STRING_LEN / 4);
 
+static void BM_StringFindStringLiteral(benchmark::State& state) {
+  std::string s;
+
+  for (int i = 0; i < state.range(0); i++)
+    s += 'a';
+
+  s += 'b';
+
+  benchmark::DoNotOptimize(s.data());
+  benchmark::ClobberMemory();
+  size_t pos;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(pos = s.find("b"));
+    benchmark::ClobberMemory();
+  }
+}
+
+BENCHMARK(BM_StringFindStringLiteral)->RangeMultiplier(2)->Range(8, 8 << 10);
+
+static void BM_StringFindCharLiteral(benchmark::State& state) {
+  std::string s;
+
+  for (int i = 0; i < state.range(0); i++)
+    s += 'a';
+
+  s += 'b';
+
+  benchmark::DoNotOptimize(s.data());
+  benchmark::ClobberMemory();
+  size_t pos;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(pos = s.find('b'));
+    benchmark::ClobberMemory();
+  }
+}
+BENCHMARK(BM_StringFindCharLiteral)->RangeMultiplier(2)->Range(8, 8 << 10);
+
 static void BM_StringCtorDefault(benchmark::State& state) {
   for (auto _ : state) {
     std::string Default;

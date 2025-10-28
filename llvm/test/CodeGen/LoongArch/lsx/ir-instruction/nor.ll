@@ -74,8 +74,7 @@ define void @nor_u_v16i8(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: nor_u_v16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vrepli.b $vr1, 31
-; CHECK-NEXT:    vnor.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vnori.b $vr0, $vr0, 31
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

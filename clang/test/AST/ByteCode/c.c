@@ -368,3 +368,22 @@ void discardedCmp(void)
 {
     (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
 }
+
+/// ArraySubscriptExpr that's not an lvalue
+typedef unsigned char U __attribute__((vector_size(1)));
+void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }
+
+static char foo_(a) // all-warning {{definition without a prototype}}
+  char a;
+{
+  return 'a';
+}
+static void bar_(void) {
+  foo_(foo_(1));
+}
+
+void foo2(void*);
+void bar2(void) {
+  int a[2][3][4][5]; // all-note {{array 'a' declared here}}
+  foo2(&a[0][4]); // all-warning {{array index 4 is past the end of the array}}
+}

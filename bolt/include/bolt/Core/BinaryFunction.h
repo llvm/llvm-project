@@ -148,6 +148,11 @@ public:
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
+  void setContainedNegateRAState() { HadNegateRAState = true; }
+  bool containedNegateRAState() const { return HadNegateRAState; }
+  void setInitialRAState(bool State) { InitialRAState = State; }
+  bool getInitialRAState() { return InitialRAState; }
+
   /// Struct for tracking exception handling ranges.
   struct CallSite {
     const MCSymbol *Start;
@@ -192,9 +197,6 @@ public:
 
     mutable MCSymbol *FunctionConstantIslandLabel{nullptr};
     mutable MCSymbol *FunctionColdConstantIslandLabel{nullptr};
-
-    // Returns constant island alignment
-    uint16_t getAlignment() const { return sizeof(uint64_t); }
   };
 
   static constexpr uint64_t COUNT_NO_PROFILE =
@@ -220,6 +222,12 @@ public:
 private:
   /// Current state of the function.
   State CurrentState{State::Empty};
+
+  /// Indicates if the Function contained .cfi-negate-ra-state. These are not
+  /// read from the binary. This boolean is used when deciding to run the
+  /// .cfi-negate-ra-state rewriting passes on a function or not.
+  bool HadNegateRAState{false};
+  bool InitialRAState{false};
 
   /// A list of symbols associated with the function entry point.
   ///
@@ -612,13 +620,11 @@ private:
   }
 
   /// Return a label at a given \p Address in the function. If the label does
-  /// not exist - create it. Assert if the \p Address does not belong to
-  /// the function. If \p CreatePastEnd is true, then return the function
-  /// end label when the \p Address points immediately past the last byte
-  /// of the function.
+  /// not exist - create it.
+  ///
   /// NOTE: the function always returns a local (temp) symbol, even if there's
   ///       a global symbol that corresponds to an entry at this address.
-  MCSymbol *getOrCreateLocalLabel(uint64_t Address, bool CreatePastEnd = false);
+  MCSymbol *getOrCreateLocalLabel(uint64_t Address);
 
   /// Register an data entry at a given \p Offset into the function.
   void markDataAtOffset(uint64_t Offset) {
@@ -1328,7 +1334,7 @@ public:
     ColdCodeSectionName = Name.str();
   }
 
-  /// Return true iif the function will halt execution on entry.
+  /// Return true if the function will halt execution on entry.
   bool trapsOnEntry() const { return TrapsOnEntry; }
 
   /// Make the function always trap on entry. Other than the trap instruction,
@@ -1642,6 +1648,51 @@ public:
   bool hasInferredProfile() const { return HasInferredProfile; }
 
   void setHasInferredProfile(bool Inferred) { HasInferredProfile = Inferred; }
+
+  /// Find corrected offset the same way addCFIInstruction does it to skip NOPs.
+  std::optional<uint64_t> getCorrectedCFIOffset(uint64_t Offset) {
+    assert(!Instructions.empty());
+    auto I = Instructions.lower_bound(Offset);
+    if (Offset == getSize()) {
+      assert(I == Instructions.end() && "unexpected iterator value");
+      // Sometimes compiler issues restore_state after all instructions
+      // in the function (even after nop).
+      --I;
+      Offset = I->first;
+    }
+    assert(I->first == Offset && "CFI pointing to unknown instruction");
+    if (I == Instructions.begin())
+      return {};
+
+    --I;
+    while (I != Instructions.begin() && BC.MIB->isNoop(I->second)) {
+      Offset = I->first;
+      --I;
+    }
+    return Offset;
+  }
+
+  void setInstModifiesRAState(uint8_t CFIOpcode, uint64_t Offset) {
+    std::optional<uint64_t> CorrectedOffset = getCorrectedCFIOffset(Offset);
+    if (CorrectedOffset) {
+      auto I = Instructions.lower_bound(*CorrectedOffset);
+      I--;
+
+      switch (CFIOpcode) {
+      case dwarf::DW_CFA_AARCH64_negate_ra_state:
+        BC.MIB->setNegateRAState(I->second);
+        break;
+      case dwarf::DW_CFA_remember_state:
+        BC.MIB->setRememberState(I->second);
+        break;
+      case dwarf::DW_CFA_restore_state:
+        BC.MIB->setRestoreState(I->second);
+        break;
+      default:
+        assert(0 && "CFI Opcode not covered by function");
+      }
+    }
+  }
 
   void addCFIInstruction(uint64_t Offset, MCCFIInstruction &&Inst) {
     assert(!Instructions.empty());
@@ -2089,8 +2140,9 @@ public:
   }
 
   /// Detects whether \p Address is inside a data region in this function
-  /// (constant islands).
-  bool isInConstantIsland(uint64_t Address) const {
+  /// (constant islands), and optionally return the island size starting
+  /// from the given \p Address.
+  bool isInConstantIsland(uint64_t Address, uint64_t *Size = nullptr) const {
     if (!Islands)
       return false;
 
@@ -2108,15 +2160,18 @@ public:
     DataIter = std::prev(DataIter);
 
     auto CodeIter = Islands->CodeOffsets.upper_bound(Offset);
-    if (CodeIter == Islands->CodeOffsets.begin())
+    if (CodeIter == Islands->CodeOffsets.begin() ||
+        *std::prev(CodeIter) <= *DataIter) {
+      if (Size)
+        *Size = (CodeIter == Islands->CodeOffsets.end() ? getMaxSize()
+                                                        : *CodeIter) -
+                Offset;
       return true;
-
-    return *std::prev(CodeIter) <= *DataIter;
+    }
+    return false;
   }
 
-  uint16_t getConstantIslandAlignment() const {
-    return Islands ? Islands->getAlignment() : 1;
-  }
+  uint16_t getConstantIslandAlignment() const;
 
   /// If there is a constant island in the range [StartOffset, EndOffset),
   /// return its address.
@@ -2166,6 +2221,11 @@ public:
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
+  }
+
+  /// Return true if the whole function is a constant island.
+  bool isDataObject() const {
+    return Islands && Islands->CodeOffsets.size() == 0;
   }
 
   bool isStartOfConstantIsland(uint64_t Offset) const {

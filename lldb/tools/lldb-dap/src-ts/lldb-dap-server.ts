@@ -1,4 +1,6 @@
+import { FSWatcher, watch as chokidarWatch } from 'chokidar';
 import * as child_process from "node:child_process";
+import * as path from "path";
 import { isDeepStrictEqual } from "util";
 import * as vscode from "vscode";
 
@@ -12,6 +14,10 @@ export class LLDBDapServer implements vscode.Disposable {
   private serverProcess?: child_process.ChildProcessWithoutNullStreams;
   private serverInfo?: Promise<{ host: string; port: number }>;
   private serverSpawnInfo?: string[];
+  // Detects changes to the lldb-dap executable file since the server's startup.
+  private serverFileWatcher?: FSWatcher;
+  // Indicates whether the lldb-dap executable file has changed since the server's startup.
+  private serverFileChanged?: boolean;
 
   constructor() {
     vscode.commands.registerCommand(
@@ -83,6 +89,11 @@ export class LLDBDapServer implements vscode.Disposable {
       });
       this.serverProcess = process;
       this.serverSpawnInfo = this.getSpawnInfo(dapPath, dapArgs, options?.env);
+      this.serverFileChanged = false;
+      this.serverFileWatcher = chokidarWatch(dapPath);
+      this.serverFileWatcher
+        .on('change', () => this.serverFileChanged = true)
+        .on('unlink', () => this.serverFileChanged = true);
     });
     return this.serverInfo;
   }
@@ -100,21 +111,27 @@ export class LLDBDapServer implements vscode.Disposable {
     args: string[],
     env: NodeJS.ProcessEnv | { [key: string]: string } | undefined,
   ): Promise<boolean> {
-    if (!this.serverProcess || !this.serverInfo || !this.serverSpawnInfo) {
+    if (
+      !this.serverProcess ||
+      !this.serverInfo ||
+      !this.serverSpawnInfo ||
+      !this.serverFileWatcher ||
+      this.serverFileChanged === undefined
+    ) {
       return true;
+    }
+
+    const changeTLDR = [];
+    const changeDetails = [];
+
+    if (this.serverFileChanged) {
+      changeTLDR.push("an old binary");
     }
 
     const newSpawnInfo = this.getSpawnInfo(dapPath, args, env);
-    if (isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
-      return true;
-    }
-
-    const userInput = await vscode.window.showInformationMessage(
-      "The arguments to lldb-dap have changed. Would you like to restart the server?",
-      {
-        modal: true,
-        detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with different arguments.
-
+    if (!isDeepStrictEqual(this.serverSpawnInfo, newSpawnInfo)) {
+      changeTLDR.push("different arguments");
+      changeDetails.push(`
 The previous lldb-dap server was started with:
 
 ${this.serverSpawnInfo.join(" ")}
@@ -122,7 +139,22 @@ ${this.serverSpawnInfo.join(" ")}
 The new lldb-dap server will be started with:
 
 ${newSpawnInfo.join(" ")}
+`
+      );
+    }
 
+    // If the server hasn't changed, continue startup without killing it.
+    if (changeTLDR.length === 0) {
+      return true;
+    }
+
+    // The server has changed. Prompt the user to restart it.
+    const userInput = await vscode.window.showInformationMessage(
+      "The lldb-dap server has changed. Would you like to restart the server?",
+      {
+        modal: true,
+        detail: `An existing lldb-dap server (${this.serverProcess.pid}) is running with ${changeTLDR.map(s => `*${s}*`).join(" and ")}.
+${changeDetails.join("\n")}
 Restarting the server will interrupt any existing debug sessions and start a new server.`,
       },
       "Restart",
@@ -130,9 +162,7 @@ Restarting the server will interrupt any existing debug sessions and start a new
     );
     switch (userInput) {
       case "Restart":
-        this.serverProcess.kill();
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        this.dispose();
         return true;
       case "Use Existing":
         return true;
@@ -156,6 +186,10 @@ Restarting the server will interrupt any existing debug sessions and start a new
     if (this.serverProcess === process) {
       this.serverProcess = undefined;
       this.serverInfo = undefined;
+      this.serverSpawnInfo = undefined;
+      this.serverFileWatcher?.close();
+      this.serverFileWatcher = undefined;
+      this.serverFileChanged = undefined;
     }
   }
 
@@ -167,9 +201,12 @@ Restarting the server will interrupt any existing debug sessions and start a new
     return [
       path,
       ...args,
-      ...Object.entries(env ?? {}).map(
-        (entry) => String(entry[0]) + "=" + String(entry[1]),
-      ),
+      ...Object.entries(env ?? {})
+        // Filter and sort to avoid restarting the server just because the
+        // order of env changed or the log path changed.
+        .filter((entry) => String(entry[0]) !== "LLDBDAP_LOG")
+        .sort()
+        .map((entry) => String(entry[0]) + "=" + String(entry[1])),
     ];
   }
 }

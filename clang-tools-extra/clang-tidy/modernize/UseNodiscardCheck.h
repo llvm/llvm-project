@@ -28,7 +28,7 @@ namespace clang::tidy::modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-nodiscard.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-nodiscard.html
 class UseNodiscardCheck : public ClangTidyCheck {
 public:
   UseNodiscardCheck(StringRef Name, ClangTidyContext *Context);

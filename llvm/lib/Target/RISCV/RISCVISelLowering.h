@@ -245,6 +245,7 @@ public:
   }
 
   ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
+  ISD::NodeType getExtendForAtomicRMWArg(unsigned Op) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;
@@ -642,6 +643,7 @@ struct RISCVVIntrinsicInfo {
   unsigned IntrinsicID;
   uint8_t ScalarOperand;
   uint8_t VLOperand;
+  bool IsFPIntrinsic;
   bool hasScalarOperand() const {
     // 0xF is not valid. See NoScalarOperand in IntrinsicsRISCV.td.
     return ScalarOperand != 0xF;

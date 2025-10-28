@@ -6794,7 +6794,9 @@ bool Sema::tryToFixVariablyModifiedVarType(TypeSourceInfo *&TInfo,
   if (SizeIsNegative)
     Diag(Loc, diag::err_typecheck_negative_array_size);
   else if (Oversized.getBoolValue())
-    Diag(Loc, diag::err_array_too_large) << toString(Oversized, 10);
+    Diag(Loc, diag::err_array_too_large) << toString(
+        Oversized, 10, Oversized.isSigned(), /*formatAsCLiteral=*/false,
+        /*UpperCase=*/false, /*InsertSeparators=*/true);
   else if (FailedFoldDiagID)
     Diag(Loc, FailedFoldDiagID);
   return false;
@@ -7638,6 +7640,58 @@ static bool isMainVar(DeclarationName Name, VarDecl *VD) {
           VD->isExternC());
 }
 
+void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
+                         TypeSourceInfo *TInfo, VarDecl *NewVD) {
+
+  // Quickly return if the function does not have an `asm` attribute.
+  if (E == nullptr)
+    return;
+
+  // The parser guarantees this is a string.
+  StringLiteral *SE = cast<StringLiteral>(E);
+  StringRef Label = SE->getString();
+  QualType R = TInfo->getType();
+  if (S->getFnParent() != nullptr) {
+    switch (SC) {
+    case SC_None:
+    case SC_Auto:
+      Diag(E->getExprLoc(), diag::warn_asm_label_on_auto_decl) << Label;
+      break;
+    case SC_Register:
+      // Local Named register
+      if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
+          DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
+        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      break;
+    case SC_Static:
+    case SC_Extern:
+    case SC_PrivateExtern:
+      break;
+    }
+  } else if (SC == SC_Register) {
+    // Global Named register
+    if (DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) {
+      const auto &TI = Context.getTargetInfo();
+      bool HasSizeMismatch;
+
+      if (!TI.isValidGCCRegisterName(Label))
+        Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
+      else if (!TI.validateGlobalRegisterVariable(Label, Context.getTypeSize(R),
+                                                  HasSizeMismatch))
+        Diag(E->getExprLoc(), diag::err_asm_invalid_global_var_reg) << Label;
+      else if (HasSizeMismatch)
+        Diag(E->getExprLoc(), diag::err_asm_register_size_mismatch) << Label;
+    }
+
+    if (!R->isIntegralType(Context) && !R->isPointerType()) {
+      Diag(TInfo->getTypeLoc().getBeginLoc(),
+           diag::err_asm_unsupported_register_type)
+          << TInfo->getTypeLoc().getSourceRange();
+      NewVD->setInvalidDecl(true);
+    }
+  }
+}
+
 NamedDecl *Sema::ActOnVariableDeclarator(
     Scope *S, Declarator &D, DeclContext *DC, TypeSourceInfo *TInfo,
     LookupResult &Previous, MultiTemplateParamsArg TemplateParamLists,
@@ -8122,6 +8176,26 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
+  if (Expr *E = D.getAsmLabel()) {
+    // The parser guarantees this is a string.
+    StringLiteral *SE = cast<StringLiteral>(E);
+    StringRef Label = SE->getString();
+
+    // Insert the asm attribute.
+    NewVD->addAttr(AsmLabelAttr::Create(Context, Label, SE->getStrTokenLoc(0)));
+  } else if (!ExtnameUndeclaredIdentifiers.empty()) {
+    llvm::DenseMap<IdentifierInfo *, AsmLabelAttr *>::iterator I =
+        ExtnameUndeclaredIdentifiers.find(NewVD->getIdentifier());
+    if (I != ExtnameUndeclaredIdentifiers.end()) {
+      if (isDeclExternC(NewVD)) {
+        NewVD->addAttr(I->second);
+        ExtnameUndeclaredIdentifiers.erase(I);
+      } else
+        Diag(NewVD->getLocation(), diag::warn_redefine_extname_not_applied)
+            << /*Variable*/ 1 << NewVD;
+    }
+  }
+
   // Handle attributes prior to checking for duplicates in MergeVarDecl
   ProcessDeclAttributes(S, NewVD, D);
 
@@ -8172,65 +8246,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(NewVD))
     NewVD->setInvalidDecl();
 
-  // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = D.getAsmLabel()) {
-    // The parser guarantees this is a string.
-    StringLiteral *SE = cast<StringLiteral>(E);
-    StringRef Label = SE->getString();
-    if (S->getFnParent() != nullptr) {
-      switch (SC) {
-      case SC_None:
-      case SC_Auto:
-        Diag(E->getExprLoc(), diag::warn_asm_label_on_auto_decl) << Label;
-        break;
-      case SC_Register:
-        // Local Named register
-        if (!Context.getTargetInfo().isValidGCCRegisterName(Label) &&
-            DeclAttrsMatchCUDAMode(getLangOpts(), getCurFunctionDecl()))
-          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
-        break;
-      case SC_Static:
-      case SC_Extern:
-      case SC_PrivateExtern:
-        break;
-      }
-    } else if (SC == SC_Register) {
-      // Global Named register
-      if (DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) {
-        const auto &TI = Context.getTargetInfo();
-        bool HasSizeMismatch;
-
-        if (!TI.isValidGCCRegisterName(Label))
-          Diag(E->getExprLoc(), diag::err_asm_unknown_register_name) << Label;
-        else if (!TI.validateGlobalRegisterVariable(Label,
-                                                    Context.getTypeSize(R),
-                                                    HasSizeMismatch))
-          Diag(E->getExprLoc(), diag::err_asm_invalid_global_var_reg) << Label;
-        else if (HasSizeMismatch)
-          Diag(E->getExprLoc(), diag::err_asm_register_size_mismatch) << Label;
-      }
-
-      if (!R->isIntegralType(Context) && !R->isPointerType()) {
-        Diag(TInfo->getTypeLoc().getBeginLoc(),
-             diag::err_asm_unsupported_register_type)
-            << TInfo->getTypeLoc().getSourceRange();
-        NewVD->setInvalidDecl(true);
-      }
-    }
-
-    NewVD->addAttr(AsmLabelAttr::Create(Context, Label, SE->getStrTokenLoc(0)));
-  } else if (!ExtnameUndeclaredIdentifiers.empty()) {
-    llvm::DenseMap<IdentifierInfo*,AsmLabelAttr*>::iterator I =
-      ExtnameUndeclaredIdentifiers.find(NewVD->getIdentifier());
-    if (I != ExtnameUndeclaredIdentifiers.end()) {
-      if (isDeclExternC(NewVD)) {
-        NewVD->addAttr(I->second);
-        ExtnameUndeclaredIdentifiers.erase(I);
-      } else
-        Diag(NewVD->getLocation(), diag::warn_redefine_extname_not_applied)
-            << /*Variable*/1 << NewVD;
-    }
-  }
+  // Check the ASM label here, as we need to know all other attributes of the
+  // Decl first.  Otherwise, we can't know if the asm label refers to the
+  // host or device in a CUDA context. The device has other registers than
+  // host and we must know where the function will be placed.
+  CheckAsmLabel(S, D.getAsmLabel(), SC, TInfo, NewVD);
 
   // Find the shadowed declaration before filtering for scope.
   NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
@@ -11039,17 +11059,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
             << CUDA().getConfigureFuncName();
       Context.setcudaConfigureCallDecl(NewFD);
     }
-
-    // Variadic functions, other than a *declaration* of printf, are not allowed
-    // in device-side CUDA code, unless someone passed
-    // -fcuda-allow-variadic-functions.
-    if (!getLangOpts().CUDAAllowVariadicFunctions && NewFD->isVariadic() &&
-        (NewFD->hasAttr<CUDADeviceAttr>() ||
-         NewFD->hasAttr<CUDAGlobalAttr>()) &&
-        !(II && II->isStr("printf") && NewFD->isExternC() &&
-          !D.isFunctionDefinition())) {
-      Diag(NewFD->getLocation(), diag::err_variadic_device_fn);
-    }
   }
 
   MarkUnusedFileScopedDecl(NewFD);
@@ -13825,13 +13834,20 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       VDecl->setInvalidDecl();
   }
 
-  // C++ [module.import/6] external definitions are not permitted in header
-  // units.
+  // C++ [module.import/6]
+  //   ...
+  //   A header unit shall not contain a definition of a non-inline function or
+  //   variable whose name has external linkage.
+  //
+  // We choose to allow weak & selectany definitions, as they are common in
+  // headers, and have semantics similar to inline definitions which are allowed
+  // in header units.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
       VDecl->getFormalLinkage() == Linkage::External && !VDecl->isInline() &&
       !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl) &&
-      !VDecl->getInstantiatedFromStaticDataMember()) {
+      !VDecl->getInstantiatedFromStaticDataMember() &&
+      !(VDecl->hasAttr<SelectAnyAttr>() || VDecl->hasAttr<WeakAttr>())) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }
@@ -14646,7 +14662,7 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
 
   Declarator D(DS, ParsedAttributesView::none(), DeclaratorContext::ForInit);
   D.SetIdentifier(Ident, IdentLoc);
-  D.takeAttributes(Attrs);
+  D.takeAttributesAppending(Attrs);
 
   D.AddTypeInfo(DeclaratorChunk::getReference(0, IdentLoc, /*lvalue*/ false),
                 IdentLoc);
@@ -16162,16 +16178,24 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     }
   }
 
-  // C++ [module.import/6] external definitions are not permitted in header
-  // units.  Deleted and Defaulted functions are implicitly inline (but the
+  // C++ [module.import/6]
+  //   ...
+  //   A header unit shall not contain a definition of a non-inline function or
+  //   variable whose name has external linkage.
+  //
+  // Deleted and Defaulted functions are implicitly inline (but the
   // inline state is not set at this point, so check the BodyKind explicitly).
+  // We choose to allow weak & selectany definitions, as they are common in
+  // headers, and have semantics similar to inline definitions which are allowed
+  // in header units.
   // FIXME: Consider an alternate location for the test where the inlined()
   // state is complete.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !FD->isInvalidDecl() && !FD->isInlined() &&
       BodyKind != FnBodyKind::Delete && BodyKind != FnBodyKind::Default &&
       FD->getFormalLinkage() == Linkage::External && !FD->isTemplated() &&
-      !FD->isTemplateInstantiation()) {
+      !FD->isTemplateInstantiation() &&
+      !(FD->hasAttr<SelectAnyAttr>() || FD->hasAttr<WeakAttr>())) {
     assert(FD->isThisDeclarationADefinition());
     Diag(FD->getLocation(), diag::err_extern_def_in_header_unit);
     FD->setInvalidDecl();
@@ -18907,8 +18931,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
     // 'bool'.
     if (BitfieldIsOverwide && !FieldTy->isBooleanType() && FieldName) {
       Diag(FieldLoc, diag::warn_bitfield_width_exceeds_type_width)
-          << FieldName << toString(Value, 10)
-          << (unsigned)TypeWidth;
+          << FieldName << Value << (unsigned)TypeWidth;
     }
   }
 
@@ -20807,7 +20830,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
 
   // SYCL functions can be template, so we check if they have appropriate
   // attribute prior to checking if it is a template.
-  if (LangOpts.SYCLIsDevice && FD->hasAttr<DeviceKernelAttr>())
+  if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelAttr>())
     return FunctionEmissionStatus::Emitted;
 
   // Templates are emitted when they're instantiated.

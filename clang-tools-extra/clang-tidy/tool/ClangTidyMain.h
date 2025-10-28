@@ -9,7 +9,7 @@
 ///  \file This file declares the main function for the clang-tidy tool.
 ///
 ///  This tool uses the Clang Tooling infrastructure, see
-///    http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+///    https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 ///  for details on setting it up with LLVM source tree.
 ///
 //===----------------------------------------------------------------------===//

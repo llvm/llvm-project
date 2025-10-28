@@ -62,6 +62,8 @@ public:
                          });
   }
 
+  void eraseCheck(llvm::StringRef CheckName) { Factories.erase(CheckName); }
+
   /// Create instances of checks that are enabled.
   std::vector<std::unique_ptr<ClangTidyCheck>>
   createChecks(ClangTidyContext *Context) const;
@@ -83,7 +85,7 @@ private:
 /// them a prefixed name.
 class ClangTidyModule {
 public:
-  virtual ~ClangTidyModule() {}
+  virtual ~ClangTidyModule() = default;
 
   /// Implement this function in order to register all \c CheckFactories
   /// belonging to this module.

@@ -5,7 +5,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i8:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadStore | #StoreStore
 ; CHECK-NEXT:    and %o0, -4, %o2
 ; CHECK-NEXT:    mov 3, %o3
 ; CHECK-NEXT:    andn %o3, %o0, %o0
@@ -36,7 +36,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.2: ! %atomicrmw.end
 ; CHECK-NEXT:    srl %o4, %o0, %o0
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadLoad | #LoadStore
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    nop
   %result = atomicrmw uinc_wrap ptr %ptr, i8 %val seq_cst
@@ -47,7 +47,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i16:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadStore | #StoreStore
 ; CHECK-NEXT:    and %o0, -4, %o2
 ; CHECK-NEXT:    and %o0, 3, %o0
 ; CHECK-NEXT:    xor %o0, 2, %o0
@@ -79,7 +79,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.2: ! %atomicrmw.end
 ; CHECK-NEXT:    srl %o5, %o0, %o0
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadLoad | #LoadStore
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    nop
   %result = atomicrmw uinc_wrap ptr %ptr, i16 %val seq_cst
@@ -90,7 +90,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i32:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadStore | #StoreStore
 ; CHECK-NEXT:    ld [%o0], %o2
 ; CHECK-NEXT:  .LBB2_1: ! %atomicrmw.start
 ; CHECK-NEXT:    ! =>This Inner Loop Header: Depth=1
@@ -106,7 +106,7 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    bne %icc, .LBB2_1
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.2: ! %atomicrmw.end
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadLoad | #LoadStore
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    mov %o2, %o0
   %result = atomicrmw uinc_wrap ptr %ptr, i32 %val seq_cst
@@ -160,7 +160,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i8:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadStore | #StoreStore
 ; CHECK-NEXT:    and %o0, -4, %o2
 ; CHECK-NEXT:    mov 3, %o3
 ; CHECK-NEXT:    andn %o3, %o0, %o0
@@ -193,7 +193,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.2: ! %atomicrmw.end
 ; CHECK-NEXT:    srl %o5, %o0, %o0
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadLoad | #LoadStore
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    nop
   %result = atomicrmw udec_wrap ptr %ptr, i8 %val seq_cst
@@ -204,7 +204,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i16:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadStore | #StoreStore
 ; CHECK-NEXT:    and %o0, -4, %o2
 ; CHECK-NEXT:    and %o0, 3, %o0
 ; CHECK-NEXT:    xor %o0, 2, %o0
@@ -238,7 +238,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.2: ! %atomicrmw.end
 ; CHECK-NEXT:    srl %g2, %o0, %o0
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadLoad | #LoadStore
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    nop
   %result = atomicrmw udec_wrap ptr %ptr, i16 %val seq_cst
@@ -249,7 +249,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-LABEL: atomicrmw_udec_wrap_i32:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadStore | #StoreStore
 ; CHECK-NEXT:    ld [%o0], %o2
 ; CHECK-NEXT:  .LBB6_1: ! %atomicrmw.start
 ; CHECK-NEXT:    ! =>This Inner Loop Header: Depth=1
@@ -267,7 +267,7 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:    bne %icc, .LBB6_1
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  ! %bb.2: ! %atomicrmw.end
-; CHECK-NEXT:    membar #LoadLoad | #StoreLoad | #LoadStore | #StoreStore
+; CHECK-NEXT:    membar #LoadLoad | #LoadStore
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    mov %o2, %o0
   %result = atomicrmw udec_wrap ptr %ptr, i32 %val seq_cst

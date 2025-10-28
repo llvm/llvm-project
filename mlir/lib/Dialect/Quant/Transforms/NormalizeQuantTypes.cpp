@@ -84,7 +84,7 @@ class NormalizedQuantTypesConverter : public TypeConverter {
 
     if (isConvertibleToPerAxis(tensorType)) {
       auto shape = subChannelType.getScales().getType().getShape();
-      auto quantizedDimItr =
+      const auto *quantizedDimItr =
           llvm::find_if(shape, [](int64_t dim) { return dim != 1; });
       auto scales = llvm::to_vector(llvm::map_range(
           subChannelType.getScales().getValues<APFloat>(),

@@ -17,7 +17,7 @@ namespace clang::tidy::cert {
 /// the default operator new.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/mem57-cpp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cert/mem57-cpp.html
 class DefaultOperatorNewAlignmentCheck : public ClangTidyCheck {
 public:
   DefaultOperatorNewAlignmentCheck(StringRef Name, ClangTidyContext *Context)

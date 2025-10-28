@@ -206,6 +206,14 @@ static DecodeStatus DecodeSPRegisterClass(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeSPRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint32_t Address,
+                                          const MCDisassembler *Decoder) {
+  assert(RegNo == 2);
+  Inst.addOperand(MCOperand::createReg(RISCV::X2));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeGPRX5RegisterClass(MCInst &Inst,
                                              const MCDisassembler *Decoder) {
   Inst.addOperand(MCOperand::createReg(RISCV::X5));
@@ -646,7 +654,10 @@ static constexpr FeatureBitset XqciFeatureGroup = {
 static constexpr FeatureBitset XSfVectorGroup = {
     RISCV::FeatureVendorXSfvcp,          RISCV::FeatureVendorXSfvqmaccdod,
     RISCV::FeatureVendorXSfvqmaccqoq,    RISCV::FeatureVendorXSfvfwmaccqqq,
-    RISCV::FeatureVendorXSfvfnrclipxfqf, RISCV::FeatureVendorXSfmmbase};
+    RISCV::FeatureVendorXSfvfnrclipxfqf, RISCV::FeatureVendorXSfmmbase,
+    RISCV::FeatureVendorXSfvfexpa,       RISCV::FeatureVendorXSfvfexpa64e,
+    RISCV::FeatureVendorXSfvfbfexp16e,   RISCV::FeatureVendorXSfvfexp16e,
+    RISCV::FeatureVendorXSfvfexp32e};
 static constexpr FeatureBitset XSfSystemGroup = {
     RISCV::FeatureVendorXSiFivecdiscarddlone,
     RISCV::FeatureVendorXSiFivecflushdlone,
@@ -668,8 +679,8 @@ static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadVdot};
 
 static constexpr FeatureBitset XAndesGroup = {
-    RISCV::FeatureVendorXAndesPerf, RISCV::FeatureVendorXAndesBFHCvt,
-    RISCV::FeatureVendorXAndesVBFHCvt,
+    RISCV::FeatureVendorXAndesPerf,      RISCV::FeatureVendorXAndesBFHCvt,
+    RISCV::FeatureVendorXAndesVBFHCvt,   RISCV::FeatureVendorXAndesVSIntH,
     RISCV::FeatureVendorXAndesVSIntLoad, RISCV::FeatureVendorXAndesVPackFPH,
     RISCV::FeatureVendorXAndesVDot};
 

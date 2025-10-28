@@ -215,63 +215,58 @@ locale::__imp::__imp(size_t refs) : facet(refs), facets_(N), name_("C") {
 }
 
 locale::__imp::__imp(const string& name, size_t refs) : facet(refs), facets_(N), name_(name) {
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    facets_ = locale::classic().__locale_->facets_;
-    for (unsigned i = 0; i < facets_.size(); ++i)
-      if (facets_[i])
-        facets_[i]->__add_shared();
-    install(new collate_byname<char>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new collate_byname<wchar_t>(name_));
-#endif
-    install(new ctype_byname<char>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new ctype_byname<wchar_t>(name_));
-#endif
-    install(new codecvt_byname<char, char, mbstate_t>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new codecvt_byname<wchar_t, char, mbstate_t>(name_));
-#endif
-    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-    install(new codecvt_byname<char16_t, char, mbstate_t>(name_));
-    install(new codecvt_byname<char32_t, char, mbstate_t>(name_));
-    _LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_HAS_CHAR8_T
-    install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name_));
-    install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name_));
-#endif
-    install(new numpunct_byname<char>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new numpunct_byname<wchar_t>(name_));
-#endif
-    install(new moneypunct_byname<char, false>(name_));
-    install(new moneypunct_byname<char, true>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new moneypunct_byname<wchar_t, false>(name_));
-    install(new moneypunct_byname<wchar_t, true>(name_));
-#endif
-    install(new time_get_byname<char>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new time_get_byname<wchar_t>(name_));
-#endif
-    install(new time_put_byname<char>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new time_put_byname<wchar_t>(name_));
-#endif
-    install(new messages_byname<char>(name_));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-    install(new messages_byname<wchar_t>(name_));
-#endif
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  __exception_guard guard([&] {
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__release_shared();
-    throw;
-  }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  });
+  facets_ = locale::classic().__locale_->facets_;
+  for (unsigned i = 0; i < facets_.size(); ++i)
+    if (facets_[i])
+      facets_[i]->__add_shared();
+  install(new collate_byname<char>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new collate_byname<wchar_t>(name_));
+#endif
+  install(new ctype_byname<char>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new ctype_byname<wchar_t>(name_));
+#endif
+  install(new codecvt_byname<char, char, mbstate_t>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new codecvt_byname<wchar_t, char, mbstate_t>(name_));
+#endif
+  _LIBCPP_SUPPRESS_DEPRECATED_PUSH
+  install(new codecvt_byname<char16_t, char, mbstate_t>(name_));
+  install(new codecvt_byname<char32_t, char, mbstate_t>(name_));
+  _LIBCPP_SUPPRESS_DEPRECATED_POP
+#if _LIBCPP_HAS_CHAR8_T
+  install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name_));
+  install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name_));
+#endif
+  install(new numpunct_byname<char>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new numpunct_byname<wchar_t>(name_));
+#endif
+  install(new moneypunct_byname<char, false>(name_));
+  install(new moneypunct_byname<char, true>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new moneypunct_byname<wchar_t, false>(name_));
+  install(new moneypunct_byname<wchar_t, true>(name_));
+#endif
+  install(new time_get_byname<char>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new time_get_byname<wchar_t>(name_));
+#endif
+  install(new time_put_byname<char>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new time_put_byname<wchar_t>(name_));
+#endif
+  install(new messages_byname<char>(name_));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  install(new messages_byname<wchar_t>(name_));
+#endif
+  guard.__complete();
 }
 
 locale::__imp::__imp(const __imp& other) : facets_(max<size_t>(N, other.facets_.size())), name_(other.name_) {
@@ -287,71 +282,66 @@ locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
   for (unsigned i = 0; i < facets_.size(); ++i)
     if (facets_[i])
       facets_[i]->__add_shared();
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    if (c & locale::collate) {
-      install(new collate_byname<char>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new collate_byname<wchar_t>(name));
-#endif
-    }
-    if (c & locale::ctype) {
-      install(new ctype_byname<char>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new ctype_byname<wchar_t>(name));
-#endif
-      install(new codecvt_byname<char, char, mbstate_t>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new codecvt_byname<wchar_t, char, mbstate_t>(name));
-#endif
-      _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-      install(new codecvt_byname<char16_t, char, mbstate_t>(name));
-      install(new codecvt_byname<char32_t, char, mbstate_t>(name));
-      _LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_HAS_CHAR8_T
-      install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name));
-      install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name));
-#endif
-    }
-    if (c & locale::monetary) {
-      install(new moneypunct_byname<char, false>(name));
-      install(new moneypunct_byname<char, true>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new moneypunct_byname<wchar_t, false>(name));
-      install(new moneypunct_byname<wchar_t, true>(name));
-#endif
-    }
-    if (c & locale::numeric) {
-      install(new numpunct_byname<char>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new numpunct_byname<wchar_t>(name));
-#endif
-    }
-    if (c & locale::time) {
-      install(new time_get_byname<char>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new time_get_byname<wchar_t>(name));
-#endif
-      install(new time_put_byname<char>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new time_put_byname<wchar_t>(name));
-#endif
-    }
-    if (c & locale::messages) {
-      install(new messages_byname<char>(name));
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install(new messages_byname<wchar_t>(name));
-#endif
-    }
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  __exception_guard guard([&] {
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__release_shared();
-    throw;
+  });
+  if (c & locale::collate) {
+    install(new collate_byname<char>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new collate_byname<wchar_t>(name));
+#endif
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  if (c & locale::ctype) {
+    install(new ctype_byname<char>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new ctype_byname<wchar_t>(name));
+#endif
+    install(new codecvt_byname<char, char, mbstate_t>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new codecvt_byname<wchar_t, char, mbstate_t>(name));
+#endif
+    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
+    install(new codecvt_byname<char16_t, char, mbstate_t>(name));
+    install(new codecvt_byname<char32_t, char, mbstate_t>(name));
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
+#if _LIBCPP_HAS_CHAR8_T
+    install(new codecvt_byname<char16_t, char8_t, mbstate_t>(name));
+    install(new codecvt_byname<char32_t, char8_t, mbstate_t>(name));
+#endif
+  }
+  if (c & locale::monetary) {
+    install(new moneypunct_byname<char, false>(name));
+    install(new moneypunct_byname<char, true>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new moneypunct_byname<wchar_t, false>(name));
+    install(new moneypunct_byname<wchar_t, true>(name));
+#endif
+  }
+  if (c & locale::numeric) {
+    install(new numpunct_byname<char>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new numpunct_byname<wchar_t>(name));
+#endif
+  }
+  if (c & locale::time) {
+    install(new time_get_byname<char>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new time_get_byname<wchar_t>(name));
+#endif
+    install(new time_put_byname<char>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new time_put_byname<wchar_t>(name));
+#endif
+  }
+  if (c & locale::messages) {
+    install(new messages_byname<char>(name));
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install(new messages_byname<wchar_t>(name));
+#endif
+  }
+  guard.__complete();
 }
 
 template <class F>
@@ -366,87 +356,83 @@ locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
   for (unsigned i = 0; i < facets_.size(); ++i)
     if (facets_[i])
       facets_[i]->__add_shared();
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    if (c & locale::collate) {
-      install_from<std::collate<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<std::collate<wchar_t> >(one);
-#endif
-    }
-    if (c & locale::ctype) {
-      install_from<std::ctype<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<std::ctype<wchar_t> >(one);
-#endif
-      install_from<std::codecvt<char, char, mbstate_t> >(one);
-      _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-      install_from<std::codecvt<char16_t, char, mbstate_t> >(one);
-      install_from<std::codecvt<char32_t, char, mbstate_t> >(one);
-      _LIBCPP_SUPPRESS_DEPRECATED_POP
-#if _LIBCPP_HAS_CHAR8_T
-      install_from<std::codecvt<char16_t, char8_t, mbstate_t> >(one);
-      install_from<std::codecvt<char32_t, char8_t, mbstate_t> >(one);
-#endif
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<std::codecvt<wchar_t, char, mbstate_t> >(one);
-#endif
-    }
-    if (c & locale::monetary) {
-      install_from<moneypunct<char, false> >(one);
-      install_from<moneypunct<char, true> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<moneypunct<wchar_t, false> >(one);
-      install_from<moneypunct<wchar_t, true> >(one);
-#endif
-      install_from<money_get<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<money_get<wchar_t> >(one);
-#endif
-      install_from<money_put<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<money_put<wchar_t> >(one);
-#endif
-    }
-    if (c & locale::numeric) {
-      install_from<numpunct<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<numpunct<wchar_t> >(one);
-#endif
-      install_from<num_get<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<num_get<wchar_t> >(one);
-#endif
-      install_from<num_put<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<num_put<wchar_t> >(one);
-#endif
-    }
-    if (c & locale::time) {
-      install_from<time_get<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<time_get<wchar_t> >(one);
-#endif
-      install_from<time_put<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<time_put<wchar_t> >(one);
-#endif
-    }
-    if (c & locale::messages) {
-      install_from<std::messages<char> >(one);
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-      install_from<std::messages<wchar_t> >(one);
-#endif
-    }
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
+  __exception_guard guard([&] {
     for (unsigned i = 0; i < facets_.size(); ++i)
       if (facets_[i])
         facets_[i]->__release_shared();
-    throw;
+  });
+
+  if (c & locale::collate) {
+    install_from<std::collate<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<std::collate<wchar_t> >(one);
+#endif
   }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+  if (c & locale::ctype) {
+    install_from<std::ctype<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<std::ctype<wchar_t> >(one);
+#endif
+    install_from<std::codecvt<char, char, mbstate_t> >(one);
+    _LIBCPP_SUPPRESS_DEPRECATED_PUSH
+    install_from<std::codecvt<char16_t, char, mbstate_t> >(one);
+    install_from<std::codecvt<char32_t, char, mbstate_t> >(one);
+    _LIBCPP_SUPPRESS_DEPRECATED_POP
+#if _LIBCPP_HAS_CHAR8_T
+    install_from<std::codecvt<char16_t, char8_t, mbstate_t> >(one);
+    install_from<std::codecvt<char32_t, char8_t, mbstate_t> >(one);
+#endif
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<std::codecvt<wchar_t, char, mbstate_t> >(one);
+#endif
+  }
+  if (c & locale::monetary) {
+    install_from<moneypunct<char, false> >(one);
+    install_from<moneypunct<char, true> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<moneypunct<wchar_t, false> >(one);
+    install_from<moneypunct<wchar_t, true> >(one);
+#endif
+    install_from<money_get<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<money_get<wchar_t> >(one);
+#endif
+    install_from<money_put<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<money_put<wchar_t> >(one);
+#endif
+  }
+  if (c & locale::numeric) {
+    install_from<numpunct<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<numpunct<wchar_t> >(one);
+#endif
+    install_from<num_get<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<num_get<wchar_t> >(one);
+#endif
+    install_from<num_put<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<num_put<wchar_t> >(one);
+#endif
+  }
+  if (c & locale::time) {
+    install_from<time_get<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<time_get<wchar_t> >(one);
+#endif
+    install_from<time_put<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<time_put<wchar_t> >(one);
+#endif
+  }
+  if (c & locale::messages) {
+    install_from<std::messages<char> >(one);
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+    install_from<std::messages<wchar_t> >(one);
+#endif
+  }
+  guard.__complete();
 }
 
 locale::__imp::__imp(const __imp& other, facet* f, long id)

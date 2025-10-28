@@ -276,7 +276,6 @@ public:
                                  SmallVector<Register> &Ops) const;
 
   /// Replace \p MI with a build_vector.
-  bool matchCombineShuffleToBuildVector(MachineInstr &MI) const;
   void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
@@ -295,8 +294,6 @@ public:
   /// Replace \p MI with a concat_vectors with \p Ops.
   void applyCombineShuffleVector(MachineInstr &MI,
                                  const ArrayRef<Register> Ops) const;
-  bool matchShuffleToExtract(MachineInstr &MI) const;
-  void applyShuffleToExtract(MachineInstr &MI) const;
 
   /// Optimize memcpy intrinsics et al, e.g. constant len calls.
   /// /p MaxLen if non-zero specifies the max length of a mem libcall to inline.
@@ -847,6 +844,10 @@ public:
                                                 BuildFnTy &MatchInfo) const;
 
   bool matchCombineFMinMaxNaN(MachineInstr &MI, unsigned &Info) const;
+
+  bool matchRepeatedFPDivisor(MachineInstr &MI,
+                              SmallVector<MachineInstr *> &MatchInfo) const;
+  void applyRepeatedFPDivisor(SmallVector<MachineInstr *> &MatchInfo) const;
 
   /// Transform G_ADD(x, G_SUB(y, x)) to y.
   /// Transform G_ADD(G_SUB(y, x), x) to y.
