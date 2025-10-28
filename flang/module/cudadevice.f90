@@ -2070,6 +2070,22 @@ implicit none
   ! Load specific types, count is in elements
   ! -----------------------------------------
   interface tma_bulk_load
+    attributes(device) subroutine tma_bulk_ldc4(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      complex(4), device :: src(*)
+      complex(4), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+
+    attributes(device) subroutine tma_bulk_ldc8(barrier, src, dst, nelems)
+      !dir$ ignore_tkr (r) src, (r) dst
+      integer(8), shared :: barrier
+      complex(8), device :: src(*)
+      complex(8), shared :: dst(*)
+      integer(4), value :: nelems
+    end subroutine
+  
     attributes(device) subroutine tma_bulk_ldi4(barrier, src, dst, nelems)
       !dir$ ignore_tkr (r) src, (r) dst
       integer(8), shared :: barrier
@@ -2107,22 +2123,6 @@ implicit none
       integer(8), shared :: barrier
       real(8), device :: src(*)
       real(8), shared :: dst(*)
-      integer(4), value :: nelems
-    end subroutine
-
-    attributes(device) subroutine tma_bulk_ldc4(barrier, src, dst, nelems)
-      !dir$ ignore_tkr (r) src, (r) dst
-      integer(8), shared :: barrier
-      complex(4), device :: src(*)
-      complex(4), shared :: dst(*)
-      integer(4), value :: nelems
-    end subroutine
-
-    attributes(device) subroutine tma_bulk_ldc8(barrier, src, dst, nelems)
-      !dir$ ignore_tkr (r) src, (r) dst
-      integer(8), shared :: barrier
-      complex(8), device :: src(*)
-      complex(8), shared :: dst(*)
       integer(4), value :: nelems
     end subroutine
   end interface
