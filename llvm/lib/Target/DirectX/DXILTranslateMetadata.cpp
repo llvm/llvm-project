@@ -58,16 +58,14 @@ public:
   }
 };
 
-static bool reportError(Module &M, Twine Message,
+static void reportError(Module &M, Twine Message,
                         DiagnosticSeverity Severity = DS_Error) {
   M.getContext().diagnose(DiagnosticInfoValidateMD(M, Message, Severity));
-  return true;
 }
 
-static bool reportLoopError(Module &M, Twine Message,
+static void reportLoopError(Module &M, Twine Message,
                             DiagnosticSeverity Severity = DS_Error) {
-  return reportError(M, Twine("Invalid \"llvm.loop\" metadata: ") + Message,
-                     Severity);
+  reportError(M, Twine("Invalid \"llvm.loop\" metadata: ") + Message, Severity);
 }
 
 enum class EntryPropsTag {
@@ -358,13 +356,13 @@ static bool isLoopMDCompatible(Module &M, Metadata *MD) {
 
   if (HintStr->getString() == "llvm.loop.unroll.count") {
     if (!ValidCountNode(HintMD)) {
-      reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
-                         "must be a constant integer");
+      reportLoopError(M, "\"llvm.loop.unroll.count\" must have 2 operands and "
+                         "the second must be a constant integer");
       return false;
     }
   } else if (HintMD->getNumOperands() != 1) {
     reportLoopError(
-        M, "\"llvm.loop.unroll.disable\" and \"llvm.loop.unroll.disable\" "
+        M, "\"llvm.loop.unroll.disable\" and \"llvm.loop.unroll.full\" "
            "must be provided as a single operand");
     return false;
   }

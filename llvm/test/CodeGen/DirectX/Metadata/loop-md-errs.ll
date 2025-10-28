@@ -61,7 +61,7 @@ exit:
 
 ;--- invalid-disable.ll
 
-; CHECK: Invalid "llvm.loop" metadata: "llvm.loop.unroll.disable" and "llvm.loop.unroll.disable" must be provided as a single operand
+; CHECK: Invalid "llvm.loop" metadata: "llvm.loop.unroll.disable" and "llvm.loop.unroll.full" must be provided as a single operand
 
 target triple = "dxilv1.0-unknown-shadermodel6.0-library"
 
@@ -88,7 +88,7 @@ exit:
 
 ;--- invalid-full.ll
 
-; CHECK: Invalid "llvm.loop" metadata: "llvm.loop.unroll.disable" and "llvm.loop.unroll.disable" must be provided as a single operand
+; CHECK: Invalid "llvm.loop" metadata: "llvm.loop.unroll.disable" and "llvm.loop.unroll.full" must be provided as a single operand
 
 target triple = "dxilv1.0-unknown-shadermodel6.0-library"
 
