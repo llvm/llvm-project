@@ -2816,7 +2816,8 @@ public:
                : diag::warn_lifetime_safety_return_stack_addr_strict)
         << IssueExpr->getEndLoc();
 
-    S.Diag(EscapeExpr->getBeginLoc(), diag::note_lifetime_safety_returned_here);
+    S.Diag(EscapeExpr->getExprLoc(), diag::note_lifetime_safety_returned_here)
+        << EscapeExpr->getEndLoc();
   }
 
 private:

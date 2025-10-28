@@ -53,14 +53,15 @@ struct Lattice {
   }
 };
 
-static SourceLocation GetFactLoc(const Fact &F) {
-  if (const auto *UF = F.getAs<UseFact>()) {
+static SourceLocation
+GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
+  if (const auto *UF = F.dyn_cast<const UseFact *>())
     return UF->getUseExpr()->getExprLoc();
-  }
-  if (const auto *OEF = F.getAs<OriginEscapesFact>()) {
+
+  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>())
     return OEF->getEscapeExpr()->getExprLoc();
-  }
-  return SourceLocation(); // Invalid SourceLocation
+
+  llvm_unreachable("unhandled causing fact in PointerUnion");
 }
 
 /// The analysis that tracks which origins are live, with granular information
@@ -85,24 +86,15 @@ public:
   Lattice join(Lattice L1, Lattice L2) const {
     LivenessMap Merged = L1.LiveOrigins;
     // Take the earliest Fact to make the join hermetic and commutative.
-    auto CombineCausingFact = [](const Fact &A, const Fact &B) -> const Fact * {
-      SourceLocation LocA = GetFactLoc(A);
-      SourceLocation LocB = GetFactLoc(B);
-
-      bool aValid = LocA.isValid();
-      bool bValid = LocB.isValid();
-
-      if (aValid && bValid) {
-        if (LocA < LocB)
-          return &A;
-        if (LocB < LocA)
-          return &B;
-      } else if (aValid) {
-        return &A;
-      } else if (bValid) {
-        return &B;
-      }
-      return &A < &B ? &A : &B;
+    auto CombineCausingFact =
+        [](llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> A,
+           llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> B)
+        -> llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> {
+      if (!A)
+        return B;
+      if (!B)
+        return A;
+      return GetFactLoc(A) < GetFactLoc(B) ? A : B;
     };
     auto CombineLivenessKind = [](LivenessKind K1,
                                   LivenessKind K2) -> LivenessKind {
@@ -120,9 +112,8 @@ public:
         return LivenessInfo(L2->CausingFact, LivenessKind::Maybe);
       if (!L2)
         return LivenessInfo(L1->CausingFact, LivenessKind::Maybe);
-      return LivenessInfo(
-          CombineCausingFact(*L1->CausingFact, *L2->CausingFact),
-          CombineLivenessKind(L1->Kind, L2->Kind));
+      return LivenessInfo(CombineCausingFact(L1->CausingFact, L2->CausingFact),
+                          CombineLivenessKind(L1->Kind, L2->Kind));
     };
     return Lattice(utils::join(
         L1.LiveOrigins, L2.LiveOrigins, Factory, CombineLivenessInfo,
@@ -144,8 +135,8 @@ public:
                                LivenessInfo(&UF, LivenessKind::Must)));
   }
 
-  // A return operation makes the origin live with definite confidence, as it
-  /// dominates this program point.
+  /// An escaping origin (e.g., via return) makes the origin live with definite
+  /// confidence, as it dominates this program point.
   Lattice transfer(Lattice In, const OriginEscapesFact &OEF) {
     OriginID OID = OEF.getEscapedOriginID();
     return Lattice(Factory.add(In.LiveOrigins, OID,

@@ -42,7 +42,7 @@ public:
     Use,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
-    // Indicates that an origin escapes the function scope (e.g., via return).
+    /// Indicates that an origin escapes the function scope (e.g., via return).
     OriginEscapes,
   };
 

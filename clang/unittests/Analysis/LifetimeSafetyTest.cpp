@@ -1313,7 +1313,7 @@ TEST_F(LifetimeAnalysisTest, PointerChainToLocal) {
 TEST_F(LifetimeAnalysisTest, MultipleAssignmentMultipleReturn) {
   SetupTest(R"(
     MyObj* target(bool c1, bool c2) {
-    static MyObj global_obj;
+      static MyObj global_obj;
       MyObj local_obj1;
       MyObj local_obj2;
       MyObj* p = nullptr;
@@ -1426,7 +1426,6 @@ TEST_F(LifetimeAnalysisTest, ReturnBeforeUseAfterScope) {
           POINT(p1);
           return p;
         }
-
       }
       POINT(p2);
       return &global_obj;

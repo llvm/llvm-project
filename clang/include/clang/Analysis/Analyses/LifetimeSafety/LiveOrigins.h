@@ -43,7 +43,7 @@ struct LivenessInfo {
   /// multiple uses along different paths, this will point to the use appearing
   /// earlier in the translation unit.
   /// This is 'null' when the origin is not live.
-  const Fact *CausingFact;
+  llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
 
   /// The kind of liveness of the origin.
   /// `Must`: The origin is live on all control-flow paths from the current
@@ -57,7 +57,10 @@ struct LivenessInfo {
   LivenessKind Kind;
 
   LivenessInfo() : CausingFact(nullptr), Kind(LivenessKind::Dead) {}
-  LivenessInfo(const Fact *CF, LivenessKind K) : CausingFact(CF), Kind(K) {}
+  LivenessInfo(
+      llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CF,
+      LivenessKind K)
+      : CausingFact(CF), Kind(K) {}
 
   bool operator==(const LivenessInfo &Other) const {
     return CausingFact == Other.CausingFact && Kind == Other.Kind;
@@ -65,7 +68,7 @@ struct LivenessInfo {
   bool operator!=(const LivenessInfo &Other) const { return !(*this == Other); }
 
   void Profile(llvm::FoldingSetNodeID &IDBuilder) const {
-    IDBuilder.AddPointer(CausingFact);
+    IDBuilder.AddPointer(CausingFact.getOpaqueValue());
     IDBuilder.Add(Kind);
   }
 };

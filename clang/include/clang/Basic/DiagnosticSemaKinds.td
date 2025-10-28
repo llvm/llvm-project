@@ -10730,11 +10730,11 @@ def warn_lifetime_safety_loan_expires_strict : Warning<
    InGroup<LifetimeSafetyStrict>, DefaultIgnore;
 
 def warn_lifetime_safety_return_stack_addr_permissive
-    : Warning<"returning reference to stack allocated object">,
+    : Warning<"address of stack memory is returned later">,
       InGroup<LifetimeSafetyPermissive>,
       DefaultIgnore;
 def warn_lifetime_safety_return_stack_addr_strict
-    : Warning<"may be returning reference to stack allocated object">,
+    : Warning<"address of stack memory maybe returned later">,
       InGroup<LifetimeSafetyStrict>,
       DefaultIgnore;
 

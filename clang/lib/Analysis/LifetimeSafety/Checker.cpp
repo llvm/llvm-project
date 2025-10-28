@@ -44,7 +44,8 @@ namespace {
 /// Struct to store the complete context for a potential lifetime violation.
 struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
-  const Fact *CausingFact;  // If the use is a UseFact or OriginEscapeFact
+  llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
+      CausingFact; // If the use is a UseFact or OriginEscapeFact
   Confidence ConfidenceLevel;
 };
 
@@ -84,7 +85,8 @@ public:
     LoanID ExpiredLoan = EF->getLoanID();
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
     Confidence CurConfidence = Confidence::None;
-    const Fact *BestCausingFact = nullptr;
+    llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
+        BestCausingFact = nullptr;
 
     for (auto &[OID, LiveInfo] : Origins) {
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
@@ -114,17 +116,20 @@ public:
     for (const auto &[LID, Warning] : FinalWarningsMap) {
       const Loan &L = FactMgr.getLoanMgr().getLoan(LID);
       const Expr *IssueExpr = L.IssueExpr;
-      const Fact *CausingFact = Warning.CausingFact;
+      llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
+          CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
-      if (const auto *UF = CausingFact->getAs<UseFact>()) {
+      if (const auto *UF = CausingFact.dyn_cast<const UseFact *>())
         Reporter->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
                                      Confidence);
-      } else if (const auto *OEF = CausingFact->getAs<OriginEscapesFact>()) {
+      else if (const auto *OEF =
+                   CausingFact.dyn_cast<const OriginEscapesFact *>())
         Reporter->reportUseAfterReturn(IssueExpr, OEF->getEscapeExpr(),
                                        ExpiryLoc, Confidence);
-      }
+      else
+        llvm_unreachable("Unhandled CausingFact type");
     }
   }
 };
