@@ -225,10 +225,9 @@ bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
   MachineInstr *Cmp;
 
   if (STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    unsigned CmpOpc = STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
-    Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc))
-              .addReg(VCCReg)
-              .addImm(0);
+    unsigned CmpOpc =
+        STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
+    Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc)).addReg(VCCReg).addImm(0);
   } else {
     // For gfx7 and earlier, S_CMP_LG_U64 doesn't exist, so we use S_OR_B64
     // which sets SCC as a side effect.
