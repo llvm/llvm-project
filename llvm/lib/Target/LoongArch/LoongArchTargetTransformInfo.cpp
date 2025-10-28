@@ -438,4 +438,80 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
                                        Args, CxtI);
 }
 
+InstructionCost LoongArchTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1) const {
+
+  assert(Val->isVectorTy() && "This must be a vector type");
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  InstructionCost RegisterFileMoveCost = 0;
+
+  static const CostKindTblEntry LSXCostTable[]{
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v16i8, {3, 4}}, // vpickve2gr.b
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v8i16, {3, 4}}, // vpickve2gr.h
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v4i32, {3, 4}}, // vpickve2gr.w
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v2i64, {3, 4}}, // vpickve2gr.d
+
+      {ISD::INSERT_VECTOR_ELT, MVT::v16i8, {3, 4}}, // vinsgr2vr.b
+      {ISD::INSERT_VECTOR_ELT, MVT::v8i16, {3, 4}}, // vinsgr2vr.h
+      {ISD::INSERT_VECTOR_ELT, MVT::v4i32, {3, 4}}, // vinsgr2vr.w
+      {ISD::INSERT_VECTOR_ELT, MVT::v2i64, {3, 4}}, // vinsgr2vr.d
+
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v4f32, {1, 1}}, // vreplvei.w
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v2f64, {1, 1}}, // vreplvei.d
+
+      {ISD::INSERT_VECTOR_ELT, MVT::v4f32, {1, 1}}, // vextrins.w
+      {ISD::INSERT_VECTOR_ELT, MVT::v2f64, {1, 1}}, // vextrins.d
+  };
+
+  static const CostKindTblEntry LASXCostTable[]{
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v32i8, {3, 4}},  // vpickve2gr.b
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v16i16, {3, 4}}, // vpickve2gr.h
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v8i32, {5, 4}},  // xvpickve2gr.w
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v4i64, {5, 4}},  // xvpickve2gr.d
+
+      {ISD::INSERT_VECTOR_ELT, MVT::v32i8, {3, 4}},  // vinsgr2vr.b
+      {ISD::INSERT_VECTOR_ELT, MVT::v16i16, {3, 4}}, // vinsgr2vr.h
+      {ISD::INSERT_VECTOR_ELT, MVT::v8i32, {4, 4}},  // xvinsgr2vr.w
+      {ISD::INSERT_VECTOR_ELT, MVT::v4i64, {4, 4}},  // xvinsgr2vr.d
+
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v8f32, {2, 1}}, // xvinsve0.w
+      {ISD::EXTRACT_VECTOR_ELT, MVT::v4f64, {2, 1}}, // xvinsve0.d
+
+      {ISD::INSERT_VECTOR_ELT, MVT::v8f32, {3, 1}}, // xvpickve.w
+      {ISD::INSERT_VECTOR_ELT, MVT::v4f64, {3, 1}}, // xvpickve.d
+  };
+
+  if (Index != -1U &&
+      (ISD == ISD::EXTRACT_VECTOR_ELT || ISD == ISD::INSERT_VECTOR_ELT)) {
+
+    if (!LT.second.isVector())
+      return TTI::TCC_Free;
+
+    unsigned SizeInBits = LT.second.getSizeInBits();
+    unsigned NumElts = LT.second.getVectorNumElements();
+    Index = Index % NumElts;
+
+    if (SizeInBits > 128 && Index >= NumElts / 2 && !Val->isFPOrFPVectorTy()) {
+      RegisterFileMoveCost += (ISD == ISD::INSERT_VECTOR_ELT ? 2 : 1);
+    }
+
+    if (ST->hasExtLSX())
+      if (auto *Entry = CostTableLookup(LSXCostTable, ISD, LT.second))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return LT.first * *KindCost + RegisterFileMoveCost;
+
+    if (ST->hasExtLASX())
+      if (auto *Entry = CostTableLookup(LASXCostTable, ISD, LT.second))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return LT.first * *KindCost + RegisterFileMoveCost;
+  }
+
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1) +
+         RegisterFileMoveCost;
+}
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.
