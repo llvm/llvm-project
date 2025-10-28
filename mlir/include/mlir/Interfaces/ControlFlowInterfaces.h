@@ -15,16 +15,10 @@
 #define MLIR_INTERFACES_CONTROLFLOWINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/Operation.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/DebugLog.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 class BranchOpInterface;
 class RegionBranchOpInterface;
-class RegionBranchTerminatorOpInterface;
 
 /// This class models how operands are forwarded to block arguments in control
 /// flow. It consists of a number, denoting how many of the successors block
@@ -192,40 +186,27 @@ class RegionSuccessor {
 public:
   /// Initialize a successor that branches to another region of the parent
   /// operation.
-  /// TODO: the default value for the regionInputs is somehow broken.
-  /// A region successor should have its input correctly set.
   RegionSuccessor(Region *region, Block::BlockArgListType regionInputs = {})
-      : successor(region), inputs(regionInputs) {
-    assert(region && "Region must not be null");
-  }
+      : region(region), inputs(regionInputs) {}
   /// Initialize a successor that branches back to/out of the parent operation.
-  /// The target must be one of the recursive parent operations.
-  RegionSuccessor(Operation *successorOp, Operation::result_range results)
-      : successor(successorOp), inputs(ValueRange(results)) {
-    assert(successorOp && "Successor op must not be null");
-  }
+  RegionSuccessor(Operation::result_range results)
+      : inputs(ValueRange(results)) {}
+  /// Constructor with no arguments.
+  RegionSuccessor() : inputs(ValueRange()) {}
 
   /// Return the given region successor. Returns nullptr if the successor is the
   /// parent operation.
-  Region *getSuccessor() const { return dyn_cast<Region *>(successor); }
+  Region *getSuccessor() const { return region; }
 
   /// Return true if the successor is the parent operation.
-  bool isParent() const { return isa<Operation *>(successor); }
+  bool isParent() const { return region == nullptr; }
 
   /// Return the inputs to the successor that are remapped by the exit values of
   /// the current region.
   ValueRange getSuccessorInputs() const { return inputs; }
 
-  bool operator==(RegionSuccessor rhs) const {
-    return successor == rhs.successor && inputs == rhs.inputs;
-  }
-
-  friend bool operator!=(RegionSuccessor lhs, RegionSuccessor rhs) {
-    return !(lhs == rhs);
-  }
-
 private:
-  llvm::PointerUnion<Region *, Operation *> successor{nullptr};
+  Region *region{nullptr};
   ValueRange inputs;
 };
 
@@ -233,65 +214,62 @@ private:
 /// `RegionBranchOpInterface`.
 /// One can branch from one of two kinds of places:
 /// * The parent operation (aka the `RegionBranchOpInterface` implementation)
-/// * A RegionBranchTerminatorOpInterface inside a region within the parent
-//    operation.
+/// * A region within the parent operation.
 class RegionBranchPoint {
 public:
   /// Returns an instance of `RegionBranchPoint` representing the parent
   /// operation.
   static constexpr RegionBranchPoint parent() { return RegionBranchPoint(); }
 
-  /// Creates a `RegionBranchPoint` that branches from the given terminator.
-  inline RegionBranchPoint(RegionBranchTerminatorOpInterface predecessor);
+  /// Creates a `RegionBranchPoint` that branches from the given region.
+  /// The pointer must not be null.
+  RegionBranchPoint(Region *region) : maybeRegion(region) {
+    assert(region && "Region must not be null");
+  }
+
+  RegionBranchPoint(Region &region) : RegionBranchPoint(&region) {}
 
   /// Explicitly stops users from constructing with `nullptr`.
   RegionBranchPoint(std::nullptr_t) = delete;
 
-  /// Returns true if branching from the parent op.
-  bool isParent() const { return predecessor == nullptr; }
+  /// Constructs a `RegionBranchPoint` from the the target of a
+  /// `RegionSuccessor` instance.
+  RegionBranchPoint(RegionSuccessor successor) {
+    if (successor.isParent())
+      maybeRegion = nullptr;
+    else
+      maybeRegion = successor.getSuccessor();
+  }
 
-  /// Returns the terminator if branching from a region.
+  /// Assigns a region being branched from.
+  RegionBranchPoint &operator=(Region &region) {
+    maybeRegion = &region;
+    return *this;
+  }
+
+  /// Returns true if branching from the parent op.
+  bool isParent() const { return maybeRegion == nullptr; }
+
+  /// Returns the region if branching from a region.
   /// A null pointer otherwise.
-  Operation *getTerminatorPredecessorOrNull() const { return predecessor; }
+  Region *getRegionOrNull() const { return maybeRegion; }
 
   /// Returns true if the two branch points are equal.
   friend bool operator==(RegionBranchPoint lhs, RegionBranchPoint rhs) {
-    return lhs.predecessor == rhs.predecessor;
+    return lhs.maybeRegion == rhs.maybeRegion;
   }
 
 private:
   // Private constructor to encourage the use of `RegionBranchPoint::parent`.
-  constexpr RegionBranchPoint() = default;
+  constexpr RegionBranchPoint() : maybeRegion(nullptr) {}
 
   /// Internal encoding. Uses nullptr for representing branching from the parent
-  /// op and the region terminator being branched from otherwise.
-  Operation *predecessor = nullptr;
+  /// op and the region being branched from otherwise.
+  Region *maybeRegion;
 };
 
 inline bool operator!=(RegionBranchPoint lhs, RegionBranchPoint rhs) {
   return !(lhs == rhs);
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     RegionBranchPoint point) {
-  if (point.isParent())
-    return os << "<from parent>";
-  return os << "<region #"
-            << point.getTerminatorPredecessorOrNull()
-                   ->getParentRegion()
-                   ->getRegionNumber()
-            << ", terminator "
-            << OpWithFlags(point.getTerminatorPredecessorOrNull(),
-                           OpPrintingFlags().skipRegions())
-            << ">";
-}
-
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     RegionSuccessor successor) {
-  if (successor.isParent())
-    return os << "<to parent>";
-  return os << "<to region #" << successor.getSuccessor()->getRegionNumber()
-            << " with " << successor.getSuccessorInputs().size() << " inputs>";
 }
 
 /// This class represents upper and lower bounds on the number of times a region
@@ -369,11 +347,5 @@ struct ReturnLike : public TraitBase<ConcreteType, ReturnLike> {
 
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/ControlFlowInterfaces.h.inc"
-
-namespace mlir {
-inline RegionBranchPoint::RegionBranchPoint(
-    RegionBranchTerminatorOpInterface predecessor)
-    : predecessor(predecessor.getOperation()) {}
-} // namespace mlir
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H

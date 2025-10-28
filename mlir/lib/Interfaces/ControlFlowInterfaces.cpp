@@ -9,9 +9,7 @@
 #include <utility>
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "llvm/Support/DebugLog.h"
 
 using namespace mlir;
 
@@ -40,31 +38,20 @@ SuccessorOperands::SuccessorOperands(unsigned int producedOperandCount,
 std::optional<BlockArgument>
 detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
                                    unsigned operandIndex, Block *successor) {
-  LDBG() << "Getting branch successor argument for operand index "
-         << operandIndex << " in successor block";
-
   OperandRange forwardedOperands = operands.getForwardedOperands();
   // Check that the operands are valid.
-  if (forwardedOperands.empty()) {
-    LDBG() << "No forwarded operands, returning nullopt";
+  if (forwardedOperands.empty())
     return std::nullopt;
-  }
 
   // Check to ensure that this operand is within the range.
   unsigned operandsStart = forwardedOperands.getBeginOperandIndex();
   if (operandIndex < operandsStart ||
-      operandIndex >= (operandsStart + forwardedOperands.size())) {
-    LDBG() << "Operand index " << operandIndex << " out of range ["
-           << operandsStart << ", "
-           << (operandsStart + forwardedOperands.size())
-           << "), returning nullopt";
+      operandIndex >= (operandsStart + forwardedOperands.size()))
     return std::nullopt;
-  }
 
   // Index the successor.
   unsigned argIndex =
       operands.getProducedOperandCount() + operandIndex - operandsStart;
-  LDBG() << "Computed argument index " << argIndex << " for successor block";
   return successor->getArgument(argIndex);
 }
 
@@ -72,15 +59,9 @@ detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
 LogicalResult
 detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                                       const SuccessorOperands &operands) {
-  LDBG() << "Verifying branch successor operands for successor #" << succNo
-         << " in operation " << op->getName();
-
   // Check the count.
   unsigned operandCount = operands.size();
   Block *destBB = op->getSuccessor(succNo);
-  LDBG() << "Branch has " << operandCount << " operands, target block has "
-         << destBB->getNumArguments() << " arguments";
-
   if (operandCount != destBB->getNumArguments())
     return op->emitError() << "branch has " << operandCount
                            << " operands for successor #" << succNo
@@ -88,22 +69,13 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                            << destBB->getNumArguments();
 
   // Check the types.
-  LDBG() << "Checking type compatibility for "
-         << (operandCount - operands.getProducedOperandCount())
-         << " forwarded operands";
   for (unsigned i = operands.getProducedOperandCount(); i != operandCount;
        ++i) {
-    Type operandType = operands[i].getType();
-    Type argType = destBB->getArgument(i).getType();
-    LDBG() << "Checking type compatibility: operand type " << operandType
-           << " vs argument type " << argType;
-
-    if (!cast<BranchOpInterface>(op).areTypesCompatible(operandType, argType))
+    if (!cast<BranchOpInterface>(op).areTypesCompatible(
+            operands[i].getType(), destBB->getArgument(i).getType()))
       return op->emitError() << "type mismatch for bb argument #" << i
                              << " of successor #" << succNo;
   }
-
-  LDBG() << "Branch successor operand verification successful";
   return success();
 }
 
@@ -154,15 +126,15 @@ LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
 
 static InFlightDiagnostic &printRegionEdgeName(InFlightDiagnostic &diag,
                                                RegionBranchPoint sourceNo,
-                                               RegionSuccessor succRegionNo) {
+                                               RegionBranchPoint succRegionNo) {
   diag << "from ";
-  if (Operation *op = sourceNo.getTerminatorPredecessorOrNull())
-    diag << "Operation " << op->getName();
+  if (Region *region = sourceNo.getRegionOrNull())
+    diag << "Region #" << region->getRegionNumber();
   else
     diag << "parent operands";
 
   diag << " to ";
-  if (Region *region = succRegionNo.getSuccessor())
+  if (Region *region = succRegionNo.getRegionOrNull())
     diag << "Region #" << region->getRegionNumber();
   else
     diag << "parent results";
@@ -173,12 +145,13 @@ static InFlightDiagnostic &printRegionEdgeName(InFlightDiagnostic &diag,
 /// `sourcePoint`. `getInputsTypesForRegion` is a function that returns the
 /// types of the inputs that flow to a successor region.
 static LogicalResult
-verifyTypesAlongAllEdges(RegionBranchOpInterface branchOp,
-                         RegionBranchPoint sourcePoint,
-                         function_ref<FailureOr<TypeRange>(RegionSuccessor)>
+verifyTypesAlongAllEdges(Operation *op, RegionBranchPoint sourcePoint,
+                         function_ref<FailureOr<TypeRange>(RegionBranchPoint)>
                              getInputsTypesForRegion) {
+  auto regionInterface = cast<RegionBranchOpInterface>(op);
+
   SmallVector<RegionSuccessor, 2> successors;
-  branchOp.getSuccessorRegions(sourcePoint, successors);
+  regionInterface.getSuccessorRegions(sourcePoint, successors);
 
   for (RegionSuccessor &succ : successors) {
     FailureOr<TypeRange> sourceTypes = getInputsTypesForRegion(succ);
@@ -187,14 +160,10 @@ verifyTypesAlongAllEdges(RegionBranchOpInterface branchOp,
 
     TypeRange succInputsTypes = succ.getSuccessorInputs().getTypes();
     if (sourceTypes->size() != succInputsTypes.size()) {
-      InFlightDiagnostic diag =
-          branchOp->emitOpError("region control flow edge ");
-      std::string succStr;
-      llvm::raw_string_ostream os(succStr);
-      os << succ;
+      InFlightDiagnostic diag = op->emitOpError("region control flow edge ");
       return printRegionEdgeName(diag, sourcePoint, succ)
              << ": source has " << sourceTypes->size()
-             << " operands, but target successor " << os.str() << " needs "
+             << " operands, but target successor needs "
              << succInputsTypes.size();
     }
 
@@ -202,10 +171,8 @@ verifyTypesAlongAllEdges(RegionBranchOpInterface branchOp,
          llvm::enumerate(llvm::zip(*sourceTypes, succInputsTypes))) {
       Type sourceType = std::get<0>(typesIdx.value());
       Type inputType = std::get<1>(typesIdx.value());
-
-      if (!branchOp.areTypesCompatible(sourceType, inputType)) {
-        InFlightDiagnostic diag =
-            branchOp->emitOpError("along control flow edge ");
+      if (!regionInterface.areTypesCompatible(sourceType, inputType)) {
+        InFlightDiagnostic diag = op->emitOpError("along control flow edge ");
         return printRegionEdgeName(diag, sourcePoint, succ)
                << ": source type #" << typesIdx.index() << " " << sourceType
                << " should match input type #" << typesIdx.index() << " "
@@ -213,7 +180,6 @@ verifyTypesAlongAllEdges(RegionBranchOpInterface branchOp,
       }
     }
   }
-
   return success();
 }
 
@@ -221,18 +187,34 @@ verifyTypesAlongAllEdges(RegionBranchOpInterface branchOp,
 LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   auto regionInterface = cast<RegionBranchOpInterface>(op);
 
-  auto inputTypesFromParent = [&](RegionSuccessor successor) -> TypeRange {
-    return regionInterface.getEntrySuccessorOperands(successor).getTypes();
+  auto inputTypesFromParent = [&](RegionBranchPoint point) -> TypeRange {
+    return regionInterface.getEntrySuccessorOperands(point).getTypes();
   };
 
   // Verify types along control flow edges originating from the parent.
-  if (failed(verifyTypesAlongAllEdges(
-          regionInterface, RegionBranchPoint::parent(), inputTypesFromParent)))
+  if (failed(verifyTypesAlongAllEdges(op, RegionBranchPoint::parent(),
+                                      inputTypesFromParent)))
     return failure();
+
+  auto areTypesCompatible = [&](TypeRange lhs, TypeRange rhs) {
+    if (lhs.size() != rhs.size())
+      return false;
+    for (auto types : llvm::zip(lhs, rhs)) {
+      if (!regionInterface.areTypesCompatible(std::get<0>(types),
+                                              std::get<1>(types))) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   // Verify types along control flow edges originating from each region.
   for (Region &region : op->getRegions()) {
-    // Collect all return-like terminators in the region.
+
+    // Since there can be multiple terminators implementing the
+    // `RegionBranchTerminatorOpInterface`, all should have the same operand
+    // types when passing them to the same region.
+
     SmallVector<RegionBranchTerminatorOpInterface> regionReturnOps;
     for (Block &block : region)
       if (!block.empty())
@@ -245,20 +227,33 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
     if (regionReturnOps.empty())
       continue;
 
-    // Verify types along control flow edges originating from each return-like
-    // terminator.
-    for (RegionBranchTerminatorOpInterface regionReturnOp : regionReturnOps) {
+    auto inputTypesForRegion =
+        [&](RegionBranchPoint point) -> FailureOr<TypeRange> {
+      std::optional<OperandRange> regionReturnOperands;
+      for (RegionBranchTerminatorOpInterface regionReturnOp : regionReturnOps) {
+        auto terminatorOperands = regionReturnOp.getSuccessorOperands(point);
 
-      auto inputTypesForRegion =
-          [&](RegionSuccessor successor) -> FailureOr<TypeRange> {
-        OperandRange terminatorOperands =
-            regionReturnOp.getSuccessorOperands(successor);
-        return TypeRange(terminatorOperands.getTypes());
-      };
-      if (failed(verifyTypesAlongAllEdges(regionInterface, regionReturnOp,
-                                          inputTypesForRegion)))
-        return failure();
-    }
+        if (!regionReturnOperands) {
+          regionReturnOperands = terminatorOperands;
+          continue;
+        }
+
+        // Found more than one ReturnLike terminator. Make sure the operand
+        // types match with the first one.
+        if (!areTypesCompatible(regionReturnOperands->getTypes(),
+                                terminatorOperands.getTypes())) {
+          InFlightDiagnostic diag = op->emitOpError("along control flow edge");
+          return printRegionEdgeName(diag, region, point)
+                 << " operands mismatch between return-like terminators";
+        }
+      }
+
+      // All successors get the same set of operand types.
+      return TypeRange(regionReturnOperands->getTypes());
+    };
+
+    if (failed(verifyTypesAlongAllEdges(op, region, inputTypesForRegion)))
+      return failure();
   }
 
   return success();
@@ -277,74 +272,31 @@ using StopConditionFn = function_ref<bool(Region *, ArrayRef<bool> visited)>;
 static bool traverseRegionGraph(Region *begin,
                                 StopConditionFn stopConditionFn) {
   auto op = cast<RegionBranchOpInterface>(begin->getParentOp());
-  LDBG() << "Starting region graph traversal from region #"
-         << begin->getRegionNumber() << " in operation " << op->getName();
-
   SmallVector<bool> visited(op->getNumRegions(), false);
   visited[begin->getRegionNumber()] = true;
-  LDBG() << "Initialized visited array with " << op->getNumRegions()
-         << " regions";
 
   // Retrieve all successors of the region and enqueue them in the worklist.
   SmallVector<Region *> worklist;
   auto enqueueAllSuccessors = [&](Region *region) {
-    LDBG() << "Enqueuing successors for region #" << region->getRegionNumber();
-    SmallVector<Attribute> operandAttributes(op->getNumOperands());
-    for (Block &block : *region) {
-      if (block.empty())
-        continue;
-      auto terminator =
-          dyn_cast<RegionBranchTerminatorOpInterface>(block.back());
-      if (!terminator)
-        continue;
-      SmallVector<RegionSuccessor> successors;
-      operandAttributes.resize(terminator->getNumOperands());
-      terminator.getSuccessorRegions(operandAttributes, successors);
-      LDBG() << "Found " << successors.size()
-             << " successors from terminator in block";
-      for (RegionSuccessor successor : successors) {
-        if (!successor.isParent()) {
-          worklist.push_back(successor.getSuccessor());
-          LDBG() << "Added region #"
-                 << successor.getSuccessor()->getRegionNumber()
-                 << " to worklist";
-        } else {
-          LDBG() << "Skipping parent successor";
-        }
-      }
-    }
+    SmallVector<RegionSuccessor> successors;
+    op.getSuccessorRegions(region, successors);
+    for (RegionSuccessor successor : successors)
+      if (!successor.isParent())
+        worklist.push_back(successor.getSuccessor());
   };
   enqueueAllSuccessors(begin);
-  LDBG() << "Initial worklist size: " << worklist.size();
 
   // Process all regions in the worklist via DFS.
   while (!worklist.empty()) {
     Region *nextRegion = worklist.pop_back_val();
-    LDBG() << "Processing region #" << nextRegion->getRegionNumber()
-           << " from worklist (remaining: " << worklist.size() << ")";
-
-    if (stopConditionFn(nextRegion, visited)) {
-      LDBG() << "Stop condition met for region #"
-             << nextRegion->getRegionNumber() << ", returning true";
+    if (stopConditionFn(nextRegion, visited))
       return true;
-    }
-    llvm::dbgs() << "Region: " << nextRegion << "\n";
-    if (!nextRegion->getParentOp()) {
-      llvm::errs() << "Region " << *nextRegion << " has no parent op\n";
-      return false;
-    }
-    if (visited[nextRegion->getRegionNumber()]) {
-      LDBG() << "Region #" << nextRegion->getRegionNumber()
-             << " already visited, skipping";
+    if (visited[nextRegion->getRegionNumber()])
       continue;
-    }
     visited[nextRegion->getRegionNumber()] = true;
-    LDBG() << "Marking region #" << nextRegion->getRegionNumber()
-           << " as visited";
     enqueueAllSuccessors(nextRegion);
   }
 
-  LDBG() << "Traversal completed, returning false";
   return false;
 }
 
@@ -370,25 +322,17 @@ static bool isRegionReachable(Region *begin, Region *r) {
 ///    mutually exclusive if they are not reachable from each other as per
 ///    RegionBranchOpInterface::getSuccessorRegions.
 bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
-  LDBG() << "Checking if operations are in mutually exclusive regions: "
-         << a->getName() << " and " << b->getName();
-
   assert(a && "expected non-empty operation");
   assert(b && "expected non-empty operation");
 
   auto branchOp = a->getParentOfType<RegionBranchOpInterface>();
   while (branchOp) {
-    LDBG() << "Checking branch operation " << branchOp->getName();
-
     // Check if b is inside branchOp. (We already know that a is.)
     if (!branchOp->isProperAncestor(b)) {
-      LDBG() << "Operation b is not inside branchOp, checking next ancestor";
       // Check next enclosing RegionBranchOpInterface.
       branchOp = branchOp->getParentOfType<RegionBranchOpInterface>();
       continue;
     }
-
-    LDBG() << "Both operations are inside branchOp, finding their regions";
 
     // b is contained in branchOp. Retrieve the regions in which `a` and `b`
     // are contained.
@@ -397,136 +341,63 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
       if (r.findAncestorOpInRegion(*a)) {
         assert(!regionA && "already found a region for a");
         regionA = &r;
-        LDBG() << "Found region #" << r.getRegionNumber() << " for operation a";
       }
       if (r.findAncestorOpInRegion(*b)) {
         assert(!regionB && "already found a region for b");
         regionB = &r;
-        LDBG() << "Found region #" << r.getRegionNumber() << " for operation b";
       }
     }
     assert(regionA && regionB && "could not find region of op");
 
-    LDBG() << "Region A: #" << regionA->getRegionNumber() << ", Region B: #"
-           << regionB->getRegionNumber();
-
     // `a` and `b` are in mutually exclusive regions if both regions are
     // distinct and neither region is reachable from the other region.
-    bool regionsAreDistinct = (regionA != regionB);
-    bool aNotReachableFromB = !isRegionReachable(regionA, regionB);
-    bool bNotReachableFromA = !isRegionReachable(regionB, regionA);
-
-    LDBG() << "Regions distinct: " << regionsAreDistinct
-           << ", A not reachable from B: " << aNotReachableFromB
-           << ", B not reachable from A: " << bNotReachableFromA;
-
-    bool mutuallyExclusive =
-        regionsAreDistinct && aNotReachableFromB && bNotReachableFromA;
-    LDBG() << "Operations are mutually exclusive: " << mutuallyExclusive;
-
-    return mutuallyExclusive;
+    return regionA != regionB && !isRegionReachable(regionA, regionB) &&
+           !isRegionReachable(regionB, regionA);
   }
 
   // Could not find a common RegionBranchOpInterface among a's and b's
   // ancestors.
-  LDBG() << "No common RegionBranchOpInterface found, operations are not "
-            "mutually exclusive";
   return false;
 }
 
 bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
-  LDBG() << "Checking if region #" << index << " is repetitive in operation "
-         << getOperation()->getName();
-
   Region *region = &getOperation()->getRegion(index);
-  bool isRepetitive = isRegionReachable(region, region);
-
-  LDBG() << "Region #" << index << " is repetitive: " << isRepetitive;
-  return isRepetitive;
+  return isRegionReachable(region, region);
 }
 
 bool RegionBranchOpInterface::hasLoop() {
-  LDBG() << "Checking if operation " << getOperation()->getName()
-         << " has loops";
-
   SmallVector<RegionSuccessor> entryRegions;
   getSuccessorRegions(RegionBranchPoint::parent(), entryRegions);
-  LDBG() << "Found " << entryRegions.size() << " entry regions";
-
-  for (RegionSuccessor successor : entryRegions) {
-    if (!successor.isParent()) {
-      LDBG() << "Checking entry region #"
-             << successor.getSuccessor()->getRegionNumber() << " for loops";
-
-      bool hasLoop =
-          traverseRegionGraph(successor.getSuccessor(),
-                              [](Region *nextRegion, ArrayRef<bool> visited) {
-                                // Interrupt traversal if the region was already
-                                // visited.
-                                return visited[nextRegion->getRegionNumber()];
-                              });
-
-      if (hasLoop) {
-        LDBG() << "Found loop in entry region #"
-               << successor.getSuccessor()->getRegionNumber();
-        return true;
-      }
-    } else {
-      LDBG() << "Skipping parent successor";
-    }
-  }
-
-  LDBG() << "No loops found in operation";
+  for (RegionSuccessor successor : entryRegions)
+    if (!successor.isParent() &&
+        traverseRegionGraph(successor.getSuccessor(),
+                            [](Region *nextRegion, ArrayRef<bool> visited) {
+                              // Interrupt traversal if the region was already
+                              // visited.
+                              return visited[nextRegion->getRegionNumber()];
+                            }))
+      return true;
   return false;
 }
 
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {
-  LDBG() << "Finding enclosing repetitive region for operation "
-         << op->getName();
-
   while (Region *region = op->getParentRegion()) {
-    LDBG() << "Checking region #" << region->getRegionNumber()
-           << " in operation " << region->getParentOp()->getName();
-
     op = region->getParentOp();
-    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      LDBG()
-          << "Found RegionBranchOpInterface, checking if region is repetitive";
-      if (branchOp.isRepetitiveRegion(region->getRegionNumber())) {
-        LDBG() << "Found repetitive region #" << region->getRegionNumber();
+    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op))
+      if (branchOp.isRepetitiveRegion(region->getRegionNumber()))
         return region;
-      }
-    } else {
-      LDBG() << "Parent operation does not implement RegionBranchOpInterface";
-    }
   }
-
-  LDBG() << "No enclosing repetitive region found";
   return nullptr;
 }
 
 Region *mlir::getEnclosingRepetitiveRegion(Value value) {
-  LDBG() << "Finding enclosing repetitive region for value";
-
   Region *region = value.getParentRegion();
   while (region) {
-    LDBG() << "Checking region #" << region->getRegionNumber()
-           << " in operation " << region->getParentOp()->getName();
-
     Operation *op = region->getParentOp();
-    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      LDBG()
-          << "Found RegionBranchOpInterface, checking if region is repetitive";
-      if (branchOp.isRepetitiveRegion(region->getRegionNumber())) {
-        LDBG() << "Found repetitive region #" << region->getRegionNumber();
+    if (auto branchOp = dyn_cast<RegionBranchOpInterface>(op))
+      if (branchOp.isRepetitiveRegion(region->getRegionNumber()))
         return region;
-      }
-    } else {
-      LDBG() << "Parent operation does not implement RegionBranchOpInterface";
-    }
     region = op->getParentRegion();
   }
-
-  LDBG() << "No enclosing repetitive region found for value";
   return nullptr;
 }
