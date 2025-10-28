@@ -1350,6 +1350,7 @@ memory version
 memory_resource cstddef
 memory_resource cstdint
 memory_resource cstdlib
+memory_resource cstring
 memory_resource exception
 memory_resource iosfwd
 memory_resource new
