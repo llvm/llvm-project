@@ -183,7 +183,8 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*|windows-2022)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            build_runs_on=windows-2022 
+            #"depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
           macos-13)
@@ -214,7 +215,7 @@ jobs:
   build-release-package:
     name: "Build Release Package"
     needs: prepare
-    if: false && github.repository_owner == 'llvm'
+    if: github.repository_owner == 'llvm'
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
