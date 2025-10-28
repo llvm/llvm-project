@@ -92,6 +92,10 @@ private:
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  void addVectorLoadStoreOperands(MachineInstr &I,
+                                  SmallVectorImpl<SrcOp> &SrcOps,
+                                  unsigned &CurOp, bool IsMasked,
+                                  bool IsStrided) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineIRBuilder &MIB) const;
 
@@ -716,6 +720,26 @@ static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
   return GenericOpc;
 }
 
+void RISCVInstructionSelector::addVectorLoadStoreOperands(
+    MachineInstr &I, SmallVectorImpl<SrcOp> &SrcOps, unsigned &CurOp,
+    bool IsMasked, bool IsStrided) const {
+  // Base Pointer
+  auto PtrReg = I.getOperand(CurOp++).getReg();
+  SrcOps.push_back(PtrReg);
+
+  // Stride
+  if (IsStrided) {
+    auto StrideReg = I.getOperand(CurOp++).getReg();
+    SrcOps.push_back(StrideReg);
+  }
+
+  // Mask
+  if (IsMasked) {
+    auto MaskReg = I.getOperand(CurOp++).getReg();
+    SrcOps.push_back(MaskReg);
+  }
+}
+
 bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     MachineInstr &I, MachineIRBuilder &MIB) const {
   // Find the intrinsic ID.
@@ -752,21 +776,7 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
       SrcOps.push_back(Register(RISCV::NoRegister));
     }
 
-    // Base Pointer
-    auto PtrReg = I.getOperand(CurOp++).getReg();
-    SrcOps.push_back(PtrReg);
-
-    // Stride
-    if (IsStrided) {
-      auto StrideReg = I.getOperand(CurOp++).getReg();
-      SrcOps.push_back(StrideReg);
-    }
-
-    // Mask
-    if (IsMasked) {
-      auto MaskReg = I.getOperand(CurOp++).getReg();
-      SrcOps.push_back(MaskReg);
-    }
+    addVectorLoadStoreOperands(I, SrcOps, CurOp, IsMasked, IsStrided);
 
     RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(getMVTForLLT(VT));
     const RISCV::VLEPseudo *P =
@@ -788,6 +798,48 @@ bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
     if (IsMasked)
       Policy = I.getOperand(CurOp++).getImm();
     PseudoMI.addImm(Policy);
+
+    // Memref
+    PseudoMI.cloneMemRefs(I);
+
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+  }
+  case Intrinsic::riscv_vsm:
+  case Intrinsic::riscv_vse:
+  case Intrinsic::riscv_vse_mask:
+  case Intrinsic::riscv_vsse:
+  case Intrinsic::riscv_vsse_mask: {
+    bool IsMasked = IntrinID == Intrinsic::riscv_vse_mask ||
+                    IntrinID == Intrinsic::riscv_vsse_mask;
+    bool IsStrided = IntrinID == Intrinsic::riscv_vsse ||
+                     IntrinID == Intrinsic::riscv_vsse_mask;
+    LLT VT = MRI->getType(I.getOperand(1).getReg());
+    unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
+
+    // Sources
+    unsigned CurOp = 1;
+    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+
+    // Store value
+    auto PassthruReg = I.getOperand(CurOp++).getReg();
+    SrcOps.push_back(PassthruReg);
+
+    addVectorLoadStoreOperands(I, SrcOps, CurOp, IsMasked, IsStrided);
+
+    RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(getMVTForLLT(VT));
+    const RISCV::VSEPseudo *P = RISCV::getVSEPseudo(
+        IsMasked, IsStrided, Log2SEW, static_cast<unsigned>(LMUL));
+
+    auto PseudoMI = MIB.buildInstr(P->Pseudo, {}, SrcOps);
+
+    // Select VL
+    auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
+    for (auto &RenderFn : *VLOpFn)
+      RenderFn(PseudoMI);
+
+    // SEW
+    PseudoMI.addImm(Log2SEW);
 
     // Memref
     PseudoMI.cloneMemRefs(I);
