@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/AbstractCallSite.h"
+#include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -51,15 +52,27 @@ TEST(AbstractCallSite, CallbackCall) {
   EXPECT_TRUE(ACS);
   EXPECT_TRUE(ACS.isCallbackCall());
   EXPECT_TRUE(ACS.isCallee(CallbackUse));
+  EXPECT_EQ(ACS.getCalleeUseForCallback(), *CallbackUse);
   EXPECT_EQ(ACS.getCalledFunction(), Callback);
+
+  // The callback metadata {CallbackNo, Arg0No, ..., isVarArg} = {1, -1, true}
+  EXPECT_EQ(ACS.getCallArgOperandNoForCallee(), 1);
+  // Though the callback metadata only specifies ONE unfixed argument No, the
+  // callback callee is vararg, hence the third arg is also considered as
+  // another arg for the callback.
+  EXPECT_EQ(ACS.getNumArgOperands(), 2);
+  Argument *Param0 = Callback->getArg(0), *Param1 = Callback->getArg(1);
+  ASSERT_TRUE(Param0 && Param1);
+  EXPECT_EQ(ACS.getCallArgOperandNo(*Param0), -1);
+  EXPECT_EQ(ACS.getCallArgOperandNo(*Param1), 2);
 }
 
 TEST(AbstractCallSite, DirectCall) {
   LLVMContext C;
 
-  const char *IR = "declare void @bar()\n"
+  const char *IR = "declare void @bar(i32 %x, i32 %y)\n"
                    "define void @foo() {\n"
-                   "  call void @bar()\n"
+                   "  call void @bar(i32 1, i32 2)\n"
                    "  ret void\n"
                    "}\n";
 
@@ -77,13 +90,30 @@ TEST(AbstractCallSite, DirectCall) {
   EXPECT_TRUE(ACS.isDirectCall());
   EXPECT_TRUE(ACS.isCallee(DirectCallUse));
   EXPECT_EQ(ACS.getCalledFunction(), Callee);
+  EXPECT_EQ(ACS.getNumArgOperands(), 2);
+  Argument *ArgX = Callee->getArg(0);
+  ASSERT_NE(ArgX, nullptr);
+  Value *CAO1 = ACS.getCallArgOperand(*ArgX);
+  Value *CAO2 = ACS.getCallArgOperand(0);
+  ASSERT_NE(CAO2, nullptr);
+  // The two call arg operands should be the same object, since they are both
+  // the first argument of the call.
+  EXPECT_EQ(CAO2, CAO1);
+
+  ConstantInt *FirstArgInt = dyn_cast<ConstantInt>(CAO2);
+  ASSERT_NE(FirstArgInt, nullptr);
+  EXPECT_EQ(FirstArgInt->getZExtValue(), 1);
+
+  EXPECT_EQ(ACS.getCallArgOperandNo(*ArgX), 0);
+  EXPECT_EQ(ACS.getCallArgOperandNo(0), 0);
+  EXPECT_EQ(ACS.getCallArgOperandNo(1), 1);
 }
 
 TEST(AbstractCallSite, IndirectCall) {
   LLVMContext C;
 
   const char *IR = "define void @foo(ptr %0) {\n"
-                   "  call void %0()\n"
+                   "  call void %0(i32 1, i32 2)\n"
                    "  ret void\n"
                    "}\n";
 
@@ -105,4 +135,13 @@ TEST(AbstractCallSite, IndirectCall) {
   EXPECT_TRUE(ACS.isCallee(IndCallUse));
   EXPECT_EQ(ACS.getCalledFunction(), nullptr);
   EXPECT_EQ(ACS.getCalledOperand(), ArgAsCallee);
+  EXPECT_EQ(ACS.getNumArgOperands(), 2);
+  Value *CalledOperand = ACS.getCallArgOperand(0);
+  ASSERT_NE(CalledOperand, nullptr);
+  ConstantInt *FirstArgInt = dyn_cast<ConstantInt>(CalledOperand);
+  ASSERT_NE(FirstArgInt, nullptr);
+  EXPECT_EQ(FirstArgInt->getZExtValue(), 1);
+
+  EXPECT_EQ(ACS.getCallArgOperandNo(0), 0);
+  EXPECT_EQ(ACS.getCallArgOperandNo(1), 1);
 }
