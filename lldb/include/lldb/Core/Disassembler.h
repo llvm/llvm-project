@@ -566,7 +566,7 @@ private:
   const Disassembler &operator=(const Disassembler &) = delete;
 };
 
-/// Structured data for a single variable annotation
+/// Structured data for a single variable annotation.
 struct VariableAnnotation {
   std::string variable_name;
   std::string location_description; // e.g., "r15", "undef", "const_0"
