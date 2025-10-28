@@ -2409,7 +2409,7 @@ underlying types is available in C23 and later.
 Enumerations with no enumerators
 -----------------------------------------
 
-Clang provides support for Microsoft extensions to support empty enums.
+Clang provides support for Microsoft extensions to support enumerations with no enumerators.
 
 .. code-block:: c++
 
