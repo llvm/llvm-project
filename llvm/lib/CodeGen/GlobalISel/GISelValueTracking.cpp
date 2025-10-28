@@ -653,16 +653,16 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     if (VecVT.isScalableVector())
       break;
 
-    Known.Zero.setAllBits();
-    Known.One.setAllBits();
-
     const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
     const unsigned NumSrcElts = VecVT.getNumElements();
+    // A return type different from the vector's element type may lead to
+    // issues with pattern selection. Bail out to avoid that.
+    if (BitWidth > EltBitWidth) {
+      break;
+    }
 
-    // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
-    // anything about the extended bits.
-    if (BitWidth > EltBitWidth)
-      Known = Known.trunc(EltBitWidth);
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
 
     // If we know the element index, just demand that vector element, else for
     // an unknown element index, ignore DemandedElts and demand them all.
@@ -673,10 +673,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
     computeKnownBitsImpl(InVec, Known2, DemandedSrcElts, Depth + 1);
     Known = Known.intersectWith(Known2);
-
-    if (BitWidth > EltBitWidth)
-      Known = Known.anyext(BitWidth);
-
+    
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
