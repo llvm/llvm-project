@@ -231,6 +231,12 @@ getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
   if (MI.getOpcode() == AArch64::RequiresZASavePseudo)
     return {ZAState::LOCAL_SAVED, std::prev(InsertPt)};
 
+  // TLS-descriptor calls don't use the standard call lowering, so handle them
+  // as a special case here. Assume a private ZA interface.
+  if (MI.getOpcode() == AArch64::TLSDESC_CALLSEQ ||
+      MI.getOpcode() == AArch64::TLSDESC_AUTH_CALLSEQ)
+    return {ZAState::LOCAL_SAVED, InsertPt};
+
   if (MI.isReturn())
     return {ZAOffAtReturn ? ZAState::OFF : ZAState::ACTIVE, InsertPt};
 
