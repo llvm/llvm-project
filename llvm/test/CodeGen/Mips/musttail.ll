@@ -24,7 +24,9 @@ define i32 @test_musttail_args(i32 %x, i32 %y, i32 %z) {
 
 ; Test musttail with many arguments that spill to stack (involves memory)
 ; MIPS O32 ABI: first 4 args in $a0-$a3, rest on stack
-declare i32 @many_args_callee(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h)
+define hidden i32 @many_args_callee(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
+  ret i32 %a
+}
 
 define i32 @test_musttail_many_args(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
 ; MIPS32-LABEL: test_musttail_many_args:
@@ -50,7 +52,9 @@ define i32 @test_musttail_many_args(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 
 ; Test musttail with large struct passed by value (involves memory)
 %struct.large = type { i32, i32, i32, i32, i32, i32, i32, i32 }
 
-declare i32 @callee_with_struct(%struct.large %s, i32 %x)
+define hidden i32 @callee_with_struct(%struct.large %s, i32 %x) {
+  ret i32 %x
+}
 
 define i32 @test_musttail_struct(%struct.large %s, i32 %x) {
 ; MIPS32-LABEL: test_musttail_struct:
@@ -77,7 +81,9 @@ define i32 @test_musttail_struct(%struct.large %s, i32 %x) {
 }
 
 ; Test musttail with mixed int and float arguments that use stack
-declare float @mixed_args_callee(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f)
+define hidden float @mixed_args_callee(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f) {
+  ret float %b
+}
 
 define float @test_musttail_mixed_args(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f) {
 ; MIPS32-LABEL: test_musttail_mixed_args:

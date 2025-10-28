@@ -3409,15 +3409,28 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // restoration. In PIC mode, calling external functions via tail call can
   // cause issues with $gp register handling (see D24763).
   bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool CalleeIsLocal = true;
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    const GlobalValue *GV = G->getGlobal();
+    bool HasLocalLinkage = GV->hasLocalLinkage() || GV->hasPrivateLinkage();
+    bool HasHiddenVisibility = GV->hasHiddenVisibility() ||
+                               GV->hasProtectedVisibility();
+    if (GV->isDeclarationForLinker())
+      CalleeIsLocal = HasLocalLinkage || HasHiddenVisibility;
+    else
+      CalleeIsLocal = GV->isDSOLocal();
+  }
+
   if (IsTailCall) {
     IsTailCall = isEligibleForTailCallOptimization(
         CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>(), IsMustTail);
-    // For non-musttail calls, restrict to local or non-interposable functions
-    if (IsTailCall && !IsMustTail) {
-      if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-        IsTailCall &= (G->getGlobal()->hasLocalLinkage() ||
-                       G->getGlobal()->hasHiddenVisibility() ||
-                       G->getGlobal()->hasProtectedVisibility());
+    if (IsTailCall) {
+      if (IsMustTail) {
+        if (!CalleeIsLocal)
+          report_fatal_error("failed to perform tail call elimination on a call "
+                             "site marked musttail");
+      } else {
+        IsTailCall &= CalleeIsLocal;
       }
     }
   }
