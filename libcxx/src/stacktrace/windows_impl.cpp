@@ -17,11 +17,6 @@
 #  include <psapi.h>
 #  include <stacktrace>
 
-#  if defined(_MSC_VER)
-#    pragma comment(lib, "dbghelp.lib")
-#    pragma comment(lib, "psapi.lib")
-#  endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
