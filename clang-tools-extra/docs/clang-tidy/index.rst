@@ -215,10 +215,11 @@ An overview of all the command-line options:
                                        This option overrides the 'FormatStyle` option in
                                        .clang-tidy file, if any.
     --header-filter=<string>         - Regular expression matching the names of the
-                                       headers to output diagnostics from. Diagnostics
-                                       from all non-system headers are displayed by
-                                       default. Diagnostics from the main file of
-                                       each translation unit are always displayed.
+                                       headers to output diagnostics from. The default
+                                       value is '.*', i.e. diagnostics from all non-system
+                                       headers are displayed by default. Diagnostics
+                                       from the main file of each translation unit are
+                                       always displayed.
                                        Can be used together with -line-filter.
                                        This option overrides the 'HeaderFilterRegex'
                                        option in .clang-tidy file, if any.
