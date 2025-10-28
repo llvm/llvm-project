@@ -32,7 +32,6 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
   SourceLocation OperandLoc = Tok.getLocation();
   TentativeParsingAction TPA(*this);
 
-  // Next, check for an unqualified-id.
   if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::kw_template,
                   tok::tilde, tok::annot_template_id)) {
     // TODO(reflection) : support parsing for
