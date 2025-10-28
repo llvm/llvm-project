@@ -415,6 +415,7 @@ private:
                                           InstCombinerImpl &IC,
                                           Instruction *CxtI);
   [[nodiscard]] bool canEvaluateSExtdImpl(Value *V, Type *Ty);
+  [[nodiscard]] bool canEvaluateSExtdPred(Value *V, Type *Ty);
 
   /// A bookkeeping map to memorize an already made decision for a traversed
   /// value.
@@ -1332,6 +1333,8 @@ bool TypeEvaluationHelper::canEvaluateZExtdImpl(Value *V, Type *Ty,
   BitsToClear = 0;
   if (canAlwaysEvaluateInType(V, Ty))
     return true;
+  // We stick to the one-user limit for the ZExt transform due to the fact
+  // that this predicate returns two values: predicate result and BitsToClear.
   if (canNotEvaluateInType(V, Ty))
     return false;
 
@@ -1682,16 +1685,18 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
 ///
 bool TypeEvaluationHelper::canEvaluateSExtd(Value *V, Type *Ty) {
   TypeEvaluationHelper TYH;
-  return TYH.canEvaluateSExtdImpl(V, Ty);
+  return TYH.canEvaluateSExtdImpl(V, Ty) && TYH.allPendingVisited();
 }
 
 bool TypeEvaluationHelper::canEvaluateSExtdImpl(Value *V, Type *Ty) {
+  return canEvaluate(V, Ty, [this](Value *V, Type *Ty) {
+    return canEvaluateSExtdPred(V, Ty);
+  });
+}
+
+bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
   assert(V->getType()->getScalarSizeInBits() < Ty->getScalarSizeInBits() &&
          "Can't sign extend type to a smaller type");
-  if (canAlwaysEvaluateInType(V, Ty))
-    return true;
-  if (canNotEvaluateInType(V, Ty))
-    return false;
 
   auto *I = cast<Instruction>(V);
   switch (I->getOpcode()) {
@@ -1709,8 +1714,8 @@ bool TypeEvaluationHelper::canEvaluateSExtdImpl(Value *V, Type *Ty) {
     return canEvaluateSExtdImpl(I->getOperand(0), Ty) &&
            canEvaluateSExtdImpl(I->getOperand(1), Ty);
 
-  //case Instruction::Shl:   TODO
-  //case Instruction::LShr:  TODO
+    // case Instruction::Shl:   TODO
+    // case Instruction::LShr:  TODO
 
   case Instruction::Select:
     return canEvaluateSExtdImpl(I->getOperand(1), Ty) &&
@@ -1718,11 +1723,12 @@ bool TypeEvaluationHelper::canEvaluateSExtdImpl(Value *V, Type *Ty) {
 
   case Instruction::PHI: {
     // We can change a phi if we can change all operands.  Note that we never
-    // get into trouble with cyclic PHIs here because we only consider
-    // instructions with a single use.
+    // get into trouble with cyclic PHIs here because canEvaluate handles use
+    // chain loops.
     PHINode *PN = cast<PHINode>(I);
     for (Value *IncValue : PN->incoming_values())
-      if (!canEvaluateSExtdImpl(IncValue, Ty)) return false;
+      if (!canEvaluateSExtdImpl(IncValue, Ty))
+        return false;
     return true;
   }
   default:

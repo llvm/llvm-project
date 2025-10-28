@@ -139,25 +139,21 @@ define i32 @eval_zext_multi_use_in_one_inst(i32 %x) {
 
 define i32 @eval_sext_multi_use_in_one_inst(i32 %x) {
 ; CHECK-LABEL: @eval_sext_multi_use_in_one_inst(
-; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[A:%.*]] = and i16 [[T]], 14
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]]
-; CHECK-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768
-; CHECK-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], 14
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[A]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = or disjoint i32 [[M]], -32768
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 ; DBGINFO-LABEL: @eval_sext_multi_use_in_one_inst(
-; DBGINFO-NEXT:    [[T:%.*]] = trunc i32 [[X:%.*]] to i16, !dbg [[DBG81:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i16 [[T]], [[META76:![0-9]+]], !DIExpression(), [[DBG81]])
-; DBGINFO-NEXT:    [[A:%.*]] = and i16 [[T]], 14, !dbg [[DBG82:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i16 [[A]], [[META77:![0-9]+]], !DIExpression(), [[DBG82]])
-; DBGINFO-NEXT:    [[M:%.*]] = mul nuw nsw i16 [[A]], [[A]], !dbg [[DBG83:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i16 [[M]], [[META78:![0-9]+]], !DIExpression(), [[DBG83]])
-; DBGINFO-NEXT:    [[O:%.*]] = or disjoint i16 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i16 [[O]], [[META79:![0-9]+]], !DIExpression(), [[DBG84]])
-; DBGINFO-NEXT:    [[R:%.*]] = sext i16 [[O]] to i32, !dbg [[DBG85:![0-9]+]]
-; DBGINFO-NEXT:      #dbg_value(i32 [[R]], [[META80:![0-9]+]], !DIExpression(), [[DBG85]])
-; DBGINFO-NEXT:    ret i32 [[R]], !dbg [[DBG86:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 [[X:%.*]], [[META76:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_stack_value), [[META81:![0-9]+]])
+; DBGINFO-NEXT:    [[A:%.*]] = and i32 [[X]], 14, !dbg [[DBG82:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(i32 [[X]], [[META77:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_constu, 14, DW_OP_and, DW_OP_stack_value), [[DBG82]])
+; DBGINFO-NEXT:    [[M:%.*]] = mul nuw nsw i32 [[A]], [[A]], !dbg [[DBG83:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(!DIArgList(i32 [[X]], i32 [[X]]), [[META78:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_constu, 14, DW_OP_and, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_constu, 14, DW_OP_and, DW_OP_mul, DW_OP_stack_value), [[DBG83]])
+; DBGINFO-NEXT:    [[O:%.*]] = or disjoint i32 [[M]], -32768, !dbg [[DBG84:![0-9]+]]
+; DBGINFO-NEXT:      #dbg_value(!DIArgList(i32 [[X]], i32 [[X]]), [[META79:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_constu, 14, DW_OP_and, DW_OP_LLVM_arg, 1, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_LLVM_convert, 16, DW_ATE_unsigned, DW_OP_constu, 14, DW_OP_and, DW_OP_mul, DW_OP_constu, 18446744073709518848, DW_OP_or, DW_OP_stack_value), [[DBG84]])
+; DBGINFO-NEXT:      #dbg_value(i32 [[O]], [[META80:![0-9]+]], !DIExpression(), [[META85:![0-9]+]])
+; DBGINFO-NEXT:    ret i32 [[O]], !dbg [[DBG86:![0-9]+]]
 ;
   %t = trunc i32 %x to i16
   %a = and i16 %t, 14
