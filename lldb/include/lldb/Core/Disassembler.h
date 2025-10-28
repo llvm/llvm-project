@@ -615,7 +615,7 @@ public:
   /// `Live_`. Returns structured data for all variables relevant at this
   /// instruction.
   std::vector<VariableAnnotation>
-  annotateStructured(Instruction &inst, Target &target,
+  AnnotateStructured(Instruction &inst, Target &target,
                      const lldb::ModuleSP &module_sp);
 
 private:
