@@ -1390,7 +1390,7 @@ extern const internal::VariadicDynCastAllOfMatcher<Expr, RequiresExpr>
 
 /// Matches concept requirement body declaration.
 ///
-/// Example matches '{ *p; }'
+/// Example matches '{ * p; }'
 /// \code
 ///   template<typename T>
 ///   concept dereferencable = requires(T p) { *p; }
