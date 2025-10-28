@@ -9287,6 +9287,11 @@ void IntrinsicLibrary::genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           mlir::NVVM::NVVMMemorySpace::Global);
   mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(
       builder, loc, dst, src, fir::getBase(args[2]), {}, {});
+
+  mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
+                                  "cp.async.bulk.commit_group", {});
+  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
+                                             builder.getI32IntegerAttr(0), {});
 }
 
 // TMA_BULK_WAIT_GROUP (CUDA)
