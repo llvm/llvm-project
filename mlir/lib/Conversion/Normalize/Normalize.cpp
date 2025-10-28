@@ -427,14 +427,15 @@ SetVector<int> NormalizePass::getOutputFootprint(
       func::FuncOp func = op->getParentOfType<func::FuncOp>();
 
       unsigned count = 0;
-      for (Block &block : func.getRegion())
+      for (Block &block : func.getRegion()) {
         for (Operation &innerOp : block) {
-          if (&innerOp == op)
+          if (&innerOp == op) {
             outputsVec.insert(count);
+            return outputsVec;
+          }
           count++;
         }
-
-      return outputsVec;
+      }
     }
 
     for (OpOperand &use : op->getUses()) {
