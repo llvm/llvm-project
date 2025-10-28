@@ -3358,7 +3358,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
     Type *ScalarPtrTy = Ctx.Types.inferScalarType(PtrOp);
     const Align Alignment = getLoadStoreAlignment(UI);
-    unsigned AS = getLoadStoreAddressSpace(UI);
+    unsigned AS = cast<PointerType>(ScalarPtrTy)->getAddressSpace();
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
     InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
@@ -3675,7 +3675,8 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -3786,7 +3787,8 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -4252,7 +4254,8 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
       getNumDefinedValues() > 0 ? getVPValue(InsertPosIdx)
                                 : getStoredValues()[InsertPosIdx]);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  unsigned AS = getLoadStoreAddressSpace(InsertPos);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
 
   unsigned InterleaveFactor = IG->getFactor();
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);

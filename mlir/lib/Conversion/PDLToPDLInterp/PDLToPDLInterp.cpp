@@ -692,7 +692,7 @@ SymbolRefAttr PatternLowering::generateRewriter(
         llvm::map_range(rewriter.getExternalArgs(), mapRewriteValue);
     args.append(mappedArgs.begin(), mappedArgs.end());
     pdl_interp::ApplyRewriteOp::create(builder, rewriter.getLoc(),
-                                       /*resultTypes=*/TypeRange(), rewriteName,
+                                       /*results=*/TypeRange(), rewriteName,
                                        args);
   } else {
     // Otherwise this is a dag rewriter defined using PDL operations.
