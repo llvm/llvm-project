@@ -426,3 +426,16 @@ define void @zt0_multiple_private_za_calls(ptr %callee) "aarch64_in_zt0" nounwin
   call void %callee()
   ret void
 }
+
+define void @disable_tailcallopt(ptr %callee) "aarch64_inout_zt0" nounwind {
+; CHECK-COMMON-LABEL: disable_tailcallopt:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    sub sp, sp, #64
+; CHECK-COMMON-NEXT:    mov x8, sp
+; CHECK-COMMON-NEXT:    str zt0, [x8]
+; CHECK-COMMON-NEXT:    smstop za
+; CHECK-COMMON-NEXT:    add sp, sp, #64
+; CHECK-COMMON-NEXT:    br x0
+  tail call void %callee()
+  ret void
+}
