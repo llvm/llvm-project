@@ -552,7 +552,7 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
         createSegment(SegmentSize, FuncIdx);
     if (ExpectedGC) {
       GsymCreator *GC = ExpectedGC->get();
-      if (GC == nullptr)
+      if (!GC)
         break; // We had not more functions to encode.
       // Don't collect any messages at all
       OutputAggregator Out(nullptr);
