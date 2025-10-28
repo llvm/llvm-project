@@ -271,6 +271,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
+
+  UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
