@@ -415,8 +415,8 @@ bool NormalizePass::isOutput(Operation &op) const noexcept {
 }
 
 /// Helper method returning indices (distance from the beginning of the basic
-/// block) of output operations using the given operation. Walks down the
-/// def-use tree recursively
+/// block) of output operations using the given operation. It Walks down the
+/// def-use tree recursively. 
 SetVector<int> NormalizePass::getOutputFootprint(
     Operation *op, SmallPtrSet<const Operation *, 32> &visited) const {
   SetVector<int> outputsVec;
