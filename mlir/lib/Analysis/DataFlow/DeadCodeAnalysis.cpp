@@ -501,10 +501,11 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
     return;
 
   SmallVector<RegionSuccessor> successors;
-  auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
-  if (!terminator)
-    return;
-  terminator.getSuccessorRegions(*operands, successors);
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
+    terminator.getSuccessorRegions(*operands, successors);
+  else
+    branch.getSuccessorRegions(op->getParentRegion(), successors);
+
   visitRegionBranchEdges(branch, op, successors);
 }
 

@@ -286,7 +286,7 @@ private:
   /// and propagating therefrom.
   virtual void
   visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
-                        RegionSuccessor successor,
+                        RegionBranchPoint successor,
                         ArrayRef<AbstractSparseLattice *> lattices);
 };
 

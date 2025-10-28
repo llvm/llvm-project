@@ -66,7 +66,7 @@ public:
 
   void visitRegionBranchControlFlowTransfer(RegionBranchOpInterface branch,
                                             RegionBranchPoint regionFrom,
-                                            RegionSuccessor regionTo,
+                                            RegionBranchPoint regionTo,
                                             const NextAccess &after,
                                             NextAccess *before) override;
 
@@ -240,7 +240,7 @@ void NextAccessAnalysis::visitCallControlFlowTransfer(
 
 void NextAccessAnalysis::visitRegionBranchControlFlowTransfer(
     RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-    RegionSuccessor regionTo, const NextAccess &after, NextAccess *before) {
+    RegionBranchPoint regionTo, const NextAccess &after, NextAccess *before) {
   LDBG() << "visitRegionBranchControlFlowTransfer: "
          << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
   LDBG() << "  regionFrom: " << (regionFrom.isParent() ? "parent" : "region");

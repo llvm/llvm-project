@@ -379,8 +379,6 @@ private:
   friend RangeBaseT;
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, Region &region);
-
 } // namespace mlir
 
 #endif // MLIR_IR_REGION_H

@@ -588,9 +588,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     // flow, propagate the lattice back along the control flow edge.
     if (auto branch = dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
       LDBG() << "    Exit block of region branch operation";
-      auto terminator =
-          cast<RegionBranchTerminatorOpInterface>(block->getTerminator());
-      visitRegionBranchOperation(point, branch, terminator, before);
+      visitRegionBranchOperation(point, branch, block->getParent(), before);
       return;
     }
 
