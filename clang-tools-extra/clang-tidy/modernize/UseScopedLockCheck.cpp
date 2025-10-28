@@ -217,7 +217,8 @@ void UseScopedLockCheck::diagOnSingleLock(
 
   // Create Fix-its only if we can find the constructor call to properly handle
   // 'std::lock_guard l(m, std::adopt_lock)' case.
-  const auto *CtorCall = dyn_cast<CXXConstructExpr>(LockGuard->getInit());
+  const auto *CtorCall =
+      dyn_cast_if_present<CXXConstructExpr>(LockGuard->getInit());
   if (!CtorCall)
     return;
 

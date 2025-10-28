@@ -83,14 +83,18 @@ namespace readability {
     m(Member) \
     m(ClassConstant) \
     m(ClassMember) \
+    m(ClassConstexpr) \
+    m(GlobalConstexprVariable) \
     m(GlobalConstant) \
     m(GlobalConstantPointer) \
     m(GlobalPointer) \
     m(GlobalVariable) \
+    m(LocalConstexprVariable) \
     m(LocalConstant) \
     m(LocalConstantPointer) \
     m(LocalPointer) \
     m(LocalVariable) \
+    m(StaticConstexprVariable) \
     m(StaticConstant) \
     m(StaticVariable) \
     m(Constant) \
@@ -1497,8 +1501,22 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
     ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
-  if (Var->isConstexpr() && NamingStyles[SK_ConstexprVariable])
-    return SK_ConstexprVariable;
+  if (Var->isConstexpr()) {
+    if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstexpr])
+      return SK_ClassConstexpr;
+
+    if (Var->isFileVarDecl() && NamingStyles[SK_GlobalConstexprVariable])
+      return SK_GlobalConstexprVariable;
+
+    if (Var->isStaticLocal() && NamingStyles[SK_StaticConstexprVariable])
+      return SK_StaticConstexprVariable;
+
+    if (Var->isLocalVarDecl() && NamingStyles[SK_LocalConstexprVariable])
+      return SK_LocalConstexprVariable;
+
+    if (NamingStyles[SK_ConstexprVariable])
+      return SK_ConstexprVariable;
+  }
 
   if (!Type.isNull() && Type.isConstQualified()) {
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstant])
