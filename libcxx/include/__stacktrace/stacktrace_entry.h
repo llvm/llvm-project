@@ -54,9 +54,9 @@ struct _StringWrapper {
 
   char __chars_[1024];
 
-  _LIBCPP_EXPORTED_FROM_ABI std::string_view view() const { return __chars_; }
+  _LIBCPP_HIDE_FROM_ABI std::string_view view() const { return __chars_; }
 
-  _LIBCPP_EXPORTED_FROM_ABI _StringWrapper& assign(std::string_view __view) {
+  _LIBCPP_HIDE_FROM_ABI _StringWrapper& assign(std::string_view __view) {
     size_t __size = std::min(__view.size(), sizeof(__chars_) - 1);
     memcpy(__chars_, __view.data(), __size);
     __chars_[__size] = 0;
