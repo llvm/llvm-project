@@ -546,19 +546,20 @@ void GpuToLLVMConversionPass::runOnOperation() {
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
-  // 
-  if (true /*handle multiple async deps enabled*/) {
+  // Insert gpu.wait operations before operations that do not support multiple
+  // async dependencies.
+  // TODO should this only be enabled upon an option?
+  {
     RewritePatternSet patternss(&getContext());
     populateGpuMultipleAsyncDepsConversionPatterns(patternss);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patternss)))) {
       return signalPassFailure();
     }
-  }
 
-  // TODO wrap this in debug macros
-  llvm::errs() << "--- IR After applyPatternsGreedily ---\n";
-  getOperation()->print(llvm::errs());
-  llvm::errs() << "--------------------------------------\n\n";
+    LLVM_DEBUG(llvm::dbgs() << "--- IR After Adding Additional gpu.waits: ---\n");
+    LLVM_DEBUG(getOperation()->print(llvm::dbgs()));
+    LLVM_DEBUG(llvm::dbgs() << "---------------------------------------------\n");
+  }
 
 
   LowerToLLVMOptions options(context);
@@ -1822,9 +1823,9 @@ LogicalResult ConvertMultipleAsyncDepsToGpuWaitPattern<Op>::matchAndRewrite(
 
   // TODO is it safe to just do getAsyncDependenciesMutable on the original op?
   Operation *newOp = rewriter.clone(*op.getOperation());
-  auto OpAdaptor = dyn_cast<Op>(newOp);
-  assert(OpAdaptor && "Expected cloned op to have same type as original op.");
-  OpAdaptor.getAsyncDependenciesMutable().assign({waitToken});
+  auto iface = dyn_cast<Op>(newOp);
+  assert(iface && "Expected cloned op to have same type as original op.");
+  iface.getAsyncDependenciesMutable().assign({waitToken});
   rewriter.replaceOp(op, newOp);
 
   return success();
@@ -1875,32 +1876,33 @@ void mlir::populateGpuToLLVMConversionPatterns(
 
 void mlir::populateGpuMultipleAsyncDepsConversionPatterns(
     RewritePatternSet &patterns) {
-  // gpu::AllocOp,
-  // gpu::DeallocOp,
-  // gpu::MemcpyOp,
-  // gpu::MemsetOp,
-  // gpu::CreateDnTensorOp,
-  // gpu::DestroyDnTensorOp,
-  // gpu::CreateCooOp,
-  // gpu::CreateCooAoSOp,
-  // gpu::CreateCsrOp,
-  // gpu::Create2To4SpMatOp,
-  // gpu::DestroySpMatOp,
-  // gpu::SpMVBufferSizeOp,
-  // gpu::SpMVOp,
-  // gpu::SpMMBufferSizeOp,
-  // gpu::SDDMMBufferSizeOp,
-  // gpu::SpMMOp,
-  // gpu::SDDMMOp,
-  // gpu::SpGEMMCreateDescrOp,
-  // gpu::SpGEMMDestroyDescrOp,
-  // gpu::SpGEMMWorkEstimationOrComputeOp,
-  // gpu::SpGEMMCopyOp,
-  // gpu::SpMatGetSizeOp,
-  // gpu::SetCsrPointersOp,
-  // gpu::CreateCscOp,
-  // gpu::CreateBsrOp,
-  // gpu::LaunchFuncOp
+  // TODO: Other ops to consider handling: 
+  // - gpu::AllocOp,
+  // - gpu::DeallocOp,
+  // - gpu::MemcpyOp,
+  // - gpu::MemsetOp,
+  // - gpu::CreateDnTensorOp,
+  // - gpu::DestroyDnTensorOp,
+  // - gpu::CreateCooOp,
+  // - gpu::CreateCooAoSOp,
+  // - gpu::CreateCsrOp,
+  // - gpu::Create2To4SpMatOp,
+  // - gpu::DestroySpMatOp,
+  // - gpu::SpMVBufferSizeOp,
+  // - gpu::SpMVOp,
+  // - gpu::SpMMBufferSizeOp,
+  // - gpu::SDDMMBufferSizeOp,
+  // - gpu::SpMMOp,
+  // - gpu::SDDMMOp,
+  // - gpu::SpGEMMCreateDescrOp,
+  // - gpu::SpGEMMDestroyDescrOp,
+  // - gpu::SpGEMMWorkEstimationOrComputeOp,
+  // - gpu::SpGEMMCopyOp,
+  // - gpu::SpMatGetSizeOp,
+  // - gpu::SetCsrPointersOp,
+  // - gpu::CreateCscOp,
+  // - gpu::CreateBsrOp,
+  // - gpu::LaunchFuncOp
   patterns.add<
     ConvertMultipleAsyncDepsToGpuWaitPattern<gpu::LaunchFuncOp>
   >(patterns.getContext());
