@@ -28,6 +28,9 @@
     #define _LIBUNWIND_SUPPORT_COMPACT_UNWIND 1
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
   #endif
+  #if defined(__aarch64__) || defined(__arm64__) || defined(__arm64e__)
+    #define _LIBUNWIND_TRACE_RET_INJECT 1
+  #endif
 #elif defined(_WIN32)
   #ifdef __SEH__
     #define _LIBUNWIND_SUPPORT_SEH_UNWIND 1
