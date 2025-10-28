@@ -380,6 +380,11 @@ Changes in existing checks
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
   binary.
 
+- Improved :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check by fixing a crash
+  on malformed code (common when using :program:`clang-tidy` through
+  :program:`clangd`).
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to correctly match
   when the format string is converted to a different type by an implicit
