@@ -3672,6 +3672,12 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     }
   }
 #endif
+
+  if (!FileSystem::Instance().Exists(debugserver_path))
+    return Status::FromErrorString("could not find '" DEBUGSERVER_BASENAME
+                                   "'. Please ensure it is properly installed "
+                                   "and available in your PATH");
+
   debugserver_launch_info.SetExecutableFile(debugserver_path,
                                             /*add_exe_file_as_first_arg=*/true);
 

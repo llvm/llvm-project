@@ -25,17 +25,17 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ---------
 ; PRINT-NEXT:; Zero                                  UAV     f16         buf      U0             u0         1
 ; PRINT-NEXT:; One                                   UAV     f32         buf      U1             u1         1
-; PRINT-NEXT:; Two                                   UAV     f64         buf      U2             u2         1
+; PRINT-NEXT:; Two                                   UAV     u32         buf      U2             u2         1
 ; PRINT-NEXT:; Three                                 UAV     i32         buf      U3             u3         1
 ; PRINT-NEXT:; Four                                  UAV    byte         r/w      U4             u5         1
 ; PRINT-NEXT:; Five                                  UAV  struct         r/w      U5             u6         1
 ; PRINT-NEXT:; Six                                   UAV     i32         buf      U6             u7         1
 ; PRINT-NEXT:; Seven                                 UAV  struct         r/w      U7             u8         1
 ; PRINT-NEXT:; Eight                                 UAV    byte         r/w      U8             u9         1
-; PRINT-NEXT:; Nine                                  UAV     u64         buf      U9     u10,space2         1
+; PRINT-NEXT:; Nine                                  UAV     u32         buf      U9     u10,space2         1
 ; PRINT-NEXT:; Array                                 UAV     f32         buf     U10      u4,space3       100
-; PRINT-NEXT:; Array2                                UAV     f64         buf     U11      u2,space4 unbounded
-; PRINT-NEXT:; Ten                                   UAV     u64         buf     U12     u22,space5         1
+; PRINT-NEXT:; Array2                                UAV     u32         buf     U11      u2,space4 unbounded
+; PRINT-NEXT:; Ten                                   UAV     u32         buf     U12     u22,space5         1
 
 define void @test() #0 {
   ; RWBuffer<half4> Zero : register(u0)
@@ -144,8 +144,8 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: ![[Half]] = !{i32 0, i32 8}
 ; CHECK: ![[One]] = !{i32 1, ptr @One, !"One", i32 0, i32 1, i32 1, i32 10, i1 false, i1 false, i1 false, ![[Float:[0-9]+]]}
 ; CHECK: ![[Float]] = !{i32 0, i32 9}
-; CHECK: ![[Two]] = !{i32 2, ptr @Two, !"Two", i32 0, i32 2, i32 1, i32 10, i1 false, i1 false, i1 false, ![[Double:[0-9]+]]}
-; CHECK: ![[Double]] = !{i32 0, i32 10}
+; CHECK: ![[Two]] = !{i32 2, ptr @Two, !"Two", i32 0, i32 2, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U32:[0-9]+]]}
+; CHECK: ![[U32]] = !{i32 0, i32 5}
 ; CHECK: ![[Three]] = !{i32 3, ptr @Three, !"Three", i32 0, i32 3, i32 1, i32 10, i1 false, i1 false, i1 false, ![[I32:[0-9]+]]}
 ; CHECK: ![[I32]] = !{i32 0, i32 4}
 ; CHECK: ![[Four]] = !{i32 4, ptr @Four, !"Four", i32 0, i32 5, i32 1, i32 11, i1 false, i1 false, i1 false, null}
@@ -155,8 +155,7 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: ![[Seven]] = !{i32 7, ptr @Seven, !"Seven", i32 0, i32 8, i32 1, i32 12, i1 false, i1 false, i1 true, ![[SevenStride:[0-9]+]]}
 ; CHECK: ![[SevenStride]] = !{i32 1, i32 16}
 ; CHECK: ![[Eight]] = !{i32 8, ptr @Eight, !"Eight", i32 0, i32 9, i32 1, i32 11, i1 false, i1 false, i1 true, null}
-; CHECK: ![[Nine]] = !{i32 9, ptr @Nine, !"Nine", i32 2, i32 10, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U64:[0-9]+]]}
-; CHECK: ![[U64]] = !{i32 0, i32 7}
+; CHECK: ![[Nine]] = !{i32 9, ptr @Nine, !"Nine", i32 2, i32 10, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U32]]}
 ; CHECK: ![[Array]] = !{i32 10, ptr @Array, !"Array", i32 3, i32 4, i32 100, i32 10, i1 false, i1 false, i1 false, ![[Float]]}
-; CHECK: ![[Array2]] = !{i32 11, ptr @Array2, !"Array2", i32 4, i32 2, i32 -1, i32 10, i1 false, i1 false, i1 false, ![[Double]]}
+; CHECK: ![[Array2]] = !{i32 11, ptr @Array2, !"Array2", i32 4, i32 2, i32 -1, i32 10, i1 false, i1 false, i1 false, ![[U32]]}
 ; CHECK: ![[Ten]] = !{i32 12, ptr @Ten, !"Ten", i32 5, i32 22, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U64:[0-9]+]]}
