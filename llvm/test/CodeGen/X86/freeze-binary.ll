@@ -864,12 +864,11 @@ define i32 @freeze_ssubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
 ; X86-LABEL: freeze_ssubo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    addb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    setb %cl
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    setb %dl
+; X86-NEXT:    subl %edx, %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -896,12 +895,11 @@ define i32 @freeze_usubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
 ; X86-LABEL: freeze_usubo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    addb {{[0-9]+}}(%esp), %dl
-; X86-NEXT:    setb %cl
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    setb %dl
+; X86-NEXT:    subl %edx, %eax
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;

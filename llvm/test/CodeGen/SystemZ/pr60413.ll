@@ -74,40 +74,8 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-NEXT:    rosbg %r2, %r3, 32, 61, 2
 ; CHECK-NEXT:    rosbg %r2, %r5, 32, 62, 1
 ; CHECK-NEXT:    or %r2, %r14
-; CHECK-NEXT:    vlgvb %r4, %v0, 1
-; CHECK-NEXT:    vlgvb %r3, %v0, 0
-; CHECK-NEXT:    risbg %r3, %r3, 48, 176, 15
-; CHECK-NEXT:    rosbg %r3, %r4, 49, 49, 14
-; CHECK-NEXT:    vlgvb %r4, %v0, 2
-; CHECK-NEXT:    rosbg %r3, %r4, 50, 50, 13
-; CHECK-NEXT:    vlgvb %r4, %v0, 3
-; CHECK-NEXT:    rosbg %r3, %r4, 51, 51, 12
-; CHECK-NEXT:    vlgvb %r4, %v0, 4
-; CHECK-NEXT:    rosbg %r3, %r4, 52, 52, 11
-; CHECK-NEXT:    vlgvb %r4, %v0, 5
-; CHECK-NEXT:    rosbg %r3, %r4, 53, 53, 10
-; CHECK-NEXT:    vlgvb %r4, %v0, 6
-; CHECK-NEXT:    rosbg %r3, %r4, 54, 54, 9
-; CHECK-NEXT:    vlgvb %r4, %v0, 7
-; CHECK-NEXT:    rosbg %r3, %r4, 55, 55, 8
-; CHECK-NEXT:    vlgvb %r4, %v0, 8
-; CHECK-NEXT:    rosbg %r3, %r4, 56, 56, 7
-; CHECK-NEXT:    vlgvb %r4, %v0, 9
-; CHECK-NEXT:    rosbg %r3, %r4, 57, 57, 6
-; CHECK-NEXT:    vlgvb %r4, %v0, 10
-; CHECK-NEXT:    rosbg %r3, %r4, 58, 58, 5
-; CHECK-NEXT:    vlgvb %r4, %v0, 11
-; CHECK-NEXT:    rosbg %r3, %r4, 59, 59, 4
-; CHECK-NEXT:    vlgvb %r4, %v0, 12
-; CHECK-NEXT:    rosbg %r3, %r4, 60, 60, 3
-; CHECK-NEXT:    vlgvb %r4, %v0, 13
-; CHECK-NEXT:    rosbg %r3, %r4, 61, 61, 2
-; CHECK-NEXT:    vlgvb %r4, %v0, 14
-; CHECK-NEXT:    rosbg %r3, %r4, 62, 62, 1
-; CHECK-NEXT:    vlgvb %r4, %v0, 15
-; CHECK-NEXT:    rosbg %r3, %r4, 63, 63, 0
 ; CHECK-NEXT:    xilf %r3, 4294967295
-; CHECK-NEXT:    or %r3, %r2
+; CHECK-NEXT:    rosbg %r3, %r2, 48, 63, 0
 ; CHECK-NEXT:    tmll %r3, 65535
 ; CHECK-NEXT:    ipm %r2
 ; CHECK-NEXT:    afi %r2, -268435456

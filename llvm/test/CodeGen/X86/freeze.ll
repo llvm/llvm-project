@@ -96,8 +96,6 @@ define i32 @freeze_anonstruct() {
 define i32 @freeze_anonstruct2() {
 ; X86ASM-LABEL: freeze_anonstruct2:
 ; X86ASM:       # %bb.0:
-; X86ASM-NEXT:    movzwl %ax, %eax
-; X86ASM-NEXT:    addl %eax, %eax
 ; X86ASM-NEXT:    retq
   %y1 = freeze {i32, i16} undef
   %v1 = extractvalue {i32, i16} %y1, 0

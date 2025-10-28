@@ -376,10 +376,14 @@ define i32 @freeze_anonstruct() {
 }
 
 define i32 @freeze_anonstruct2() {
-; CHECK-LABEL: freeze_anonstruct2:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    add w0, w8, w8, uxth
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: freeze_anonstruct2:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_anonstruct2:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w0, w8, w8, uxth
+; CHECK-GI-NEXT:    ret
   %y1 = freeze {i32, i16} undef
   %v1 = extractvalue {i32, i16} %y1, 0
   %v2 = extractvalue {i32, i16} %y1, 1

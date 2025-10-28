@@ -14813,6 +14813,13 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
     return Res;
 
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse() && !VT.isVector()) {
+    SDValue Res =
+        DAG.getFreeze(DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0.getOperand(0)));
+    return DAG.getNode(ISD::AssertSext, DL, VT, Res,
+                       DAG.getValueType(N0.getOperand(0).getValueType()));
+  }
+
   return SDValue();
 }
 
@@ -15192,6 +15199,13 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
       return SDValue(CSENode, 0);
   }
 
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse() && !VT.isVector()) {
+    SDValue Res =
+        DAG.getFreeze(DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0)));
+    return DAG.getNode(ISD::AssertZext, DL, VT, Res,
+                       DAG.getValueType(N0.getOperand(0).getValueType()));
+  }
+
   return SDValue();
 }
 
@@ -15359,6 +15373,10 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
 
   if (SDValue Res = tryToFoldExtendSelectLoad(N, TLI, DAG, DL, Level))
     return Res;
+
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse())
+    return DAG.getFreeze(
+        DAG.getNode(ISD::ANY_EXTEND, DL, VT, N0.getOperand(0)));
 
   return SDValue();
 }
@@ -16934,6 +16952,11 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       return LegalShuffle;
   }
 
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse()) {
+    SDLoc DL(N);
+    return DAG.getFreeze(DAG.getNode(ISD::BITCAST, DL, VT, N0.getOperand(0)));
+  }
+
   return SDValue();
 }
 
@@ -16965,6 +16988,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // with (freeze (assert ext)) blocking simplifications of SRA/SRL. See for
   // example https://reviews.llvm.org/D136529#4120959.
   if (N0.getOpcode() == ISD::SRA || N0.getOpcode() == ISD::SRL)
+    return SDValue();
+  // Avoid folding extensions and bitcasts. Each of these operations handles
+  // FREEZE in their own respective visitors.
+  if (N0.getOpcode() == ISD::ANY_EXTEND || N0.getOpcode() == ISD::SIGN_EXTEND ||
+      N0.getOpcode() == ISD::ZERO_EXTEND || N0.getOpcode() == ISD::BITCAST)
     return SDValue();
 
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
