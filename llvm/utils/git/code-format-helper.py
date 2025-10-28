@@ -482,13 +482,10 @@ def hook_main():
         args.changed_files.append(line)
 
     failed_fmts = []
-    comments = []
     for fmt in ALL_FORMATTERS:
         if fmt.has_tool():
             if not fmt.run(args.changed_files, args):
                 failed_fmts.append(fmt.name)
-            if fmt.comment:
-                comments.append(fmt.comment)
         else:
             print(f"Couldn't find {fmt.name}, can't check " + fmt.friendly_name.lower())
 
