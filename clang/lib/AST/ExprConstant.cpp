@@ -11622,7 +11622,8 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
 static bool evalShuffleGeneric(
     EvalInfo &Info, const CallExpr *Call, APValue &Out,
     llvm::function_ref<std::pair<unsigned, unsigned>(unsigned, unsigned)>
-        GetSourceIndex) {
+        GetSourceIndex,
+    llvm::function_ref<bool(unsigned, unsigned)> ShouldZero = nullptr) {
 
   const auto *VT = Call->getType()->getAs<VectorType>();
   if (!VT)
@@ -11643,9 +11644,15 @@ static bool evalShuffleGeneric(
   ResultElements.reserve(NumElts);
 
   for (unsigned DstIdx = 0; DstIdx != NumElts; ++DstIdx) {
-    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
-    const APValue &Src = (SrcVecIdx == 0) ? A : B;
-    ResultElements.push_back(Src.getVectorElt(SrcIdx));
+    if (ShouldZero && ShouldZero(DstIdx, ShuffleMask)) {
+      // Zero out this element
+      QualType ElemTy = VT->getElementType();
+      ResultElements.push_back(APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+    } else {
+      auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
+      const APValue &Src = (SrcVecIdx == 0) ? A : B;
+      ResultElements.push_back(Src.getVectorElt(SrcIdx));
+    }
   }
 
   Out = APValue(ResultElements.data(), ResultElements.size());
@@ -12477,6 +12484,30 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
               unsigned SrcIdx = (ElemInLane < NumSelectableElems) ? 0 : 1;
               unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
               return {SrcIdx, LaneOffset + Index};
+            }))
+      return false;
+    return Success(R, E);
+  }
+  case X86::BI__builtin_ia32_insertps128: {
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, unsigned> {
+              // Bits [7:6]: select element from source vector Y (0-3)
+              // Bits [5:4]: select destination position (0-3)
+              unsigned SrcElem = (Mask >> 6) & 0x3;
+              unsigned DstElem = (Mask >> 4) & 0x3;
+              if (DstIdx == DstElem) {
+                // Insert element from source vector (B) at this position
+                return {1, SrcElem};
+              } else {
+                // Copy from destination vector (A)
+                return {0, DstIdx};
+              }
+            },
+            [](unsigned DstIdx, unsigned Mask) -> bool {
+              // Bits [3:0]: zero mask
+              return (Mask & (1 << DstIdx)) != 0;
             }))
       return false;
     return Success(R, E);
