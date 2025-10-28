@@ -23,12 +23,11 @@ namespace __ibm {
 // Returns (size_t) -1 when an invalid sequence is encountered.
 // Leaves *`src` pointing to the next character to convert or NULL
 // if a null character was converted from *`src`.
-size_t mbsnrtowcs(
-    wchar_t* __restrict dst,
-    const char** __restrict src,
-    size_t src_size_bytes,
-    size_t max_dest_chars,
-    mbstate_t* __restrict ps) {
+size_t mbsnrtowcs(wchar_t* __restrict dst,
+                  const char** __restrict src,
+                  size_t src_size_bytes,
+                  size_t max_dest_chars,
+                  mbstate_t* __restrict ps) {
   const size_t terminated_sequence = static_cast<size_t>(0);
   const size_t invalid_sequence    = static_cast<size_t>(-1);
   const size_t incomplete_sequence = static_cast<size_t>(-2);
@@ -101,9 +100,7 @@ size_t mbsnrtowcs(
   return dest_converted;
 }
 
-size_t __libcpp_mbsnrtowcs_l(wchar_t * dest, const char **src, size_t nms,
-                          size_t len, mbstate_t *ps, locale_t l)
-{
+size_t __libcpp_mbsnrtowcs_l(wchar_t* dest, const char** src, size_t nms, size_t len, mbstate_t* ps, locale_t l) {
   __locale::__locale_guard current(l);
   return mbsnrtowcs(dest, src, nms, len, ps);
 }

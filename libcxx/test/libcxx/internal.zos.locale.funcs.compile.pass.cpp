@@ -6,10 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: target={{.+}}-zos{{.*}}
+
 // Test that version of the POSIX functions provided outside of libc++ don't
 // cause compilation errors.
 
-struct locale_t { };
+struct locale_t {};
 locale_t newlocale(int category_mask, const char* locale, locale_t base);
 void freelocale(locale_t locobj);
 locale_t uselocale(locale_t newloc);

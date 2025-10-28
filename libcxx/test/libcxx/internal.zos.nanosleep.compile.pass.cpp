@@ -11,5 +11,5 @@
 
 #include <time.h> // timespec
 
-int nanosleep(const struct timespec* , struct timespec* );
+int nanosleep(const struct timespec*, struct timespec*);
 #include <mutex>
