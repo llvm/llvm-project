@@ -26,7 +26,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
@@ -34,10 +33,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
-#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <cstdint>
 
 #define DEBUG_TYPE "amdgpu-codegenprepare"
 
@@ -95,13 +92,6 @@ static cl::opt<bool> DisableFDivExpand(
   cl::desc("Prevent expanding floating point division in AMDGPUCodeGenPrepare"),
   cl::ReallyHidden,
   cl::init(false));
-
-// Disable bitsin(typeof(x)) - popcnt(x) to s_bcnt0(x) transformation.
-static cl::opt<bool>
-    DisableBcnt0("amdgpu-codegenprepare-disable-bcnt0",
-                 cl::desc("Prevent transforming bitsin(typeof(x)) - "
-                          "popcount(x) to bcnt0(x) in AMDGPUCodeGenPrepare"),
-                 cl::ReallyHidden, cl::init(false));
 
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
@@ -268,7 +258,6 @@ public:
   bool visitAddrSpaceCastInst(AddrSpaceCastInst &I);
 
   bool visitIntrinsicInst(IntrinsicInst &I);
-  bool visitCtpop(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
   bool run();
@@ -1921,8 +1910,6 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return visitFMinLike(I);
   case Intrinsic::sqrt:
     return visitSqrt(I);
-  case Intrinsic::ctpop:
-    return visitCtpop(I);
   default:
     return false;
   }
@@ -1988,34 +1975,6 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
   }
 
   return insertValues(Builder, FractArg->getType(), ResultVals);
-}
-
-bool AMDGPUCodeGenPrepareImpl::visitCtpop(IntrinsicInst &I) {
-  uint32_t BitWidth, DestinationWidth;
-  if (!I.hasOneUse() || !I.getType()->isIntegerTy())
-    return false;
-
-  BitWidth = I.getType()->getIntegerBitWidth();
-  if(!ST.hasBCNT(BitWidth))
-    return false;
-
-  Instruction *MustBeSub = I.user_back();
-  if (!match(MustBeSub, m_Sub(m_SpecificInt(BitWidth), m_Specific(&I))))
-    return false;
-
-  IRBuilder<> Builder(MustBeSub);
-  Instruction *TransformedIns =
-      Builder.CreateIntrinsic(BitWidth > 32 ? Intrinsic::amdgcn_bcnt64_lo
-                                            : Intrinsic::amdgcn_bcnt32_lo,
-                              {}, {I.getArgOperand(0)});
-
-  DestinationWidth = MustBeSub->getType()->getIntegerBitWidth();
-  TransformedIns = cast<Instruction>(Builder.CreateZExtOrTrunc(
-      TransformedIns, Type::getIntNTy(I.getContext(), DestinationWidth)));
-
-  BasicBlock::iterator SubIt = MustBeSub->getIterator();
-  ReplaceInstWithValue(SubIt,TransformedIns);
-  return true;
 }
 
 bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
