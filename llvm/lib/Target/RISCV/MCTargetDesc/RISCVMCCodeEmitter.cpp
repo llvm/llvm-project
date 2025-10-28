@@ -208,8 +208,6 @@ void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI,
   MCRegister Dest = MI.getOperand(1).getReg();
   int64_t Imm = MI.getOperand(2).getImm();
   addFixup(Fixups, 0, Expr, ELF::R_RISCV_TLSDESC_CALL);
-  if (STI.hasFeature(RISCV::FeatureRelax))
-    Fixups.back().setLinkerRelaxable();
   MCInst Call =
       MCInstBuilder(RISCV::JALR).addReg(Link).addReg(Dest).addImm(Imm);
 
@@ -698,7 +696,9 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatCI) {
       FixupKind = RISCV::fixup_riscv_rvc_imm;
-      AsmRelaxToLinkerRelaxableWithFeature(RISCV::FeatureVendorXqcili);
+      // Relaxes to `QC.E.LI` with fixup_riscv_qc_e_32
+      if (STI.hasFeature(RISCV::FeatureVendorXqcili))
+        AsmRelaxToLinkerRelaxable();
     } else if (MIFrm == RISCVII::InstFormatI) {
       FixupKind = RISCV::fixup_riscv_12_i;
     } else if (MIFrm == RISCVII::InstFormatQC_EB) {
