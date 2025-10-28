@@ -200,6 +200,11 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
   using OpRewritePattern<gpu::GPUFuncOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
                                 PatternRewriter &rewriter) const override {
+    auto uArch = getUArch(xegpu::getChipStr(gpuFuncOp).value_or(""));
+    if (!uArch)
+      return rewriter.notifyMatchFailure(
+          gpuFuncOp, "Subgroup distribution requires target attribute attached "
+                     "to set the warp size");
     // If the function only contains a single void return, skip.
     if (llvm::all_of(gpuFuncOp.getBody().getOps(), [](Operation &op) {
           return isa<gpu::ReturnOp>(op) && !op.getNumOperands();
@@ -229,11 +234,6 @@ struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
         rewriter, newGpuFunc.getLoc(), rewriter.getIndexType(),
         /** upperBound = **/ mlir::IntegerAttr());
     ArrayRef<Type> gpuFuncResultType = gpuFuncOp.getFunctionType().getResults();
-    auto uArch = getUArch(xegpu::getChipStr(gpuFuncOp).value_or(""));
-    if (!uArch)
-      return rewriter.notifyMatchFailure(
-          gpuFuncOp, "Subgroup distribution requires target attribute attached "
-                     "to set the warp size");
     auto warpOp = gpu::WarpExecuteOnLane0Op::create(
         rewriter, laneId.getLoc(), gpuFuncResultType, laneId,
         uArch->getSubgroupSize(), newGpuFunc.getArguments(),
@@ -501,15 +501,14 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
           warpOp, "warp result is not a xegpu::LoadNd op");
 
     auto loadOp = operand->get().getDefiningOp<xegpu::LoadNdOp>();
-    // Chip information is required to decide if the layout requires transpose
-    // effect.
-    auto chipStr = xegpu::getChipStr(loadOp);
-    auto uArch = getUArch(chipStr.value_or(""));
+    auto uArch = getUArch(xegpu::getChipStr(loadOp).value_or(""));
     if (!uArch)
       return rewriter.notifyMatchFailure(
           loadOp, "xegpu::LoadNdOp require target attribute attached to "
                   "determine transpose "
                   "requirement");
+    // Chip information is required to decide if the layout requires transpose
+    // effect.
     // Expecting offsets to be present.
     SmallVector<OpFoldResult> offsets = loadOp.getMixedOffsets();
     if (offsets.empty())
