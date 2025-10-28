@@ -84,6 +84,7 @@ jobs:
         cat custom-triplets/x64-windows-static-release.cmake
         echo "set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DBUILD_SHARED_LIBS=OFF)" >> custom-triplets/x64-windows-static-release.cmake
         echo "set(VCPKG_BUILD_TYPE release)" >> custom-triplets/x64-windows-static-release.cmake
+        echo "set(BUILD_SHARED_LIBS OFF)" >> custom-triplets/x64-windows-static-release.cmake
         vcpkg --debug install libxml2:x64-windows-static-release --overlay-triplets=custom-triplets
         find /c/vcpkg -iname 'libxml*.lib'
 
