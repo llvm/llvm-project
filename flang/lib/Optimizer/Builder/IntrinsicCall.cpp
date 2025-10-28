@@ -3359,8 +3359,8 @@ void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
-  mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, barrier,
-                                           fir::getBase(args[1]), {});
+  mlir::NVVM::MBarrierInitOp::create(builder, loc, barrier,
+                                     fir::getBase(args[1]), {});
   auto kind = mlir::NVVM::ProxyKindAttr::get(
       builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
   auto space = mlir::NVVM::SharedSpaceAttr::get(
