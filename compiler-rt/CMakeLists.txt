@@ -315,7 +315,7 @@ include(config-ix)
 # Setup Compiler Flags
 #================================
 
-# fcf-protection is a gcc/clang option for CET support on Linux platforms.
+# fcf-protection is a gcc/clang option for CET support on some ELF platforms.
 # We need to handle MSVC CET option on Windows platforms.
 if (NOT MSVC)
   if (COMPILER_RT_ENABLE_CET AND NOT COMPILER_RT_HAS_FCF_PROTECTION_FLAG)

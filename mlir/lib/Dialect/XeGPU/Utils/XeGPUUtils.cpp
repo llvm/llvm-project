@@ -147,7 +147,7 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
-    auto parentOp = arg.getOwner()->getParentOp();
+    auto *parentOp = arg.getOwner()->getParentOp();
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)

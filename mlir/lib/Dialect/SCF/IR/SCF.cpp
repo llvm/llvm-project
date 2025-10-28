@@ -111,10 +111,8 @@ static TerminatorTy verifyAndGetTerminator(Operation *op, Region &region,
   return nullptr;
 }
 
-/// Helper function to compute the difference between two values. This is used
-/// by the loop implementations to compute the trip count.
-static std::optional<llvm::APSInt> computeUbMinusLb(Value lb, Value ub,
-                                                    bool isSigned) {
+std::optional<llvm::APSInt> mlir::scf::computeUbMinusLb(Value lb, Value ub,
+                                                        bool isSigned) {
   llvm::APSInt diff;
   auto addOp = ub.getDefiningOp<arith::AddIOp>();
   if (!addOp)

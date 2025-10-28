@@ -1061,8 +1061,11 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
   SDValue W0 = isUndef(PredV)
                   ? DAG.getUNDEF(MVT::i64)
                   : DAG.getNode(HexagonISD::P2D, dl, MVT::i64, PredV);
-  Words[IdxW].push_back(HiHalf(W0, DAG));
-  Words[IdxW].push_back(LoHalf(W0, DAG));
+  if (Bytes < BitBytes) {
+    Words[IdxW].push_back(HiHalf(W0, DAG));
+    Words[IdxW].push_back(LoHalf(W0, DAG));
+  } else
+    Words[IdxW].push_back(W0);
 
   while (Bytes < BitBytes) {
     IdxW ^= 1;
@@ -1083,7 +1086,26 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     Bytes *= 2;
   }
 
+  while (Bytes > BitBytes) {
+    IdxW ^= 1;
+    Words[IdxW].clear();
+
+    if (Bytes <= 4) {
+      for (const SDValue &W : Words[IdxW ^ 1]) {
+        SDValue T = contractPredicate(W, dl, DAG);
+        Words[IdxW].push_back(T);
+      }
+    } else {
+      for (const SDValue &W : Words[IdxW ^ 1]) {
+        Words[IdxW].push_back(W);
+      }
+    }
+    Bytes /= 2;
+  }
+
   assert(Bytes == BitBytes);
+  if (BitBytes == 1 && PredTy == MVT::v2i1)
+    ByteTy = MVT::getVectorVT(MVT::i16, HwLen);
 
   SDValue Vec = ZeroFill ? getZero(dl, ByteTy, DAG) : DAG.getUNDEF(ByteTy);
   SDValue S4 = DAG.getConstant(HwLen-4, dl, MVT::i32);
@@ -3156,6 +3178,9 @@ HexagonTargetLowering::SplitVectorOp(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const {
   auto *MemN = cast<MemSDNode>(Op.getNode());
+
+  if (!MemN->getMemoryVT().isSimple())
+    return Op;
 
   MVT MemTy = MemN->getMemoryVT().getSimpleVT();
   if (!isHvxPairTy(MemTy))

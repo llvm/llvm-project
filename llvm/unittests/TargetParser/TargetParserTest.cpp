@@ -518,6 +518,11 @@ INSTANTIATE_TEST_SUITE_P(
             ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
+        ARMCPUTestParams<uint64_t>(
+            "star-mc3", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVE | ARM::AEK_FP |
+                ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
+            "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE,
                                    "iwmmxt"),
         ARMCPUTestParams<uint64_t>("xscale", "xscale", "none", ARM::AEK_NONE,
@@ -528,7 +533,7 @@ INSTANTIATE_TEST_SUITE_P(
                                    "7-S")),
     ARMCPUTestParams<uint64_t>::PrintToStringParamName);
 
-static constexpr unsigned NumARMCPUArchs = 94;
+static constexpr unsigned NumARMCPUArchs = 95;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;

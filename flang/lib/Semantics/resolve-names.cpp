@@ -9194,11 +9194,11 @@ bool DeclarationVisitor::CheckNonPointerInitialization(
               "'%s' has already been initialized"_err_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
+        } else if (details->isCDefined()) {
+          // CDEFINED variables cannot have initializer, because their storage
+          // may come outside of Fortran.
+          Say(name, "CDEFINED variable cannot be initialized"_err_en_US);
         } else {
-          if (details->isCDefined()) {
-            context().Warn(common::UsageWarning::CdefinedInit, name.source,
-                "CDEFINED variable should not have an initializer"_warn_en_US);
-          }
           return true;
         }
       } else {
@@ -10078,7 +10078,10 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
     return;
   }
   if (const auto *tkr{

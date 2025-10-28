@@ -3496,7 +3496,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (isPowerOf2_64(AlignMask + 1)) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
-        if (match(A, m_PtrToInt(m_Value(A)))) {
+        if (match(A, m_PtrToIntOrAddr(m_Value(A)))) {
           /// Note: this doesn't preserve the offset information but merges
           /// offset and alignment.
           /// TODO: we can generate a GEP instead of merging the alignment with

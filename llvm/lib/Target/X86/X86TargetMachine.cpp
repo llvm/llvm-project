@@ -423,7 +423,7 @@ void X86PassConfig::addIRPasses() {
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
   addPass(createX86LowerAMXIntrinsicsPass());
-  addPass(createX86LowerAMXTypePass());
+  addPass(createX86LowerAMXTypeLegacyPass());
 
   TargetPassConfig::addIRPasses();
 

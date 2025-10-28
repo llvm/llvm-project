@@ -167,8 +167,13 @@ private:
     std::vector<GlobMatcher::Glob> Globs;
 
     RadixTree<iterator_range<StringRef::const_iterator>,
+              RadixTree<iterator_range<StringRef::const_reverse_iterator>,
+                        SmallVector<const GlobMatcher::Glob *, 1>>>
+        PrefixSuffixToGlob;
+
+    RadixTree<iterator_range<StringRef::const_iterator>,
               SmallVector<const GlobMatcher::Glob *, 1>>
-        PrefixToGlob;
+        SubstrToGlob;
   };
 
   /// Represents a set of patterns and their line numbers

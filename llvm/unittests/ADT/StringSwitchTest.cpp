@@ -157,7 +157,7 @@ TEST(StringSwitchTest, Cases) {
 
   auto Translate = [](StringRef S) {
     return llvm::StringSwitch<OSType>(S)
-        .Cases(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
+        .Cases({StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt"},
                OSType::Windows)
         .Cases({"linux", "unix", "*nix", "posix"}, OSType::Linux)
         .Cases({"macos", "osx"}, OSType::MacOS)
@@ -189,7 +189,7 @@ TEST(StringSwitchTest, CasesLower) {
 
   auto Translate = [](StringRef S) {
     return llvm::StringSwitch<OSType>(S)
-        .CasesLower(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
+        .CasesLower({StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt"},
                     OSType::Windows)
         .CasesLower({"linux", "unix", "*nix", "posix"}, OSType::Linux)
         .CasesLower({"macos", "osx"}, OSType::MacOS)

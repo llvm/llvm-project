@@ -4506,6 +4506,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(AI);
   }
 
+  case Builtin::BI__builtin_infer_alloc_token: {
+    llvm::MDNode *MDN = buildAllocToken(E);
+    llvm::Value *MDV = MetadataAsValue::get(getLLVMContext(), MDN);
+    llvm::Function *F =
+        CGM.getIntrinsic(llvm::Intrinsic::alloc_token_id, {IntPtrTy});
+    llvm::CallBase *TokenID = Builder.CreateCall(F, MDV);
+    return RValue::get(TokenID);
+  }
+
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero: {
     Address Dest = EmitPointerWithAlignment(E->getArg(0));

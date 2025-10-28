@@ -351,7 +351,6 @@ define i64  @test_many_callee_arguments(
   ret i64 %ret
 }
 
-; FIXME: The new lowering should avoid saves/restores in the probing loop.
 define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_state_agnostic" "probe-stack"="inline-asm" "stack-probe-size"="65536"{
 ; CHECK-LABEL: agnostic_za_buffer_alloc_with_stack_probes:
 ; CHECK:       // %bb.0:
@@ -389,16 +388,14 @@ define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_s
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_state_size
 ; CHECK-NEWLOWERING-NEXT:    mov x8, sp
 ; CHECK-NEWLOWERING-NEXT:    sub x19, x8, x0
-; CHECK-NEWLOWERING-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
-; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16, lsl #12 // =65536
 ; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_save
+; CHECK-NEWLOWERING-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
+; CHECK-NEWLOWERING-NEXT:    sub sp, sp, #16, lsl #12 // =65536
 ; CHECK-NEWLOWERING-NEXT:    cmp sp, x19
 ; CHECK-NEWLOWERING-NEXT:    b.le .LBB7_3
 ; CHECK-NEWLOWERING-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
-; CHECK-NEWLOWERING-NEXT:    mov x0, x19
 ; CHECK-NEWLOWERING-NEXT:    str xzr, [sp]
-; CHECK-NEWLOWERING-NEXT:    bl __arm_sme_restore
 ; CHECK-NEWLOWERING-NEXT:    b .LBB7_1
 ; CHECK-NEWLOWERING-NEXT:  .LBB7_3:
 ; CHECK-NEWLOWERING-NEXT:    mov sp, x19

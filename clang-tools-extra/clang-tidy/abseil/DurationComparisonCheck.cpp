@@ -17,7 +17,7 @@ namespace clang::tidy::abseil {
 
 void DurationComparisonCheck::registerMatchers(MatchFinder *Finder) {
   auto Matcher = expr(comparisonOperatorWithCallee(functionDecl(
-                          functionDecl(DurationConversionFunction())
+                          functionDecl(durationConversionFunction())
                               .bind("function_decl"))))
                      .bind("binop");
 
