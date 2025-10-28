@@ -137,7 +137,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
         print(f"\nTesting GetVariableAnnotations() API on {instructions.GetSize()} instructions")
 
-        # Track what we find
+        # Track what we find.
         found_annotations = False
         found_variables = set()
 
