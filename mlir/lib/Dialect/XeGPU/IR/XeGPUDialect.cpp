@@ -41,6 +41,11 @@ void XeGPUDialect::initialize() {
 // A `srcShape` consists of N distribution units, each being `subShapesLayout` x
 // `subShape`. A `delinearizedId` is used to identify a particular `subShape`
 // within each distribution unit.
+// Example:
+// WG data is 128x256. SG data is 16x32, in 4x2 layout, this gives a
+// distribution unit of shape 64x64, we have 2x4 such distribution units.
+// `delinearizedId` is used to identify a 16x32 of a subgroup in each
+// distribution unit.
 static SmallVector<SmallVector<Value>>
 genOffsets(OpBuilder &builder, Location loc, SmallVector<Value> delinearizedId,
            ArrayRef<int64_t> subShapesLayout, ArrayRef<int64_t> subShape,
@@ -294,13 +299,13 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId,
   return affine::delinearizeIndex(builder, loc, linearId, dims);
 }
 
-/// Implements DistributeLayoutAttr::computeDistributedCoords to generate
+/// Implements DistributeLayoutAttr::computeDistributedOffsets to generate
 /// instructions for computing multi-dimensional offsets when distributed by
 /// LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
-LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
-                                     Value linearId, ArrayRef<int64_t> shape,
-                                     xegpu::DistributionLevel targetLevel) {
+LayoutAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
+                                      Value linearId, ArrayRef<int64_t> shape,
+                                      xegpu::DistributionLevel targetLevel) {
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
   if (targetLevel == DistributionLevel::SG) {
@@ -386,13 +391,13 @@ SliceAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId,
   return parent.delinearizeId(builder, loc, linearId, level);
 }
 
-// Implements DistributeLayoutAttr::computeDistributedCoords to generate
+// Implements DistributeLayoutAttr::computeDistributedOffsets to generate
 // instructions for computing multi-dimensional offsets when distributed by
 // LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
-SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
-                                    Value linearId, ArrayRef<int64_t> shape,
-                                    xegpu::DistributionLevel targetLevel) {
+SliceAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
+                                     Value linearId, ArrayRef<int64_t> shape,
+                                     xegpu::DistributionLevel targetLevel) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
   if (!isForWorkgroup())
     return failure();

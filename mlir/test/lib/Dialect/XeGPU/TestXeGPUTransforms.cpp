@@ -200,7 +200,7 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto maybeOffsets = sliceAttr.computeDistributedCoords(
+    auto maybeOffsets = sliceAttr.computeDistributedOffsets(
         rewriter, loc, sgId, wgShape, xegpu::DistributionLevel::SG);
     if (failed(maybeOffsets))
       return failure();

@@ -171,7 +171,7 @@ def XeGPU_WGLevel: I32EnumAttrCase<"WG", 0, "wg">;
 def XeGPU_SGLevel: I32EnumAttrCase<"SG", 1, "sg">;
 def XeGPU_WILevel: I32EnumAttrCase<"WI", 2, "wi">;
 def XeGPU_DistributionLevel: I32EnumAttr<"DistributionLevel",
-      "The enumeration for the scope of fence operation.",
+      "Specify target level for offsets distribution utility.",
       [XeGPU_WGLevel, XeGPU_SGLevel, XeGPU_WILevel]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::xegpu";
@@ -243,7 +243,7 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       represents the higher-level problem size. Each `level` may access
                       multiple blocks according to round-robin distribution rules.}],
                     "FailureOr<SmallVector<SmallVector<Value>>>",
-                    "computeDistributedCoords",
+                    "computeDistributedOffsets",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape, "xegpu::DistributionLevel": $level)>,
     InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
                      to some other layout according to given permutation of (0...n-1).}],
@@ -496,7 +496,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     /// represents the higher-level problem size. Each `level` may access
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
-    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape, xegpu::DistributionLevel level);
+    computeDistributedOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape, xegpu::DistributionLevel level);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
@@ -661,7 +661,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// multiple blocks according to round-robin distribution rules.
 
     FailureOr<SmallVector<SmallVector<Value>>>
-    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId,ArrayRef<int64_t> shape, xegpu::DistributionLevel level);
+    computeDistributedOffsets(OpBuilder &builder, Location loc, Value linearId,ArrayRef<int64_t> shape, xegpu::DistributionLevel level);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
