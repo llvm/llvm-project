@@ -914,7 +914,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             dummyName);
       }
       // INTENT(OUT) and INTENT(IN OUT) cases are caught elsewhere
-    } else {
+    } else if (!actualIsAllocatable && !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)) {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
           dummyName);
