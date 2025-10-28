@@ -1998,7 +1998,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (auto *arg = args.getLastArg(OPT_slop_scale_eq)) {
     StringRef v(arg->getValue());
     unsigned slop = 0;
-    if (!llvm::to_integer(v, slop, 0))
+    if (!llvm::to_integer(v, slop))
       error(arg->getSpelling() +
             ": expected a non-negative integer, but got '" + v +
             "'");
