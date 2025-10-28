@@ -273,8 +273,7 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 FailureOr<SmallVector<Value>>
-LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId,
-                          xegpu::DistributionLevel idLevel) {
+LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
 
   // TODO: handle order attribute
   auto hasDefaultOrder = [&]() {
@@ -285,9 +284,9 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId,
   if (!hasDefaultOrder())
     return mlir::emitError(loc, "order attribute is currently not supported.");
   SmallVector<int64_t> layout;
-  if (idLevel == xegpu::DistributionLevel::SG) {
+  if (isForWorkgroup()) {
     layout = getEffectiveSgLayoutAsInt();
-  } else if (idLevel == xegpu::DistributionLevel::WI) {
+  } else if (isForSubgroup()) {
     layout = getEffectiveLaneLayoutAsInt();
   } else {
     return failure();
@@ -304,14 +303,13 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId,
 /// LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
 LayoutAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
-                                      Value linearId, ArrayRef<int64_t> shape,
-                                      xegpu::DistributionLevel targetLevel) {
+                                      Value linearId, ArrayRef<int64_t> shape) {
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
-  if (targetLevel == DistributionLevel::SG) {
+  if (isForWorkgroup()) {
     layout = getEffectiveSgLayoutAsInt();
     subShape = getEffectiveSgDataAsInt();
-  } else if (targetLevel == DistributionLevel::WI) {
+  } else if (isForSubgroup()) {
     layout = getEffectiveLaneLayoutAsInt();
     subShape = getEffectiveLaneDataAsInt();
   } else {
@@ -325,7 +323,7 @@ LayoutAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
   }
 
   // delinearize Ids
-  auto maybeIds = delinearizeId(builder, loc, linearId, targetLevel);
+  auto maybeIds = delinearizeId(builder, loc, linearId);
   if (failed(maybeIds))
     return failure();
   SmallVector<Value> ids = *maybeIds;
@@ -384,11 +382,10 @@ SliceAttr SliceAttr::flatten() const {
 }
 
 FailureOr<SmallVector<Value>>
-SliceAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId,
-                         xegpu::DistributionLevel level) {
+SliceAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
   SliceAttr attr = flatten();
   auto parent = dyn_cast<LayoutAttr>(attr.getParent());
-  return parent.delinearizeId(builder, loc, linearId, level);
+  return parent.delinearizeId(builder, loc, linearId);
 }
 
 // Implements DistributeLayoutAttr::computeDistributedOffsets to generate
@@ -396,18 +393,17 @@ SliceAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId,
 // LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
-                                     Value linearId, ArrayRef<int64_t> shape,
-                                     xegpu::DistributionLevel targetLevel) {
+                                     Value linearId, ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
   if (!isForWorkgroup())
     return failure();
 
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
-  if (targetLevel == DistributionLevel::SG) {
+  if (isForWorkgroup()) {
     layout = getEffectiveSgLayoutAsInt();
     subShape = getEffectiveSgDataAsInt();
-  } else if (targetLevel == DistributionLevel::WI) {
+  } else if (isForSubgroup()) {
     layout = getEffectiveLaneLayoutAsInt();
     subShape = getEffectiveLaneDataAsInt();
   } else {
@@ -422,7 +418,7 @@ SliceAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
   }
 
   // delinearize Ids
-  auto maybeIds = delinearizeId(builder, loc, linearId, targetLevel);
+  auto maybeIds = delinearizeId(builder, loc, linearId);
   if (failed(maybeIds))
     return failure();
 

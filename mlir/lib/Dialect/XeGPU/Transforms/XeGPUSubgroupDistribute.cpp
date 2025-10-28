@@ -911,9 +911,8 @@ static SmallVector<Value> computeDistributedOffsetsForMatrixOp(
     PatternRewriter &rewriter, Location loc, xegpu::DistributeLayoutAttr layout,
     Value laneId, ArrayRef<int64_t> payloadShape, ValueRange origOffsets) {
   SmallVector<Value> newOffsets;
-  ;
-  auto maybeDescOffsets = layout.computeDistributedOffsets(
-      rewriter, loc, laneId, payloadShape, xegpu::DistributionLevel::WI);
+  auto maybeDescOffsets =
+      layout.computeDistributedOffsets(rewriter, loc, laneId, payloadShape);
   if (failed(maybeDescOffsets))
     return {};
   assert(maybeDescOffsets.value().size() == 1 &&
