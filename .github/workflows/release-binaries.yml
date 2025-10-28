@@ -287,6 +287,8 @@ jobs:
         vcpkg install libxml2[core]:x64-windows-static
         #find / -iname 'libxml*.lib'
         ls -l  /c/vcpkg/packages/libxml2_x64-windows-static/lib/
+        find /c/vcpkg/ -iname '*.cmake'
+        find /c/vcpkg/ -iname '*cmake*'
         cat  /c/vcpkg/packages/libxml2_x64-windows-static/lib/cmake/*
 
     - name: Configure
