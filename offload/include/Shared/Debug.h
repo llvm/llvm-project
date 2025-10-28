@@ -282,10 +282,10 @@ inline DebugSettings &getDebugSettings() {
   static std::once_flag Flag{};
   std::call_once(Flag, []() {
     printf("Configuring debug settings\n");
-    // Eventually, we probably should allow for the upper layers to set
-    // the debug settings directly according to their own env var
-    // (or other methods) settings.
-    // For now mantain compatibility with existing libomptarget env var
+    // Eventually, we probably should allow the upper layers to set
+    // debug settings directly according to their own env var or
+    // other methods.
+    // For now, mantain compatibility with existing libomptarget env var
     // and add a liboffload independent one.
     char *Env = getenv("LIBOMPTARGET_DEBUG");
     if (!Env) {
@@ -317,11 +317,10 @@ inline DebugSettings &getDebugSettings() {
   return Settings;
 }
 
-inline bool isDebugEnabled() {
-  return getDebugSettings().Enabled;
-}
+inline bool isDebugEnabled() { return getDebugSettings().Enabled; }
 
-inline bool shouldPrintDebug(const char *Component, const char *Type, uint32_t Level) {
+inline bool shouldPrintDebug(const char *Component, const char *Type,
+                             uint32_t Level) {
   const auto &Settings = getDebugSettings();
   if (!Settings.Enabled)
     return false;
