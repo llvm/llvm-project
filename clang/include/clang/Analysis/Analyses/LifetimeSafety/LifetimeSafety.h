@@ -44,7 +44,7 @@ public:
                                   Confidence Confidence) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
-                                    const Stmt *EscapeStmt,
+                                    const Expr *EscapeExpr,
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 };

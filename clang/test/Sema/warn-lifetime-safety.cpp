@@ -397,6 +397,118 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
 }
 
 //===----------------------------------------------------------------------===//
+// Basic Definite Use-After-Return (Return-Stack-Address) (-W...permissive)
+// These are cases where the pointer is guaranteed to be dangling at the use site.
+//===----------------------------------------------------------------------===//
+
+MyObj* simple_return_stack_address(){
+  MyObj s;      
+  MyObj* p = &s; // expected-warning {{returning reference to stack allocated object}}
+  return p;      // expected-note {{returned here}}
+}
+
+MyObj* conditional_assign_unconditional_return(MyObj safe, bool c){
+  MyObj s; 
+  MyObj* p = &safe;
+  if(c){
+    p = &s;       // expected-warning {{returning reference to stack allocated object}}
+  }     
+  return p;      // expected-note {{returned here}}
+}
+
+MyObj* conditional_assign_both_branches(MyObj safe, bool c){
+
+  MyObj s;
+  MyObj* p = nullptr;
+  if (c) {
+    p = &s;     // expected-warning {{returning reference to stack allocated object}}
+  } else {
+    p = &safe;
+  }
+  return p;     // expected-note {{returned here}}
+
+}
+
+MyObj* reassign_safe_to_local(MyObj safe){
+  MyObj local;
+  MyObj* p = &safe;
+
+  p = &local;   // expected-warning {{returning reference to stack allocated object}}
+  return p;     // expected-note {{returned here}}
+}
+
+MyObj* pointer_chain_to_local(){
+  MyObj local;
+  MyObj* p1 = &local; // expected-warning {{returning reference to stack allocated object}}
+
+  MyObj* p2 = p1; 
+
+  return p2;          // expected-note {{returned here}}
+}
+
+MyObj* multiple_assign_multiple_return(MyObj safe, bool c1, bool c2){
+  MyObj local1;
+  MyObj local2;
+  MyObj* p = nullptr;
+  if(c1){
+    p = &local1;      // expected-warning {{returning reference to stack allocated object}}
+    return p;         // expected-note {{returned here}}
+  }
+  else if(c2){
+    p = &local2;      // expected-warning {{returning reference to stack allocated object}}
+    return p;         // expected-note {{returned here}}
+  }
+  p = &safe;
+  return p;
+}
+
+MyObj* multiple_assign_single_return(MyObj safe, bool c1, bool c2){
+  MyObj local1;
+  MyObj local2;
+  MyObj* p = nullptr;
+  if(c1){
+    p = &local1;     // expected-warning {{returning reference to stack allocated object}}
+  }
+  else if(c2){
+    p = &local2;     // expected-warning {{returning reference to stack allocated object}}
+  }
+  else{
+  p = &safe;
+  }
+  
+  return p;         // expected-note {{returned here}} // expected-note {{returned here}}
+}
+
+//===----------------------------------------------------------------------===//
+// Use-After-Scope & Use-After-Return (Return-Stack-Address) Combined
+// These are cases where the diagnostic kind is determined by location
+//===----------------------------------------------------------------------===//
+
+MyObj* uaf_before_uar(){
+  MyObj* p;
+  {
+    MyObj local_obj; 
+    p = &local_obj;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }                  // expected-note {{destroyed here}}
+  return p;          // expected-note {{later used here}}
+}
+
+MyObj* uar_before_uaf(MyObj safe, bool c){
+  MyObj* p;
+  {
+    MyObj local_obj; 
+    p = &local_obj;  // expected-warning {{returning reference to stack allocated object}}
+    if(c){
+      return p;      // expected-note {{returned here}}
+    }
+
+  }
+  (void)*p;
+  p = &safe;
+  return p;
+}
+
+//===----------------------------------------------------------------------===//
 // No-Error Cases
 //===----------------------------------------------------------------------===//
 void no_error_if_dangle_then_rescue() {
@@ -434,6 +546,12 @@ void no_error_loan_from_current_iteration(bool cond) {
   }
 }
 
+MyObj* safe_return(MyObj safe){
+  MyObj local;
+  MyObj *p = &local;
+  p = &safe;    // p has been reassigned
+  return p;     // This is safe
+}
 
 //===----------------------------------------------------------------------===//
 // Lifetimebound Attribute Tests

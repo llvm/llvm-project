@@ -1202,5 +1202,242 @@ TEST_F(LifetimeAnalysisTest, LivenessOutsideLoop) {
   EXPECT_THAT(Origins({"p"}), MaybeLiveAt("p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, SimpleReturnStackAddress) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj s;
+      MyObj* p = &s;
+      POINT(p1);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origin("p"), HasLoansTo({"s"}, "p1"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, ConditionalAssignUnconditionalReturn) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj s1;
+      MyObj* p = nullptr;
+      POINT(before_if);
+      if (c) {
+        p = &s1;
+        POINT(after_assign);
+      }
+      POINT(after_if);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origin("p"), HasLoansTo({"s1"}, "after_if"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_if"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"s1"}, "after_assign"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_assign"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({}, "before_if"));
+  EXPECT_THAT(Origins({"p"}), MaybeLiveAt("before_if"));
+}
+
+TEST_F(LifetimeAnalysisTest, ConditionalAssignBothBranches) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj s1;
+      static MyObj s2;
+      MyObj* p = nullptr;
+      POINT(before_if);
+      if (c) {
+        p = &s1;
+        POINT(after_assign_if);
+      } else {
+       p = &s2;
+       POINT(after_assign_else);
+      }
+      POINT(after_if);
+      return p;
+    }
+  )");
+  EXPECT_THAT(Origin("p"), HasLoansTo({"s1", "s2"}, "after_if"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_if"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"s1"}, "after_assign_if"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_assign_if"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"s2"}, "after_assign_else"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_assign_else"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({}, "before_if"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("before_if"));
+}
+
+TEST_F(LifetimeAnalysisTest, ReassignFromSafeToLocalThenReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      static MyObj safe_obj;
+      MyObj local_obj;
+      MyObj* p = &safe_obj;
+      POINT(p1);
+
+      p = &local_obj;
+      POINT(p2); 
+      return p;
+    }
+  )");
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p2"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"safe_obj"}, "p1"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, PointerChainToLocal) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj local_obj;
+      MyObj* p1 = &local_obj;
+      POINT(p_p1);
+      MyObj* p2 = p1;
+      POINT(p_p2);
+      return p2;
+    }
+  )");
+  EXPECT_THAT(Origin("p2"), HasLoansTo({"local_obj"}, "p_p2"));
+  EXPECT_THAT(Origins({"p2"}), MustBeLiveAt("p_p2"));
+  EXPECT_THAT(Origins({"p1"}), testing::Not(AreLiveAt("p_p2")));
+
+  EXPECT_THAT(Origin("p1"), HasLoansTo({"local_obj"}, "p_p1"));
+  EXPECT_THAT(Origins({"p1"}), MustBeLiveAt("p_p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, MultipleAssignmentMultipleReturn) {
+  SetupTest(R"(
+    MyObj* target(bool c1, bool c2) {
+    static MyObj global_obj;
+      MyObj local_obj1;
+      MyObj local_obj2;
+      MyObj* p = nullptr;
+      POINT(before_cond);
+      if(c1){
+        p = &local_obj1;
+        POINT(after_c1);
+        return p;
+      }
+      else if(c2){
+        p = &local_obj2;
+        POINT(after_c2);
+        return p;
+      }
+      p = &global_obj;
+      POINT(after_cond);
+      return p;
+    }
+  )");
+  // Expect two permissive warnings here in each block
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_cond"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"global_obj"}, "after_cond"));
+
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_c2"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj2"}, "after_c2"));
+
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_c1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj1"}, "after_c1"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({}, "before_cond"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("before_cond"));
+}
+
+TEST_F(LifetimeAnalysisTest, MultipleAssignmentsSingleReturn) {
+  SetupTest(R"(
+    MyObj* target(bool c1, bool c2) {
+    static MyObj global_obj;
+      MyObj local_obj1;
+      MyObj local_obj2;
+      MyObj* p = nullptr;
+      POINT(before_cond);
+      if(c1){
+        p = &local_obj1;
+        POINT(after_c1);
+      }
+      else if(c2){
+        p = &local_obj2;
+        POINT(after_c2);
+      }
+      else{
+      p = &global_obj;
+      POINT(after_else);
+      }
+      
+      POINT(after_cond);
+      return p;
+    }
+  )");
+  // Expect permissive warning at return statement with both local_obj1 and
+  // local_obj2 as culprit loans
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_cond"));
+  EXPECT_THAT(
+      Origin("p"),
+      HasLoansTo({"global_obj", "local_obj2", "local_obj1"}, "after_cond"));
+
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_else"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"global_obj"}, "after_else"));
+
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_c2"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj2"}, "after_c2"));
+
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("after_c1"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj1"}, "after_c1"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({}, "before_cond"));
+  EXPECT_THAT(NoOrigins(), AreLiveAt("before_cond"));
+}
+
+TEST_F(LifetimeAnalysisTest, UseAfterScopeThenReturn) {
+  SetupTest(R"(
+    MyObj* target() {
+      MyObj* p;
+      {
+        MyObj local_obj;
+        p = &local_obj;
+        POINT(p1);
+      }
+      POINT(p2);
+      return p;
+    }
+  )");
+  // Expect a Use-after-scope warning because `p` in `return p` is a use even
+  // before return
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p2"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, ReturnBeforeUseAfterScope) {
+  SetupTest(R"(
+    MyObj* target(bool c) {
+      MyObj* p;
+      static MyObj global_obj;
+      {
+        MyObj local_obj;
+        p = &local_obj;
+        if(c){
+          POINT(p1);
+          return p;
+        }
+
+      }
+      POINT(p2);
+      return &global_obj;
+    }
+  )");
+  // Expect a return stack address warning as return is before use after scope
+  EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
+
+  EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p1"));
+  EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p1"));
+}
+
 } // anonymous namespace
 } // namespace clang::lifetimes::internal

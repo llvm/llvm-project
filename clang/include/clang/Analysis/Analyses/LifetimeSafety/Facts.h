@@ -39,13 +39,11 @@ public:
     /// loan set.
     OriginFlow,
     /// An origin escapes the function by flowing into the return value.
-    ReturnOfOrigin,
-    /// An origin is used (eg. appears as l-value expression like DeclRefExpr).
     Use,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
+    // Indicates that an origin escapes the function scope (e.g., via return).
     OriginEscapes,
-    // An origin that stores a loan escapes the function.
   };
 
 private:
@@ -130,33 +128,19 @@ public:
             const OriginManager &OM) const override;
 };
 
-class ReturnOfOriginFact : public Fact {
-  OriginID OID;
-
-public:
-  static bool classof(const Fact *F) {
-    return F->getKind() == Kind::ReturnOfOrigin;
-  }
-
-  ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
-  OriginID getReturnedOriginID() const { return OID; }
-  void dump(llvm::raw_ostream &OS, const LoanManager &,
-            const OriginManager &OM) const override;
-};
-
 class OriginEscapesFact : public Fact {
   OriginID OID;
-  const Stmt *EscapeSource;
+  const Expr *EscapeExpr;
 
 public:
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::OriginEscapes;
   }
 
-  OriginEscapesFact(OriginID OID, const Stmt *Source)
-      : Fact(Kind::OriginEscapes), OID(OID), EscapeSource(Source) {}
+  OriginEscapesFact(OriginID OID, const Expr *EscapeExpr)
+      : Fact(Kind::OriginEscapes), OID(OID), EscapeExpr(EscapeExpr) {}
   OriginID getEscapedOriginID() const { return OID; }
-  const Stmt *getEscapeSource() const { return EscapeSource; }
+  const Expr *getEscapeExpr() const { return EscapeExpr; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };

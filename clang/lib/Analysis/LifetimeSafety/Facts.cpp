@@ -43,13 +43,6 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ")\n";
 }
 
-void ReturnOfOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                              const OriginManager &OM) const {
-  OS << "ReturnOfOrigin (";
-  OM.dump(getReturnedOriginID(), OS);
-  OS << ")\n";
-}
-
 void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                               const OriginManager &OM) const {
   OS << "OriginEscapes (";
