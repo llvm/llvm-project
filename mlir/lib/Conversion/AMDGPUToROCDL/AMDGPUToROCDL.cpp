@@ -989,26 +989,17 @@ mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, Chipset chipset) {
                                  smfma.getN(), smfma.getK(), 1u, chipset);
 }
 
-/// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
-/// if one exists. This includes checking to ensure the intrinsic is supported
-/// on the architecture you are compiling for.
-static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
-                                                  Chipset chipset) {
-  auto sourceVectorType = cast<VectorType>(wmma.getSourceA().getType());
-  auto sourceBVectorType = cast<VectorType>(wmma.getSourceB().getType());
-  auto destVectorType = cast<VectorType>(wmma.getDestC().getType());
-  Type elemSourceType = sourceVectorType.getElementType();
-  Type elemBSourceType = sourceBVectorType.getElementType();
-  Type elemDestType = destVectorType.getElementType();
+/// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
+/// for RDNA3/4 architectures.
+static std::optional<StringRef>
+wmmaOpToIntrinsicRDNA(Type elemSourceType, Type elemBSourceType,
+                      Type elemDestType, uint32_t k, bool isRDNA3) {
+  using fp8 = Float8E4M3FNType;
+  using bf8 = Float8E5M2Type;
 
-  const uint32_t k = wmma.getK();
-  const bool isRDNA3 = chipset.majorVersion == 11;
-  const bool isRDNA4 = chipset.majorVersion == 12 && chipset.minorVersion == 0;
-
+  // Handle k == 16 for RDNA3/4.
   if (k == 16) {
-    if (!isRDNA3 && !isRDNA4) // gfx1250 does not have any wmma ops with k=16.
-      return std::nullopt;
-
+    // Common patterns for RDNA3 and RDNA4.
     if (elemSourceType.isF16() && elemDestType.isF32())
       return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
     if (elemSourceType.isBF16() && elemDestType.isF32())
@@ -1019,22 +1010,15 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
       return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
     if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
       return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
-    if (chipset.majorVersion == 11) {
+
+    // RDNA3 specific patterns.
+    if (isRDNA3) {
       if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
         return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
-    }
-  }
-  if (isRDNA3)
-    return std::nullopt;
-
-  using fp8 = Float8E4M3FNType;
-  using bf8 = Float8E5M2Type;
-
-  // gfx12+
-  if (k == 16) {
-    if (!isRDNA4) // gfx1250 does not have any wmma ops with k=16.
       return std::nullopt;
+    }
 
+    // RDNA4 specific patterns (fp8/bf8).
     if (isa<fp8>(elemSourceType) && isa<fp8>(elemBSourceType) &&
         elemDestType.isF32())
       return ROCDL::wmma_f32_16x16x16_fp8_fp8::getOperationName();
@@ -1047,20 +1031,38 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
     if (isa<bf8>(elemSourceType) && isa<fp8>(elemBSourceType) &&
         elemDestType.isF32())
       return ROCDL::wmma_f32_16x16x16_bf8_fp8::getOperationName();
-
     if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
       return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
 
     return std::nullopt;
   }
-  if (k == 32) {
-    if (isRDNA4) {
-      if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
-        return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
-      return std::nullopt;
-    }
 
-    // gfx1250
+  // Handle k == 32 for RDNA4.
+  if (k == 32 && !isRDNA3) {
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
+  }
+
+  llvm_unreachable("Unsupported k value");
+}
+
+/// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
+/// for the gfx1250 architecture.
+static std::optional<StringRef> wmmaOpToIntrinsicGfx1250(Type elemSourceType,
+                                                         Type elemBSourceType,
+                                                         Type elemDestType,
+                                                         uint32_t k) {
+  using fp8 = Float8E4M3FNType;
+  using bf8 = Float8E5M2Type;
+
+  if (k == 4) {
+    if (elemSourceType.isF32() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x4_f32::getOperationName();
+
+    return std::nullopt;
+  }
+
+  if (k == 32) {
     if (elemSourceType.isF16() && elemDestType.isF32())
       return ROCDL::wmma_f32_16x16x32_f16::getOperationName();
     if (elemSourceType.isBF16() && elemDestType.isF32())
@@ -1070,16 +1072,6 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
     if (elemSourceType.isBF16() && elemDestType.isBF16())
       return ROCDL::wmma_bf16_16x16x32_bf16::getOperationName();
 
-    return std::nullopt;
-  }
-
-  if (isRDNA4)
-    return std::nullopt;
-
-  // gfx1250
-  if (k == 4) {
-    if (elemSourceType.isF32() && elemDestType.isF32())
-      return ROCDL::wmma_f32_16x16x4_f32::getOperationName();
     return std::nullopt;
   }
 
@@ -1142,6 +1134,36 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
 
     return std::nullopt;
   }
+
+  llvm_unreachable("Unsupported k value");
+}
+
+/// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
+/// if one exists. This includes checking to ensure the intrinsic is supported
+/// on the architecture you are compiling for.
+static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
+                                                  Chipset chipset) {
+  auto sourceVectorType = cast<VectorType>(wmma.getSourceA().getType());
+  auto sourceBVectorType = cast<VectorType>(wmma.getSourceB().getType());
+  auto destVectorType = cast<VectorType>(wmma.getDestC().getType());
+  Type elemSourceType = sourceVectorType.getElementType();
+  Type elemBSourceType = sourceBVectorType.getElementType();
+  Type elemDestType = destVectorType.getElementType();
+
+  const uint32_t k = wmma.getK();
+  const bool isRDNA3 = chipset.majorVersion == 11;
+  const bool isRDNA4 = chipset.majorVersion == 12 && chipset.minorVersion == 0;
+
+  // Handle RDNA3 and RDNA4.
+  if (isRDNA3 || isRDNA4)
+    return wmmaOpToIntrinsicRDNA(elemSourceType, elemBSourceType, elemDestType,
+                                 k, isRDNA3);
+
+  // Handle gfx1250.
+  if (chipset == Chipset{12, 5, 0})
+    return wmmaOpToIntrinsicGfx1250(elemSourceType, elemBSourceType,
+                                    elemDestType, k);
+
   llvm_unreachable("unhandled WMMA case");
 }
 
