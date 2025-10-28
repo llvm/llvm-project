@@ -10078,7 +10078,10 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::ForceInline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoInline>(x.u)) {
     return;
   }
   if (const auto *tkr{
