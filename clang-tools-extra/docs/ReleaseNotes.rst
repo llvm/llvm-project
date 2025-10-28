@@ -325,6 +325,12 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers with multiple parameters.
 
+- Improved :doc:`cppcoreguidelines-macro-usage
+  <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by excluding macro
+  bodies that starts with ``__attribute__((..))`` keyword.
+  Such a macro body is unlikely a proper expression and so suggesting users
+  an impossible rewrite into a template function should be avoided.
+
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
   avoid false positives on inherited members in class templates.
