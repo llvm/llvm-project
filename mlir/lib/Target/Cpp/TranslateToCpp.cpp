@@ -1366,16 +1366,25 @@ std::string CppEmitter::getApplyName(emitc::ApplyOp op) {
   StringRef opStr = op.getApplicableOperator();
   Value operand = op.getOperand();
 
-  // Handle dereference and address-of operators specially
-  if (opStr == "*") {
-    ss << "(*" << getOrCreateName(operand) << ")";
-  } else if (opStr == "&") {
+  if (opStr == "&") {
     ss << "&" << getOrCreateName(operand);
-  } else {
-    // Generic operator form: operand followed by operator
-    ss << getOrCreateName(operand) << opStr;
+    return ss.str();
   }
 
+  // Emit '*(&x)' form
+  if (opStr == "*") {
+    if (auto innerApply = operand.getDefiningOp<emitc::ApplyOp>()) {
+      StringRef innerOp = innerApply.getApplicableOperator();
+      if (innerOp == "&") {
+        ss << "*(&" << getOrCreateName(innerApply.getOperand()) << ")";
+        return ss.str();
+      }
+    }
+    ss << "*" << getOrCreateName(operand);
+    return ss.str();
+  }
+
+  ss << getOrCreateName(operand) << opStr;
   return ss.str();
 }
 
@@ -1829,6 +1838,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
             return success();
           })
           .Case<emitc::ApplyOp>([&](emitc::ApplyOp op) {
+            if (emittedExpression) {
+              return printOperation(*this, op);
+            }
             std::string expr = getApplyName(op);
             cacheDeferredOpResult(op.getResult(), expr);
             // If the result is unused, emit it as a standalone statement.

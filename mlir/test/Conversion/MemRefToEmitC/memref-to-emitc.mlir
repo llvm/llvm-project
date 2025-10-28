@@ -4,6 +4,10 @@
 // CHECK-LABEL: alloca()
 func.func @alloca() {
   // CHECK-NEXT: %[[ALLOCA:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<2xf32>
+  // CHECK-NEXT: [[CONST:%.+]] = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK-NEXT: [[SUBSCRIPT:%.+]] = emitc.subscript %[[ALLOCA]]{{.}}[[CONST]]{{.}} : (!emitc.array<2xf32>, index) -> !emitc.lvalue<f32>
+  // CHECK-NEXT: [[APPLY:%.+]] = emitc.apply "&"([[SUBSCRIPT]]) : (!emitc.lvalue<f32>) -> !emitc.ptr<f32>
+  // CHECK-NEXT: [[CAST:%.+]] = emitc.cast [[APPLY]] : !emitc.ptr<f32> to !emitc.ptr<!emitc.array<2xf32>>
   %0 = memref.alloca() : memref<2xf32>
   return
 }
@@ -53,9 +57,15 @@ module @globals {
   // CHECK-LABEL: use_global
   func.func @use_global() {
     // CHECK-NEXT: emitc.get_global @public_global : !emitc.array<3x7xf32>
+    // CHECK-NEXT: "emitc.constant"() <{value = 0 : index}> : () -> index
+    // CHECK-NEXT: "emitc.constant"() <{value = 0 : index}> : () -> index
+    // CHECK: emitc.subscript %0[%1, %2] : (!emitc.array<3x7xf32>, index, index) -> !emitc.lvalue<f32>
+    // CHECK-NEXT: emitc.apply "&"(%3) : (!emitc.lvalue<f32>) -> !emitc.ptr<f32>
+    // CHECK-NEXT: emitc.cast %4 : !emitc.ptr<f32> to !emitc.ptr<!emitc.array<3x7xf32>>
     %0 = memref.get_global @public_global : memref<3x7xf32>
     // CHECK-NEXT: emitc.get_global @__constant_xi32 : !emitc.lvalue<i32>
-    // CHECK-NEXT: emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    // CHECK-NEXT: emitc.apply "&"(%6) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    // CHECK-NEXT: emitc.cast %7 : !emitc.ptr<i32> to !emitc.ptr<!emitc.array<1xi32>>
     %1 = memref.get_global @__constant_xi32 : memref<i32>
     return
   }
