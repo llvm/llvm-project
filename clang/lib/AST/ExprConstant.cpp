@@ -15819,32 +15819,32 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
       switch (Opcode.getExtValue() & 0x7) {
       case 0: // _MM_CMPINT_EQ
-        result = (A == B);
+        Result = (A == B);
         break;
       case 1: // _MM_CMPINT_LT
-        result = IsUnsigned ? A.ult(B) : A.slt(B);
+        Result = IsUnsigned ? A.ult(B) : A.slt(B);
         break;
       case 2: // _MM_CMPINT_LE
-        result = IsUnsigned ? A.ule(B) : A.sle(B);
+        Result = IsUnsigned ? A.ule(B) : A.sle(B);
         break;
       case 3: // _MM_CMPINT_FALSE
-        result = false;
+        Result = false;
         break;
       case 4: // _MM_CMPINT_NE
-        result = (A != B);
+        Result = (A != B);
         break;
       case 5: // _MM_CMPINT_NLT (>=)
-        result = IsUnsigned ? A.uge(B) : A.sge(B);
+        Result = IsUnsigned ? A.uge(B) : A.sge(B);
         break;
       case 6: // _MM_CMPINT_NLE (>)
-        result = IsUnsigned ? A.ugt(B) : A.sgt(B);
+        Result = IsUnsigned ? A.ugt(B) : A.sgt(B);
         break;
       case 7: // _MM_CMPINT_TRUE
-        result = true;
+        Result = true;
         break;
       }
 
-      RetMask.setBitVal(ElemNum, Mask[ElemNum] && result);
+      RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
     }
 
     return Success(APValue(RetMask), E);
