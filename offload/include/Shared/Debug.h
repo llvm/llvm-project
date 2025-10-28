@@ -42,6 +42,8 @@
 #include <mutex>
 #include <string>
 
+#include "llvm/Support/circular_raw_ostream.h"
+
 /// 32-Bit field data attributes controlling information presented to the user.
 enum OpenMPInfoType : uint32_t {
   // Print data arguments and attributes upon entering an OpenMP device kernel.
@@ -197,5 +199,191 @@ inline uint32_t getDebugLevel() {
       INFO(_flags, _id, __VA_ARGS__);                                          \
     }                                                                          \
   } while (false)
+
+// New macros that will allow for more granular control over debugging output
+// Each message can be classified by Component, Type and Level
+// Component: The broad component of the offload runtime emitting the message.
+// Type: A cross-component classification of messages
+// Level: The verbosity level of the message
+//
+// The component is pulled from the TARGET_NAME macro, Type and Level can be
+// defined for each debug message but by default they are "default" and "1"
+// respectively.
+//
+// For liboffload and plugins, use OFFLOAD_DEBUG(...)
+// For libomptarget, use OPENMP_DEBUG(...)
+// Constructing messages should be done using C++ stream style syntax.
+//
+// Usage examples:
+// OFFLOAD_DEBUG("type1", 2, "This is a level 2 message of type1");
+// OFFLOAD_DEBUG("Init", "This is a default level of the init type");
+// OPENMP_DEBUG("This is a level 1 message of the default type");
+// OFFLOAD_DEBUG("Init", 3, NumDevices << " were initialized\n");
+// OFFLOAD_DEBUG("Kernel", "Starting kernel " << KernelName << " on device " <<
+//               DeviceId);
+//
+// Message output can be controlled by setting LIBOMPTARGET_DEBUG or
+// LIBOFFLOAD_DEBUG environment variables. Their syntax is as follows:
+// [integer]|all|<type1>[:<level1>][,<type2>[:<level2>],...]
+//
+// 0 : Disable all debug messages
+// all : Enable all debug messages
+// integer : Set the default level for all messages
+// <type> : Enable only messages of the specified type and level (more than one
+//          can be specified). Components are also supported as
+//          types.
+// <level> : Set the verbosity level for the specified type (default is 1)
+//
+// For very specific cases where more control is needed, use OFFLOAD_DEBUG_RAW
+// or OFFLOAD_DEBUG_BASE. See below for details.
+
+namespace llvm::offload::debug {
+
+#ifdef OMPTARGET_DEBUG
+
+struct DebugFilter {
+  StringRef Type;
+  uint32_t Level;
+};
+
+struct DebugSettings {
+  bool Enabled = false;
+  uint32_t DefaultLevel = 1;
+  llvm::SmallVector<DebugFilter> Filters;
+};
+
+/// dbgs - Return a circular-buffered debug stream.
+inline llvm::raw_ostream &dbgs() {
+  // Do one-time initialization in a thread-safe way.
+  static struct dbgstream {
+    llvm::circular_raw_ostream strm;
+
+    dbgstream() : strm(llvm::errs(), "*** Debug Log Output ***\n", 0) {}
+  } thestrm;
+
+  return thestrm.strm;
+}
+
+inline DebugFilter parseDebugFilter(StringRef Filter) {
+  size_t Pos = Filter.find(':');
+  if (Pos == StringRef::npos)
+    return {Filter, 1};
+
+  StringRef Type = Filter.slice(0, Pos);
+  uint32_t Level = 1;
+  if (Filter.slice(Pos + 1, Filter.size()).getAsInteger(10, Level))
+    Level = 1;
+
+  return {Type, Level};
+}
+
+inline DebugSettings &getDebugSettings() {
+  static DebugSettings Settings;
+  static std::once_flag Flag{};
+  std::call_once(Flag, []() {
+    printf("Configuring debug settings\n");
+    // Eventually, we probably should allow for the upper layers to set
+    // the debug settings directly according to their own env var
+    // (or other methods) settings.
+    // For now mantain compatibility with existing libomptarget env var
+    // and add a liboffload independent one.
+    char *Env = getenv("LIBOMPTARGET_DEBUG");
+    if (!Env) {
+      Env = getenv("LIBOFFLOAD_DEBUG");
+      if (!Env)
+        return;
+    }
+
+    StringRef EnvRef(Env);
+    if (EnvRef == "0")
+      return;
+
+    Settings.Enabled = true;
+    if (EnvRef.equals_insensitive("all"))
+      return;
+
+    if (!EnvRef.getAsInteger(10, Settings.DefaultLevel))
+      return;
+
+    Settings.DefaultLevel = 1;
+
+    SmallVector<StringRef> DbgTypes;
+    EnvRef.split(DbgTypes, ',', -1, false);
+
+    for (auto &DT : DbgTypes)
+      Settings.Filters.push_back(parseDebugFilter(DT));
+  });
+
+  return Settings;
+}
+
+inline bool isDebugEnabled() {
+  return getDebugSettings().Enabled;
+}
+
+inline bool shouldPrintDebug(const char *Component, const char *Type, uint32_t Level) {
+  const auto &Settings = getDebugSettings();
+  if (!Settings.Enabled)
+    return false;
+
+  if (Settings.Filters.empty())
+    return Level <= Settings.DefaultLevel;
+
+  for (const auto &DT : Settings.Filters) {
+    if (DT.Level < Level)
+      continue;
+    if (DT.Type.equals_insensitive(Type))
+      return true;
+    if (DT.Type.equals_insensitive(Component))
+      return true;
+  }
+
+  return false;
+}
+
+#define OFFLOAD_DEBUG_BASE(Component, Type, Level, ...)                        \
+  do {                                                                         \
+    if (llvm::offload::debug::isDebugEnabled() &&                              \
+        llvm::offload::debug::shouldPrintDebug(Component, Type, Level))        \
+      __VA_ARGS__;                                                             \
+  } while (0)
+
+#define OFFLOAD_DEBUG_RAW(Type, Level, X)                                      \
+  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), Type, Level, X)
+
+#define OFFLOAD_DEBUG_1(X)                                                     \
+  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), "default", 1,                       \
+                     llvm::offload::debug::dbgs()                              \
+                         << DEBUG_PREFIX << " --> " << X)
+
+#define OFFLOAD_DEBUG_2(Type, X)                                               \
+  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), Type, 1,                            \
+                     llvm::offload::debug::dbgs()                              \
+                         << DEBUG_PREFIX << " --> " << X)
+
+#define OFFLOAD_DEBUG_3(Type, Level, X)                                        \
+  OFFLOAD_DEBUG_BASE(GETNAME(TARGET_NAME), Type, Level,                        \
+                     llvm::offload::debug::dbgs()                              \
+                         << DEBUG_PREFIX << " --> " << X)
+
+#define OFFLOAD_SELECT(Type, Level, X, NArgs, ...) OFFLOAD_DEBUG_##NArgs
+
+// To be used in liboffload and plugins
+#define OFFLOAD_DEBUG(...) OFFLOAD_SELECT(__VA_ARGS__, 3, 2, 1)(__VA_ARGS__)
+
+// To be used in libomptarget only
+#define OPENMP_DEBUG(...) OFFLOAD_DEBUG(__VA_ARGS__)
+
+#else
+
+// Don't print anything if debugging is disabled
+#define OFFLOAD_DEBUG_BASE(Component, Type, Level, ...)
+#define OFFLOAD_DEBUG_RAW(Type, Level, X)
+#define OFFLOAD_DEBUG(...)
+#define OPENMP_DEBUG(...)
+
+#endif
+
+} // namespace llvm::offload::debug
 
 #endif // OMPTARGET_SHARED_DEBUG_H
