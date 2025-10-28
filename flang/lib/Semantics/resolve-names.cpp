@@ -9456,13 +9456,35 @@ bool ResolveNamesVisitor::SetProcFlag(
     SayWithDecl(name, symbol,
         "Implicit declaration of function '%s' has a different result type than in previous declaration"_err_en_US);
     return false;
-  } else if (symbol.has<ProcEntityDetails>()) {
-    symbol.set(flag); // in case it hasn't been set yet
-    if (flag == Symbol::Flag::Function) {
-      ApplyImplicitRules(symbol);
-    }
-    if (symbol.attrs().test(Attr::INTRINSIC)) {
-      AcquireIntrinsicProcedureFlags(symbol);
+  } else if (const auto *procDetails{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (symbol.owner().IsDerivedType()) { // procedure pointer component
+      bool isFunction{IsFunction(symbol)};
+      const Symbol *explicitInterface{procDetails->procInterface()};
+      if (flag == Symbol::Flag::Function) {
+        if (!isFunction) {
+          SayWithDecl(name, symbol,
+              "Procedure pointer component '%s' was not declared to be a function"_err_en_US);
+        }
+      } else if (isFunction ||
+          (!explicitInterface &&
+              !context().IsEnabled(
+                  common::LanguageFeature::CallImplicitProcComponent))) {
+        SayWithDecl(name, symbol,
+            "Procedure pointer component '%s' was not declared to be a subroutine"_err_en_US);
+      } else if (!explicitInterface &&
+          context().ShouldWarn(
+              common::LanguageFeature::CallImplicitProcComponent)) {
+        SayWithDecl(name, symbol,
+            "Procedure pointer component '%s' should have been declared to be a subroutine"_warn_en_US);
+      }
+    } else {
+      symbol.set(flag); // in case it hasn't been set yet
+      if (flag == Symbol::Flag::Function) {
+        ApplyImplicitRules(symbol);
+      }
+      if (symbol.attrs().test(Attr::INTRINSIC)) {
+        AcquireIntrinsicProcedureFlags(symbol);
+      }
     }
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(

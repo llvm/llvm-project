@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 integer :: y
 procedure() :: a
 procedure(real) :: b
@@ -136,16 +136,34 @@ function b8()
 end
 
 subroutine s9
+  abstract interface
+    subroutine subr
+    end
+    real function realfunc()
+    end
+  end interface
   type t
     procedure(), nopass, pointer :: p1, p2
+    procedure(subr), nopass, pointer :: psub
+    procedure(realfunc), nopass, pointer :: pfunc
   end type
   type(t) x
+  !ERROR: Function result characteristics are not known
+  !ERROR: Procedure pointer component 'p1' was not declared to be a function
   print *, x%p1()
-  call x%p2
-  !ERROR: Cannot call function 'p1' like a subroutine
+  !ERROR: Procedure pointer component 'p1' should have been declared to be a subroutine
   call x%p1
-  !ERROR: Cannot call subroutine 'p2' like a function
+  !ERROR: Procedure pointer component 'p2' should have been declared to be a subroutine
+  call x%p2
+  !ERROR: Function result characteristics are not known
+  !ERROR: Procedure pointer component 'p2' was not declared to be a function
   print *, x%p2()
+  !ERROR: Cannot call subroutine 'psub' like a function
+  print *, x%psub()
+  print *, x%pfunc() ! ok
+  call x%psub ! ok
+  !ERROR: Cannot call function 'pfunc' like a subroutine
+  call x%pfunc
 end subroutine
 
 subroutine s10

@@ -939,6 +939,17 @@ print *, [(j,j=1,10)]
   This design allows format-driven input with `DT` editing to retain
   control over advancement in child input, while otherwise allowing it.
 
+* Many compilers interpret `PROCEDURE()` as meaning a subroutine,
+  but it does not do so; it defines an entity that is not declared
+  to be either a subroutine or a function.
+  If it is referenced, its references must be consistent.
+  If it is never referenced, it may be associated with any
+  procedure.
+
+* A `PROCEDURE()` component (necessarily also a pointer) without an
+  explicit interface or result type cannot be called as a function,
+  and will elicit an optional warning when called as a subroutine.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
