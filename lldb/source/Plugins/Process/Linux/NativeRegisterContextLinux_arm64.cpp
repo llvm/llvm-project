@@ -108,19 +108,18 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
                                           native_thread.GetID(), &regset,
                                           &ioVec, sizeof(sve_header))
-            .Success()) {
+            .Success())
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
 
-      // We may also have the Scalable Matrix Extension (SME) which adds a
-      // streaming SVE mode.
-      ioVec.iov_len = sizeof(sve_header);
-      regset = NT_ARM_SSVE;
-      if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
-                                            native_thread.GetID(), &regset,
-                                            &ioVec, sizeof(sve_header))
-              .Success())
-        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
-    }
+    // We may have the Scalable Matrix Extension (SME) which adds a
+    // streaming SVE mode. Systems can have SVE and/or SME.
+    ioVec.iov_len = sizeof(sve_header);
+    regset = NT_ARM_SSVE;
+    if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
+                                          native_thread.GetID(), &regset,
+                                          &ioVec, sizeof(sve_header))
+            .Success())
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
 
     sve::user_za_header za_header;
     ioVec.iov_base = &za_header;
@@ -271,10 +270,11 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
 
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
 
-  if (reg == LLDB_INVALID_REGNUM)
+  if (reg == LLDB_INVALID_REGNUM) {
     return Status::FromErrorStringWithFormat(
         "no lldb regnum for %s",
         reg_info && reg_info->name ? reg_info->name : "<unknown register>");
+  }
 
   uint8_t *src;
   uint32_t offset = LLDB_INVALID_INDEX32;
@@ -291,13 +291,17 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     src = (uint8_t *)GetGPRBuffer() + offset;
 
   } else if (IsFPR(reg)) {
-    if (m_sve_state == SVEState::Disabled) {
-      // SVE is disabled take legacy route for FPU register access
+    if (m_sve_state == SVEState::Disabled ||
+        m_sve_state == SVEState::StreamingFPSIMD) {
+      // If we do not have SVE, FP registers are read from the FP register set.
+      // If we only have SVE in streaming mode, but are outside of streaming
+      // mode, they also come from the FP register set.
       error = ReadFPR();
       if (error.Fail())
         return error;
 
-      offset = CalculateFprOffset(reg_info);
+      offset = CalculateFprOffset(reg_info,
+                                  m_sve_state == SVEState::StreamingFPSIMD);
       assert(offset < GetFPRSize());
       src = (uint8_t *)GetFPRBuffer() + offset;
     } else {
@@ -349,8 +353,52 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return Status::FromErrorString("SVE disabled or not supported");
 
     if (GetRegisterInfo().IsSVERegVG(reg)) {
+      error = ReadSVEHeader();
+      if (error.Fail()) {
+        return error;
+      }
+
       sve_vg = GetSVERegVG();
       src = (uint8_t *)&sve_vg;
+    } else if (m_sve_state == SVEState::StreamingFPSIMD) {
+      // When we only have streaming SVE and we are not in streaming mode,
+      // we cannot reading streaming SVE registers.
+
+      if (GetRegisterInfo().IsSVEPReg(reg) ||
+          GetRegisterInfo().IsSVERegFFR(reg)) {
+        // For predicate registers, return 0s.
+        std::vector<uint8_t> fake_p(reg_info->byte_size, 0);
+        reg_value.SetFromMemoryData(*reg_info, &fake_p[0], reg_info->byte_size,
+                                    eByteOrderLittle, error);
+        return error;
+      }
+
+      // Zero extend the 128-bit FP register to Z register size.
+      error = ReadFPR();
+      if (error.Fail())
+        return error;
+
+      // As we told the client we have Z registers, our own internal offsets
+      // are set as if we were using an SVE context. We need to work out
+      // an offset within the FP context instead:
+      // struct user_fpsimd_state {
+      // 	__uint128_t	vregs[32];
+      // 	__u32		fpsr;
+      // 	__u32		fpcr;
+      // 	__u32		__reserved[2];
+      // };
+      const uint32_t z_num = reg - GetRegisterInfo().GetRegNumSVEZ0();
+      offset = z_num * 16;
+      assert(offset < GetFPRSize());
+      src = (uint8_t *)GetFPRBuffer() + offset;
+
+      // Copy from FP into a fake Z value.
+      std::vector<uint8_t> fake_z(reg_info->byte_size, 0);
+      std::memcpy(&fake_z[0], src, 16 /* 128 bits */);
+      reg_value.SetFromMemoryData(*reg_info, &fake_z[0], reg_info->byte_size,
+                                  eByteOrderLittle, error);
+
+      return error;
     } else {
       // SVE enabled, we will read and cache SVE ptrace data
       error = ReadAllSVE();
@@ -495,13 +543,17 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     return WriteGPR();
   } else if (IsFPR(reg)) {
-    if (m_sve_state == SVEState::Disabled) {
-      // SVE is disabled take legacy route for FPU register access
+    if (m_sve_state == SVEState::Disabled ||
+        m_sve_state == SVEState::StreamingFPSIMD) {
+      // SVE is not present, or we only have it in streaming mode and are
+      // currently outside of streaming mode. Take normal route for FPU register
+      // access.
       error = ReadFPR();
       if (error.Fail())
         return error;
 
-      offset = CalculateFprOffset(reg_info);
+      offset = CalculateFprOffset(reg_info,
+                                  m_sve_state == SVEState::StreamingFPSIMD);
       assert(offset < GetFPRSize());
       dst = (uint8_t *)GetFPRBuffer() + offset;
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
@@ -510,8 +562,9 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     } else {
       // SVE enabled, we will read and cache SVE ptrace data.
       error = ReadAllSVE();
-      if (error.Fail())
+      if (error.Fail()) {
         return error;
+      }
 
       // FPSR and FPCR will be located right after Z registers in
       // SVEState::FPSIMD while in SVEState::Full or SVEState::Streaming they
@@ -544,9 +597,49 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       return WriteAllSVE();
     }
   } else if (IsSVE(reg)) {
-    if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
+    if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown) {
       return Status::FromErrorString("SVE disabled or not supported");
-    else {
+    } else if (m_sve_state == SVEState::StreamingFPSIMD) {
+      // When a target has SVE (in any state), the client is told that it has
+      // real SVE registers and that the FP registers are just subregisters
+      // of those SVE registers. This means that any FP write will be converted
+      // into an SVE write.
+      //
+      // If we get here, it did that, but we are outside of streaming mode
+      // on an SME only system. Meaning there's no way at all to write to actual
+      // SVE registers.
+      //
+      // Instead we will have to extract the bottom 128 bits of the register,
+      // write that via the standard FP route and then return the fake SVE
+      // values as usual.
+      //
+      // We can only do this for Z registers of course, P, FFR, or VG.
+      if (GetRegisterInfo().IsSVERegVG(reg) ||
+          GetRegisterInfo().IsSVEPReg(reg) ||
+          GetRegisterInfo().IsSVERegFFR(reg))
+        return Status::FromErrorString(
+            "Cannot write SVE VG, P or FFR registers while outside of "
+            "streaming mode.");
+
+      // We have told the client that we only have Z registers and the V
+      // registers are subsets of Z. This means that the V byte offsets are
+      // actually for the SVE register context, which we cannot access right
+      // now. That is, v0 is offset 16, v1 is 16+vlen, and so on. So we will
+      // manually patch this data into the FP context and write it.
+      error = ReadFPR();
+      if (error.Fail())
+        return error;
+
+      uint32_t z_num = reg - GetRegisterInfo().GetRegNumSVEZ0();
+      offset = z_num * 16;
+      assert(offset < GetFPRSize());
+      dst = (uint8_t *)GetFPRBuffer() + offset;
+      // If we get here we must have a Z register. Assume we have 16 bytes aka
+      // 128 bits at least, enough to fill an FP V register.
+      ::memcpy(dst, reg_value.GetBytes(), 16);
+
+      return WriteFPR();
+    } else {
       // Target has SVE enabled, we will read and cache SVE ptrace data
       error = ReadAllSVE();
       if (error.Fail())
@@ -698,7 +791,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 enum RegisterSetType : uint32_t {
   GPR,
   SVE, // Used for SVE and SSVE.
-  FPR, // When there is no SVE, or SVE in FPSIMD mode.
+  FPR, // When there is no SVE, or SVE in FPSIMD mode, or streaming only SVE
+       // that is in non-streaming mode.
   // Pointer authentication registers are read only, so not included here.
   MTE,
   TLS,
@@ -766,8 +860,11 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
     }
   }
 
-  // If SVE is enabled we need not copy FPR separately.
-  if (GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) {
+  // If SVE is enabled we need not copy FPR separately. If we are in
+  // non-streaming mode of a streaming only process, then we need to save FPR
+  // though.
+  if ((GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) &&
+      m_sve_state != SVEState::StreamingFPSIMD) {
     // Store mode and register data.
     cached_size +=
         sizeof(RegisterSetType) + sizeof(m_sve_state) + GetSVEBufferSize();
@@ -869,7 +966,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
                             m_za_header.size);
   }
 
-  if (GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) {
+  if ((GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) &&
+      m_sve_state != SVEState::StreamingFPSIMD) {
     dst = AddRegisterSetType(dst, RegisterSetType::SVE);
     *(reinterpret_cast<SVEState *>(dst)) = m_sve_state;
     dst += sizeof(m_sve_state);
@@ -1011,11 +1109,59 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
           GetSVEBuffer(), &src, GetSVEBufferSize(), m_sve_buffer_is_valid,
           std::bind(&NativeRegisterContextLinux_arm64::WriteAllSVE, this));
       break;
-    case RegisterSetType::FPR:
-      error = RestoreRegisters(
-          GetFPRBuffer(), &src, GetFPRSize(), m_fpu_is_valid,
-          std::bind(&NativeRegisterContextLinux_arm64::WriteFPR, this));
+    case RegisterSetType::FPR: {
+      if (!GetRegisterInfo().IsSVEPresent() &&
+          GetRegisterInfo().IsSSVEPresent()) {
+        // On an SME only system, if we get here then we were outside of
+        // streaming mode when the registers were saved. We may be in streaming
+        // mode at the current moment, so we need to to exit it. The kernel
+        // allows us to do this by writing FPSIMD format data to non-streaming
+        // SVE registers, with a vector length of 0 set. We only do this for
+        // this one situation, for anything else we use the FP register set, or
+        // the streaming SVE register set.
+
+        size_t data_size = sve::ptrace_fpsimd_offset + GetFPRSize();
+        // NT_ARM_SVE data must be a multiple of 128 bits, and the FPU data size
+        // is not, round up.
+        data_size =
+            (data_size + sve::vq_bytes - 1) / sve::vq_bytes * sve::vq_bytes;
+        std::vector<uint8_t> sve_fpsimd_data(data_size);
+
+        user_sve_header *header =
+            reinterpret_cast<user_sve_header *>(sve_fpsimd_data.data());
+        std::memset(header, 0, sizeof(user_sve_header));
+        header->size = sve_fpsimd_data.size();
+        // VL = 0 tells the process to exit streaming mode.
+        header->vl = 0;
+        header->flags = sve::ptrace_regs_fpsimd;
+        std::memcpy(&sve_fpsimd_data[sve::ptrace_fpsimd_offset], src,
+                    GetFPRSize());
+
+        struct iovec ioVec;
+        ioVec.iov_base = sve_fpsimd_data.data();
+        ioVec.iov_len = sve_fpsimd_data.size();
+
+        // We must always use non-streaming SVE here, even if the system only
+        // has streaming SVE.
+        error = WriteRegisterSet(&ioVec, sve_fpsimd_data.size(), NT_ARM_SVE);
+
+        // Writing FPU, and SVE overlaps FPU.
+        m_fpu_is_valid = false;
+        m_sve_buffer_is_valid = false;
+        m_sve_header_is_valid = false;
+
+        m_sve_state = SVEState::Unknown;
+        ConfigureRegisterContext();
+
+        // Consume FP register set.
+        src += GetFPRSize();
+      } else {
+        error = RestoreRegisters(
+            GetFPRBuffer(), &src, GetFPRSize(), m_fpu_is_valid,
+            std::bind(&NativeRegisterContextLinux_arm64::WriteFPR, this));
+      }
       break;
+    }
     case RegisterSetType::MTE:
       error = RestoreRegisters(
           GetMTEControl(), &src, GetMTEControlSize(), m_mte_ctrl_is_valid,
@@ -1210,7 +1356,6 @@ Status NativeRegisterContextLinux_arm64::ReadFPR() {
   ioVec.iov_len = GetFPRSize();
 
   error = ReadRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
-
   if (error.Success())
     m_fpu_is_valid = true;
 
@@ -1227,6 +1372,9 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
   ioVec.iov_len = GetFPRSize();
 
   m_fpu_is_valid = false;
+  // SVE Z registers overlap the FP registers.
+  m_sve_buffer_is_valid = false;
+  m_sve_header_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetFPRSize(), NT_FPREGSET);
 }
@@ -1250,7 +1398,13 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
 }
 
 unsigned NativeRegisterContextLinux_arm64::GetSVERegSet() {
-  return m_sve_state == SVEState::Streaming ? NT_ARM_SSVE : NT_ARM_SVE;
+  switch (m_sve_state) {
+  case SVEState::Streaming:
+  case SVEState::StreamingFPSIMD:
+    return NT_ARM_SSVE;
+  default:
+    return NT_ARM_SVE;
+  }
 }
 
 Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
@@ -1595,41 +1749,59 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
   // ConfigureRegisterContext gets called from InvalidateAllRegisters
   // on every stop and configures SVE vector length and whether we are in
   // streaming SVE mode.
+
   // If m_sve_state is set to SVEState::Disabled on first stop, code below will
   // be deemed non operational for the lifetime of current process.
   if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
-    // If we have SVE we may also have the SVE streaming mode that SME added.
-    // We can read the header of either mode, but only the active mode will
-    // have valid register data.
+    // Systems may have SVE and/or SME. If they are SME only, the SVE regset
+    // cannot be read from but the SME one can. If they have both SVE and SME,
+    // only the active mode will return valid register data.
 
-    // Check whether SME is present and the streaming SVE mode is active.
     m_sve_header_is_valid = false;
     m_sve_buffer_is_valid = false;
     m_sve_state = SVEState::Streaming;
     Status error = ReadSVEHeader();
 
-    // Streaming mode is active if the header has the SVE active flag set.
-    if (!(error.Success() && ((m_sve_header.flags & sve::ptrace_regs_mask) ==
-                              sve::ptrace_regs_sve))) {
-      // Non-streaming might be active instead.
-      m_sve_header_is_valid = false;
-      m_sve_buffer_is_valid = false;
+    bool has_sme = error.Success();
+    bool sme_is_active =
+        has_sme &&
+        ((m_sve_header.flags & sve::ptrace_regs_mask) == sve::ptrace_regs_sve);
+
+    m_sve_header_is_valid = false;
+    m_sve_buffer_is_valid = false;
+    m_sve_state = SVEState::Full;
+    error = ReadSVEHeader();
+
+    bool has_sve = error.Success();
+    bool sve_is_active =
+        has_sve &&
+        ((m_sve_header.flags & sve::ptrace_regs_mask) == sve::ptrace_regs_sve);
+    // We do not check this for streaming mode because the streaming mode regset
+    // will never be in FP format.
+    bool fp_is_active =
+        has_sve && ((m_sve_header.flags & sve::ptrace_regs_mask) ==
+                    sve::ptrace_regs_fpsimd);
+
+    if (sme_is_active)
+      m_sve_state = SVEState::Streaming;
+    else if (sve_is_active)
       m_sve_state = SVEState::Full;
-      error = ReadSVEHeader();
-      if (error.Success()) {
-        // If SVE is enabled thread can switch between SVEState::FPSIMD and
-        // SVEState::Full on every stop.
-        if ((m_sve_header.flags & sve::ptrace_regs_mask) ==
-            sve::ptrace_regs_fpsimd)
-          m_sve_state = SVEState::FPSIMD;
-        // Else we are in SVEState::Full.
-      } else {
-        m_sve_state = SVEState::Disabled;
-      }
-    }
+    else if (fp_is_active)
+      m_sve_state = SVEState::FPSIMD;
+    else if (has_sme) {
+      // We are in the non-streaming mode of an SME only system.
+      m_sve_state = SVEState::StreamingFPSIMD;
+    } else
+      m_sve_state = SVEState::Disabled;
 
     if (m_sve_state == SVEState::Full || m_sve_state == SVEState::FPSIMD ||
-        m_sve_state == SVEState::Streaming) {
+        m_sve_state == SVEState::Streaming ||
+        m_sve_state == SVEState::StreamingFPSIMD) {
+
+      m_sve_header_is_valid = false;
+      m_sve_buffer_is_valid = false;
+      error = ReadSVEHeader();
+
       // On every stop we configure SVE vector length by calling
       // ConfigureVectorLengthSVE regardless of current SVEState of this thread.
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
@@ -1656,8 +1828,30 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
 }
 
 uint32_t NativeRegisterContextLinux_arm64::CalculateFprOffset(
-    const RegisterInfo *reg_info) const {
-  return reg_info->byte_offset - GetGPRSize();
+    const RegisterInfo *reg_info, bool streaming_fpsimd) const {
+  uint32_t offset = reg_info->byte_offset - GetGPRSize();
+  if (!streaming_fpsimd)
+    return offset;
+
+  // If we're outside of streaming mode on a streaming only target, the offsets
+  // are relative to an SVE context. We need the offset into the actual FPR
+  // context:
+  // struct user_fpsimd_state {
+  // 	__uint128_t	vregs[32];
+  // 	__u32		fpsr;
+  // 	__u32		fpcr;
+  // 	__u32		__reserved[2];
+  // };
+  const size_t fpsr_offset = 16 * 32;
+  const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
+  if (reg == GetRegisterInfo().GetRegNumFPSR())
+    offset = fpsr_offset;
+  else if (reg == GetRegisterInfo().GetRegNumFPCR())
+    offset = fpsr_offset + 4;
+  else
+    offset = 16 * (reg - GetRegisterInfo().GetRegNumFPV0());
+
+  return offset;
 }
 
 uint32_t NativeRegisterContextLinux_arm64::CalculateSVEOffset(
