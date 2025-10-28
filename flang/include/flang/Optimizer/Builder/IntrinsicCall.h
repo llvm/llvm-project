@@ -469,6 +469,13 @@ struct IntrinsicLibrary {
   void genTMABulkLoadR4(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkLoadR8(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreI4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreI8(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreR2(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreR4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreR8(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreC4(llvm::ArrayRef<fir::ExtendedValue>);
+  void genTMABulkStoreC8(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkWaitGroup(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
