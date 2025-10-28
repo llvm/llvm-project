@@ -25,17 +25,18 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
     return;
   }
 
+  mlir::Region *parentRegion =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+
   // Branching from condition: go to body or exit.
-  if (&op.getCond() ==
-      point.getTerminatorPredecessorOrNull()->getParentRegion()) {
+  if (&op.getCond() == parentRegion) {
     regions.emplace_back(mlir::RegionSuccessor(op, op->getResults()));
     regions.emplace_back(&op.getBody(), op.getBody().getArguments());
     return;
   }
 
   // Branching from body: go to step (for) or condition.
-  if (&op.getBody() ==
-      point.getTerminatorPredecessorOrNull()->getParentRegion()) {
+  if (&op.getBody() == parentRegion) {
     // FIXME(cir): Should we consider break/continue statements here?
     mlir::Region *afterBody =
         (op.maybeGetStep() ? op.maybeGetStep() : &op.getCond());
@@ -44,8 +45,7 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
   }
 
   // Branching from step: go to condition.
-  if (op.maybeGetStep() ==
-      point.getTerminatorPredecessorOrNull()->getParentRegion()) {
+  if (op.maybeGetStep() == parentRegion) {
     regions.emplace_back(&op.getCond(), op.getCond().getArguments());
     return;
   }
