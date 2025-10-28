@@ -3410,6 +3410,18 @@ TEST_F(FormatTestComments, DontAlignOverPPDirective) {
                  "long loong = 1; // Dont align",
                  Style);
 
+  verifyFormat("#define A   // Comment that\n"
+               "            // would wrap\n"
+               "#define FOO // For the\n"
+               "            // alignment\n"
+               "#define B   // Also\n"
+               "            // aligned",
+               "#define A // Comment that would wrap\n"
+               "#define FOO // For the alignment\n"
+               "#define B // Also\n"
+               " // aligned",
+               Style);
+
   Style.AlignTrailingComments.OverEmptyLines = 1;
   verifyNoChange("#define A // Comment\n"
                  "\n"
