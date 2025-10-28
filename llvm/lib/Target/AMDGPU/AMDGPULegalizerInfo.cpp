@@ -6725,17 +6725,9 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   // We are only processing the operands of d16 image operations on subtargets
   // that use the unpacked register layout, or need to repack the TFE result.
 
-  unsigned IntrOpcode = Intr->BaseOpcode;
-  // For image atomic: use no-return opcode if result is unused.
-  if (Intr->AtomicNoRetBaseOpcode != Intr->BaseOpcode) {
-    const MachineRegisterInfo &MRI = MF.getRegInfo();
-    Register ResultDef = MI.getOperand(0).getReg();
-    if (MRI.use_nodbg_empty(ResultDef))
-      IntrOpcode = Intr->AtomicNoRetBaseOpcode;
-  }
   // TODO: Do we need to guard against already legalized intrinsics?
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
-      AMDGPU::getMIMGBaseOpcodeInfo(IntrOpcode);
+      AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
 
   MachineRegisterInfo *MRI = B.getMRI();
   const LLT S32 = LLT::scalar(32);
@@ -6753,9 +6745,7 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
 
   const bool IsAtomicPacked16Bit =
       (BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16 ||
-       BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_F16_NORTN ||
-       BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16 ||
-       BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16_NORTN);
+       BaseOpcode->BaseOpcode == AMDGPU::IMAGE_ATOMIC_PK_ADD_BF16);
 
   // Check for 16 bit addresses and pack if true.
   LLT GradTy =
