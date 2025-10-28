@@ -78,7 +78,12 @@ jobs:
         VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
         VCPKG_ENV_PASSTHROUGH: 1
       run: |
-        vcpkg --debug install libxml2:x64-windows-static
+        mkdir custom-triplets
+        cp vcpkg/triples/x64-windows-static.cmake custom-triplets/x64-windows-static-release.cmake
+        cat custom-triplets/x64-windows-static-release.cmake
+        echo "set(VCPKG_CMAKE_CONFIGURE_OPTIONS -DBUILD_SHARED_LIBS=OFF)" >> custom-triplets/x64-windows-static-release.cmake
+        echo "set(VCPKG_BUILD_TYPE release)" >> custom-triplets/x64-windows-static-release.cmake
+        vcpkg --debug install libxml2:x64-windows-static-release --overlay-triplets=custom-triplets
         find /c/vcpkg -iname 'libxml*.lib'
 
     - name: Checkout LLVM
@@ -168,7 +173,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*|windows-2022)
-            build_runs_on="depot-${{ inputs.runs-on }}"
+            build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
           macos-13)
