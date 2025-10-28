@@ -2297,7 +2297,8 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
           CGM.getABIInfo().getOptimalVectorMemoryType(VecTy, getLangOpts());
       if (!ClangVecTy->isPackedVectorBoolType(getContext()) &&
           VecTy != NewVecTy) {
-        SmallVector<int, 16> Mask(NewVecTy->getNumElements(), -1);
+        SmallVector<int, 16> Mask(NewVecTy->getNumElements(),
+                                  VecTy->getNumElements());
         std::iota(Mask.begin(), Mask.begin() + VecTy->getNumElements(), 0);
         // Use undef instead of poison for the padding lanes, to make sure no
         // padding bits are poisoned, which may break coercion.
