@@ -1998,13 +1998,6 @@ implicit none
 
   ! TMA Operations
 
-  interface 
-    attributes(device) subroutine barrier_init(barrier, count)
-      integer(8), shared :: barrier
-      integer(4), value :: count
-    end subroutine
-  end interface
-
   interface barrier_arrive
     attributes(device) function barrier_arrive(barrier) result(token)
       integer(8), shared :: barrier
@@ -2014,6 +2007,28 @@ implicit none
       integer(8), shared :: barrier
       integer(4), value :: count
       integer(8) :: token
+    end function
+  end interface
+
+  interface 
+    attributes(device) subroutine barrier_init(barrier, count)
+      integer(8), shared :: barrier
+      integer(4), value :: count
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) integer function barrier_try_wait(barrier, token)
+      integer(8), shared :: barrier
+      integer(8), value  :: token
+    end function
+  end interface
+  
+  interface
+    attributes(device) integer function barrier_try_wait_sleep(barrier, token, ns)
+      integer(8), shared :: barrier
+      integer(8), value  :: token
+      integer(4), value  :: ns
     end function
   end interface
 

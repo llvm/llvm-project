@@ -492,3 +492,25 @@ end subroutine
 ! CHECK: %[[CASTED_CMP_XCHG_EV:.*]] = fir.convert %[[CMP_XCHG_EV]] : (i1) -> i32
 ! CHECK: %{{.*}} = arith.constant 1 : i32
 ! CHECK: %19 = arith.cmpi eq, %[[CASTED_CMP_XCHG_EV]], %{{.*}} : i32
+
+attributes(global) subroutine test_barrier_try_wait()
+  integer :: istat
+  integer(8), shared :: barrier1
+  integer(8) :: token
+  istat = barrier_try_wait(barrier1, token)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_barrier_try_wait()
+! CHECK: scf.while
+! CHECK: %{{.*}} = nvvm.inline_ptx ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%{{.*}}], %{{.*}}, %{{.*}}; selp.b32 %{{.*}}, 1, 0, p;" ro(%{{.*}}, %{{.*}}, %c1000000{{.*}} : !llvm.ptr, i64, i32) -> i32
+
+attributes(global) subroutine test_barrier_try_wait_sleep()
+  integer :: istat
+  integer(8), shared :: barrier1
+  integer(8) :: token
+  integer(4) :: sleep_time
+  istat = barrier_try_wait_sleep(barrier1, token, sleep_time)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_barrier_try_wait_sleep()
+! CHECK: %{{.*}} = nvvm.inline_ptx ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%{{.*}}], %{{.*}}, %{{.*}}; selp.b32 %0, 1, 0, p;" ro(%{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr, i64, i32) -> i32
