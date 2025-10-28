@@ -59,7 +59,6 @@ void FactsGenerator::run() {
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
     CurrentBlockFacts.clear();
     EscapesInCurrentBlock.clear();
-    EscapesInCurrentBlock.clear();
     for (unsigned I = 0; I < Block->size(); ++I) {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
@@ -68,8 +67,6 @@ void FactsGenerator::run() {
                    Element.getAs<CFGAutomaticObjDtor>())
         handleDestructor(*DtorOpt);
     }
-    CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
-                             EscapesInCurrentBlock.end());
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);

@@ -62,13 +62,10 @@ public:
                   AnalysisDeclContext &ADC, LifetimeSafetyReporter *Reporter)
       : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
         Reporter(Reporter) {
-    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>()) {
-      for (const Fact *F : FactMgr.getFacts(B)) {
-        if (const auto *EF = F->getAs<ExpireFact>()) {
+    for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
+      for (const Fact *F : FactMgr.getFacts(B))
+        if (const auto *EF = F->getAs<ExpireFact>())
           checkExpiry(EF);
-        }
-      }
-    }
     issuePendingWarnings();
   }
 
@@ -107,7 +104,7 @@ public:
     if (LastConf >= CurConfidence)
       return;
     FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
-                                     /*BestCausingFact*/ BestCausingFact,
+                                     /*BestCausingFact=*/BestCausingFact,
                                      /*ConfidenceLevel=*/CurConfidence};
   }
 
