@@ -5329,7 +5329,7 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
 defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
 
-let Predicates = [HasNEON, HasFPRCVT] in {
+let Predicates = [HasNEONandIsStreamingSafe, HasFPRCVT] in {
   defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf", any_sint_to_fp>;
   defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf", any_uint_to_fp>;
 
