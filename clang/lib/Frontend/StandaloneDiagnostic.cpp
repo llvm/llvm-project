@@ -69,7 +69,7 @@ translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
     FileLoc = It->getValue();
   }
 
-  // Cache miss - compute the location
+  // Cache miss - compute and cache the location
   if (FileLoc.isInvalid()) {
     const auto FileID =
         SrcMgr.getOrCreateFileID(*FileRef, StandaloneDiag.FileKind);
@@ -79,7 +79,6 @@ translateStandaloneDiag(FileManager &FileMgr, SourceManager &SrcMgr,
       return StoredDiagnostic(StandaloneDiag.Level, StandaloneDiag.ID,
                               StandaloneDiag.Message);
 
-    // Store in cache
     SrcLocCache[StandaloneDiag.Filename] = FileLoc;
   }
 
