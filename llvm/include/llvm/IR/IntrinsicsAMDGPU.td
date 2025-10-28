@@ -2359,12 +2359,6 @@ def int_amdgcn_mbcnt_hi :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem]>;
 
-def int_amdgcn_bcnt32_lo :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
-
-def int_amdgcn_bcnt64_lo :
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
-
 // llvm.amdgcn.ds.swizzle src offset
 def int_amdgcn_ds_swizzle :
   ClangBuiltin<"__builtin_amdgcn_ds_swizzle">,
