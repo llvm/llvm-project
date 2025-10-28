@@ -5287,6 +5287,22 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
 }
 
+SDValue AMDGPUTargetLowering::expandABS(SDNode *N, SelectionDAG &CurDAG,
+                                        bool IsNegative) const {
+  assert(N->getOpcode() == ISD::ABS &&
+         "Tried to select abs with non-abs opcode.");
+
+  if (N->getValueSizeInBits(0) != 16 || IsNegative)
+    return TargetLowering::expandABS(N, CurDAG, IsNegative);
+
+  SDValue Src = N->getOperand(0);
+  SDLoc DL(Src);
+
+  SDValue SExtSrc = CurDAG.getSExtOrTrunc(Src, DL, MVT::i32);
+  SDValue ExtAbs = CurDAG.getNode(ISD::ABS, DL, MVT::i32, SExtSrc);
+  return CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i16, ExtAbs);
+}
+
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
