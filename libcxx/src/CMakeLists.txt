@@ -254,7 +254,7 @@ if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
 endif()
 
-if(WIN32 AND NOT (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC"))
+if(WIN32)
   string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}dbghelp")
   string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}psapi")
 endif()
