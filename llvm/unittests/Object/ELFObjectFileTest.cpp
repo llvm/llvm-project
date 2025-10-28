@@ -1206,7 +1206,7 @@ Sections:
       - FuncEntryCount: 1000
         PGOBBEntries:
           - BBFreq:          1000
-            PropellerBBFreq: 50
+            PostLinkBBFreq:  50
             Successors:
             - ID:          1
               BrProb:      0x22222222
@@ -1268,7 +1268,7 @@ Sections:
          - Successors:
             - ID:              1
               BrProb:          0x22222222
-              PropellerBrFreq: 7
+              PostLinkBrFreq:  7
             - ID:          2
               BrProb:      0xcccccccc
          - Successors:

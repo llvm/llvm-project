@@ -59,20 +59,20 @@
 # CHECK-NEXT:         {
 # RAW-NEXT:             Frequency: 100
 # PRETTY-NEXT:          Frequency: 1.0
-# CHECK-NEXT:           Propeller Frequency: 10
+# CHECK-NEXT:           PostLink Frequency: 10
 # CHECK-NEXT:           Successors [
 # CHECK-NEXT:             {
 # CHECK-NEXT:               ID: 2
 # RAW-NEXT:                 Probability: 0x80000000
 # PRETTY-NEXT:              Probability: 0x80000000 / 0x80000000 = 100.00%
-# CHECK-NEXT:               Propeller Probability: 7
+# CHECK-NEXT:               PostLink Probability: 7
 # CHECK-NEXT:             }
 # CHECK-NEXT:           ]
 # CHECK-NEXT:         }
 # CHECK-NEXT:         {
 # RAW-NEXT:             Frequency: 100
 # PRETTY-NEXT:          Frequency: 1.0
-# CHECK-NEXT:           Propeller Frequency: 0
+# CHECK-NEXT:           PostLink Frequency: 0
 # CHECK-NEXT:           Successors [
 # CHECK-NEXT:           ]
 # CHECK-NEXT:         }
@@ -201,11 +201,11 @@ Sections:
       - FuncEntryCount: 100
         PGOBBEntries:
           - BBFreq:          100
-            PropellerBBFreq: 10
+            PostLinkBBFreq: 10
             Successors:
               - ID:              2
                 BrProb:          0x80000000
-                PropellerBrFreq: 7
+                PostLinkBrFreq: 7
           - BBFreq:        100
             Successors:    []
       - FuncEntryCount: 8888

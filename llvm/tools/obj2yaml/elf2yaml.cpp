@@ -972,8 +972,8 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
           auto &PGOBBEntry = PGOBBEntries.emplace_back();
           if (FeatureOrErr->BBFreq) {
             PGOBBEntry.BBFreq = Data.getULEB128(Cur);
-            if (FeatureOrErr->PropellerCfg)
-              PGOBBEntry.PropellerBBFreq = Data.getULEB128(Cur);
+            if (FeatureOrErr->PostLinkCfg)
+              PGOBBEntry.PostLinkBBFreq = Data.getULEB128(Cur);
             if (!Cur)
               break;
           }
@@ -984,10 +984,10 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
             for (uint64_t SuccIdx = 0; Cur && SuccIdx < SuccCount; ++SuccIdx) {
               uint32_t ID = Data.getULEB128(Cur);
               uint32_t BrProb = Data.getULEB128(Cur);
-              std::optional<uint32_t> PropellerBrFreq;
-              if (FeatureOrErr->PropellerCfg)
-                PropellerBrFreq = Data.getULEB128(Cur);
-              SuccEntries.push_back({ID, BrProb, PropellerBrFreq});
+              std::optional<uint32_t> PostLinkBrFreq;
+              if (FeatureOrErr->PostLinkCfg)
+                PostLinkBrFreq = Data.getULEB128(Cur);
+              SuccEntries.push_back({ID, BrProb, PostLinkBrFreq});
             }
           }
         }

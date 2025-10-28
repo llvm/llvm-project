@@ -44,22 +44,22 @@
 # VALID-NEXT:       - FuncEntryCount: 100
 # VALID-NEXT:         PGOBBEntries:
 # VALID-NEXT:           - BBFreq:           100
-# VALID-NEXT:             PropellerBBFreq:  10
+# VALID-NEXT:             PostLinkBBFreq:   10
 # VALID-NEXT:             Successors:
 # VALID-NEXT:               - ID:              2
 # VALID-NEXT:                 BrProb:          0x80000000
-# VALID-NEXT:                 PropellerBrFreq: 7
+# VALID-NEXT:                 PostLinkBrFreq:  7
 # VALID-NEXT:               - ID:              4
 # VALID-NEXT:                 BrProb:          0x80000000
-# VALID-NEXT:                 PropellerBrFreq: 0
+# VALID-NEXT:                 PostLinkBrFreq:  0
 # VALID-NEXT:           - BBFreq:           50
-# VALID-NEXT:             PropellerBBFreq:  0
+# VALID-NEXT:             PostLinkBBFreq:   0
 # VALID-NEXT:             Successors:
 # VALID-NEXT:               - ID:              4
 # VALID-NEXT:                 BrProb:          0xFFFFFFFF
-# VALID-NEXT:                 PropellerBrFreq: 0
+# VALID-NEXT:                 PostLinkBrFreq:  0
 # VALID-NEXT:           - BBFreq:           100
-# VALID-NEXT:             PropellerBBFreq:  3
+# VALID-NEXT:             PostLinkBBFreq:   3
 # VALID-NEXT:             Successors:    []
 # VALID-NEXT:         PGOBBEntries:
 # VALID-NEXT:           - BBFreq:        20
@@ -104,11 +104,11 @@ Sections:
       - FuncEntryCount: 100
         PGOBBEntries:
           - BBFreq:          100
-            PropellerBBFreq: 10
+            PostLinkBBFreq:  10
             Successors:
               - ID:              2
                 BrProb:          0x80000000
-                PropellerBrFreq: 7
+                PostLinkBrFreq:  7
               - ID:              4
                 BrProb:          0x80000000
           - BBFreq:              50
@@ -116,7 +116,7 @@ Sections:
               - ID:              4
                 BrProb:          0xFFFFFFFF
           - BBFreq:              100
-            PropellerBBFreq:     3
+            PostLinkBBFreq:      3
             Successors: []
       - PGOBBEntries:
           - BBFreq:        20

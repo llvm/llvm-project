@@ -203,10 +203,10 @@ struct PGOAnalysisMapEntry {
     struct SuccessorEntry {
       uint32_t ID;
       llvm::yaml::Hex32 BrProb;
-      std::optional<uint32_t> PropellerBrFreq;
+      std::optional<uint32_t> PostLinkBrFreq;
     };
     std::optional<uint64_t> BBFreq;
-    std::optional<uint32_t> PropellerBBFreq;
+    std::optional<uint32_t> PostLinkBBFreq;
     std::optional<std::vector<SuccessorEntry>> Successors;
   };
   std::optional<uint64_t> FuncEntryCount;

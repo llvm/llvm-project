@@ -858,7 +858,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
                          "basic block hash feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
                          " feature = " + Twine(static_cast<int>(Feature)));
-    if (FeatEnable.PropellerCfg && Version < 5)
+    if (FeatEnable.PostLinkCfg && Version < 5)
       return createError("version should be >= 5 for SHT_LLVM_BB_ADDR_MAP when "
                          "basic block hash feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
@@ -951,8 +951,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         uint64_t BBF = FeatEnable.BBFreq
                            ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
                            : 0;
-        uint32_t PropellerBBFreq =
-            FeatEnable.PropellerCfg
+        uint32_t PostLinkBBFreq =
+            FeatEnable.PostLinkCfg
                 ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
                 : 0;
 
@@ -964,20 +964,20 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           for (uint64_t I = 0; I < SuccCount; ++I) {
             uint32_t BBID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
             uint32_t BrProb = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-            uint32_t PropellerFreq =
-                FeatEnable.PropellerCfg
+            uint32_t PostLinkFreq =
+                FeatEnable.PostLinkCfg
                     ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
                     : 0;
 
             if (PGOAnalyses)
               Successors.push_back(
-                  {BBID, BranchProbability::getRaw(BrProb), PropellerFreq});
+                  {BBID, BranchProbability::getRaw(BrProb), PostLinkFreq});
           }
         }
 
         if (PGOAnalyses)
           PGOBBEntries.push_back(
-              {BlockFrequency(BBF), PropellerBBFreq, std::move(Successors)});
+              {BlockFrequency(BBF), PostLinkBBFreq, std::move(Successors)});
       }
 
       if (PGOAnalyses)

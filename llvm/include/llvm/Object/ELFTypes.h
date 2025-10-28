@@ -834,7 +834,7 @@ struct BBAddrMap {
     bool OmitBBEntries : 1;
     bool CallsiteEndOffsets : 1;
     bool BBHash : 1;
-    bool PropellerCfg : 1;
+    bool PostLinkCfg : 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
@@ -849,7 +849,7 @@ struct BBAddrMap {
              (static_cast<uint8_t>(OmitBBEntries) << 4) |
              (static_cast<uint8_t>(CallsiteEndOffsets) << 5) |
              (static_cast<uint8_t>(BBHash) << 6) |
-             (static_cast<uint8_t>(PropellerCfg) << 7);
+             (static_cast<uint8_t>(PostLinkCfg) << 7);
     }
 
     // Decodes from minimum bit width representation and validates no
@@ -870,11 +870,11 @@ struct BBAddrMap {
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
                       OmitBBEntries, CallsiteEndOffsets, BBHash,
-                      PropellerCfg) ==
+                      PostLinkCfg) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
                       Other.MultiBBRange, Other.OmitBBEntries,
                       Other.CallsiteEndOffsets, Other.BBHash,
-                      Other.PropellerCfg);
+                      Other.PostLinkCfg);
     }
   };
 
@@ -1017,25 +1017,25 @@ struct PGOAnalysisMap {
       uint32_t ID;
       /// Branch Probability of the edge to this successor taken from MBPI.
       BranchProbability Prob;
-      /// Raw edge count from Propeller.
-      uint32_t PropellerFreq;
+      /// Raw edge count from the post link profile.
+      uint64_t PostLinkFreq;
 
       bool operator==(const SuccessorEntry &Other) const {
-        return std::tie(ID, Prob, PropellerFreq) ==
-               std::tie(Other.ID, Other.Prob, Other.PropellerFreq);
+        return std::tie(ID, Prob, PostLinkFreq) ==
+               std::tie(Other.ID, Other.Prob, Other.PostLinkFreq);
       }
     };
 
     /// Block frequency taken from MBFI
     BlockFrequency BlockFreq;
-    /// Raw block count taken from Propeller.
-    uint32_t PropellerBlockFreq = 0;
+    /// Raw block count taken from the post linke profile
+    uint64_t PostLinkBlockFreq = 0;
     /// List of successors of the current block
     llvm::SmallVector<SuccessorEntry, 2> Successors;
 
     bool operator==(const PGOBBEntry &Other) const {
-      return std::tie(BlockFreq, PropellerBlockFreq, Successors) ==
-             std::tie(Other.BlockFreq, PropellerBlockFreq, Other.Successors);
+      return std::tie(BlockFreq, PostLinkBlockFreq, Successors) ==
+             std::tie(Other.BlockFreq, PostLinkBlockFreq, Other.Successors);
     }
   };
 

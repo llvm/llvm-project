@@ -1556,15 +1556,15 @@ void ELFState<ELFT>::writeSectionContent(
     for (const auto &PGOBBE : PGOBBEntries) {
       if (PGOBBE.BBFreq)
         SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
-      if (FeatureOrErr->PropellerCfg || PGOBBE.PropellerBBFreq.has_value())
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PropellerBBFreq.value_or(0));
+      if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
+        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
       if (PGOBBE.Successors) {
         SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb, PropellerBrFreq] : *PGOBBE.Successors) {
+        for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
           SHeader.sh_size += CBA.writeULEB128(ID);
           SHeader.sh_size += CBA.writeULEB128(BrProb);
-          if (FeatureOrErr->PropellerCfg || PropellerBrFreq.has_value())
-            SHeader.sh_size += CBA.writeULEB128(PropellerBrFreq.value_or(0));
+          if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
+            SHeader.sh_size += CBA.writeULEB128(PostLinkBrFreq.value_or(0));
         }
       }
     }
