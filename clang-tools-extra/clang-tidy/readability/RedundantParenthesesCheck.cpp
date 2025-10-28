@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantParenthesesCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -50,25 +51,19 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
                  cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
   Finder->addMatcher(
-      parenExpr(subExpr(anyOf(parenExpr(), ConstantExpr, declRefExpr())),
-                unless(anyOf(isInMacro(),
-                             // sizeof(...) is common used.
-                             hasParent(unaryExprOrTypeTraitExpr()))))
+      parenExpr(
+          subExpr(anyOf(parenExpr(), ConstantExpr,
+                        declRefExpr(to(namedDecl(unless(
+                            matchers::matchesAnyListedName(AllowedDecls))))))),
+          unless(anyOf(isInMacro(),
+                       // sizeof(...) is common used.
+                       hasParent(unaryExprOrTypeTraitExpr()))))
           .bind("dup"),
       this);
 }
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
-  if (auto *DRE = dyn_cast<DeclRefExpr>(PE->getSubExpr())) {
-    const std::string Name = DRE->getDecl()->getQualifiedNameAsString();
-    const bool Allowed =
-        llvm::any_of(AllowedDecls, [&Name](const llvm::Regex &NM) {
-          return NM.isValid() && NM.match(Name);
-        });
-    if (Allowed)
-      return;
-  }
   diag(PE->getBeginLoc(), "redundant parentheses around expression")
       << FixItHint::CreateRemoval(PE->getLParen())
       << FixItHint::CreateRemoval(PE->getRParen());

@@ -33,8 +33,9 @@ Options
 
 .. option:: AllowedDecls
 
-  A semicolon-separated list of names of declarations to ignore when the
-  parentheses are around. Declarations can include variables or functions.
+  Semicolon-separated list of regular expressions matching names of declarations
+  to ignore when the parentheses are around. Declarations can include variables
+  or functions.
   The default is an `std::max;std::min`.
   
   Some STL library functions may have the same name as widely used function-like
