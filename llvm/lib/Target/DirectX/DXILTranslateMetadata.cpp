@@ -376,7 +376,7 @@ static void translateLoopMetadata(Module &M, Instruction *I, MDNode *BaseMD) {
     return Node && Node->getNumOperands() != 0 && Node == Node->getOperand(0);
   };
 
-  // Strip empty metadata or a non-distinct node
+  // Set metadata to null to remove empty/ill-formed metadata from instruction
   if (BaseMD->getNumOperands() == 0 || !IsDistinctNode(BaseMD))
     return I->setMetadata("llvm.loop", nullptr);
 
