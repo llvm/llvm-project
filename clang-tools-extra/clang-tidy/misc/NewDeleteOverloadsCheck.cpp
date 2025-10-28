@@ -52,8 +52,11 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
 
   const auto *FPT = Node.getType()->castAs<FunctionProtoType>();
   ASTContext &Ctx = Node.getASTContext();
-  return !(Ctx.getLangOpts().SizedDeallocation &&
-           Ctx.hasSameType(FPT->getParamType(1), Ctx.getSizeType()));
+  if (Ctx.getLangOpts().SizedDeallocation &&
+      Ctx.hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
+    return false;
+
+  return true;
 }
 
 } // namespace

@@ -1880,9 +1880,12 @@ static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
   padStringAtBegin(S1PadB, BiggerLength);
   padStringAtBegin(S2PadB, BiggerLength);
 
-  return isCommonSuffixWithoutSomeCharacters(
-      Threshold, StringRef{S1PadB.begin(), BiggerLength},
-      StringRef{S2PadB.begin(), BiggerLength});
+  if (isCommonSuffixWithoutSomeCharacters(
+          Threshold, StringRef{S1PadB.begin(), BiggerLength},
+          StringRef{S2PadB.begin(), BiggerLength}))
+    return true;
+
+  return false;
 }
 
 } // namespace filter

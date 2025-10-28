@@ -54,7 +54,8 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
 
       AllowedTypes(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {
-  if (!AnalyzeValues && !AnalyzeReferences && !AnalyzePointers)
+  if (AnalyzeValues == false && AnalyzeReferences == false &&
+      AnalyzePointers == false)
     this->configurationDiag(
         "The check 'misc-const-correctness' will not "
         "perform any analysis because 'AnalyzeValues', "

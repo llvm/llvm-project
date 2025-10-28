@@ -70,7 +70,7 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
     IgnoreHeadersRegex.emplace_back(HeaderSuffix);
   }
 
-  if (!UnusedIncludes && !MissingIncludes)
+  if (UnusedIncludes == false && MissingIncludes == false)
     this->configurationDiag("The check 'misc-include-cleaner' will not "
                             "perform any analysis because 'UnusedIncludes' and "
                             "'MissingIncludes' are both false.");

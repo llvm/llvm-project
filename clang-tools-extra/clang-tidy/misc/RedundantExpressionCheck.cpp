@@ -196,9 +196,12 @@ static bool areExclusiveRanges(BinaryOperatorKind OpcodeLHS,
 
   // Handle the case where constants are off by one: x > 5 && x < 6.
   APSInt ValueLhsPlus1;
-  return OpcodeLHS == BO_GT && OpcodeRHS == BO_LT &&
-         incrementWithoutOverflow(ValueLHS, ValueLhsPlus1) &&
-         APSInt::compareValues(ValueLhsPlus1, ValueRHS) == 0;
+  if (OpcodeLHS == BO_GT && OpcodeRHS == BO_LT &&
+      incrementWithoutOverflow(ValueLHS, ValueLhsPlus1) &&
+      APSInt::compareValues(ValueLhsPlus1, ValueRHS) == 0)
+    return true;
+
+  return false;
 }
 
 // Returns whether the ranges covered by the union of both relational
@@ -723,10 +726,12 @@ static bool areSidesBinaryConstExpressions(const BinaryOperator *&BinOp,
     return !E->isValueDependent() && E->isIntegerConstantExpr(*AstCtx);
   };
 
-  return (IsIntegerConstantExpr(LhsBinOp->getLHS()) ||
-          IsIntegerConstantExpr(LhsBinOp->getRHS())) &&
-         (IsIntegerConstantExpr(RhsBinOp->getLHS()) ||
-          IsIntegerConstantExpr(RhsBinOp->getRHS()));
+  if ((IsIntegerConstantExpr(LhsBinOp->getLHS()) ||
+       IsIntegerConstantExpr(LhsBinOp->getRHS())) &&
+      (IsIntegerConstantExpr(RhsBinOp->getLHS()) ||
+       IsIntegerConstantExpr(RhsBinOp->getRHS())))
+    return true;
+  return false;
 }
 
 static bool areSidesBinaryConstExpressionsOrDefinesOrIntegerConstant(
@@ -742,8 +747,10 @@ static bool areSidesBinaryConstExpressionsOrDefinesOrIntegerConstant(
 
   auto IsDefineExpr = [AstCtx](const Expr *E) {
     const SourceRange Lsr = E->getSourceRange();
-    return !(!Lsr.getBegin().isMacroID() || E->isValueDependent() ||
-             !E->isIntegerConstantExpr(*AstCtx));
+    if (!Lsr.getBegin().isMacroID() || E->isValueDependent() ||
+        !E->isIntegerConstantExpr(*AstCtx))
+      return false;
+    return true;
   };
 
   return IsDefineExpr(Lhs) || IsDefineExpr(Rhs);
