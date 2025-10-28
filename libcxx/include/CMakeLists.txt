@@ -782,7 +782,6 @@ set(files
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
   __tuple/tuple_like.h
-  __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
@@ -1594,7 +1593,6 @@ set(files
   __cxx03/cmath
   __cxx03/codecvt
   __cxx03/complex
-  __cxx03/complex.h
   __cxx03/condition_variable
   __cxx03/csetjmp
   __cxx03/csignal
@@ -1607,25 +1605,20 @@ set(files
   __cxx03/cstring
   __cxx03/ctgmath
   __cxx03/ctime
-  __cxx03/ctype.h
   __cxx03/cuchar
   __cxx03/cwchar
   __cxx03/cwctype
   __cxx03/deque
-  __cxx03/errno.h
   __cxx03/exception
   __cxx03/experimental/__config
   __cxx03/experimental/utility
   __cxx03/ext/__hash
   __cxx03/ext/hash_map
   __cxx03/ext/hash_set
-  __cxx03/fenv.h
-  __cxx03/float.h
   __cxx03/forward_list
   __cxx03/fstream
   __cxx03/functional
   __cxx03/future
-  __cxx03/inttypes.h
   __cxx03/iomanip
   __cxx03/ios
   __cxx03/iosfwd
@@ -1652,11 +1645,8 @@ set(files
   __cxx03/sstream
   __cxx03/stack
   __cxx03/stdatomic.h
-  __cxx03/stdbool.h
-  __cxx03/stddef.h
   __cxx03/stdexcept
   __cxx03/stdint.h
-  __cxx03/stdio.h
   __cxx03/stdlib.h
   __cxx03/streambuf
   __cxx03/string
@@ -1664,7 +1654,6 @@ set(files
   __cxx03/string_view
   __cxx03/strstream
   __cxx03/system_error
-  __cxx03/tgmath.h
   __cxx03/thread
   __cxx03/type_traits
   __cxx03/typeindex
@@ -1677,7 +1666,6 @@ set(files
   __cxx03/vector
   __cxx03/version
   __cxx03/wchar.h
-  __cxx03/wctype.h
   )
 
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)

@@ -382,7 +382,8 @@ DignosticsEngineWithDiagOpts::DignosticsEngineWithDiagOpts(
 
 std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
 buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                 llvm::BumpPtrAllocator &Alloc) {
   SmallVector<const char *, 256> Argv;
   Argv.reserve(ArgStrs.size());
   for (const std::string &Arg : ArgStrs)
@@ -393,7 +394,6 @@ buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
       "clang LLVM compiler", FS);
   Driver->setTitle("clang_based_tool");
 
-  llvm::BumpPtrAllocator Alloc;
   bool CLMode = driver::IsClangCL(
       driver::getDriverMode(Argv[0], ArrayRef(Argv).slice(1)));
 
@@ -524,13 +524,12 @@ bool initializeScanCompilerInstance(
   // Use the dependency scanning optimized file system if requested to do so.
   if (DepFS) {
     DepFS->resetBypassedPathPrefix();
-    if (!ScanInstance.getHeaderSearchOpts().ModuleCachePath.empty()) {
-      SmallString<256> ModulesCachePath;
-      normalizeModuleCachePath(
-          ScanInstance.getFileManager(),
-          ScanInstance.getHeaderSearchOpts().ModuleCachePath, ModulesCachePath);
+    SmallString<256> ModulesCachePath;
+    normalizeModuleCachePath(ScanInstance.getFileManager(),
+                             ScanInstance.getHeaderSearchOpts().ModuleCachePath,
+                             ModulesCachePath);
+    if (!ModulesCachePath.empty())
       DepFS->setBypassedPathPrefix(ModulesCachePath);
-    }
 
     ScanInstance.setDependencyDirectivesGetter(
         std::make_unique<ScanningDependencyDirectivesGetter>(

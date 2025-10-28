@@ -25,7 +25,6 @@
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
-#include "flang/Optimizer/Builder/Runtime/Coarray.h"
 #include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Exceptions.h"
@@ -40,6 +39,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -412,28 +412,28 @@ static constexpr IntrinsicHandler handlers[]{
     {"co_broadcast",
      &I::genCoBroadcast,
      {{{"a", asBox},
-       {"source_image", asAddr},
+       {"source_image", asValue},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
     {"co_max",
      &I::genCoMax,
      {{{"a", asBox},
-       {"result_image", asAddr, handleDynamicOptional},
+       {"result_image", asValue, handleDynamicOptional},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
     {"co_min",
      &I::genCoMin,
      {{{"a", asBox},
-       {"result_image", asAddr, handleDynamicOptional},
+       {"result_image", asValue, handleDynamicOptional},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
     {"co_sum",
      &I::genCoSum,
      {{{"a", asBox},
-       {"result_image", asAddr, handleDynamicOptional},
+       {"result_image", asValue, handleDynamicOptional},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
@@ -829,7 +829,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
     {"num_images",
      &I::genNumImages,
-     {{{"team", asAddr}, {"team_number", asAddr}}},
+     {{{"team_number", asValue}, {"team", asBox}}},
      /*isElemental*/ false},
     {"pack",
      &I::genPack,
@@ -989,9 +989,18 @@ static constexpr IntrinsicHandler handlers[]{
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"syncthreads", &I::genSyncThreads, {}, /*isElemental=*/false},
-    {"syncthreads_and", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
-    {"syncthreads_count", &I::genSyncThreadsCount, {}, /*isElemental=*/false},
-    {"syncthreads_or", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
+    {"syncthreads_and_i4", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
+    {"syncthreads_and_l4", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
+    {"syncthreads_count_i4",
+     &I::genSyncThreadsCount,
+     {},
+     /*isElemental=*/false},
+    {"syncthreads_count_l4",
+     &I::genSyncThreadsCount,
+     {},
+     /*isElemental=*/false},
+    {"syncthreads_or_i4", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
+    {"syncthreads_or_l4", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
     {"syncwarp", &I::genSyncWarp, {}, /*isElemental=*/false},
     {"system",
      &I::genSystem,
@@ -1758,8 +1767,10 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::SinOp>},
     {"sin", RTNAME_STRING(CSinF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::SinhOp>},
+    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::SinhOp>},
     {"sinh", RTNAME_STRING(SinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"sinh", "csinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"sinh", "csinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
@@ -3095,7 +3106,9 @@ IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  return mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  mlir::Value boolResult =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  return builder.createConvert(loc, resultType, boolResult);
 }
 
 mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
@@ -3516,11 +3529,23 @@ static mlir::Value getAddrFromBox(fir::FirOpBuilder &builder,
   return addr;
 }
 
+static void clocDeviceArgRewrite(fir::ExtendedValue arg) {
+  // Special case for device address in c_loc.
+  if (auto emboxOp = mlir::dyn_cast_or_null<fir::EmboxOp>(
+          fir::getBase(arg).getDefiningOp()))
+    if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+            emboxOp.getMemref().getDefiningOp()))
+      if (declareOp.getDataAttr() &&
+          declareOp.getDataAttr() == cuf::DataAttribute::Device)
+        emboxOp.getMemrefMutable().assign(declareOp.getMemref());
+}
+
 static fir::ExtendedValue
 genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
                  bool isFunc = false, bool isDevLoc = false) {
   assert(args.size() == 1);
+  clocDeviceArgRewrite(args[0]);
   mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
   mlir::Value resAddr;
   if (isDevLoc)
@@ -3795,79 +3820,40 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
 void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value sourceImage = fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2])
-          ? fir::AbsentOp::create(builder, loc,
-                                  builder.getRefType(builder.getI32Type()))
-                .getResult()
-          : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoBroadcast(builder, loc, fir::getBase(args[0]), sourceImage,
-                               status, errmsg);
+  mif::CoBroadcastOp::create(builder, loc, fir::getBase(args[0]),
+                             /*sourceImage*/ fir::getBase(args[1]),
+                             /*status*/ fir::getBase(args[2]),
+                             /*errmsg*/ fir::getBase(args[3]));
 }
 
 // CO_MAX
 void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value refNone =
-      fir::AbsentOp::create(builder, loc,
-                            builder.getRefType(builder.getI32Type()))
-          .getResult();
-  mlir::Value resultImage =
-      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoMax(builder, loc, fir::getBase(args[0]), resultImage,
-                         status, errmsg);
+  mif::CoMaxOp::create(builder, loc, fir::getBase(args[0]),
+                       /*resultImage*/ fir::getBase(args[1]),
+                       /*status*/ fir::getBase(args[2]),
+                       /*errmsg*/ fir::getBase(args[3]));
 }
 
 // CO_MIN
 void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value refNone =
-      fir::AbsentOp::create(builder, loc,
-                            builder.getRefType(builder.getI32Type()))
-          .getResult();
-  mlir::Value resultImage =
-      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoMin(builder, loc, fir::getBase(args[0]), resultImage,
-                         status, errmsg);
+  mif::CoMinOp::create(builder, loc, fir::getBase(args[0]),
+                       /*resultImage*/ fir::getBase(args[1]),
+                       /*status*/ fir::getBase(args[2]),
+                       /*errmsg*/ fir::getBase(args[3]));
 }
 
 // CO_SUM
 void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value absentInt =
-      fir::AbsentOp::create(builder, loc,
-                            builder.getRefType(builder.getI32Type()))
-          .getResult();
-  mlir::Value resultImage =
-      isStaticallyAbsent(args[1]) ? absentInt : fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2]) ? absentInt : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoSum(builder, loc, fir::getBase(args[0]), resultImage,
-                         status, errmsg);
+  mif::CoSumOp::create(builder, loc, fir::getBase(args[0]),
+                       /*resultImage*/ fir::getBase(args[1]),
+                       /*status*/ fir::getBase(args[2]),
+                       /*errmsg*/ fir::getBase(args[3]));
 }
 
 // COMMAND_ARGUMENT_COUNT
@@ -7579,9 +7565,9 @@ IntrinsicLibrary::genNumImages(mlir::Type resultType,
   assert(args.size() == 0 || args.size() == 1);
 
   if (args.size())
-    return fir::runtime::getNumImagesWithTeam(builder, loc,
-                                              fir::getBase(args[0]));
-  return fir::runtime::getNumImages(builder, loc);
+    return mif::NumImagesOp::create(builder, loc, fir::getBase(args[0]))
+        .getResult();
+  return mif::NumImagesOp::create(builder, loc).getResult();
 }
 
 // CLOCK, CLOCK64, GLOBALTIMER
@@ -8659,17 +8645,11 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   converter->checkCoarrayEnabled();
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
-  mlir::Value team =
-      !isStaticallyAbsent(args, args.size() - 1)
-          ? fir::getBase(args[args.size() - 1])
-          : builder
-                .create<fir::AbsentOp>(loc,
-                                       fir::BoxType::get(builder.getNoneType()))
-                .getResult();
+  mlir::Value team = fir::getBase(args[args.size() - 1]);
 
   if (!coarrayIsAbsent)
     TODO(loc, "this_image with coarray argument.");
-  mlir::Value res = fir::runtime::getThisImage(builder, loc, team);
+  mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
 }
 
@@ -8998,10 +8978,12 @@ IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                     llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_COUNT
@@ -9010,10 +8992,12 @@ IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_OR
@@ -9022,10 +9006,12 @@ IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCWARP

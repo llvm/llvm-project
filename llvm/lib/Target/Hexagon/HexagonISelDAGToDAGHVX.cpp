@@ -2953,6 +2953,10 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   case Intrinsic::hexagon_V6_vgathermhw_128B:
     Opcode = Hexagon::V6_vgathermhw_pseudo;
     break;
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B:
+    Opcode = Hexagon::V6_vgather_vscatter_mh_pseudo;
+    break;
   }
 
   SDVTList VTs = CurDAG->getVTList(MVT::Other);
