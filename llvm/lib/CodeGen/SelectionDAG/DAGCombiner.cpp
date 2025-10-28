@@ -23481,10 +23481,26 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT))
       return DAG.getSplat(VT, DL, InVal);
 
-    // Check if this operation is illegal and will be handled the default way.
-    if (TLI.getTypeAction(*DAG.getContext(), VT) ==
-            TargetLowering::TypeSplitVector ||
-        TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT)) {
+    // Extend this type to be byte-addressable
+    EVT OldVT = VT;
+    EVT EltVT = VT.getVectorElementType();
+    bool IsByteSized = EltVT.isByteSized();
+    if (!IsByteSized) {
+      EltVT =
+          EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
+      VT = VT.changeElementType(EltVT);
+    }
+
+    // Check if this operation will be handled the default way for its type.
+    auto IsTypeDefaultHandled = [this](EVT VT) {
+      return TLI.getTypeAction(*DAG.getContext(), VT) ==
+                 TargetLowering::TypeSplitVector ||
+             TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT);
+    };
+
+    // Check if this operation is illegal and will be handled the default way,
+    // even after extending the type to be byte-addressable.
+    if (IsTypeDefaultHandled(OldVT) && IsTypeDefaultHandled(VT)) {
       // For each dynamic insertelt, the default way will save the vector to
       // the stack, store at an offset, and load the modified vector. This can
       // dramatically increase code size if we have a chain of insertelts on a
@@ -23518,6 +23534,8 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 
         // Save the vector to the stack
         SDValue InVec = Seq.back()->getOperand(0);
+        if (!IsByteSized)
+          InVec = DAG.getNode(ISD::ANY_EXTEND, DL, VT, InVec);
         SDValue Store = DAG.getStore(DAG.getEntryNode(), DL, InVec, StackPtr,
                                      PtrInfo, SmallestAlign);
 
@@ -23525,6 +23543,10 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
         for (SDNode *N : reverse(Seq)) {
           SDValue Elmnt = N->getOperand(1);
           SDValue Index = N->getOperand(2);
+
+          // Check if we have to extend the element type
+          if (!IsByteSized && Elmnt.getValueType().bitsLT(EltVT))
+            Elmnt = DAG.getNode(ISD::ANY_EXTEND, DL, EltVT, Elmnt);
 
           // Store the new element. This may be larger than the vector element
           // type, so use a truncating store.
@@ -23540,7 +23562,8 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
         // Load the saved vector from the stack
         SDValue Load =
             DAG.getLoad(VT, DL, Store, StackPtr, PtrInfo, SmallestAlign);
-        return Load.getValue(0);
+        SDValue LoadV = Load.getValue(0);
+        return IsByteSized ? LoadV : DAG.getAnyExtOrTrunc(LoadV, DL, OldVT);
       }
     }
 
