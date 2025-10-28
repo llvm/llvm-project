@@ -8,18 +8,12 @@
 
 #include "mlir/Conversion/Normalize/Normalize.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <iomanip>
 #include <sstream>
@@ -49,21 +43,19 @@ private:
   bool isOutput(Operation &op) const noexcept;
   void reorderOperations(const SmallVector<Operation *, 16> &outputs);
   void reorderOperation(Operation *used, Operation *user,
-                        llvm::SmallPtrSet<const Operation *, 32> &visited);
+                        SmallPtrSet<const Operation *, 32> &visited);
   void renameOperations(const SmallVector<Operation *, 16> &outputs);
   void renameOperation(Operation *op,
                        SmallPtrSet<const Operation *, 32> &visited);
   bool isInitialOperation(Operation *const op) const noexcept;
-  void
-  nameAsInitialOperation(Operation *op,
-                         llvm::SmallPtrSet<const Operation *, 32> &visited);
-  void
-  nameAsRegularOperation(Operation *op,
-                         llvm::SmallPtrSet<const Operation *, 32> &visited);
+  void nameAsInitialOperation(Operation *op,
+                              SmallPtrSet<const Operation *, 32> &visited);
+  void nameAsRegularOperation(Operation *op,
+                              SmallPtrSet<const Operation *, 32> &visited);
   bool hasOnlyImmediateOperands(Operation *const op) const noexcept;
-  llvm::SetVector<int>
+  SetVector<int>
   getOutputFootprint(Operation *op,
-                     llvm::SmallPtrSet<const Operation *, 32> &visited) const;
+                     SmallPtrSet<const Operation *, 32> &visited) const;
   void appendRenamedOperands(Operation *op, SmallString<512> &name);
   void reorderOperationOperandsByName(Operation *op);
   OpPrintingFlags flags{};
@@ -90,7 +82,7 @@ void NormalizePass::runOnOperation() {
 
 void NormalizePass::renameOperations(
     const SmallVector<Operation *, 16> &outputs) {
-  llvm::SmallPtrSet<const Operation *, 32> visited;
+  SmallPtrSet<const Operation *, 32> visited;
 
   for (auto *op : outputs)
     renameOperation(op, visited);
@@ -175,7 +167,7 @@ std::string inline split(std::string_view str, const char &delimiter,
 /// arguments, void is appended, else a hash of the definition of the operation
 /// is appended.
 void NormalizePass::nameAsInitialOperation(
-    Operation *op, llvm::SmallPtrSet<const Operation *, 32> &visited) {
+    Operation *op, SmallPtrSet<const Operation *, 32> &visited) {
 
   for (Value operand : op->getOperands())
     if (Operation *defOp = operand.getDefiningOp())
@@ -196,7 +188,7 @@ void NormalizePass::nameAsInitialOperation(
   name.append("vl" + std::to_string(hash).substr(0, 5));
 
   if (auto call = dyn_cast<func::CallOp>(op)) {
-    llvm::StringRef callee = call.getCallee();
+    StringRef callee = call.getCallee();
     name.append(callee.str());
   }
 
@@ -233,7 +225,7 @@ void NormalizePass::nameAsInitialOperation(
 /// CallOp. A regular operation must have operands, thus the renaming is further
 /// handled in appendRenamedOperands.
 void NormalizePass::nameAsRegularOperation(
-    Operation *op, llvm::SmallPtrSet<const Operation *, 32> &visited) {
+    Operation *op, SmallPtrSet<const Operation *, 32> &visited) {
 
   for (Value operand : op->getOperands())
     if (Operation *defOp = operand.getDefiningOp())
@@ -260,7 +252,7 @@ void NormalizePass::nameAsRegularOperation(
   name.append("op" + std::to_string(hash).substr(0, 5));
 
   if (auto call = dyn_cast<func::CallOp>(op)) {
-    llvm::StringRef callee = call.getCallee();
+    StringRef callee = call.getCallee();
     name.append(callee.str());
   }
 
@@ -318,7 +310,7 @@ void NormalizePass::appendRenamedOperands(Operation *op,
   }
 
   if (op->hasTrait<OpTrait::IsCommutative>())
-    llvm::sort(operands.begin(), operands.end());
+    sort(operands.begin(), operands.end());
 
   name.append("$");
   for (size_t i = 0, size_ = operands.size(); i < size_; ++i) {
@@ -350,10 +342,9 @@ void NormalizePass::reorderOperationOperandsByName(Operation *op) {
   }
 
   if (op->hasTrait<OpTrait::IsCommutative>()) {
-    llvm::sort(
-        operands.begin(), operands.end(), [](const auto &a, const auto &b) {
-          return llvm::StringRef(a.first).compare_insensitive(b.first) < 0;
-        });
+    sort(operands.begin(), operands.end(), [](const auto &a, const auto &b) {
+      return StringRef(a.first).compare_insensitive(b.first) < 0;
+    });
   }
 
   for (size_t i = 0, size_ = operands.size(); i < size_; i++) {
@@ -365,7 +356,7 @@ void NormalizePass::reorderOperationOperandsByName(Operation *op) {
 /// operation and reducing the def-use distance.
 void NormalizePass::reorderOperations(
     const SmallVector<Operation *, 16> &outputs) {
-  llvm::SmallPtrSet<const Operation *, 32> visited;
+  SmallPtrSet<const Operation *, 32> visited;
   for (auto *const op : outputs)
     for (Value operand : op->getOperands())
       if (Operation *defOp = operand.getDefiningOp())
@@ -374,7 +365,7 @@ void NormalizePass::reorderOperations(
 
 void NormalizePass::reorderOperation(
     Operation *used, Operation *user,
-    llvm::SmallPtrSet<const Operation *, 32> &visited) {
+    SmallPtrSet<const Operation *, 32> &visited) {
   if (!visited.count(used)) {
     visited.insert(used);
 
@@ -426,9 +417,9 @@ bool NormalizePass::isOutput(Operation &op) const noexcept {
 /// Helper method returning indices (distance from the beginning of the basic
 /// block) of output operations using the given operation. Walks down the
 /// def-use tree recursively
-llvm::SetVector<int> NormalizePass::getOutputFootprint(
-    Operation *op, llvm::SmallPtrSet<const Operation *, 32> &visited) const {
-  llvm::SetVector<int> outputsVec;
+SetVector<int> NormalizePass::getOutputFootprint(
+    Operation *op, SmallPtrSet<const Operation *, 32> &visited) const {
+  SetVector<int> outputsVec;
   if (!visited.count(op)) {
     visited.insert(op);
 
@@ -449,8 +440,7 @@ llvm::SetVector<int> NormalizePass::getOutputFootprint(
     for (OpOperand &use : op->getUses()) {
       Operation *useOp = use.getOwner();
       if (useOp) {
-        llvm::SetVector<int> outputsUsingUop =
-            getOutputFootprint(useOp, visited);
+        SetVector<int> outputsUsingUop = getOutputFootprint(useOp, visited);
 
         outputsVec.insert(outputsUsingUop.begin(), outputsUsingUop.end());
       }
