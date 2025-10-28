@@ -95,7 +95,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 module {
-  func.func @not_tiled_no_rewriting(%arg0: memref<1x4x32xf32>, %arg1: memref<1x32x96xf32>, %arg2: memref<4x96xf32>) -> memref<4x96xf32> {
+  func.func @negative_not_tiled(%arg0: memref<1x4x32xf32>, %arg1: memref<1x32x96xf32>, %arg2: memref<4x96xf32>) -> memref<4x96xf32> {
     %c0 = arith.constant 0 : index
     %0 = ub.poison : f32
     %1 = vector.transfer_read %arg0[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} : memref<1x4x32xf32>, vector<1x4x32xf32>
@@ -107,7 +107,7 @@ module {
   }
 }
 
-// CHECK-LABEL: func.func @not_tiled_no_rewriting(
+// CHECK-LABEL: func.func @negative_not_tiled(
 // CHECK-NOT: vector.fma{{.*}}vector<8xf32>
 // CHECK: vector.contract
 
@@ -124,7 +124,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 module {
-  func.func @tensor_type_no_rewriting(%arg0: tensor<32x32x32xf32>, %arg1: tensor<32x32x32xf32>, %arg2: tensor<32x32xf32>) -> tensor<32x32xf32> {
+  func.func @negative_tensor_type(%arg0: tensor<32x32x32xf32>, %arg1: tensor<32x32x32xf32>, %arg2: tensor<32x32xf32>) -> tensor<32x32xf32> {
     %0 = ub.poison : f32
     %c0 = arith.constant 0 : index
     %c32 = arith.constant 32 : index
@@ -156,7 +156,7 @@ module {
   }
 }
 
-// CHECK-LABEL: func.func @tensor_type_no_rewriting(
+// CHECK-LABEL: func.func @negative_tensor_type(
 // CHECK-NOT: vector.fma{{.*}}vector<16xf32>
 // CHECK: vector.contract
 
@@ -173,7 +173,7 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 module {
-  func.func @accumulator_not_hoisted_outside_K_or_reduction_loop(%arg0: memref<1x4x32xf32>, %arg1: memref<1x32x96xf32>, %arg2: memref<4x96xf32>) -> memref<4x96xf32> {
+  func.func @negative_accumulator_not_hoisted_outside_K_or_reduction_loop(%arg0: memref<1x4x32xf32>, %arg1: memref<1x32x96xf32>, %arg2: memref<4x96xf32>) -> memref<4x96xf32> {
     %0 = ub.poison : f32
     %c0 = arith.constant 0 : index
     %c4 = arith.constant 4 : index
@@ -200,7 +200,7 @@ module {
   }
 }
 
-// CHECK-LABEL: func.func @accumulator_not_hoisted_outside_K_or_reduction_loop(
+// CHECK-LABEL: func.func @negative_accumulator_not_hoisted_outside_K_or_reduction_loop(
 // CHECK-NOT: vector.fma{{.*}}vector<16xf32>
 // CHECK: vector.contract
 
