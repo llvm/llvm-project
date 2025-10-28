@@ -10,8 +10,8 @@ target triple = "nvptx64-nvidia-cuda"
 define void @foo(ptr %a, ptr %b, i32 %j) {
 ; PTX-LABEL: foo(
 ; PTX:       {
-; PTX-NEXT:    .reg .b32 %r<8>;
-; PTX-NEXT:    .reg .b64 %rd<13>;
+; PTX-NEXT:    .reg .b32 %r<4>;
+; PTX-NEXT:    .reg .b64 %rd<9>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    ld.param.b64 %rd1, [foo_param_0];
@@ -22,22 +22,14 @@ define void @foo(ptr %a, ptr %b, i32 %j) {
 ; PTX-NEXT:    mul.wide.s32 %rd3, %r3, 4;
 ; PTX-NEXT:    add.s64 %rd4, %rd2, %rd3;
 ; PTX-NEXT:    st.b32 [%rd4], 0;
-; PTX-NEXT:    add.s32 %r4, %r3, %r3;
-; PTX-NEXT:    mul.wide.s32 %rd5, %r4, 4;
-; PTX-NEXT:    add.s64 %rd6, %rd2, %rd5;
-; PTX-NEXT:    st.b32 [%rd6], 1;
-; PTX-NEXT:    add.s32 %r5, %r4, 1;
-; PTX-NEXT:    mul.wide.s32 %rd7, %r5, 4;
-; PTX-NEXT:    add.s64 %rd8, %rd2, %rd7;
-; PTX-NEXT:    st.b32 [%rd8], 2;
-; PTX-NEXT:    add.s32 %r6, %r5, %r3;
-; PTX-NEXT:    mul.wide.s32 %rd9, %r6, 4;
-; PTX-NEXT:    add.s64 %rd10, %rd2, %rd9;
-; PTX-NEXT:    st.b32 [%rd10], 3;
-; PTX-NEXT:    add.s32 %r7, %r6, %r3;
-; PTX-NEXT:    mul.wide.s32 %rd11, %r7, 4;
-; PTX-NEXT:    add.s64 %rd12, %rd2, %rd11;
-; PTX-NEXT:    st.b32 [%rd12], 4;
+; PTX-NEXT:    add.s64 %rd5, %rd4, %rd3;
+; PTX-NEXT:    st.b32 [%rd5], 1;
+; PTX-NEXT:    add.s64 %rd6, %rd5, 4;
+; PTX-NEXT:    st.b32 [%rd5+4], 2;
+; PTX-NEXT:    add.s64 %rd7, %rd6, %rd3;
+; PTX-NEXT:    st.b32 [%rd7], 3;
+; PTX-NEXT:    add.s64 %rd8, %rd7, %rd3;
+; PTX-NEXT:    st.b32 [%rd8], 4;
 ; PTX-NEXT:    ret;
   %i.0 = load i32, ptr %a, align 8
   %i = add i32 %i.0, %j

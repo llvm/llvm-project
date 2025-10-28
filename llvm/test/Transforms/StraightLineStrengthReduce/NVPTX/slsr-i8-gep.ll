@@ -4,7 +4,6 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-; CHECK-LABEL: slsr_i8_zero_delta(
 define void @slsr_i8_zero_delta(ptr %in, ptr %out, i64 %add) {
 ; PTX-LABEL: slsr_i8_zero_delta(
 ; PTX:       {
@@ -28,11 +27,9 @@ define void @slsr_i8_zero_delta(ptr %in, ptr %out, i64 %add) {
 ; CHECK-NEXT:    [[GETELEM0_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
 ; CHECK-NEXT:    [[GETELEM0_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 32
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GETELEM0_1]], align 1
-; CHECK-NEXT:    [[GETELEM1_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
-; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1_0]], i64 64
+; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 64
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GETELEM1_1]], align 1
-; CHECK-NEXT:    [[GETELEM2_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
-; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM2_0]], i64 96
+; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 96
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GETELEM2_1]], align 1
 ; CHECK-NEXT:    [[OUT0:%.*]] = add i8 [[LOAD0]], [[LOAD1]]
 ; CHECK-NEXT:    [[OUT1:%.*]] = add i8 [[OUT0]], [[LOAD2]]
@@ -58,7 +55,6 @@ define void @slsr_i8_zero_delta(ptr %in, ptr %out, i64 %add) {
   ret void
 }
 
-; CHECK-LABEL: slsr_i8_zero_delta_2(
 define void @slsr_i8_zero_delta_2(ptr %in, ptr %out, i64 %add) {
 ; PTX-LABEL: slsr_i8_zero_delta_2(
 ; PTX:       {
@@ -81,11 +77,9 @@ define void @slsr_i8_zero_delta_2(ptr %in, ptr %out, i64 %add) {
 ; CHECK-SAME: ptr [[IN:%.*]], ptr [[OUT:%.*]], i64 [[ADD:%.*]]) {
 ; CHECK-NEXT:    [[GETELEM0_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GETELEM0_0]], align 1
-; CHECK-NEXT:    [[GETELEM1_0:%.*]] = getelementptr i8, ptr [[IN]], i64 [[ADD]]
-; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1_0]], i64 32
+; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 32
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GETELEM1_1]], align 1
-; CHECK-NEXT:    [[GETELEM2_0:%.*]] = getelementptr i8, ptr [[IN]], i64 [[ADD]]
-; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM2_0]], i64 64
+; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 64
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GETELEM2_1]], align 1
 ; CHECK-NEXT:    [[OUT0:%.*]] = add i8 [[LOAD0]], [[LOAD1]]
 ; CHECK-NEXT:    [[OUT1:%.*]] = add i8 [[OUT0]], [[LOAD2]]
@@ -110,7 +104,6 @@ define void @slsr_i8_zero_delta_2(ptr %in, ptr %out, i64 %add) {
   ret void
 }
 
-; CHECK-LABEL: slsr_i8_base_delta(
 define void @slsr_i8_base_delta(ptr %in, ptr %out, i64 %add) {
 ; PTX-LABEL: slsr_i8_base_delta(
 ; PTX:       {
@@ -134,12 +127,10 @@ define void @slsr_i8_base_delta(ptr %in, ptr %out, i64 %add) {
 ; CHECK-NEXT:    [[GETELEM0_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
 ; CHECK-NEXT:    [[GETELEM0_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 32
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GETELEM0_1]], align 1
-; CHECK-NEXT:    [[GETELEM1_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 1
-; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1_0]], i64 [[ADD]]
+; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 1
 ; CHECK-NEXT:    [[GETELEM1_2:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1_1]], i64 64
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GETELEM1_2]], align 1
-; CHECK-NEXT:    [[GETELEM2_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 2
-; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM2_0]], i64 [[ADD]]
+; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 2
 ; CHECK-NEXT:    [[GETELEM2_2:%.*]] = getelementptr inbounds i8, ptr [[GETELEM2_1]], i64 96
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GETELEM2_2]], align 1
 ; CHECK-NEXT:    [[OUT0:%.*]] = add i8 [[LOAD0]], [[LOAD1]]
@@ -168,7 +159,6 @@ define void @slsr_i8_base_delta(ptr %in, ptr %out, i64 %add) {
   ret void
 }
 
-; CHECK-LABEL: slsr_i8_index_delta(
 define void @slsr_i8_index_delta(ptr %in, ptr %out, i64 %add) {
 ; PTX-LABEL: slsr_i8_index_delta(
 ; PTX:       {
@@ -197,8 +187,7 @@ define void @slsr_i8_index_delta(ptr %in, ptr %out, i64 %add) {
 ; CHECK-NEXT:    [[GETELEM1_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
 ; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1_0]], i64 64
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GETELEM1_1]], align 1
-; CHECK-NEXT:    [[GETELEM2_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
-; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM2_0]], i64 96
+; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1_0]], i64 96
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GETELEM2_1]], align 1
 ; CHECK-NEXT:    [[OUT0:%.*]] = add i8 [[LOAD0]], [[LOAD1]]
 ; CHECK-NEXT:    [[OUT1:%.*]] = add i8 [[OUT0]], [[LOAD2]]
@@ -224,7 +213,6 @@ define void @slsr_i8_index_delta(ptr %in, ptr %out, i64 %add) {
   ret void
 }
 
-; CHECK-LABEL: slsr_i8_stride_delta(
 define void @slsr_i8_stride_delta(ptr %in, ptr %out, i64 %add, i64 %offset) {
 ; PTX-LABEL: slsr_i8_stride_delta(
 ; PTX:       {
@@ -250,12 +238,10 @@ define void @slsr_i8_stride_delta(ptr %in, ptr %out, i64 %add, i64 %offset) {
 ; CHECK-NEXT:    [[GETELEM0_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD]]
 ; CHECK-NEXT:    [[GETELEM0_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 32
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GETELEM0_1]], align 1
-; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[ADD]], 1
-; CHECK-NEXT:    [[GETELEM1_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD1]]
+; CHECK-NEXT:    [[GETELEM1_0:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 1
 ; CHECK-NEXT:    [[GETELEM1_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1_0]], i64 64
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GETELEM1_1]], align 1
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD]], [[OFFSET]]
-; CHECK-NEXT:    [[GETELEM2_0:%.*]] = getelementptr inbounds i8, ptr [[IN]], i64 [[ADD2]]
+; CHECK-NEXT:    [[GETELEM2_0:%.*]] = getelementptr inbounds i8, ptr [[GETELEM0_0]], i64 [[OFFSET]]
 ; CHECK-NEXT:    [[GETELEM2_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM2_0]], i64 96
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GETELEM2_1]], align 1
 ; CHECK-NEXT:    [[OUT0:%.*]] = add i8 [[LOAD0]], [[LOAD1]]
