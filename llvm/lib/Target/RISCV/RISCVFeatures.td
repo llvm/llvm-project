@@ -1850,6 +1850,10 @@ def TuneShortForwardBranchOpt
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
 
+def TuneShortForwardBranchIMinMax
+    : SubtargetFeature<"short-forward-branch-i-minmax", "HasShortForwardBranchIMinMax",
+                       "true", "Enable short forward branch optimization for min,max instructions in Zbb", [TuneShortForwardBranchOpt]>;
+
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands

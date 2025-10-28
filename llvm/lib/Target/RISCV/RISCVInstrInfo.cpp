@@ -1739,7 +1739,8 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
 /// return the defining instruction.
 static MachineInstr *canFoldAsPredicatedOp(Register Reg,
                                            const MachineRegisterInfo &MRI,
-                                           const TargetInstrInfo *TII) {
+                                           const TargetInstrInfo *TII,
+                                           bool minmax) {
   if (!Reg.isVirtual())
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
@@ -1747,6 +1748,12 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   MachineInstr *MI = MRI.getVRegDef(Reg);
   if (!MI)
     return nullptr;
+
+  if (!minmax &&
+      (MI->getOpcode() == RISCV::MAX || MI->getOpcode() == RISCV::MIN ||
+       MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
+    return nullptr;
+
   // Check if MI can be predicated and folded into the CCMOV.
   if (getPredicatedOpcode(MI->getOpcode()) == RISCV::INSTRUCTION_LIST_END)
     return nullptr;
@@ -1809,11 +1816,12 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
     return nullptr;
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-  MachineInstr *DefMI =
-      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this);
+  MachineInstr *DefMI = canFoldAsPredicatedOp(
+      MI.getOperand(5).getReg(), MRI, this, STI.hasShortForwardBranchIMinMax());
   bool Invert = !DefMI;
   if (!DefMI)
-    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this);
+    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this,
+                                  STI.hasShortForwardBranchIMinMax());
   if (!DefMI)
     return nullptr;
 
