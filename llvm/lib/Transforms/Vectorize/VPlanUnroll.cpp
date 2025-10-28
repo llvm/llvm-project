@@ -378,20 +378,18 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // part.
     if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
                       m_ExtractLastPart(m_VPValue(Op0)))) ||
-        match(&R, m_ExtractLastElement(m_VPValue(Op0)))) {
+        match(&R, m_ExtractFinalLane(m_VPValue(Op0)))) {
       auto *I = cast<VPInstruction>(&R);
-      bool IsPenultimate =
-          I->getOpcode() == VPInstruction::ExtractPenultimateElement;
-      unsigned PartIdx = IsPenultimate ? UF - 2 : UF - 1;
-
+      addUniformForAllParts(I);
       if (Plan.hasScalarVFOnly()) {
+        bool IsPenultimate =
+            I->getOpcode() == VPInstruction::ExtractPenultimateElement;
+        unsigned PartIdx = IsPenultimate ? UF - 2 : UF - 1;
         // For scalar VF, directly use the scalar part value.
-        addUniformForAllParts(I);
         I->replaceAllUsesWith(getValueForPart(Op0, PartIdx));
         continue;
       }
       // For vector VF, extract from the last part.
-      addUniformForAllParts(I);
       R.setOperand(0, getValueForPart(Op0, UF - 1));
       continue;
     }
@@ -496,6 +494,10 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       continue;
     }
     if (Lane.getKind() == VPLane::Kind::ScalableLast) {
+      // Look through mandatory Unpack.
+      [[maybe_unused]] bool Matched =
+          match(Op, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)));
+      assert(Matched && "original op must have been Unpack");
       auto *ExtractPart =
           Builder.createNaryOp(VPInstruction::ExtractLastPart, {Op});
       NewOps.push_back(

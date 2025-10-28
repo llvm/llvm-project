@@ -1017,9 +1017,9 @@ public:
     ComputeAnyOfResult,
     ComputeFindIVResult,
     ComputeReductionResult,
-    // Extracts the last part of its operand.
+    // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,
-    // Extracts the last lane of the current part of its operand.
+    // Extracts the last lane of its vector operand, per part.
     ExtractLastLane,
     // Extracts the second-to-last lane from its operand or the second-to-last
     // part if it is scalar. In the latter case, the recipe will be removed
@@ -1403,7 +1403,7 @@ public:
   /// Update the recipes first operand to the last lane of the operand using \p
   /// Builder. Must only be used for VPIRInstructions with at least one operand
   /// wrapping a PHINode.
-  void extractLastLaneOfFirstOperand(VPBuilder &Builder);
+  void extractFinalLaneOfFirstOperand(VPBuilder &Builder);
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
