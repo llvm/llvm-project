@@ -436,6 +436,7 @@ def AllowMisalignedMemAccesses
                     : Predicate<"!Subtarget->requiresStrictAlign()">;
 
 def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
+def AllowXorToEor3Merge : Predicate<"!Subtarget->disableXorMerge()">;
 
 
 //===----------------------------------------------------------------------===//
@@ -1817,10 +1818,12 @@ multiclass EOR3_pattern<ValueType Vec128Ty, ValueType Vec64Ty>{
               dsub)>;
 }
 
+let Predicates = [AllowXorToEor3Merge], AddedComplexity=1 in {
 defm : EOR3_pattern<v16i8, v8i8>;
 defm : EOR3_pattern<v8i16, v4i16>;
 defm : EOR3_pattern<v4i32, v2i32>;
 defm : EOR3_pattern<v2i64, v1i64>;
+}
 
 class BCAX_pattern<ValueType VecTy>
   : Pat<(xor (VecTy V128:$Vn), (and (VecTy V128:$Vm), (vnot (VecTy V128:$Va)))),
