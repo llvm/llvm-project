@@ -174,7 +174,7 @@ jobs:
           # that builds more quickly.
           macos-13 | macos-14)
             bootstrap_prefix="BOOTSTRAP"
-            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF -D${bootstrap_prefix}-LLVM_TARGETS_TO_BUILD=Native"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
             ;;
           *)
             bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
@@ -251,18 +251,13 @@ jobs:
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
   # Use a separate job to test some of the projects when running on the smaller runners.
-  test-release-package-mac-flang-mlir:
-    name: "Test Release Package Mac OS (flang + mlir)"
+  test-release-package-mac-other-projects:
+    name: "Test Release Package Mac OS (other projects)"
     needs:
       - prepare
-    # Flang is currently disabled on Mac due to
-    # https://github.com/llvm/llvm-project/issues/160546
-    # so we don't need to test it.
     if: >-
-      false && 
       github.event_name == 'pull_request' &&
-      (needs.prepare.outputs.build-runs-on == 'macos-13' ||
-       needs.prepare.outputs.build-runs-on == 'macos-14')
+      needs.prepare.outputs.build-runs-on == 'macos-13
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
     - name: Checkout LLVM
@@ -275,12 +270,12 @@ jobs:
       run: |
         cmake -G Ninja -S llvm -B build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -DLLVM_RELEASE_ENABLE_PROJECTS="clang;mlir;flang" \
-            -DLLVM_RELEASE_FINAL_STAGE_TARGETS="check-flang;check-mlir" \
+            -DLLVM_RELEASE_ENABLE_PROJECTS="mlir" \
+            -DLLVM_RELEASE_FINAL_STAGE_TARGETS="check-mlir" \
             -C clang/cmake/caches/Release.cmake
     - name: Build and Test
       run: |
-        ninja -C build stage2-check-flang stage2-check-mlir
+        ninja -C build stage2-check-mlir
 
 
   upload-release-binaries:
