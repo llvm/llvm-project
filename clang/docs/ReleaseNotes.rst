@@ -387,6 +387,19 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
+- ``-Wpointer-bool-conversion`` will now also warn in the following case
+
+  .. code-block:: c
+
+    struct B {
+      B(bool V) {}
+    };
+    void test(const B& b);
+    void test0(B* b) {
+      test(b); // this will call B::B(bool) and create a new B
+    }
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
