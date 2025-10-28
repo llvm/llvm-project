@@ -78,6 +78,7 @@ jobs:
         VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
         VCPKG_ENV_PASSTHROUGH: 1
       run: |
+        vcpkg update
         mkdir custom-triplets
         cp /c/vcpkg/triples/x64-windows-static.cmake custom-triplets/x64-windows-static-release.cmake
         cat custom-triplets/x64-windows-static-release.cmake
