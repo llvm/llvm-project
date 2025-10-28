@@ -130,7 +130,7 @@ AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     visitRegionSuccessors(getProgramPointAfter(branch), branch,
-                          /*successor=*/{branch, branch->getResults()},
+                          /*successor=*/RegionBranchPoint::parent(),
                           resultLattices);
     return success();
   }
@@ -279,7 +279,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitCallableOperation(
 
 void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
     ProgramPoint *point, RegionBranchOpInterface branch,
-    RegionSuccessor successor, ArrayRef<AbstractSparseLattice *> lattices) {
+    RegionBranchPoint successor, ArrayRef<AbstractSparseLattice *> lattices) {
   const auto *predecessors = getOrCreateFor<PredecessorState>(point, point);
   assert(predecessors->allPredecessorsKnown() &&
          "unexpected unresolved region successors");
@@ -314,7 +314,7 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
         visitNonControlFlowArgumentsImpl(
             branch,
             RegionSuccessor(
-                branch, branch->getResults().slice(firstIndex, inputs.size())),
+                branch->getResults().slice(firstIndex, inputs.size())),
             lattices, firstIndex);
       } else {
         if (!inputs.empty())
