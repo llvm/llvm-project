@@ -2000,8 +2000,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     unsigned slop = 0;
     if (!llvm::to_integer(v, slop))
       error(arg->getSpelling() +
-            ": expected a non-negative integer, but got '" + v +
-            "'");
+            ": expected a non-negative integer, but got '" + v +"'");
     config->slopScale = slop;
   }
 
