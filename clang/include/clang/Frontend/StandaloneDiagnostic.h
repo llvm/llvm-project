@@ -33,7 +33,6 @@ namespace clang {
 /// that file.
 /// To report the diagnostic, it must first be translated back into a
 /// StoredDiagnostic with a new associated SourceManager.
-///
 struct StandaloneDiagnostic {
   /// Represents a CharSourceRange within a StandaloneDiagnostic.
   struct SourceOffsetRange {
