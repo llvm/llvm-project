@@ -13,11 +13,16 @@
 #define BOLT_PASSES_POINTER_AUTH_CFI_ANALYZER
 
 #include "bolt/Passes/BinaryPasses.h"
+#include <mutex>
 
 namespace llvm {
 namespace bolt {
 
 class PointerAuthCFIAnalyzer : public BinaryFunctionPass {
+  // setIgnored() is not thread-safe, but the pass is running on functions in
+  // parallel.
+  std::mutex IgnoreMutex;
+
 public:
   explicit PointerAuthCFIAnalyzer() : BinaryFunctionPass(false) {}
 

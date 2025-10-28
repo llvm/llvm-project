@@ -47,6 +47,7 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
         // Not all functions have .cfi_negate_ra_state in them. But if one does,
         // we expect psign/pauth instructions to have the hasNegateRAState
         // annotation.
+        std::lock_guard<std::mutex> Lock(IgnoreMutex);
         BF.setIgnored();
         if (opts::Verbosity >= 1)
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
@@ -73,6 +74,7 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
             BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                       << BF.getPrintName()
                       << ": ptr signing inst encountered in Signed RA state\n";
+          std::lock_guard<std::mutex> Lock(IgnoreMutex);
           BF.setIgnored();
           return false;
         }
@@ -84,6 +86,7 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
                       << BF.getPrintName()
                       << ": ptr authenticating inst encountered in Unsigned RA "
                          "state\n";
+          std::lock_guard<std::mutex> Lock(IgnoreMutex);
           BF.setIgnored();
           return false;
         }
