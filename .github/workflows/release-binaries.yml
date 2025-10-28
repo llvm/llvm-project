@@ -289,7 +289,7 @@ jobs:
         ls -l  /c/vcpkg/packages/libxml2_x64-windows-static/lib/
         find /c/vcpkg/ -iname '*.cmake'
         find /c/vcpkg/ -iname '*cmake*'
-        cat  /c/vcpkg/packages/libxml2_x64-windows-static/lib/cmake/*
+        cat /c/vcpkg/packages/libxml2_x64-windows-static/share/libxml2/libxml2-config.cmake
 
     - name: Configure
       id: build
