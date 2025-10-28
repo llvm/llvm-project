@@ -2022,8 +2022,9 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
                              TTI.getCastContextHint(BC), CostKind, BC);
   }
 
-  if (!TargetScalarType || LI->user_empty())
+  if (!TargetScalarType)
     return false;
+  assert(!LI->user_empty() && "Unexpected load without bitcast users");
   InstructionCost ScalarizedCost =
       TTI.getMemoryOpCost(Instruction::Load, TargetScalarType, LI->getAlign(),
                           LI->getPointerAddressSpace(), CostKind);
