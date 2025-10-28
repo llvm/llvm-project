@@ -66,7 +66,7 @@ struct ExpandShapeOpInterface
                                        ValueBoundsConstraintSet &cstr) const {
     auto expandOp = cast<memref::ExpandShapeOp>(op);
     assert(value == expandOp.getResult() && "invalid value");
-    cstr.bound(value)[dim] == expandOp.getOutputShape()[dim];
+    cstr.bound(value)[dim] == expandOp.getMixedOutputShape()[dim];
   }
 };
 

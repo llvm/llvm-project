@@ -449,10 +449,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_coro_free:
   case Builtin::BI__builtin_coro_size: {
-    cgm.errorNYI(e->getSourceRange(),
-                 "BI__builtin_coro_free, BI__builtin_coro_size NYI");
-    assert(!cir::MissingFeatures::coroSizeBuiltinCall());
-    return getUndefRValue(e->getType());
+    GlobalDecl gd{fd};
+    mlir::Type ty = cgm.getTypes().getFunctionType(
+        cgm.getTypes().arrangeGlobalDeclaration(gd));
+    const auto *nd = cast<NamedDecl>(gd.getDecl());
+    cir::FuncOp fnOp =
+        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
+    fnOp.setBuiltin(true);
+    return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
+                    returnValue);
   }
   case Builtin::BI__builtin_prefetch: {
     auto evaluateOperandAsInt = [&](const Expr *arg) {

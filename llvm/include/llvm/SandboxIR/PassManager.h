@@ -49,7 +49,7 @@ protected:
   }
   PassManager(const PassManager &) = delete;
   PassManager(PassManager &&) = default;
-  virtual ~PassManager() = default;
+  ~PassManager() override = default;
   PassManager &operator=(const PassManager &) = delete;
 
 public:
