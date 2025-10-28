@@ -18,7 +18,7 @@ namespace clang::tidy::abseil {
 void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
   auto Matcher =
       expr(comparisonOperatorWithCallee(functionDecl(
-               functionDecl(TimeConversionFunction()).bind("function_decl"))))
+               functionDecl(timeConversionFunction()).bind("function_decl"))))
           .bind("binop");
 
   Finder->addMatcher(Matcher, this);

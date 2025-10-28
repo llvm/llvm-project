@@ -17641,12 +17641,28 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars, [&](Value *V) {
-          return isa<PoisonValue>(V) ||
-                 (E->Idx == 0 && isa<InsertElementInst>(V)) ||
-                 E->isCopyableElement(V) ||
-                 (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
-        }))
+        (all_of(E->Scalars,
+                [&](Value *V) {
+                  return isa<PoisonValue>(V) ||
+                         (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                         E->isCopyableElement(V) ||
+                         (!isVectorLikeInstWithConstOps(V) &&
+                          isUsedOutsideBlock(V));
+                }) &&
+         (!E->doesNotNeedToSchedule() ||
+          any_of(E->Scalars,
+                 [&](Value *V) {
+                   if (!isa<Instruction>(V) ||
+                       (E->hasCopyableElements() && E->isCopyableElement(V)))
+                     return false;
+                   return !areAllOperandsNonInsts(V);
+                 }) ||
+          none_of(E->Scalars, [&](Value *V) {
+            if (!isa<Instruction>(V) ||
+                (E->hasCopyableElements() && E->isCopyableElement(V)))
+              return false;
+            return MustGather.contains(V);
+          }))))
       Res = FindLastInst();
     else
       Res = FindFirstInst();

@@ -72,7 +72,7 @@ public:
       : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
                      PSI, DL, RPOT) {}
 
-  virtual ~InstCombinerImpl() = default;
+  ~InstCombinerImpl() override = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);

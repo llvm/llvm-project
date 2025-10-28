@@ -354,7 +354,7 @@ private:
   bool VisitDeclStmt(DeclStmt *S);
   bool TraverseStmt(Stmt *S);
 
-  bool TraverseStmtImpl(Stmt *S);
+  bool traverseStmtImpl(Stmt *S);
 
   /// Add an expression to the list of expressions on which the container
   /// expression depends.

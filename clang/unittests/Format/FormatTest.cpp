@@ -19615,6 +19615,25 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "};",
                Alignment);
 
+  // Aligning lines should not mess up the comments. However, feel free to
+  // change the test if it turns out that comments inside the closure should not
+  // be aligned with those outside it.
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};  //\n"
+               "auto b                     = [] { //\n"
+               "  return;                         //\n"
+               "};",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};  //\n"
+               "auto b                     = [] { //\n"
+               "  return aaaaaaaaaaaaaaaaaaaaa;   //\n"
+               "};",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaa = {};      //\n"
+               "auto b               = [] {     //\n"
+               "  return aaaaaaaaaaaaaaaaaaaaa; //\n"
+               "};",
+               Alignment);
+
   verifyFormat("auto b = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "           ccc ? aaaaa : bbbbb,\n"
                "           dddddddddddddddddddddddddd);",

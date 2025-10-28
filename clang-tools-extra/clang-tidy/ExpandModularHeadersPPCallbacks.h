@@ -44,7 +44,7 @@ public:
   ExpandModularHeadersPPCallbacks(
       CompilerInstance *CI,
       IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-  ~ExpandModularHeadersPPCallbacks();
+  ~ExpandModularHeadersPPCallbacks() override;
 
   /// Returns the preprocessor that provides callbacks for the whole
   /// translation unit, including the main file, textual headers, and modular

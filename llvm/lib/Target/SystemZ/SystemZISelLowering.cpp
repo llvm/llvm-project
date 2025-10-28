@@ -1714,7 +1714,7 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
     }
     if (Constraint[1] == '@') {
       if (StringRef("{@cc}").compare(Constraint) == 0)
-        return std::make_pair(0u, &SystemZ::GR32BitRegClass);
+        return std::make_pair(SystemZ::CC, &SystemZ::CCRRegClass);
     }
   }
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
@@ -1765,10 +1765,6 @@ SDValue SystemZTargetLowering::LowerAsmOutputForConstraint(
   if (OpInfo.ConstraintVT.isVector() || !OpInfo.ConstraintVT.isInteger() ||
       OpInfo.ConstraintVT.getSizeInBits() < 8)
     report_fatal_error("Glue output operand is of invalid type");
-
-  MachineFunction &MF = DAG.getMachineFunction();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  MRI.addLiveIn(SystemZ::CC);
 
   if (Glue.getNode()) {
     Glue = DAG.getCopyFromReg(Chain, DL, SystemZ::CC, MVT::i32, Glue);

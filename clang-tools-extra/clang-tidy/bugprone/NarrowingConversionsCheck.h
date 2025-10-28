@@ -41,7 +41,7 @@ private:
   void diagNarrowIntegerConstantToSignedInt(SourceLocation SourceLoc,
                                             const Expr &Lhs, const Expr &Rhs,
                                             const llvm::APSInt &Value,
-                                            const uint64_t HexBits);
+                                            uint64_t HexBits);
 
   void diagNarrowConstant(SourceLocation SourceLoc, const Expr &Lhs,
                           const Expr &Rhs);

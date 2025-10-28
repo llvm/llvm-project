@@ -370,3 +370,12 @@ namespace GH150709 {
   static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
   static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
 }
+
+namespace DiscardedAddrLabel {
+  void foo(void) {
+  L:
+    *&&L; // both-error {{indirection not permitted}} \
+          // both-warning {{expression result unused}}
+  }
+}
+

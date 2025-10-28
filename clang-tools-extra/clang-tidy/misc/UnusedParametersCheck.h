@@ -18,7 +18,7 @@ namespace clang::tidy::misc {
 class UnusedParametersCheck : public ClangTidyCheck {
 public:
   UnusedParametersCheck(StringRef Name, ClangTidyContext *Context);
-  ~UnusedParametersCheck();
+  ~UnusedParametersCheck() override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;

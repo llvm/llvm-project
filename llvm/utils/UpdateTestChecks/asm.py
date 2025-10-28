@@ -570,6 +570,7 @@ def get_run_handler(triple):
         "arm64": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
         "arm64e": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "arm64ec": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
+        "arm64-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "arm64-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "arm64-apple-macosx": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "armv7-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
