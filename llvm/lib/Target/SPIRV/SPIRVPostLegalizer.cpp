@@ -138,11 +138,14 @@ static SPIRVType *deduceTypeForGBuildVector(MachineInstr *I,
                                             MachineIRBuilder &MIB,
                                             Register ResVReg) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Processing " << *I << "\n");
   // First check if any of the operands have a type.
   for (unsigned i = 1; i < I->getNumOperands(); ++i) {
     if (SPIRVType *OpType =
             GR->getSPIRVTypeForVReg(I->getOperand(i).getReg())) {
       const LLT &ResLLT = MRI.getType(ResVReg);
+      LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Found operand type "
+                        << *OpType << ", returning vector type\n");
       return GR->getOrCreateSPIRVVectorType(OpType, ResLLT.getNumElements(),
                                             MIB, false);
     }
@@ -153,11 +156,14 @@ static SPIRVType *deduceTypeForGBuildVector(MachineInstr *I,
       Register ExtractResReg = Use.getOperand(0).getReg();
       if (SPIRVType *ScalarType = GR->getSPIRVTypeForVReg(ExtractResReg)) {
         const LLT &ResLLT = MRI.getType(ResVReg);
+        LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Found use type "
+                          << *ScalarType << ", returning vector type\n");
         return GR->getOrCreateSPIRVVectorType(
             ScalarType, ResLLT.getNumElements(), MIB, false);
       }
     }
   }
+  LLVM_DEBUG(dbgs() << "deduceTypeForGBuildVector: Could not deduce type\n");
   return nullptr;
 }
 
@@ -191,7 +197,8 @@ static SPIRVType *deduceTypeForGIntrinsic(MachineInstr *I, MachineFunction &MF,
   for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
     const unsigned UseOpc = Use.getOpcode();
     assert(UseOpc == TargetOpcode::G_EXTRACT_VECTOR_ELT ||
-           UseOpc == TargetOpcode::G_SHUFFLE_VECTOR);
+           UseOpc == TargetOpcode::G_SHUFFLE_VECTOR ||
+           UseOpc == TargetOpcode::G_BUILD_VECTOR);
     Register UseResultReg = Use.getOperand(0).getReg();
     if (SPIRVType *UseResType = GR->getSPIRVTypeForVReg(UseResultReg)) {
       SPIRVType *ScalarType = GR->getScalarOrVectorComponentType(UseResType);
@@ -316,8 +323,7 @@ static bool requiresSpirvType(MachineInstr &I, SPIRVGlobalRegistry *GR,
 }
 
 static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
-                                                SPIRVGlobalRegistry *GR,
-                                                MachineIRBuilder MIB) {
+                                                SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<MachineInstr *, 8> Worklist;
   for (MachineBasicBlock &MBB : MF) {
@@ -342,6 +348,7 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
     SmallVector<MachineInstr *, 8> NextWorklist;
 
     for (MachineInstr *I : Worklist) {
+      MachineIRBuilder MIB(*I);
       if (deduceAndAssignSpirvType(I, MF, GR, MIB)) {
         Changed = true;
       } else {
@@ -360,8 +367,7 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
 }
 
 static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
-                                           SPIRVGlobalRegistry *GR,
-                                           MachineIRBuilder MIB) {
+                                           SPIRVGlobalRegistry *GR) {
   LLVM_DEBUG(dbgs() << "Entering ensureAssignTypeForTypeFolding for function "
                     << MF.getName() << "\n");
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -395,6 +401,7 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
             dbgs() << "  Adding ASSIGN_TYPE for ResultRegister: "
                    << printReg(ResultRegister, MRI.getTargetRegisterInfo())
                    << " with type: " << *ResultType);
+        MachineIRBuilder MIB(MI);
         insertAssignInstr(ResultRegister, nullptr, ResultType, GR, MIB, MRI);
       }
     }
@@ -460,9 +467,8 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
   GR->setCurrentFunc(MF);
-  MachineIRBuilder MIB(MF);
-  registerSpirvTypeForNewInstructions(MF, GR, MIB);
-  ensureAssignTypeForTypeFolding(MF, GR, MIB);
+  registerSpirvTypeForNewInstructions(MF, GR);
+  ensureAssignTypeForTypeFolding(MF, GR);
   lowerExtractVectorElements(MF);
 
   return true;
