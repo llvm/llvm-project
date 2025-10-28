@@ -76,28 +76,29 @@
 !
 ! On AIX, -pie is never passed to the linker.
 ! RUN: %flang -target powerpc64-unknown-aix -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=NO-PIE
+! RUN:     | FileCheck %s --check-prefixes=NO-PIE
 ! RUN: %flang -target powerpc64-unknown-aix -pie -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=NO-PIE
+! RUN:     | FileCheck %s --check-prefixes=NO-PIE,UNUSED
 ! RUN: %flang -target powerpc64-unknown-aix -no-pie -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=NO-PIE
+! RUN:     | FileCheck %s --check-prefixes=NO-PIE,UNUSED
 !
 ! On MinGW and Windows, -pie may be specified, but it is ignored.
 ! RUN: %flang -target aarch64-pc-windows-gnu -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
+! RUN:   | FileCheck %s --check-prefixes=NO-PIE
 ! RUN: %flang -target x86_64-pc-windows-gnu -pie -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
+! RUN:   | FileCheck %s --check-prefixes=NO-PIE,UNUSED
 ! RUN: %flang -target i686-pc-windows-gnu -no-pie -### %s 2>&1 \
-! RUN:   | FileCheck %s --check-prefix=NO-PIE
+! RUN:   | FileCheck %s --check-prefixes=NO-PIE,UNUSED
 ! RUN: %flang -target aarch64-windows-msvc -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=NO-PIE
+! RUN:     | FileCheck %s --check-prefixes=NO-PIE
 ! RUN: %flang -target aarch64-windows-msvc -pie -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=NO-PIE
+! RUN:     | FileCheck %s --check-prefixes=NO-PIE,UNUSED
 ! RUN: %flang -target aarch64-windows-msvc -no-pie -### %s 2>&1 \
-! RUN:     | FileCheck %s --check-prefix=NO-PIE
+! RUN:     | FileCheck %s --check-prefixes=NO-PIE,UNUSED
 !
 ! PIE: "-pie"
 ! NO-PIE-NOT: "-pie"
+! UNUSED: warning: argument unused during compilation: '{{(-no)?}}-pie'
 ! ------------------------------------------------------------------------------
 
 program hello
