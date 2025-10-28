@@ -947,10 +947,12 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
 // Normalize
 //===----------------------------------------------------------------------===//
 def Normalize : Pass<"normalize", "ModuleOp"> {
-  let summary = "convert MLIR input to its normalized form";
+  let summary = "Convert MLIR input to its normalized form";
   let description = [{
-    This pass produces reordered MLIR input with determinstic variable
-    names to reduce the diff between two semantically similar programs
+    This pass aims to transform MLIR inputs into a normal form by reordering
+    and renaming instructions while preserving the same semantics. The pass
+    makes it easier to spot semantic differences while diffing two modules
+    which have undergone different passes.
   }];
 }
 
