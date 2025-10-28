@@ -1020,6 +1020,7 @@ void ModFileWriter::PutObjectEntity(
         break;
       case common::IgnoreTKR::Contiguous:
         os << 'c';
+        break;
       case common::IgnoreTKR::Pointer:
         os << 'p';
         break;
