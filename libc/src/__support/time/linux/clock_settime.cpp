@@ -34,13 +34,13 @@ ErrorOr<int> clock_settime(clockid_t clockid, const timespec *ts) {
 
   __kernel_timespec ts64{};
 
+  // Populate the 64-bit kernel structure from the user-provided timespec
+  ts64.tv_sec = static_cast<decltype(ts64.tv_sec)>(ts->tv_sec);
+  ts64.tv_nsec = static_cast<decltype(ts64.tv_nsec)>(ts->tv_nsec);
+
   ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_settime64,
                                           static_cast<long>(clockid),
                                           reinterpret_cast<long>(&ts64));
-  if (ret == 0) {
-    ts->tv_sec = static_cast<decltype(ts->tv_sec)>(ts64.tv_sec);
-    ts->tv_nsec = static_cast<decltype(ts->tv_nsec)>(ts64.tv_nsec);
-  }
 #else
 #error "SYS_clock_settime and SYS_clock_settime64 syscalls not available."
 #endif
