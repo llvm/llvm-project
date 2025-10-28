@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// does not.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/inconsistent-ifelse-braces.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/inconsistent-ifelse-braces.html
 class InconsistentIfelseBracesCheck : public ClangTidyCheck {
 public:
   InconsistentIfelseBracesCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,7 +30,7 @@ private:
                    const IfStmt *If);
   void checkStmt(const ast_matchers::MatchFinder::MatchResult &Result,
                  const Stmt *S, SourceLocation StartLoc,
-                 SourceLocation EndLocHint = SourceLocation());
+                 SourceLocation EndLocHint = {});
 };
 
 } // namespace clang::tidy::bugprone
