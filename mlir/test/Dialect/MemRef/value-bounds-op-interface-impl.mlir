@@ -67,11 +67,11 @@ func.func @memref_dim_all_positive(%m: memref<?xf32>, %x: index) {
 //  CHECK-SAME:     %[[m:[a-zA-Z0-9]+]]: memref<?xf32>
 //  CHECK-SAME:     %[[sz:[a-zA-Z0-9]+]]: index
 //       CHECK:   %[[c4:.*]] = arith.constant 4 : index
-//       CHECK:   return %[[sz]], %[[c4]]
+//       CHECK:   return %[[c4]], %[[sz]]
 func.func @memref_expand(%m: memref<?xf32>, %sz: index) -> (index, index) {
-  %0 = memref.expand_shape %m [[0, 1]] output_shape [%sz, 4]: memref<?xf32> into memref<?x4xf32>
-  %1 = "test.reify_bound"(%0) {dim = 0} : (memref<?x4xf32>) -> (index)
-  %2 = "test.reify_bound"(%0) {dim = 1} : (memref<?x4xf32>) -> (index)
+  %0 = memref.expand_shape %m [[0, 1]] output_shape [4, %sz]: memref<?xf32> into memref<4x?xf32>
+  %1 = "test.reify_bound"(%0) {dim = 0} : (memref<4x?xf32>) -> (index)
+  %2 = "test.reify_bound"(%0) {dim = 1} : (memref<4x?xf32>) -> (index)
   return %1, %2 : index, index
 }
 

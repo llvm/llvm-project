@@ -1525,7 +1525,15 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   }
 
   // Try to extend the entire expression tree to the wide destination type.
-  if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
+  bool ShouldExtendExpression = true;
+  Value *TruncSrc = nullptr;
+  // It is not desirable to extend expression in the trunc + sext pattern when
+  // destination type is narrower than original (pre-trunc) type.
+  if (match(Src, m_Trunc(m_Value(TruncSrc))))
+    if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
+      ShouldExtendExpression = false;
+  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+      canEvaluateSExtd(Src, DestTy)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
@@ -1545,13 +1553,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                                       ShAmt);
   }
 
-  Value *X;
-  if (match(Src, m_Trunc(m_Value(X)))) {
+  Value *X = TruncSrc;
+  if (X) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    if (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)
-      return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
+    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
+      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
+        ResTrunc->setHasNoSignedWrap(true);
+      return Res;
+    }
 
     // If input is a trunc from the destination type, then convert into shifts.
     if (Src->hasOneUse() && X->getType() == DestTy) {
