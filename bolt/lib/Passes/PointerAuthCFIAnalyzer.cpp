@@ -28,6 +28,10 @@
 
 using namespace llvm;
 
+namespace opts {
+extern llvm::cl::opt<unsigned> Verbosity;
+} // namespace opts
+
 namespace llvm {
 namespace bolt {
 
@@ -44,9 +48,10 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
         // we expect psign/pauth instructions to have the hasNegateRAState
         // annotation.
         BF.setIgnored();
-        BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                  << BF.getPrintName()
-                  << ": ptr sign/auth inst without .cfi_negate_ra_state\n";
+        if (opts::Verbosity >= 1)
+          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                    << BF.getPrintName()
+                    << ": ptr sign/auth inst without .cfi_negate_ra_state\n";
         return false;
       }
     }
@@ -64,19 +69,21 @@ bool PointerAuthCFIAnalyzer::runOnFunction(BinaryFunction &BF) {
       if (BC.MIB->isPSignOnLR(Inst)) {
         if (RAState) {
           // RA signing instructions should only follow unsigned RA state.
-          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                    << BF.getPrintName()
-                    << ": ptr signing inst encountered in Signed RA state\n";
+          if (opts::Verbosity >= 1)
+            BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                      << BF.getPrintName()
+                      << ": ptr signing inst encountered in Signed RA state\n";
           BF.setIgnored();
           return false;
         }
       } else if (BC.MIB->isPAuthOnLR(Inst)) {
         if (!RAState) {
           // RA authenticating instructions should only follow signed RA state.
-          BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                    << BF.getPrintName()
-                    << ": ptr authenticating inst encountered in Unsigned RA "
-                       "state\n";
+          if (opts::Verbosity >= 1)
+            BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
+                      << BF.getPrintName()
+                      << ": ptr authenticating inst encountered in Unsigned RA "
+                         "state\n";
           BF.setIgnored();
           return false;
         }
