@@ -10846,20 +10846,11 @@ static SDValue combineShiftToMULH(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
 
   SDValue MulhRightOp;
   if (LeftOp.getOpcode() != RightOp.getOpcode()) {
-    if (ConstantSDNode *Constant = isConstOrConstSplat(RightOp)) {
-      unsigned ActiveBits = IsSignExt
-                                ? Constant->getAPIntValue().getSignificantBits()
-                                : Constant->getAPIntValue().getActiveBits();
-      if (ActiveBits > NarrowVTSize)
-        return SDValue();
-      MulhRightOp = DAG.getConstant(
-          Constant->getAPIntValue().trunc(NarrowVT.getScalarSizeInBits()), DL,
-          NarrowVT);
-    } else if (IsZeroExt &&
-               DAG.computeKnownBits(RightOp).countMinLeadingZeros() >=
-                   NarrowVTSize) {
+    if (IsZeroExt && ShiftOperand.hasOneUse() &&
+        DAG.computeKnownBits(RightOp).countMinLeadingZeros() >= NarrowVTSize) {
       MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
-    } else if (IsSignExt && DAG.ComputeNumSignBits(RightOp) > NarrowVTSize) {
+    } else if (IsSignExt && ShiftOperand.hasOneUse() &&
+               DAG.ComputeNumSignBits(RightOp) > NarrowVTSize) {
       MulhRightOp = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, RightOp);
     } else {
       return SDValue();
