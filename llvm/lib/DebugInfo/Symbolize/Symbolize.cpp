@@ -566,8 +566,7 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
     StringRef ArchivePath = It->second;
     StringRef MemberName = sys::path::filename(DbgObj->getFileName());
     FullDbgObjKey = (Twine(ArchivePath) + "(" + MemberName + ")").str();
-  } 
-  else {
+  } else {
     FullDbgObjKey = DbgObj->getFileName().str();
   }
   BinaryForPath.find(FullDbgObjKey)
