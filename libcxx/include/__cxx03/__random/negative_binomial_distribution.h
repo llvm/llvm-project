@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -58,13 +58,8 @@ private:
 
 public:
   // constructor and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI negative_binomial_distribution() : negative_binomial_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit negative_binomial_distribution(result_type __k, double __p = 0.5) : __p_(__k, __p) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit negative_binomial_distribution(result_type __k = 1, double __p = 0.5)
       : __p_(__k, __p) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit negative_binomial_distribution(const param_type& __p) : __p_(__p) {}
   _LIBCPP_HIDE_FROM_ABI void reset() {}
 
@@ -154,4 +149,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_NEGATIVE_BINOMIAL_DISTRIBUTION_H

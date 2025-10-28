@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-LABEL: LBB0{{.*}}if.end
 ; CHECK: r[[REG:[0-9]+]] = zxth
 ; CHECK: lsr(r[[REG]],

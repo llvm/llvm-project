@@ -33,7 +33,7 @@ class GreedyRewriteConfig;
 
 #define GEN_PASS_DECL_CANONICALIZER
 #define GEN_PASS_DECL_CONTROLFLOWSINK
-#define GEN_PASS_DECL_CSEPASS
+#define GEN_PASS_DECL_CSE
 #define GEN_PASS_DECL_INLINER
 #define GEN_PASS_DECL_LOOPINVARIANTCODEMOTION
 #define GEN_PASS_DECL_MEM2REG
@@ -46,6 +46,7 @@ class GreedyRewriteConfig;
 #define GEN_PASS_DECL_SYMBOLPRIVATIZE
 #define GEN_PASS_DECL_TOPOLOGICALSORT
 #define GEN_PASS_DECL_COMPOSITEFIXEDPOINTPASS
+#define GEN_PASS_DECL_BUBBLEDOWNMEMORYSPACECASTS
 #include "mlir/Transforms/Passes.h.inc"
 
 /// Creates an instance of the Canonicalizer pass, configured with default
@@ -62,8 +63,8 @@ std::unique_ptr<Pass> createCanonicalizerPass();
 /// set to their type name.
 std::unique_ptr<Pass>
 createCanonicalizerPass(const GreedyRewriteConfig &config,
-                        ArrayRef<std::string> disabledPatterns = std::nullopt,
-                        ArrayRef<std::string> enabledPatterns = std::nullopt);
+                        ArrayRef<std::string> disabledPatterns = {},
+                        ArrayRef<std::string> enabledPatterns = {});
 
 /// Creates a pass to perform control-flow sinking.
 std::unique_ptr<Pass> createControlFlowSinkPass();

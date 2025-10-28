@@ -297,7 +297,9 @@ arguments for the region of that MLIR operation. This enables, for example, the
 introduction of private copies of the same underlying variable defined outside
 the MLIR operation the clause is attached to. Currently, clauses with this
 property can be classified into three main categories:
-  - Map-like clauses: `map`, `use_device_addr` and `use_device_ptr`.
+  - Map-like clauses: `host_eval` (compiler internal, not defined by the OpenMP
+  specification: [see more](#host-evaluated-clauses-in-target-regions)), `map`,
+  `use_device_addr` and `use_device_ptr`.
   - Reduction-like clauses: `in_reduction`, `reduction` and `task_reduction`.
   - Privatization clauses: `private`.
 
@@ -350,12 +352,31 @@ let assemblyFormat = clausesAssemblyFormat # [{
 ```
 
 The `BlockArgOpenMPOpInterface` has been introduced to simplify the addition and
-handling of these kinds of clauses. It holds `num<ClauseName>BlockArgs()`
-functions that by default return 0, to be overriden by each clause through the
-`extraClassDeclaration` property. Based on these functions and the expected
-alphabetical sorting between entry block argument-defining clauses, it
-implements `get<ClauseName>BlockArgs()` functions that are the intended method
-of accessing clause-defined block arguments.
+handling of these kinds of clauses. Adding it to an operation directly, or
+indirectly through a clause, results in the addition of overridable
+`get<ClauseName>Vars()` and `num<ClauseName>BlockArgs()` public functions for
+all entry block argument-generating clauses. By default, the reported number of
+block arguments defined by a clause will correspond to the number of operands
+taken by the operation for that clause. This list of operands will be empty by
+default, and will automatically be overriden by getters of the corresponding
+`Variadic<...> $<clause_name>_vars` argument of the same clause's definition.
+
+In addition to these methods added to the actual operations, the
+`BlockArgOpenMPOpInterface` itself defines a set of methods based on the
+previous ones and on the convention that entry block arguments for multiple
+clauses are sorted alphabetically by clause name. These are listed below, and
+they represent the main way in which clause-defined block arguments should be
+accessed:
+  - `get<ClauseName>BlockArgsStart()`: Returns the index within the list of
+  entry block arguments where the first element defined by the given clause
+  should be located.
+  - `get<ClauseName>BlockArgs()`: Returns the list of entry block arguments
+  defined by the given clause.
+  - `numClauseBlockArgs()`: Returns the total number of entry block arguments
+  defined by all clauses.
+  - `getBlockArgsPairs()`: Returns a list of pairs where the first element is
+  the outside value, or operand, and the second element is the corresponding
+  entry block argument.
 
 ## Loop-Associated Directives
 
@@ -521,4 +542,59 @@ omp.parallel ... {
   ...
   omp.terminator
 } {omp.composite}
+```
+
+## Host-Evaluated Clauses in Target Regions
+
+The `omp.target` operation, which represents the OpenMP `target` construct, is
+marked with the `IsolatedFromAbove` trait. This means that, inside of its
+region, no MLIR values defined outside of the op itself can be used. This is
+consistent with the OpenMP specification of the `target` construct, which
+mandates that all host device values used inside of the `target` region must
+either be privatized (data-sharing) or mapped (data-mapping).
+
+Normally, clauses applied to a construct are evaluated before entering that
+construct. Further, in some cases, the OpenMP specification stipulates that
+clauses be evaluated _on the host device_ on entry to a parent `target`
+construct. In particular, the `num_teams` and `thread_limit` clauses of the
+`teams` construct must be evaluated on the host device if it's nested inside or
+combined with a `target` construct.
+
+Additionally, the runtime library targeted by the MLIR to LLVM IR translation of
+the OpenMP dialect supports the optimized launch of SPMD kernels (i.e.
+`target teams distribute parallel {do,for}` in OpenMP), which requires
+specifying in advance what the total trip count of the loop is. Consequently, it
+is also beneficial to evaluate the trip count on the host device prior to the
+kernel launch.
+
+These host-evaluated values in MLIR would need to be placed outside of the
+`omp.target` region and also attached to the corresponding nested operations,
+which is not possible because of the `IsolatedFromAbove` trait. The solution
+implemented to address this problem has been to introduce the `host_eval`
+argument to the `omp.target` operation. It works similarly to a `map` clause,
+but its only intended use is to forward host-evaluated values to their
+corresponding operation inside of the region. Any uses outside of the previously
+described result in a verifier error.
+
+```mlir
+// Initialize %0, %1, %2, %3...
+omp.target host_eval(%0 -> %nt, %1 -> %lb, %2 -> %ub, %3 -> %step : i32, i32, i32, i32) {
+  omp.teams num_teams(to %nt : i32) {
+    omp.parallel {
+      omp.distribute {
+        omp.wsloop {
+          omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+            // ...
+            omp.yield
+          }
+          omp.terminator
+        } {omp.composite}
+        omp.terminator
+      } {omp.composite}
+      omp.terminator
+    } {omp.composite}
+    omp.terminator
+  }
+  omp.terminator
+}
 ```

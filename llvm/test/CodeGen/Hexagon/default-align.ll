@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 ; Make sure we don't use setbit to add offsets to stack objects.
 ; CHECK-NOT: setbit
 

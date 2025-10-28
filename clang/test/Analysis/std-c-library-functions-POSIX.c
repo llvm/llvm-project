@@ -237,3 +237,14 @@ void test_readlinkat_bufsize_zero(int fd, char *Buf, size_t Bufsize) {
   else
     clang_analyzer_eval(Bufsize == 0); // expected-warning{{UNKNOWN}}
 }
+
+void test_setsockopt_bufptr_null(int x) {
+  char buf[10] = {0};
+
+  setsockopt(1, 2, 3, 0, 0);
+  setsockopt(1, 2, 3, buf, 10);
+  if (x)
+    setsockopt(1, 2, 3, buf, 11); // expected-warning{{The 4th argument to 'setsockopt' is a buffer with size 10 but should be a buffer with size equal to or greater than the value of the 5th argument (which is 11)}}
+  else
+    setsockopt(1, 2, 3, 0, 10);  // expected-warning{{The 4th argument to 'setsockopt' is NULL but should not be NULL}}
+}

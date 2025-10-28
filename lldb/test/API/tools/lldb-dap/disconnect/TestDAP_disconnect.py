@@ -31,7 +31,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         created.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, disconnectAutomatically=False)
+        self.build_and_launch(program, stopOnEntry=True, disconnectAutomatically=False)
 
         # We set a breakpoint right before the side effect file is created
         self.set_source_breakpoints(
@@ -39,7 +39,11 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_next_stop()
 
+        # verify we haven't produced the side effect file yet
+        self.assertFalse(os.path.exists(program + ".side_effect"))
+
         self.dap_server.request_disconnect()
+
         # verify we didn't produce the side effect file
         time.sleep(1)
         self.assertFalse(os.path.exists(program + ".side_effect"))
@@ -52,7 +56,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         before the file is created, and as the process is not terminated upon disconnection,
         the file is created anyway.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         # Use a file as a synchronization point between test and inferior.

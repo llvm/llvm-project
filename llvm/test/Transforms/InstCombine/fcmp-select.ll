@@ -219,8 +219,8 @@ define double @test_fcmp_select_clamp(double %x) {
 
 define double @test_fcmp_select_maxnum(double %x) {
 ; CHECK-LABEL: @test_fcmp_select_maxnum(
-; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz double @llvm.maxnum.f64(double [[X:%.*]], double 1.000000e+00)
-; CHECK-NEXT:    [[SEL2:%.*]] = call nnan nsz double @llvm.minnum.f64(double [[SEL1]], double 2.550000e+02)
+; CHECK-NEXT:    [[SEL1:%.*]] = call nsz double @llvm.maxnum.f64(double [[X:%.*]], double 1.000000e+00)
+; CHECK-NEXT:    [[SEL2:%.*]] = call nsz double @llvm.minnum.f64(double [[SEL1]], double 2.550000e+02)
 ; CHECK-NEXT:    ret double [[SEL2]]
 ;
   %cmp1 = fcmp ogt double %x, 1.0
@@ -267,4 +267,39 @@ define i1 @test_fcmp_select_var_const_unordered(double %x, double %y) {
   %sel = select i1 %cmp1, double %y, double 0.000000e+00
   %cmp2 = fcmp ugt double %sel, 0x3E80000000000000
   ret i1 %cmp2
+}
+
+define i1 @test_fcmp_ord_select_fcmp_oeq_var_const(double %x) {
+; CHECK-LABEL: @test_fcmp_ord_select_fcmp_oeq_var_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp oeq double [[X:%.*]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %cmp1 = fcmp ord double %x, 0.000000e+00
+  %sel = select i1 %cmp1, double %x, double 0.000000e+00
+  %cmp2 = fcmp oeq double %sel, 1.000000e+00
+  ret i1 %cmp2
+}
+
+; Make sure that we recognize the SPF correctly.
+
+define float @test_select_nnan_nsz_fcmp_olt(float %x) {
+; CHECK-LABEL: @test_select_nnan_nsz_fcmp_olt(
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
+; CHECK-NEXT:    ret float [[SEL1]]
+;
+  %cmp = fcmp olt float %x, 0.000000e+00
+  %sel = select nnan nsz i1 %cmp, float %x, float -0.000000e+00
+  ret float %sel
+}
+
+define float @test_select_nnan_nsz_fcmp_ult(float %x) {
+; CHECK-LABEL: @test_select_nnan_nsz_fcmp_ult(
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SEL1]]
+;
+  %cmp = fcmp ult float %x, 0.000000e+00
+  %sel = select nnan nsz i1 %cmp, float %x, float -0.000000e+00
+  ret float %sel
 }

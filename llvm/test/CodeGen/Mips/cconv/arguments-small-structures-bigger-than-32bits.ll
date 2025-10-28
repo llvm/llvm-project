@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=mips64   -target-abi n64 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEB
-; RUN: llc < %s -march=mips64el -target-abi n64 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEL
-; RUN: llc < %s -march=mips64   -target-abi n32 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEB
-; RUN: llc < %s -march=mips64el -target-abi n32 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEL
+; RUN: llc < %s -mtriple=mips64   -target-abi n64 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEB
+; RUN: llc < %s -mtriple=mips64el -target-abi n64 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEL
+; RUN: llc < %s -mtriple=mips64   -target-abi n32 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEB
+; RUN: llc < %s -mtriple=mips64el -target-abi n32 -mcpu=mips64r2 | FileCheck %s -check-prefixes=ALL,MIPSEL
 
 ; #include <stdio.h>
 ; 

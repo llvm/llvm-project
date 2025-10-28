@@ -203,7 +203,13 @@ typedef __SIZE_TYPE__ usize;
 typedef uptr usize;
 #endif
 
-typedef u64 tid_t;
+#if defined(__s390__) && !defined(__s390x__)
+typedef long ssize;
+#else
+typedef sptr ssize;
+#endif
+
+typedef u64 ThreadID;
 
 // ----------- ATTENTION -------------
 // This header should NOT include any other headers to avoid portability issues.

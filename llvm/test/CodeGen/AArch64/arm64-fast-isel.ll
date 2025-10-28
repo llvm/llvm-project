@@ -118,14 +118,14 @@ entry:
 
 declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
 
-define void @logicalReg() {
+define void @logicalReg(i1 %arg) {
 ; Make sure we generate a logical reg = reg, reg instruction without any
 ; machine verifier errors.
 ; CHECK-LABEL: logicalReg:
 ; CHECK: orr w{{[0-9]+}}, w{{[0-9]+}}, w{{[0-9]+}}
 ; CHECK: ret
 entry:
-  br i1 undef, label %cond.end, label %cond.false
+  br i1 %arg, label %cond.end, label %cond.false
 
 cond.false:
   %cond = select i1 undef, i1 true, i1 false

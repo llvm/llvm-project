@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mipsel -mcpu=mips32 -fast-isel -frame-pointer=all -relocation-model=pic < %s
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32 -fast-isel -frame-pointer=all -relocation-model=pic < %s
 
 ; Test that negative array access don't crash constant synthesis when fast isel
 ; generates negative offsets.

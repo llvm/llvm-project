@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that "r0 = rN" is packetized together with dealloc_return.
 ; CHECK: r0 = r
 ; CHECK-NOT: {

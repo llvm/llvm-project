@@ -7,11 +7,11 @@ struct test {
 
 template<typename T, typename V>
 decltype(T::template fun_diff<V>) foo1() {}
-// expected-note@-1 {{candidate template ignored: substitution failure [with T = test<int>, V = int]: 'test<int>::fun_diff' is expected to be a non-type template, but instantiated to a type alias template}}
+// expected-note@-1 {{candidate template ignored: substitution failure [with T = test<int>, V = int]: 'test<int>::template fun_diff' is expected to be a non-type template, but instantiated to a type alias template}}
 
 template<typename T>
 void foo2() {
-  // expected-error@+1 {{test<int>::fun_diff' is expected to be a non-type template, but instantiated to a type alias template}}
+  // expected-error@+1 {{test<int>::template fun_diff' is expected to be a non-type template, but instantiated to a type alias template}}
   int a = test<T>::template fun_diff<int>;
 }
 
@@ -22,7 +22,7 @@ struct has_fun_diff {
 
 template<typename T>
 struct has_fun_diff<T, int> {
-  // expected-error@+1 {{'test<int>::fun_diff' is expected to be a non-type template, but instantiated to a type alias template}}
+  // expected-error@+1 {{'test<int>::template fun_diff' is expected to be a non-type template, but instantiated to a type alias template}}
   using type = decltype(T::template fun_diff<int>);
 };
 

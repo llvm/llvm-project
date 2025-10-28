@@ -45,6 +45,9 @@ void DescribeThread(AsanThreadContext *context) {
   }
   context->announced = true;
 
+  InternalScopedString str;
+  str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
+
   AsanThreadContext *parent_context =
       context->parent_tid == kInvalidTid
           ? nullptr
@@ -52,12 +55,7 @@ void DescribeThread(AsanThreadContext *context) {
 
   // `context->parent_tid` may point to reused slot. Check `unique_id` which
   // is always smaller for the parent, always greater for a new user.
-  if (context->unique_id <= parent_context->unique_id)
-    parent_context = nullptr;
-
-  InternalScopedString str;
-  str.AppendF("Thread %s", AsanThreadIdAndName(context).c_str());
-  if (!parent_context) {
+  if (!parent_context || context->unique_id <= parent_context->unique_id) {
     str.Append(" created by unknown thread\n");
     Printf("%s", str.data());
     return;
@@ -213,10 +211,10 @@ bool GetStackAddressInformation(uptr addr, uptr access_size,
   descr->frame_pc = access.frame_pc;
   descr->frame_descr = access.frame_descr;
 
-#if SANITIZER_PPC64V1
-  // On PowerPC64 ELFv1, the address of a function actually points to a
-  // three-doubleword data structure with the first field containing
-  // the address of the function's code.
+#if SANITIZER_PPC64V1 || SANITIZER_AIX
+  // On PowerPC64 ELFv1 or AIX, the address of a function actually points to a
+  // three-doubleword (or three-word for 32-bit AIX) data structure with
+  // the first field containing the address of the function's code.
   descr->frame_pc = *reinterpret_cast<uptr *>(descr->frame_pc);
 #endif
   descr->frame_pc += 16;
@@ -446,6 +444,18 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     data.kind = kAddressKindShadow;
     return;
   }
+
+  // Check global first. On AIX, some global data defined in shared libraries
+  // are put to the STACK region for unknown reasons. Check global first can
+  // workaround this issue.
+  // TODO: Look into whether there's a different solution to this problem.
+#if SANITIZER_AIX
+  if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
+    data.kind = kAddressKindGlobal;
+    return;
+  }
+#endif
+
   if (GetHeapAddressInformation(addr, access_size, &data.heap)) {
     data.kind = kAddressKindHeap;
     return;
@@ -463,10 +473,14 @@ AddressDescription::AddressDescription(uptr addr, uptr access_size,
     return;
   }
 
+// GetGlobalAddressInformation is called earlier on AIX due to a workaround
+#if !SANITIZER_AIX
   if (GetGlobalAddressInformation(addr, access_size, &data.global)) {
     data.kind = kAddressKindGlobal;
     return;
   }
+#endif
+
   data.kind = kAddressKindWild;
   data.wild.addr = addr;
   data.wild.access_size = access_size;

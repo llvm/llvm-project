@@ -85,10 +85,10 @@ void foo(const bool& X);
 
 // Disallow element-wise access.
 bool* ElementRefs() {
-  eight_bools.y = false; // expected-error@88 {{illegal vector component name ''y''}}
-  &eight_bools.z;        // expected-error@89 {{illegal vector component name ''z''}}
-  foo(eight_bools.w);    // expected-error@90 {{illegal vector component name ''w''}}
-  foo(eight_bools.wyx);  // expected-error@91 {{illegal vector component name ''wyx''}}
+  eight_bools.y = false; // expected-error@88 {{illegal vector component name 'y'}}
+  &eight_bools.z;        // expected-error@89 {{illegal vector component name 'z'}}
+  foo(eight_bools.w);    // expected-error@90 {{illegal vector component name 'w'}}
+  foo(eight_bools.wyx);  // expected-error@91 {{illegal vector component name 'wyx'}}
 }
 
 void Sizeof() {
@@ -112,3 +112,7 @@ void Sizeof() {
   static_assert(sizeof(Bool195) == 32);
   static_assert(sizeof(Bool257) == 64);
 }
+
+#if !__has_feature(ext_vector_type_boolean)
+#error "FAIL"
+#endif

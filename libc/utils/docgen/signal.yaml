@@ -1,0 +1,102 @@
+functions:
+  kill:
+    in-latest-posix: ''
+  raise:
+    c-definition: 7.14.2.1
+    in-latest-posix: ''
+  sigaction:
+    in-latest-posix: ''
+  sigaddset:
+    in-latest-posix: ''
+  sigaltstack:
+    in-latest-posix: ''
+  sigdelset:
+    in-latest-posix: ''
+  sigemptyset:
+    in-latest-posix: ''
+  sigfillset:
+    in-latest-posix: ''
+  signal:
+    c-definition: 7.14.1.1
+    in-latest-posix: ''
+  sigprocmask:
+    in-latest-posix: ''
+macros:
+  SIGABRT:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIGALRM:
+    in-latest-posix: ''
+  SIGBUS:
+    in-latest-posix: ''
+  SIGCHLD:
+    in-latest-posix: ''
+  SIGCONT:
+    in-latest-posix: ''
+  SIGFPE:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIGHUP:
+    in-latest-posix: ''
+  SIGILL:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIGINT:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIGKILL:
+    in-latest-posix: ''
+  SIGPIPE:
+    in-latest-posix: ''
+  SIGPOLL:
+    in-latest-posix: ''
+  SIGPROF:
+    in-latest-posix: ''
+  SIGQUIT:
+    in-latest-posix: ''
+  SIGRTMAX:
+    in-latest-posix: ''
+  SIGRTMIN:
+    in-latest-posix: ''
+  SIGSEGV:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIGSTOP:
+    in-latest-posix: ''
+  SIGSYS:
+    in-latest-posix: ''
+  SIGTERM:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIGTRAP:
+    in-latest-posix: ''
+  SIGTSTP:
+    in-latest-posix: ''
+  SIGTTIN:
+    in-latest-posix: ''
+  SIGTTOU:
+    in-latest-posix: ''
+  SIGURG:
+    in-latest-posix: ''
+  SIGUSR1:
+    in-latest-posix: ''
+  SIGUSR2:
+    in-latest-posix: ''
+  SIGVTALRM:
+    in-latest-posix: ''
+  SIGXCPU:
+    in-latest-posix: ''
+  SIGXFSZ:
+    in-latest-posix: ''
+  SIG_DFL:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIG_ERR:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+  SIG_HOLD:
+    in-latest-posix: ''
+  SIG_IGN:
+    c-definition: 7.14.3
+    in-latest-posix: ''
+

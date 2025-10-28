@@ -66,8 +66,7 @@ public:
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties()
-      .set(MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -109,9 +108,6 @@ template <typename DerivedT, bool PreRegAlloc>
 PreservedAnalyses TailDuplicatePassBase<DerivedT, PreRegAlloc>::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(static_cast<DerivedT &>(*this), MF);
-
-  if (MF.getFunction().hasOptNone())
-    return PreservedAnalyses::all();
 
   auto *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
   auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)

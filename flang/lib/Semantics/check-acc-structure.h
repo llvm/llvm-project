@@ -63,6 +63,9 @@ public:
   void Enter(const parser::OpenACCCacheConstruct &);
   void Leave(const parser::OpenACCCacheConstruct &);
   void Enter(const parser::AccAtomicUpdate &);
+  void Enter(const parser::AccAtomicCapture &);
+  void Enter(const parser::AccAtomicWrite &);
+  void Enter(const parser::AccAtomicRead &);
   void Enter(const parser::OpenACCEndConstruct &);
 
   // Clauses
@@ -80,10 +83,29 @@ public:
 #include "llvm/Frontend/OpenACC/ACC.inc"
 
 private:
+  void CheckAtomicStmt(
+      const parser::AssignmentStmt &assign, const std::string &construct);
+  void CheckAtomicUpdateStmt(const parser::AssignmentStmt &assign,
+      const SomeExpr &updateVar, const SomeExpr *captureVar);
+  void CheckAtomicCaptureStmt(const parser::AssignmentStmt &assign,
+      const SomeExpr *updateVar, const SomeExpr &captureVar);
+  void CheckAtomicWriteStmt(const parser::AssignmentStmt &assign,
+      const SomeExpr &updateVar, const SomeExpr *captureVar);
+  void CheckAtomicUpdateVariable(
+      const parser::Variable &updateVar, const parser::Variable &captureVar);
+  void CheckAtomicCaptureVariable(
+      const parser::Variable &captureVar, const parser::Variable &updateVar);
+
   bool CheckAllowedModifier(llvm::acc::Clause clause);
   bool IsComputeConstruct(llvm::acc::Directive directive) const;
+  bool IsLoopConstruct(llvm::acc::Directive directive) const;
+  std::optional<llvm::acc::Directive> getParentComputeConstruct() const;
   bool IsInsideComputeConstruct() const;
+  bool IsInsideKernelsConstruct() const;
   void CheckNotInComputeConstruct();
+  std::optional<std::int64_t> getGangDimensionSize(
+      DirectiveContext &dirContext);
+  void CheckNotInSameOrSubLevelLoopConstruct();
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);
   void CheckMultipleOccurrenceInDeclare(

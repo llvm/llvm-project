@@ -35,3 +35,12 @@ func.func @ctest() -> index {
   // CHECK-NEXT: return %{{.*}} : index
   return %2 : index
 }
+
+// CHECK-LABEL:   func.func @ptrtest(
+// CHECK-SAME:                       %[[VAL_0:.*]]: !fir.heap<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>> {
+func.func @ptrtest(%0 : !fir.heap<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>> {
+  %1 = fir.convert %0 : (!fir.heap<!fir.array<2xf32>>) -> !fir.ref<!fir.array<2xf32>>
+  %2 = fir.convert %1 : (!fir.ref<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>>
+// CHECK:           return %[[VAL_0]] : !fir.heap<!fir.array<2xf32>>
+  return %2 : !fir.heap<!fir.array<2xf32>>
+}

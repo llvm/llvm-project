@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   CodeGenTypes
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   Object
   ObjectYAML

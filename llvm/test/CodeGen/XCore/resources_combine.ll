@@ -1,4 +1,4 @@
-; RUN: llc -march=xcore < %s | FileCheck %s
+; RUN: llc -mtriple=xcore < %s | FileCheck %s
 
 declare i32 @llvm.xcore.int.p1(ptr addrspace(1) %r)
 declare i32 @llvm.xcore.inct.p1(ptr addrspace(1) %r)

@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mcpu=mips32r2 -mattr=+mips16 < %s | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r2 | FileCheck %s
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips64r2 | FileCheck %s
+; RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r2 -mattr=+mips16 < %s | FileCheck %s
 
 define signext i8 @A(i8 %e.0, i8 signext %sum)  nounwind {
 entry:

@@ -507,6 +507,12 @@ void emitCommonEntityInfo(raw_ostream &OS, const CommonEntityInfo &CEI) {
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
   uint8_t payload = 0;
+  if (auto safety = CEI.getSwiftSafety()) {
+    payload = static_cast<unsigned>(*safety);
+    payload <<= 1;
+    payload |= 0x01;
+  }
+  payload <<= 2;
   if (auto swiftPrivate = CEI.isSwiftPrivate()) {
     payload |= 0x01;
     if (*swiftPrivate)
@@ -536,7 +542,8 @@ unsigned getCommonEntityInfoSize(const CommonEntityInfo &CEI) {
 // in on-disk hash tables.
 unsigned getCommonTypeInfoSize(const CommonTypeInfo &CTI) {
   return 2 + (CTI.getSwiftBridge() ? CTI.getSwiftBridge()->size() : 0) + 2 +
-         (CTI.getNSErrorDomain() ? CTI.getNSErrorDomain()->size() : 0) +
+         (CTI.getNSErrorDomain() ? CTI.getNSErrorDomain()->size() : 0) + 2 +
+         (CTI.getSwiftConformance() ? CTI.getSwiftConformance()->size() : 0) +
          getCommonEntityInfoSize(CTI);
 }
 
@@ -554,6 +561,12 @@ void emitCommonTypeInfo(raw_ostream &OS, const CommonTypeInfo &CTI) {
   if (auto nsErrorDomain = CTI.getNSErrorDomain()) {
     writer.write<uint16_t>(nsErrorDomain->size() + 1);
     OS.write(nsErrorDomain->c_str(), CTI.getNSErrorDomain()->size());
+  } else {
+    writer.write<uint16_t>(0);
+  }
+  if (auto conformance = CTI.getSwiftConformance()) {
+    writer.write<uint16_t>(conformance->size() + 1);
+    OS.write(conformance->c_str(), conformance->size());
   } else {
     writer.write<uint16_t>(0);
   }
@@ -1093,6 +1106,7 @@ unsigned getFunctionInfoSize(const FunctionInfo &FI) {
   for (const auto &P : FI.Params)
     size += getParamInfoSize(P);
   size += sizeof(uint16_t) + FI.ResultType.size();
+  size += sizeof(uint16_t) + FI.SwiftReturnOwnership.size();
   return size;
 }
 
@@ -1117,7 +1131,9 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
     emitParamInfo(OS, PI);
 
   writer.write<uint16_t>(FI.ResultType.size());
-  writer.write(ArrayRef<char>{FI.ResultType.data(), FI.ResultType.size()});
+  writer.write(ArrayRef<char>{FI.ResultType});
+  writer.write<uint16_t>(FI.SwiftReturnOwnership.size());
+  writer.write(ArrayRef<char>{FI.SwiftReturnOwnership});
 }
 
 /// Used to serialize the on-disk global function table.
@@ -1266,11 +1282,14 @@ public:
 class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
 public:
   unsigned getUnversionedInfoSize(const TagInfo &TI) {
+    // clang-format off
     return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
-           2 + (TI.SwiftConformance ? TI.SwiftConformance->size() : 0) +
-           2 + getCommonTypeInfoSize(TI);
+           2 + (TI.SwiftDestroyOp ? TI.SwiftDestroyOp->size() : 0) +
+           2 + (TI.SwiftDefaultOwnership ? TI.SwiftDefaultOwnership->size() : 0) +
+           3 + getCommonTypeInfoSize(TI);
+    // clang-format on
   }
 
   void emitUnversionedInfo(raw_ostream &OS, const TagInfo &TI) {
@@ -1289,7 +1308,12 @@ public:
     writer.write<uint8_t>(Flags);
 
     if (auto Copyable = TI.isSwiftCopyable())
-      writer.write<uint8_t>(*Copyable ? kSwiftCopyable : kSwiftNonCopyable);
+      writer.write<uint8_t>(*Copyable ? kSwiftConforms : kSwiftDoesNotConform);
+    else
+      writer.write<uint8_t>(0);
+
+    if (auto Escapable = TI.isSwiftEscapable())
+      writer.write<uint8_t>(*Escapable ? kSwiftConforms : kSwiftDoesNotConform);
     else
       writer.write<uint8_t>(0);
 
@@ -1311,9 +1335,15 @@ public:
     } else {
       writer.write<uint16_t>(0);
     }
-    if (auto Conformance = TI.SwiftConformance) {
-      writer.write<uint16_t>(Conformance->size() + 1);
-      OS.write(Conformance->c_str(), Conformance->size());
+    if (auto DefaultOwnership = TI.SwiftDefaultOwnership) {
+      writer.write<uint16_t>(DefaultOwnership->size() + 1);
+      OS.write(DefaultOwnership->c_str(), DefaultOwnership->size());
+    } else {
+      writer.write<uint16_t>(0);
+    }
+    if (auto DestroyOp = TI.SwiftDestroyOp) {
+      writer.write<uint16_t>(DestroyOp->size() + 1);
+      OS.write(DestroyOp->c_str(), DestroyOp->size());
     } else {
       writer.write<uint16_t>(0);
     }

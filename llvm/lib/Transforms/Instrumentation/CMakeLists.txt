@@ -6,11 +6,11 @@ add_llvm_component_library(LLVMInstrumentation
   DataFlowSanitizer.cpp
   GCOVProfiling.cpp
   BlockCoverageInference.cpp
-  MemProfiler.cpp
+  MemProfInstrumentation.cpp
+  MemProfUse.cpp
   MemorySanitizer.cpp
   NumericalStabilitySanitizer.cpp
   IndirectCallPromotion.cpp
-  InstrOrderFile.cpp
   InstrProfiling.cpp
   KCFI.cpp
   LowerAllowCheckPass.cpp
@@ -19,11 +19,11 @@ add_llvm_component_library(LLVMInstrumentation
   PGOForceFunctionAttrs.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp
-  PoisonChecking.cpp
   SanitizerCoverage.cpp
   SanitizerBinaryMetadata.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
+  TypeSanitizer.cpp
   HWAddressSanitizer.cpp
   RealtimeSanitizer.cpp
 

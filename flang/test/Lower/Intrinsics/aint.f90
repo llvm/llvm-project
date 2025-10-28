@@ -1,41 +1,31 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}
 
 ! CHECK-LABEL: func @_QPaint_test(
-! CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<f32>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
+! CHECK-SAME: %[[VAL_0_b:.*]]: !fir.ref<f32>{{.*}}, %[[VAL_1_b:.*]]: !fir.ref<f32>{{.*}}) {
 subroutine aint_test(a, b)
-! CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f32>
+! CHECK: %[[VAL_0:.*]]:2 = hlfir.declare %[[VAL_0_b]]
+! CHECK: %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_1_b]]
+! CHECK: %[[VAL_2:.*]] = fir.load %[[VAL_0]]#0 : !fir.ref<f32>
 ! CHECK: %[[VAL_3:.*]] = fir.call @llvm.trunc.f32(%[[VAL_2]]) {{.*}}: (f32) -> f32
-! CHECK: fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f32>
+! CHECK: hlfir.assign %[[VAL_3]] to %[[VAL_1]]#0 : f32, !fir.ref<f32>
 ! CHECK: return
   real :: a, b
   b = aint(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPaint_test_real8(
-! CHECK-SAME:                                %[[VAL_0:.*]]: !fir.ref<f64> {fir.bindc_name = "a"},
-! CHECK-SAME:                                %[[VAL_1:.*]]: !fir.ref<f64> {fir.bindc_name = "b"}) {
-! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f64>
-! CHECK:         %[[VAL_3:.*]] = fir.call @llvm.trunc.f64(%[[VAL_2]]) {{.*}}: (f64) -> f64
-! CHECK:         fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f64>
-! CHECK:         return
-! CHECK:       }
+! CHECK:   fir.call @llvm.trunc.f64({{.*}}) {{.*}}: (f64) -> f64
 
 subroutine aint_test_real8(a, b)
   real(8) :: a, b
   b = aint(a)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPaint_test_real10(
-! CHECK-SAME:                                 %[[VAL_0:.*]]: !fir.ref<f80> {fir.bindc_name = "a"},
-! CHECK-SAME:                                 %[[VAL_1:.*]]: !fir.ref<f80> {fir.bindc_name = "b"}) {
-! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<f80>
-! CHECK:         %[[VAL_3:.*]] = fir.call @llvm.trunc.f80(%[[VAL_2]]) {{.*}}: (f80) -> f80
-! CHECK:         fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f80>
-! CHECK:         return
-! CHECK:       }
-
+! CHECK-KIND10-LABEL: func.func @_QPaint_test_real10(
+! CHECK-KIND10:   fir.call @llvm.trunc.f80({{.*}}) {{.*}}: (f80) -> f80
 subroutine aint_test_real10(a, b)
-  real(10) :: a, b
+  integer, parameter :: kind10 = merge(10, 4, selected_real_kind(p=18).eq.10)
+  real(kind10) :: a, b
   b = aint(a)
 end subroutine
 

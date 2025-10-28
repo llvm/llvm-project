@@ -207,6 +207,11 @@ void foo() {
 // CHECK: ![[GLOBAL_ANON]] = !DICompositeType(tag: DW_TAG_structure_type,
 // CHECK-SAME:              name: "InAnonymousNamespace", {{.*}}DIFlagFwdDecl)
 
+// There is a full definition of the type available in the module.
+// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual",
+// CHECK-SAME:             DIFlagFwdDecl
+// CHECK-SAME:             identifier: "_ZTS7Virtual")
+
 // CHECK: !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !{{[0-9]+}}, entity: ![[STRUCT]], file: ![[CPP]], line: 50)
 
 // CHECK: !DICompileUnit(
@@ -217,8 +222,3 @@ void foo() {
 
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "A",
 // CHECK-SAME:             DIFlagFwdDecl
-
-// There is a full definition of the type available in the module.
-// CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "Virtual",
-// CHECK-SAME:             DIFlagFwdDecl
-// CHECK-SAME:             identifier: "_ZTS7Virtual")

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -mno-pairing -mno-compound < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -mno-pairing -mno-compound < %s | FileCheck %s
 
 ; Test to see if we inline calls to memcpy/memmove when
 ; the array size is small.

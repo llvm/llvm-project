@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-non-const-parameter %t
+// RUN: %check_clang_tidy -std=c99,c11,c17 %s readability-non-const-parameter %t
 
 static int f();
 

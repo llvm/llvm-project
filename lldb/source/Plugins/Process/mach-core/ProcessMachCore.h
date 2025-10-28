@@ -131,6 +131,7 @@ private:
   VMRangeToPermissions m_core_range_infos;
   lldb::ModuleSP m_core_module_sp;
   lldb::addr_t m_dyld_addr;
+  lldb::addr_t m_dyld_all_image_infos_addr;
   lldb::addr_t m_mach_kernel_addr;
   llvm::StringRef m_dyld_plugin_name;
 };

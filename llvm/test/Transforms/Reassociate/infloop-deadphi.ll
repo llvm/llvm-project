@@ -3,14 +3,14 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @f() {
+define void @f(i1 %arg) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[DONE:%.*]]
 ; CHECK:       dead:
 ; CHECK-NEXT:    [[XOR0:%.*]] = xor i16 [[XOR1:%.*]], undef
 ; CHECK-NEXT:    [[XOR1]] = xor i16 [[XOR0]], undef
-; CHECK-NEXT:    br i1 undef, label [[DEAD:%.*]], label [[DONE]]
+; CHECK-NEXT:    br i1 %arg, label [[DEAD:%.*]], label [[DONE]]
 ; CHECK:       done:
 ; CHECK-NEXT:    ret void
 ;
@@ -20,7 +20,7 @@ entry:
 dead:
   %xor0 = xor i16 %xor1, undef
   %xor1 = xor i16 %xor0, undef
-  br i1 undef, label %dead, label %done
+  br i1 %arg, label %dead, label %done
 
 done:
   %e = phi i16 [ %xor1, %dead ], [ 0, %entry ]

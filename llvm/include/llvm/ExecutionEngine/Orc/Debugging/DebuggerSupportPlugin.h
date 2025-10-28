@@ -16,6 +16,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
@@ -25,7 +26,8 @@ namespace orc {
 ///
 /// Currently MachO only. For ELF use DebugObjectManagerPlugin. These two
 /// plugins will be merged in the near future.
-class GDBJITDebugInfoRegistrationPlugin : public ObjectLinkingLayer::Plugin {
+class LLVM_ABI GDBJITDebugInfoRegistrationPlugin
+    : public ObjectLinkingLayer::Plugin {
 public:
   class DebugSectionSynthesizer {
   public:

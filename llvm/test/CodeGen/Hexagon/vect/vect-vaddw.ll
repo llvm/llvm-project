@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: vaddw
 
 define <2 x i32> @t_i2x32(<2 x i32> %a, <2 x i32> %b) nounwind {

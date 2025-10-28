@@ -60,7 +60,7 @@ define i8 @f20s8(double %x) #0 {
 entry:
 ; CHECK-LABEL: name: f20s8
 ; CHECK: [[CVTTSD2SIrm:%[0-9]+]]:gr32 = CVTTSD2SIrm %fixed-stack.0, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load (s64) from %fixed-stack.0, align 16)
-; CHECK: [[COPY:%[0-9]+]]:gr32_abcd = COPY [[CVTTSD2SIrm]]
+; CHECK: [[COPY:%[0-9]+]]:gr32_abcd = COPY killed [[CVTTSD2SIrm]]
 ; CHECK: [[COPY1:%[0-9]+]]:gr8 = COPY [[COPY]].sub_8bit
 ; CHECK: $al = COPY [[COPY1]]
 ; CHECK: RET 0, $al

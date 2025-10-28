@@ -7,11 +7,11 @@ target triple = "i386-pc-linux-gnu"
 ;.
 ; CHECK: @switch.table.reachable_default_dense_0to31 = private unnamed_addr constant [32 x i32] [i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1], align 4
 ; CHECK: @switch.table.unreachable_default_dense_0to31 = private unnamed_addr constant [32 x i32] [i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1], align 4
-; CHECK: @switch.table.reachable_default_holes_0to31 = private unnamed_addr constant [32 x i32] [i32 0, i32 7, i32 6, i32 0, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 0, i32 2, i32 1, i32 0, i32 7, i32 0, i32 5, i32 4, i32 3, i32 2, i32 0, i32 0, i32 7, i32 6, i32 5, i32 0, i32 3, i32 2, i32 1], align 4
-; CHECK: @switch.table.unreachable_default_holes_0to31 = private unnamed_addr constant [32 x i32] [i32 0, i32 7, i32 6, i32 0, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 0, i32 2, i32 1, i32 0, i32 7, i32 0, i32 5, i32 4, i32 3, i32 2, i32 0, i32 0, i32 7, i32 6, i32 5, i32 0, i32 3, i32 2, i32 1], align 4
+; CHECK: @switch.table.reachable_default_holes_0to31 = private unnamed_addr constant [32 x i32] [i32 0, i32 7, i32 6, i32 poison, i32 4, i32 3, i32 2, i32 1, i32 poison, i32 7, i32 6, i32 5, i32 4, i32 poison, i32 2, i32 1, i32 0, i32 7, i32 poison, i32 5, i32 4, i32 3, i32 2, i32 poison, i32 0, i32 7, i32 6, i32 5, i32 poison, i32 3, i32 2, i32 1], align 4
+; CHECK: @switch.table.unreachable_default_holes_0to31 = private unnamed_addr constant [32 x i32] [i32 0, i32 7, i32 6, i32 poison, i32 4, i32 3, i32 2, i32 1, i32 poison, i32 7, i32 6, i32 5, i32 4, i32 poison, i32 2, i32 1, i32 0, i32 7, i32 poison, i32 5, i32 4, i32 3, i32 2, i32 poison, i32 0, i32 7, i32 6, i32 5, i32 poison, i32 3, i32 2, i32 1], align 4
 ; CHECK: @switch.table.reachable_default_dense_0to32 = private unnamed_addr constant [33 x i32] [i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0], align 4
 ; CHECK: @switch.table.unreachable_default_dense_0to32 = private unnamed_addr constant [33 x i32] [i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0], align 4
-; CHECK: @switch.table.unreachable_default_holes_0to32 = private unnamed_addr constant [33 x i32] [i32 0, i32 7, i32 6, i32 0, i32 4, i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 0, i32 2, i32 1, i32 0, i32 7, i32 0, i32 5, i32 4, i32 3, i32 2, i32 0, i32 0, i32 7, i32 6, i32 5, i32 0, i32 3, i32 2, i32 1, i32 0], align 4
+; CHECK: @switch.table.unreachable_default_holes_0to32 = private unnamed_addr constant [33 x i32] [i32 0, i32 7, i32 6, i32 poison, i32 4, i32 3, i32 2, i32 1, i32 poison, i32 7, i32 6, i32 5, i32 4, i32 poison, i32 2, i32 1, i32 0, i32 7, i32 poison, i32 5, i32 4, i32 3, i32 2, i32 poison, i32 0, i32 7, i32 6, i32 5, i32 poison, i32 3, i32 2, i32 1, i32 0], align 4
 ;.
 define i32 @reachable_default_dense_0to31(i32 %x, i32 %y) {
 ; CHECK-LABEL: @reachable_default_dense_0to31(
@@ -143,17 +143,16 @@ define i32 @reachable_default_holes_0to31(i32 %x, i32 %y) {
 ; CHECK-LABEL: @reachable_default_holes_0to31(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X:%.*]], 32
-; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_HOLE_CHECK:%.*]], label [[RETURN:%.*]]
-; CHECK:       switch.hole_check:
 ; CHECK-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i32 -277094665, [[X]]
 ; CHECK-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i32 [[SWITCH_SHIFTED]] to i1
-; CHECK-NEXT:    br i1 [[SWITCH_LOBIT]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_LOBIT]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [32 x i32], ptr @switch.table.reachable_default_holes_0to31, i32 0, i32 [[X]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ [[Y:%.*]], [[SWITCH_HOLE_CHECK]] ], [ [[Y]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[SWITCH_LOAD]], [[SWITCH_LOOKUP]] ], [ [[Y:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:

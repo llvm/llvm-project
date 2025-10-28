@@ -1,4 +1,4 @@
-//===--- QualifiedAutoCheck.h - clang-tidy ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,12 +18,10 @@ namespace clang::tidy::readability {
 /// 'const auto &'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/qualified-auto.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/qualified-auto.html
 class QualifiedAutoCheck : public ClangTidyCheck {
 public:
-  QualifiedAutoCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context),
-        AddConstToQualified(Options.get("AddConstToQualified", true)) {}
+  QualifiedAutoCheck(StringRef Name, ClangTidyContext *Context);
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
@@ -33,6 +31,8 @@ public:
 
 private:
   const bool AddConstToQualified;
+  const std::vector<StringRef> AllowedTypes;
+  const bool IgnoreAliasing;
 };
 
 } // namespace clang::tidy::readability

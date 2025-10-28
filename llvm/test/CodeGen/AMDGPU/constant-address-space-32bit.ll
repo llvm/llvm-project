@@ -238,8 +238,8 @@ main_body:
   %25 = getelementptr inbounds [0 x <8 x i32>], ptr addrspace(6) %1, i32 0, i32 %24, !amdgpu.uniform !0
   %26 = load <8 x i32>, ptr addrspace(6) %25, align 32, !invariant.load !0
   %27 = shl i32 %23, 2
-  %28 = or disjoint i32 %27, 3
-  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %28, !amdgpu.uniform !0
+  %28 = getelementptr [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %27, !amdgpu.uniform !0
+  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %28, i32 0, i32 3, !amdgpu.uniform !0
   %30 = load <4 x i32>, ptr addrspace(6) %29, align 16, !invariant.load !0
   %31 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %30, i1 0, i32 0, i32 0) #8
   %32 = extractelement <4 x float> %31, i32 0
@@ -247,7 +247,7 @@ main_body:
   %34 = extractelement <4 x float> %31, i32 2
   %35 = extractelement <4 x float> %31, i32 3
   %36 = bitcast float %4 to i32
-  %37 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef, i32 %36, 4
+  %37 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison, i32 %36, 4
   %38 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %37, float %32, 5
   %39 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %38, float %33, 6
   %40 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %39, float %34, 7
@@ -270,8 +270,8 @@ main_body:
   %25 = getelementptr inbounds [0 x <8 x i32>], ptr addrspace(6) %1, i32 0, i32 %24
   %26 = load <8 x i32>, ptr addrspace(6) %25, align 32, !invariant.load !0
   %27 = shl i32 %23, 2
-  %28 = or disjoint i32 %27, 3
-  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %28
+  %28 = getelementptr [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %27
+  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %28, i32 0, i32 3
   %30 = load <4 x i32>, ptr addrspace(6) %29, align 16, !invariant.load !0
   %31 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %30, i1 0, i32 0, i32 0) #8
   %32 = extractelement <4 x float> %31, i32 0
@@ -279,7 +279,7 @@ main_body:
   %34 = extractelement <4 x float> %31, i32 2
   %35 = extractelement <4 x float> %31, i32 3
   %36 = bitcast float %4 to i32
-  %37 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef, i32 %36, 4
+  %37 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison, i32 %36, 4
   %38 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %37, float %32, 5
   %39 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %38, float %33, 6
   %40 = insertvalue <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %39, float %34, 7
@@ -306,7 +306,7 @@ define amdgpu_vs float @load_addr_no_fold(ptr addrspace(6) inreg noalias %p0) #0
 define amdgpu_vs float @vgpr_arg_src(ptr addrspace(6) %arg) {
 main_body:
   %tmp9 = load ptr addrspace(8), ptr addrspace(6) %arg
-  %tmp10 = call nsz float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp9, i32 undef, i32 0, i32 0, i32 0) #1
+  %tmp10 = call nsz float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp9, i32 poison, i32 0, i32 0, i32 0) #1
   ret float %tmp10
 }
 

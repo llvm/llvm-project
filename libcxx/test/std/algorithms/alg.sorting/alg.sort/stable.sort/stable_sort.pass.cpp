@@ -8,162 +8,256 @@
 
 // <algorithm>
 
-// template<RandomAccessIterator Iter>
-//   requires ShuffleIterator<Iter>
-//         && LessThanComparable<Iter::value_type>
-//   void
-//   stable_sort(Iter first, Iter last);
+// template <class RandomAccessIterator>
+//     constexpr void               // constexpr since C++26
+//     stable_sort(RandomAccessIterator first, RandomAccessIterator last);
+
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=200000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=200000000
 
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <limits>
 #include <random>
+#include <type_traits>
 #include <vector>
 
 #include "count_new.h"
 #include "test_macros.h"
 
-std::mt19937 randomness;
+template <class Iterator>
+TEST_CONSTEXPR_CXX26 void test_all_permutations(Iterator first, Iterator last) {
+  using T = typename std::iterator_traits<Iterator>::value_type;
 
-template <class RI>
-void
-test_sort_helper(RI f, RI l)
-{
-    typedef typename std::iterator_traits<RI>::value_type value_type;
-    typedef typename std::iterator_traits<RI>::difference_type difference_type;
-
-    if (f != l)
-    {
-        difference_type len = l - f;
-        value_type* save(new value_type[len]);
-        do
-        {
-            std::copy(f, l, save);
-            std::stable_sort(save, save+len);
-            assert(std::is_sorted(save, save+len));
-        } while (std::next_permutation(f, l));
-        delete [] save;
-    }
+  do {
+    std::vector<T> save(first, last);
+    std::stable_sort(save.begin(), save.end());
+    assert(std::is_sorted(save.begin(), save.end()));
+  } while (std::next_permutation(first, last));
 }
 
-template <class RI>
-void
-test_sort_driver_driver(RI f, RI l, int start, RI real_last)
-{
-    for (RI i = l; i > f + start;)
-    {
-        *--i = start;
-        if (f == i)
-        {
-            test_sort_helper(f, real_last);
-        }
+template <class Iterator>
+TEST_CONSTEXPR_CXX26 void test_sort_exhaustive_impl(Iterator first, Iterator last, int start, Iterator real_last) {
+  using T = typename std::iterator_traits<Iterator>::value_type;
+
+  for (Iterator i = last; i > first + start;) {
+    *--i = static_cast<T>(start);
+    if (first == i) {
+      test_all_permutations(first, real_last);
+    }
     if (start > 0)
-        test_sort_driver_driver(f, i, start-1, real_last);
+      test_sort_exhaustive_impl(first, i, start - 1, real_last);
+  }
+}
+
+template <class T>
+TEST_CONSTEXPR_CXX26 void test_sort_exhaustive(int N) {
+  std::vector<T> vec;
+  vec.resize(N);
+  for (int i = 0; i < N; ++i) {
+    test_sort_exhaustive_impl(vec.begin(), vec.end(), i, vec.end());
+  }
+}
+
+template <class T>
+TEST_CONSTEXPR_CXX26 std::vector<T> generate_sawtooth(int N, int M) {
+  // Populate a sequence of length N with M different numbers
+  std::vector<T> v;
+  T x = 0;
+  for (int i = 0; i < N; ++i) {
+    v.push_back(x);
+    if (++x == M)
+      x = 0;
+  }
+
+  if (std::is_signed<T>::value) {
+    for (auto& a : v) {
+      a -= (M / 2);
     }
+  }
+
+  return v;
 }
 
-template <class RI>
-void
-test_sort_driver(RI f, RI l, int start)
-{
-    test_sort_driver_driver(f, l, start, l);
-}
+template <class T>
+TEST_CONSTEXPR_CXX26 void test_larger_sorts(int N, int M) {
+  assert(N != 0);
+  assert(M != 0);
 
-template <int sa>
-void
-test_sort_()
-{
-    int ia[sa];
-    for (int i = 0; i < sa; ++i)
-    {
-        test_sort_driver(ia, ia+sa, i);
+  // test saw tooth pattern
+  {
+    auto v = generate_sawtooth<T>(N, M);
+    std::stable_sort(v.begin(), v.end());
+    assert(std::is_sorted(v.begin(), v.end()));
+  }
+
+  // test random pattern
+  {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      auto v = generate_sawtooth<T>(N, M);
+      std::mt19937 randomness;
+      std::shuffle(v.begin(), v.end(), randomness);
+      std::stable_sort(v.begin(), v.end());
+      assert(std::is_sorted(v.begin(), v.end()));
     }
+  }
+
+  // test sorted pattern
+  {
+    auto v = generate_sawtooth<T>(N, M);
+    std::sort(v.begin(), v.end());
+
+    std::stable_sort(v.begin(), v.end());
+    assert(std::is_sorted(v.begin(), v.end()));
+  }
+
+  // test reverse sorted pattern
+  {
+    auto v = generate_sawtooth<T>(N, M);
+    std::sort(v.begin(), v.end());
+    std::reverse(v.begin(), v.end());
+
+    std::stable_sort(v.begin(), v.end());
+    assert(std::is_sorted(v.begin(), v.end()));
+  }
+
+  // test swap ranges 2 pattern
+  {
+    auto v = generate_sawtooth<T>(N, M);
+    std::sort(v.begin(), v.end());
+    std::swap_ranges(v.begin(), v.begin() + (N / 2), v.begin() + (N / 2));
+
+    std::stable_sort(v.begin(), v.end());
+    assert(std::is_sorted(v.begin(), v.end()));
+  }
+
+  // test reverse swap ranges 2 pattern
+  {
+    auto v = generate_sawtooth<T>(N, M);
+    std::sort(v.begin(), v.end());
+    std::reverse(v.begin(), v.end());
+    std::swap_ranges(v.begin(), v.begin() + (N / 2), v.begin() + (N / 2));
+
+    std::stable_sort(v.begin(), v.end());
+    assert(std::is_sorted(v.begin(), v.end()));
+  }
 }
 
-void
-test_larger_sorts(int N, int M)
-{
-    assert(N != 0);
-    assert(M != 0);
-    // create array length N filled with M different numbers
-    int* array = new int[N];
-    int x = 0;
-    for (int i = 0; i < N; ++i)
-    {
-        array[i] = x;
-        if (++x == M)
-            x = 0;
-    }
-    // test saw tooth pattern
-    std::stable_sort(array, array+N);
-    assert(std::is_sorted(array, array+N));
-    // test random pattern
-    std::shuffle(array, array+N, randomness);
-    std::stable_sort(array, array+N);
-    assert(std::is_sorted(array, array+N));
-    // test sorted pattern
-    std::stable_sort(array, array+N);
-    assert(std::is_sorted(array, array+N));
-    // test reverse sorted pattern
-    std::reverse(array, array+N);
-    std::stable_sort(array, array+N);
-    assert(std::is_sorted(array, array+N));
-    // test swap ranges 2 pattern
-    std::swap_ranges(array, array+N/2, array+N/2);
-    std::stable_sort(array, array+N);
-    assert(std::is_sorted(array, array+N));
-    // test reverse swap ranges 2 pattern
-    std::reverse(array, array+N);
-    std::swap_ranges(array, array+N/2, array+N/2);
-    std::stable_sort(array, array+N);
-    assert(std::is_sorted(array, array+N));
-    delete [] array;
+template <class T>
+TEST_CONSTEXPR_CXX26 void test_larger_sorts(int N) {
+  test_larger_sorts<T>(N, 1);
+  test_larger_sorts<T>(N, 2);
+  test_larger_sorts<T>(N, 3);
+  test_larger_sorts<T>(N, N / 2 - 1);
+  test_larger_sorts<T>(N, N / 2);
+  test_larger_sorts<T>(N, N / 2 + 1);
+  test_larger_sorts<T>(N, N - 2);
+  test_larger_sorts<T>(N, N - 1);
+  test_larger_sorts<T>(N, N);
 }
 
-void
-test_larger_sorts(int N)
-{
-    test_larger_sorts(N, 1);
-    test_larger_sorts(N, 2);
-    test_larger_sorts(N, 3);
-    test_larger_sorts(N, N/2-1);
-    test_larger_sorts(N, N/2);
-    test_larger_sorts(N, N/2+1);
-    test_larger_sorts(N, N-2);
-    test_larger_sorts(N, N-1);
-    test_larger_sorts(N, N);
+template <class T>
+TEST_CONSTEXPR_CXX26 bool test() {
+  // test null range
+  {
+    T value = 0;
+    std::stable_sort(&value, &value);
+  }
+
+  // exhaustively test all possibilities up to length 8
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_sort_exhaustive<T>(1);
+    test_sort_exhaustive<T>(2);
+    test_sort_exhaustive<T>(3);
+    test_sort_exhaustive<T>(4);
+    test_sort_exhaustive<T>(5);
+    test_sort_exhaustive<T>(6);
+    test_sort_exhaustive<T>(7);
+    test_sort_exhaustive<T>(8);
+  }
+
+  test_larger_sorts<T>(256);
+  test_larger_sorts<T>(257);
+  if (!TEST_IS_CONSTANT_EVALUATED) { // avoid blowing past constexpr evaluation limit
+    test_larger_sorts<T>(499);
+    test_larger_sorts<T>(500);
+    test_larger_sorts<T>(997);
+    test_larger_sorts<T>(1000);
+    test_larger_sorts<T>(1009);
+    test_larger_sorts<T>(1024);
+    test_larger_sorts<T>(1031);
+    test_larger_sorts<T>(2053);
+  }
+
+  // check that the algorithm works without memory
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    std::vector<T> vec(150, T(3));
+    getGlobalMemCounter()->throw_after = 0;
+    std::stable_sort(vec.begin(), vec.end());
+  }
+#endif
+
+  return true;
 }
 
-int main(int, char**)
-{
-    // test null range
-    int d = 0;
-    std::stable_sort(&d, &d);
-    // exhaustively test all possibilities up to length 8
-    test_sort_<1>();
-    test_sort_<2>();
-    test_sort_<3>();
-    test_sort_<4>();
-    test_sort_<5>();
-    test_sort_<6>();
-    test_sort_<7>();
-    test_sort_<8>();
+template <class T>
+bool test_floating_special_values() {
+  static_assert(std::is_floating_point<T>::value, "");
 
-    test_larger_sorts(256);
-    test_larger_sorts(257);
-    test_larger_sorts(499);
-    test_larger_sorts(500);
-    test_larger_sorts(997);
-    test_larger_sorts(1000);
-    test_larger_sorts(1009);
+  auto v = generate_sawtooth<T>(1024, 512);
+  v.insert(v.end(), 256, static_cast<T>(0.0));
+  v.insert(v.end(), 256, static_cast<T>(-0.0));
+  v.insert(v.end(), 256, std::numeric_limits<T>::infinity());
+  v.insert(v.end(), 256, -std::numeric_limits<T>::infinity());
 
-#if !defined(TEST_HAS_NO_EXCEPTIONS)
-    { // check that the algorithm works without memory
-        std::vector<int> vec(150, 3);
-        getGlobalMemCounter()->throw_after = 0;
-        std::stable_sort(vec.begin(), vec.end());
-    }
-#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
+  std::mt19937 randomness;
+  std::shuffle(v.begin(), v.end(), randomness);
 
+  std::stable_sort(v.begin(), v.end());
+  assert(std::is_sorted(v.begin(), v.end()));
+
+  return true;
+}
+
+template <class T>
+bool test_floating() {
+  return test<T>() && test_floating_special_values<T>();
+}
+
+enum struct Enum : int { a, b, c, d, e, f, g, h };
+TEST_CONSTEXPR_CXX26 bool operator<(Enum x, Enum y) { return static_cast<int>(x) > static_cast<int>(y); }
+
+TEST_CONSTEXPR_CXX26 bool test_enum() {
+  auto v = std::vector<Enum>(128, Enum::a);
+  v.resize(v.size() + 128, Enum::b);
+  v.resize(v.size() + 128, Enum::c);
+  v.resize(v.size() + 128, Enum::d);
+  v.resize(v.size() + 128, Enum::e);
+  v.resize(v.size() + 128, Enum::f);
+  v.resize(v.size() + 128, Enum::g);
+  v.resize(v.size() + 128, Enum::h);
+
+  // Order is reversed by definition
+  std::stable_sort(v.begin(), v.end());
+  assert(std::is_sorted(v.begin(), v.end()));
+
+  return true;
+}
+
+int main(int, char**) {
+  test<int>();
+  test_floating<float>();
+  test_floating<double>();
+  test_floating<long double>();
+  test_enum();
+#if TEST_STD_VER >= 26
+  static_assert(test<int>());
+  static_assert(test<float>());
+  static_assert(test<double>());
+  // test constexprness of radix sort branch
+  static_assert(test<char>());
+#endif
   return 0;
 }

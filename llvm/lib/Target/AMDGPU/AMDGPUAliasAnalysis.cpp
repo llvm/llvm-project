@@ -38,9 +38,7 @@ ImmutablePass *llvm::createAMDGPUExternalAAWrapperPass() {
   return new AMDGPUExternalAAWrapper();
 }
 
-AMDGPUAAWrapperPass::AMDGPUAAWrapperPass() : ImmutablePass(ID) {
-  initializeAMDGPUAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+AMDGPUAAWrapperPass::AMDGPUAAWrapperPass() : ImmutablePass(ID) {}
 
 void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -80,10 +78,14 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
     } else if (const Argument *Arg = dyn_cast<Argument>(ObjA)) {
       const Function *F = Arg->getParent();
       switch (F->getCallingConv()) {
-      case CallingConv::AMDGPU_KERNEL:
+      case CallingConv::AMDGPU_KERNEL: {
         // In the kernel function, kernel arguments won't alias to (local)
         // variables in shared or private address space.
-        return AliasResult::NoAlias;
+        const auto *ObjB =
+            getUnderlyingObject(B.Ptr->stripPointerCastsForAliasAnalysis());
+        return ObjA != ObjB && isIdentifiedObject(ObjB) ? AliasResult::NoAlias
+                                                        : AliasResult::MayAlias;
+      }
       default:
         // TODO: In the regular function, if that local variable in the
         // location B is not captured, that argument pointer won't alias to it

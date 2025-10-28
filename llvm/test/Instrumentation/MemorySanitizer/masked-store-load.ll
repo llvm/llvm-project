@@ -19,7 +19,7 @@ declare void @llvm.masked.compressstore.v16f32(<16 x float>, ptr, <16 x i1>)
 define void @Store(ptr %p, <4 x i64> %v, <4 x i1> %mask) sanitize_memory {
 ; CHECK-LABEL: @Store(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
@@ -30,9 +30,9 @@ define void @Store(ptr %p, <4 x i64> %v, <4 x i1> %mask) sanitize_memory {
 ;
 ; ADDR-LABEL: @Store(
 ; ADDR-NEXT:  entry:
-; ADDR-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; ADDR-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
+; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 40), align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; ADDR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
@@ -52,8 +52,8 @@ define void @Store(ptr %p, <4 x i64> %v, <4 x i1> %mask) sanitize_memory {
 ;
 ; ORIGINS-LABEL: @Store(
 ; ORIGINS-NEXT:  entry:
-; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
@@ -88,7 +88,7 @@ entry:
 define <4 x double> @Load(ptr %p, <4 x double> %v, <4 x i1> %mask) sanitize_memory {
 ; CHECK-LABEL: @Load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
@@ -101,8 +101,8 @@ define <4 x double> @Load(ptr %p, <4 x double> %v, <4 x i1> %mask) sanitize_memo
 ; ADDR-LABEL: @Load(
 ; ADDR-NEXT:  entry:
 ; ADDR-NEXT:    [[TMP0:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; ADDR-NEXT:    [[TMP1:%.*]] = load <4 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 40) to ptr), align 8
-; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; ADDR-NEXT:    [[TMP1:%.*]] = load <4 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 40), align 8
+; ADDR-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; ADDR-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
@@ -123,8 +123,8 @@ define <4 x double> @Load(ptr %p, <4 x double> %v, <4 x i1> %mask) sanitize_memo
 ;
 ; ORIGINS-LABEL: @Load(
 ; ORIGINS-NEXT:  entry:
-; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; ORIGINS-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
@@ -235,7 +235,7 @@ entry:
 ; FIXME: Provide real implementation.
 define <16 x float> @Gather(<16 x ptr> %ptrs, <16 x i1> %mask, <16 x float> %passthru) sanitize_memory {
 ; CHECK-LABEL: @Gather(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 136) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 136), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <16 x ptr> [[PTRS:%.*]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <16 x i64> [[TMP2]], splat (i64 87960930222080)
@@ -246,9 +246,9 @@ define <16 x float> @Gather(<16 x ptr> %ptrs, <16 x i1> %mask, <16 x float> %pas
 ; CHECK-NEXT:    ret <16 x float> [[RET]]
 ;
 ; ADDR-LABEL: @Gather(
-; ADDR-NEXT:    [[TMP1:%.*]] = load <16 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
+; ADDR-NEXT:    [[TMP1:%.*]] = load <16 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 128), align 8
 ; ADDR-NEXT:    [[TMP2:%.*]] = load <16 x i64>, ptr @__msan_param_tls, align 8
-; ADDR-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 136) to ptr), align 8
+; ADDR-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 136), align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[_MSMASKEDPTRS:%.*]] = select <16 x i1> [[MASK:%.*]], <16 x i64> [[TMP2]], <16 x i64> zeroinitializer
 ; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint <16 x ptr> [[PTRS:%.*]] to <16 x i64>
@@ -270,8 +270,8 @@ define <16 x float> @Gather(<16 x ptr> %ptrs, <16 x i1> %mask, <16 x float> %pas
 ; ADDR-NEXT:    ret <16 x float> [[RET]]
 ;
 ; ORIGINS-LABEL: @Gather(
-; ORIGINS-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 136) to ptr), align 8
-; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 136) to ptr), align 4
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 136), align 8
+; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 136), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = ptrtoint <16 x ptr> [[PTRS:%.*]] to <16 x i64>
 ; ORIGINS-NEXT:    [[TMP4:%.*]] = xor <16 x i64> [[TMP3]], splat (i64 87960930222080)
@@ -326,8 +326,8 @@ define void @Scatter(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask) sanitize
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @Scatter(
-; ADDR-NEXT:    [[TMP1:%.*]] = load <8 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 96) to ptr), align 8
-; ADDR-NEXT:    [[TMP2:%.*]] = load <8 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 32) to ptr), align 8
+; ADDR-NEXT:    [[TMP1:%.*]] = load <8 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 96), align 8
+; ADDR-NEXT:    [[TMP2:%.*]] = load <8 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; ADDR-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[_MSMASKEDPTRS:%.*]] = select <8 x i1> [[MASK:%.*]], <8 x i64> [[TMP2]], <8 x i64> zeroinitializer
@@ -403,7 +403,7 @@ define void @ScatterNoSanitize(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask
 ; FIXME: Provide real implementation.
 define <16 x float> @ExpandLoad(ptr %ptr, <16 x i1> %mask, <16 x float> %passthru) sanitize_memory {
 ; CHECK-LABEL: @ExpandLoad(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
@@ -415,8 +415,8 @@ define <16 x float> @ExpandLoad(ptr %ptr, <16 x i1> %mask, <16 x float> %passthr
 ;
 ; ADDR-LABEL: @ExpandLoad(
 ; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
-; ADDR-NEXT:    [[TMP2:%.*]] = load <16 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ADDR-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; ADDR-NEXT:    [[TMP2:%.*]] = load <16 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ADDR-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; ADDR-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
@@ -436,8 +436,8 @@ define <16 x float> @ExpandLoad(ptr %ptr, <16 x i1> %mask, <16 x float> %passthr
 ; ADDR-NEXT:    ret <16 x float> [[RET]]
 ;
 ; ORIGINS-LABEL: @ExpandLoad(
-; ORIGINS-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
-; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 16) to ptr), align 4
+; ORIGINS-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 16), align 8
+; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 16), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; ORIGINS-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
@@ -492,8 +492,8 @@ define void @CompressStore(<16 x float> %value, ptr %ptr, <16 x i1> %mask) sanit
 ; CHECK-NEXT:    ret void
 ;
 ; ADDR-LABEL: @CompressStore(
-; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
-; ADDR-NEXT:    [[TMP2:%.*]] = load <16 x i1>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 72) to ptr), align 8
+; ADDR-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 64), align 8
+; ADDR-NEXT:    [[TMP2:%.*]] = load <16 x i1>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 72), align 8
 ; ADDR-NEXT:    [[TMP3:%.*]] = load <16 x i32>, ptr @__msan_param_tls, align 8
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64

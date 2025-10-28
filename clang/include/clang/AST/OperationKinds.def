@@ -119,7 +119,7 @@ CAST_OPERATION(ArrayToPointerDecay)
 CAST_OPERATION(FunctionToPointerDecay)
 
 /// CK_NullToPointer - Null pointer constant to pointer, ObjC
-/// pointer, or block pointer.
+/// pointer, block pointer, or std::nullptr_t.
 ///   (void*) 0
 ///   void (^block)() = 0;
 CAST_OPERATION(NullToPointer)
@@ -366,6 +366,12 @@ CAST_OPERATION(HLSLVectorTruncation)
 
 // Non-decaying array RValue cast (HLSL only).
 CAST_OPERATION(HLSLArrayRValue)
+
+// Aggregate by Value cast (HLSL only).
+CAST_OPERATION(HLSLElementwiseCast)
+
+// Splat cast for Aggregates (HLSL only).
+CAST_OPERATION(HLSLAggregateSplatCast)
 
 //===- Binary Operations  -------------------------------------------------===//
 // Operators listed in order of precedence.

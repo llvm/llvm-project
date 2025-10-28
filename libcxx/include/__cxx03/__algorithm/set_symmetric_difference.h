@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
-#define _LIBCPP___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
+#define _LIBCPP___CXX03___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
 
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/comp_ref_type.h>
@@ -34,14 +34,13 @@ struct __set_symmetric_difference_result {
   _OutIter __out_;
 
   // need a constructor as C++03 aggregate init is hard
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+  _LIBCPP_HIDE_FROM_ABI
   __set_symmetric_difference_result(_InIter1&& __in_iter1, _InIter2&& __in_iter2, _OutIter&& __out_iter)
       : __in1_(std::move(__in_iter1)), __in2_(std::move(__in_iter2)), __out_(std::move(__out_iter)) {}
 };
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __set_symmetric_difference_result<_InIter1, _InIter2, _OutIter>
-__set_symmetric_difference(
+_LIBCPP_HIDE_FROM_ABI __set_symmetric_difference_result<_InIter1, _InIter2, _OutIter> __set_symmetric_difference(
     _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Sent2 __last2, _OutIter __result, _Compare&& __comp) {
   while (__first1 != __last1) {
     if (__first2 == __last2) {
@@ -69,7 +68,7 @@ __set_symmetric_difference(
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_symmetric_difference(
+_LIBCPP_HIDE_FROM_ABI _OutputIterator set_symmetric_difference(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -87,7 +86,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_symmetri
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_symmetric_difference(
+_LIBCPP_HIDE_FROM_ABI _OutputIterator set_symmetric_difference(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
@@ -106,4 +105,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SET_SYMMETRIC_DIFFERENCE_H

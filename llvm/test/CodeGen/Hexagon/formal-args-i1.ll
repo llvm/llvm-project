@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; This tests validates the fact that the formal arguments of type scalar i1
 ; (passed using 32-bit register) is converted back to use predicate registers
 ; CHECK: [[P0:p[0-3]]] = tstbit(r0,#0)

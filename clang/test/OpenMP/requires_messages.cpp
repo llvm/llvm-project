@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100  %s -Wuninitialized
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=99 -DOMP99 -verify=expected,rev -ferror-limit 100  %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -DOMP60 -verify=self -ferror-limit 100  %s -Wuninitialized
 
 int a;
 #pragma omp requires unified_address allocate(a) // rev-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note {{unified_address clause previously used here}} expected-note{{unified_address clause previously used here}} expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp requires'}}
@@ -21,6 +22,12 @@ int a;
 #pragma omp requires dynamic_allocators // rev-note {{dynamic_allocators clause previously used here}} expected-note {{dynamic_allocators clause previously used here}}
 
 #pragma omp requires dynamic_allocators, dynamic_allocators // expected-error {{only one dynamic_allocators clause can appear on a requires directive in a single translation unit}} expected-error {{directive '#pragma omp requires' cannot contain more than one 'dynamic_allocators' clause}}
+
+#ifdef OMP60
+#pragma omp requires self_maps // self-note {{self_maps clause previously used here}}
+
+#pragma omp requires self_maps, self_maps // self-error {{only one self_maps clause can appear on a requires directive in a single translation unit}} self-error {{directive '#pragma omp requires' cannot contain more than one 'self_maps' clause}}
+#endif
 
 #pragma omp requires atomic_default_mem_order(seq_cst) // rev-note {{atomic_default_mem_order clause previously used here}} expected-note {{atomic_default_mem_order clause previously used here}} expected-note {{atomic_default_mem_order clause previously used here}} expected-note {{atomic_default_mem_order clause previously used here}} expected-note {{atomic_default_mem_order clause previously used here}}
 

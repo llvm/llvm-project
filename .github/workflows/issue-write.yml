@@ -6,6 +6,7 @@ on:
       - "Check code formatting"
       - "Check for private emails used in PRs"
       - "PR Request Release Note"
+      - "Code lint"
     types:
       - completed
 
@@ -14,7 +15,7 @@ permissions:
 
 jobs:
   pr-comment:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     if: >
@@ -25,7 +26,7 @@ jobs:
       )
     steps:
       - name: Fetch Sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           sparse-checkout: |
             .github/workflows/unprivileged-download-artifact/action.yml
@@ -39,7 +40,7 @@ jobs:
 
       - name: 'Comment on PR'
         if: steps.download-artifact.outputs.artifact-id != ''
-        uses: actions/github-script@v3
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -49,7 +50,7 @@ jobs:
               return;
             }
 
-            let runInfo = await github.actions.getWorkflowRun({
+            let runInfo = await github.rest.actions.getWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
               run_id: context.payload.workflow_run.id
@@ -122,7 +123,7 @@ jobs:
                 // Security check: Ensure that this comment was created by
                 // the github-actions bot, so a malicious input won't overwrite
                 // a user's comment.
-                github.issues.getComment({
+                github.rest.issues.getComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   comment_id: comment.id
@@ -132,7 +133,7 @@ jobs:
                     console.log("Invalid comment id: " + comment.id);
                     return;
                   }
-                  github.issues.updateComment({
+                  github.rest.issues.updateComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: pr_number,
@@ -141,7 +142,7 @@ jobs:
                   });
                 });
               } else {
-                github.issues.createComment({
+                github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: pr_number,

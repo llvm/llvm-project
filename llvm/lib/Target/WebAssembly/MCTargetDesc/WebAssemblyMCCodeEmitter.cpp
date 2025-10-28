@@ -13,14 +13,12 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
@@ -109,7 +107,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeULEB128(uint32_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_I64IMM:
-          encodeSLEB128(int64_t(MO.getImm()), OS);
+          encodeSLEB128(MO.getImm(), OS);
           break;
         case WebAssembly::OPERAND_SIGNATURE:
         case WebAssembly::OPERAND_VEC_I8IMM:
@@ -158,10 +156,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         const MCOperandInfo &Info = Desc.operands()[I];
         switch (Info.OperandType) {
         case WebAssembly::OPERAND_I32IMM:
-          FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i32);
+          FixupKind = WebAssembly::fixup_sleb128_i32;
           break;
         case WebAssembly::OPERAND_I64IMM:
-          FixupKind = MCFixupKind(WebAssembly::fixup_sleb128_i64);
+          FixupKind = WebAssembly::fixup_sleb128_i64;
           PaddedSize = 10;
           break;
         case WebAssembly::OPERAND_FUNCTION32:
@@ -171,10 +169,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         case WebAssembly::OPERAND_TYPEINDEX:
         case WebAssembly::OPERAND_GLOBAL:
         case WebAssembly::OPERAND_TAG:
-          FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
+          FixupKind = WebAssembly::fixup_uleb128_i32;
           break;
         case WebAssembly::OPERAND_OFFSET64:
-          FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i64);
+          FixupKind = WebAssembly::fixup_uleb128_i64;
           PaddedSize = 10;
           break;
         default:
@@ -183,10 +181,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       } else {
         // Variadic expr operands are try_table's catch/catch_ref clauses' tags.
         assert(Opcode == WebAssembly::TRY_TABLE_S);
-        FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
+        FixupKind = WebAssembly::fixup_uleb128_i32;
       }
-      Fixups.push_back(MCFixup::create(OS.tell() - Start, MO.getExpr(),
-                                       FixupKind, MI.getLoc()));
+      Fixups.push_back(
+          MCFixup::create(OS.tell() - Start, MO.getExpr(), FixupKind));
       ++MCNumFixups;
       encodeULEB128(0, OS, PaddedSize);
     } else {

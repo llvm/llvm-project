@@ -11,7 +11,7 @@ module m2
   interface s
   end interface
 contains
-  !WARNING: 's' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
+  !WARNING: 's' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic [-Whomonymous-specific]
   subroutine s
   end subroutine
 end module
@@ -290,6 +290,7 @@ module m14d
  contains
   subroutine test
     real :: y
+    !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
     y = foo(1.0)
     x = foo(2)
   end subroutine
@@ -301,6 +302,7 @@ module m14e
  contains
   subroutine test
     real :: y
+    !PORTABILITY: Reference to generic function 'foo' (resolving to specific 'bar') is ambiguous with a structure constructor of the same name [-Wambiguous-structure-constructor]
     y = foo(1.0)
     x = foo(2)
   end subroutine

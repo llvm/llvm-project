@@ -2060,7 +2060,7 @@ TEST_F(AArch64GISelMITest, LibcallFPExt) {
   auto CheckStr = R"(
   CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC
   CHECK: $h0 = COPY [[TRUNC]]
-  CHECK: BL &__gnu_h2f_ieee
+  CHECK: BL &__extendhfsf2
   CHECK: $d0 = COPY
   CHECK: BL &__extenddftf2
   )";
@@ -2103,7 +2103,7 @@ TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
   auto CheckStr = R"(
   CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
   CHECK: $s0 = COPY [[TRUNC]]
-  CHECK: BL &__gnu_f2h_ieee
+  CHECK: BL &__truncsfhf2
   CHECK: $q0 = COPY
   CHECK: BL &__trunctfdf2
   )";

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that the store to Q6VecPredResult does not get expanded into multiple
 ; stores. There should be no memd's. This relies on the alignment specified

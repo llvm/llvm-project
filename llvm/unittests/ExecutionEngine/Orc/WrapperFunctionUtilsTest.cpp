@@ -118,8 +118,9 @@ static WrapperFunctionResult voidNoopAsyncWrapper(const char *ArgData,
   auto RF = RP.get_future();
 
   WrapperFunction<void()>::handleAsync(
-      ArgData, ArgSize, voidNoopAsync,
-      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); });
+      ArgData, ArgSize,
+      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); },
+      voidNoopAsync);
 
   return RF.get();
 }
@@ -131,10 +132,10 @@ static WrapperFunctionResult addAsyncWrapper(const char *ArgData,
 
   WrapperFunction<int32_t(int32_t, int32_t)>::handleAsync(
       ArgData, ArgSize,
+      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); },
       [](unique_function<void(int32_t)> SendResult, int32_t X, int32_t Y) {
         SendResult(X + Y);
-      },
-      [&](WrapperFunctionResult R) { RP.set_value(std::move(R)); });
+      });
   return RF.get();
 }
 

@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
-#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 
 using namespace llvm;
@@ -41,6 +39,10 @@ public:
   bool usesOnlyLowPageBits(RelType type) const override;
 };
 } // namespace
+
+uint64_t elf::getMipsPageAddr(uint64_t addr) {
+  return (addr + 0x8000) & ~0xffff;
+}
 
 template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 2;
@@ -78,7 +80,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
                                const uint8_t *loc) const {
   // See comment in the calculateMipsRelChain.
   if (ELFT::Is64Bits || ctx.arg.mipsN32Abi)
-    type &= 0xff;
+    type.v &= 0xff;
 
   switch (type) {
   case R_MIPS_JALR:
@@ -105,7 +107,7 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_GPREL32:
   case R_MICROMIPS_GPREL16:
   case R_MICROMIPS_GPREL7_S2:
-    return R_MIPS_GOTREL;
+    return RE_MIPS_GOTREL;
   case R_MIPS_26:
   case R_MICROMIPS_26_S1:
     return R_PLT;
@@ -122,9 +124,9 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
     // equal to the start of .got section. In that case we consider these
     // relocations as relative.
     if (&s == ctx.sym.mipsGpDisp)
-      return R_MIPS_GOT_GP_PC;
+      return RE_MIPS_GOT_GP_PC;
     if (&s == ctx.sym.mipsLocalGp)
-      return R_MIPS_GOT_GP;
+      return RE_MIPS_GOT_GP;
     [[fallthrough]];
   case R_MIPS_32:
   case R_MIPS_64:
@@ -163,14 +165,14 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_GOT16:
   case R_MICROMIPS_GOT16:
     if (s.isLocal())
-      return R_MIPS_GOT_LOCAL_PAGE;
+      return RE_MIPS_GOT_LOCAL_PAGE;
     [[fallthrough]];
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
   case R_MIPS_TLS_GOTTPREL:
   case R_MICROMIPS_CALL16:
   case R_MICROMIPS_TLS_GOTTPREL:
-    return R_MIPS_GOT_OFF;
+    return RE_MIPS_GOT_OFF;
   case R_MIPS_CALL_HI16:
   case R_MIPS_CALL_LO16:
   case R_MIPS_GOT_HI16:
@@ -179,19 +181,19 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MICROMIPS_CALL_LO16:
   case R_MICROMIPS_GOT_HI16:
   case R_MICROMIPS_GOT_LO16:
-    return R_MIPS_GOT_OFF32;
+    return RE_MIPS_GOT_OFF32;
   case R_MIPS_GOT_PAGE:
-    return R_MIPS_GOT_LOCAL_PAGE;
+    return RE_MIPS_GOT_LOCAL_PAGE;
   case R_MIPS_TLS_GD:
   case R_MICROMIPS_TLS_GD:
-    return R_MIPS_TLSGD;
+    return RE_MIPS_TLSGD;
   case R_MIPS_TLS_LDM:
   case R_MICROMIPS_TLS_LDM:
-    return R_MIPS_TLSLD;
+    return RE_MIPS_TLSLD;
   case R_MIPS_NONE:
     return R_NONE;
   default:
-    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << Twine(type)
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
     return R_NONE;
   }
@@ -369,7 +371,7 @@ bool MIPS<ELFT>::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   if (type != R_MIPS_26 && type != R_MIPS_PC26_S2 &&
       type != R_MICROMIPS_26_S1 && type != R_MICROMIPS_PC26_S1)
     return false;
-  auto *f = dyn_cast_or_null<ObjFile<ELFT>>(file);
+  auto *f = dyn_cast<ObjFile<ELFT>>(file);
   if (!f)
     return false;
   // If current file has PIC code, LA25 stub is not required.
@@ -475,14 +477,13 @@ int64_t MIPS<ELFT>::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // These relocations are defined as not having an implicit addend.
     return 0;
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }
 
 static std::pair<uint32_t, uint64_t>
-calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
+calculateMipsRelChain(Ctx &ctx, uint8_t *loc, uint32_t type, uint64_t val) {
   // MIPS N64 ABI packs multiple relocations into the single relocation
   // record. In general, all up to three relocations can have arbitrary
   // types. In fact, Clang and GCC uses only a few combinations. For now,
@@ -495,8 +496,8 @@ calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
   // relocations used to modify result of the first one: extend it to
   // 64-bit, extract high or low part etc. For details, see part 2.9 Relocation
   // at the https://dmz-portal.mips.com/mw/images/8/82/007-4658-001.pdf
-  RelType type2 = (type >> 8) & 0xff;
-  RelType type3 = (type >> 16) & 0xff;
+  uint32_t type2 = (type >> 8) & 0xff;
+  uint32_t type3 = (type >> 16) & 0xff;
   if (type2 == R_MIPS_NONE && type3 == R_MIPS_NONE)
     return std::make_pair(type, val);
   if (type2 == R_MIPS_64 && type3 == R_MIPS_NONE)
@@ -504,7 +505,7 @@ calculateMipsRelChain(Ctx &ctx, uint8_t *loc, RelType type, uint64_t val) {
   if (type2 == R_MIPS_SUB && (type3 == R_MIPS_HI16 || type3 == R_MIPS_LO16))
     return std::make_pair(type3, -val);
   Err(ctx) << getErrorLoc(ctx, loc) << "unsupported relocations combination "
-           << Twine(type);
+           << type;
   return std::make_pair(type & 0xff, val);
 }
 

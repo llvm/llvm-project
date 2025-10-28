@@ -20,7 +20,8 @@ char ExpressionVariable::ID;
 ExpressionVariable::ExpressionVariable() : m_flags(0) {}
 
 uint8_t *ExpressionVariable::GetValueBytes() {
-  std::optional<uint64_t> byte_size = m_frozen_sp->GetByteSize();
+  std::optional<uint64_t> byte_size =
+      llvm::expectedToOptional(m_frozen_sp->GetByteSize());
   if (byte_size && *byte_size) {
     if (m_frozen_sp->GetDataExtractor().GetByteSize() < *byte_size) {
       m_frozen_sp->GetValue().ResizeData(*byte_size);

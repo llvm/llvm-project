@@ -46,6 +46,8 @@ enum class SwiftNewTypeKind {
   Enum,
 };
 
+enum class SwiftSafetyKind { Unspecified, Safe, Unsafe, None };
+
 /// Describes API notes data for any entity.
 ///
 /// This is used as the base of all API notes.
@@ -71,13 +73,19 @@ private:
   LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftPrivate : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftSafetyAudited : 1;
+
+  LLVM_PREFERRED_TYPE(SwiftSafetyKind)
+  unsigned SwiftSafety : 2;
+
 public:
   /// Swift name of this entity.
   std::string SwiftName;
 
   CommonEntityInfo()
       : Unavailable(0), UnavailableInSwift(0), SwiftPrivateSpecified(0),
-        SwiftPrivate(0) {}
+        SwiftPrivate(0), SwiftSafetyAudited(0), SwiftSafety(0) {}
 
   std::optional<bool> isSwiftPrivate() const {
     return SwiftPrivateSpecified ? std::optional<bool>(SwiftPrivate)
@@ -87,6 +95,17 @@ public:
   void setSwiftPrivate(std::optional<bool> Private) {
     SwiftPrivateSpecified = Private.has_value();
     SwiftPrivate = Private.value_or(0);
+  }
+
+  std::optional<SwiftSafetyKind> getSwiftSafety() const {
+    return SwiftSafetyAudited ? std::optional<SwiftSafetyKind>(
+                                    static_cast<SwiftSafetyKind>(SwiftSafety))
+                              : std::nullopt;
+  }
+
+  void setSwiftSafety(SwiftSafetyKind Safety) {
+    SwiftSafetyAudited = 1;
+    SwiftSafety = static_cast<unsigned>(Safety);
   }
 
   friend bool operator==(const CommonEntityInfo &, const CommonEntityInfo &);
@@ -108,6 +127,9 @@ public:
     if (!SwiftPrivateSpecified)
       setSwiftPrivate(RHS.isSwiftPrivate());
 
+    if (!SwiftSafetyAudited && RHS.SwiftSafetyAudited)
+      setSwiftSafety(*RHS.getSwiftSafety());
+
     if (SwiftName.empty())
       SwiftName = RHS.SwiftName;
 
@@ -123,7 +145,9 @@ inline bool operator==(const CommonEntityInfo &LHS,
          LHS.Unavailable == RHS.Unavailable &&
          LHS.UnavailableInSwift == RHS.UnavailableInSwift &&
          LHS.SwiftPrivateSpecified == RHS.SwiftPrivateSpecified &&
-         LHS.SwiftPrivate == RHS.SwiftPrivate && LHS.SwiftName == RHS.SwiftName;
+         LHS.SwiftPrivate == RHS.SwiftPrivate &&
+         LHS.SwiftSafetyAudited == RHS.SwiftSafetyAudited &&
+         LHS.SwiftSafety == RHS.SwiftSafety && LHS.SwiftName == RHS.SwiftName;
 }
 
 inline bool operator!=(const CommonEntityInfo &LHS,
@@ -140,6 +164,9 @@ class CommonTypeInfo : public CommonEntityInfo {
 
   /// The NS error domain for this type.
   std::optional<std::string> NSErrorDomain;
+
+  /// The Swift protocol that this type should be automatically conformed to.
+  std::optional<std::string> SwiftConformance;
 
 public:
   CommonTypeInfo() {}
@@ -165,6 +192,14 @@ public:
                            : std::nullopt;
   }
 
+  std::optional<std::string> getSwiftConformance() const {
+    return SwiftConformance;
+  }
+
+  void setSwiftConformance(std::optional<std::string> conformance) {
+    SwiftConformance = conformance;
+  }
+
   friend bool operator==(const CommonTypeInfo &, const CommonTypeInfo &);
 
   CommonTypeInfo &operator|=(const CommonTypeInfo &RHS) {
@@ -175,6 +210,8 @@ public:
       setSwiftBridge(RHS.getSwiftBridge());
     if (!NSErrorDomain)
       setNSErrorDomain(RHS.getNSErrorDomain());
+    if (SwiftConformance)
+      setSwiftConformance(RHS.getSwiftConformance());
 
     return *this;
   }
@@ -185,7 +222,8 @@ public:
 inline bool operator==(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
   return static_cast<const CommonEntityInfo &>(LHS) == RHS &&
          LHS.SwiftBridge == RHS.SwiftBridge &&
-         LHS.NSErrorDomain == RHS.NSErrorDomain;
+         LHS.NSErrorDomain == RHS.NSErrorDomain &&
+         LHS.SwiftConformance == RHS.SwiftConformance;
 }
 
 inline bool operator!=(const CommonTypeInfo &LHS, const CommonTypeInfo &RHS) {
@@ -542,6 +580,9 @@ public:
   /// The result type of this function, as a C type.
   std::string ResultType;
 
+  /// Ownership convention for return value
+  std::string SwiftReturnOwnership;
+
   /// The function parameters.
   std::vector<ParamInfo> Params;
 
@@ -622,7 +663,8 @@ inline bool operator==(const FunctionInfo &LHS, const FunctionInfo &RHS) {
          LHS.NumAdjustedNullable == RHS.NumAdjustedNullable &&
          LHS.NullabilityPayload == RHS.NullabilityPayload &&
          LHS.ResultType == RHS.ResultType && LHS.Params == RHS.Params &&
-         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention;
+         LHS.RawRetainCountConvention == RHS.RawRetainCountConvention &&
+         LHS.SwiftReturnOwnership == RHS.SwiftReturnOwnership;
 }
 
 inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
@@ -724,19 +766,24 @@ class TagInfo : public CommonTypeInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned SwiftCopyable : 1;
 
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftEscapableSpecified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SwiftEscapable : 1;
+
 public:
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
-
-  /// The Swift protocol that this type should be automatically conformed to.
-  std::optional<std::string> SwiftConformance;
+  std::optional<std::string> SwiftDestroyOp;
+  std::optional<std::string> SwiftDefaultOwnership;
 
   std::optional<EnumExtensibilityKind> EnumExtensibility;
 
   TagInfo()
       : HasFlagEnum(0), IsFlagEnum(0), SwiftCopyableSpecified(false),
-        SwiftCopyable(false) {}
+        SwiftCopyable(false), SwiftEscapableSpecified(false),
+        SwiftEscapable(false) {}
 
   std::optional<bool> isFlagEnum() const {
     if (HasFlagEnum)
@@ -757,6 +804,16 @@ public:
     SwiftCopyable = Value.value_or(false);
   }
 
+  std::optional<bool> isSwiftEscapable() const {
+    return SwiftEscapableSpecified ? std::optional<bool>(SwiftEscapable)
+                                   : std::nullopt;
+  }
+
+  void setSwiftEscapable(std::optional<bool> Value) {
+    SwiftEscapableSpecified = Value.has_value();
+    SwiftEscapable = Value.value_or(false);
+  }
+
   TagInfo &operator|=(const TagInfo &RHS) {
     static_cast<CommonTypeInfo &>(*this) |= RHS;
 
@@ -766,9 +823,10 @@ public:
       SwiftRetainOp = RHS.SwiftRetainOp;
     if (!SwiftReleaseOp)
       SwiftReleaseOp = RHS.SwiftReleaseOp;
-
-    if (!SwiftConformance)
-      SwiftConformance = RHS.SwiftConformance;
+    if (!SwiftDestroyOp)
+      SwiftDestroyOp = RHS.SwiftDestroyOp;
+    if (!SwiftDefaultOwnership)
+      SwiftDefaultOwnership = RHS.SwiftDefaultOwnership;
 
     if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
@@ -778,6 +836,9 @@ public:
 
     if (!SwiftCopyableSpecified)
       setSwiftCopyable(RHS.isSwiftCopyable());
+
+    if (!SwiftEscapableSpecified)
+      setSwiftEscapable(RHS.isSwiftEscapable());
 
     return *this;
   }
@@ -792,9 +853,11 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftImportAs == RHS.SwiftImportAs &&
          LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
          LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
-         LHS.SwiftConformance == RHS.SwiftConformance &&
+         LHS.SwiftDestroyOp == RHS.SwiftDestroyOp &&
+         LHS.SwiftDefaultOwnership == RHS.SwiftDefaultOwnership &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
+         LHS.isSwiftEscapable() == RHS.isSwiftEscapable() &&
          LHS.EnumExtensibility == RHS.EnumExtensibility;
 }
 

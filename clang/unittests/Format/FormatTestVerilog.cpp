@@ -160,6 +160,8 @@ TEST_F(FormatTestVerilog, Block) {
   // Test that 'disable fork' and 'rand join' don't get mistaken as blocks.
   verifyFormat("disable fork;\n"
                "x = x;");
+  verifyFormat("wait fork;\n"
+               "x = x;");
   verifyFormat("rand join x x;\n"
                "x = x;");
   // The begin keyword should not be indented if it is too long to fit on the
@@ -702,6 +704,18 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "  generate\n"
                "  endgenerate\n"
                "endfunction : x");
+  // Type names with '::' should be recognized.
+  verifyFormat("function automatic x::x x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  // Names having to do macros should be recognized.
+  verifyFormat("function automatic x::x x``x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyFormat("function automatic x::x `x\n"
+               "    (input x);\n"
+               "endfunction : x");
+  verifyNoCrash("x x(x x, x x);");
 }
 
 TEST_F(FormatTestVerilog, Identifiers) {

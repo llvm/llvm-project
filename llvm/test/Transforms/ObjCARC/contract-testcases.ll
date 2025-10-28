@@ -19,13 +19,13 @@ declare i32 @__gxx_personality_sj0(...)
 ; Don't get in trouble on bugpointed code.
 
 ; CHECK-LABEL: define void @test0(
-define void @test0() {
+define void @test0(i1 %arg) {
 bb:
   %tmp1 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr undef) nounwind
   br label %bb3
 
 bb3:                                              ; preds = %bb2
-  br i1 undef, label %bb6, label %bb4
+  br i1 %arg, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb3
   switch i64 undef, label %bb5 [
@@ -45,15 +45,15 @@ bb6:                                              ; preds = %bb5, %bb4, %bb4, %b
 ; for the same block, use the exactly same value in each block.
 
 ; CHECK-LABEL: define void @test1(
-; CHECK: br i1 undef, label %bb7, label %bb7
+; CHECK: br i1 %arg, label %bb7, label %bb7
 ; CHECK: bb7:
 ; CHECK: %tmp8 = phi ptr [ %tmp3, %bb ], [ %tmp3, %bb ]
 ; CHECK: }
-define void @test1() {
+define void @test1(i1 %arg) {
 bb:
   %tmp = tail call ptr @objc_msgSend()
   %tmp3 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %tmp) nounwind
-  br i1 undef, label %bb7, label %bb7
+  br i1 %arg, label %bb7, label %bb7
 
 bb7:                                              ; preds = %bb6, %bb6, %bb5
   %tmp8 = phi ptr [ %tmp, %bb ], [ %tmp, %bb ]

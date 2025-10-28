@@ -22,22 +22,16 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-cl::opt<bolt::PLTCall::OptType>
-PLT("plt",
-  cl::desc("optimize PLT calls (requires linking with -znow)"),
-  cl::init(bolt::PLTCall::OT_NONE),
-  cl::values(clEnumValN(bolt::PLTCall::OT_NONE,
-      "none",
-      "do not optimize PLT calls"),
-    clEnumValN(bolt::PLTCall::OT_HOT,
-      "hot",
-      "optimize executed (hot) PLT calls"),
-    clEnumValN(bolt::PLTCall::OT_ALL,
-      "all",
-      "optimize all PLT calls")),
-  cl::ZeroOrMore,
-  cl::cat(BoltOptCategory));
-
+static cl::opt<bolt::PLTCall::OptType>
+    PLT("plt", cl::desc("optimize PLT calls (requires linking with -znow)"),
+        cl::init(bolt::PLTCall::OT_NONE),
+        cl::values(clEnumValN(bolt::PLTCall::OT_NONE, "none",
+                              "do not optimize PLT calls"),
+                   clEnumValN(bolt::PLTCall::OT_HOT, "hot",
+                              "optimize executed (hot) PLT calls"),
+                   clEnumValN(bolt::PLTCall::OT_ALL, "all",
+                              "optimize all PLT calls")),
+        cl::ZeroOrMore, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -70,8 +64,8 @@ Error PLTCall::runOnFunctions(BinaryContext &BC) {
         const BinaryFunction *CalleeBF = BC.getFunctionForSymbol(CallSymbol);
         if (!CalleeBF || !CalleeBF->isPLTFunction())
           continue;
-        const InstructionListType NewCode = BC.MIB->createIndirectPltCall(
-            *II, CalleeBF->getPLTSymbol(), BC.Ctx.get());
+        const InstructionListType NewCode = BC.MIB->createIndirectPLTCall(
+            std::move(*II), CalleeBF->getPLTSymbol(), BC.Ctx.get());
         II = BB.replaceInstruction(II, NewCode);
         assert(!NewCode.empty() && "PLT Call replacement must be non-empty");
         std::advance(II, NewCode.size() - 1);

@@ -4,11 +4,15 @@
 
 // Test that deprecation warnings for the wavefront size macro are emitted properly.
 
-#include <type_traits>
-
 #define WRAPPED __AMDGCN_WAVEFRONT_SIZE__
 
 #define DOUBLE_WRAPPED (WRAPPED)
+
+template <bool C, class T = void> struct my_enable_if {};
+
+template <class T> struct my_enable_if<true, T> {
+  typedef T type;
+};
 
 __attribute__((host, device)) void use(int, const char*);
 
@@ -76,7 +80,7 @@ public:
     template<unsigned int FunWarpSize = OuterWarpSize>
     __attribute__((device))
     auto fun(void)
-        -> typename std::enable_if<(FunWarpSize <= __AMDGCN_WAVEFRONT_SIZE__), void>::type // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
+        -> typename my_enable_if<(FunWarpSize <= __AMDGCN_WAVEFRONT_SIZE__), void>::type // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
     {
         use(1, "yay!");
     }
@@ -84,7 +88,7 @@ public:
     template<unsigned int FunWarpSize = OuterWarpSize>
     __attribute__((device))
     auto fun(void)
-        -> typename std::enable_if<(FunWarpSize > __AMDGCN_WAVEFRONT_SIZE__), void>::type // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
+        -> typename my_enable_if<(FunWarpSize > __AMDGCN_WAVEFRONT_SIZE__), void>::type // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
     {
         use(0, "nay!");
     }
@@ -97,14 +101,14 @@ void device_fun_selector_user() {
     f.fun<1>();
     f.fun<1000>();
 
-    std::enable_if<(1 <= __AMDGCN_WAVEFRONT_SIZE__), int>::type x = 42; // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
+    my_enable_if<(1 <= __AMDGCN_WAVEFRONT_SIZE__), int>::type x = 42; // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
 }
 
-__attribute__((device)) std::enable_if<(1 <= __AMDGCN_WAVEFRONT_SIZE__), int>::type DeviceFunTemplateRet(void) { // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
+__attribute__((device)) my_enable_if<(1 <= __AMDGCN_WAVEFRONT_SIZE__), int>::type DeviceFunTemplateRet(void) { // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
     return 42;
 }
 
-__attribute__((device)) int DeviceFunTemplateArg(std::enable_if<(1 <= __AMDGCN_WAVEFRONT_SIZE__), int>::type x) { // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
+__attribute__((device)) int DeviceFunTemplateArg(my_enable_if<(1 <= __AMDGCN_WAVEFRONT_SIZE__), int>::type x) { // expected-warning {{macro '__AMDGCN_WAVEFRONT_SIZE__' has been marked as deprecated}}
     return x;
 }
 

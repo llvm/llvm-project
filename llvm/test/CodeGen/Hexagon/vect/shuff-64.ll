@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; CHECK-LABEL: test_00:
 ; CHECK-DAG: r[[REG00:[0-9]+]] = swiz(r0)

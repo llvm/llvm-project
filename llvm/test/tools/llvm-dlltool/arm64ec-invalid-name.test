@@ -1,0 +1,6 @@
+; RUN: not llvm-dlltool -m arm64ec -d %s -l %t.lib 2>&1 | FileCheck %s
+; CHECK: Invalid ARM64EC function name '?func'
+
+LIBRARY test.dll
+EXPORTS
+        ?func

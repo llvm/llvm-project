@@ -93,6 +93,10 @@
  
 // CHECK-V6K: __ARM_FEATURE_LDREX 0xf
 
+// RUN: %clang -target arm-none-linux-eabi -march=armv6kz -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V6KZ
+ 
+// CHECK-V6KZ: __ARM_FEATURE_LDREX 0xf
+
 // RUN: %clang -target arm-none-linux-eabi -march=armv7-a -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7A
 
 // CHECK-V7A: __ARM_ARCH 7
@@ -183,6 +187,37 @@
 // RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m23 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-NODSP
 // RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m33 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-DSP
 // RUN: %clang --target=arm-arm-none-eabi -march=armv8m.main+dsp -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-DSP
+
+// RUN: %clang -target arm-none-linux-eabi -march=armv8m.base -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V8M-BASE
+
+// CHECK-V8M-BASE-NOT: __ARM_ARCH_ISA_ARM
+// CHECK-V8M-BASE-NOT: __ARM_FEATURE_DSP
+// CHECK-V8M-BASE-NOT: __ARM_FEATURE_SIMD32
+// CHECK-V8M-BASE:     __ARM_ARCH 8
+// CHECK-V8M-BASE:     __ARM_ARCH_ISA_THUMB 1
+// CHECK-V8M-BASE:     __ARM_ARCH_PROFILE 'M'
+// CHECK-V8M-BASE:     __ARM_FEATURE_CLZ 1
+// CHECK-V8M-BASE:     __ARM_FEATURE_IDIV 1
+// CHECK-V8M-BASE:     __ARM_FEATURE_LDREX 0x7
+// CHECK-V8M-BASE:     __ARM_FEATURE_QBIT 1
+// CHECK-V8M-BASE:     __ARM_FEATURE_SAT
+// CHECK-V8M-BASE-NOT: __ARM_FEATURE_UNALIGNED
+
+// RUN: %clang -target arm-none-linux-eabi -march=armv8m.main -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V8M-MAIN
+// RUN: %clang -target arm-none-linux-eabi -march=armv8.1m.main -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V8M-MAIN
+
+// CHECK-V8M-MAIN-NOT: __ARM_ARCH_ISA_ARM
+// CHECK-V8M-MAIN-NOT: __ARM_FEATURE_DSP
+// CHECK-V8M-MAIN-NOT: __ARM_FEATURE_SIMD32
+// CHECK-V8M-MAIN:     __ARM_ARCH 8
+// CHECK-V8M-MAIN:     __ARM_ARCH_ISA_THUMB 2
+// CHECK-V8M-MAIN:     __ARM_ARCH_PROFILE 'M'
+// CHECK-V8M-MAIN:     __ARM_FEATURE_CLZ 1
+// CHECK-V8M-MAIN:     __ARM_FEATURE_IDIV 1
+// CHECK-V8M-MAIN:     __ARM_FEATURE_LDREX 0x7
+// CHECK-V8M-MAIN:     __ARM_FEATURE_QBIT 1
+// CHECK-V8M-MAIN:     __ARM_FEATURE_SAT 1
+// CHECK-V8M-MAIN:     __ARM_FEATURE_UNALIGNED 1
 
 // CHECK-M-DSP: __ARM_FEATURE_DSP 1
 // CHECK-M-DSP: __ARM_FEATURE_SIMD32 1

@@ -103,6 +103,7 @@ fputwc U
 free U
 freelocale U
 fwrite U
+getauxval U
 getc U
 getcwd U
 getenv U

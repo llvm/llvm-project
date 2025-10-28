@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mcpu=mips32 -verify-machineinstrs -o /dev/null < %s 
+; RUN: llc -mtriple=mips -mcpu=mips32 -verify-machineinstrs -o /dev/null < %s 
 ; Confirm that MachineInstr branch simplification preserves
 ; register operand flags, such as the <undef> flag.
 

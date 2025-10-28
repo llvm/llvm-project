@@ -8,10 +8,6 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1
 
-; - The llvm.dbg.value intrinsic pointing to an argument in @foo (%arg1) is
-;   dropped
-; CHECK-NOT: #dbg_value
-
 ; - Instructions without locations in the original function have no
 ;   location in the new function
 ; CHECK:      [[ADD1:%.*]] = add i32 %{{.*}}, 1{{$}}

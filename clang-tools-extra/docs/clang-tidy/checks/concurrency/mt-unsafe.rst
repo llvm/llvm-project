@@ -32,6 +32,9 @@ Examples:
 
     sleep(1); // implementation may use SIGALRM
 
+Options
+-------
+
 .. option:: FunctionSet
 
   Specifies which functions in libc should be considered thread-safe,

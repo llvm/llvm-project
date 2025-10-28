@@ -1,4 +1,4 @@
-//===--- UnsafeFunctionsCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// but is not exclusive to, the functions from the
 /// Annex K. "Bounds-checking interfaces" of C11.
 ///
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-functions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/unsafe-functions.html
 class UnsafeFunctionsCheck : public ClangTidyCheck {
 public:
   UnsafeFunctionsCheck(StringRef Name, ClangTidyContext *Context);
@@ -43,7 +43,7 @@ public:
 private:
   const std::vector<CheckedFunction> CustomFunctions;
 
-  // If true, the default set of functions are reported.
+  /// If true, the default set of functions are reported.
   const bool ReportDefaultFunctions;
   /// If true, additional functions from widely used API-s (such as POSIX) are
   /// added to the list of reported functions.

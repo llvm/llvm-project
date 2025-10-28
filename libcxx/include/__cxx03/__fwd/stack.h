@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_STACK_H
-#define _LIBCPP___FWD_STACK_H
+#ifndef _LIBCPP___CXX03___FWD_STACK_H
+#define _LIBCPP___CXX03___FWD_STACK_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/deque.h>
@@ -23,4 +23,4 @@ class _LIBCPP_TEMPLATE_VIS stack;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_STACK_H
+#endif // _LIBCPP___CXX03___FWD_STACK_H

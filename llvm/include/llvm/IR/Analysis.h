@@ -13,6 +13,7 @@
 #define LLVM_IR_ANALYSIS_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -56,8 +57,8 @@ private:
 
 template <typename IRUnitT> AnalysisSetKey AllAnalysesOn<IRUnitT>::SetKey;
 
-extern template class AllAnalysesOn<Module>;
-extern template class AllAnalysesOn<Function>;
+extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<Module>;
+extern template class LLVM_TEMPLATE_ABI AllAnalysesOn<Function>;
 
 /// Represents analyses that only rely on functions' control flow.
 ///
@@ -74,7 +75,7 @@ public:
   static AnalysisSetKey *ID() { return &SetKey; }
 
 private:
-  static AnalysisSetKey SetKey;
+  LLVM_ABI static AnalysisSetKey SetKey;
 };
 
 /// A set of analyses that are preserved following a run of a transformation
@@ -128,11 +129,14 @@ public:
   }
 
   /// Mark an analysis as preserved.
-  template <typename AnalysisT> void preserve() { preserve(AnalysisT::ID()); }
+  template <typename AnalysisT> PreservedAnalyses &preserve() {
+    preserve(AnalysisT::ID());
+    return *this;
+  }
 
   /// Given an analysis's ID, mark the analysis as preserved, adding it
   /// to the set.
-  void preserve(AnalysisKey *ID) {
+  PreservedAnalyses &preserve(AnalysisKey *ID) {
     // Clear this ID from the explicit not-preserved set if present.
     NotPreservedAnalysisIDs.erase(ID);
 
@@ -140,18 +144,21 @@ public:
     // NotPreservedAnalysisIDs).
     if (!areAllPreserved())
       PreservedIDs.insert(ID);
+    return *this;
   }
 
   /// Mark an analysis set as preserved.
-  template <typename AnalysisSetT> void preserveSet() {
+  template <typename AnalysisSetT> PreservedAnalyses &preserveSet() {
     preserveSet(AnalysisSetT::ID());
+    return *this;
   }
 
   /// Mark an analysis set as preserved using its ID.
-  void preserveSet(AnalysisSetKey *ID) {
+  PreservedAnalyses &preserveSet(AnalysisSetKey *ID) {
     // If we're not already in the saturated 'all' state, add this set.
     if (!areAllPreserved())
       PreservedIDs.insert(ID);
+    return *this;
   }
 
   /// Mark an analysis as abandoned.
@@ -161,7 +168,10 @@ public:
   ///
   /// Note that you can only abandon a specific analysis, not a *set* of
   /// analyses.
-  template <typename AnalysisT> void abandon() { abandon(AnalysisT::ID()); }
+  template <typename AnalysisT> PreservedAnalyses &abandon() {
+    abandon(AnalysisT::ID());
+    return *this;
+  }
 
   /// Mark an analysis as abandoned using its ID.
   ///
@@ -170,9 +180,10 @@ public:
   ///
   /// Note that you can only abandon a specific analysis, not a *set* of
   /// analyses.
-  void abandon(AnalysisKey *ID) {
+  PreservedAnalyses &abandon(AnalysisKey *ID) {
     PreservedIDs.erase(ID);
     NotPreservedAnalysisIDs.insert(ID);
+    return *this;
   }
 
   /// Intersect this set with another in place.
@@ -300,7 +311,7 @@ public:
 
 private:
   /// A special key used to indicate all analyses.
-  static AnalysisSetKey AllAnalysesKey;
+  LLVM_ABI static AnalysisSetKey AllAnalysesKey;
 
   /// The IDs of analyses and analysis sets that are preserved.
   SmallPtrSet<void *, 2> PreservedIDs;

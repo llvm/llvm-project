@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-min-max-use-initializer-list %t
+// RUN: %check_clang_tidy --match-partial-fixes %s modernize-min-max-use-initializer-list %t
 
 // CHECK-FIXES: #include <algorithm>
 namespace utils {

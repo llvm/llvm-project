@@ -129,14 +129,13 @@ public:
 
 struct SystemZRegisterInfo : public SystemZGenRegisterInfo {
 public:
-  SystemZRegisterInfo(unsigned int RA);
+  SystemZRegisterInfo(unsigned int RA, unsigned int HwMode);
 
   /// getPointerRegClass - Return the register class to use to hold pointers.
   /// This is currently only used by LOAD_STACK_GUARD, which requires a non-%r0
   /// register, hence ADDR64.
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind=0) const override {
+  getPointerRegClass(unsigned Kind = 0) const override {
     return &SystemZ::ADDR64BitRegClass;
   }
 
@@ -161,6 +160,7 @@ public:
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID CC) const override;
+  const uint32_t *getNoPreservedMask() const override;
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI,
                            int SPAdj, unsigned FIOperandNum,

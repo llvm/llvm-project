@@ -76,6 +76,12 @@ public:
   void Clear();
   static bool FormIsSupported(dw_form_t form);
 
+  // The following methods use LLVM naming convension in order to be are used by
+  // LLVM libraries.
+  std::optional<uint64_t> getAsUnsignedConstant() const;
+  std::optional<int64_t> getAsSignedConstant() const;
+  const char *getAsCString() const { return AsCString(); }
+
 protected:
   // Compile unit where m_value was located.
   // It may be different from compile unit where m_value refers to.

@@ -15,8 +15,8 @@
 
 #include "X86Subtarget.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Target/TargetMachine.h"
 #include <memory>
 #include <optional>
 
@@ -25,7 +25,7 @@ namespace llvm {
 class StringRef;
 class TargetTransformInfo;
 
-class X86TargetMachine final : public LLVMTargetMachine {
+class X86TargetMachine final : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<X86Subtarget>> SubtargetMap;
   // True if this is used in JIT.
@@ -79,6 +79,10 @@ public:
   bool isJIT() const { return IsJIT; }
 
   bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 } // end namespace llvm

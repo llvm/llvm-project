@@ -7,10 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___THREAD_ID_H
-#define _LIBCPP___THREAD_ID_H
+#ifndef _LIBCPP___CXX03___THREAD_ID_H
+#define _LIBCPP___CXX03___THREAD_ID_H
 
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/functional.h>
 #include <__cxx03/__fwd/ostream.h>
@@ -55,11 +54,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = 0; }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
-#  if _LIBCPP_STD_VER <= 17
   friend _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT;
-#  else  // _LIBCPP_STD_VER <= 17
-  friend _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept;
-#  endif // _LIBCPP_STD_VER <= 17
 
   template <class _CharT, class _Traits>
   friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -84,8 +79,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _
   return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
 }
 
-#  if _LIBCPP_STD_VER <= 17
-
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x == __y); }
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT {
@@ -95,18 +88,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _N
 inline _LIBCPP_HIDE_FROM_ABI bool operator<=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__y < __x); }
 inline _LIBCPP_HIDE_FROM_ABI bool operator>(__thread_id __x, __thread_id __y) _NOEXCEPT { return __y < __x; }
 inline _LIBCPP_HIDE_FROM_ABI bool operator>=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x < __y); }
-
-#  else // _LIBCPP_STD_VER <= 17
-
-inline _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept {
-  if (__x == __y)
-    return strong_ordering::equal;
-  if (__thread_id::__lt_impl(__x, __y))
-    return strong_ordering::less;
-  return strong_ordering::greater;
-}
-
-#  endif // _LIBCPP_STD_VER <= 17
 
 namespace this_thread {
 
@@ -118,4 +99,4 @@ inline _LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT { return __libcpp_th
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___THREAD_ID_H
+#endif // _LIBCPP___CXX03___THREAD_ID_H

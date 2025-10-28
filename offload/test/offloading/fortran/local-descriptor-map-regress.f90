@@ -1,17 +1,13 @@
-! Small regression test that checks that we do not cause
-! a runtime map error in cases where we are required to
-! allocate a local variable for the fortran descriptor
-! to store into and then load from it, done so by
-! re-using the temporary local variable across all
-! maps related to the mapped variable and associated
-! local variable to make sure that each map does as
-! it's intended to do with the original data. This
-! prevents blobs of local descriptor data remaining
-! attatched on device long after it's supposed to,
-! which can cause weird map issues later in susbequent
-! function invocations. However, it doesn't avoid a user
-! shooting themselves in the foot by mapping data via enter
-! and then not providing a corresponding exit.
+! Small regression test that checks that we do not cause a runtime map error in
+! cases where we are required to allocate a local variable for the fortran
+! descriptor to store into and then load from it, done so by reusing the
+! temporary local variable across all maps related to the mapped variable and
+! associated local variable to make sure that each map does as it is intended
+! to do with the original data. This prevents blobs of local descriptor data
+! remaining attached on device long after it's supposed to, which can cause
+! weird map issues later in susbequent function invocations. However, it
+! doesn't avoid a user shooting themselves in the foot by mapping data via
+! enter and then not providing a corresponding exit.
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

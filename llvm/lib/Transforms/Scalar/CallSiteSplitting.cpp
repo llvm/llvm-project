@@ -132,7 +132,7 @@ static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
   if (!BI || !BI->isConditional())
     return;
 
-  CmpInst::Predicate Pred;
+  CmpPredicate Pred;
   Value *Cond = BI->getCondition();
   if (!match(Cond, m_ICmp(Pred, m_Value(), m_Constant())))
     return;
@@ -142,7 +142,7 @@ static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
     if (isCondRelevantToAnyCallArgument(Cmp, CB))
       Conditions.push_back({Cmp, From->getTerminator()->getSuccessor(0) == To
                                      ? Pred
-                                     : Cmp->getInversePredicate()});
+                                     : Cmp->getInverseCmpPredicate()});
 }
 
 /// Record ICmp conditions relevant to any argument in CB following Pred's
@@ -218,8 +218,8 @@ static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
   return true;
 }
 
-static Instruction *cloneInstForMustTail(Instruction *I, Instruction *Before,
-                                         Value *V) {
+static Instruction *
+cloneInstForMustTail(Instruction *I, BasicBlock::iterator Before, Value *V) {
   Instruction *Copy = I->clone();
   Copy->setName(I->getName());
   Copy->insertBefore(Before);
@@ -251,8 +251,8 @@ static void copyMustTailReturn(BasicBlock *SplitBB, Instruction *CI,
   Instruction *TI = SplitBB->getTerminator();
   Value *V = NewCI;
   if (BCI)
-    V = cloneInstForMustTail(BCI, TI, V);
-  cloneInstForMustTail(RI, TI, IsVoid ? nullptr : V);
+    V = cloneInstForMustTail(BCI, TI->getIterator(), V);
+  cloneInstForMustTail(RI, TI->getIterator(), IsVoid ? nullptr : V);
 
   // FIXME: remove TI here, `DuplicateInstructionsInSplitBetween` has a bug
   // that prevents doing this now.
@@ -397,9 +397,10 @@ static void splitCallSite(CallBase &CB,
         continue;
       PHINode *NewPN = PHINode::Create(CurrentI->getType(), Preds.size());
       NewPN->setDebugLoc(CurrentI->getDebugLoc());
-      for (auto &Mapping : ValueToValueMaps)
-        NewPN->addIncoming(Mapping[CurrentI],
-                           cast<Instruction>(Mapping[CurrentI])->getParent());
+      for (auto &Mapping : ValueToValueMaps) {
+        Value *V = Mapping[CurrentI];
+        NewPN->addIncoming(V, cast<Instruction>(V)->getParent());
+      }
       NewPN->insertBefore(*TailBB, TailBB->begin());
       CurrentI->replaceAllUsesWith(NewPN);
     }
@@ -415,7 +416,7 @@ static void splitCallSite(CallBase &CB,
 // constant incoming values.
 static bool isPredicatedOnPHI(CallBase &CB) {
   BasicBlock *Parent = CB.getParent();
-  if (&CB != Parent->getFirstNonPHIOrDbg())
+  if (&CB != &*Parent->getFirstNonPHIOrDbg())
     return false;
 
   for (auto &PN : Parent->phis()) {

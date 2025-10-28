@@ -1,8 +1,6 @@
 ; RUN: llc < %s | FileCheck --check-prefixes=CHECK %s
 ; RUN: llc -O0 < %s | FileCheck --check-prefixes=CHECK %s
 
-; RUN: llc --try-experimental-debuginfo-iterators < %s | FileCheck --check-prefixes=CHECK %s
-; RUN: llc --try-experimental-debuginfo-iterators -O0 < %s | FileCheck --check-prefixes=CHECK %s
 
 ; Source to regenerate:
 ; $ clang -cc1 -triple x86_64-windows-msvc t.cpp -debug-info-kind=limited \

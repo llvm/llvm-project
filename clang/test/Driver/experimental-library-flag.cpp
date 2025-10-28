@@ -9,6 +9,11 @@
 // RUN: %clangxx -fexperimental-library -stdlib=libstdc++ -### %s 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIBSTDCXX %s
 // RUN: %clangxx -fexperimental-library -stdlib=libc++ -nostdlib++ -### %s 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-NOSTDLIB %s
 
+/// The FreeBSD driver did not support -stdlib=libstdc++ previously, check that it does the right thing here.
+// RUN: %clangxx --target=x86_64-unknown-freebsd -fexperimental-library -stdlib=libc++ -### %s 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIBCXX %s
+// RUN: %clangxx --target=x86_64-unknown-freebsd -fexperimental-library -stdlib=libstdc++ -### %s 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-LIBSTDCXX %s
+// RUN: %clangxx --target=x86_64-unknown-freebsd -fexperimental-library -stdlib=libc++ -nostdlib++ -### %s 2>&1 | FileCheck --check-prefixes=CHECK,CHECK-NOSTDLIB %s
+
 // -fexperimental-library must be passed to CC1.
 // CHECK: -fexperimental-library
 

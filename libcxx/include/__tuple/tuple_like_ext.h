@@ -14,7 +14,6 @@
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
-#include <__tuple/tuple_types.h>
 #include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -26,13 +25,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct __tuple_like_ext : false_type {};
 
-template <class _Tp>
-struct __tuple_like_ext<const _Tp> : public __tuple_like_ext<_Tp> {};
-template <class _Tp>
-struct __tuple_like_ext<volatile _Tp> : public __tuple_like_ext<_Tp> {};
-template <class _Tp>
-struct __tuple_like_ext<const volatile _Tp> : public __tuple_like_ext<_Tp> {};
-
 #ifndef _LIBCPP_CXX03_LANG
 template <class... _Tp>
 struct __tuple_like_ext<tuple<_Tp...> > : true_type {};
@@ -43,9 +35,6 @@ struct __tuple_like_ext<pair<_T1, _T2> > : true_type {};
 
 template <class _Tp, size_t _Size>
 struct __tuple_like_ext<array<_Tp, _Size> > : true_type {};
-
-template <class... _Tp>
-struct __tuple_like_ext<__tuple_types<_Tp...> > : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
