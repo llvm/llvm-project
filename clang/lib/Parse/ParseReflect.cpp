@@ -39,6 +39,7 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
     // - nested-name-specifier identifier ::
     // - namespace-name ::
     // - nested-name-specifier template_opt simple-template-id
+    TPA.Revert();
     Diag(OperandLoc, diag::err_cannot_reflect_operand);
     return ExprError();
   } else if (SS.isValid() &&
