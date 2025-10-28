@@ -1283,6 +1283,41 @@ BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
   return std::nullopt;
 }
 
+bool BinaryFunction::validateBranchTarget(
+    uint64_t TargetAddress, uint64_t AbsoluteInstrAddr,
+    const ArrayRef<uint8_t> &CurrentFunctionData) {
+  if (auto *TargetFunc =
+          BC.getBinaryFunctionContainingAddress(TargetAddress)) {
+    const uint64_t TargetOffset = TargetAddress - TargetFunc->getAddress();
+    ArrayRef<uint8_t> TargetFunctionData;
+    // Check if the target address is within the current function.
+    if (TargetFunc == this) {
+      TargetFunctionData = CurrentFunctionData;
+    } else {
+      // external call/branch, fetch the binary data for target
+      ErrorOr<ArrayRef<uint8_t>> TargetDataOrErr = TargetFunc->getData();
+      assert(TargetDataOrErr && "function data is not available");
+      TargetFunctionData = *TargetDataOrErr;
+    }
+
+    MCInst TargetInst;
+    uint64_t TargetInstSize;
+    if (!BC.SymbolicDisAsm->getInstruction(
+            TargetInst, TargetInstSize, TargetFunctionData.slice(TargetOffset),
+            TargetAddress, nulls())) {
+      // If the target address cannot be disassembled well,
+      // it implies a corrupted control flow.
+      BC.errs() << "BOLT-WARNING: direct branch/call at 0x"
+                << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
+                << *this << " targets an invalid instruction at 0x"
+                << Twine::utohexstr(TargetAddress) << "\n";
+      return false;
+    }
+  }
+
+  return true;
+}
+
 Error BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1396,6 +1431,11 @@ Error BinaryFunction::disassemble() {
       uint64_t TargetAddress = 0;
       if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
+        if (!validateBranchTarget(TargetAddress, AbsoluteInstrAddr,
+                                  FunctionData)) {
+          setIgnored();
+          break;
+        }
         // Check if the target is within the same function. Otherwise it's
         // a call, possibly a tail call.
         //

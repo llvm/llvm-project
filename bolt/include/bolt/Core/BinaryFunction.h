@@ -2264,6 +2264,13 @@ public:
   /// it is probably another function.
   bool isSymbolValidInScope(const SymbolRef &Symbol, uint64_t SymbolSize) const;
 
+  /// Validates if the target of a direct branch/call is a valid
+  /// executable instruction.
+  /// Return true if the target is valid, false otherwise.
+  bool validateBranchTarget(uint64_t TargetAddress,
+                            uint64_t AbsoluteInstrAddr,
+                            const ArrayRef<uint8_t> &CurrentFunctionData);
+
   /// Disassemble function from raw data.
   /// If successful, this function will populate the list of instructions
   /// for this function together with offsets from the function start
