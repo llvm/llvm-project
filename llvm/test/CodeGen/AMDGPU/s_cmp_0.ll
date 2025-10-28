@@ -110,6 +110,21 @@ define amdgpu_ps i32 @abs32(i32 inreg %val0) {
   ret i32 %zext
 }
 
+define amdgpu_ps i32 @absdiff32(i32 inreg %val0, i32 inreg %val1) {
+; CHECK-LABEL: absdiff32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_absdiff_i32 s0, s0, s1
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    ; return to shader part epilog
+  %diff = sub i32 %val0, %val1
+  %result = call i32 @llvm.abs.i32(i32 %diff, i1 false)
+  %cmp = icmp ne i32 %result, 0
+  %zext = zext i1 %cmp to i32
+  ret i32 %zext
+}
+
 define amdgpu_ps i32 @and32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: and32:
 ; CHECK:       ; %bb.0:
@@ -608,14 +623,14 @@ define amdgpu_ps i32 @si_pc_add_rel_offset_must_not_optimize() {
 ; CHECK-NEXT:    s_add_u32 s0, s0, __unnamed_1@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, __unnamed_1@rel32@hi+12
 ; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    s_cbranch_scc0 .LBB35_2
+; CHECK-NEXT:    s_cbranch_scc0 .LBB36_2
 ; CHECK-NEXT:  ; %bb.1: ; %endif
 ; CHECK-NEXT:    s_mov_b32 s0, 1
-; CHECK-NEXT:    s_branch .LBB35_3
-; CHECK-NEXT:  .LBB35_2: ; %if
+; CHECK-NEXT:    s_branch .LBB36_3
+; CHECK-NEXT:  .LBB36_2: ; %if
 ; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_branch .LBB35_3
-; CHECK-NEXT:  .LBB35_3:
+; CHECK-NEXT:    s_branch .LBB36_3
+; CHECK-NEXT:  .LBB36_3:
   %cmp = icmp ne ptr addrspace(4) @1, null
   br i1 %cmp, label %endif, label %if
 

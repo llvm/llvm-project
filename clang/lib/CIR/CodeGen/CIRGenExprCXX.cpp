@@ -565,8 +565,10 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
       dtor = rd->getDestructor();
 
       if (dtor->isVirtual()) {
-        cgf.cgm.errorNYI(de->getSourceRange(),
-                         "emitObjectDelete: virtual destructor");
+        assert(!cir::MissingFeatures::devirtualizeDestructor());
+        cgf.cgm.getCXXABI().emitVirtualObjectDelete(cgf, de, ptr, elementType,
+                                                    dtor);
+        return;
       }
     }
   }
@@ -801,6 +803,26 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   emitNewDeleteCall(*this, deleteFD, deleteFTy, deleteArgs);
 }
 
+static mlir::Value emitDynamicCastToNull(CIRGenFunction &cgf,
+                                         mlir::Location loc, QualType destTy) {
+  mlir::Type destCIRTy = cgf.convertType(destTy);
+  assert(mlir::isa<cir::PointerType>(destCIRTy) &&
+         "result of dynamic_cast should be a ptr");
+
+  if (!destTy->isPointerType()) {
+    mlir::Region *currentRegion = cgf.getBuilder().getBlock()->getParent();
+    /// C++ [expr.dynamic.cast]p9:
+    ///   A failed cast to reference type throws std::bad_cast
+    cgf.cgm.getCXXABI().emitBadCastCall(cgf, loc);
+
+    // The call to bad_cast will terminate the current block. Create a new block
+    // to hold any follow up code.
+    cgf.getBuilder().createBlock(currentRegion, currentRegion->end());
+  }
+
+  return cgf.getBuilder().getNullPtr(destCIRTy, loc);
+}
+
 mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
                                             const CXXDynamicCastExpr *dce) {
   mlir::Location loc = getLoc(dce->getSourceRange());
@@ -831,10 +853,8 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
   assert(srcRecordTy->isRecordType() && "source type must be a record type!");
   assert(!cir::MissingFeatures::emitTypeCheck());
 
-  if (dce->isAlwaysNull()) {
-    cgm.errorNYI(dce->getSourceRange(), "emitDynamicCastToNull");
-    return {};
-  }
+  if (dce->isAlwaysNull())
+    return emitDynamicCastToNull(*this, loc, destTy);
 
   auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
   return cgm.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,
