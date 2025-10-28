@@ -110,20 +110,42 @@ enum class SymbolSubKind : uint8_t {
 typedef uint32_t SymbolPropertySet;
 /// Set of properties that provide additional info about a symbol.
 enum class SymbolProperty : SymbolPropertySet {
-  Generic                       = 1 << 0,
+  Generic = 1 << 0,
   TemplatePartialSpecialization = 1 << 1,
-  TemplateSpecialization        = 1 << 2,
-  UnitTest                      = 1 << 3,
-  IBAnnotated                   = 1 << 4,
-  IBOutletCollection            = 1 << 5,
-  GKInspectable                 = 1 << 6,
-  Local                         = 1 << 7,
+  TemplateSpecialization = 1 << 2,
+  UnitTest = 1 << 3,
+  IBAnnotated = 1 << 4,
+  IBOutletCollection = 1 << 5,
+  GKInspectable = 1 << 6,
+  Local = 1 << 7,
   /// Symbol is part of a protocol interface.
-  ProtocolInterface             = 1 << 8,
+  ProtocolInterface = 1 << 8,
 
-  /// Swift-only properties
-  SwiftAsync                    = 1 << 16,
+  /// --- Swift-only properties
+
+  /// Whether this is a `async` function.
+  SwiftAsync = 1 << 16,
+
+  /// Swift Access control levels, packed into 3 bits.
+  ///
+  /// Use \c applyForEachSymbolProperty or \c
+  /// getSwiftAccessLevelFromSymbolPropertySet to correctly unpack these from a
+  /// \c SymbolPropertySet.
+  SwiftAccessControlLessThanFilePrivate = 1 << 17,
+  SwiftAccessControlFilePrivate = 1 << 18,
+  SwiftAccessControlInternal = 1 << 18 | 1 << 17,
+  SwiftAccessControlPackage = 1 << 19,
+  SwiftAccessControlSPI = 1 << 19 | 1 << 17,
+  SwiftAccessControlPublic = 1 << 19 | 1 << 18,
 };
+
+/// The Swift access level is bit-packed into `SymbolPropertySet` so we can't
+/// easily apply a \c SymbolProperty bit-mask to a \c SymbolPropertySet to check
+/// for the access level. This function extracts the access level from a \c
+/// SymbolPropertySet. It guarantees to only ever return a \c
+/// SwiftAccessControl* case of \c SymbolProperty.
+std::optional<SymbolProperty>
+    getSwiftAccessLevelFromSymbolPropertySet(SymbolPropertySet);
 
 /// Set of roles that are attributed to symbol occurrences.
 ///

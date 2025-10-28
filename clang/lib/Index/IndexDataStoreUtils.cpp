@@ -483,6 +483,25 @@ indexstore_symbol_property_t index::getIndexStoreProperties(SymbolPropertySet Pr
     case SymbolProperty::SwiftAsync:
       storeProp |= INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ASYNC;
       break;
+    case SymbolProperty::SwiftAccessControlLessThanFilePrivate:
+      storeProp |=
+          INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_LESSTHANFILEPRIVATE;
+      break;
+    case SymbolProperty::SwiftAccessControlFilePrivate:
+      storeProp |= INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_FILEPRIVATE;
+      break;
+    case SymbolProperty::SwiftAccessControlInternal:
+      storeProp |= INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_INTERNAL;
+      break;
+    case SymbolProperty::SwiftAccessControlPackage:
+      storeProp |= INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_PACKAGE;
+      break;
+    case SymbolProperty::SwiftAccessControlSPI:
+      storeProp |= INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_SPI;
+      break;
+    case SymbolProperty::SwiftAccessControlPublic:
+      storeProp |= INDEXSTORE_SYMBOL_PROPERTY_SWIFT_ACCESSCONTROL_PUBLIC;
+      break;
     }
   });
   return static_cast<indexstore_symbol_property_t>(storeProp);
