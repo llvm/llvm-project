@@ -72,6 +72,7 @@ jobs:
       with:
         python-version: '3.13'
     - name: Install libxml2
+      if:false
       shell: bash
       env:
         VCPKG_BUILD_TYPE: release
@@ -89,6 +90,7 @@ jobs:
         find /c/vcpkg -iname 'libxml*.lib'
     
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      if: false
       with:
         name: libxml2
         path: |
@@ -251,7 +253,7 @@ jobs:
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
     - name: Install libxml2 for Windows
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && false
       run: |
         # Build libxml2 for windows
         curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz
@@ -293,10 +295,24 @@ jobs:
         #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2/libxml
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
-        cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+        cmake --debug-trycompile  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
+            -DLLVM_ENABLE_LIBXML2=FORCE_ON \
+            -DLIBXML2_LIBRARIES=/c/vcpkg/packages/libxml2_x64-windows-static/lib/libxml2s.lib \
+            -DLIBXML2_INCLUDE_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2 \
+            -DLIBXML2_DEFINITIONS=-DLIBXML_STATIC \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+
+    - name: Save build 
+      if: failure() && runner.os == 'Windows'
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: build
+        # Due to path differences on Windows when running in bash vs running on node,
+        # we need to search for files in the current workspace.
+        path: |
+          build
 
     - name: Build
       shell: bash
