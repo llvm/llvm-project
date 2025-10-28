@@ -13,7 +13,10 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__filesystem/path.h>
+
+#if _LIBCPP_HAS_LOCALIZATION
 #include <__locale>
+#endif
 #include <string>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -24,28 +27,30 @@
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
+#  if !defined(_LIBCPP_WIN32API) || _LIBCPP_HAS_LOCALIZATION
 template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(_InputIt __f, _InputIt __l) {
   static_assert(
-#  if _LIBCPP_HAS_CHAR8_T
-      is_same<typename __is_pathable<_InputIt>::__char_type, char8_t>::value ||
-#  endif
-          is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
-      "u8path(Iter, Iter) requires Iter have a value_type of type 'char'"
-      " or 'char8_t'");
-#  if defined(_LIBCPP_WIN32API)
-  string __tmp(__f, __l);
-  using _CVT = __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
-  std::wstring __w;
-  __w.reserve(__tmp.size());
-  _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
-  return path(__w);
-#  else
-  return path(__f, __l);
-#  endif /* !_LIBCPP_WIN32API */
+#    if _LIBCPP_HAS_CHAR8_T
+        is_same<typename __is_pathable<_InputIt>::__char_type, char8_t>::value ||
+#    endif
+            is_same<typename __is_pathable<_InputIt>::__char_type, char>::value,
+        "u8path(Iter, Iter) requires Iter have a value_type of type 'char'"
+        " or 'char8_t'");
+#    if defined(_LIBCPP_WIN32API)
+    string __tmp(__f, __l);
+    using _CVT = __widen_from_utf8<sizeof(wchar_t) * __CHAR_BIT__>;
+    std::wstring __w;
+    __w.reserve(__tmp.size());
+    _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
+    return path(__w);
+#    else
+    return path(__f, __l);
+#    endif /* !_LIBCPP_WIN32API */
 }
+#  endif /* !_LIBCPP_WIN32API || _LIBCPP_HAS_LOCALIZATION */
 
-#  if defined(_LIBCPP_WIN32API)
+#  if defined(_LIBCPP_WIN32API) && _LIBCPP_HAS_LOCALIZATION
 template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(_InputIt __f, _NullSentinel) {
   static_assert(
@@ -65,7 +70,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(_InputIt __f, 
   _CVT()(back_inserter(__w), __tmp.data(), __tmp.data() + __tmp.size());
   return path(__w);
 }
-#  endif /* _LIBCPP_WIN32API */
+#  endif /* _LIBCPP_WIN32API && _LIBCPP_HAS_LOCALIZATION */
 
 template <class _Source, __enable_if_t<__is_pathable<_Source>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(const _Source& __s) {
@@ -85,7 +90,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(const _Source&
 }
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
-
 #endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___FILESYSTEM_U8PATH_H
