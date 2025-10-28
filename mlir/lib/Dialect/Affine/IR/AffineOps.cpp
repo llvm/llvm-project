@@ -2611,18 +2611,18 @@ static std::optional<uint64_t> getTrivialConstantTripCount(AffineForOp forOp) {
 }
 
 /// Calculate the constant value of the loop's induction variable for its last
-/// trip, construct an OpFoldResult using this value and return it.
-static OpFoldResult getConstantInductionVarForLastTrip(AffineForOp forOp) {
+/// trip.
+static std::optional<int64_t>
+getConstantInductionVarForLastTrip(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
   if (!tripCount.has_value())
-    return {};
+    return std::nullopt;
   if (tripCount.value() == 0)
-    return {};
+    return std::nullopt;
   int64_t lb = forOp.getConstantLowerBound();
   int64_t step = forOp.getStepAsInt();
   int64_t lastTripIv = lb + (tripCount.value() - 1) * step;
-  return OpFoldResult(
-      IntegerAttr::get(IndexType::get(forOp.getContext()), lastTripIv));
+  return lastTripIv;
 }
 
 /// Fold the empty loop.
@@ -2645,11 +2645,10 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
   for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
     Value val = yieldOp.getOperand(i);
     BlockArgument *iterArgIt = llvm::find(iterArgs, val);
-    // TODO: It should be possible to perform a replacement by computing the
-    // last value of the IV based on the bounds and the step.
     if (val == forOp.getInductionVar()) {
-      if (OpFoldResult lastTripIv = getConstantInductionVarForLastTrip(forOp)) {
-        replacements.push_back(lastTripIv);
+      if (auto lastTripIv = getConstantInductionVarForLastTrip(forOp)) {
+        replacements.push_back(IntegerAttr::get(
+            IndexType::get(forOp.getContext()), lastTripIv.value()));
         continue;
       }
       return {};
