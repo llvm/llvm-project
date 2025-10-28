@@ -3997,7 +3997,7 @@ static Value *foldOrUnsignedUMulOverflowICmp(BinaryOperator &I,
   return nullptr;
 }
 
-// Fold select(X >s 0, 0, -X) | smax(X, 0) --> abs(X)
+/// Fold select(X >s 0, 0, -X) | smax(X, 0) --> abs(X)
 static Value *FoldOrOfSelectSmaxToAbs(BinaryOperator &I,
                                       InstCombiner::BuilderTy &Builder) {
   CmpPredicate Pred;
