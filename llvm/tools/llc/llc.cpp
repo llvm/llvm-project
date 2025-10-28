@@ -206,12 +206,19 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-static cl::opt<std::string> SaveStats(
+enum SaveStatsMode { None, Cwd, Obj };
+
+static cl::opt<SaveStatsMode> SaveStats(
     "save-stats",
     cl::desc("Save LLVM statistics to a file in the current directory"
              "(`-save-stats`/`-save-stats=cwd`) or the directory of the output"
              "file (`-save-stats=obj`). (default: cwd)"),
-    cl::init(""), cl::ValueOptional);
+    cl::values(clEnumValN(SaveStatsMode::Cwd, "cwd",
+                          "Save to the current working directory"),
+               clEnumValN(SaveStatsMode::Cwd, "", ""),
+               clEnumValN(SaveStatsMode::Obj, "obj",
+                          "Save to the output file directory")),
+    cl::init(SaveStatsMode::None), cl::ValueOptional);
 
 static cl::opt<bool> EnableNewPassManager(
     "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
@@ -367,46 +374,43 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 }
 
 static int MaybeEnableStats() {
-  if (SaveStats.getNumOccurrences() > 0) {
-    if (SaveStats.empty() || SaveStats == "cwd" || SaveStats == "obj") {
-      llvm::EnableStatistics(false);
-    } else {
-      WithColor::error(errs(), "llc")
-          << "Invalid --save-stats value: " << SaveStats
-          << ", must be empty, 'cwd' or 'obj'\n";
-      return 1;
-    }
+  if (SaveStats == SaveStatsMode::None) {
+    return 0;
   }
+
+  llvm::EnableStatistics(false);
   return 0;
 }
 
 static int MaybeSaveStats(std::string &&OutputFilename) {
-  if (SaveStats.getNumOccurrences() > 0) {
-    SmallString<128> StatsFilename;
-    if (SaveStats == "obj") {
-      StatsFilename = OutputFilename;
-      llvm::sys::path::remove_filename(StatsFilename);
-    } else {
-      assert((SaveStats.empty() || SaveStats == "cwd") &&
-             "Should have been a valid --save-stats value");
-    }
-
-    auto BaseName = llvm::sys::path::filename(OutputFilename);
-    llvm::sys::path::append(StatsFilename, BaseName);
-    llvm::sys::path::replace_extension(StatsFilename, "stats");
-
-    auto FileFlags = llvm::sys::fs::OF_TextWithCRLF;
-    std::error_code EC;
-    auto StatsOS =
-        std::make_unique<llvm::raw_fd_ostream>(StatsFilename, EC, FileFlags);
-    if (EC) {
-      WithColor::error(errs(), "llc")
-          << "Unable to open statistics file: " << EC.message() << "\n";
-      return 1;
-    } else {
-      llvm::PrintStatisticsJSON(*StatsOS);
-    }
+  if (SaveStats == SaveStatsMode::None) {
+    return 0;
   }
+
+  SmallString<128> StatsFilename;
+  if (SaveStats == SaveStatsMode::Obj) {
+    StatsFilename = OutputFilename;
+    llvm::sys::path::remove_filename(StatsFilename);
+  } else {
+    assert((SaveStats == SaveStatsMode::Cwd) &&
+           "Should have been a valid --save-stats value");
+  }
+
+  auto BaseName = llvm::sys::path::filename(OutputFilename);
+  llvm::sys::path::append(StatsFilename, BaseName);
+  llvm::sys::path::replace_extension(StatsFilename, "stats");
+
+  auto FileFlags = llvm::sys::fs::OF_TextWithCRLF;
+  std::error_code EC;
+  auto StatsOS =
+      std::make_unique<llvm::raw_fd_ostream>(StatsFilename, EC, FileFlags);
+  if (EC) {
+    WithColor::error(errs(), "llc")
+        << "Unable to open statistics file: " << EC.message() << "\n";
+    return 1;
+  }
+
+  llvm::PrintStatisticsJSON(*StatsOS);
   return 0;
 }
 
