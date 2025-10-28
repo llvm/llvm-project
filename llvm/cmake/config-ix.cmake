@@ -210,6 +210,7 @@ if(LLVM_ENABLE_ZSTD)
 endif()
 
 if(LLVM_ENABLE_LIBXML2)
+  message("LIBRARIES BEFORE: ${LIBXML2_LIBRARIES} WIN32: ${WIN32}")
   if(LLVM_ENABLE_LIBXML2 STREQUAL FORCE_ON)
     find_package(LibXml2 REQUIRED)
   elseif(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
@@ -219,6 +220,7 @@ if(LLVM_ENABLE_LIBXML2)
     # Check if libxml2 we found is usable; for example, we may have found a 32-bit
     # library on a 64-bit system which would result in a link-time failure.
     message("LIBRARIES: ${LIBXML2_LIBRARIES}")
+    message("DEFINITIONS: ${LIBXML2_DEFINITIONS}")
     cmake_push_check_state()
     list(APPEND CMAKE_REQUIRED_INCLUDES ${LIBXML2_INCLUDE_DIRS})
     list(APPEND CMAKE_REQUIRED_LIBRARIES LibXml2::LibXml2 ${LIBXML2_LIBRARIES})

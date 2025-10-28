@@ -304,7 +304,7 @@ jobs:
         # so we need to set some extra cmake flags to disable this.
         # -DLIBXML2_LIBRARIES=/c/vcpkg/packages/libxml2_x64-windows-static/lib/libxml2.lib \
         # -DLIBXML2_INCLUDE_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2 \
-        cmake --debug-trycompile  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+        cmake --trace-expand --debug-trycompile  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -DLLVM_ENABLE_LIBXML2=FORCE_ON \
             -DLIBXML2_DEFINITIONS=-DLIBXML_STATIC \
