@@ -9,17 +9,17 @@
 #ifndef _LIBCPP___SUPPORT_IBMVASPRINTF_H
 #define _LIBCPP___SUPPORT_IBMVASPRINTF_H
 
-#include <cstdlib>  // malloc, realloc
-#include <stdarg.h> // va_copy, va_end
-#include <stdio.h>  // vsnprintf
+#include <cstdarg> // va_copy, va_end
+#include <cstdio>  // vsnprintf
+#include <cstdlib> // malloc, realloc
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __ibm {
 
 inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char* fmt, va_list ap) {
+_LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int __vasprintf(char** __strp, const char* __fmt, va_list __ap) {
   const size_t buff_size = 256;
-  if ((*strp = (char*)malloc(buff_size)) == nullptr) {
+  if ((*__strp = (char*)std::malloc(buff_size)) == nullptr) {
     return -1;
   }
 
@@ -27,21 +27,21 @@ _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 2, 0) int vasprintf(char** strp, const char
   // va_copy may not be provided by the C library in C++03 mode.
 #if defined(_LIBCPP_CXX03_LANG) && __has_builtin(__builtin_va_copy)
 #  if defined(__MVS__) && !defined(_VARARG_EXT_)
-  __builtin_zos_va_copy(ap_copy, ap);
+  __builtin_zos_va_copy(ap_copy, __ap);
 #  else
-  __builtin_va_copy(ap_copy, ap);
+  __builtin_va_copy(ap_copy, __ap);
 #  endif
 #else
-  va_copy(ap_copy, ap);
+  va_copy(ap_copy, __ap);
 #endif
-  int str_size = vsnprintf(*strp, buff_size, fmt, ap_copy);
+  int str_size = vsnprintf(*__strp, buff_size, __fmt, ap_copy);
   va_end(ap_copy);
 
   if ((size_t)str_size >= buff_size) {
-    if ((*strp = (char*)realloc(*strp, str_size + 1)) == nullptr) {
+    if ((*__strp = (char*)std::realloc(*__strp, str_size + 1)) == nullptr) {
       return -1;
     }
-    str_size = vsnprintf(*strp, str_size + 1, fmt, ap);
+    str_size = vsnprintf(*__strp, str_size + 1, __fmt, __ap);
   }
   return str_size;
 }

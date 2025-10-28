@@ -32,7 +32,6 @@ struct __locale_guard {
   _LIBCPP_HIDE_FROM_ABI __locale_guard(locale_t& __loc) : __old_loc_(std::uselocale(__loc)) {}
 
   _LIBCPP_HIDE_FROM_ABI ~__locale_guard() {
-    // if (__old_loc_)
     if (__old_loc_ != (locale_t)0)
       std::uselocale(__old_loc_);
   }
@@ -299,7 +298,7 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __as
   va_list __va;
   va_start(__va, __format);
   __locale_guard __current(__loc);
-  int __res = std::__ibm::vasprintf(__s, __format, __va); // non-standard
+  int __res = std::__ibm::__vasprintf(__s, __format, __va); // non-standard
   va_end(__va);
   return __res;
 }

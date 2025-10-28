@@ -22,12 +22,11 @@ namespace __ibm {
 // converted from *src, excluding the null terminator.
 // Returns (size_t) -1 if an error occurs and sets errno.
 // If `dst` is NULL, `dst_size_bytes` is ignored and no bytes are copied to `dst`.
-size_t wcsnrtombs(
-    char* __restrict dst,
-    const wchar_t** __restrict src,
-    size_t max_source_chars,
-    size_t dst_size_bytes,
-    mbstate_t* __restrict ps) {
+size_t wcsnrtombs(char* __restrict dst,
+                  const wchar_t** __restrict src,
+                  size_t max_source_chars,
+                  size_t dst_size_bytes,
+                  mbstate_t* __restrict ps) {
   const size_t invalid_wchar = static_cast<size_t>(-1);
 
   size_t source_converted;
@@ -98,9 +97,7 @@ size_t wcsnrtombs(
   return dest_converted;
 }
 
-size_t __libcpp_wcsnrtombs_l(char *dest, const wchar_t **src, size_t nwc,
-                             size_t len, mbstate_t *ps, locale_t l)
-{
+size_t __libcpp_wcsnrtombs_l(char* dest, const wchar_t** src, size_t nwc, size_t len, mbstate_t* ps, locale_t l) {
   __locale::__locale_guard __current(l);
   return wcsnrtombs(dest, src, nwc, len, ps);
 }

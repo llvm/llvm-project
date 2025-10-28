@@ -13,18 +13,17 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-lconv *__libcpp_localeconv_l(locale_t& __l)
-{
+lconv* __libcpp_localeconv_l(locale_t& __l) {
   __locale::__locale_guard __current(__l);
 
-  lconv * lc = localeconv();
+  lconv* lc = localeconv();
   static lconv newlc;
   newlc = *lc;
 
-  enum {max_char_num = 20};
-#define DeepCopy(mbr) \
-  static char buf_##mbr[max_char_num]; \
-  strncpy(buf_##mbr, lc->mbr, max_char_num); \
+  enum { max_char_num = 20 };
+#define DeepCopy(mbr)                                                                                                  \
+  static char buf_##mbr[max_char_num];                                                                                 \
+  strncpy(buf_##mbr, lc->mbr, max_char_num);                                                                           \
   newlc.mbr = buf_##mbr;
 
   DeepCopy(decimal_point);
