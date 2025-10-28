@@ -394,8 +394,8 @@ void NormalizePass::collectOutputOperations(
 ///  - Terminator operations are outputs
 ///  - Any operation that implements MemoryEffectOpInterface and reports at
 ///    least one MemoryEffects::Write effect is an output
-///  - func::CallOp is treated as an output (calls are conservatively assumed to
-///    possibly produce side effects).
+///  - Any operation that implements CallOpInterface is treated as an output
+///    (calls are conservatively assumed to possibly produce side effects).
 bool NormalizePass::isOutput(Operation &op) const noexcept {
   if (op.hasTrait<OpTrait::IsTerminator>())
     return true;
@@ -408,7 +408,7 @@ bool NormalizePass::isOutput(Operation &op) const noexcept {
         return true;
   }
 
-  if (auto call = dyn_cast<func::CallOp>(op))
+  if (dyn_cast<CallOpInterface>(&op))
     return true;
 
   return false;
