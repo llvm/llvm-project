@@ -425,6 +425,8 @@ private:
 
   bool refersToUnion(const Expr *E);
 
+  bool isValidBitCast(const CastExpr *E);
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
