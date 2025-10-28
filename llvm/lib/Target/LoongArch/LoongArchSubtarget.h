@@ -104,7 +104,7 @@ public:
   Align getPrefLoopAlignment() const { return PrefLoopAlignment; }
   unsigned getMaxBytesForAlignment() const { return MaxBytesForAlignment; }
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
-  bool enableMachineScheduler() const override { return true; }
+  bool enableMachineScheduler() const override;
   bool useAA() const override;
 };
 } // end namespace llvm
