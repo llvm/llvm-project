@@ -674,7 +674,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
           APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
 
     computeKnownBitsImpl(InVec, Known, DemandedSrcElts, Depth + 1);
-    
+
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
