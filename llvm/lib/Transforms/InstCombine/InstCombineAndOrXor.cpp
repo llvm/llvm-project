@@ -3998,16 +3998,23 @@ static Value *foldOrUnsignedUMulOverflowICmp(BinaryOperator &I,
 }
 
 /// Fold select(X >s 0, 0, -X) | smax(X, 0) --> abs(X)
+///      select(X <s 0, -X, 0) | smax(X, 0) --> abs(X)
 static Value *FoldOrOfSelectSmaxToAbs(BinaryOperator &I,
                                       InstCombiner::BuilderTy &Builder) {
-  CmpPredicate Pred;
   Value *X;
-  if (match(&I, m_c_Or(m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(X),
-                                               m_ZeroInt()),
-                                m_ZeroInt(), m_Sub(m_ZeroInt(), m_Deferred(X))),
-                       m_OneUse(m_Intrinsic<Intrinsic::smax>(m_Deferred(X),
-                                                             m_ZeroInt())))))
-    return Builder.CreateBinaryIntrinsic(Intrinsic::abs, X, Builder.getFalse());
+  Value *Sel;
+  if (match(&I, m_c_Or(m_Value(Sel), m_OneUse(m_Intrinsic<Intrinsic::smax>(
+                                         m_Value(X), m_ZeroInt()))))) {
+    auto NegX = m_Neg(m_Specific(X));
+    if (match(Sel, m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Specific(X),
+                                           m_ZeroInt()),
+                            m_ZeroInt(), NegX)) ||
+        match(Sel, m_Select(m_SpecificICmp(ICmpInst::ICMP_SLT, m_Specific(X),
+                                           m_ZeroInt()),
+                            NegX, m_ZeroInt())))
+      return Builder.CreateBinaryIntrinsic(Intrinsic::abs, X,
+                                           Builder.getFalse());
+  }
   return nullptr;
 }
 
@@ -4559,7 +4566,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (Value *V = SimplifyAddWithRemainder(I))
       return replaceInstUsesWith(I, V);
 
-  // select(X >s 0, 0, -X) | smax(X, 0) -> abs(X)
   if (Value *Res = FoldOrOfSelectSmaxToAbs(I, Builder))
     return replaceInstUsesWith(I, Res);
 

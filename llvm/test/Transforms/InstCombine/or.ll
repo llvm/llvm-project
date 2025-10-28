@@ -2116,7 +2116,7 @@ define <4 x i32> @or_zext_nneg_minus_constant_splat(<4 x i8> %a) {
 
 define i8 @or_positive_minus_non_positive_to_abs(i8 %a){
 ; CHECK-LABEL: @or_positive_minus_non_positive_to_abs(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.abs.i8(i8 [[TMP0:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.abs.i8(i8 [[A:%.*]], i1 false)
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %b = icmp sgt i8 %a, 0
@@ -2162,14 +2162,27 @@ define i8 @or_select_smax_smax_to_abs(i8 %a){
 declare i8 @llvm.abs.i8(i8, i1)
 declare <2 x i8> @llvm.abs.v2i8(<2 x i8>, i1)
 
-define <2 x i8> @or_select_smax_to_abs(<2 x i8> %a){
-; CHECK-LABEL: @or_select_smax_to_abs(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[TMP0:%.*]], i1 false)
-; CHECK-NEXT:    ret <2 x i8> [[TMP2]]
+define <2 x i8> @or_sgt_select_smax_to_abs(<2 x i8> %a){
+; CHECK-LABEL: @or_sgt_select_smax_to_abs(
+; CHECK-NEXT:    [[OR:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i8> [[OR]]
 ;
   %sgt0 = icmp sgt <2 x i8> %a, zeroinitializer
   %neg = sub <2 x i8> zeroinitializer, %a
   %sel = select <2 x i1> %sgt0, <2 x i8> zeroinitializer, <2 x i8> %neg
+  %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
+  %or = or <2 x i8> %sel, %max
+  ret <2 x i8> %or
+}
+
+define <2 x i8> @or_lgt_select_smax_to_abs(<2 x i8> %a){
+; CHECK-LABEL: @or_lgt_select_smax_to_abs(
+; CHECK-NEXT:    [[OR:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i8> [[OR]]
+;
+  %slt0 = icmp slt <2 x i8> %a, zeroinitializer
+  %neg = sub <2 x i8> zeroinitializer, %a
+  %sel = select <2 x i1> %slt0, <2 x i8> %neg, <2 x i8> zeroinitializer
   %max = call <2 x i8> @llvm.smax.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
   %or = or <2 x i8> %sel, %max
   ret <2 x i8> %or
