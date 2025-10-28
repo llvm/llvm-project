@@ -240,15 +240,12 @@ LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
   return result;
 }
 
-void mlir::detail::reportFatalInferReturnTypesError(OperationState &state) {
-  std::string buffer;
-  llvm::raw_string_ostream os(buffer);
-  os << "Failed to infer result type(s):\n"
-     << "\"" << state.name << "\"(...) "
-     << state.attributes.getDictionary(state.location.getContext()) << " : ("
-     << llvm::interleaved(llvm::map_range(
-            state.operands, [](Value val) { return val.getType(); }))
-     << ") -> ( ??? )";
-  emitRemark(state.location, "location of op");
-  llvm::report_fatal_error(llvm::StringRef(buffer));
+void mlir::detail::emitInferReturnTypesError(OperationState &state) {
+  mlir::emitError(state.location)
+      << "failed to infer result type(s):\n"
+      << "\"" << state.name << "\"(...) "
+      << state.attributes.getDictionary(state.location.getContext()) << " : ("
+      << llvm::interleaved(llvm::map_range(
+             state.operands, [](Value val) { return val.getType(); }))
+      << ") -> ( ??? )";
 }
