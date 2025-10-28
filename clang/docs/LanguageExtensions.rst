@@ -2407,7 +2407,7 @@ Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
 underlying types is available in C23 and later.
 
 Enumerations with no enumerators
------------------------------------------
+--------------------------------
 
 Clang provides support for Microsoft extensions to support enumerations with no enumerators.
 
