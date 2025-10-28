@@ -1,5 +1,8 @@
-// RUN: %clang_cc1 -std=c++26 %s -emit-llvm -O3                          -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++26 %s -emit-llvm -O3 -fstrict-vtable-pointers -o - | FileCheck %s --check-prefix=STRICT
+// Actual triple does not matter, just ensuring that the ABI being used for
+// mangling and similar is consistent. Choosing x86_64 as that seems to be a
+// configured target for most build configurations
+// RUN: %clang_cc1 -triple=x86_64 -std=c++26 %s -emit-llvm -O3                          -o - | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64 -std=c++26 %s -emit-llvm -O3 -fstrict-vtable-pointers -o - | FileCheck %s --check-prefix=STRICT
 
 using size_t = unsigned long;
 using int64_t = long;
