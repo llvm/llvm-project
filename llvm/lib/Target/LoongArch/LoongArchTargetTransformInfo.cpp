@@ -460,3 +460,75 @@ InstructionCost LoongArchTTIImpl::getArithmeticInstrCost(
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                        Args, CxtI);
 }
+
+InstructionCost LoongArchTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1) const {
+
+  assert(Val->isVectorTy() && "This must be a vector type");
+
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+  InstructionCost RegisterFileMoveCost = 0;
+
+  static const CostKindTblEntry CostTable[]{
+      {ISD::EXTRACT_VECTOR_ELT, MVT::i8, {3, 4}},  // vpickve2gr.b
+      {ISD::EXTRACT_VECTOR_ELT, MVT::i16, {3, 4}}, // vpickve2gr.h
+      {ISD::EXTRACT_VECTOR_ELT, MVT::i32, {3, 4}}, // vpickve2gr.w
+      {ISD::EXTRACT_VECTOR_ELT, MVT::i64, {3, 4}}, // vpickve2gr.d
+
+      {ISD::EXTRACT_VECTOR_ELT, MVT::f32, {1, 1}}, // vreplvei.w
+      {ISD::EXTRACT_VECTOR_ELT, MVT::f64, {1, 1}}, // vreplvei.d
+  };
+
+  if (Index != -1U &&
+      (ISD == ISD::EXTRACT_VECTOR_ELT || ISD == ISD::INSERT_VECTOR_ELT)) {
+
+    if (!LT.second.isVector())
+      return TTI::TCC_Free;
+
+    unsigned SizeInBits = LT.second.getSizeInBits();
+    unsigned NumElts = LT.second.getVectorNumElements();
+    Index = Index % NumElts;
+
+    if (SizeInBits > 128 && Index >= NumElts / 2 && !Val->isFPOrFPVectorTy()) {
+      RegisterFileMoveCost += (ISD == ISD::INSERT_VECTOR_ELT ? 2 : 1);
+    }
+
+    if (ISD == ISD::INSERT_VECTOR_ELT) {
+      // vldi/vrepli
+      if (isa_and_nonnull<PoisonValue>(Op0) && isa_and_nonnull<Constant>(Op1)) {
+        return 1 + RegisterFileMoveCost;
+      }
+
+      // vldi + vextrins
+      if (isa_and_nonnull<ConstantFP>(Op1)) {
+        return 2 + RegisterFileMoveCost;
+      }
+
+      // vextrins
+      if (Op1 &&
+          (Op1->getType()->isFloatTy() || Op1->getType()->isDoubleTy())) {
+        return 1 + RegisterFileMoveCost;
+      }
+
+      // vinsgr2vr
+      if (CostKind == TTI::TCK_RecipThroughput) {
+        return 4 + RegisterFileMoveCost;
+      }
+      if (CostKind == TTI::TCK_Latency) {
+        return 3 + RegisterFileMoveCost;
+      }
+    }
+
+    if (auto *Entry =
+            CostTableLookup(CostTable, ISD, LT.second.getScalarType()))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return *KindCost + RegisterFileMoveCost;
+  }
+
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1) +
+         RegisterFileMoveCost;
+}
+
+// TODO: Implement more hooks to provide TTI machinery for LoongArch.
