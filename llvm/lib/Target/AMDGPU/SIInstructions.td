@@ -2765,7 +2765,7 @@ def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
 >;
 
 def : GCNPat<(UniformTernaryFrag<fshr> i32:$src0, i32:$src1, i32:$src2),
-     (S_OR_B32 (S_LSHR_B32 $src1, (S_AND_B32 $src2, (i32 0xffffffff))), (S_LSHL_B32 $src0, (S_SUB_I32 (i32 32), (S_AND_B32 $src2, (i32 0xffffffff)))))
+     (S_OR_B32 (S_LSHR_B32 $src1, $src2), (S_LSHL_B32 $src0, (S_SUB_I32 (i32 32), $src2)))
 >;
 
 } // end True16Predicate = UseFakeTrue16Insts
