@@ -174,16 +174,34 @@ attributes #0 = { "target-cpu"="knl" }
 define void @PR40816() #1 {
 ; CHECK-LABEL: define void @PR40816(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    store i32 [[TMP0]], ptr @b, align 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 2
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[RETURN:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    store i32 0, ptr @b, align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK:       [[PRED_STORE_IF1]]:
+; CHECK-NEXT:    store i32 1, ptr @b, align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_CONTINUE2]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[RETURN:.*]]
+; CHECK:       [[PRED_STORE_IF3]]:
+; CHECK-NEXT:    store i32 2, ptr @b, align 1
+; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK:       [[PRED_STORE_IF5]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br [[RETURN1:label %.*]]
+; CHECK:       [[SCALAR_PH:.*:]]
 ;
 ; FORCE-LABEL: define void @PR40816(
 ; FORCE-SAME: ) #[[ATTR1:[0-9]+]] {
