@@ -1040,6 +1040,30 @@ llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
   llvm.return
 }
 
+llvm.func @rocdl.global.load.async.lds.b8(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b8
+  rocdl.global.load.async.to.lds.b8 %src, %dst, 0, 0 : !llvm.ptr<1>
+  llvm.return
+}
+
+llvm.func @rocdl.global.load.async.lds.b32(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b32
+  rocdl.global.load.async.to.lds.b32 %src, %dst, 0, 0 : !llvm.ptr<1>
+  llvm.return
+}
+
+llvm.func @rocdl.global.load.async.lds.b64(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b64
+  rocdl.global.load.async.to.lds.b64 %src, %dst, 0, 0 : !llvm.ptr<1>
+  llvm.return
+}
+
+llvm.func @rocdl.global.load.async.lds.b128(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
+  // CHECK: call void @llvm.amdgcn.global.load.async.to.lds.b128
+  rocdl.global.load.async.to.lds.b128 %src, %dst, 0, 0 : !llvm.ptr<1>
+  llvm.return
+}
+
 // CHECK-LABEL: rocdl.tensor.load.to.lds
 llvm.func @rocdl.tensor.load.to.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
                                     %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
