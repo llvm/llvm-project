@@ -1767,8 +1767,10 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::SinOp>},
     {"sin", RTNAME_STRING(CSinF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::SinhOp>},
+    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::SinhOp>},
     {"sinh", RTNAME_STRING(SinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"sinh", "csinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"sinh", "csinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
@@ -3104,7 +3106,9 @@ IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  return mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  mlir::Value boolResult =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  return builder.createConvert(loc, resultType, boolResult);
 }
 
 mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,

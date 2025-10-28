@@ -904,9 +904,10 @@ int main(int argc, char const *argv[]) {
   }
 
 #if !defined(_WIN32)
-  signal_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-  signal_thread.join();
+  // Try to interrupt the signal thread.  If that succeeds, wait for it to exit.
+  if (signal_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    signal_thread.join();
 #endif
 
   return exit_code;

@@ -2632,6 +2632,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(Op, MVT::f32, Promote);
   }
 
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f32, MVT::i32);
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f64, MVT::i64);
+
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
                        ISD::SCALAR_TO_VECTOR,
@@ -57613,10 +57617,10 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold any similar generic ADD/SUB opcodes to reuse this node.
-  auto MatchGeneric = [&](SDValue N0, SDValue N1, bool Negate) {
+  auto MatchGeneric = [&](unsigned Opc, SDValue N0, SDValue N1, bool Negate) {
     SDValue Ops[] = {N0, N1};
     SDVTList VTs = DAG.getVTList(N->getValueType(0));
-    if (SDNode *GenericAddSub = DAG.getNodeIfExists(GenericOpc, VTs, Ops)) {
+    if (SDNode *GenericAddSub = DAG.getNodeIfExists(Opc, VTs, Ops)) {
       SDValue Op(N, 0);
       if (Negate) {
         // Bail if this is only used by a user of the x86 add/sub.
@@ -57628,8 +57632,25 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
       DCI.CombineTo(GenericAddSub, Op);
     }
   };
-  MatchGeneric(LHS, RHS, false);
-  MatchGeneric(RHS, LHS, X86ISD::SUB == N->getOpcode());
+  MatchGeneric(GenericOpc, LHS, RHS, false);
+  MatchGeneric(GenericOpc, RHS, LHS, X86ISD::SUB == N->getOpcode());
+
+  if (auto *Const = dyn_cast<ConstantSDNode>(RHS)) {
+    SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
+    if (X86ISD::SUB == N->getOpcode()) {
+      // Fold generic add(LHS, -C) to X86ISD::SUB(LHS, C).
+      MatchGeneric(ISD::ADD, LHS, NegC, false);
+    } else {
+      // Negate X86ISD::ADD(LHS, C) and replace generic sub(-C, LHS).
+      MatchGeneric(ISD::SUB, NegC, LHS, true);
+    }
+  } else if (auto *Const = dyn_cast<ConstantSDNode>(LHS)) {
+    if (X86ISD::SUB == N->getOpcode()) {
+      SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
+      // Negate X86ISD::SUB(C, RHS) and replace generic add(RHS, -C).
+      MatchGeneric(ISD::ADD, RHS, NegC, true);
+    }
+  }
 
   // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
   // EFLAGS result doesn't change.

@@ -3274,13 +3274,13 @@ struct FunctionReference {
 // R1521 call-stmt -> CALL procedure-designator [ chevrons ]
 //         [( [actual-arg-spec-list] )]
 // (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
-//          scalar-int-expr [, scalar-int-expr ] ] >>>
+//          scalar-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
   BOILERPLATE(CallStmt);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
-    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarIntExpr>,
+    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarExpr>,
         std::optional<ScalarIntExpr>>
         t;
   };
@@ -3356,6 +3356,9 @@ struct StmtFunctionStmt {
 // !DIR$ NOVECTOR
 // !DIR$ NOUNROLL
 // !DIR$ NOUNROLL_AND_JAM
+// !DIR$ FORCEINLINE
+// !DIR$ INLINE
+// !DIR$ NOINLINE
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3384,11 +3387,14 @@ struct CompilerDirective {
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
+  EMPTY_CLASS(ForceInline);
+  EMPTY_CLASS(Inline);
+  EMPTY_CLASS(NoInline);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam>
+      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline>
       u;
 };
 
@@ -3502,6 +3508,16 @@ struct OmpDirectiveName {
   llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
 };
 
+// type-name list item
+struct OmpTypeName {
+  UNION_CLASS_BOILERPLATE(OmpTypeName);
+  std::variant<TypeSpec, DeclarationTypeSpec> u;
+};
+
+struct OmpTypeNameList {
+  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeName>);
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3539,21 +3555,12 @@ struct OmpReductionIdentifier {
 // combiner-expression ->                           // since 4.5
 //    assignment-statement |
 //    function-reference
-struct OmpReductionCombiner {
-  UNION_CLASS_BOILERPLATE(OmpReductionCombiner);
+struct OmpCombinerExpression {
+  UNION_CLASS_BOILERPLATE(OmpCombinerExpression);
   std::variant<AssignmentStmt, FunctionReference> u;
 };
 
 inline namespace arguments {
-struct OmpTypeSpecifier {
-  UNION_CLASS_BOILERPLATE(OmpTypeSpecifier);
-  std::variant<TypeSpec, DeclarationTypeSpec> u;
-};
-
-struct OmpTypeNameList {
-  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeSpecifier>);
-};
-
 struct OmpLocator {
   UNION_CLASS_BOILERPLATE(OmpLocator);
   std::variant<OmpObject, FunctionReference> u;
@@ -3596,7 +3603,7 @@ struct OmpMapperSpecifier {
 struct OmpReductionSpecifier {
   TUPLE_CLASS_BOILERPLATE(OmpReductionSpecifier);
   std::tuple<OmpReductionIdentifier, OmpTypeNameList,
-      std::optional<OmpReductionCombiner>>
+      std::optional<OmpCombinerExpression>>
       t;
 };
 
