@@ -311,8 +311,7 @@ define void @stride_const(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
 ; CHECK-NEXT:    [[OFFSET:%.*]] = sext i32 [[ADD_2]] to i64
 ; CHECK-NEXT:    [[GETELEM_1:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[OFFSET]]
 ; CHECK-NEXT:    store float [[R]], ptr [[GETELEM_1]], align 4
-; CHECK-NEXT:    [[OFFSET3:%.*]] = add i64 [[OFFSET]], 4
-; CHECK-NEXT:    [[GETELEM_2:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[OFFSET3]]
+; CHECK-NEXT:    [[GETELEM_2:%.*]] = getelementptr i8, ptr [[GETELEM_1]], i64 16
 ; CHECK-NEXT:    store float [[R]], ptr [[GETELEM_2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -342,12 +341,9 @@ define void @stride_var(ptr %input, i32 %c, i32 %b, i32 %n, float %r) {
 ; CHECK-NEXT:    [[I:%.*]] = sext i32 [[ADD1]] to i64
 ; CHECK-NEXT:    [[GETELEM:%.*]] = getelementptr float, ptr [[INPUT]], i64 [[I]]
 ; CHECK-NEXT:    store float [[R]], ptr [[GETELEM]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[B]], [[N]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], [[C]]
-; CHECK-NEXT:    [[ADD_11:%.*]] = add i32 [[ADD]], [[N]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_11]], [[N]]
-; CHECK-NEXT:    [[OFFSET1:%.*]] = sext i32 [[ADD_2]] to i64
-; CHECK-NEXT:    [[GETELEM_1:%.*]] = getelementptr inbounds float, ptr [[INPUT]], i64 [[OFFSET1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    [[GETELEM_1:%.*]] = getelementptr inbounds i8, ptr [[GETELEM]], i64 [[TMP2]]
 ; CHECK-NEXT:    store float [[R]], ptr [[GETELEM_1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -383,7 +379,7 @@ define void @base_const(i32 %a, ptr %base, i16 %r) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[A]] to i64
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[BASE]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[R]], ptr [[GEP1]], align 2
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[BASE]], i64 [[TMP1]], i32 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[GEP1]], i64 2
 ; CHECK-NEXT:    store i16 [[R]], ptr [[GEP2]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -401,10 +397,9 @@ define void @base_var(i32 %a, ptr %base, i16 %r, i64 %n) {
 ; CHECK-LABEL: define void @base_var(
 ; CHECK-SAME: i32 [[A:%.*]], ptr [[BASE:%.*]], i16 [[R:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[A]] to i64
-; CHECK-NEXT:    [[BASE1:%.*]] = getelementptr inbounds i8, ptr [[BASE]], i64 [[N]]
 ; CHECK-NEXT:    [[GETELEM1:%.*]] = getelementptr inbounds [[STRUCT_A:%.*]], ptr [[BASE]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i16 [[R]], ptr [[GETELEM1]], align 2
-; CHECK-NEXT:    [[GETELEM2:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[BASE1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GETELEM2:%.*]] = getelementptr inbounds i8, ptr [[GETELEM1]], i64 [[N]]
 ; CHECK-NEXT:    store i16 [[R]], ptr [[GETELEM2]], align 2
 ; CHECK-NEXT:    ret void
 ;

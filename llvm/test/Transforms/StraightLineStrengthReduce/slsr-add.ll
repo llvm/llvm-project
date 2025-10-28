@@ -181,10 +181,9 @@ define void @stride_const(i32 %a, ptr %base, i16 %r) {
 ; CHECK-LABEL: @stride_const(
 ; CHECK-NEXT:    [[I1:%.*]] = sext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[I2:%.*]] = mul i64 [[I1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[I2]], 8
 ; CHECK-NEXT:    [[BI:%.*]] = ptrtoint ptr [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[BI]], [[TMP3]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], 8
 ; CHECK-NEXT:    [[ADDR1:%.*]] = inttoptr i64 [[ADD1]] to ptr
 ; CHECK-NEXT:    [[ADDR2:%.*]] = inttoptr i64 [[ADD2]] to ptr
 ; CHECK-NEXT:    store i16 [[R:%.*]], ptr [[ADDR1]], align 2
@@ -210,11 +209,10 @@ define void @stride_var(i32 %a, ptr %base, i16 %r, i64 %n) {
 ; CHECK-LABEL: @stride_var(
 ; CHECK-NEXT:    [[I1:%.*]] = sext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[I2:%.*]] = mul i64 [[I1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[I1]], [[N:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[BI:%.*]] = ptrtoint ptr [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[BI]], [[TMP4]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[N:%.*]], 1
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[TMP3]]
 ; CHECK-NEXT:    [[ADDR1:%.*]] = inttoptr i64 [[ADD1]] to ptr
 ; CHECK-NEXT:    [[ADDR2:%.*]] = inttoptr i64 [[ADD2]] to ptr
 ; CHECK-NEXT:    store i16 [[R:%.*]], ptr [[ADDR1]], align 2
@@ -245,8 +243,7 @@ define void @base_const(i32 %a, ptr %base, i16 %r) {
 ; CHECK-NEXT:    [[I2:%.*]] = mul i64 [[I1]], 2
 ; CHECK-NEXT:    [[BI:%.*]] = ptrtoint ptr [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
-; CHECK-NEXT:    [[ADD2_0:%.*]] = add i64 [[BI]], 5
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD2_0]], [[I2]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], 5
 ; CHECK-NEXT:    [[ADDR1:%.*]] = inttoptr i64 [[ADD1]] to ptr
 ; CHECK-NEXT:    [[ADDR2:%.*]] = inttoptr i64 [[ADD2]] to ptr
 ; CHECK-NEXT:    store i16 [[R:%.*]], ptr [[ADDR1]], align 2
@@ -274,8 +271,7 @@ define void @base_var(i32 %a, ptr %base, i16 %r, i64 %n) {
 ; CHECK-NEXT:    [[I2:%.*]] = mul i64 [[I1]], 2
 ; CHECK-NEXT:    [[BI:%.*]] = ptrtoint ptr [[BASE:%.*]] to i64
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i64 [[BI]], [[I2]]
-; CHECK-NEXT:    [[ADD2_0:%.*]] = add i64 [[BI]], [[N:%.*]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD2_0]], [[I2]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[N:%.*]]
 ; CHECK-NEXT:    [[ADDR1:%.*]] = inttoptr i64 [[ADD1]] to ptr
 ; CHECK-NEXT:    [[ADDR2:%.*]] = inttoptr i64 [[ADD2]] to ptr
 ; CHECK-NEXT:    store i16 [[R:%.*]], ptr [[ADDR1]], align 2
