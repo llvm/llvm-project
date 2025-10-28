@@ -221,12 +221,23 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
+  Register VCCReg = I.getOperand(1).getReg();
+  MachineInstr *Cmp;
 
-  unsigned CmpOpc =
-      STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
-  MachineInstr *Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc))
-                          .addReg(I.getOperand(1).getReg())
-                          .addImm(0);
+  if (STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    unsigned CmpOpc = STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
+    Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc))
+              .addReg(VCCReg)
+              .addImm(0);
+  } else {
+    // For gfx7 and earlier, S_CMP_LG_U64 doesn't exist, so we use S_OR_B64
+    // which sets SCC as a side effect.
+    Register DeadDst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    Cmp = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_OR_B64), DeadDst)
+              .addReg(VCCReg)
+              .addReg(VCCReg);
+  }
+
   if (!constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI))
     return false;
 
