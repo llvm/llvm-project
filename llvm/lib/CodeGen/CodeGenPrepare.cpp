@@ -4075,7 +4075,6 @@ bool PhiNodeSetIterator::operator!=(const PhiNodeSetIterator &RHS) const {
 /// if it is simplified.
 class SimplificationTracker {
   DenseMap<Value *, Value *> Storage;
-  const SimplifyQuery &SQ;
   // Tracks newly created Phi nodes. The elements are iterated by insertion
   // order.
   PhiNodeSet AllPhiNodes;
@@ -4083,8 +4082,6 @@ class SimplificationTracker {
   SmallPtrSet<SelectInst *, 32> AllSelectNodes;
 
 public:
-  SimplificationTracker(const SimplifyQuery &sq) : SQ(sq) {}
-
   Value *Get(Value *V) {
     do {
       auto SV = Storage.find(V);
@@ -4092,30 +4089,6 @@ public:
         return V;
       V = SV->second;
     } while (true);
-  }
-
-  Value *Simplify(Value *Val) {
-    SmallVector<Value *, 32> WorkList;
-    SmallPtrSet<Value *, 32> Visited;
-    WorkList.push_back(Val);
-    while (!WorkList.empty()) {
-      auto *P = WorkList.pop_back_val();
-      if (!Visited.insert(P).second)
-        continue;
-      if (auto *PI = dyn_cast<Instruction>(P))
-        if (Value *V = simplifyInstruction(cast<Instruction>(PI), SQ)) {
-          for (auto *U : PI->users())
-            WorkList.push_back(cast<Value>(U));
-          Put(PI, V);
-          PI->replaceAllUsesWith(V);
-          if (auto *PHI = dyn_cast<PHINode>(PI))
-            AllPhiNodes.erase(PHI);
-          if (auto *Select = dyn_cast<SelectInst>(PI))
-            AllSelectNodes.erase(Select);
-          PI->eraseFromParent();
-        }
-    }
-    return Get(Val);
   }
 
   void Put(Value *From, Value *To) { Storage.insert({From, To}); }
@@ -4178,8 +4151,7 @@ private:
   /// Common Type for all different fields in addressing modes.
   Type *CommonType = nullptr;
 
-  /// SimplifyQuery for simplifyInstruction utility.
-  const SimplifyQuery &SQ;
+  const DataLayout &DL;
 
   /// Original Address.
   Value *Original;
@@ -4188,8 +4160,8 @@ private:
   Value *CommonValue = nullptr;
 
 public:
-  AddressingModeCombiner(const SimplifyQuery &_SQ, Value *OriginalValue)
-      : SQ(_SQ), Original(OriginalValue) {}
+  AddressingModeCombiner(const DataLayout &DL, Value *OriginalValue)
+      : DL(DL), Original(OriginalValue) {}
 
   ~AddressingModeCombiner() { eraseCommonValueIfDead(); }
 
@@ -4301,7 +4273,7 @@ private:
     // Keep track of keys where the value is null. We will need to replace it
     // with constant null when we know the common type.
     SmallVector<Value *, 2> NullValue;
-    Type *IntPtrTy = SQ.DL.getIntPtrType(AddrModes[0].OriginalValue->getType());
+    Type *IntPtrTy = DL.getIntPtrType(AddrModes[0].OriginalValue->getType());
     for (auto &AM : AddrModes) {
       Value *DV = AM.GetFieldAsValue(DifferentField, IntPtrTy);
       if (DV) {
@@ -4351,7 +4323,7 @@ private:
     // simplification is possible only if original phi/selects were not
     // simplified yet.
     // Using this mapping we can find the current value in AddrToBase.
-    SimplificationTracker ST(SQ);
+    SimplificationTracker ST;
 
     // First step, DFS to create PHI nodes for all intermediate blocks.
     // Also fill traverse order for the second step.
@@ -4510,7 +4482,6 @@ private:
           PHI->addIncoming(ST.Get(Map[PV]), B);
         }
       }
-      Map[Current] = ST.Simplify(V);
     }
   }
 
@@ -5901,8 +5872,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   // the graph are compatible.
   bool PhiOrSelectSeen = false;
   SmallVector<Instruction *, 16> AddrModeInsts;
-  const SimplifyQuery SQ(*DL, TLInfo);
-  AddressingModeCombiner AddrModes(SQ, Addr);
+  AddressingModeCombiner AddrModes(*DL, Addr);
   TypePromotionTransaction TPT(RemovedInsts);
   TypePromotionTransaction::ConstRestorationPt LastKnownGood =
       TPT.getRestorationPoint();

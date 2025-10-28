@@ -9002,12 +9002,12 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
 }
 
 static SMECallAttrs
-getSMECallAttrs(const Function &Caller, const AArch64TargetLowering &TLI,
+getSMECallAttrs(const Function &Caller, const RTLIB::RuntimeLibcallsInfo &RTLCI,
                 const TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.CB)
-    return SMECallAttrs(*CLI.CB, &TLI);
+    return SMECallAttrs(*CLI.CB, &RTLCI);
   if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
-    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol(), TLI));
+    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol(), RTLCI));
   return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(SMEAttrs::Normal));
 }
 
@@ -9029,7 +9029,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
   // SME Streaming functions are not eligible for TCO as they may require
   // the streaming mode or ZA to be restored after returning from the call.
-  SMECallAttrs CallAttrs = getSMECallAttrs(CallerF, *this, CLI);
+  SMECallAttrs CallAttrs =
+      getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
       CallAttrs.requiresPreservingAllZAState() ||
       CallAttrs.caller().hasStreamingBody())
@@ -9454,7 +9455,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
+  SMECallAttrs CallAttrs =
+      getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
 
   std::optional<unsigned> ZAMarkerNode;
   bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
@@ -26723,11 +26725,34 @@ static SDValue performDUPCombine(SDNode *N,
   }
 
   if (N->getOpcode() == AArch64ISD::DUP) {
+    SDValue Op = N->getOperand(0);
+
+    // Optimize DUP(extload/zextload i8/i16/i32) to avoid GPR->FPR transfer.
+    // For example:
+    //   v4i32 = DUP (i32 (zextloadi8 addr))
+    // =>
+    //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
+    //   v4i32 = DUPLANE32 (v4i32), 0
+    if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
+      ISD::LoadExtType ExtType = LD->getExtensionType();
+      EVT MemVT = LD->getMemoryVT();
+      EVT ElemVT = VT.getVectorElementType();
+      if ((ExtType == ISD::EXTLOAD || ExtType == ISD::ZEXTLOAD) &&
+          (MemVT == MVT::i8 || MemVT == MVT::i16 || MemVT == MVT::i32) &&
+          ElemVT != MemVT && LD->hasOneUse()) {
+        EVT Vec128VT = EVT::getVectorVT(*DCI.DAG.getContext(), ElemVT,
+                                        128 / ElemVT.getSizeInBits());
+        SDValue ScalarToVec =
+            DCI.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, Vec128VT, Op);
+        return DCI.DAG.getNode(getDUPLANEOp(ElemVT), DL, VT, ScalarToVec,
+                               DCI.DAG.getConstant(0, DL, MVT::i64));
+      }
+    }
+
     // If the instruction is known to produce a scalar in SIMD registers, we can
     // duplicate it across the vector lanes using DUPLANE instead of moving it
     // to a GPR first. For example, this allows us to handle:
     //   v4i32 = DUP (i32 (FCMGT (f32, f32)))
-    SDValue Op = N->getOperand(0);
     // FIXME: Ideally, we should be able to handle all instructions that
     // produce a scalar value in FPRs.
     if (Op.getOpcode() == AArch64ISD::FCMEQ ||
@@ -29496,11 +29521,6 @@ AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   if (Subtarget->isTargetAndroid())
     return UseTlsOffset(IRB, 0x48);
 
-  // Fuchsia is similar.
-  // <zircon/tls.h> defines ZX_TLS_UNSAFE_SP_OFFSET with this value.
-  if (Subtarget->isTargetFuchsia())
-    return UseTlsOffset(IRB, -0x8);
-
   return TargetLowering::getSafeStackPointerLocation(IRB);
 }
 
@@ -29818,7 +29838,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallAttrs = SMECallAttrs(*Base, this);
+    auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
     if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
         CallAttrs.requiresPreservingZT0() ||
         CallAttrs.requiresPreservingAllZAState())

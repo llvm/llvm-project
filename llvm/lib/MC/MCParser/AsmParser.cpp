@@ -734,7 +734,7 @@ public:
     Lexer.setLexHLASMStrings(true);
   }
 
-  ~HLASMAsmParser() { Lexer.setSkipSpace(true); }
+  ~HLASMAsmParser() override { Lexer.setSkipSpace(true); }
 
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI) override;
