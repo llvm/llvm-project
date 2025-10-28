@@ -141,6 +141,10 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LLVM_BINUTILS_INCDIR=/usr/include"
+        fi
+
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*)
@@ -207,6 +211,13 @@ jobs:
       id: build
       shell: bash
       run: |
+        # Install binutils-dev on linux so we can build the gold plugin.  Clang
+        # defaults to binutils on Linux, so we need the plugin so that users can
+        # enable lto while using the default linker.
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          sudo apt-get install binutils-dev
+        fi
+
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
