@@ -206,7 +206,7 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
-// Return wave active sum that corresponds to the QT scalar type
+// Return wave active max that corresponds to the QT scalar type
 static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
                                                CGHLSLRuntime &RT, QualType QT) {
   switch (Arch) {
@@ -221,6 +221,25 @@ static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
   }
   default:
     llvm_unreachable("Intrinsic WaveActiveMax"
+                     " not supported by target architecture");
+  }
+}
+
+// Return wave active min that corresponds to the QT scalar type
+static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
+                                               CGHLSLRuntime &RT, QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    if (QT->isUnsignedIntegerType())
+      return Intrinsic::spv_wave_reduce_umin;
+    return Intrinsic::spv_wave_reduce_min;
+  case llvm::Triple::dxil: {
+    if (QT->isUnsignedIntegerType())
+      return Intrinsic::dx_wave_reduce_umin;
+    return Intrinsic::dx_wave_reduce_min;
+  }
+  default:
+    llvm_unreachable("Intrinsic WaveActiveMin"
                      " not supported by target architecture");
   }
 }
@@ -741,6 +760,17 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
                            ArrayRef{OpExpr}, "hlsl.wave.active.max");
+  }
+  case Builtin::BI__builtin_hlsl_wave_active_min: {
+    // Due to the use of variadic arguments, explicitly retreive argument
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID IID = getWaveActiveMinIntrinsic(
+        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
+        E->getArg(0)->getType());
+
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.wave.active.min");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     // We don't define a SPIR-V intrinsic, instead it is a SPIR-V built-in
