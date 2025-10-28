@@ -2515,7 +2515,6 @@ TEST_F(FormatTestComments, BlockComments) {
       "bool aaaaaaaaaaaaa = /* trailing comment */\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaa || aaaaaaaaaaaaaaaaaaaaaaaaa ||\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa || aaaaaaaaaaaaaaaaaaaaaaaaaa;",
-
       "bool       aaaaaaaaaaaaa =       /* trailing comment */\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaa||aaaaaaaaaaaaaaaaaaaaaaaaa    ||\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaa   || aaaaaaaaaaaaaaaaaaaaaaaaaa;");
@@ -3652,7 +3651,6 @@ TEST_F(FormatTestComments, NoCrash_Bug34236) {
 "/*                                                                */ /*\n"
 "                                                                      *       a\n"
 "                                                                      * b c d*/",
-
 "/*                                                                */ /*\n"
 " *       a b\n"
 " *       c     d*/");
@@ -3771,7 +3769,6 @@ TEST_F(FormatTestComments, ReflowBackslashCrash) {
 "// bbbbb run \\\n"
 "// rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr\n"
 "// \\ <log_file> -- --output_directory=\"<output_directory>\"",
-
 "// How to run:\n"
 "// bbbbb run \\\n"
 "// rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr \\\n"
@@ -4278,7 +4275,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
                WrapCode, Style);
 
   Style = getLLVMStyleWithColumns(20);
-  constexpr StringRef LotsOfSpaces =
+  constexpr StringRef LotsOfSpaces(
       "//                      This are more spaces "
       "than the ColumnLimit, what now?\n"
       "\n"
@@ -4289,7 +4286,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
       "\n"
       "// A comment with\n"
       "//   some indentation that has to be split.\n"
-      "// And now without";
+      "// And now without");
   verifyFormat("//                      This are more spaces "
                "than the ColumnLimit, what now?\n"
                "\n"
@@ -4481,8 +4478,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
 TEST_F(FormatTestComments, SplitCommentIntroducers) {
   verifyFormat("//\n"
                "/\\\n"
-               "/\n"
-               "",
+               "/\n",
                "//\n"
                "/\\\n"
                "/ \n"
