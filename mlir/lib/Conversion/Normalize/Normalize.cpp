@@ -15,6 +15,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Hashing.h"
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
 
@@ -428,14 +429,19 @@ SetVector<int> NormalizePass::getOutputFootprint(
 
       unsigned count = 0;
       for (Block &block : func.getRegion()) {
-        for (Operation &innerOp : block) {
-          if (&innerOp == op) {
-            outputsVec.insert(count);
-            return outputsVec;
-          }
-          count++;
+        if (auto it = std::find_if(
+                block.begin(), block.end(),
+                [op](Operation &innerOp) { return &innerOp == op; });
+            it != block.end()) {
+          count += std::distance(block.begin(), it);
+          outputsVec.insert(count);
+          break;
+        } else {
+          count += std::distance(block.begin(), block.end());
         }
       }
+
+      return outputsVec;
     }
 
     for (OpOperand &use : op->getUses()) {
