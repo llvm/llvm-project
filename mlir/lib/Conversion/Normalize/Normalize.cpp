@@ -352,8 +352,6 @@ void NormalizePass::reorderOperationOperandsByName(Operation *op) {
   }
 }
 
-/// Reorders operations by walking up the tree from each operand of an output
-/// operation and reducing the def-use distance.
 void NormalizePass::reorderOperations(
     const SmallVector<Operation *, 16> &outputs) {
   SmallPtrSet<const Operation *, 32> visited;
@@ -363,6 +361,8 @@ void NormalizePass::reorderOperations(
         reorderOperation(defOp, op, visited);
 }
 
+/// Reorders operations by walking up the tree from each operand of an output
+/// operation and reducing the def-use distance.
 void NormalizePass::reorderOperation(
     Operation *used, Operation *user,
     SmallPtrSet<const Operation *, 32> &visited) {
