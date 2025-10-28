@@ -257,7 +257,7 @@ jobs:
       - prepare
     if: >-
       github.event_name == 'pull_request' &&
-      needs.prepare.outputs.build-runs-on == 'macos-13
+      needs.prepare.outputs.build-runs-on == 'macos-13'
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
     - name: Checkout LLVM
