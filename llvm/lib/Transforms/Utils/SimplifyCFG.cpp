@@ -5228,9 +5228,8 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
         CompVal, DL.getIntPtrType(CompVal->getType()), "magicptr");
   }
 
-  // Check if we can represent the values can be represented as a contiguous
-  // range. If so, we use a range check + conditional branch instead of a
-  // switch.
+  // Check if we can represent the values as a contiguous range. If so, we use a
+  // range check + conditional branch instead of a switch.
   if (Values.front()->getValue() - Values.back()->getValue() ==
       Values.size() - 1) {
     ConstantRange RangeToCheck = ConstantRange::getNonEmpty(
