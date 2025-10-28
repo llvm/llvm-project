@@ -147,6 +147,35 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 }
 
 //===----------------------------------------------------------------------===//
+// ROCDL vector types definitions
+//===----------------------------------------------------------------------===//
+
+class ROCDL_ConcreteVector<Type elem, int length> :
+  FixedVectorOfLengthAndType<[length], [elem]>,
+  BuildableType<
+    "::mlir::VectorType::get({" # length # "} ,"
+      # elem.builderCall # ")">;
+
+def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
+def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
+def ROCDL_V2I32Type : ROCDL_ConcreteVector<I32, 2>;
+def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
+def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
+def ROCDL_V3I32Type : ROCDL_ConcreteVector<I32, 3>;
+def ROCDL_V4I32Type : ROCDL_ConcreteVector<I32, 4>;
+def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
+def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
+def ROCDL_V8BF16Type : ROCDL_ConcreteVector<BF16, 8>;
+def ROCDL_V8F16Type : ROCDL_ConcreteVector<F16, 8>;
+def ROCDL_V8F32Type : ROCDL_ConcreteVector<F32, 8>;
+def ROCDL_V16BF16Type : ROCDL_ConcreteVector<BF16, 16>;
+def ROCDL_V16F16Type : ROCDL_ConcreteVector<F16, 16>;
+def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
+def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
+def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
+def ROCDL_V32F32Type : ROCDL_ConcreteVector<F32, 32>;
+
+//===----------------------------------------------------------------------===//
 // Wave-level primitives
 //===----------------------------------------------------------------------===//
 
@@ -670,8 +699,8 @@ def ROCDL_GlobalLoadLDSOp :
 // Base class for tensor load/store operations with 4 descriptor groups.
 class ROCDL_TensorLDSIntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
-  dag args = (ins LLVM_VectorOf<I32>:$dgroup0, LLVM_VectorOf<I32>:$dgroup1,
-                  LLVM_VectorOf<I32>:$dgroup2, LLVM_VectorOf<I32>:$dgroup3,
+  dag args = (ins ROCDL_V4I32Type:$dgroup0, ROCDL_V8I32Type:$dgroup1,
+                  ROCDL_V4I32Type:$dgroup2, ROCDL_V4I32Type:$dgroup3,
                   I32Attr:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let summary = "Base class for ROCDL tensor load/store to/from LDS.";
@@ -684,8 +713,7 @@ class ROCDL_TensorLDSIntrOp<string mnemonic> :
     This op is for gfx1250+ architectures.
   }];
   let assemblyFormat = [{
-    $dgroup0 `,` $dgroup1 `,` $dgroup2 `,` $dgroup3 `,` $cachePolicy
-    attr-dict `:` type($dgroup0) `,` type($dgroup1) `,` type($dgroup2) `,` type($dgroup3)
+    attr-dict operands `cachepolicy` $cachePolicy
   }];
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
@@ -698,7 +726,7 @@ class ROCDL_TensorLDSIntrOp<string mnemonic> :
 // (D2 variant).
 class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
-  dag args = (ins LLVM_VectorOf<I32>:$dgroup0, LLVM_VectorOf<I32>:$dgroup1,
+  dag args = (ins ROCDL_V4I32Type:$dgroup0, ROCDL_V8I32Type:$dgroup1,
                   I32Attr:$cachePolicy);
   let arguments = !con(args, baseArgs);
   let summary = "Base class for ROCDL tensor load/store to/from LDS (D2 variant).";
@@ -711,8 +739,7 @@ class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
     This op is for gfx1250+ architectures.
   }];
   let assemblyFormat = [{
-    $dgroup0 `,` $dgroup1 `,` $cachePolicy
-    attr-dict `:` type($dgroup0) `,` type($dgroup1)
+    attr-dict operands `cachepolicy` $cachePolicy
   }];
   let extraClassDefinition = [{
     SmallVector<Value> $cppClass::getAccessedOperands() {
@@ -995,30 +1022,6 @@ def ROCDL_Permlane32SwapOp : ROCDL_IntrOp<"permlane32.swap", [], [],
     permutation specified by $fi to the provided inputs.
   }];
 }
-
-class ROCDL_ConcreteVector<Type elem, int length> :
-  FixedVectorOfLengthAndType<[length], [elem]>,
-  BuildableType<
-    "::mlir::VectorType::get({" # length # "} ,"
-      # elem.builderCall # ")">;
-
-def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
-def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
-def ROCDL_V2I32Type : ROCDL_ConcreteVector<I32, 2>;
-def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
-def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
-def ROCDL_V3I32Type : ROCDL_ConcreteVector<I32, 3>;
-def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
-def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
-def ROCDL_V8BF16Type : ROCDL_ConcreteVector<BF16, 8>;
-def ROCDL_V8F16Type : ROCDL_ConcreteVector<F16, 8>;
-def ROCDL_V8F32Type : ROCDL_ConcreteVector<F32, 8>;
-def ROCDL_V16BF16Type : ROCDL_ConcreteVector<BF16, 16>;
-def ROCDL_V16F16Type : ROCDL_ConcreteVector<F16, 16>;
-def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
-def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
-def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
-def ROCDL_V32F32Type : ROCDL_ConcreteVector<F32, 32>;
 
 //===---------------------------------------------------------------------===//
 // 16-bit float intrinsics
