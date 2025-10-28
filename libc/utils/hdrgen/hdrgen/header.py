@@ -241,7 +241,7 @@ class HeaderFile:
         return {
             "name": self.name,
             "standards": self.standards,
-            "includes": [
-                str(file) for file in sorted({COMMON_HEADER} | self.includes())
-            ],
+            "includes": sorted(
+                str(file) for file in {COMMON_HEADER} | self.includes()
+            ),
         }
