@@ -528,7 +528,7 @@ public:
                                callOp.getDynamicSharedMemorySize(), newOpers,
                                asyncToken ? asyncToken.getType() : nullptr,
                                callOp.getAsyncDependencies(),
-                               /**/ std::nullopt);
+                               /*clusterSize=*/std::nullopt);
       if (callOp.getClusterSizeX())
         newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
       if (callOp.getClusterSizeY())
