@@ -776,6 +776,26 @@ llvm.func @rocdl.raw.buffer.i32(%rsrc : vector<4xi32>,
   llvm.return
 }
 
+llvm.func @rocdl.tensor.load.store.ops(
+        %desc0 : vector<4xi32>,
+        %desc1 : vector<8xi32>,
+        %desc2 : vector<4xi32>,
+        %desc3 : vector<4xi32>) {
+  // CHECK-LABEL: @rocdl.tensor.load.store.ops(
+  // CHECK-SAME: %[[DESC0:.*]]: vector<4xi32>, %[[DESC1:.*]]: vector<8xi32>, %[[DESC2:.*]]: vector<4xi32>, %[[DESC3:.*]]: vector<4xi32>)
+  // CHECK: rocdl.tensor.load.to.lds %[[DESC0]], %[[DESC1]], %[[DESC2]], %[[DESC3]] cachepolicy 0
+  // CHECK: rocdl.tensor.load.to.lds.d2 %[[DESC0]], %[[DESC1]] cachepolicy 0
+  // CHECK: rocdl.tensor.store.from.lds %[[DESC0]], %[[DESC1]], %[[DESC2]], %[[DESC3]] cachepolicy 0
+  // CHECK: rocdl.tensor.store.from.lds.d2 %[[DESC0]], %[[DESC1]] cachepolicy 0
+
+  rocdl.tensor.load.to.lds %desc0, %desc1, %desc2, %desc3 cachepolicy 0
+  rocdl.tensor.load.to.lds.d2 %desc0, %desc1 cachepolicy 0
+
+  rocdl.tensor.store.from.lds %desc0, %desc1, %desc2, %desc3 cachepolicy 0
+  rocdl.tensor.store.from.lds.d2 %desc0, %desc1 cachepolicy 0
+  llvm.return
+}
+
 llvm.func @rocdl_8bit_floats(%source: i32, %source_half: f16, %source_bfloat: bf16, %stoch: i32) -> i32 {
 // CHECK-LABEL: @rocdl_8bit_floats
 // CHECK: rocdl.cvt.f32.bf8

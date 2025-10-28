@@ -147,6 +147,35 @@ class ROCDL_DimGetterFunctionOp<string mnemonic, string device_function,
 }
 
 //===----------------------------------------------------------------------===//
+// ROCDL vector types definitions
+//===----------------------------------------------------------------------===//
+
+class ROCDL_ConcreteVector<Type elem, int length> :
+  FixedVectorOfLengthAndType<[length], [elem]>,
+  BuildableType<
+    "::mlir::VectorType::get({" # length # "} ,"
+      # elem.builderCall # ")">;
+
+def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
+def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
+def ROCDL_V2I32Type : ROCDL_ConcreteVector<I32, 2>;
+def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
+def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
+def ROCDL_V3I32Type : ROCDL_ConcreteVector<I32, 3>;
+def ROCDL_V4I32Type : ROCDL_ConcreteVector<I32, 4>;
+def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
+def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
+def ROCDL_V8BF16Type : ROCDL_ConcreteVector<BF16, 8>;
+def ROCDL_V8F16Type : ROCDL_ConcreteVector<F16, 8>;
+def ROCDL_V8F32Type : ROCDL_ConcreteVector<F32, 8>;
+def ROCDL_V16BF16Type : ROCDL_ConcreteVector<BF16, 16>;
+def ROCDL_V16F16Type : ROCDL_ConcreteVector<F16, 16>;
+def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
+def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
+def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
+def ROCDL_V32F32Type : ROCDL_ConcreteVector<F32, 32>;
+
+//===----------------------------------------------------------------------===//
 // Wave-level primitives
 //===----------------------------------------------------------------------===//
 
@@ -806,6 +835,65 @@ def ROCDL_RawBufferAtomicCmpSwap :
 }
 
 //===---------------------------------------------------------------------===//
+// Raw tensor load/store intrinsics: gfx12+
+
+def ROCDL_TensorLoadToLds :
+  ROCDL_IntrOp<"tensor.load.to.lds", [], [], [], 0, 0, 0, 0, [4], ["cpol"]>,
+  Arguments<(ins ROCDL_V4I32Type:$desc0,
+                 ROCDL_V8I32Type:$desc1,
+                 ROCDL_V4I32Type:$desc2,
+                 ROCDL_V4I32Type:$desc3,
+                 I32Attr:$cpol)>{
+  let description = [{
+      Loads tensor data from Global to LDS. Available on gfx12+.
+  }];
+  let assemblyFormat = [{
+    attr-dict operands `cachepolicy` $cpol
+  }];
+}
+
+def ROCDL_TensorLoadToLdsD2 :
+  ROCDL_IntrOp<"tensor.load.to.lds.d2", [], [], [], 0, 0, 0, 0, [2], ["cpol"]>,
+  Arguments<(ins ROCDL_V4I32Type:$desc0,
+                 ROCDL_V8I32Type:$desc1,
+                 I32Attr:$cpol)>{
+  let description = [{
+      Loads 2D tensor data from Global to LDS. Available on gfx12+. TODO
+  }];
+  let assemblyFormat = [{
+    attr-dict operands `cachepolicy` $cpol
+  }];
+}
+
+def ROCDL_TensorStoreFromLds :
+  ROCDL_IntrOp<"tensor.store.from.lds", [], [], [], 0, 0, 0, 0, [4], ["cpol"]>,
+  Arguments<(ins ROCDL_V4I32Type:$desc0,
+                 ROCDL_V8I32Type:$desc1,
+                 ROCDL_V4I32Type:$desc2,
+                 ROCDL_V4I32Type:$desc3,
+                 I32Attr:$cpol)>{
+  let description = [{
+      Stores tensor data from Global to LDS. Available on gfx12+.
+  }];
+  let assemblyFormat = [{
+    attr-dict operands `cachepolicy` $cpol
+  }];
+}
+
+def ROCDL_TensorStoreFromLdsD2 :
+  ROCDL_IntrOp<"tensor.store.from.lds.d2", [], [], [], 0, 0, 0, 0, [2], ["cpol"]>,
+  Arguments<(ins ROCDL_V4I32Type:$desc0,
+                 ROCDL_V8I32Type:$desc1,
+                 I32Attr:$cpol)>{
+  let description = [{
+      Stores tensor 2D data from Global to LDS. Available on gfx12+. TODO
+  }];
+  let assemblyFormat = [{
+    attr-dict operands `cachepolicy` $cpol
+  }];
+}
+
+//===---------------------------------------------------------------------===//
 // MI-100 and MI-200 buffer atomic floating point add intrinsic
 
 def ROCDL_RawBufferAtomicFAddOp :
@@ -931,30 +1019,6 @@ def ROCDL_Permlane32SwapOp : ROCDL_IntrOp<"permlane32.swap", [], [],
     permutation specified by $fi to the provided inputs.
   }];
 }
-
-class ROCDL_ConcreteVector<Type elem, int length> :
-  FixedVectorOfLengthAndType<[length], [elem]>,
-  BuildableType<
-    "::mlir::VectorType::get({" # length # "} ,"
-      # elem.builderCall # ")">;
-
-def ROCDL_V2I16Type : ROCDL_ConcreteVector<I16, 2>;
-def ROCDL_V2F16Type : ROCDL_ConcreteVector<F16, 2>;
-def ROCDL_V2I32Type : ROCDL_ConcreteVector<I32, 2>;
-def ROCDL_V2BF16Type : ROCDL_ConcreteVector<BF16, 2>;
-def ROCDL_V2F32Type : ROCDL_ConcreteVector<F32, 2>;
-def ROCDL_V3I32Type : ROCDL_ConcreteVector<I32, 3>;
-def ROCDL_V6I32Type : ROCDL_ConcreteVector<I32, 6>;
-def ROCDL_V8I32Type : ROCDL_ConcreteVector<I32, 8>;
-def ROCDL_V8BF16Type : ROCDL_ConcreteVector<BF16, 8>;
-def ROCDL_V8F16Type : ROCDL_ConcreteVector<F16, 8>;
-def ROCDL_V8F32Type : ROCDL_ConcreteVector<F32, 8>;
-def ROCDL_V16BF16Type : ROCDL_ConcreteVector<BF16, 16>;
-def ROCDL_V16F16Type : ROCDL_ConcreteVector<F16, 16>;
-def ROCDL_V16F32Type : ROCDL_ConcreteVector<F32, 16>;
-def ROCDL_V32F16Type : ROCDL_ConcreteVector<F16, 32>;
-def ROCDL_V32BF16Type : ROCDL_ConcreteVector<BF16, 32>;
-def ROCDL_V32F32Type : ROCDL_ConcreteVector<F32, 32>;
 
 //===---------------------------------------------------------------------===//
 // 16-bit float intrinsics
