@@ -1323,12 +1323,10 @@ func.func @simplify_bounds_tiled() {
       }
     }
   }
-  // CHECK:      affine.for
-  // CHECK-NEXT:   affine.for
+  // CHECK:      affine.for %{{.*}} 0 to 2
+  // CHECK-NEXT:   affine.for %{{.*}} = 0 to 32 step 16
   // CHECK-NEXT:     affine.for %{{.*}} = 0 to 32 step 16
-  // CHECK-NEXT:       affine.for %{{.*}} = 0 to 32 step 16
-  // CHECK-NEXT:         affine.for %{{.*}} = 0 to 2
-  // CHECK-NEXT:           affine.for %{{.*}} = 0 to 16 step 16
+  // CHECK-NEXT:       affine.for %{{.*}} = 0 to 2
 
   return
 }
@@ -1348,9 +1346,7 @@ func.func @simplify_min_max_multi_expr() {
   // CHECK: affine.for
   affine.for %i = 0 to 2 {
     // CHECK: affine.for
-    affine.for %j = 0 to 4 {
-      // The first upper bound expression will not be lower than -9. So, it's redundant.
-      // CHECK-NEXT: affine.for %{{.*}} = -10 to -9
+    affine.for %j = 0 to 4 { 
       affine.for %k = -10 to min affine_map<(d0, d1) -> (4 * d0 - 3 * d1, -9)>(%i, %j) {
         "test.foo"() : () -> ()
       }
@@ -1370,7 +1366,6 @@ func.func @simplify_min_max_multi_expr() {
     }
   }
 
-  // CHECK: affine.for %{{.*}} = 0 to 1
   affine.for %i = 0 to 2 {
     affine.for %j = max affine_map<(d0) -> (d0 floordiv 2, 0)>(%i) to 1 {
       "test.foo"() : () -> ()
@@ -2401,3 +2396,21 @@ func.func @for_empty_body_folder_iv_yield() -> index {
   }
   return %10 : index
 }
+
+// -----
+
+// Check that single iteration loop is removed and its body is promoted to the
+// parent block.
+
+// CHECK-LABEL: func @promote_single_iter_loop
+// CHECK-SAME:    %[[IN:.*]]: memref<1xf32>, %[[OUT:.*]]: memref<1xf32>
+func.func @promote_single_iter_loop(%in: memref<1xf32>, %out: memref<1xf32>) {
+  affine.for %i = 0 to 1 {
+    %1 = affine.load %in[%i] : memref<1xf32>
+    affine.store %1, %out[%i] : memref<1xf32>
+  }
+  return
+}
+
+// CHECK-NEXT: %[[DATA:.*]] = affine.load %[[IN]][0]
+// CHECK-NEXT: affine.store %[[DATA]], %[[OUT]][0]

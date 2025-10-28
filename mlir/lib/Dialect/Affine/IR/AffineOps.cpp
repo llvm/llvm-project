@@ -2716,6 +2716,46 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
   return success(folded);
 }
 
+/// Replaces the given op with the contents of the given single-block region,
+/// using the operands of the block terminator to replace operation results.
+static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
+                                Region &region, ValueRange blockArgs = {}) {
+  assert(region.hasOneBlock() && "expected single-block region");
+  Block *block = &region.front();
+  Operation *terminator = block->getTerminator();
+  ValueRange results = terminator->getOperands();
+  rewriter.inlineBlockBefore(block, op, blockArgs);
+  rewriter.replaceOp(op, results);
+  rewriter.eraseOp(terminator);
+}
+
+struct SimplifyTrivialLoops : public OpRewritePattern<AffineForOp> {
+  using OpRewritePattern<AffineForOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(AffineForOp forOp,
+                                PatternRewriter &rewriter) const override {
+    std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
+    if (!tripCount.has_value() || tripCount != 1)
+      return failure();
+
+    SmallVector<Value> blockArgs;
+    blockArgs.reserve(forOp.getInits().size() + 1);
+    rewriter.setInsertionPointToStart(forOp.getBody());
+    Value lower = AffineApplyOp::create(
+        rewriter, forOp.getLoc(), forOp.getLowerBoundMap(),
+        ValueRange(forOp.getLowerBoundOperands()));
+    forOp.getInductionVar().replaceAllUsesWith(lower);
+    blockArgs.push_back(lower);
+    llvm::append_range(blockArgs, forOp.getInits());
+    replaceOpWithRegion(rewriter, forOp, forOp.getRegion(), blockArgs);
+    return success();
+  }
+};
+
+void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<SimplifyTrivialLoops>(context);
+}
+
 OperandRange AffineForOp::getEntrySuccessorOperands(RegionBranchPoint point) {
   assert((point.isParent() || point == getRegion()) && "invalid region point");
 

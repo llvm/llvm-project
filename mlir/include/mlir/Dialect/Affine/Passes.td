@@ -381,10 +381,6 @@ def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
 def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let summary = "Apply normalization transformations to affine loop-like ops";
   let constructor = "mlir::affine::createAffineLoopNormalizePass()";
-  let options = [
-    Option<"promoteSingleIter", "promote-single-iter", "bool",
-           /*default=*/"true", "Promote single iteration loops">,
-  ];
 }
 
 def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
