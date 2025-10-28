@@ -68,6 +68,6 @@ else()
   add_llvm_component_group(NativeCodeGen)
 endif()
 
-# Component post-processing
+# Component post-processing  
 LLVMBuildResolveComponentsLink()
 LLVMBuildGenerateCFragment(OUTPUT ${LLVMCONFIGLIBRARYDEPENDENCIESINC})

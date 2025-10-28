@@ -27,7 +27,7 @@
 /*/CMakeUserPresets.json
 
 # Nested build directory
-/build*
+/build*  
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).
