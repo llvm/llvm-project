@@ -21,7 +21,12 @@ using namespace llvm;
 namespace llvm {
 namespace bolt {
 
+static bool PassFailed = false;
+
 void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
+  if (PassFailed)
+    return;
+
   BinaryContext &BC = BF.getBinaryContext();
 
   if (BF.getState() == BinaryFunction::State::Empty)
@@ -39,7 +44,6 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
     coverFunctionFragmentStart(BF, FF);
     bool FirstIter = true;
-    MCInst PrevInst;
     bool PrevRAState = false;
     // As this pass runs after function splitting, we should only check
     // consecutive instructions inside FunctionFragments.
@@ -52,6 +56,8 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
         if (!RAState) {
           BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
                     << " in function " << BF.getPrintName() << "\n";
+          PassFailed = true;
+          return;
         }
         if (!FirstIter) {
           // Consecutive instructions with different RAState means we need to
@@ -62,7 +68,6 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
         } else {
           FirstIter = false;
         }
-        PrevInst = *It;
         PrevRAState = *RAState;
       }
     }
@@ -90,6 +95,7 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
   if (!RAState) {
     BC.errs() << "BOLT-ERROR: unknown RAState after inferUnknownStates "
               << " in function " << BF.getPrintName() << "\n";
+    PassFailed = true;
     return;
   }
   if (*RAState)
@@ -151,6 +157,8 @@ Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
             << " functions "
             << format("(%.2lf%%).\n", (100.0 * FunctionsModified) /
                                           BC.getBinaryFunctions().size());
+  if (PassFailed)
+    return createFatalBOLTError("");
   return Error::success();
 }
 
