@@ -1059,7 +1059,8 @@ struct NamedInstrProfRecord : InstrProfRecord {
   uint64_t Hash;
 
   // We reserve this bit as the flag for context sensitive profile record.
-  static const int CS_FLAG_IN_FUNC_HASH = 60;
+  static constexpr unsigned CS_FLAG_IN_FUNC_HASH = 60;
+  static constexpr uint64_t FUNC_HASH_MASK = 0x0FFF'FFFF'FFFF'FFFF;
 
   NamedInstrProfRecord() = default;
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
@@ -1174,7 +1175,9 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling, decision record and bitmap are modified for mcdc.
   Version12 = 12,
-  // The current version is 12.
+  // In this version, the frontend PGO stable hash algorithm defaults to V4.
+  Version13 = 13,
+  // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;

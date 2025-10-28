@@ -734,7 +734,7 @@ void FuncPGOInstrumentation<Edge, BBInfo>::computeCFGHash() {
   FunctionHash = (((uint64_t)JCH.getCRC()) << 28) + JC.getCRC();
 
   // Reserve bit 60-63 for other information purpose.
-  FunctionHash &= 0x0FFFFFFFFFFFFFFF;
+  FunctionHash &= NamedInstrProfRecord::FUNC_HASH_MASK;
   if (IsCS)
     NamedInstrProfRecord::setCSFlagInHash(FunctionHash);
   LLVM_DEBUG(dbgs() << "Function Hash Computation for " << F.getName() << ":\n"
