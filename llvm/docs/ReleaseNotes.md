@@ -194,7 +194,7 @@ Changes to LLDB
 * The default PDB reader on Windows was changed from DIA to native, which uses 
   LLVM's PDB and CodeView support. You can switch back to the DIA reader with
   `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
-  DIA reader will be removed in future versions of LLDB.
+  DIA reader will be removed in a future version of LLDB.
 
 Changes to BOLT
 ---------------------------------
