@@ -9,15 +9,12 @@
 // Implementations of internal_syscall and internal_iserror for Linux/systemz.
 //
 //===----------------------------------------------------------------------===//
-#define SYSCALL(name) __NR_ ## name
+#define SYSCALL(name) __NR_##name
 
 static uptr internal_syscall(u64 nr) {
   register u64 retval __asm__("r2");
   register u64 r1 asm("r1") = nr;
-  asm volatile("svc 0" 
-               : "=r"(retval) 
-               : "r"(r1)
-               : "memory", "cc");
+  asm volatile("svc 0" : "=r"(retval) : "r"(r1) : "memory", "cc");
   return retval;
 }
 
@@ -26,10 +23,7 @@ static uptr internal_syscall(u64 nr, T1 arg1) {
   register u64 retval __asm__("r2");
   register u64 r1 asm("r1") = nr;
   register u64 r2 asm("r2") = (u64)arg1;
-  asm volatile("svc 0" 
-               : "=r"(retval) 
-               : "r"(r1), "r"(r2)
-               : "memory", "cc");
+  asm volatile("svc 0" : "=r"(retval) : "r"(r1), "r"(r2) : "memory", "cc");
   return retval;
 }
 
@@ -111,7 +105,7 @@ static uptr internal_syscall(u64 nr, T1 arg1, T2 arg2, T3 arg3, T4 arg4,
   return retval;
 }
 
-bool internal_iserror(uptr retval, int *rverrno) {
+bool internal_iserror(uptr retval, int* rverrno) {
   if (retval >= (uptr)-4095) {
     if (rverrno)
       *rverrno = -retval;
