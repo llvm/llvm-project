@@ -63,7 +63,7 @@ def KnobOp : Op<Transform_Dialect, "tune.knob", [
 
 def AlternativesOp : Op<Transform_Dialect, "tune.alternatives", [
   DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorRegions",
+        ["getEntrySuccessorOperands",
          "getRegionInvocationBounds"]>,
   DeclareOpInterfaceMethods<TransformOpInterface>,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

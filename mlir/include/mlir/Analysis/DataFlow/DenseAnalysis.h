@@ -397,7 +397,7 @@ protected:
   /// itself.
   virtual void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
+      RegionSuccessor regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) {
     meet(before, after);
   }
@@ -526,7 +526,7 @@ public:
   /// and "to" regions.
   virtual void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-      RegionBranchPoint regionTo, const LatticeT &after, LatticeT *before) {
+      RegionSuccessor regionTo, const LatticeT &after, LatticeT *before) {
     AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
         branch, regionFrom, regionTo, after, before);
   }
@@ -571,7 +571,7 @@ protected:
   }
   void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionForm,
-      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
+      RegionSuccessor regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) final {
     visitRegionBranchControlFlowTransfer(branch, regionForm, regionTo,
                                          static_cast<const LatticeT &>(after),

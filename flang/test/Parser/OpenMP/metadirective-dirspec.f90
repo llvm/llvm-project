@@ -105,8 +105,8 @@ end
 !UNPARSE:  TYPE :: tt2
 !UNPARSE:   REAL :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1,tt2: omp_out%x = omp_in%x+omp_out%x)&
-!UNPARSE: !$OMP&)
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1, tt2: omp&
+!UNPARSE: !$OMP&_out%x = omp_in%x + omp_out%x))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -127,21 +127,44 @@ end
 !PARSE-TREE: | | | | | Name = 'tt1'
 !PARSE-TREE: | | | | OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | | | Name = 'tt2'
-!PARSE-TREE: | | | | OmpCombinerExpression -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
-!PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | | | Name = 'x'
-!PARSE-TREE: | | | | | Expr = 'omp_in%x+omp_out%x'
-!PARSE-TREE: | | | | | | Add
-!PARSE-TREE: | | | | | | | Expr = 'omp_in%x'
-!PARSE-TREE: | | | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | | | DataRef -> Name = 'omp_in'
-!PARSE-TREE: | | | | | | | | | Name = 'x'
-!PARSE-TREE: | | | | | | | Expr = 'omp_out%x'
-!PARSE-TREE: | | | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | OmpCombinerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | Instance -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | Variable = 'omp_out%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | Expr = 'omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | | Add
+!PARSE-TREE: | | | | | | | | Expr = 'omp_in%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_in'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | | | Expr = 'omp_out%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | OmpStylizedInstance
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | Instance -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | Variable = 'omp_out%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | Expr = 'omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | | Add
+!PARSE-TREE: | | | | | | | | Expr = 'omp_in%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_in'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | | | Expr = 'omp_out%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
 
 subroutine f04
   !$omp metadirective when(user={condition(.true.)}: &

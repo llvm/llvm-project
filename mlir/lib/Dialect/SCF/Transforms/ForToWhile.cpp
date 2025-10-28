@@ -23,7 +23,6 @@ namespace mlir {
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
 } // namespace mlir
 
-using namespace llvm;
 using namespace mlir;
 using scf::ForOp;
 using scf::WhileOp;
