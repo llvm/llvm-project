@@ -53,14 +53,11 @@ struct Lattice {
   }
 };
 
-static SourceLocation
-GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
+static SourceLocation GetFactLoc(CausingFactType F) {
   if (const auto *UF = F.dyn_cast<const UseFact *>())
     return UF->getUseExpr()->getExprLoc();
-
   if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>())
     return OEF->getEscapeExpr()->getExprLoc();
-
   llvm_unreachable("unhandled causing fact in PointerUnion");
 }
 
@@ -86,10 +83,8 @@ public:
   Lattice join(Lattice L1, Lattice L2) const {
     LivenessMap Merged = L1.LiveOrigins;
     // Take the earliest Fact to make the join hermetic and commutative.
-    auto CombineCausingFact =
-        [](llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> A,
-           llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> B)
-        -> llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> {
+    auto CombineCausingFact = [](CausingFactType A,
+                                 CausingFactType B) -> CausingFactType {
       if (!A)
         return B;
       if (!B)

@@ -217,12 +217,14 @@ public:
   /// user-defined locations in the code.
   /// \note This is intended for testing only.
   llvm::StringMap<ProgramPoint> getTestPoints() const;
+  /// Retrieves all the facts in the block containing Program Point P.
+  /// \note This is intended for testing only.
+  llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) const;
 
   LoanManager &getLoanMgr() { return LoanMgr; }
   const LoanManager &getLoanMgr() const { return LoanMgr; }
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
-  llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) const;
 
 private:
   LoanManager LoanMgr;

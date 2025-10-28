@@ -104,10 +104,9 @@ llvm::ArrayRef<const Fact *>
 FactManager::getBlockContaining(ProgramPoint P) const {
   for (const auto &Entry : BlockToFactsMap) {
     const auto &Facts = Entry.second;
-    for (const Fact *F : Facts) {
+    for (const Fact *F : Facts)
       if (F == P)
         return Facts;
-    }
   }
   return {};
 }

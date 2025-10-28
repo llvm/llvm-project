@@ -31,6 +31,9 @@
 
 namespace clang::lifetimes::internal {
 
+using CausingFactType =
+    ::llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>;
+
 enum class LivenessKind : uint8_t {
   Dead,  // Not alive
   Maybe, // Live on some path but not all paths (may-be-live)
@@ -43,7 +46,7 @@ struct LivenessInfo {
   /// multiple uses along different paths, this will point to the use appearing
   /// earlier in the translation unit.
   /// This is 'null' when the origin is not live.
-  llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
+  CausingFactType CausingFact;
 
   /// The kind of liveness of the origin.
   /// `Must`: The origin is live on all control-flow paths from the current
@@ -57,10 +60,7 @@ struct LivenessInfo {
   LivenessKind Kind;
 
   LivenessInfo() : CausingFact(nullptr), Kind(LivenessKind::Dead) {}
-  LivenessInfo(
-      llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CF,
-      LivenessKind K)
-      : CausingFact(CF), Kind(K) {}
+  LivenessInfo(CausingFactType CF, LivenessKind K) : CausingFact(CF), Kind(K) {}
 
   bool operator==(const LivenessInfo &Other) const {
     return CausingFact == Other.CausingFact && Kind == Other.Kind;

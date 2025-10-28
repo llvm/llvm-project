@@ -1434,8 +1434,6 @@ TEST_F(LifetimeAnalysisTest, MultipleAssignmentsSingleReturn) {
       return p;
     }
   )");
-  // Expect permissive warning at return statement with both local_obj1 and
-  // local_obj2 as culprit loans
   EXPECT_THAT("local_obj1", HasLiveLoanAtExpiry("P"));
   EXPECT_THAT("local_obj2", HasLiveLoanAtExpiry("P"));
 }
@@ -1453,8 +1451,6 @@ TEST_F(LifetimeAnalysisTest, UseAfterScopeThenReturn) {
       return p;
     }
   )");
-  // Expect a Use-after-scope warning because `p` in `return p` is a use even
-  // before return
   EXPECT_THAT(Origin("p"), HasLoansTo({"local_obj"}, "p2"));
   EXPECT_THAT(Origins({"p"}), MustBeLiveAt("p2"));
 
@@ -1481,7 +1477,6 @@ TEST_F(LifetimeAnalysisTest, ReturnBeforeUseAfterScope) {
       return &global_obj;
     }
   )");
-  // Expect a return stack address warning as return is before use after scope
   EXPECT_THAT("local_obj", HasLiveLoanAtExpiry("p1"));
 
   EXPECT_THAT(NoOrigins(), AreLiveAt("p2"));
