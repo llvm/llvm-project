@@ -3206,6 +3206,7 @@ struct FormatStyle {
     ///   b1 = 0b101101; // Not added.
     ///   b2 = 0b101'101; // Not removed.
     ///   b3 = 0b1'101'101; // Always added.
+    ///   b4 = 0b10'1101; // Corrected to 0b101'101.
     /// \endcode
     int8_t BinaryMaxDigitsNoSeparator;
     /// Format separators in decimal literals.
@@ -3232,6 +3233,7 @@ struct FormatStyle {
     ///   d1 = 123456; // Not added.
     ///   d2 = 123'456; // Not removed.
     ///   d3 = 5'000'000; // Always added.
+    ///   d4 = 1'23'45; // Corrected to 12'345.
     /// \endcode
     int8_t DecimalMaxDigitsNoSeparator;
     /// Format separators in hexadecimal literals.
@@ -3260,6 +3262,7 @@ struct FormatStyle {
     ///   h1 = 0xABCDE; // Not added.
     ///   h2 = 0xA'BC'DE; // Not removed.
     ///   h3 = 0xAB'CD'EF; // Always added.
+    ///   h4 = 0xABCD'E; // Corrected to 0xA'BC'DE.
     /// \endcode
     int8_t HexMaxDigitsNoSeparator;
     bool operator==(const IntegerLiteralSeparatorStyle &R) const {
