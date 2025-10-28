@@ -1133,7 +1133,7 @@ TEST(AddressSanitizer, ThreadedStressStackReuseTest) {
     ASSERT_EQ(0, rc);
   }
   for (int i = 0; i < kNumThreads; i++) {
-    PTHREAD_CREATE(&t[i], &attr, (void* (*)(void *x))LotsOfStackReuse, 0);
+    PTHREAD_CREATE(&t[i], &attr, (void* (*)(void* x))LotsOfStackReuse, 0);
   }
   for (int i = 0; i < kNumThreads; i++) {
     PTHREAD_JOIN(t[i], 0);
