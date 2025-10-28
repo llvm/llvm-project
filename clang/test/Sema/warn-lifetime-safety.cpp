@@ -416,67 +416,73 @@ MyObj* conditional_assign_unconditional_return(MyObj safe, bool c){
   return p;      // expected-note {{returned here}}
 }
 
-MyObj* conditional_assign_both_branches(MyObj safe, bool c){
+View conditional_assign_both_branches(MyObj safe, bool c){
 
   MyObj s;
-  MyObj* p = nullptr;
+  View p;
   if (c) {
-    p = &s;     // expected-warning {{returning reference to stack allocated object}}
+    p = s;      // expected-warning {{returning reference to stack allocated object}}
   } else {
-    p = &safe;
+    p = safe;
   }
   return p;     // expected-note {{returned here}}
 
 }
 
-MyObj* reassign_safe_to_local(MyObj safe){
+View reassign_safe_to_local(MyObj safe){
   MyObj local;
-  MyObj* p = &safe;
+  View p = safe;
 
-  p = &local;   // expected-warning {{returning reference to stack allocated object}}
+  p = local;    // expected-warning {{returning reference to stack allocated object}}
   return p;     // expected-note {{returned here}}
 }
 
-MyObj* pointer_chain_to_local(){
+View pointer_chain_to_local(){
   MyObj local;
-  MyObj* p1 = &local; // expected-warning {{returning reference to stack allocated object}}
+  View p1 = local;     // expected-warning {{returning reference to stack allocated object}}
 
-  MyObj* p2 = p1; 
+  View p2 = p1; 
 
   return p2;          // expected-note {{returned here}}
 }
 
-MyObj* multiple_assign_multiple_return(MyObj safe, bool c1, bool c2){
+View multiple_assign_multiple_return(MyObj safe, bool c1, bool c2){
   MyObj local1;
   MyObj local2;
-  MyObj* p = nullptr;
+  View p;
   if(c1){
-    p = &local1;      // expected-warning {{returning reference to stack allocated object}}
+    p = local1;       // expected-warning {{returning reference to stack allocated object}}
     return p;         // expected-note {{returned here}}
   }
   else if(c2){
-    p = &local2;      // expected-warning {{returning reference to stack allocated object}}
+    p = local2;       // expected-warning {{returning reference to stack allocated object}}
     return p;         // expected-note {{returned here}}
   }
-  p = &safe;
+  p = safe;
   return p;
 }
 
-MyObj* multiple_assign_single_return(MyObj safe, bool c1, bool c2){
+View multiple_assign_single_return(MyObj safe, bool c1, bool c2){
   MyObj local1;
   MyObj local2;
-  MyObj* p = nullptr;
+  View p;
   if(c1){
-    p = &local1;     // expected-warning {{returning reference to stack allocated object}}
+    p = local1;      // expected-warning {{returning reference to stack allocated object}}
   }
   else if(c2){
-    p = &local2;     // expected-warning {{returning reference to stack allocated object}}
+    p = local2;      // expected-warning {{returning reference to stack allocated object}}
   }
   else{
-  p = &safe;
+    p = safe;
   }
   
-  return p;         // expected-note {{returned here}} // expected-note {{returned here}}
+  return p;         // expected-note 2 {{returned here}}
+}
+
+View direct_return_of_local(){
+  MyObj stack;      
+  return stack;     // expected-warning {{returning reference to stack allocated object}}
+                    // expected-note@-1 {{returned here}}
 }
 
 //===----------------------------------------------------------------------===//
@@ -699,4 +705,22 @@ void lifetimebound_ctor() {
     v = obj;
   }
   (void)v;
+}
+
+View lifetimebound_return_of_local(){
+  MyObj stack;
+  return Identity(stack); // expected-warning {{returning reference to stack allocated object}}
+                          // expected-note@-1 {{returned here}}
+}
+
+// FIXME: The analysis does not currently model the lifetime of by-value
+// parameters, so it fails to diagnose this UAR violation.
+View lifetimebound_return_of_by_value_param(MyObj stack_param) {
+  return Identity(stack_param); 
+}
+
+// FIXME: The analysis does not currently model the lifetime of by-value
+// parameters, so it fails to diagnose this UAF violation.
+void uaf_from_by_value_param_failing(MyObj param, View* out_p) {
+  *out_p = Identity(param);
 }
