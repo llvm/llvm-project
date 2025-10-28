@@ -197,6 +197,7 @@ def update_test(ti: common.TestInfo):
                     global_tbaa_records_for_prefixes,
                     is_filtered=builder.is_filtered(),
                     original_check_lines=original_check_lines.get(func, {}),
+                    check_comments=args.check_comments,
                 ),
             )
         )
@@ -230,6 +231,7 @@ def update_test(ti: common.TestInfo):
                         global_tbaa_records_for_prefixes,
                         is_filtered=builder.is_filtered(),
                         original_check_lines=original_check_lines.get(func_name, {}),
+                        check_comments=args.check_comments,
                     )
                 )
                 is_in_function_start = False
@@ -361,6 +363,12 @@ def main():
         default="default",
         choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
+    )
+    parser.add_argument(
+        "--check-comments",
+        action="store_true",
+        default=False,
+        help="Check the generated comments (e.g., PredicateInfo/MemSSA) for functions",
     )
     parser.add_argument(
         "--reset-variable-names",
