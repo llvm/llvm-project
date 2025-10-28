@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -778,6 +779,12 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   // we have more non-fatal errors from InstrProfReader in the future. How
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
+  auto ReaderWarningScope = llvm::make_scope_exit([&] {
+    // If we hit a different error we may still have an error in ReaderWarning.
+    // Consume it now to avoid an assert
+    if (ReaderWarning)
+      consumeError(std::move(ReaderWarning->first));
+  });
   auto Warn = [&](Error E) {
     if (ReaderWarning) {
       consumeError(std::move(E));

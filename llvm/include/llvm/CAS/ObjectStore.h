@@ -226,7 +226,7 @@ public:
   /// Set the size for limiting growth of on-disk storage. This has an effect
   /// for when the instance is closed.
   ///
-  /// Implementations may be not have this implemented.
+  /// Implementations may leave this unimplemented.
   virtual Error setSizeLimit(std::optional<uint64_t> SizeLimit) {
     return Error::success();
   }
@@ -242,7 +242,7 @@ public:
   /// Prune local storage to reduce its size according to the desired size
   /// limit. Pruning can happen concurrently with other operations.
   ///
-  /// Implementations may be not have this implemented.
+  /// Implementations may leave this unimplemented.
   virtual Error pruneStorageData() { return Error::success(); }
 
   /// Validate the whole node tree.

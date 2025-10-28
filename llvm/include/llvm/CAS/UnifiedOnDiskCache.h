@@ -33,7 +33,7 @@ class OnDiskKeyValueDB;
 /// Usage patterns should be that an instance of \p UnifiedOnDiskCache is open
 /// for a limited period of time, e.g. for the duration of a build operation.
 /// For long-living processes that need periodic access to a
-/// \p UnifiedOnDiskCache, the client should device a scheme where access is
+/// \p UnifiedOnDiskCache, the client should devise a scheme where access is
 /// performed within some defined period. For example, if a service is designed
 /// to continuously wait for requests that access a \p UnifiedOnDiskCache, it
 /// could keep the instance alive while new requests are coming in but close it

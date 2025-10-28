@@ -42,7 +42,7 @@ enum class ValidationResult {
 /// marking the files for garbage collection.
 /// \param ForceValidation Whether to force validation to occur even if it
 /// should not be necessary.
-/// \param LLVMCasBinary If provided, validation is performed out-of-process
+/// \param LLVMCasBinaryPath If provided, validation is performed out-of-process
 /// using the given \c llvm-cas executable which protects against crashes
 /// during validation. Otherwise validation is performed in-process.
 ///
@@ -52,7 +52,7 @@ enum class ValidationResult {
 /// in an invalid state because \p AllowRecovery is false.
 Expected<ValidationResult> validateOnDiskUnifiedCASDatabasesIfNeeded(
     StringRef Path, bool CheckHash, bool AllowRecovery, bool ForceValidation,
-    std::optional<StringRef> LLVMCasBinary);
+    std::optional<StringRef> LLVMCasBinaryPath);
 
 } // namespace llvm::cas
 

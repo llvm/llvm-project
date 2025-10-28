@@ -83,7 +83,7 @@ private:
   using DataT = CacheEntry<sizeof(HashType)>;
 };
 
-/// Builtin unified ActionCache that wraps around UnifiedOnDiskCache to privode
+/// Builtin unified ActionCache that wraps around UnifiedOnDiskCache to provide
 /// access to its ActionCache.
 class UnifiedOnDiskActionCache final : public ActionCache {
 public:

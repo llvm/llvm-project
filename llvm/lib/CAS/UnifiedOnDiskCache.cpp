@@ -18,7 +18,7 @@
 /// receives) there are directories named like this:
 ///
 /// 'v<version>.<x>'
-/// 'v<version>.<x+1'
+/// 'v<version>.<x+1>'
 /// 'v<version>.<x+2>'
 /// ...
 ///
@@ -144,13 +144,13 @@ UnifiedOnDiskCache::faultInFromUpstreamKV(ArrayRef<uint8_t> Key) {
 /// \returns all the 'v<version>.<x>' names of sub-directories, sorted with
 /// ascending order of the integer after the dot. Corrupt directories, if
 /// included, will come first.
-static Error getAllDBDirs(StringRef Path, SmallVectorImpl<std::string> &DBDirs,
-                          bool IncludeCorrupt = false) {
+static Expected<SmallVector<std::string, 4>>
+getAllDBDirs(StringRef Path, bool IncludeCorrupt = false) {
   struct DBDir {
     uint64_t Order;
     std::string Name;
   };
-  SmallVector<DBDir, 6> FoundDBDirs;
+  SmallVector<DBDir> FoundDBDirs;
 
   std::error_code EC;
   for (sys::fs::directory_iterator DirI(Path, EC), DirE; !EC && DirI != DirE;
@@ -176,26 +176,28 @@ static Error getAllDBDirs(StringRef Path, SmallVectorImpl<std::string> &DBDirs,
   llvm::sort(FoundDBDirs, [](const DBDir &LHS, const DBDir &RHS) -> bool {
     return LHS.Order <= RHS.Order;
   });
+
+  SmallVector<std::string, 4> DBDirs;
   for (DBDir &Dir : FoundDBDirs)
     DBDirs.push_back(std::move(Dir.Name));
-  return Error::success();
+  return DBDirs;
 }
 
-static Error getAllGarbageDirs(StringRef Path,
-                               SmallVectorImpl<std::string> &DBDirs) {
-  if (Error E = getAllDBDirs(Path, DBDirs, /*IncludeCorrupt=*/true))
-    return E;
+static Expected<SmallVector<std::string, 4>> getAllGarbageDirs(StringRef Path) {
+  auto DBDirs = getAllDBDirs(Path, /*IncludeCorrupt=*/true);
+  if (!DBDirs)
+    return DBDirs.takeError();
 
   // FIXME: When the version of \p DBDirPrefix is bumped up we need to figure
   // out how to handle the leftover sub-directories of the previous version.
 
-  for (unsigned Keep = 2; Keep > 0 && !DBDirs.empty(); --Keep) {
-    StringRef Back(DBDirs.back());
+  for (unsigned Keep = 2; Keep > 0 && !DBDirs->empty(); --Keep) {
+    StringRef Back(DBDirs->back());
     if (Back.starts_with(CorruptPrefix))
       break;
-    DBDirs.pop_back();
+    DBDirs->pop_back();
   }
-  return Error::success();
+  return *DBDirs;
 }
 
 /// \returns Given a sub-directory named 'v<version>.<x>', it outputs the
@@ -288,15 +290,14 @@ static Expected<uint64_t> getBootTime() {
     return createFileError("/proc", EC);
   return Status.getLastModificationTime().time_since_epoch().count();
 #else
-  llvm::report_fatal_error("unimplemented");
+  llvm::report_fatal_error("getBootTime unimplemented");
 #endif
 }
 
-Expected<ValidationResult>
-UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
-                                     unsigned HashByteSize, bool CheckHash,
-                                     bool AllowRecovery, bool ForceValidation,
-                                     std::optional<StringRef> LLVMCasBinary) {
+Expected<ValidationResult> UnifiedOnDiskCache::validateIfNeeded(
+    StringRef RootPath, StringRef HashName, unsigned HashByteSize,
+    bool CheckHash, bool AllowRecovery, bool ForceValidation,
+    std::optional<StringRef> LLVMCasBinaryPath) {
   if (std::error_code EC = sys::fs::create_directories(RootPath))
     return createFileError(RootPath, EC);
 
@@ -337,11 +338,11 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
 
   // Validate!
   bool NeedsRecovery = false;
-  Error E =
-      LLVMCasBinary
-          ? validateOutOfProcess(*LLVMCasBinary, RootPath, CheckHash)
-          : validateInProcess(RootPath, HashName, HashByteSize, CheckHash);
-  if (E) {
+  if (Error E =
+          LLVMCasBinaryPath
+              ? validateOutOfProcess(*LLVMCasBinaryPath, RootPath, CheckHash)
+              : validateInProcess(RootPath, HashName, HashByteSize,
+                                  CheckHash)) {
     if (AllowRecovery) {
       consumeError(std::move(E));
       NeedsRecovery = true;
@@ -369,11 +370,11 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
     }
     auto UnlockFD = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
 
-    SmallVector<std::string, 4> DBDirs;
-    if (Error E = getAllDBDirs(RootPath, DBDirs))
-      return std::move(E);
+    auto DBDirs = getAllDBDirs(RootPath);
+    if (!DBDirs)
+      return DBDirs.takeError();
 
-    for (StringRef DBDir : DBDirs) {
+    for (StringRef DBDir : *DBDirs) {
       sys::path::remove_filename(PathBuf);
       sys::path::append(PathBuf, DBDir);
       std::error_code EC;
@@ -436,13 +437,13 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
           lockFileThreadSafe(LockFD, sys::fs::LockKind::Shared))
     return createFileError(PathBuf, EC);
 
-  SmallVector<std::string, 4> DBDirs;
-  if (Error E = getAllDBDirs(RootPath, DBDirs))
-    return std::move(E);
-  if (DBDirs.empty())
-    DBDirs.push_back((Twine(DBDirPrefix) + "1").str());
+  auto DBDirs = getAllDBDirs(RootPath);
+  if (!DBDirs)
+    return DBDirs.takeError();
+  if (DBDirs->empty())
+    DBDirs->push_back((Twine(DBDirPrefix) + "1").str());
 
-  assert(!DBDirs.empty());
+  assert(!DBDirs->empty());
 
   /// If there is only one directory open databases on it. If there are 2 or
   /// more directories, get the most recent directories and chain them, with the
@@ -451,8 +452,8 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   auto UniDB = std::unique_ptr<UnifiedOnDiskCache>(new UnifiedOnDiskCache());
   std::unique_ptr<OnDiskGraphDB> UpstreamGraphDB;
   std::unique_ptr<OnDiskKeyValueDB> UpstreamKVDB;
-  if (DBDirs.size() > 1) {
-    StringRef UpstreamDir = *(DBDirs.end() - 2);
+  if (DBDirs->size() > 1) {
+    StringRef UpstreamDir = *(DBDirs->end() - 2);
     PathBuf = RootPath;
     sys::path::append(PathBuf, UpstreamDir);
     if (Error E = OnDiskGraphDB::open(PathBuf, HashName, HashByteSize,
@@ -466,7 +467,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
       return std::move(E);
   }
 
-  StringRef PrimaryDir = *(DBDirs.end() - 1);
+  StringRef PrimaryDir = *(DBDirs->end() - 1);
   PathBuf = RootPath;
   sys::path::append(PathBuf, PrimaryDir);
   std::unique_ptr<OnDiskGraphDB> PrimaryGraphDB;
@@ -487,7 +488,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   UniDB->RootPath = RootPath;
   UniDB->SizeLimit = SizeLimit.value_or(0);
   UniDB->LockFD = LockFD;
-  UniDB->NeedsGarbageCollection = DBDirs.size() > 2;
+  UniDB->NeedsGarbageCollection = DBDirs->size() > 2;
   UniDB->PrimaryDBDir = PrimaryDir;
   UniDB->UpstreamGraphDB = std::move(UpstreamGraphDB);
   UniDB->PrimaryGraphDB = std::move(PrimaryGraphDB);
@@ -520,10 +521,10 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
     return false;
 
   // If the hard limit is beyond 85%, declare above limit and request clean up.
-  unsigned CurrentPrecent =
+  unsigned CurrentPercent =
       std::max(PrimaryGraphDB->getHardStorageLimitUtilization(),
                PrimaryKVDB->getHardStorageLimitUtilization());
-  if (CurrentPrecent > 85)
+  if (CurrentPercent > 85)
     return true;
 
   // We allow each of the directories in the chain to reach up to half the
@@ -595,12 +596,12 @@ UnifiedOnDiskCache::UnifiedOnDiskCache() = default;
 UnifiedOnDiskCache::~UnifiedOnDiskCache() { consumeError(close()); }
 
 Error UnifiedOnDiskCache::collectGarbage(StringRef Path) {
-  SmallVector<std::string, 4> DBDirs;
-  if (Error E = getAllGarbageDirs(Path, DBDirs))
-    return E;
+  auto DBDirs = getAllGarbageDirs(Path);
+  if (!DBDirs)
+    return DBDirs.takeError();
 
   SmallString<256> PathBuf(Path);
-  for (StringRef UnusedSubDir : DBDirs) {
+  for (StringRef UnusedSubDir : *DBDirs) {
     sys::path::append(PathBuf, UnusedSubDir);
     if (std::error_code EC = sys::fs::remove_directories(PathBuf))
       return createFileError(PathBuf, EC);
