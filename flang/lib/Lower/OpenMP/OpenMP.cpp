@@ -3595,6 +3595,22 @@ static void genOpenMPDeclareMapperImpl(
   mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
 }
 
+// Materialize omp.declare_mapper for a specific mapper symbol by lowering the
+// saved declaration from semantics.
+void Fortran::lower::materializeOpenMPDeclareMapperForSymbol(
+    Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx, const semantics::Symbol &sym) {
+  const semantics::Symbol &ultimate = sym.GetUltimate();
+  if (auto *md = ultimate.detailsIf<semantics::MapperDetails>()) {
+    for (const auto *decl : md->GetDeclList()) {
+      if (const auto *mapperDecl =
+              std::get_if<parser::OpenMPDeclareMapperConstruct>(&decl->u)) {
+        genOpenMPDeclareMapperImpl(converter, semaCtx, *mapperDecl, &ultimate);
+      }
+    }
+  }
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
@@ -4243,38 +4259,5 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
       mlirFlags = mlirFlags | MlirRequires::unified_shared_memory;
 
     offloadMod.setRequires(mlirFlags);
-  }
-}
-
-// Walk scopes and materialize omp.declare_mapper ops for mapper declarations
-// found in imported modules. If \p scope is null, start from the global scope.
-void Fortran::lower::materializeOpenMPDeclareMappers(
-    Fortran::lower::AbstractConverter &converter,
-    semantics::SemanticsContext &semaCtx, const semantics::Scope *scope) {
-  const semantics::Scope &root = scope ? *scope : semaCtx.globalScope();
-
-  // Recurse into child scopes first (modules, submodules, etc.).
-  for (const semantics::Scope &child : root.children())
-    materializeOpenMPDeclareMappers(converter, semaCtx, &child);
-
-  // Only consider module scopes to avoid duplicating local constructs.
-  if (!root.IsModule())
-    return;
-
-  // Only materialize for modules coming from mod files to avoid duplicates.
-  if (!root.symbol() || !root.symbol()->test(semantics::Symbol::Flag::ModFile))
-    return;
-
-  // Scan symbols in this module scope for MapperDetails.
-  for (auto &it : root) {
-    const semantics::Symbol &sym = *it.second;
-    if (auto *md = sym.detailsIf<semantics::MapperDetails>()) {
-      for (const auto *decl : md->GetDeclList()) {
-        if (const auto *mapperDecl =
-                std::get_if<parser::OpenMPDeclareMapperConstruct>(&decl->u)) {
-          genOpenMPDeclareMapperImpl(converter, semaCtx, *mapperDecl, &sym);
-        }
-      }
-    }
   }
 }
