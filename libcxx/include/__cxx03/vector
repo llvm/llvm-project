@@ -1630,7 +1630,7 @@ private:
     return __n * __bits_per_word;
   }
   _LIBCPP_HIDE_FROM_ABI static size_type __external_cap_to_internal(size_type __n) _NOEXCEPT {
-    return (__n - 1) / __bits_per_word + 1;
+    return __n > 0 ? (__n - 1) / __bits_per_word + 1 : size_type(0);
   }
 
 public:
@@ -2142,11 +2142,13 @@ void vector<bool, _Allocator>::reserve(size_type __n) {
 
 template <class _Allocator>
 void vector<bool, _Allocator>::shrink_to_fit() _NOEXCEPT {
-  if (__external_cap_to_internal(size()) > __cap()) {
+  if (__external_cap_to_internal(size()) < __cap()) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-      vector(*this, allocator_type(__alloc())).swap(*this);
+      vector __v(*this, allocator_type(__alloc()));
+      if (__v.__cap() < __cap())
+        __v.swap(*this);
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     } catch (...) {
     }

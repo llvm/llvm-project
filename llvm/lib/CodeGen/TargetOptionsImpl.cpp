@@ -44,7 +44,7 @@ bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
     return false;
 
   return StringSwitch<bool>(FPAttr.getValueAsString())
-      .Cases("all", "non-leaf", "reserved", true)
+      .Cases({"all", "non-leaf", "reserved"}, true)
       .Case(("non-leaf-no-reserve"), MF.getFrameInfo().hasCalls())
       .Case("none", false);
 }
@@ -52,7 +52,7 @@ bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume
 /// that the rounding mode of the FPU can change from its default.
 bool TargetOptions::HonorSignDependentRoundingFPMath() const {
-  return !UnsafeFPMath && HonorSignDependentRoundingFPMathOption;
+  return HonorSignDependentRoundingFPMathOption;
 }
 
 /// NOTE: There are targets that still do not support the debug entry values

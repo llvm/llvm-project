@@ -1955,7 +1955,7 @@ defm borland_extensions : BoolFOption<"borland-extensions",
           "Accept non-standard constructs supported by the Borland compiler">,
   NegFlag<SetFalse>>;
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption, FC1Option]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,
   Flags<[]>, HelpText<"Load the clang builtins module map file.">;
 defm caret_diagnostics : BoolFOption<"caret-diagnostics",
@@ -2750,6 +2750,10 @@ def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<N>">,
   HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
+
+def falloc_token_mode_EQ : Joined<["-"], "falloc-token-mode=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Set the allocation token mode (experimental)">;
 
 def fallow_runtime_check_skip_hot_cutoff_EQ
     : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
@@ -3559,7 +3563,7 @@ def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, 
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AssumeSaneOperatorNew">>;
 def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"Disable implicit builtin knowledge of functions">;
 def fno_builtin_ : Joined<["-"], "fno-builtin-">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -4368,7 +4372,7 @@ def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
 def funique_source_file_names: Flag<["-"], "funique-source-file-names">, Group<f_Group>,
-  HelpText<"Allow the compiler to assume that each translation unit has a unique "                       
+  HelpText<"Allow the compiler to assume that each translation unit has a unique "
            "source file identifier (see -funique-source-file-identifier) at link time">;
 def fno_unique_source_file_names: Flag<["-"], "fno-unique-source-file-names">;
 def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identifier=">, Group<f_Group>,
@@ -5979,10 +5983,10 @@ def : Flag<["-"], "nocudainc">, Alias<no_offload_inc>;
 def no_offloadlib
     : Flag<["--"], "no-offloadlib">,
       MarshallingInfoFlag<LangOpts<"NoGPULib">>,
-      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-      HelpText<"Do not link device library for CUDA/HIP device compilation">;
+      Visibility<[ClangOption, CC1Option, CLOption, FlangOption, FC1Option]>,
+      HelpText<"Do not link device library for CUDA/HIP/SYCL device compilation">;
 def offloadlib : Flag<["--"], "offloadlib">,
-                 Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                 Visibility<[ClangOption, CC1Option, CLOption, FlangOption, FC1Option]>,
                  HelpText<"Link device libraries for GPU device compilation">;
 def : Flag<["-"], "nogpulib">,
       Alias<no_offloadlib>,
@@ -6557,6 +6561,8 @@ def mv75 : Flag<["-"], "mv75">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv75"]>;
 def mv79 : Flag<["-"], "mv79">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv79"]>;
+def mv81 : Flag<["-"], "mv81">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv81"]>;
 def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
 def mhexagon_hvx_EQ : Joined<["-"], "mhvx=">,
@@ -7188,7 +7194,7 @@ defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
   HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
-def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+def static_libflangrt : Flag<["-"], "static-libflangrt">,
   HelpText<"Link the flang-rt static library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
