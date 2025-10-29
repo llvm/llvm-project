@@ -641,33 +641,33 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       // sideeffects until now or the nested operations do not access the
       // buffer written by outer scope.
       if (seenSideeffects) {
-        bool accessesWrittenBuffer = false;
-        nestedParallel.walk([&](Operation *nestedOp) {
-          if (accessesWrittenBuffer)
-            return;
+        WalkResult walkRes = nestedParallel.walk([&](Operation *nestedOp) {
           if (isMemoryEffectFree(nestedOp))
-            return;
+            return WalkResult::advance();
 
-          if (auto memEffectInterface =
-                  dyn_cast<MemoryEffectOpInterface>(nestedOp)) {
-            SmallVector<MemoryEffects::EffectInstance> effects;
-            memEffectInterface.getEffects(effects);
-            for (const auto &effect : effects) {
-              if (isa<MemoryEffects::Read>(effect.getEffect()) ||
-                  isa<MemoryEffects::Write>(effect.getEffect())) {
-                Value baseBuffer = effect.getValue();
-                for (auto val : writtenBuffer) {
-                  if (aliasAnalysis.alias(baseBuffer, val) !=
-                      AliasResult::NoAlias) {
-                    accessesWrittenBuffer = true;
-                    return;
-                  }
+          auto memEffectInterface = dyn_cast<MemoryEffectOpInterface>(nestedOp);
+          if (!memEffectInterface)
+            return WalkResult::advance();
+
+          SmallVector<MemoryEffects::EffectInstance> effects;
+          memEffectInterface.getEffects(effects);
+          for (const MemoryEffects::EffectInstance &effect : effects) {
+            if (isa<MemoryEffects::Read>(effect.getEffect()) ||
+                isa<MemoryEffects::Write>(effect.getEffect())) {
+              Value baseBuffer = effect.getValue();
+              if (!baseBuffer)
+                return WalkResult::interrupt();
+              for (Value val : writtenBuffer) {
+                if (aliasAnalysis.alias(baseBuffer, val) !=
+                    AliasResult::NoAlias) {
+                  return WalkResult::interrupt();
                 }
               }
             }
           }
+          return WalkResult::advance();
         });
-        if (accessesWrittenBuffer)
+        if (walkRes.wasInterrupted())
           return failure();
       }
       // A nested scf.parallel needs insertion of code to compute indices.
@@ -722,9 +722,15 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
                 dyn_cast<MemoryEffectOpInterface>(clone)) {
           SmallVector<MemoryEffects::EffectInstance> effects;
           memEffectInterface.getEffects(effects);
-          for (const auto &effect : effects) {
-            if (isa<MemoryEffects::Write>(effect.getEffect()))
-              writtenBuffer.insert(effect.getValue());
+          for (const MemoryEffects::EffectInstance &effect : effects) {
+            if (isa<MemoryEffects::Write>(effect.getEffect())) {
+              Value writtenBase = effect.getValue();
+              // Conservatively return failure if we cannot find the written
+              // address.
+              if (!writtenBase)
+                return failure();
+              writtenBuffer.insert(writtenBase);
+            }
           }
         }
       }
