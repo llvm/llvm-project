@@ -12404,7 +12404,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'x':
     assert(HowLong == 0 && !Signed && !Unsigned &&
            "Bad modifiers used with 'x'!");
-    Type = Context.Float16Ty;
+    Type = Context.getLangOpts().OpenCL ? Context.HalfTy : Context.Float16Ty;
     break;
   case 'y':
     assert(HowLong == 0 && !Signed && !Unsigned &&
