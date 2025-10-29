@@ -2258,9 +2258,9 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
   // Find the associated region by skipping nested loop-associated constructs
   // such as loop transformations
   const parser::NestedConstruct *innermostAssocRegion{nullptr};
-  const parser::OpenMPLoopConstruct *innermostConstruct = &x;
-  auto &loopConsList =
-      std::get<std::list<parser::NestedConstruct>>(innermostConstruct->t);
+  const parser::OpenMPLoopConstruct *innermostConstruct{&x};
+  auto &loopConsList{
+      std::get<std::list<parser::NestedConstruct>>(innermostConstruct->t)};
   for (auto &loopCons : loopConsList) {
     innermostAssocRegion = &loopCons;
     if (const auto *innerConstruct{
