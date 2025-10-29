@@ -148,6 +148,8 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 
+#include "llvm/Transforms/Utils/DebugRecordDeleter.h"
+
 using namespace llvm;
 
 namespace llvm {
@@ -1676,6 +1678,11 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, Phase));
 
+  // Include the DebugRecordDeleter passinto the -O2 pipeline.
+  if(Level == OptimizationLevel::O2) {
+    MPM.addPass(DebugRecordDeleterPass());
+  }
+
   if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
       PGOOpt->Action == PGOOptions::SampleUse)
     MPM.addPass(PseudoProbeUpdatePass());
@@ -1684,7 +1691,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   addAnnotationRemarksPass(MPM);
 
   if (isLTOPreLink(Phase))
-    addRequiredLTOPreLinkPasses(MPM);
+    addRequiredLTOPreLinkPasses(MPM); 
   return MPM;
 }
 

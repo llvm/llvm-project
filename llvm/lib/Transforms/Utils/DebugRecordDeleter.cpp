@@ -4,6 +4,10 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h" 
+#include "llvm/Passes/OptimizationLevel.h" 
+
 using namespace llvm;
 
 // build/bin/opt -S /home/ana-marija/Documents/foo_00.ll -passes=dbg-deleter
