@@ -309,7 +309,7 @@ jobs:
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -DLLVM_ENABLE_LIBXML2=FORCE_ON \
             -DLIBXML2_DEFINITIONS=-DLIBXML_STATIC \
-            -DCMAKE_PREFIX_PATH=/c/vcpkg/packages/libxml2_x64-windows-static/ \
+            -DCMAKE_PREFIX_PATH=/c/vcpkg/packages/libxml2_x64-windows-static/share/ \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
