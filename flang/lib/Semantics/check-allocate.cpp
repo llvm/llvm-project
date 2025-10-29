@@ -471,26 +471,13 @@ static bool HaveCompatibleLengths(
 }
 
 bool IsSameAllocation(const SomeExpr *root, const SomeExpr *path) {
-  if (root) {
-    if (std::optional<evaluate::DataRef> rootRef{ExtractDataRef(root)}) {
-      if (path) {
-        if (std::optional<evaluate::DataRef> pathRef{ExtractDataRef(path)}) {
-          if (pathRef->IsPathFrom(*rootRef)) {
-            return true;
-          }
-        } else {
-          if (*root == *path) {
-            return true;
-          }
-        }
-      }
-    } else {
-      if (path && *root == *path) {
-        return true;
-      }
-    }
+  if (root && path) {
+    // For now we just use equality of expressions. If we implement a more
+    // sophisticated alias analysis we should use it here.
+    return *root == *path;
+  } else {
+    return false;
   }
-  return false;
 }
 
 bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
