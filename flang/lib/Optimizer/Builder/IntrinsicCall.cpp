@@ -25,7 +25,6 @@
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
-#include "flang/Optimizer/Builder/Runtime/Coarray.h"
 #include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Exceptions.h"
@@ -40,6 +39,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -50,6 +50,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -346,6 +347,26 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genVoteSync<mlir::NVVM::VoteSyncKind::ballot>,
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
+    {"barrier_arrive",
+     &I::genBarrierArrive,
+     {{{"barrier", asAddr}}},
+     /*isElemental=*/false},
+    {"barrier_arrive_cnt",
+     &I::genBarrierArriveCnt,
+     {{{"barrier", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"barrier_init",
+     &I::genBarrierInit,
+     {{{"barrier", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"barrier_try_wait",
+     &I::genBarrierTryWait,
+     {{{"barrier", asAddr}, {"token", asValue}}},
+     /*isElemental=*/false},
+    {"barrier_try_wait_sleep",
+     &I::genBarrierTryWaitSleep,
+     {{{"barrier", asAddr}, {"token", asValue}, {"ns", asValue}}},
+     /*isElemental=*/false},
     {"bessel_jn",
      &I::genBesselJn,
      {{{"n1", asValue}, {"n2", asValue}, {"x", asValue}}},
@@ -400,28 +421,28 @@ static constexpr IntrinsicHandler handlers[]{
     {"co_broadcast",
      &I::genCoBroadcast,
      {{{"a", asBox},
-       {"source_image", asAddr},
+       {"source_image", asValue},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
     {"co_max",
      &I::genCoMax,
      {{{"a", asBox},
-       {"result_image", asAddr, handleDynamicOptional},
+       {"result_image", asValue, handleDynamicOptional},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
     {"co_min",
      &I::genCoMin,
      {{{"a", asBox},
-       {"result_image", asAddr, handleDynamicOptional},
+       {"result_image", asValue, handleDynamicOptional},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
     {"co_sum",
      &I::genCoSum,
      {{{"a", asBox},
-       {"result_image", asAddr, handleDynamicOptional},
+       {"result_image", asValue, handleDynamicOptional},
        {"stat", asAddr, handleDynamicOptional},
        {"errmsg", asBox, handleDynamicOptional}}},
      /*isElemental*/ false},
@@ -489,6 +510,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"extends_type_of",
      &I::genExtendsTypeOf,
      {{{"a", asBox}, {"mold", asBox}}},
+     /*isElemental=*/false},
+    {"fence_proxy_async",
+     &I::genFenceProxyAsync,
+     {},
      /*isElemental=*/false},
     {"findloc",
      &I::genFindloc,
@@ -813,7 +838,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
     {"num_images",
      &I::genNumImages,
-     {{{"team", asAddr}, {"team_number", asAddr}}},
+     {{{"team_number", asValue}, {"team", asBox}}},
      /*isElemental*/ false},
     {"pack",
      &I::genPack,
@@ -973,9 +998,18 @@ static constexpr IntrinsicHandler handlers[]{
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"syncthreads", &I::genSyncThreads, {}, /*isElemental=*/false},
-    {"syncthreads_and", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
-    {"syncthreads_count", &I::genSyncThreadsCount, {}, /*isElemental=*/false},
-    {"syncthreads_or", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
+    {"syncthreads_and_i4", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
+    {"syncthreads_and_l4", &I::genSyncThreadsAnd, {}, /*isElemental=*/false},
+    {"syncthreads_count_i4",
+     &I::genSyncThreadsCount,
+     {},
+     /*isElemental=*/false},
+    {"syncthreads_count_l4",
+     &I::genSyncThreadsCount,
+     {},
+     /*isElemental=*/false},
+    {"syncthreads_or_i4", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
+    {"syncthreads_or_l4", &I::genSyncThreadsOr, {}, /*isElemental=*/false},
     {"syncwarp", &I::genSyncWarp, {}, /*isElemental=*/false},
     {"system",
      &I::genSystem,
@@ -1000,6 +1034,102 @@ static constexpr IntrinsicHandler handlers[]{
     {"threadfence_block", &I::genThreadFenceBlock, {}, /*isElemental=*/false},
     {"threadfence_system", &I::genThreadFenceSystem, {}, /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"tma_bulk_commit_group",
+     &I::genTMABulkCommitGroup,
+     {{}},
+     /*isElemental=*/false},
+    {"tma_bulk_g2s",
+     &I::genTMABulkG2S,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nbytes", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldc4",
+     &I::genTMABulkLoadC4,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldc8",
+     &I::genTMABulkLoadC8,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldi4",
+     &I::genTMABulkLoadI4,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldi8",
+     &I::genTMABulkLoadI8,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldr2",
+     &I::genTMABulkLoadR2,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldr4",
+     &I::genTMABulkLoadR4,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_ldr8",
+     &I::genTMABulkLoadR8,
+     {{{"barrier", asAddr},
+       {"src", asAddr},
+       {"dst", asAddr},
+       {"nelems", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_s2g",
+     &I::genTMABulkS2G,
+     {{{"src", asAddr}, {"dst", asAddr}, {"nbytes", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_c4",
+     &I::genTMABulkStoreC4,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_c8",
+     &I::genTMABulkStoreC8,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_i4",
+     &I::genTMABulkStoreI4,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_i8",
+     &I::genTMABulkStoreI8,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_r2",
+     &I::genTMABulkStoreR2,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_r4",
+     &I::genTMABulkStoreR4,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_store_r8",
+     &I::genTMABulkStoreR8,
+     {{{"src", asAddr}, {"dst", asAddr}, {"count", asValue}}},
+     /*isElemental=*/false},
+    {"tma_bulk_wait_group",
+     &I::genTMABulkWaitGroup,
+     {{}},
+     /*isElemental=*/false},
     {"trailz", &I::genTrailz},
     {"transfer",
      &I::genTransfer,
@@ -1723,8 +1853,10 @@ static constexpr MathOperation mathOperations[] = {
      genComplexMathOp<mlir::complex::SinOp>},
     {"sin", RTNAME_STRING(CSinF128), FuncTypeComplex16Complex16,
      genLibF128Call},
-    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>, genLibCall},
-    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>, genLibCall},
+    {"sinh", "sinhf", genFuncType<Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::SinhOp>},
+    {"sinh", "sinh", genFuncType<Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::SinhOp>},
     {"sinh", RTNAME_STRING(SinhF128), FuncTypeReal16Real16, genLibF128Call},
     {"sinh", "csinhf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"sinh", "csinh", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
@@ -2134,7 +2266,8 @@ IntrinsicLibrary::genElementalCall<IntrinsicLibrary::ExtendedGenerator>(
   for (const fir::ExtendedValue &arg : args) {
     auto *box = arg.getBoxOf<fir::BoxValue>();
     if (!arg.getUnboxed() && !arg.getCharBox() &&
-        !(box && fir::isScalarBoxedRecordType(fir::getBase(*box).getType())))
+        !(box && (fir::isScalarBoxedRecordType(fir::getBase(*box).getType()) ||
+                  fir::isClassStarType(fir::getBase(*box).getType()))))
       fir::emitFatalError(loc, "nonscalar intrinsic argument");
   }
   if (outline)
@@ -3059,7 +3192,9 @@ IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  return mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  mlir::Value boolResult =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  return builder.createConvert(loc, resultType, boolResult);
 }
 
 mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
@@ -3174,6 +3309,114 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
       fir::factory::getMutableIRBox(builder, loc, *pointer);
   auto pointerBox = fir::LoadOp::create(builder, loc, pointerBoxRef);
   return fir::runtime::genAssociated(builder, loc, pointerBox, targetBox);
+}
+
+static mlir::Value convertPtrToNVVMSpace(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value barrier,
+                                         mlir::NVVM::NVVMMemorySpace space) {
+  mlir::Value llvmPtr = fir::ConvertOp::create(
+      builder, loc, mlir::LLVM::LLVMPointerType::get(builder.getContext()),
+      barrier);
+  mlir::Value addrCast = mlir::LLVM::AddrSpaceCastOp::create(
+      builder, loc,
+      mlir::LLVM::LLVMPointerType::get(builder.getContext(),
+                                       static_cast<unsigned>(space)),
+      llvmPtr);
+  return addrCast;
+}
+
+// BARRIER_ARRIVE (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
+                                   llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
+  return mlir::NVVM::MBarrierArriveSharedOp::create(builder, loc, resultType,
+                                                    barrier)
+      .getResult();
+}
+
+// BARRIER_ARRIBVE_CNT (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierArriveCnt(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
+  mlir::Value token = fir::AllocaOp::create(builder, loc, resultType);
+  // TODO: the MBarrierArriveExpectTxOp is not taking the state argument and
+  // currently just the sink symbol `_`.
+  // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive
+  mlir::NVVM::MBarrierArriveExpectTxOp::create(builder, loc, barrier, args[1],
+                                               {});
+  return fir::LoadOp::create(builder, loc, token);
+}
+
+// BARRIER_INIT (CUDA)
+void IntrinsicLibrary::genBarrierInit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
+  mlir::NVVM::MBarrierInitSharedOp::create(builder, loc, barrier,
+                                           fir::getBase(args[1]), {});
+  auto kind = mlir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
+  auto space = mlir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
+  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
+}
+
+// BARRIER_TRY_WAIT (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierTryWait(mlir::Type resultType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
+  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+  fir::StoreOp::create(builder, loc, zero, res);
+  mlir::Value ns =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 1000000);
+  mlir::Value load = fir::LoadOp::create(builder, loc, res);
+  auto whileOp = mlir::scf::WhileOp::create(
+      builder, loc, mlir::TypeRange{resultType}, mlir::ValueRange{load});
+  mlir::Block *beforeBlock = builder.createBlock(&whileOp.getBefore());
+  mlir::Value beforeArg = beforeBlock->addArgument(resultType, loc);
+  builder.setInsertionPointToStart(beforeBlock);
+  mlir::Value condition = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::ne, beforeArg, zero);
+  mlir::scf::ConditionOp::create(builder, loc, condition, beforeArg);
+  mlir::Block *afterBlock = builder.createBlock(&whileOp.getAfter());
+  afterBlock->addArgument(resultType, loc);
+  builder.setInsertionPointToStart(afterBlock);
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
+  mlir::Value ret =
+      mlir::NVVM::InlinePtxOp::create(
+          builder, loc, {resultType}, {barrier, args[1], ns}, {},
+          ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%1], %2, %3; "
+          "selp.b32 %0, 1, 0, p;",
+          {})
+          .getResult(0);
+  mlir::scf::YieldOp::create(builder, loc, ret);
+  builder.setInsertionPointAfter(whileOp);
+  return whileOp.getResult(0);
+}
+
+// BARRIER_TRY_WAIT_SLEEP (CUDA)
+mlir::Value
+IntrinsicLibrary::genBarrierTryWaitSleep(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 3);
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  auto barrier = builder.createConvert(loc, llvmPtrTy, args[0]);
+  return mlir::NVVM::InlinePtxOp::create(
+             builder, loc, {resultType}, {barrier, args[1], args[2]}, {},
+             ".reg .pred p; mbarrier.try_wait.shared.b64 p, [%1], %2, %3; "
+             "selp.b32 %0, 1, 0, p;",
+             {})
+      .getResult(0);
 }
 
 // BESSEL_JN
@@ -3423,11 +3666,23 @@ static mlir::Value getAddrFromBox(fir::FirOpBuilder &builder,
   return addr;
 }
 
+static void clocDeviceArgRewrite(fir::ExtendedValue arg) {
+  // Special case for device address in c_loc.
+  if (auto emboxOp = mlir::dyn_cast_or_null<fir::EmboxOp>(
+          fir::getBase(arg).getDefiningOp()))
+    if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+            emboxOp.getMemref().getDefiningOp()))
+      if (declareOp.getDataAttr() &&
+          declareOp.getDataAttr() == cuf::DataAttribute::Device)
+        emboxOp.getMemrefMutable().assign(declareOp.getMemref());
+}
+
 static fir::ExtendedValue
 genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
                  bool isFunc = false, bool isDevLoc = false) {
   assert(args.size() == 1);
+  clocDeviceArgRewrite(args[0]);
   mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
   mlir::Value resAddr;
   if (isDevLoc)
@@ -3702,79 +3957,40 @@ mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
 void IntrinsicLibrary::genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value sourceImage = fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2])
-          ? fir::AbsentOp::create(builder, loc,
-                                  builder.getRefType(builder.getI32Type()))
-                .getResult()
-          : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoBroadcast(builder, loc, fir::getBase(args[0]), sourceImage,
-                               status, errmsg);
+  mif::CoBroadcastOp::create(builder, loc, fir::getBase(args[0]),
+                             /*sourceImage*/ fir::getBase(args[1]),
+                             /*status*/ fir::getBase(args[2]),
+                             /*errmsg*/ fir::getBase(args[3]));
 }
 
 // CO_MAX
 void IntrinsicLibrary::genCoMax(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value refNone =
-      fir::AbsentOp::create(builder, loc,
-                            builder.getRefType(builder.getI32Type()))
-          .getResult();
-  mlir::Value resultImage =
-      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoMax(builder, loc, fir::getBase(args[0]), resultImage,
-                         status, errmsg);
+  mif::CoMaxOp::create(builder, loc, fir::getBase(args[0]),
+                       /*resultImage*/ fir::getBase(args[1]),
+                       /*status*/ fir::getBase(args[2]),
+                       /*errmsg*/ fir::getBase(args[3]));
 }
 
 // CO_MIN
 void IntrinsicLibrary::genCoMin(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value refNone =
-      fir::AbsentOp::create(builder, loc,
-                            builder.getRefType(builder.getI32Type()))
-          .getResult();
-  mlir::Value resultImage =
-      isStaticallyAbsent(args[1]) ? refNone : fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2]) ? refNone : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoMin(builder, loc, fir::getBase(args[0]), resultImage,
-                         status, errmsg);
+  mif::CoMinOp::create(builder, loc, fir::getBase(args[0]),
+                       /*resultImage*/ fir::getBase(args[1]),
+                       /*status*/ fir::getBase(args[2]),
+                       /*errmsg*/ fir::getBase(args[3]));
 }
 
 // CO_SUM
 void IntrinsicLibrary::genCoSum(llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 4);
-  mlir::Value absentInt =
-      fir::AbsentOp::create(builder, loc,
-                            builder.getRefType(builder.getI32Type()))
-          .getResult();
-  mlir::Value resultImage =
-      isStaticallyAbsent(args[1]) ? absentInt : fir::getBase(args[1]);
-  mlir::Value status =
-      isStaticallyAbsent(args[2]) ? absentInt : fir::getBase(args[2]);
-  mlir::Value errmsg =
-      isStaticallyAbsent(args[3])
-          ? fir::AbsentOp::create(builder, loc, PRIF_ERRMSG_TYPE).getResult()
-          : fir::getBase(args[3]);
-  fir::runtime::genCoSum(builder, loc, fir::getBase(args[0]), resultImage,
-                         status, errmsg);
+  mif::CoSumOp::create(builder, loc, fir::getBase(args[0]),
+                       /*resultImage*/ fir::getBase(args[1]),
+                       /*status*/ fir::getBase(args[2]),
+                       /*errmsg*/ fir::getBase(args[3]));
 }
 
 // COMMAND_ARGUMENT_COUNT
@@ -4290,6 +4506,17 @@ IntrinsicLibrary::genExtendsTypeOf(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genExtendsTypeOf(builder, loc, fir::getBase(args[0]),
                                      fir::getBase(args[1])));
+}
+
+// FENCE_PROXY_ASYNC (CUDA)
+void IntrinsicLibrary::genFenceProxyAsync(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  auto kind = mlir::NVVM::ProxyKindAttr::get(
+      builder.getContext(), mlir::NVVM::ProxyKind::async_shared);
+  auto space = mlir::NVVM::SharedSpaceAttr::get(
+      builder.getContext(), mlir::NVVM::SharedSpace::shared_cta);
+  mlir::NVVM::FenceProxyOp::create(builder, loc, kind, space);
 }
 
 // FINDLOC
@@ -6989,8 +7216,33 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
 }
 
 // MOD
+static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value a, mlir::Value p) {
+  auto fastmathFlags = mlir::arith::FastMathFlags::contract;
+  auto fastmathAttr =
+      mlir::arith::FastMathFlagsAttr::get(builder.getContext(), fastmathFlags);
+  mlir::Value divResult =
+      mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
+  mlir::Type intType = builder.getIntegerType(
+      a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
+  mlir::Value intResult = builder.createConvert(loc, intType, divResult);
+  mlir::Value cnvResult = builder.createConvert(loc, a.getType(), intResult);
+  mlir::Value mulResult =
+      mlir::arith::MulFOp::create(builder, loc, cnvResult, p, fastmathAttr);
+  mlir::Value subResult =
+      mlir::arith::SubFOp::create(builder, loc, a, mulResult, fastmathAttr);
+  return subResult;
+}
+
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
+  auto mod = builder.getModule();
+  bool dontUseFastRealMod = false;
+  bool canUseApprox = mlir::arith::bitEnumContainsAny(
+      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.no_fast_real_mod"))
+    dontUseFastRealMod = attr.getValue();
+
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
     mlir::Type signlessType = mlir::IntegerType::get(
@@ -7002,9 +7254,16 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  // Use runtime.
-  return builder.createConvert(
-      loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
+  if (resultType.isFloat() && canUseApprox && !dontUseFastRealMod) {
+    // Treat MOD as an approximate function and code-gen inline code
+    // instead of calling into the Fortran runtime library.
+    return builder.createConvert(loc, resultType,
+                                 genFastMod(builder, loc, args[0], args[1]));
+  } else {
+    // Use runtime.
+    return builder.createConvert(
+        loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
+  }
 }
 
 // MODULO
@@ -7443,9 +7702,9 @@ IntrinsicLibrary::genNumImages(mlir::Type resultType,
   assert(args.size() == 0 || args.size() == 1);
 
   if (args.size())
-    return fir::runtime::getNumImagesWithTeam(builder, loc,
-                                              fir::getBase(args[0]));
-  return fir::runtime::getNumImages(builder, loc);
+    return mif::NumImagesOp::create(builder, loc, fir::getBase(args[0]))
+        .getResult();
+  return mif::NumImagesOp::create(builder, loc).getResult();
 }
 
 // CLOCK, CLOCK64, GLOBALTIMER
@@ -8523,17 +8782,11 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   converter->checkCoarrayEnabled();
   assert(args.size() >= 1 && args.size() <= 3);
   const bool coarrayIsAbsent = args.size() == 1;
-  mlir::Value team =
-      !isStaticallyAbsent(args, args.size() - 1)
-          ? fir::getBase(args[args.size() - 1])
-          : builder
-                .create<fir::AbsentOp>(loc,
-                                       fir::BoxType::get(builder.getNoneType()))
-                .getResult();
+  mlir::Value team = fir::getBase(args[args.size() - 1]);
 
   if (!coarrayIsAbsent)
     TODO(loc, "this_image with coarray argument.");
-  mlir::Value res = fir::runtime::getThisImage(builder, loc, team);
+  mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
 }
 
@@ -8862,10 +9115,12 @@ IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                     llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_COUNT
@@ -8874,10 +9129,12 @@ IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_OR
@@ -8886,10 +9143,12 @@ IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCWARP
@@ -9073,6 +9332,224 @@ mlir::Value IntrinsicLibrary::genTime(mlir::Type resultType,
   assert(args.size() == 0);
   return builder.createConvert(loc, resultType,
                                fir::runtime::genTime(builder, loc));
+}
+
+// TMA_BULK_COMMIT_GROUP (CUDA)
+void IntrinsicLibrary::genTMABulkCommitGroup(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  mlir::NVVM::CpAsyncBulkCommitGroupOp::create(builder, loc);
+}
+
+// TMA_BULK_G2S (CUDA)
+void IntrinsicLibrary::genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value barrier = convertPtrToNVVMSpace(
+      builder, loc, fir::getBase(args[0]), mlir::NVVM::NVVMMemorySpace::Shared);
+  mlir::Value dst =
+      convertPtrToNVVMSpace(builder, loc, fir::getBase(args[2]),
+                            mlir::NVVM::NVVMMemorySpace::SharedCluster);
+  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
+                                          mlir::NVVM::NVVMMemorySpace::Global);
+  mlir::NVVM::CpAsyncBulkGlobalToSharedClusterOp::create(
+      builder, loc, dst, src, barrier, fir::getBase(args[3]), {}, {});
+}
+
+static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value barrier, mlir::Value src,
+                           mlir::Value dst, mlir::Value nelem,
+                           mlir::Value eleSize) {
+  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, nelem, eleSize);
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  barrier = builder.createConvert(loc, llvmPtrTy, barrier);
+  mlir::NVVM::InlinePtxOp::create(
+      builder, loc, mlir::TypeRange{}, {dst, src, size, barrier}, {},
+      "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], "
+      "[%1], %2, [%3];",
+      {});
+  mlir::NVVM::InlinePtxOp::create(
+      builder, loc, mlir::TypeRange{}, {barrier, size}, {},
+      "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;", {});
+}
+
+// TMA_BULK_LOADC4
+void IntrinsicLibrary::genTMABulkLoadC4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADC8
+void IntrinsicLibrary::genTMABulkLoadC8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 16);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADI4
+void IntrinsicLibrary::genTMABulkLoadI4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADI8
+void IntrinsicLibrary::genTMABulkLoadI8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADR2
+void IntrinsicLibrary::genTMABulkLoadR2(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 2);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADR4
+void IntrinsicLibrary::genTMABulkLoadR4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_LOADR8
+void IntrinsicLibrary::genTMABulkLoadR8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkLoad(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                 fir::getBase(args[2]), fir::getBase(args[3]), eleSize);
+}
+
+// TMA_BULK_S2G (CUDA)
+void IntrinsicLibrary::genTMABulkS2G(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value src = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[0]),
+                                          mlir::NVVM::NVVMMemorySpace::Shared);
+  mlir::Value dst = convertPtrToNVVMSpace(builder, loc, fir::getBase(args[1]),
+                                          mlir::NVVM::NVVMMemorySpace::Global);
+  mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(
+      builder, loc, dst, src, fir::getBase(args[2]), {}, {});
+
+  mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
+                                  "cp.async.bulk.commit_group", {});
+  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
+                                             builder.getI32IntegerAttr(0), {});
+}
+
+static void genTMABulkStore(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value src, mlir::Value dst, mlir::Value count,
+                            mlir::Value eleSize) {
+  mlir::Value size = mlir::arith::MulIOp::create(builder, loc, eleSize, count);
+  src = convertPtrToNVVMSpace(builder, loc, src,
+                              mlir::NVVM::NVVMMemorySpace::Shared);
+  dst = convertPtrToNVVMSpace(builder, loc, dst,
+                              mlir::NVVM::NVVMMemorySpace::Global);
+  mlir::NVVM::CpAsyncBulkSharedCTAToGlobalOp::create(builder, loc, dst, src,
+                                                     size, {}, {});
+  mlir::NVVM::InlinePtxOp::create(builder, loc, mlir::TypeRange{}, {}, {},
+                                  "cp.async.bulk.commit_group", {});
+  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc,
+                                             builder.getI32IntegerAttr(0), {});
+}
+
+// TMA_BULK_STORE_C4 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreC4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_C8 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreC8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 16);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_I4 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreI4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_I8 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreI8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_R2 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreR2(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 2);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_R4 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreR4(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 4);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_STORE_R8 (CUDA)
+void IntrinsicLibrary::genTMABulkStoreR8(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value eleSize =
+      builder.createIntegerConstant(loc, builder.getI32Type(), 8);
+  genTMABulkStore(builder, loc, fir::getBase(args[0]), fir::getBase(args[1]),
+                  fir::getBase(args[2]), eleSize);
+}
+
+// TMA_BULK_WAIT_GROUP (CUDA)
+void IntrinsicLibrary::genTMABulkWaitGroup(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  auto group = builder.getIntegerAttr(builder.getI32Type(), 0);
+  mlir::NVVM::CpAsyncBulkWaitGroupOp::create(builder, loc, group, {});
 }
 
 // TRIM

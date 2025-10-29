@@ -141,12 +141,18 @@ class LexicalScopes {
 public:
   LexicalScopes() = default;
 
+  /// Scan module to build subprogram-to-function map.
+  LLVM_ABI void initialize(const Module &);
+
   /// Scan machine function and constuct lexical scope nest, resets
   /// the instance if necessary.
-  LLVM_ABI void initialize(const MachineFunction &);
+  LLVM_ABI void scanFunction(const MachineFunction &);
 
-  /// Release memory.
-  LLVM_ABI void reset();
+  /// Reset the instance so that it's prepared for another module.
+  LLVM_ABI void resetModule();
+
+  /// Reset the instance so that it's prepared for another function.
+  LLVM_ABI void resetFunction();
 
   /// Return true if there is any lexical scope information available.
   bool empty() { return CurrentFnLexicalScope == nullptr; }
@@ -196,6 +202,11 @@ public:
   /// Find or create an abstract lexical scope.
   LLVM_ABI LexicalScope *getOrCreateAbstractScope(const DILocalScope *Scope);
 
+  /// Get function to which the given subprogram is attached, if exists.
+  const Function *getFunction(const DISubprogram *SP) const {
+    return FunctionMap.lookup(SP);
+  }
+
 private:
   /// Find lexical scope for the given Scope/IA. If not available
   /// then create new lexical scope.
@@ -224,6 +235,9 @@ private:
                           DenseMap<const MachineInstr *, LexicalScope *> &M);
 
   const MachineFunction *MF = nullptr;
+
+  /// Mapping between DISubprograms and IR functions.
+  DenseMap<const DISubprogram *, const Function *> FunctionMap;
 
   /// Tracks the scopes in the current function.
   // Use an unordered_map to ensure value pointer validity over insertion.

@@ -665,8 +665,8 @@ generateLoopNestUsingCustomOp(
     return failure();
   }
 
-  if (failed(generateLoopTerminatorFn(rewriter, loc, tiledResults,
-                                      resultOffsets, resultSizes,
+  if (failed(generateLoopTerminatorFn(rewriter, loc, loopHeaderInfo->loops,
+                                      tiledResults, resultOffsets, resultSizes,
                                       loopHeaderInfo->destinationTensors))) {
     return failure();
   }
@@ -2177,10 +2177,9 @@ cloneAsInsertSlices(RewriterBase &rewriter,
               auto clonedOp = cloneAsInsertSlice(rewriter, op);
               clonedSlices.push_back(clonedOp);
             })
-        .Default([&](Operation *op) {
-          // Assert here assuming this has already been checked.
-          assert(0 && "unexpected slice type while cloning as insert slice");
-        });
+        // Assert here assuming this has already been checked.
+        .DefaultUnreachable(
+            "unexpected slice type while cloning as insert slice");
   }
   return clonedSlices;
 }

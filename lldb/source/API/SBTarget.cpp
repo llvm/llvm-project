@@ -255,6 +255,7 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec, false));
     if (process_sp) {
+      ElapsedTime load_core_time(target_sp->GetStatistics().GetLoadCoreTime());
       error.SetError(process_sp->LoadCore());
       if (error.Success())
         sb_process.SetSP(process_sp);
@@ -1630,6 +1631,14 @@ const char *SBTarget::GetLabel() const {
   if (TargetSP target_sp = GetSP())
     return ConstString(target_sp->GetLabel().data()).AsCString();
   return nullptr;
+}
+
+lldb::user_id_t SBTarget::GetGloballyUniqueID() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return target_sp->GetGloballyUniqueID();
+  return LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID;
 }
 
 SBError SBTarget::SetLabel(const char *label) {

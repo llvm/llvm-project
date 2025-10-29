@@ -13,6 +13,7 @@
 #include "flang/Semantics/openmp-utils.h"
 
 #include "flang/Common/Fortran-consts.h"
+#include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
@@ -25,7 +26,9 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -40,6 +43,44 @@
 
 namespace Fortran::semantics::omp {
 using namespace Fortran::parser::omp;
+
+const Scope &GetScopingUnit(const Scope &scope) {
+  const Scope *iter{&scope};
+  for (; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockConstruct:
+    case Scope::Kind::BlockData:
+    case Scope::Kind::DerivedType:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+    case Scope::Kind::Subprogram:
+      return *iter;
+    default:
+      break;
+    }
+  }
+  return *iter;
+}
+
+const Scope &GetProgramUnit(const Scope &scope) {
+  const Scope *unit{nullptr};
+  for (const Scope *iter{&scope}; !iter->IsTopLevel(); iter = &iter->parent()) {
+    switch (iter->kind()) {
+    case Scope::Kind::BlockData:
+    case Scope::Kind::MainProgram:
+    case Scope::Kind::Module:
+      return *iter;
+    case Scope::Kind::Subprogram:
+      // Ignore subprograms that are nested.
+      unit = iter;
+      break;
+    default:
+      break;
+    }
+  }
+  assert(unit && "Scope not in a program unit");
+  return *unit;
+}
 
 SourcedActionStmt GetActionStmt(const parser::ExecutionPartConstruct *x) {
   if (x == nullptr) {
@@ -179,12 +220,12 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
   //    `- std::optional<Expr>      ^->v
-  return typedExpr.get()->v;
+  return DEREF(typedExpr.get()).v;
 }
 
 std::optional<evaluate::DynamicType> GetDynamicType(
@@ -466,5 +507,4 @@ bool IsStrictlyStructuredBlock(const parser::Block &block) {
     return false;
   }
 }
-
 } // namespace Fortran::semantics::omp

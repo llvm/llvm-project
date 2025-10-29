@@ -7,6 +7,7 @@ static_library("TargetProcess") {
   ]
   sources = [
     "DefaultHostBootstrapValues.cpp",
+    "ExecutorResolver.cpp",
     "ExecutorSharedMemoryMapperService.cpp",
     "JITLoaderGDB.cpp",
     "JITLoaderPerf.cpp",

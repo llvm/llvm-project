@@ -755,6 +755,25 @@ bb3:
   ret i1 %phi
 }
 
+define i32 @negative_constfold_select() {
+; CHECK-LABEL: @negative_constfold_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 poison
+;
+entry:
+  switch i32 poison, label %default [
+  i32 0, label %bb
+  i32 2, label %bb
+  ]
+
+bb:
+  br label %default
+
+default:
+  %ret = phi i32 [ poison, %entry ], [ poison, %bb ]
+  ret i32 %ret
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 3, i32 5, i32 7}
 !2 = !{!"branch_weights", i32 3, i32 5, i32 7, i32 11, i32 13}
