@@ -16485,6 +16485,34 @@ static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Op, DL, VT, Shift1, Shift2);
 }
 
+static SDValue getShlAddShlAdd(SDNode *N, SelectionDAG &DAG, int ShX, int ShY) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue X = N->getOperand(0);
+  SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                               DAG.getConstant(ShY, DL, VT), X);
+  return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                     DAG.getConstant(ShX, DL, VT), Mul359);
+}
+
+static SDValue expandMulToShlAddShlAdd(SDNode *N, SelectionDAG &DAG,
+                                       uint64_t MulAmt) {
+  switch (MulAmt) {
+  case 5 * 3:
+    return getShlAddShlAdd(N, DAG, 2, 1);
+  case 9 * 3:
+    return getShlAddShlAdd(N, DAG, 3, 1);
+  case 5 * 5:
+    return getShlAddShlAdd(N, DAG, 2, 2);
+  case 9 * 5:
+    return getShlAddShlAdd(N, DAG, 3, 2);
+  case 9 * 9:
+    return getShlAddShlAdd(N, DAG, 3, 3);
+  default:
+    return SDValue();
+  }
+}
+
 // Try to expand a scalar multiply to a faster sequence.
 static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
                          TargetLowering::DAGCombinerInfo &DCI,
@@ -16542,38 +16570,8 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
 
     // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
-    int ShX;
-    int ShY;
-    switch (MulAmt) {
-    case 3 * 5:
-      ShY = 1;
-      ShX = 2;
-      break;
-    case 3 * 9:
-      ShY = 1;
-      ShX = 3;
-      break;
-    case 5 * 5:
-      ShX = ShY = 2;
-      break;
-    case 5 * 9:
-      ShY = 2;
-      ShX = 3;
-      break;
-    case 9 * 9:
-      ShX = ShY = 3;
-      break;
-    default:
-      ShX = ShY = 0;
-      break;
-    }
-    if (ShX) {
-      SDLoc DL(N);
-      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                                   DAG.getConstant(ShY, DL, VT), X);
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getConstant(ShX, DL, VT), Mul359);
-    }
+    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt))
+      return V;
 
     // If this is a power 2 + 2/4/8, we can use a shift followed by a single
     // shXadd. First check if this a sum of two power of 2s because that's
