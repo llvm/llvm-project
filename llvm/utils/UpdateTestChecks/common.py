@@ -2090,7 +2090,7 @@ def add_checks(
     global_tbaa_records_for_prefixes={},
     preserve_names=False,
     original_check_lines: Mapping[str, List[str]] = {},
-    check_comments=True,
+    check_inst_comments=True,
 ):
     # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
     prefix_exclusions = set()
@@ -2288,8 +2288,8 @@ def add_checks(
                     global_tbaa_records,
                     preserve_names,
                     original_check_lines=original_check_lines.get(checkprefix),
-                    # IR output might require comments checks, e.g., predicate info, memssa
-                    ignore_all_comments=not check_comments,
+                    # IR output might require comments checks, e.g., print-predicate-info, print<memssa>
+                    ignore_all_comments=not check_inst_comments,
                 )
 
                 # This could be selectively enabled with an optional invocation argument.
@@ -2309,7 +2309,7 @@ def add_checks(
                     if func_line.strip() == "":
                         is_blank_line = True
                         continue
-                    if not check_comments:
+                    if not check_inst_comments:
                         # Do not waste time checking IR comments unless necessary.
                         func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
 
@@ -2353,7 +2353,7 @@ def add_ir_checks(
     global_vars_seen_dict,
     global_tbaa_records_for_prefixes,
     is_filtered,
-    check_comments=False,
+    check_inst_comments=False,
     original_check_lines={},
 ):
     assert ginfo.is_ir()
@@ -2380,7 +2380,7 @@ def add_ir_checks(
         global_tbaa_records_for_prefixes,
         preserve_names,
         original_check_lines=original_check_lines,
-        check_comments=check_comments,
+        check_inst_comments=check_inst_comments,
     )
 
 
