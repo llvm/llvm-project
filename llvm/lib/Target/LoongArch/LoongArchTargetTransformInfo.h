@@ -66,6 +66,11 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
 
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };
