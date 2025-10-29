@@ -16481,10 +16481,34 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
-  case ISD::AVGFLOORS:
-  case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+    // trunc (avgceilu (sext (x), sext (y))) -> avgceils(x, y)
+    // trunc (avgceils (zext (x), zext (y))) -> avgceilu(x, y)
+    if (N0.hasOneUse()) {
+      SDValue Op0 = N0.getOperand(0);
+      SDValue Op1 = N0.getOperand(1);
+      if (N0.getOpcode() == ISD::AVGCEILU) {
+        if (TLI.isOperationLegalOrCustom(ISD::AVGCEILS, VT) &&
+            Op0.getOpcode() == ISD::SIGN_EXTEND &&
+            Op1.getOpcode() == ISD::SIGN_EXTEND &&
+            Op0.getOperand(0).getValueType() == VT &&
+            Op1.getOperand(0).getValueType() == VT)
+          return DAG.getNode(ISD::AVGCEILS, DL, VT, Op0.getOperand(0),
+                             Op1.getOperand(0));
+      } else {
+        if (TLI.isOperationLegalOrCustom(ISD::AVGCEILU, VT) &&
+            Op0.getOpcode() == ISD::ZERO_EXTEND &&
+            Op1.getOpcode() == ISD::ZERO_EXTEND &&
+            Op0.getOperand(0).getValueType() == VT &&
+            Op1.getOperand(0).getValueType() == VT)
+          return DAG.getNode(ISD::AVGCEILU, DL, VT, Op0.getOperand(0),
+                             Op1.getOperand(0));
+      }
+    }
+    [[fallthrough]];
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
   case ISD::ABDS:
   case ISD::ABDU:
     // (trunc (avg a, b)) -> (avg (trunc a), (trunc b))
@@ -19993,8 +20017,12 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  for (SDNode *Op : Ptr->users()) {
+  for (SDUse &U : Ptr->uses()) {
+    if (U.getResNo() != Ptr.getResNo())
+      continue;
+
     // Check for #1.
+    SDNode *Op = U.getUser();
     if (!shouldCombineToPostInc(N, Ptr, Op, BasePtr, Offset, AM, DAG, TLI))
       continue;
 
