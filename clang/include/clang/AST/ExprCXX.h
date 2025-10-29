@@ -5530,9 +5530,6 @@ public:
   SourceLocation getEndLoc() const LLVM_READONLY {
     return OperandRange.getEnd();
   }
-  SourceRange getSourceRange() const {
-    return SourceRange(getBeginLoc(), getEndLoc());
-  }
 
   /// Returns location of the '^^'-operator.
   SourceLocation getOperatorLoc() const { return OperatorLoc; }
