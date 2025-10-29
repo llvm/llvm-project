@@ -603,8 +603,6 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
         os << ", ";
       os << "'" << arg->getSpelling() << "'";
     }
-    // The diagnostics engine will add single quotes around the argument to the
-    // error message. Strip the leading and trailing quote from here.
     diags.Report(clang::diag::err_drv_too_many_actions) << buf;
     return false;
   }
