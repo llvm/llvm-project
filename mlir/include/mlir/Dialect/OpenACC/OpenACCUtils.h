@@ -43,6 +43,14 @@ mlir::acc::VariableTypeCategory getTypeCategory(mlir::Value var);
 /// empty string if no name is found.
 std::string getVariableName(mlir::Value v);
 
+/// Get the recipe name for a given kind, type and value.
+///
+/// \param kind The kind of recipe to get the name for.
+/// \param type The type to get the recipe name for. Can be null if the
+///        var is provided instead.
+/// \return The recipe name, or an empty string if not available.
+std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type);
+
 } // namespace acc
 } // namespace mlir
 
