@@ -196,6 +196,10 @@ private:
                            SPIRVCodeGenContext &Ctx,
                            const DenseMap<StringRef, Register> &MacroDefRegs);
 
+  void emitDebugTypeEnum(
+      const SmallPtrSetImpl<const DICompositeType *> &EnumTypes,
+      SPIRVCodeGenContext &Ctx);
+
   void emitDebugQualifiedTypes(
       const SmallPtrSetImpl<DIDerivedType *> &QualifiedDerivedTypes,
       SPIRVCodeGenContext &Ctx);
@@ -465,30 +469,20 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     emitDebugMacroDefs(MF, Ctx);
     emitDebugBuildIdentifier(BuildIdentifier, Ctx);
     emitDebugStoragePath(BuildStoragePath, Ctx);
-
-    // *** MODIFIED ORDER *** Emit basic types first
     emitDebugBasicTypes(Collector.BasicTypes, Ctx);
 
-    // Now emit types that might depend on basic types or each other
     emitSubroutineTypes(Collector.SubRoutineTypes, Ctx);
-    emitSubprograms(Collector.SubPrograms,
-                    Ctx); // Subprograms use SubroutineTypes
+    emitSubprograms(Collector.SubPrograms, Ctx);
     emitLexicalScopes(Collector.LexicalScopes, Ctx);
-    emitDebugPointerTypes(Collector.PointerDerivedTypes,
-                          Ctx); // Pointers use BaseTypes (Basic/Composite)
-    emitDebugArrayTypes(Collector.ArrayTypes, Ctx); // Arrays use BaseTypes
-    emitAllDebugTypeComposites(
-        Collector.CompositeTypes,
-        Ctx); // Composites define types used by Pointers/Members
+    emitDebugPointerTypes(Collector.PointerDerivedTypes, Ctx);
+    emitDebugArrayTypes(Collector.ArrayTypes, Ctx);
+    emitAllDebugTypeComposites(Collector.CompositeTypes, Ctx);
+    emitDebugTypeEnum(Collector.EnumTypes, Ctx);
     emitAllTemplateDebugInstructions(Collector.CompositeTypesWithTemplates,
-                                     Ctx); // Templates use Composites & Params
-    emitDebugQualifiedTypes(Collector.QualifiedDerivedTypes,
-                            Ctx);                   // Qualifiers use BaseTypes
-    emitDebugTypedefs(Collector.TypedefTypes, Ctx); // Typedefs use BaseTypes
-    emitDebugTypePtrToMember(Collector.PtrToMemberTypes,
-                             Ctx); // PtrToMember uses BaseTypes
-
-    // Emit entities that use types
+                                     Ctx);
+    emitDebugQualifiedTypes(Collector.QualifiedDerivedTypes, Ctx);
+    emitDebugTypedefs(Collector.TypedefTypes, Ctx);
+    emitDebugTypePtrToMember(Collector.PtrToMemberTypes, Ctx);
     emitAllDebugGlobalVariables(MF, Ctx);
     emitDebugImportedEntities(Collector.ImportedEntities, Ctx);
   }
@@ -535,7 +529,6 @@ Register SPIRVEmitNonSemanticDI::EmitDIInstruction(
               SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100))
           .addImm(Inst);
   for (auto Reg : Operands) {
-    llvm::errs() << "Adding operand register: " << Reg << "\n";
     MIB.addUse(Reg);
   }
   MIB.constrainAllUses(*Ctx.TII, *Ctx.TRI, *Ctx.RBI);
@@ -611,6 +604,72 @@ uint32_t SPIRVEmitNonSemanticDI::mapDebugFlags(DINode::DIFlags DFlags) {
   if (DFlags & DINode::FlagEnumClass)
     Flags |= Flag::FlagIsEnumClass;
   return Flags;
+}
+
+void SPIRVEmitNonSemanticDI::emitDebugTypeEnum(
+    const SmallPtrSetImpl<const DICompositeType *> &EnumTypes,
+    SPIRVCodeGenContext &Ctx) {
+  for (auto *EnumTy : EnumTypes) {
+    if (!EnumTy || EnumTy->getTag() != dwarf::DW_TAG_enumeration_type)
+      continue;
+    if (Register Existing = Ctx.GR->getDebugValue(EnumTy); Existing.isValid())
+      continue;
+    Register NameStr = EmitOpString(EnumTy->getName(), Ctx);
+    bool UnderlyingTypeIsFwd = false;
+    Register UnderlyingTypeReg = findBaseTypeRegisterRecursive(
+        EnumTy->getBaseType(), Ctx, UnderlyingTypeIsFwd);
+    if (!UnderlyingTypeReg.isValid()) {
+      UnderlyingTypeReg = EmitDIInstruction(
+          SPIRV::NonSemanticExtInst::DebugInfoNone, {}, Ctx, false);
+      UnderlyingTypeIsFwd = false;
+    }
+    Register SourceReg =
+        findRegisterFromMap(EnumTy->getFile(), Ctx.SourceRegPairs);
+    if (!SourceReg.isValid()) {
+      SourceReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
+                                    {}, Ctx, false);
+    }
+    Register Line = Ctx.GR->buildConstantInt(EnumTy->getLine(), Ctx.MIRBuilder,
+                                             Ctx.I32Ty, false);
+    Register Column =
+        Ctx.GR->buildConstantInt(1, Ctx.MIRBuilder, Ctx.I32Ty, false);
+
+    Register ParentReg = Ctx.GR->getDebugValue(EnumTy->getScope());
+    if (!ParentReg.isValid()) {
+      llvm::errs() << "Warning: Could not find Parent scope register for Enum: "
+                   << EnumTy->getName() << "\n";
+      ParentReg = Ctx.GR->getDebugValue(EnumTy->getFile());
+      if (!ParentReg.isValid()) {
+        ParentReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
+                                      {}, Ctx, false);
+      }
+    }
+    Register Size = Ctx.GR->buildConstantInt(EnumTy->getSizeInBits(),
+                                             Ctx.MIRBuilder, Ctx.I32Ty, false);
+    uint32_t Flags = transDebugFlags(EnumTy);
+    Register FlagsReg =
+        Ctx.GR->buildConstantInt(Flags, Ctx.MIRBuilder, Ctx.I32Ty, false);
+    SmallVector<Register, 16> EnumOperands;
+    for (Metadata *MD : EnumTy->getElements()) {
+      if (auto *E = dyn_cast<DIEnumerator>(MD)) {
+        Register Val = Ctx.GR->buildConstantInt(
+            E->getValue().getZExtValue(), Ctx.MIRBuilder, Ctx.I32Ty, false);
+        Register Name = EmitOpString(E->getName(), Ctx);
+        EnumOperands.push_back(Val);
+        EnumOperands.push_back(Name);
+      }
+    }
+    SmallVector<Register, 12> Ops = {
+        NameStr, UnderlyingTypeReg, SourceReg, Line,
+        Column,  ParentReg,         Size,      FlagsReg};
+    Ops.append(EnumOperands);
+    bool HasForwardRef = UnderlyingTypeIsFwd;
+    Register DefReg = Ctx.GR->getDebugValue(EnumTy);
+    Register Res = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugTypeEnum,
+                                     Ops, Ctx, HasForwardRef, DefReg);
+    Ctx.GR->addDebugValue(EnumTy, Res);
+    Ctx.CompositeTypeRegPairs.emplace_back(EnumTy, Res);
+  }
 }
 
 void SPIRVEmitNonSemanticDI::emitSingleCompilationUnit(
@@ -845,10 +904,7 @@ void SPIRVEmitNonSemanticDI::emitDebugPointerTypes(
                                                        Ctx.I32Ty, false, false);
 
     const DIType *BaseTy = PointerDerivedType->getBaseType();
-    llvm::errs() << "Pointer Derived Type BaseTy: "
-                 << (BaseTy ? BaseTy->getName() : "null") << "\n";
-
-    bool HasForwardRef = false;
+      bool HasForwardRef = false;
     Register BaseTypeReg =
         findBaseTypeRegisterRecursive(BaseTy, Ctx, HasForwardRef);
 
@@ -1230,7 +1286,7 @@ void SPIRVEmitNonSemanticDI::emitDebugArrayTypes(
     Register BaseTypeReg =
         findBaseTypeRegisterRecursive(ElementType, Ctx, HasForwardRef);
 
-    if (!BaseTypeReg.isValid()) { // If still not valid after recursive lookup
+    if (!BaseTypeReg.isValid()) {
       llvm::errs()
           << "Warning: Could not find element type for Array/Vector.\n";
       BaseTypeReg = EmitDIInstruction(SPIRV::NonSemanticExtInst::DebugInfoNone,
@@ -1433,9 +1489,6 @@ void SPIRVEmitNonSemanticDI::emitDebugTypeComposite(
       Ctx.GR->buildConstantInt(Flags, Ctx.MIRBuilder, Ctx.I32Ty, false, false);
 
   Register DefReg = Ctx.GR->getDebugValue(CompTy);
-  llvm::errs() << "Emitting DebugTypeComposite for: " << CompTy->getName()
-               << ", Found Res: " << DefReg << "\n";
-
   SmallVector<Register, 4> MemberRegs;
   bool HasForwardRef = false;
 
@@ -1744,8 +1797,6 @@ Register SPIRVEmitNonSemanticDI::findBaseTypeRegisterRecursive(
       IsForwardRef = Ctx.GR->isForwardPlaceholder(Found);
       return Found;
     }
-    llvm::errs() << "Creating placeholder for CompositeType: " << Ty->getName()
-                 << "\n";
     Register PlaceholderReg = Ctx.MRI.createVirtualRegister(&SPIRV::IDRegClass);
     Ctx.MRI.setType(PlaceholderReg, LLT::scalar(32));
     Ctx.GR->markAsForwardPlaceholder(PlaceholderReg);
