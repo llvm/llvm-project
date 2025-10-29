@@ -15,7 +15,7 @@ class MultipleSlidesTestCase(TestBase):
     # The intermediate object main.o is compiled without debug info, but
     # a.out is linked with `-gdwarf` on Windows. This creates a PDB.
     # However, in the native PDB plugin, the symbols don't have a size.
-    @skipIfWindows
+    @expectedFailureWindows
     def test_mulitple_slides(self):
         """Test that a binary can be slid multiple times correctly."""
         self.build()
