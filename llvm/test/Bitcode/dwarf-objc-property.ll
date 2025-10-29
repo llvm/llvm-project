@@ -1,53 +1,11 @@
-; UNSUPPORTED:  target={{.*}}-aix{{.*}}
-;
-; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump --debug-info - | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 
-; CHECK: DW_TAG_structure_type
-; CHECK:   DW_AT_name ("Foo")
-;
-; CHECK:   DW_TAG_APPLE_property
-; CHECK:     DW_AT_APPLE_property_name ("autoSynthProp")
-; CHECK:     DW_AT_APPLE_property_attribute
-; CHECK-SAME: DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
-; CHECK-SAME: DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
-;
-; CHECK:   DW_TAG_APPLE_property
-; CHECK:     DW_AT_APPLE_property_name ("synthProp")
-; CHECK:     DW_AT_APPLE_property_attribute
-; CHECK-SAME: DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
-; CHECK-SAME: DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
-;
-; CHECK:   DW_TAG_APPLE_property
-; CHECK:     DW_AT_APPLE_property_name ("customGetterProp")
-; CHECK:     DW_AT_APPLE_property_getter   ("customGetter")
-; CHECK:     DW_AT_APPLE_property_attribute
-; CHECK-SAME: DW_APPLE_PROPERTY_getter, DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
-; CHECK-SAME: DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
-;
-; CHECK:   DW_TAG_APPLE_property
-; CHECK:     DW_AT_APPLE_property_name ("customSetterProp")
-; CHECK:     DW_AT_APPLE_property_setter   ("customSetter:")
-; CHECK:     DW_AT_APPLE_property_attribute
-; CHECK-SAME: DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
-; CHECK-SAME: DW_APPLE_PROPERTY_setter, DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
-;
-; CHECK:   DW_TAG_APPLE_property
-; CHECK:     DW_AT_APPLE_property_name ("customAccessorsProp")
-; CHECK:     DW_AT_APPLE_property_getter   ("customGetter")
-; CHECK:     DW_AT_APPLE_property_setter   ("customSetter:")
-; CHECK:     DW_AT_APPLE_property_attribute
-; CHECK-SAME: DW_APPLE_PROPERTY_getter, DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
-; CHECK-SAME: DW_APPLE_PROPERTY_setter, DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
-;
-; FIXME: missing link between DW_TAG_member and the associated DW_TAG_APPLE_property
-; CHECK:   DW_TAG_member
-; CHECK-NOT: DW_AT_APPLE_property
-; CHECK:   DW_TAG_member
-; CHECK-NOT: DW_AT_APPLE_property
-; CHECK:   DW_TAG_member
-; CHECK-NOT: DW_AT_APPLE_property
-; CHECK:   DW_TAG_member
-; CHECK-NOT: DW_AT_APPLE_property
+; CHECK: !DIObjCProperty(name: "autoSynthProp", file: !3, line: 5, attributes: 2316, type: !8)
+; CHECK: !DIObjCProperty(name: "synthProp", file: !3, line: 6, attributes: 2316, type: !8)
+; CHECK: !DIObjCProperty(name: "customGetterProp", file: !3, line: 7, getter: "customGetter", attributes: 2318, type: !8)
+; CHECK: !DIObjCProperty(name: "customSetterProp", file: !3, line: 8, setter: "customSetter:", attributes: 2444, type: !8)
+; CHECK: !DIObjCProperty(name: "customAccessorsProp", file: !3, line: 9, setter: "customSetter:", getter: "customGetter", attributes: 2446, type: !8)
 
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}
