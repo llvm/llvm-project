@@ -332,6 +332,13 @@ def combine_mul_cmlt : GICombineRule<
   (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def combine_build_unmerge : GICombineRule<
+  (defs root:$root, register_matchinfo:$unmergeSrc),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+         [{ return matchCombineBuildUnmerge(*${root}, MRI, ${unmergeSrc}); }]),
+  (apply [{ applyCombineBuildUnmerge(*${root}, MRI, B, ${unmergeSrc}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -366,7 +373,7 @@ def AArch64PostLegalizerCombiner
                         select_to_minmax, or_to_bsp, combine_concat_vector,
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt, combine_use_vector_truncate,
+                        combine_mul_cmlt, combine_use_vector_truncate, combine_build_unmerge,
                         extmultomull, truncsat_combines, lshr_of_trunc_of_lshr,
                         funnel_shift_from_or_shift_constants_are_legal]> {
 }
