@@ -1571,10 +1571,6 @@ public:
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
     AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
-    // If CacheAddStream is null, we have a cache hit and at this point object
-    // file is already passed back to the linker.
-    // If CacheAddStream is not null, we have a cache miss and we need to run
-    // the backend for codegen.
     if (CacheAddStream)
       return RunThinBackend(CacheAddStream);
 
@@ -2318,6 +2314,57 @@ public:
     this->Conf.Dtlto = 1;
   }
 
+  virtual Error runThinLTOBackendThread(
+      Job &J, const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
+          &ResolvedODR) {
+
+    llvm::TimeTraceScope timeScope(
+        "Run ThinLTO backend thread (out-of-process)", J.ModuleID);
+
+    if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
+                           J.SummaryIndexPath, J.ImportsFiles)) {
+      std::unique_lock<std::mutex> L(ErrMu);
+      if (Err)
+        Err = joinErrors(std::move(*Err), std::move(E));
+      else
+        Err = std::move(E);
+    }
+
+    if (Cache.isValid() && CombinedIndex.modulePaths().count(J.ModuleID) &&
+        all_of(CombinedIndex.getModuleHash(J.ModuleID),
+               [](uint32_t V) { return V != 0; })) {
+      const GVSummaryMapTy &DefinedGlobals =
+          ModuleToDefinedGVSummaries.find(J.ModuleID)->second;
+
+      // The module may be cached, this helps handling it.
+      J.CacheKey = computeLTOCacheKey(
+          Conf, CombinedIndex, J.ModuleID, ImportList, ExportList, ResolvedODR,
+          DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+
+      // The module may be cached, this helps handling it.
+      auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
+      if (Error E = CacheAddStreamExp.takeError()) {
+        Err = joinErrors(std::move(*Err), std::move(E));
+      } else {
+        AddStreamFn &CacheAddStream = *CacheAddStreamExp;
+        // If CacheAddStream is null, we have a cache hit and at this point
+        // object file is already passed back to the linker.
+        if (!CacheAddStream) {
+          J.Cached = true; // Cache hit, mark the job as cached.
+          CachedJobs.fetch_add(1);
+        } else {
+          // If CacheAddStream is not null, we have a cache miss and we need to
+          // run the backend for codegen. Save cache 'add stream'
+          // function for a later use.
+          J.CacheAddStream = std::move(CacheAddStream);
+        }
+      }
+    }
+    return Error::success();
+  }
+
   Error start(
       unsigned Task, BitcodeModule BM,
       const FunctionImporter::ImportMapTy &ImportList,
@@ -2346,46 +2393,15 @@ public:
     // The BackendThreadPool is only used here to write the sharded index files
     // (similar to WriteIndexesThinBackend).
     BackendThreadPool.async(
-        [=](Job &J, const FunctionImporter::ImportMapTy &ImportList) {
-          if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
-                                 J.SummaryIndexPath, J.ImportsFiles)) {
-            std::unique_lock<std::mutex> L(ErrMu);
-            if (Err)
-              Err = joinErrors(std::move(*Err), std::move(E));
-            else
-              Err = std::move(E);
-          }
-
-          if (Cache.isValid() &&
-              CombinedIndex.modulePaths().count(J.ModuleID) &&
-              all_of(CombinedIndex.getModuleHash(J.ModuleID),
-                     [](uint32_t V) { return V != 0; })) {
-
-            const GVSummaryMapTy &DefinedGlobals =
-                ModuleToDefinedGVSummaries.find(ModulePath)->second;
-
-            // Compute and store a bitcode module cache key.
-            J.CacheKey = computeLTOCacheKey(
-                Conf, CombinedIndex, ModulePath, ImportList, ExportList,
-                ResolvedODR, DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
-
-            // Check if we have something in the cache.
-            auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
-            if (Error E = CacheAddStreamExp.takeError()) {
-              Err = joinErrors(std::move(*Err), std::move(E));
-            } else {
-              AddStreamFn &CacheAddStream = *CacheAddStreamExp;
-              if (!CacheAddStream) {
-                J.Cached = true; // Cache hit, mark the job as cached.
-                CachedJobs.fetch_add(1);
-              } else {
-                // Cache miss, save cache 'add stream' function for a later use.
-                J.CacheAddStream = std::move(CacheAddStream);
-              }
-            }
-          }
+        [=](Job &J, const FunctionImporter::ImportMapTy &ImportList,
+            const FunctionImporter::ExportSetTy &ExportList,
+            const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
+                &ResolvedODR) {
+          Error E =
+              runThinLTOBackendThread(J, ImportList, ExportList, ResolvedODR);
         },
-        std::ref(J), std::ref(ImportList));
+        std::ref(J), std::ref(ImportList), std::ref(ExportList),
+        std::ref(ResolvedODR));
 
     return Error::success();
   }
