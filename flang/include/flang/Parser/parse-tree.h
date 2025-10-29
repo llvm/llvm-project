@@ -24,7 +24,9 @@
 #include "provenance.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/reference.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -3274,13 +3276,13 @@ struct FunctionReference {
 // R1521 call-stmt -> CALL procedure-designator [ chevrons ]
 //         [( [actual-arg-spec-list] )]
 // (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
-//          scalar-int-expr [, scalar-int-expr ] ] >>>
+//          scalar-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
   BOILERPLATE(CallStmt);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
-    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarIntExpr>,
+    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarExpr>,
         std::optional<ScalarIntExpr>>
         t;
   };
@@ -3356,6 +3358,9 @@ struct StmtFunctionStmt {
 // !DIR$ NOVECTOR
 // !DIR$ NOUNROLL
 // !DIR$ NOUNROLL_AND_JAM
+// !DIR$ FORCEINLINE
+// !DIR$ INLINE
+// !DIR$ NOINLINE
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3384,11 +3389,14 @@ struct CompilerDirective {
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
+  EMPTY_CLASS(ForceInline);
+  EMPTY_CLASS(Inline);
+  EMPTY_CLASS(NoInline);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
       VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam>
+      NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline, NoInline>
       u;
 };
 
@@ -3502,6 +3510,18 @@ struct OmpDirectiveName {
   llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
 };
 
+// type-name list item
+struct OmpTypeName {
+  CharBlock source;
+  mutable const semantics::DeclTypeSpec *declTypeSpec{nullptr};
+  UNION_CLASS_BOILERPLATE(OmpTypeName);
+  std::variant<TypeSpec, DeclarationTypeSpec> u;
+};
+
+struct OmpTypeNameList {
+  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeName>);
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3522,6 +3542,39 @@ struct OmpObjectList {
   WRAPPER_CLASS_BOILERPLATE(OmpObjectList, std::list<OmpObject>);
 };
 
+struct OmpStylizedDeclaration {
+  COPY_AND_ASSIGN_BOILERPLATE(OmpStylizedDeclaration);
+  // Since "Reference" isn't handled by parse-tree-visitor, add EmptyTrait,
+  // and visit the members by hand when needed.
+  using EmptyTrait = std::true_type;
+  common::Reference<const OmpTypeName> type;
+  EntityDecl var;
+};
+
+struct OmpStylizedInstance {
+  struct Instance {
+    UNION_CLASS_BOILERPLATE(Instance);
+    std::variant<AssignmentStmt, CallStmt, common::Indirection<Expr>> u;
+  };
+  TUPLE_CLASS_BOILERPLATE(OmpStylizedInstance);
+  std::tuple<std::list<OmpStylizedDeclaration>, Instance> t;
+};
+
+class ParseState;
+
+// Ref: [5.2:76], [6.0:185]
+//
+struct OmpStylizedExpression {
+  CharBlock source;
+  // Pointer to a temporary copy of the ParseState that is used to create
+  // additional parse subtrees for the stylized expression. This is only
+  // used internally during parsing and conveys no information to the
+  // consumers of the AST.
+  const ParseState *state{nullptr};
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpStylizedExpression, std::list<OmpStylizedInstance>);
+};
+
 // Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
 //
 // reduction-identifier ->
@@ -3539,21 +3592,25 @@ struct OmpReductionIdentifier {
 // combiner-expression ->                           // since 4.5
 //    assignment-statement |
 //    function-reference
-struct OmpReductionCombiner {
-  UNION_CLASS_BOILERPLATE(OmpReductionCombiner);
-  std::variant<AssignmentStmt, FunctionReference> u;
+struct OmpCombinerExpression : public OmpStylizedExpression {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpCombinerExpression, OmpStylizedExpression);
+  static llvm::ArrayRef<CharBlock> Variables();
+};
+
+// Ref: [4.5:222:7-8], [5.0:305:28-29], [5.1:337:20-21], [5.2:127:6-8],
+//      [6.0:242:3-5]
+//
+// initializer-expression ->                        // since 4.5
+//    OMP_PRIV = expression |
+//    subroutine-name(argument-list)
+struct OmpInitializerExpression : public OmpStylizedExpression {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpInitializerExpression, OmpStylizedExpression);
+  static llvm::ArrayRef<CharBlock> Variables();
 };
 
 inline namespace arguments {
-struct OmpTypeSpecifier {
-  UNION_CLASS_BOILERPLATE(OmpTypeSpecifier);
-  std::variant<TypeSpec, DeclarationTypeSpec> u;
-};
-
-struct OmpTypeNameList {
-  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeSpecifier>);
-};
-
 struct OmpLocator {
   UNION_CLASS_BOILERPLATE(OmpLocator);
   std::variant<OmpObject, FunctionReference> u;
@@ -3596,7 +3653,7 @@ struct OmpMapperSpecifier {
 struct OmpReductionSpecifier {
   TUPLE_CLASS_BOILERPLATE(OmpReductionSpecifier);
   std::tuple<OmpReductionIdentifier, OmpTypeNameList,
-      std::optional<OmpReductionCombiner>>
+      std::optional<OmpCombinerExpression>>
       t;
 };
 
@@ -4551,16 +4608,9 @@ struct OmpInReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
-// declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
-//                                              : combiner) [initializer-clause]
-struct OmpInitializerProc {
-  TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
-  std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
-};
 // Initialization for declare reduction construct
 struct OmpInitializerClause {
-  UNION_CLASS_BOILERPLATE(OmpInitializerClause);
-  std::variant<OmpInitializerProc, AssignmentStmt> u;
+  WRAPPER_CLASS_BOILERPLATE(OmpInitializerClause, OmpInitializerExpression);
 };
 
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]

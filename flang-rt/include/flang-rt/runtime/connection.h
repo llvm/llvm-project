@@ -73,7 +73,6 @@ struct ConnectionState : public ConnectionAttributes {
     auto least{leftTabLimit.value_or(0)};
     auto newPos{positionInRecord + n};
     positionInRecord = newPos < least ? least : newPos;
-    ;
   }
 
   RT_API_ATTRS void BeginRecord() {

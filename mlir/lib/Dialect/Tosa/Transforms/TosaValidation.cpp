@@ -635,6 +635,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Transpose);
   // Type Conversion
   CHECK_RANKS_AND_SIZES(Cast);
+  CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
+  CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
@@ -691,7 +693,7 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
                                  << " shape dimension cannot be dynamic";
     }
 
-    int64_t element_bits = type.getElementTypeBitWidth();
+    int64_t element_bits = tosa::getBitWidth(getElementTypeOrSelf(type));
     int64_t element_bytes = std::max(INT64_C(1), element_bits / 8);
     int64_t size = element_bytes * type.getNumElements();
 
@@ -1204,6 +1206,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
       case 16:
       case 32:
       case 48:
+      case 64:
         return true;
       }
     } else if (allowUnsigned && intTy.isUnsigned()) {
@@ -1214,9 +1217,10 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
         return true;
       }
     }
-  } else if (mlir::isa<tosa::shapeType>(type)) {
+  } else if (isa<tosa::shapeType>(type))
     return true;
-  }
+  else if (isa<tosa::mxint8Type>(type))
+    return true;
   return false;
 }
 
