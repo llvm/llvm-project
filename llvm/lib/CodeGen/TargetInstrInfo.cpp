@@ -56,9 +56,9 @@ static cl::opt<unsigned int> MaxAccumulatorWidth(
     "acc-max-width", cl::Hidden, cl::init(3),
     cl::desc("Maximum number of branches in the accumulator tree"));
 
-static cl::opt<bool> AllowNTRemat(
-    "allow-none-trival-remat", cl::init(true), cl::Hidden,
-    cl::desc("Allow non-trivial rematerialization by default"));
+static cl::opt<bool>
+    AllowNTRemat("allow-none-trival-remat", cl::init(true), cl::Hidden,
+                 cl::desc("Allow non-trivial rematerialization by default"));
 
 TargetInstrInfo::~TargetInstrInfo() = default;
 
