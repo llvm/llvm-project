@@ -74,8 +74,7 @@ exit:
   ret void
 }
 
-; FIXME: Currently this mis-compiled when interleaving; all stores store the
-; last lane of the last part, instead of the last lane per part.
+; Check each unrolled store stores the last lane of the corresponding part.
 ; Test case for https://github.com/llvm/llvm-project/issues/162498.
 define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(ptr %dst) {
 ; VF4IC1-LABEL: define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
@@ -93,12 +92,12 @@ define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
 ; VF4IC1-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
 ; VF4IC1-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[VEC_IND]], splat (i32 1)
 ; VF4IC1-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
-; VF4IC1-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP5]]
 ; VF4IC1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
-; VF4IC1-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP7]]
 ; VF4IC1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP4]], i32 2
-; VF4IC1-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP9]]
 ; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
+; VF4IC1-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP5]]
+; VF4IC1-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP7]]
+; VF4IC1-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP9]]
 ; VF4IC1-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP11]]
 ; VF4IC1-NEXT:    store i32 [[TMP0]], ptr [[TMP6]], align 4
 ; VF4IC1-NEXT:    store i32 [[TMP1]], ptr [[TMP8]], align 4
@@ -121,13 +120,15 @@ define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2IC2-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 0
+; VF2IC2-NEXT:    [[TMP8:%.*]] = add i32 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 2
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 3
-; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i32 [[INDEX]], 1
+; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP7]], 1
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP0]], 1
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP2]]
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP3]]
-; VF2IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP4]], align 4
+; VF2IC2-NEXT:    store i32 [[TMP8]], ptr [[TMP4]], align 4
 ; VF2IC2-NEXT:    store i32 [[TMP1]], ptr [[TMP5]], align 4
 ; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100

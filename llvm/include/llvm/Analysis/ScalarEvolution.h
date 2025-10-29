@@ -638,8 +638,12 @@ public:
   /// \p GEP The GEP. The indices contained in the GEP itself are ignored,
   /// instead we use IndexExprs.
   /// \p IndexExprs The expressions for the indices.
-  LLVM_ABI const SCEV *
-  getGEPExpr(GEPOperator *GEP, const SmallVectorImpl<const SCEV *> &IndexExprs);
+  LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
+                                  ArrayRef<const SCEV *> IndexExprs);
+  LLVM_ABI const SCEV *getGEPExpr(const SCEV *BaseExpr,
+                                  ArrayRef<const SCEV *> IndexExprs,
+                                  Type *SrcElementTy,
+                                  GEPNoWrapFlags NW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<const SCEV *> &Operands);
@@ -1345,6 +1349,7 @@ public:
 
   class LoopGuards {
     DenseMap<const SCEV *, const SCEV *> RewriteMap;
+    SmallDenseSet<std::pair<const SCEV *, const SCEV *>> NotEqual;
     bool PreserveNUW = false;
     bool PreserveNSW = false;
     ScalarEvolution &SE;

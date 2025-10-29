@@ -429,6 +429,10 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
@@ -492,6 +496,8 @@ public:
                                     bool assumeConvergent = false);
 
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
+  static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
+  static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".

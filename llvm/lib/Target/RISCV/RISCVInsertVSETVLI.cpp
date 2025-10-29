@@ -699,7 +699,8 @@ public:
            "Can't encode VTYPE for uninitialized or unknown");
     if (TWiden != 0)
       return RISCVVType::encodeXSfmmVType(SEW, TWiden, AltFmt);
-    return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
+    return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic,
+                                   AltFmt);
   }
 
   bool hasSEWLMULRatioOnly() const { return SEWLMULRatioOnly; }
