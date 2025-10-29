@@ -480,9 +480,10 @@ size_t matchWeights(
     const BinaryFunction &BF,
     const YAMLProfileReader::ProbeMatchSpec &ProbeMatchSpecs);
 
-StaleMatcher initMatcher(BinaryContext &BC,
-                         const BinaryFunction::BasicBlockOrderType &BlockOrder,
-                         FlowFunction &Func, HashFunction HashFunction) {
+std::pair<StaleMatcher, std::vector<BlendedBlockHash>>
+initMatcher(BinaryContext &BC,
+            const BinaryFunction::BasicBlockOrderType &BlockOrder,
+            FlowFunction &Func, HashFunction HashFunction) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
@@ -513,7 +514,7 @@ StaleMatcher initMatcher(BinaryContext &BC,
   }
   StaleMatcher Matcher;
   Matcher.init(Blocks, BlendedHashes, CallHashes);
-  return Matcher;
+  return {Matcher, BlendedHashes};
 }
 
 using FlowBlockTy = std::pair<const FlowBlock *, float>;
@@ -525,7 +526,7 @@ ProfileBlockMatchMap
 matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
             HashFunction HashFunction,
             YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
-            StaleMatcher &Matcher) {
+            StaleMatcher &Matcher, ArrayRef<BlendedBlockHash> BlendedHashes) {
   ProfileBlockMatchMap MatchedBlocks;
 
   // Match blocks from the profile to the blocks in CFG.
@@ -560,10 +561,13 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
       continue;
     }
     MatchedBlocks[YamlBB.Index] = {MatchedBlock, 1};
+    BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
     LLVM_DEBUG(dbgs() << "Matched yaml block (bid = " << YamlBB.Index << ")"
                       << " with hash " << Twine::utohexstr(YamlBB.Hash)
                       << " to BB (index = " << MatchedBlock->Index - 1 << ")"
+                      << " with hash " << Twine::utohexstr(BinHash.combine())
                       << "\n");
+    (void)BinHash;
     uint64_t ExecCount = YamlBB.ExecCount;
     // Update matching stats accounting for the matched block.
     switch (Method) {
@@ -595,9 +599,8 @@ void transferEdgeWeights(ProfileBlockMatchMap &MatchedBlocks,
                          MutableArrayRef<uint64_t> OutWeight,
                          MutableArrayRef<uint64_t> InWeight,
                          const yaml::bolt::BinaryFunctionProfile &YamlBF) {
-  using namespace yaml::bolt;
-  for (const BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
-    for (const SuccessorInfo &YamlSI : YamlBB.Successors) {
+  for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
+    for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors) {
       if (YamlSI.Count == 0)
         continue;
 
@@ -674,7 +677,8 @@ size_t matchWeights(BinaryContext &BC,
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
-  StaleMatcher Matcher = initMatcher(BC, BlockOrder, Func, HashFunction);
+  auto [Matcher, BlendedHashes] =
+      initMatcher(BC, BlockOrder, Func, HashFunction);
 
   auto getBlock = [&](const MCDecodedPseudoProbeInlineTree *Node,
                       uint64_t Id) -> const FlowBlock * {
@@ -720,8 +724,8 @@ size_t matchWeights(BinaryContext &BC,
             matchProbe(CSI.InlineTreeNode, CSI.Probe);
       }
     }
-    ProfileBlockMatchMap StaleMatchedBlocks =
-        matchBlocks(BC, *YamlBF, HashFunction, IdToYamlBF, Matcher);
+    ProfileBlockMatchMap StaleMatchedBlocks = matchBlocks(
+        BC, *YamlBF, HashFunction, IdToYamlBF, Matcher, BlendedHashes);
     for (const auto &[Id, FlowBlockPair] : StaleMatchedBlocks)
       // TBD: determine scaling factor
       if (!MatchedBlocks.contains(Id))
@@ -730,8 +734,8 @@ size_t matchWeights(BinaryContext &BC,
     transferEdgeWeights(MatchedBlocks, OutWeight, InWeight, *YamlBF);
   }
   if (ProbeMatchSpecs.empty()) {
-    ProfileBlockMatchMap MatchedBlocks =
-        matchBlocks(BC, YamlBF, HashFunction, IdToYamlBF, Matcher);
+    ProfileBlockMatchMap MatchedBlocks = matchBlocks(
+        BC, YamlBF, HashFunction, IdToYamlBF, Matcher, BlendedHashes);
     transferEdgeWeights(MatchedBlocks, OutWeight, InWeight, YamlBF);
   }
 
