@@ -6799,6 +6799,79 @@ defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc, "F
 defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround, "FCVTAS">;
 defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround, "FCVTAU">;
 
+// For global-isel we can use register classes to determine
+// which FCVT instruction to use.
+let Predicates = [HasFPRCVT] in {
+def : Pat<(i64 (any_lround f32:$Rn)),
+          (FCVTASDSr f32:$Rn)>;
+def : Pat<(i64 (any_llround f32:$Rn)),
+          (FCVTASDSr f32:$Rn)>;
+}
+def : Pat<(i64 (any_lround f64:$Rn)),
+          (FCVTASv1i64 f64:$Rn)>;
+def : Pat<(i64 (any_llround f64:$Rn)),
+          (FCVTASv1i64 f64:$Rn)>;
+
+let Predicates = [HasFPRCVT] in {
+  def : Pat<(f32 (bitconvert (i32 (any_lround f16:$Rn)))),
+            (FCVTASSHr f16:$Rn)>;
+  def : Pat<(f64 (bitconvert (i64 (any_lround f16:$Rn)))),
+            (FCVTASDHr f16:$Rn)>;
+  def : Pat<(f64 (bitconvert (i64 (any_llround f16:$Rn)))),
+            (FCVTASDHr f16:$Rn)>;
+  def : Pat<(f64 (bitconvert (i64 (any_lround f32:$Rn)))),
+            (FCVTASDSr f32:$Rn)>;
+  def : Pat<(f32 (bitconvert (i32 (any_lround f64:$Rn)))),
+            (FCVTASSDr f64:$Rn)>;
+  def : Pat<(f64 (bitconvert (i64 (any_llround f32:$Rn)))),
+            (FCVTASDSr f32:$Rn)>;
+}
+def : Pat<(f32 (bitconvert (i32 (any_lround f32:$Rn)))),
+          (FCVTASv1i32 f32:$Rn)>;
+def : Pat<(f64 (bitconvert (i64 (any_lround f64:$Rn)))),
+          (FCVTASv1i64 f64:$Rn)>;
+def : Pat<(f64 (bitconvert (i64 (any_llround f64:$Rn)))),
+          (FCVTASv1i64 f64:$Rn)>;
+
+// For global-isel we can use register classes to determine
+// which FCVT instruction to use.
+let Predicates = [HasFPRCVT] in {
+def : Pat<(i64 (any_lrint f16:$Rn)),
+          (FCVTZSDHr (FRINTXHr f16:$Rn))>;
+def : Pat<(i64 (any_llrint f16:$Rn)),
+          (FCVTZSDHr (FRINTXHr f16:$Rn))>;
+def : Pat<(i64 (any_lrint f32:$Rn)),
+          (FCVTZSDSr (FRINTXSr f32:$Rn))>;
+def : Pat<(i64 (any_llrint f32:$Rn)),
+          (FCVTZSDSr (FRINTXSr f32:$Rn))>;
+}
+def : Pat<(i64 (any_lrint f64:$Rn)),
+          (FCVTZSv1i64 (FRINTXDr f64:$Rn))>;
+def : Pat<(i64 (any_llrint f64:$Rn)),
+          (FCVTZSv1i64 (FRINTXDr f64:$Rn))>;
+
+let Predicates = [HasFPRCVT] in {
+  def : Pat<(f32 (bitconvert (i32 (any_lrint f16:$Rn)))),
+            (FCVTZSSHr (FRINTXHr f16:$Rn))>;
+  def : Pat<(f64 (bitconvert (i64 (any_lrint f16:$Rn)))),
+            (FCVTZSDHr (FRINTXHr f16:$Rn))>;
+  def : Pat<(f64 (bitconvert (i64 (any_llrint f16:$Rn)))),
+            (FCVTZSDHr (FRINTXHr f16:$Rn))>;
+  def : Pat<(f64 (bitconvert (i64 (any_lrint f32:$Rn)))),
+            (FCVTZSDSr (FRINTXSr f32:$Rn))>;
+  def : Pat<(f32 (bitconvert (i32 (any_lrint f64:$Rn)))),
+            (FCVTZSSDr (FRINTXDr f64:$Rn))>;
+  def : Pat<(f64 (bitconvert (i64 (any_llrint f32:$Rn)))),
+            (FCVTZSDSr (FRINTXSr f32:$Rn))>;
+}
+def : Pat<(f32 (bitconvert (i32 (any_lrint f32:$Rn)))),
+          (FCVTZSv1i32 (FRINTXSr f32:$Rn))>;
+def : Pat<(f64 (bitconvert (i64 (any_lrint f64:$Rn)))),
+          (FCVTZSv1i64 (FRINTXDr f64:$Rn))>;
+def : Pat<(f64 (bitconvert (i64 (any_llrint f64:$Rn)))),
+          (FCVTZSv1i64 (FRINTXDr f64:$Rn))>;
+
+
 // f16 -> s16 conversions
 let Predicates = [HasFullFP16] in {
   def : Pat<(i16(fp_to_sint_sat_gi f16:$Rn)), (FCVTZSv1f16 f16:$Rn)>;

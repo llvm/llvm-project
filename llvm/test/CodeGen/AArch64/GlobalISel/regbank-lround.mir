@@ -14,7 +14,7 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %fpr:fpr(s64) = COPY $d0
-    ; CHECK-NEXT: %lround:gpr(s64) = G_LROUND %fpr(s64)
+    ; CHECK-NEXT: %lround:fpr(s64) = G_LROUND %fpr(s64)
     ; CHECK-NEXT: $d0 = COPY %lround(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %fpr:_(s64) = COPY $d0
@@ -35,7 +35,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %gpr:gpr(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s64) = COPY %gpr(s64)
-    ; CHECK-NEXT: %lround:gpr(s64) = G_LROUND [[COPY]](s64)
+    ; CHECK-NEXT: %lround:fpr(s64) = G_LROUND [[COPY]](s64)
     ; CHECK-NEXT: $d0 = COPY %lround(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %gpr:_(s64) = COPY $x0
