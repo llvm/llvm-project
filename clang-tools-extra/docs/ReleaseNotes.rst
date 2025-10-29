@@ -331,6 +331,11 @@ Changes in existing checks
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
 
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  by adding a new option `AllowThreadLocal` that suppresses warnings on
+  non-const global variables with thread-local storage duration.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers with multiple parameters.

@@ -512,7 +512,7 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
   }
 
 #ifdef __MVS__
-  ErrorOr<bool> NeedsConversion = needConversion(Filename.str().c_str(), FD);
+  ErrorOr<bool> NeedsConversion = needConversion(Filename, FD);
   if (std::error_code EC = NeedsConversion.getError())
     return EC;
   // File size may increase due to EBCDIC -> UTF-8 conversion, therefore we

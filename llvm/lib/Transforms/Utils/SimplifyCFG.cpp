@@ -7623,7 +7623,9 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     auto *DefaultCaseBB = SI->getDefaultDest();
     BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
     auto It = OrigBB->getTerminator()->getIterator();
-    BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    auto *BI = BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    // BI is handling the default case for SI, and so should share its DebugLoc.
+    BI->setDebugLoc(SI->getDebugLoc());
     It->eraseFromParent();
 
     addPredecessorToBlock(DefaultCaseBB, OrigBB, SplitBB);
