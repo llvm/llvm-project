@@ -56,28 +56,44 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "%VAL argument must be a scalar numeric or logical expression"_err_en_US);
   }
   if (const auto *expr{arg.UnwrapExpr()}) {
-    if (const Symbol * base{GetFirstSymbol(*expr)};
-        base && IsFunctionResult(*base)) {
-      context.NoteDefinedSymbol(*base);
+    if (const Symbol *base{GetFirstSymbol(*expr)}) {
+      const Symbol &symbol{GetAssociationRoot(*base)};
+      if (IsFunctionResult(symbol)) {
+        context.NoteDefinedSymbol(symbol);
+      }
     }
     if (IsBOZLiteral(*expr)) {
-      messages.Say("BOZ argument requires an explicit interface"_err_en_US);
+      messages.Say("BOZ argument %s requires an explicit interface"_err_en_US,
+          expr->AsFortran());
     } else if (evaluate::IsNullPointerOrAllocatable(expr)) {
       messages.Say(
-          "Null pointer argument requires an explicit interface"_err_en_US);
+          "Null pointer argument '%s' requires an explicit interface"_err_en_US,
+          expr->AsFortran());
     } else if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
-      const Symbol &symbol{named->GetLastSymbol()};
-      if (IsAssumedRank(symbol)) {
+      const Symbol &resolved{ResolveAssociations(named->GetLastSymbol())};
+      if (IsAssumedRank(resolved)) {
         messages.Say(
-            "Assumed rank argument requires an explicit interface"_err_en_US);
+            "Assumed rank argument '%s' requires an explicit interface"_err_en_US,
+            expr->AsFortran());
       }
+      const Symbol &symbol{GetAssociationRoot(resolved)};
       if (symbol.attrs().test(Attr::ASYNCHRONOUS)) {
         messages.Say(
-            "ASYNCHRONOUS argument requires an explicit interface"_err_en_US);
+            "ASYNCHRONOUS argument '%s' requires an explicit interface"_err_en_US,
+            expr->AsFortran());
       }
       if (symbol.attrs().test(Attr::VOLATILE)) {
         messages.Say(
-            "VOLATILE argument requires an explicit interface"_err_en_US);
+            "VOLATILE argument '%s' requires an explicit interface"_err_en_US,
+            expr->AsFortran());
+      }
+      if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+        if (object->cudaDataAttr()) {
+          messages.Warn(/*inModuleFile=*/false, context.languageFeatures(),
+              common::UsageWarning::CUDAUsage,
+              "Actual argument '%s' with CUDA data attributes should be passed via an explicit interface"_warn_en_US,
+              expr->AsFortran());
+        }
       }
     } else if (auto argChars{characteristics::DummyArgument::FromActual(
                    "actual argument", *expr, context.foldingContext(),
@@ -169,7 +185,8 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                 } else if (static_cast<std::size_t>(actualOffset->offset()) >=
                         actualOffset->symbol().size() ||
                     !evaluate::IsContiguous(
-                        actualOffset->symbol(), foldingContext)) {
+                        actualOffset->symbol(), foldingContext)
+                        .value_or(false)) {
                   // If substring, take rest of substring
                   if (*actualLength > 0) {
                     actualChars -=
@@ -582,7 +599,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             context.IsEnabled(
                 common::LanguageFeature::ContiguousOkForSeqAssociation) &&
             actualLastSymbol &&
-            evaluate::IsContiguous(*actualLastSymbol, foldingContext)};
+            evaluate::IsContiguous(*actualLastSymbol, foldingContext)
+                .value_or(false)};
         if (actualIsArrayElement && actualLastSymbol &&
             !dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
           if (IsPointer(*actualLastSymbol)) {
@@ -647,7 +665,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
               } else if (static_cast<std::size_t>(actualOffset->offset()) >=
                       actualOffset->symbol().size() ||
                   !evaluate::IsContiguous(
-                      actualOffset->symbol(), foldingContext)) {
+                      actualOffset->symbol(), foldingContext)
+                      .value_or(false)) {
                 actualElements = 1;
               } else if (auto actualSymType{evaluate::DynamicType::From(
                              actualOffset->symbol())}) {
@@ -895,7 +914,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             dummyName);
       }
       // INTENT(OUT) and INTENT(IN OUT) cases are caught elsewhere
-    } else {
+    } else if (!actualIsAllocatable &&
+        !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)) {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
           dummyName);
@@ -910,7 +930,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             dummy, actual, *scope,
             /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
       }
-    } else if (!actualIsPointer) {
+    } else if (!actualIsPointer &&
+        !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)) {
       messages.Say(
           "Actual argument associated with POINTER %s must also be POINTER unless INTENT(IN)"_err_en_US,
           dummyName);
@@ -1538,6 +1559,10 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
             evaluate::SayWithDeclaration(messages, *wholeSymbol,
                 "Whole assumed-size array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
                 wholeSymbol->name());
+          } else if (IsAssumedRank(*wholeSymbol)) {
+            evaluate::SayWithDeclaration(messages, *wholeSymbol,
+                "Assumed-rank array '%s' may not be used as an argument to an elemental procedure"_err_en_US,
+                wholeSymbol->name());
           }
         }
         if (auto argShape{evaluate::GetShape(context, *expr)}) {
@@ -1546,10 +1571,10 @@ static bool CheckElementalConformance(parser::ContextualMessages &messages,
                 ") corresponding to dummy argument #" + std::to_string(index) +
                 " ('" + dummy.name + "')"};
             if (shape) {
-              auto tristate{evaluate::CheckConformance(messages, *shape,
-                  *argShape, evaluate::CheckConformanceFlags::None,
-                  shapeName.c_str(), argName.c_str())};
-              if (tristate && !*tristate) {
+              if (!evaluate::CheckConformance(messages, *shape, *argShape,
+                      evaluate::CheckConformanceFlags::None, shapeName.c_str(),
+                      argName.c_str())
+                      .value_or(true)) {
                 return false;
               }
             } else {
@@ -2218,10 +2243,9 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
   }
 }
 
-static parser::Messages CheckExplicitInterface(
-    const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
-    SemanticsContext &context, const Scope *scope,
-    const evaluate::SpecificIntrinsic *intrinsic,
+parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
+    evaluate::ActualArguments &actuals, SemanticsContext &context,
+    const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
     bool allowActualArgumentConversions, bool extentErrors,
     bool ignoreImplicitVsExplicit) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
@@ -2383,44 +2407,51 @@ bool CheckArguments(const characteristics::Procedure &proc,
   evaluate::FoldingContext foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
   bool allowArgumentConversions{true};
+  parser::Messages implicitBuffer;
   if (!explicitInterface || treatingExternalAsImplicit) {
-    parser::Messages buffer;
     {
-      auto restorer{messages.SetMessages(buffer)};
+      auto restorer{messages.SetMessages(implicitBuffer)};
       for (auto &actual : actuals) {
         if (actual) {
           CheckImplicitInterfaceArg(*actual, messages, context);
         }
       }
     }
-    if (!buffer.empty()) {
+    if (implicitBuffer.AnyFatalError()) {
       if (auto *msgs{messages.messages()}) {
-        msgs->Annex(std::move(buffer));
+        msgs->Annex(std::move(implicitBuffer));
       }
       return false; // don't pile on
     }
     allowArgumentConversions = false;
   }
   if (explicitInterface) {
-    auto buffer{CheckExplicitInterface(proc, actuals, context, &scope,
+    auto explicitBuffer{CheckExplicitInterface(proc, actuals, context, &scope,
         intrinsic, allowArgumentConversions,
         /*extentErrors=*/true, ignoreImplicitVsExplicit)};
-    if (!buffer.empty()) {
+    if (!explicitBuffer.empty()) {
       if (treatingExternalAsImplicit) {
-        if (auto *msg{foldingContext.Warn(
+        // Combine all messages into one warning
+        if (auto *warning{messages.Warn(/*inModuleFile=*/false,
+                context.languageFeatures(),
                 common::UsageWarning::KnownBadImplicitInterface,
                 "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
-          buffer.AttachTo(*msg, parser::Severity::Because);
-        } else {
-          buffer.clear();
+          explicitBuffer.AttachTo(*warning, parser::Severity::Because);
         }
+      } else if (auto *msgs{messages.messages()}) {
+        msgs->Annex(std::move(explicitBuffer));
       }
-      if (auto *msgs{messages.messages()}) {
-        msgs->Annex(std::move(buffer));
-      }
+      // These messages override any in implicitBuffer.
       return false;
     }
   }
-  return true;
+  if (!implicitBuffer.empty()) {
+    if (auto *msgs{messages.messages()}) {
+      msgs->Annex(std::move(implicitBuffer));
+    }
+    return false;
+  } else {
+    return true; // no messages
+  }
 }
 } // namespace Fortran::semantics

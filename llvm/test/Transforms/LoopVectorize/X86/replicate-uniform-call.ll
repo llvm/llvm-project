@@ -40,36 +40,16 @@ define void @smax_call_uniform(ptr %dst, i64 %x) {
 ; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
 ; CHECK:       [[PRED_UREM_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = tail call i64 @llvm.smax.i64(i64 0, i64 0)
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select i1 [[C]], i64 1, i64 [[TMP13]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[P]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[PREDPHI7]], 1
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[DST]], i64 [[ADD]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP17]]
-; CHECK-NEXT:    store i64 0, ptr [[GEP]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[REM1:%.*]] = urem i64 [[MUL]], [[X]]
-; CHECK-NEXT:    [[SMAX:%.*]] = tail call i64 @llvm.smax.i64(i64 [[REM1]], i64 0)
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[LOOP_HEADER]] ], [ [[SMAX]], %[[ELSE]] ]
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[DST]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    store i64 0, ptr [[GEP1]], align 8
-; CHECK-NEXT:    [[IV_NEXT1]] = add i64 [[IV1]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT1]], 1024
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

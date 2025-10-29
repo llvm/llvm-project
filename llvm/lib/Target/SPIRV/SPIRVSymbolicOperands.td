@@ -211,6 +211,7 @@ def CooperativeMatrixOperandsOperand : OperandCategory;
 def SpecConstantOpOperandsOperand : OperandCategory;
 def MatrixMultiplyAccumulateOperandsOperand : OperandCategory;
 def FPEncodingOperand : OperandCategory;
+def PackedVectorFormatsOperand : OperandCategory;
 
 //===----------------------------------------------------------------------===//
 // Definition of the Environments
@@ -384,6 +385,8 @@ defm SPV_INTEL_int4 : ExtensionOperand<123, [EnvOpenCL]>;
 defm SPV_KHR_float_controls2 : ExtensionOperand<124, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_tensor_float32_conversion : ExtensionOperand<125, [EnvOpenCL]>;
 defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvVulkan, EnvOpenCL]>;
+defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
+defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -593,6 +596,7 @@ defm SubgroupMatrixMultiplyAccumulateINTEL : CapabilityOperand<6236, 0, 0, [SPV_
 defm Subgroup2DBlockIOINTEL : CapabilityOperand<6228, 0, 0, [SPV_INTEL_2d_block_io], []>;
 defm Subgroup2DBlockTransformINTEL : CapabilityOperand<6229, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
 defm Subgroup2DBlockTransposeINTEL : CapabilityOperand<6230, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
+defm PredicatedIOINTEL : CapabilityOperand<6257, 0, 0, [SPV_INTEL_predicated_io], []>;
 defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
 defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
 defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tensor_float32_conversion], []>;
@@ -695,7 +699,7 @@ defm IntersectionNV: ExecutionModelOperand<5314, [RayTracingNV]>;
 defm AnyHitNV: ExecutionModelOperand<5315, [RayTracingNV]>;
 defm ClosestHitNV: ExecutionModelOperand<5316, [RayTracingNV]>;
 defm MissNV: ExecutionModelOperand<5317, [RayTracingNV]>;
-defm CallableNV: ExecutionModelOperand<5318, [RayTracingNV]>;
+defm CallableNV : ExecutionModelOperand<5318, [RayTracingNV]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define MemoryModel enum values and at the same time
@@ -801,6 +805,8 @@ defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;
 defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
+defm FPFastMathDefault : ExecutionModeOperand<6028, [FloatControls2]>;
+defm MaximallyReconvergesKHR : ExecutionModeOperand<6023, [Shader]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define StorageClass enum values and at the same time
@@ -1152,6 +1158,9 @@ defm NotInf : FPFastMathModeOperand<0x2, [Kernel]>;
 defm NSZ : FPFastMathModeOperand<0x4, [Kernel]>;
 defm AllowRecip : FPFastMathModeOperand<0x8, [Kernel]>;
 defm Fast : FPFastMathModeOperand<0x10, [Kernel]>;
+defm AllowContract : FPFastMathModeOperand<0x10000, [FloatControls2]>;
+defm AllowReassoc : FPFastMathModeOperand<0x20000, [FloatControls2]>;
+defm AllowTransform : FPFastMathModeOperand<0x40000, [FloatControls2]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FPRoundingMode enum values and at the same time
@@ -2026,3 +2035,22 @@ multiclass FPEncodingOperand<bits<32> value, list<Extension> reqExtensions>{
 }
 
 defm BFloat16KHR : FPEncodingOperand<0, [SPV_KHR_bfloat16]>;
+
+def PackedVectorFormats : GenericEnum, Operand<i32> {
+  let FilterClass = "PackedVectorFormats";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class PackedVectorFormats<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass PackedVectorFormatsOperand<bits<32> value, list<Extension> reqExtensions> {
+  def NAME : BuiltIn<NAME, value>;
+  defm : SymbolicOperandWithRequirements<PackedVectorFormatsOperand, value, NAME, 0, 0, reqExtensions, [], []>;
+}
+
+defm PackedVectorFormat4x8Bit : PackedVectorFormatsOperand<0, [SPV_KHR_integer_dot_product]>;

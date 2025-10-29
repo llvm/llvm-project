@@ -2117,6 +2117,22 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
   EXPECT_TRUE(Errs.empty());
 }
 
+TEST(CommandLineTest, ConsumeOptionalString) {
+  cl::ResetCommandLineParser();
+
+  StackOption<std::optional<std::string>, cl::opt<std::optional<std::string>>>
+      Input("input");
+
+  const char *Args[] = {"prog", "--input=\"value\""};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  ASSERT_TRUE(cl::ParseCommandLineOptions(2, Args, StringRef(), &OS));
+  ASSERT_TRUE(Input.has_value());
+  EXPECT_EQ("\"value\"", *Input);
+  EXPECT_TRUE(Errs.empty());
+}
+
 TEST(CommandLineTest, ResetAllOptionOccurrences) {
   cl::ResetCommandLineParser();
 

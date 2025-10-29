@@ -354,6 +354,76 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
       sd_match(InsertELT, m_InsertElt(m_Value(), m_Value(), m_SpecificInt(1))));
 }
 
+TEST_F(SelectionDAGPatternMatchTest, matchGenericTernaryOp) {
+  SDLoc DL;
+  auto Float32VT = EVT::getFloatingPointVT(32);
+
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Float32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Float32VT);
+  SDValue Op2 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 3, Float32VT);
+
+  SDValue FMA = DAG->getNode(ISD::FMA, DL, Float32VT, Op0, Op1, Op2);
+  SDValue FAdd = DAG->getNode(ISD::FADD, DL, Float32VT, Op0, Op1);
+
+  using namespace SDPatternMatch;
+  SDValue A, B, C;
+
+  EXPECT_TRUE(sd_match(FMA, m_TernaryOp(ISD::FMA, m_Specific(Op0),
+                                        m_Specific(Op1), m_Specific(Op2))));
+  EXPECT_FALSE(sd_match(FMA, m_TernaryOp(ISD::FADD, m_Specific(Op0),
+                                         m_Specific(Op1), m_Specific(Op2))));
+  EXPECT_FALSE(
+      sd_match(FAdd, m_TernaryOp(ISD::FMA, m_Value(), m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(FMA, m_TernaryOp(ISD::FMA, m_Specific(Op1),
+                                         m_Specific(Op0), m_Specific(Op2))));
+
+  EXPECT_TRUE(
+      sd_match(FMA, m_TernaryOp(ISD::FMA, m_Value(A), m_Value(B), m_Value(C))));
+  EXPECT_EQ(A, Op0);
+  EXPECT_EQ(B, Op1);
+  EXPECT_EQ(C, Op2);
+
+  A = B = C = SDValue();
+
+  EXPECT_TRUE(sd_match(FMA, m_c_TernaryOp(ISD::FMA, m_Specific(Op0),
+                                          m_Specific(Op1), m_Specific(Op2))));
+  EXPECT_TRUE(sd_match(FMA, m_c_TernaryOp(ISD::FMA, m_Specific(Op1),
+                                          m_Specific(Op0), m_Specific(Op2))));
+
+  EXPECT_FALSE(sd_match(FMA, m_c_TernaryOp(ISD::FMA, m_Specific(Op2),
+                                           m_Specific(Op1), m_Specific(Op0))));
+  EXPECT_FALSE(sd_match(FMA, m_c_TernaryOp(ISD::FMA, m_Specific(Op2),
+                                           m_Specific(Op0), m_Specific(Op1))));
+
+  EXPECT_FALSE(sd_match(FMA, m_c_TernaryOp(ISD::FMA, m_Specific(Op0),
+                                           m_Specific(Op2), m_Specific(Op1))));
+  EXPECT_FALSE(sd_match(FMA, m_c_TernaryOp(ISD::FMA, m_Specific(Op1),
+                                           m_Specific(Op2), m_Specific(Op0))));
+
+  EXPECT_TRUE(sd_match(
+      FMA, m_c_TernaryOp(ISD::FMA, m_Value(A), m_Value(B), m_Value(C))));
+  EXPECT_EQ(A, Op0);
+  EXPECT_EQ(B, Op1);
+  EXPECT_EQ(C, Op2);
+
+  A = B = C = SDValue();
+  EXPECT_TRUE(sd_match(
+      FMA, m_c_TernaryOp(ISD::FMA, m_Value(B), m_Value(A), m_Value(C))));
+  EXPECT_EQ(A, Op1);
+  EXPECT_EQ(B, Op0);
+  EXPECT_EQ(C, Op2);
+
+  A = B = C = SDValue();
+  EXPECT_TRUE(sd_match(
+      FMA, m_c_TernaryOp(ISD::FMA, m_Value(A), m_Value(B), m_Value(C))));
+  EXPECT_EQ(A, Op0);
+  EXPECT_EQ(B, Op1);
+  EXPECT_EQ(C, Op2);
+
+  EXPECT_FALSE(
+      sd_match(FAdd, m_c_TernaryOp(ISD::FMA, m_Value(), m_Value(), m_Value())));
+}
+
 TEST_F(SelectionDAGPatternMatchTest, matchUnaryOp) {
   SDLoc DL;
   auto Int32VT = EVT::getIntegerVT(Context, 32);
@@ -548,6 +618,31 @@ TEST_F(SelectionDAGPatternMatchTest, matchNode) {
   EXPECT_FALSE(
       sd_match(Add, m_Node(ISD::ADD, m_Value(), m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(Add, m_Node(ISD::ADD, m_ConstInt(), m_Value())));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, matchSelectLike) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
+
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, Int32VT);
+  SDValue TVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue FVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+
+  SDValue VCond = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, VInt32VT);
+  SDValue VTVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, VInt32VT);
+  SDValue VFVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, VInt32VT);
+
+  SDValue Select = DAG->getNode(ISD::SELECT, DL, Int32VT, Cond, TVal, FVal);
+  SDValue VSelect =
+      DAG->getNode(ISD::VSELECT, DL, Int32VT, VCond, VTVal, VFVal);
+
+  using namespace SDPatternMatch;
+  EXPECT_TRUE(sd_match(Select, m_SelectLike(m_Specific(Cond), m_Specific(TVal),
+                                            m_Specific(FVal))));
+  EXPECT_TRUE(
+      sd_match(VSelect, m_SelectLike(m_Specific(VCond), m_Specific(VTVal),
+                                     m_Specific(VFVal))));
 }
 
 namespace {

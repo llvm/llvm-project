@@ -29,6 +29,7 @@ Version changelog:
    'none' and 'all'. 'smart' is the default.
 5: Basic block labels are matched by FileCheck expressions
 6: The semantics of TBAA checks has been incorporated in the check lines.
+7: Indent switch-cases correctly.
 """
 DEFAULT_VERSION = 6
 
@@ -606,6 +607,7 @@ MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 
 IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
+IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\w+")
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r"^(\s+)")
 SCRUB_WHITESPACE_RE = re.compile(r"(?!^(|  \w))[ \t]+", flags=re.M)
@@ -882,6 +884,7 @@ class function_body(object):
 
 class FunctionTestBuilder:
     def __init__(self, run_list, flags, scrubber_args, path, ginfo):
+        self._run_list = run_list
         self._verbose = flags.verbose
         self._record_args = flags.function_signature
         self._check_attributes = flags.check_attributes
@@ -917,15 +920,53 @@ class FunctionTestBuilder:
                 self._func_order.update({prefix: []})
                 self._global_var_dict.update({prefix: dict()})
 
+    # Return true if there is conflicting output for different runs for the
+    # given prefix and function name.
+    def has_conflicting_output(self, prefix, func):
+        # There was conflicting output if the func_dict is None for this
+        # prefix and function.
+        return self._func_dict[prefix].get(func) is None
+
     def finish_and_get_func_dict(self):
-        for prefix in self.get_failed_prefixes():
-            warn(
-                "Prefix %s had conflicting output from different RUN lines for all functions in test %s"
-                % (
-                    prefix,
-                    self._path,
+        all_funcs = set()
+        for prefix in self._func_dict:
+            all_funcs.update(self._func_dict[prefix].keys())
+
+        warnings_to_print = collections.defaultdict(list)
+        for func in sorted(list(all_funcs)):
+            for i, run_info in enumerate(self._run_list):
+                prefixes = run_info[0]
+                if not prefixes:
+                    continue
+
+                # Check if this RUN line produces this function at all. If
+                # not, we can skip analysing this function for this RUN.
+                run_contains_func = all(
+                    func in self._func_dict.get(p, {}) for p in prefixes
                 )
+                if not run_contains_func:
+                    continue
+
+                # Check if this RUN line can print any checks for this
+                # function. It can't if all of its prefixes have conflicting
+                # (None) output.
+                cannot_print_for_this_run = all(
+                    self.has_conflicting_output(p, func) for p in prefixes
+                )
+                if cannot_print_for_this_run:
+                    warnings_to_print[func].append((i, prefixes))
+
+        for func, warning_info in warnings_to_print.items():
+            conflict_strs = []
+            for run_index, prefixes in warning_info:
+                conflict_strs.append(
+                    f"RUN #{run_index + 1} (prefixes: {', '.join(prefixes)})"
+                )
+            warn(
+                f"For function '{func}', the following RUN lines will not generate checks due to conflicting output: {', '.join(conflict_strs)}",
+                test_file=self._path,
             )
+
         return self._func_dict
 
     def func_order(self):
@@ -1077,20 +1118,6 @@ class FunctionTestBuilder:
         outputs for all RUN lines.
         """
         self._processed_prefixes.update(prefixes)
-
-    def get_failed_prefixes(self):
-        # This returns the list of those prefixes that failed to match any function,
-        # because there were conflicting bodies produced by different RUN lines, in
-        # all instances of the prefix.
-        for prefix in self._func_dict:
-            if self._func_dict[prefix] and (
-                not [
-                    fct
-                    for fct in self._func_dict[prefix]
-                    if self._func_dict[prefix][fct] is not None
-                ]
-            ):
-                yield prefix
 
 
 ##### Generator of LLVM IR CHECK lines

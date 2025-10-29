@@ -22,7 +22,7 @@ loop:
   %load = load i32, ptr %gep, align 4
   %red.next = add i32 %red, %load
   %iv.next = add i64 %iv, 1
-  %exitcond = icmp eq i64 %iv.next, 256
+  %exitcond = icmp eq i64 %iv.next, 257
   br i1 %exitcond, label %exit, label %loop
 
 exit:

@@ -57,7 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
+        .DefaultUnreachable("Unhandled type");
   }
 
   void add(Type type) { add(cast<SPIRVType>(type)); }
@@ -107,7 +107,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
+        .DefaultUnreachable("Unhandled type");
   }
 
   void add(Type type) { add(cast<SPIRVType>(type)); }
@@ -198,30 +198,15 @@ Type CompositeType::getElementType(unsigned index) const {
       .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
       .Case<StructType>(
           [index](StructType type) { return type.getElementType(index); })
-      .Default(
-          [](Type) -> Type { llvm_unreachable("invalid composite type"); });
+      .DefaultUnreachable("Invalid composite type");
 }
 
 unsigned CompositeType::getNumElements() const {
-  if (auto arrayType = llvm::dyn_cast<ArrayType>(*this))
-    return arrayType.getNumElements();
-  if (auto matrixType = llvm::dyn_cast<MatrixType>(*this))
-    return matrixType.getNumColumns();
-  if (auto structType = llvm::dyn_cast<StructType>(*this))
-    return structType.getNumElements();
-  if (auto vectorType = llvm::dyn_cast<VectorType>(*this))
-    return vectorType.getNumElements();
-  if (auto tensorArmType = dyn_cast<TensorArmType>(*this))
-    return tensorArmType.getNumElements();
-  if (llvm::isa<CooperativeMatrixType>(*this)) {
-    llvm_unreachable(
-        "invalid to query number of elements of spirv Cooperative Matrix type");
-  }
-  if (llvm::isa<RuntimeArrayType>(*this)) {
-    llvm_unreachable(
-        "invalid to query number of elements of spirv::RuntimeArray type");
-  }
-  llvm_unreachable("invalid composite type");
+  return TypeSwitch<SPIRVType, unsigned>(*this)
+      .Case<ArrayType, StructType, TensorArmType, VectorType>(
+          [](auto type) { return type.getNumElements(); })
+      .Case<MatrixType>([](MatrixType type) { return type.getNumColumns(); })
+      .DefaultUnreachable("Invalid type for number of elements query");
 }
 
 bool CompositeType::hasCompileTimeKnownNumElements() const {

@@ -3718,8 +3718,9 @@ TEST(APIntTest, ScaleBitMask) {
 TEST(APIntTest, DenseMap) {
   DenseMap<APInt, int> Map;
   APInt ZeroWidthInt(0, 0, false);
-  Map.insert({ZeroWidthInt, 0});
-  Map.find(ZeroWidthInt);
+  Map.insert({ZeroWidthInt, 123});
+  auto It = Map.find(ZeroWidthInt);
+  EXPECT_EQ(It->second, 123);
 }
 
 TEST(APIntTest, TryExt) {

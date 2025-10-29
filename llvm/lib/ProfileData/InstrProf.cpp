@@ -292,7 +292,7 @@ void ProfOStream::patch(ArrayRef<PatchItem> P) {
     for (const auto &K : P) {
       for (int I = 0, E = K.D.size(); I != E; I++) {
         uint64_t Bytes =
-            endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+            endian::byte_swap<uint64_t>(K.D[I], llvm::endianness::little);
         Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
                      (const char *)&Bytes, sizeof(uint64_t));
       }
@@ -302,7 +302,7 @@ void ProfOStream::patch(ArrayRef<PatchItem> P) {
 
 std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
-                           uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
+                           [[maybe_unused]] uint64_t Version) {
   // Value names may be prefixed with a binary '1' to indicate
   // that the backend should not modify the symbols due to any platform
   // naming convention. Do not include that '1' in the PGO profile name.

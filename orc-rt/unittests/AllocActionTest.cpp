@@ -14,7 +14,7 @@
 #include "orc-rt/ExecutorAddress.h"
 #include "orc-rt/SPSAllocAction.h"
 
-#include "SimplePackedSerializationTestUtils.h"
+#include "AllocActionTestUtils.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
@@ -77,11 +77,14 @@ TEST(AllocActionTest, RunFinalizationActionsComplete) {
 
   std::vector<AllocActionPair> InitialActions;
 
-  auto MakeArgBuffer = [&]() { return makeExecutorAddrBuffer(&Val); };
-  InitialActions.push_back({{increment_sps_allocaction, MakeArgBuffer()},
-                            {decrement_sps_allocaction, MakeArgBuffer()}});
-  InitialActions.push_back({{increment_sps_allocaction, MakeArgBuffer()},
-                            {decrement_sps_allocaction, MakeArgBuffer()}});
+  auto MakeAAOnVal = [&](AllocActionFn Fn) {
+    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
+                                                   ExecutorAddr::fromPtr(&Val));
+  };
+  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
+                            MakeAAOnVal(decrement_sps_allocaction)});
+  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
+                            MakeAAOnVal(decrement_sps_allocaction)});
 
   auto DeallocActions = cantFail(runFinalizeActions(std::move(InitialActions)));
 
@@ -102,11 +105,14 @@ TEST(AllocActionTest, RunFinalizeActionsFail) {
 
   std::vector<AllocActionPair> InitialActions;
 
-  auto MakeArgBuffer = [&]() { return makeExecutorAddrBuffer(&Val); };
-  InitialActions.push_back({{increment_sps_allocaction, MakeArgBuffer()},
-                            {decrement_sps_allocaction, MakeArgBuffer()}});
-  InitialActions.push_back({{fail_sps_allocaction, MakeArgBuffer()},
-                            {decrement_sps_allocaction, MakeArgBuffer()}});
+  auto MakeAAOnVal = [&](AllocActionFn Fn) {
+    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
+                                                   ExecutorAddr::fromPtr(&Val));
+  };
+  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
+                            MakeAAOnVal(decrement_sps_allocaction)});
+  InitialActions.push_back({*MakeAllocAction<>::from(fail_sps_allocaction),
+                            MakeAAOnVal(decrement_sps_allocaction)});
 
   auto DeallocActions = runFinalizeActions(std::move(InitialActions));
 
@@ -126,11 +132,14 @@ TEST(AllocActionTest, RunFinalizeActionsNullFinalize) {
 
   std::vector<AllocActionPair> InitialActions;
 
-  auto MakeArgBuffer = [&]() { return makeExecutorAddrBuffer(&Val); };
-  InitialActions.push_back({{increment_sps_allocaction, MakeArgBuffer()},
-                            {decrement_sps_allocaction, MakeArgBuffer()}});
-  InitialActions.push_back({{nullptr, WrapperFunctionBuffer()},
-                            {decrement_sps_allocaction, MakeArgBuffer()}});
+  auto MakeAAOnVal = [&](AllocActionFn Fn) {
+    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
+                                                   ExecutorAddr::fromPtr(&Val));
+  };
+  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
+                            MakeAAOnVal(decrement_sps_allocaction)});
+  InitialActions.push_back({*MakeAllocAction<>::from(nullptr),
+                            MakeAAOnVal(decrement_sps_allocaction)});
 
   auto DeallocActions = cantFail(runFinalizeActions(std::move(InitialActions)));
 
@@ -148,11 +157,14 @@ TEST(AllocActionTest, RunFinalizeActionsNullDealloc) {
 
   std::vector<AllocActionPair> InitialActions;
 
-  auto MakeArgBuffer = [&]() { return makeExecutorAddrBuffer(&Val); };
-  InitialActions.push_back({{increment_sps_allocaction, MakeArgBuffer()},
-                            {decrement_sps_allocaction, MakeArgBuffer()}});
-  InitialActions.push_back({{increment_sps_allocaction, MakeArgBuffer()},
-                            {nullptr, WrapperFunctionBuffer()}});
+  auto MakeAAOnVal = [&](AllocActionFn Fn) {
+    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
+                                                   ExecutorAddr::fromPtr(&Val));
+  };
+  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
+                            MakeAAOnVal(decrement_sps_allocaction)});
+  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
+                            *MakeAllocAction<>::from(nullptr)});
 
   auto DeallocActions = cantFail(runFinalizeActions(std::move(InitialActions)));
 

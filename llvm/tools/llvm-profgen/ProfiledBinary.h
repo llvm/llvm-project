@@ -228,19 +228,19 @@ class ProfiledBinary {
   // A list of binary functions that have samples.
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
 
-  // GUID to Elf symbol start address map
+  // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
   DenseSet<std::pair<uint64_t, uint64_t>> AddrsWithInvalidInstruction;
 
-  // Start address to Elf symbol GUID map
+  // Start address to symbol GUID map
   std::unordered_multimap<uint64_t, uint64_t> StartAddrToSymMap;
 
   // An ordered map of mapping function's start address to function range
-  // relevant info. Currently to determine if the offset of ELF is the start of
-  // a real function, we leverage the function range info from DWARF.
+  // relevant info. Currently to determine if the offset of ELF/COFF is the
+  // start of a real function, we leverage the function range info from DWARF.
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
   // Address to context location map. Used to expand the context.
@@ -335,9 +335,9 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const object::ELFObjectFileBase *Obj);
+  void checkPseudoProbe(const object::ObjectFile *Obj);
 
-  void decodePseudoProbe(const object::ELFObjectFileBase *Obj);
+  void decodePseudoProbe(const object::ObjectFile *Obj);
 
   void checkUseFSDiscriminator(
       const object::ObjectFile *Obj,
@@ -353,8 +353,8 @@ class ProfiledBinary {
   // Load debug info from DWARF unit.
   void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
 
-  // Create elf symbol to its start address mapping.
-  void populateElfSymbolAddressList(const object::ELFObjectFileBase *O);
+  // Create symbol to its start address mapping.
+  void populateSymbolAddressList(const object::ObjectFile *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the

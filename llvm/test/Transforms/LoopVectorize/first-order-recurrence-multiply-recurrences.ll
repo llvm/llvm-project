@@ -119,22 +119,7 @@ define void @test_pr54223_sink_after_insertion_order(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[FOR_1_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SCALAR_RECUR6:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[FOR_2_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SCALAR_RECUR6]]
-; CHECK-NEXT:    [[MULADD:%.*]] = call float @llvm.fmuladd.f32(float [[SCALAR_RECUR]], float [[NEG]], float 0.000000e+00)
-; CHECK-NEXT:    [[DST_GEP:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[FOR_1_NEXT]] = load float, ptr [[A]], align 4
-; CHECK-NEXT:    [[FOR_2_NEXT]] = load float, ptr [[B]], align 4
-; CHECK-NEXT:    store float [[MULADD]], ptr [[DST_GEP]], align 4
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 10000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -435,6 +420,82 @@ loop:
   %icmp = icmp ult i64 %iv, 337
   %a = and i64 %iv, %mask
   %trunc = trunc i64 %a to i32
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @hoist_previous_value_and_operand_load(ptr %dst) {
+; CHECK-LABEL: @hoist_previous_value_and_operand_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ [[LOAD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 3
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    [[LOAD]] = load i32, ptr [[DST]], align 4
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %add, %loop ]
+  %for.1 = phi i32 [ 1, %entry ], [ %load, %loop ]
+  %for.2 = phi i32 [ 0, %entry ], [ %or, %loop ]
+  %or = or i32 %for.1, 3
+  %add = add i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %for.2, ptr %gep
+  %icmp = icmp ult i64 %iv, 337
+  %load = load i32, ptr %dst
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @hoist_previous_value_and_operand_assume(ptr %dst) {
+; CHECK-LABEL: @hoist_previous_value_and_operand_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[TRUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR]] = or i1 [[FOR_1]], true
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i1 [[FOR_2]], ptr [[GEP]], align 1
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    call void @llvm.assume(i1 [[FOR_1]])
+; CHECK-NEXT:    [[TRUNC]] = trunc i64 [[IV]] to i1
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %add, %loop ]
+  %for.1 = phi i1 [ 1, %entry ], [ %trunc, %loop ]
+  %for.2 = phi i1 [ 0, %entry ], [ %or, %loop ]
+  %or = or i1 %for.1, 3
+  %add = add i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i1 %for.2, ptr %gep
+  %icmp = icmp ult i64 %iv, 337
+  call void @llvm.assume(i1 %for.1)
+  %trunc = trunc i64 %iv to i1
   br i1 %icmp, label %loop, label %exit
 
 exit:

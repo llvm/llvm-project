@@ -16,6 +16,19 @@
 #include "../../GenerateInput.h"
 #include "benchmark/benchmark.h"
 
+static void BM_map_find_string_literal(benchmark::State& state) {
+  std::map<std::string, int> map;
+  map.emplace("Something very very long to show a long string situation", 1);
+  map.emplace("Something Else", 2);
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    benchmark::DoNotOptimize(map.find("Something very very long to show a long string situation"));
+  }
+}
+
+BENCHMARK(BM_map_find_string_literal);
+
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
   using ValueType = typename std::map<K, V>::value_type;

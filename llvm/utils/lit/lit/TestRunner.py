@@ -92,12 +92,12 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env, umask=-1, ulimit={}):
+    def __init__(self, cwd, env, umask=-1, ulimit=None):
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
         self.dirStack = []
-        self.ulimit = ulimit
+        self.ulimit = ulimit if ulimit else {}
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -945,7 +945,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             path = (
                 cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
             )
-            executable = lit.util.which(args[0], shenv.env["PATH"])
+            executable = lit.util.which(args[0], path)
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 
@@ -1541,8 +1541,10 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
         return s
 
     path_substitutions = [
-        ("s", sourcepath), ("S", sourcedir), ("p", sourcedir),
-        ("t", tmpName), ("T", tmpDir)
+        ("s", sourcepath),
+        ("S", sourcedir),
+        ("p", sourcedir),
+        ("t", tmpName),
     ]
     for path_substitution in path_substitutions:
         letter = path_substitution[0]
@@ -1918,6 +1920,14 @@ def applySubstitutions(script, substitutions, conditions={}, recursion_limit=Non
             # since thrashing has such bad consequences, not bounding the cache
             # seems reasonable.
             ln = _caching_re_compile(a).sub(str(b), escapePercents(ln))
+
+        # TODO(boomanaiden154): Remove when we branch LLVM 22 so people on the
+        # release branch will have sufficient time to migrate.
+        if bool(_caching_re_compile("%T").search(ln)):
+            raise ValueError(
+                "%T is no longer supported. Please create directories with names "
+                "based on %t."
+            )
 
         # Strip the trailing newline and any extra whitespace.
         return ln.strip()

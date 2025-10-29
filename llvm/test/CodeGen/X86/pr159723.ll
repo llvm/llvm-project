@@ -17,7 +17,7 @@ define <8 x i1> @test_cmp_v8half_ogt(<8 x half> %rhs, <8 x i1> %mask) nounwind {
 ; CHECK-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; CHECK-NEXT:    callq test_call_8@PLT
 ; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
-; CHECK-NEXT:    vcmpltph {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %k0 {%k1} # 16-byte Folded Reload
+; CHECK-NEXT:    vcmpgtph {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %k0 {%k1} # 16-byte Folded Reload
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
@@ -79,7 +79,7 @@ define <16 x i1> @test_cmp_v16half_olt_commute(<16 x half> %rhs, <16 x i1> %mask
 ; CHECK-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; CHECK-NEXT:    callq test_call_16@PLT
 ; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
-; CHECK-NEXT:    vcmpltph {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %k0 {%k1} # 32-byte Folded Reload
+; CHECK-NEXT:    vcmpgtph {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %k0 {%k1} # 32-byte Folded Reload
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm0
 ; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    vzeroupper
@@ -100,7 +100,7 @@ define <32 x i1> @test_cmp_v32half_oge(<32 x half> %rhs, <32 x i1> %mask) nounwi
 ; CHECK-NEXT:    kmovd %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    callq test_call_32@PLT
 ; CHECK-NEXT:    kmovd {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 4-byte Reload
-; CHECK-NEXT:    vcmpleph {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 {%k1} # 64-byte Folded Reload
+; CHECK-NEXT:    vcmpgeph {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %k0 {%k1} # 64-byte Folded Reload
 ; CHECK-NEXT:    vpmovm2b %k0, %ymm0
 ; CHECK-NEXT:    addq $88, %rsp
 ; CHECK-NEXT:    retq

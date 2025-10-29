@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s readability-uppercase-literal-suffix %t -- -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -config="{CheckOptions: {readability-uppercase-literal-suffix.NewSuffixes: 'L;uL'}}" -- -I %clang_tidy_headers
 
 #include "integral_constant.h"
 
@@ -53,7 +53,7 @@ void integer_suffix() {
   static_assert(is_same<decltype(v11), const unsigned long>::value, "");
   static_assert(v11 == 1, "");
 
-  static constexpr auto v12 = 1UL; // OK.
+  static constexpr auto v12 = 1UL;
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: integer literal has suffix 'UL', which is not uppercase
   // CHECK-FIXES: static constexpr auto v12 = 1uL;
   static_assert(is_same<decltype(v12), const unsigned long>::value, "");

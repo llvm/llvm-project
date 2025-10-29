@@ -167,6 +167,36 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
               MI, FirstVariableIndex, OS);
           printRemainingVariableOps(MI, FirstVariableIndex + 1, OS);
           break;
+        case SPIRV::OpSwitch:
+          if (MI->getFlags() & SPIRV::INST_PRINTER_WIDTH64) {
+            // In binary format 64-bit types are split into two 32-bit operands,
+            // but in text format combine these into a single 64-bit value as
+            // this is what tools such as spirv-as require.
+            const unsigned NumOps = MI->getNumOperands();
+            for (unsigned OpIdx = NumFixedOps; OpIdx < NumOps;) {
+              if (OpIdx + 1 >= NumOps || !MI->getOperand(OpIdx).isImm() ||
+                  !MI->getOperand(OpIdx + 1).isImm()) {
+                llvm_unreachable("Unexpected OpSwitch operands");
+                continue;
+              }
+              OS << ' ';
+              uint64_t LowBits = MI->getOperand(OpIdx).getImm();
+              uint64_t HighBits = MI->getOperand(OpIdx + 1).getImm();
+              uint64_t CombinedValue = (HighBits << 32) | LowBits;
+              OS << formatImm(CombinedValue);
+              OpIdx += 2;
+
+              // Next should be the label
+              if (OpIdx < NumOps) {
+                OS << ' ';
+                printOperand(MI, OpIdx, OS);
+                OpIdx++;
+              }
+            }
+          } else {
+            printRemainingVariableOps(MI, NumFixedOps, OS);
+          }
+          break;
         case SPIRV::OpImageSampleImplicitLod:
         case SPIRV::OpImageSampleDrefImplicitLod:
         case SPIRV::OpImageSampleProjImplicitLod:
@@ -266,6 +296,32 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
               }
             }
             OS << Buffer;
+          }
+          break;
+        }
+        case SPIRV::OpSDot:
+        case SPIRV::OpUDot:
+        case SPIRV::OpSUDot:
+        case SPIRV::OpSDotAccSat:
+        case SPIRV::OpUDotAccSat:
+        case SPIRV::OpSUDotAccSat: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::PackedVectorFormatsOperand>(
+                MI, NumOps - 1, OS);
+            break;
+          }
+          break;
+        }
+        case SPIRV::OpPredicatedLoadINTEL:
+        case SPIRV::OpPredicatedStoreINTEL: {
+          const unsigned NumOps = MI->getNumOperands();
+          if (NumOps > NumFixedOps) {
+            OS << ' ';
+            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
+                MI, NumOps - 1, OS);
+            break;
           }
           break;
         }

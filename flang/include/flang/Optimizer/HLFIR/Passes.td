@@ -61,6 +61,10 @@ def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
                         "the hlfir.matmul.">];
 }
 
+def ExpressionSimplification : Pass<"hlfir-expression-simplification"> {
+  let summary = "Simplify Fortran expressions";
+}
+
 def InlineElementals : Pass<"inline-elementals"> {
   let summary = "Inline chained hlfir.elemental operations";
 }

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -89,6 +90,11 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
     "optsize-jump-table-density", cl::init(40), cl::Hidden,
     cl::desc("Minimum density for building a jump table in "
              "an optsize function"));
+
+static cl::opt<unsigned> MinimumBitTestCmpsOverride(
+    "min-bit-test-cmps", cl::init(2), cl::Hidden,
+    cl::desc("Set minimum of largest number of comparisons "
+             "to use bit test for switch."));
 
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
@@ -428,6 +434,11 @@ RTLIB::Libcall RTLIB::getSINCOSPI(EVT RetVT) {
                       SINCOSPI_F128, SINCOSPI_PPCF128);
 }
 
+RTLIB::Libcall RTLIB::getSINCOS_STRET(EVT RetVT) {
+  return getFPLibCall(RetVT, SINCOS_STRET_F32, SINCOS_STRET_F64,
+                      UNKNOWN_LIBCALL, UNKNOWN_LIBCALL, UNKNOWN_LIBCALL);
+}
+
 RTLIB::Libcall RTLIB::getMODF(EVT RetVT) {
   return getFPLibCall(RetVT, MODF_F32, MODF_F64, MODF_F80, MODF_F128,
                       MODF_PPCF128);
@@ -719,6 +730,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
+
+  MinimumBitTestCmps = MinimumBitTestCmpsOverride;
 }
 
 // Define the virtual destructor out-of-line to act as a key method to anchor
@@ -815,7 +828,8 @@ void TargetLoweringBase::initActions() {
                         ISD::FTAN,           ISD::FACOS,
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
-                        ISD::FTANH,          ISD::FATAN2},
+                        ISD::FTANH,          ISD::FATAN2,
+                        ISD::FMULADD},
                        VT, Expand);
 
     // Overflow operations default to expand
@@ -2096,6 +2110,11 @@ Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
 }
 
 Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
+  // MSVC CRT has a function to validate security cookie.
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported)
+    return M.getFunction(getLibcallImplName(SecurityCheckCookieLibcall));
   return nullptr;
 }
 
@@ -2121,6 +2140,14 @@ void TargetLoweringBase::setMaximumJumpTableSize(unsigned Val) {
 
 bool TargetLoweringBase::isJumpTableRelative() const {
   return getTargetMachine().isPositionIndependent();
+}
+
+unsigned TargetLoweringBase::getMinimumBitTestCmps() const {
+  return MinimumBitTestCmps;
+}
+
+void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
+  MinimumBitTestCmps = Val;
 }
 
 Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {

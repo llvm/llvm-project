@@ -320,10 +320,7 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
   }
   // Default case: unhandled opcode
   OS << "  default:\n"
-     << "    std::string msg;\n"
-     << "    raw_string_ostream Msg(msg);\n"
-     << "    Msg << \"Not supported instr: \" << MI;\n"
-     << "    report_fatal_error(Msg.str().c_str());\n"
+     << "    reportUnsupportedInst(MI);\n"
      << "  }\n";
   OS << "}\n\n";
 }

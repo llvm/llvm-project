@@ -10,9 +10,9 @@ declare void @baz(i64)
 define void @test_chr_with_lifetimes(ptr %i) !prof !14 {
 ; CHECK-LABEL: @test_chr_with_lifetimes(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TEST:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TEST:%.*]] = alloca i32, align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 true, i1 [[TMP9]], i1 false
 ; CHECK-NEXT:    [[TMP11:%.*]] = freeze i1 [[TMP1]]
@@ -150,6 +150,73 @@ bb2:
   %test5 = load ptr, ptr %test
   call void @llvm.lifetime.end.p0(ptr %test)
   %6 = icmp eq ptr %4, %test5
+  br i1 %6, label %bb3, label %bb2
+
+bb3:
+  ret void
+}
+
+; Test that we do not move around allocas that occur in the entry block
+; before splitting. If we accidentally sink them, we can move them after
+; their users.
+define void @test_no_move_allocas(ptr %i) !prof !14 {
+; CHECK-LABEL: @test_no_move_allocas(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TEST:%.*]] = alloca i32, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TEST]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 true, i1 [[TMP2]], i1 false
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i1 [[TMP4]], i1 false
+; CHECK-NEXT:    br i1 [[TMP5]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 true, i64 0, i64 4, !prof [[PROF16]]
+; CHECK-NEXT:    call void @baz(i64 [[TMP6]])
+; CHECK-NEXT:    br i1 false, label [[BB1:%.*]], label [[BB0:%.*]], !prof [[PROF17]]
+; CHECK:       bb0:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       entry.split.nonchr:
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP1]], i64 0, i64 4, !prof [[PROF16]]
+; CHECK-NEXT:    call void @baz(i64 [[TMP7]])
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB0_NONCHR:%.*]], label [[BB1]], !prof [[PROF16]]
+; CHECK:       bb0.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi ptr [ [[TMP9:%.*]], [[BB2]] ], [ null, [[BB1]] ]
+; CHECK-NEXT:    [[TMP9]] = getelementptr i8, ptr [[TMP8]], i64 24
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[TMP8]], [[I]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[BB3:%.*]], label [[BB2]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %test = alloca i32, align 8
+  call void @llvm.lifetime.start.p0(ptr %test)
+  %1 = load i32, ptr %i
+  %2 = icmp eq i32 %1, 0
+  %3 = select i1 %2, i64 4, i64 0, !prof !15
+  call void @baz(i64 %3)
+  br i1 %2, label %bb1, label %bb0, !prof !15
+
+bb0:
+  call void @foo()
+  br label %bb1
+
+bb1:
+  call void @bar()
+  br label %bb2
+
+bb2:
+  %4 = phi ptr [ %5, %bb2 ], [ null, %bb1 ]
+  %5 = getelementptr i8, ptr %4, i64 24
+  %6 = icmp eq ptr %4, %i
   br i1 %6, label %bb3, label %bb2
 
 bb3:

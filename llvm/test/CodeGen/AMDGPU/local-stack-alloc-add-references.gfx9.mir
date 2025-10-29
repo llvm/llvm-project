@@ -20,16 +20,16 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX900-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX900-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 256, [[V_ADD_U32_e64_]], implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e32__literal_offsets
     ; GFX942: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 256, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX942-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 512, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e32__literal_offsets
@@ -37,21 +37,21 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX10-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 256, [[V_ADD_U32_e64_]], implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e32__literal_offsets
     ; GFX12: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 256, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX12-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 512, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX12-NEXT: SI_RETURN
     %0:vgpr_32 = V_ADD_U32_e32 256, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e32 512, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -72,16 +72,16 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX900-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX900-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 8, [[V_ADD_U32_e64_]], implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e32__inline_imm_offsets
     ; GFX942: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 8, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX942-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 16, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e32__inline_imm_offsets
@@ -89,21 +89,21 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX10-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 8, [[V_ADD_U32_e64_]], implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e32__inline_imm_offsets
     ; GFX12: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 8, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX12-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 16, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX12-NEXT: SI_RETURN
     %0:vgpr_32 = V_ADD_U32_e32 8, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e32 16, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -124,16 +124,16 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX900-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX900-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 8, [[V_ADD_U32_e64_]], 0, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e64__inline_imm_offsets
     ; GFX942: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, 8, 0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX942-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 16, %stack.0, 0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e64__inline_imm_offsets
@@ -141,21 +141,21 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX10-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 8, [[V_ADD_U32_e64_]], 0, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e64__inline_imm_offsets
     ; GFX12: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, 8, 0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX12-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 16, %stack.0, 0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX12-NEXT: SI_RETURN
     %0:vgpr_32 = V_ADD_U32_e64 %stack.0, 8, 0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e64 16, %stack.0, 0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -178,9 +178,9 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX900-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX900-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e32__vgpr_offsets
@@ -188,9 +188,9 @@ body:             |
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX942-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX942-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e32__vgpr_offsets
@@ -199,9 +199,9 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX10-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e32__vgpr_offsets
@@ -209,15 +209,15 @@ body:             |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX12-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX12-NEXT: SI_RETURN
     %vgpr_offset:vgpr_32 = COPY $vgpr0
     %0:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e32 %vgpr_offset, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -240,9 +240,9 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX900-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_MOV_B32_e32_]], %vgpr_offset, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX900-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_MOV_B32_e32_]], %vgpr_offset, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e32__vgpr_offsets_commute
@@ -250,9 +250,9 @@ body:             |
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX942-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %stack.0, %vgpr_offset, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX942-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %stack.0, %vgpr_offset, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e32__vgpr_offsets_commute
@@ -261,9 +261,9 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_MOV_B32_e32_]], %vgpr_offset, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX10-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_MOV_B32_e32_]], %vgpr_offset, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e32__vgpr_offsets_commute
@@ -271,15 +271,15 @@ body:             |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: %vgpr_offset:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %stack.0, %vgpr_offset, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX12-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %stack.0, %vgpr_offset, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX12-NEXT: SI_RETURN
     %vgpr_offset:vgpr_32 = COPY $vgpr0
     %0:vgpr_32 = V_ADD_U32_e32 %stack.0, %vgpr_offset, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e32 %stack.0, %vgpr_offset, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -301,9 +301,9 @@ body:             |
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX900-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX900-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e32__sgpr_offsets
@@ -311,9 +311,9 @@ body:             |
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX942-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX942-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e32__sgpr_offsets
@@ -322,9 +322,9 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX10-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX10-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e32__sgpr_offsets
@@ -332,15 +332,15 @@ body:             |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX12-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_]]
     ; GFX12-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e32_1]]
     ; GFX12-NEXT: SI_RETURN
     %sgpr_offset:sreg_32 = COPY $sgpr8
     %0:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e32 %sgpr_offset, %stack.0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -363,9 +363,9 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX900-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX900-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e64__sgpr_offsets
@@ -373,9 +373,9 @@ body:             |
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX942-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, %stack.0, 0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX942-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, %stack.0, 0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e64__sgpr_offsets
@@ -384,9 +384,9 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX10-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX10-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e64__sgpr_offsets
@@ -394,15 +394,15 @@ body:             |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX12-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, %stack.0, 0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX12-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, %stack.0, 0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX12-NEXT: SI_RETURN
     %sgpr_offset:sreg_32 = COPY $sgpr8
     %0:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, %stack.0, 0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e64 %sgpr_offset, %stack.0, 0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -425,9 +425,9 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX900-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MOV_B32_e32_]], %sgpr_offset, 0, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX900-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MOV_B32_e32_]], %sgpr_offset, 0, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e64__sgpr_offsets_commute
@@ -435,9 +435,9 @@ body:             |
     ; GFX942-NEXT: {{  $}}
     ; GFX942-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX942-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, %sgpr_offset, 0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX942-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, %sgpr_offset, 0, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e64__sgpr_offsets_commute
@@ -446,9 +446,9 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX10-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MOV_B32_e32_]], %sgpr_offset, 0, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX10-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_MOV_B32_e32_]], %sgpr_offset, 0, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e64__sgpr_offsets_commute
@@ -456,15 +456,15 @@ body:             |
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: %sgpr_offset:sreg_32 = COPY $sgpr8
     ; GFX12-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, %sgpr_offset, 0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX12-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, %sgpr_offset, 0, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX12-NEXT: SI_RETURN
     %sgpr_offset:sreg_32 = COPY $sgpr8
     %0:vgpr_32 = V_ADD_U32_e64 %stack.0, %sgpr_offset, 0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e64 %stack.0, %sgpr_offset, 0, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
@@ -486,16 +486,16 @@ body:             |
     ; GFX900-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX900-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX900-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX900-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 8, [[V_ADD_U32_e64_]], 1, implicit $exec
-    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX900-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX900-NEXT: SI_RETURN
     ;
     ; GFX942-LABEL: name: local_stack_alloc__v_add_u32_e64__inline_imm_offsets_clamp_modifier
     ; GFX942: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, 8, 1, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX942-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 16, %stack.0, 1, implicit $exec
-    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX942-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX942-NEXT: SI_RETURN
     ;
     ; GFX10-LABEL: name: local_stack_alloc__v_add_u32_e64__inline_imm_offsets_clamp_modifier
@@ -503,21 +503,21 @@ body:             |
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GFX10-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 killed [[S_MOV_B32_]], [[V_MOV_B32_e32_]], 0, implicit $exec
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[V_ADD_U32_e64_]]
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[COPY]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[COPY]]
     ; GFX10-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 8, [[V_ADD_U32_e64_]], 1, implicit $exec
-    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX10-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX10-NEXT: SI_RETURN
     ;
     ; GFX12-LABEL: name: local_stack_alloc__v_add_u32_e64__inline_imm_offsets_clamp_modifier
     ; GFX12: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 %stack.0, 8, 1, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_]]
     ; GFX12-NEXT: [[V_ADD_U32_e64_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 16, %stack.0, 1, implicit $exec
-    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
+    ; GFX12-NEXT: INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, [[V_ADD_U32_e64_1]]
     ; GFX12-NEXT: SI_RETURN
     %0:vgpr_32 = V_ADD_U32_e64 %stack.0, 8, /*clamp*/1, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %0
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %0
     %1:vgpr_32 = V_ADD_U32_e64 16, %stack.0, /*clamp*/1, implicit $exec
-    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 2031625 /* reguse:VGPR_32 */, %1
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 1835017 /* reguse:VGPR_32 */, %1
     SI_RETURN
 
 ...
