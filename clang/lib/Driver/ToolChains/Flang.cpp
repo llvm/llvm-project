@@ -1049,7 +1049,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Default intrinsic module dirs must be added after any user-provided
   // -fintrinsic-modules-path to have lower precedence
-  if (auto IntrModPath = TC.getDefaultIntrinsicModuleDir()) {
+  if (std::optional<std::string> IntrModPath =
+          TC.getDefaultIntrinsicModuleDir()) {
     CmdArgs.push_back("-fintrinsic-modules-path");
     CmdArgs.push_back(Args.MakeArgString(*IntrModPath));
   }

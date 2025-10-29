@@ -577,8 +577,9 @@ int main(int argc, char **argv) {
   ProgramName programPrefix;
   programPrefix = argv[0] + ": "s;
 
-  if (includeDirs.size() == 0)
+  if (includeDirs.size() == 0) {
     includeDirs.push_back(".");
+  }
 
   Fortran::parser::Options options;
   options.predefinitions.emplace_back("__flang__"s, "1"s);

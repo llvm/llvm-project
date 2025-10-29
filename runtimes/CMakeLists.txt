@@ -136,7 +136,6 @@ if (LLVM_LIBRARY_OUTPUT_INTDIR AND LLVM_RUNTIME_OUTPUT_INTDIR AND PACKAGE_VERSIO
 endif()
 
 
-
 # Determine whether we are in the runtimes/runtimes-bins directory of a
 # bootstrap build.
 set(LLVM_TREE_AVAILABLE OFF)
@@ -415,9 +414,6 @@ macro (flang_module_fortran_enable)
       # The primary situation we want to support here is Flang or its intrinsic modules were built separately in a non-bootstrapping build.
       cmake_push_check_state(RESET)
       set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
-      #set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ")
-      message("CMAKE_Fortran_FLAGS: ${CMAKE_Fortran_FLAGS}")
-      message("CMAKE_REQUIRED_FLAGS: ${CMAKE_REQUIRED_FLAGS}")
       check_fortran_source_compiles("
         subroutine testroutine
           use iso_c_binding
@@ -449,8 +445,6 @@ macro (flang_module_fortran_enable)
     endif ()
     cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
     cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
-    message("RUNTIMES_OUTPUT_RESOURCE_MOD_DIR: ${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}")
-    message("RUNTIMES_INSTALL_RESOURCE_MOD_PATH: ${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}")
 
     # Avoid module files to be installed multiple times if this macro is called multiple times
     get_property(is_installed GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED)

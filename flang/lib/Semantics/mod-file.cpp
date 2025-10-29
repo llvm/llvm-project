@@ -1540,13 +1540,9 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
         sourceFile->path());
     return nullptr;
   } else if (requiredHash && *requiredHash != *checkSum) {
-    std::string s;
-    llvm::raw_string_ostream OS(s);
-    OS << "'"s + name.ToString() + "': "s + sourceFile->path();
-    OS << " Expected: " << llvm::format_hex(*requiredHash, 8)
-       << " Actual: " << llvm::format_hex(*checkSum, 8);
     Say("use", name, ancestorName,
-        "File is not the right module file for %s"_err_en_US, OS.str());
+        "File is not the right module file for %s"_err_en_US,
+        "'"s + name.ToString() + "': "s + sourceFile->path());
     return nullptr;
   }
   llvm::raw_null_ostream NullStream;

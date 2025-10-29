@@ -6532,6 +6532,7 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   if (llvm::sys::fs::exists(Twine(P)))
     return std::string(P);
 
+  // With Flang, also look for instrinsic modules
   if (IsFlangMode()) {
     if (std::optional<std::string> IntrPath =
             TC.getDefaultIntrinsicModuleDir()) {

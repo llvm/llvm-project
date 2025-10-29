@@ -159,7 +159,7 @@ check_cxx_source_compiles(
 # NOTE: Does not work with Flang and CMake < 3.24
 cmake_push_check_state(RESET)
 set(CMAKE_REQUIRED_FLAGS "-ffree-form")
-set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 check_fortran_source_compiles([[
     subroutine test_quadmath
       real(16) :: var1

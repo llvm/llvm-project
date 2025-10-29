@@ -242,14 +242,20 @@ endif ()
 
 if (NOT WIN32)
   # CMake ignores intrinsic USE dependencies
-  # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES to disable this behavior, unfortunately it does not work with Ninja (https://gitlab.kitware.com/cmake/cmake/-/issues/26803) 
-  # As a workaround, we build those intrinsic modules first such that the main runtime can depend on it.
+  # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
+  # to disable this behavior, unfortunately it does not work with Ninja
+  # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803) 
+  # As a workaround, we build those intrinsic modules first such that the main
+  # runtime can depend on it.
   add_flangrt_library(flang_rt.intrinsics.obj OBJECT
     ${intrinsics_sources}
   )
 
-  # This barrier exists to force all of the intrinsic modules of flang_rt.intrinsics.obj to be built before anything that depends on it.
-  # Without it, CMake/Ninja seem to think that the modules of flang_rt.intrinsics.obj can be built concurrently to those in flang_rt.runtime.
+  # This barrier exists to force all of the intrinsic modules of
+  # flang_rt.intrinsics.obj to be built before anything that depends on it.
+  # Without it, CMake/Ninja seem to think that the modules of
+  # flang_rt.intrinsics.obj can be built concurrently to those in
+  # flang_rt.runtime.
   add_custom_target(flang_rt.intrinsics
     COMMENT "Intrinsic module dependency barrier"
   )
@@ -308,9 +314,8 @@ else()
     endif ()
 
     # Setting an unique Fortran_MODULE_DIRECTORY is required for each variant to
-    # write a different .mod file.
-    # One has to be selected to be the public module that is to be installed.
-    # We select the first.
+    # write a different .mod file. One of them has to be selected to be the
+    # public module that is to be installed. We select the first.
     if (_has_public_intrinsics)
       set(is_public "")
     else ()

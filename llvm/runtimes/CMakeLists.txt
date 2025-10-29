@@ -287,7 +287,6 @@ function(runtime_default_target)
                                                 CUDA CMAKE_CUDA # For runtimes that may look for the CUDA compiler and/or SDK (libc, offload, flang-rt)
                                                 FFI # offload uses libffi
                                                 FLANG_RUNTIME # Shared between Flang and Flang-RT
-                                                LIBOMP
                                                 ${ARG_PREFIXES}
                            EXTRA_TARGETS ${extra_targets}
                                          ${test_targets}
@@ -530,7 +529,6 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-
   # Tools needed by build_symbolizer.sh.
   if("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
     foreach(dep clang llvm-tblgen opt llvm-ar llvm-link)
@@ -539,23 +537,20 @@ if(build_runtimes)
       endif()
     endforeach()
   endif()
-  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
-    list(APPEND extra_args ENABLE_FORTRAN)
-  endif()
-  if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
-    # Ensure REAL(16) support in runtimes to be consistent with compiler
-    if (FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=TRUE")
-   else ()
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=FALSE")
-   endif ()
-  endif ()
   # Allow openmp to see the Fortran compiler
   if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND "flang" IN_LIST LLVM_ENABLE_PROJECTS)
     list(APPEND extra_args ENABLE_FORTRAN)
   endif()
+  if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    # Ensure REAL(16) support in runtimes to be consistent with compiler
+    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=TRUE")
+    else()
+      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=FALSE")
+    endif()
+  endif()
   if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager clang-nvlink-wrapper)
+    foreach(dep opt llvm-link llvm-extract clang llvm-offload-binary clang-nvlink-wrapper)
       if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()

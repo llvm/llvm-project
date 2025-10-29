@@ -2,11 +2,31 @@
 # for use by Lit, and delegates to LLVM's lit test handlers.
 add_subdirectory(lib)
 
+set(FLANG_TEST_Fortran_FLAGS "" CACHE STRING "Additional Fortran flags for running tests, such as -fintrinsic-modules-path=<path>")
+
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(FLANG_TEST_ENABLE_INTRINSICS_default ON)
+else ()
+  set(FLANG_TEST_ENABLE_INTRINSICS_default OFF)
+endif ()
+option(FLANG_TEST_ENABLE_INTRINSICS "Force-enable tests that require intrinsic modules from Flang-RT" "${FLANG_TEST_ENABLE_INTRINSICS_default}")
+
+
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND FLANG_TEST_ENABLE_INTRINSICS AND NOT FLANG_STANDALONE_BUILD)
+  set(FLANG_TEST_ENABLE_OPENMP_default ON)
+else ()
+  set(FLANG_TEST_ENABLE_OPENMP_default OFF)
+endif ()
+option(FLANG_TEST_ENABLE_OPENMP "Force-enable tests that require modules from OpenMP" "${FLANG_TEST_ENABLE_OPENMP_default}")
+
+
 llvm_canonicalize_cmake_booleans(
   FLANG_STANDALONE_BUILD
   LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
+  FLANG_TEST_ENABLE_INTRINSICS
+  FLANG_TEST_ENABLE_OPENMP
 )
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)

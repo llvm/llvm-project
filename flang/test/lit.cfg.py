@@ -144,10 +144,12 @@ flang_exe = lit.util.which("flang", config.flang_llvm_tools_dir)
 if not flang_exe:
     lit_config.fatal(f"Could not identify flang executable")
 
+# Intrinsic paths that are added implicitly by the `flang` driver, but have to be added manually when invoking the frontend `flang -fc1`.
+intrinsics_search_args = []
 
-print(f"{config.flang_test_fortran_flags=}")
-print(f"{config.flang_test_enable_intrinsics=}")
-print(f"{config.flang_test_enable_openmp=}")
+# Intrinsic paths that are added to `flang` as well as `flang -fc1`.
+extra_intrinsics_search_args = list(config.flang_test_fortran_flags) 
+
 
 def get_resource_module_intrinsic_dir(modfile):
     # Determine the intrinsic module search path that is added by the driver. If
@@ -156,77 +158,40 @@ def get_resource_module_intrinsic_dir(modfile):
     flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
     return flang_intrinsics_dir or None
 
-
-
-
-intrinsics_search_args = []
-extra_intrinsics_search_args = config.flang_test_fortran_flags + ["-I", f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src"] # FIXME:
-
 intrinsics_mod_path = get_resource_module_intrinsic_dir("__fortran_builtins.mod")
+if intrinsics_mod_path:
+    intrinsics_search_args += [f"-fintrinsic-modules-path={intrinsics_mod_path}"]
+
 openmp_mod_path = get_resource_module_intrinsic_dir("omp_lib.mod")
-openmp_inc_path = get_resource_module_intrinsic_dir("omp_lib.h")
-print(f"{intrinsics_mod_path=}")
-print(f"{openmp_mod_path=}")
-print(f"{openmp_inc_path=}")
-if mod_path := intrinsics_mod_path or openmp_mod_path:
-    intrinsics_search_args += [f"-fintrinsic-modules-path={mod_path}"]
-    lit_config.note(f"using flang default module intrinsics: {mod_path}")
-
-
-if extra_intrinsics_search_args:
-    lit_config.note(f"using flang extra arguments: {' '.join(extra_intrinsics_search_args)}")
-
-
-
-#if config.flang_intrinsic_modules_dir:
-#    extra_intrinsics_search_args += [f"-fintrinsic-modules-path={config.flang_intrinsic_modules_dir}"]
-#    lit_config.note(f"using extra module intrinsics: {config.flang_intrinsic_modules_dir}")
+if openmp_mod_path and openmp_mod_path != intrinsics_mod_path:
+    intrinsics_search_args += [f"-fintrinsic-modules-path={openmp_mod_path}"]
 
 
 # If intrinsic modules are not available, disable tests unless they are marked as 'module-independent'.
 config.available_features.add("module-independent")
-if config.flang_test_enable_intrinsics:
+if config.flang_test_enable_intrinsics or intrinsics_mod_path:
     config.available_features.add("flangrt-modules")
 else:
-    lit_config.warning(f"Intrinsic modules not available and not in default path: disabling most tests")
+    lit_config.warning(f"Intrinsic modules not in driver default paths: disabling most tests; Use FLANG_TEST_ENABLE_INTRINSICS=ON to force-enable")
     config.limit_to_features.add("module-independent")
 
-
-
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
-openmp_flags_substitution = "-fopenmp"
-if config.flang_test_enable_openmp:
+if config.flang_test_enable_openmp or openmp_mod_path:
     config.available_features.add("openmp_runtime")
-    lit_config.note(f"OpenMP tests enabled")
+
+    # Search path for omp_lib.h with LLVM_ENABLE_RUNTIMES=openmp
+    # FIXME: Do not hardcode, openmp should write this into the resource directory
+    extra_intrinsics_search_args += ["-I", f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src"] 
 else:
-    lit_config.warning(f"OpenMP tests disabled: FLANG_TEST_ENABLE_OPENMP option no set and omp_lib.mod not in resource path")
+    lit_config.warning(f"OpenMP modules found not in driver default paths: OpenMP tests disabled: Use FLANG_TEST_ENABLE_OPENMP=ON to force-enable")
 
 
-
-#if 'flangrt-modules' not in config.available_features:
-#    # OpenMP modules depend on Flang-RT modules
-#    pass
-#elif not config.have_openmp_rtl:
-#    lit_config.warning(f"OpenMP runtime library not available: OpenMP tests disabled")
-#elif not config.openmp_module_dir:
-#    lit_config.warning(f"OpenMP modules not available: OpenMP tests disabled")
-#elif openmp_mod_path:
-#    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
-#    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
-#    # project or runtime. If not in the compiler resources module directory like the other intrinsic modules, we must add it to the path.
-#    config.available_features.add("openmp_runtime")
-#    extra_intrinsics_search_args += [
-#        f"-fintrinsic-modules-path={config.openmp_module_dir}"
-#    ]
-#    lit_config.note(f"using OpenMP modules: {config.openmp_module_dir}")
-
-
-
+lit_config.note(f"using flang: {flang_exe}")
+lit_config.note(f"using flang implicit search paths: {' '.join(intrinsics_search_args)}")
+lit_config.note(f"using flang extra search paths: {' '.join(extra_intrinsics_search_args)}")
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
-flang_tool = FindTool("flang")
-#lit_config.note(f"using flang: {flang_tool.command}")
 tools = [
     ToolSubst(
         "bbc",
@@ -236,24 +201,23 @@ tools = [
     ),
     ToolSubst(
         "%flang",
-        command=flang_tool,
+        command=flang_exe,
         extra_args=extra_intrinsics_search_args,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
-        command=flang_tool,
+        command=flang_exe,
         extra_args=["-fc1"] + intrinsics_search_args + extra_intrinsics_search_args,
         unresolved="fatal",
     ),
-    # Do not implicitly add intrinsic search paths
+    # Variant that does not implicitly add intrinsic search paths
     ToolSubst(
         "%bbc_bare",
         command=FindTool("bbc"),
         unresolved="fatal",
     ),
 ]
-
 
 # Flang has several unimplemented features. TODO messages are used to mark
 # and fail if these features are exercised. Some TODOs exit with a non-zero
@@ -293,8 +257,7 @@ result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
 
-
-config.substitutions.append(("%openmp_flags", openmp_flags_substitution))
+config.substitutions.append(("%openmp_flags", "-fopenmp"))
 
 # Add features and substitutions to test F128 math support.
 # %f128-lib substitution may be used to generate check prefixes
