@@ -647,7 +647,9 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         const unsigned OpCode = MI.getOpcode();
         if (OpCode == SPIRV::OpString) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
-        } else if ((OpCode == SPIRV::OpExtInst|| OpCode == SPIRV::OpExtInstWithForwardRefsKHR) && MI.getOperand(2).isImm() &&
+        } else if ((OpCode == SPIRV::OpExtInst ||
+                    OpCode == SPIRV::OpExtInstWithForwardRefsKHR) &&
+                   MI.getOperand(2).isImm() &&
                    MI.getOperand(2).getImm() ==
                        SPIRV::InstructionSet::
                            NonSemantic_Shader_DebugInfo_100) {
