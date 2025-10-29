@@ -150,14 +150,14 @@ private:
     if (!CurrentToken)
       return false;
 
-    auto *Left = CurrentToken->Previous; // The '<'.
+    auto *const Left = CurrentToken->Previous; // The '<'.
     if (!Left)
       return false;
 
     if (NonTemplateLess.count(Left) > 0)
       return false;
 
-    const auto *BeforeLess = Left->Previous;
+    const auto *const BeforeLess = Left->Previous;
 
     if (BeforeLess) {
       if (BeforeLess->Tok.isLiteral())
@@ -206,8 +206,18 @@ private:
               (!Next || Next->isNoneOf(tok::l_paren, tok::l_brace))) {
             return false;
           }
-          if (!MaybeAngles)
-            return false;
+          if (!MaybeAngles) {
+            const bool IsCommonCppTemplate =
+                (BeforeLess && BeforeLess->is(tok::identifier) &&
+                 (BeforeLess->TokenText.ends_with("_t") ||
+                  BeforeLess->TokenText.ends_with("_v"))) ||
+                (Next &&
+                 Next->startsSequence(tok::coloncolon, tok::identifier) &&
+                 (Next->Next->TokenText == "type" ||
+                  Next->Next->TokenText == "value"));
+            if (!IsCommonCppTemplate)
+              return false;
+          }
         }
         Left->MatchingParen = CurrentToken;
         CurrentToken->MatchingParen = Left;
