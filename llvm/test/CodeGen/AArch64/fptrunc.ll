@@ -345,19 +345,11 @@ entry:
 }
 
 define <2 x half> @fptrunc_v2f32_v2f16(<2 x float> %a) {
-; CHECK-SD-LABEL: fptrunc_v2f32_v2f16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fptrunc_v2f32_v2f16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
-; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fptrunc_v2f32_v2f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %c = fptrunc <2 x float> %a to <2 x half>
   ret <2 x half> %c
