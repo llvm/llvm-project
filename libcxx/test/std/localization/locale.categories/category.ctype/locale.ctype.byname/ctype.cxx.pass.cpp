@@ -11,6 +11,8 @@
 #include <cwctype>
 #include <cassert>
 
+#include "test_macros.h"
+
 // This test makes sure that various macro defined on z/OS in
 // <ctype.h> and <cwtype.h> which previously were in conflict
 // with functions defined in libc++ <locale_base_api.h> still
