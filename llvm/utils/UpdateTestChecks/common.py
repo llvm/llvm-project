@@ -1910,7 +1910,7 @@ def generalize_check_lines(
             if ignore_all_comments:
                 # Ignore any comments, since the check lines will too.
                 scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
-            else:     
+            else:
                 # Ignore comments of predecessors only.
                 scrubbed_line = SCRUB_PRED_COMMENT_RE.sub(r"", line)
             # Ignore the metadata details if check global is none
