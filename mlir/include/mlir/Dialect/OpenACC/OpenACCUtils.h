@@ -38,6 +38,11 @@ std::optional<ClauseDefaultValue> getDefaultAttr(mlir::Operation *op);
 /// Get the type category of an OpenACC variable.
 mlir::acc::VariableTypeCategory getTypeCategory(mlir::Value var);
 
+/// Attempts to extract the variable name from a value by walking through
+/// view-like operations until an `acc.var_name` attribute is found. Returns
+/// empty string if no name is found.
+std::string getVariableName(mlir::Value v);
+
 } // namespace acc
 } // namespace mlir
 

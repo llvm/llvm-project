@@ -30,6 +30,10 @@ EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
                                             _Unwind_Personality_Fn);
 #endif
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 #if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
 
