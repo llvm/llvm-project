@@ -1,5 +1,5 @@
 ## Tests stale block matching with pseudo probes.
-# XFAIL: *
+
 # REQUIRES: system-linux
 # RUN: split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
@@ -55,7 +55,7 @@ functions:
         hash:            0xFFFFFFFFFFFFFFF1
         insns:           1
         succ:            [ { bid: 3, cnt: 1} ]
-        probes:          [ { blx: 1 } ]
+        probes:          [ { blk: [ 1 ] } ]
     inline_tree:         [ { g: 0 } ]
 pseudo_probe_desc:
   gs:              [ 0xDB956436E78DD5FA ]
