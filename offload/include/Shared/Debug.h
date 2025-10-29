@@ -227,12 +227,23 @@ inline uint32_t getDebugLevel() {
 // [integer]|all|<type1>[:<level1>][,<type2>[:<level2>],...]
 //
 // 0 : Disable all debug messages
-// all : Enable all debug messages
+// all : Enable all level 1 debug messages
 // integer : Set the default level for all messages
 // <type> : Enable only messages of the specified type and level (more than one
 //          can be specified). Components are also supported as
 //          types.
 // <level> : Set the verbosity level for the specified type (default is 1)
+//
+// Some examples:
+// LIBOFFLOAD_DEBUG=1  (Print all messages of level 1 or lower)
+// LIBOFFLOAD_DEBUG=5  (Print all messages of level 5 or lower)
+// LIBOFFLOAD_DEBUG=init (Print messages of type "init" of level 1 or lower)
+// LIBOFFLOAD_DEBUG=init:3,mapping:2 (Print messages of type "init" of level 3
+//                                   or lower and messages of type "mapping" of
+//                                   level 2 or lower)
+// LIBOFFLOAD_DEBUG=omptarget:4, init (Print messages from component "omptarget" of
+//                                   level 4 or lower and messages of type
+//                                   "init" of level 1 or lower)
 //
 // For very specific cases where more control is needed, use OFFLOAD_DEBUG_RAW
 // or OFFLOAD_DEBUG_BASE. See below for details.
