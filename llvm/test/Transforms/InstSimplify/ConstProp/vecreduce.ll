@@ -137,10 +137,26 @@ define i32 @mul_1() {
 
 define i32 @mul_1_scalable_vector() {
 ; CHECK-LABEL: @mul_1_scalable_vector(
-; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 1))
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 1
 ;
   %x = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 1))
+  ret i32 %x
+}
+
+define i32 @mul_2() {
+; CHECK-LABEL: @mul_2(
+; CHECK-NEXT:    ret i32 256
+;
+  %x = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>)
+  ret i32 %x
+}
+
+define i32 @mul_2_scalable_vector() {
+; CHECK-LABEL: @mul_2_scalable_vector(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 2))
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = call i32 @llvm.vector.reduce.mul.nxv8i32(<vscale x 8 x i32> splat (i32 2))
   ret i32 %x
 }
 

@@ -2166,7 +2166,7 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   auto *OpVT = cast<VectorType>(Op->getType());
 
   // This is the same as the underlying binops - poison propagates.
-  if (isa<PoisonValue>(Op) || Op->containsPoisonElement())
+  if (Op->containsPoisonElement())
     return PoisonValue::get(OpVT->getElementType());
 
   // Shortcut non-accumulating reductions.
@@ -2180,12 +2180,15 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
     case Intrinsic::vector_reduce_umax:
       return SplatVal;
     case Intrinsic::vector_reduce_add:
+      if (SplatVal->isNullValue())
+        return SplatVal;
+      break;
     case Intrinsic::vector_reduce_mul:
-      if (SplatVal->isZeroValue())
+      if (SplatVal->isNullValue() || SplatVal->isOneValue())
         return SplatVal;
       break;
     case Intrinsic::vector_reduce_xor:
-      if (SplatVal->isZeroValue())
+      if (SplatVal->isNullValue())
         return SplatVal;
       if (OpVT->getElementCount().isKnownMultipleOf(2))
         return Constant::getNullValue(OpVT->getElementType());
