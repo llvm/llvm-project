@@ -18369,8 +18369,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
     }
   }
 
-  using namespace SDPatternMatch;
-  SDValue X, Y, Cst;
+  SDValue X, Y;
 
   // (fma 1.0, X, Y) or (fma X, 1.0, Y) -> (fadd X, Y)
   SDValue C1 = DAG.getConstantFP(1.0, DL, VT);
