@@ -279,9 +279,10 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
     // The code below annotates the "llvm.loop.vectorize.enable" to false
     // for the code flow taken when RTCs fail. Because we don't want the
     // Loop Vectorizer to come in later and vectorize the original fall back
-    // loop when Polly is enabled. This also prevent's multiple loop versions
-    // created by Polly with Loop Vectorizer. Also don't do this when Polly's
-    // RTC value is false, as we are left with only one version of Loop.
+    // loop when Polly is enabled. This avoids loop versioning on fallback
+    // loop by Loop Vectorizer. Don't do this when Polly's RTC value is
+    // false (due to code generation failure), as we are left with only one
+    // version of Loop.
     if (!(CI && CI->isZero())) {
       for (Loop *L : LI.getLoopsInPreorder()) {
         if (S.contains(L))
