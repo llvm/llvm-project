@@ -205,9 +205,7 @@ PreservedAnalyses PhiValuesPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-PhiValuesWrapperPass::PhiValuesWrapperPass() : FunctionPass(ID) {
-  initializePhiValuesWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+PhiValuesWrapperPass::PhiValuesWrapperPass() : FunctionPass(ID) {}
 
 bool PhiValuesWrapperPass::runOnFunction(Function &F) {
   Result.reset(new PhiValues(F));

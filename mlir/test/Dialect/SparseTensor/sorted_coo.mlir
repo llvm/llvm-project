@@ -101,7 +101,7 @@ func.func @sparse_scale(%argx: tensor<?x?xf32, #SortedCOO>) -> tensor<?x?xf32, #
 // C_HECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
 // C_HECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
 // C_HECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// C_HECK:           %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
+// C_HECK:           %[[VAL_10:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<32xf64> to memref<32xf64>
 // C_HECK:           %[[VAL_11:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_4]]] : memref<?xindex>
 // C_HECK:           %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // C_HECK:           %[[VAL_13:.*]] = scf.while (%[[VAL_14:.*]] = %[[VAL_11]]) : (index) -> index {
@@ -170,7 +170,7 @@ func.func @matvec(%arga: tensor<32x64xf64, #SortedCOO>,
 // C_HECK-DAG:       %[[VAL_12:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 0 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
 // C_HECK-DAG:       %[[VAL_13:.*]] = sparse_tensor.coordinates %[[VAL_1]] {level = 1 : index} : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xindex, strided<[?], offset: ?>>
 // C_HECK-DAG:       %[[VAL_14:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x64xf64, #sparse{{[0-9]*}}> to memref<?xf64>
-// C_HECK:           %[[VAL_15:.*]] = bufferization.to_memref %[[VAL_2]] : tensor<32x64xf64> to memref<32x64xf64>
+// C_HECK:           %[[VAL_15:.*]] = bufferization.to_buffer %[[VAL_2]] : tensor<32x64xf64> to memref<32x64xf64>
 // C_HECK:           linalg.fill ins(%[[VAL_4]] : f64) outs(%[[VAL_15]] : memref<32x64xf64>)
 // C_HECK:           %[[VAL_16:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_5]]] : memref<?xindex>
 // C_HECK:           %[[VAL_17:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_6]]] : memref<?xindex>

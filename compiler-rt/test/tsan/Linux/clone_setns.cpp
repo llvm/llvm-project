@@ -2,7 +2,7 @@
 
 // The test models how sandbox2 unshares user namespace after clone:
 // https://github.com/google/sandboxed-api/blob/c95837a6c131fbdf820db352a97d54fcbcbde6c0/sandboxed_api/sandbox2/forkserver.cc#L249
-// which works only in sigle-threaded processes.
+// which works only in single-threaded processes.
 
 #include "../test.h"
 #include <errno.h>

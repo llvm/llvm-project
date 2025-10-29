@@ -213,30 +213,6 @@ public:
 
   typedef void (*StopPointSiteSPMapFunc)(StopPointSite &site, void *baton);
 
-  /// Enquires of the site on in this list with ID \a site_id
-  /// whether we should stop for the constituent or not.
-  ///
-  /// \param[in] context
-  ///    This contains the information about this stop.
-  ///
-  /// \param[in] site_id
-  ///    This site ID that we hit.
-  ///
-  /// \return
-  ///    \b true if we should stop, \b false otherwise.
-  bool ShouldStop(StoppointCallbackContext *context,
-                  typename StopPointSite::SiteID site_id) {
-    if (StopPointSiteSP site_sp = FindByID(site_id)) {
-      // Let the site decide if it should stop here (could not have
-      // reached it's target hit count yet, or it could have a callback that
-      // decided it shouldn't stop (shared library loads/unloads).
-      return site_sp->ShouldStop(context);
-    }
-    // We should stop here since this site isn't valid anymore or it
-    // doesn't exist.
-    return true;
-  }
-
   /// Returns the number of elements in the list.
   ///
   /// \result
@@ -278,9 +254,8 @@ protected:
         [site_id](const std::pair<lldb::addr_t, StopPointSiteSP> s) {
           return site_id == s.second->GetID();
         };
-    return std::find_if(m_site_list.begin(),
-                        m_site_list.end(), // Search full range
-                        id_matches);
+    return llvm::find_if(m_site_list, // Search full range
+                         id_matches);
   }
 
   typename collection::const_iterator
@@ -290,9 +265,8 @@ protected:
         [site_id](const std::pair<lldb::addr_t, StopPointSiteSP> s) {
           return site_id == s.second->GetID();
         };
-    return std::find_if(m_site_list.begin(),
-                        m_site_list.end(), // Search full range
-                        id_matches);
+    return llvm::find_if(m_site_list, // Search full range
+                         id_matches);
   }
 
   mutable std::recursive_mutex m_mutex;

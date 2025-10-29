@@ -72,7 +72,7 @@ template <input_or_output_iterator _Iter,
           sentinel_for<_Iter> _Sent = _Iter,
           subrange_kind _Kind       = sized_sentinel_for<_Sent, _Iter> ? subrange_kind::sized : subrange_kind::unsized>
   requires(_Kind == subrange_kind::sized || !sized_sentinel_for<_Sent, _Iter>)
-class _LIBCPP_TEMPLATE_VIS subrange : public view_interface<subrange<_Iter, _Sent, _Kind>> {
+class subrange : public view_interface<subrange<_Iter, _Sent, _Kind>> {
 public:
   // Note: this is an internal implementation detail that is public only for internal usage.
   static constexpr bool _StoreSize = (_Kind == subrange_kind::sized && !sized_sentinel_for<_Sent, _Iter>);

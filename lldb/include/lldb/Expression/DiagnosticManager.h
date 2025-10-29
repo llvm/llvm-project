@@ -107,7 +107,8 @@ public:
     m_fixed_expression.clear();
   }
 
-  const DiagnosticList &Diagnostics() { return m_diagnostics; }
+  const DiagnosticList &Diagnostics() const { return m_diagnostics; }
+  DiagnosticList &Diagnostics() { return m_diagnostics; }
 
   bool HasFixIts() const {
     return llvm::any_of(m_diagnostics,

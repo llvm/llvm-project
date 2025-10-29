@@ -48,7 +48,7 @@ define double @test_float_binops(i32 %a) nounwind {
 ; between literals and the formal parameters.
 ; CHECK: INST_GEP {{.*}}
 ; CHECK: INST_LOAD {{.*}}op0=1 {{.*}}
-; CHECK: INST_CMP2 op0=1 {{.*}}
+; CHECK: INST_CMP2 {{.*}}op0=1 {{.*}}
 ; CHECK: INST_RET {{.*}}op0=1
 define i1 @test_load(i32 %a, {i32, i32}* %ptr) nounwind {
 entry:

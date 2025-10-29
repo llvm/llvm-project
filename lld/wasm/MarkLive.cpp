@@ -114,8 +114,8 @@ void MarkLive::run() {
     if (sym->isNoStrip() || sym->isExported())
       enqueue(sym);
 
-  if (WasmSym::callDtors)
-    enqueue(WasmSym::callDtors);
+  if (ctx.sym.callDtors)
+    enqueue(ctx.sym.callDtors);
 
   for (const ObjFile *obj : ctx.objectFiles)
     if (obj->isLive()) {
@@ -131,7 +131,7 @@ void MarkLive::run() {
   // If we have any non-discarded init functions, mark `__wasm_call_ctors` as
   // live so that we assign it an index and call it.
   if (isCallCtorsLive())
-    WasmSym::callCtors->markLive();
+    ctx.sym.callCtors->markLive();
 }
 
 void MarkLive::mark() {

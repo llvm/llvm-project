@@ -13,6 +13,7 @@
 
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
+#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
@@ -45,11 +46,10 @@ using llvm::SMLoc;
 using llvm::StringMap;
 using llvm::StringRef;
 using mlir::tblgen::Attribute;
-using mlir::tblgen::EnumAttr;
-using mlir::tblgen::EnumAttrCase;
+using mlir::tblgen::EnumCase;
+using mlir::tblgen::EnumInfo;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
-using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -114,13 +114,12 @@ Availability::Availability(const Record *def) : def(def) {
 }
 
 StringRef Availability::getClass() const {
-  SmallVector<const Record *, 1> parentClass;
-  def->getDirectSuperClasses(parentClass);
-  if (parentClass.size() != 1) {
+  if (def->getDirectSuperClasses().size() != 1) {
     PrintFatalError(def->getLoc(),
                     "expected to only have one direct superclass");
   }
-  return parentClass.front()->getName();
+  const Record *parentClass = def->getDirectSuperClasses().front().first;
+  return parentClass->getName();
 }
 
 StringRef Availability::getInterfaceClassNamespace() const {
@@ -204,18 +203,17 @@ static bool emitInterfaceDefs(const RecordKeeper &records, raw_ostream &os) {
   auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 1> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<const Record *, 1> parent;
-    def->getDirectSuperClasses(parent);
-    if (parent.size() != 1) {
+    if (def->getDirectSuperClasses().size() != 1) {
       PrintFatalError(def->getLoc(),
                       "expected to only have one direct superclass");
     }
-    if (llvm::is_contained(handledClasses, parent.front()))
+    const Record *parent = def->getDirectSuperClasses().front().first;
+    if (llvm::is_contained(handledClasses, parent))
       continue;
 
     Availability availability(def);
     emitInterfaceDef(availability, os);
-    handledClasses.push_back(parent.front());
+    handledClasses.push_back(parent);
   }
   return false;
 }
@@ -261,8 +259,8 @@ static void emitInterfaceDecl(const Availability &availability,
   std::string interfaceTraitsName =
       std::string(formatv("{0}Traits", interfaceName));
 
-  StringRef cppNamespace = availability.getInterfaceClassNamespace();
-  NamespaceEmitter nsEmitter(os, cppNamespace);
+  llvm::NamespaceEmitter nsEmitter(os,
+                                   availability.getInterfaceClassNamespace());
   os << "class " << interfaceName << ";\n\n";
 
   // Emit the traits struct containing the concept and model declarations.
@@ -293,18 +291,17 @@ static bool emitInterfaceDecls(const RecordKeeper &records, raw_ostream &os) {
   auto defs = records.getAllDerivedDefinitions("Availability");
   SmallVector<const Record *, 4> handledClasses;
   for (const Record *def : defs) {
-    SmallVector<const Record *, 1> parent;
-    def->getDirectSuperClasses(parent);
-    if (parent.size() != 1) {
+    if (def->getDirectSuperClasses().size() != 1) {
       PrintFatalError(def->getLoc(),
                       "expected to only have one direct superclass");
     }
-    if (llvm::is_contained(handledClasses, parent.front()))
+    const Record *parent = def->getDirectSuperClasses().front().first;
+    if (llvm::is_contained(handledClasses, parent))
       continue;
 
     Availability avail(def);
     emitInterfaceDecl(avail, os);
-    handledClasses.push_back(parent.front());
+    handledClasses.push_back(parent);
   }
   return false;
 }
@@ -335,18 +332,18 @@ static mlir::GenRegistration
 
 static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
                                             raw_ostream &os) {
-  EnumAttr enumAttr(enumDef);
-  StringRef enumName = enumAttr.getEnumClassName();
-  std::vector<EnumAttrCase> enumerants = enumAttr.getAllCases();
+  EnumInfo enumInfo(enumDef);
+  StringRef enumName = enumInfo.getEnumClassName();
+  std::vector<EnumCase> enumerants = enumInfo.getAllCases();
 
   // Mapping from availability class name to (enumerant, availability
   // specification) pairs.
-  llvm::StringMap<llvm::SmallVector<std::pair<EnumAttrCase, Availability>, 1>>
+  llvm::StringMap<llvm::SmallVector<std::pair<EnumCase, Availability>, 1>>
       classCaseMap;
 
   // Place all availability specifications to their corresponding
   // availability classes.
-  for (const EnumAttrCase &enumerant : enumerants)
+  for (const EnumCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef()))
       classCaseMap[avail.getClass()].push_back({enumerant, avail});
 
@@ -359,14 +356,14 @@ static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
 
     os << "  switch (value) {\n";
     for (const auto &caseSpecPair : classCasePair.getValue()) {
-      EnumAttrCase enumerant = caseSpecPair.first;
+      EnumCase enumerant = caseSpecPair.first;
       Availability avail = caseSpecPair.second;
       os << formatv("  case {0}::{1}: { {2} return {3}({4}); }\n", enumName,
                     enumerant.getSymbol(), avail.getMergeInstancePreparation(),
                     avail.getMergeInstanceType(), avail.getMergeInstance());
     }
     // Only emit default if uncovered cases.
-    if (classCasePair.getValue().size() < enumAttr.getAllCases().size())
+    if (classCasePair.getValue().size() < enumInfo.getAllCases().size())
       os << "  default: break;\n";
     os << "  }\n"
        << "  return std::nullopt;\n"
@@ -376,19 +373,19 @@ static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
 
 static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                                             raw_ostream &os) {
-  EnumAttr enumAttr(enumDef);
-  StringRef enumName = enumAttr.getEnumClassName();
-  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
-  std::vector<EnumAttrCase> enumerants = enumAttr.getAllCases();
+  EnumInfo enumInfo(enumDef);
+  StringRef enumName = enumInfo.getEnumClassName();
+  std::string underlyingType = std::string(enumInfo.getUnderlyingType());
+  std::vector<EnumCase> enumerants = enumInfo.getAllCases();
 
   // Mapping from availability class name to (enumerant, availability
   // specification) pairs.
-  llvm::StringMap<llvm::SmallVector<std::pair<EnumAttrCase, Availability>, 1>>
+  llvm::StringMap<llvm::SmallVector<std::pair<EnumCase, Availability>, 1>>
       classCaseMap;
 
   // Place all availability specifications to their corresponding
   // availability classes.
-  for (const EnumAttrCase &enumerant : enumerants)
+  for (const EnumCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef()))
       classCaseMap[avail.getClass()].push_back({enumerant, avail});
 
@@ -399,14 +396,13 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                   avail.getMergeInstanceType(), avail.getQueryFnName(),
                   enumName);
 
-    os << formatv(
-        "  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
-        " && \"cannot have more than one bit set\");\n",
-        underlyingType);
+    os << formatv("  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
+                  " && \"cannot have more than one bit set\");\n",
+                  underlyingType);
 
     os << "  switch (value) {\n";
     for (const auto &caseSpecPair : classCasePair.getValue()) {
-      EnumAttrCase enumerant = caseSpecPair.first;
+      EnumCase enumerant = caseSpecPair.first;
       Availability avail = caseSpecPair.second;
       os << formatv("  case {0}::{1}: { {2} return {3}({4}); }\n", enumName,
                     enumerant.getSymbol(), avail.getMergeInstancePreparation(),
@@ -420,22 +416,16 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
 }
 
 static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
-  EnumAttr enumAttr(enumDef);
-  StringRef enumName = enumAttr.getEnumClassName();
-  StringRef cppNamespace = enumAttr.getCppNamespace();
-  auto enumerants = enumAttr.getAllCases();
+  EnumInfo enumInfo(enumDef);
+  StringRef enumName = enumInfo.getEnumClassName();
+  auto enumerants = enumInfo.getAllCases();
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
   llvm::StringSet<> handledClasses;
 
   // Place all availability specifications to their corresponding
   // availability classes.
-  for (const EnumAttrCase &enumerant : enumerants)
+  for (const EnumCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef())) {
       StringRef className = avail.getClass();
       if (handledClasses.count(className))
@@ -445,16 +435,13 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
                     enumName);
       handledClasses.insert(className);
     }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Declarations", os,
                              records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumInfo");
   for (const auto *def : defs)
     emitEnumDecl(*def, os);
 
@@ -462,32 +449,20 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 }
 
 static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
-  EnumAttr enumAttr(enumDef);
-  StringRef cppNamespace = enumAttr.getCppNamespace();
+  EnumInfo enumInfo(enumDef);
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
-  if (enumAttr.isBitEnum()) {
+  if (enumInfo.isBitEnum())
     emitAvailabilityQueryForBitEnum(enumDef, os);
-  } else {
+  else
     emitAvailabilityQueryForIntEnum(enumDef, os);
-  }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
-  os << "\n";
 }
 
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
                              records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
-  for (const auto *def : defs)
+  for (const Record *def : records.getAllDerivedDefinitions("EnumInfo"))
     emitEnumDef(*def, os);
 
   return false;
@@ -535,7 +510,7 @@ static void emitAttributeSerialization(const Attribute &attr,
   os << tabs
      << formatv("if (auto attr = {0}->getAttr(\"{1}\")) {{\n", opVar, attrName);
   if (llvm::is_contained(constantIdEnumAttrs, attr.getAttrDefName())) {
-    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
+    EnumInfo baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
        << formatv("  {0}.push_back(prepareConstantInt({1}.getLoc(), "
                   "Builder({1}).getI32IntegerAttr(static_cast<uint32_t>("
@@ -544,7 +519,7 @@ static void emitAttributeSerialization(const Attribute &attr,
                   baseEnum.getEnumClassName());
   } else if (attr.isSubClassOf("SPIRV_BitEnumAttr") ||
              attr.isSubClassOf("SPIRV_I32EnumAttr")) {
-    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
+    EnumInfo baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
        << formatv("  {0}.push_back(static_cast<uint32_t>("
                   "::llvm::cast<{1}::{2}Attr>(attr).getValue()));\n",
@@ -831,7 +806,7 @@ static void emitAttributeDeserialization(const Attribute &attr,
                                          StringRef words, StringRef wordIndex,
                                          raw_ostream &os) {
   if (llvm::is_contained(constantIdEnumAttrs, attr.getAttrDefName())) {
-    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
+    EnumInfo baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "opBuilder.getAttr<{2}::{3}Attr>(static_cast<{2}::{3}>("
@@ -840,7 +815,7 @@ static void emitAttributeDeserialization(const Attribute &attr,
                   baseEnum.getEnumClassName(), words, wordIndex);
   } else if (attr.isSubClassOf("SPIRV_BitEnumAttr") ||
              attr.isSubClassOf("SPIRV_I32EnumAttr")) {
-    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
+    EnumInfo baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
        << formatv("  {0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "opBuilder.getAttr<{2}::{3}Attr>("
@@ -935,7 +910,8 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   // Process operands/attributes
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto *valueArg = llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
+    if (auto *valueArg =
+            llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(
@@ -1046,7 +1022,7 @@ static void emitDeserializationFunction(const Record *attrClass,
   emitDecorationDeserialization(op, "  ", valueID, attributes, os);
 
   os << formatv("  Location loc = createFileLineColLoc(opBuilder);\n");
-  os << formatv("  auto {1} = opBuilder.create<{0}>(loc, {2}, {3}, {4}); "
+  os << formatv("  auto {1} = {0}::create(opBuilder, loc, {2}, {3}, {4}); "
                 "(void){1};\n",
                 op.getQualCppClassName(), opVar, resultTypes, operands,
                 attributes);
@@ -1182,8 +1158,7 @@ static bool emitSerializationFns(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Serialization Utilities/Functions", os,
                              records);
 
-  std::string dSerFnString, dDesFnString, serFnString, deserFnString,
-      utilsString;
+  std::string dSerFnString, dDesFnString, serFnString, deserFnString;
   raw_string_ostream dSerFn(dSerFnString), dDesFn(dDesFnString),
       serFn(serFnString), deserFn(deserFnString);
   const Record *attrClass = records.getClass("Attr");
@@ -1246,9 +1221,9 @@ static void emitEnumGetAttrNameFnDecl(raw_ostream &os) {
                 "attributeName();\n");
 }
 
-static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
+static void emitEnumGetAttrNameFnDefn(const EnumInfo &enumInfo,
                                       raw_ostream &os) {
-  auto enumName = enumAttr.getEnumClassName();
+  auto enumName = enumInfo.getEnumClassName();
   os << formatv("template <> inline StringRef attributeName<{0}>() {{\n",
                 enumName);
   os << "  "
@@ -1261,13 +1236,13 @@ static void emitEnumGetAttrNameFnDefn(const EnumAttr &enumAttr,
 static bool emitAttrUtils(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Attribute Utilities", os, records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumAttrInfo");
+  auto defs = records.getAllDerivedDefinitions("EnumInfo");
   os << "#ifndef MLIR_DIALECT_SPIRV_IR_ATTR_UTILS_H_\n";
   os << "#define MLIR_DIALECT_SPIRV_IR_ATTR_UTILS_H_\n";
   emitEnumGetAttrNameFnDecl(os);
   for (const auto *def : defs) {
-    EnumAttr enumAttr(*def);
-    emitEnumGetAttrNameFnDefn(enumAttr, os);
+    EnumInfo enumInfo(*def);
+    emitEnumGetAttrNameFnDefn(enumInfo, os);
   }
   os << "#endif // MLIR_DIALECT_SPIRV_IR_ATTR_UTILS_H\n";
   return false;
@@ -1306,9 +1281,9 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
     if (!namedAttr.attr.isSubClassOf("SPIRV_BitEnumAttr") &&
         !namedAttr.attr.isSubClassOf("SPIRV_I32EnumAttr"))
       continue;
-    EnumAttr enumAttr(namedAttr.attr.getDef().getValueAsDef("enum"));
+    EnumInfo enumInfo(namedAttr.attr.getDef().getValueAsDef("enum"));
 
-    for (const EnumAttrCase &enumerant : enumAttr.getAllCases())
+    for (const EnumCase &enumerant : enumInfo.getAllCases())
       for (const Availability &caseAvail :
            getAvailabilities(enumerant.getDef()))
         availClasses.try_emplace(caseAvail.getClass(), caseAvail);
@@ -1348,14 +1323,14 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       if (!namedAttr.attr.isSubClassOf("SPIRV_BitEnumAttr") &&
           !namedAttr.attr.isSubClassOf("SPIRV_I32EnumAttr"))
         continue;
-      EnumAttr enumAttr(namedAttr.attr.getDef().getValueAsDef("enum"));
+      EnumInfo enumInfo(namedAttr.attr.getDef().getValueAsDef("enum"));
 
       // (enumerant, availability specification) pairs for this availability
       // class.
-      SmallVector<std::pair<EnumAttrCase, Availability>, 1> caseSpecs;
+      SmallVector<std::pair<EnumCase, Availability>, 1> caseSpecs;
 
       // Collect all cases' availability specs.
-      for (const EnumAttrCase &enumerant : enumAttr.getAllCases())
+      for (const EnumCase &enumerant : enumInfo.getAllCases())
         for (const Availability &caseAvail :
              getAvailabilities(enumerant.getDef()))
           if (availClassName == caseAvail.getClass())
@@ -1366,19 +1341,19 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       if (caseSpecs.empty())
         continue;
 
-      if (enumAttr.isBitEnum()) {
+      if (enumInfo.isBitEnum()) {
         // For BitEnumAttr, we need to iterate over each bit to query its
         // availability spec.
         os << formatv("  for (unsigned i = 0; "
                       "i < std::numeric_limits<{0}>::digits; ++i) {{\n",
-                      enumAttr.getUnderlyingType());
+                      enumInfo.getUnderlyingType());
         os << formatv("    {0}::{1} tblgen_attrVal = this->{2}() & "
                       "static_cast<{0}::{1}>(1 << i);\n",
-                      enumAttr.getCppNamespace(), enumAttr.getEnumClassName(),
+                      enumInfo.getCppNamespace(), enumInfo.getEnumClassName(),
                       srcOp.getGetterName(namedAttr.name));
         os << formatv(
             "    if (static_cast<{0}>(tblgen_attrVal) == 0) continue;\n",
-            enumAttr.getUnderlyingType());
+            enumInfo.getUnderlyingType());
       } else {
         // For IntEnumAttr, we just need to query the value as a whole.
         os << "  {\n";
@@ -1386,7 +1361,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
                       srcOp.getGetterName(namedAttr.name));
       }
       os << formatv("    auto tblgen_instance = {0}::{1}(tblgen_attrVal);\n",
-                    enumAttr.getCppNamespace(), avail.getQueryFnName());
+                    enumInfo.getCppNamespace(), avail.getQueryFnName());
       os << "    if (tblgen_instance) "
          // TODO` here once ODS supports
          // dialect-specific contents so that we can use not implementing the
@@ -1434,14 +1409,14 @@ static bool emitCapabilityImplication(const RecordKeeper &records,
                                       raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Capability Implication", os, records);
 
-  EnumAttr enumAttr(
+  EnumInfo enumInfo(
       records.getDef("SPIRV_CapabilityAttr")->getValueAsDef("enum"));
 
   os << "ArrayRef<spirv::Capability> "
         "spirv::getDirectImpliedCapabilities(spirv::Capability cap) {\n"
      << "  switch (cap) {\n"
      << "  default: return {};\n";
-  for (const EnumAttrCase &enumerant : enumAttr.getAllCases()) {
+  for (const EnumCase &enumerant : enumInfo.getAllCases()) {
     const Record &def = enumerant.getDef();
     if (!def.getValue("implies"))
       continue;
@@ -1452,7 +1427,7 @@ static bool emitCapabilityImplication(const RecordKeeper &records,
        << ": {static const spirv::Capability implies[" << impliedCapsDefs.size()
        << "] = {";
     llvm::interleaveComma(impliedCapsDefs, os, [&](const Record *capDef) {
-      os << "spirv::Capability::" << EnumAttrCase(capDef).getSymbol();
+      os << "spirv::Capability::" << EnumCase(capDef).getSymbol();
     });
     os << "}; return ArrayRef<spirv::Capability>(implies, "
        << impliedCapsDefs.size() << "); }\n";

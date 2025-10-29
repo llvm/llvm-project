@@ -204,7 +204,7 @@ class HeaderFile:
 
         current_guard = None
         for function in self.functions:
-            if function.guard == None:
+            if function.guard == None and current_guard == None:
                 content.append(str(function) + " __NOEXCEPT;")
                 content.append("")
             else:
@@ -221,7 +221,8 @@ class HeaderFile:
                     content.append(f"#endif // {current_guard}")
                     content.append("")
                     current_guard = function.guard
-                    content.append(f"#ifdef {current_guard}")
+                    if current_guard is not None:
+                        content.append(f"#ifdef {current_guard}")
                     content.append(str(function) + " __NOEXCEPT;")
                     content.append("")
         if current_guard != None:
@@ -240,7 +241,5 @@ class HeaderFile:
         return {
             "name": self.name,
             "standards": self.standards,
-            "includes": [
-                str(file) for file in sorted({COMMON_HEADER} | self.includes())
-            ],
+            "includes": sorted(str(file) for file in {COMMON_HEADER} | self.includes()),
         }

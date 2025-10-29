@@ -162,8 +162,6 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   allSources->set_encoding(invoc.getFortranOpts().encoding);
   if (!setUpTargetMachine())
     return false;
-  // Create the semantics context
-  semaContext = invoc.getSemanticsCtx(*allCookedSources, getTargetMachine());
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
 
@@ -228,18 +226,15 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
 
 void CompilerInstance::createDiagnostics(clang::DiagnosticConsumer *client,
                                          bool shouldOwnClient) {
-  diagnostics =
-      createDiagnostics(&getDiagnosticOpts(), client, shouldOwnClient);
+  diagnostics = createDiagnostics(getDiagnosticOpts(), client, shouldOwnClient);
 }
 
 clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-CompilerInstance::createDiagnostics(clang::DiagnosticOptions *opts,
+CompilerInstance::createDiagnostics(clang::DiagnosticOptions &opts,
                                     clang::DiagnosticConsumer *client,
                                     bool shouldOwnClient) {
-  clang::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
-      new clang::DiagnosticIDs());
-  clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diags(
-      new clang::DiagnosticsEngine(diagID, opts));
+  auto diags = llvm::makeIntrusiveRefCnt<clang::DiagnosticsEngine>(
+      clang::DiagnosticIDs::create(), opts);
 
   // Create the diagnostic client for reporting errors or for
   // implementing -verify.
@@ -258,18 +253,15 @@ getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
                                            const TargetOptions &targetOpts,
                                            const llvm::Triple triple) {
   llvm::StringRef cpu = targetOpts.cpu;
-  llvm::StringMap<bool> implicitFeaturesMap;
-  // Get the set of implicit target features
-  llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, implicitFeaturesMap);
+  llvm::StringMap<bool> FeaturesMap;
 
   // Add target features specified by the user
   for (auto &userFeature : targetOpts.featuresAsWritten) {
     std::string userKeyString = userFeature.substr(1);
-    implicitFeaturesMap[userKeyString] = (userFeature[0] == '+');
+    FeaturesMap[userKeyString] = (userFeature[0] == '+');
   }
 
-  auto HasError =
-      llvm::AMDGPU::insertWaveSizeFeature(cpu, triple, implicitFeaturesMap);
+  auto HasError = llvm::AMDGPU::fillAMDGPUFeatureMap(cpu, triple, FeaturesMap);
   if (HasError.first) {
     unsigned diagID = diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                             "Unsupported feature ID: %0");
@@ -278,9 +270,9 @@ getExplicitAndImplicitAMDGPUTargetFeatures(clang::DiagnosticsEngine &diags,
   }
 
   llvm::SmallVector<std::string> featuresVec;
-  for (auto &implicitFeatureItem : implicitFeaturesMap) {
-    featuresVec.push_back((llvm::Twine(implicitFeatureItem.second ? "+" : "-") +
-                           implicitFeatureItem.first().str())
+  for (auto &FeatureItem : FeaturesMap) {
+    featuresVec.push_back((llvm::Twine(FeatureItem.second ? "+" : "-") +
+                           FeatureItem.first().str())
                               .str());
   }
   llvm::sort(featuresVec);
@@ -352,9 +344,10 @@ bool CompilerInstance::setUpTargetMachine() {
   const std::string &theTriple = targetOpts.triple;
 
   // Create `Target`
+  const llvm::Triple triple(theTriple);
   std::string error;
   const llvm::Target *theTarget =
-      llvm::TargetRegistry::lookupTarget(theTriple, error);
+      llvm::TargetRegistry::lookupTarget(triple, error);
   if (!theTarget) {
     getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
         << error;
@@ -373,13 +366,12 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
 
   targetMachine.reset(theTarget->createTargetMachine(
-      llvm::Triple(theTriple), /*CPU=*/targetOpts.cpu,
+      triple, /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, /*Options=*/tOpts,
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/cm, OptLevel));
   assert(targetMachine && "Failed to create TargetMachine");
   if (cm.has_value()) {
-    const llvm::Triple triple(theTriple);
     if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
         triple.getArch() == llvm::Triple::x86_64) {
       targetMachine->setLargeDataThreshold(CGOpts.LargeDataThreshold);

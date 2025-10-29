@@ -1293,6 +1293,39 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isinf)
 bool4 isinf(float4);
 
 //===----------------------------------------------------------------------===//
+// isnan builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T isnan(T x)
+/// \brief Determines if the specified value \a x  is Not a Number.
+/// \param x The specified input value.
+///
+/// Returns a value of the same size as the input, with a value set
+/// to True if the x parameter is NaN or QNaN. Otherwise, False.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool isnan(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool2 isnan(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool3 isnan(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool4 isnan(half4);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool isnan(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool2 isnan(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool3 isnan(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_isnan)
+bool4 isnan(float4);
+
+//===----------------------------------------------------------------------===//
 // lerp builtins
 //===----------------------------------------------------------------------===//
 
@@ -1882,10 +1915,10 @@ uint64_t4 reversebits(uint64_t4);
 /// x[0] * y[1] - y[0] * x[1]
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_crossf16)
 half3 cross(half3, half3);
 
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_cross)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_crossf32)
 float3 cross(float3, float3);
 
 //===----------------------------------------------------------------------===//
@@ -2190,10 +2223,10 @@ float4 sqrt(float4);
 // step builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn T step(T x, T y)
+/// \fn T step(T y, T x)
 /// \brief Returns 1 if the x parameter is greater than or equal to the y
-/// parameter; otherwise, 0. vector. \param x [in] The first floating-point
-/// value to compare. \param y [in] The first floating-point value to compare.
+/// parameter; otherwise, 0. vector. \param y [in] The first floating-point
+/// value to compare. \param x [in] The second floating-point value to compare.
 ///
 /// Step is based on the following formula: (x >= y) ? 1 : 0
 
@@ -2350,6 +2383,10 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
 __attribute__((convergent)) bool WaveIsFirstLane();
 
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_count)
+__attribute__((convergent)) uint WaveGetLaneCount();
+
 //===----------------------------------------------------------------------===//
 // WaveReadLaneAt builtins
 //===----------------------------------------------------------------------===//
@@ -2358,77 +2395,108 @@ __attribute__((convergent)) bool WaveIsFirstLane();
 // the specified wave.
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool WaveReadLaneAt(bool, int32_t);
+__attribute__((convergent)) bool WaveReadLaneAt(bool, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool2 WaveReadLaneAt(bool2, int32_t);
+__attribute__((convergent)) bool2 WaveReadLaneAt(bool2, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool3 WaveReadLaneAt(bool3, int32_t);
+__attribute__((convergent)) bool3 WaveReadLaneAt(bool3, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) bool4 WaveReadLaneAt(bool4, int32_t);
+__attribute__((convergent)) bool4 WaveReadLaneAt(bool4, uint32_t);
 
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t WaveReadLaneAt(int16_t, int32_t);
+__attribute__((convergent)) int16_t WaveReadLaneAt(int16_t, uint32_t);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t2 WaveReadLaneAt(int16_t2, int32_t);
+__attribute__((convergent)) int16_t2 WaveReadLaneAt(int16_t2, uint32_t);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t3 WaveReadLaneAt(int16_t3, int32_t);
+__attribute__((convergent)) int16_t3 WaveReadLaneAt(int16_t3, uint32_t);
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int16_t4 WaveReadLaneAt(int16_t4, int32_t);
+__attribute__((convergent)) int16_t4 WaveReadLaneAt(int16_t4, uint32_t);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint16_t WaveReadLaneAt(uint16_t, uint32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint16_t2 WaveReadLaneAt(uint16_t2, uint32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint16_t3 WaveReadLaneAt(uint16_t3, uint32_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint16_t4 WaveReadLaneAt(uint16_t4, uint32_t);
 #endif
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half WaveReadLaneAt(half, int32_t);
+__attribute__((convergent)) half WaveReadLaneAt(half, uint32_t);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half2 WaveReadLaneAt(half2, int32_t);
+__attribute__((convergent)) half2 WaveReadLaneAt(half2, uint32_t);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half3 WaveReadLaneAt(half3, int32_t);
+__attribute__((convergent)) half3 WaveReadLaneAt(half3, uint32_t);
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) half4 WaveReadLaneAt(half4, int32_t);
+__attribute__((convergent)) half4 WaveReadLaneAt(half4, uint32_t);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int WaveReadLaneAt(int, int32_t);
+__attribute__((convergent)) int WaveReadLaneAt(int, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int2 WaveReadLaneAt(int2, int32_t);
+__attribute__((convergent)) int2 WaveReadLaneAt(int2, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int3 WaveReadLaneAt(int3, int32_t);
+__attribute__((convergent)) int3 WaveReadLaneAt(int3, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int4 WaveReadLaneAt(int4, int32_t);
+__attribute__((convergent)) int4 WaveReadLaneAt(int4, uint32_t);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float WaveReadLaneAt(float, int32_t);
+__attribute__((convergent)) uint WaveReadLaneAt(uint, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float2 WaveReadLaneAt(float2, int32_t);
+__attribute__((convergent)) uint2 WaveReadLaneAt(uint2, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float3 WaveReadLaneAt(float3, int32_t);
+__attribute__((convergent)) uint3 WaveReadLaneAt(uint3, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) float4 WaveReadLaneAt(float4, int32_t);
+__attribute__((convergent)) uint4 WaveReadLaneAt(uint4, uint32_t);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t WaveReadLaneAt(int64_t, int32_t);
+__attribute__((convergent)) float WaveReadLaneAt(float, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t2 WaveReadLaneAt(int64_t2, int32_t);
+__attribute__((convergent)) float2 WaveReadLaneAt(float2, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t3 WaveReadLaneAt(int64_t3, int32_t);
+__attribute__((convergent)) float3 WaveReadLaneAt(float3, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) int64_t4 WaveReadLaneAt(int64_t4, int32_t);
+__attribute__((convergent)) float4 WaveReadLaneAt(float4, uint32_t);
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double WaveReadLaneAt(double, int32_t);
+__attribute__((convergent)) int64_t WaveReadLaneAt(int64_t, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double2 WaveReadLaneAt(double2, int32_t);
+__attribute__((convergent)) int64_t2 WaveReadLaneAt(int64_t2, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double3 WaveReadLaneAt(double3, int32_t);
+__attribute__((convergent)) int64_t3 WaveReadLaneAt(int64_t3, uint32_t);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
-__attribute__((convergent)) double4 WaveReadLaneAt(double4, int32_t);
+__attribute__((convergent)) int64_t4 WaveReadLaneAt(int64_t4, uint32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint64_t WaveReadLaneAt(uint64_t, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint64_t2 WaveReadLaneAt(uint64_t2, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint64_t3 WaveReadLaneAt(uint64_t3, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) uint64_t4 WaveReadLaneAt(uint64_t4, uint32_t);
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double WaveReadLaneAt(double, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double2 WaveReadLaneAt(double2, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double3 WaveReadLaneAt(double3, uint32_t);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_read_lane_at)
+__attribute__((convergent)) double4 WaveReadLaneAt(double4, uint32_t);
 
 //===----------------------------------------------------------------------===//
 // WaveActiveMax builtins
@@ -2528,6 +2596,129 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) double3 WaveActiveMax(double3);
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_max)
 __attribute__((convergent)) double4 WaveActiveMax(double4);
+
+//===----------------------------------------------------------------------===//
+// WaveActiveMin builtins
+//===----------------------------------------------------------------------===//
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half WaveActiveMin(half);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half2 WaveActiveMin(half2);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half3 WaveActiveMin(half3);
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) half4 WaveActiveMin(half4);
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t WaveActiveMin(int16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t2 WaveActiveMin(int16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t3 WaveActiveMin(int16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int16_t4 WaveActiveMin(int16_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t WaveActiveMin(uint16_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t2 WaveActiveMin(uint16_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t3 WaveActiveMin(uint16_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint16_t4 WaveActiveMin(uint16_t4);
+#endif
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int WaveActiveMin(int);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int2 WaveActiveMin(int2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int3 WaveActiveMin(int3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int4 WaveActiveMin(int4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint WaveActiveMin(uint);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint2 WaveActiveMin(uint2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint3 WaveActiveMin(uint3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint4 WaveActiveMin(uint4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t WaveActiveMin(int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t2 WaveActiveMin(int64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t3 WaveActiveMin(int64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) int64_t4 WaveActiveMin(int64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t WaveActiveMin(uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t2 WaveActiveMin(uint64_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t3 WaveActiveMin(uint64_t3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) uint64_t4 WaveActiveMin(uint64_t4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float WaveActiveMin(float);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float2 WaveActiveMin(float2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float3 WaveActiveMin(float3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) float4 WaveActiveMin(float4);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double WaveActiveMin(double);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double2 WaveActiveMin(double2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double3 WaveActiveMin(double3);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_min)
+__attribute__((convergent)) double4 WaveActiveMin(double4);
 
 //===----------------------------------------------------------------------===//
 // WaveActiveSum builtins
@@ -2770,7 +2961,7 @@ float4 radians(float4);
 /// call.
 
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_group_memory_barrier_with_group_sync)
-void GroupMemoryBarrierWithGroupSync(void);
+__attribute__((convergent)) void GroupMemoryBarrierWithGroupSync(void);
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

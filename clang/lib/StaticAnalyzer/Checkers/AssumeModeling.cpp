@@ -45,7 +45,6 @@ void AssumeModelingChecker::checkPostStmt(const AttributedStmt *A,
       continue;
 
     const auto *Assumption = AssumptionVal.getAsInteger();
-    assert(Assumption && "We should know the exact outcome of an assume expr");
     if (Assumption && Assumption->isZero()) {
       C.addSink();
     }

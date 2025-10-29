@@ -20,7 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
-using namespace lldb_private::dwarf;
+using namespace llvm::dwarf;
 
 TEST(DWARFDIETest, ChildIteration) {
   // Tests DWARFDIE::child_iterator.
@@ -393,6 +393,64 @@ DWARF:
       unit->DIE().GetFirstChild().GetFirstChild().GetSibling().GetFirstChild();
   EXPECT_THAT(foo_struct_die.GetTypeLookupContext(),
               testing::ElementsAre(make_struct("struct_t")));
+}
+
+TEST(DWARFDIETest, GetAttributeValue_ImplicitConst) {
+  // Make sure we can correctly retrieve the value of an attribute
+  // that has a DW_FORM_implicit_const form.
+
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+DWARF:
+  debug_str:
+    - ''
+  debug_abbrev:
+    - ID:              0
+      Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+        - Code:            0x2
+          Tag:             DW_TAG_subprogram
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_object_pointer
+              Form:            DW_FORM_implicit_const
+              Value:           5
+  debug_info:
+    - Version:         5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+        - AbbrCode:        0x2
+          Values:
+            - Value:           0xDEADBEEFDEADBEEF
+              CStr:            func
+        - AbbrCode:        0x0)";
+
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  DWARFUnit *unit = symbol_file->DebugInfo().GetUnitAtIndex(0);
+  ASSERT_TRUE(unit);
+
+  DWARFDIE subprogram = unit->DIE().GetFirstChild();
+  ASSERT_TRUE(subprogram);
+  dw_offset_t end_attr_offset;
+  DWARFFormValue form_value;
+  dw_offset_t offset = subprogram.GetDIE()->GetAttributeValue(
+      unit, DW_AT_object_pointer, form_value, &end_attr_offset);
+  EXPECT_EQ(form_value.Unsigned(), 5U);
+  EXPECT_GT(offset, 0U);
+  EXPECT_GT(end_attr_offset, 0U);
 }
 
 struct GetAttributesTestFixture : public testing::TestWithParam<dw_attr_t> {};

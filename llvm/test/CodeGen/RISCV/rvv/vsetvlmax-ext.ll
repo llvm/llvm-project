@@ -427,7 +427,7 @@ define i64 @vsetvlmax_e32mf2_and8bits() {
 ; CHECK-LABEL: vsetvlmax_e32mf2_and8bits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf8, ta, ma
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
   %a = call i64 @llvm.riscv.vsetvlimax(i64 2, i64 5)
   %b = and i64 %a, 255
@@ -597,7 +597,7 @@ define i64 @vsetvlmax_e64mf4_and8bits() {
 ; CHECK-LABEL: vsetvlmax_e64mf4_and8bits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64, mf4, ta, ma
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    ret
   %a = call i64 @llvm.riscv.vsetvlimax(i64 3, i64 6)
   %b = and i64 %a, 255

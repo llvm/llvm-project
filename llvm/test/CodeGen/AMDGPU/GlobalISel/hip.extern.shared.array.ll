@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=gfx900 -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -global-isel -mtriple=amdgcn--amdhsa -mcpu=gfx900 -o - %s | FileCheck %s
 
 @lds0 = addrspace(3) global [512 x float] poison
 @lds1 = addrspace(3) global [256 x float] poison

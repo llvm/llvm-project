@@ -12,7 +12,7 @@
 // CHECK-SAME: %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 [[EXEC_MODE2:1]], i32 [[MIN_THREADS2:1]], i32 [[MAX_THREADS2:30]], i32 [[MIN_TEAMS2:40]], i32 [[MAX_TEAMS2:40]], i32 0, i32 0 },
 // CHECK-SAME: ptr @{{.*}}, ptr @{{.*}} }
 
-module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%num_teams : !llvm.ptr) {
     // CHECK: define weak_odr protected amdgpu_kernel void @__omp_offloading_{{.*}}_main_l{{[0-9]+}}(ptr %[[KERNEL_ARGS:.*]], ptr %[[NUM_TEAMS_ARG:.*]]) #[[ATTRS1:[0-9]+]]
     // CHECK: %{{.*}} = call i32 @__kmpc_target_init(ptr @[[KERNEL1_ENV]], ptr %[[KERNEL_ARGS]])

@@ -25,7 +25,6 @@ using llvm::yaml::Hex8;
 using llvm::yaml::Input;
 using llvm::yaml::isNumeric;
 using llvm::yaml::MappingNormalization;
-using llvm::yaml::MappingTraits;
 using llvm::yaml::Output;
 using llvm::yaml::ScalarTraits;
 using ::testing::StartsWith;
@@ -1298,7 +1297,7 @@ TEST(YAMLIO, TestScalarAfterBlockScalar) {
 - block_scalac:     |
     AA
     BB
-scalar:          a
+  scalar:          a
 ...
 )");
 }

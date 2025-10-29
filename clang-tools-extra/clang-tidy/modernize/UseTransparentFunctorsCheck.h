@@ -1,4 +1,4 @@
-//===--- UseTransparentFunctorsCheck.h - clang-tidy--------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Prefer using transparent functors to non-transparent ones.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-transparent-functors.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-transparent-functors.html
 class UseTransparentFunctorsCheck : public ClangTidyCheck {
 public:
   UseTransparentFunctorsCheck(StringRef Name, ClangTidyContext *Context);
@@ -26,6 +26,7 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
 private:
   const bool SafeMode;
 };

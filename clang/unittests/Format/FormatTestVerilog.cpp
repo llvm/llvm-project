@@ -160,6 +160,8 @@ TEST_F(FormatTestVerilog, Block) {
   // Test that 'disable fork' and 'rand join' don't get mistaken as blocks.
   verifyFormat("disable fork;\n"
                "x = x;");
+  verifyFormat("wait fork;\n"
+               "x = x;");
   verifyFormat("rand join x x;\n"
                "x = x;");
   // The begin keyword should not be indented if it is too long to fit on the
@@ -1285,7 +1287,7 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                getStyleWithColumns(getDefaultStyle(), 32));
   // Space around braces should be correct.
   auto Style = getStyleWithColumns(getDefaultStyle(), 24);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(R"(x({ "xxxxxxxxxxxxxxxx ",
     "xxxx" });)",
                R"(x("xxxxxxxxxxxxxxxx xxxx");)", Style);

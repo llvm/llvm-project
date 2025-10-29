@@ -91,8 +91,7 @@ void BitcastBuffer::markInitialized(Bits Offset, Bits Length) {
     InitializedBits.push_back(Element);
   } else {
     // Insert sorted.
-    auto It = std::upper_bound(InitializedBits.begin(), InitializedBits.end(),
-                               Element);
+    auto It = llvm::upper_bound(InitializedBits, Element);
     InitializedBits.insert(It, Element);
   }
 

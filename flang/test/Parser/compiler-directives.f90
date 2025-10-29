@@ -45,6 +45,10 @@ subroutine unroll
   ! CHECK: !DIR$ UNROLL 2
   do i=1,10
   enddo
+  !dir$ nounroll
+  ! CHECK: !DIR$ NOUNROLL 
+  do i=1,10
+  enddo
 end subroutine
 
 subroutine unroll_and_jam
@@ -56,4 +60,39 @@ subroutine unroll_and_jam
   ! CHECK: !DIR$ UNROLL_AND_JAM 2
   do i=1,10
   enddo
+  !dir$ nounroll_and_jam
+  ! CHECK: !DIR$ NOUNROLL_AND_JAM 
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine no_vector
+  !dir$ novector
+  ! CHECK: !DIR$ NOVECTOR
+  do i=1,10
+  enddo
+end subroutine
+
+subroutine inline
+  integer :: a
+  !dir$ forceinline 
+  ! CHECK: !DIR$ FORCEINLINE 
+  a = f(2)
+
+  !dir$ inline 
+  ! CHECK: !DIR$ INLINE 
+  call g()
+
+  !dir$ noinline 
+  ! CHECK: !DIR$ NOINLINE 
+  call g()
+
+  contains
+    function f(x)
+      integer :: x
+      f = x**2
+    end function
+
+    subroutine g()
+    end subroutine
 end subroutine

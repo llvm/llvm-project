@@ -21,6 +21,44 @@
 namespace llvm {
 namespace {
 
+// Check that use count checks treat ConstantData like they have no uses.
+TEST(ConstantsTest, UseCounts) {
+  LLVMContext Context;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+
+  EXPECT_TRUE(Zero->use_empty());
+  EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
+  EXPECT_FALSE(Zero->hasOneUse());
+  EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
+
+  std::unique_ptr<Module> M(new Module("MyModule", Context));
+
+  // Introduce some uses
+  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
+                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
+                     "gv_user0");
+  new GlobalVariable(*M, Int32Ty, /*isConstant=*/false,
+                     GlobalValue::ExternalLinkage, /*Initializer=*/Zero,
+                     "gv_user1");
+
+  // Still looks like use_empty with uses.
+  EXPECT_TRUE(Zero->use_empty());
+  EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
+  EXPECT_FALSE(Zero->hasOneUse());
+  EXPECT_FALSE(Zero->hasOneUser());
+  EXPECT_FALSE(Zero->hasNUses(1));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(1));
+  EXPECT_FALSE(Zero->hasNUses(2));
+  EXPECT_FALSE(Zero->hasNUsesOrMore(2));
+}
+
 TEST(ConstantsTest, Integer_i1) {
   LLVMContext Context;
   IntegerType *Int1 = IntegerType::get(Context, 1);
@@ -526,13 +564,17 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
 
   Global->setAlignment(Align(4));
 
-  ConstantInt *TheConstant(ConstantInt::get(IntType, 2));
+  ConstantInt *TheConstant = ConstantInt::get(IntType, 2);
 
-  Constant *TheConstantExpr(ConstantExpr::getPtrToInt(Global.get(), IntType));
+  Constant *PtrToInt = ConstantExpr::getPtrToInt(Global.get(), IntType);
+  ASSERT_TRUE(
+      ConstantFoldBinaryInstruction(Instruction::And, PtrToInt, TheConstant)
+          ->isNullValue());
 
-  ASSERT_TRUE(ConstantFoldBinaryInstruction(Instruction::And, TheConstantExpr,
-                                            TheConstant)
-                  ->isNullValue());
+  Constant *PtrToAddr = ConstantExpr::getPtrToAddr(Global.get(), IntType);
+  ASSERT_TRUE(
+      ConstantFoldBinaryInstruction(Instruction::And, PtrToAddr, TheConstant)
+          ->isNullValue());
 }
 
 // Check that containsUndefOrPoisonElement and containsPoisonElement is working
@@ -736,12 +778,12 @@ TEST(ConstantsTest, ComdatUserTracking) {
   EXPECT_TRUE(Users.size() == 0);
 
   Type *Ty = Type::getInt8Ty(Context);
-  GlobalVariable *GV1 = cast<GlobalVariable>(M.getOrInsertGlobal("gv1", Ty));
+  GlobalVariable *GV1 = M.getOrInsertGlobal("gv1", Ty);
   GV1->setComdat(C);
   EXPECT_TRUE(Users.size() == 1);
   EXPECT_TRUE(Users.contains(GV1));
 
-  GlobalVariable *GV2 = cast<GlobalVariable>(M.getOrInsertGlobal("gv2", Ty));
+  GlobalVariable *GV2 = M.getOrInsertGlobal("gv2", Ty);
   GV2->setComdat(C);
   EXPECT_TRUE(Users.size() == 2);
   EXPECT_TRUE(Users.contains(GV2));

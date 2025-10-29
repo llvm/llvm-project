@@ -1,4 +1,4 @@
-; REQUIRES: x86, shell
+; REQUIRES: x86
 
 ;; Keep __profd_foo in a nodeduplicate comdat, despite a comdat of the same name
 ;; in a previous object file.
@@ -36,19 +36,25 @@
 
 ; RUN: ld.lld --thinlto-index-only --save-temps -u foo %t/a.bc %t/b.bc -o %t/ab
 ; RUN: FileCheck %s --check-prefix=RESOL_AB < %t/ab.resolution.txt
-; RUN: (llvm-dis < %t/b.bc && llvm-dis < %t/b.bc.thinlto.bc) | FileCheck %s --check-prefix=IR_AB
+; RUN: llvm-dis < %t/b.bc > %t.out
+; RUN: llvm-dis < %t/b.bc.thinlto.bc >> %t.out
+; RUN: FileCheck %s --check-prefix=IR_AB --input-file %t.out
 ; RUN: ld.lld -u foo %t/a.bc %t/b.bc -o %t/ab
 ; RUN: llvm-readelf -x .data %t/ab | FileCheck %s --check-prefix=DATA
 
 ; RUN: ld.lld --thinlto-index-only --save-temps -u foo %t/a.bc --start-lib %t/b.bc --end-lib -o %t/ab
 ; RUN: FileCheck %s --check-prefix=RESOL_AB < %t/ab.resolution.txt
-; RUN: (llvm-dis < %t/b.bc && llvm-dis < %t/b.bc.thinlto.bc) | FileCheck %s --check-prefix=IR_AB
+; RUN: llvm-dis < %t/b.bc > %t.out
+; RUN: llvm-dis < %t/b.bc.thinlto.bc >> %t.out
+; RUN: FileCheck %s --check-prefix=IR_AB --input-file %t.out
 ; RUN: ld.lld -u foo %t/a.bc --start-lib %t/b.bc --end-lib -o %t/ab
 ; RUN: llvm-readelf -x .data %t/ab | FileCheck %s --check-prefix=DATA
 
 ; RUN: ld.lld --thinlto-index-only --save-temps -u foo -u c %t/a.bc --start-lib %t/b.bc %t/c.bc --end-lib -o %t/abc
 ; RUN: FileCheck %s --check-prefix=RESOL_ABC < %t/abc.resolution.txt
-; RUN: (llvm-dis < %t/b.bc && llvm-dis < %t/b.bc.thinlto.bc) | FileCheck %s --check-prefix=IR_ABC
+; RUN: llvm-dis < %t/b.bc > %t.out
+; RUN: llvm-dis < %t/b.bc.thinlto.bc >> %t.out
+; RUN: FileCheck %s --check-prefix=IR_ABC --input-file %t.out
 ; RUN: ld.lld -u foo %t/a.bc --start-lib %t/b.bc %t/c.bc --end-lib -o %t/abc
 ; RUN: llvm-readelf -x .data %t/abc | FileCheck %s --check-prefix=DATA
 

@@ -66,9 +66,9 @@ export int aa = 43;
     CreateInvocationOptions CIOpts;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
 
+    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*CIOpts.VFS,
-                                            new DiagnosticOptions());
+        CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
     CIOpts.Diags = Diags;
 
     const char *Args[] = {"clang++",       "-std=c++20",
@@ -86,16 +86,13 @@ export int aa = 43;
 
     Buf->release();
 
-    CompilerInstance Instance;
-    Instance.setDiagnostics(Diags.get());
-    Instance.setInvocation(Invocation);
+    CompilerInstance Instance(std::move(Invocation));
+    Instance.setDiagnostics(Diags);
 
     Instance.getFrontendOpts().OutputFile = BMIPath;
 
-    if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
-            Instance.getInvocation(), Instance.getDiagnostics(), CIOpts.VFS))
-      CIOpts.VFS = VFSWithRemapping;
-    Instance.createFileManager(CIOpts.VFS);
+    Instance.createVirtualFileSystem(CIOpts.VFS);
+    Instance.createFileManager();
 
     Instance.getHeaderSearchOpts().ValidateASTInputFilesContent = true;
 
@@ -107,9 +104,9 @@ export int aa = 43;
   {
     CreateInvocationOptions CIOpts;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+    DiagnosticOptions DiagOpts;
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(*CIOpts.VFS,
-                                            new DiagnosticOptions());
+        CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
     CIOpts.Diags = Diags;
 
     std::string BMIPath = llvm::Twine(TestDir + "/a.pcm").str();
@@ -121,12 +118,12 @@ export int aa = 43;
     EXPECT_TRUE(Invocation);
     Invocation->getFrontendOpts().DisableFree = false;
 
-    CompilerInstance Clang;
+    CompilerInstance Clang(std::move(Invocation));
 
-    Clang.setInvocation(Invocation);
-    Clang.setDiagnostics(Diags.get());
-    FileManager *FM = Clang.createFileManager(CIOpts.VFS);
-    Clang.createSourceManager(*FM);
+    Clang.setDiagnostics(Diags);
+    Clang.createVirtualFileSystem(CIOpts.VFS);
+    Clang.createFileManager();
+    Clang.createSourceManager();
 
     EXPECT_TRUE(Clang.createTarget());
     Clang.createPreprocessor(TU_Complete);

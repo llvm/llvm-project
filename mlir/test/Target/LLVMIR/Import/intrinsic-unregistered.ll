@@ -37,7 +37,7 @@ define dso_local void @t2(<8 x i8> %lhs, <8 x i8> %rhs, ptr %a) {
 }
 
 ; CHECK: llvm.func @t2(%[[A0:.*]]: vector<8xi8>, %[[A1:.*]]: vector<8xi8>, %[[A2:.*]]: !llvm.ptr) {{.*}} {
-; CHECK:   llvm.call_intrinsic "llvm.aarch64.neon.st2.v8i8.p0"(%[[A0]], %[[A1]], %[[A2]]) : (vector<8xi8>, vector<8xi8>, !llvm.ptr) -> !llvm.void
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.neon.st2.v8i8.p0"(%[[A0]], %[[A1]], %[[A2]]) : (vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()
 ; CHECK:   llvm.return
 ; CHECK: }
 
@@ -51,7 +51,7 @@ define void @gctest() gc "example" {
 }
 
 ; CHECK-LABEL: @gctest
-; CHECK: llvm.call_intrinsic "llvm.gcroot"({{.*}}, {{.*}}) : (!llvm.ptr, !llvm.ptr) -> !llvm.void
+; CHECK: llvm.call_intrinsic "llvm.gcroot"({{.*}}, {{.*}}) : (!llvm.ptr, !llvm.ptr) -> ()
 
 ; // -----
 

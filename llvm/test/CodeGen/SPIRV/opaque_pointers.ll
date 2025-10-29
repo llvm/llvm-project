@@ -5,7 +5,7 @@
 ; CHECK-DAG: %[[#Int64Ty:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#PtrInt64Ty:]] = OpTypePointer Function %[[#Int64Ty]]
 ; CHECK-DAG: %[[#FTy:]] = OpTypeFunction %[[#Int64Ty]] %[[#PtrInt32Ty]]
-; CHECK-DAG: %[[#Const:]] = OpConstant %[[#Int32Ty]] 0
+; CHECK-DAG: %[[#Const:]] = OpConstantNull %[[#Int32Ty]]
 ; CHECK: OpFunction %[[#Int64Ty]] None %[[#FTy]]
 ; CHECK: %[[#Param:]] = OpFunctionParameter %[[#PtrInt32Ty]]
 ; CHECK: OpStore %[[#Param]] %[[#Const]] Aligned 4

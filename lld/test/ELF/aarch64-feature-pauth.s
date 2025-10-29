@@ -13,8 +13,12 @@
 # RUN: not ld.lld tag1.o tag1a.o tag2.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR1 %s
 
 # ERR1:      error: incompatible values of AArch64 PAuth core info found
-# ERR1-NEXT: >>> tag1.o: 0x2a000000000000000{{1|2}}00000000000000
-# ERR1-NEXT: >>> tag2.o: 0x2a000000000000000{{1|2}}00000000000000
+# ERR1-NEXT: platform:
+# ERR1-NEXT: >>> tag1.o: 0x2a
+# ERR1-NEXT: >>> tag2.o: 0x2a
+# ERR1-NEXT: version:
+# ERR1-NEXT: >>> tag1.o: 0x01
+# ERR1-NEXT: >>> tag2.o: 0x02
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu abi-tag-short.s -o short.o
 # RUN: not ld.lld short.o -o /dev/null 2>&1 | FileCheck --check-prefix ERR2 %s

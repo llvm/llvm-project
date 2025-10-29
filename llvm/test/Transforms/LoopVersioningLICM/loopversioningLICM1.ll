@@ -57,23 +57,23 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[CMP2_LVER_ORIG:%.*]] = icmp ult i32 [[INC_LVER_ORIG]], [[ITR]]
 ; CHECK-NEXT:    br i1 [[CMP2_LVER_ORIG]], label [[FOR_BODY3_LVER_ORIG]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.body3.ph:
-; CHECK-NEXT:    [[ARRAYIDX7_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2:![0-9]+]], !noalias [[META2]]
+; CHECK-NEXT:    [[ARRAYIDX7_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[ADD86:%.*]] = phi i32 [ [[ARRAYIDX7_PROMOTED]], [[FOR_BODY3_PH]] ], [ [[ADD8:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[J_113:%.*]] = phi i32 [ [[J_016]], [[FOR_BODY3_PH]] ], [ [[INC:%.*]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[J_113]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[VAR1]], i64 [[IDXPROM]]
-; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4, !alias.scope [[META2]], !noalias [[META2]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX]], align 4, !alias.scope [[META5:![0-9]+]], !noalias [[META2]]
 ; CHECK-NEXT:    [[ADD8]] = add nsw i32 [[ADD86]], [[ADD]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[J_113]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[INC]], [[ITR]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT5:%.*]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT5:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       for.inc11.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT:%.*]]
 ; CHECK:       for.inc11.loopexit.loopexit5:
 ; CHECK-NEXT:    [[ADD8_LCSSA:%.*]] = phi i32 [ [[ADD8]], [[FOR_BODY3]] ]
-; CHECK-NEXT:    store i32 [[ADD8_LCSSA]], ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2]], !noalias [[META2]]
+; CHECK-NEXT:    store i32 [[ADD8_LCSSA]], ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2]]
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT]]
 ; CHECK:       for.inc11.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC11]]

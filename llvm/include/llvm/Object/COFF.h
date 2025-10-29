@@ -20,6 +20,7 @@
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/BinaryByteStream.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -876,7 +877,7 @@ struct coff_dynamic_relocation64_v2 {
   support::ulittle32_t Flags;
 };
 
-class COFFObjectFile : public ObjectFile {
+class LLVM_ABI COFFObjectFile : public ObjectFile {
 private:
   COFFObjectFile(MemoryBufferRef Object);
 
@@ -937,6 +938,10 @@ public:
     if (SymbolTable32)
       return reinterpret_cast<uintptr_t>(SymbolTable32);
     return uintptr_t(0);
+  }
+
+  StringRef getStringTable() const {
+    return StringRef(StringTable, StringTableSize);
   }
 
   uint16_t getMachine() const {
@@ -1230,22 +1235,23 @@ public:
                           uint32_t I, const COFFObjectFile *Owner)
       : ImportTable(Table), Index(I), OwningObject(Owner) {}
 
-  bool operator==(const ImportDirectoryEntryRef &Other) const;
-  void moveNext();
+  LLVM_ABI bool operator==(const ImportDirectoryEntryRef &Other) const;
+  LLVM_ABI void moveNext();
 
-  imported_symbol_iterator imported_symbol_begin() const;
-  imported_symbol_iterator imported_symbol_end() const;
-  iterator_range<imported_symbol_iterator> imported_symbols() const;
+  LLVM_ABI imported_symbol_iterator imported_symbol_begin() const;
+  LLVM_ABI imported_symbol_iterator imported_symbol_end() const;
+  LLVM_ABI iterator_range<imported_symbol_iterator> imported_symbols() const;
 
-  imported_symbol_iterator lookup_table_begin() const;
-  imported_symbol_iterator lookup_table_end() const;
-  iterator_range<imported_symbol_iterator> lookup_table_symbols() const;
+  LLVM_ABI imported_symbol_iterator lookup_table_begin() const;
+  LLVM_ABI imported_symbol_iterator lookup_table_end() const;
+  LLVM_ABI iterator_range<imported_symbol_iterator>
+  lookup_table_symbols() const;
 
-  Error getName(StringRef &Result) const;
-  Error getImportLookupTableRVA(uint32_t &Result) const;
-  Error getImportAddressTableRVA(uint32_t &Result) const;
+  LLVM_ABI Error getName(StringRef &Result) const;
+  LLVM_ABI Error getImportLookupTableRVA(uint32_t &Result) const;
+  LLVM_ABI Error getImportAddressTableRVA(uint32_t &Result) const;
 
-  Error
+  LLVM_ABI Error
   getImportTableEntry(const coff_import_directory_table_entry *&Result) const;
 
 private:
@@ -1261,17 +1267,17 @@ public:
                                uint32_t I, const COFFObjectFile *Owner)
       : Table(T), Index(I), OwningObject(Owner) {}
 
-  bool operator==(const DelayImportDirectoryEntryRef &Other) const;
-  void moveNext();
+  LLVM_ABI bool operator==(const DelayImportDirectoryEntryRef &Other) const;
+  LLVM_ABI void moveNext();
 
-  imported_symbol_iterator imported_symbol_begin() const;
-  imported_symbol_iterator imported_symbol_end() const;
-  iterator_range<imported_symbol_iterator> imported_symbols() const;
+  LLVM_ABI imported_symbol_iterator imported_symbol_begin() const;
+  LLVM_ABI imported_symbol_iterator imported_symbol_end() const;
+  LLVM_ABI iterator_range<imported_symbol_iterator> imported_symbols() const;
 
-  Error getName(StringRef &Result) const;
-  Error getDelayImportTable(
-      const delay_import_directory_table_entry *&Result) const;
-  Error getImportAddress(int AddrIndex, uint64_t &Result) const;
+  LLVM_ABI Error getName(StringRef &Result) const;
+  LLVM_ABI Error
+  getDelayImportTable(const delay_import_directory_table_entry *&Result) const;
+  LLVM_ABI Error getImportAddress(int AddrIndex, uint64_t &Result) const;
 
 private:
   const delay_import_directory_table_entry *Table;
@@ -1287,17 +1293,17 @@ public:
                           const COFFObjectFile *Owner)
       : ExportTable(Table), Index(I), OwningObject(Owner) {}
 
-  bool operator==(const ExportDirectoryEntryRef &Other) const;
-  void moveNext();
+  LLVM_ABI bool operator==(const ExportDirectoryEntryRef &Other) const;
+  LLVM_ABI void moveNext();
 
-  Error getDllName(StringRef &Result) const;
-  Error getOrdinalBase(uint32_t &Result) const;
-  Error getOrdinal(uint32_t &Result) const;
-  Error getExportRVA(uint32_t &Result) const;
-  Error getSymbolName(StringRef &Result) const;
+  LLVM_ABI Error getDllName(StringRef &Result) const;
+  LLVM_ABI Error getOrdinalBase(uint32_t &Result) const;
+  LLVM_ABI Error getOrdinal(uint32_t &Result) const;
+  LLVM_ABI Error getExportRVA(uint32_t &Result) const;
+  LLVM_ABI Error getSymbolName(StringRef &Result) const;
 
-  Error isForwarder(bool &Result) const;
-  Error getForwardTo(StringRef &Result) const;
+  LLVM_ABI Error isForwarder(bool &Result) const;
+  LLVM_ABI Error getForwardTo(StringRef &Result) const;
 
 private:
   const export_directory_table_entry *ExportTable;
@@ -1315,13 +1321,13 @@ public:
                     const COFFObjectFile *Owner)
       : Entry32(nullptr), Entry64(Entry), Index(I), OwningObject(Owner) {}
 
-  bool operator==(const ImportedSymbolRef &Other) const;
-  void moveNext();
+  LLVM_ABI bool operator==(const ImportedSymbolRef &Other) const;
+  LLVM_ABI void moveNext();
 
-  Error getSymbolName(StringRef &Result) const;
-  Error isOrdinal(bool &Result) const;
-  Error getOrdinal(uint16_t &Result) const;
-  Error getHintNameRVA(uint32_t &Result) const;
+  LLVM_ABI Error getSymbolName(StringRef &Result) const;
+  LLVM_ABI Error isOrdinal(bool &Result) const;
+  LLVM_ABI Error getOrdinal(uint16_t &Result) const;
+  LLVM_ABI Error getHintNameRVA(uint32_t &Result) const;
 
 private:
   const import_lookup_table_entry32 *Entry32;
@@ -1337,11 +1343,11 @@ public:
                const COFFObjectFile *Owner)
       : Header(Header), Index(0) {}
 
-  bool operator==(const BaseRelocRef &Other) const;
-  void moveNext();
+  LLVM_ABI bool operator==(const BaseRelocRef &Other) const;
+  LLVM_ABI void moveNext();
 
-  Error getType(uint8_t &Type) const;
-  Error getRVA(uint32_t &Result) const;
+  LLVM_ABI Error getType(uint8_t &Type) const;
+  LLVM_ABI Error getRVA(uint32_t &Result) const;
 
 private:
   const coff_base_reloc_block_header *Header;
@@ -1354,14 +1360,14 @@ public:
   DynamicRelocRef(const void *Header, const COFFObjectFile *Owner)
       : Obj(Owner), Header(reinterpret_cast<const uint8_t *>(Header)) {}
 
-  bool operator==(const DynamicRelocRef &Other) const;
-  void moveNext();
-  uint32_t getType() const;
-  void getContents(ArrayRef<uint8_t> &Ref) const;
+  LLVM_ABI bool operator==(const DynamicRelocRef &Other) const;
+  LLVM_ABI void moveNext();
+  LLVM_ABI uint32_t getType() const;
+  LLVM_ABI void getContents(ArrayRef<uint8_t> &Ref) const;
 
-  arm64x_reloc_iterator arm64x_reloc_begin() const;
-  arm64x_reloc_iterator arm64x_reloc_end() const;
-  iterator_range<arm64x_reloc_iterator> arm64x_relocs() const;
+  LLVM_ABI arm64x_reloc_iterator arm64x_reloc_begin() const;
+  LLVM_ABI arm64x_reloc_iterator arm64x_reloc_end() const;
+  LLVM_ABI iterator_range<arm64x_reloc_iterator> arm64x_relocs() const;
 
 private:
   Error validate() const;
@@ -1378,15 +1384,15 @@ public:
   Arm64XRelocRef(const coff_base_reloc_block_header *Header, uint32_t Index = 0)
       : Header(Header), Index(Index) {}
 
-  bool operator==(const Arm64XRelocRef &Other) const;
-  void moveNext();
+  LLVM_ABI bool operator==(const Arm64XRelocRef &Other) const;
+  LLVM_ABI void moveNext();
 
   COFF::Arm64XFixupType getType() const {
     return COFF::Arm64XFixupType((getReloc() >> 12) & 3);
   }
   uint32_t getRVA() const { return Header->PageRVA + (getReloc() & 0xfff); }
-  uint8_t getSize() const;
-  uint64_t getValue() const;
+  LLVM_ABI uint8_t getSize() const;
+  LLVM_ABI uint64_t getValue() const;
 
 private:
   const support::ulittle16_t &getReloc(uint32_t Offset = 0) const {
@@ -1410,20 +1416,21 @@ public:
   explicit ResourceSectionRef(StringRef Ref)
       : BBS(Ref, llvm::endianness::little) {}
 
-  Error load(const COFFObjectFile *O);
-  Error load(const COFFObjectFile *O, const SectionRef &S);
+  LLVM_ABI Error load(const COFFObjectFile *O);
+  LLVM_ABI Error load(const COFFObjectFile *O, const SectionRef &S);
 
-  Expected<ArrayRef<UTF16>>
+  LLVM_ABI Expected<ArrayRef<UTF16>>
   getEntryNameString(const coff_resource_dir_entry &Entry);
-  Expected<const coff_resource_dir_table &>
+  LLVM_ABI Expected<const coff_resource_dir_table &>
   getEntrySubDir(const coff_resource_dir_entry &Entry);
-  Expected<const coff_resource_data_entry &>
+  LLVM_ABI Expected<const coff_resource_data_entry &>
   getEntryData(const coff_resource_dir_entry &Entry);
-  Expected<const coff_resource_dir_table &> getBaseTable();
-  Expected<const coff_resource_dir_entry &>
+  LLVM_ABI Expected<const coff_resource_dir_table &> getBaseTable();
+  LLVM_ABI Expected<const coff_resource_dir_entry &>
   getTableEntry(const coff_resource_dir_table &Table, uint32_t Index);
 
-  Expected<StringRef> getContents(const coff_resource_data_entry &Entry);
+  LLVM_ABI Expected<StringRef>
+  getContents(const coff_resource_data_entry &Entry);
 
 private:
   BinaryByteStream BBS;

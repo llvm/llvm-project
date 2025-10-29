@@ -26,6 +26,23 @@ namespace fir::runtime {
 mlir::Value genMapExcept(fir::FirOpBuilder &builder, mlir::Location loc,
                          mlir::Value excepts);
 
+void genFeclearexcept(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value excepts);
+
+void genFeraiseexcept(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value excepts);
+
+mlir::Value genFetestexcept(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Value excepts);
+
+void genFedisableexcept(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::Value excepts);
+
+void genFeenableexcept(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value excepts);
+
+mlir::Value genFegetexcept(fir::FirOpBuilder &builder, mlir::Location loc);
+
 mlir::Value genSupportHalting(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value excepts);
 

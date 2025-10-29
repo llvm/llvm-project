@@ -16,15 +16,14 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTASK_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTASK_H
 
-#include <mach/mach.h>
-#include <sys/socket.h>
-#include <map>
-#include <string>
 #include "DNBDefs.h"
-#include "RNBContext.h"
 #include "MachException.h"
 #include "MachVMMemory.h"
-#include "PThreadMutex.h"
+#include "RNBContext.h"
+#include <mach/mach.h>
+#include <map>
+#include <string>
+#include <sys/socket.h>
 
 class MachProcess;
 
@@ -57,6 +56,8 @@ public:
   nub_size_t ReadMemory(nub_addr_t addr, nub_size_t size, void *buf);
   nub_size_t WriteMemory(nub_addr_t addr, nub_size_t size, const void *buf);
   int GetMemoryRegionInfo(nub_addr_t addr, DNBRegionInfo *region_info);
+  nub_bool_t GetMemoryTags(nub_addr_t addr, nub_size_t size,
+                           std::vector<uint8_t> &tags);
   std::string GetProfileData(DNBProfileDataScanType scanType);
 
   nub_addr_t AllocateMemory(nub_size_t size, uint32_t permissions);

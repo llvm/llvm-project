@@ -1,4 +1,4 @@
-//===--- ChainedComparisonCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,8 +34,7 @@ AST_MATCHER(BinaryOperator,
 
 AST_MATCHER(CXXOperatorCallExpr,
             hasCppOperatorAChildComparisonOperatorWithoutParen) {
-  return std::any_of(Node.arg_begin(), Node.arg_end(),
-                     isExprAComparisonOperator);
+  return llvm::any_of(Node.arguments(), isExprAComparisonOperator);
 }
 
 struct ChainedComparisonData {
@@ -51,6 +50,8 @@ private:
   void extract(const BinaryOperator *Op);
   void extract(const CXXOperatorCallExpr *Op);
 };
+
+} // namespace
 
 void ChainedComparisonData::add(const Expr *Operand) {
   if (!Name.empty())
@@ -111,8 +112,6 @@ void ChainedComparisonData::extract(const Expr *Op) {
       extract(OverloadedOp);
   }
 }
-
-} // namespace
 
 void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto OperatorMatcher = expr(anyOf(

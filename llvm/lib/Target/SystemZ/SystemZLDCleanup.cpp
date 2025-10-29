@@ -28,9 +28,7 @@ namespace {
 class SystemZLDCleanup : public MachineFunctionPass {
 public:
   static char ID;
-  SystemZLDCleanup() : MachineFunctionPass(ID), TII(nullptr), MF(nullptr) {
-    initializeSystemZLDCleanupPass(*PassRegistry::getPassRegistry());
-  }
+  SystemZLDCleanup() : MachineFunctionPass(ID), TII(nullptr), MF(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

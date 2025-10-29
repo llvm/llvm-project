@@ -1,4 +1,4 @@
-//===-- InlineFunctionDeclCheck.cpp ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,15 +12,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
-#include "llvm/ADT/StringSet.h"
-
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_libc {
 
-namespace {
-
-const TemplateParameterList *
+static const TemplateParameterList *
 getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
   const TemplateParameterList *ReturnList =
       FuncDecl->getDescribedTemplateParams();
@@ -36,8 +32,6 @@ getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
 
   return ReturnList;
 }
-
-} // namespace
 
 InlineFunctionDeclCheck::InlineFunctionDeclCheck(StringRef Name,
                                                  ClangTidyContext *Context)

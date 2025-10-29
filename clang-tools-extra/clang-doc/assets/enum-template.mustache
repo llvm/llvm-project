@@ -1,0 +1,53 @@
+{{! 
+    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    See https://llvm.org/LICENSE.txt for license information.
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    
+    This file defines the template for enums
+}}
+<div id="{{ID}}" class="delimiter-container">
+    <div>
+        <pre>
+            <code class="language-cpp code-clang-doc">
+enum {{Name}}
+            </code>
+        </pre>
+    </div>
+    {{! Enum Values }}
+    <table class="table-wrapper">
+        <tbody>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+            {{#HasComment}}
+                <th>Comment</th>
+            {{/HasComment}}
+        </tr>
+            {{#Members}}
+            <tr>
+                <td>{{Name}}</td>
+                {{! A ValueExpr is an explicitly assigned enum value }}
+                {{#Value}}
+                <td>{{Value}}</td>
+                {{/Value}}
+                {{^Value}}
+                <td>{{ValueExpr}}</td>
+                {{/Value}}
+                {{#EnumValueComments}}
+                    <td>{{>Comments}}</td>
+                {{/EnumValueComments}}
+            </tr>
+            {{/Members}}
+        </tbody>
+    </table>
+    {{#EnumComments}}
+    <div>
+        {{>Comments}}
+    </div>
+    {{/EnumComments}}
+    {{#Location}}
+    <div>
+        Defined at line {{LineNumber}} of file {{Filename}}
+    </div>
+    {{/Location}}
+</div>

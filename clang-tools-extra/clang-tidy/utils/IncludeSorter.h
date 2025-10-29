@@ -1,4 +1,4 @@
-//===------------ IncludeSorter.h - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,7 +23,7 @@ namespace utils {
 class IncludeSorter {
 public:
   /// Supported include styles.
-  enum IncludeStyle { IS_LLVM = 0, IS_Google = 1, IS_Google_ObjC };
+  enum IncludeStyle { IS_LLVM = 0, IS_Google = 1, IS_Google_ObjC = 2 };
 
   /// The classifications of inclusions, in the order they should be sorted.
   enum IncludeKinds {
@@ -37,7 +37,7 @@ public:
 
   /// ``IncludeSorter`` constructor; takes the FileID and name of the file to be
   /// processed by the sorter.
-  IncludeSorter(const SourceManager *SourceMgr, const FileID FileID,
+  IncludeSorter(const SourceManager *SourceMgr, FileID FileID,
                 StringRef FileName, IncludeStyle Style);
 
   /// Adds the given include directive to the sorter.

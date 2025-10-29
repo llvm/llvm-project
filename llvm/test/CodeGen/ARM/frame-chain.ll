@@ -223,3 +223,33 @@ define dso_local void @required_fp(i32 %0, i32 %1) {
   store i64 %8, ptr %6, align 8
   ret void
 }
+
+define dso_local noundef i32 @leaf_tailcall(i32 noundef %0) {
+; LEAF-FP-LABEL: leaf_tailcall:
+; LEAF-FP:       @ %bb.0:
+; LEAF-FP-NEXT:    .save {r11, lr}
+; LEAF-FP-NEXT:    push {r11, lr}
+; LEAF-FP-NEXT:    .setfp r11, sp
+; LEAF-FP-NEXT:    mov r11, sp
+; LEAF-FP-NEXT:    pop {r11, lr}
+; LEAF-FP-NEXT:    b leaf
+;
+; LEAF-FP-AAPCS-LABEL: leaf_tailcall:
+; LEAF-FP-AAPCS:       @ %bb.0:
+; LEAF-FP-AAPCS-NEXT:    .save {r11, lr}
+; LEAF-FP-AAPCS-NEXT:    push {r11, lr}
+; LEAF-FP-AAPCS-NEXT:    .setfp r11, sp
+; LEAF-FP-AAPCS-NEXT:    mov r11, sp
+; LEAF-FP-AAPCS-NEXT:    pop {r11, lr}
+; LEAF-FP-AAPCS-NEXT:    b leaf
+;
+; LEAF-NOFP-LABEL: leaf_tailcall:
+; LEAF-NOFP:       @ %bb.0:
+; LEAF-NOFP-NEXT:    b leaf
+;
+; LEAF-NOFP-AAPCS-LABEL: leaf_tailcall:
+; LEAF-NOFP-AAPCS:       @ %bb.0:
+; LEAF-NOFP-AAPCS-NEXT:    b leaf
+  %a = tail call noundef i32 @leaf(i32 noundef %0)
+  ret i32 %a
+}

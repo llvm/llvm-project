@@ -2,7 +2,7 @@
 void test() {
   int *p = malloc(1);
   free(p);
-  free(p); // warn: attempt to free released memory
+  free(p); // warn: attempt to release already released memory
 }
 
 void test() {

@@ -79,9 +79,9 @@ and then check for ``#if _LIBCPP_SOMETHING_ENABLED`` instead of
 
 and then checking for ``#ifdef _LIBCPP_SOMETHING_ENABLED``.
 
-This makes it significantly easier to catch missing includes, since Clang and GCC will warn when using and undefined
-marco inside an ``#if`` statement when using ``-Wundef``. Some macros in libc++ don't use this style yet, so this only
-applies when introducing a new macro.
+This makes it significantly easier to catch missing includes: Clang and GCC with ``-Wundef`` enabled will warn
+when using an undefined macro inside an ``#if`` statement. Some macros in libc++ don't use this style yet,
+so this guideline only applies when introducing a new macro.
 
 This is partially enforced by the clang-tidy check ``libcpp-internal-ftms``.
 
@@ -107,9 +107,9 @@ This is enforced by the clang-tidy check ``libcpp-uglify-attributes``.
 Use C++11 extensions in C++03 code if they simplify the code
 ============================================================
 
-libc++ only supports Clang in C++98/03 mode. Clang provides many C++11 features in C++03, making it possible to write a
-lot of code in a simpler way than if we were restricted to C++03 features. Some use of extensions is even mandatory,
-since libc++ supports move semantics in C++03.
+libc++ supports the C++98/03 mode only with the Clang compiler. Clang provides many C++11 features
+in C++03, making it possible to write a lot of code in a simpler way than if we were restricted to C++03 features.
+Some use of extensions is even mandatory, since libc++ supports move semantics in C++03.
 
 Use ``using`` aliases instead of ``typedef``
 ============================================
@@ -124,8 +124,8 @@ Write SFINAE with ``requires`` clauses in C++20-only code
 subsume other concepts. This means that overloads based on traits can be written without negating more general cases.
 They also show intent better.
 
-Write ``enable_if`` as ``enable_if_t<conditon, int> = 0``
-=========================================================
+Write ``enable_if`` as ``enable_if_t<condition, int> = 0``
+==========================================================
 
 The form ``enable_if_t<condition, int> = 0`` is the only one that works in every language mode and for overload sets
 using the same template arguments otherwise. If the code must work in C++11 or C++03, the libc++-internal alias

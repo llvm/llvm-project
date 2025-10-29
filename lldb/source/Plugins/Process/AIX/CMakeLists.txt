@@ -1,6 +1,10 @@
 add_lldb_library(lldbPluginProcessAIX
   NativeProcessAIX.cpp
+  NativeThreadAIX.cpp
+  NativeRegisterContextAIX.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbHost
@@ -9,8 +13,6 @@ add_lldb_library(lldbPluginProcessAIX
     lldbUtility
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
-  LINK_COMPONENTS
-    Support
   )
 
 target_compile_definitions(lldbPluginProcessAIX PRIVATE "-D_ALL_SOURCE")

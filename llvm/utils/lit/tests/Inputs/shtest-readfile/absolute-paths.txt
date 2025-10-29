@@ -1,0 +1,6 @@
+## Tests that readfile works with absolute paths.
+# RUN: echo -n "hello" > %t
+# RUN: echo %{readfile:%t}
+
+## Fail the test so we can assert on the output.
+# RUN: not echo return

@@ -184,7 +184,7 @@ MachineBasicBlock *splitBlockBefore(MachineBasicBlock::iterator MI,
 
 class SystemZInstrInfo : public SystemZGenInstrInfo {
   const SystemZRegisterInfo RI;
-  SystemZSubtarget &STI;
+  const SystemZSubtarget &STI;
 
   void splitMove(MachineBasicBlock::iterator MI, unsigned NewOpcode) const;
   void splitAdjDynAlloc(MachineBasicBlock::iterator MI) const;
@@ -225,7 +225,7 @@ protected:
                                        unsigned CommuteOpIdx2) const override;
 
 public:
-  explicit SystemZInstrInfo(SystemZSubtarget &STI);
+  explicit SystemZInstrInfo(const SystemZSubtarget &STI);
 
   // Override TargetInstrInfo.
   Register isLoadFromStackSlot(const MachineInstr &MI,
@@ -258,10 +258,6 @@ public:
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
                     Register FalseReg) const override;
-  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
-                                  const MachineRegisterInfo *MRI,
-                                  Register &FoldAsLoadDefReg,
-                                  MachineInstr *&DefMI) const override;
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;
 

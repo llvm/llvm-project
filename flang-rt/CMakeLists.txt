@@ -221,15 +221,6 @@ endif()
 # System Introspection #
 ########################
 
-# The GPU targets require a few mandatory arguments to make the standard CMake
-# check flags happy.
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
-  set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
-endif()
-
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
@@ -255,11 +246,11 @@ if (UNIX AND CMAKE_SYSTEM_NAME MATCHES "AIX")
   add_compile_definitions(_LARGE_FILE_API)
 endif ()
 
-# Check whether the compiler can undefine a macro using the "-U" flag.
+# Check whether the compiler can undefine a macro using the "-Wp,-U" flag.
 # Aternatively, we could use
 #   CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU"
 # but some older versions of CMake don't define it for GCC itself.
-check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
+check_cxx_compiler_flag("-Wp,-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
@@ -290,44 +281,6 @@ set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  if (NOT DEFINED FLANG_RT_GCC_RESOURCE_DIR)
-    set(FLANG_RT_GCC_RESOURCE_DIR "FLANG_RT_GCC_RESOURCE_DIR-NOTFOUND")
-    execute_process(
-      COMMAND "${CMAKE_CXX_COMPILER}" -v -c "${FLANG_RT_SOURCE_DIR}/cmake/clang_gcc_root.cpp" ${CMAKE_CXX_FLAGS} -###
-      ERROR_FILE "${CMAKE_CURRENT_BINARY_DIR}/clang_gcc_root_result"
-    )
-    file(STRINGS "${CMAKE_CURRENT_BINARY_DIR}/clang_gcc_root_result" _errorresult)
-    foreach (_line IN LISTS _errorresult)
-      string(REGEX MATCH
-        "^Selected GCC installation: (.+)$"
-        _match
-        "${_line}")
-      if (CMAKE_MATCH_1)
-        set(FLANG_RT_GCC_RESOURCE_DIR "${CMAKE_MATCH_1}")
-        message(STATUS "Found GCC installation selected by Clang: ${FLANG_RT_GCC_RESOURCE_DIR}")
-        break()
-      endif ()
-    endforeach ()
-    set(FLANG_RT_GCC_RESOURCE_DIR "${FLANG_RT_GCC_RESOURCE_DIR}" CACHE INTERNAL "Path to GCC's resource dir selected by Clang" FORCE)
-  endif ()
-endif ()
-
-check_include_file("quadmath.h" FOUND_QUADMATH_H)
-if (FOUND_QUADMATH_H)
-  message(STATUS "quadmath.h found without additional include paths")
-  set(FLANG_RT_INCLUDE_QUADMATH_H "<quadmath.h>")
-elseif (FLANG_RT_GCC_RESOURCE_DIR)
-  cmake_push_check_state()
-    list(APPEND CMAKE_REQUIRED_INCLUDES "${FLANG_RT_GCC_RESOURCE_DIR}/include")
-    check_include_file("quadmath.h" FOUND_GCC_QUADMATH_H)
-  cmake_pop_check_state()
-  if (FOUND_GCC_QUADMATH_H)
-    message(STATUS "quadmath.h found in Clang's selected GCC installation")
-    set(FLANG_RT_INCLUDE_QUADMATH_H "\"${FLANG_RT_GCC_RESOURCE_DIR}/include/quadmath.h\"")
-  endif ()
-endif ()
-
 #####################
 # Build Preparation #
 #####################
@@ -351,7 +304,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 
 configure_file(cmake/config.h.cmake.in config.h)
-if (FLANG_RT_INCLUDE_QUADMATH_H)
+if (FLANG_INCLUDE_QUADMATH_H)
   configure_file("cmake/quadmath_wrapper.h.in" "${FLANG_RT_BINARY_DIR}/quadmath_wrapper.h")
 endif ()
 
@@ -372,8 +325,8 @@ if (LLVM_INCLUDE_EXAMPLES)
 endif ()
 
 if (FLANG_RT_INCLUDE_TESTS)
-  add_subdirectory(unittests)
   add_subdirectory(test)
+  add_subdirectory(unittests)
 else ()
   add_custom_target(check-flang-rt)
 endif()

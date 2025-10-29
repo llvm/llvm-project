@@ -13,8 +13,10 @@
 #ifndef LLVM_MC_MCOBJECTFILEINFO_H
 #define LLVM_MC_MCOBJECTFILEINFO_H
 
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -25,7 +27,7 @@ namespace llvm {
 class MCContext;
 class MCSection;
 
-class MCObjectFileInfo {
+class LLVM_ABI MCObjectFileInfo {
 protected:
   /// True if target object file supports a weak_definition of constant 0 for an
   /// omitted EH frame.
@@ -49,6 +51,9 @@ protected:
   /// Compact unwind encoding indicating that we should emit only an EH frame.
   unsigned CompactUnwindDwarfEHFrameOnly = 0;
 
+  /// SFrame ABI architecture byte.
+  std::optional<sframe::ABI> SFrameABIArch = {};
+
   /// Section directive for standard text.
   MCSection *TextSection = nullptr;
 
@@ -67,6 +72,9 @@ protected:
   /// If exception handling is supported by the target, this is the section the
   /// Language Specific Data Area information is emitted to.
   MCSection *LSDASection = nullptr;
+
+  /// Section containing call graph metadata.
+  MCSection *CallGraphSection = nullptr;
 
   /// If exception handling is supported by the target and the target can
   /// support a compact representation of the CIE and FDE, this is the section
@@ -173,6 +181,9 @@ protected:
   /// It is initialized on demand so it can be overwritten (with uniquing).
   MCSection *EHFrameSection = nullptr;
 
+  /// SFrame section.
+  MCSection *SFrameSection = nullptr;
+
   /// Section containing metadata on function stack sizes.
   MCSection *StackSizesSection = nullptr;
 
@@ -230,8 +241,6 @@ protected:
   MCSection *GLJMPSection = nullptr;
 
   // GOFF specific sections.
-  MCSection *PPA1Section = nullptr;
-  MCSection *PPA2Section = nullptr;
   MCSection *PPA2ListSection = nullptr;
   MCSection *ADASection = nullptr;
   MCSection *IDRLSection = nullptr;
@@ -267,6 +276,7 @@ public:
     return CompactUnwindDwarfEHFrameOnly;
   }
 
+  std::optional<sframe::ABI> getSFrameABIArch() const { return SFrameABIArch; }
   virtual unsigned getTextSectionAlignment() const { return 4; }
   MCSection *getTextSection() const { return TextSection; }
   MCSection *getDataSection() const { return DataSection; }
@@ -360,6 +370,8 @@ public:
   MCSection *getFaultMapSection() const { return FaultMapSection; }
   MCSection *getRemarksSection() const { return RemarksSection; }
 
+  MCSection *getCallGraphSection(const MCSection &TextSec) const;
+
   MCSection *getStackSizesSection(const MCSection &TextSec) const;
 
   MCSection *getBBAddrMapSection(const MCSection &TextSec) const;
@@ -438,8 +450,6 @@ public:
   MCSection *getGLJMPSection() const { return GLJMPSection; }
 
   // GOFF specific sections.
-  MCSection *getPPA1Section() const { return PPA1Section; }
-  MCSection *getPPA2Section() const { return PPA2Section; }
   MCSection *getPPA2ListSection() const { return PPA2ListSection; }
   MCSection *getADASection() const { return ADASection; }
   MCSection *getIDRLSection() const { return IDRLSection; }
@@ -448,6 +458,7 @@ public:
   MCSection *getTOCBaseSection() const { return TOCBaseSection; }
 
   MCSection *getEHFrameSection() const { return EHFrameSection; }
+  MCSection *getSFrameSection() const { return SFrameSection; }
 
   bool isPositionIndependent() const { return PositionIndependent; }
 

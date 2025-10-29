@@ -11,7 +11,7 @@ end
 
 !UNPARSE: SUBROUTINE f00 (x)
 !UNPARSE:  INTEGER x(10_4)
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: ALLOCATE(x))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: ALLOCATE(x))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -37,7 +37,7 @@ end
 
 !UNPARSE: SUBROUTINE f01 (x)
 !UNPARSE:  INTEGER x
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: CRITICAL(x))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: CRITICAL(x))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -61,8 +61,8 @@ subroutine f02
 end
 
 !UNPARSE: SUBROUTINE f02
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: DECLARE MAPPER(mymapper:INTEGER:&
-!UNPARSE: !$OMP&:v) MAP(TOFROM: v))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE MAPPER(mymapper:INTEGER::&
+!UNPARSE: !$OMP&v) MAP(TOFROM: v))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -78,7 +78,7 @@ end
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare mapper
 !PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpMapperSpecifier
-!PARSE-TREE: | | | | Name = 'mymapper'
+!PARSE-TREE: | | | | string = 'mymapper'
 !PARSE-TREE: | | | | TypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | Name = 'v'
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
@@ -105,8 +105,8 @@ end
 !UNPARSE:  TYPE :: tt2
 !UNPARSE:   REAL :: x
 !UNPARSE:  END TYPE
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1,tt2: omp_out%x=omp_in%x+omp_out%x
-!UNPARSE: ))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE REDUCTION(+:tt1, tt2: omp&
+!UNPARSE: !$OMP&_out%x = omp_in%x + omp_out%x))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -123,25 +123,48 @@ end
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | | | Name = 'tt1'
-!PARSE-TREE: | | | | OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | | | OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | | | Name = 'tt2'
-!PARSE-TREE: | | | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
-!PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | | | Name = 'x'
-!PARSE-TREE: | | | | | Expr = 'omp_in%x+omp_out%x'
-!PARSE-TREE: | | | | | | Add
-!PARSE-TREE: | | | | | | | Expr = 'omp_in%x'
-!PARSE-TREE: | | | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | | | DataRef -> Name = 'omp_in'
-!PARSE-TREE: | | | | | | | | | Name = 'x'
-!PARSE-TREE: | | | | | | | Expr = 'omp_out%x'
-!PARSE-TREE: | | | | | | | | Designator -> DataRef -> StructureComponent
-!PARSE-TREE: | | | | | | | | | DataRef -> Name = 'omp_out'
-!PARSE-TREE: | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | OmpCombinerExpression -> OmpStylizedInstance
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | Instance -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | Variable = 'omp_out%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | Expr = 'omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | | Add
+!PARSE-TREE: | | | | | | | | Expr = 'omp_in%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_in'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | | | Expr = 'omp_out%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | OmpStylizedInstance
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | OmpStylizedDeclaration
+!PARSE-TREE: | | | | | Instance -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | Variable = 'omp_out%x'
+!PARSE-TREE: | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | Expr = 'omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | | | | Add
+!PARSE-TREE: | | | | | | | | Expr = 'omp_in%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_in'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
+!PARSE-TREE: | | | | | | | | Expr = 'omp_out%x'
+!PARSE-TREE: | | | | | | | | | Designator -> DataRef -> StructureComponent
+!PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_out'
+!PARSE-TREE: | | | | | | | | | | Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
 
 subroutine f04
   !$omp metadirective when(user={condition(.true.)}: &
@@ -149,7 +172,7 @@ subroutine f04
 end
 
 !UNPARSE: SUBROUTINE f04
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: DECLARE SIMD(f04))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE SIMD(f04))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -174,7 +197,7 @@ subroutine f05
 end
 
 !UNPARSE: SUBROUTINE f05
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: DECLARE TARGET(f05))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: DECLARE TARGET(f05))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -201,7 +224,7 @@ end
 
 !UNPARSE: SUBROUTINE f06 (x, y)
 !UNPARSE:  INTEGER x, y
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: FLUSH(x, y))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: FLUSH(x, y))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
@@ -228,7 +251,7 @@ end
 
 !UNPARSE: SUBROUTINE f07
 !UNPARSE:  INTEGER t
-!UNPARSE: !$OMP METADIRECTIVE  WHEN(USER={CONDITION(.true._4)}: THREADPRIVATE(t))
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: THREADPRIVATE(t))
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective

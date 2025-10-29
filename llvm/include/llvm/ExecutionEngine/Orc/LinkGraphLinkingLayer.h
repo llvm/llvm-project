@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/Orc/LinkGraphLayer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>
@@ -40,14 +41,15 @@ namespace orc {
 ///
 /// Clients can use this class to add LinkGraphs to an ExecutionSession, and it
 /// serves as a base for the ObjectLinkingLayer that can link object files.
-class LinkGraphLinkingLayer : public LinkGraphLayer, private ResourceManager {
+class LLVM_ABI LinkGraphLinkingLayer : public LinkGraphLayer,
+                                       private ResourceManager {
   class JITLinkCtx;
 
 public:
   /// Plugin instances can be added to the ObjectLinkingLayer to receive
   /// callbacks when code is loaded or emitted, and when JITLink is being
   /// configured.
-  class Plugin {
+  class LLVM_ABI Plugin {
   public:
     virtual ~Plugin();
     virtual void modifyPassConfig(MaterializationResponsibility &MR,
@@ -61,7 +63,6 @@ public:
                                      jitlink::JITLinkContext &Ctx,
                                      MemoryBufferRef InputObject) {}
 
-    virtual void notifyLoaded(MaterializationResponsibility &MR) {}
     virtual Error notifyEmitted(MaterializationResponsibility &MR) {
       return Error::success();
     }
@@ -87,7 +88,7 @@ public:
                         std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Destroy the LinkGraphLinkingLayer.
-  ~LinkGraphLinkingLayer();
+  ~LinkGraphLinkingLayer() override;
 
   /// Add a plugin.
   LinkGraphLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {

@@ -230,8 +230,8 @@ void check_wide_string(char* b, ...)
   va_list ap;
   va_start(ap,b);
 
-  printf(L"foo %d",2); // expected-warning {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
-  vsprintf(b,L"bar %d",ap); // expected-warning {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
+  printf(L"foo %d",2); // expected-error {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
+  vsprintf(b,L"bar %d",ap); // expected-error {{incompatible pointer types}}, expected-warning {{should not be a wide string}}
 }
 
 void check_asterisk_precision_width(int x) {
@@ -678,15 +678,21 @@ void pr18905(void) {
 }
 
 void __attribute__((format(strfmon,1,2))) monformat(const char *fmt, ...);
+void __attribute__((format(gnu_strfmon,1,2))) gnu_monformat(const char *fmt, ...);
 void __attribute__((format(strftime,1,0))) dateformat(const char *fmt);
+void __attribute__((format(gnu_strftime,1,0))) gnu_dateformat(const char *fmt);
 
 // Other formats
 void test_other_formats(void) {
   char *str = "";
   monformat("", 1); // expected-warning{{format string is empty}}
   monformat(str); // expected-warning{{format string is not a string literal (potentially insecure)}}
+  gnu_monformat("", 1); // expected-warning{{format string is empty}}
+  gnu_monformat(str); // expected-warning{{format string is not a string literal (potentially insecure)}}
   dateformat(""); // expected-warning{{format string is empty}}
   dateformat(str); // no-warning (using strftime non-literal is not unsafe)
+  gnu_dateformat(""); // expected-warning{{format string is empty}}
+  gnu_dateformat(str); // no-warning (using strftime non-literal is not unsafe)
 }
 
 // Do not warn about unused arguments coming from system headers.

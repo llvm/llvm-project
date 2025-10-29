@@ -134,6 +134,27 @@ TEST(ManglerTest, WindowsX64) {
             "?vectorcall");
 }
 
+TEST(ManglerTest, UEFIX64) {
+  LLVMContext Ctx;
+  DataLayout DL("e-m:w-p270:32:32-p271:32:32-p272:64:64-"
+                "i64:64-i128:128-f80:128-n8:16:32:64-S128"); // uefi X86_64
+  Module Mod("test", Ctx);
+  Mod.setDataLayout(DL);
+  Mangler Mang;
+  EXPECT_EQ(mangleStr("foo", Mang, DL), "foo");
+  EXPECT_EQ(mangleStr("\01foo", Mang, DL), "foo");
+  EXPECT_EQ(mangleStr("?foo", Mang, DL), "?foo");
+  EXPECT_EQ(mangleFunc("foo", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::C, Mod, Mang),
+            "foo");
+  EXPECT_EQ(mangleFunc("?foo", llvm::GlobalValue::ExternalLinkage,
+                       llvm::CallingConv::C, Mod, Mang),
+            "?foo");
+  EXPECT_EQ(mangleFunc("foo", llvm::GlobalValue::PrivateLinkage,
+                       llvm::CallingConv::C, Mod, Mang),
+            ".Lfoo");
+}
+
 TEST(ManglerTest, XCOFF) {
   LLVMContext Ctx;
   DataLayout DL("m:a"); // XCOFF/AIX
@@ -222,6 +243,9 @@ TEST(ManglerTest, Arm64EC) {
       // public: int __cdecl Wrapper<struct A>::GetValue(struct WW<struct
       // A>::Z)const
       "?GetValue@?$Wrapper@UA@@@@$$hQEBAHUZ@?$WW@UA@@@@@Z",
+
+      // MD5 symbol
+      "??@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@$$h@",
   };
 
   for (const auto &Arm64ECName : Arm64ECNames) {

@@ -46,12 +46,14 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -64,7 +66,7 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-#define DEBUG_TYPE "lower-amx-type"
+#define DEBUG_TYPE "x86-lower-amx-type"
 
 static bool isAMXCast(Instruction *II) {
   return match(II,
@@ -137,7 +139,7 @@ static Instruction *getFirstNonAllocaInTheEntryBlock(Function &F) {
 
 class ShapeCalculator {
 private:
-  TargetMachine *TM = nullptr;
+  const TargetMachine *TM = nullptr;
 
   // In AMX intrinsics we let Shape = {Row, Col}, but the
   // RealCol = Col / ElementSize. We may use the RealCol
@@ -145,7 +147,7 @@ private:
   std::map<Value *, Value *> Col2Row, Row2Col;
 
 public:
-  ShapeCalculator(TargetMachine *TargetM) : TM(TargetM) {}
+  ShapeCalculator(const TargetMachine *TargetM) : TM(TargetM) {}
   std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo);
   std::pair<Value *, Value *> getShape(PHINode *Phi);
   Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity);
@@ -380,7 +382,7 @@ void X86LowerAMXType::combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
   Value *NewInst =
-      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
   Bitcast->replaceAllUsesWith(NewInst);
 }
 
@@ -405,7 +407,7 @@ void X86LowerAMXType::combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST) {
   Value *Stride = Builder.getInt64(64);
   Value *I8Ptr = ST->getOperand(1);
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
-  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
   if (Bitcast->hasOneUse())
     return;
   // %13 = bitcast x86_amx %src to <256 x i32>
@@ -455,7 +457,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     std::tie(Row, Col) = SC->getShape(II, OpNo);
     std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
     Value *NewInst =
-        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
     Bitcast->replaceAllUsesWith(NewInst);
   } else {
     // %2 = bitcast x86_amx %src to <256 x i32>
@@ -472,7 +474,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     Value *Row = II->getOperand(0);
     Value *Col = II->getOperand(1);
     std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Src};
-    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
     Value *NewInst = Builder.CreateLoad(Bitcast->getType(), AllocaAddr);
     Bitcast->replaceAllUsesWith(NewInst);
   }
@@ -612,7 +614,7 @@ static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
 
   Instruction *TileStore =
-      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
   return TileStore;
 }
 
@@ -643,7 +645,7 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
   std::array<Value *, 4> Args = {Row, Col, Ptr, Stride};
 
   Value *TileLoad =
-      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
   UserI->replaceUsesOfWith(V, TileLoad);
 }
 
@@ -854,6 +856,7 @@ public:
       : Func(F), SC(ShapeC), DT(nullptr) {}
   bool combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
   bool combineLoadCast(IntrinsicInst *Cast, LoadInst *LD);
+  bool combineTilezero(IntrinsicInst *Cast);
   bool combineLdSt(SmallVectorImpl<Instruction *> &Casts);
   bool combineAMXcast(TargetLibraryInfo *TLI);
   bool transformAMXCast(IntrinsicInst *AMXCast);
@@ -1084,7 +1087,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   assert(Tile->getType()->isX86_AMXTy() && "Not Tile Operand!");
 
   // TODO: Specially handle the multi-use case.
-  if (Tile->getNumUses() != 1)
+  if (!Tile->hasOneUse())
     return false;
 
   // We don't fetch shape from tilestore, we only get shape from tiledef,
@@ -1124,7 +1127,7 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   Value *I8Ptr = Builder.CreateBitCast(ST->getOperand(1), Builder.getPtrTy());
   std::array<Value *, 5> Args = {Row, Col, I8Ptr, Stride, Tile};
-  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+  Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
   return true;
 }
 
@@ -1169,10 +1172,30 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
   Value *NewInst =
-      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+      Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
   Cast->replaceAllUsesWith(NewInst);
 
   return EraseLoad;
+}
+
+// %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+// -->
+// %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
+bool X86LowerAMXCast::combineTilezero(IntrinsicInst *Cast) {
+  Value *Row = nullptr, *Col = nullptr;
+  Use &U = *(Cast->use_begin());
+  unsigned OpNo = U.getOperandNo();
+  auto *II = cast<IntrinsicInst>(U.getUser());
+  if (!isAMXIntrinsic(II))
+    return false;
+
+  std::tie(Row, Col) = SC->getShape(II, OpNo);
+
+  IRBuilder<> Builder(Cast);
+  Value *NewInst =
+      Builder.CreateIntrinsic(Intrinsic::x86_tilezero_internal, {}, {Row, Col});
+  Cast->replaceAllUsesWith(NewInst);
+  return true;
 }
 
 bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
@@ -1198,7 +1221,14 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       for (auto *Store : DeadStores)
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
-      SmallVector<Instruction *, 2> DeadLoads;
+      //  %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+      //  -->
+      //  %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
+      if (isa<ConstantAggregateZero>(Cast->getOperand(0))) {
+        Change |= combineTilezero(cast<IntrinsicInst>(Cast));
+        continue;
+      }
+
       auto *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
       if (!Load || !Load->hasOneUse())
         continue;
@@ -1211,6 +1241,7 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
         // Set the operand is null so that load instruction can be erased.
         Cast->setOperand(0, nullptr);
         Load->eraseFromParent();
+        Change = true;
       }
     }
   }
@@ -1357,7 +1388,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     std::array<Value *, 4> Args = {
         Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty())};
     Value *NewInst =
-        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, {}, Args);
+        Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
     AMXCast->replaceAllUsesWith(NewInst);
     AMXCast->eraseFromParent();
   } else {
@@ -1376,7 +1407,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     Value *Col = II->getOperand(1);
     std::array<Value *, 5> Args = {
         Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty()), Src};
-    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, {}, Args);
+    Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
     Value *NewInst = Builder.CreateLoad(AMXCast->getType(), AllocaAddr);
     AMXCast->replaceAllUsesWith(NewInst);
     AMXCast->eraseFromParent();
@@ -1403,7 +1434,57 @@ bool X86LowerAMXCast::transformAllAMXCast() {
   return Change;
 }
 
+bool lowerAmxType(Function &F, const TargetMachine *TM,
+                  TargetLibraryInfo *TLI) {
+  // Performance optimization: most code doesn't use AMX, so return early if
+  // there are no instructions that produce AMX values. This is sufficient, as
+  // AMX arguments and constants are not allowed -- so any producer of an AMX
+  // value must be an instruction.
+  // TODO: find a cheaper way for this, without looking at all instructions.
+  if (!containsAMXCode(F))
+    return false;
+
+  bool C = false;
+  ShapeCalculator SC(TM);
+  X86LowerAMXCast LAC(F, &SC);
+  C |= LAC.combineAMXcast(TLI);
+  // There might be remaining AMXcast after combineAMXcast and they should be
+  // handled elegantly.
+  C |= LAC.transformAllAMXCast();
+
+  X86LowerAMXType LAT(F, &SC);
+  C |= LAT.visit();
+
+  // Prepare for fast register allocation at O0.
+  // Todo: May better check the volatile model of AMX code, not just
+  // by checking Attribute::OptimizeNone and CodeGenOptLevel::None.
+  if (TM->getOptLevel() == CodeGenOptLevel::None) {
+    // If Front End not use O0 but the Mid/Back end use O0, (e.g.
+    // "Clang -O2 -S -emit-llvm t.c" + "llc t.ll") we should make
+    // sure the amx data is volatile, that is necessary for AMX fast
+    // register allocation.
+    if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
+      X86VolatileTileData VTD(F);
+      C = VTD.volatileTileData() || C;
+    }
+  }
+
+  return C;
+}
+
 } // anonymous namespace
+
+PreservedAnalyses X86LowerAMXTypePass::run(Function &F,
+                                           FunctionAnalysisManager &FAM) {
+  TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+  bool Changed = lowerAmxType(F, TM, &TLI);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
 namespace {
 
@@ -1414,44 +1495,10 @@ public:
   X86LowerAMXTypeLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
-    // Performance optimization: most code doesn't use AMX, so return early if
-    // there are no instructions that produce AMX values. This is sufficient, as
-    // AMX arguments and constants are not allowed -- so any producer of an AMX
-    // value must be an instruction.
-    // TODO: find a cheaper way for this, without looking at all instructions.
-    if (!containsAMXCode(F))
-      return false;
-
-    bool C = false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-
-    ShapeCalculator SC(TM);
-    X86LowerAMXCast LAC(F, &SC);
-    C |= LAC.combineAMXcast(TLI);
-    // There might be remaining AMXcast after combineAMXcast and they should be
-    // handled elegantly.
-    C |= LAC.transformAllAMXCast();
-
-    X86LowerAMXType LAT(F, &SC);
-    C |= LAT.visit();
-
-    // Prepare for fast register allocation at O0.
-    // Todo: May better check the volatile model of AMX code, not just
-    // by checking Attribute::OptimizeNone and CodeGenOptLevel::None.
-    if (TM->getOptLevel() == CodeGenOptLevel::None) {
-      // If Front End not use O0 but the Mid/Back end use O0, (e.g.
-      // "Clang -O2 -S -emit-llvm t.c" + "llc t.ll") we should make
-      // sure the amx data is volatile, that is nessary for AMX fast
-      // register allocation.
-      if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
-        X86VolatileTileData VTD(F);
-        C = VTD.volatileTileData() || C;
-      }
-    }
-
-    return C;
+    return lowerAmxType(F, TM, TLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1472,6 +1519,6 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(X86LowerAMXTypeLegacyPass, DEBUG_TYPE, PassName, false,
                     false)
 
-FunctionPass *llvm::createX86LowerAMXTypePass() {
+FunctionPass *llvm::createX86LowerAMXTypeLegacyPass() {
   return new X86LowerAMXTypeLegacyPass();
 }

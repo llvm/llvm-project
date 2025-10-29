@@ -206,7 +206,7 @@ public:
           getI()->getOpcode(), I->getType(), TargetTransformInfo::TCK_Latency,
           {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
           {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
-      auto TotalCost = Scaled64::get(*Cost.getValue());
+      auto TotalCost = Scaled64::get(Cost.getValue());
       if (auto *OpI = dyn_cast<Instruction>(I->getOperand(1 - CondIdx))) {
         auto It = InstCostMap.find(OpI);
         if (It != InstCostMap.end())
@@ -451,8 +451,7 @@ void SelectOptimizeImpl::optimizeSelectsInnerLoops(Function &F,
   SmallVector<Loop *, 4> Loops(LI->begin(), LI->end());
   // Need to check size on each iteration as we accumulate child loops.
   for (unsigned long i = 0; i < Loops.size(); ++i)
-    for (Loop *ChildL : Loops[i]->getSubLoops())
-      Loops.push_back(ChildL);
+    llvm::append_range(Loops, Loops[i]->getSubLoops());
 
   for (Loop *L : Loops) {
     if (!L->isInnermost())
@@ -1381,8 +1380,8 @@ std::optional<uint64_t>
 SelectOptimizeImpl::computeInstCost(const Instruction *I) {
   InstructionCost ICost =
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
-  if (auto OC = ICost.getValue())
-    return std::optional<uint64_t>(*OC);
+  if (ICost.isValid())
+    return std::optional<uint64_t>(ICost.getValue());
   return std::nullopt;
 }
 

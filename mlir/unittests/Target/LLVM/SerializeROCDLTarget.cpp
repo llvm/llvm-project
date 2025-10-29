@@ -125,7 +125,7 @@ TEST_F(MLIRTargetLLVMROCDL,
         serializer.serializeToObject(gpuModule, options);
     // Check that the serializer was successful.
     EXPECT_TRUE(StringRef(object->data(), object->size())
-                    .contains(".amdhsa_code_object_version 5"));
+                    .contains(".amdhsa_code_object_version 6"));
   }
 }
 

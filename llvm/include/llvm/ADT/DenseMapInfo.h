@@ -17,6 +17,8 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -50,10 +52,10 @@ inline unsigned combineHashValue(unsigned a, unsigned b) {
 /// just be `void`.
 template<typename T, typename Enable = void>
 struct DenseMapInfo {
-  //static inline T getEmptyKey();
-  //static inline T getTombstoneKey();
-  //static unsigned getHashValue(const T &Val);
-  //static bool isEqual(const T &LHS, const T &RHS);
+  // static constexpr T getEmptyKey();
+  // static constexpr T getTombstoneKey();
+  // static unsigned getHashValue(const T &Val);
+  // static bool isEqual(const T &LHS, const T &RHS);
 };
 
 // Provide DenseMapInfo for all pointers. Come up with sentinel pointer values
@@ -69,13 +71,13 @@ struct DenseMapInfo<T*> {
   //               "Log2MaxAlign bits of alignment");
   static constexpr uintptr_t Log2MaxAlign = 12;
 
-  static inline T* getEmptyKey() {
+  static constexpr T *getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
   }
 
-  static inline T* getTombstoneKey() {
+  static constexpr T *getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
@@ -91,8 +93,8 @@ struct DenseMapInfo<T*> {
 
 // Provide DenseMapInfo for chars.
 template<> struct DenseMapInfo<char> {
-  static inline char getEmptyKey() { return ~0; }
-  static inline char getTombstoneKey() { return ~0 - 1; }
+  static constexpr char getEmptyKey() { return ~0; }
+  static constexpr char getTombstoneKey() { return ~0 - 1; }
   static unsigned getHashValue(const char& Val) { return Val * 37U; }
 
   static bool isEqual(const char &LHS, const char &RHS) {
@@ -100,120 +102,33 @@ template<> struct DenseMapInfo<char> {
   }
 };
 
-// Provide DenseMapInfo for unsigned chars.
-template <> struct DenseMapInfo<unsigned char> {
-  static inline unsigned char getEmptyKey() { return ~0; }
-  static inline unsigned char getTombstoneKey() { return ~0 - 1; }
-  static unsigned getHashValue(const unsigned char &Val) { return Val * 37U; }
+// Provide DenseMapInfo for all integral types except char.
+//
+// The "char" case is excluded because it uses ~0 as the empty key despite
+// "char" being a signed type.  "std::is_same_v<T, char>" is included below
+// for clarity; technically, we do not need it because the explicit
+// specialization above "wins",
+template <typename T>
+struct DenseMapInfo<
+    T, std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, char>>> {
+  static constexpr T getEmptyKey() { return std::numeric_limits<T>::max(); }
 
-  static bool isEqual(const unsigned char &LHS, const unsigned char &RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned shorts.
-template <> struct DenseMapInfo<unsigned short> {
-  static inline unsigned short getEmptyKey() { return 0xFFFF; }
-  static inline unsigned short getTombstoneKey() { return 0xFFFF - 1; }
-  static unsigned getHashValue(const unsigned short &Val) { return Val * 37U; }
-
-  static bool isEqual(const unsigned short &LHS, const unsigned short &RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned ints.
-template<> struct DenseMapInfo<unsigned> {
-  static inline unsigned getEmptyKey() { return ~0U; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
-  static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
-
-  static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned longs.
-template<> struct DenseMapInfo<unsigned long> {
-  static inline unsigned long getEmptyKey() { return ~0UL; }
-  static inline unsigned long getTombstoneKey() { return ~0UL - 1L; }
-
-  static unsigned getHashValue(const unsigned long& Val) {
-    if constexpr (sizeof(Val) == 4)
-      return DenseMapInfo<unsigned>::getHashValue(Val);
+  static constexpr T getTombstoneKey() {
+    if constexpr (std::is_unsigned_v<T> || std::is_same_v<T, long>)
+      return std::numeric_limits<T>::max() - 1;
     else
+      return std::numeric_limits<T>::min();
+  }
+
+  static unsigned getHashValue(const T &Val) {
+    if constexpr (std::is_unsigned_v<T> && sizeof(T) > sizeof(unsigned))
       return densemap::detail::mix(Val);
+    else
+      return static_cast<unsigned>(Val *
+                                   static_cast<std::make_unsigned_t<T>>(37U));
   }
 
-  static bool isEqual(const unsigned long& LHS, const unsigned long& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for unsigned long longs.
-template<> struct DenseMapInfo<unsigned long long> {
-  static inline unsigned long long getEmptyKey() { return ~0ULL; }
-  static inline unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
-
-  static unsigned getHashValue(const unsigned long long& Val) {
-    return densemap::detail::mix(Val);
-  }
-
-  static bool isEqual(const unsigned long long& LHS,
-                      const unsigned long long& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for shorts.
-template <> struct DenseMapInfo<short> {
-  static inline short getEmptyKey() { return 0x7FFF; }
-  static inline short getTombstoneKey() { return -0x7FFF - 1; }
-  static unsigned getHashValue(const short &Val) { return Val * 37U; }
-  static bool isEqual(const short &LHS, const short &RHS) { return LHS == RHS; }
-};
-
-// Provide DenseMapInfo for ints.
-template<> struct DenseMapInfo<int> {
-  static inline int getEmptyKey() { return 0x7fffffff; }
-  static inline int getTombstoneKey() { return -0x7fffffff - 1; }
-  static unsigned getHashValue(const int& Val) { return (unsigned)(Val * 37U); }
-
-  static bool isEqual(const int& LHS, const int& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for longs.
-template<> struct DenseMapInfo<long> {
-  static inline long getEmptyKey() {
-    return (1UL << (sizeof(long) * 8 - 1)) - 1UL;
-  }
-
-  static inline long getTombstoneKey() { return getEmptyKey() - 1L; }
-
-  static unsigned getHashValue(const long& Val) {
-    return (unsigned)(Val * 37UL);
-  }
-
-  static bool isEqual(const long& LHS, const long& RHS) {
-    return LHS == RHS;
-  }
-};
-
-// Provide DenseMapInfo for long longs.
-template<> struct DenseMapInfo<long long> {
-  static inline long long getEmptyKey() { return 0x7fffffffffffffffLL; }
-  static inline long long getTombstoneKey() { return -0x7fffffffffffffffLL-1; }
-
-  static unsigned getHashValue(const long long& Val) {
-    return (unsigned)(Val * 37ULL);
-  }
-
-  static bool isEqual(const long long& LHS,
-                      const long long& RHS) {
-    return LHS == RHS;
-  }
+  static bool isEqual(const T &LHS, const T &RHS) { return LHS == RHS; }
 };
 
 // Provide DenseMapInfo for all pairs whose members have info.
@@ -223,14 +138,12 @@ struct DenseMapInfo<std::pair<T, U>> {
   using FirstInfo = DenseMapInfo<T>;
   using SecondInfo = DenseMapInfo<U>;
 
-  static inline Pair getEmptyKey() {
-    return std::make_pair(FirstInfo::getEmptyKey(),
-                          SecondInfo::getEmptyKey());
+  static constexpr Pair getEmptyKey() {
+    return {FirstInfo::getEmptyKey(), SecondInfo::getEmptyKey()};
   }
 
-  static inline Pair getTombstoneKey() {
-    return std::make_pair(FirstInfo::getTombstoneKey(),
-                          SecondInfo::getTombstoneKey());
+  static constexpr Pair getTombstoneKey() {
+    return {FirstInfo::getTombstoneKey(), SecondInfo::getTombstoneKey()};
   }
 
   static unsigned getHashValue(const Pair& PairVal) {
@@ -256,49 +169,39 @@ struct DenseMapInfo<std::pair<T, U>> {
 template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   using Tuple = std::tuple<Ts...>;
 
-  static inline Tuple getEmptyKey() {
+  static constexpr Tuple getEmptyKey() {
     return Tuple(DenseMapInfo<Ts>::getEmptyKey()...);
   }
 
-  static inline Tuple getTombstoneKey() {
+  static constexpr Tuple getTombstoneKey() {
     return Tuple(DenseMapInfo<Ts>::getTombstoneKey()...);
   }
 
-  template <unsigned I>
-  static unsigned getHashValueImpl(const Tuple &values, std::false_type) {
-    using EltType = std::tuple_element_t<I, Tuple>;
-    std::integral_constant<bool, I + 1 == sizeof...(Ts)> atEnd;
-    return detail::combineHashValue(
-        DenseMapInfo<EltType>::getHashValue(std::get<I>(values)),
-        getHashValueImpl<I + 1>(values, atEnd));
-  }
-
-  template <unsigned I>
-  static unsigned getHashValueImpl(const Tuple &, std::true_type) {
-    return 0;
+  template <unsigned I> static unsigned getHashValueImpl(const Tuple &values) {
+    if constexpr (I == sizeof...(Ts)) {
+      return 0;
+    } else {
+      using EltType = std::tuple_element_t<I, Tuple>;
+      return detail::combineHashValue(
+          DenseMapInfo<EltType>::getHashValue(std::get<I>(values)),
+          getHashValueImpl<I + 1>(values));
+    }
   }
 
   static unsigned getHashValue(const std::tuple<Ts...> &values) {
-    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
-    return getHashValueImpl<0>(values, atEnd);
+    return getHashValueImpl<0>(values);
   }
 
-  template <unsigned I>
-  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs, std::false_type) {
-    using EltType = std::tuple_element_t<I, Tuple>;
-    std::integral_constant<bool, I + 1 == sizeof...(Ts)> atEnd;
-    return DenseMapInfo<EltType>::isEqual(std::get<I>(lhs), std::get<I>(rhs)) &&
-           isEqualImpl<I + 1>(lhs, rhs, atEnd);
-  }
-
-  template <unsigned I>
-  static bool isEqualImpl(const Tuple &, const Tuple &, std::true_type) {
-    return true;
+  template <std::size_t... Is>
+  static bool isEqualImpl(const Tuple &lhs, const Tuple &rhs,
+                          std::index_sequence<Is...>) {
+    return (DenseMapInfo<std::tuple_element_t<Is, Tuple>>::isEqual(
+                std::get<Is>(lhs), std::get<Is>(rhs)) &&
+            ...);
   }
 
   static bool isEqual(const Tuple &lhs, const Tuple &rhs) {
-    std::integral_constant<bool, 0 == sizeof...(Ts)> atEnd;
-    return isEqualImpl<0>(lhs, rhs, atEnd);
+    return isEqualImpl(lhs, rhs, std::index_sequence_for<Ts...>{});
   }
 };
 
@@ -308,10 +211,22 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
   using UnderlyingType = std::underlying_type_t<Enum>;
   using Info = DenseMapInfo<UnderlyingType>;
 
-  static Enum getEmptyKey() { return static_cast<Enum>(Info::getEmptyKey()); }
+  // If an enum does not have a "fixed" underlying type, it may be UB to cast
+  // some values of the underlying type to the enum. We use an "extra" constexpr
+  // local to ensure that such UB would trigger "static assertion expression is
+  // not an integral constant expression", rather than runtime UB.
+  //
+  // If you hit this error, you can fix by switching to `enum class`, or adding
+  // an explicit underlying type (e.g. `enum X : int`) to the enum's definition.
 
-  static Enum getTombstoneKey() {
-    return static_cast<Enum>(Info::getTombstoneKey());
+  static constexpr Enum getEmptyKey() {
+    constexpr Enum V = static_cast<Enum>(Info::getEmptyKey());
+    return V;
+  }
+
+  static constexpr Enum getTombstoneKey() {
+    constexpr Enum V = static_cast<Enum>(Info::getTombstoneKey());
+    return V;
   }
 
   static unsigned getHashValue(const Enum &Val) {
@@ -319,6 +234,30 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
   }
 
   static bool isEqual(const Enum &LHS, const Enum &RHS) { return LHS == RHS; }
+};
+
+template <typename T> struct DenseMapInfo<std::optional<T>> {
+  using Optional = std::optional<T>;
+  using Info = DenseMapInfo<T>;
+
+  static constexpr Optional getEmptyKey() { return {Info::getEmptyKey()}; }
+
+  static constexpr Optional getTombstoneKey() {
+    return {Info::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const Optional &OptionalVal) {
+    return detail::combineHashValue(
+        OptionalVal.has_value(),
+        Info::getHashValue(OptionalVal.value_or(Info::getEmptyKey())));
+  }
+
+  static bool isEqual(const Optional &LHS, const Optional &RHS) {
+    if (LHS && RHS) {
+      return Info::isEqual(LHS.value(), RHS.value());
+    }
+    return !LHS && !RHS;
+  }
 };
 } // end namespace llvm
 
