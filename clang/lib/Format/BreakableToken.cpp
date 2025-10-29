@@ -34,11 +34,6 @@ static constexpr size_t BlockCommentCloserLength = 2;
 
 namespace {
 
-bool isWellFormedBlockCommentText(StringRef Text) {
-  return Text.size() >= BlockCommentOpenerLength + BlockCommentCloserLength &&
-         Text.starts_with("/*") && Text.ends_with("*/");
-}
-
 int countTrailingSpaces(StringRef Text) {
   const size_t TrimmedSize = Text.rtrim(Blanks).size();
   return static_cast<int>(Text.size() - TrimmedSize);
@@ -83,6 +78,11 @@ void replaceCommentWhitespace(const FormatToken &Tok, unsigned Offset,
 }
 
 } // namespace
+
+bool isWellFormedBlockCommentText(StringRef Text) {
+  return Text.size() >= BlockCommentOpenerLength + BlockCommentCloserLength &&
+         Text.starts_with("/*") && Text.ends_with("*/");
+}
 
 FormatStyle::CommentSpaceMode getAfterOpeningSpaceMode(const FormatStyle &Style,
                                                        const FormatToken &Tok) {

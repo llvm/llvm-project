@@ -27,6 +27,8 @@ namespace format {
 
 class BreakableBlockComment;
 
+bool isWellFormedBlockCommentText(llvm::StringRef Text);
+
 FormatStyle::CommentSpaceMode
 getBeforeClosingSpaceMode(const FormatStyle &Style, const FormatToken &Tok);
 

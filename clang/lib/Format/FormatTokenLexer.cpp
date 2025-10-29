@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FormatTokenLexer.h"
+#include "BreakableToken.h"
 #include "FormatToken.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1443,9 +1444,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
     TrailingWhitespace = UntrimmedText.size() - FormatTok->TokenText.size();
     FormatTok->setBlockCommentKind(classifyBlockComment(FormatTok->TokenText));
 
-    if (FormatTok->TokenText.starts_with("/*") &&
-        FormatTok->TokenText.ends_with("*/") &&
-        FormatTok->TokenText.size() >= 4) {
+    if (isWellFormedBlockCommentText(FormatTok->TokenText)) {
       const StringRef Content =
           FormatTok->TokenText.drop_front(2).drop_back(2).rtrim("\r\n");
       if (!Content.empty()) {
