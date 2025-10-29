@@ -1372,8 +1372,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     // Round-to-integer need custom lowering for fp16, as Promote doesn't work
     // because the result type is integer.
-    for (auto Op : {ISD::LROUND, ISD::LLROUND, ISD::LLRINT, ISD::STRICT_LROUND, 
-                    ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
+    for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
       setOperationAction(Op, MVT::f16, Custom);
   
     for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
@@ -10751,17 +10750,6 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerCMP(Op, DAG);
   case ISD::ABS:
     return LowerABS(Op, DAG);
-  case ISD::LRINT:
-  case ISD::LLRINT:
-  case ISD::LROUND:
-  case ISD::LLROUND: {
-    assert((Op.getOperand(0).getValueType() == MVT::f16 ||
-            Op.getOperand(1).getValueType() == MVT::bf16) &&
-           "Expected custom lowering of rounding operations only for f16");
-    SDLoc DL(Op);
-    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0));
-    return DAG.getNode(Op.getOpcode(), DL, Op.getValueType(), Ext);
-  }
   case ISD::STRICT_LROUND:
   case ISD::STRICT_LLROUND:
   case ISD::STRICT_LRINT:
