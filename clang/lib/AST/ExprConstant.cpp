@@ -15791,6 +15791,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       unsigned MSB = A[A.getBitWidth() - 1];
       RetMask.setBitVal(ElemNum, MSB);
     }
+    return Success(APValue(RetMask), E);
+  }
+
   case clang::X86::BI__builtin_ia32_cmpb128_mask:
   case clang::X86::BI__builtin_ia32_cmpw128_mask:
   case clang::X86::BI__builtin_ia32_cmpd128_mask:
