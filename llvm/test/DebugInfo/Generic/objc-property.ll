@@ -15,27 +15,24 @@
 ; CHECK-SAME: DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
 ; CHECK-SAME: DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
 ;
-; FIXME: this should have a DW_AT_APPLE_property_getter tag
 ; CHECK:   DW_TAG_APPLE_property
 ; CHECK:     DW_AT_APPLE_property_name ("customGetterProp")
-; CHECK:     DW_AT_APPLE_property_setter   ("customGetter")
+; CHECK:     DW_AT_APPLE_property_getter   ("customGetter")
 ; CHECK:     DW_AT_APPLE_property_attribute
 ; CHECK-SAME: DW_APPLE_PROPERTY_getter, DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
 ; CHECK-SAME: DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
 ;
-; FIXME: this should have a DW_AT_APPLE_property_setter tag
 ; CHECK:   DW_TAG_APPLE_property
 ; CHECK:     DW_AT_APPLE_property_name ("customSetterProp")
-; CHECK:     DW_AT_APPLE_property_getter   ("customSetter:")
+; CHECK:     DW_AT_APPLE_property_setter   ("customSetter:")
 ; CHECK:     DW_AT_APPLE_property_attribute
 ; CHECK-SAME: DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
 ; CHECK-SAME: DW_APPLE_PROPERTY_setter, DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
 ;
-; FIXME: the DW_AT_APPLE_property_(getter|setter) values are inverted
 ; CHECK:   DW_TAG_APPLE_property
 ; CHECK:     DW_AT_APPLE_property_name ("customAccessorsProp")
-; CHECK:     DW_AT_APPLE_property_getter   ("customSetter:")
-; CHECK:     DW_AT_APPLE_property_setter   ("customGetter")
+; CHECK:     DW_AT_APPLE_property_getter   ("customGetter")
+; CHECK:     DW_AT_APPLE_property_setter   ("customSetter:")
 ; CHECK:     DW_AT_APPLE_property_attribute
 ; CHECK-SAME: DW_APPLE_PROPERTY_getter, DW_APPLE_PROPERTY_assign, DW_APPLE_PROPERTY_readwrite,
 ; CHECK-SAME: DW_APPLE_PROPERTY_setter, DW_APPLE_PROPERTY_atomic, DW_APPLE_PROPERTY_unsafe_unretained
