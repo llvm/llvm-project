@@ -1286,8 +1286,7 @@ BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
 bool BinaryFunction::validateBranchTarget(
     uint64_t TargetAddress, uint64_t AbsoluteInstrAddr,
     const ArrayRef<uint8_t> &CurrentFunctionData) {
-  if (auto *TargetFunc =
-          BC.getBinaryFunctionContainingAddress(TargetAddress)) {
+  if (auto *TargetFunc = BC.getBinaryFunctionContainingAddress(TargetAddress)) {
     const uint64_t TargetOffset = TargetAddress - TargetFunc->getAddress();
     ArrayRef<uint8_t> TargetFunctionData;
     // Check if the target address is within the current function.

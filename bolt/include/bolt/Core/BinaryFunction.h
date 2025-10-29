@@ -2239,8 +2239,7 @@ public:
   /// Validates if the target of a direct branch/call is a valid
   /// executable instruction.
   /// Return true if the target is valid, false otherwise.
-  bool validateBranchTarget(uint64_t TargetAddress,
-                            uint64_t AbsoluteInstrAddr,
+  bool validateBranchTarget(uint64_t TargetAddress, uint64_t AbsoluteInstrAddr,
                             const ArrayRef<uint8_t> &CurrentFunctionData);
 
   /// Disassemble function from raw data.
