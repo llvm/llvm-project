@@ -385,9 +385,9 @@
 ; GCN-O3-NEXT:        AMDGPU Control Flow Wave Transform
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis
+; GCN-O3-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Register Coalescer
-; GCN-O3-NEXT:        SI optimize exec mask operations pre-RA
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Debug Variable Analysis
 ; GCN-O3-NEXT:        Live Stack Slot Analysis

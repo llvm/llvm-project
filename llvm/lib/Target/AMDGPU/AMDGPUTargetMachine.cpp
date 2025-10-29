@@ -1675,6 +1675,9 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // instructions that cause scheduling barriers.
   insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
 
+  if (!LateWaveTransform && OptExecMaskPreRA)
+    insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
+
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -1853,13 +1856,14 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
     // allocations.
     //    addPass(&AMDGPUUpdateAllocatedVGPRLiveRangesID);
 
+    // Optimize EXEC-mask related instructions around SGPR register class.
+    if (OptExecMaskPreRA)
+      addPass(&SIOptimizeExecMaskingPreRAID);
+
     // Now we can perform register-coalescing on remaining copies,
     // mainly sgpr copies and wwm-vgpr copies.
     addPass(&RegisterCoalescerID);
   }
-
-  if (OptExecMaskPreRA)
-    addPass(&SIOptimizeExecMaskingPreRAID);
   
   addPass(createSGPRAllocPass(true));
 
