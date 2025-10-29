@@ -12213,7 +12213,7 @@ static int matchShuffleAsShift(MVT &ShiftVT, unsigned &Opcode,
     MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
     ShiftVT = ByteShift ? MVT::getVectorVT(MVT::i8, SizeInBits / 8)
                         : MVT::getVectorVT(ShiftSVT, Size / Scale);
-    return (int)ShiftAmt;
+    return ShiftAmt;
   };
 
   // SSE/AVX supports logical shifts up to 64-bit integers - so we can just
@@ -54679,7 +54679,8 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
         SDValue NewPtr = DAG.getMemBasePlusOffset(
             Ld->getBasePtr(), PtrByteOfs, DL, SDNodeFlags::NoUnsignedWrap);
         SDValue NewLoad =
-            DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getMemOperand());
+            DAG.getLoad(VT, DL, Ld->getChain(), NewPtr, Ld->getPointerInfo(),
+                        Align(), Ld->getMemOperand()->getFlags());
         DAG.ReplaceAllUsesOfValueWith(Src.getOperand(0).getValue(1),
                                       NewLoad.getValue(1));
         return NewLoad;
