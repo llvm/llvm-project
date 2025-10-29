@@ -963,8 +963,8 @@ LogicalResult NVVM::WMMALoadOp::verify() {
   // Special case for f64 fragments
   Type f64Ty = Float64Type::get(getContext());
   if (typeInfo.first == f64Ty && typeInfo.second == 1) {
-      if (getType() != f64Ty)
-        return emitOpError("expected destination type to be f64");
+    if (getType() != f64Ty)
+      return emitOpError("expected destination type to be f64");
     return success();
   }
   // Everything else is a struct
