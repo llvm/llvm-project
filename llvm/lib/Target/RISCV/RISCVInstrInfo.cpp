@@ -1740,7 +1740,7 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
 static MachineInstr *canFoldAsPredicatedOp(Register Reg,
                                            const MachineRegisterInfo &MRI,
                                            const TargetInstrInfo *TII,
-                                           bool minmax) {
+                                           const RISCVSubtarget &STI) {
   if (!Reg.isVirtual())
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
@@ -1749,7 +1749,7 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   if (!MI)
     return nullptr;
 
-  if (!minmax &&
+  if (!STI.hasShortForwardBranchIMinMax() &&
       (MI->getOpcode() == RISCV::MAX || MI->getOpcode() == RISCV::MIN ||
        MI->getOpcode() == RISCV::MINU || MI->getOpcode() == RISCV::MAXU))
     return nullptr;
@@ -1816,12 +1816,11 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
     return nullptr;
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-  MachineInstr *DefMI = canFoldAsPredicatedOp(
-      MI.getOperand(5).getReg(), MRI, this, STI.hasShortForwardBranchIMinMax());
+  MachineInstr *DefMI =
+      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this, STI);
   bool Invert = !DefMI;
   if (!DefMI)
-    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this,
-                                  STI.hasShortForwardBranchIMinMax());
+    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this, STI);
   if (!DefMI)
     return nullptr;
 
