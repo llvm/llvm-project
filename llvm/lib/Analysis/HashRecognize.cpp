@@ -468,8 +468,11 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
 
     // Ensure that the PHIs have exactly two uses:
     // the bit-shift, and the XOR (or a cast feeding into the XOR).
+    // Also ensure that the SimpleRecurrence's evolution doesn't have stray
+    // users.
     if (!ConditionalRecurrence.Phi->hasNUses(2) ||
-        !SimpleRecurrence.Phi->hasNUses(2))
+        !SimpleRecurrence.Phi->hasNUses(2) ||
+        SimpleRecurrence.BO->getUniqueUndroppableUser() != SimpleRecurrence.Phi)
       return "Recurrences have stray uses";
 
     // Check that the SelectInst ConditionalRecurrence.Step is conditional on
@@ -486,14 +489,6 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   if (TC > (LHSAux ? LHSAux->getType()->getIntegerBitWidth()
                    : LHS->getType()->getIntegerBitWidth()))
     return "Loop iterations exceed bitwidth of data";
-
-  // Make sure that the simple recurrence evolution isn't used in the exit
-  // block.
-  if (SimpleRecurrence && any_of(SimpleRecurrence.BO->users(), [Exit](User *U) {
-        auto *UI = dyn_cast<Instruction>(U);
-        return UI && UI->getParent() == Exit;
-      }))
-    return "Recurrences have stray uses";
 
   // Make sure that the computed value is used in the exit block: this should be
   // true even if it is only really used in an outer loop's exit block, since
