@@ -5165,8 +5165,8 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
     ICmpInst *ICI, SelectInst *Select, IRBuilder<> &Builder) {
   BasicBlock *BB = ICI->getParent();
 
-  // If the block has any PHIs in it or the icmp/select has multiple uses, it is too
-  // complex.
+  // If the block has any PHIs in it or the icmp/select has multiple uses, it is
+  // too complex.
   if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse() || !Select->hasOneUse())
     return false;
 
@@ -5176,13 +5176,14 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
   BasicBlock *Pred = BB->getSinglePredecessor();
   if (!Pred || !isa<SwitchInst>(Pred->getTerminator()))
     return false;
-  
+
   Value *IcmpCond;
   ConstantInt *NewCaseVal;
   CmpPredicate Predicate;
 
   // Match icmp X, C
-  if (!match(ICI, m_ICmp(Predicate, m_Value(IcmpCond), m_ConstantInt(NewCaseVal))))
+  if (!match(ICI,
+             m_ICmp(Predicate, m_Value(IcmpCond), m_ConstantInt(NewCaseVal))))
     return false;
 
   Value *SelectCond, *SelectTrueVal, *SelectFalseVal;
@@ -5239,8 +5240,8 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
       isa<PHINode>(++BasicBlock::iterator(PHIUse)))
     return false;
 
-  // If the icmp is a SETEQ, then the default dest gets SelectFalseVal, the new edge gets
-  // SelectTrueVal in the PHI.
+  // If the icmp is a SETEQ, then the default dest gets SelectFalseVal, the new
+  // edge gets SelectTrueVal in the PHI.
   Value *DefaultCst = SelectFalseVal;
   Value *NewCst = SelectTrueVal;
 
