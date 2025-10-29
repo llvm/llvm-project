@@ -891,7 +891,7 @@ class DIBasicType : public DIType {
   friend class MDNode;
 
   unsigned Encoding;
-  /// Describes the number of bits used by the value of the object Non-zero when
+  /// Describes the number of bits used by the value of the object. Non-zero when
   /// the value of an object does not fully occupy the storage size specified by
   /// SizeInBits.
   uint32_t DataSizeInBits;
