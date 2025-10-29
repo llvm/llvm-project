@@ -907,22 +907,22 @@ struct StoreDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
-static SmallVector<Value> computeDistributedOffsetsForMatrixOp(
+static SmallVector<Value> computeDistributedCoordinatesForMatrixOp(
     PatternRewriter &rewriter, Location loc, xegpu::DistributeLayoutAttr layout,
     Value laneId, ArrayRef<int64_t> payloadShape, ValueRange origOffsets) {
-  SmallVector<Value> newOffsets;
-  auto maybeDescOffsets =
-      layout.computeDistributedOffsets(rewriter, loc, laneId, payloadShape);
-  if (failed(maybeDescOffsets))
+  SmallVector<Value> newCoods;
+  auto maybeCoords =
+      layout.computeDistributedCoords(rewriter, loc, laneId, payloadShape);
+  if (failed(maybeCoords))
     return {};
-  assert(maybeDescOffsets.value().size() == 1 &&
+  assert(maybeCoords.value().size() == 1 &&
          "Expected one set of distributed offsets");
   SmallVector<OpFoldResult> ofrVec = xegpu::addWithRightAligned(
-      rewriter, loc, getAsOpFoldResult(maybeDescOffsets.value()[0]),
+      rewriter, loc, getAsOpFoldResult(maybeCoords.value()[0]),
       getAsOpFoldResult(origOffsets));
-  newOffsets = llvm::to_vector(llvm::map_range(
+  newCoods = llvm::to_vector(llvm::map_range(
       ofrVec, [&](OpFoldResult ofr) -> Value { return cast<Value>(ofr); }));
-  return newOffsets;
+  return newCoods;
 }
 
 /// Pattern for distributing xegpu::LoadMatrixOp.
@@ -969,7 +969,7 @@ struct LoadMatrixDistribution final : public gpu::WarpDistributionPattern {
         getDistVecTypeBasedOnLaneLayout(layout, sgPayloadTy);
     if (failed(distPayloadByWarpOpOrFailure))
       return rewriter.notifyMatchFailure(
-          matrixOp, "The matrix op payload has no layout.");
+          matrixOp, "Failed to distribute matrix op payload based on layout.");
 
     SmallVector<Value> operands = {matrixOp.getMemDesc()};
     const unsigned offsetsStartIdx = operands.size();
@@ -992,17 +992,17 @@ struct LoadMatrixDistribution final : public gpu::WarpDistributionPattern {
     ValueRange currentOffsets =
         ValueRange(newOperands).drop_front(offsetsStartIdx);
 
-    SmallVector<Value> newOffsets = currentOffsets;
+    SmallVector<Value> newCoords = currentOffsets;
     rewriter.setInsertionPointAfter(newWarpOp);
 
     if (!matrixOp.getSubgroupBlockIoAttr()) {
-      newOffsets = computeDistributedOffsetsForMatrixOp(
+      newCoords = computeDistributedCoordinatesForMatrixOp(
           rewriter, loc, layout, newWarpOp.getLaneid(), sgPayloadTy.getShape(),
           currentOffsets);
     }
     xegpu::LoadMatrixOp newOp = xegpu::LoadMatrixOp::create(
         rewriter, newWarpOp.getLoc(), *distPayloadByWarpOpOrFailure,
-        newOperands[0], ValueRange(newOffsets), newConstOffsetsAttr,
+        newOperands[0], ValueRange(newCoords), newConstOffsetsAttr,
         matrixOp.getSubgroupBlockIoAttr(), xegpu::DistributeLayoutAttr{});
     // Resolve the output type and replace all uses.
     rewriter.replaceAllUsesWith(
@@ -1045,7 +1045,7 @@ struct StoreMatrixDistribution final : public gpu::WarpDistributionPattern {
         getDistVecTypeBasedOnLaneLayout(layout, sgPayloadTy);
     if (failed(distPayloadByWarpOpOrFailure))
       return rewriter.notifyMatchFailure(
-          matrixOp, "The matrix op payload has no layout.");
+          matrixOp, "Failed to distribute matrix op payload based on layout.");
 
     SmallVector<Value> operands = {matrixOp.getData(), matrixOp.getMemDesc()};
     const unsigned offsetsStartIdx = operands.size();
@@ -1069,18 +1069,18 @@ struct StoreMatrixDistribution final : public gpu::WarpDistributionPattern {
     ValueRange currentOffsets =
         ValueRange(newOperands).drop_front(offsetsStartIdx);
 
-    SmallVector<Value> newOffsets = currentOffsets;
+    SmallVector<Value> newCoords = currentOffsets;
     rewriter.setInsertionPointAfter(newWarpOp);
 
     if (!matrixOp.getSubgroupBlockIoAttr()) {
-      newOffsets = computeDistributedOffsetsForMatrixOp(
+      newCoords = computeDistributedCoordinatesForMatrixOp(
           rewriter, loc, layout, newWarpOp.getLaneid(), sgPayloadTy.getShape(),
           currentOffsets);
     }
 
     xegpu::StoreMatrixOp::create(
         rewriter, loc, TypeRange{}, newOperands[0], newOperands[1],
-        ValueRange(newOffsets), newConstOffsetsAttr,
+        ValueRange(newCoords), newConstOffsetsAttr,
         matrixOp.getSubgroupBlockIoAttr(), xegpu::DistributeLayoutAttr{});
     rewriter.eraseOp(matrixOp);
     return success();

@@ -115,7 +115,7 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   // descriptors to be accessed, based on the layout information.
   ArrayRef<int64_t> wgShape = op.getDataShape();
   auto maybeDescOffsets =
-      layout.computeDistributedOffsets(rewriter, loc, sgId, wgShape);
+      layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
   if (failed(maybeDescOffsets))
     return failure();
 
@@ -832,7 +832,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
       Value sgId =
           gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
       auto sgOffsets =
-          layout.computeDistributedOffsets(rewriter, loc, sgId, wgShape);
+          layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
       if (failed(sgOffsets))
         return failure();
 
@@ -1054,7 +1054,7 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
     auto sgOffsets =
-        layout.computeDistributedOffsets(rewriter, loc, sgId, wgShape);
+        layout.computeDistributedCoords(rewriter, loc, sgId, wgShape);
     if (failed(sgOffsets))
       return failure();
 

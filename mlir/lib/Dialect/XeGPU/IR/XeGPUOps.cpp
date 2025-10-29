@@ -175,7 +175,7 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
 
 LogicalResult
 IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
-                      UnitAttr subgroup_block_io,
+                      UnitAttr subgroup_block_io, DistributeLayoutAttr layout,
                       function_ref<InFlightDiagnostic()> emitError) {
 
   if (!dataTy) {
@@ -191,7 +191,20 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
 
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
-
+  if (subgroup_block_io && layout) {
+    auto laneData = layout.getEffectiveLaneDataAsInt();
+    if (!laneData.empty()) {
+      bool isLaneDataLinear =
+          std::all_of(laneData.begin(), std::prev(laneData.end()),
+                      [](int x) { return x == 1; });
+      if (!isLaneDataLinear)
+        return emitError()
+               << "With subgroup_block_io, lane data must be linear.";
+      if (isLaneDataLinear && laneData.back() != 1)
+        return emitError()
+               << "With subgroup_block_io, lane data must be coalesced.";
+    }
+  }
   if (dataShape.size() == 2) {
     if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
@@ -1102,7 +1115,7 @@ LogicalResult LoadMatrixOp::verify() {
   MemDescType mdescTy = getMemDesc().getType();
 
   return IsValidMatrixOpParams(resTy, mdescTy, subgroup_block_io,
-                               [&]() { return emitError(); });
+                               getLayoutAttr(), [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1126,7 +1139,7 @@ LogicalResult StoreMatrixOp::verify() {
   UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
   MemDescType mdescTy = getMemDesc().getType();
   return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
-                               [&]() { return emitError(); });
+                               getLayoutAttr(), [&]() { return emitError(); });
 }
 
 namespace mlir {

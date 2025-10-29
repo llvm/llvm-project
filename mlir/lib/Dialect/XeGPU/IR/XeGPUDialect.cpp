@@ -47,10 +47,11 @@ void XeGPUDialect::initialize() {
 // `delinearizedId` is used to identify a 16x32 of a subgroup in each
 // distribution unit.
 static SmallVector<SmallVector<Value>>
-genOffsets(OpBuilder &builder, Location loc, SmallVector<Value> delinearizedId,
-           ArrayRef<int64_t> subShapesLayout, ArrayRef<int64_t> subShape,
-           ArrayRef<int64_t> srcShape) {
-  SmallVector<SmallVector<Value>> offsets;
+genCoordinates(OpBuilder &builder, Location loc,
+               SmallVector<Value> delinearizedId,
+               ArrayRef<int64_t> subShapesLayout, ArrayRef<int64_t> subShape,
+               ArrayRef<int64_t> srcShape) {
+  SmallVector<SmallVector<Value>> coordinates;
 
   // A distribution unit must be less than or equal to `srcShape`
   SmallVector<int64_t> distUnitShape = llvm::map_to_vector(
@@ -89,9 +90,9 @@ genOffsets(OpBuilder &builder, Location loc, SmallVector<Value> delinearizedId,
               arith::ConstantIndexOp::create(builder, loc, std::get<1>(t)));
         });
 
-    offsets.push_back(mods);
+    coordinates.push_back(mods);
   }
-  return offsets;
+  return coordinates;
 }
 
 // Checks if the given shape can be evenly distributed based on the layout
@@ -298,12 +299,12 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
   return affine::delinearizeIndex(builder, loc, linearId, dims);
 }
 
-/// Implements DistributeLayoutAttr::computeDistributedOffsets to generate
+/// Implements DistributeLayoutAttr::computeDistributedCoords to generate
 /// instructions for computing multi-dimensional offsets when distributed by
 /// LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
-LayoutAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
-                                      Value linearId, ArrayRef<int64_t> shape) {
+LayoutAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
+                                     Value linearId, ArrayRef<int64_t> shape) {
   SmallVector<int64_t> layout;
   SmallVector<int64_t> subShape;
   if (isForWorkgroup()) {
@@ -328,7 +329,7 @@ LayoutAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
     return failure();
   SmallVector<Value> ids = *maybeIds;
 
-  return genOffsets(builder, loc, ids, layout, subShape, shape);
+  return genCoordinates(builder, loc, ids, layout, subShape, shape);
 }
 
 //===----------------------------------------------------------------------===//
@@ -388,12 +389,12 @@ SliceAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
   return parent.delinearizeId(builder, loc, linearId);
 }
 
-// Implements DistributeLayoutAttr::computeDistributedOffsets to generate
+// Implements DistributeLayoutAttr::computeDistributedCoords to generate
 // instructions for computing multi-dimensional offsets when distributed by
 // LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
-SliceAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
-                                     Value linearId, ArrayRef<int64_t> shape) {
+SliceAttr::computeDistributedCoords(OpBuilder &builder, Location loc,
+                                    Value linearId, ArrayRef<int64_t> shape) {
   assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
   if (!isForWorkgroup())
     return failure();
@@ -428,7 +429,7 @@ SliceAttr::computeDistributedOffsets(OpBuilder &builder, Location loc,
   SmallVector<Value> sgIds =
       XeGPUDialect::slice(ArrayRef<Value>(*maybeIds), dims);
 
-  return genOffsets(builder, loc, sgIds, layout, subShape, shape);
+  return genCoordinates(builder, loc, sgIds, layout, subShape, shape);
 }
 
 bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {

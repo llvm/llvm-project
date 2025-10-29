@@ -228,12 +228,12 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "FailureOr<SmallVector<Value>>",
                     "delinearizeId",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
-    InterfaceMethod<[{Generates instructions to compute multidimensional offsets for dist units
+    InterfaceMethod<[{Generates instructions to compute multidimensional coordinates for dist units
                       assigned to a level identified by linearId. The shape parameter
                       represents the higher-level problem size. Each level may access
                       multiple blocks according to round-robin distribution rules.}],
                     "FailureOr<SmallVector<SmallVector<Value>>>",
-                    "computeDistributedOffsets",
+                    "computeDistributedCoords",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
     InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
                      to some other layout according to given permutation of (0...n-1).}],
@@ -481,12 +481,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     FailureOr<SmallVector<Value>>
     delinearizeId(OpBuilder &builder, Location loc, Value linearId);
 
-    /// Generates instructions to compute multidimensional offsets for dist units
+    /// Generates instructions to compute multidimensional coordinates for dist units
     /// assigned to a level identified by linearId. The shape parameter
     /// represents the higher-level problem size. Each `level` may access
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
-    computeDistributedOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
@@ -645,13 +645,13 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     FailureOr<SmallVector<Value>>
     delinearizeId(OpBuilder &builder, Location loc, Value linearId);
 
-    /// Generates instructions to compute multidimensional offsets for blocks
+    /// Generates instructions to compute multidimensional coordinates for blocks
     /// assigned to a subgroup identified by linearId. The shape parameter
     /// represents the workgroup-level problem size. Each subgroup may access
     /// multiple blocks according to round-robin distribution rules.
 
     FailureOr<SmallVector<SmallVector<Value>>>
-    computeDistributedOffsets(OpBuilder &builder, Location loc, Value linearId,ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId,ArrayRef<int64_t> shape);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);
