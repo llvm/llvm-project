@@ -1866,10 +1866,19 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // If either of the blocks has it's address taken, then we can't do this fold,
   // because the code we'd hoist would no longer run when we jump into the block
   // by it's address.
-  for (auto *Succ : successors(BB))
-    if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
+  for (auto *Succ : successors(BB)) {
+    if (Succ->hasAddressTaken())
       return false;
-
+    if (Succ->getSinglePredecessor())
+      continue;
+    // If Succ has >1 predecessors, continue to check if the Succ is terminated
+    // by an `unreachable` inst. Since executing `unreachable` inst is an UB, we
+    // can relax the condition based on the assumptiom that the program would
+    // never enter Succ and trigger an UB.
+    if (isa<UnreachableInst>(Succ->getTerminator()))
+      continue;
+    return false;
+  }
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
