@@ -762,9 +762,9 @@ public:
         // FIXME(cir): For now lets pretend we shouldn't use the conversion
         // intrinsics and insert a cast here unconditionally.
         src = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, src,
-                                 cgf.FloatTy);
+                                 cgf.floatTy);
         srcType = cgf.getContext().FloatTy;
-        mlirSrcType = cgf.FloatTy;
+        mlirSrcType = cgf.floatTy;
       }
     }
 
@@ -1738,7 +1738,7 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
   //
   // See more in `EmitSub` in CGExprScalar.cpp.
   assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
-  return cir::PtrDiffOp::create(builder, cgf.getLoc(ops.loc), cgf.PtrDiffTy,
+  return cir::PtrDiffOp::create(builder, cgf.getLoc(ops.loc), cgf.ptrDiffTy,
                                 ops.lhs, ops.rhs);
 }
 
@@ -2220,7 +2220,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                                      "sizeof operator for VariableArrayType",
                                      e->getStmtClassName());
       return builder.getConstant(
-          loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
                                  llvm::APSInt(llvm::APInt(64, 1), true)));
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
@@ -2228,12 +2228,12 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
         e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
         e->getStmtClassName());
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+        loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
                                llvm::APSInt(llvm::APInt(64, 1), true)));
   }
 
   return builder.getConstant(
-      loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+      loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
                              e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
@@ -2329,14 +2329,14 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
     mlir::Value lhs = Visit(lhsExpr);
     if (!lhs) {
-      lhs = builder.getNullValue(cgf.VoidTy, loc);
+      lhs = builder.getNullValue(cgf.voidTy, loc);
       lhsIsVoid = true;
     }
 
     mlir::Value rhs = Visit(rhsExpr);
     if (lhsIsVoid) {
       assert(!rhs && "lhs and rhs types must match");
-      rhs = builder.getNullValue(cgf.VoidTy, loc);
+      rhs = builder.getNullValue(cgf.voidTy, loc);
     }
 
     return builder.createSelect(loc, condV, lhs, rhs);
@@ -2381,7 +2381,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
   if (!insertPoints.empty()) {
     // If both arms are void, so be it.
     if (!yieldTy)
-      yieldTy = cgf.VoidTy;
+      yieldTy = cgf.voidTy;
 
     // Insert required yields.
     for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {

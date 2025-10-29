@@ -495,13 +495,14 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     if (failed(maybePackedDimForEachOperand))
       return failure();
     packedOperandsDims.packedDimForEachOperand = *maybePackedDimForEachOperand;
-    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
 
     LDBG() << "++++ After pack size #" << i << ": " << packedSizes[i];
     LDBG() << "maps: " << llvm::interleaved(indexingMaps);
     LDBG() << "iterators: " << llvm::interleaved(iteratorTypes);
     LDBG() << "packedDimForEachOperand: "
            << llvm::interleaved(packedOperandsDims.packedDimForEachOperand);
+
+    listOfPackedOperandsDim.pushBack(std::move(packedOperandsDims));
   }
 
   // Step 2. Propagate packing to all LinalgOp operands.

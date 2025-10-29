@@ -152,19 +152,20 @@ IterationGraphSorter IterationGraphSorter::fromGenericOp(
 }
 
 IterationGraphSorter::IterationGraphSorter(
-    SmallVector<Value> &&ins, SmallVector<AffineMap> &&loop2InsLvl, Value out,
-    AffineMap loop2OutLvl, SmallVector<utils::IteratorType> &&iterTypes,
+    SmallVector<Value> &&insArg, SmallVector<AffineMap> &&loop2InsLvlArg,
+    Value out, AffineMap loop2OutLvl,
+    SmallVector<utils::IteratorType> &&iterTypesArg,
     sparse_tensor::LoopOrderingStrategy strategy)
-    : ins(std::move(ins)), loop2InsLvl(std::move(loop2InsLvl)), out(out),
-      loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypes)),
+    : ins(std::move(insArg)), loop2InsLvl(std::move(loop2InsLvlArg)), out(out),
+      loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypesArg)),
       strategy(strategy) {
   // One map per tensor.
-  assert(this->loop2InsLvl.size() == this->ins.size());
+  assert(loop2InsLvl.size() == ins.size());
   // All the affine maps have the same number of dimensions (loops).
   assert(llvm::all_equal(llvm::map_range(
-      this->loop2InsLvl, [](AffineMap m) { return m.getNumDims(); })));
+      loop2InsLvl, [](AffineMap m) { return m.getNumDims(); })));
   // The number of results of the map should match the rank of the tensor.
-  assert(llvm::all_of(llvm::zip(this->loop2InsLvl, this->ins), [](auto mvPair) {
+  assert(llvm::all_of(llvm::zip(loop2InsLvl, ins), [](auto mvPair) {
     auto [m, v] = mvPair;
 
     // For ranked types the rank must match.
