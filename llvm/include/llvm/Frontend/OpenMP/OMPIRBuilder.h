@@ -1231,7 +1231,7 @@ public:
   /// \param HasDistSchedule Defines if the clause being lowered is
   /// dist_schedule as this is handled slightly differently
   ///
-  /// \param ChunkSize The chunk size for dist_schedule loop
+  /// \param DistScheduleChunkSize The chunk size for dist_schedule loop
   ///
   /// \returns Point where to insert code after the workshare construct.
   LLVM_ABI InsertPointOrErrorTy applyWorkshareLoop(
@@ -1243,8 +1243,8 @@ public:
       bool HasOrderedClause = false,
       omp::WorksharingLoopType LoopType =
           omp::WorksharingLoopType::ForStaticLoop,
-      bool NoLoop = false,
-      bool HasDistSchedule = false, Value *DistScheduleChunkSize = nullptr);
+      bool NoLoop = false, bool HasDistSchedule = false,
+      Value *DistScheduleChunkSize = nullptr);
 
   /// Tile a loop nest.
   ///
