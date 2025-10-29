@@ -1841,8 +1841,8 @@ define <16 x float> @v16f32_no_step2(<16 x float> %x) #3 {
   ret <16 x float> %div
 }
 
-attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="!divf,!vec-divf" }
-attributes #1 = { "unsafe-fp-math"="true" "reciprocal-estimates"="divf,vec-divf" }
-attributes #2 = { "unsafe-fp-math"="true" "reciprocal-estimates"="divf:2,vec-divf:2" }
-attributes #3 = { "unsafe-fp-math"="true" "reciprocal-estimates"="divf:0,vec-divf:0" }
+attributes #0 = { "reciprocal-estimates"="!divf,!vec-divf" }
+attributes #1 = { "reciprocal-estimates"="divf,vec-divf" }
+attributes #2 = { "reciprocal-estimates"="divf:2,vec-divf:2" }
+attributes #3 = { "reciprocal-estimates"="divf:0,vec-divf:0" }
 

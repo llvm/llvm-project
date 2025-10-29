@@ -9002,12 +9002,12 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
 }
 
 static SMECallAttrs
-getSMECallAttrs(const Function &Caller, const AArch64TargetLowering &TLI,
+getSMECallAttrs(const Function &Caller, const RTLIB::RuntimeLibcallsInfo &RTLCI,
                 const TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.CB)
-    return SMECallAttrs(*CLI.CB, &TLI);
+    return SMECallAttrs(*CLI.CB, &RTLCI);
   if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
-    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol(), TLI));
+    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol(), RTLCI));
   return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(SMEAttrs::Normal));
 }
 
@@ -9028,10 +9028,12 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   CallingConv::ID CallerCC = CallerF.getCallingConv();
 
   // SME Streaming functions are not eligible for TCO as they may require
-  // the streaming mode or ZA to be restored after returning from the call.
-  SMECallAttrs CallAttrs = getSMECallAttrs(CallerF, *this, CLI);
+  // the streaming mode or ZA/ZT0 to be restored after returning from the call.
+  SMECallAttrs CallAttrs =
+      getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
       CallAttrs.requiresPreservingAllZAState() ||
+      CallAttrs.requiresPreservingZT0() ||
       CallAttrs.caller().hasStreamingBody())
     return false;
 
@@ -9454,7 +9456,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
+  SMECallAttrs CallAttrs =
+      getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
 
   std::optional<unsigned> ZAMarkerNode;
   bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
@@ -19476,6 +19479,61 @@ static SDValue performMulVectorExtendCombine(SDNode *Mul, SelectionDAG &DAG) {
                      Op1 ? Op1 : Mul->getOperand(1));
 }
 
+// Multiplying an RDSVL value by a constant can sometimes be done cheaper by
+// folding a power-of-two factor of the constant into the RDSVL immediate and
+// compensating with an extra shift.
+//
+// We rewrite:
+//   (mul (srl (rdsvl 1), w), x)
+// to one of:
+//   (shl (rdsvl y),  z)   if z > 0
+//   (srl (rdsvl y), abs(z))   if z < 0
+// where integers y, z satisfy   x = y * 2^(w + z)   and   y ∈ [-32, 31].
+static SDValue performMulRdsvlCombine(SDNode *Mul, SelectionDAG &DAG) {
+  SDLoc DL(Mul);
+  EVT VT = Mul->getValueType(0);
+  SDValue MulOp0 = Mul->getOperand(0);
+  int ConstMultiplier =
+      cast<ConstantSDNode>(Mul->getOperand(1))->getSExtValue();
+  if ((MulOp0->getOpcode() != ISD::SRL) ||
+      (MulOp0->getOperand(0).getOpcode() != AArch64ISD::RDSVL))
+    return SDValue();
+
+  unsigned AbsConstValue = abs(ConstMultiplier);
+  unsigned OperandShift =
+      cast<ConstantSDNode>(MulOp0->getOperand(1))->getZExtValue();
+
+  // z ≤ ctz(|x|) - w  (largest extra shift we can take while keeping y
+  // integral)
+  int UpperBound = llvm::countr_zero(AbsConstValue) - OperandShift;
+
+  // To keep y in range, with B = 31 for x > 0 and B = 32 for x < 0, we need:
+  // 2^(w + z) ≥ ceil(x / B)  ⇒  z ≥ ceil_log2(ceil(x / B)) - w  (LowerBound).
+  unsigned B = ConstMultiplier < 0 ? 32 : 31;
+  unsigned CeilAxOverB = (AbsConstValue + (B - 1)) / B; // ceil(|x|/B)
+  int LowerBound = llvm::Log2_32_Ceil(CeilAxOverB) - OperandShift;
+
+  // No valid solution found.
+  if (LowerBound > UpperBound)
+    return SDValue();
+
+  // Any value of z in [LowerBound, UpperBound] is valid. Prefer no extra
+  // shift if possible.
+  int Shift = std::min(std::max(/*prefer*/ 0, LowerBound), UpperBound);
+
+  // y = x / 2^(w + z)
+  int32_t RdsvlMul = (AbsConstValue >> (OperandShift + Shift)) *
+                     (ConstMultiplier < 0 ? -1 : 1);
+  auto Rdsvl = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                           DAG.getSignedConstant(RdsvlMul, DL, MVT::i32));
+
+  if (Shift == 0)
+    return Rdsvl;
+  return DAG.getNode(Shift < 0 ? ISD::SRL : ISD::SHL, DL, VT, Rdsvl,
+                     DAG.getConstant(abs(Shift), DL, MVT::i32),
+                     SDNodeFlags::Exact);
+}
+
 // Combine v4i32 Mul(And(Srl(X, 15), 0x10001), 0xffff) -> v8i16 CMLTz
 // Same for other types with equivalent constants.
 static SDValue performMulVectorCmpZeroCombine(SDNode *N, SelectionDAG &DAG) {
@@ -19603,6 +19661,9 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   // The below optimizations require a constant RHS.
   if (!isa<ConstantSDNode>(N1))
     return SDValue();
+
+  if (SDValue Ext = performMulRdsvlCombine(N, DAG))
+    return Ext;
 
   ConstantSDNode *C = cast<ConstantSDNode>(N1);
   const APInt &ConstValue = C->getAPIntValue();
@@ -26665,11 +26726,34 @@ static SDValue performDUPCombine(SDNode *N,
   }
 
   if (N->getOpcode() == AArch64ISD::DUP) {
+    SDValue Op = N->getOperand(0);
+
+    // Optimize DUP(extload/zextload i8/i16/i32) to avoid GPR->FPR transfer.
+    // For example:
+    //   v4i32 = DUP (i32 (zextloadi8 addr))
+    // =>
+    //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
+    //   v4i32 = DUPLANE32 (v4i32), 0
+    if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
+      ISD::LoadExtType ExtType = LD->getExtensionType();
+      EVT MemVT = LD->getMemoryVT();
+      EVT ElemVT = VT.getVectorElementType();
+      if ((ExtType == ISD::EXTLOAD || ExtType == ISD::ZEXTLOAD) &&
+          (MemVT == MVT::i8 || MemVT == MVT::i16 || MemVT == MVT::i32) &&
+          ElemVT != MemVT && LD->hasOneUse()) {
+        EVT Vec128VT = EVT::getVectorVT(*DCI.DAG.getContext(), ElemVT,
+                                        128 / ElemVT.getSizeInBits());
+        SDValue ScalarToVec =
+            DCI.DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, Vec128VT, Op);
+        return DCI.DAG.getNode(getDUPLANEOp(ElemVT), DL, VT, ScalarToVec,
+                               DCI.DAG.getConstant(0, DL, MVT::i64));
+      }
+    }
+
     // If the instruction is known to produce a scalar in SIMD registers, we can
     // duplicate it across the vector lanes using DUPLANE instead of moving it
     // to a GPR first. For example, this allows us to handle:
     //   v4i32 = DUP (i32 (FCMGT (f32, f32)))
-    SDValue Op = N->getOperand(0);
     // FIXME: Ideally, we should be able to handle all instructions that
     // produce a scalar value in FPRs.
     if (Op.getOpcode() == AArch64ISD::FCMEQ ||
@@ -27602,6 +27686,15 @@ static SDValue performPTestFirstCombine(SDNode *N,
 static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  // If a DUP(Op0) already exists, reuse it for the scalar_to_vector.
+  if (DCI.isAfterLegalizeDAG()) {
+    if (SDNode *LN = DCI.DAG.getNodeIfExists(AArch64ISD::DUP, N->getVTList(),
+                                             N->getOperand(0)))
+      return SDValue(LN, 0);
+  }
+
   // Let's do below transform.
   //
   //         t34: v4i32 = AArch64ISD::UADDLV t2
@@ -27638,7 +27731,6 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   // Let's generate new sequence with AArch64ISD::NVCAST.
-  SDLoc DL(N);
   SDValue EXTRACT_SUBVEC =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, UADDLV,
                   DAG.getConstant(0, DL, MVT::i64));
@@ -29422,15 +29514,6 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   TargetLowering::insertSSPDeclarations(M);
 }
 
-Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported)
-    return M.getFunction(getLibcallImplName(SecurityCheckCookieLibcall));
-  return TargetLowering::getSSPStackGuardCheck(M);
-}
-
 Value *
 AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the
@@ -29438,11 +29521,6 @@ AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
   if (Subtarget->isTargetAndroid())
     return UseTlsOffset(IRB, 0x48);
-
-  // Fuchsia is similar.
-  // <zircon/tls.h> defines ZX_TLS_UNSAFE_SP_OFFSET with this value.
-  if (Subtarget->isTargetFuchsia())
-    return UseTlsOffset(IRB, -0x8);
 
   return TargetLowering::getSafeStackPointerLocation(IRB);
 }
@@ -29761,7 +29839,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallAttrs = SMECallAttrs(*Base, this);
+    auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
     if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
         CallAttrs.requiresPreservingZT0() ||
         CallAttrs.requiresPreservingAllZAState())

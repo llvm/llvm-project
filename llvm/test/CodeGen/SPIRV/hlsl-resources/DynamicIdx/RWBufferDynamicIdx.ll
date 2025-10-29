@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - | FileCheck %s --match-full-lines
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
 %"__cblayout_$Globals" = type <{ i32 }>
 
@@ -9,7 +10,6 @@
 
 ; CHECK: OpCapability Shader
 ; CHECK: OpCapability StorageTexelBufferArrayDynamicIndexingEXT
-
 define void @main() local_unnamed_addr #0 {
 entry:
   %"$Globals.cb_h.i.i" = tail call target("spirv.VulkanBuffer", target("spirv.Layout", %"__cblayout_$Globals", 4, 0), 2, 0) @"llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_tspirv.Layout_s___cblayout_$Globalss_4_0t_2_0t"(i32 1, i32 0, i32 1, i32 0, ptr nonnull @"$Globals.str")
@@ -20,3 +20,7 @@ entry:
   store i32 99, ptr addrspace(11) %2, align 4
   ret void
 }
+
+!hlsl.cbs = !{!0}
+
+!0 = !{ptr @"$Globals.cb", ptr addrspace(12) @i}
