@@ -190,7 +190,7 @@ find_first_character(const unsigned char *src, unsigned char ch,
 // 3. generic - read using clang's internal vector types
 // 4. arch - hand-coded per architecture. Possibly in asm, or with intrinsics.
 //
-//The called implemenation is chosen at build-time by setting
+// The called implemenation is chosen at build-time by setting
 // LIBC_CONF_{FUNC}_IMPL in config.json
 static constexpr auto &string_length_impl =
     LIBC_COPT_STRING_LENGTH_IMPL::string_length;
