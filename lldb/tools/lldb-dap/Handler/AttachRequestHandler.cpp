@@ -124,6 +124,8 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       attach_info.SetWaitForLaunch(args.waitFor, /*async=*/false);
       dap.target.Attach(attach_info, error);
     }
+    if (error.Fail())
+      return ToError(error);
   }
 
   // Make sure the process is attached and stopped.
