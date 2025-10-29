@@ -407,7 +407,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` by printing
-  the type of the diagnosed variable.
+  the type of the diagnosed variable and correctly generating fix-it hints for
+  parameter-pack arguments.
 
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
