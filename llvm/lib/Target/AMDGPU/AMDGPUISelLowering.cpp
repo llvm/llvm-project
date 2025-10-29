@@ -18,7 +18,6 @@
 #include "AMDGPUMachineFunction.h"
 #include "AMDGPUMemoryUtils.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -5286,27 +5285,6 @@ SDValue AMDGPUTargetLowering::performRcpCombine(SDNode *N,
   const APFloat &Val = CFP->getValueAPF();
   APFloat One(Val.getSemantics(), "1.0");
   return DCI.DAG.getConstantFP(One / Val, SDLoc(N), N->getValueType(0));
-}
-
-SDValue AMDGPUTargetLowering::expandABS(SDNode *N, SelectionDAG &CurDAG,
-                                        bool IsNegative) const {
-  assert(N->getOpcode() == ISD::ABS &&
-         "Tried to select abs with non-abs opcode.");
-
-  if (N->getValueSizeInBits(0) != 16 || getRegClassFor(N->getSimpleValueType(0)) != &AMDGPU::SReg_32RegClass)
-    return TargetLowering::expandABS(N, CurDAG, IsNegative);
-
-  SDValue Src = N->getOperand(0);
-  SDLoc DL(Src);
-
-  SDValue SExtSrc = CurDAG.getSExtOrTrunc(Src, DL, MVT::i32);
-  SDValue ExtAbs = CurDAG.getNode(ISD::ABS, DL, MVT::i32, SExtSrc);
-  SDValue TruncResult = CurDAG.getNode(ISD::TRUNCATE, DL, MVT::i16, ExtAbs);
-  
-  if (!IsNegative)
-    return TruncResult;
-  return CurDAG.getNode(ISD::SUB, DL, MVT::i16,
-                        CurDAG.getConstant(0, DL, MVT::i16), TruncResult);
 }
 
 SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,

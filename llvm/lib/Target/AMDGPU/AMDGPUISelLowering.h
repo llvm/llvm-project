@@ -135,8 +135,6 @@ protected:
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  virtual SDValue expandABS(SDNode *N, SelectionDAG &CurDAG,
-                            bool IsNegative) const override;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
