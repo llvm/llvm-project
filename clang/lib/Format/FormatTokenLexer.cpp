@@ -1448,8 +1448,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
       const StringRef Content =
           FormatTok->TokenText.drop_front(2).drop_back(2).rtrim("\r\n");
       if (!Content.empty()) {
-        const unsigned char LastChar =
-            static_cast<unsigned char>(Content.back());
+        const auto LastChar = static_cast<unsigned char>(Content.back());
         if (!isHorizontalWhitespace(LastChar)) {
           FormatTok->NeedsSpaceBeforeClosingBlockComment = true;
           FormatTok->SpaceBeforeClosingBlockCommentOffset =
