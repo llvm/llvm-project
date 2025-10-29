@@ -2323,7 +2323,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         GET_OR_DISTINCT(DIObjCProperty,
                         (Context, getMDString(Record[1]),
                          getMDOrNull(Record[2]), Record[3],
-                         getMDString(Record[4]), getMDString(Record[5]),
+                         getMDString(Record[5]), getMDString(Record[4]),
                          Record[6], getDITypeRefOrNull(Record[7]))),
         NextMetadataNo);
     NextMetadataNo++;
