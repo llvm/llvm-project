@@ -487,6 +487,14 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
                    : LHS->getType()->getIntegerBitWidth()))
     return "Loop iterations exceed bitwidth of data";
 
+  // Make sure that the simple recurrence evolution isn't used in the exit
+  // block.
+  if (SimpleRecurrence && any_of(SimpleRecurrence.BO->users(), [Exit](User *U) {
+        auto *UI = dyn_cast<Instruction>(U);
+        return UI && UI->getParent() == Exit;
+      }))
+    return "Recurrences have stray uses";
+
   // Make sure that the computed value is used in the exit block: this should be
   // true even if it is only really used in an outer loop's exit block, since
   // the loop is in LCSSA form.
