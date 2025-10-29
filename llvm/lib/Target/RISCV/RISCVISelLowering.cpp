@@ -16518,14 +16518,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   // We're adding additional uses of X here, and in principle, we should be freezing
   // X before doing so.  However, adding freeze here causes real regressions, and no
   // other target properly freezes X in these cases either.
-  SDValue X = N->getOperand(0);
-
   if (Subtarget.hasShlAdd(3)) {
+    SDValue X = N->getOperand(0);
     int Shift;
     if (int ShXAmount = isShifted359(MulAmt, Shift)) {
       // 3/5/9 * 2^N -> shl (shXadd X, X), N
       SDLoc DL(N);
-      SDValue X = N->getOperand(0);
       // Put the shift first if we can fold a zext into the shift forming
       // a slli.uw.
       if (X.getOpcode() == ISD::AND && isa<ConstantSDNode>(X.getOperand(1)) &&
