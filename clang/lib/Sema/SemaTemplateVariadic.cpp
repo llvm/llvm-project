@@ -1510,7 +1510,7 @@ static void CheckFoldOperand(Sema &S, Expr *E) {
   E = E->IgnoreImpCasts();
   auto *OCE = dyn_cast<CXXOperatorCallExpr>(E);
   if ((OCE && OCE->isInfixBinaryOp()) || isa<BinaryOperator>(E) ||
-      isa<AbstractConditionalOperator>(E)) {
+      isa<AbstractConditionalOperator>(E) || isa<RecoveryExpr>(E)) {
     S.Diag(E->getExprLoc(), diag::err_fold_expression_bad_operand)
         << E->getSourceRange()
         << FixItHint::CreateInsertion(E->getBeginLoc(), "(")
