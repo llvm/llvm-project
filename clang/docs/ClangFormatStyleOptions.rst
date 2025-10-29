@@ -6620,38 +6620,28 @@ the configuration (without a prefix: ``Auto``).
   (preserve existing spacing, the default), ``Always`` (insert a single
   space), or ``Never`` (remove all spaces).
 
-  The available controls are:
-
-  ``AfterOpeningComment``
-    Governs the space immediately after ``/*`` in regular block comments.
-  ``BeforeClosingComment``
-    Governs the space before ``*/`` in regular block comments.
-  ``AfterOpeningParamComment``
-    Governs the space after ``/*`` in parameter comments such as
-    ``/*param=*/``.
-  ``BeforeClosingParamComment``
-    Governs the space before ``*/`` in parameter comments.
-
-  .. code-block:: c++
-
-    // BeforeClosingComment: Always
-    auto Value = foo(/* comment */);
-    // BeforeClosingParamComment: Never
-    auto Number = foo(/*param=*/42);
-
   Nested configuration flags:
 
   Specifies spacing behavior for different block comment forms.
 
-  * ``CommentSpaceMode AfterOpeningComment`` :versionbadge:`clang-format 21`
-  Governs the space immediately after ``/*`` in regular block comments.
+  * ``CommentSpaceMode AfterOpeningComment`` Governs the space immediately after ``/*`` in regular block comments.
 
   * ``CommentSpaceMode BeforeClosingComment`` Governs the space before ``*/`` in regular block comments.
+
+    .. code-block:: c++
+
+      // BeforeClosingComment: Always
+      auto Value = foo(/* comment */);
 
   * ``CommentSpaceMode AfterOpeningParamComment`` Governs the space after ``/*`` in parameter comments such as
     ``/*param=*/``.
 
   * ``CommentSpaceMode BeforeClosingParamComment`` Governs the space before ``*/`` in parameter comments.
+
+    .. code-block:: c++
+
+      // BeforeClosingParamComment: Never
+      auto Number = foo(/*param=*/42);
 
 
 .. _SpaceInEmptyBlock:
