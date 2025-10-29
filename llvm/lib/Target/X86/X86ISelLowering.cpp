@@ -12213,7 +12213,7 @@ static int matchShuffleAsShift(MVT &ShiftVT, unsigned &Opcode,
     MVT ShiftSVT = MVT::getIntegerVT(ScalarSizeInBits * Scale);
     ShiftVT = ByteShift ? MVT::getVectorVT(MVT::i8, SizeInBits / 8)
                         : MVT::getVectorVT(ShiftSVT, Size / Scale);
-    return (int)ShiftAmt;
+    return ShiftAmt;
   };
 
   // SSE/AVX supports logical shifts up to 64-bit integers - so we can just
