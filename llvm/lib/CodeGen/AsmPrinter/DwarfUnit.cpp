@@ -773,6 +773,8 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     // If the value of an object of the given type does not fully occupy the
     // storage described by a byte size attribute, the base type entry may also
     // have a DW_AT_bit_size [...] attribute.
+    // TODO: Do big endian targets need DW_AT_data_bit_offset? See discussion in
+    // pull request #164372.
     if (uint64_t DataSizeInBits = BTy->getDataSizeInBits();
         DataSizeInBits && DataSizeInBits != SizeInBytes * 8)
       addUInt(Buffer, dwarf::DW_AT_bit_size, std::nullopt, DataSizeInBits);
