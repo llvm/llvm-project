@@ -332,26 +332,10 @@ private:
       return It->second;
     };
 
-    auto matchPseudoProbeInfo = [&](const yaml::bolt::PseudoProbeInfo
-                                        &ProfileProbe,
-                                    uint32_t NodeId) {
-      for (uint64_t Index = 0; Index < 64; ++Index)
-        if (ProfileProbe.BlockMask & 1ull << Index)
-          ++FlowBlockMatchCount[matchProfileProbeToBlock(NodeId, Index + 1)];
-      for (const auto &ProfileProbes :
-           {ProfileProbe.BlockProbes, ProfileProbe.IndCallProbes,
-            ProfileProbe.CallProbes})
-        for (uint64_t ProfileProbe : ProfileProbes)
-          ++FlowBlockMatchCount[matchProfileProbeToBlock(NodeId, ProfileProbe)];
-    };
-
-    for (const yaml::bolt::PseudoProbeInfo &ProfileProbe : BlockPseudoProbes) {
-      if (!ProfileProbe.InlineTreeNodes.empty())
-        for (uint32_t ProfileInlineTreeNode : ProfileProbe.InlineTreeNodes)
-          matchPseudoProbeInfo(ProfileProbe, ProfileInlineTreeNode);
-      else
-        matchPseudoProbeInfo(ProfileProbe, ProfileProbe.InlineTreeIndex);
-    }
+    for (const yaml::bolt::PseudoProbeInfo &ProfileProbe : BlockPseudoProbes)
+      for (uint32_t Node : ProfileProbe.InlineTreeNodes)
+        for (uint64_t Probe : ProfileProbe.BlockProbes)
+          ++FlowBlockMatchCount[matchProfileProbeToBlock(Node, Probe)];
     uint32_t BestMatchCount = 0;
     uint32_t TotalMatchCount = 0;
     const FlowBlock *BestMatchBlock = nullptr;
@@ -553,9 +537,10 @@ size_t matchWeights(
     const BinaryFunction &BF,
     const ArrayRef<YAMLProfileReader::ProbeMatchSpec> ProbeMatchSpecs);
 
-StaleMatcher initMatcher(BinaryContext &BC,
-                         const BinaryFunction::BasicBlockOrderType &BlockOrder,
-                         FlowFunction &Func, HashFunction HashFunction) {
+std::pair<StaleMatcher, std::vector<BlendedBlockHash>>
+initMatcher(BinaryContext &BC,
+            const BinaryFunction::BasicBlockOrderType &BlockOrder,
+            FlowFunction &Func, HashFunction HashFunction) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
@@ -585,21 +570,8 @@ StaleMatcher initMatcher(BinaryContext &BC,
                       << Twine::utohexstr(BB->getHash()) << "\n");
   }
   StaleMatcher Matcher;
-  // Collects function pseudo probes for use in the StaleMatcher.
-  if (opts::StaleMatchingWithPseudoProbes) {
-    const MCPseudoProbeDecoder *Decoder = BC.getPseudoProbeDecoder();
-    assert(Decoder &&
-           "If pseudo probes are in use, pseudo probe decoder should exist");
-    const AddressProbesMap &ProbeMap = Decoder->getAddress2ProbesMap();
-    const uint64_t FuncAddr = BF.getAddress();
-    for (const MCDecodedPseudoProbe &Probe :
-         ProbeMap.find(FuncAddr, FuncAddr + BF.getSize()))
-      if (const BinaryBasicBlock *BB =
-              BF.getBasicBlockContainingOffset(Probe.getAddress() - FuncAddr))
-        Matcher.mapProbeToBB(&Probe, Blocks[BB->getIndex()]);
-  }
   Matcher.init(Blocks, BlendedHashes, CallHashes);
-  return Matcher;
+  return {Matcher, BlendedHashes};
 }
 
 using FlowBlockTy = std::pair<const FlowBlock *, float>;
@@ -611,7 +583,7 @@ ProfileBlockMatchMap
 matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
             HashFunction HashFunction,
             YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
-            StaleMatcher &Matcher) {
+            StaleMatcher &Matcher, ArrayRef<BlendedBlockHash> BlendedHashes) {
   ProfileBlockMatchMap MatchedBlocks;
 
   // Match blocks from the profile to the blocks in CFG.
@@ -646,10 +618,13 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
       continue;
     }
     MatchedBlocks[YamlBB.Index] = {MatchedBlock, 1};
+    BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
     LLVM_DEBUG(dbgs() << "Matched yaml block (bid = " << YamlBB.Index << ")"
                       << " with hash " << Twine::utohexstr(YamlBB.Hash)
                       << " to BB (index = " << MatchedBlock->Index - 1 << ")"
+                      << " with hash " << Twine::utohexstr(BinHash.combine())
                       << "\n");
+    (void)BinHash;
     uint64_t ExecCount = YamlBB.ExecCount;
     // Update matching stats accounting for the matched block.
     switch (Method) {
@@ -760,15 +735,15 @@ size_t matchWeights(BinaryContext &BC,
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
-  StaleMatcher Matcher = initMatcher(BC, BlockOrder, Func, HashFunction);
+  auto [Matcher, BlendedHashes] = initMatcher(BC, BlockOrder, Func, HashFunction);
 
   // Match jumps from the profile to the jumps from CFG
   std::vector<uint64_t> OutWeight(Func.Blocks.size(), 0);
   std::vector<uint64_t> InWeight(Func.Blocks.size(), 0);
 
   if (ProbeMatchSpecs.empty()) {
-    ProfileBlockMatchMap MatchedBlocks =
-        matchBlocks(BC, YamlBF, HashFunction, IdToYamlBF, Matcher);
+    ProfileBlockMatchMap MatchedBlocks = matchBlocks(
+        BC, YamlBF, HashFunction, IdToYamlBF, Matcher, BlendedHashes);
     transferEdgeWeights(MatchedBlocks, OutWeight, InWeight, YamlBF);
   }
 

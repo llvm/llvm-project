@@ -1,4 +1,5 @@
 ## Test stale block matching with pseudo probes including inline tree matching.
+# XFAIL: *
 # RUN: split-file %s %t
 # RUN: llvm-bolt \
 # RUN:   %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin \
