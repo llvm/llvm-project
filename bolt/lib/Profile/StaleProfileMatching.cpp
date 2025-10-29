@@ -707,7 +707,8 @@ size_t matchWeights(BinaryContext &BC,
     // Block index => matched block + its block profile
     ProfileBlockMatchMap MatchedBlocks;
     for (const auto &[RootIdx, NodeMapScale] : StartIdxNodeMap) {
-      const auto &[NodeMap, Scale] = NodeMapScale;
+      ArrayRef NodeMap = NodeMapScale.first;
+      const float Scale = NodeMapScale.second;
       for (const BinaryBasicBlockProfile &BB : YamlBF->Blocks) {
         auto matchProbe = [&](uint32_t Node, uint64_t Id) {
           if (const FlowBlock *Block = getBlock(NodeMap[Node], Id)) {
