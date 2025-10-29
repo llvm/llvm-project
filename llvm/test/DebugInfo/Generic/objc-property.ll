@@ -1,3 +1,5 @@
+; UNSUPPORTED:  target={{.*}}-aix{{.*}}
+;
 ; RUN: llc -filetype=obj -o - %s | llvm-dwarfdump --debug-info - | FileCheck %s
 
 ; CHECK: DW_TAG_structure_type
