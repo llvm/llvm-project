@@ -7626,12 +7626,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
   case NEON::BI__builtin_neon_vmmlaq_f16_mf8_fpm:
     return EmitFP8NeonCall(Intrinsic::aarch64_neon_fmmla,
-                           {llvm::FixedVectorType::get(HalfTy, 8)}, Ops, E,
-                           "fmmla");
+                           {llvm::FixedVectorType::get(HalfTy, 8),
+                            llvm::FixedVectorType::get(HalfTy, 8)},
+                           Ops, E, "fmmla");
   case NEON::BI__builtin_neon_vmmlaq_f32_mf8_fpm:
     return EmitFP8NeonCall(Intrinsic::aarch64_neon_fmmla,
-                           {llvm::FixedVectorType::get(FloatTy, 4)}, Ops, E,
-                           "fmmla");
+                           {llvm::FixedVectorType::get(FloatTy, 4),
+                            llvm::FixedVectorType::get(FloatTy, 4)},
+                           Ops, E, "fmmla");
   case NEON::BI__builtin_neon_vcvt1_low_bf16_mf8_fpm:
     ExtractLow = true;
     [[fallthrough]];

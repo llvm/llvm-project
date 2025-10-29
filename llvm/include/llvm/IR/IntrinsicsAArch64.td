@@ -217,11 +217,6 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : DefaultAttrsIntrinsic<[llvm_v4f32_ty],
                 [llvm_v4f32_ty, llvm_v8bf16_ty, llvm_v8bf16_ty],
                 [IntrNoMem]>;
-
-  class AdvSIMD_MatMul_fpm_Intrinsic
-    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                [LLVMMatchType<0>, llvm_v16i8_ty, llvm_v16i8_ty],
-                [IntrNoMem]>;
 }
 
 // Arithmetic ops
@@ -504,7 +499,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_neon_ummla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_smmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usmmla : AdvSIMD_MatMul_Intrinsic;
-  def int_aarch64_neon_fmmla : AdvSIMD_MatMul_fpm_Intrinsic;
+  def int_aarch64_neon_fmmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfdot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_bfmmla
