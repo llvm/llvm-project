@@ -205,6 +205,8 @@ private:
   unsigned parseVerilogHierarchyHeader();
   void parseVerilogTable();
   void parseVerilogCaseLabel();
+  // For import, export, and extern.
+  bool tryToParseVerilogExtern();
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall();
 
