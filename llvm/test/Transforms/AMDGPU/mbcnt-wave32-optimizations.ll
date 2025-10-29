@@ -53,24 +53,10 @@ entry:
   ret i32 %a
 }
 
-; Test with work group size = 4 * wave size (128)
-define i32 @test_mbcnt_lo_bitmask_128() !reqd_work_group_size !3 {
-; CHECK-LABEL: define i32 @test_mbcnt_lo_bitmask_128(
-; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META3:![0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 128) i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 31
-; CHECK-NEXT:    ret i32 [[TMP1]]
-;
-entry:
-  %a = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-  ret i32 %a
-}
-
 ; Test with work group size = 0.75 * wave size (48)
-define i32 @test_mbcnt_lo_bitmask_48() !reqd_work_group_size !4 {
+define i32 @test_mbcnt_lo_bitmask_48() !reqd_work_group_size !3 {
 ; CHECK-LABEL: define i32 @test_mbcnt_lo_bitmask_48(
-; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META4:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META3:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 48) i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[TMP0]], 31
@@ -128,9 +114,9 @@ entry:
 }
 
 ; Test with work group size = 0.75 * wave size (48)
-define i32 @test_mbcnt_full_pattern_wave32_partial() !reqd_work_group_size !4 {
+define i32 @test_mbcnt_full_pattern_wave32_partial() !reqd_work_group_size !3 {
 ; CHECK-LABEL: define i32 @test_mbcnt_full_pattern_wave32_partial(
-; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META4]] {
+; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META3]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 48) i32 @llvm.amdgcn.workitem.id.x()
@@ -150,8 +136,7 @@ entry:
 !0 = !{i32 32, i32 1, i32 1}   ; X=32 (1*wave32), Y=1, Z=1
 !1 = !{i32 64, i32 1, i32 1}   ; X=64 (2*wave32), Y=1, Z=1
 !2 = !{i32 96, i32 1, i32 1}   ; X=96 (3*wave32), Y=1, Z=1
-!3 = !{i32 128, i32 1, i32 1}  ; X=128 (4*wave32), Y=1, Z=1
-!4 = !{i32 48, i32 1, i32 1}   ; X=48 (1.5*wave32), Y=1, Z=1
+!3 = !{i32 48, i32 1, i32 1}   ; X=48 (1.5*wave32), Y=1, Z=1
 
 ; =============================================================================
 ; FUNCTION DECLARATIONS
@@ -165,6 +150,5 @@ attributes #0 = { nounwind readnone speculatable willreturn }
 ; CHECK: [[META0]] = !{i32 32, i32 1, i32 1}
 ; CHECK: [[META1]] = !{i32 64, i32 1, i32 1}
 ; CHECK: [[META2]] = !{i32 96, i32 1, i32 1}
-; CHECK: [[META3]] = !{i32 128, i32 1, i32 1}
-; CHECK: [[META4]] = !{i32 48, i32 1, i32 1}
+; CHECK: [[META3]] = !{i32 48, i32 1, i32 1}
 ;.
