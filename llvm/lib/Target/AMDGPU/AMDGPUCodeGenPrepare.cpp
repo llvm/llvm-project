@@ -35,6 +35,7 @@
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 #define DEBUG_TYPE "amdgpu-codegenprepare"
 
@@ -2080,6 +2081,10 @@ INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
 
 /// Optimize mbcnt.lo calls on wave32 architectures for lane ID computation.
 bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
+  // Abort if wave size is not known at compile time.
+  if (!ST.isWaveSizeKnown())
+    return false;
+
   // This optimization only applies to wave32 targets where mbcnt.lo operates on
   // the full execution mask.
   if (!ST.isWave32())
@@ -2092,10 +2097,6 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
   if (!Arg0C || !Arg1C || !Arg0C->isAllOnesValue() || !Arg1C->isZero())
     return false;
 
-  // Abort if wave size is not known at compile time.
-  if (!ST.isWaveSizeKnown())
-    return false;
-
   unsigned Wave = ST.getWavefrontSize();
 
   if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
@@ -2104,13 +2105,11 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
     // When XLen == wave_size, each work group contains exactly one wave, so
     // mbcnt.lo(~0, 0) directly equals the workitem ID within the group.
     if (XLen == Wave) {
-      IRBuilder<> B(&I);
-      CallInst *NewCall =
-          B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-      NewCall->takeName(&I);
+      Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(
+          I.getModule(), Intrinsic::amdgcn_workitem_id_x);
+      CallInst *NewCall = CallInst::Create(WorkitemIdFn, I.getName());
+      ReplaceInstWithInst(&I, NewCall);
       ST.makeLIDRangeMetadata(NewCall);
-      I.replaceAllUsesWith(NewCall);
-      I.eraseFromParent();
       return true;
     }
     // When work group evenly splits into waves and wave size is power-of-2,
@@ -2121,12 +2120,10 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
         IRBuilder<> B(&I);
         CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
         ST.makeLIDRangeMetadata(Tid);
-        IntegerType *ITy = cast<IntegerType>(Tid->getType());
-        Constant *Mask = ConstantInt::get(ITy, Wave - 1);
-        Instruction *AndInst = cast<Instruction>(B.CreateAnd(Tid, Mask));
-        AndInst->takeName(&I);
-        I.replaceAllUsesWith(AndInst);
-        I.eraseFromParent();
+        Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
+        Value *AndInst = B.CreateAnd(Tid, Mask);
+        BasicBlock::iterator BI(&I);
+        ReplaceInstWithValue(BI, AndInst);
         return true;
       }
     }
@@ -2137,23 +2134,24 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
 
 /// Optimize mbcnt.hi calls for lane ID computation.
 bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
-  // On wave32, the upper 32 bits of exec are always 0, so mbcnt.hi(mask, val)
-  // always returns val unchanged.
+  // Abort if wave size is not known at compile time.
+  if (!ST.isWaveSizeKnown())
+    return false;
+
+  // Calculate wave size once at the beginning
+  unsigned Wave = ST.getWavefrontSize();
+
+  // On wave32, the upper 32 bits of execution mask are always 0, so
+  // mbcnt.hi(mask, val) always returns val unchanged.
   if (ST.isWave32()) {
-    // Abort if wave size is not known at compile time.
-    if (!ST.isWaveSizeKnown())
-      return false;
-
-    unsigned Wave = ST.getWavefrontSize();
-
     if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
       unsigned XLen = *MaybeX;
 
       // Replace mbcnt.hi(mask, val) with val only when work group size matches
       // wave size (single wave per work group).
       if (XLen == Wave) {
-        I.replaceAllUsesWith(I.getArgOperand(1));
-        I.eraseFromParent();
+        BasicBlock::iterator BI(&I);
+        ReplaceInstWithValue(BI, I.getArgOperand(1));
         return true;
       }
     }
@@ -2162,32 +2160,15 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
   // Optimize the complete lane ID computation pattern:
   // mbcnt.hi(~0, mbcnt.lo(~0, 0)) which counts all active lanes with lower IDs
   // across the full execution mask.
-  auto *HiArg1 = dyn_cast<CallInst>(I.getArgOperand(1));
-  if (!HiArg1)
+  using namespace PatternMatch;
+
+  // Check for pattern: mbcnt.hi(~0, mbcnt.lo(~0, 0))
+  if (!match(I.getArgOperand(0), m_AllOnes()))
     return false;
 
-  Function *CalledF = HiArg1->getCalledFunction();
-  if (!CalledF || CalledF->getIntrinsicID() != Intrinsic::amdgcn_mbcnt_lo)
+  if (!match(I.getArgOperand(1),
+             m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(m_AllOnes(), m_Zero())))
     return false;
-
-  // mbcnt.hi mask must be all-ones (count from upper 32 bits)
-  auto *HiArg0C = dyn_cast<ConstantInt>(I.getArgOperand(0));
-  if (!HiArg0C || !HiArg0C->isAllOnesValue())
-    return false;
-
-  // mbcnt.lo mask must be all-ones (mask=~0, all lanes) and base must be 0.
-  Value *Lo0 = HiArg1->getArgOperand(0);
-  Value *Lo1 = HiArg1->getArgOperand(1);
-  auto *Lo0C = dyn_cast<ConstantInt>(Lo0);
-  auto *Lo1C = dyn_cast<ConstantInt>(Lo1);
-  if (!Lo0C || !Lo1C || !Lo0C->isAllOnesValue() || !Lo1C->isZero())
-    return false;
-
-  // Abort if wave size is not known at compile time.
-  if (!ST.isWaveSizeKnown())
-    return false;
-
-  unsigned Wave = ST.getWavefrontSize();
 
   if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
     unsigned XLen = *MaybeX;
@@ -2195,30 +2176,26 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
     // When XLen == wave_size, each work group contains exactly one wave, so
     // lane_id = workitem.id.x.
     if (XLen == Wave) {
-      IRBuilder<> B(&I);
-      CallInst *NewCall =
-          B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-      NewCall->takeName(&I);
+      Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(
+          I.getModule(), Intrinsic::amdgcn_workitem_id_x);
+      CallInst *NewCall = CallInst::Create(WorkitemIdFn, I.getName());
+      ReplaceInstWithInst(&I, NewCall);
       ST.makeLIDRangeMetadata(NewCall);
-      I.replaceAllUsesWith(NewCall);
-      I.eraseFromParent();
       return true;
     }
     // When work group evenly splits into waves and wave size is power-of-2,
     // we can compute lane ID within wave using bit masking:
     // lane_id = workitem.id.x & (wave_size - 1).
     if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
-      if (isPowerOf2_32(Wave)) {
+      if (XLen % Wave == 0 && isPowerOf2_32(Wave)) {
         // Construct optimized sequence: workitem.id.x & (wave_size - 1)
         IRBuilder<> B(&I);
         CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
         ST.makeLIDRangeMetadata(Tid);
-        IntegerType *ITy = cast<IntegerType>(Tid->getType());
-        Constant *Mask = ConstantInt::get(ITy, Wave - 1);
-        Instruction *AndInst = cast<Instruction>(B.CreateAnd(Tid, Mask));
-        AndInst->takeName(&I);
-        I.replaceAllUsesWith(AndInst);
-        I.eraseFromParent();
+        Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
+        Value *AndInst = B.CreateAnd(Tid, Mask);
+        BasicBlock::iterator BI(&I);
+        ReplaceInstWithValue(BI, AndInst);
         return true;
       }
     }
@@ -2230,12 +2207,11 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
       unsigned XLen =
           mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
       if (XLen == Wave) {
-        IRBuilder<> B(&I);
-        CallInst *NewCall =
-            B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-        NewCall->takeName(&I);
-        I.replaceAllUsesWith(NewCall);
-        I.eraseFromParent();
+        Function *WorkitemIdFn = Intrinsic::getOrInsertDeclaration(
+            I.getModule(), Intrinsic::amdgcn_workitem_id_x);
+        CallInst *NewCall = CallInst::Create(WorkitemIdFn, I.getName());
+        ReplaceInstWithInst(&I, NewCall);
+        ST.makeLIDRangeMetadata(NewCall);
         return true;
       }
     }
