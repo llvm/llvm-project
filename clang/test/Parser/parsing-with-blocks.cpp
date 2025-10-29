@@ -10,4 +10,6 @@ struct A {
 int main()
 {
     (void)(A{}^^(int y){ return y + 1; });
+    (void)(1^^(){ return 1; }());
+    (void)(1^^{ return 1; }());
 }
