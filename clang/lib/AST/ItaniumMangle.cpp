@@ -4949,7 +4949,7 @@ recurse:
   case Expr::CXXReflectExprClass: {
     // TODO(Reflection): implement this after introducing std::meta::info
     // and add info in APValue
-    break;
+    [[fallthrough]];
   }
 
   // FIXME: invent manglings for all these.
