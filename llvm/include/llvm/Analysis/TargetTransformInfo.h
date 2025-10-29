@@ -135,6 +135,9 @@ class IntrinsicCostAttributes {
   InstructionCost ScalarizationCost = InstructionCost::getInvalid();
   TargetLibraryInfo const *LibInfo = nullptr;
 
+  MaybeAlign Alignment;
+  bool VariableMask = false;
+
 public:
   LLVM_ABI IntrinsicCostAttributes(
       Intrinsic::ID Id, const CallBase &CI,
@@ -145,6 +148,10 @@ public:
       Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,
       FastMathFlags Flags = FastMathFlags(), const IntrinsicInst *I = nullptr,
       InstructionCost ScalarCost = InstructionCost::getInvalid());
+
+  LLVM_ABI IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                                   ArrayRef<Type *> Tys, Align Alignment,
+                                   bool VariableMask = false);
 
   LLVM_ABI IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
                                    ArrayRef<const Value *> Args);
@@ -160,6 +167,8 @@ public:
   const IntrinsicInst *getInst() const { return II; }
   Type *getReturnType() const { return RetTy; }
   FastMathFlags getFlags() const { return FMF; }
+  MaybeAlign getAlign() const { return Alignment; }
+  bool getVariableMask() const { return VariableMask; }
   InstructionCost getScalarizationCost() const { return ScalarizationCost; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
@@ -1584,20 +1593,6 @@ public:
   LLVM_ABI InstructionCost getExpandCompressMemoryOpCost(
       unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of strided memory operations.
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p DataTy - a vector type of the data to be loaded or stored
-  /// \p Ptr - pointer [or vector of pointers] - address[es] in memory
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
-  LLVM_ABI InstructionCost getStridedMemoryOpCost(
-      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-      Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
 
   /// \return The cost of the interleaved memory operation.
