@@ -94,13 +94,9 @@ static unsigned getNumDefTiles(MachineRegisterInfo *MRI, MachineInstr &MI) {
     if (Reg.isVirtual()) {
       if (MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)
         return 1;
-      if (MRI->getRegClass(Reg)->getID() == X86::TILEPAIRRegClassID)
-        return 2;
     }
     if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
       return 1;
-    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-      return 2;
   }
 
   return 0;
@@ -109,8 +105,6 @@ static unsigned getNumDefTiles(MachineRegisterInfo *MRI, MachineInstr &MI) {
 static unsigned getTMMIndex(Register Reg) {
   if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
     return Reg - X86::TMM0;
-  if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-    return (Reg - X86::TMM0_TMM1) * 2;
   llvm_unreachable("Invalid Tmm Reg!");
 }
 

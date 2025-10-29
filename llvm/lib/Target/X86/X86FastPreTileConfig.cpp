@@ -268,18 +268,14 @@ void X86FastPreTileConfig::reload(MachineBasicBlock::iterator UseMI,
 }
 
 static unsigned getTileDefNum(MachineRegisterInfo *MRI, Register Reg) {
-  if (Reg.isVirtual()) {
-    unsigned RegClassID = MRI->getRegClass(Reg)->getID();
-    if (RegClassID == X86::TILERegClassID)
-      return 1;
-    if (RegClassID == X86::TILEPAIRRegClassID)
-      return 2;
-  } else {
-    if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-      return 1;
-    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-      return 2;
+  if (Reg.isVirtual() &&
+      MRI->getRegClass(Reg)->getID() == X86::TILERegClassID) {
+    return 1;
   }
+
+  if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
+    return 1;
+
   return 0;
 }
 
@@ -636,19 +632,7 @@ bool X86FastPreTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
       else if (dominates(MBB, LastShapeMI, ColMI))
         LastShapeMI = ColMI;
     }
-    unsigned TileDefNum = getTileDefNum(MRI, MI.getOperand(0).getReg());
-    if (TileDefNum > 1) {
-      for (unsigned I = 1; I < TileDefNum; I++) {
-        MachineOperand *ColxMO = &MI.getOperand(2 + I);
-        MachineInstr *ColxMI = MRI->getVRegDef(ColxMO->getReg());
-        if (ColxMI->getParent() == &MBB) {
-          if (!LastShapeMI)
-            LastShapeMI = ColxMI;
-          else if (dominates(MBB, LastShapeMI, ColxMI))
-            LastShapeMI = ColxMI;
-        }
-      }
-    }
+
     // If there is user live out of the tilecfg, spill it and reload in
     // before the user.
     Register TileReg = MI.getOperand(0).getReg();

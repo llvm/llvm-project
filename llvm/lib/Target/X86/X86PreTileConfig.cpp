@@ -144,8 +144,6 @@ class X86PreTileConfig : public MachineFunctionPass {
     unsigned Shapes = 0;
     if (MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID)
       Shapes = 1;
-    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILEPAIRRegClassID)
-      Shapes = 2;
     if (!Shapes)
       return false;
 
@@ -251,13 +249,6 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
     MachineBasicBlock *DefMBB = DefMI->getParent();
     if (DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
       continue;
-
-    // This happens when column = 0 in multi-tile operand.
-    if (DefMI->getOpcode() == X86::COPY) {
-      MachineInstr *MI = MRI->getVRegDef(DefMI->getOperand(1).getReg());
-      if (MI && MI->isMoveImmediate())
-        continue;
-    }
 
     if (DefMI->isPHI()) {
       for (unsigned I = 1; I < DefMI->getNumOperands(); I += 2)
