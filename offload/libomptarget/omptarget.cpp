@@ -1086,6 +1086,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HstPtrBegin, DataSize, UpdateRef, HasHoldModifier, !IsImplicit,
         ForceDelete, /*FromDataEnd=*/true);
     void *TgtPtrBegin = TPR.TargetPointer;
+
     if (!TPR.isPresent() && !TPR.isHostPointer() &&
         (DataSize || HasPresentModifier)) {
       DP("Mapping does not exist (%s)\n",
@@ -1125,6 +1126,11 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (!TPR.isPresent())
       continue;
 
+    // Track force-deleted pointers so we can use this information if we
+    // encounter FROM entries for the same pointer later on.
+    if (ForceDelete && TPR.Flags.IsLast)
+      StateInfo->MarkedForDeletionPtrs.insert(HstPtrBegin);
+
     // Move data back to the host
     const bool HasAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     const bool HasFrom = ArgTypes[I] & OMP_TGT_MAPTYPE_FROM;
@@ -1141,15 +1147,40 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       return true;
     };
 
+    // Lambda to check if this pointer was previously marked for deletion.
+    // Such a pointer would have had "IsLast" set to true when its DELETE entry
+    // was processed. So, the flag wouldn't be set for any FROM entries seen
+    // later on.
+    auto WasPreviouslyMarkedForDeletion = [&]() -> bool {
+      if (!StateInfo->MarkedForDeletionPtrs.contains(HstPtrBegin))
+        return false;
+      DP("Pointer HstPtr=" DPxMOD " was previously marked for deletion\n",
+         DPxPTR(HstPtrBegin));
+      return true;
+    };
+
+    bool FromCopyBackAlreadyDone =
+        StateInfo->TransferredFromPtrs.contains(HstPtrBegin);
     bool IsMapFromOnNonHostNonZeroData =
         HasFrom && !TPR.Flags.IsHostPointer && DataSize != 0;
-    bool IsLastOrHasAlways = TPR.Flags.IsLast || HasAlways;
+    bool IsLastOrHasAlwaysOrWasForceDeleted =
+        TPR.Flags.IsLast || HasAlways || WasPreviouslyMarkedForDeletion();
 
-    if ((IsMapFromOnNonHostNonZeroData && IsLastOrHasAlways) ||
-        // Even if are not looking at an entry with FROM map-type, if there were
-        // any previously deferred FROM transfers for this pointer, we should
-        // do them when the ref-count goes down to zero.
-        (TPR.Flags.IsLast && HasDeferredMapFrom())) {
+    if (!FromCopyBackAlreadyDone &&
+        ((IsMapFromOnNonHostNonZeroData &&
+          IsLastOrHasAlwaysOrWasForceDeleted) ||
+         // Even if are not looking at an entry with FROM map-type, if there
+         // were any previously deferred FROM transfers for this pointer, we
+         // should do them when the ref-count goes down to zero.
+         (TPR.Flags.IsLast && HasDeferredMapFrom()))) {
+      // Track that we're doing a FROM transfer for this pointer
+      // NOTE: If we don't care about the case of multiple different maps with
+      // from, always, or multiple map(from)s seen after a map(delete), e.g.
+      // ... map(always, from: x) map(always, from: x)
+      // ... map(delete: x) map(from: x) map(from: x)
+      // Then we can forego tacking TransferredFromPtrs.
+      StateInfo->TransferredFromPtrs.insert(HstPtrBegin);
+
       DP("Moving %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
          DataSize, DPxPTR(TgtPtrBegin), DPxPTR(HstPtrBegin));
       TIMESCOPE_WITH_DETAILS_AND_IDENT(
@@ -1179,8 +1210,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
             OFFLOAD_SUCCESS)
           return OFFLOAD_FAIL;
       }
-    } else if (IsMapFromOnNonHostNonZeroData && !IsLastOrHasAlways &&
-               !IsMemberOf) {
+    } else if (!FromCopyBackAlreadyDone && IsMapFromOnNonHostNonZeroData &&
+               !IsLastOrHasAlwaysOrWasForceDeleted && !IsMemberOf) {
       // We can have cases like the following:
       //   map(alloc: p[0:1]) map(from: p[0:1])
       //

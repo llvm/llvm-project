@@ -499,6 +499,14 @@ struct StateInfoTy {
   /// occur due to the ref-count not being zero.
   llvm::SmallSet<void *, 32> DeferredFromPtrs;
 
+  /// Host pointers for which we have attempted a FROM transfer at some point
+  /// during targetDataEnd. Used to avoid duplicate transfers.
+  llvm::SmallSet<void *, 32> TransferredFromPtrs;
+
+  /// Host pointers for which a DELETE entry was encountered, causing their
+  /// ref-count to have gone down to zero.
+  llvm::SmallSet<void *, 32> MarkedForDeletionPtrs;
+
   StateInfoTy() = default;
 
   // Delete copy constructor and copy assignment operator to prevent copying
