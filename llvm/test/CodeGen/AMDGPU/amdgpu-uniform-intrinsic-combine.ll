@@ -595,6 +595,8 @@ define amdgpu_kernel void @ballot_i32(i32 %v, ptr addrspace(1) %out) {
 ; PASS-CHECK-LABEL: define amdgpu_kernel void @ballot_i32(
 ; PASS-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; PASS-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[C]])
+; PASS-CHECK-NEXT:    [[BALLOT_NE_ZERO:%.*]] = icmp ne i32 [[BALLOT]], 0
 ; PASS-CHECK-NEXT:    store i1 [[C]], ptr addrspace(1) [[OUT]], align 1
 ; PASS-CHECK-NEXT:    ret void
 ;
@@ -623,6 +625,8 @@ define amdgpu_kernel void @ballot_i64(i32 %v, ptr addrspace(1) %out) {
 ; PASS-CHECK-LABEL: define amdgpu_kernel void @ballot_i64(
 ; PASS-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
 ; PASS-CHECK-NEXT:    [[C:%.*]] = trunc i32 [[V]] to i1
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[C]])
+; PASS-CHECK-NEXT:    [[BALLOT_NE_ZERO:%.*]] = icmp ne i64 [[BALLOT]], 0
 ; PASS-CHECK-NEXT:    store i1 [[C]], ptr addrspace(1) [[OUT]], align 1
 ; PASS-CHECK-NEXT:    ret void
 ;
