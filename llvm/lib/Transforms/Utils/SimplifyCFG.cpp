@@ -1871,10 +1871,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
       return false;
     if (Succ->getSinglePredecessor())
       continue;
-    // If Succ has >1 predecessors, continue to check if the Succ is terminated
-    // by an `unreachable` inst. Since executing `unreachable` inst is an UB, we
+    // If Succ has >1 predecessors, continue to check if the Succ contains only
+    // one `unreachable` inst. Since executing `unreachable` inst is an UB, we
     // can relax the condition based on the assumptiom that the program would
-    // never enter Succ and trigger an UB.
+    // never enter Succ and trigger such an UB.
     if (isa<UnreachableInst>(*Succ->begin()))
       continue;
     return false;
