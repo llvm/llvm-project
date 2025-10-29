@@ -475,7 +475,7 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
         Obj = MTE->getSubExpr();
       if (auto *DRE = dyn_cast<DeclRefExpr>(Obj)) {
         auto *D = dyn_cast<VarDecl>(DRE->getDecl());
-        if (D->hasInit())
+        if (D && D->hasInit())
           Obj = D->getInit();
       }
       Visit(Obj);
@@ -487,9 +487,8 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
     for (const LambdaCapture &Capture : LE->captures())
       if (Capture.capturesVariable())
         if (const VarDecl *VD = dyn_cast<VarDecl>(Capture.getCapturedVar()))
-          if (VD == Var)
-            if (Capture.getCaptureKind() == LCK_ByRef)
-              AllValuesAreNoReturn = false;
+          if (VD == Var && Capture.getCaptureKind() == LCK_ByRef)
+            AllValuesAreNoReturn = false;
   }
 
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE) {
