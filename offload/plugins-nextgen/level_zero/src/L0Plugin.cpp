@@ -144,14 +144,9 @@ GenericDeviceTy *LevelZeroPluginTy::createDevice(GenericPluginTy &Plugin,
                       (SubId < 0 ? "" : "." + std::to_string(SubId)) +
                       (CCSId < 0 ? "" : "." + std::to_string(CCSId));
 
-  auto *NewDevice = new L0DeviceTy(
-      static_cast<LevelZeroPluginTy &>(Plugin), DeviceId, NumDevices, zeDevice,
-      *zeDriver, std::move(IdStr), CCSId < 0 ? 0 : CCSId /* ComputeIndex */);
-  if (NewDevice && getDebugLevel() > 0) {
-    DP("Device %" PRIi32 " information\n", DeviceId);
-    NewDevice->reportDeviceInfo();
-  }
-  return NewDevice;
+  return new L0DeviceTy(static_cast<LevelZeroPluginTy &>(Plugin), DeviceId,
+                        NumDevices, zeDevice, *zeDriver, std::move(IdStr),
+                        CCSId < 0 ? 0 : CCSId /* ComputeIndex */);
 }
 
 GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {

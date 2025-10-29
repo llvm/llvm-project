@@ -330,7 +330,7 @@ public:
   /// to support target pointer with offset, and positive "ActiveSize" is
   /// specified in such cases for correct debug logging.
   Expected<void *> allocL0(size_t Size, size_t Align, int32_t Kind,
-                           size_t ActiveSize = 0);
+                           size_t ActiveSize = 0, bool Logging = true);
 
   /// Allocate memory with the specified information from a memory pool
   Expected<void *> alloc(size_t Size, size_t Align, int32_t Kind,

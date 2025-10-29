@@ -83,7 +83,9 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
 
   // Check page size used for this allocation kind to decide minimum
   // allocation size when allocating from L0.
-  auto MemOrErr = Allocator->allocL0(8, 0, AllocKind);
+  auto MemOrErr =
+      Allocator->allocL0(/* Size=*/8, /*Align=*/0, AllocKind, /*ActiveSize=*/0,
+                         /*Logging=*/false);
   if (!MemOrErr)
     return MemOrErr.takeError();
   void *Mem = *MemOrErr;
@@ -610,7 +612,8 @@ Error MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size) {
 }
 
 Expected<void *> MemAllocatorTy::allocL0(size_t Size, size_t Align,
-                                         int32_t Kind, size_t ActiveSize) {
+                                         int32_t Kind, size_t ActiveSize,
+                                         bool Logging) {
   void *Mem = nullptr;
   ze_device_mem_alloc_desc_t DeviceDesc{ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC,
                                         nullptr, 0, 0};
@@ -649,8 +652,11 @@ Expected<void *> MemAllocatorTy::allocL0(size_t Size, size_t Align,
     assert(0 && "Invalid target data allocation kind");
   }
 
-  size_t LoggedSize = ActiveSize ? ActiveSize : Size;
-  log(LoggedSize, LoggedSize, Kind);
+  if (Logging) {
+    size_t LoggedSize = ActiveSize ? ActiveSize : Size;
+    log(LoggedSize, LoggedSize, Kind);
+  }
+
   if (makeResident) {
     assert(Device &&
            "Device is not set for memory allocation. Is this a Device Pool?");

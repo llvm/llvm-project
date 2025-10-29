@@ -156,7 +156,7 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
 }
 
 void L0DeviceTy::reportDeviceInfo() const {
-  DP("Device %" PRIu32 "\n", DeviceId);
+  DP("Device %" PRIu32 " information\n", DeviceId);
   DP("-- Name                         : %s\n", getNameCStr());
   DP("-- PCI ID                       : 0x%" PRIx32 "\n", getPCIId());
   DP("-- UUID                         : %s\n", getUuid().data());
@@ -216,6 +216,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
   l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
+  if (getDebugLevel() > 0)
+    reportDeviceInfo();
   return Plugin::success();
 }
 
