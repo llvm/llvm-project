@@ -183,8 +183,7 @@ jobs:
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*|windows-2022)
-            build_runs_on=windows-2022 
-            #"depot-${{ inputs.runs-on }}-16"
+            build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
           macos-13)
@@ -314,6 +313,7 @@ jobs:
         cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -DLLVM_ENABLE_LIBXML2=FORCE_ON \
+            -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
