@@ -35,6 +35,12 @@ template <typename T>
 struct enable_if<true, T> {
   typedef T type;
 };
+
+template <typename T>
+struct unique_ptr {
+  T &operator*() const;
+  T *operator->() const;
+};
 }
 
 template <typename T>
@@ -143,4 +149,10 @@ int *r() {
   return &holder.v[0];
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
   // CHECK-FIXES: return holder.v.data();
+}
+
+void s(std::unique_ptr<std::vector<unsigned char>> p) {
+  f(&(*p)[0]);
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'data' should be used for accessing the data pointer instead of taking the address of the 0-th element [readability-container-data-pointer]
+  // CHECK-FIXES: f((*p).data());
 }
