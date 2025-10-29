@@ -161,7 +161,7 @@ private:
 
 public:
   /// Default constructor creates empty storage (invalid state)
-  VocabStorage() : Sections(), TotalSize(0), Dimension(0) {}
+  VocabStorage() = default;
 
   /// Create a VocabStorage with pre-organized section data
   VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);

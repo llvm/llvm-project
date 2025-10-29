@@ -8973,8 +8973,7 @@ SystemZTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
         if (const auto *CB = dyn_cast<CallBase>(RHSVal)) {
           if (CB->isInlineAsm()) {
             const InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
-            return IA &&
-                   IA->getConstraintString().find("{@cc}") != std::string::npos;
+            return IA && IA->getConstraintString().contains("{@cc}");
           }
         }
       }
