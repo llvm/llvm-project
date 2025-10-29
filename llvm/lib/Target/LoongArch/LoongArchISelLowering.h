@@ -66,6 +66,7 @@ enum NodeType : unsigned {
   MOVGR2FCSR,
 
   FTINT,
+  SITOF,
 
   // Build and split F64 pair
   BUILD_PAIR_F64,
