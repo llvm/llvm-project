@@ -5164,7 +5164,7 @@ private:
   /// ParseCXXReflectExpression - parses the operand of reflection operator
   /// \param DoubleCaretLoc the location of the double caret operator
   ///
-  /// \returns on success, a expression holdiing the constructed CXXReflectExpr;
+  /// \returns on success, a expression holding the constructed CXXReflectExpr;
   ///          on failture, an ExprError
   ExprResult ParseCXXReflectExpression(SourceLocation DoubleCaretLoc);
 
