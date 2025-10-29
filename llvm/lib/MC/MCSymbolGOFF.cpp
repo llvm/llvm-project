@@ -13,20 +13,26 @@
 using namespace llvm;
 
 void MCSymbolGOFF::initAttributes() {
-  if (hasLDAttributes())
+  // Temporary labels are not emitted into the object file.
+  if (isTemporary())
     return;
+
+  // Do not initialize the attributes multiple times.
+  if (hasLDAttributes() || hasERAttributes())
+    return;
+
+  GOFF::ESDBindingScope BindingScope =
+      isExternal()
+          ? (isExported() ? GOFF::ESD_BSC_ImportExport : GOFF::ESD_BSC_Library)
+          : GOFF::ESD_BSC_Section;
+  GOFF::ESDBindingStrength BindingStrength =
+      isWeak() ? GOFF::ESDBindingStrength::ESD_BST_Weak
+               : GOFF::ESDBindingStrength::ESD_BST_Strong;
 
   if (isDefined()) {
     MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(getSection());
-    GOFF::ESDBindingScope BindingScope =
-        isExternal() ? (isExported() ? GOFF::ESD_BSC_ImportExport
-                                     : GOFF::ESD_BSC_Library)
-                     : GOFF::ESD_BSC_Section;
-    GOFF::ESDBindingStrength BindingStrength =
-        isWeak() ? GOFF::ESDBindingStrength::ESD_BST_Weak
-                 : GOFF::ESDBindingStrength::ESD_BST_Strong;
     if (Section.isED()) {
-      setLDAttributes(GOFF::LDAttr{false, GOFF::ESD_EXE_CODE, BindingStrength,
+      setLDAttributes(GOFF::LDAttr{false, CodeData, BindingStrength,
                                    GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_64,
                                    BindingScope});
     } else if (Section.isPR()) {
@@ -34,6 +40,8 @@ void MCSymbolGOFF::initAttributes() {
       // TODO Does it make sense to it to here?
     } else
       llvm_unreachable("Unexpected section type for label");
+  } else {
+    setERAttributes(GOFF::ERAttr{CodeData, BindingStrength,
+                                 GOFF::ESD_LT_XPLink, BindingScope});
   }
-  // TODO Handle external symbol.
 }

@@ -14,6 +14,7 @@
 
 namespace llvm {
 class GOFFObjectWriter;
+class MCSymbolGOFF;
 
 class MCGOFFStreamer : public MCObjectStreamer {
 
@@ -34,6 +35,8 @@ public:
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
+
+  void emitExterns();
 };
 
 } // end namespace llvm

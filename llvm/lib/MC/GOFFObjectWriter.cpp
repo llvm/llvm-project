@@ -266,6 +266,17 @@ public:
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(EDAttr.Alignment);
   }
+
+  GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
+             const GOFF::ERAttr &Attr)
+      : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
+        SymbolType(GOFF::ESD_ST_ExternalReference),
+        NameSpace(GOFF::ESD_NS_NormalName) {
+    BehavAttrs.setExecutable(Attr.Executable);
+    BehavAttrs.setBindingStrength(Attr.BindingStrength);
+    BehavAttrs.setLinkageType(Attr.Linkage);
+    BehavAttrs.setBindingScope(Attr.BindingScope);
+  }
 };
 
 class GOFFWriter {
@@ -279,6 +290,7 @@ class GOFFWriter {
 
   void defineSectionSymbols(const MCSectionGOFF &Section);
   void defineLabel(const MCSymbolGOFF &Symbol);
+  void defineExtern(const MCSymbolGOFF &Symbol);
   void defineSymbols();
 
 public:
@@ -332,6 +344,12 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
   writeSymbol(LD);
 }
 
+void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
+  GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(),
+                Symbol.getOwner()->getOrdinal(), Symbol.getERAttributes());
+  writeSymbol(ER);
+}
+
 void GOFFWriter::defineSymbols() {
   unsigned Ordinal = 0;
   // Process all sections.
@@ -349,6 +367,9 @@ void GOFFWriter::defineSymbols() {
     if (Symbol.hasLDAttributes()) {
       Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);
+    } else if (Symbol.hasERAttributes()) {
+      Symbol.setIndex(++Ordinal);
+      defineExtern(Symbol);
     }
   }
 }

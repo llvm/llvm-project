@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCGOFFStreamer.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -75,6 +76,12 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Memtag:
     return false;
 
+  case MCSA_Code:
+    Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_CODE);
+    break;
+  case MCSA_Data:
+    Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_DATA);
+    break;
   case MCSA_Global:
     Symbol->setExternal(true);
     break;
@@ -92,6 +99,18 @@ bool MCGOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   }
 
   return true;
+}
+
+void MCGOFFStreamer::emitExterns() {
+  for (auto &Symbol : getAssembler().symbols()) {
+    if (Symbol.isTemporary())
+      continue;
+    if (Symbol.isRegistered()) {
+      auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
+      Sym.setOwner(static_cast<MCSectionGOFF *>(getCurrentSection().first));
+      Sym.initAttributes();
+    }
+  }
 }
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,

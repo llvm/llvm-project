@@ -80,6 +80,14 @@ struct PRAttr {
   uint32_t SortKey = 0;
 };
 
+// Attributes for ER symbols.
+struct ERAttr {
+  GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
+  GOFF::ESDBindingStrength BindingStrength = GOFF::ESD_BST_Strong;
+  GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
+  GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
+};
+
 // Predefined GOFF class names.
 constexpr StringLiteral CLASS_CODE = "C_CODE64";
 constexpr StringLiteral CLASS_WSA = "C_WSA64";

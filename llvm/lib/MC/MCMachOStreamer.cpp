@@ -299,6 +299,8 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Exported:
   case MCSA_Memtag:
   case MCSA_WeakAntiDep:
+  case MCSA_Code:
+  case MCSA_Data:
     return false;
 
   case MCSA_Global:

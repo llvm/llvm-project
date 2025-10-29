@@ -151,6 +151,8 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   case MCSA_IndirectSymbol:
   case MCSA_Exported:
   case MCSA_WeakAntiDep:
+  case MCSA_Code:
+  case MCSA_Data:
     return false;
 
   case MCSA_NoDeadStrip:

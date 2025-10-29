@@ -8,11 +8,18 @@
 
 #include "SystemZHLASMAsmStreamer.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/GOFF.h"
+#include "llvm/MC/MCGOFFAttributes.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Signals.h"
 #include <sstream>
 
 using namespace llvm;
+
+void SystemZHLASMAsmStreamer::visitUsedSymbol(const MCSymbol &Sym) {
+  Assembler->registerSymbol(Sym);
+}
 
 void SystemZHLASMAsmStreamer::EmitEOL() {
   // Comments are emitted on a new line before the instruction.
@@ -183,17 +190,132 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   EmitEOL();
 }
 
+static void emitXATTR(raw_ostream &OS, StringRef Name,
+                      GOFF::ESDLinkageType Linkage,
+                      GOFF::ESDExecutable Executable,
+                      GOFF::ESDBindingScope BindingScope) {
+  llvm::ListSeparator Sep(",");
+  OS << Name << " XATTR ";
+  OS << Sep << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK")
+     << ")";
+  if (Executable != GOFF::ESD_EXE_Unspecified)
+    OS << Sep << "REFERENCE("
+       << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA") << ")";
+  if (BindingScope != GOFF::ESD_BSC_Unspecified) {
+    OS << Sep << "SCOPE(";
+    switch (BindingScope) {
+    case GOFF::ESD_BSC_Section:
+      OS << "SECTION";
+      break;
+    case GOFF::ESD_BSC_Module:
+      OS << "MODULE";
+      break;
+    case GOFF::ESD_BSC_Library:
+      OS << "LIBRARY";
+      break;
+    case GOFF::ESD_BSC_ImportExport:
+      OS << "EXPORT";
+      break;
+    default:
+      break;
+    }
+    OS << ')';
+  }
+  OS << '\n';
+}
+
+static bool sameNameAsCSECT(MCSymbolGOFF *Sym) {
+  if (Sym->hasLDAttributes() && Sym->isInSection()) {
+    MCSectionGOFF &ED = static_cast<MCSectionGOFF &>(Sym->getSection());
+    return Sym->getName() == ED.getParent()->getName();
+  }
+  return false;
+}
+
 void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
+  MCSymbolGOFF *Sym = static_cast<MCSymbolGOFF *>(Symbol);
 
-  MCStreamer::emitLabel(Symbol, Loc);
+  MCStreamer::emitLabel(Sym, Loc);
+  Sym->initAttributes();
 
-  Symbol->print(OS, MAI);
+  // Emit ENTRY statement only if not implied by CSECT.
+  bool EmitEntry = !sameNameAsCSECT(Sym);
+
+  if (!Sym->isTemporary() && Sym->hasLDAttributes()) {
+    GOFF::LDAttr &LD = Sym->getLDAttributes();
+    if (EmitEntry) {
+      OS << " ENTRY " << Sym->getName();
+      EmitEOL();
+    }
+
+    emitXATTR(OS, Sym->getName(), LD.Linkage, LD.Executable, LD.BindingScope);
+    EmitEOL();
+  }
+
   // TODO Need to adjust this based on Label type
-  OS << " DS 0H";
-  // TODO Update LabelSuffix in SystemZMCAsmInfoGOFF once tests have been
-  // moved to HLASM syntax.
-  // OS << MAI->getLabelSuffix();
-  EmitEOL();
+  if (EmitEntry) {
+    OS << Sym->getName() << " DS 0H";
+    // TODO Update LabelSuffix in SystemZMCAsmInfoGOFF once tests have been
+    // moved to HLASM syntax.
+    // OS << MAI->getLabelSuffix();
+    EmitEOL();
+  }
+}
+
+bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
+                                                  MCSymbolAttr Attribute) {
+  auto *Symbol = static_cast<MCSymbolGOFF *>(Sym);
+  switch (Attribute) {
+  case MCSA_Invalid:
+  case MCSA_Cold:
+  case MCSA_ELF_TypeFunction:
+  case MCSA_ELF_TypeIndFunction:
+  case MCSA_ELF_TypeObject:
+  case MCSA_ELF_TypeTLS:
+  case MCSA_ELF_TypeCommon:
+  case MCSA_ELF_TypeNoType:
+  case MCSA_ELF_TypeGnuUniqueObject:
+  case MCSA_LGlobal:
+  case MCSA_Extern:
+  case MCSA_Exported:
+  case MCSA_IndirectSymbol:
+  case MCSA_Internal:
+  case MCSA_LazyReference:
+  case MCSA_NoDeadStrip:
+  case MCSA_SymbolResolver:
+  case MCSA_AltEntry:
+  case MCSA_PrivateExtern:
+  case MCSA_Protected:
+  case MCSA_Reference:
+  case MCSA_WeakDefinition:
+  case MCSA_WeakDefAutoPrivate:
+  case MCSA_WeakAntiDep:
+  case MCSA_Memtag:
+    return false;
+
+  case MCSA_Code:
+    Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_CODE);
+    break;
+  case MCSA_Data:
+    Symbol->setCodeData(GOFF::ESDExecutable::ESD_EXE_DATA);
+    break;
+  case MCSA_Global:
+    Symbol->setExternal(true);
+    break;
+  case MCSA_Local:
+    Symbol->setExternal(false);
+    break;
+  case MCSA_Weak:
+  case MCSA_WeakReference:
+    Symbol->setExternal(true);
+    Symbol->setWeak();
+    break;
+  case MCSA_Hidden:
+    Symbol->setHidden(true);
+    break;
+  }
+
+  return true;
 }
 
 void SystemZHLASMAsmStreamer::emitRawTextImpl(StringRef String) {
@@ -276,6 +398,7 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
 
+  MCStreamer::emitValueImpl(Value, Size, Loc);
   OS << " DC ";
   emitHLASMValueImpl(Value, Size, true);
   EmitEOL();
@@ -284,4 +407,25 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 void SystemZHLASMAsmStreamer::emitEnd() {
   OS << " END";
   EmitEOL();
+}
+
+void SystemZHLASMAsmStreamer::emitExterns() {
+  for (auto &Symbol : getAssembler().symbols()) {
+    if (Symbol.isTemporary())
+      continue;
+    if (Symbol.isRegistered()) {
+      auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
+      Sym.setOwner(static_cast<MCSectionGOFF *>(getCurrentSection().first));
+      Sym.initAttributes();
+      GOFF::ERAttr &ER = Sym.getERAttributes();
+      OS << " "
+         << (ER.BindingStrength == GOFF::ESDBindingStrength::ESD_BST_Weak
+                 ? "WXTRN"
+                 : "EXTRN")
+         << " " << Sym.getName();
+      EmitEOL();
+      emitXATTR(OS, Sym.getName(), ER.Linkage, ER.Executable, ER.BindingScope);
+      EmitEOL();
+    }
+  }
 }

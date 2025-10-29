@@ -15,6 +15,7 @@
 #include "SystemZTargetStreamer.h"
 #include "SystemZHLASMAsmStreamer.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCGOFFStreamer.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 
 using namespace llvm;
@@ -38,11 +39,11 @@ SystemZHLASMAsmStreamer &SystemZTargetHLASMStreamer::getHLASMStreamer() {
   return static_cast<SystemZHLASMAsmStreamer &>(getStreamer());
 }
 
-void SystemZTargetHLASMStreamer::emitExtern(StringRef Sym) {
-  getStreamer().emitRawText(Twine(" EXTRN ") + Twine(Sym));
-}
-
 void SystemZTargetHLASMStreamer::emitEnd() { getHLASMStreamer().emitEnd(); }
+
+void SystemZTargetHLASMStreamer::emitExterns() {
+  getHLASMStreamer().emitExterns();
+}
 
 // HLASM statements can only perform a single operation at a time
 const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
@@ -65,4 +66,12 @@ const MCExpr *SystemZTargetGOFFStreamer::createWordDiffExpr(
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(Hi, Ctx),
                               MCSymbolRefExpr::create(Lo, Ctx), Ctx),
       MCConstantExpr::create(1, Ctx), Ctx);
+}
+
+MCGOFFStreamer &SystemZTargetGOFFStreamer::getGOFFStreamer() {
+  return static_cast<MCGOFFStreamer &>(getStreamer());
+}
+
+void SystemZTargetGOFFStreamer::emitExterns() {
+  getGOFFStreamer().emitExterns();
 }
