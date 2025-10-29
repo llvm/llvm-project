@@ -1829,6 +1829,10 @@ inline const char *Registers_ppc64::getRegisterName(int regNum) {
 class _LIBUNWIND_HIDDEN Registers_arm64;
 extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
 
+#if !defined(__APPLE__)
+extern "C" void __attribute__((weak)) __arm_za_disable();
+#endif
+
 #if defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_shstk_get_jump_target() {
   return reinterpret_cast<void *>(&__libunwind_Registers_arm64_jumpto);
@@ -1855,7 +1859,7 @@ public:
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
   static const char *getRegisterName(int num);
-  void        jumpto() { __libunwind_Registers_arm64_jumpto(this); }
+  void jumpto();
   static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64;
   }
@@ -1969,6 +1973,32 @@ Registers_arm64::operator=(const Registers_arm64 &other) {
   // the pc after the bitwise copy.
   setIP(other.getIP());
   return *this;
+}
+
+void Registers_arm64::jumpto() {
+#if !defined(__APPLE__)
+  // The platform must ensure that all the following conditions are true on
+  // entry to EH:
+  //
+  // - PSTATE.SM is 0.
+  // - PSTATE.ZA is 0.
+  // - TPIDR2_EL0 is null.
+  //
+  // The first point is ensured by routines for throwing exceptions having a
+  // non-streaming interface. TPIDR2_EL0 is set to null and ZA disabled by
+  // calling __arm_za_disable.
+  //
+  // See:
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#exceptions
+  if (__arm_za_disable) {
+    __arm_za_disable();
+  } else {
+    // FIXME: If SME is available and `__arm_za_disable` is not, this should
+    // abort.
+    _LIBUNWIND_DEBUG_LOG("failed to call __arm_za_disable in %s", __FUNCTION__);
+  }
+#endif
+  __libunwind_Registers_arm64_jumpto(this);
 }
 
 inline Registers_arm64::Registers_arm64() {
