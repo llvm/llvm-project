@@ -259,7 +259,9 @@ void InitializePlatform() {
 
   ThreadEventCallbacks callbacks = {
       .create = ThreadCreateCallback,
+      .start = nullptr,
       .terminate = ThreadTerminateCallback,
+      .destroy = nullptr,
   };
   InstallPthreadIntrospectionHook(callbacks);
 #endif
