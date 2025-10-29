@@ -400,10 +400,10 @@ macro (flang_module_fortran_enable)
 
   include(CheckLanguage)
   check_language(Fortran)
-  
+
   if (CMAKE_Fortran_COMPILER)
     enable_language(Fortran)
-    
+
     if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang" AND "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
       # In a bootstrapping build, the intrinsic modules are not built yet.
       # Targets can depend on flang-rt-mod to ensure they are built before.
@@ -412,9 +412,12 @@ macro (flang_module_fortran_enable)
       message(STATUS "${LLVM_SUBPROJECT_TITLE}: Building Fortran modules for Flang bootstrapping itself")
     else ()
       # Check whether building modules works, avoid causing the entire build to fail because of Fortran.
-      # The primary situation we want to support here is Flang or its intrinsic modules were built in a non-bootstrapping build separately.
+      # The primary situation we want to support here is Flang or its intrinsic modules were built separately in a non-bootstrapping build.
       cmake_push_check_state(RESET)
       set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
+      #set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ")
+      message("CMAKE_Fortran_FLAGS: ${CMAKE_Fortran_FLAGS}")
+      message("CMAKE_REQUIRED_FLAGS: ${CMAKE_REQUIRED_FLAGS}")
       check_fortran_source_compiles("
         subroutine testroutine
           use iso_c_binding
@@ -431,9 +434,9 @@ macro (flang_module_fortran_enable)
   else ()
     message(STATUS "Not compiling Flang modules: Fortran not enabled")
   endif ()
-  
+
   option(RUNTIMES_FLANG_MODULES_ENABLED "Build Fortran modules" "${RUNTIMES_FLANG_MODULES_ENABLED_default}")
-  
+
   if (RUNTIMES_FLANG_MODULES_ENABLED)
     if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
       get_toolchain_module_subdir(toolchain_mod_subdir)

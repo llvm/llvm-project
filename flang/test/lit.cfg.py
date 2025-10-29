@@ -145,65 +145,88 @@ if not flang_exe:
     lit_config.fatal(f"Could not identify flang executable")
 
 
-def get_resource_module_intrinsic_dir():
+print(f"{config.flang_test_fortran_flags=}")
+print(f"{config.flang_test_enable_intrinsics=}")
+print(f"{config.flang_test_enable_openmp=}")
+
+def get_resource_module_intrinsic_dir(modfile):
     # Determine the intrinsic module search path that is added by the driver. If
     # skipping the driver using -fc1, we need to append the path manually.
-    for modfile in ["__fortran_builtins.mod", "omp_lib.mod"]:
-      flang_intrinsics_dir = subprocess.check_output([flang_exe, f"-print-file-name={modfile}"], text=True).strip()
-      flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
-      if flang_intrinsics_dir:
-          return flang_intrinsics_dir
-    return None
+    flang_intrinsics_dir = subprocess.check_output([flang_exe, *config.flang_test_fortran_flags, f"-print-file-name={modfile}"], text=True).strip()
+    flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
+    return flang_intrinsics_dir or None
+
+
 
 
 intrinsics_search_args = []
-if flang_intrinsics_dir := get_resource_module_intrinsic_dir():
-    intrinsics_search_args += [f"-fintrinsic-modules-path={flang_intrinsics_dir}"]
-    lit_config.note(f"using default module intrinsics: {flang_intrinsics_dir}")
+extra_intrinsics_search_args = config.flang_test_fortran_flags + ["-I", f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src"] # FIXME:
+
+intrinsics_mod_path = get_resource_module_intrinsic_dir("__fortran_builtins.mod")
+openmp_mod_path = get_resource_module_intrinsic_dir("omp_lib.mod")
+openmp_inc_path = get_resource_module_intrinsic_dir("omp_lib.h")
+print(f"{intrinsics_mod_path=}")
+print(f"{openmp_mod_path=}")
+print(f"{openmp_inc_path=}")
+if mod_path := intrinsics_mod_path or openmp_mod_path:
+    intrinsics_search_args += [f"-fintrinsic-modules-path={mod_path}"]
+    lit_config.note(f"using flang default module intrinsics: {mod_path}")
 
 
-extra_intrinsics_search_args = []
-if config.flang_intrinsic_modules_dir:
-    extra_intrinsics_search_args += [
-        f"-fintrinsic-modules-path={config.flang_intrinsic_modules_dir}"
-    ]
-    lit_config.note(
-        f"using extra module intrinsics: {config.flang_intrinsic_modules_dir}"
-    )
+if extra_intrinsics_search_args:
+    lit_config.note(f"using flang extra arguments: {' '.join(extra_intrinsics_search_args)}")
+
+
+
+#if config.flang_intrinsic_modules_dir:
+#    extra_intrinsics_search_args += [f"-fintrinsic-modules-path={config.flang_intrinsic_modules_dir}"]
+#    lit_config.note(f"using extra module intrinsics: {config.flang_intrinsic_modules_dir}")
+
 
 # If intrinsic modules are not available, disable tests unless they are marked as 'module-independent'.
 config.available_features.add("module-independent")
-if config.have_flangrt_mod or config.flang_intrinsic_modules_dir:
+if config.flang_test_enable_intrinsics:
     config.available_features.add("flangrt-modules")
 else:
-    lit_config.warning(f"Intrinsic modules not available: disabling most tests")
+    lit_config.warning(f"Intrinsic modules not available and not in default path: disabling most tests")
     config.limit_to_features.add("module-independent")
+
 
 
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
 openmp_flags_substitution = "-fopenmp"
-if 'flangrt-modules' not in config.available_features:
-    # OpenMP modules depend on Flang-RT modules
-    pass
-elif not config.have_openmp_rtl:
-    lit_config.warning(f"OpenMP runtime library not available: OpenMP tests disabled")
-elif not config.openmp_module_dir:
-    lit_config.warning(f"OpenMP modules not available: OpenMP tests disabled")
-else:
-    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
-    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
-    # project or runtime. If not in the compiler resources module directory like the other intrinsic modules, we must add it to the path.
+if config.flang_test_enable_openmp:
     config.available_features.add("openmp_runtime")
-    extra_intrinsics_search_args += [
-        f"-fintrinsic-modules-path={config.openmp_module_dir}"
-    ]
-    lit_config.note(f"using OpenMP modules: {config.openmp_module_dir}")
+    lit_config.note(f"OpenMP tests enabled")
+else:
+    lit_config.warning(f"OpenMP tests disabled: FLANG_TEST_ENABLE_OPENMP option no set and omp_lib.mod not in resource path")
+
+
+
+#if 'flangrt-modules' not in config.available_features:
+#    # OpenMP modules depend on Flang-RT modules
+#    pass
+#elif not config.have_openmp_rtl:
+#    lit_config.warning(f"OpenMP runtime library not available: OpenMP tests disabled")
+#elif not config.openmp_module_dir:
+#    lit_config.warning(f"OpenMP modules not available: OpenMP tests disabled")
+#elif openmp_mod_path:
+#    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
+#    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
+#    # project or runtime. If not in the compiler resources module directory like the other intrinsic modules, we must add it to the path.
+#    config.available_features.add("openmp_runtime")
+#    extra_intrinsics_search_args += [
+#        f"-fintrinsic-modules-path={config.openmp_module_dir}"
+#    ]
+#    lit_config.note(f"using OpenMP modules: {config.openmp_module_dir}")
 
 
 
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
+flang_tool = FindTool("flang")
+#lit_config.note(f"using flang: {flang_tool.command}")
 tools = [
     ToolSubst(
         "bbc",
@@ -213,13 +236,13 @@ tools = [
     ),
     ToolSubst(
         "%flang",
-        command=FindTool("flang"),
+        command=flang_tool,
         extra_args=extra_intrinsics_search_args,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
-        command=FindTool("flang"),
+        command=flang_tool,
         extra_args=["-fc1"] + intrinsics_search_args + extra_intrinsics_search_args,
         unresolved="fatal",
     ),
@@ -230,6 +253,7 @@ tools = [
         unresolved="fatal",
     ),
 ]
+
 
 # Flang has several unimplemented features. TODO messages are used to mark
 # and fail if these features are exercised. Some TODOs exit with a non-zero

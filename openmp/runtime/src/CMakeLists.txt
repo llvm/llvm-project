@@ -365,6 +365,8 @@ if(WIN32)
   endif()
 endif()
 
+
+
 # Building the Fortran module files
 # One compilation step creates both omp_lib.mod and omp_lib_kinds.mod
 configure_file(${LIBOMP_INC_DIR}/omp_lib.h.var omp_lib.h @ONLY)
@@ -468,7 +470,7 @@ if(LLVM_RUNTIMES_BUILD AND RUNTIMES_FLANG_MODULES_ENABLED)
   if (FORTRAN_MODULE_DEPS)
     add_dependencies(libomp-mod ${FORTRAN_MODULE_DEPS})
   endif ()
-  
+
   set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
   if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
     set (destination ${LIBOMP_MODULES_INSTALL_PATH})

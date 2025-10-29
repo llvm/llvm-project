@@ -273,7 +273,28 @@ set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
 mark_as_advanced(FLANG_TOOLS_INSTALL_DIR)
 
-set(FLANG_INTRINSIC_MODULES_DIR "" CACHE PATH "Additional search path for modules; needed for running all tests if not building flang-rt in a bootstrapping build")
+#set(FLANG_INTRINSIC_MODULES_DIR "" CACHE PATH "Additional search path for modules; needed for running all tests if not building flang-rt in a bootstrapping build")
+#set(FLANG_TEST_FLANG_RT_Fortran_FLAGS "" CACHE STRING "Additional flags that makes Flang find the Flang-RT modules during testing; typically -fintrinsic-modules-path=<path>")
+#set(FLANG_TEST_OPENMP_Fortran_FLAGS "" CACHE STRING "Additional flags that makes Flang find the OpenMP modules during testing; typically -fintrinsic-modules-path=<path>")
+
+set(FLANG_TEST_Fortran_FLAGS "" CACHE STRING "Additional Fortran flags for running tests, such as -fintrinsic-modules-path=<path>")
+
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(FLANG_TEST_ENABLE_INTRINSICS_default ON)
+else ()
+  set(FLANG_TEST_ENABLE_INTRINSICS_default OFF)
+endif ()
+option(FLANG_TEST_ENABLE_INTRINSICS "Enable tests that require intrinsic modules from Flang-RT" "${FLANG_TEST_ENABLE_INTRINSICS_default}")
+
+
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND FLANG_TEST_ENABLE_INTRINSICS)
+  set(FLANG_TEST_ENABLE_OPENMP_default ON)
+else ()
+  set(FLANG_TEST_ENABLE_OPENMP_default OFF)
+endif ()
+option(FLANG_TEST_ENABLE_OPENMP "Enable tests that require modules from OpenMP" "${FLANG_TEST_ENABLE_OPENMP_default}")
+
+
 set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
 
 # TODO: Remove when libclangDriver is lifted out of Clang

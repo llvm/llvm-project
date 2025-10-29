@@ -21,6 +21,8 @@ if((NOT ${LIBOMP_OMPT_SUPPORT}) OR (NOT ${LLVM_INCLUDE_TESTS}))
 endif()
 
 include(CMakePackageConfigHelpers)
+find_package(ZLIB)
+message("ZLIB_FOUND: ${ZLIB_FOUND}")
 
 include_directories(${LIBOMP_INCLUDE_DIR})
 
