@@ -94,6 +94,8 @@ public:
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
+  BuiltinTypeDeclBuilder &addGetDimensionsMethodForBuffer();
+
 private:
   BuiltinTypeDeclBuilder &addCreateFromBinding();
   BuiltinTypeDeclBuilder &addCreateFromImplicitBinding();

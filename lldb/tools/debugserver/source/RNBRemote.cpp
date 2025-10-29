@@ -3205,7 +3205,6 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
   packet.remove_prefix(ranges_prefix.size());
 
   std::vector<std::pair<nub_addr_t, std::size_t>> ranges;
-  std::size_t total_length = 0;
 
   // Ranges should have the form: <addr>,<size>[,<addr>,<size>]*;
   auto end_of_ranges_pos = packet.find(';');
@@ -3236,7 +3235,6 @@ rnb_err_t RNBRemote::HandlePacket_MultiMemRead(const char *p) {
                                     "MultiMemRead length is too large");
 
     ranges.emplace_back(*maybe_addr, *maybe_length);
-    total_length += *maybe_length;
   }
 
   if (ranges.empty())

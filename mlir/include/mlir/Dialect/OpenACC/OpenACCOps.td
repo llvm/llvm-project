@@ -787,6 +787,21 @@ def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
   let extraClassDeclaration = extraClassDeclarationBase;
 }
 
+// The mapping of firstprivate cannot be represented through an `acc.copyin`
+// since that operation includes present counter updates (and private variables
+// do not impact counters). Instead, the below operation is used to represent
+// the mapping of that initial value which can be used to initialize the private
+// copies.
+def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
+    "mlir::acc::DataClause::acc_firstprivate", "", [],
+    (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
+  let summary = "Used to decompose firstprivate semantics and represents the "
+                "mapping of the initial value.";
+  let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
+                          "Accelerator mapped variable",[MemWrite]>:$accVar);
+  let extraClassDeclaration = extraClassDeclarationBase;
+}
+
 //===----------------------------------------------------------------------===//
 // 2.5.15 reduction clause
 //===----------------------------------------------------------------------===//
@@ -2102,6 +2117,56 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
 }
 
 //===----------------------------------------------------------------------===//
+// acc.kernel_environment
+//===----------------------------------------------------------------------===//
+
+def OpenACC_KernelEnvironmentOp : OpenACC_Op<"kernel_environment",
+    [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
+     NoTerminator,
+     MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
+                    MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
+  let summary = "Decomposition of compute constructs to capture data mapping "
+                "and asynchronous behavior information";
+  let description = [{
+    The `acc.kernel_environment` operation represents a decomposition of
+    any OpenACC compute construct (acc.kernels, acc.parallel, or
+    acc.serial) that captures data mapping and asynchronous behavior:
+    - data clause operands
+    - async clause operands
+    - wait clause operands
+
+    This allows kernel execution parallelism and privatization to be
+    handled separately, facilitating eventual lowering to GPU dialect where
+    kernel launching and compute offloading are handled separately.
+  }];
+
+  let arguments = (ins
+    Variadic<AnyType>:$dataClauseOperands,
+    Variadic<IntOrIndex>:$asyncOperands,
+    OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
+    OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
+    Variadic<IntOrIndex>:$waitOperands,
+    OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
+    OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
+    OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
+    OptionalAttr<DeviceTypeArrayAttr>:$waitOnly);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
+            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
+      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
+          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
+          $waitOnly)
+    )
+    $region attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // 2.6.5 data Construct
 //===----------------------------------------------------------------------===//
 
@@ -2787,10 +2852,14 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
                        OpenACC_PointerLikeType:$v,
-                       TypeAttr:$element_type);
+                       TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $v `=` $x
-    `:` type($v) `,` type($x) `,` $element_type attr-dict
+    `:` type($v) `,` type($x) `,` $element_type
+    attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -2809,8 +2878,12 @@ def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
   }];
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
-                       AnyType:$expr);
+                       AnyType:$expr,
+                       Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $x `=` $expr
     `:` type($x) `,` type($expr)
     attr-dict
@@ -2850,10 +2923,15 @@ def AtomicUpdateOp : OpenACC_Op<"atomic.update",
 
   let arguments = (ins Arg<OpenACC_PointerLikeType,
                            "Address of variable to be updated",
-                           [MemRead, MemWrite]>:$x);
+                           [MemRead, MemWrite]>:$x,
+                       Optional<I1>:$ifCond);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
-    $x `:` type($x) $region attr-dict
+    oilist(
+        `if` `(` $ifCond `)`
+    )
+    $x `:` type($x)
+      $region attr-dict
   }];
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2896,8 +2974,13 @@ def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
 
   }];
 
+  let arguments = (ins Optional<I1>:$ifCond);
+
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $region attr-dict
   }];
   let hasRegionVerifier = 1;

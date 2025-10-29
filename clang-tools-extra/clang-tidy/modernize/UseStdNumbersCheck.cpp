@@ -255,8 +255,10 @@ struct MatchBuilder {
   double DiffThreshold;
 };
 
-std::string getCode(const StringRef Constant, const bool IsFloat,
-                    const bool IsLongDouble) {
+} // namespace
+
+static std::string getCode(const StringRef Constant, const bool IsFloat,
+                           const bool IsLongDouble) {
   if (IsFloat) {
     return ("std::numbers::" + Constant + "_v<float>").str();
   }
@@ -266,9 +268,9 @@ std::string getCode(const StringRef Constant, const bool IsFloat,
   return ("std::numbers::" + Constant).str();
 }
 
-bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
-                            const clang::SourceManager &SM,
-                            const clang::LangOptions &LO) {
+static bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
+                                   const clang::SourceManager &SM,
+                                   const clang::LangOptions &LO) {
   if (!Range.getBegin().isMacroID()) {
     return false;
   }
@@ -286,8 +288,6 @@ bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
 
   return true;
 }
-
-} // namespace
 
 namespace clang::tidy::modernize {
 UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,

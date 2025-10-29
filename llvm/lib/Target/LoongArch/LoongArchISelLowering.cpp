@@ -1701,6 +1701,43 @@ lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
                      DAG.getConstant(Imm, DL, GRLenVT));
 }
 
+/// Lower VECTOR_SHUFFLE whose result is the reversed source vector.
+///
+/// It is possible to do optimization for VECTOR_SHUFFLE performing vector
+/// reverse whose mask likes:
+///   <7, 6, 5, 4, 3, 2, 1, 0>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue
+lowerVECTOR_SHUFFLE_IsReverse(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                              SDValue V1, SelectionDAG &DAG,
+                              const LoongArchSubtarget &Subtarget) {
+  // Only vectors with i8/i16 elements which cannot match other patterns
+  // directly needs to do this.
+  if (VT != MVT::v16i8 && VT != MVT::v8i16 && VT != MVT::v32i8 &&
+      VT != MVT::v16i16)
+    return SDValue();
+
+  if (!ShuffleVectorInst::isReverseMask(Mask, Mask.size()))
+    return SDValue();
+
+  int WidenNumElts = VT.getVectorNumElements() / 4;
+  SmallVector<int, 16> WidenMask(WidenNumElts, -1);
+  for (int i = 0; i < WidenNumElts; ++i)
+    WidenMask[i] = WidenNumElts - 1 - i;
+
+  MVT WidenVT = MVT::getVectorVT(
+      VT.getVectorElementType() == MVT::i8 ? MVT::i32 : MVT::i64, WidenNumElts);
+  SDValue NewV1 = DAG.getBitcast(WidenVT, V1);
+  SDValue WidenRev = DAG.getVectorShuffle(WidenVT, DL, NewV1,
+                                          DAG.getUNDEF(WidenVT), WidenMask);
+
+  return DAG.getNode(LoongArchISD::VSHUF4I, DL, VT,
+                     DAG.getBitcast(VT, WidenRev),
+                     DAG.getConstant(27, DL, Subtarget.getGRLenVT()));
+}
+
 /// Lower VECTOR_SHUFFLE into VPACKEV (if possible).
 ///
 /// VPACKEV interleaves the even elements from each vector.
@@ -2003,6 +2040,9 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result =
              lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+      return Result;
+    if ((Result =
+             lowerVECTOR_SHUFFLE_IsReverse(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
@@ -2614,10 +2654,16 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
+    // Try to widen vectors to gain more optimization opportunities.
+    if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
+      return NewShuffle;
     if ((Result =
              lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, Mask, VT, V1, DAG, Subtarget)))
+      return Result;
+    if ((Result =
+             lowerVECTOR_SHUFFLE_IsReverse(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the

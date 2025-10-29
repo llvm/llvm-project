@@ -1693,6 +1693,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
+  void *insert_pos = nullptr;
+  if (class_template_decl->findSpecialization(args, insert_pos))
+    return nullptr;
+  class_template_decl->AddSpecialization(class_template_specialization_decl,
+                                         insert_pos);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 
