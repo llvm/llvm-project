@@ -191,7 +191,7 @@ static MDTuple *getEntryPropAsMetadata(Module &M, const EntryProperties &EP,
   LLVMContext &Ctx = EP.Entry->getContext();
   if (EntryShaderFlags != 0)
     MDVals.append(getTagValueAsMetadata(EntryPropsTag::ShaderFlags,
-                                        MMDI.ShaderProfile, Ctx));
+                                        EntryShaderFlags, Ctx));
 
   if (EP.Entry != nullptr) {
     // FIXME: support more props.
@@ -227,6 +227,7 @@ static MDTuple *getEntryPropAsMetadata(Module &M, const EntryProperties &EP,
           return nullptr;
         }
 
+        // A range is being specified if EP.WaveSizeMax != 0
         if (EP.WaveSizeMax && !IsWaveRange) {
           reportError(
               M, "Shader model 6.8 or greater is required to specify "
