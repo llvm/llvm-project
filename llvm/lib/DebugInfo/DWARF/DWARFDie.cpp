@@ -133,7 +133,7 @@ static llvm::Expected<llvm::StringRef>
 getApplePropertyName(const DWARFDie &PropDIE) {
   if (!PropDIE)
     return llvm::createStringError("invalid DIE");
- 
+
   if (PropDIE.getTag() != DW_TAG_APPLE_property)
     return llvm::createStringError("referencing not a DW_TAG_APPLE_property");
 
