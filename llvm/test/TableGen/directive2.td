@@ -156,8 +156,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL:      #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-NEXT: #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
-// IMPL-NEXT: namespace llvm {
-// IMPL-NEXT: namespace tdl {
+// IMPL-NEXT: namespace llvm::tdl {
 // IMPL-EMPTY:
 // IMPL-NEXT:   // Sets for dira
 // IMPL-EMPTY:
@@ -174,8 +173,7 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-EMPTY:
 // IMPL-NEXT:   static  requiredClauses_TDLD_dira {
 // IMPL-NEXT:   };
-// IMPL-NEXT: } // namespace tdl
-// IMPL-NEXT: } // namespace llvm
+// IMPL-NEXT: } // namespace llvm::tdl
 // IMPL-EMPTY:
 // IMPL-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
