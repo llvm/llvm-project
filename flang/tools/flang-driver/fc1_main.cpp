@@ -21,12 +21,16 @@
 #include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "flang/FrontendTool/Utils.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 #include <cstdio>
 
@@ -48,6 +52,43 @@ static int printSupportedCPUs(llvm::StringRef triple) {
   std::unique_ptr<llvm::TargetMachine> targetMachine(
       target->createTargetMachine(parsedTriple, "", "+cpuhelp", targetOpts,
                                   std::nullopt));
+  return 0;
+}
+
+static int printSupportedExtensions(std::string triple) {
+  std::string error;
+  const llvm::Target *target =
+      llvm::TargetRegistry::lookupTarget(triple, error);
+  if (!target) {
+    llvm::errs() << error;
+    return 1;
+  }
+
+  llvm::TargetOptions targetOpts;
+  std::unique_ptr<llvm::TargetMachine> targetMachine(
+      target->createTargetMachine(triple, "", "", targetOpts, std::nullopt));
+  const llvm::Triple &targetTriple = targetMachine->getTargetTriple();
+  const llvm::MCSubtargetInfo *mcInfo = targetMachine->getMCSubtargetInfo();
+  const llvm::ArrayRef<llvm::SubtargetFeatureKV> features =
+      mcInfo->getAllProcessorFeatures();
+
+  llvm::StringMap<llvm::StringRef> descMap;
+  for (const llvm::SubtargetFeatureKV &feature : features)
+    descMap.insert({feature.Key, feature.Desc});
+
+  if (targetTriple.isRISCV())
+    llvm::RISCVISAInfo::printSupportedExtensions(descMap);
+  else if (targetTriple.isAArch64())
+    llvm::AArch64::PrintSupportedExtensions();
+  else if (targetTriple.isARM())
+    llvm::ARM::PrintSupportedExtensions(descMap);
+  else {
+    // The option was already checked in Driver::HandleImmediateArgs,
+    // so we do not expect to get here if we are not a supported architecture.
+    assert(0 && "Unhandled triple for --print-supported-extensions option.");
+    return 1;
+  }
+
   return 0;
 }
 
@@ -80,6 +121,11 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   // --print-supported-cpus takes priority over the actual compilation.
   if (flang->getFrontendOpts().printSupportedCPUs)
     return printSupportedCPUs(flang->getInvocation().getTargetOpts().triple);
+
+  // --print-supported-extensions takes priority over the actual compilation.
+  if (flang->getFrontendOpts().printSupportedExtensions)
+    return printSupportedExtensions(
+        flang->getInvocation().getTargetOpts().triple);
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 

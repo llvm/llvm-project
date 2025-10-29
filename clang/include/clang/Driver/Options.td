@@ -6267,15 +6267,15 @@ def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
            "specified,it will print the supported cpus for the default target)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedCPUs">>;
 
+def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">,
+  HelpText<"Print supported -march extensions (RISC-V, AArch64 and ARM only)">,
+  MarshallingInfoFlag<FrontendOpts<"PrintSupportedExtensions">>;
+
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
 def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
 
 } // let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option]
 
-def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">,
-  Visibility<[ClangOption, CC1Option, CLOption]>,
-  HelpText<"Print supported -march extensions (RISC-V, AArch64 and ARM only)">,
-  MarshallingInfoFlag<FrontendOpts<"PrintSupportedExtensions">>;
 def print_enabled_extensions : Flag<["-", "--"], "print-enabled-extensions">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Print the extensions enabled by the given target and -march/-mcpu options."
