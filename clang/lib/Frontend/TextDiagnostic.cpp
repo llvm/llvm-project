@@ -17,7 +17,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <optional>
 
@@ -662,7 +661,7 @@ void TextDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag D) {
-  uint64_t StartOfLocationInfo = OS.tell();
+  uint64_t StartOfLocationInfo = OS.getColumn();
 
   // Emit the location of this particular diagnostic.
   if (Loc.isValid())
@@ -675,8 +674,11 @@ void TextDiagnostic::emitDiagnosticMessage(
     printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
-                         Message, OS.tell() - StartOfLocationInfo,
+                         Message, OS.getColumn() - StartOfLocationInfo,
                          DiagOpts.MessageLength, DiagOpts.ShowColors);
+  // We use a formatted ostream, which does its own buffering. Flush here
+  // so we keep the proper order of output.
+  OS.flush();
 }
 
 /*static*/ void
@@ -1485,7 +1487,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
       if (CharStyle != Styles.end()) {
         if (!CurrentColor ||
             (CurrentColor && *CurrentColor != CharStyle->Color)) {
-          OS.changeColor(CharStyle->Color, false);
+          OS.changeColor(CharStyle->Color);
           CurrentColor = CharStyle->Color;
         }
       } else if (CurrentColor) {
