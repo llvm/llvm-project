@@ -473,12 +473,13 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-size_t matchWeights(
-    BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
-    const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
-    HashFunction HashFunction, YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
-    const BinaryFunction &BF,
-    const YAMLProfileReader::ProbeMatchSpec &ProbeMatchSpecs);
+size_t matchWeights(BinaryContext &BC,
+                    const BinaryFunction::BasicBlockOrderType &BlockOrder,
+                    const yaml::bolt::BinaryFunctionProfile &YamlBF,
+                    FlowFunction &Func, HashFunction HashFunction,
+                    YAMLProfileReader::ProfileLookupMap &IdToYamlBF,
+                    const BinaryFunction &BF,
+                    const YAMLProfileReader::ProbeMatchSpec &ProbeMatchSpecs);
 
 std::pair<StaleMatcher, std::vector<BlendedBlockHash>>
 initMatcher(BinaryContext &BC,

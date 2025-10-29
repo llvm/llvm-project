@@ -369,7 +369,7 @@ bool YAMLProfileReader::parseFunctionProfile(
 // Probe inline tree: move InlineTreeIndex into InlineTreeNodes.
 static void
 decodeYamlInlineTree(const yaml::bolt::ProfilePseudoProbeDesc &YamlPD,
-                    yaml::bolt::BinaryFunctionProfile &YamlBF) {
+                     yaml::bolt::BinaryFunctionProfile &YamlBF) {
   uint32_t ParentId = 0;
   uint32_t PrevGUIDIdx = 0;
   for (yaml::bolt::InlineTreeNode &InlineTreeNode : YamlBF.InlineTree) {
