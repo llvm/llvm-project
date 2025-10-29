@@ -411,7 +411,8 @@ public:
   }
 
   InterfaceKind VisitReferenceType(const ReferenceType *Ty) {
-    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E->IgnoreImpCasts());
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf,
+                                                E->IgnoreImpCasts());
     assert(!AddrOfE.isInvalid() && "Can not create unary expression");
     Args.push_back(AddrOfE.get());
     return InterfaceKind::NoAlloc;
