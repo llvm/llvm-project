@@ -328,7 +328,8 @@ public:
       : Idx(Idx), HasThis(false), IsValid(true) {
     assert(Idx >= 1 && "Idx must be one-origin");
     if (const auto *FD = dyn_cast<FunctionDecl>(D))
-      HasThis = FD->isCXXInstanceMember();
+      HasThis = FD->isCXXInstanceMember() &&
+                !FD->hasCXXExplicitFunctionObjectParameter();
   }
 
   /// A type into which \c ParamIdx can be serialized.

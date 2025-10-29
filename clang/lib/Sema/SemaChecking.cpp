@@ -3542,9 +3542,7 @@ bool Sema::ValueIsRunOfOnes(CallExpr *TheCall, unsigned ArgNum) {
 
 bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
                                unsigned FirstArg, FormatStringInfo *FSI) {
-  bool IsCXXMember = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
-    IsCXXMember = MD->isInstance();
+  bool HasImplicitThisParam = hasImplicitObjectParameter(D);
   bool IsVariadic = false;
   if (const FunctionType *FnTy = D->getFunctionType())
     IsVariadic = cast<FunctionProtoType>(FnTy)->isVariadic();
@@ -3553,11 +3551,12 @@ bool Sema::getFormatStringInfo(const Decl *D, unsigned FormatIdx,
   else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D))
     IsVariadic = OMD->isVariadic();
 
-  return getFormatStringInfo(FormatIdx, FirstArg, IsCXXMember, IsVariadic, FSI);
+  return getFormatStringInfo(FormatIdx, FirstArg, HasImplicitThisParam,
+                             IsVariadic, FSI);
 }
 
 bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
-                               bool IsCXXMember, bool IsVariadic,
+                               bool HasImplicitThisParam, bool IsVariadic,
                                FormatStringInfo *FSI) {
   if (FirstArg == 0)
     FSI->ArgPassingKind = FAPK_VAList;
@@ -3571,7 +3570,7 @@ bool Sema::getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
   // The way the format attribute works in GCC, the implicit this argument
   // of member functions is counted. However, it doesn't appear in our own
   // lists, so decrement format_idx in that case.
-  if (IsCXXMember) {
+  if (HasImplicitThisParam) {
     if(FSI->FormatIdx == 0)
       return false;
     --FSI->FormatIdx;
