@@ -185,13 +185,8 @@ else:
 
 define void @test_icmp_complex(i1 %c, i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_icmp_complex(
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
-; CHECK:       if:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF2:%.*]], label [[ELSE2:%.*]]
-; CHECK:       else:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[B]], [[A]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[IF2]], label [[ELSE2]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       if2:
@@ -501,22 +496,10 @@ define void @test_switch_with_unreachable_block_as_default(i1 %c, i32 %x, ptr %p
 ; CHECK-NEXT:      i32 2, label [[BAR:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw2:
-; CHECK-NEXT:    switch i32 [[X]], label [[UNREACHABLE]] [
-; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
-; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       bb1:
 ; CHECK-NEXT:    store i64 42, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       bb2:
-; CHECK-NEXT:    store i64 42, ptr [[PTR]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
-; CHECK:       bb3:
-; CHECK-NEXT:    store i64 42, ptr [[PTR]], align 4
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bar:
