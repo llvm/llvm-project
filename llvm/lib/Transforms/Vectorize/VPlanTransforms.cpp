@@ -1057,54 +1057,51 @@ static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   return nullptr;
 }
 
-/// Try to simplify recipe \p R.
-static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
-  VPlan *Plan = R.getParent()->getPlan();
-
-  auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
-  if (!Def)
-    return;
+/// Try to simplify VPSingleDefRecipe \p Def.
+static void simplifySingleDefRecipe(VPSingleDefRecipe &Def,
+                                    VPTypeAnalysis &TypeInfo) {
+  VPlan *Plan = Def.getParent()->getPlan();
 
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
   const DataLayout &DL =
       Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
-  if (VPValue *V = tryToFoldLiveIns(*Def, Def->operands(), DL, TypeInfo))
-    return Def->replaceAllUsesWith(V);
+  if (VPValue *V = tryToFoldLiveIns(Def, Def.operands(), DL, TypeInfo))
+    return Def.replaceAllUsesWith(V);
 
   // Fold PredPHI LiveIn -> LiveIn.
-  if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
+  if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&Def)) {
     VPValue *Op = PredPHI->getOperand(0);
     if (Op->isLiveIn())
       PredPHI->replaceAllUsesWith(Op);
   }
 
-  VPBuilder Builder(Def);
+  VPBuilder Builder(&Def);
   VPValue *A;
-  if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
-    Type *TruncTy = TypeInfo.inferScalarType(Def);
+  if (match(&Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
+    Type *TruncTy = TypeInfo.inferScalarType(&Def);
     Type *ATy = TypeInfo.inferScalarType(A);
     if (TruncTy == ATy) {
-      Def->replaceAllUsesWith(A);
+      Def.replaceAllUsesWith(A);
     } else {
       // Don't replace a scalarizing recipe with a widened cast.
-      if (isa<VPReplicateRecipe>(Def))
+      if (isa<VPReplicateRecipe>(&Def))
         return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
-        unsigned ExtOpcode = match(R.getOperand(0), m_SExt(m_VPValue()))
+        unsigned ExtOpcode = match(Def.getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
         auto *Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
                                             TruncTy);
-        if (auto *UnderlyingExt = R.getOperand(0)->getUnderlyingValue()) {
+        if (auto *UnderlyingExt = Def.getOperand(0)->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
           Ext->setUnderlyingValue(UnderlyingExt);
         }
-        Def->replaceAllUsesWith(Ext);
+        Def.replaceAllUsesWith(Ext);
       } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
         auto *Trunc = Builder.createWidenCast(Instruction::Trunc, A, TruncTy);
-        Def->replaceAllUsesWith(Trunc);
+        Def.replaceAllUsesWith(Trunc);
       }
     }
 #ifndef NDEBUG
@@ -1125,75 +1122,75 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   // && (Y || Z) and (X || !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
   VPValue *X, *Y, *Z;
-  if (match(Def,
+  if (match(&Def,
             m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                          m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y)))))) {
-    Def->replaceAllUsesWith(X);
-    Def->eraseFromParent();
+    Def.replaceAllUsesWith(X);
+    Def.eraseFromParent();
     return;
   }
 
   // x | 1 -> 1
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
-    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
+  if (match(&Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
+    return Def.replaceAllUsesWith(Def.getOperand(Def.getOperand(0) == X));
 
   // x | 0 -> x
-  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
-    return Def->replaceAllUsesWith(X);
+  if (match(&Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
+    return Def.replaceAllUsesWith(X);
 
   // x & 0 -> 0
-  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
-    return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
+  if (match(&Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
+    return Def.replaceAllUsesWith(Def.getOperand(Def.getOperand(0) == X));
 
   // x && false -> false
-  if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
-    return Def->replaceAllUsesWith(Def->getOperand(1));
+  if (match(&Def, m_LogicalAnd(m_VPValue(X), m_False())))
+    return Def.replaceAllUsesWith(Def.getOperand(1));
 
   // (x && y) || (x && z) -> x && (y || z)
-  if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
+  if (match(&Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                               m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
       // Simplify only if one of the operands has one use to avoid creating an
       // extra recipe.
-      (!Def->getOperand(0)->hasMoreThanOneUniqueUser() ||
-       !Def->getOperand(1)->hasMoreThanOneUniqueUser()))
-    return Def->replaceAllUsesWith(
+      (!Def.getOperand(0)->hasMoreThanOneUniqueUser() ||
+       !Def.getOperand(1)->hasMoreThanOneUniqueUser()))
+    return Def.replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createOr(Y, Z)));
 
   // x && !x -> 0
-  if (match(&R, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
-    return Def->replaceAllUsesWith(Plan->getFalse());
+  if (match(&Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
+    return Def.replaceAllUsesWith(Plan->getFalse());
 
-  if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
-    return Def->replaceAllUsesWith(X);
+  if (match(&Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
+    return Def.replaceAllUsesWith(X);
 
   // select !c, x, y -> select c, y, x
   VPValue *C;
-  if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
-    Def->setOperand(0, C);
-    Def->setOperand(1, Y);
-    Def->setOperand(2, X);
+  if (match(&Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
+    Def.setOperand(0, C);
+    Def.setOperand(1, Y);
+    Def.setOperand(2, X);
     return;
   }
 
   // Reassociate (x && y) && z -> x && (y && z) if x has multiple users. With
   // tail folding it is likely that x is a header mask and can be simplified
   // further.
-  if (match(Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
-                              m_VPValue(Z))) &&
+  if (match(&Def, m_LogicalAnd(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
+                               m_VPValue(Z))) &&
       X->hasMoreThanOneUniqueUser())
-    return Def->replaceAllUsesWith(
+    return Def.replaceAllUsesWith(
         Builder.createLogicalAnd(X, Builder.createLogicalAnd(Y, Z)));
 
-  if (match(Def, m_c_Mul(m_VPValue(A), m_One())))
-    return Def->replaceAllUsesWith(A);
+  if (match(&Def, m_c_Mul(m_VPValue(A), m_One())))
+    return Def.replaceAllUsesWith(A);
 
-  if (match(Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
-    return Def->replaceAllUsesWith(R.getOperand(0) == A ? R.getOperand(1)
-                                                        : R.getOperand(0));
+  if (match(&Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
+    return Def.replaceAllUsesWith(Def.getOperand(0) == A ? Def.getOperand(1)
+                                                         : Def.getOperand(0));
 
-  if (match(Def, m_Not(m_VPValue(A)))) {
+  if (match(&Def, m_Not(m_VPValue(A)))) {
     if (match(A, m_Not(m_VPValue(A))))
-      return Def->replaceAllUsesWith(A);
+      return Def.replaceAllUsesWith(A);
 
     // Try to fold Not into compares by adjusting the predicate in-place.
     CmpPredicate Pred;
@@ -1218,71 +1215,71 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
         }
         // If Cmp doesn't have a debug location, use the one from the negation,
         // to preserve the location.
-        if (!Cmp->getDebugLoc() && R.getDebugLoc())
-          Cmp->setDebugLoc(R.getDebugLoc());
+        if (!Cmp->getDebugLoc() && Def.getDebugLoc())
+          Cmp->setDebugLoc(Def.getDebugLoc());
       }
     }
   }
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
-  if ((match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
-       match(Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
-      TypeInfo.inferScalarType(Def->getOperand(1)) ==
-          TypeInfo.inferScalarType(Def))
-    return Def->replaceAllUsesWith(Def->getOperand(1));
+  if ((match(&Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
+       match(&Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
+      TypeInfo.inferScalarType(Def.getOperand(1)) ==
+          TypeInfo.inferScalarType(&Def))
+    return Def.replaceAllUsesWith(Def.getOperand(1));
 
-  if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
-                                                            m_One()))) {
-    Type *WideStepTy = TypeInfo.inferScalarType(Def);
+  if (match(&Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
+                                                             m_One()))) {
+    Type *WideStepTy = TypeInfo.inferScalarType(&Def);
     if (TypeInfo.inferScalarType(X) != WideStepTy)
       X = Builder.createWidenCast(Instruction::Trunc, X, WideStepTy);
-    Def->replaceAllUsesWith(X);
+    Def.replaceAllUsesWith(X);
     return;
   }
 
   // For i1 vp.merges produced by AnyOf reductions:
   // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
-  if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
-                                                  m_VPValue(X), m_VPValue())) &&
+  if (match(&Def, m_Intrinsic<Intrinsic::vp_merge>(
+                      m_True(), m_VPValue(A), m_VPValue(X), m_VPValue())) &&
       match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
-      TypeInfo.inferScalarType(R.getVPSingleValue())->isIntegerTy(1)) {
-    Def->setOperand(1, Def->getOperand(0));
-    Def->setOperand(0, Y);
+      TypeInfo.inferScalarType(Def.getVPSingleValue())->isIntegerTy(1)) {
+    Def.setOperand(1, Def.getOperand(0));
+    Def.setOperand(0, Y);
     return;
   }
 
-  if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
+  if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&Def)) {
     if (Phi->getOperand(0) == Phi->getOperand(1))
-      Def->replaceAllUsesWith(Phi->getOperand(0));
+      Phi->replaceAllUsesWith(Phi->getOperand(0));
     return;
   }
 
   // Look through ExtractLastElement (BuildVector ....).
-  if (match(&R, m_CombineOr(m_ExtractLastElement(m_BuildVector()),
-                            m_ExtractLastLanePerPart(m_BuildVector())))) {
-    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
-    Def->replaceAllUsesWith(
+  if (match(&Def, m_CombineOr(m_ExtractLastElement(m_BuildVector()),
+                              m_ExtractLastLanePerPart(m_BuildVector())))) {
+    auto *BuildVector = cast<VPInstruction>(Def.getOperand(0));
+    Def.replaceAllUsesWith(
         BuildVector->getOperand(BuildVector->getNumOperands() - 1));
     return;
   }
 
   // Look through ExtractPenultimateElement (BuildVector ....).
-  if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                    m_BuildVector()))) {
-    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
-    Def->replaceAllUsesWith(
+  if (match(&Def, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                      m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(Def.getOperand(0));
+    Def.replaceAllUsesWith(
         BuildVector->getOperand(BuildVector->getNumOperands() - 2));
     return;
   }
 
   uint64_t Idx;
-  if (match(&R, m_ExtractElement(m_BuildVector(), m_ConstantInt(Idx)))) {
-    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
-    Def->replaceAllUsesWith(BuildVector->getOperand(Idx));
+  if (match(&Def, m_ExtractElement(m_BuildVector(), m_ConstantInt(Idx)))) {
+    auto *BuildVector = cast<VPInstruction>(Def.getOperand(0));
+    Def.replaceAllUsesWith(BuildVector->getOperand(Idx));
     return;
   }
 
-  if (auto *Phi = dyn_cast<VPPhi>(Def)) {
+  if (auto *Phi = dyn_cast<VPPhi>(&Def)) {
     if (Phi->getNumOperands() == 1)
       Phi->replaceAllUsesWith(Phi->getOperand(0));
     return;
@@ -1294,19 +1291,19 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
 
   // Hoist an invariant increment Y of a phi X, by having X start at Y.
-  if (match(Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && Y->isLiveIn() &&
+  if (match(&Def, m_c_Add(m_VPValue(X), m_VPValue(Y))) && Y->isLiveIn() &&
       isa<VPPhi>(X)) {
     auto *Phi = cast<VPPhi>(X);
-    if (Phi->getOperand(1) != Def && match(Phi->getOperand(0), m_ZeroInt()) &&
-        Phi->getNumUsers() == 1 && (*Phi->user_begin() == &R)) {
+    if (Phi->getOperand(1) != &Def && match(Phi->getOperand(0), m_ZeroInt()) &&
+        Phi->getNumUsers() == 1 && (*Phi->user_begin() == &Def)) {
       Phi->setOperand(0, Y);
-      Def->replaceAllUsesWith(Phi);
+      Def.replaceAllUsesWith(Phi);
       return;
     }
   }
 
   // VPVectorPointer for part 0 can be replaced by their start pointer.
-  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(&R)) {
+  if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(&Def)) {
     if (VecPtr->isFirstPart()) {
       VecPtr->replaceAllUsesWith(VecPtr->getOperand(0));
       return;
@@ -1315,7 +1312,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   // VPScalarIVSteps for part 0 can be replaced by their start value, if only
   // the first lane is demanded.
-  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(Def)) {
+  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&Def)) {
     if (Steps->isPart0() && vputils::onlyFirstLaneUsed(Steps)) {
       Steps->replaceAllUsesWith(Steps->getOperand(0));
       return;
@@ -1323,35 +1320,35 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
   // Simplify redundant ReductionStartVector recipes after unrolling.
   VPValue *StartV;
-  if (match(Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
-                     m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
-    Def->replaceUsesWithIf(StartV, [](const VPUser &U, unsigned Idx) {
+  if (match(&Def, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                      m_VPValue(StartV), m_VPValue(), m_VPValue()))) {
+    Def.replaceUsesWithIf(StartV, [](const VPUser &U, unsigned Idx) {
       auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
       return PhiR && PhiR->isInLoop();
     });
     return;
   }
 
-  if (match(Def,
+  if (match(&Def,
             m_CombineOr(m_ExtractLastElement(m_Broadcast(m_VPValue(A))),
                         m_ExtractLastLanePerPart(m_Broadcast(m_VPValue(A)))))) {
-    Def->replaceAllUsesWith(A);
+    Def.replaceAllUsesWith(A);
     return;
   }
 
-  if (match(Def, m_CombineOr(m_ExtractLastElement(m_VPValue(A)),
-                             m_ExtractLastLanePerPart(m_VPValue(A)))) &&
+  if (match(&Def, m_CombineOr(m_ExtractLastElement(m_VPValue(A)),
+                              m_ExtractLastLanePerPart(m_VPValue(A)))) &&
       ((isa<VPInstruction>(A) && vputils::isSingleScalar(A)) ||
        (isa<VPReplicateRecipe>(A) &&
         cast<VPReplicateRecipe>(A)->isSingleScalar())) &&
       all_of(A->users(),
-             [Def, A](VPUser *U) { return U->usesScalars(A) || Def == U; })) {
-    return Def->replaceAllUsesWith(A);
+             [&Def, A](VPUser *U) { return U->usesScalars(A) || &Def == U; })) {
+    return Def.replaceAllUsesWith(A);
   }
 
   if (Plan->getUF() == 1 &&
-      match(Def, m_ExtractLastLanePerPart(m_VPValue(A)))) {
-    return Def->replaceAllUsesWith(
+      match(&Def, m_ExtractLastLanePerPart(m_VPValue(A)))) {
+    return Def.replaceAllUsesWith(
         Builder.createNaryOp(VPInstruction::ExtractLastElement, {A}));
   }
 }
@@ -1361,9 +1358,9 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(Plan);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      simplifyRecipe(R, TypeInfo);
-    }
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
+        simplifySingleDefRecipe(*Def, TypeInfo);
   }
 }
 
