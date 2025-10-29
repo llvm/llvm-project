@@ -2503,7 +2503,7 @@ public:
     BeginOpenMP();
     Word("!$OMP ALLOCATE");
     Put(" (");
-    Walk(std::get<OmpObjectList>(x.t));
+    Walk(std::get<std::optional<OmpObjectList>>(x.t));
     Put(")");
     Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
