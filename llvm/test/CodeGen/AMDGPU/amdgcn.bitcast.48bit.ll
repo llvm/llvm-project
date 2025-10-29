@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 
-define <3 x half> @bitcast_v3bf16_to_v3f16(<3 x bfloat> %a, i32 %b) {
+define <3 x half> @bitcast_v3bf16_to_v3f16(<3 x bfloat> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v3bf16_to_v3f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -242,7 +242,7 @@ end:
   ret <3 x half> %phi
 }
 
-define inreg <3 x half> @bitcast_v3bf16_to_v3f16_scalar(<3 x bfloat> inreg %a, i32 inreg %b) {
+define inreg <3 x half> @bitcast_v3bf16_to_v3f16_scalar(<3 x bfloat> inreg %a, i32 inreg %b) #0 {
 ; SI-LABEL: bitcast_v3bf16_to_v3f16_scalar:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -500,7 +500,7 @@ end:
   ret <3 x half> %phi
 }
 
-define <3 x bfloat> @bitcast_v3f16_to_v3bf16(<3 x half> %a, i32 %b) {
+define <3 x bfloat> @bitcast_v3f16_to_v3bf16(<3 x half> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v3f16_to_v3bf16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -608,7 +608,7 @@ end:
   ret <3 x bfloat> %phi
 }
 
-define inreg <3 x bfloat> @bitcast_v3f16_to_v3bf16_scalar(<3 x half> inreg %a, i32 inreg %b) {
+define inreg <3 x bfloat> @bitcast_v3f16_to_v3bf16_scalar(<3 x half> inreg %a, i32 inreg %b) #0 {
 ; SI-LABEL: bitcast_v3f16_to_v3bf16_scalar:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -730,7 +730,7 @@ end:
   ret <3 x bfloat> %phi
 }
 
-define <3 x i16> @bitcast_v3bf16_to_v3i16(<3 x bfloat> %a, i32 %b) {
+define <3 x i16> @bitcast_v3bf16_to_v3i16(<3 x bfloat> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v3bf16_to_v3i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -960,7 +960,7 @@ end:
   ret <3 x i16> %phi
 }
 
-define inreg <3 x i16> @bitcast_v3bf16_to_v3i16_scalar(<3 x bfloat> inreg %a, i32 inreg %b) {
+define inreg <3 x i16> @bitcast_v3bf16_to_v3i16_scalar(<3 x bfloat> inreg %a, i32 inreg %b) #0 {
 ; SI-LABEL: bitcast_v3bf16_to_v3i16_scalar:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1209,7 +1209,7 @@ end:
   ret <3 x i16> %phi
 }
 
-define <3 x bfloat> @bitcast_v3i16_to_v3bf16(<3 x i16> %a, i32 %b) {
+define <3 x bfloat> @bitcast_v3i16_to_v3bf16(<3 x i16> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v3i16_to_v3bf16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1305,7 +1305,7 @@ end:
   ret <3 x bfloat> %phi
 }
 
-define inreg <3 x bfloat> @bitcast_v3i16_to_v3bf16_scalar(<3 x i16> inreg %a, i32 inreg %b) {
+define inreg <3 x bfloat> @bitcast_v3i16_to_v3bf16_scalar(<3 x i16> inreg %a, i32 inreg %b) #0 {
 ; SI-LABEL: bitcast_v3i16_to_v3bf16_scalar:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1415,7 +1415,7 @@ end:
   ret <3 x bfloat> %phi
 }
 
-define <3 x i16> @bitcast_v3f16_to_v3i16(<3 x half> %a, i32 %b) {
+define <3 x i16> @bitcast_v3f16_to_v3i16(<3 x half> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v3f16_to_v3i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1509,7 +1509,7 @@ end:
   ret <3 x i16> %phi
 }
 
-define inreg <3 x i16> @bitcast_v3f16_to_v3i16_scalar(<3 x half> inreg %a, i32 inreg %b) {
+define inreg <3 x i16> @bitcast_v3f16_to_v3i16_scalar(<3 x half> inreg %a, i32 inreg %b) #0 {
 ; SI-LABEL: bitcast_v3f16_to_v3i16_scalar:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1622,7 +1622,7 @@ end:
   ret <3 x i16> %phi
 }
 
-define <3 x half> @bitcast_v3i16_to_v3f16(<3 x i16> %a, i32 %b) {
+define <3 x half> @bitcast_v3i16_to_v3f16(<3 x i16> %a, i32 %b) #0 {
 ; SI-LABEL: bitcast_v3i16_to_v3f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1722,7 +1722,7 @@ end:
   ret <3 x half> %phi
 }
 
-define inreg <3 x half> @bitcast_v3i16_to_v3f16_scalar(<3 x i16> inreg %a, i32 inreg %b) {
+define inreg <3 x half> @bitcast_v3i16_to_v3f16_scalar(<3 x i16> inreg %a, i32 inreg %b) #0 {
 ; SI-LABEL: bitcast_v3i16_to_v3f16_scalar:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1832,3 +1832,5 @@ end:
   %phi = phi <3 x half> [ %a2, %cmp.true ], [ %a3, %cmp.false ]
   ret <3 x half> %phi
 }
+
+attributes #0 = { nounwind }

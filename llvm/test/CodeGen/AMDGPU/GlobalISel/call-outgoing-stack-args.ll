@@ -238,8 +238,8 @@ define void @func_caller_stack() #2 {
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 1
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:16
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
+; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
 ; MUBUF-NEXT:    v_readlane_b32 s4, v40, 2
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -277,8 +277,8 @@ define void @func_caller_stack() #2 {
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_v16i32_v16i32_v4i32@rel32@hi+12
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 1
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
+; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
 ; FLATSCR-NEXT:    v_readlane_b32 s0, v40, 2
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1
@@ -363,8 +363,8 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) #2 {
 ; MUBUF-NEXT:    s_waitcnt vmcnt(1)
 ; MUBUF-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:60
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 0
+; MUBUF-NEXT:    v_readlane_b32 s31, v40, 1
 ; MUBUF-NEXT:    s_mov_b32 s32, s33
 ; MUBUF-NEXT:    v_readlane_b32 s4, v40, 2
 ; MUBUF-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -414,8 +414,8 @@ define void @func_caller_byval(ptr addrspace(5) %argptr) #2 {
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dwordx2 off, v[0:1], s32 offset:56
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 0
+; FLATSCR-NEXT:    v_readlane_b32 s31, v40, 1
 ; FLATSCR-NEXT:    s_mov_b32 s32, s33
 ; FLATSCR-NEXT:    v_readlane_b32 s0, v40, 2
 ; FLATSCR-NEXT:    s_or_saveexec_b64 s[2:3], -1

@@ -175,8 +175,8 @@ define void @outgoing_f16_arg(ptr %ptr) #0 {
 ; GFX7-NEXT:    s_addk_i32 s32, 0x400
 ; GFX7-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX7-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -207,8 +207,8 @@ define void @outgoing_v2f16_arg(ptr %ptr) #0 {
 ; GFX7-NEXT:    s_addk_i32 s32, 0x400
 ; GFX7-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX7-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -245,8 +245,8 @@ define void @outgoing_f16_return(ptr %ptr) #0 {
 ; GFX7-NEXT:    flat_store_short v[40:41], v0
 ; GFX7-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX7-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v42, 0
+; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v42, 2
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -283,8 +283,8 @@ define void @outgoing_v2f16_return(ptr %ptr) #0 {
 ; GFX7-NEXT:    flat_store_dword v[40:41], v0
 ; GFX7-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX7-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v42, 0
+; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v42, 2
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -324,8 +324,8 @@ define void @outgoing_v4f16_return(ptr %ptr) #0 {
 ; GFX7-NEXT:    flat_store_dword v[40:41], v0
 ; GFX7-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX7-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v42, 0
+; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v42, 2
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -371,8 +371,8 @@ define void @outgoing_v8f16_return(ptr %ptr) #0 {
 ; GFX7-NEXT:    flat_store_dword v[40:41], v0
 ; GFX7-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX7-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v42, 0
+; GFX7-NEXT:    v_readlane_b32 s31, v42, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v42, 2
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -402,8 +402,8 @@ define half @call_split_type_used_outside_block_v8f16() #0 {
 ; GFX7-NEXT:    s_addk_i32 s32, 0x400
 ; GFX7-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX7-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX7-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX7-NEXT:    s_mov_b32 s32, s33
 ; GFX7-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX7-NEXT:    s_or_saveexec_b64 s[6:7], -1

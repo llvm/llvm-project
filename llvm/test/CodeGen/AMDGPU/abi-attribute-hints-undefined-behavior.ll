@@ -30,8 +30,8 @@ define void @parent_func_missing_inputs() #0 {
 ; FIXEDABI-NEXT:    s_addc_u32 s17, s17, requires_all_inputs@rel32@hi+12
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; FIXEDABI-NEXT:    v_readlane_b32 s31, v40, 1
 ; FIXEDABI-NEXT:    v_readlane_b32 s30, v40, 0
+; FIXEDABI-NEXT:    v_readlane_b32 s31, v40, 1
 ; FIXEDABI-NEXT:    s_mov_b32 s32, s33
 ; FIXEDABI-NEXT:    v_readlane_b32 s4, v40, 2
 ; FIXEDABI-NEXT:    s_or_saveexec_b64 s[6:7], -1

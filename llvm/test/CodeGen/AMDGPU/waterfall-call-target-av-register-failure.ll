@@ -118,8 +118,8 @@ define i32 @fix_sgpr_copies_indirect_call(ptr addrspace(5) %ptr) {
 ; CHECK-NEXT:    v_readlane_b32 s5, v41, 13
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v40, 4
 ; CHECK-NEXT:    v_readlane_b32 s34, v40, 2
