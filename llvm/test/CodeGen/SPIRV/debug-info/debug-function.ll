@@ -6,7 +6,7 @@
 ; CHECK-MIR-DAG: [[type_void:%[0-9]+:type]] = OpTypeVoid
 ; CHECK-MIR-DAG: [[source:%[0-9]+:.*]] = OpExtInst [[type_void]], 3, 35, {{%[0-9]+:.*}}
 ; CHECK-MIR-DAG: [[compile_unit:%[0-9]+:.*]] = OpExtInst [[type_void]], 3, 1
-; CHECK-MIR-DAG: [[type_func:%[0-9]+:.*]] = OpExtInst [[type_void]], 3, 8, {{%[0-9]+:.*}}, [[type_void]]
+; CHECK-MIR-DAG: [[type_func:%[0-9]+:.*]] = OpExtInst [[type_void]], 3, 8
 ; CHECK-MIR-DAG: [[func1:%[0-9]+:.*]] = OpExtInst [[type_void]], 3, 20, {{%[0-9]+:.*}}, [[type_func]], [[source]], {{%[0-9]+:.*}}, {{%[0-9]+:.*}}, [[compile_unit]]
 ; CHECK-MIR-DAG: [[func2:%[0-9]+:.*]] = OpExtInst [[type_void]], 3, 20, {{%[0-9]+:.*}}, [[type_func]], [[source]], {{%[0-9]+:.*}}, {{%[0-9]+:.*}}, [[compile_unit]]
 
@@ -18,7 +18,7 @@
 ; CHECK-SPIRV: %[[#zero:]] = OpConstant %[[#Ty32]] 0
 ; CHECK-SPIRV: %[[#debug_source:]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugSource
 ; CHECK-SPIRV: %[[#debug_compilation:]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugCompilationUnit
-; CHECK-SPIRV: %[[#typefunc:]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugTypeFunction %[[#zero]] %[[#void]]
+; CHECK-SPIRV: %[[#typefunc:]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugTypeFunction %[[#zero]]
 ; CHECK-SPIRV: %[[#func1:]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugFunction %[[#test1]] %[[#typefunc]] %[[#debug_source]] %[[#]] %[[#]] %[[#debug_compilation]]
 ; CHECK-SPIRV: %[[#func2:]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugFunction %[[#test2]] %[[#typefunc]] %[[#debug_source]] %[[#]] %[[#]] %[[#debug_compilation]]
 
