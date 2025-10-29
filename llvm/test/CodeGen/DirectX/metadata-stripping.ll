@@ -27,7 +27,7 @@ _Z4mainDv3_j.exit:                                ; preds = %for.body.i, %entry
 ; CHECK-NOT: !{!"llvm.loop.mustprogress"}
 ; CHECK-DAG: [[RANGEMD]] = !{i32 1, i32 5}
 ; CHECK-DAG: [[LOOPMD]] = distinct !{[[LOOPMD]]}
-; CHECK-NOT: {!"llvm.loop.mustprogress"}
+; CHECK-NOT: !{!"llvm.loop.mustprogress"}
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{i32 1, i32 5}
