@@ -1031,3 +1031,37 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
   return TLI->supportsTailCallFor(CB);
 }
+
+TargetTransformInfo::VPLegalization
+PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
+  using VPLegalization = TargetTransformInfo::VPLegalization;
+  unsigned Directive = ST->getCPUDirective();
+  VPLegalization DefaultLegalization = BaseT::getVPLegalizationStrategy(PI);
+  if (Directive != PPC::DIR_PWR10 && Directive != PPC::DIR_PWR_FUTURE)
+    return DefaultLegalization;
+
+  unsigned IID = PI.getIntrinsicID();
+  if (IID != Intrinsic::vp_load && IID != Intrinsic::vp_store)
+    return DefaultLegalization;
+
+  bool IsLoad = IID == Intrinsic::vp_load;
+  Type* VecTy = IsLoad ? PI.getType() : PI.getOperand(0)->getType();
+  EVT VT = TLI->getValueType(DL, VecTy, true);
+  dbgs() << "&&& Typecheck " << VT << "\n";
+  if (VT != MVT::v2i64 && VT != MVT::v4i32 && VT != MVT::v8i16 &&
+      VT != MVT::v16i8)
+    return DefaultLegalization;
+
+  auto IsAllTrueMask = [](Value *MaskVal) {
+    if (Value *SplattedVal = getSplatValue(MaskVal))
+      if (auto *ConstValue = dyn_cast<Constant>(SplattedVal))
+        return ConstValue->isAllOnesValue();
+    return false;
+  };
+  unsigned MaskIx = IsLoad ? 1 : 2;
+  if (!IsAllTrueMask(PI.getOperand(MaskIx)))
+    return DefaultLegalization;
+
+  return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
+}
+

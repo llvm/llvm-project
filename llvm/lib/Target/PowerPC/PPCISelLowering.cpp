@@ -652,6 +652,15 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
 
+  setOperationAction(ISD::VP_STORE, MVT::v16i1, Custom);
+  setOperationAction(ISD::VP_STORE, MVT::v8i1, Custom);
+  setOperationAction(ISD::VP_STORE, MVT::v4i1, Custom);
+  setOperationAction(ISD::VP_STORE, MVT::v2i1, Custom);
+  setOperationAction(ISD::VP_LOAD, MVT::v16i1, Custom);
+  setOperationAction(ISD::VP_LOAD, MVT::v8i1, Custom);
+  setOperationAction(ISD::VP_LOAD, MVT::v4i1, Custom);
+  setOperationAction(ISD::VP_LOAD, MVT::v2i1, Custom);
+
   // We want to custom lower some of our intrinsics.
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::f64, Custom);
@@ -11909,6 +11918,81 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
 }
 
+static SDValue AdjustLength(SDValue Val, unsigned Bits, bool Left,
+                            SelectionDAG &DAG) {
+  SDLoc dl(Val);
+  EVT VT = Val->getValueType(0);
+  unsigned LeftAdj = Left ? VT.getSizeInBits() - 8 : 0;
+  unsigned TypeAdj = llvm::countr_zero<uint32_t>(Bits / 8);
+  //  unsigned Shift = llvm::countr_zero<uint64_t>(Imm);
+  // EVT ShiftAmountTy = getShiftAmountTy(VT, DAG.getDataLayout());
+  // if (Value > 0 && isPowerOf2_64(Value))
+  SDValue SHLAmt = DAG.getConstant(LeftAdj + TypeAdj, dl, VT);
+  return DAG.getNode(ISD::SHL, dl, VT, Val, SHLAmt);
+}
+
+SDValue PPCTargetLowering::LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const {
+  dbgs() << "&&& Lower VP_LOAD\n";
+  Op.dump();
+  auto VPLD = cast<VPLoadSDNode>(Op);
+  bool Future = Subtarget.isISAFuture();
+  SDLoc dl(Op);
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(3).getNode(), true) &&
+         "Mask predication not supported");
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Len = DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPLD->getOperand(4));
+  unsigned IID = Future ? Intrinsic::ppc_vsx_lxvrl : Intrinsic::ppc_vsx_lxvl; 
+  unsigned EltBits = Op->getValueType(0).getScalarType().getSizeInBits();
+  Len = AdjustLength(Len, EltBits, !Future, DAG);
+  SDValue Ops[] = {
+    VPLD->getChain(),    // Chain
+    // DAG.getConstant(Intrinsic::ppc_vsx_lxvl, dl, MVT::i32),
+    DAG.getConstant(IID, dl, MVT::i32),
+    VPLD->getOperand(1),
+    // VPLD->getOperand(4),
+    // DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPLD->getOperand(4)),
+    Len
+  };
+  SDVTList Tys = DAG.getVTList(Op->getValueType(0), MVT::Other);
+  SDValue VPL = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, dl, Tys,
+                                        Ops, VPLD->getMemoryVT(), VPLD->getMemOperand());
+  VPL.dump();
+  return VPL;
+  // return SDValue();
+}
+
+SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
+  dbgs() << "&&& Lower VP_STORE\n";
+  Op.dump();
+  auto VPST = cast<VPStoreSDNode>(Op);
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(4).getNode(), true) &&
+         "Mask predication not supported");
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDLoc dl(Op);
+  SDValue Len = DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPST->getOperand(5));
+  unsigned EltBits = Op->getOperand(1).getValueType().getScalarType().getSizeInBits();
+  bool Future = Subtarget.isISAFuture();
+  unsigned IID = Future ? Intrinsic::ppc_vsx_stxvrl : Intrinsic::ppc_vsx_stxvl; 
+  Len = AdjustLength(Len, EltBits, !Future, DAG);
+  SDValue Ops[] = {
+    VPST->getChain(),    // Chain
+    // DAG.getConstant(Intrinsic::ppc_vsx_stxvl, dl, MVT::i32),
+    DAG.getConstant(IID, dl, MVT::i32),
+    // DAG.getTargetConstant(Intrinsic::ppc_vsx_stxvl, dl, MVT::i64),
+    DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, VPST->getOperand(1)),
+    VPST->getOperand(2),
+    // DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPST->getOperand(5)),
+    Len
+  };
+  SDVTList Tys = DAG.getVTList(MVT::Other);
+  // SDValue VPS = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, dl, Tys,
+  SDValue VPS = DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, dl, Tys,
+                                        Ops, VPST->getMemoryVT(), VPST->getMemOperand());
+  VPS.dump();
+  return VPS;
+  // return SDValue();
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12763,6 +12847,10 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     if (Op->getFlags().hasNoFPExcept())
       return Op;
     return SDValue();
+  case ISD::VP_LOAD:
+    return LowerVP_LOAD(Op, DAG);
+  case ISD::VP_STORE:
+    return LowerVP_STORE(Op, DAG);
   }
 }
 
