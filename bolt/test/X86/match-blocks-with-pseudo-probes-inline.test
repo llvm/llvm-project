@@ -5,8 +5,10 @@
 # RUN:   -o %t.bolt -data %t/yaml -infer-stale-profile -v=2 \
 # RUN:   --stale-matching-with-pseudo-probes 2>&1 | FileCheck %s
 
+# CHECK: BOLT-INFO: pseudo probe profile matching matched 100.00% (3/3) inline tree root(s) corresponding to profile or binary functions. Couldn't match 0 roots with mismatching GUIDs, 0 with mismatching hash.
+# CHECK: BOLT-INFO: pseudo probe profile matching matched 100.00% (6/6) inline tree node(s) corresponding to inlined source functions. Couldn't match 0 nodes with mismatching hash, 0 with missing profile node.
 # CHECK: BOLT-WARNING: 3 (100.0% of all profiled) functions have invalid (possibly stale) profile
-# CHECK: BOLT-INFO: inference found an exact pseudo probe match for 100.00% of basic blocks (3 out of 3 stale)
+# CHECK: BOLT-INFO: inference found pseudo probe match for 233.33% of basic blocks (7 out of 3 stale) responsible for 233.33% samples (7 out of 3 stale)
 
 #--- yaml
 ---
