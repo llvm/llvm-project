@@ -82,7 +82,7 @@ struct S1{} s1; s1
 // CHECK-NEXT: (S1 &) @0x{{[0-9a-f]+}}
 
 struct S2 {int d;} E = {22}; E
-// CHECK-NEXT: (struct S2 &) @0x{{[0-9a-f]+}}
+// CHECK-NEXT: (S2 &) @0x{{[0-9a-f]+}}
 
 E.d
 // CHECK-NEXT: (int) 22
