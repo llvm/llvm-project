@@ -2080,21 +2080,13 @@ define amdgpu_ps float @flat_load_saddr_i8_offset_or_i64_imm_offset_16(ptr addrs
 }
 
 define amdgpu_ps float @flat_load_saddr_i8_offset_or_i64_imm_offset_4160(ptr addrspace(6) inreg %sbase, i32 %idx) {
-; GFX1250-SDAG-LABEL: flat_load_saddr_i8_offset_or_i64_imm_offset_4160:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    v_or_b32_e32 v0, 0x1040, v0
-; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-SDAG-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX1250-GISEL-LABEL: flat_load_saddr_i8_offset_or_i64_imm_offset_4160:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-GISEL-NEXT:    v_or_b32_e32 v0, 0x1040, v0
-; GFX1250-GISEL-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    ; return to shader part epilog
+; GFX1250-LABEL: flat_load_saddr_i8_offset_or_i64_imm_offset_4160:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    v_or_b32_e32 v0, 0x1040, v0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    flat_load_u8 v0, v[0:1]
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    ; return to shader part epilog
   %zext.idx = zext i32 %idx to i64
   %or = or i64 %zext.idx, 4160
   %addr = inttoptr i64 %or to ptr
@@ -2179,6 +2171,7 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv_multiload(ptr inreg %arg, ptr inre
 ; GFX1250-SDAG-NEXT:    flat_load_b32 v1, v0, s[4:5] scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0x400
+; GFX1250-SDAG-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc0 .LBB117_1
 ; GFX1250-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX1250-SDAG-NEXT:    s_endpgm
@@ -2190,15 +2183,16 @@ define amdgpu_ps void @flat_addr_64bit_lsr_iv_multiload(ptr inreg %arg, ptr inre
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1250-GISEL-NEXT:  .LBB117_1: ; %bb3
 ; GFX1250-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v3, vcc_lo
 ; GFX1250-GISEL-NEXT:    v_add_nc_u64_e32 v[2:3], 4, v[2:3]
+; GFX1250-GISEL-NEXT:    ; kill: killed $vgpr4 killed $vgpr5
+; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    flat_load_b32 v6, v[4:5] scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    flat_load_b32 v4, v[4:5] scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-GISEL-NEXT:    flat_load_b32 v6, v[4:5] scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x400, v2
 ; GFX1250-GISEL-NEXT:    s_cbranch_vccz .LBB117_1

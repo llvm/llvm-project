@@ -15,8 +15,7 @@
 #include <memory>
 #include <vector>
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 class RecordConsumer {
 public:
@@ -48,7 +47,6 @@ public:
   Error consume(std::unique_ptr<Record> R) override;
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_FDRRECORDCONSUMER_H

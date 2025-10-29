@@ -3025,6 +3025,19 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !nosanitize if both K and J have it.
         K->setMetadata(Kind, JMD);
         break;
+      case LLVMContext::MD_captures:
+        K->setMetadata(
+            Kind, MDNode::fromCaptureComponents(
+                      K->getContext(), MDNode::toCaptureComponents(JMD) |
+                                           MDNode::toCaptureComponents(KMD)));
+        break;
+      case LLVMContext::MD_alloc_token:
+        // Preserve !alloc_token if both K and J have it, and they are equal.
+        if (KMD == JMD)
+          K->setMetadata(Kind, JMD);
+        else
+          K->setMetadata(Kind, nullptr);
+        break;
       }
   }
   // Set !invariant.group from J if J has it. If both instructions have it
@@ -3233,6 +3246,13 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
   return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
+unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
+                                        DominatorTree &DT,
+                                        const Instruction *I) {
+  auto Dominates = [&](const Use &U) { return DT.dominates(I, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
+}
+
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
@@ -3247,6 +3267,15 @@ unsigned llvm::replaceDominatedUsesWithIf(
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
   auto DominatesAndShouldReplace = [&](const Use &U) {
     return DT.dominates(BB, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const Instruction *I,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace = [&](const Use &U) {
+    return DT.dominates(I, U) && ShouldReplace(U, To);
   };
   return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }

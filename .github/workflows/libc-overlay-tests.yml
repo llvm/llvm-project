@@ -51,7 +51,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@a1209f81afb8c005c13b4296c32e363431bffea5 # v1.2.17
+      uses: hendrikmuhs/ccache-action@bfa03e1de4d7f7c3e80ad9109feedd05c4f5a716 # v1.2.19
       with:
         max-size: 1G
         key: libc_overlay_build_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}

@@ -43,6 +43,7 @@
 #include "support/Trace.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1886,7 +1887,15 @@ private:
         for (auto &Cand : C.first) {
           if (Cand.SemaResult &&
               Cand.SemaResult->Kind == CodeCompletionResult::RK_Declaration) {
-            auto ID = clangd::getSymbolID(Cand.SemaResult->getDeclaration());
+            const NamedDecl *DeclToLookup = Cand.SemaResult->getDeclaration();
+            // For instantiations of members of class templates, the
+            // documentation will be stored at the member's original
+            // declaration.
+            if (const NamedDecl *Adjusted =
+                    dyn_cast<NamedDecl>(&adjustDeclToTemplate(*DeclToLookup))) {
+              DeclToLookup = Adjusted;
+            }
+            auto ID = clangd::getSymbolID(DeclToLookup);
             if (!ID)
               continue;
             Req.IDs.insert(ID);

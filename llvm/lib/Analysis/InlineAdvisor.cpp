@@ -217,7 +217,7 @@ AnalysisKey PluginInlineAdvisorAnalysis::Key;
 bool InlineAdvisorAnalysis::initializeIR2VecVocabIfRequested(
     Module &M, ModuleAnalysisManager &MAM) {
   if (!IR2VecVocabFile.empty()) {
-    auto IR2VecVocabResult = MAM.getResult<IR2VecVocabAnalysis>(M);
+    auto &IR2VecVocabResult = MAM.getResult<IR2VecVocabAnalysis>(M);
     if (!IR2VecVocabResult.isValid()) {
       M.getContext().emitError("Failed to load IR2Vec vocabulary");
       return false;

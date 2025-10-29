@@ -9,15 +9,14 @@ target triple = "amdgcn-amd-amdhsa"
 define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) {
 ; GFX1250-SDAG-LABEL: use_private_to_flat_addrspacecast:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x24
+; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_lshlrev_b32 v1, 20, v0
-; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s2, -1
+; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_lshlrev_b32 v1, 20, v0
+; GFX1250-SDAG-NEXT:    s_cmp_lg_u32 s0, -1
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], src_flat_scratch_base_lo, v[0:1]
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_cndmask_b32 v1, 0, v1
 ; GFX1250-SDAG-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
@@ -56,13 +55,11 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast_nonnull(ptr addrspa
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-SDAG-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 20, v0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], src_flat_scratch_base_lo
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
+; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], src_flat_scratch_base_lo, v[0:1]
 ; GFX1250-SDAG-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    s_endpgm
@@ -91,10 +88,9 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) {
 ; GFX1250-LABEL: use_flat_to_private_addrspacecast:
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX1250-NEXT:    s_mov_b32 s2, src_flat_scratch_base_lo
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_sub_co_i32 s2, s0, s2
+; GFX1250-NEXT:    s_sub_co_i32 s2, s0, src_flat_scratch_base_lo
 ; GFX1250-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; GFX1250-NEXT:    s_cselect_b32 s0, s2, -1
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
@@ -110,9 +106,8 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x24
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s1, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    s_sub_co_i32 s0, s0, s1
+; GFX1250-SDAG-NEXT:    s_sub_co_i32 s0, s0, src_flat_scratch_base_lo
 ; GFX1250-SDAG-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-SDAG-NEXT:    s_endpgm
@@ -122,9 +117,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast_nonnull(ptr %ptr) {
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s1, src_flat_scratch_base_lo
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s0, s1
+; GFX1250-GISEL-NEXT:    s_sub_co_i32 s0, s0, src_flat_scratch_base_lo
 ; GFX1250-GISEL-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-GISEL-NEXT:    s_endpgm

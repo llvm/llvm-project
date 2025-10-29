@@ -1659,6 +1659,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -1, (1 << 5) - 1,
         "immediate must be non-zero in the range");
+  case Match_InvalidXSfmmVType: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return generateXSfmmVTypeError(ErrorLoc);
+  }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return generateVTypeError(ErrorLoc);
@@ -1688,7 +1692,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       (1 << 25) - 1);
   // HACK: See comment before `BareSymbolQC_E_LI` in RISCVInstrInfoXqci.td.
   case Match_InvalidBareSymbolQC_E_LI:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   // END HACK
   case Match_InvalidBareSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,
@@ -2402,7 +2406,8 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 }
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
-  if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa))
+  if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+      STI->hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))
     return Error(
         ErrorLoc,
         "operand must be "
@@ -3352,10 +3357,10 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
 
 bool isValidInsnFormat(StringRef Format, const MCSubtargetInfo &STI) {
   return StringSwitch<bool>(Format)
-      .Cases("r", "r4", "i", "b", "sb", "u", "j", "uj", "s", true)
-      .Cases("cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj",
+      .Cases({"r", "r4", "i", "b", "sb", "u", "j", "uj", "s"}, true)
+      .Cases({"cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj"},
              STI.hasFeature(RISCV::FeatureStdExtZca))
-      .Cases("qc.eai", "qc.ei", "qc.eb", "qc.ej", "qc.es",
+      .Cases({"qc.eai", "qc.ei", "qc.eb", "qc.ej", "qc.es"},
              !STI.hasFeature(RISCV::Feature64Bit))
       .Default(false);
 }

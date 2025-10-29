@@ -57,7 +57,9 @@ public:
   }
 
   /// Check if the set contains the given \c key.
-  bool contains(StringRef key) const { return Base::contains(key); }
+  [[nodiscard]] bool contains(StringRef key) const {
+    return Base::contains(key);
+  }
 };
 
 } // end namespace llvm

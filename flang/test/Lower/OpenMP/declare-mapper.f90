@@ -80,7 +80,7 @@ subroutine declare_mapper_2
    !CHECK:        %[[VAL_8:.*]] = omp.map.bounds lower_bound(%[[VAL_6]] : index) upper_bound(%[[VAL_7]] : index) extent(%[[VAL_2]] : index) stride(%[[VAL_5]] : index) start_idx(%[[VAL_5]] : index)
    !CHECK:        %[[VAL_9:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !fir.ref<!fir.array<250xf32>>, !fir.array<250xf32>) map_clauses(tofrom) capture(ByRef) bounds(%[[VAL_8]]) -> !fir.ref<!fir.array<250xf32>> {name = "v%[[VAL_10:.*]]"}
    !CHECK:        %[[VAL_11:.*]] = hlfir.designate %[[VAL_1]]#0{"temp"}   : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
-   !CHECK:        %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {name = "v%[[VAL_13:.*]]"}
+   !CHECK:        %[[VAL_12:.*]] = omp.map.info var_ptr(%[[VAL_11]] : !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>) map_clauses(storage) capture(ByRef) -> !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {name = "v%[[VAL_13:.*]]"}
    !CHECK:        %[[VAL_14:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) members(%[[VAL_9]], %[[VAL_12]] : [3], [1] : !fir.ref<!fir.array<250xf32>>, !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<[[MY_TYPE]]> {name = "v", partial_map = true}
    !CHECK:        omp.declare_mapper.info map_entries(%[[VAL_14]], %[[VAL_9]], %[[VAL_12]] : !fir.ref<[[MY_TYPE]]>, !fir.ref<!fir.array<250xf32>>, !fir.ref<!fir.type<_QFdeclare_mapper_2Tmy_type{num_vals:i32,values:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
    !CHECK:      }
@@ -280,6 +280,10 @@ subroutine declare_mapper_nested_parent
   end type real_t
 
   !$omp declare mapper (custommapper : real_t :: t) map(tofrom: t%base_arr, t%real_arr)
+  ! CHECK: omp.declare_mapper @{{.*custommapper}}
+  ! CHECK-DAG: omp.map.info {{.*}} {name = "t%base_t%base_arr"}
+  ! CHECK-DAG: omp.map.info {{.*}} {name = "t%real_arr"}
+  ! CHECK: omp.declare_mapper.info
 
   type(real_t) :: r
 
@@ -290,12 +294,9 @@ subroutine declare_mapper_nested_parent
   r%inner%deep_arr = 4.0
   r%real_arr = 0.0
 
-  ! CHECK: omp.target
-  ! Check implicit maps for nested parent and deep nested allocatable payloads
-  ! CHECK-DAG: omp.map.info {{.*}} {name = "r.base_arr.implicit_map"}
+  ! Check implicit maps for deep nested allocatable payloads not covered by mapper
   ! CHECK-DAG: omp.map.info {{.*}} {name = "r.deep_arr.implicit_map"}
-  ! The declared mapper's own allocatable is still mapped implicitly
-  ! CHECK-DAG: omp.map.info {{.*}} {name = "r.real_arr.implicit_map"}
+  ! CHECK: omp.target
   !$omp target map(mapper(custommapper), tofrom: r)
     r%real_arr = r%base_arr(1) + r%inner%deep_arr(1)
   !$omp end target

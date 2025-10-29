@@ -482,12 +482,13 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
   }
 
   sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {
+    // The ordering has to be strictly weak.
     /// Sort heaviest intervals first to prioritize their unspilling
-    if (A->weight() > B->weight())
-      return true;
+    if (A->weight() != B->weight())
+      return A->weight() > B->weight();
 
-    if (A->getSize() > B->getSize())
-      return true;
+    if (A->getSize() != B->getSize())
+      return A->getSize() > B->getSize();
 
     // Tie breaker by number to avoid need for stable sort
     return A->reg().stackSlotIndex() < B->reg().stackSlotIndex();

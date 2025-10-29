@@ -11,6 +11,7 @@
 
 #include "lldb/API/SBAttachInfo.h"
 #include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBEvent.h"
@@ -351,7 +352,7 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<int>
+  virtual llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
     return llvm::createStringError("Type has no child named '%s'", child_name);
@@ -572,11 +573,16 @@ public:
 
   lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
 
+  lldb::StackFrameSP GetOpaqueTypeFromSBFrame(const lldb::SBFrame &frame) const;
+
   SymbolContext
   GetOpaqueTypeFromSBSymbolContext(const lldb::SBSymbolContext &sym_ctx) const;
 
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;
+
+  lldb::BreakpointLocationSP GetOpaqueTypeFromSBBreakpointLocation(
+      const lldb::SBBreakpointLocation &break_loc) const;
 
   lldb::ProcessAttachInfoSP
   GetOpaqueTypeFromSBAttachInfo(const lldb::SBAttachInfo &attach_info) const;

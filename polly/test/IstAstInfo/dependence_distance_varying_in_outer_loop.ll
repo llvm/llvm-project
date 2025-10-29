@@ -1,12 +1,9 @@
 ; RUN: opt %loadPolly -polly-canonicalize -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -print-polyhedral-info -polly-check-parallel -disable-output < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;        void f(int *restrict A, int *restrict sum) {
 ; CHECK:   #pragma minimal dependence distance: 1
-; PINFO:    for.cond: Loop is not parallel.
 ;          for (int j = 0; j < 1024; j++)
 ; CHECK:      #pragma minimal dependence distance: 1
-; PINFO-NEXT: for.cond1: Loop is not parallel.
 ;             for (int i = j; i < 1024; i++)
 ;               A[i - 3] = A[j] * 2 + A[j] + 2;
 ;        }
