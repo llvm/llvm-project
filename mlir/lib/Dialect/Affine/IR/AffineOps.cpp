@@ -2610,21 +2610,6 @@ static std::optional<uint64_t> getTrivialConstantTripCount(AffineForOp forOp) {
   return ub - lb <= 0 ? 0 : (ub - lb + step - 1) / step;
 }
 
-/// Calculate the constant value of the loop's induction variable for its last
-/// trip.
-static std::optional<int64_t>
-getConstantInductionVarForLastTrip(AffineForOp forOp) {
-  std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
-  if (!tripCount.has_value())
-    return std::nullopt;
-  if (tripCount.value() == 0)
-    return std::nullopt;
-  int64_t lb = forOp.getConstantLowerBound();
-  int64_t step = forOp.getStepAsInt();
-  int64_t lastTripIv = lb + (tripCount.value() - 1) * step;
-  return lastTripIv;
-}
-
 /// Fold the empty loop.
 static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
   if (!llvm::hasSingleElement(*forOp.getBody()))
@@ -2637,7 +2622,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
     // results.
     return forOp.getInits();
   }
-  SmallVector<OpFoldResult, 4> replacements;
+  SmallVector<Value, 4> replacements;
   auto yieldOp = cast<AffineYieldOp>(forOp.getBody()->getTerminator());
   auto iterArgs = forOp.getRegionIterArgs();
   bool hasValDefinedOutsideLoop = false;
@@ -2645,14 +2630,10 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
   for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
     Value val = yieldOp.getOperand(i);
     BlockArgument *iterArgIt = llvm::find(iterArgs, val);
-    if (val == forOp.getInductionVar()) {
-      if (auto lastTripIv = getConstantInductionVarForLastTrip(forOp)) {
-        replacements.push_back(IntegerAttr::get(
-            IndexType::get(forOp.getContext()), lastTripIv.value()));
-        continue;
-      }
+    // TODO: It should be possible to perform a replacement by computing the
+    // last value of the IV based on the bounds and the step.
+    if (val == forOp.getInductionVar())
       return {};
-    }
     if (iterArgIt == iterArgs.end()) {
       // `val` is defined outside of the loop.
       assert(forOp.isDefinedOutsideOfLoop(val) &&
@@ -2675,7 +2656,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
   // out of order.
   if (tripCount.has_value() && tripCount.value() >= 2 && iterArgsNotInOrder)
     return {};
-  return replacements;
+  return llvm::to_vector_of<OpFoldResult>(replacements);
 }
 
 /// Canonicalize the bounds of the given loop.
