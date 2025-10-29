@@ -52,8 +52,8 @@ static StringRef trySuggestPpc(StringRef Name) {
 }
 
 static StringRef trySuggestX86(StringRef Name) {
-  if (!(Name.consume_front("_mm_") || Name.consume_front("_mm256_") ||
-        Name.consume_front("_mm512_")))
+  if (!Name.consume_front("_mm_") && !Name.consume_front("_mm256_") &&
+      !Name.consume_front("_mm512_"))
     return {};
 
   // [simd.alg]

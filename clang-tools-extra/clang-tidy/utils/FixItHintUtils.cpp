@@ -29,8 +29,8 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
 }
 
 static bool isValueType(const Type *T) {
-  return !(isa<PointerType>(T) || isa<ReferenceType>(T) || isa<ArrayType>(T) ||
-           isa<MemberPointerType>(T) || isa<ObjCObjectPointerType>(T));
+  return !isa<PointerType>(T) && !isa<ReferenceType>(T) && !isa<ArrayType>(T) &&
+         !isa<MemberPointerType>(T) && !isa<ObjCObjectPointerType>(T);
 }
 static bool isValueType(QualType QT) { return isValueType(QT.getTypePtr()); }
 static bool isMemberOrFunctionPointer(QualType QT) {

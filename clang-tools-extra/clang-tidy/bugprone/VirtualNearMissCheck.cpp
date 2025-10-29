@@ -56,8 +56,8 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
   /// Check if the return types are covariant.
 
   // Both types must be pointers or references to classes.
-  if (!(BaseReturnTy->isPointerType() && DerivedReturnTy->isPointerType()) &&
-      !(BaseReturnTy->isReferenceType() && DerivedReturnTy->isReferenceType()))
+  if ((!BaseReturnTy->isPointerType() || !DerivedReturnTy->isPointerType()) &&
+      (!BaseReturnTy->isReferenceType() || !DerivedReturnTy->isReferenceType()))
     return false;
 
   /// BTy is the class type in return type of BaseMD. For example,

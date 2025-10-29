@@ -413,14 +413,12 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
 
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
-    if ((ParamType->isEnumeralType() && ParamType->castAsCanonical<EnumType>()
+    return !(
+        (ParamType->isEnumeralType() && ParamType->castAsCanonical<EnumType>()
                                             ->getOriginalDecl()
                                             ->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->castAsCanonical<EnumType>()->getOriginalDecl()->isScoped()))
-      return false;
-
-    return true;
+         ArgType->castAsCanonical<EnumType>()->getOriginalDecl()->isScoped()));
   }
 
   // Check if the argument and the param are both function types (the parameter
@@ -431,7 +429,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   }
 
   // Arrays or pointer arguments convert to array or pointer parameters.
-  if (!(isPointerOrArray(ArgType) && isPointerOrArray(ParamType)))
+  if (!isPointerOrArray(ArgType) || !isPointerOrArray(ParamType))
     return false;
 
   // When ParamType is an array reference, ArgType has to be of the same-sized
@@ -472,7 +470,7 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
 
   // Unless argument and param are both multilevel pointers, the types are not
   // convertible.
-  if (!(ParamType->isAnyPointerType() && ArgType->isAnyPointerType()))
+  if (!ParamType->isAnyPointerType() || !ArgType->isAnyPointerType())
     return false;
 
   return arePointerTypesCompatible(ArgType, ParamType, IsParamContinuouslyConst,

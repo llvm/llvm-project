@@ -23,8 +23,8 @@ public:
   bool VisitVarDecl(VarDecl *VD) {
     // Do not count function params.
     // Do not count decomposition declarations (C++17's structured bindings).
-    if (StructNesting == 0 &&
-        !(isa<ParmVarDecl>(VD) || isa<DecompositionDecl>(VD)))
+    if (StructNesting == 0 && !isa<ParmVarDecl>(VD) &&
+        !isa<DecompositionDecl>(VD))
       ++Info.Variables;
     return true;
   }

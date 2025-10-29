@@ -54,7 +54,7 @@ AST_MATCHER(CXXMethodDecl, hasTemplateReturnType) {
 }
 AST_MATCHER(CXXMethodDecl, isDefinitionOrInline) {
   // A function definition, with optional inline but not the declaration.
-  return !(Node.isThisDeclarationADefinition() && Node.isOutOfLine());
+  return !Node.isThisDeclarationADefinition() || !Node.isOutOfLine();
 }
 AST_MATCHER(QualType, isInstantiationDependentType) {
   return Node->isInstantiationDependentType();

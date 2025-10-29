@@ -60,7 +60,7 @@ void NSDateFormatterCheck::check(const MatchFinder::MatchResult &Result) {
          "did you mean to use week-year (Y) instead?");
   }
   if (SR.contains('F')) {
-    if (!(SR.contains('e') || SR.contains('E'))) {
+    if (!SR.contains('e') && !SR.contains('E')) {
       diag(StrExpr->getExprLoc(),
            "day of week in month (F) used without day of the week (e or E); "
            "did you forget e (or E) in the format string?");

@@ -410,7 +410,7 @@ static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
   const auto *M = dyn_cast<CXXMethodDecl>(&F);
   if (!F.isConstexpr() && !F.isInlineSpecified() &&
       F.getStorageClass() != SC_Extern && F.getStorageClass() != SC_Static &&
-      !Fr && !(M && M->isVirtualAsWritten()))
+      !Fr && (!M || !M->isVirtualAsWritten()))
     return;
 
   // Tokenize return type. If it contains macros which contain a mix of
@@ -459,7 +459,7 @@ UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
       TransformFunctions(Options.get("TransformFunctions", true)),
       TransformLambdas(Options.get("TransformLambdas", TransformLambda::All)) {
 
-  if (TransformFunctions == false && TransformLambdas == TransformLambda::None)
+  if (!TransformFunctions && TransformLambdas == TransformLambda::None)
     this->configurationDiag(
         "The check 'modernize-use-trailing-return-type' will not perform any "
         "analysis because 'TransformFunctions' and 'TransformLambdas' are "

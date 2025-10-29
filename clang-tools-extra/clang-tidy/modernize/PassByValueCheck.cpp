@@ -188,7 +188,7 @@ static bool hasRValueOverload(const CXXConstructorDecl *Ctor,
           return false;
       } else {
         // All other parameters can be similar or paired.
-        if (!(CandidateParamType == CtorParamType || IsLValueRValuePair))
+        if (!CandidateParamType == CtorParamType && !IsLValueRValuePair)
           return false;
       }
     }

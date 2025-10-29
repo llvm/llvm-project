@@ -29,7 +29,6 @@ Checks: >
   -readability-magic-numbers,
   -readability-named-parameter,
   -readability-qualified-auto,
-  -readability-simplify-boolean-expr,
   -readability-static-definition-in-anonymous-namespace,
   -readability-suspicious-call-argument,
   -readability-use-anyofallof
@@ -37,3 +36,5 @@ Checks: >
 CheckOptions:
   - key:             performance-move-const-arg.CheckTriviallyCopyableMove
     value:           false
+  - key:             readability-simplify-boolean-expr.SimplifyDeMorganRelaxed
+    value:           true

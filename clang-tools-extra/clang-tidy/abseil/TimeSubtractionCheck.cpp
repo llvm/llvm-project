@@ -80,8 +80,8 @@ static bool parensRequired(const MatchFinder::MatchResult &Result,
                            const Expr *Node) {
   // TODO: Figure out any more contexts in which we can omit the surrounding
   // parentheses.
-  return !(isConstructorAssignment(Result, Node) || isArgument(Result, Node) ||
-           isReturn(Result, Node));
+  return !isConstructorAssignment(Result, Node) && !isArgument(Result, Node) &&
+         !isReturn(Result, Node);
 }
 
 void TimeSubtractionCheck::emitDiagnostic(const Expr *Node,

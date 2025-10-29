@@ -164,10 +164,10 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace, bool IsMacro,
 
     return Info;
   }
-  if (!(hasReservedDoubleUnderscore(Name, LangOpts) ||
-        startsWithUnderscoreCapital(Name) ||
-        startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace,
-                                              IsMacro)))
+  if (!hasReservedDoubleUnderscore(Name, LangOpts) &&
+      !startsWithUnderscoreCapital(Name) &&
+      !startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace,
+                                             IsMacro))
     return FailureInfo{NonReservedTag, getNonReservedFixup(std::string(Name))};
   return std::nullopt;
 }

@@ -227,10 +227,9 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
                    SpecialMemberFunctionKind::CopyAssignment);
   }
 
-  if (RequireFive &&
-      !(AllowMissingMoveFunctionsWhenCopyIsDeleted &&
-        (IsDeleted(SpecialMemberFunctionKind::CopyConstructor) &&
-         IsDeleted(SpecialMemberFunctionKind::CopyAssignment)))) {
+  if (RequireFive && (!AllowMissingMoveFunctionsWhenCopyIsDeleted ||
+                      !IsDeleted(SpecialMemberFunctionKind::CopyConstructor) ||
+                      !IsDeleted(SpecialMemberFunctionKind::CopyAssignment))) {
     assert(RequireThree);
     RequireMembers(SpecialMemberFunctionKind::MoveConstructor,
                    SpecialMemberFunctionKind::MoveAssignment);

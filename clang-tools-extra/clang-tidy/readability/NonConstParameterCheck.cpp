@@ -115,8 +115,8 @@ void NonConstParameterCheck::addParm(const ParmVarDecl *Parm) {
   // Only add nonconst integer/float pointer parameters.
   const QualType T = Parm->getType();
   if (!T->isPointerType() || T->getPointeeType().isConstQualified() ||
-      !(T->getPointeeType()->isIntegerType() ||
-        T->getPointeeType()->isFloatingType()))
+      (!T->getPointeeType()->isIntegerType() &&
+       !T->getPointeeType()->isFloatingType()))
     return;
 
   auto [It, Inserted] = Parameters.try_emplace(Parm);

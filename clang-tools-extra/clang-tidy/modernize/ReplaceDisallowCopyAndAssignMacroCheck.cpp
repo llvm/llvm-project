@@ -61,7 +61,7 @@ private:
   bool shouldAppendSemi(SourceRange MacroLoc) {
     std::optional<Token> Next = Lexer::findNextToken(
         MacroLoc.getEnd(), PP.getSourceManager(), PP.getLangOpts());
-    return !(Next && Next->is(tok::semi));
+    return !Next || !Next->is(tok::semi);
   }
 
   ReplaceDisallowCopyAndAssignMacroCheck &Check;
