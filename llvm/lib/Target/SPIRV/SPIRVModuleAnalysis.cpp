@@ -681,7 +681,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
               NS::DebugMacroDef,
               NS::DebugMacroUndef,
               NS::DebugTypePtrToMember,
-              NS::DebugTypeInheritance};
+              NS::DebugTypeEnum};
           bool IsGlobalDI = false;
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
             IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
