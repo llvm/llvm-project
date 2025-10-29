@@ -2,7 +2,7 @@
 
 // CHECK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1100"
 buffer_load_dwordx4 v[0:3], v0, s[0:3], 0, offen offset:4092 slc
-// CHECK: buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092 slc ; <MCInst #13135 BUFFER_LOAD_DWORDX4_OFFEN_gfx11
+// CHECK: buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092 slc ; <MCInst #{{[0-9]+}} BUFFER_LOAD_DWORDX4_OFFEN_gfx11
 // CHECK-NEXT: ;  <MCOperand Reg:10104>
 // CHECK-NEXT: ;  <MCOperand Reg:486>
 // CHECK-NEXT: ;  <MCOperand Reg:7754>
@@ -11,7 +11,7 @@ buffer_load_dwordx4 v[0:3], v0, s[0:3], 0, offen offset:4092 slc
 // CHECK-NEXT: ;  <MCOperand Imm:2>
 // CHECK-NEXT: ;  <MCOperand Imm:0>>
 buffer_store_dword v0, v1, s[0:3], 0 offen slc
-// CHECK: buffer_store_b32 v0, v1, s[0:3], 0 offen slc ; <MCInst #14553 BUFFER_STORE_DWORD_OFFEN_gfx11
+// CHECK: buffer_store_b32 v0, v1, s[0:3], 0 offen slc ; <MCInst #{{[0-9]+}} BUFFER_STORE_DWORD_OFFEN_gfx11
 // CHECK-NEXT: ;  <MCOperand Reg:486>
 // CHECK-NEXT: ;  <MCOperand Reg:487>
 // CHECK-NEXT: ;  <MCOperand Reg:7754>
@@ -22,7 +22,7 @@ buffer_store_dword v0, v1, s[0:3], 0 offen slc
 
 ; tbuffer ops use autogenerate asm parsers
 tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092 slc
-// CHECK: tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092 slc ; <MCInst #34095 TBUFFER_LOAD_FORMAT_XYZW_OFFEN_gfx11
+// CHECK: tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen offset:4092 slc ; <MCInst #{{[0-9]+}} TBUFFER_LOAD_FORMAT_XYZW_OFFEN_gfx11
 // CHECK-NEXT: ;  <MCOperand Reg:10104>
 // CHECK-NEXT: ;  <MCOperand Reg:486>
 // CHECK-NEXT: ;  <MCOperand Reg:7754>
@@ -32,7 +32,7 @@ tbuffer_load_format_xyzw v[0:3], v0, s[0:3], 0 format:[BUF_FMT_32_32_SINT] offen
 // CHECK-NEXT: ;  <MCOperand Imm:2>
 // CHECK-NEXT: ;  <MCOperand Imm:0>>
 tbuffer_store_d16_format_x v0, v1, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM] offen slc
-// CHECK: tbuffer_store_d16_format_x v0, v1, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM] offen slc ; <MCInst #34264 TBUFFER_STORE_FORMAT_D16_X_OFFEN_gfx11
+// CHECK: tbuffer_store_d16_format_x v0, v1, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM] offen slc ; <MCInst #{{[0-9]+}} TBUFFER_STORE_FORMAT_D16_X_OFFEN_gfx11
 // CHECK-NEXT: ;  <MCOperand Reg:486>
 // CHECK-NEXT: ;  <MCOperand Reg:487>
 // CHECK-NEXT: ;  <MCOperand Reg:7754>
