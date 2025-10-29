@@ -27,7 +27,7 @@ Sections:
 ## Test the following cases:
 
 ## 1) We can produce an .llvm_bb_addr_map section from a description with
-##    Entries and PGO Analysis data.
+##    Entries and PGO Analysis and Post Link data.
   - Name: '.llvm_bb_addr_map (1)'
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
@@ -68,8 +68,8 @@ Sections:
                Metadata:      0x00000003
 
 ## Check that yaml2obj generates a warning when we use unsupported feature.
-# RUN: not yaml2obj --docnum=2  %s 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
-# INVALID-FEATURE: error: out of range hex8 number
+# RUN: yaml2obj --docnum=2  %s 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
+# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0x100
 
 --- !ELF
 FileHeader:

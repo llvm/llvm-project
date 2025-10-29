@@ -1886,7 +1886,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Version", E.Version);
-  IO.mapOptional("Feature", E.Feature, Hex8(0));
+  IO.mapOptional("Feature", E.Feature, Hex16(0));
   IO.mapOptional("NumBBRanges", E.NumBBRanges);
   IO.mapOptional("BBRanges", E.BBRanges);
 }

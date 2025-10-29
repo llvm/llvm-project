@@ -831,7 +831,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   };
 
   uint8_t Version = 0;
-  uint8_t Feature = 0;
+  uint16_t Feature = 0;
   BBAddrMap::Features FeatEnable{};
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
          Cur.tell() < Content.size()) {
@@ -841,7 +841,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     if (Version < 2 || Version > 5)
       return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                          Twine(static_cast<int>(Version)));
-    Feature = Data.getU8(Cur); // Feature byte
+    Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
     if (!Cur)
       break;
     auto FeatEnableOrErr = BBAddrMap::Features::decode(Feature);
@@ -860,7 +860,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
                          " feature = " + Twine(static_cast<int>(Feature)));
     if (FeatEnable.PostLinkCfg && Version < 5)
       return createError("version should be >= 5 for SHT_LLVM_BB_ADDR_MAP when "
-                         "basic block hash feature is enabled: version = " +
+                         "post link cfg feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
                          " feature = " + Twine(static_cast<int>(Feature)));
     uint32_t NumBlocksInBBRange = 0;

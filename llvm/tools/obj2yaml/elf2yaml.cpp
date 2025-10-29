@@ -895,7 +895,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   std::vector<ELFYAML::PGOAnalysisMapEntry> PGOAnalyses;
   DataExtractor::Cursor Cur(0);
   uint8_t Version = 0;
-  uint8_t Feature = 0;
+  uint16_t Feature = 0;
   uint64_t Address = 0;
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
@@ -905,7 +905,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
                 Twine(static_cast<int>(Version)));
-      Feature = Data.getU8(Cur);
+      Feature = Version < 5 ? Data.getU8(Cur) : Data.getU16(Cur);
     }
     uint64_t NumBBRanges = 1;
     uint64_t NumBlocks = 0;

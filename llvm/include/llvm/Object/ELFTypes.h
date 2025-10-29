@@ -841,7 +841,7 @@ struct BBAddrMap {
     bool hasPGOAnalysisBBData() const { return BBFreq || BrProb; }
 
     // Encodes to minimum bit width representation.
-    uint8_t encode() const {
+    uint16_t encode() const {
       return (static_cast<uint8_t>(FuncEntryCount) << 0) |
              (static_cast<uint8_t>(BBFreq) << 1) |
              (static_cast<uint8_t>(BrProb) << 2) |
@@ -854,7 +854,7 @@ struct BBAddrMap {
 
     // Decodes from minimum bit width representation and validates no
     // unnecessary bits are used.
-    static Expected<Features> decode(uint8_t Val) {
+    static Expected<Features> decode(uint16_t Val) {
       Features Feat{
           static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
           static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),

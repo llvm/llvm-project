@@ -15,7 +15,7 @@
 
 ## Check that a malformed section can be handled.
 # RUN: yaml2obj %s -DBITS=32 -DSIZE=24 -o %t2.o
-# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck --match-full-lines %s -DOFFSET=0x00000014 -DFILE=%t2.o --check-prefix=TRUNCATED
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck --match-full-lines %s -DOFFSET=0x00000015 -DFILE=%t2.o --check-prefix=TRUNCATED
 
 ## Check that missing features can be handled.
 # RUN: yaml2obj %s -DBITS=32 -DFEATURE=0x2 -o %t3.o

@@ -1470,8 +1470,14 @@ void ELFState<ELFT>::writeSectionContent(
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
       CBA.write(E.Version);
-      CBA.write(E.Feature);
-      SHeader.sh_size += 2;
+      SHeader.sh_size += 1;
+      if (E.Version < 5) {
+        CBA.write(static_cast<uint8_t>(E.Feature));
+        SHeader.sh_size += 1;
+      } else {
+        CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
+        SHeader.sh_size += 2;
+      }
     }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     bool MultiBBRangeFeatureEnabled = false;

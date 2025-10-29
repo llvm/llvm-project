@@ -1474,7 +1474,7 @@ Sections:
     DoCheckFails(
         TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
         "unable to read SHT_LLVM_BB_ADDR_MAP section with index 6: "
-        "unexpected end of data at offset 0xa while reading [0x3, 0xb)");
+        "unexpected end of data at offset 0xa while reading [0x4, 0xc)");
     // Check that we can read the other section's bb-address-maps which are
     // valid.
     DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,
