@@ -124,11 +124,27 @@ target_link_libraries(unwind_shared PUBLIC
 #===============================================================================
 
 get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir_builtins)
-string(REGEX REPLACE "^lib/" "" install_dir_builtins "${install_dir_builtins}")
-string(FIND "${install_dir_builtins}" "clang" install_path_contains_triple)
-if(install_path_contains_triple EQUAL -1)
-  set(builtins_suffix "-${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+
+# Extract the relative path starting from 'clang' or after 'lib/'
+if(IS_ABSOLUTE "${install_dir_builtins}")
+  # For absolute paths, extract starting from 'clang/' if it exists
+  string(REGEX MATCH "clang/.*$" install_dir_builtins_temp "${install_dir_builtins}")
+  if(install_dir_builtins_temp)
+    set(install_dir_builtins "${install_dir_builtins_temp}")
+  else()
+    # Fallback: strip up to first lib/
+    string(REGEX REPLACE "^.*/lib/" "" install_dir_builtins "${install_dir_builtins}")
+  endif()
 else()
+  string(REGEX REPLACE "^lib/" "" install_dir_builtins "${install_dir_builtins}")
+endif()
+
+# Always add the architecture suffix
+set(builtins_suffix "-${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+
+# Only prepend ../ when using per-target runtime directories
+string(FIND "${install_dir_builtins}" "clang" install_path_contains_triple)
+if(install_path_contains_triple GREATER -1 AND LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
   string(PREPEND install_dir_builtins "../")
 endif()
 set(LLVM_LIBGCC_COMPILER_RT ${install_dir_builtins}/libclang_rt.builtins${builtins_suffix}.a)
