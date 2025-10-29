@@ -5,7 +5,7 @@
   ; ModuleID = 'test-wmma-convergent'
   target triple = "amdgcn-amd-amdhsa"
 
-  define void @wmma_test(ptr addrspace(4) %a, ptr addrspace(4) %b, ptr addrspace(4) %c, float %scale) {
+  define void @wmma_test() {
   entry:
     br label %if.then
 
@@ -25,189 +25,53 @@ body:             |
   ; CHECK-LABEL: name: wmma_test
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (dereferenceable invariant load (s128), addrspace 4)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4
-  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_]], [[COPY1]], implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORDX4_SADDR1:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR]].sub3
-  ; CHECK-NEXT:   [[V_PK_ADD_F16_:%[0-9]+]]:vgpr_32 = V_PK_ADD_F16 8, [[COPY6]], 8, [[COPY6]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR]].sub2
-  ; CHECK-NEXT:   [[V_PK_ADD_F16_1:%[0-9]+]]:vgpr_32 = V_PK_ADD_F16 8, [[COPY7]], 8, [[COPY7]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR]].sub1
-  ; CHECK-NEXT:   [[V_PK_ADD_F16_2:%[0-9]+]]:vgpr_32 = V_PK_ADD_F16 8, [[COPY8]], 8, [[COPY8]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR]].sub0
-  ; CHECK-NEXT:   [[V_PK_ADD_F16_3:%[0-9]+]]:vgpr_32 = V_PK_ADD_F16 8, [[COPY9]], 8, [[COPY9]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_ADD_F16_3]], %subreg.sub0, [[V_PK_ADD_F16_2]], %subreg.sub1, [[V_PK_ADD_F16_1]], %subreg.sub2, [[V_PK_ADD_F16_]], %subreg.sub3
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR1]].sub3
-  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 939538432
-  ; CHECK-NEXT:   [[V_PK_MUL_F16_:%[0-9]+]]:vgpr_32 = V_PK_MUL_F16 8, [[COPY10]], 8, [[S_MOV_B32_1]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR1]].sub2
-  ; CHECK-NEXT:   [[V_PK_MUL_F16_1:%[0-9]+]]:vgpr_32 = V_PK_MUL_F16 8, [[COPY11]], 8, [[S_MOV_B32_1]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR1]].sub1
-  ; CHECK-NEXT:   [[V_PK_MUL_F16_2:%[0-9]+]]:vgpr_32 = V_PK_MUL_F16 8, [[COPY12]], 8, [[S_MOV_B32_1]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_SADDR1]].sub0
-  ; CHECK-NEXT:   [[V_PK_MUL_F16_3:%[0-9]+]]:vgpr_32 = V_PK_MUL_F16 8, [[COPY13]], 8, [[S_MOV_B32_1]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_PK_MUL_F16_3]], %subreg.sub0, [[V_PK_MUL_F16_2]], %subreg.sub1, [[V_PK_MUL_F16_1]], %subreg.sub2, [[V_PK_MUL_F16_]], %subreg.sub3
-  ; CHECK-NEXT:   early-clobber %42:vreg_256 = V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, [[REG_SEQUENCE2]], 8, [[REG_SEQUENCE3]], 8, 0, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-  ; CHECK-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[S_MOV_B32_2]], implicit $exec
-  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[V_AND_B32_e64_]], [[S_MOV_B32_3]], implicit $exec
-  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[V_CMP_EQ_U32_e64_]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   early-clobber %3:vreg_256 = V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, [[DEF]], 8, [[DEF1]], 8, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32 = SI_IF [[DEF2]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.if.then:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]], 16, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
-  ; CHECK-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
-  ; CHECK-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_192 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY2]], %subreg.sub3, [[COPY15]], %subreg.sub4, [[COPY14]], %subreg.sub5
-  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 3
-  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_4]], [[COPY1]], implicit $exec
-  ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_LSHLREV_B32_e64_1]], %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
-  ; CHECK-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE4]].sub5
-  ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:sreg_32 = COPY [[REG_SEQUENCE4]].sub4
-  ; CHECK-NEXT:   [[REG_SEQUENCE6:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY17]], %subreg.sub0, [[COPY16]], %subreg.sub1
-  ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 24, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
-  ; CHECK-NEXT:   [[COPY18:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE5]].sub0
-  ; CHECK-NEXT:   [[V_LSHLREV_B32_e64_2:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[S_MOV_B32_2]], [[COPY18]], implicit $exec
-  ; CHECK-NEXT:   [[COPY19:%[0-9]+]]:vgpr_32 = COPY %42.sub1
-  ; CHECK-NEXT:   [[COPY20:%[0-9]+]]:vgpr_32 = COPY %42.sub3
-  ; CHECK-NEXT:   [[COPY21:%[0-9]+]]:vgpr_32 = COPY %42.sub5
-  ; CHECK-NEXT:   [[COPY22:%[0-9]+]]:vgpr_32 = COPY %42.sub7
-  ; CHECK-NEXT:   [[COPY23:%[0-9]+]]:vgpr_32 = COPY %42.sub6
-  ; CHECK-NEXT:   [[COPY24:%[0-9]+]]:vgpr_32 = COPY %42.sub4
-  ; CHECK-NEXT:   [[COPY25:%[0-9]+]]:vgpr_32 = COPY %42.sub2
-  ; CHECK-NEXT:   [[COPY26:%[0-9]+]]:vgpr_32 = COPY %42.sub0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY27:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
-  ; CHECK-NEXT:   [[V_FMA_MIXLO_F16_:%[0-9]+]]:vgpr_32 = V_FMA_MIXLO_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY26]], 0, 0, 0, [[COPY27]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY28:%[0-9]+]]:vgpr_32 = COPY [[DEF1]]
-  ; CHECK-NEXT:   [[V_FMA_MIXLO_F16_1:%[0-9]+]]:vgpr_32 = V_FMA_MIXLO_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY25]], 0, 0, 0, [[COPY28]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY29:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
-  ; CHECK-NEXT:   [[V_FMA_MIXLO_F16_2:%[0-9]+]]:vgpr_32 = V_FMA_MIXLO_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY24]], 0, 0, 0, [[COPY29]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY30:%[0-9]+]]:vgpr_32 = COPY [[DEF3]]
-  ; CHECK-NEXT:   [[V_FMA_MIXLO_F16_3:%[0-9]+]]:vgpr_32 = V_FMA_MIXLO_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY23]], 0, 0, 0, [[COPY30]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_FMA_MIXHI_F16_:%[0-9]+]]:vgpr_32 = V_FMA_MIXHI_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY22]], 0, 0, 0, [[V_FMA_MIXLO_F16_3]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_FMA_MIXHI_F16_1:%[0-9]+]]:vgpr_32 = V_FMA_MIXHI_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY21]], 0, 0, 0, [[V_FMA_MIXLO_F16_2]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_FMA_MIXHI_F16_2:%[0-9]+]]:vgpr_32 = V_FMA_MIXHI_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY20]], 0, 0, 0, [[V_FMA_MIXLO_F16_1]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[V_FMA_MIXHI_F16_3:%[0-9]+]]:vgpr_32 = V_FMA_MIXHI_F16 0, [[S_LOAD_DWORD_IMM]], 0, [[COPY19]], 0, 0, 0, [[V_FMA_MIXLO_F16_]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[REG_SEQUENCE7:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[V_FMA_MIXHI_F16_3]], %subreg.sub0, [[V_FMA_MIXHI_F16_2]], %subreg.sub1, [[V_FMA_MIXHI_F16_1]], %subreg.sub2, [[V_FMA_MIXHI_F16_]], %subreg.sub3
-  ; CHECK-NEXT:   [[COPY31:%[0-9]+]]:vreg_128 = COPY [[REG_SEQUENCE7]]
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR [[V_LSHLREV_B32_e64_2]], [[COPY31]], [[REG_SEQUENCE6]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY %3.sub1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY %3.sub3
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY %3.sub5
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY %3.sub7
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY %3.sub6
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY %3.sub4
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY %3.sub2
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY %3.sub0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.if.end:
   ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0
-  bb.0.entry:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $vgpr0, $sgpr0_sgpr1
 
-    %6:sgpr_64 = COPY $sgpr0_sgpr1
-    %5:vgpr_32 = COPY $vgpr0
-    %7:sgpr_128 = S_LOAD_DWORDX4_IMM %6:sgpr_64, 0, 0 :: (dereferenceable invariant load (s128), addrspace 4)
-    %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM %6:sgpr_64, 16, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
-    %9:sreg_32 = COPY %8.sub1:sreg_64_xexec
-    %10:sreg_32 = COPY %8.sub0:sreg_64_xexec
-    %11:sreg_32 = COPY %7.sub3:sgpr_128
-    %12:sreg_32 = COPY %7.sub2:sgpr_128
-    %13:sreg_32 = COPY %7.sub1:sgpr_128
-    %14:sreg_32 = COPY %7.sub0:sgpr_128
-    %15:sgpr_192 = REG_SEQUENCE %14:sreg_32, %subreg.sub0, %13:sreg_32, %subreg.sub1, %12:sreg_32, %subreg.sub2, %11:sreg_32, %subreg.sub3, %10:sreg_32, %subreg.sub4, %9:sreg_32, %subreg.sub5
-    %1:sgpr_192 = COPY %15:sgpr_192
-    %16:sreg_64_xexec_xnull = REG_SEQUENCE %14:sreg_32, %subreg.sub0, %13:sreg_32, %subreg.sub1
-    %17:sreg_64_xexec_xnull = REG_SEQUENCE %12:sreg_32, %subreg.sub0, %11:sreg_32, %subreg.sub1
-    %18:sreg_32 = S_MOV_B32 3
-    %19:vgpr_32 = V_LSHLREV_B32_e64 %18:sreg_32, %5:vgpr_32, implicit $exec
-    %101:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %100:vreg_64 = REG_SEQUENCE %19:vgpr_32, %subreg.sub0, %101:vgpr_32, %subreg.sub1
-    %2:vreg_64 = COPY %100:vreg_64
-    %22:sreg_32 = S_MOV_B32 4
-    %23:vgpr_32 = V_LSHLREV_B32_e64 %22:sreg_32, %5:vgpr_32, implicit $exec
-    %24:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %16:sreg_64_xexec_xnull, %23:vgpr_32, 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    %25:vreg_128 = GLOBAL_LOAD_DWORDX4_SADDR %17:sreg_64_xexec_xnull, %23:vgpr_32, 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    %26:vgpr_32 = COPY %24.sub3:vreg_128
-    %27:vgpr_32 = V_PK_ADD_F16 8, %26:vgpr_32, 8, %26:vgpr_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %28:vgpr_32 = COPY %24.sub2:vreg_128
-    %29:vgpr_32 = V_PK_ADD_F16 8, %28:vgpr_32, 8, %28:vgpr_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %30:vgpr_32 = COPY %24.sub1:vreg_128
-    %31:vgpr_32 = V_PK_ADD_F16 8, %30:vgpr_32, 8, %30:vgpr_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %32:vgpr_32 = COPY %24.sub0:vreg_128
-    %33:vgpr_32 = V_PK_ADD_F16 8, %32:vgpr_32, 8, %32:vgpr_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %99:vreg_128 = REG_SEQUENCE %33:vgpr_32, %subreg.sub0, %31:vgpr_32, %subreg.sub1, %29:vgpr_32, %subreg.sub2, %27:vgpr_32, %subreg.sub3
-    %35:vgpr_32 = COPY %25.sub3:vreg_128
-    %36:sreg_32 = S_MOV_B32 939538432
-    %37:vgpr_32 = V_PK_MUL_F16 8, %35:vgpr_32, 8, %36:sreg_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %38:vgpr_32 = COPY %25.sub2:vreg_128
-    %39:vgpr_32 = V_PK_MUL_F16 8, %38:vgpr_32, 8, %36:sreg_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %40:vgpr_32 = COPY %25.sub1:vreg_128
-    %41:vgpr_32 = V_PK_MUL_F16 8, %40:vgpr_32, 8, %36:sreg_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %42:vgpr_32 = COPY %25.sub0:vreg_128
-    %43:vgpr_32 = V_PK_MUL_F16 8, %42:vgpr_32, 8, %36:sreg_32, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %98:vreg_128 = REG_SEQUENCE %43:vgpr_32, %subreg.sub0, %41:vgpr_32, %subreg.sub1, %39:vgpr_32, %subreg.sub2, %37:vgpr_32, %subreg.sub3
-    early-clobber %3:vreg_256 = V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, %99:vreg_128, 8, %98:vreg_128, 8, 0, 0, 0, implicit $exec
-    %47:sreg_32 = S_MOV_B32 1
-    %48:vgpr_32 = V_AND_B32_e64 %5:vgpr_32, %47:sreg_32, implicit $exec
-    %49:sreg_32 = S_MOV_B32 0
-    %50:sreg_32 = V_CMP_EQ_U32_e64 %48:vgpr_32, %49:sreg_32, implicit $exec
-    %4:sreg_32 = SI_IF %50:sreg_32, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_128 = IMPLICIT_DEF
+    %2:sreg_32 = IMPLICIT_DEF
+    early-clobber %3:vreg_256 = V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, %0:vreg_128, 8, %1:vreg_128, 8, 0, 0, 0, implicit $exec
+    %4:sreg_32 = SI_IF %2:sreg_32, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.1
 
   bb.1.if.then:
-    successors: %bb.2(0x80000000)
+    successors: %bb.2
 
-    %51:sreg_32 = COPY %1.sub5:sgpr_192
-    %52:sreg_32 = COPY %1.sub4:sgpr_192
-    %53:sreg_64_xexec_xnull = REG_SEQUENCE %52:sreg_32, %subreg.sub0, %51:sreg_32, %subreg.sub1
-    %54:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %6:sgpr_64, 24, 0 :: (dereferenceable invariant load (s32), align 8, addrspace 4)
-    %55:vgpr_32 = COPY %2.sub0:vreg_64
-    %57:vgpr_32 = V_LSHLREV_B32_e64 %47:sreg_32, %55:vgpr_32, implicit $exec
-    %58:vgpr_32 = COPY %3.sub1:vreg_256
-    %59:vgpr_32 = COPY %3.sub3:vreg_256
-    %60:vgpr_32 = COPY %3.sub5:vreg_256
-    %61:vgpr_32 = COPY %3.sub7:vreg_256
-    %62:vgpr_32 = COPY %3.sub6:vreg_256
-    %63:vgpr_32 = COPY %3.sub4:vreg_256
-    %64:vgpr_32 = COPY %3.sub2:vreg_256
-    %65:vgpr_32 = COPY %3.sub0:vreg_256
-    %67:sreg_32 = IMPLICIT_DEF
-    %68:vgpr_32 = COPY %67:sreg_32
-    %66:vgpr_32 = V_FMA_MIXLO_F16 0, %54:sreg_32_xm0_xexec, 0, %65:vgpr_32, 0, 0, 0, %68:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %70:sreg_32 = IMPLICIT_DEF
-    %71:vgpr_32 = COPY %70:sreg_32
-    %69:vgpr_32 = V_FMA_MIXLO_F16 0, %54:sreg_32_xm0_xexec, 0, %64:vgpr_32, 0, 0, 0, %71:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %73:sreg_32 = IMPLICIT_DEF
-    %74:vgpr_32 = COPY %73:sreg_32
-    %72:vgpr_32 = V_FMA_MIXLO_F16 0, %54:sreg_32_xm0_xexec, 0, %63:vgpr_32, 0, 0, 0, %74:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %76:sreg_32 = IMPLICIT_DEF
-    %77:vgpr_32 = COPY %76:sreg_32
-    %75:vgpr_32 = V_FMA_MIXLO_F16 0, %54:sreg_32_xm0_xexec, 0, %62:vgpr_32, 0, 0, 0, %77:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %78:vgpr_32 = V_FMA_MIXHI_F16 0, %54:sreg_32_xm0_xexec, 0, %61:vgpr_32, 0, 0, 0, %75:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %79:vgpr_32 = V_FMA_MIXHI_F16 0, %54:sreg_32_xm0_xexec, 0, %60:vgpr_32, 0, 0, 0, %72:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %80:vgpr_32 = V_FMA_MIXHI_F16 0, %54:sreg_32_xm0_xexec, 0, %59:vgpr_32, 0, 0, 0, %69:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %81:vgpr_32 = V_FMA_MIXHI_F16 0, %54:sreg_32_xm0_xexec, 0, %58:vgpr_32, 0, 0, 0, %66:vgpr_32, 0, 0, implicit $mode, implicit $exec
-    %97:vreg_128 = REG_SEQUENCE %81:vgpr_32, %subreg.sub0, %80:vgpr_32, %subreg.sub1, %79:vgpr_32, %subreg.sub2, %78:vgpr_32, %subreg.sub3
-    %83:vreg_128 = COPY %97:vreg_128
-    GLOBAL_STORE_DWORDX4_SADDR %57:vgpr_32, %83:vreg_128, %53:sreg_64_xexec_xnull, 0, 0, implicit $exec :: (store (s128), addrspace 1)
+    %5:vgpr_32 = COPY %3.sub1:vreg_256
+    %6:vgpr_32 = COPY %3.sub3:vreg_256
+    %7:vgpr_32 = COPY %3.sub5:vreg_256
+    %8:vgpr_32 = COPY %3.sub7:vreg_256
+    %9:vgpr_32 = COPY %3.sub6:vreg_256
+    %10:vgpr_32 = COPY %3.sub4:vreg_256
+    %11:vgpr_32 = COPY %3.sub2:vreg_256
+    %12:vgpr_32 = COPY %3.sub0:vreg_256
 
   bb.2.if.end:
-
     SI_END_CF %4:sreg_32, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_ENDPGM 0
 
