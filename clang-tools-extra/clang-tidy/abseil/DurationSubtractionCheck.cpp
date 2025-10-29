@@ -21,7 +21,7 @@ void DurationSubtractionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(
           hasOperatorName("-"),
-          hasLHS(callExpr(callee(functionDecl(DurationConversionFunction())
+          hasLHS(callExpr(callee(functionDecl(durationConversionFunction())
                                      .bind("function_decl")),
                           hasArgument(0, expr().bind("lhs_arg")))))
           .bind("binop"),
