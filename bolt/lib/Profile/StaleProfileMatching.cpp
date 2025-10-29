@@ -684,6 +684,7 @@ matchBlocks(BinaryContext &BC, const yaml::bolt::BinaryFunctionProfile &YamlBF,
     }
     addMatchedBlock({MatchedBlock, Method}, YamlBF, YamlBB);
   }
+
   for (const auto &[YamlBBIdx, FlowBlockProfile] : MatchedBlocks) {
     const auto &[MatchedBlock, YamlBB] = FlowBlockProfile;
     StaleMatcher::MatchMethod Method = MatchedFlowBlocks.lookup(MatchedBlock);
@@ -735,9 +736,8 @@ void transferEdgeWeights(ProfileBlockMatchMap &MatchedBlocks,
                          MutableArrayRef<uint64_t> OutWeight,
                          MutableArrayRef<uint64_t> InWeight,
                          const yaml::bolt::BinaryFunctionProfile &YamlBF) {
-  using namespace yaml::bolt;
-  for (const BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
-    for (const SuccessorInfo &YamlSI : YamlBB.Successors) {
+  for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
+    for (const yaml::bolt::SuccessorInfo &YamlSI : YamlBB.Successors) {
       if (YamlSI.Count == 0)
         continue;
 
