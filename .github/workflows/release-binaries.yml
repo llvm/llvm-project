@@ -252,6 +252,15 @@ jobs:
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
+    # We will use Wix to generate the installer on Windows, because this
+    # reportedly works better with larger installers, though, I haven't actually
+    # seen an installer > 2GB, which is the limit for default installer
+    # generator.
+    - name: Install Wix
+      if: runner.os == 'Windows'
+      run: |
+        dotnet tool install --global wix
+
     - name: Install libxml2 for Windows
       if: runner.os == 'Windows' && false
       run: |

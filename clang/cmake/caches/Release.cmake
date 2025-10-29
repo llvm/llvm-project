@@ -190,6 +190,8 @@ endif()
 # We want to generate an installer on Windows.
 if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+else()
+  set_final_stage_var(CPACK_GENERATOR "WIX" STRING)
 endif()
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
