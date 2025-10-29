@@ -811,6 +811,11 @@ bool Designator<T>::IsPathFrom(const Designator<T> &that) const {
   return TestVariableIsPathFromRoot(*this, that);
 }
 
+template <typename T, typename U>
+optional<bool> Designator<T>::IsSameEntity(const Designator<U> &that) const {
+  return std::nullopt;
+}
+
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
