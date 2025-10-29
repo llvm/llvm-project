@@ -1238,7 +1238,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     AllowSuffix = false;
-    Res = ParseUnaryExprOrTypeTraitExpression();
+    Res = ParseCXXReflectExpression();
     break;
   }
   case tok::ampamp: {      // unary-expression: '&&' identifier
@@ -2282,8 +2282,6 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   else if (getLangOpts().C2y && OpTok.is(tok::kw__Countof))
     Diag(OpTok, diag::warn_c2y_compat_keyword) << OpTok.getName();
 
-  if (OpTok.is(tok::caretcaret))
-    return ParseCXXReflectExpression(OpTok.getLocation());
 
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated,

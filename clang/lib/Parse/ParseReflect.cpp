@@ -16,10 +16,13 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 using namespace clang;
 
-ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
+ExprResult Parser::ParseCXXReflectExpression() {
   // TODO(reflection) : support parsing for more reflect-expressions.
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+  assert(Tok.is(tok::caretcaret) && "expecting reflection operator ^^");
+  SourceLocation DoubleCaretLoc = Tok.getLocation();
+  ConsumeToken();
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
