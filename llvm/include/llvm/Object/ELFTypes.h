@@ -1013,12 +1013,12 @@ struct PGOAnalysisMap {
     /// probability associated with it.
     struct SuccessorEntry {
       /// Unique ID of this successor basic block.
-      uint32_t ID;
+      uint32_t ID = 0;
       /// Branch Probability of the edge to this successor taken from MBPI.
       BranchProbability Prob;
       /// Raw edge count from the post link profile (e.g., from bolt or
       /// propeller).
-      uint64_t PostLinkFreq;
+      uint64_t PostLinkFreq = 0;
 
       bool operator==(const SuccessorEntry &Other) const {
         return std::tie(ID, Prob, PostLinkFreq) ==
