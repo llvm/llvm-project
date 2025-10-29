@@ -152,11 +152,12 @@ IterationGraphSorter IterationGraphSorter::fromGenericOp(
 }
 
 IterationGraphSorter::IterationGraphSorter(
-    SmallVector<Value> &&ins, SmallVector<AffineMap> &&loop2InsLvl, Value out,
-    AffineMap loop2OutLvl, SmallVector<utils::IteratorType> &&iterTypes,
+    SmallVector<Value> &&insArg, SmallVector<AffineMap> &&loop2InsLvlArg,
+    Value out, AffineMap loop2OutLvl,
+    SmallVector<utils::IteratorType> &&iterTypesArg,
     sparse_tensor::LoopOrderingStrategy strategy)
-    : ins(std::move(ins)), loop2InsLvl(std::move(loop2InsLvl)), out(out),
-      loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypes)),
+    : ins(std::move(insArg)), loop2InsLvl(std::move(loop2InsLvlArg)), out(out),
+      loop2OutLvl(loop2OutLvl), iterTypes(std::move(iterTypesArg)),
       strategy(strategy) {
   // One map per tensor.
   assert(loop2InsLvl.size() == ins.size());
@@ -166,7 +167,15 @@ IterationGraphSorter::IterationGraphSorter(
   // The number of results of the map should match the rank of the tensor.
   assert(llvm::all_of(llvm::zip(loop2InsLvl, ins), [](auto mvPair) {
     auto [m, v] = mvPair;
-    return m.getNumResults() == cast<ShapedType>(v.getType()).getRank();
+
+    // For ranked types the rank must match.
+    // Simply return true for UnrankedTensorType
+    if (auto shapedType = llvm::dyn_cast<ShapedType>(v.getType())) {
+      return !shapedType.hasRank() ||
+             (m.getNumResults() == shapedType.getRank());
+    }
+    // Non-shaped (scalar) types behave like rank-0.
+    return m.getNumResults() == 0;
   }));
 
   itGraph.resize(getNumLoops(), std::vector<bool>(getNumLoops(), false));
