@@ -301,7 +301,9 @@ class SimplifyCFGOpt {
 
   bool tryToSimplifyUncondBranchWithICmpInIt(ICmpInst *ICI,
                                              IRBuilder<> &Builder);
-
+  bool tryToSimplifyUncondBranchWithICmpSelectInIt(ICmpInst *ICI,
+                                                   SelectInst *Select,
+                                                   IRBuilder<> &Builder);
   bool hoistCommonCodeFromSuccessors(Instruction *TI, bool AllInstsEqOnly);
   bool hoistSuccIdenticalTerminatorToSwitchOrIf(
       Instruction *TI, Instruction *I1,
@@ -5116,6 +5118,172 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
   return true;
 }
 
+/// Similar to tryToSimplifyUncondBranchWithICmpInIt, but handle a more generic
+/// case. This is called when we find an icmp instruction (a seteq/setne with a
+/// constant) and its following select instruction as the only TWO instruction
+/// in a block that ends with an uncond branch.  We are looking for a very
+/// specific pattern that occurs when "  
+///    if (A == 1) return C1;
+///    if (A == 2) return C2;
+///    if (A < 3) return C3;
+///    return C4;
+/// " gets simplified.  In this case, we merge the first two "branches of icmp"
+/// into a switch, but then the default value goes to an uncond block with a lt
+/// icmp and select in it, as InstCombine can not simplify "A < 3" as "A == 2".
+/// After SimplifyCFG and other subsequent optimizations (e.g., SCCP), we might
+/// get something like:
+///
+/// case1:
+///   switch i8 %A, label %DEFAULT [ i8 0, label %end    i8 1, label %case2 ]
+/// case2:
+///   br label %end
+/// DEFAULT:
+///   %tmp = icmp eq i8 %A, 2
+///   %val = select i1 %tmp, i8 C3, i8 C4
+///   br label %end
+/// end:
+///   _ = phi i8 [ C1, %case1 ], [ C2, %case2 ], [ %val, %DEFAULT ]
+///
+/// We prefer to split the edge to 'end' so that there are TWO entries of V3/V4
+/// to the PHI, merging the icmp & select into the switch, as follows:
+///
+/// case1:
+///   switch i8 %A, label %DEFAULT [
+///     i8 0, label %end
+///     i8 1, label %case2
+///     i8 2, label %case3
+///   ]
+/// case2:
+///   br label %end
+/// case3:
+///   br label %end
+/// DEFAULT:
+///   br label %end
+/// end:
+///   _ = phi i8 [ C1, %case1 ], [ C2, %case2 ], [ C3, %case2 ], [ C4, %DEFAULT]
+bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpSelectInIt(
+    ICmpInst *ICI, SelectInst *Select, IRBuilder<> &Builder) {
+  BasicBlock *BB = ICI->getParent();
+
+  // If the block has any PHIs in it or the icmp/select has multiple uses, it is too
+  // complex.
+  if (isa<PHINode>(BB->begin()) || !ICI->hasOneUse() || !Select->hasOneUse())
+    return false;
+
+  // The pattern we're looking for is where our only predecessor is a switch on
+  // 'V' and this block is the default case for the switch.  In this case we can
+  // fold the compared value into the switch to simplify things.
+  BasicBlock *Pred = BB->getSinglePredecessor();
+  if (!Pred || !isa<SwitchInst>(Pred->getTerminator()))
+    return false;
+  
+  Value *IcmpCond;
+  ConstantInt *NewCaseVal;
+  CmpPredicate Predicate;
+
+  // Match icmp X, C
+  if (!match(ICI, m_ICmp(Predicate, m_Value(IcmpCond), m_ConstantInt(NewCaseVal))))
+    return false;
+
+  Value *SelectCond, *SelectTrueVal, *SelectFalseVal;
+  // Match select Cond, TrueVal, FalseVal
+  if (!match(Select, m_Select(m_Value(SelectCond), m_Value(SelectTrueVal),
+                              m_Value(SelectFalseVal))))
+    return false;
+
+  // Check if the select condition is the same as the icmp condition.
+  if (SelectCond != ICI)
+    return false;
+
+  SwitchInst *SI = cast<SwitchInst>(Pred->getTerminator());
+  if (SI->getCondition() != IcmpCond)
+    return false;
+
+  // If BB is reachable on a non-default case, then we simply know the value of
+  // V in this block.  Substitute it and constant fold the icmp instruction
+  // away.
+  if (SI->getDefaultDest() != BB) {
+    ConstantInt *VVal = SI->findCaseDest(BB);
+    assert(VVal && "Should have a unique destination value");
+    ICI->setOperand(0, VVal);
+
+    if (Value *V = simplifyInstruction(ICI, {DL, ICI})) {
+      ICI->replaceAllUsesWith(V);
+      ICI->eraseFromParent();
+    }
+    // BB is now empty, so it is likely to simplify away.
+    return requestResimplify();
+  }
+
+  // Ok, the block is reachable from the default dest.  If the constant we're
+  // comparing exists in one of the other edges, then we can constant fold ICI
+  // and zap it.
+  if (SI->findCaseValue(NewCaseVal) != SI->case_default()) {
+    Value *V;
+    if (Predicate == ICmpInst::ICMP_EQ)
+      V = ConstantInt::getFalse(BB->getContext());
+    else
+      V = ConstantInt::getTrue(BB->getContext());
+
+    ICI->replaceAllUsesWith(V);
+    ICI->eraseFromParent();
+    // BB is now empty, so it is likely to simplify away.
+    return requestResimplify();
+  }
+
+  // The use of the select has to be in the 'end' block, by the only PHI node in
+  // the block.
+  BasicBlock *SuccBlock = BB->getTerminator()->getSuccessor(0);
+  PHINode *PHIUse = dyn_cast<PHINode>(Select->user_back());
+  if (PHIUse == nullptr || PHIUse != &SuccBlock->front() ||
+      isa<PHINode>(++BasicBlock::iterator(PHIUse)))
+    return false;
+
+  // If the icmp is a SETEQ, then the default dest gets SelectFalseVal, the new edge gets
+  // SelectTrueVal in the PHI.
+  Value *DefaultCst = SelectFalseVal;
+  Value *NewCst = SelectTrueVal;
+
+  if (ICI->getPredicate() == ICmpInst::ICMP_NE)
+    std::swap(DefaultCst, NewCst);
+
+  // Replace Select (which is used by the PHI for the default value) with
+  // SelectFalseVal or SelectTrueVal depending on if ICI is EQ or NE.
+  Select->replaceAllUsesWith(DefaultCst);
+  Select->eraseFromParent();
+  ICI->eraseFromParent();
+
+  SmallVector<DominatorTree::UpdateType, 2> Updates;
+
+  // Okay, the switch goes to this block on a default value.  Add an edge from
+  // the switch to the merge point on the compared value.
+  BasicBlock *NewBB =
+      BasicBlock::Create(BB->getContext(), "switch.edge", BB->getParent(), BB);
+  {
+    SwitchInstProfUpdateWrapper SIW(*SI);
+    auto W0 = SIW.getSuccessorWeight(0);
+    SwitchInstProfUpdateWrapper::CaseWeightOpt NewW;
+    if (W0) {
+      NewW = ((uint64_t(*W0) + 1) >> 1);
+      SIW.setSuccessorWeight(0, *NewW);
+    }
+    SIW.addCase(NewCaseVal, NewBB, NewW);
+    if (DTU)
+      Updates.push_back({DominatorTree::Insert, Pred, NewBB});
+  }
+
+  // NewBB branches to the phi block, add the uncond branch and the phi entry.
+  Builder.SetInsertPoint(NewBB);
+  Builder.SetCurrentDebugLocation(SI->getDebugLoc());
+  Builder.CreateBr(SuccBlock);
+  PHIUse->addIncoming(NewCst, NewBB);
+  if (DTU) {
+    Updates.push_back({DominatorTree::Insert, NewBB, SuccBlock});
+    DTU->applyUpdates(Updates);
+  }
+  return true;
+}
+
 /// The specified branch is a conditional branch.
 /// Check to see if it is branching on an or/and chain of icmp instructions, and
 /// fold it into a switch instruction if so.
@@ -8167,13 +8335,18 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
 
   // If the only instruction in the block is a seteq/setne comparison against a
   // constant, try to simplify the block.
-  if (ICmpInst *ICI = dyn_cast<ICmpInst>(I))
+  if (ICmpInst *ICI = dyn_cast<ICmpInst>(I)) {
     if (ICI->isEquality() && isa<ConstantInt>(ICI->getOperand(1))) {
       ++I;
       if (I->isTerminator() &&
           tryToSimplifyUncondBranchWithICmpInIt(ICI, Builder))
         return true;
+      if (isa<SelectInst>(I) && I->getNextNode()->isTerminator() &&
+          tryToSimplifyUncondBranchWithICmpSelectInIt(ICI, cast<SelectInst>(I),
+                                                      Builder))
+        return true;
     }
+  }
 
   // See if we can merge an empty landing pad block with another which is
   // equivalent.
