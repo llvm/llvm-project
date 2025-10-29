@@ -261,8 +261,8 @@ public:
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool visitFMinLike(IntrinsicInst &I);
   bool visitSqrt(IntrinsicInst &I);
-  bool visitMbcntLo(IntrinsicInst &I);
-  bool visitMbcntHi(IntrinsicInst &I);
+  bool visitMbcntLo(IntrinsicInst &I) const;
+  bool visitMbcntHi(IntrinsicInst &I) const;
   bool run();
 };
 
@@ -2098,7 +2098,7 @@ INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)
 
 /// Optimize mbcnt.lo calls on wave32 architectures for lane ID computation.
-bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) const {
   // Abort if wave size is not known at compile time.
   if (!ST.isWaveSizeKnown())
     return false;
@@ -2110,9 +2110,8 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
 
   // Only optimize the pattern mbcnt.lo(~0, 0) which counts active lanes with
   // lower IDs.
-  auto *Arg0C = dyn_cast<ConstantInt>(I.getArgOperand(0));
-  auto *Arg1C = dyn_cast<ConstantInt>(I.getArgOperand(1));
-  if (!Arg0C || !Arg1C || !Arg0C->isAllOnesValue() || !Arg1C->isZero())
+  if (!match(&I,
+             m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(m_AllOnes(), m_Zero())))
     return false;
 
   unsigned Wave = ST.getWavefrontSize();
@@ -2151,12 +2150,12 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) {
 }
 
 /// Optimize mbcnt.hi calls for lane ID computation.
-bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
+bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
   // Abort if wave size is not known at compile time.
   if (!ST.isWaveSizeKnown())
     return false;
 
-  // Calculate wave size once at the beginning
+  // Calculate wave size
   unsigned Wave = ST.getWavefrontSize();
 
   // On wave32, the upper 32 bits of execution mask are always 0, so
@@ -2205,7 +2204,7 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) {
     // we can compute lane ID within wave using bit masking:
     // lane_id = workitem.id.x & (wave_size - 1).
     if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
-      if (XLen % Wave == 0 && isPowerOf2_32(Wave)) {
+      if (isPowerOf2_32(Wave)) {
         // Construct optimized sequence: workitem.id.x & (wave_size - 1)
         IRBuilder<> B(&I);
         CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});

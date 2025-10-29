@@ -70,6 +70,22 @@ entry:
   ret i32 %b
 }
 
+; Test with work group size = 0.75 * wave size (48)
+define i32 @test_mbcnt_full_pattern_wave64_partial() !reqd_work_group_size !4 {
+; CHECK-LABEL: define i32 @test_mbcnt_full_pattern_wave64_partial(
+; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META4:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 48) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[TMP0]], 63
+; CHECK-NEXT:    ret i32 [[B]]
+;
+entry:
+  %a = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %b = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %a)
+  ret i32 %b
+}
+
 ; =============================================================================
 ; METADATA
 ; =============================================================================
@@ -78,6 +94,7 @@ entry:
 !1 = !{i32 128, i32 1, i32 1}  ; X=128 (2*wave), Y=1, Z=1
 !2 = !{i32 256, i32 1, i32 1}  ; X=256 (4*wave), Y=1, Z=1
 !3 = !{i32 64, i32 2, i32 1}   ; X=64 (1*wave), Y=2, Z=1
+!4 = !{i32 48, i32 1, i32 1}   ; X=48 (0.75*wave), Y=1, Z=1
 
 ; =============================================================================
 ; FUNCTION DECLARATIONS
@@ -92,4 +109,5 @@ attributes #0 = { nounwind readnone speculatable willreturn }
 ; CHECK: [[META1]] = !{i32 128, i32 1, i32 1}
 ; CHECK: [[META2]] = !{i32 256, i32 1, i32 1}
 ; CHECK: [[META3]] = !{i32 64, i32 2, i32 1}
+; CHECK: [[META4]] = !{i32 48, i32 1, i32 1}
 ;.

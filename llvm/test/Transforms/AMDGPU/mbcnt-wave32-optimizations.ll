@@ -8,7 +8,7 @@
 ; SIMPLE REPLACEMENT OPTIMIZATIONS (mbcnt.lo -> workitem.id.x)
 ; =============================================================================
 
-; Test with work group size = wave size
+; Test with work group size = wave size (32)
 define i32 @test_mbcnt_lo_simple_wave32() !reqd_work_group_size !0 {
 ; CHECK-LABEL: define i32 @test_mbcnt_lo_simple_wave32(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] !reqd_work_group_size [[META0:![0-9]+]] {
@@ -25,7 +25,7 @@ entry:
 ; BITMASK OPTIMIZATIONS (mbcnt.lo -> workitem.id.x & 0x1f)
 ; =============================================================================
 
-; Test with work group size = 2 * wave size
+; Test with work group size = 2 * wave size (64)
 define i32 @test_mbcnt_lo_bitmask_64() !reqd_work_group_size !1 {
 ; CHECK-LABEL: define i32 @test_mbcnt_lo_bitmask_64(
 ; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META1:![0-9]+]] {
@@ -39,10 +39,24 @@ entry:
   ret i32 %a
 }
 
-; Test with work group size = 4 * wave size
+; Test with work group size = 3 * wave size (96)
+define i32 @test_mbcnt_lo_bitmask_96() !reqd_work_group_size !2 {
+; CHECK-LABEL: define i32 @test_mbcnt_lo_bitmask_96(
+; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META2:![0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 96) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 31
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+entry:
+  %a = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  ret i32 %a
+}
+
+; Test with work group size = 4 * wave size (128)
 define i32 @test_mbcnt_lo_bitmask_128() !reqd_work_group_size !3 {
 ; CHECK-LABEL: define i32 @test_mbcnt_lo_bitmask_128(
-; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META2:![0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META3:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 128) i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 31
@@ -53,14 +67,14 @@ entry:
   ret i32 %a
 }
 
-; Test with work group size = non-power-of-2 but wave-multiple
-define i32 @test_mbcnt_lo_bitmask_96() !reqd_work_group_size !2 {
-; CHECK-LABEL: define i32 @test_mbcnt_lo_bitmask_96(
-; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META3:![0-9]+]] {
+; Test with work group size = 0.75 * wave size (48)
+define i32 @test_mbcnt_lo_bitmask_48() !reqd_work_group_size !4 {
+; CHECK-LABEL: define i32 @test_mbcnt_lo_bitmask_48(
+; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META4:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 96) i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 31
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 48) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[TMP0]], 31
+; CHECK-NEXT:    ret i32 [[A]]
 ;
 entry:
   %a = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -99,13 +113,29 @@ entry:
 ; FULL PATTERN OPTIMIZATION (mbcnt.hi(~0, mbcnt.lo(~0, 0)) -> workitem.id.x)
 ; =============================================================================
 
-; Test full pattern on wave32
+; Test with work group size = wave size (32)
 define i32 @test_mbcnt_full_pattern_wave32() !reqd_work_group_size !0 {
 ; CHECK-LABEL: define i32 @test_mbcnt_full_pattern_wave32(
 ; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 32) i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %a = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %b = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %a)
+  ret i32 %b
+}
+
+; Test with work group size = 0.75 * wave size (48)
+define i32 @test_mbcnt_full_pattern_wave32_partial() !reqd_work_group_size !4 {
+; CHECK-LABEL: define i32 @test_mbcnt_full_pattern_wave32_partial(
+; CHECK-SAME: ) #[[ATTR0]] !reqd_work_group_size [[META4]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+; CHECK-NEXT:    [[TMP0:%.*]] = call range(i32 0, 48) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[B:%.*]] = and i32 [[TMP0]], 31
+; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
   %a = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -121,6 +151,7 @@ entry:
 !1 = !{i32 64, i32 1, i32 1}   ; X=64 (2*wave32), Y=1, Z=1
 !2 = !{i32 96, i32 1, i32 1}   ; X=96 (3*wave32), Y=1, Z=1
 !3 = !{i32 128, i32 1, i32 1}  ; X=128 (4*wave32), Y=1, Z=1
+!4 = !{i32 48, i32 1, i32 1}   ; X=48 (1.5*wave32), Y=1, Z=1
 
 ; =============================================================================
 ; FUNCTION DECLARATIONS
@@ -133,6 +164,7 @@ attributes #0 = { nounwind readnone speculatable willreturn }
 ;.
 ; CHECK: [[META0]] = !{i32 32, i32 1, i32 1}
 ; CHECK: [[META1]] = !{i32 64, i32 1, i32 1}
-; CHECK: [[META2]] = !{i32 128, i32 1, i32 1}
-; CHECK: [[META3]] = !{i32 96, i32 1, i32 1}
+; CHECK: [[META2]] = !{i32 96, i32 1, i32 1}
+; CHECK: [[META3]] = !{i32 128, i32 1, i32 1}
+; CHECK: [[META4]] = !{i32 48, i32 1, i32 1}
 ;.
