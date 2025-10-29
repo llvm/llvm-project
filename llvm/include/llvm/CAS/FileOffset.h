@@ -15,7 +15,7 @@
 #ifndef LLVM_CAS_FILEOFFSET_H
 #define LLVM_CAS_FILEOFFSET_H
 
-#include <cstdlib>
+#include <cstdint>
 
 namespace llvm::cas {
 

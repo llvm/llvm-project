@@ -564,13 +564,17 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
 
   Global->setAlignment(Align(4));
 
-  ConstantInt *TheConstant(ConstantInt::get(IntType, 2));
+  ConstantInt *TheConstant = ConstantInt::get(IntType, 2);
 
-  Constant *TheConstantExpr(ConstantExpr::getPtrToInt(Global.get(), IntType));
+  Constant *PtrToInt = ConstantExpr::getPtrToInt(Global.get(), IntType);
+  ASSERT_TRUE(
+      ConstantFoldBinaryInstruction(Instruction::And, PtrToInt, TheConstant)
+          ->isNullValue());
 
-  ASSERT_TRUE(ConstantFoldBinaryInstruction(Instruction::And, TheConstantExpr,
-                                            TheConstant)
-                  ->isNullValue());
+  Constant *PtrToAddr = ConstantExpr::getPtrToAddr(Global.get(), IntType);
+  ASSERT_TRUE(
+      ConstantFoldBinaryInstruction(Instruction::And, PtrToAddr, TheConstant)
+          ->isNullValue());
 }
 
 // Check that containsUndefOrPoisonElement and containsPoisonElement is working

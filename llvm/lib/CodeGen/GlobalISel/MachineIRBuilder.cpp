@@ -800,10 +800,11 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleVector(const DstOp &Res,
   LLT DstTy = Res.getLLTTy(*getMRI());
   LLT Src1Ty = Src1.getLLTTy(*getMRI());
   LLT Src2Ty = Src2.getLLTTy(*getMRI());
-  const LLT DstElemTy = DstTy.isVector() ? DstTy.getElementType() : DstTy;
-  const LLT ElemTy1 = Src1Ty.isVector() ? Src1Ty.getElementType() : Src1Ty;
-  const LLT ElemTy2 = Src2Ty.isVector() ? Src2Ty.getElementType() : Src2Ty;
+  const LLT DstElemTy = DstTy.getScalarType();
+  const LLT ElemTy1 = Src1Ty.getScalarType();
+  const LLT ElemTy2 = Src2Ty.getScalarType();
   assert(DstElemTy == ElemTy1 && DstElemTy == ElemTy2);
+  assert(Mask.size() > 1 && "Scalar G_SHUFFLE_VECTOR are not supported");
   (void)DstElemTy;
   (void)ElemTy1;
   (void)ElemTy2;

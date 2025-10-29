@@ -105,9 +105,11 @@ extern "C" {
     mach_msg_type_number_t *infoCnt);
 }
 
+#  if !SANITIZER_GO
 // Weak symbol no-op when TSan is not linked
 SANITIZER_WEAK_ATTRIBUTE extern void __tsan_set_in_internal_write_call(
     bool value) {}
+#  endif
 
 namespace __sanitizer {
 
@@ -179,11 +181,15 @@ uptr internal_read(fd_t fd, void *buf, uptr count) {
 }
 
 uptr internal_write(fd_t fd, const void *buf, uptr count) {
+#  if SANITIZER_GO
+  return write(fd, buf, count);
+#  else
   // We need to disable interceptors when writing in TSan
   __tsan_set_in_internal_write_call(true);
   uptr res = write(fd, buf, count);
   __tsan_set_in_internal_write_call(false);
   return res;
+#  endif
 }
 
 uptr internal_stat(const char *path, void *buf) {
