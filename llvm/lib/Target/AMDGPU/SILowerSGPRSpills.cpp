@@ -267,11 +267,19 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
 
     std::vector<CalleeSavedInfo> CSI;
     const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
+    Register RetAddrReg = TRI->getReturnAddressReg(MF);
+    bool SpillRetAddrReg = false;
 
     for (unsigned I = 0; CSRegs[I]; ++I) {
       MCRegister Reg = CSRegs[I];
 
       if (SavedRegs.test(Reg)) {
+        if (Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub0) ||
+            Reg == TRI->getSubReg(RetAddrReg, AMDGPU::sub1)) {
+          SpillRetAddrReg = true;
+          continue;
+        }
+
         const TargetRegisterClass *RC =
           TRI->getMinimalPhysRegClass(Reg, MVT::i32);
         int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
@@ -280,6 +288,18 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(
         CSI.emplace_back(Reg, JunkFI);
         CalleeSavedFIs.push_back(JunkFI);
       }
+    }
+
+    // Return address uses a register pair. Add the super register to the
+    // CSI list so that it's easier to identify the entire spill and CFI
+    // can be emitted appropriately.
+    if (SpillRetAddrReg) {
+      const TargetRegisterClass *RC =
+          TRI->getMinimalPhysRegClass(RetAddrReg, MVT::i64);
+      int JunkFI = MFI.CreateStackObject(TRI->getSpillSize(*RC),
+                                         TRI->getSpillAlign(*RC), true);
+      CSI.push_back(CalleeSavedInfo(RetAddrReg, JunkFI));
+      CalleeSavedFIs.push_back(JunkFI);
     }
 
     if (!CSI.empty()) {

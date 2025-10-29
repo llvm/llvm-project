@@ -275,8 +275,8 @@ define void @func_indirect_use_workitem_id_x() #1 {
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -308,8 +308,8 @@ define void @func_indirect_use_workitem_id_y() #1 {
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -341,8 +341,8 @@ define void @func_indirect_use_workitem_id_z() #1 {
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -696,8 +696,8 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -742,8 +742,8 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -1019,8 +1019,8 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 10
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -1469,8 +1469,8 @@ define void @func_call_no_workitem_id_hints() #2 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 9
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1

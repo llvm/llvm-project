@@ -35,8 +35,8 @@ define amdgpu_gfx void @basic_test(i32 %x, i32 inreg %c, ptr addrspace(1) %ptr) 
 ; DAGISEL-NEXT:    s_clause 0x1
 ; DAGISEL-NEXT:    scratch_load_b32 v41, off, s33
 ; DAGISEL-NEXT:    scratch_load_b32 v40, off, s33 offset:4
-; DAGISEL-NEXT:    v_readlane_b32 s31, v42, 1
 ; DAGISEL-NEXT:    v_readlane_b32 s30, v42, 0
+; DAGISEL-NEXT:    v_readlane_b32 s31, v42, 1
 ; DAGISEL-NEXT:    s_mov_b32 s32, s33
 ; DAGISEL-NEXT:    v_readlane_b32 s0, v42, 2
 ; DAGISEL-NEXT:    s_or_saveexec_b32 s1, -1
@@ -78,8 +78,8 @@ define amdgpu_gfx void @basic_test(i32 %x, i32 inreg %c, ptr addrspace(1) %ptr) 
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    scratch_load_b32 v41, off, s33
 ; GISEL-NEXT:    scratch_load_b32 v40, off, s33 offset:4
-; GISEL-NEXT:    v_readlane_b32 s31, v42, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v42, 0
+; GISEL-NEXT:    v_readlane_b32 s31, v42, 1
 ; GISEL-NEXT:    s_mov_b32 s32, s33
 ; GISEL-NEXT:    v_readlane_b32 s0, v42, 2
 ; GISEL-NEXT:    s_or_saveexec_b32 s1, -1
@@ -787,8 +787,8 @@ define amdgpu_gfx void @ret_void(i32 %x) #0 {
 ; DAGISEL-NEXT:    s_wait_alu 0xfffe
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; DAGISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; DAGISEL-NEXT:    v_readlane_b32 s30, v40, 0
+; DAGISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; DAGISEL-NEXT:    s_mov_b32 s32, s33
 ; DAGISEL-NEXT:    v_readlane_b32 s0, v40, 2
 ; DAGISEL-NEXT:    s_or_saveexec_b32 s1, -1
@@ -822,8 +822,8 @@ define amdgpu_gfx void @ret_void(i32 %x) #0 {
 ; GISEL-NEXT:    s_wait_alu 0xfffe
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
+; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    s_mov_b32 s32, s33
 ; GISEL-NEXT:    v_readlane_b32 s0, v40, 2
 ; GISEL-NEXT:    s_or_saveexec_b32 s1, -1

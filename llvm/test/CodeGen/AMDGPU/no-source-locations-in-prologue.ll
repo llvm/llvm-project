@@ -247,8 +247,8 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .loc 0 32 1 ; lane-info.cpp:32:1
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1

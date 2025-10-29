@@ -40,8 +40,8 @@ define float @call_split_type_used_outside_block_v2f32() #0 {
 ; GCN-NEXT:    s_addc_u32 s17, s17, func_v2f32@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -76,8 +76,8 @@ define float @call_split_type_used_outside_block_v3f32() #0 {
 ; GCN-NEXT:    s_addc_u32 s17, s17, func_v3f32@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -112,8 +112,8 @@ define half @call_split_type_used_outside_block_v4f16() #0 {
 ; GCN-NEXT:    s_addc_u32 s17, s17, func_v4f16@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -148,8 +148,8 @@ define { i32, half } @call_split_type_used_outside_block_struct() #0 {
 ; GCN-NEXT:    s_addc_u32 s17, s17, func_struct@rel32@hi+12
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_mov_b32_e32 v1, v4
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2

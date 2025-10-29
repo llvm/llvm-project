@@ -214,8 +214,8 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX8-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX8-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX8-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX8-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX8-NEXT:    s_mov_b32 s32, s33
 ; GFX8-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX8-NEXT:    buffer_load_dword v3, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -242,8 +242,8 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX8-ARCH-FLAT-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX8-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-ARCH-FLAT-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX8-ARCH-FLAT-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX8-ARCH-FLAT-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX8-ARCH-FLAT-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX8-ARCH-FLAT-NEXT:    s_mov_b32 s32, s33
 ; GFX8-ARCH-FLAT-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX8-ARCH-FLAT-NEXT:    s_add_i32 s3, s33, 8
@@ -270,8 +270,8 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX9-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-NEXT:    buffer_load_dword v3, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -297,8 +297,8 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX9-ARCH-FLAT-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX9-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-ARCH-FLAT-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX9-ARCH-FLAT-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX9-ARCH-FLAT-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX9-ARCH-FLAT-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX9-ARCH-FLAT-NEXT:    s_mov_b32 s32, s33
 ; GFX9-ARCH-FLAT-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX9-ARCH-FLAT-NEXT:    scratch_load_dword v3, off, s33 ; 4-byte Folded Reload
@@ -321,11 +321,12 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX942-ARCH-FLAT-NEXT:    s_addc_u32 s1, s1, with_private_to_flat_addrspacecast@gotpcrel32@hi+12
 ; GFX942-ARCH-FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; GFX942-ARCH-FLAT-NEXT:    v_writelane_b32 v3, s30, 0
+; GFX942-ARCH-FLAT-NEXT:    s_nop 1
 ; GFX942-ARCH-FLAT-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX942-ARCH-FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-ARCH-FLAT-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX942-ARCH-FLAT-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX942-ARCH-FLAT-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX942-ARCH-FLAT-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX942-ARCH-FLAT-NEXT:    s_mov_b32 s32, s33
 ; GFX942-ARCH-FLAT-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX942-ARCH-FLAT-NEXT:    scratch_load_dword v3, off, s33 ; 4-byte Folded Reload
@@ -352,8 +353,8 @@ define void @call_with_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #0 {
 ; GFX10-NEXT:    v_writelane_b32 v3, s31, 1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX10-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX10-NEXT:    v_readlane_b32 s30, v3, 0
+; GFX10-NEXT:    v_readlane_b32 s31, v3, 1
 ; GFX10-NEXT:    s_mov_b32 s32, s33
 ; GFX10-NEXT:    s_xor_saveexec_b32 s4, -1
 ; GFX10-NEXT:    buffer_load_dword v3, off, s[0:3], s33 ; 4-byte Folded Reload

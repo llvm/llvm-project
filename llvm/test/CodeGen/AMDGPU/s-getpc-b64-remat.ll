@@ -20,9 +20,9 @@ define void @test_remat_s_getpc_b64() {
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
+; GFX9-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX9-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    v_readlane_b32 s31, v2, 1
-; GFX9-NEXT:    v_readlane_b32 s30, v2, 0
 ; GFX9-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; GFX9-NEXT:    buffer_load_dword v2, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
@@ -45,8 +45,8 @@ define void @test_remat_s_getpc_b64() {
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-NEXT:    v_readlane_b32 s31, v2, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v2, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v2, 1
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_load_b32 v2, off, s32 ; 4-byte Folded Reload
@@ -79,8 +79,8 @@ define void @test_remat_s_getpc_b64() {
 ; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-NEXT:    v_readlane_b32 s31, v2, 1
 ; GFX12-NEXT:    v_readlane_b32 s30, v2, 0
+; GFX12-NEXT:    v_readlane_b32 s31, v2, 1
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[0:1], off
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
 ; GFX12-NEXT:    scratch_load_b32 v2, off, s32 ; 4-byte Folded Reload

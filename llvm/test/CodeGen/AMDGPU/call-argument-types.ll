@@ -7178,8 +7178,8 @@ define void @stack_12xv3i32() #0 {
 ; VI-NEXT:    v_mov_b32_e32 v30, 10
 ; VI-NEXT:    v_writelane_b32 v40, s31, 1
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
+; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7246,8 +7246,8 @@ define void @stack_12xv3i32() #0 {
 ; CI-NEXT:    v_mov_b32_e32 v30, 10
 ; CI-NEXT:    v_writelane_b32 v40, s31, 1
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
+; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7314,8 +7314,8 @@ define void @stack_12xv3i32() #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v30, 10
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7364,8 +7364,8 @@ define void @stack_12xv3i32() #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7432,8 +7432,8 @@ define void @stack_12xv3i32() #0 {
 ; HSA-NEXT:    v_mov_b32_e32 v30, 10
 ; HSA-NEXT:    v_writelane_b32 v40, s31, 1
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
+; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7517,8 +7517,8 @@ define void @stack_12xv3f32() #0 {
 ; VI-NEXT:    v_mov_b32_e32 v30, 0x41200000
 ; VI-NEXT:    v_writelane_b32 v40, s31, 1
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
+; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7585,8 +7585,8 @@ define void @stack_12xv3f32() #0 {
 ; CI-NEXT:    v_mov_b32_e32 v30, 0x41200000
 ; CI-NEXT:    v_writelane_b32 v40, s31, 1
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
+; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7653,8 +7653,8 @@ define void @stack_12xv3f32() #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v30, 0x41200000
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7707,8 +7707,8 @@ define void @stack_12xv3f32() #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7775,8 +7775,8 @@ define void @stack_12xv3f32() #0 {
 ; HSA-NEXT:    v_mov_b32_e32 v30, 0x41200000
 ; HSA-NEXT:    v_writelane_b32 v40, s31, 1
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
+; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7868,8 +7868,8 @@ define void @stack_8xv5i32() #0 {
 ; VI-NEXT:    v_mov_b32_e32 v30, 6
 ; VI-NEXT:    v_writelane_b32 v40, s31, 1
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
+; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -7944,8 +7944,8 @@ define void @stack_8xv5i32() #0 {
 ; CI-NEXT:    v_mov_b32_e32 v30, 6
 ; CI-NEXT:    v_writelane_b32 v40, s31, 1
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
+; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -8020,8 +8020,8 @@ define void @stack_8xv5i32() #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v30, 6
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -8075,8 +8075,8 @@ define void @stack_8xv5i32() #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8151,8 +8151,8 @@ define void @stack_8xv5i32() #0 {
 ; HSA-NEXT:    v_mov_b32_e32 v30, 6
 ; HSA-NEXT:    v_writelane_b32 v40, s31, 1
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
+; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -8240,8 +8240,8 @@ define void @stack_8xv5f32() #0 {
 ; VI-NEXT:    v_mov_b32_e32 v30, 0x40c00000
 ; VI-NEXT:    v_writelane_b32 v40, s31, 1
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    v_readlane_b32 s30, v40, 0
+; VI-NEXT:    v_readlane_b32 s31, v40, 1
 ; VI-NEXT:    s_mov_b32 s32, s33
 ; VI-NEXT:    v_readlane_b32 s4, v40, 2
 ; VI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -8316,8 +8316,8 @@ define void @stack_8xv5f32() #0 {
 ; CI-NEXT:    v_mov_b32_e32 v30, 0x40c00000
 ; CI-NEXT:    v_writelane_b32 v40, s31, 1
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    v_readlane_b32 s30, v40, 0
+; CI-NEXT:    v_readlane_b32 s31, v40, 1
 ; CI-NEXT:    s_mov_b32 s32, s33
 ; CI-NEXT:    v_readlane_b32 s4, v40, 2
 ; CI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -8392,8 +8392,8 @@ define void @stack_8xv5f32() #0 {
 ; GFX9-NEXT:    v_mov_b32_e32 v30, 0x40c00000
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -8450,8 +8450,8 @@ define void @stack_8xv5f32() #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX11-NEXT:    s_mov_b32 s32, s33
 ; GFX11-NEXT:    v_readlane_b32 s0, v40, 2
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8526,8 +8526,8 @@ define void @stack_8xv5f32() #0 {
 ; HSA-NEXT:    v_mov_b32_e32 v30, 0x40c00000
 ; HSA-NEXT:    v_writelane_b32 v40, s31, 1
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    v_readlane_b32 s30, v40, 0
+; HSA-NEXT:    v_readlane_b32 s31, v40, 1
 ; HSA-NEXT:    s_mov_b32 s32, s33
 ; HSA-NEXT:    v_readlane_b32 s4, v40, 2
 ; HSA-NEXT:    s_or_saveexec_b64 s[6:7], -1

@@ -299,8 +299,8 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-TRUE16-NEXT:    s_wait_alu 0xfffe
 ; CHECK-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-TRUE16-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-TRUE16-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-TRUE16-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-TRUE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-TRUE16-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-TRUE16-NEXT:    s_or_saveexec_b32 s1, -1
@@ -339,8 +339,8 @@ define amdgpu_gfx void @amdgpu_gfx() #0 {
 ; CHECK-FAKE16-NEXT:    s_wait_alu 0xfffe
 ; CHECK-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-FAKE16-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-FAKE16-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-FAKE16-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-FAKE16-NEXT:    s_mov_b32 s32, s33
 ; CHECK-FAKE16-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-FAKE16-NEXT:    s_or_saveexec_b32 s1, -1

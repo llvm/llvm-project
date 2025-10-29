@@ -29,8 +29,8 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -68,8 +68,8 @@ define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
