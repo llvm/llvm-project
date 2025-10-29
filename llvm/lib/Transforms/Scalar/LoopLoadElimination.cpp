@@ -102,8 +102,10 @@ struct StoreToLoadForwardingCandidate {
                DL.getTypeSizeInBits(getLoadStoreType(Store)) &&
            "Should be a known dependence");
 
-    int64_t StrideLoad = getPtrStride(PSE, LoadType, LoadPtr, L, DT).value_or(0);
-    int64_t StrideStore = getPtrStride(PSE, LoadType, StorePtr, L, DT).value_or(0);
+    int64_t StrideLoad =
+        getPtrStride(PSE, LoadType, LoadPtr, L, DT).value_or(0);
+    int64_t StrideStore =
+        getPtrStride(PSE, LoadType, StorePtr, L, DT).value_or(0);
     if (!StrideLoad || !StrideStore || StrideLoad != StrideStore)
       return false;
 
