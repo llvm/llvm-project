@@ -290,6 +290,7 @@ jobs:
         find /c/vcpkg/ -iname '*.cmake'
         find /c/vcpkg/ -iname '*cmake*'
         cat /c/vcpkg/packages/libxml2_x64-windows-static/share/libxml2/libxml2-config.cmake
+        cat "/c/Program Files/CMake/share/cmake-3.31/Modules/FindLibXml2.cmake"
 
     - name: Configure
       id: build
