@@ -1806,7 +1806,7 @@ def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v4i32>;
 def : SHA3_pattern<EOR3, int_aarch64_crypto_eor3u, v2i64>;
 
 multiclass EOR3_pattern<ValueType Vec128Ty, ValueType Vec64Ty>{
-  def: Pat<(xor (xor (Vec128Ty V128:$Vn), (Vec128Ty V128:$Vm)), (Vec128Ty V128:$Va)),
+  def : Pat<(xor (xor (Vec128Ty V128:$Vn), (Vec128Ty V128:$Vm)), (Vec128Ty V128:$Va)),
         (EOR3 (Vec128Ty V128:$Vn), (Vec128Ty V128:$Vm), (Vec128Ty V128:$Va))>;
   def : Pat<(xor (xor (Vec64Ty V64:$Vn), (Vec64Ty V64:$Vm)), (Vec64Ty V64:$Va)),
             (EXTRACT_SUBREG
