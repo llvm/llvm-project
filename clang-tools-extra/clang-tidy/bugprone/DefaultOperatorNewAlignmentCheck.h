@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_DEFAULTOPERATORNEWALIGNMENTCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_DEFAULTOPERATORNEWALIGNMENTCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTOPERATORNEWALIGNMENTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTOPERATORNEWALIGNMENTCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 /// Checks if an object of type with extended alignment is allocated by using
 /// the default operator new.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/cert/mem57-cpp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/default-operator-new-alignment.html
 class DefaultOperatorNewAlignmentCheck : public ClangTidyCheck {
 public:
   DefaultOperatorNewAlignmentCheck(StringRef Name, ClangTidyContext *Context)
@@ -29,6 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_DEFAULTOPERATORNEWALIGNMENTCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_DEFAULTOPERATORNEWALIGNMENTCHECK_H
