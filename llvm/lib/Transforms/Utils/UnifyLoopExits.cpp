@@ -180,8 +180,8 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
         if (L->contains(Succ))
           continue;
         bool UpdatedLI = false;
-        BasicBlock *NewSucc = ControlFlowHub::createCallBrTarget(
-            CallBr, Succ, J, nullptr, &DTU, &LI, &UpdatedLI);
+        BasicBlock *NewSucc =
+            SplitCallBrEdge(BB, Succ, J, &DTU, nullptr, &LI, &UpdatedLI);
         // Even if CallBr and Succ do not have a common parent loop, we need to
         // add the new target block to the parent loop of the current loop.
         if (!UpdatedLI)
