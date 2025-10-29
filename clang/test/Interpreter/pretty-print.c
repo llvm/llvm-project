@@ -78,14 +78,16 @@ int * null_ptr = (int*)0; null_ptr
 union U { int I; float F; } u; u.I = 12; u.I
 // CHECK-NEXT: (int) 12
 
-// TODO: _Bool, _Complex, _Atomic, and _BitInt
-// struct S1{} s1; s1
-// TODO-CHECK-NEXT: (S1 &) @0x{{[0-9a-f]+}}
+struct S1{} s1; s1
+// CHECK-NEXT: (S1 &) @0x{{[0-9a-f]+}}
 
-// struct S2 {int d;} E = {22}; E
-// TODO-CHECK-NEXT: (struct S2 &) @0x{{[0-9a-f]+}}
-// E.d
-// TODO-CHECK-NEXT: (int) 22
+struct S2 {int d;} E = {22}; E
+// CHECK-NEXT: (S2 &) @0x{{[0-9a-f]+}}
+
+E.d
+// CHECK-NEXT: (int) 22
+
+// TODO: _Bool, _Complex, _Atomic, and _BitInt
 
 // -----------------------------------------------------------------------------
 // Tentative definition handling (C99 6.9.2)
