@@ -146,22 +146,26 @@ protected:
 
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
-                                      Attr *Semantic,
+                                      HLSLSemanticBaseAttr *Semantic,
                                       std::optional<unsigned> Index);
 
   llvm::Value *handleScalarSemanticLoad(llvm::IRBuilder<> &B,
                                         const FunctionDecl *FD,
                                         llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl);
+                                        const clang::DeclaratorDecl *Decl,
+                                        HLSLAppliedSemanticAttr *Semantic);
 
-  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B,
-                                        const FunctionDecl *FD,
-                                        llvm::Type *Type,
-                                        const clang::DeclaratorDecl *Decl);
+  llvm::Value *handleStructSemanticLoad(
+      llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+      const clang::DeclaratorDecl *Decl,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> &begin,
+      specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
-  llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
-                                  llvm::Type *Type,
-                                  const clang::DeclaratorDecl *Decl);
+  llvm::Value *
+  handleSemanticLoad(llvm::IRBuilder<> &B, const FunctionDecl *FD,
+                     llvm::Type *Type, const clang::DeclaratorDecl *Decl,
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> &begin,
+                     specific_attr_iterator<HLSLAppliedSemanticAttr> end);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
@@ -205,14 +209,14 @@ private:
                                    HLSLResourceBindingAttr *RBA);
 
   llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                         HLSLSemanticAttr *Semantic,
+                                         HLSLAppliedSemanticAttr *Semantic,
                                          std::optional<unsigned> Index);
   llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
-                                        HLSLSemanticAttr *Semantic,
+                                        HLSLAppliedSemanticAttr *Semantic,
                                         std::optional<unsigned> Index);
   llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                     const clang::DeclaratorDecl *Decl,
-                                    HLSLSemanticAttr *Semantic,
+                                    HLSLAppliedSemanticAttr *Semantic,
                                     std::optional<unsigned> Index);
 
   llvm::Triple::ArchType getArch();
