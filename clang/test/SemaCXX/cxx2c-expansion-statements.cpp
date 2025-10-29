@@ -843,14 +843,13 @@ static_assert(unexpanded_pack_good(E{1, 2}, E{3, 4}) == 62);
 // a DecompositionDecl w/ zero bindings.
 constexpr bool empty_side_effect() {
   struct A {
-    bool& b;
-    constexpr A(bool& b) : b{b} {
+    constexpr A(bool& b) {
       b = true;
     }
   };
 
   bool constructed = false;
-  template for (auto x : A(constructed)) {}
+  template for (auto x : A(constructed)) static_assert(false);
   return constructed;
 }
 
