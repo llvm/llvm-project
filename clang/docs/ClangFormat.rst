@@ -93,6 +93,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --output-replacements-xml      - Output replacements as XML.
     --qualifier-alignment=<string> - If set, overrides the qualifier alignment style
                                      determined by the QualifierAlignment style flag
+    -r                             - Recursively format files in any specified directories
     --sort-includes                - If set, overrides the include sorting behavior
                                      determined by the SortIncludes style flag
     --style=<string>               - Set coding style. <string> can be:

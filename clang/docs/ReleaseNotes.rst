@@ -613,6 +613,7 @@ clang-format
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
 - Add ``AllowBreakBeforeQtProperty`` option.
+- Add ``-r`` option for recursing into specified directories when formatting.
 
 libclang
 --------

@@ -1,0 +1,21 @@
+RUN: rm -rf %t && mkdir %t
+RUN: split-file %s %t
+
+RUN: clang-format -i -r --verbose %t 2>&1 | FileCheck %s -DDIR=%t -DSEP=%{fs-sep}
+
+CHECK: Formatting [1/4] [[DIR]][[SEP]]1.cpp
+CHECK: Formatting [2/4] [[DIR]][[SEP]]2[[SEP]]3.cpp
+CHECK: Formatting [3/4] [[DIR]][[SEP]]2[[SEP]]4[[SEP]]5.cpp
+CHECK: Formatting [4/4] [[DIR]][[SEP]]2[[SEP]]6.cpp
+
+#--- 1.cpp
+int x;
+
+#--- 2/3.cpp
+int x;
+
+#--- 2/4/5.cpp
+int x;
+
+#--- 2/6.cpp
+int x;

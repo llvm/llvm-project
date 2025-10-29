@@ -132,6 +132,11 @@ static cl::opt<std::string> Files(
     cl::value_desc("filename"), cl::init(""), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool>
+    Recursive("r",
+              cl::desc("Recursively format files in any specified directories"),
+              cl::cat(ClangFormatCategory));
+
+static cl::opt<bool>
     Verbose("verbose", cl::desc("If set, shows the list of processed files"),
             cl::cat(ClangFormatCategory));
 
@@ -698,6 +703,31 @@ int main(int argc, const char **argv) {
       LineNo++;
     }
     errs() << "Clang-formatting " << LineNo << " files\n";
+  }
+
+  if (Recursive) {
+    SmallVector<std::string> ExpandedNames;
+    for (const std::string &Path : FileNames) {
+      if (sys::fs::is_directory(Path)) {
+        std::error_code ErrorCode;
+        for (sys::fs::recursive_directory_iterator I(Path, ErrorCode), E;
+             I != E && !ErrorCode; I.increment(ErrorCode)) {
+          bool Result = false;
+          ErrorCode = sys::fs::is_regular_file(I->path(), Result);
+          // Conservatively assume that any unopenable entries are also regular
+          // files. Later code will emit an error when trying to format them, if
+          // they aren't valid by then.
+          if (ErrorCode || Result)
+            ExpandedNames.push_back(I->path());
+        }
+      } else {
+        ExpandedNames.push_back(std::move(Path));
+      }
+    }
+
+    FileNames.clear();
+    for (const std::string &Name : ExpandedNames)
+      FileNames.push_back(Name);
   }
 
   if (FileNames.empty()) {
