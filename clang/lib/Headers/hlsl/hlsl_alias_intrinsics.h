@@ -2502,6 +2502,9 @@ __attribute__((convergent)) double4 WaveReadLaneAt(double4, uint32_t);
 // WaveActiveBitOr builtins
 //===----------------------------------------------------------------------===//
 
+// \brief Returns the value of the expression for the given lane index within
+// the specified wave.
+
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_bit_or)
 __attribute__((convergent)) uint WaveActiveBitOr(uint);

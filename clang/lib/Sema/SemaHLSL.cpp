@@ -3215,22 +3215,22 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
-    // Ensure input expr type is a scalar/vector and the same as the return type
-    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
-      return true;
     if (CheckWaveActive(&SemaRef, TheCall))
       return true;
 
-    // Ensure expression parameter type can be interpreted as a uint
+    // Ensure the expr type is interpretable as a uint or vector<uint>
     ExprResult Expr = TheCall->getArg(0);
     QualType ArgTyExpr = Expr.get()->getType();
-    if (!ArgTyExpr->isIntegerType()) {
+    auto *VTy = ArgTyExpr->getAs<VectorType>();
+    if (!(ArgTyExpr->isIntegerType() ||
+         (VTy && VTy->getElementType()->isIntegerType()))) {
       SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                   diag::err_typecheck_convert_incompatible)
+                   diag::err_builtin_invalid_arg_type)
           << ArgTyExpr << SemaRef.Context.UnsignedIntTy << 1 << 0 << 0;
       return true;
     }
 
+    // Ensure input expr type is the same as the return type
     TheCall->setType(ArgTyExpr);
     break;
   }

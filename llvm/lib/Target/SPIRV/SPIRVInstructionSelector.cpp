@@ -2015,8 +2015,7 @@ bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
   Register InputRegister = I.getOperand(2).getReg();
   SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
 
-  if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
+  assert(InputType && "VReg has no type assigned");
 
   bool IsBoolTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool);
   bool IsVectorTy = InputType->getOpcode() == SPIRV::OpTypeVector;
