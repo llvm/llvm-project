@@ -1100,6 +1100,10 @@ def FeatureStdExtP
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
                                     "'Base P' (Packed SIMD)">;
+def FeatureEnablePExtCodeGen
+    : SubtargetFeature<"enable-p-ext-codegen", "EnablePExtCodeGen",
+                       "true", "Turn on P Extension codegen(This is a temporary"
+                       " switch where only partial codegen is currently supported)">;
 
 def HasStdExtZbaOrP
     : Predicate<"Subtarget->hasStdExtZba() || Subtarget->hasStdExtP()">,
