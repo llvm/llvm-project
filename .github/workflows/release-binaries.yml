@@ -178,7 +178,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
           # libxml2 config
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON -DBOOTSTRAP_BOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LibXml2_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/share/libxml2/ -DBOOTSTRAP_BOOTSTRAP_LibXml2_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/share/libxml2/"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
@@ -315,7 +314,6 @@ jobs:
         cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -DLLVM_ENABLE_LIBXML2=FORCE_ON \
-            -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
@@ -331,6 +329,11 @@ jobs:
 
     - name: Build
       shell: bash
+      env:
+        # Set this variable so that stage2-instrumented and stage2 configuration
+        # steps can find libxml2.  This only is used on Windows and setting
+        # this variable should have no affect on other OSes.
+        LIBXML2_ROOT: /c/vcpkg/packages/libxml2_x64-windows-static/
       run: |
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
