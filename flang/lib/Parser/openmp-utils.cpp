@@ -74,4 +74,16 @@ const BlockConstruct *GetFortranBlockConstruct(
   return nullptr;
 }
 
+const OmpCombinerExpression *GetCombinerExpr(
+    const OmpReductionSpecifier &rspec) {
+  return addr_if(std::get<std::optional<OmpCombinerExpression>>(rspec.t));
+}
+
+const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init) {
+  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&init.u)}) {
+    return &wrapped->v.v;
+  }
+  return nullptr;
+}
+
 } // namespace Fortran::parser::omp

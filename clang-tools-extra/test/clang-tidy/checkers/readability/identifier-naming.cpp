@@ -86,7 +86,9 @@
 // RUN:     readability-identifier-naming.LocalPointerPrefix: 'l_', \
 // RUN:     readability-identifier-naming.LocalConstantPointerCase: CamelCase, \
 // RUN:     readability-identifier-naming.LocalConstantPointerPrefix: 'lc_', \
-// RUN:   }}' -- -fno-delayed-template-parsing -Dbad_macro \
+// RUN:   }}' \
+// RUN:   -header-filter='' \
+// RUN:   -- -fno-delayed-template-parsing -Dbad_macro \
 // RUN:   -I%S/Inputs/identifier-naming \
 // RUN:   -isystem %S/Inputs/identifier-naming/system
 
@@ -95,8 +97,7 @@
 #include <system-header.h>
 #include <coroutines.h>
 #include "user-header.h"
-// NO warnings or fixes expected from declarations within header files without
-// the -header-filter= option
+// NO warnings or fixes expected from declarations with the -header-filter='' option
 
 namespace FOO_NS {
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for namespace 'FOO_NS' [readability-identifier-naming]

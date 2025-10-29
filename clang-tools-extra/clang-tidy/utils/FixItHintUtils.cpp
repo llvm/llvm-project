@@ -21,6 +21,11 @@ FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
   auto Token = utils::lexer::getPreviousToken(
       AmpLocation, Context.getSourceManager(), Context.getLangOpts());
+
+  // For parameter packs the '&' must go before the '...' token
+  if (Token.is(tok::ellipsis))
+    return FixItHint::CreateInsertion(Token.getLocation(), "&");
+
   if (!Token.is(tok::unknown))
     AmpLocation = Lexer::getLocForEndOfToken(Token.getLocation(), 0,
                                              Context.getSourceManager(),

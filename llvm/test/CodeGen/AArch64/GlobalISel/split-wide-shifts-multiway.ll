@@ -4992,28 +4992,21 @@ define void @test_shl_i512_const_32(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_32:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #32
-; GISEL-NEXT:    lsr x13, x9, #32
-; GISEL-NEXT:    lsl x8, x8, #32
-; GISEL-NEXT:    orr x9, x10, x9, lsl #32
-; GISEL-NEXT:    lsr x10, x11, #32
-; GISEL-NEXT:    orr x11, x13, x11, lsl #32
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #32
-; GISEL-NEXT:    orr x10, x10, x12, lsl #32
-; GISEL-NEXT:    lsr x12, x14, #32
-; GISEL-NEXT:    lsr x9, x15, #32
-; GISEL-NEXT:    orr x8, x8, x14, lsl #32
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #32
-; GISEL-NEXT:    lsr x12, x13, #32
-; GISEL-NEXT:    orr x9, x9, x13, lsl #32
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #32
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #32
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #32
+; GISEL-NEXT:    extr x10, x15, x14, #32
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5044,30 +5037,22 @@ define void @test_lshr_i512_const_32(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_32:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x13, x9, #32
-; GISEL-NEXT:    lsl x15, x10, #32
-; GISEL-NEXT:    orr x11, x12, x11, lsr #32
-; GISEL-NEXT:    orr x8, x13, x8, lsr #32
-; GISEL-NEXT:    lsl x13, x14, #32
-; GISEL-NEXT:    orr x9, x15, x9, lsr #32
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #32
-; GISEL-NEXT:    lsl x8, x16, #32
-; GISEL-NEXT:    lsl x11, x12, #32
-; GISEL-NEXT:    lsl x13, x15, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #32
-; GISEL-NEXT:    lsr x10, x16, #32
-; GISEL-NEXT:    orr x11, x11, x14, lsr #32
-; GISEL-NEXT:    orr x9, x13, x12, lsr #32
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #32
+; GISEL-NEXT:    extr x9, x13, x12, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #32
+; GISEL-NEXT:    extr x8, x15, x14, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #32
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5098,32 +5083,24 @@ define void @test_ashr_i512_const_32(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_32:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x15, x9, #32
-; GISEL-NEXT:    lsl x16, x10, #32
-; GISEL-NEXT:    orr x11, x12, x11, lsr #32
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x8, x15, x8, lsr #32
-; GISEL-NEXT:    lsl x15, x13, #32
-; GISEL-NEXT:    orr x9, x16, x9, lsr #32
-; GISEL-NEXT:    asr x16, x17, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x14, #32
-; GISEL-NEXT:    orr x10, x15, x10, lsr #32
-; GISEL-NEXT:    lsl x15, x12, #32
-; GISEL-NEXT:    orr x8, x11, x13, lsr #32
-; GISEL-NEXT:    lsl x11, x17, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x15, x14, lsr #32
-; GISEL-NEXT:    lsl x13, x16, #32
-; GISEL-NEXT:    orr x10, x11, x12, lsr #32
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    orr x8, x13, x17, asr #32
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    ldp x14, x15, [x1, #32]
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    asr x8, x13, #63
+; GISEL-NEXT:    extr x11, x14, x11, #32
+; GISEL-NEXT:    extr x9, x15, x14, #32
+; GISEL-NEXT:    lsl x8, x8, #32
+; GISEL-NEXT:    stp x10, x11, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x15, #32
+; GISEL-NEXT:    extr x11, x13, x12, #32
+; GISEL-NEXT:    orr x8, x8, x13, asr #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x11, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5252,23 +5229,17 @@ define void @test_shl_i512_const_96(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #32
-; GISEL-NEXT:    lsr x16, x9, #32
-; GISEL-NEXT:    lsl x8, x8, #32
-; GISEL-NEXT:    orr x9, x14, x9, lsl #32
-; GISEL-NEXT:    lsr x14, x10, #32
-; GISEL-NEXT:    orr x10, x16, x10, lsl #32
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #32
-; GISEL-NEXT:    orr x11, x14, x11, lsl #32
-; GISEL-NEXT:    lsr x14, x12, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #32
-; GISEL-NEXT:    orr x8, x8, x12, lsl #32
-; GISEL-NEXT:    orr x10, x14, x13, lsl #32
-; GISEL-NEXT:    orr x9, x9, x15, lsl #32
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #32
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #32
+; GISEL-NEXT:    extr x9, x13, x12, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5297,27 +5268,21 @@ define void @test_lshr_i512_const_96(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_96:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x13, x9, #32
-; GISEL-NEXT:    orr x10, x12, x10, lsr #32
-; GISEL-NEXT:    lsl x12, x11, #32
-; GISEL-NEXT:    orr x8, x13, x8, lsr #32
-; GISEL-NEXT:    lsl x13, x14, #32
-; GISEL-NEXT:    orr x9, x12, x9, lsr #32
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #32
-; GISEL-NEXT:    orr x11, x13, x11, lsr #32
-; GISEL-NEXT:    lsl x12, x16, #32
-; GISEL-NEXT:    orr x8, x10, x14, lsr #32
-; GISEL-NEXT:    lsr x10, x16, #32
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #32
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #32
+; GISEL-NEXT:    extr x9, x13, x12, #32
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #32
+; GISEL-NEXT:    lsr x8, x14, #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5347,29 +5312,23 @@ define void @test_ashr_i512_const_96(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_96:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x11, [x1, #8]
-; GISEL-NEXT:    ldp x10, x13, [x1, #32]
-; GISEL-NEXT:    lsl x12, x8, #32
-; GISEL-NEXT:    lsl x14, x9, #32
-; GISEL-NEXT:    lsl x15, x10, #32
-; GISEL-NEXT:    orr x11, x12, x11, lsr #32
-; GISEL-NEXT:    ldp x12, x16, [x1, #48]
-; GISEL-NEXT:    orr x8, x14, x8, lsr #32
-; GISEL-NEXT:    lsl x14, x13, #32
-; GISEL-NEXT:    orr x9, x15, x9, lsr #32
-; GISEL-NEXT:    asr x15, x16, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x12, #32
-; GISEL-NEXT:    orr x10, x14, x10, lsr #32
-; GISEL-NEXT:    lsl x14, x16, #32
-; GISEL-NEXT:    orr x8, x11, x13, lsr #32
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x13, [x1, #40]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x14, x12, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #32
+; GISEL-NEXT:    extr x9, x10, x9, #32
+; GISEL-NEXT:    extr x10, x11, x10, #32
+; GISEL-NEXT:    asr x15, x12, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #32
+; GISEL-NEXT:    extr x9, x14, x13, #32
 ; GISEL-NEXT:    lsl x11, x15, #32
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x14, x12, lsr #32
-; GISEL-NEXT:    orr x10, x11, x16, asr #32
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x15, [x0, #48]
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x14, #32
+; GISEL-NEXT:    orr x8, x11, x12, asr #32
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x15, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5404,28 +5363,21 @@ define void @test_shl_i512_const_1(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_1:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #63
-; GISEL-NEXT:    lsr x13, x9, #63
-; GISEL-NEXT:    lsl x8, x8, #1
-; GISEL-NEXT:    orr x9, x10, x9, lsl #1
-; GISEL-NEXT:    lsr x10, x11, #63
-; GISEL-NEXT:    orr x11, x13, x11, lsl #1
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #63
-; GISEL-NEXT:    orr x10, x10, x12, lsl #1
-; GISEL-NEXT:    lsr x12, x14, #63
-; GISEL-NEXT:    lsr x9, x15, #63
-; GISEL-NEXT:    orr x8, x8, x14, lsl #1
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #1
-; GISEL-NEXT:    lsr x12, x13, #63
-; GISEL-NEXT:    orr x9, x9, x13, lsl #1
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #1
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #1
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #63
+; GISEL-NEXT:    extr x10, x15, x14, #63
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5457,30 +5409,22 @@ define void @test_lshr_i512_const_1(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_1:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x13, x9, #63
-; GISEL-NEXT:    lsl x15, x10, #63
-; GISEL-NEXT:    orr x11, x12, x11, lsr #1
-; GISEL-NEXT:    orr x8, x13, x8, lsr #1
-; GISEL-NEXT:    lsl x13, x14, #63
-; GISEL-NEXT:    orr x9, x15, x9, lsr #1
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #1
-; GISEL-NEXT:    lsl x8, x16, #63
-; GISEL-NEXT:    lsl x11, x12, #63
-; GISEL-NEXT:    lsl x13, x15, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #1
-; GISEL-NEXT:    lsr x10, x16, #1
-; GISEL-NEXT:    orr x11, x11, x14, lsr #1
-; GISEL-NEXT:    orr x9, x13, x12, lsr #1
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #1
+; GISEL-NEXT:    extr x9, x13, x12, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #1
+; GISEL-NEXT:    extr x8, x15, x14, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #1
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5512,32 +5456,24 @@ define void @test_ashr_i512_const_1(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_1:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x15, x9, #63
-; GISEL-NEXT:    lsl x16, x10, #63
-; GISEL-NEXT:    orr x11, x12, x11, lsr #1
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x8, x15, x8, lsr #1
-; GISEL-NEXT:    lsl x15, x13, #63
-; GISEL-NEXT:    orr x9, x16, x9, lsr #1
-; GISEL-NEXT:    asr x16, x17, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x14, #63
-; GISEL-NEXT:    orr x10, x15, x10, lsr #1
-; GISEL-NEXT:    lsl x15, x12, #63
-; GISEL-NEXT:    orr x8, x11, x13, lsr #1
-; GISEL-NEXT:    lsl x11, x17, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x15, x14, lsr #1
-; GISEL-NEXT:    lsl x13, x16, #63
-; GISEL-NEXT:    orr x10, x11, x12, lsr #1
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    orr x8, x13, x17, asr #1
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    ldp x14, x15, [x1, #32]
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    asr x8, x13, #63
+; GISEL-NEXT:    extr x11, x14, x11, #1
+; GISEL-NEXT:    extr x9, x15, x14, #1
+; GISEL-NEXT:    lsl x8, x8, #63
+; GISEL-NEXT:    stp x10, x11, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x15, #1
+; GISEL-NEXT:    extr x11, x13, x12, #1
+; GISEL-NEXT:    orr x8, x8, x13, asr #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x11, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5571,28 +5507,21 @@ define void @test_shl_i512_const_15(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_15:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #49
-; GISEL-NEXT:    lsr x13, x9, #49
-; GISEL-NEXT:    lsl x8, x8, #15
-; GISEL-NEXT:    orr x9, x10, x9, lsl #15
-; GISEL-NEXT:    lsr x10, x11, #49
-; GISEL-NEXT:    orr x11, x13, x11, lsl #15
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #49
-; GISEL-NEXT:    orr x10, x10, x12, lsl #15
-; GISEL-NEXT:    lsr x12, x14, #49
-; GISEL-NEXT:    lsr x9, x15, #49
-; GISEL-NEXT:    orr x8, x8, x14, lsl #15
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #15
-; GISEL-NEXT:    lsr x12, x13, #49
-; GISEL-NEXT:    orr x9, x9, x13, lsl #15
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #15
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #15
+; GISEL-NEXT:    extr x8, x9, x8, #49
+; GISEL-NEXT:    extr x9, x10, x9, #49
+; GISEL-NEXT:    extr x10, x11, x10, #49
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #49
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #49
+; GISEL-NEXT:    extr x10, x15, x14, #49
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #49
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5624,30 +5553,22 @@ define void @test_lshr_i512_const_15(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_15:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #49
-; GISEL-NEXT:    lsl x13, x9, #49
-; GISEL-NEXT:    lsl x15, x10, #49
-; GISEL-NEXT:    orr x11, x12, x11, lsr #15
-; GISEL-NEXT:    orr x8, x13, x8, lsr #15
-; GISEL-NEXT:    lsl x13, x14, #49
-; GISEL-NEXT:    orr x9, x15, x9, lsr #15
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #15
-; GISEL-NEXT:    lsl x8, x16, #49
-; GISEL-NEXT:    lsl x11, x12, #49
-; GISEL-NEXT:    lsl x13, x15, #49
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #15
-; GISEL-NEXT:    lsr x10, x16, #15
-; GISEL-NEXT:    orr x11, x11, x14, lsr #15
-; GISEL-NEXT:    orr x9, x13, x12, lsr #15
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #15
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #15
+; GISEL-NEXT:    extr x10, x11, x10, #15
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #15
+; GISEL-NEXT:    extr x9, x13, x12, #15
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #15
+; GISEL-NEXT:    extr x8, x15, x14, #15
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #15
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5679,32 +5600,24 @@ define void @test_ashr_i512_const_15(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_15:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #49
-; GISEL-NEXT:    lsl x15, x9, #49
-; GISEL-NEXT:    lsl x16, x10, #49
-; GISEL-NEXT:    orr x11, x12, x11, lsr #15
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x8, x15, x8, lsr #15
-; GISEL-NEXT:    lsl x15, x13, #49
-; GISEL-NEXT:    orr x9, x16, x9, lsr #15
-; GISEL-NEXT:    asr x16, x17, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x14, #49
-; GISEL-NEXT:    orr x10, x15, x10, lsr #15
-; GISEL-NEXT:    lsl x15, x12, #49
-; GISEL-NEXT:    orr x8, x11, x13, lsr #15
-; GISEL-NEXT:    lsl x11, x17, #49
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x15, x14, lsr #15
-; GISEL-NEXT:    lsl x13, x16, #49
-; GISEL-NEXT:    orr x10, x11, x12, lsr #15
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    orr x8, x13, x17, asr #15
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #15
+; GISEL-NEXT:    ldp x14, x15, [x1, #32]
+; GISEL-NEXT:    extr x9, x10, x9, #15
+; GISEL-NEXT:    extr x10, x11, x10, #15
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    asr x8, x13, #63
+; GISEL-NEXT:    extr x11, x14, x11, #15
+; GISEL-NEXT:    extr x9, x15, x14, #15
+; GISEL-NEXT:    lsl x8, x8, #49
+; GISEL-NEXT:    stp x10, x11, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x15, #15
+; GISEL-NEXT:    extr x11, x13, x12, #15
+; GISEL-NEXT:    orr x8, x8, x13, asr #15
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x11, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5738,28 +5651,21 @@ define void @test_shl_i512_const_63(ptr %result, ptr %input) {
 ; GISEL-LABEL: test_shl_i512_const_63:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    ldp x8, x9, [x1]
-; GISEL-NEXT:    ldp x11, x12, [x1, #16]
-; GISEL-NEXT:    ldp x14, x15, [x1, #32]
-; GISEL-NEXT:    lsr x10, x8, #1
-; GISEL-NEXT:    lsr x13, x9, #1
-; GISEL-NEXT:    lsl x8, x8, #63
-; GISEL-NEXT:    orr x9, x10, x9, lsl #63
-; GISEL-NEXT:    lsr x10, x11, #1
-; GISEL-NEXT:    orr x11, x13, x11, lsl #63
-; GISEL-NEXT:    ldp x13, x16, [x1, #48]
-; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    lsr x8, x12, #1
-; GISEL-NEXT:    orr x10, x10, x12, lsl #63
-; GISEL-NEXT:    lsr x12, x14, #1
-; GISEL-NEXT:    lsr x9, x15, #1
-; GISEL-NEXT:    orr x8, x8, x14, lsl #63
-; GISEL-NEXT:    stp x11, x10, [x0, #16]
-; GISEL-NEXT:    orr x11, x12, x15, lsl #63
-; GISEL-NEXT:    lsr x12, x13, #1
-; GISEL-NEXT:    orr x9, x9, x13, lsl #63
-; GISEL-NEXT:    stp x8, x11, [x0, #32]
-; GISEL-NEXT:    orr x8, x12, x16, lsl #63
-; GISEL-NEXT:    stp x9, x8, [x0, #48]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x13, x14, [x1, #32]
+; GISEL-NEXT:    lsl x12, x8, #63
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    ldp x15, x16, [x1, #48]
+; GISEL-NEXT:    stp x12, x8, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #16]
+; GISEL-NEXT:    extr x9, x14, x13, #1
+; GISEL-NEXT:    extr x10, x15, x14, #1
+; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    extr x8, x16, x15, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5791,30 +5697,22 @@ define void @test_lshr_i512_const_63(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_63:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x11, [x1]
-; GISEL-NEXT:    ldp x10, x14, [x1, #24]
-; GISEL-NEXT:    ldr x16, [x1, #56]
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x13, x9, #1
-; GISEL-NEXT:    lsl x15, x10, #1
-; GISEL-NEXT:    orr x11, x12, x11, lsr #63
-; GISEL-NEXT:    orr x8, x13, x8, lsr #63
-; GISEL-NEXT:    lsl x13, x14, #1
-; GISEL-NEXT:    orr x9, x15, x9, lsr #63
-; GISEL-NEXT:    ldp x12, x15, [x1, #40]
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    orr x10, x13, x10, lsr #63
-; GISEL-NEXT:    lsl x8, x16, #1
-; GISEL-NEXT:    lsl x11, x12, #1
-; GISEL-NEXT:    lsl x13, x15, #1
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x8, x8, x15, lsr #63
-; GISEL-NEXT:    lsr x10, x16, #63
-; GISEL-NEXT:    orr x11, x11, x14, lsr #63
-; GISEL-NEXT:    orr x9, x13, x12, lsr #63
-; GISEL-NEXT:    stp x8, x10, [x0, #48]
-; GISEL-NEXT:    stp x11, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #63
+; GISEL-NEXT:    extr x8, x15, x14, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    lsr x9, x15, #63
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5846,30 +5744,22 @@ define void @test_ashr_i512_const_63(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_63:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #8]
-; GISEL-NEXT:    ldr x10, [x1]
-; GISEL-NEXT:    ldp x11, x13, [x1, #24]
-; GISEL-NEXT:    ldr x17, [x1, #56]
-; GISEL-NEXT:    lsl x15, x9, #1
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x16, x11, #1
-; GISEL-NEXT:    orr x8, x15, x8, lsr #63
-; GISEL-NEXT:    lsl x15, x13, #1
-; GISEL-NEXT:    orr x10, x12, x10, lsr #63
-; GISEL-NEXT:    ldp x14, x12, [x1, #40]
-; GISEL-NEXT:    orr x9, x16, x9, lsr #63
-; GISEL-NEXT:    orr x11, x15, x11, lsr #63
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x8, x17, #1
-; GISEL-NEXT:    lsl x16, x14, #1
-; GISEL-NEXT:    lsl x10, x12, #1
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    asr x9, x17, #63
-; GISEL-NEXT:    orr x8, x8, x12, lsr #63
-; GISEL-NEXT:    orr x13, x16, x13, lsr #63
-; GISEL-NEXT:    orr x10, x10, x14, lsr #63
-; GISEL-NEXT:    orr x9, x9, x9, lsl #1
-; GISEL-NEXT:    stp x13, x10, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1]
+; GISEL-NEXT:    ldp x10, x11, [x1, #16]
+; GISEL-NEXT:    ldp x12, x13, [x1, #32]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    ldp x14, x15, [x1, #48]
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    extr x11, x14, x13, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    asr x10, x15, #63
+; GISEL-NEXT:    extr x8, x15, x14, #63
+; GISEL-NEXT:    stp x9, x11, [x0, #32]
+; GISEL-NEXT:    orr x9, x10, x10, lsl #1
 ; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
@@ -5906,23 +5796,17 @@ define void @test_shl_i512_const_65(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #63
-; GISEL-NEXT:    lsr x16, x9, #63
-; GISEL-NEXT:    lsl x8, x8, #1
-; GISEL-NEXT:    orr x9, x14, x9, lsl #1
-; GISEL-NEXT:    lsr x14, x10, #63
-; GISEL-NEXT:    orr x10, x16, x10, lsl #1
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #63
-; GISEL-NEXT:    orr x11, x14, x11, lsl #1
-; GISEL-NEXT:    lsr x14, x12, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #63
-; GISEL-NEXT:    orr x8, x8, x12, lsl #1
-; GISEL-NEXT:    orr x10, x14, x13, lsl #1
-; GISEL-NEXT:    orr x9, x9, x15, lsl #1
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #1
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -5953,27 +5837,21 @@ define void @test_lshr_i512_const_65(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_65:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x13, x9, #63
-; GISEL-NEXT:    orr x10, x12, x10, lsr #1
-; GISEL-NEXT:    lsl x12, x11, #63
-; GISEL-NEXT:    orr x8, x13, x8, lsr #1
-; GISEL-NEXT:    lsl x13, x14, #63
-; GISEL-NEXT:    orr x9, x12, x9, lsr #1
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #63
-; GISEL-NEXT:    orr x11, x13, x11, lsr #1
-; GISEL-NEXT:    lsl x12, x16, #63
-; GISEL-NEXT:    orr x8, x10, x14, lsr #1
-; GISEL-NEXT:    lsr x10, x16, #1
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #1
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #1
+; GISEL-NEXT:    extr x9, x13, x12, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #1
+; GISEL-NEXT:    lsr x8, x14, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6005,29 +5883,23 @@ define void @test_ashr_i512_const_65(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_65:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x11, [x1, #8]
-; GISEL-NEXT:    ldp x10, x13, [x1, #32]
-; GISEL-NEXT:    lsl x12, x8, #63
-; GISEL-NEXT:    lsl x14, x9, #63
-; GISEL-NEXT:    lsl x15, x10, #63
-; GISEL-NEXT:    orr x11, x12, x11, lsr #1
-; GISEL-NEXT:    ldp x12, x16, [x1, #48]
-; GISEL-NEXT:    orr x8, x14, x8, lsr #1
-; GISEL-NEXT:    lsl x14, x13, #63
-; GISEL-NEXT:    orr x9, x15, x9, lsr #1
-; GISEL-NEXT:    asr x15, x16, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x12, #63
-; GISEL-NEXT:    orr x10, x14, x10, lsr #1
-; GISEL-NEXT:    lsl x14, x16, #63
-; GISEL-NEXT:    orr x8, x11, x13, lsr #1
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x13, [x1, #40]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x14, x12, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    asr x15, x12, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #1
+; GISEL-NEXT:    extr x9, x14, x13, #1
 ; GISEL-NEXT:    lsl x11, x15, #63
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x14, x12, lsr #1
-; GISEL-NEXT:    orr x10, x11, x16, asr #1
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x15, [x0, #48]
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x14, #1
+; GISEL-NEXT:    orr x8, x11, x12, asr #1
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x15, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6062,23 +5934,17 @@ define void @test_shl_i512_const_100(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #28
-; GISEL-NEXT:    lsr x16, x9, #28
-; GISEL-NEXT:    lsl x8, x8, #36
-; GISEL-NEXT:    orr x9, x14, x9, lsl #36
-; GISEL-NEXT:    lsr x14, x10, #28
-; GISEL-NEXT:    orr x10, x16, x10, lsl #36
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #28
-; GISEL-NEXT:    orr x11, x14, x11, lsl #36
-; GISEL-NEXT:    lsr x14, x12, #28
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #28
-; GISEL-NEXT:    orr x8, x8, x12, lsl #36
-; GISEL-NEXT:    orr x10, x14, x13, lsl #36
-; GISEL-NEXT:    orr x9, x9, x15, lsl #36
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #36
+; GISEL-NEXT:    extr x8, x9, x8, #28
+; GISEL-NEXT:    extr x9, x10, x9, #28
+; GISEL-NEXT:    extr x10, x11, x10, #28
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #28
+; GISEL-NEXT:    extr x9, x13, x12, #28
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #28
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6109,27 +5975,21 @@ define void @test_lshr_i512_const_100(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_100:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #28
-; GISEL-NEXT:    lsl x13, x9, #28
-; GISEL-NEXT:    orr x10, x12, x10, lsr #36
-; GISEL-NEXT:    lsl x12, x11, #28
-; GISEL-NEXT:    orr x8, x13, x8, lsr #36
-; GISEL-NEXT:    lsl x13, x14, #28
-; GISEL-NEXT:    orr x9, x12, x9, lsr #36
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #28
-; GISEL-NEXT:    orr x11, x13, x11, lsr #36
-; GISEL-NEXT:    lsl x12, x16, #28
-; GISEL-NEXT:    orr x8, x10, x14, lsr #36
-; GISEL-NEXT:    lsr x10, x16, #36
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #36
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #36
+; GISEL-NEXT:    extr x9, x10, x9, #36
+; GISEL-NEXT:    extr x10, x11, x10, #36
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #36
+; GISEL-NEXT:    extr x9, x13, x12, #36
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #36
+; GISEL-NEXT:    lsr x8, x14, #36
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6161,29 +6021,23 @@ define void @test_ashr_i512_const_100(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_100:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x11, [x1, #8]
-; GISEL-NEXT:    ldp x10, x13, [x1, #32]
-; GISEL-NEXT:    lsl x12, x8, #28
-; GISEL-NEXT:    lsl x14, x9, #28
-; GISEL-NEXT:    lsl x15, x10, #28
-; GISEL-NEXT:    orr x11, x12, x11, lsr #36
-; GISEL-NEXT:    ldp x12, x16, [x1, #48]
-; GISEL-NEXT:    orr x8, x14, x8, lsr #36
-; GISEL-NEXT:    lsl x14, x13, #28
-; GISEL-NEXT:    orr x9, x15, x9, lsr #36
-; GISEL-NEXT:    asr x15, x16, #63
-; GISEL-NEXT:    stp x11, x8, [x0]
-; GISEL-NEXT:    lsl x11, x12, #28
-; GISEL-NEXT:    orr x10, x14, x10, lsr #36
-; GISEL-NEXT:    lsl x14, x16, #28
-; GISEL-NEXT:    orr x8, x11, x13, lsr #36
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x13, [x1, #40]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x14, x12, [x1, #48]
+; GISEL-NEXT:    extr x8, x9, x8, #36
+; GISEL-NEXT:    extr x9, x10, x9, #36
+; GISEL-NEXT:    extr x10, x11, x10, #36
+; GISEL-NEXT:    asr x15, x12, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x13, x11, #36
+; GISEL-NEXT:    extr x9, x14, x13, #36
 ; GISEL-NEXT:    lsl x11, x15, #28
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    orr x9, x14, x12, lsr #36
-; GISEL-NEXT:    orr x10, x11, x16, asr #36
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x15, [x0, #48]
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x12, x14, #36
+; GISEL-NEXT:    orr x8, x11, x12, asr #36
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x15, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6219,23 +6073,17 @@ define void @test_shl_i512_const_127(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x15, [x1, #48]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #16]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #32]
-; GISEL-NEXT:    lsr x14, x8, #1
-; GISEL-NEXT:    lsr x16, x9, #1
-; GISEL-NEXT:    lsl x8, x8, #63
-; GISEL-NEXT:    orr x9, x14, x9, lsl #63
-; GISEL-NEXT:    lsr x14, x10, #1
-; GISEL-NEXT:    orr x10, x16, x10, lsl #63
-; GISEL-NEXT:    stp xzr, x8, [x0]
-; GISEL-NEXT:    lsr x8, x11, #1
-; GISEL-NEXT:    orr x11, x14, x11, lsl #63
-; GISEL-NEXT:    lsr x14, x12, #1
-; GISEL-NEXT:    stp x9, x10, [x0, #16]
-; GISEL-NEXT:    lsr x9, x13, #1
-; GISEL-NEXT:    orr x8, x8, x12, lsl #63
-; GISEL-NEXT:    orr x10, x14, x13, lsl #63
-; GISEL-NEXT:    orr x9, x9, x15, lsl #63
-; GISEL-NEXT:    stp x11, x8, [x0, #32]
-; GISEL-NEXT:    stp x10, x9, [x0, #48]
+; GISEL-NEXT:    lsl x14, x8, #63
+; GISEL-NEXT:    extr x8, x9, x8, #1
+; GISEL-NEXT:    extr x9, x10, x9, #1
+; GISEL-NEXT:    extr x10, x11, x10, #1
+; GISEL-NEXT:    stp xzr, x14, [x0]
+; GISEL-NEXT:    stp x8, x9, [x0, #16]
+; GISEL-NEXT:    extr x8, x12, x11, #1
+; GISEL-NEXT:    extr x9, x13, x12, #1
+; GISEL-NEXT:    stp x10, x8, [x0, #32]
+; GISEL-NEXT:    extr x10, x15, x13, #1
+; GISEL-NEXT:    stp x9, x10, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6266,27 +6114,21 @@ define void @test_lshr_i512_const_127(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_lshr_i512_const_127:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x13, x9, #1
-; GISEL-NEXT:    orr x10, x12, x10, lsr #63
-; GISEL-NEXT:    lsl x12, x11, #1
-; GISEL-NEXT:    orr x8, x13, x8, lsr #63
-; GISEL-NEXT:    lsl x13, x14, #1
-; GISEL-NEXT:    orr x9, x12, x9, lsr #63
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x15, #1
-; GISEL-NEXT:    orr x11, x13, x11, lsr #63
-; GISEL-NEXT:    lsl x12, x16, #1
-; GISEL-NEXT:    orr x8, x10, x14, lsr #63
-; GISEL-NEXT:    lsr x10, x16, #63
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x12, x15, lsr #63
-; GISEL-NEXT:    stp x10, xzr, [x0, #48]
-; GISEL-NEXT:    stp x8, x9, [x0, #32]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    extr x9, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #63
+; GISEL-NEXT:    lsr x8, x14, #63
+; GISEL-NEXT:    stp x9, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
@@ -6317,28 +6159,22 @@ define void @test_ashr_i512_const_127(ptr %result, ptr %input) {
 ;
 ; GISEL-LABEL: test_ashr_i512_const_127:
 ; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    ldp x8, x9, [x1, #16]
-; GISEL-NEXT:    ldr x10, [x1, #8]
-; GISEL-NEXT:    ldp x11, x14, [x1, #32]
-; GISEL-NEXT:    ldp x15, x16, [x1, #48]
-; GISEL-NEXT:    lsl x12, x8, #1
-; GISEL-NEXT:    lsl x13, x9, #1
-; GISEL-NEXT:    orr x10, x12, x10, lsr #63
-; GISEL-NEXT:    lsl x12, x11, #1
-; GISEL-NEXT:    orr x8, x13, x8, lsr #63
-; GISEL-NEXT:    lsl x13, x14, #1
-; GISEL-NEXT:    orr x9, x12, x9, lsr #63
-; GISEL-NEXT:    lsl x12, x15, #1
-; GISEL-NEXT:    stp x10, x8, [x0]
-; GISEL-NEXT:    lsl x10, x16, #1
-; GISEL-NEXT:    orr x11, x13, x11, lsr #63
-; GISEL-NEXT:    asr x8, x16, #63
-; GISEL-NEXT:    orr x12, x12, x14, lsr #63
-; GISEL-NEXT:    stp x9, x11, [x0, #16]
-; GISEL-NEXT:    orr x9, x10, x15, lsr #63
-; GISEL-NEXT:    orr x10, x8, x8, lsl #1
-; GISEL-NEXT:    stp x12, x9, [x0, #32]
-; GISEL-NEXT:    stp x10, x8, [x0, #48]
+; GISEL-NEXT:    ldp x8, x9, [x1, #8]
+; GISEL-NEXT:    ldr x14, [x1, #56]
+; GISEL-NEXT:    ldp x10, x11, [x1, #24]
+; GISEL-NEXT:    ldp x12, x13, [x1, #40]
+; GISEL-NEXT:    extr x8, x9, x8, #63
+; GISEL-NEXT:    extr x9, x10, x9, #63
+; GISEL-NEXT:    extr x10, x11, x10, #63
+; GISEL-NEXT:    stp x8, x9, [x0]
+; GISEL-NEXT:    extr x8, x12, x11, #63
+; GISEL-NEXT:    asr x9, x14, #63
+; GISEL-NEXT:    extr x11, x13, x12, #63
+; GISEL-NEXT:    stp x10, x8, [x0, #16]
+; GISEL-NEXT:    extr x10, x14, x13, #63
+; GISEL-NEXT:    orr x8, x9, x9, lsl #1
+; GISEL-NEXT:    stp x11, x10, [x0, #32]
+; GISEL-NEXT:    stp x8, x9, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64
