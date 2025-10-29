@@ -2478,6 +2478,16 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 ///   matches '__asm("mov al, 2")'
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
 
+/// Matches top level asm declarations.
+///
+/// \code
+///  __asm__("nop");
+/// \endcode
+/// fileScopeAsmDecl()
+///   matches '__asm__("nop")'
+extern const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
+    fileScopeAsmDecl;
+
 /// Matches bool literals.
 ///
 /// Example matches true
