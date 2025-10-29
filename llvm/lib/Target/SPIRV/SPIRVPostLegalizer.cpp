@@ -62,6 +62,7 @@ static bool mayBeInserted(unsigned Opcode) {
   case TargetOpcode::G_IMPLICIT_DEF:
   case TargetOpcode::G_BUILD_VECTOR:
   case TargetOpcode::G_ICMP:
+  case TargetOpcode::G_SHUFFLE_VECTOR:
   case TargetOpcode::G_ANYEXT:
     return true;
   default:
@@ -83,30 +84,47 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
                                            SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register SrcReg = I->getOperand(I->getNumOperands() - 1).getReg();
+  SPIRVType *ScalarType = nullptr;
   if (SPIRVType *DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
-    if (DefType->getOpcode() == SPIRV::OpTypeVector) {
-      SPIRVType *ScalarType =
-          GR->getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
-      for (unsigned i = 0; i < I->getNumDefs(); ++i) {
-        Register DefReg = I->getOperand(i).getReg();
-        if (!GR->getSPIRVTypeForVReg(DefReg)) {
-          LLT DefLLT = MRI.getType(DefReg);
-          SPIRVType *ResType;
-          if (DefLLT.isVector()) {
-            const SPIRVInstrInfo *TII =
-                MF.getSubtarget<SPIRVSubtarget>().getInstrInfo();
-            ResType = GR->getOrCreateSPIRVVectorType(
-                ScalarType, DefLLT.getNumElements(), *I, *TII);
-          } else {
-            ResType = ScalarType;
-          }
-          setRegClassType(DefReg, ResType, GR, &MRI, MF);
+    assert(DefType->getOpcode() == SPIRV::OpTypeVector);
+    ScalarType = GR->getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+  }
+
+  if (!ScalarType) {
+    // If we could not deduce the type from the source, try to deduce it from
+    // the uses of the results.
+    for (unsigned i = 0; i < I->getNumDefs() && !ScalarType; ++i) {
+      for (const auto &Use :
+           MRI.use_nodbg_instructions(I->getOperand(i).getReg())) {
+        assert(Use.getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
+               "Expected use of G_UNMERGE_VALUES to be a G_BUILD_VECTOR");
+        if (auto *VecType =
+                GR->getSPIRVTypeForVReg(Use.getOperand(0).getReg())) {
+          ScalarType = GR->getScalarOrVectorComponentType(VecType);
+          break;
         }
       }
-      return true;
     }
   }
-  return false;
+
+  if (!ScalarType)
+    return false;
+
+  for (unsigned i = 0; i < I->getNumDefs(); ++i) {
+    Register DefReg = I->getOperand(i).getReg();
+    if (GR->getSPIRVTypeForVReg(DefReg))
+      continue;
+
+    LLT DefLLT = MRI.getType(DefReg);
+    SPIRVType *ResType =
+        DefLLT.isVector()
+            ? GR->getOrCreateSPIRVVectorType(
+                  ScalarType, DefLLT.getNumElements(), *I,
+                  *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo())
+            : ScalarType;
+    setRegClassType(DefReg, ResType, GR, &MRI, MF);
+  }
+  return true;
 }
 
 static SPIRVType *deduceTypeForGExtractVectorElt(MachineInstr *I,
@@ -167,20 +185,61 @@ static SPIRVType *deduceTypeForGBuildVector(MachineInstr *I,
   return nullptr;
 }
 
+static SPIRVType *deduceTypeForGShuffleVector(MachineInstr *I,
+                                              MachineFunction &MF,
+                                              SPIRVGlobalRegistry *GR,
+                                              MachineIRBuilder &MIB,
+                                              Register ResVReg) {
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const LLT &ResLLT = MRI.getType(ResVReg);
+  assert(ResLLT.isVector() && "G_SHUFFLE_VECTOR result must be a vector");
+
+  // The result element type should be the same as the input vector element
+  // types.
+  for (unsigned i = 1; i <= 2; ++i) {
+    Register VReg = I->getOperand(i).getReg();
+    if (auto *VType = GR->getSPIRVTypeForVReg(VReg)) {
+      if (auto *ScalarType = GR->getScalarOrVectorComponentType(VType))
+        return GR->getOrCreateSPIRVVectorType(
+            ScalarType, ResLLT.getNumElements(), MIB, false);
+    }
+  }
+  return nullptr;
+}
+
 static SPIRVType *deduceTypeForGImplicitDef(MachineInstr *I,
                                             MachineFunction &MF,
                                             SPIRVGlobalRegistry *GR,
                                             Register ResVReg) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
-    const unsigned UseOpc = Use.getOpcode();
-    assert(UseOpc == TargetOpcode::G_BUILD_VECTOR ||
-           UseOpc == TargetOpcode::G_SHUFFLE_VECTOR);
-    // It's possible that the use instruction has not been processed yet.
-    // We should look at the operands of the use to determine the type.
-    for (unsigned i = 1; i < Use.getNumOperands(); ++i) {
-      if (auto *Type = GR->getSPIRVTypeForVReg(Use.getOperand(i).getReg()))
-        return Type;
+  for (const MachineInstr &Use : MRI.use_nodbg_instructions(ResVReg)) {
+    SPIRVType *ScalarType = nullptr;
+    switch (Use.getOpcode()) {
+    case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_UNMERGE_VALUES:
+      // It's possible that the use instruction has not been processed yet.
+      // We should look at the operands of the use to determine the type.
+      for (unsigned i = 1; i < Use.getNumOperands(); ++i) {
+        if (SPIRVType *OpType =
+                GR->getSPIRVTypeForVReg(Use.getOperand(i).getReg()))
+          ScalarType = GR->getScalarOrVectorComponentType(OpType);
+      }
+      break;
+    case TargetOpcode::G_SHUFFLE_VECTOR:
+      // For G_SHUFFLE_VECTOR, only look at the vector input operands.
+      if (auto *Type = GR->getSPIRVTypeForVReg(Use.getOperand(1).getReg()))
+        ScalarType = GR->getScalarOrVectorComponentType(Type);
+      if (auto *Type = GR->getSPIRVTypeForVReg(Use.getOperand(2).getReg()))
+        ScalarType = GR->getScalarOrVectorComponentType(Type);
+      break;
+    }
+    if (ScalarType) {
+      const LLT &ResLLT = MRI.getType(ResVReg);
+      if (!ResLLT.isVector())
+        return ScalarType;
+      return GR->getOrCreateSPIRVVectorType(
+          ScalarType, ResLLT.getNumElements(), *I,
+          *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo());
     }
   }
   return nullptr;
@@ -198,7 +257,8 @@ static SPIRVType *deduceTypeForGIntrinsic(MachineInstr *I, MachineFunction &MF,
     const unsigned UseOpc = Use.getOpcode();
     assert(UseOpc == TargetOpcode::G_EXTRACT_VECTOR_ELT ||
            UseOpc == TargetOpcode::G_SHUFFLE_VECTOR ||
-           UseOpc == TargetOpcode::G_BUILD_VECTOR);
+           UseOpc == TargetOpcode::G_BUILD_VECTOR ||
+           UseOpc == TargetOpcode::G_UNMERGE_VALUES);
     Register UseResultReg = Use.getOperand(0).getReg();
     if (SPIRVType *UseResType = GR->getSPIRVTypeForVReg(UseResultReg)) {
       SPIRVType *ScalarType = GR->getScalarOrVectorComponentType(UseResType);
@@ -262,6 +322,10 @@ static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
   }
   case TargetOpcode::G_BUILD_VECTOR: {
     ResType = deduceTypeForGBuildVector(I, MF, GR, MIB, ResVReg);
+    break;
+  }
+  case TargetOpcode::G_SHUFFLE_VECTOR: {
+    ResType = deduceTypeForGShuffleVector(I, MF, GR, MIB, ResVReg);
     break;
   }
   case TargetOpcode::G_ANYEXT: {
@@ -362,7 +426,21 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
   if (!Worklist.empty()) {
     LLVM_DEBUG(dbgs() << "Remaining worklist:\n";
                for (auto *I : Worklist) { I->dump(); });
-    assert(Worklist.empty() && "Worklist is not empty");
+    for (auto *I : Worklist) {
+      MachineIRBuilder MIB(*I);
+      Register ResVReg = I->getOperand(0).getReg();
+      const LLT &ResLLT = MRI.getType(ResVReg);
+      SPIRVType *ResType = nullptr;
+      if (ResLLT.isVector()) {
+        SPIRVType *CompType = GR->getOrCreateSPIRVIntegerType(
+            ResLLT.getElementType().getSizeInBits(), MIB);
+        ResType = GR->getOrCreateSPIRVVectorType(
+            CompType, ResLLT.getNumElements(), MIB, false);
+      } else {
+        ResType = GR->getOrCreateSPIRVIntegerType(ResLLT.getSizeInBits(), MIB);
+      }
+      setRegClassType(ResVReg, ResType, GR, &MRI, MF, true);
+    }
   }
 }
 
