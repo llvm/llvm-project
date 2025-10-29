@@ -35,8 +35,7 @@ std::string OpenACCSupport::getRecipeName(RecipeKind kind, Type type,
   return recipeName;
 }
 
-InFlightDiagnostic OpenACCSupport::emitNYI(Location loc,
-                                                   const Twine &message) {
+InFlightDiagnostic OpenACCSupport::emitNYI(Location loc, const Twine &message) {
   if (impl)
     return impl->emitNYI(loc, message);
   return mlir::emitError(loc, "not yet implemented: " + message);
