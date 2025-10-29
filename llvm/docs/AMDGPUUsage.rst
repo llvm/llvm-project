@@ -1179,6 +1179,53 @@ is conservatively correct for OpenCL.
                              other operations within the same address space.
      ======================= ===================================================
 
+Target Types
+------------
+
+The AMDGPU backend implements some target extension types.
+
+.. _amdgpu-types-named-barriers:
+
+Named Barriers
+~~~~~~~~~~~~~~
+
+Named barriers are represented as memory objects of type
+``target("amdgcn.named.barrier", 0)``. They are allocated as global variables
+in the LDS address space. They do not occupy regular LDS memory, but their
+lifetime and allocation granularity matches that of global variables in LDS.
+
+The following types built from named barriers are supported in global variables,
+defined recursively:
+
+* a standalone ``target("amdgcn.named.barrier", 0)``
+* an array of supported types
+* a struct containing a single element of supported type
+
+.. code-block:: llvm
+
+      @bar = addrspace(3) global target("amdgcn.named.barrier", 0) undef
+      @foo = addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] undef
+      @baz = addrspace(3) global { target("amdgcn.named.barrier", 0) } undef
+
+Barrier types may not be used in ``alloca``.
+
+The integral representation of a pointer to a valid named barrier is in the
+range ``0x0080'0010`` to ``0x0080'0100`` (inclusive). The representation is
+formed by the expression ``0x0080'0000 | (id << 4)``, where ``id`` is the
+hardware barrier ID. The integral representation of the null named barrier is
+``0x0080'0000``.
+
+It is not legal to attempt to form a pointer to any non-named barrier objects.
+
+It is undefined behavior to use a pointer to any part of a named barrier object
+as the pointer operand of a regular memory access instruction or intrinsic.
+Pointers to named barrier objects are intended to be used with dedicated
+intrinsics.
+
+We expand on the semantics of named barriers in
+:ref:`the memory model section <amdgpu-memory-model-named-barriers>`.
+
+
 LLVM IR Intrinsics
 ------------------
 
@@ -6620,6 +6667,138 @@ Multiple tags can be used at the same time to synchronize with more than one add
   code generation. Optimizations are free to drop the tags to allow for
   better code optimization, at the cost of synchronizing additional address
   spaces.
+
+.. _amdgpu-memory-model-barriers:
+
+Hardware Barriers
++++++++++++++++++
+
+.. note::
+
+  This section is preliminary. The semantics described here are intended to be
+  formalized properly in the future.
+
+Hardware barriers synchronize execution between concurrently running waves using
+fixed function hardware. Intuitively, a set of waves are "members" of a barrier.
+Waves *signal* the barrier and later *wait* for it. Execution only proceeds past
+the *wait* once all member waves have *signaled* the barrier.
+
+Formally, barriers affect semantics in exactly two ways. First, they affect
+forward progress. Waiting on a barrier that never completes (is not signaled
+sufficiently) prevents forward progress and therefore, given the assumption of
+forward progress, is undefined behavior. Second, barrier operations can pair
+with fences to contribute *synchronizes-with* relations in the memory model.
+
+Roughly speaking:
+
+- Release fences pair with barrier signal operations that are later in program
+  order
+- Barrier wait operations pair with acquire fences that are later in program
+  order
+- If a barrier signal operation contributes to allowing a wait operation to
+  complete, then the corresponding paired fences can synchronize-with each
+  other (given compatible sync scopes and memory model relaxation annotations)
+
+Default Barriers
+################
+
+There is a default workgroup barrier and a default cluster barrier. All waves
+of a workgroup and cluster are members of the same default workgroup and
+cluster barriers, respectively.
+
+.. _amdgpu-memory-model-named-barriers:
+
+Named Barriers
+##############
+
+All named barrier operations must occur in wave-uniform control flow. All
+arguments of named barrier intrinsics must be wave-uniform.
+
+Named barriers are allocated as global variables of
+:ref:`a target extension type <amdgpu-types-named-barriers>`.
+
+Named barriers may be signaled by the intrinsics:
+
+.. code-block:: llvm
+
+  declare void @llvm.amdgcn.s.barrier.signal(i32 %barrier_hw_id)
+  declare void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %barrier_ptr, i32 %member_count)
+
+If the second form is used and ``member_count`` is non-zero, the operation is
+an *initializing* signal, else it is *non*-initializing.
+
+Named barriers may be initialized explicitly using:
+
+.. code-block:: llvm
+
+  declare void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %barrier_ptr, i32 %member_count)
+
+It is possible to "leave" a named barrier. This decrements the named barrier's
+member count and completes the barrier if all other members have signaled it:
+
+.. code-block:: llvm
+
+  declare void @llvm.amdgcn.s.barrier.leave(i32 %barrier_type)
+
+``barrier_type`` must be set to ``1``.
+
+Note that leaving a named barrier is not exactly the opposite of joining a
+barrier (for example, joining a barrier does not change its member count).
+
+Leaving implicitly *joins* (see below) a null named barrier.
+
+Signal, leave, and initializing operations on the same named barrier must obey
+certain ordering constraints:
+
+* Non-initializing signals must be ordered after some initializing signal or an
+  explicit initializing operation.
+* Explicit initializing operations must not race signal or leave operations.
+* Initializing signal operations must not race leave operations.
+* Initializing signal operations with contradicting member counts must not race
+  each other.
+
+The details of how these orders can be established and races prevented are tbd.
+Using a default workgroup or cluster barrier in the natural way is guaranteed to
+be sufficient.
+
+In order to wait for a named barrier, a wave must first *join* the named barrier
+using:
+
+.. code-block:: llvm
+
+  declare void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %barrier_ptr)
+
+The named barrier may then be waited for using:
+
+.. code-block:: llvm
+
+  declare void @llvm.amdgcn.s.barrier.wait(i32 %barrier_type)
+
+... with ``barrier_type`` set to ``1``.
+
+Signal, leave, join, and wait operations must obey certain ordering constraints.
+The details are tbd. Satisfying the following rules is guaranteed to be
+sufficient:
+
+* Signal or wait for a named barrier only if it is the most recent to have been
+  joined in program order.
+* Signal or leave a named barrier only if the number of prior signaling
+  operations on that named barrier since the most recent join in program order
+  is equal to the number of prior wait operations on that named barrier since
+  the most recent join in program order.
+* Wait for a named barrier only if the number of prior signaling operations on
+  that named barrier since the most recent join in program order is one larger
+  than the number of prior wait operations on that named barrier since the most
+  recent join in program order.
+* Do not signal a named barrier or wait for it in program order after leaving it.
+
+Additionally, use signal, leave, and wait operations on a named barrier from a
+consistent associated set of waves that is determined at initialization time and
+whose initial size is the member count used at initialization. The set of waves
+may shrink with leave operations. Operations on a named barrier object with
+conflicting sets of waves must not race. The details of this rule and how an
+ordering can be established to prevent a race is tbd. Using a default workgroup
+or cluster barrier in the natural way is guaranteed to be sufficient.
 
 .. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
 
