@@ -16,5 +16,3 @@ void test_naked_lambda() {
 // ASM-NOT: push
 // ASM-NOT: pop
 // ASM: retq
-
-

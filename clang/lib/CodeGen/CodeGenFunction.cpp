@@ -1330,6 +1330,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         // fast register allocator would be happier...
         CXXThisValue = CXXABIThisValue;
       }
+    } else if (IsInLambda && MD->isImplicitObjectMemberFunction()) {
+      // Populate capture fields metadata for analysis. We skip
+      // EmitInstanceProlog to avoid emitting prologue code.
+      // FIXME: Naked functions cannot access captures via LLVM IR; any access
+      // must be done manually in inline assembly.
+      MD->getParent()->getCaptureFields(LambdaCaptureFields,
+                                        LambdaThisCaptureField);
     }
 
     // Check the 'this' pointer once per function, if it's available.
