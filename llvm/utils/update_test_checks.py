@@ -365,7 +365,7 @@ def main():
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
     )
     parser.add_argument(
-        "--check-inst_comments",
+        "--check-inst-comments",
         action="store_true",
         default=False,
         help="Check the generated comments describing instructions (e.g., -print-predicate-info/print<memssa>)",
