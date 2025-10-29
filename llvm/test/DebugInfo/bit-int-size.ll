@@ -31,8 +31,8 @@
 !5 = !DIGlobalVariableExpression(var: !6, expr: !DIExpression())
 !6 = distinct !DIGlobalVariable(name: "b", scope: !2, file: !7, line: 5, type: !8, isLocal: false, isDefinition: true)
 !7 = !DIFile(filename: "bit-int.c", directory: "/")
-!8 = !DIBasicType(name: "_BitInt", size: 8, data_size: 2, encoding: DW_ATE_signed)
-!9 = !DIBasicType(name: "unsigned _BitInt", size: 32, data_size: 17, encoding: DW_ATE_unsigned)
+!8 = !DIBasicType(name: "_BitInt", size: 8, dataSize: 2, encoding: DW_ATE_signed)
+!9 = !DIBasicType(name: "unsigned _BitInt", size: 32, dataSize: 17, encoding: DW_ATE_unsigned)
 !10 = !{i32 2, !"Debug Info Version", i32 3}
 !11 = !{i32 1, !"wchar_size", i32 4}
 !12 = !{!"clang version 22.0.0git"}
