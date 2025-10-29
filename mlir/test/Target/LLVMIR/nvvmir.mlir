@@ -483,7 +483,7 @@ llvm.func @nvvm_wmma_load_c_f64(%arg0: !llvm.ptr, %arg1 : i32) {
 
 // CHECK-LABEL: @nvvm_wmma_mma_f64
 llvm.func @nvvm_wmma_mma_f64(%0 : f64, %1 : f64, %2 : f64, %3 : f64) {
-  // CHECK: { double, double } @llvm.nvvm.wmma.mm8n8k4.mma.row.col.f64(f64 %{{.*}}, f64 %{{.*}}, f64 %{{.*}}, f64 %{{.*}})
+  // CHECK: { double, double } @llvm.nvvm.wmma.m8n8k4.mma.row.col.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}})
   %r = nvvm.wmma.mma %0, %1, %2, %3
     {eltypeA = #nvvm.mma_type<f64>, eltypeB = #nvvm.mma_type<f64>, k = 4 : i32, layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, m = 8 : i32, n = 8 : i32}
     : (f64, f64, f64, f64)
@@ -493,7 +493,7 @@ llvm.func @nvvm_wmma_mma_f64(%0 : f64, %1 : f64, %2 : f64, %3 : f64) {
 
 // CHECK-LABEL: @nvvm_wmma_store_d_f64
 llvm.func @nvvm_wmma_store_d_f64(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : f64, %arg3 : f64) {
-  // CHECK: call void @llvm.nvvm.wmma.m8n8k4.store.d.row.stride.f64.p0(ptr %{{.*}}, f64 %{{.*}}, f64 %{{.*}}, i32 %{{.*}})
+  // CHECK: call void @llvm.nvvm.wmma.m8n8k4.store.d.row.stride.f64.p0(ptr %{{.*}}, double %{{.*}}, double %{{.*}}, i32 %{{.*}})
   nvvm.wmma.store %arg0, %arg1, %arg2, %arg3
     {eltype = #nvvm.mma_type<f64>, k = 4 : i32, layout = #nvvm.mma_layout<row>, m = 8 : i32, n = 8 : i32}
     : !llvm.ptr, f64, f64
