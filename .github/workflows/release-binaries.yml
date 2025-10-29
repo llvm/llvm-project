@@ -372,6 +372,7 @@ jobs:
         # we need to search for files in the current workspace.
         path: |
           S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
+          S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
 
   upload-release-binaries:
     name: "Upload Release Binaries"
