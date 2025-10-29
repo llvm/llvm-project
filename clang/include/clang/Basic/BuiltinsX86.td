@@ -1285,81 +1285,99 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr] in {
   def knotdi : X86Builtin<"unsigned long long int(unsigned long long int)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cmpb128_mask : X86Builtin<"unsigned short(_Vector<16, char>, _Vector<16, char>, _Constant int, unsigned short)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cmpd128_mask : X86Builtin<"unsigned char(_Vector<4, int>, _Vector<4, int>, _Constant int, unsigned char)">;
   def cmpq128_mask : X86Builtin<"unsigned char(_Vector<2, long long int>, _Vector<2, long long int>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cmpw128_mask : X86Builtin<"unsigned char(_Vector<8, short>, _Vector<8, short>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cmpb256_mask : X86Builtin<"unsigned int(_Vector<32, char>, _Vector<32, char>, _Constant int, unsigned int)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cmpd256_mask : X86Builtin<"unsigned char(_Vector<8, int>, _Vector<8, int>, _Constant int, unsigned char)">;
   def cmpq256_mask : X86Builtin<"unsigned char(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def cmpw256_mask : X86Builtin<"unsigned short(_Vector<16, short>, _Vector<16, short>, _Constant int, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def cmpb512_mask : X86Builtin<"unsigned long long int(_Vector<64, char>, _Vector<64, char>, _Constant int, unsigned long long int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def cmpd512_mask : X86Builtin<"unsigned short(_Vector<16, int>, _Vector<16, int>, _Constant int, unsigned short)">;
   def cmpq512_mask : X86Builtin<"unsigned char(_Vector<8, long long int>, _Vector<8, long long int>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def cmpw512_mask : X86Builtin<"unsigned int(_Vector<32, short>, _Vector<32, short>, _Constant int, unsigned int)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def ucmpb128_mask : X86Builtin<"unsigned short(_Vector<16, char>, _Vector<16, char>, _Constant int, unsigned short)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def ucmpd128_mask : X86Builtin<"unsigned char(_Vector<4, int>, _Vector<4, int>, _Constant int, unsigned char)">;
   def ucmpq128_mask : X86Builtin<"unsigned char(_Vector<2, long long int>, _Vector<2, long long int>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def ucmpw128_mask : X86Builtin<"unsigned char(_Vector<8, short>, _Vector<8, short>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def ucmpb256_mask : X86Builtin<"unsigned int(_Vector<32, char>, _Vector<32, char>, _Constant int, unsigned int)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def ucmpd256_mask : X86Builtin<"unsigned char(_Vector<8, int>, _Vector<8, int>, _Constant int, unsigned char)">;
   def ucmpq256_mask : X86Builtin<"unsigned char(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512vl,avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl,avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def ucmpw256_mask : X86Builtin<"unsigned short(_Vector<16, short>, _Vector<16, short>, _Constant int, unsigned short)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def ucmpb512_mask : X86Builtin<"unsigned long long int(_Vector<64, char>, _Vector<64, char>, _Constant int, unsigned long long int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def ucmpd512_mask : X86Builtin<"unsigned short(_Vector<16, int>, _Vector<16, int>, _Constant int, unsigned short)">;
   def ucmpq512_mask : X86Builtin<"unsigned char(_Vector<8, long long int>, _Vector<8, long long int>, _Constant int, unsigned char)">;
 }
 
-let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512bw",
+    Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def ucmpw512_mask : X86Builtin<"unsigned int(_Vector<32, short>, _Vector<32, short>, _Constant int, unsigned int)">;
 }
 
