@@ -103,6 +103,31 @@ endif()
 
 check_symbol_exists(__PICOLIBC__ "string.h" PICOLIBC)
 
+# Check for the existence of <complex.h> complex math functions.
+# This is necessary even though libcxx uses the builtin versions
+# of these functions, because if the builtin cannot be used, a reference
+# to the library function is emitted. Using compiler builtins for these
+# functions requires corresponding C99 library functions to be present.
+
+cmake_push_check_state()
+list(APPEND CMAKE_REQUIRED_LIBRARIES m)
+check_c_source_compiles("
+#include <complex.h>
+typedef __complex__ float float_type;
+typedef __complex__ double double_type;
+typedef __complex__ long double ld_type;
+volatile float_type tmpf;
+volatile double_type tmpd;
+volatile ld_type tmpld;
+int main(void) {
+  tmpf = cexpf(tmpf);
+  tmpd = cexp(tmpd);
+  tmpld = cexpl(tmpld);
+  return 0;
+}
+" C_SUPPORTS_C99_COMPLEX)
+cmake_pop_check_state()
+
 # Check libraries
 if(WIN32 AND NOT MINGW)
   # TODO(compnerd) do we want to support an emulation layer that allows for the

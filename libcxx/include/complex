@@ -1074,6 +1074,7 @@ _LIBCPP_HIDE_FROM_ABI complex<_Tp> sqrt(const complex<_Tp>& __x) {
 
 // exp
 
+#if _LIBCPP_HAS_C99_COMPLEX
 _LIBCPP_HIDE_FROM_ABI inline _Complex float __cexp(_Complex float __v) { return __builtin_cexpf(__v); }
 _LIBCPP_HIDE_FROM_ABI inline _Complex double __cexp(_Complex double __v) { return __builtin_cexp(__v); }
 _LIBCPP_HIDE_FROM_ABI inline _Complex long double __cexp(_Complex long double __v) { return __builtin_cexpl(__v); }
@@ -1082,6 +1083,31 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI complex<_Tp> exp(const complex<_Tp>& __x) {
   return complex<_Tp>(__from_builtin_tag(), std::__cexp(__x.__builtin()));
 }
+#else
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI complex<_Tp> exp(const complex<_Tp>& __x) {
+  _Tp __i = __x.imag();
+  if (__i == 0) {
+    return complex<_Tp>(std::exp(__x.real()), std::copysign(_Tp(0), __x.imag()));
+  }
+  if (std::isinf(__x.real())) {
+    if (__x.real() < _Tp(0)) {
+      if (!std::isfinite(__i))
+        __i = _Tp(1);
+    } else if (__i == 0 || !std::isfinite(__i)) {
+      if (std::isinf(__i))
+        __i = _Tp(NAN);
+      return complex<_Tp>(__x.real(), __i);
+    }
+  }
+  if (std::isinf(__e)) {
+    _Tp __e2 = std::exp(__x.real() * _Tp(0.5));
+    return complex<_Tp>(__e2 * std::cos(__i) * __e2, __e2 * std::sin(__i) * __e2);
+  }
+  _Tp __e = std::exp(__x.real());
+  return complex<_Tp>(__e * std::cos(__i), __e * std::sin(__i));
+}
+#endif
 
 // pow
 
