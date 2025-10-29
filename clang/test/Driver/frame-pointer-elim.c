@@ -246,7 +246,7 @@
 // -mno-reserve-frame-pointer-reg overrides platform defaults
 // But -mno-reserve-frame-pointer-reg should override the target platform default
 // RUN: %clang -### --target=aarch64-pc-windows-msvc -S -fomit-frame-pointer -mno-reserve-frame-pointer-reg %s 2>&1 |  \
-// RUN:   FileCheck --check-prefix=KEEP-RESERVED %s
+// RUN:   FileCheck --check-prefix=KEEP-NONE %s
 
 void f0() {}
 void f1() { f0(); }
