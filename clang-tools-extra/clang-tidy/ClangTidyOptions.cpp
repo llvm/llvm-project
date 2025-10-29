@@ -154,6 +154,7 @@ template <> struct ScalarEnumerationTraits<clang::DiagnosticIDs::Level> {
   }
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckDiag> {
+  // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
   static const bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
@@ -165,6 +166,7 @@ template <> struct MappingTraits<ClangTidyOptions::CustomCheckDiag> {
   }
 };
 template <> struct SequenceElementTraits<ClangTidyOptions::CustomCheckValue> {
+  // NOLINTNEXTLINE(readability-identifier-naming) Defined by YAMLTraits.h
   static const bool flow = false;
 };
 template <> struct MappingTraits<ClangTidyOptions::CustomCheckValue> {
@@ -245,7 +247,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.WarningsAsErrors = "";
   Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
   Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
-  Options.HeaderFilterRegex = "";
+  Options.HeaderFilterRegex = ".*";
   Options.ExcludeHeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";

@@ -1471,7 +1471,13 @@ def SDT_RISCVPASUBU : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                            SDTCisSameAs<0, 2>]>;
 def riscv_pasubu : RVSDNode<"PASUBU", SDT_RISCVPASUBU>;
 
+//===----------------------------------------------------------------------===//
+// Codegen patterns
+//===----------------------------------------------------------------------===//
+
 let Predicates = [HasStdExtP] in {
+  def : PatGpr<abs, ABS>;
+
   // Basic 8-bit arithmetic patterns
   def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI8VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_B GPR:$rs1, GPR:$rs2)>;

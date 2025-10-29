@@ -530,7 +530,7 @@ gpu.module @xevm_module{
 // CHECK-NEXT:  }
 // CHECK-NEXT:  %[[T1:.*]] = vector.transpose %[[W]]#1, [1, 0] : vector<1x2xf32> to vector<2x1xf32>
 gpu.module @xevm_module{
-  gpu.func @vector_transpose(%arg0: memref<2x16xf32>, %laneid: index) {
+  gpu.func @vector_transpose(%laneid: index) {
     %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<2x1xf32>) {
       %cst = "some_op"()
         {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
@@ -556,7 +556,7 @@ gpu.module @xevm_module{
 // CHECK:       }
 // CHECK:       vector.bitcast %[[W]]#1 : vector<4x2xi8> to vector<4x1xi16>
 gpu.module @xevm_module{
-  gpu.func @vector_bitcast(%arg0: memref<4x16xi16>, %laneid: index) {
+  gpu.func @vector_bitcast(%laneid: index) {
     %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<4x1xi16>) {
       %cst = "some_op"()
         {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}
@@ -570,6 +570,85 @@ gpu.module @xevm_module{
       gpu.yield %bitcast : vector<4x16xi16>
     }
     "some_user_op"(%r) : (vector<4x1xi16>) -> ()
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @vector_shapecast_rank_increasing
+// CHECK:         %{{.*}}:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<1x1xf32>, vector<1xf32>) {
+// CHECK:           gpu.yield %{{.*}} : vector<1x16xf32>, vector<16xf32>
+// CHECK:         }
+// CHECK:         %{{.*}} = vector.shape_cast %{{.*}}#1 : vector<1xf32> to vector<1x1xf32>
+gpu.module @xevm_module {
+  gpu.func @vector_shapecast_rank_increasing(%laneid: index) {
+    %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1x1xf32>) {
+      %cst = "some_op"()
+        {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+        : () -> (vector<16xf32>)
+      %cast = vector.shape_cast %cst
+        {
+          layout_operand_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
+          layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+        }
+        : vector<16xf32> to vector<1x16xf32>
+      gpu.yield %cast : vector<1x16xf32>
+    }
+    "some_user_op"(%r) : (vector<1x1xf32>) -> ()
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @vector_shapecast_rank_reducing(
+// CHECK:         %{{.*}}:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<1xf32>, vector<1x1xf32>) {
+// CHECK:           gpu.yield %{{.*}} : vector<16xf32>, vector<1x16xf32>
+// CHECK:         }
+// CHECK:         %{{.*}} = vector.shape_cast %{{.*}}#1 : vector<1x1xf32> to vector<1xf32>
+gpu.module @xevm_module {
+  gpu.func @vector_shapecast_rank_reducing(%laneid: index) {
+    %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1xf32>) {
+      %cst = "some_op"()
+        {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+        : () -> (vector<1x16xf32>)
+      %cast = vector.shape_cast %cst
+        {
+          layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+          layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+        }
+        : vector<1x16xf32> to vector<16xf32>
+      gpu.yield %cast : vector<16xf32>
+    }
+    "some_user_op"(%r) : (vector<1xf32>) -> ()
+    gpu.return
+  }
+}
+
+// -----
+// NOTE: Layouts are still valid, but distribution still requires a slice layout for the operand.
+//
+// CHECK-LABEL:  gpu.func @vector_shapecast_unsupported
+// CHECK:          %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<1x1xf32>) {
+// CHECK:            %[[T1:.*]] = vector.shape_cast %{{.*}} : vector<16xf32> to vector<1x16xf32>
+// CHECK:            gpu.yield %[[T1]] : vector<1x16xf32>
+// CHECK:          }
+// CHECK:          "some_user_op"(%[[W]]) : (vector<1x1xf32>) -> ()
+// CHECK:          gpu.return
+gpu.module @xevm_module {
+  gpu.func @vector_shapecast_unsupported(%laneid: index) {
+    %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1x1xf32>) {
+      %cst = "some_op"()
+        {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]> }
+        : () -> (vector<16xf32>)
+      %cast = vector.shape_cast %cst
+        {
+          layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+          layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+        }
+        : vector<16xf32> to vector<1x16xf32>
+      gpu.yield %cast : vector<1x16xf32>
+    }
+    "some_user_op"(%r) : (vector<1x1xf32>) -> ()
     gpu.return
   }
 }

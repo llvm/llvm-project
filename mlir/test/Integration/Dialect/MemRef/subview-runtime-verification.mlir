@@ -2,6 +2,7 @@
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \
 // RUN:     -test-cf-assert \
+// RUN:     -convert-scf-to-cf \
 // RUN:     -convert-to-llvm | \
 // RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
@@ -11,6 +12,7 @@
 // RUN:     -expand-strided-metadata \
 // RUN:     -lower-affine \
 // RUN:     -test-cf-assert \
+// RUN:     -convert-scf-to-cf \
 // RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
 // RUN:     -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
@@ -37,6 +39,17 @@ func.func @subview_dynamic_rank_reduce(%memref: memref<?x4xf32>, %offset: index,
         memref<?xf32, strided<[?], offset: ?>>
     return
 }
+
+func.func @subview_zero_size_dim(%memref: memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>>, 
+                                 %dim_0: index, 
+                                 %dim_1: index, 
+                                 %dim_2: index) {
+    %subview = memref.subview %memref[0, 0, 0] [%dim_0, %dim_1, %dim_2] [1, 1, 1] :
+        memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>> to
+        memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+    return
+}
+
 
 func.func @main() {
   %0 = arith.constant 0 : index
@@ -105,6 +118,14 @@ func.func @main() {
   // CHECK-NOT: ERROR: Runtime op verification failed
   func.call @subview_dynamic_rank_reduce(%alloca_4_dyn, %0, %1, %0) : (memref<?x4xf32>, index, index, index) -> ()
 
+  %alloca_10x4x1 = memref.alloca() : memref<10x4x1xf32>
+  %alloca_10x4x1_dyn_stride = memref.cast %alloca_10x4x1 : memref<10x4x1xf32> to memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>>
+  // CHECK-NOT: ERROR: Runtime op verification failed
+  %dim_0 = arith.constant 0 : index
+  %dim_1 = arith.constant 4 : index
+  %dim_2 = arith.constant 1 : index
+  func.call @subview_zero_size_dim(%alloca_10x4x1_dyn_stride, %dim_0, %dim_1, %dim_2)
+                                        : (memref<10x4x1xf32, strided<[?, ?, ?], offset: ?>>, index, index, index) -> ()
 
   return
 }

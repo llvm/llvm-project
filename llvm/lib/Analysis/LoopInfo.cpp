@@ -986,8 +986,8 @@ PreservedAnalyses LoopPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
-
+void llvm::printLoop(const Loop &L, raw_ostream &OS,
+                     const std::string &Banner) {
   if (forcePrintModuleIR()) {
     // handling -print-module-scope
     OS << Banner << " (loop: ";
