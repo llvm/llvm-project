@@ -1675,9 +1675,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // instructions that cause scheduling barriers.
   insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
 
-  if (!LateWaveTransform && OptExecMaskPreRA)
-    insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
-
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -1861,6 +1858,9 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
     addPass(&RegisterCoalescerID);
   }
 
+  if (OptExecMaskPreRA)
+    addPass(&SIOptimizeExecMaskingPreRAID);
+  
   addPass(createSGPRAllocPass(true));
 
   // Commit allocated register changes. This is mostly necessary because too
