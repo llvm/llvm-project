@@ -189,8 +189,8 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
   lldb::ProcessSP jit_process_sp(m_jit_process_wp.lock());
   if (jit_process_sp) {
     const bool generate_debug_info = true;
-    auto *clang_parser = new ClangExpressionParser(jit_process_sp.get(), *this,
-                                                   generate_debug_info);
+    auto *clang_parser = new ClangExpressionParser(
+        jit_process_sp.get(), *this, generate_debug_info, diagnostic_manager);
     num_errors = clang_parser->Parse(diagnostic_manager);
     m_parser.reset(clang_parser);
   } else {

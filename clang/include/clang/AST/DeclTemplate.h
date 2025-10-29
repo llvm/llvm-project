@@ -3395,9 +3395,10 @@ inline UnsignedOrNone getExpandedPackSize(const NamedDecl *Param) {
   return std::nullopt;
 }
 
-/// Internal helper used by Subst* nodes to retrieve the parameter list
-/// for their AssociatedDecl.
-TemplateParameterList *getReplacedTemplateParameterList(const Decl *D);
+/// Internal helper used by Subst* nodes to retrieve a parameter from the
+/// AssociatedDecl, and the template argument substituted into it, if any.
+std::tuple<NamedDecl *, TemplateArgument>
+getReplacedTemplateParameter(Decl *D, unsigned Index);
 
 /// If we have a 'templated' declaration for a template, adjust 'D' to
 /// refer to the actual template.

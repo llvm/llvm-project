@@ -34,6 +34,7 @@ else()
                                     FOUND_VAR
                                       LUAANDSWIG_FOUND
                                     REQUIRED_VARS
+                                      LUA_EXECUTABLE
                                       LUA_LIBRARIES
                                       LUA_INCLUDE_DIR
                                       LUA_VERSION_MINOR

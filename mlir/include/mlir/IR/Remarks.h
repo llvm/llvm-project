@@ -18,7 +18,6 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
-#include <optional>
 
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
@@ -144,7 +143,7 @@ public:
 
   llvm::StringRef getCategoryName() const { return categoryName; }
 
-  llvm::StringRef getFullCategoryName() const {
+  llvm::StringRef getCombinedCategoryName() const {
     if (categoryName.empty() && subCategoryName.empty())
       return {};
     if (subCategoryName.empty())
@@ -318,7 +317,7 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// MLIR Remark Streamer
+// Pluggable Remark Utilities
 //===----------------------------------------------------------------------===//
 
 /// Base class for MLIR remark streamers that is used to stream
@@ -338,6 +337,26 @@ public:
   virtual void finalize() {} // optional
 };
 
+using ReportFn = llvm::unique_function<void(const Remark &)>;
+
+/// Base class for MLIR remark emitting policies that is used to emit
+/// optimization remarks to the underlying remark streamer. The derived classes
+/// should implement the `reportRemark` method to provide the actual emitting
+/// implementation.
+class RemarkEmittingPolicyBase {
+protected:
+  ReportFn reportImpl;
+
+public:
+  RemarkEmittingPolicyBase() = default;
+  virtual ~RemarkEmittingPolicyBase() = default;
+
+  void initialize(ReportFn fn) { reportImpl = std::move(fn); }
+
+  virtual void reportRemark(const Remark &remark) = 0;
+  virtual void finalize() = 0;
+};
+
 //===----------------------------------------------------------------------===//
 // Remark Engine (MLIR Context will own this class)
 //===----------------------------------------------------------------------===//
@@ -355,6 +374,8 @@ private:
   std::optional<llvm::Regex> failedFilter;
   /// The MLIR remark streamer that will be used to emit the remarks.
   std::unique_ptr<MLIRRemarkStreamerBase> remarkStreamer;
+  /// The MLIR remark policy that will be used to emit the remarks.
+  std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy;
   /// When is enabled, engine also prints remarks as mlir::emitRemarks.
   bool printAsEmitRemarks = false;
 
@@ -392,6 +413,8 @@ private:
   InFlightRemark emitIfEnabled(Location loc, RemarkOpts opts,
                                bool (RemarkEngine::*isEnabled)(StringRef)
                                    const);
+  /// Report a remark.
+  void reportImpl(const Remark &remark);
 
 public:
   /// Default constructor is deleted, use the other constructor.
@@ -407,8 +430,15 @@ public:
   ~RemarkEngine();
 
   /// Setup the remark engine with the given output path and format.
-  LogicalResult initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
-                           std::string *errMsg);
+  LogicalResult
+  initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
+             std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
+             std::string *errMsg);
+
+  /// Get the remark emitting policy.
+  RemarkEmittingPolicyBase *getRemarkEmittingPolicy() const {
+    return remarkEmittingPolicy.get();
+  }
 
   /// Report a remark.
   void report(const Remark &&remark);
@@ -445,6 +475,46 @@ inline InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
 } // namespace mlir::remark::detail
 
 namespace mlir::remark {
+
+//===----------------------------------------------------------------------===//
+// Remark Emitting Policies
+//===----------------------------------------------------------------------===//
+
+/// Policy that emits all remarks.
+class RemarkEmittingPolicyAll : public detail::RemarkEmittingPolicyBase {
+public:
+  RemarkEmittingPolicyAll();
+
+  void reportRemark(const detail::Remark &remark) override {
+    assert(reportImpl && "reportImpl is not set");
+    reportImpl(remark);
+  }
+  void finalize() override {}
+};
+
+/// Policy that emits final remarks.
+class RemarkEmittingPolicyFinal : public detail::RemarkEmittingPolicyBase {
+private:
+  /// user can intercept them for custom processing via a registered callback,
+  /// otherwise they will be reported on engine destruction.
+  llvm::DenseSet<detail::Remark> postponedRemarks;
+
+public:
+  RemarkEmittingPolicyFinal();
+
+  void reportRemark(const detail::Remark &remark) override {
+    postponedRemarks.erase(remark);
+    postponedRemarks.insert(remark);
+  }
+
+  void finalize() override {
+    assert(reportImpl && "reportImpl is not set");
+    for (auto &remark : postponedRemarks) {
+      if (reportImpl)
+        reportImpl(remark);
+    }
+  }
+};
 
 /// Create a Reason with llvm::formatv formatting.
 template <class... Ts>
@@ -505,16 +575,72 @@ inline detail::InFlightRemark analysis(Location loc, RemarkOpts opts) {
 
 /// Setup remarks for the context. This function will enable the remark engine
 /// and set the streamer to be used for optimization remarks. The remark
-/// categories are used to filter the remarks that will be emitted by the remark
-/// engine. If a category is not specified, it will not be emitted. If
+/// categories are used to filter the remarks that will be emitted by the
+/// remark engine. If a category is not specified, it will not be emitted. If
 /// `printAsEmitRemarks` is true, the remarks will be printed as
 /// mlir::emitRemarks. 'streamer' must inherit from MLIRRemarkStreamerBase and
 /// will be used to stream the remarks.
 LogicalResult enableOptimizationRemarks(
     MLIRContext &ctx,
     std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
+    std::unique_ptr<remark::detail::RemarkEmittingPolicyBase>
+        remarkEmittingPolicy,
     const remark::RemarkCategories &cats, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark
 
+// DenseMapInfo specialization for Remark
+namespace llvm {
+template <>
+struct DenseMapInfo<mlir::remark::detail::Remark> {
+  static constexpr StringRef kEmptyKey = "<EMPTY_KEY>";
+  static constexpr StringRef kTombstoneKey = "<TOMBSTONE_KEY>";
+
+  /// Helper to provide a static dummy context for sentinel keys.
+  static mlir::MLIRContext *getStaticDummyContext() {
+    static mlir::MLIRContext dummyContext;
+    return &dummyContext;
+  }
+
+  /// Create an empty remark
+  static inline mlir::remark::detail::Remark getEmptyKey() {
+    return mlir::remark::detail::Remark(
+        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
+        mlir::UnknownLoc::get(getStaticDummyContext()),
+        mlir::remark::RemarkOpts::name(kEmptyKey));
+  }
+
+  /// Create a dead remark
+  static inline mlir::remark::detail::Remark getTombstoneKey() {
+    return mlir::remark::detail::Remark(
+        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
+        mlir::UnknownLoc::get(getStaticDummyContext()),
+        mlir::remark::RemarkOpts::name(kTombstoneKey));
+  }
+
+  /// Compute the hash value of the remark
+  static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
+    return llvm::hash_combine(
+        remark.getLocation().getAsOpaquePointer(),
+        llvm::hash_value(remark.getRemarkName()),
+        llvm::hash_value(remark.getCombinedCategoryName()));
+  }
+
+  static bool isEqual(const mlir::remark::detail::Remark &lhs,
+                      const mlir::remark::detail::Remark &rhs) {
+    // Check for empty/tombstone keys first
+    if (lhs.getRemarkName() == kEmptyKey ||
+        lhs.getRemarkName() == kTombstoneKey ||
+        rhs.getRemarkName() == kEmptyKey ||
+        rhs.getRemarkName() == kTombstoneKey) {
+      return lhs.getRemarkName() == rhs.getRemarkName();
+    }
+
+    // For regular remarks, compare key identifying fields
+    return lhs.getLocation() == rhs.getLocation() &&
+           lhs.getRemarkName() == rhs.getRemarkName() &&
+           lhs.getCombinedCategoryName() == rhs.getCombinedCategoryName();
+  }
+};
+} // namespace llvm
 #endif // MLIR_IR_REMARKS_H

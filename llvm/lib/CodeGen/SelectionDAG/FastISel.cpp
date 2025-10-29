@@ -1843,7 +1843,8 @@ bool FastISel::selectOperator(const User *I, unsigned Opcode) {
     return selectCast(I, ISD::SINT_TO_FP);
 
   case Instruction::IntToPtr: // Deliberate fall-through.
-  case Instruction::PtrToInt: {
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr: {
     EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());
     EVT DstVT = TLI.getValueType(DL, I->getType());
     if (DstVT.bitsGT(SrcVT))

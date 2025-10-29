@@ -1430,6 +1430,18 @@ def FeatureAddSubU64Insts
 def FeatureMadU32Inst : SubtargetFeature<"mad-u32-inst", "HasMadU32Inst",
                                          "true", "Has v_mad_u32 instruction">;
 
+def FeatureAddMinMaxInsts : SubtargetFeature<"add-min-max-insts",
+  "HasAddMinMaxInsts",
+  "true",
+  "Has v_add_{min|max}_{i|u}32 instructions"
+>;
+
+def FeaturePkAddMinMaxInsts : SubtargetFeature<"pk-add-min-max-insts",
+  "HasPkAddMinMaxInsts",
+  "true",
+  "Has v_pk_add_{min|max}_{i|u}16 instructions"
+>;
+
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -1452,6 +1464,13 @@ def FeatureClusters : SubtargetFeature< "clusters",
   "HasClusters",
   "true",
   "Has clusters of workgroups support"
+>;
+
+def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
+  "waits-before-system-scope-stores",
+  "RequiresWaitsBeforeSystemScopeStores",
+  "true",
+  "Target requires waits for loads and atomics before system scope stores"
 >;
 
 // Dummy feature used to disable assembler instructions.
@@ -2048,7 +2067,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureMaxHardClauseLength32,
    Feature1_5xVGPRs,
    FeatureMemoryAtomicFAddF32DenormalSupport,
-   FeatureBVHDualAndBVH8Insts
+   FeatureBVHDualAndBVH8Insts,
+   FeatureWaitsBeforeSystemScopeStores,
    ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2115,6 +2135,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureLshlAddU64Inst,
    FeatureAddSubU64Insts,
    FeatureMadU32Inst,
+   FeatureAddMinMaxInsts,
+   FeaturePkAddMinMaxInsts,
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
    Feature45BitNumRecordsBufferResource,
@@ -2592,6 +2614,9 @@ def UseFakeTrue16Insts : True16PredicateClass<"Subtarget->hasTrue16BitInsts() &&
   // FIXME When we default to RealTrue16 instead of Fake, change the line as follows.
   // AssemblerPredicate<(all_of FeatureTrue16BitInsts, (not FeatureRealTrue16Insts))>;
 
+def UseTrue16WithSramECC : True16PredicateClass<"Subtarget->useRealTrue16Insts() && "
+                                                "!Subtarget->d16PreservesUnusedBits()">;
+
 def HasD16Writes32BitVgpr: Predicate<"Subtarget->hasD16Writes32BitVgpr()">,
   AssemblerPredicate<(all_of FeatureTrue16BitInsts, FeatureRealTrue16Insts, FeatureD16Writes32BitVgpr)>;
 def NotHasD16Writes32BitVgpr: Predicate<"!Subtarget->hasD16Writes32BitVgpr()">,
@@ -2655,11 +2680,11 @@ def HasFmaakFmamkF64Insts :
 
 def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+  AssemblerPredicate<(any_of FeatureAddMinMaxInsts)>;
 
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+  AssemblerPredicate<(any_of FeaturePkAddMinMaxInsts)>;
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
@@ -2768,6 +2793,9 @@ def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
 
 def HasMAIInsts : Predicate<"Subtarget->hasMAIInsts()">,
   AssemblerPredicate<(all_of FeatureMAIInsts)>;
+
+def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
+  AssemblerPredicate<(all_of (not FeatureMAIInsts))>;
 
 def HasSMemRealTime : Predicate<"Subtarget->hasSMemRealTime()">,
   AssemblerPredicate<(all_of FeatureSMemRealTime)>;
@@ -2942,6 +2970,20 @@ def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic(
 
 def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
  AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
+
+def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
+                      AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+// gfx90a-gfx950. Has AGPRs, and also the align2 VGPR/AGPR requirement
+def AVAlign2LoadStoreMode : HwMode<[HasMAIInsts, NeedsAlignedVGPRs]>;
+
+// gfx1250, has alignment requirement but no AGPRs.
+def AlignedVGPRNoAGPRMode : HwMode<[NotHasMAIInsts, NeedsAlignedVGPRs]>;
+
 
 // Include AMDGPU TD files
 include "SISchedule.td"

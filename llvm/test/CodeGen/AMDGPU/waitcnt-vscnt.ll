@@ -26,17 +26,17 @@ define amdgpu_kernel void @barrier_vmcnt_global(ptr addrspace(1) %arg) {
 ; GFX9-LABEL: barrier_vmcnt_global:
 ; GFX9:         s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; GFX9-NEXT:    v_add_u32_e32 v2, 1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v2, v1, s[0:1]
-; GFX9-NEXT:    v_add_u32_e32 v1, 1, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 30, v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v3, s1
+; GFX9-NEXT:    global_load_dword v3, v1, s[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 30, v[1:2]
+; GFX9-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_barrier
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    global_store_dword v[0:1], v3, off
 ; GFX9-NEXT:    s_endpgm
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -369,10 +369,9 @@ define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(ptr %arg) {
 ; GFX8-NEXT:    flat_load_dword v3, v[2:3]
 ; GFX8-NEXT:    v_add_u32_e32 v2, vcc, 1, v0
 ; GFX8-NEXT:    v_lshrrev_b64 v[0:1], 30, v[1:2]
-; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v4, v1, vcc
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_barrier
 ; GFX8-NEXT:    flat_store_dword v[0:1], v3
 ; GFX8-NEXT:    s_endpgm
@@ -393,10 +392,9 @@ define amdgpu_kernel void @barrier_vmcnt_vscnt_flat_workgroup(ptr %arg) {
 ; GFX9-NEXT:    flat_load_dword v3, v[2:3]
 ; GFX9-NEXT:    v_add_u32_e32 v2, 1, v0
 ; GFX9-NEXT:    v_lshrrev_b64 v[0:1], 30, v[1:2]
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v4, v1, vcc
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_barrier
 ; GFX9-NEXT:    flat_store_dword v[0:1], v3
 ; GFX9-NEXT:    s_endpgm
