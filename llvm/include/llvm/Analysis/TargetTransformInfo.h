@@ -745,6 +745,8 @@ public:
   LLVM_ABI TailFoldingStyle
   getPreferredTailFoldingStyle(bool IVUpdateMayOverflow = true) const;
 
+  LLVM_ABI bool preferMemIntrinsicVPExpansion() const;
+
   // Parameters that control the loop peeling transformation
   struct PeelingPreferences {
     /// A forced peeling factor (the number of bodied of the original loop

@@ -281,6 +281,92 @@ insertLoopExpansion(Instruction *InsertBefore, Value *Len,
   return LEI;
 }
 
+static void buildScalableVectorForwardCpyLoop(BasicBlock *EntryBB,
+                                              BasicBlock *LoopBB,
+                                              BasicBlock *ExitBB,
+                                              Value *SrcAddr, Value *DstAddr,
+                                              Value *CopyLen) {
+  Function *F = EntryBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+  Module *M = F->getParent();
+
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  ElementCount EC = ElementCount::getScalable(8);
+  Type *VecTy = VectorType::get(Int8Ty, EC);
+  Type *PtrTy = PointerType::get(VecTy, 0);
+
+  Type *Int1Ty = Type::getInt1Ty(Ctx);
+  Type *MaskTy = VectorType::get(Int1Ty, EC);
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+
+  Type *LenType = CopyLen->getType();
+  Value *TrueMaskVec = Constant::getAllOnesValue(MaskTy);
+
+  IRBuilder<> LoopBuilder(LoopBB);
+  PHINode *Src = LoopBuilder.CreatePHI(SrcAddr->getType(), 2, "src.f");
+  PHINode *Dst = LoopBuilder.CreatePHI(DstAddr->getType(), 2, "dst.f");
+  PHINode *Len = LoopBuilder.CreatePHI(LenType, 2, "len.f");
+
+  Src->addIncoming(SrcAddr, EntryBB);
+  Dst->addIncoming(DstAddr, EntryBB);
+  Len->addIncoming(CopyLen, EntryBB);
+
+  // load and store a chunk of data
+  Value *SrcBitcast = LoopBuilder.CreateBitCast(Src, PtrTy);
+  Value *DstBitcast = LoopBuilder.CreateBitCast(Dst, PtrTy);
+
+  Value *ActualVL = LoopBuilder.CreateIntrinsic(
+      Intrinsic::experimental_get_vector_length, {LenType},
+      {Len, ConstantInt::get(Int32Ty, 8), LoopBuilder.getTrue()});
+
+  FunctionCallee VPLoad =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vp_load, {VecTy, PtrTy});
+  Value *Vec =
+      LoopBuilder.CreateCall(VPLoad, {SrcBitcast, TrueMaskVec, ActualVL});
+
+  FunctionCallee VPStore =
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::vp_store, {VecTy, PtrTy});
+  LoopBuilder.CreateCall(VPStore, {Vec, DstBitcast, TrueMaskVec, ActualVL});
+
+  // Update loop state
+  Value *SrcNext = LoopBuilder.CreateGEP(Int8Ty, Src, ActualVL);
+  Value *DstNext = LoopBuilder.CreateGEP(Int8Ty, Dst, ActualVL);
+
+  // On 64 bit the two operator types for update Len will be different types
+  // VL -> Int32Ty
+  // Len -> Int64Ty
+  Value *LenNext =
+        LoopBuilder.CreateSub(Len, LoopBuilder.CreateZExt(ActualVL, LenType));
+
+  Value *Cond =
+      LoopBuilder.CreateICmpUGT(LenNext, ConstantInt::get(LenType, 0));
+
+  LoopBuilder.CreateCondBr(Cond, LoopBB, ExitBB);
+  Src->addIncoming(SrcNext, LoopBB);
+  Dst->addIncoming(DstNext, LoopBB);
+  Len->addIncoming(LenNext, LoopBB);
+}
+
+static void createMemCpyScalableVectorLoop(Instruction *InsertBefore,
+                                           Value *SrcAddr, Value *DstAddr,
+                                           Value *CopyLen, Align SrcAlign,
+                                           Align DstAlign, bool SrcIsVolatile,
+                                           bool DstIsVolatile,
+                                           const TargetTransformInfo &TTI) {
+  BasicBlock *EntryBB = InsertBefore->getParent();
+  Function *F = EntryBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+
+  BasicBlock *ExitBB =
+      EntryBB->splitBasicBlock(InsertBefore, "memcpy.vec.exit");
+  BasicBlock *LoopBB = BasicBlock::Create(Ctx, "memcpy.vec.loop", F, ExitBB);
+  EntryBB->getTerminator()->setSuccessor(0, LoopBB);
+
+  buildScalableVectorForwardCpyLoop(EntryBB, LoopBB, ExitBB, SrcAddr, DstAddr,
+                                    CopyLen);
+}
+
 void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
                                      Value *DstAddr, ConstantInt *CopyLen,
                                      Align SrcAlign, Align DstAlign,
@@ -527,6 +613,168 @@ tryInsertCastToCommonAddrSpace(IRBuilderBase &B, Value *Addr1, Value *Addr2,
                        "support addrspacecast");
   }
   return {ResAddr1, ResAddr2};
+}
+
+// Lower memmove to IR using VP intrinsics. memmove is required to correctly
+// copy overlapping memory regions; therefore, it has to check the relative
+// positions of the source and destination pointers and choose the copy
+// direction accordingly.
+//
+// The code below is an IR rendition of this C function using RISCV intrinsics:
+//
+// void* memmove(void* dst, const void* src, size_t n) {
+//    uint8_t *d = (uint8_t *)dest;
+//    const uint8_t *s = (const uint8_t *)src;
+//    if (s < d) {
+//        // Backward copy
+//        s += n;
+//        d += n;
+//        while (n > 0) {
+//            size_t vl = __riscv_vsetvl_e8m8(n);
+//            s -= vl;
+//            d -= vl;
+//            vuint8m8_t v = __riscv_vle8_v_u8m8(s, vl);
+//            __riscv_vse8_v_u8m8(d, v, vl);
+//            n -= vl;
+//        }
+//    } else {
+//        // Forward copy
+//        while (n > 0) {
+//            size_t vl = __riscv_vsetvl_e8m8(n);
+//            vuint8m8_t v = __riscv_vle8_v_u8m8(s, vl);
+//            __riscv_vse8_v_u8m8(d, v, vl);
+//            s += vl;
+//            d += vl;
+//            n -= vl;
+//        }
+//    }
+//    return dest;
+// }
+static void createMemMoveScalableVectorLoop(Instruction *InsertBefore,
+                                            Value *SrcAddr, Value *DstAddr,
+                                            Value *CopyLen, Align SrcAlign,
+                                            Align DstAlign, bool SrcIsVolatile,
+                                            bool DstIsVolatile,
+                                            const TargetTransformInfo &TTI) {
+
+  BasicBlock *EntryBB = InsertBefore->getParent();
+  Function *F = EntryBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+  Module *M = F->getParent();
+
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  ElementCount EC = ElementCount::getScalable(8);
+  Type *VecTy = VectorType::get(Int8Ty, EC); // <vscale x 8 x i8>
+  Type *PtrTy = PointerType::get(VecTy, 0);  // i8* or <vscale x N x i8>*
+
+  Type *Int1Ty = Type::getInt1Ty(Ctx);
+  Type *MaskTy = VectorType::get(Int1Ty, EC);
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+
+  Type *LenType = CopyLen->getType();
+  Value *TrueMaskVec = Constant::getAllOnesValue(MaskTy);
+
+  IRBuilder<> Builder(InsertBefore);
+  // Create the a comparison of src and dst, based on which we jump to either
+  // the forward-copy part of the function (if src >= dst) or the backwards-copy
+  // part (if src < dst).
+  // SplitBlockAndInsertIfThenElse conveniently creates the basic if-then-else
+  // structure. Its block terminators (unconditional branches) are replaced by
+  // the appropriate conditional branches when the loop is built.
+  // If the pointers are in different address spaces, they need to be converted
+  // to a compatible one. Cases where memory ranges in the different address
+  // spaces cannot overlap are lowered as memcpy and not handled here.
+  auto [CmpSrcAddr, CmpDstAddr] =
+      tryInsertCastToCommonAddrSpace(Builder, SrcAddr, DstAddr, TTI);
+  Value *PtrCompare =
+      Builder.CreateICmpULT(CmpSrcAddr, CmpDstAddr, "compare_addr");
+  Instruction *ThenTerm, *ElseTerm;
+  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(),
+                                &ThenTerm, &ElseTerm);
+
+  // Then we will have two parts, backward and forward copy to ensure correctess
+  // of the reuslt on overlaping memory regions.
+  BasicBlock *BackwardBB = ThenTerm->getParent();
+  BackwardBB->setName("vec.backward");
+  BasicBlock *ForwardBB = ElseTerm->getParent();
+  ForwardBB->setName("vec.forward");
+  BasicBlock *ExitBB = InsertBefore->getParent();
+  ExitBB->setName("vec.done");
+
+  // === Backward Copy Loop ===
+  // This part is divided in two Blocks:
+  // - The preheader were pointers are moved to the end of the region to copy
+  // - The loop block that will perform the data copy
+  {
+    // Init block for initializing Src and Dest addresses
+    IRBuilder<> BackwardBuilder(BackwardBB);
+    Value *SrcStart = BackwardBuilder.CreateGEP(Int8Ty, SrcAddr, CopyLen);
+    Value *DstStart = BackwardBuilder.CreateGEP(Int8Ty, DstAddr, CopyLen);
+
+    BasicBlock *BackwardLoopBB =
+        BasicBlock::Create(F->getContext(), "vec.backward.loop", F, ForwardBB);
+    BackwardBuilder.CreateBr(BackwardLoopBB);
+
+    // Backward copy loop
+    IRBuilder<> BackwardLoopBuilder(BackwardLoopBB);
+    PHINode *Src =
+        BackwardLoopBuilder.CreatePHI(SrcStart->getType(), 2, "src.b");
+    PHINode *Dst =
+        BackwardLoopBuilder.CreatePHI(DstStart->getType(), 2, "dst.b");
+    PHINode *Len = BackwardLoopBuilder.CreatePHI(LenType, 2, "len.b");
+
+    Src->addIncoming(SrcStart, BackwardBB);
+    Dst->addIncoming(DstStart, BackwardBB);
+    Len->addIncoming(CopyLen, BackwardBB);
+
+    // Compute next chunk to be processed
+    Value *VL = Len;
+    Value *ActualVL = BackwardLoopBuilder.CreateIntrinsic(
+        Intrinsic::experimental_get_vector_length, {LenType},
+        {VL, ConstantInt::get(Int32Ty, 8), BackwardLoopBuilder.getTrue()});
+
+    Value *SrcNext = BackwardLoopBuilder.CreateGEP(
+        Int8Ty, Src, BackwardLoopBuilder.CreateNeg(ActualVL));
+    Value *DstNext = BackwardLoopBuilder.CreateGEP(
+        Int8Ty, Dst, BackwardLoopBuilder.CreateNeg(ActualVL));
+
+    // Load and store a chunk
+    Value *SrcBitcast = BackwardLoopBuilder.CreateBitCast(SrcNext, PtrTy);
+    Value *DstBitcast = BackwardLoopBuilder.CreateBitCast(DstNext, PtrTy);
+
+    FunctionCallee VPLoad = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vp_load, {VecTy, PtrTy});
+    Value *Vec = BackwardLoopBuilder.CreateCall(
+        VPLoad, {SrcBitcast, TrueMaskVec, ActualVL});
+
+    FunctionCallee VPStore = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vp_store, {VecTy, PtrTy});
+    BackwardLoopBuilder.CreateCall(VPStore,
+                                   {Vec, DstBitcast, TrueMaskVec, ActualVL});
+
+    // Update loop state
+    // On 64 bit the two operator types for update Len will be different types
+    // VL -> Int32Ty
+    // Len -> Int64Ty
+    Value *LenNext = BackwardLoopBuilder.CreateSub(
+          Len, BackwardLoopBuilder.CreateZExt(ActualVL, LenType));
+
+    Value *CondB = BackwardLoopBuilder.CreateICmpUGT(
+        LenNext, ConstantInt::get(LenType, 0));
+    BackwardLoopBuilder.CreateCondBr(CondB, BackwardLoopBB, ExitBB);
+
+    Src->addIncoming(SrcNext, BackwardLoopBB);
+    Dst->addIncoming(DstNext, BackwardLoopBB);
+    Len->addIncoming(LenNext, BackwardLoopBB);
+
+    ThenTerm->eraseFromParent();
+  }
+
+  // === Forward Copy Loop ===
+  buildScalableVectorForwardCpyLoop(EntryBB, ForwardBB, ExitBB, SrcAddr,
+                                    DstAddr, CopyLen);
+  ElseTerm->eraseFromParent();
 }
 
 // Lower memmove to IR. memmove is required to correctly copy overlapping memory
@@ -983,6 +1231,84 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   }
 }
 
+static void createMemSetScalableVectorLoop(Instruction *InsertBefore,
+                                           Value *DstAddr, Value *CopyLen,
+                                           Value *SetValue, Align DstAlign,
+                                           bool IsVolatile) {
+  BasicBlock *EntryBB = InsertBefore->getParent();
+  Function *F = EntryBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+  Module *M = F->getParent();
+
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  ElementCount EC = ElementCount::getScalable(8);
+  Type *VecTy = VectorType::get(Int8Ty, EC);
+  Type *PtrTy = PointerType::get(VecTy, 0);
+
+  Type *Int1Ty = Type::getInt1Ty(Ctx);
+  Type *MaskTy = VectorType::get(Int1Ty, EC);
+
+  Type *Int32Ty = Type::getInt32Ty(Ctx);
+
+  Type *ShuffleMaskTy = VectorType::get(Int32Ty, EC);
+
+  Type *LenType = CopyLen->getType();
+
+  Value *TrueMaskVec = Constant::getAllOnesValue(MaskTy);
+  BasicBlock *ExitBB =
+      EntryBB->splitBasicBlock(InsertBefore, "memset.vec.exit");
+  BasicBlock *LoopBB = BasicBlock::Create(Ctx, "memset.vec.loop", F, ExitBB);
+  EntryBB->getTerminator()->setSuccessor(0, LoopBB);
+
+  {
+    IRBuilder<> LoopBuilder(LoopBB);
+    PHINode *Dst = LoopBuilder.CreatePHI(DstAddr->getType(), 2, "src.f");
+    PHINode *Len = LoopBuilder.CreatePHI(LenType, 2, "len.f");
+
+    Dst->addIncoming(DstAddr, EntryBB);
+    Len->addIncoming(CopyLen, EntryBB);
+
+    // Broadcast scalar value into vector
+    Value *Val = (SetValue->getType() != Int8Ty)
+                    ? LoopBuilder.CreateTrunc(SetValue, Int8Ty)
+                    : SetValue;
+
+    Value *LaneValue = LoopBuilder.CreateInsertElement(
+        UndefValue::get(VecTy), Val, LoopBuilder.getInt32(0));
+
+    Value *ValueVec = LoopBuilder.CreateShuffleVector(
+        LaneValue, UndefValue::get(VecTy),
+        Constant::getNullValue(ShuffleMaskTy));
+
+    // store a chunk of data
+    Value *ActualVL = LoopBuilder.CreateIntrinsic(
+        Intrinsic::experimental_get_vector_length, {LenType},
+        {Len, ConstantInt::get(Int32Ty, 8), LoopBuilder.getTrue()});
+
+    Value *DstBitcast = LoopBuilder.CreateBitCast(Dst, PtrTy);
+    FunctionCallee VPStore = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vp_store, {VecTy, PtrTy});
+    LoopBuilder.CreateCall(VPStore,
+                           {ValueVec, DstBitcast, TrueMaskVec, ActualVL});
+
+    // Update loop state
+    Value *DstNext = LoopBuilder.CreateGEP(Int8Ty, Dst, ActualVL);
+
+    // On 64 bit the two operator types for update Len will be different types
+    // VL -> Int32Ty
+    // Len -> Int64Ty
+    Value *LenNext =
+          LoopBuilder.CreateSub(Len, LoopBuilder.CreateZExt(ActualVL, LenType));
+
+    Value *Cond =
+        LoopBuilder.CreateICmpUGT(LenNext, ConstantInt::get(LenType, 0));
+
+    LoopBuilder.CreateCondBr(Cond, LoopBB, ExitBB);
+    Dst->addIncoming(DstNext, LoopBB);
+    Len->addIncoming(LenNext, LoopBB);
+  }
+}
+
 static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
                              Value *CopyLen, Value *SetValue, Align DstAlign,
                              std::optional<uint64_t> AverageTripCount,
@@ -991,10 +1317,9 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
   const DataLayout &DL = F->getDataLayout();
-  BasicBlock *NewBB =
-      OrigBB->splitBasicBlock(InsertBefore, "split");
-  BasicBlock *LoopBB
-    = BasicBlock::Create(F->getContext(), "loadstoreloop", F, NewBB);
+  BasicBlock *NewBB = OrigBB->splitBasicBlock(InsertBefore, "split");
+  BasicBlock *LoopBB =
+      BasicBlock::Create(F->getContext(), "loadstoreloop", F, NewBB);
 
   IRBuilder<> Builder(OrigBB->getTerminator());
 
@@ -1051,6 +1376,22 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
                               ScalarEvolution *SE) {
   bool CanOverlap = canOverlap(Memcpy, SE);
   auto TripCount = getAverageMemOpLoopTripCount(*Memcpy);
+  // If the target architecture support scalable vector, we can just lower
+  // it using VP intrinsics
+  if (TTI.preferMemIntrinsicVPExpansion()) {
+    createMemCpyScalableVectorLoop(
+        /* InsertBefore */ Memcpy,
+        /* SrcAddr */ Memcpy->getRawSource(),
+        /* DstAddr */ Memcpy->getRawDest(),
+        /* CopyLen */ Memcpy->getLength(),
+        /* SrcAlign */ Memcpy->getSourceAlign().valueOrOne(),
+        /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
+        /* SrcIsVolatile */ Memcpy->isVolatile(),
+        /* DstIsVolatile */ Memcpy->isVolatile(),
+        /* TargetTransformInfo */ TTI);
+    return;
+  }
+
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Memcpy->getLength())) {
     createMemCpyLoopKnownSize(
         /* InsertBefore */ Memcpy,
@@ -1092,7 +1433,6 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
   bool SrcIsVolatile = Memmove->isVolatile();
   bool DstIsVolatile = SrcIsVolatile;
   IRBuilder<> CastBuilder(Memmove);
-
   unsigned SrcAS = SrcAddr->getType()->getPointerAddressSpace();
   unsigned DstAS = DstAddr->getType()->getPointerAddressSpace();
   if (SrcAS != DstAS) {
@@ -1100,6 +1440,16 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
       // We may not be able to emit a pointer comparison, but we don't have
       // to. Expand as memcpy.
       auto AverageTripCount = getAverageMemOpLoopTripCount(*Memmove);
+
+      // If the target architecture support scalable vector, we can just lower
+      // it using VP intrinsics
+      if (TTI.preferMemIntrinsicVPExpansion()) {
+        createMemCpyScalableVectorLoop(/*InsertBefore=*/Memmove, SrcAddr,
+                                       DstAddr, CopyLen, SrcAlign, DstAlign,
+                                       SrcIsVolatile, DstIsVolatile, TTI);
+        return true;
+      }
+
       if (ConstantInt *CI = dyn_cast<ConstantInt>(CopyLen)) {
         createMemCpyLoopKnownSize(
             /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CI, SrcAlign, DstAlign,
@@ -1127,6 +1477,15 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
     }
   }
 
+  // If the target architecture support scalable vector, we can just lower
+  // it using VP intrinsics
+  if (TTI.preferMemIntrinsicVPExpansion()) {
+    createMemMoveScalableVectorLoop(
+        /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CopyLen, SrcAlign, DstAlign,
+        SrcIsVolatile, DstIsVolatile, TTI);
+    return true;
+  }
+
   if (ConstantInt *CI = dyn_cast<ConstantInt>(CopyLen)) {
     createMemMoveLoopKnownSize(
         /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CI, SrcAlign, DstAlign,
@@ -1139,14 +1498,25 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
   return true;
 }
 
-void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
-  createMemSetLoop(/* InsertBefore */ Memset,
+void llvm::expandMemSetAsLoop(MemSetInst *Memset,
+                              const TargetTransformInfo &TTI) {
+  if (TTI.preferMemIntrinsicVPExpansion()) {
+    createMemSetScalableVectorLoop(
+        /* InsertBefore=*/Memset,
+        /* DstAddr=*/Memset->getRawDest(),
+        /* CopyLen=*/Memset->getLength(),
+        /* SetValue=*/Memset->getValue(),
+        /* Alignment=*/Memset->getDestAlign().valueOrOne(),
+        Memset->isVolatile());
+  } else {
+   createMemSetLoop(/* InsertBefore */ Memset,
                    /* DstAddr */ Memset->getRawDest(),
                    /* CopyLen */ Memset->getLength(),
                    /* SetValue */ Memset->getValue(),
                    /* Alignment */ Memset->getDestAlign().valueOrOne(),
                    /* AverageTripCount */ getAverageMemOpLoopTripCount(*Memset),
                    /* IsVolatile */ Memset->isVolatile());
+  }
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {

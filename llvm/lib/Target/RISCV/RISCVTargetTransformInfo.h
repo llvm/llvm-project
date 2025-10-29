@@ -126,6 +126,9 @@ public:
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
+  bool preferMemIntrinsicVPExpansion() const override {
+    return ST->hasVInstructions();
+  }
   std::optional<unsigned> getMaxVScale() const override;
   std::optional<unsigned> getVScaleForTuning() const override;
 

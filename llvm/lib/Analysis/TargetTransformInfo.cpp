@@ -386,6 +386,10 @@ TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle(
   return TTIImpl->getPreferredTailFoldingStyle(IVUpdateMayOverflow);
 }
 
+bool TargetTransformInfo::preferMemIntrinsicVPExpansion() const {
+  return TTIImpl->preferMemIntrinsicVPExpansion();
+}
+
 std::optional<Instruction *>
 TargetTransformInfo::instCombineIntrinsic(InstCombiner &IC,
                                           IntrinsicInst &II) const {

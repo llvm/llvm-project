@@ -23,6 +23,7 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/IR/IRBuilder.h"
@@ -96,7 +97,7 @@ static Function *getOrCreateFunction(Module *M, Type *RetTy,
   return NewF;
 }
 
-static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic) {
+static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic, const SPIRVTargetMachine& TM) {
   // For @llvm.memset.* intrinsic cases with constant value and length arguments
   // are emulated via "storing" a constant array to the destination. For other
   // cases we wrap the intrinsic in @spirv.llvm_memset_* function and expand the
@@ -140,7 +141,7 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic) {
     auto *MemSet = IRB.CreateMemSet(Dest, Val, Len, MSI->getDestAlign(),
                                     MSI->isVolatile());
     IRB.CreateRetVoid();
-    expandMemSetAsLoop(cast<MemSetInst>(MemSet));
+    expandMemSetAsLoop(cast<MemSetInst>(MemSet), TM.getTargetTransformInfo(*F));
     MemSet->eraseFromParent();
     break;
   }
@@ -439,7 +440,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       switch (II->getIntrinsicID()) {
       case Intrinsic::memset:
       case Intrinsic::bswap:
-        Changed |= lowerIntrinsicToFunction(II);
+        Changed |= lowerIntrinsicToFunction(II, TM);
         break;
       case Intrinsic::fshl:
       case Intrinsic::fshr:
