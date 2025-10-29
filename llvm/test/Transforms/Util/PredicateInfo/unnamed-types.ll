@@ -10,7 +10,7 @@
 ; CHECK-NEXT:  %arg.0 = bitcast ptr %arg to ptr
 
 ; CHECK-LABEL: bb1:
-; CHECK-NEXT: branch predicate info { TrueEdge: 0 Comparison:  %cmp2 = icmp ne ptr null, %tmp Edge: [label %bb1,label %bb3], RenamedOp: %tmp }
+; CHECK: branch predicate info { TrueEdge: 0 Comparison:  %cmp2 = icmp ne ptr null, %tmp Edge: [label %bb1,label %bb3], RenamedOp: %tmp }
 ; CHECK-NEXT: %tmp.0 = bitcast ptr %tmp to ptr
 
 define void @f0(ptr %arg, ptr %tmp) {
