@@ -52,7 +52,7 @@ endfunction ()
 
 # Corresponds to Flang's ToolChain::getDefaultIntrinsicModuleDir().
 function (get_toolchain_module_subdir outvar)
-  set(outval "finclude")
+  set(outval "finclude/flang")
 
   get_toolchain_arch_dirname(arch_dirname)
   set(outval "${outval}/${arch_dirname}")
