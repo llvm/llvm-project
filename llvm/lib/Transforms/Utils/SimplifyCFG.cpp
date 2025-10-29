@@ -1875,7 +1875,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // by an `unreachable` inst. Since executing `unreachable` inst is an UB, we
     // can relax the condition based on the assumptiom that the program would
     // never enter Succ and trigger an UB.
-    if (isa<UnreachableInst>(Succ->getFirstNonPHIOrDbgOrLifetime()))
+    if (isa<UnreachableInst>(*Succ->begin()))
       continue;
     return false;
   }
