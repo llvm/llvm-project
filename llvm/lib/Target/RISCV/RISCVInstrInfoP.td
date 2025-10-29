@@ -1456,131 +1456,91 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db">;
 } // Predicates = [HasStdExtP, IsRV32]
 
-def SDT_RISCVPLI : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
+def SDT_RISCVPLI : SDTypeProfile<1, 1, [SDTCisVec<0>,
+                                        SDTCisInt<0>,
+                                        SDTCisInt<1>]>;
 def riscv_pli : RVSDNode<"PLI", SDT_RISCVPLI>;
-def SDT_RISCVPASUB
-    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>]>;
+def SDT_RISCVPASUB : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                          SDTCisInt<0>,
+                                          SDTCisSameAs<0, 1>,
+                                          SDTCisSameAs<0, 2>]>;
 def riscv_pasub : RVSDNode<"PASUB", SDT_RISCVPASUB>;
-def SDT_RISCVPASUBU
-    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>]>;
+def SDT_RISCVPASUBU : SDTypeProfile<1, 2, [SDTCisVec<0>,
+                                           SDTCisInt<0>,
+                                           SDTCisSameAs<0, 1>,
+                                           SDTCisSameAs<0, 2>]>;
 def riscv_pasubu : RVSDNode<"PASUBU", SDT_RISCVPASUBU>;
-let Predicates = [HasStdExtP, IsRV64] in {
-  // Basic arithmetic patterns for v4i16 (16-bit elements in 64-bit GPR)
-  def: Pat<(v4i16 (add (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PADD_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i16 (sub (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PSUB_H") GPR:$rs1, GPR:$rs2)>;
-
-  // Saturating add/sub patterns for v4i16
-  def: Pat<(v4i16 (saddsat (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PSADD_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i16 (uaddsat (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PSADDU_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i16 (ssubsat (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PSSUB_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i16 (usubsat (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PSSUBU_H") GPR:$rs1, GPR:$rs2)>;
-
-  // Averaging patterns for v4i16
-  def: Pat<(v4i16 (avgfloors (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PAADD_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i16 (avgflooru (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PAADDU_H") GPR:$rs1, GPR:$rs2)>;
-  
-  // Absolute difference patterns for v4i16
-  def: Pat<(v4i16 (abds (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PDIF_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i16 (abdu (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PDIFU_H") GPR:$rs1, GPR:$rs2)>;
-  
-  // Basic arithmetic patterns for v8i8 (8-bit elements in 64-bit GPR)
-  def: Pat<(v8i8 (add (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PADD_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v8i8 (sub (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PSUB_B") GPR:$rs1, GPR:$rs2)>;
-
-  // Saturating add/sub patterns for v8i8
-  def: Pat<(v8i8 (saddsat (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PSADD_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v8i8 (uaddsat (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PSADDU_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v8i8 (ssubsat (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PSSUB_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v8i8 (usubsat (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PSSUBU_B") GPR:$rs1, GPR:$rs2)>;
-
-  // Averaging patterns for v8i8
-  def: Pat<(v8i8 (avgfloors (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PAADD_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v8i8 (avgflooru (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PAADDU_B") GPR:$rs1, GPR:$rs2)>;
-  
-  // Absolute difference patterns for v8i8
-  def: Pat<(v8i8 (abds (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PDIF_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v8i8 (abdu (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))), (!cast<Instruction>("PDIFU_B") GPR:$rs1, GPR:$rs2)>;
-  
-  def: Pat<(v2i32 (riscv_pli simm10:$imm10)), (PLI_W simm10:$imm10)>;
-  def: Pat<(v4i16 (riscv_pli simm10:$imm10)), (PLI_H simm10:$imm10)>;
-  def: Pat<(v8i8 (riscv_pli simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
-
-  def: Pat<(v8i8 (riscv_pasub (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-           (PASUB_B (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))>;
-  def: Pat<(v4i16 (riscv_pasub (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-           (PASUB_H (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))>;
-  def: Pat<(v2i32 (riscv_pasub (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
-           (PASUB_W (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))>;
-  def: Pat<(v8i8 (riscv_pasubu (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
-           (PASUBU_B (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))>;
-  def: Pat<(v4i16 (riscv_pasubu (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
-           (PASUBU_H (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))>;
-  def: Pat<(v2i32 (riscv_pasubu (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
-           (PASUBU_W (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))>;
-
-  // Load/Store patterns for v4i16 and v8i8 (use regular GPR load/store since they're in GPRs)
-  def : StPat<store, SD, GPR, v4i16>;
-  def : LdPat<load, LD, v4i16>;
-  def : StPat<store, SD, GPR, v8i8>;
-  def : LdPat<load, LD, v8i8>;
-  
-  // Load/Store patterns for v2i32 (32-bit elements in 64-bit GPR)
-  def : StPat<store, SD, GPR, v2i32>;
-  def : LdPat<load, LD, v2i32>;
-} // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
-  // Basic arithmetic patterns for v2i16 (16-bit elements in 32-bit GPR)
-  def: Pat<(v2i16 (add (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PADD_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i16 (sub (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PSUB_H") GPR:$rs1, GPR:$rs2)>;
+  // Basic 8-bit arithmetic patterns
+  def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_B GPR:$rs1, GPR:$rs2)>;
 
-  // Saturating add/sub patterns for v2i16
-  def: Pat<(v2i16 (saddsat (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PSADD_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i16 (uaddsat (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PSADDU_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i16 (ssubsat (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PSSUB_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i16 (usubsat (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PSSUBU_H") GPR:$rs1, GPR:$rs2)>;
+  // Basic 16-bit arithmetic patterns
+  def: Pat<(XLenVecI16VT (add GPR:$rs1, GPR:$rs2)), (PADD_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_H GPR:$rs1, GPR:$rs2)>;
 
-  // Averaging patterns for v2i16
-  def: Pat<(v2i16 (avgfloors (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PAADD_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i16 (avgflooru (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PAADDU_H") GPR:$rs1, GPR:$rs2)>;
+  // 8-bit saturating add/sub patterns
+  def: Pat<(XLenVecI8VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_B GPR:$rs1, GPR:$rs2)>;
+
+  // 16-bit saturating add/sub patterns
+  def: Pat<(XLenVecI16VT (saddsat GPR:$rs1, GPR:$rs2)), (PSADD_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (uaddsat GPR:$rs1, GPR:$rs2)), (PSADDU_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (ssubsat GPR:$rs1, GPR:$rs2)), (PSSUB_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (usubsat GPR:$rs1, GPR:$rs2)), (PSSUBU_H GPR:$rs1, GPR:$rs2)>;
+
+  // 8-bit averaging patterns
+  def: Pat<(XLenVecI8VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_B GPR:$rs1, GPR:$rs2)>;
+
+  // 16-bit averaging patterns
+  def: Pat<(XLenVecI16VT (avgfloors GPR:$rs1, GPR:$rs2)), (PAADD_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (avgflooru GPR:$rs1, GPR:$rs2)), (PAADDU_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_H GPR:$rs1, GPR:$rs2)>;
   
-  // Absolute difference patterns for v2i16
-  def: Pat<(v2i16 (abds (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PDIF_H") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v2i16 (abdu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))), (!cast<Instruction>("PDIFU_H") GPR:$rs1, GPR:$rs2)>;
+  // 8-bit absolute difference patterns
+  def: Pat<(XLenVecI8VT (abds GPR:$rs1, GPR:$rs2)), (PDIF_B GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI8VT (abdu GPR:$rs1, GPR:$rs2)), (PDIFU_B GPR:$rs1, GPR:$rs2)>;
   
-  // Basic arithmetic patterns for v4i8 (8-bit elements in 32-bit GPR)
-  def: Pat<(v4i8 (add (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PADD_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i8 (sub (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PSUB_B") GPR:$rs1, GPR:$rs2)>;
-
-  // Saturating add/sub patterns for v4i8
-  def: Pat<(v4i8 (saddsat (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PSADD_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i8 (uaddsat (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PSADDU_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i8 (ssubsat (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PSSUB_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i8 (usubsat (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PSSUBU_B") GPR:$rs1, GPR:$rs2)>;
-
-  // Averaging patterns for v4i8
-  def: Pat<(v4i8 (avgfloors (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PAADD_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i8 (avgflooru (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PAADDU_B") GPR:$rs1, GPR:$rs2)>;
+  // 16-bit absolute difference patterns
+  def: Pat<(XLenVecI16VT (abds GPR:$rs1, GPR:$rs2)), (PDIF_H GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(XLenVecI16VT (abdu GPR:$rs1, GPR:$rs2)), (PDIFU_H GPR:$rs1, GPR:$rs2)>;
   
-  // Absolute difference patterns for v4i8
-  def: Pat<(v4i8 (abds (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PDIF_B") GPR:$rs1, GPR:$rs2)>;
-  def: Pat<(v4i8 (abdu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))), (!cast<Instruction>("PDIFU_B") GPR:$rs1, GPR:$rs2)>;
-  
-  def: Pat<(v2i16 (riscv_pli simm10:$imm10)), (PLI_H simm10:$imm10)>;
-  def: Pat<(v4i8 (riscv_pli simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
 
-  def: Pat<(v4i8 (riscv_pasub (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-           (PASUB_B (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))>;
-  def: Pat<(v2i16 (riscv_pasub (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-           (PASUB_H (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))>;
-  def: Pat<(v4i8 (riscv_pasubu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
-           (PASUBU_B (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))>;
-  def: Pat<(v2i16 (riscv_pasubu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
-           (PASUBU_H (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))>;
+  // 8-bit PLI SD node pattern
+  def: Pat<(XLenVecI8VT (riscv_pli simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
+  // 16-bit PLI SD node pattern
+  def: Pat<(XLenVecI16VT (riscv_pli simm10:$imm10)), (PLI_H simm10:$imm10)>;
 
-  // Load/Store patterns for v2i16 and v4i8 (use regular GPR load/store since they're in GPRs)
-  def : StPat<store, SW, GPR, v2i16>;
-  def : LdPat<load, LW, v2i16>;
-  def : StPat<store, SW, GPR, v4i8>;
-  def : LdPat<load, LW, v4i8>;
 } // Predicates = [HasStdExtP]
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  // Load/Store patterns
+  def : StPat<store, SW, GPR, v4i8>;
+  def : StPat<store, SW, GPR, v2i16>;
+  def : LdPat<load, LW, v4i8>;
+  def : LdPat<load, LW, v2i16>;
+} // Predicates = [HasStdExtP, IsRV32]
+
+let Predicates = [HasStdExtP, IsRV64] in {
+  // 32-bit PLI SD node pattern
+  def: Pat<(v2i32 (riscv_pli simm10:$imm10)), (PLI_W simm10:$imm10)>;
+
+  // 32-bit averaging-sub patterns
+  def: Pat<(v2i32 (riscv_pasub GPR:$rs1, GPR:$rs2)), (PASUB_W GPR:$rs1, GPR:$rs2)>;
+  def: Pat<(v2i32 (riscv_pasubu GPR:$rs1, GPR:$rs2)), (PASUBU_W GPR:$rs1, GPR:$rs2)>;
+
+  // Load/Store patterns
+  def : StPat<store, SD, GPR, v8i8>;
+  def : StPat<store, SD, GPR, v4i16>;
+  def : StPat<store, SD, GPR, v2i32>;
+  def : LdPat<load, LD, v8i8>;
+  def : LdPat<load, LD, v4i16>;
+  def : LdPat<load, LD, v2i32>;
+} // Predicates = [HasStdExtP, IsRV64]
