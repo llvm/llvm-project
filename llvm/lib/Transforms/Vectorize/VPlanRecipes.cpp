@@ -1962,7 +1962,8 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
   getOperand(1)->printAsOperand(O, SlotTracker);
   O << ", ";
   getOperand(2)->printAsOperand(O, SlotTracker);
-  O << (isInvariantCond() ? " (condition is loop invariant)" : "");
+  O << (vputils::isSingleScalar(getCond()) ? " (condition is single-scalar)"
+                                           : "");
 }
 #endif
 
@@ -1971,7 +1972,7 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   // loop. This means that we can't just use the original 'cond' value.
   // We have to take the 'vectorized' value and pick the first lane.
   // Instcombine will make this a no-op.
-  Value *Cond = State.get(getCond(), isInvariantCond());
+  Value *Cond = State.get(getCond(), vputils::isSingleScalar(getCond()));
 
   Value *Op0 = State.get(getOperand(1));
   Value *Op1 = State.get(getOperand(2));
@@ -2020,6 +2021,11 @@ InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getCmpSelInstrCost(
       Instruction::Select, VectorTy, CondTy, Pred, Ctx.CostKind,
       {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, SI);
+}
+
+bool VPWidenSelectRecipe::onlyFirstLaneUsed(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return Op == getCond() && vputils::isSingleScalar(getCond());
 }
 
 VPIRFlags::FastMathFlagsTy::FastMathFlagsTy(const FastMathFlags &FMF) {
