@@ -29,7 +29,6 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
   }
 
   SourceLocation OperandLoc = Tok.getLocation();
-  TentativeParsingAction TPA(*this);
 
   if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::kw_template,
                   tok::tilde, tok::annot_template_id)) {
@@ -38,18 +37,15 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
     // - nested-name-specifier identifier ::
     // - namespace-name ::
     // - nested-name-specifier template_opt simple-template-id
-    TPA.Revert();
     Diag(OperandLoc, diag::err_cannot_reflect_operand);
     return ExprError();
   } else if (SS.isValid() &&
              SS.getScopeRep().getKind() == NestedNameSpecifier::Kind::Global) {
     // global namespace ::.
-    TPA.Commit();
     Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
     return Actions.ActOnCXXReflectExpr(DoubleCaretLoc, SourceLocation(),
                                        TUDecl);
   }
-  TPA.Revert();
 
   if (isCXXTypeId(TentativeCXXTypeIdContext::AsReflectionOperand)) {
     TypeResult TR = ParseTypeName(/*TypeOf=*/nullptr);
