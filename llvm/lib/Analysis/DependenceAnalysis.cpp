@@ -2863,8 +2863,8 @@ static std::optional<APInt> getConstanCoefficient(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
   if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
-    if (Product->hasNoSignedWrap())
-      if (auto *Constant = dyn_cast<SCEVConstant>(Product->getOperand(0)))
+    if (const auto *Constant = dyn_cast<SCEVConstant>(Product->getOperand(0)))
+      if (Product->hasNoSignedWrap())
         return Constant->getAPInt();
   return std::nullopt;
 }
