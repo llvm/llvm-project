@@ -273,6 +273,7 @@ static bool generateCode(Scop &S, IslAstInfo &AI, LoopInfo &LI,
   } else {
     NodeBuilder.addParameters(S.getContext().release());
     Value *RTC = NodeBuilder.createRTC(AI.getRunCondition().release());
+
     Builder.GetInsertBlock()->getTerminator()->setOperand(0, RTC);
 
     auto *CI = dyn_cast<ConstantInt>(RTC);
