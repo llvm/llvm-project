@@ -1130,7 +1130,6 @@ define i1 @test70_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test70_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1200,7 +1199,6 @@ define i1 @test73_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test73_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1270,7 +1268,6 @@ define i1 @test75_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test75_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1304,7 +1301,6 @@ define i1 @test76_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test76_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1516,9 +1512,7 @@ define i1 @test84_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-TRUE16-LABEL: test84_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
-; GFX11-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1526,8 +1520,6 @@ define i1 @test84_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-FAKE16-LABEL: test84_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_min_f16_e32 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0, v2
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1578,8 +1570,6 @@ define <2 x i1> @test85_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-TRUE16-LABEL: test85_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-TRUE16-NEXT:    v_pk_min_f16 v1, v0, v1
 ; GFX11-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v1.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1590,8 +1580,6 @@ define <2 x i1> @test85_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-FAKE16-LABEL: test85_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
@@ -1646,8 +1634,6 @@ define <2 x i1> @test86_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-TRUE16-LABEL: test86_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v0, v1
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v1.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1658,8 +1644,6 @@ define <2 x i1> @test86_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-FAKE16-LABEL: test86_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
@@ -1708,9 +1692,7 @@ define i1 @test87_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-TRUE16-LABEL: test87_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1718,8 +1700,6 @@ define i1 @test87_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-FAKE16-LABEL: test87_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v2
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1770,8 +1750,6 @@ define <2 x i1> @test88_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-TRUE16-LABEL: test88_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-TRUE16-NEXT:    v_pk_min_f16 v1, v0, v1
 ; GFX11-TRUE16-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v1.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1782,8 +1760,6 @@ define <2 x i1> @test88_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-FAKE16-LABEL: test88_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_pk_min_f16 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
@@ -1832,9 +1808,7 @@ define i1 @test89_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-TRUE16-LABEL: test89_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
-; GFX11-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_min_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1842,8 +1816,6 @@ define i1 @test89_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-FAKE16-LABEL: test89_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_min_f16_e32 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v2
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1888,9 +1860,7 @@ define i1 @test90_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-TRUE16-LABEL: test90_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.h, v1.l, v1.l
-; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v0.h
+; GFX11-TRUE16-NEXT:    v_max_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1898,8 +1868,6 @@ define i1 @test90_nnan(half %arg1, half %arg2, half %arg3) {
 ; GFX11-FAKE16-LABEL: test90_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_max_f16_e32 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0, v2
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1950,8 +1918,6 @@ define <2 x i1> @test91_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-TRUE16-LABEL: test91_nnan:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-TRUE16-NEXT:    v_pk_max_f16 v1, v0, v1
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v1.l, v2.l
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1962,8 +1928,6 @@ define <2 x i1> @test91_nnan(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg
 ; GFX11-FAKE16-LABEL: test91_nnan:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
@@ -2712,12 +2676,11 @@ define i1 @test115_nnan(float %arg1, float %arg2, float %arg3, float %arg4, floa
 ; GCN-LABEL: test115_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
+; GCN-NEXT:    v_max_f32_e32 v2, v2, v3
 ; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v4
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s0, v1, v4
-; GCN-NEXT:    v_max_f32_e32 v2, v2, v3
-; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GCN-NEXT:    v_cmp_lt_f32_e64 s1, v2, v4
+; GCN-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GCN-NEXT:    s_or_b32 s0, s0, s1
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -3370,7 +3333,6 @@ define i1 @test137_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test137_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -3645,7 +3607,6 @@ define i1 @test146_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test146_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -3754,7 +3715,6 @@ define i1 @test149_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test149_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -3826,7 +3786,6 @@ define i1 @test151_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test151_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_max_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -3861,7 +3820,6 @@ define i1 @test152_nnan(float %arg1, float %arg2, float %arg3) {
 ; GCN-LABEL: test152_nnan:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GCN-NEXT:    v_min_f32_e32 v0, v0, v1
 ; GCN-NEXT:    v_cmp_le_f32_e32 vcc_lo, v0, v2
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
