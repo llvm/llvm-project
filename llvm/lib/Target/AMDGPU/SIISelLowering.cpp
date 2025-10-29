@@ -7037,7 +7037,7 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   if (Src.getOpcode() == ISD::SETCC) {
     SDValue Op0 = Src.getOperand(0);
     SDValue Op1 = Src.getOperand(1);
-    // Need to expand bflat to float for comparison (setcc).
+    // Need to expand bfloat to float for comparison (setcc).
     if (Op0.getValueType() == MVT::bf16) {
       Op0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op0);
       Op1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op1);
