@@ -938,7 +938,7 @@ MachineIRBuilder::buildFPTrunc(const DstOp &Res, const SrcOp &Op,
 
 MachineInstrBuilder
 MachineIRBuilder::buildFPTruncOdd(const DstOp &Res, const SrcOp &Op,
-                               std::optional<unsigned> Flags) {
+                                  std::optional<unsigned> Flags) {
   return buildInstr(TargetOpcode::G_FPTRUNC_ODD, Res, Op, Flags);
 }
 

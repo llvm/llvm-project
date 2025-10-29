@@ -68,7 +68,7 @@ private:
   bool legalizePrefetch(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeBitcast(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeFptrunc(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-                            MachineRegisterInfo &MRI) const;
+                       MachineRegisterInfo &MRI) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

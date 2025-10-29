@@ -1334,7 +1334,8 @@ public:
 
   /// Build and insert \p Res = G_FPTRUNC_ODD \p Op
   ///
-  /// G_FPTRUNC_ODD converts a floating-point value into one with a smaller type using round to odd.
+  /// G_FPTRUNC_ODD converts a floating-point value into one with a smaller type
+  /// using round to odd.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   /// \pre \p Res must be a generic virtual register with scalar or vector type.
@@ -1344,7 +1345,7 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder
   buildFPTruncOdd(const DstOp &Res, const SrcOp &Op,
-               std::optional<unsigned> Flags = std::nullopt);
+                  std::optional<unsigned> Flags = std::nullopt);
 
   /// Build and insert \p Res = G_TRUNC \p Op
   ///
