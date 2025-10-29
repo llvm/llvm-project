@@ -16634,23 +16634,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
       }
     }
 
-    for (uint64_t Divisor : {3, 5, 9}) {
-      if (MulAmt % Divisor != 0)
-        continue;
-      uint64_t MulAmt2 = MulAmt / Divisor;
-      // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
-      // of 25 which happen to be quite common.
-      if (int ShBAmount = isShifted359(MulAmt2, Shift)) {
-        SDLoc DL(N);
-        SDValue Mul359A =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                        DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
-        SDValue Mul359B =
-            DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359A,
-                        DAG.getConstant(ShBAmount, DL, VT), Mul359A);
-        return DAG.getNode(ISD::SHL, DL, VT, Mul359B,
-                           DAG.getConstant(Shift, DL, VT));
-      }
+    // 3/5/9 * 3/5/9 * 2^N - In particular, this covers multiples
+    // of 25 which happen to be quite common.
+    Shift = llvm::countr_zero(MulAmt);
+    if (SDValue V = expandMulToShlAddShlAdd(N, DAG, MulAmt >> Shift)) {
+      SDLoc DL(N);
+      return DAG.getNode(ISD::SHL, DL, VT, V, DAG.getConstant(Shift, DL, VT));
     }
   }
 
