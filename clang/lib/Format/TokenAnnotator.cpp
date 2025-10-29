@@ -2674,8 +2674,11 @@ private:
     }
 
     // *a or &a or &&a.
-    if (PreviousNotConst->is(TT_PointerOrReference))
+    if (PreviousNotConst->is(TT_PointerOrReference) ||
+        PreviousNotConst->endsSequence(tok::coloncolon,
+                                       TT_PointerOrReference)) {
       return true;
+    }
 
     // MyClass a;
     if (PreviousNotConst->isTypeName(LangOpts))
@@ -3791,17 +3794,11 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
-  if (!Current.Tok.getIdentifierInfo())
+  if (Current.isNoneOf(tok::identifier, tok::kw_operator))
     return false;
 
   const auto *Prev = Current.getPreviousNonComment();
   assert(Prev);
-
-  if (Prev->is(tok::coloncolon))
-    Prev = Prev->Previous;
-
-  if (!Prev)
-    return false;
 
   const auto &Previous = *Prev;
 
@@ -3851,6 +3848,8 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
+    if (Line.startsWith(tok::kw_friend))
+      return true;
     if (Previous.Tok.getIdentifierInfo() &&
         Previous.isNoneOf(tok::kw_return, tok::kw_co_return)) {
       return true;

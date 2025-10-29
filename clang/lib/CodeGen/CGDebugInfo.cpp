@@ -110,6 +110,33 @@ static bool IsArtificial(VarDecl const *VD) {
                               cast<Decl>(VD->getDeclContext())->isImplicit());
 }
 
+/// Returns \c true if the specified variable \c VD is an explicit parameter of
+/// a synthesized Objective-C property accessor. E.g., a synthesized property
+/// setter method will have a single explicit parameter which is the property to
+/// set.
+static bool IsObjCSynthesizedPropertyExplicitParameter(VarDecl const *VD) {
+  assert(VD);
+
+  if (!llvm::isa<ParmVarDecl>(VD))
+    return false;
+
+  // Not a property method.
+  const auto *Method =
+      llvm::dyn_cast_or_null<ObjCMethodDecl>(VD->getDeclContext());
+  if (!Method)
+    return false;
+
+  // Not a synthesized property accessor.
+  if (!Method->isImplicit() || !Method->isPropertyAccessor())
+    return false;
+
+  // Not an explicit parameter.
+  if (VD->isImplicit())
+    return false;
+
+  return true;
+}
+
 CGDebugInfo::CGDebugInfo(CodeGenModule &CGM)
     : CGM(CGM), DebugKind(CGM.getCodeGenOpts().getDebugInfo()),
       DebugTypeExtRefs(CGM.getCodeGenOpts().DebugTypeExtRefs),
@@ -1147,14 +1174,13 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
-
   StringRef Name = Ty->isUnsigned() ? "unsigned _BitInt" : "_BitInt";
   llvm::dwarf::TypeKind Encoding = Ty->isUnsigned()
                                        ? llvm::dwarf::DW_ATE_unsigned
                                        : llvm::dwarf::DW_ATE_signed;
-
   return DBuilder.createBasicType(Name, CGM.getContext().getTypeSize(Ty),
-                                  Encoding);
+                                  Encoding, llvm::DINode::FlagZero, 0,
+                                  Ty->getNumBits());
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
@@ -5158,7 +5184,12 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   }
   SmallVector<uint64_t, 13> Expr;
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  if (VarIsArtificial)
+
+  // While synthesized Objective-C property setters are "artificial" (i.e., they
+  // are not spelled out in source), we want to pretend they are just like a
+  // regular non-compiler generated method. Hence, don't mark explicitly passed
+  // parameters of such methods as artificial.
+  if (VarIsArtificial && !IsObjCSynthesizedPropertyExplicitParameter(VD))
     Flags |= llvm::DINode::FlagArtificial;
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());

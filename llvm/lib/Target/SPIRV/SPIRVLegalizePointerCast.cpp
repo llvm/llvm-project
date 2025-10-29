@@ -347,7 +347,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
 public:
   SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {}
 
-  virtual bool runOnFunction(Function &F) override {
+  bool runOnFunction(Function &F) override {
     const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
     GR = ST.getSPIRVGlobalRegistry();
     DeadInstructions.clear();
