@@ -740,7 +740,7 @@ static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
   return "r600";
 }
 
-static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel() {
   // The AMDGPU toolchain only supports generating shared objects, so we
   // must always use PIC.
   return Reloc::PIC_;
@@ -754,8 +754,8 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOptLevel OptLevel)
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(), TT, getGPUOrDefault(TT, CPU), FS, Options,
-          getEffectiveRelocModel(RM),
-          getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
+          getEffectiveRelocModel(), getEffectiveCodeModel(CM, CodeModel::Small),
+          OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
   if (TT.isAMDGCN()) {
@@ -2086,7 +2086,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
     addPass(AMDGPUAtomicOptimizerPass(TM, AMDGPUAtomicOptimizerStrategy));
 
-  addPass(AtomicExpandPass(&TM));
+  addPass(AtomicExpandPass(TM));
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(AMDGPUPromoteAllocaPass(TM));

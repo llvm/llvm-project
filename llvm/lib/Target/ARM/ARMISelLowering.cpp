@@ -1298,12 +1298,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
 
-  // Use __sincos_stret if available.
-  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
-      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
-    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-  }
+  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
   if (Subtarget->hasFPARMv8Base()) {
@@ -2849,6 +2845,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (isTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, MVT::Other, Ops);
+    if (CLI.CFIType)
+      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
@@ -2856,6 +2854,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a chain and a flag for retval copy to use.
   Chain = DAG.getNode(CallOpc, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
@@ -9831,13 +9831,18 @@ static SDValue LowerUADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
 }
 
 SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetDarwin());
-
   // For iOS, we want to call an alternative entry point: __sincos_stret,
   // return values are passed via sret.
   SDLoc dl(Op);
   SDValue Arg = Op.getOperand(0);
   EVT ArgVT = Arg.getValueType();
+  RTLIB::Libcall LC = RTLIB::getSINCOS_STRET(ArgVT);
+  RTLIB::LibcallImpl SincosStret = getLibcallImpl(LC);
+  if (SincosStret == RTLIB::Unsupported)
+    return SDValue();
+
+  assert(Subtarget->isTargetDarwin());
+
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
@@ -9867,11 +9872,9 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
 
   Args.emplace_back(Arg, ArgTy);
 
-  RTLIB::Libcall LC =
-      (ArgVT == MVT::f64) ? RTLIB::SINCOS_STRET_F64 : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = getLibcallName(LC);
-  CallingConv::ID CC = getLibcallCallingConv(LC);
-  SDValue Callee = DAG.getExternalSymbol(LibcallName, getPointerTy(DL));
+  StringRef LibcallName = getLibcallImplName(SincosStret);
+  CallingConv::ID CC = getLibcallImplCallingConv(SincosStret);
+  SDValue Callee = DAG.getExternalSymbol(LibcallName.data(), getPointerTy(DL));
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
@@ -12006,6 +12009,71 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
   BuildMI(TpLoopBody, Dl, TII->get(ARM::t2B))
       .addMBB(TpExit)
       .add(predOps(ARMCC::AL));
+}
+
+bool ARMTargetLowering::supportKCFIBundles() const {
+  // KCFI is supported in all ARM/Thumb modes
+  return true;
+}
+
+MachineInstr *
+ARMTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::instr_iterator &MBBI,
+                                 const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  MachineOperand *TargetOp = nullptr;
+  switch (MBBI->getOpcode()) {
+  // ARM mode opcodes
+  case ARM::BLX:
+  case ARM::BLX_pred:
+  case ARM::BLX_noip:
+  case ARM::BLX_pred_noip:
+  case ARM::BX_CALL:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
+  case ARM::TAILJMPr:
+  case ARM::TAILJMPr4:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  // Thumb mode opcodes (Thumb1 and Thumb2)
+  // Note: Most Thumb call instructions have predicate operands before the
+  // target register Format: tBLXr pred, predreg, target_register, ...
+  case ARM::tBLXr:      // Thumb1/Thumb2: BLX register (requires V5T)
+  case ARM::tBLXr_noip: // Thumb1/Thumb2: BLX register, no IP clobber
+  case ARM::tBX_CALL:   // Thumb1 only: BX call (push LR, BX)
+    TargetOp = &MBBI->getOperand(2);
+    break;
+  // Tail call instructions don't have predicates, target is operand 0
+  case ARM::tTAILJMPr: // Thumb1/Thumb2: Tail call via register
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  assert(TargetOp && TargetOp->isReg() && "Invalid target operand");
+  TargetOp->setIsRenamable(false);
+
+  // Select the appropriate KCFI_CHECK variant based on the instruction set
+  unsigned KCFICheckOpcode;
+  if (Subtarget->isThumb()) {
+    if (Subtarget->isThumb2()) {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb2;
+    } else {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb1;
+    }
+  } else {
+    KCFICheckOpcode = ARM::KCFI_CHECK_ARM;
+  }
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(KCFICheckOpcode))
+      .addReg(TargetOp->getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
 }
 
 MachineBasicBlock *
@@ -21310,15 +21378,6 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
   }
 
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  RTLIB::LibcallImpl SecurityCheckCookie =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookie != RTLIB::Unsupported)
-    return M.getFunction(getLibcallImplName(SecurityCheckCookie));
-  return TargetLowering::getSSPStackGuardCheck(M);
 }
 
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
