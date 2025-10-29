@@ -1225,9 +1225,7 @@ struct WgToSgVectorTransposeOp
   LogicalResult
   matchAndRewrite(vector::TransposeOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    VectorType resultType = dyn_cast<VectorType>(op.getResult().getType());
-    if (!resultType)
-      return failure();
+    VectorType resultType = op.getResultVectorType();
 
     ArrayRef<int64_t> wgShape = resultType.getShape();
     xegpu::DistributeLayoutAttr layout =
@@ -1242,9 +1240,7 @@ struct WgToSgVectorTransposeOp
 
     SmallVector<int64_t> sourceSgLayout =
         sourceLayout.getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> sourceSgData = sourceLayout.getEffectiveSgDataAsInt();
     SmallVector<int64_t> resultSgLayout = layout.getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> resultSgData = layout.getEffectiveSgDataAsInt();
     DenseI32ArrayAttr sourceOrder = sourceLayout.getOrder();
     DenseI32ArrayAttr resultOrder = layout.getOrder();
 
@@ -1253,37 +1249,20 @@ struct WgToSgVectorTransposeOp
           op, "Both source and result must have order attributes");
     }
 
-    SmallVector<int64_t> sourceOrderVec = llvm::to_vector(
-        llvm::map_range(sourceOrder.asArrayRef(),
-                        [](int32_t idx) { return static_cast<int64_t>(idx); }));
-    SmallVector<int64_t> resultOrderVec = llvm::to_vector(
-        llvm::map_range(resultOrder.asArrayRef(),
-                        [](int32_t idx) { return static_cast<int64_t>(idx); }));
-
     ArrayRef<int64_t> permutation = op.getPermutation();
-    size_t expectedSize = permutation.size();
-    if (sourceSgLayout.size() != expectedSize ||
-        sourceSgData.size() != expectedSize ||
-        resultSgLayout.size() != expectedSize ||
-        resultSgData.size() != expectedSize ||
-        sourceOrderVec.size() != expectedSize ||
-        resultOrderVec.size() != expectedSize) {
+    size_t permutationSize = permutation.size();
+    if (sourceSgLayout.size() != permutationSize ||
+        resultSgLayout.size() != permutationSize) {
       return rewriter.notifyMatchFailure(
-          op, "All layouts and permutation must have the same rank");
+          op, "Layouts and permutation must have the same rank");
     }
 
-    // Check that sgLayout, sgData & order are properly transposed for operand
+    // Check that sgLayout, sgData & order are properly transposed for source
     // and result
-    for (size_t i = 0; i < permutation.size(); ++i) {
-      int64_t srcDim = permutation[i];
-      if (resultSgLayout[i] != sourceSgLayout[srcDim] ||
-          resultSgData[i] != sourceSgData[srcDim] ||
-          resultOrderVec[i] != sourceOrderVec[srcDim]) {
-        return rewriter.notifyMatchFailure(
-            op, "Result layout is not a valid transpose of source layout "
-                "according to permutation");
-      }
-    }
+    if (!layout.isTransposeOf(sourceLayout, permutation))
+      return rewriter.notifyMatchFailure(
+          op, "Result layout is not a valid transpose of source layout "
+              "according to permutation");
 
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
@@ -1292,10 +1271,8 @@ struct WgToSgVectorTransposeOp
     for (auto src : adaptor.getVector()) {
       auto newTranspose = vector::TransposeOp::create(
           rewriter, op.getLoc(), newResultType, src, permutation);
-      if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
-          !layout.getEffectiveInstDataAsInt().empty())
-        xegpu::setDistributeLayoutAttr(newTranspose->getResult(0),
-                                       layout.dropSgLayoutAndData());
+      xegpu::setDistributeLayoutAttr(newTranspose->getResult(0),
+                                     layout.dropSgLayoutAndData());
       newTransposeOps.push_back(newTranspose.getResult());
     }
 
