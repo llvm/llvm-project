@@ -28,8 +28,6 @@ namespace format {
 namespace {
 
 CommentKind classifyBlockComment(StringRef Text) {
-  if (!Text.starts_with("/*") || !Text.ends_with("*/"))
-    return CommentKind::Plain;
   if (Text.starts_with("/**") || Text.starts_with("/*!"))
     return CommentKind::DocString;
   const StringRef Content = Text.drop_front(2).drop_back(2).trim();
@@ -1442,9 +1440,10 @@ FormatToken *FormatTokenLexer::getNextToken() {
     StringRef UntrimmedText = FormatTok->TokenText;
     FormatTok->TokenText = FormatTok->TokenText.rtrim(" \t\v\f");
     TrailingWhitespace = UntrimmedText.size() - FormatTok->TokenText.size();
-    FormatTok->setBlockCommentKind(classifyBlockComment(FormatTok->TokenText));
 
     if (isWellFormedBlockCommentText(FormatTok->TokenText)) {
+      FormatTok->setBlockCommentKind(
+          classifyBlockComment(FormatTok->TokenText));
       const StringRef Content =
           FormatTok->TokenText.drop_front(2).drop_back(2).rtrim("\r\n");
       if (!Content.empty()) {
