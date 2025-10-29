@@ -35,8 +35,7 @@ protected:
   MacroExpansionContextTest()
       : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
-        DiagID(new DiagnosticIDs()),
-        Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-pc-linux-unknown";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -45,7 +44,6 @@ protected:
 
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;

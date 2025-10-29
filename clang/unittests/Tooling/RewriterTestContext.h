@@ -49,8 +49,7 @@ struct RewriterDiagnosticConsumer : public DiagnosticConsumer {
 class RewriterTestContext {
  public:
    RewriterTestContext()
-       : Diagnostics(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-                     DiagOpts),
+       : Diagnostics(DiagnosticIDs::create(), DiagOpts),
          InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
          OverlayFileSystem(
              new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem())),

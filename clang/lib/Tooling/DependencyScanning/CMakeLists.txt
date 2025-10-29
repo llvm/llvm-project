@@ -14,6 +14,7 @@ add_clang_library(clangDependencyScanning
   DependencyScanningWorker.cpp
   DependencyScanningTool.cpp
   IncludeTreeActionController.cpp
+  DependencyScannerImpl.cpp
   InProcessModuleCache.cpp
   ModuleDepCollector.cpp
   ScanAndUpdateArgs.cpp
@@ -29,6 +30,5 @@ add_clang_library(clangDependencyScanning
   clangFrontend
   clangLex
   clangSerialization
-  clangTooling
   ${LLVM_PTHREAD_LIB}
   )

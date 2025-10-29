@@ -443,9 +443,15 @@ public:
 
   const DiagnosticsEngine &getDiagnostics() const { return *Diagnostics; }
   DiagnosticsEngine &getDiagnostics() { return *Diagnostics; }
+  llvm::IntrusiveRefCntPtr<DiagnosticsEngine> getDiagnosticsPtr() {
+    return Diagnostics;
+  }
 
   const SourceManager &getSourceManager() const { return *SourceMgr; }
   SourceManager &getSourceManager() { return *SourceMgr; }
+  llvm::IntrusiveRefCntPtr<SourceManager> getSourceManagerPtr() {
+    return SourceMgr;
+  }
 
   const Preprocessor &getPreprocessor() const { return *PP; }
   Preprocessor &getPreprocessor() { return *PP; }
@@ -453,8 +459,11 @@ public:
 
   const ASTContext &getASTContext() const { return *Ctx; }
   ASTContext &getASTContext() { return *Ctx; }
+  llvm::IntrusiveRefCntPtr<ASTContext> getASTContextPtr() { return Ctx; }
 
-  void setASTContext(ASTContext *ctx) { Ctx = ctx; }
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> ctx) {
+    Ctx = std::move(ctx);
+  }
   void setPreprocessor(std::shared_ptr<Preprocessor> pp);
 
   /// Enable source-range based diagnostic messages.
@@ -495,6 +504,7 @@ public:
 
   const FileManager &getFileManager() const { return *FileMgr; }
   FileManager &getFileManager() { return *FileMgr; }
+  IntrusiveRefCntPtr<FileManager> getFileManagerPtr() { return FileMgr; }
 
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
@@ -802,8 +812,8 @@ public:
       std::shared_ptr<CompilerInvocation> CI,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       std::shared_ptr<DiagnosticOptions> DiagOpts,
-      IntrusiveRefCntPtr<DiagnosticsEngine> Diags, FileManager *FileMgr,
-      bool OnlyLocalDecls = false,
+      IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
+      IntrusiveRefCntPtr<FileManager> FileMgr, bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
       unsigned PrecompilePreambleAfterNParses = 0,
       TranslationUnitKind TUKind = TU_Complete,
@@ -920,8 +930,10 @@ public:
                     bool IncludeCodePatterns, bool IncludeBriefComments,
                     CodeCompleteConsumer &Consumer,
                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-                    DiagnosticsEngine &Diag, LangOptions &LangOpts,
-                    SourceManager &SourceMgr, FileManager &FileMgr,
+                    llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag,
+                    LangOptions &LangOpts,
+                    llvm::IntrusiveRefCntPtr<SourceManager> SourceMgr,
+                    llvm::IntrusiveRefCntPtr<FileManager> FileMgr,
                     SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
                     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
                     std::unique_ptr<SyntaxOnlyAction> Act);

@@ -62,7 +62,8 @@ public:
         CompilerInstance::createDiagnostics(*VFS, *DiagOpts,
                                             new DiagnosticConsumer));
 
-    FileManager *FileMgr = new FileManager(CI->getFileSystemOpts(), VFS);
+    auto FileMgr =
+        llvm::makeIntrusiveRefCnt<FileManager>(CI->getFileSystemOpts(), VFS);
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
         CI, PCHContainerOpts, DiagOpts, Diags, FileMgr, false,

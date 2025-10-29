@@ -180,7 +180,7 @@ public:
   const char *GetTargetTriple();
 
   void SetExternalSource(
-      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> &ast_source_up);
+      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_sp);
 
   bool GetCompleteDecl(clang::Decl *decl) {
     return TypeSystemClang::GetCompleteDecl(&getASTContext(), decl);

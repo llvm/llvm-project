@@ -221,11 +221,13 @@ private:
     RecordLinkage Class = RecordLinkage::Unknown;
     RecordLinkage MetaClass = RecordLinkage::Unknown;
     RecordLinkage EHType = RecordLinkage::Unknown;
+#ifndef __swift__
     bool operator==(const Linkages &other) const {
       return std::tie(Class, MetaClass, EHType) ==
              std::tie(other.Class, other.MetaClass, other.EHType);
     }
     bool operator!=(const Linkages &other) const { return !(*this == other); }
+#endif
   };
   Linkages Linkages;
 

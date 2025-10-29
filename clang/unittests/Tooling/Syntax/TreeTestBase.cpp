@@ -152,10 +152,10 @@ SyntaxTreeTest::buildTree(StringRef Code, const TestClangConfig &ClangConfig) {
   Invocation->getPreprocessorOpts().addRemappedFile(
       FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
   CompilerInstance Compiler(Invocation);
-  Compiler.setDiagnostics(Diags.get());
+  Compiler.setDiagnostics(Diags);
   Compiler.setVirtualFileSystem(FS);
-  Compiler.setFileManager(FileMgr.get());
-  Compiler.setSourceManager(SourceMgr.get());
+  Compiler.setFileManager(FileMgr);
+  Compiler.setSourceManager(SourceMgr);
 
   syntax::TranslationUnit *Root = nullptr;
   BuildSyntaxTreeAction Recorder(Root, this->TM, this->TB, this->Arena);

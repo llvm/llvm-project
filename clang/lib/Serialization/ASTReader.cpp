@@ -612,8 +612,7 @@ bool PCHValidator::ReadDiagnosticOptions(DiagnosticOptions &DiagOpts,
                                          bool Complain) {
   DiagnosticsEngine &ExistingDiags = PP.getDiagnostics();
   IntrusiveRefCntPtr<DiagnosticIDs> DiagIDs(ExistingDiags.getDiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagIDs, DiagOpts));
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagIDs, DiagOpts);
   // This should never fail, because we would have processed these options
   // before writing them to an ASTFile.
   ProcessWarningOptions(*Diags, DiagOpts,

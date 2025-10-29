@@ -52,8 +52,8 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   if (Bodies.count(D->getName()) != 0)
     return;
 
-  SourceManager &SM = CI.getSourceManager();
-  FileID mainFileID = SM.getMainFileID();
+  llvm::IntrusiveRefCntPtr<SourceManager> SM = CI.getSourceManagerPtr();
+  FileID mainFileID = SM->getMainFileID();
 
   llvm::StringRef modelPath = CI.getAnalyzerOpts().ModelPath;
 
@@ -89,15 +89,15 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
       new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
       /*ShouldOwnClient=*/true);
 
-  Instance.getDiagnostics().setSourceManager(&SM);
+  Instance.getDiagnostics().setSourceManager(SM.get());
 
   // The instance wants to take ownership, however DisableFree frontend option
   // is set to true to avoid double free issues
   Instance.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
-  Instance.setFileManager(&CI.getFileManager());
-  Instance.setSourceManager(&SM);
+  Instance.setFileManager(CI.getFileManagerPtr());
+  Instance.setSourceManager(SM);
   Instance.setPreprocessor(CI.getPreprocessorPtr());
-  Instance.setASTContext(&CI.getASTContext());
+  Instance.setASTContext(CI.getASTContextPtr());
 
   Instance.getPreprocessor().InitializeForModelFile();
 
@@ -118,5 +118,5 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   // the main file id is changed to the model file during parsing and it needs
   // to be reset to the former main file id after parsing of the model file
   // is done.
-  SM.setMainFileID(mainFileID);
+  SM->setMainFileID(mainFileID);
 }

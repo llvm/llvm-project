@@ -35,6 +35,14 @@ struct PathStorage {
   PathStorage() {}
   PathStorage(const Twine &InputPath,
               sys::path::Style Style = sys::path::Style::native) {
+    assign(InputPath, Style);
+  }
+  PathStorage(StringRef InputPath,
+              sys::path::Style Style = sys::path::Style::native) {
+    assign(InputPath, Style);
+  }
+  void assign(const Twine &InputPath,
+              sys::path::Style Style = sys::path::Style::native) {
     if (is_style_windows(Style)) {
       // Canonicalize to backslahes
       InputPath.toVector(Storage);
@@ -45,7 +53,7 @@ struct PathStorage {
       Path = Storage.str();
     }
   }
-  PathStorage(StringRef InputPath,
+  void assign(StringRef InputPath,
               sys::path::Style Style = sys::path::Style::native) {
     if (is_style_windows(Style)) {
       // Canonicalize to backslahes
@@ -56,6 +64,14 @@ struct PathStorage {
       Path = InputPath;
     }
   }
+
+  // Note: the default implementation of these would leave Path pointing to the
+  // wrong storage. We could implement them, but they are also slower than
+  // calling assign since they would copy the storage again.
+  PathStorage(const PathStorage &) = delete;
+  PathStorage(PathStorage &&) = delete;
+  PathStorage &operator=(PathStorage &&) = delete;
+  PathStorage &operator=(const PathStorage &) = delete;
 };
 
 /// Caching for lazily discovering a CAS-based filesystem.

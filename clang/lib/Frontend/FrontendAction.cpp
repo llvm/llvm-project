@@ -892,11 +892,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
   if (ReplayASTFile) {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(new DiagnosticsEngine(
-        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions()));
+    auto ASTDiags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions());
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     // FIXME: What if the input is a memory buffer?
@@ -918,7 +918,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
     CI.setVirtualFileSystem(AST->getFileManager().getVirtualFileSystemPtr());
-    CI.setFileManager(&AST->getFileManager());
+    CI.setFileManager(AST->getFileManagerPtr());
     CI.createSourceManager();
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
 
@@ -966,7 +966,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     assert(hasASTFileSupport() &&
            "This action does not have AST file support!");
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // FIXME: What if the input is a memory buffer?
     StringRef InputFile = Input.getFile();
@@ -985,14 +985,14 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
-    CI.setVirtualFileSystem(AST->getVirtualFileSystemPtr());
-    CI.setFileManager(&AST->getFileManager());
-    CI.setSourceManager(&AST->getSourceManager());
+    CI.setVirtualFileSystem(AST->getFileManager().getVirtualFileSystemPtr());
+    CI.setFileManager(AST->getFileManagerPtr());
+    CI.setSourceManager(AST->getSourceManagerPtr());
     CI.setPreprocessor(AST->getPreprocessorPtr());
     Preprocessor &PP = CI.getPreprocessor();
     PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
                                            PP.getLangOpts());
-    CI.setASTContext(&AST->getASTContext());
+    CI.setASTContext(AST->getASTContextPtr());
 
     setCurrentInput(Input, std::move(AST));
 
@@ -1297,11 +1297,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     if (!CI.getPreprocessorOpts().ChainedIncludes.empty()) {
       // Convert headers to PCH and chain them.
-      IntrusiveRefCntPtr<ExternalSemaSource> source, FinalReader;
+      IntrusiveRefCntPtr<ExternalSemaSource> source;
+      IntrusiveRefCntPtr<ASTReader> FinalReader;
       source = createChainedIncludesSource(CI, FinalReader);
       if (!source)
         return false;
-      CI.setASTReader(static_cast<ASTReader *>(FinalReader.get()));
+      CI.setASTReader(FinalReader);
       CI.getASTContext().setExternalSource(source);
     } else if (CI.getLangOpts().Modules ||
                !CI.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
@@ -1397,23 +1398,21 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // provides the layouts from that file.
   if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() &&
       CI.hasASTContext() && !CI.getASTContext().getExternalSource()) {
-    IntrusiveRefCntPtr<ExternalASTSource>
-      Override(new LayoutOverrideSource(
-                     CI.getFrontendOpts().OverrideRecordLayoutsFile));
+    auto Override = llvm::makeIntrusiveRefCnt<LayoutOverrideSource>(
+        CI.getFrontendOpts().OverrideRecordLayoutsFile);
     CI.getASTContext().setExternalSource(Override);
   }
 
   // Setup HLSL External Sema Source
   if (CI.getLangOpts().HLSL && CI.hasASTContext()) {
-    IntrusiveRefCntPtr<ExternalSemaSource> HLSLSema(
-        new HLSLExternalSemaSource());
-    if (auto *SemaSource = dyn_cast_if_present<ExternalSemaSource>(
-            CI.getASTContext().getExternalSource())) {
-      IntrusiveRefCntPtr<ExternalSemaSource> MultiSema(
-          new MultiplexExternalSemaSource(SemaSource, HLSLSema.get()));
-      CI.getASTContext().setExternalSource(MultiSema);
+    auto HLSLSema = llvm::makeIntrusiveRefCnt<HLSLExternalSemaSource>();
+    if (auto SemaSource = dyn_cast_if_present<ExternalSemaSource>(
+            CI.getASTContext().getExternalSourcePtr())) {
+      auto MultiSema = llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
+          std::move(SemaSource), std::move(HLSLSema));
+      CI.getASTContext().setExternalSource(std::move(MultiSema));
     } else
-      CI.getASTContext().setExternalSource(HLSLSema);
+      CI.getASTContext().setExternalSource(std::move(HLSLSema));
   }
 
   FailureCleanup.release();
@@ -1541,7 +1540,6 @@ void ASTFrontendAction::ExecuteAction() {
 
   if (!CI.hasSema())
     CI.createSema(getTranslationUnitKind(), CompletionConsumer);
-
   ParseAST(CI.getSema(), CI.getFrontendOpts().ShowStats,
            CI.getFrontendOpts().SkipFunctionBodies);
 }

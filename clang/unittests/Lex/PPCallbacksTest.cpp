@@ -135,7 +135,7 @@ protected:
   PPCallbacksTest()
       : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
-        DiagID(new DiagnosticIDs()),
+        DiagID(DiagnosticIDs::create()),
         Diags(DiagID, DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions()) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";

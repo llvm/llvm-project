@@ -398,7 +398,7 @@ public:
   }
 
   /// setDiagnostics - Replace the current diagnostics engine.
-  void setDiagnostics(DiagnosticsEngine *Value);
+  void setDiagnostics(llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Value);
 
   DiagnosticConsumer &getDiagnosticClient() const {
     assert(Diagnostics && Diagnostics->getClient() &&
@@ -504,8 +504,8 @@ public:
     FileMgr.resetWithoutRelease();
   }
 
-  /// Replace the current file manager.
-  void setFileManager(FileManager *Value);
+  /// Replace the current file manager and virtual file system.
+  void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}
   /// @name Output Manager
@@ -549,7 +549,7 @@ public:
   }
 
   /// setSourceManager - Replace the current source manager.
-  void setSourceManager(SourceManager *Value);
+  void setSourceManager(llvm::IntrusiveRefCntPtr<SourceManager> Value);
 
   /// @}
   /// @name Preprocessor
@@ -594,7 +594,7 @@ public:
   }
 
   /// setASTContext - Replace the current AST context.
-  void setASTContext(ASTContext *Value);
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> Value);
 
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
