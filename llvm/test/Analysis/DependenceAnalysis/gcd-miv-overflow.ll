@@ -21,8 +21,8 @@
 ;   - A[offset0] : A[4], A[5], A[6], ...
 ;   - A[offset1] : A[0], A[3], A[6], ...
 ;
-; The root cause is that DA assumes `3*m` begin a multiple of 3 in mathematical
-; sense, which isn't necessarily true due to overflow.
+; The root cause is that DA interprets `3*m` in non-modular arithmetic, which
+; isn't necessarily true due to overflow.
 ;
 define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-ALL-LABEL: 'gcdmiv_coef_ovfl'

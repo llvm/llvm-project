@@ -4,16 +4,15 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=weak-zero-siv 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-WEAK-ZERO-SIV
 
-; offset = -2;
-; for (i = 0; i < (1LL << 62); i++, offset += 2) {
-;   if (0 <= offset)
-;     A[offset] = 1;
+; for (i = 0; i < (1LL << 62); i++) {
+;   if (0 <= 2*i - 2)
+;     A[2*i - 2] = 1;
 ;   A[2] = 2;
 ; }
 ;
 ; FIXME: DependenceAnalysis currently detects no dependency between the two
 ; stores, but it does exist. The root cause is that the product of the BTC and
-; the coefficient triggers an overflow.
+; the coefficient ((1LL << 62) - 1 and 2) overflows in a signed sense.
 ;
 define void @weakzero_dst_siv_prod_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'weakzero_dst_siv_prod_ovfl'
@@ -61,18 +60,17 @@ exit:
   ret void
 }
 
-; offset = -1;
-; for (i = 0; i < n; i++, offset += 2) {
-;   if (0 <= offset)
-;     A[offset] = 1;
+; for (i = 0; i < n; i++) {
+;   if (0 <= 2*i - 1)
+;     A[2*i - 1] = 1;
 ;   A[INT64_MAX] = 2;
 ; }
 ;
 ; FIXME: DependenceAnalysis currently detects no dependency between the two
 ; stores, but it does exist. When `%n` is 2^62, the value of `%offset` will be
 ; the same as INT64_MAX at the last iteration.
-; The root cause is that the calculation of the differenct between the two
-; constants (INT64_MAX and -1) triggers an overflow.
+; The root cause is that the calculation of the difference between the two
+; constants (INT64_MAX and -1) overflows in a signed sense.
 ;
 define void @weakzero_dst_siv_delta_ovfl(ptr %A, i64 %n) {
 ; CHECK-ALL-LABEL: 'weakzero_dst_siv_delta_ovfl'

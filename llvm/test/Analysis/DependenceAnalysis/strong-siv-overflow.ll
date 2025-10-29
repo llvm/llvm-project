@@ -4,19 +4,19 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=strong-siv 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-STRONG-SIV
 
-; offset0 = -2;
-; offset1 = -4;
-; for (i = 0; i < (1LL << 62); i++, offset0 += 2, offset1 += 2) {
-;   if (0 <= offset0)
-;     A[offset0] = 1;
-;   if (0 <= offset1)
-;     A[offset1] = 2;
+; for (i = 0; i < (1LL << 62); i++) {
+;   if (0 <= 2*i - 2)
+;     A[2*i - 2] = 1;
+;
+;   if (0 <= 2*i - 4)
+;     A[2*i - 4] = 2;
 ; }
 ;
 ; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist.
-; The root cause is that the product of the BTC and the coefficient triggers an
-; overflow.
+; stores, but it does exist. For example, each store will access A[0] when i
+; is 1 and 2 respectively.
+; The root cause is that the product of the BTC and the coefficient
+; ((1LL << 62) - 1 and 2) overflows in a signed sense.
 define void @strongsiv_const_ovfl(ptr %A) {
 ; CHECK-LABEL: 'strongsiv_const_ovfl'
 ; CHECK-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1

@@ -11,13 +11,13 @@
 ;     A[3*i - 2] = 1;
 ; }
 ;
-; FIXME: DependencyAnalsysis currently detects no dependency between
+; FIXME: DependenceAnalsysis currently detects no dependency between
 ; `A[-3*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
 ;
-;  memory location  | -3*i + INT64_MAX | 3*i - 2
-; ------------------|------------------|-----------
-;  A[1]             | i = max_i        | i = 1
-;  A[INT64_MAX - 3] | i = 1            | i = max_i
+;  memory access       | i == 1           | i == max_i
+; ---------------------|------------------|------------------
+;  A[-3*i + INT64_MAX] | A[INT64_MAX - 3] | A[1]
+;  A[3*i - 2]          | A[1]             | A[INT64_MAX - 3]
 ;
 ; The root cause is that the calculation of the differenct between the two
 ; constants (INT64_MAX and -2) triggers an overflow.
@@ -73,13 +73,13 @@ exit:
 ;   A[3*i + 1] = 1;
 ; }
 ;
-; FIXME: DependencyAnalsysis currently detects no dependency between
+; FIXME: DependenceAnalsysis currently detects no dependency between
 ; `A[-3*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
 ;
-;  memory location  | -3*i + INT64_MAX | 3*i + 1
-; ------------------|------------------|--------------
-;  A[1]             | i = max_i        | i = 0
-;  A[INT64_MAX - 3] | i = 1            | i = max_i - 1
+;  memory access       | i == 0 | i == 1           | i == max_i - 1 | i == max_i
+; ---------------------|--------|------------------|----------------|------------------
+;  A[-3*i + INT64_MAX] |        | A[INT64_MAX - 3] | A[1]           |
+;  A[3*i + 1]          | A[1]   |                  |                | A[INT64_MAX - 3]
 ;
 ; The root cause is that the product of the BTC, the coefficient, and 2
 ; triggers an overflow.

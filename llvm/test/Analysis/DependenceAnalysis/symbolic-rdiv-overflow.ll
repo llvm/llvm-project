@@ -4,17 +4,17 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -da-enable-dependence-test=symbolic-rdiv 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,CHECK-SYMBOLIC-RDIV
 
-; offset = -2;
-; for (i = 0; i < (1LL << 62); i++, offset += 2) {
-;   if (0 <= offset0)
-;     A[offset0] = 1;
+; for (i = 0; i < (1LL << 62); i++) {
+;   if (0 <= 2*i - 2)
+;     A[2*i - 2] = 1;
 ;   A[i] = 2;
 ; }
 ;
 ; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist.
-; The root cause is that the product of the BTC and the coefficient triggers an
-; overflow.
+; stores, but it does exist. For example, each store will access A[0] when i
+; is 1 and 0 respectively.
+; The root cause is that the product of the BTC and the coefficient 
+; ((1LL << 62) - 1 and 2) overflows in a signed sense.
 define void @symbolicrdiv_prod_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'symbolicrdiv_prod_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
@@ -61,8 +61,8 @@ exit:
   ret void
 }
 
-; offset0 = -4611686018427387904  // -2^62
-; offset1 =  4611686018427387904  // 2^62
+; offset0 = -4611686018427387904;  // -2^62
+; offset1 =  4611686018427387904;  // 2^62
 ; for (i = 0; i < (1LL << 62) - 100; i++) {
 ;   if (0 <= offset0)
 ;     A[offset0] = 1;
@@ -73,9 +73,15 @@ exit:
 ; }
 ;
 ; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist.
+; stores, but it does exist. For example,
+;
+;  memory access           | i == 2^61 | i == 2^61 + 2^59 | i == 2^61 + 2^60  
+; -------------------------|-----------|------------------|-------------------
+;  A[2*i - 2^62] (offset0) |           | A[2^60]          | A[2^61]           
+;  A[-i + 2^62]  (offset1) | A[2^61]   |                  | A[2^60]           
+;
 ; The root cause is that the calculation of the differenct between the two
-; constants (-2^62 and 2^62) triggers an overflow.
+; constants (-2^62 and 2^62) overflows in a signed sense.
 define void @symbolicrdiv_delta_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'symbolicrdiv_delta_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
