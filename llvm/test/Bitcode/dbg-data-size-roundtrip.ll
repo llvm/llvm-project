@@ -1,6 +1,6 @@
 ; RUN: opt %s -o - -S | llvm-as - | llvm-dis - | FileCheck %s
 
-; CHECK: !DIBasicType(name: "unsigned _BitInt", size: 32, data_size: 17, encoding: DW_ATE_unsigned)
+; CHECK: !DIBasicType(name: "unsigned _BitInt", size: 32, dataSize: 17, encoding: DW_ATE_unsigned)
 
 @a = global i8 0, align 1, !dbg !0
 
@@ -13,7 +13,7 @@
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !3, producer: "clang version 22.0.0git", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, nameTableKind: None)
 !3 = !DIFile(filename: "bit-int.c", directory: "/")
 !4 = !{!0}
-!5 = !DIBasicType(name: "unsigned _BitInt", size: 32, data_size: 17, encoding: DW_ATE_unsigned)
+!5 = !DIBasicType(name: "unsigned _BitInt", size: 32, dataSize: 17, encoding: DW_ATE_unsigned)
 !6 = !{i32 2, !"Debug Info Version", i32 3}
 !7 = !{i32 1, !"wchar_size", i32 4}
 !8 = !{!"clang version 22.0.0git"}
