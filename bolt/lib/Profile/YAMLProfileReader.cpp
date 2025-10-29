@@ -350,9 +350,6 @@ bool YAMLProfileReader::parseFunctionProfile(
              << MismatchedCalls << " calls, and " << MismatchedEdges
              << " edges in profile did not match function " << BF << '\n';
 
-    if (YamlBF.NumBasicBlocks != BF.size())
-      ++BC.Stats.NumStaleFuncsWithEqualBlockCount;
-
     if (!opts::InferStaleProfile)
       return false;
     ArrayRef<ProbeMatchSpec> ProbeMatchSpecs;
