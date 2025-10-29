@@ -517,7 +517,9 @@ def AArch64msb_m1 : PatFrags<(ops node:$pred, node:$op1, node:$op2, node:$op3),
                               (vselect node:$pred, (sub node:$op3, (AArch64mul_p_oneuse (SVEAllActive), node:$op2, node:$op1)), node:$op1)]>;
 def AArch64eor3 : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_eor3 node:$op1, node:$op2, node:$op3),
-                            (xor node:$op1, (xor node:$op2, node:$op3))]>;
+                            (xor node:$op1, (xor node:$op2, node:$op3))], [{
+                            return N->getOpcode() != ISD::XOR || !Subtarget->disableXorMerge();
+                            }]>;
 def AArch64bcax : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_bcax node:$op1, node:$op2, node:$op3),
                             (xor node:$op1, (and node:$op2, (vnot node:$op3)))]>;

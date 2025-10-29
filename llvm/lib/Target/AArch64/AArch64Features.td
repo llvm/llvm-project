@@ -897,6 +897,11 @@ def FeatureUseWzrToVecMove : SubtargetFeature<"use-wzr-to-vec-move",
                                               "UseWzrToVecMove", "true",
                                               "Move from WZR to insert 0 into vector registers">;
 
+// On some processors, 2 operand xor use higher throughput paths than 3 operand xor, making
+// it more beneficial to keep them separate.
+def FeatureDisableXorMerge : SubtargetFeature<"disable-xor-merge",
+                                              "DisableXorMerge", "true",
+                                              "Prevent chained XOR instructions from being merged into EOR3">;
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

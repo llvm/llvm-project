@@ -1081,7 +1081,8 @@ def ProcessorFeatures {
                                        FeatureCCIDX,
                                        FeatureDotProd, FeatureFullFP16, FeatureSB, FeatureSSBS, FeatureSVE,
                                        FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS, FeatureLSE,
-                                       FeatureNEON, FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC];
+                                       FeatureNEON, FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC,
+                                       FeatureDisableXorMerge];
   list<SubtargetFeature> NeoverseN3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureMTE, FeaturePerfMon,
                                       FeatureRandGen, FeatureSPE, FeatureSPE_EEF,
@@ -1109,7 +1110,7 @@ def ProcessorFeatures {
                                        FeatureCCIDX,
                                        FeatureSHA3, FeatureSM4, FeatureDotProd, FeatureComplxNum,
                                        FeatureCRC, FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS,
-                                       FeatureRCPC, FeatureRDM];
+                                       FeatureRCPC, FeatureRDM, FeatureDisableXorMerge];
   list<SubtargetFeature> NeoverseV2 = [HasV9_0aOps, FeatureBF16, FeatureSPE,
                                        FeaturePerfMon, FeatureETE, FeatureMatMulInt8,
                                        FeatureNEON, FeatureSVEBitPerm, FeatureFP16FML,
@@ -1117,7 +1118,8 @@ def ProcessorFeatures {
                                        FeatureCCIDX,
                                        FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureDotProd,
                                        FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS, FeatureLSE,
-                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC];
+                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC,
+                                       FeatureDisableXorMerge];
   list<SubtargetFeature> NeoverseV3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
