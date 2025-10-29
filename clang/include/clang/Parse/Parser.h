@@ -5177,8 +5177,6 @@ private:
   /// Implementations are in ParseHLSL.cpp
   ///@{
 
-  //===--------------------------------------------------------------------===//
-
 private:
   bool MaybeParseHLSLAnnotations(Declarator &D,
                                  SourceLocation *EndLoc = nullptr,
