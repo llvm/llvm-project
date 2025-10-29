@@ -241,30 +241,16 @@ define <4 x double> @h_to_d(<4 x half> %a) {
 ;
 ; CHECK-CVT-GI-LABEL: h_to_d:
 ; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-CVT-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-CVT-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-CVT-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-CVT-GI-NEXT:    fcvt d0, h0
-; CHECK-CVT-GI-NEXT:    fcvt d4, h1
-; CHECK-CVT-GI-NEXT:    fcvt d1, h2
-; CHECK-CVT-GI-NEXT:    fcvt d2, h3
-; CHECK-CVT-GI-NEXT:    mov v0.d[1], v4.d[0]
-; CHECK-CVT-GI-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-CVT-GI-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v1.2d, v1.4s
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: h_to_d:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP16-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-FP16-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-FP16-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-FP16-GI-NEXT:    fcvt d0, h0
-; CHECK-FP16-GI-NEXT:    fcvt d4, h1
-; CHECK-FP16-GI-NEXT:    fcvt d1, h2
-; CHECK-FP16-GI-NEXT:    fcvt d2, h3
-; CHECK-FP16-GI-NEXT:    mov v0.d[1], v4.d[0]
-; CHECK-FP16-GI-NEXT:    mov v1.d[1], v2.d[0]
+; CHECK-FP16-GI-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-FP16-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-FP16-GI-NEXT:    fcvtl2 v1.2d, v1.4s
 ; CHECK-FP16-GI-NEXT:    ret
   %1 = fpext <4 x half> %a to <4 x double>
   ret <4 x double> %1

@@ -825,6 +825,15 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}})
       .libcallFor({{s128, s64}, {s128, s32}, {s128, s16}})
+      .moreElementsToNextPow2(0)
+      .lowerIf([](const LegalityQuery &Q) {
+        LLT DstTy = Q.Types[0];
+        LLT SrcTy = Q.Types[1];
+        return SrcTy.isVector() && DstTy.isVector() &&
+               SrcTy.getNumElements() > 2 &&
+               SrcTy.getScalarSizeInBits() == 16 &&
+               DstTy.getScalarSizeInBits() == 64;
+      })
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarize(0);

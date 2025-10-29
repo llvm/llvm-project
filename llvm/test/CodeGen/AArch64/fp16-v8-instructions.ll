@@ -298,48 +298,22 @@ define <8 x double> @h_to_d(<8 x half> %a) {
 ;
 ; CHECK-CVT-GI-LABEL: h_to_d:
 ; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-CVT-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-CVT-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-CVT-GI-NEXT:    mov h4, v0.h[4]
-; CHECK-CVT-GI-NEXT:    mov h5, v0.h[5]
-; CHECK-CVT-GI-NEXT:    mov h6, v0.h[6]
-; CHECK-CVT-GI-NEXT:    mov h7, v0.h[7]
-; CHECK-CVT-GI-NEXT:    fcvt d0, h0
-; CHECK-CVT-GI-NEXT:    fcvt d16, h1
-; CHECK-CVT-GI-NEXT:    fcvt d1, h2
-; CHECK-CVT-GI-NEXT:    fcvt d17, h3
-; CHECK-CVT-GI-NEXT:    fcvt d2, h4
-; CHECK-CVT-GI-NEXT:    fcvt d4, h5
-; CHECK-CVT-GI-NEXT:    fcvt d3, h6
-; CHECK-CVT-GI-NEXT:    fcvt d5, h7
-; CHECK-CVT-GI-NEXT:    mov v0.d[1], v16.d[0]
-; CHECK-CVT-GI-NEXT:    mov v1.d[1], v17.d[0]
-; CHECK-CVT-GI-NEXT:    mov v2.d[1], v4.d[0]
-; CHECK-CVT-GI-NEXT:    mov v3.d[1], v5.d[0]
+; CHECK-CVT-GI-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-GI-NEXT:    fcvtl2 v3.4s, v0.8h
+; CHECK-CVT-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v1.2d, v1.4s
+; CHECK-CVT-GI-NEXT:    fcvtl v2.2d, v3.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v3.2d, v3.4s
 ; CHECK-CVT-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: h_to_d:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-FP16-GI-NEXT:    mov h2, v0.h[2]
-; CHECK-FP16-GI-NEXT:    mov h3, v0.h[3]
-; CHECK-FP16-GI-NEXT:    mov h4, v0.h[4]
-; CHECK-FP16-GI-NEXT:    mov h5, v0.h[5]
-; CHECK-FP16-GI-NEXT:    mov h6, v0.h[6]
-; CHECK-FP16-GI-NEXT:    mov h7, v0.h[7]
-; CHECK-FP16-GI-NEXT:    fcvt d0, h0
-; CHECK-FP16-GI-NEXT:    fcvt d16, h1
-; CHECK-FP16-GI-NEXT:    fcvt d1, h2
-; CHECK-FP16-GI-NEXT:    fcvt d17, h3
-; CHECK-FP16-GI-NEXT:    fcvt d2, h4
-; CHECK-FP16-GI-NEXT:    fcvt d4, h5
-; CHECK-FP16-GI-NEXT:    fcvt d3, h6
-; CHECK-FP16-GI-NEXT:    fcvt d5, h7
-; CHECK-FP16-GI-NEXT:    mov v0.d[1], v16.d[0]
-; CHECK-FP16-GI-NEXT:    mov v1.d[1], v17.d[0]
-; CHECK-FP16-GI-NEXT:    mov v2.d[1], v4.d[0]
-; CHECK-FP16-GI-NEXT:    mov v3.d[1], v5.d[0]
+; CHECK-FP16-GI-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-FP16-GI-NEXT:    fcvtl2 v3.4s, v0.8h
+; CHECK-FP16-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-FP16-GI-NEXT:    fcvtl2 v1.2d, v1.4s
+; CHECK-FP16-GI-NEXT:    fcvtl v2.2d, v3.2s
+; CHECK-FP16-GI-NEXT:    fcvtl2 v3.2d, v3.4s
 ; CHECK-FP16-GI-NEXT:    ret
   %1 = fpext <8 x half> %a to <8 x double>
   ret <8 x double> %1
