@@ -2674,8 +2674,11 @@ private:
     }
 
     // *a or &a or &&a.
-    if (PreviousNotConst->is(TT_PointerOrReference))
+    if (PreviousNotConst->is(TT_PointerOrReference) ||
+        PreviousNotConst->endsSequence(tok::coloncolon,
+                                       TT_PointerOrReference)) {
       return true;
+    }
 
     // MyClass a;
     if (PreviousNotConst->isTypeName(LangOpts))
