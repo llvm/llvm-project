@@ -56,7 +56,8 @@ endif()
 
 # Don't build flang on Darwin due to:
 # https://github.com/llvm/llvm-project/issues/160546
-if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
+# Skip flang build on Windows because it makes the insaller too big.
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "flang")
 endif()
 
