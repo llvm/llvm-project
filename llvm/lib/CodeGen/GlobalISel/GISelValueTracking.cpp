@@ -628,7 +628,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
 
     assert(MI.getOperand(0).getReg() == R &&
            "We only compute knownbits for the sum here.");
-    // With UADDO_CARRY, a carry bit may be added in.
+    // With [US]ADDE, a carry bit may be added in.
     KnownBits Carry(1);
     if (Opcode == TargetOpcode::G_UADDE || Opcode == TargetOpcode::G_SADDE) {
       computeKnownBitsImpl(MI.getOperand(4).getReg(), Known, DemandedElts,
