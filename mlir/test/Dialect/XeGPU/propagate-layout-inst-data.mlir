@@ -69,6 +69,45 @@ gpu.module @test_kernel {
 }
 
 // -----
+gpu.module @test_kernel {
+  gpu.func @elementwise_with_inst_data_12(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
+    %c0 = arith.constant 0 : index
+    %c32 = arith.constant 32 : index
+    %c1024 = arith.constant 1024 : index
+    %block_id_x = gpu.block_id x
+    %block_id_y = gpu.block_id y
+    %m = arith.muli %block_id_x, %c32 : index
+
+    %a_tdesc = xegpu.create_nd_tdesc %A[%m, %c0] : memref<1024x1024xf16> -> !xegpu.tensor_desc<12x32xf16>
+    %b_tdesc = xegpu.create_nd_tdesc %B[%m, %c0] : memref<1024x1024xf16> -> !xegpu.tensor_desc<12x32xf16>
+    %c_tdesc = xegpu.create_nd_tdesc %C[%m, %c0] : memref<1024x1024xf16> -> !xegpu.tensor_desc<12x32xf16>
+
+    %out:3 = scf.for %k = %c0 to %c1024 step %c32
+      iter_args(%arg0 = %a_tdesc, %arg1 = %b_tdesc, %arg2 = %c_tdesc)
+      -> (!xegpu.tensor_desc<12x32xf16>, !xegpu.tensor_desc<12x32xf16>, !xegpu.tensor_desc<12x32xf16>) {
+      //CHECK: xegpu.load_nd {{.*}} {layout_result_0 = #xegpu.layout<inst_data = [4, 16], lane_layout = [1, 16], lane_data = [1, 1]>} :
+      //CHECK-SAME: !xegpu.tensor_desc<12x32xf16, #xegpu.layout<inst_data = [4, 16], lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<12x32xf16>
+      %a = xegpu.load_nd %arg0 : !xegpu.tensor_desc<12x32xf16> -> vector<12x32xf16>
+      %b = xegpu.load_nd %arg1 : !xegpu.tensor_desc<12x32xf16> -> vector<12x32xf16>
+
+      //CHECK-COUNT: arith.addf {{.*}} {layout_result_0 = #xegpu.layout<inst_data = [4, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<12x32xf16>
+      %c = arith.addf %a, %b : vector<12x32xf16>
+
+      //CHECK-COUNT: xegpu.store_nd {{.*}} : vector<12x32xf16>, !xegpu.tensor_desc<12x32xf16, #xegpu.layout<inst_data = [4, 16], lane_layout = [1, 16], lane_data = [1, 1]>>>
+      xegpu.store_nd %c, %arg2: vector<12x32xf16>, !xegpu.tensor_desc<12x32xf16>
+
+      //CHECK-COUNT: xegpu.update_nd_offset {{.*}} : !xegpu.tensor_desc<12x32xf16, #xegpu.layout<inst_data = [4, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+      %a_next_tdesc = xegpu.update_nd_offset %arg0, [%c0, %c32] : !xegpu.tensor_desc<12x32xf16>
+      %b_next_tdesc = xegpu.update_nd_offset %arg1, [%c0, %c32] : !xegpu.tensor_desc<12x32xf16>
+      %c_next_tdesc = xegpu.update_nd_offset %arg2, [%c0, %c32] : !xegpu.tensor_desc<12x32xf16>
+      scf.yield %a_next_tdesc, %b_next_tdesc, %c_next_tdesc
+        : !xegpu.tensor_desc<12x32xf16>, !xegpu.tensor_desc<12x32xf16>, !xegpu.tensor_desc<12x32xf16>
+    }
+    gpu.return
+  }
+}
+
+// -----
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_chunksize(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256xf16>) {
