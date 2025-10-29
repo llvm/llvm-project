@@ -222,10 +222,9 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[EXITCOND_2:%.*]] = icmp eq i16 [[IV_1_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_2]], label %[[LOOP_2_PH:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_2_PH]]:
-; CHECK-NEXT:    [[IV_1_LCSSA2:%.*]] = phi i16 [ [[IV_1]], %[[LOOP_1_LATCH]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT_LCSSA:%.*]] = phi i16 [ [[IV_1_NEXT]], %[[LOOP_1_LATCH]] ]
 ; CHECK-NEXT:    [[IV_1_NEXT_EXT:%.*]] = sext i16 [[IV_1_NEXT_LCSSA]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[IV_1_LCSSA2]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[IV_1]], 3
 ; CHECK-NEXT:    br label %[[LOOP_2_HEADER:.*]]
 ; CHECK:       [[LOOP_2_HEADER]]:
 ; CHECK-NEXT:    [[IV_1_REM:%.*]] = urem i64 100, [[IV_1_NEXT_EXT]]

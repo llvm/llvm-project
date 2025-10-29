@@ -352,7 +352,7 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<int>
+  virtual llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) {
     return llvm::createStringError("Type has no child named '%s'", child_name);

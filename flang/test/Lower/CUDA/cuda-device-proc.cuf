@@ -468,7 +468,18 @@ attributes(global) subroutine test_bulk_g2s(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_bulk_g2s
-! CHECK: nvvm.cp.async.bulk.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : <7>, <1>
+! CHECK: %[[BARRIER:.*]]:2 = hlfir.declare %4 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFtest_bulk_g2sEbarrier1"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK: %[[DST:.*]]:2 = hlfir.declare %16(%17) {data_attr = #cuf.cuda<shared>, uniq_name = "_QFtest_bulk_g2sEtmpa"} : (!fir.ref<!fir.array<1024xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xf64>>, !fir.ref<!fir.array<1024xf64>>)
+! CHECK: %[[COUNT:.*]]:2 = hlfir.declare %19 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_bulk_g2sEtx_count"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)    
+! CHECK: %[[SRC:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
+! CHECK: %[[COUNT_LOAD:.*]] = fir.load %20#0 : !fir.ref<i32>
+! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
+! CHECK: %[[BARRIER_3:.*]] = llvm.addrspacecast %[[BARRIER_PTR]] : !llvm.ptr to !llvm.ptr<3>
+! CHECK: %[[DST_PTR:.*]] = fir.convert %[[DST]]#0 : (!fir.ref<!fir.array<1024xf64>>) -> !llvm.ptr
+! CHECK: %[[DST_7:.*]] = llvm.addrspacecast %[[DST_PTR]] : !llvm.ptr to !llvm.ptr<7>
+! CHECK: %[[SRC_PTR:.*]] = fir.convert %[[SRC]] : (!fir.ref<f64>) -> !llvm.ptr
+! CHECK: %[[SRC_3:.*]] = llvm.addrspacecast %[[SRC_PTR]] : !llvm.ptr to !llvm.ptr<1>
+! CHECK: nvvm.cp.async.bulk.shared.cluster.global %[[DST_7]], %[[SRC_3]], %[[BARRIER_3]], %[[COUNT_LOAD]] : <7>, <1>
 
 attributes(global) subroutine test_bulk_s2g(a)
   real(8), device :: a(*)

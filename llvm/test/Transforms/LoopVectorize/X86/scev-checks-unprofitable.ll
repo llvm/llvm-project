@@ -17,13 +17,12 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ZEXT]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP_1_EXIT:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_1_EXIT]]:
-; CHECK-NEXT:    [[IV_1_LCSSA2:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_3_PREHEADER:.*]]
 ; CHECK:       [[LOOP_3_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[IV_1_LCSSA2]], 1
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[IV_1]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

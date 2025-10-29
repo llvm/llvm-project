@@ -48787,6 +48787,11 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
   }
 
   if (CC == X86::COND_E || CC == X86::COND_NE) {
+    // Canonicalize constant to RHS if we're just using ZF.
+    if (Op0 != Op1 && DAG.isConstantIntBuildVectorOrConstantInt(Op0) &&
+        !DAG.isConstantIntBuildVectorOrConstantInt(Op1))
+      return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op1, Op0);
+
     // TESTZ(X,~Y) == TESTC(Y,X)
     if (SDValue NotOp1 = IsNOT(Op1, DAG)) {
       CC = (CC == X86::COND_E ? X86::COND_B : X86::COND_AE);
@@ -48849,10 +48854,6 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
         }
       }
     }
-
-    // TESTZ(-1,X) == TESTZ(X,X)
-    if (ISD::isBuildVectorAllOnes(Op0.getNode()))
-      return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op1, Op1);
 
     // TESTZ(X,-1) == TESTZ(X,X)
     if (ISD::isBuildVectorAllOnes(Op1.getNode()))
