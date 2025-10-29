@@ -570,10 +570,10 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
 
   // for gather and scatter ops, Low-precision types are packed in 32-bit units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();
-  constexpr int packingBitSizeGatherScatter{32};
-  int chunkAlignmentFactor = bitWidth < packingBitSizeGatherScatter
-                                 ? packingBitSizeGatherScatter / bitWidth
-                                 : 1;
+  int chunkAlignmentFactor =
+      bitWidth < xegpu::uArch::generalPackedFormatBitSize
+          ? xegpu::uArch::generalPackedFormatBitSize / bitWidth
+          : 1;
   auto scatterAttr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(encoding);
   if (scatterAttr) {
     int64_t chunkSize = scatterAttr.getChunkSizeAsInt();

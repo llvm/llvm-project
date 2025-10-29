@@ -204,6 +204,28 @@ struct LayoutInfoLattice : public Lattice<LayoutInfo> {
   using Lattice::Lattice;
 };
 
+/// Helper Function to find a proper instruction multiple for the user-supplied
+/// sg-level data shape. `candidates` are uArch allowed shapes.
+/// `candidateMultiples` are uArch multiples of such shapes (e.g., block count).
+template <typename T>
+int getLargestDivisor(T dim, ArrayRef<T> candidates,
+                      ArrayRef<T> candidateMultiples = {}) {
+  static_assert(std::is_integral<T>::value, "T must be an integer type");
+  int largest = -1;
+  SmallVector<T> multiples = {1};
+  if (!candidateMultiples.empty())
+    multiples =
+        SmallVector<T>(candidateMultiples.begin(), candidateMultiples.end());
+  for (T candidate : candidates) {
+    for (T multiple : multiples) {
+      int value = static_cast<int>(candidate * multiple);
+      if (value != 0 && dim % value == 0 && value > largest)
+        largest = value;
+    }
+  }
+  return largest;
+}
+
 /// Helper Functions to get default layouts. A `default layout` is a layout that
 /// is assigned to a value when the layout is not fixed by some anchor operation
 /// (like DPAS).
@@ -482,12 +504,23 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
   if (!blockWHC)
     prefetch.emitWarning("No known block params found for the element type.");
   auto [bWidth, bHeight, bCount] = blockWHC.value();
-
   SmallVector<int> instData;
+  int instWidth = getLargestDivisor(
+      static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth,
+      bCount);
+  if (instWidth == -1)
+    prefetch.emitWarning(
+        "No suitable instruction multiple found for the given shape.");
   if (tdescTy.getRank() == 1)
-    instData = {bWidth.back() * bCount.back()};
-  else
-    instData = {bHeight.back(), bWidth.back() * bCount.back()};
+    instData = {instWidth};
+  else {
+    int instHeight = getLargestDivisor(
+        static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 2)), bHeight);
+    if (instHeight == -1)
+      prefetch.emitWarning(
+          "No suitable instruction multiple found for the given shape.");
+    instData = {instHeight, instWidth};
+  }
   auto prefetchLayout = getDefaultSIMTLayoutInfo(
       tdescTy, uArch, instData, uArchInstruction->getPackedFormatBitSize());
   // Propagate the layout to the source tensor descriptor.
@@ -597,10 +630,22 @@ void LayoutInfoPropagation::visitDpasOp(
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
           xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+
+  const unsigned dataALen = aTy.getShape().front();
+  auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
   const int maxALen =
-      uArchInstruction->getSupportedM(aTy.getElementType()).back();
+      getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
+  if (maxALen == -1)
+    dpas.emitWarning(
+        "No suitable instruction multiple found for the given shape.");
+
+  const unsigned dataBLen = bTy.getShape().back();
+  auto supportedBLen = uArchInstruction->getSupportedK(bTy.getElementType());
   const int maxBLen =
-      uArchInstruction->getSupportedK(bTy.getElementType()).back();
+      getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
+  if (maxBLen == -1)
+    dpas.emitWarning(
+        "No suitable instruction multiple found for the given shape.");
   SmallVector<int> instDataA = {maxALen, subgroupSize};
   SmallVector<int> instDataB = {subgroupSize, maxBLen};
 
@@ -614,8 +659,13 @@ void LayoutInfoPropagation::visitDpasOp(
                          uArchInstruction->getPackedFormatBitSizeB())));
   if (operands.size() > 2) {
     VectorType cTy = dpas.getAccType();
+    const unsigned dataCLen = bTy.getShape().back();
+    auto supportedCLen = uArchInstruction->getSupportedN(bTy.getElementType());
     const int maxCLen =
-        uArchInstruction->getSupportedN(bTy.getElementType()).back();
+        getLargestDivisor(dataCLen, ArrayRef<unsigned>(supportedCLen));
+    if (maxCLen == -1)
+      dpas.emitWarning(
+          "No suitable instruction multiple found for the given shape.");
     SmallVector<int> instDataC = {maxALen, maxCLen};
     propagateIfChanged(operands[2],
                        operands[2]->meet(getSIMTLayoutInfoForDPASOperand(
@@ -634,16 +684,29 @@ void LayoutInfoPropagation::visitStoreNdOp(
       dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(
           uArch->getInstruction(
               xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
+  VectorType dataTy = store.getValueType();
   auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
       store.getValueType().getElementType());
   if (!blockWHC)
     store.emitWarning("No known block params found for the element type.");
   auto [bWidth, bHeight, bCount] = blockWHC.value();
   SmallVector<int> instData;
-  if (store.getValueType().getRank() == 1)
-    instData = {bWidth.back() * bCount.back()};
-  else
-    instData = {bHeight.back(), bWidth.back() * bCount.back()};
+  int instWidth = getLargestDivisor(
+      static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth,
+      bCount);
+  if (instWidth == -1)
+    store.emitWarning(
+        "No suitable instruction multiple found for the given shape.");
+  if (dataTy.getRank() == 1)
+    instData = {instWidth};
+  else {
+    int instHeight = getLargestDivisor(
+        static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 2)), bHeight);
+    if (instHeight == -1)
+      store.emitWarning(
+          "No suitable instruction multiple found for the given shape.");
+    instData = {instHeight, instWidth};
+  }
   LayoutInfo storeLayout =
       getDefaultSIMTLayoutInfo(store.getValueType(), uArch, instData,
                                uArchInstruction->getPackedFormatBitSize());
