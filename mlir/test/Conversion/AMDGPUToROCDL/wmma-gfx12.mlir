@@ -1,4 +1,6 @@
-// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1200 --allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s --convert-amdgpu-to-rocdl=chipset=gfx1200 \
+// RUN:   --split-input-file --verify-diagnostics | FileCheck %s
+
 // CHECK-LABEL: @wmma_to_rocdl
 func.func @wmma_to_rocdl(%arg0 : vector<8xf16>, %arg1 : vector<4xf16>,
                          %arg2 : vector<8xf32>, %arg3 : vector<4xf32>,
@@ -64,5 +66,14 @@ func.func @wmma_to_rocdl(%arg0 : vector<8xf16>, %arg1 : vector<4xf16>,
   // CHECK: rocdl.wmma.i32.16x16x16.iu4{{.*}}: (i1, i32, i1, i32, vector<4xi32>, i1) -> vector<4xi32>
   amdgpu.wmma 16x16x16 %arg16 * %arg16 + %arg13 {clamp} : vector<4xi4>, vector<4xi4>, vector<4xi32>
 
+  func.return
+}
+
+// -----
+
+func.func @wmma_unsupported_k(%arg0 : vector<64xf8E4M3FN>, %arg1 : vector<8xf16>) {
+  // expected-error@below {{'amdgpu.wmma' op no intrinsic matching WMMA on the given chipset}}
+  // expected-error@below {{failed to legalize operation 'amdgpu.wmma'}}
+  amdgpu.wmma 16x16x128 %arg0 * %arg0 + %arg1 : vector<64xf8E4M3FN>, vector<64xf8E4M3FN>, vector<8xf16>
   func.return
 }

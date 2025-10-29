@@ -1043,7 +1043,7 @@ wmmaOpToIntrinsicRDNA(Type elemSourceType, Type elemBSourceType,
       return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
   }
 
-  llvm_unreachable("Unsupported k value");
+  return std::nullopt;
 }
 
 /// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -1135,7 +1135,7 @@ static std::optional<StringRef> wmmaOpToIntrinsicGfx1250(Type elemSourceType,
     return std::nullopt;
   }
 
-  llvm_unreachable("Unsupported k value");
+  return std::nullopt;
 }
 
 /// Returns the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -1164,7 +1164,7 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
     return wmmaOpToIntrinsicGfx1250(elemSourceType, elemBSourceType,
                                     elemDestType, k);
 
-  llvm_unreachable("unhandled WMMA case");
+  return std::nullopt;
 }
 
 namespace {

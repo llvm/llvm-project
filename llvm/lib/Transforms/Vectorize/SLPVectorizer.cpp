@@ -16920,7 +16920,10 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
            TEUseEI.EdgeIdx < UseEI.EdgeIdx || TEUseEI.UserTE != UseEI.UserTE) &&
-          !CheckOrdering(InsertPt))
+          (!CheckOrdering(InsertPt) ||
+           (UseEI.UserTE->hasCopyableElements() &&
+            isUsedOutsideBlock(const_cast<Instruction *>(TEInsertPt)) &&
+            is_contained(UseEI.UserTE->Scalars, TEInsertPt))))
         continue;
       // The node is reused - exit.
       if (CheckAndUseSameNode(TEPtr))

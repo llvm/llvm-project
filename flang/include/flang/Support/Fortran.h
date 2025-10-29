@@ -86,8 +86,9 @@ ENUM_CLASS(IgnoreTKR,
     Rank, // R - don't check ranks
     Device, // D - don't check host/device residence
     Managed, // M - don't check managed storage
-    Contiguous) // C - don't check for storage sequence association with a
+    Contiguous, // C - don't check for storage sequence association with a
                 // potentially non-contiguous object
+    Pointer) // P - ignore pointer and allocatable matching
 using IgnoreTKRSet = EnumSet<IgnoreTKR, 8>;
 // IGNORE_TKR(A) = IGNORE_TKR(TKRDM)
 static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,

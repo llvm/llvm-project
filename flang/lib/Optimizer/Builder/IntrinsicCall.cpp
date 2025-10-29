@@ -9362,6 +9362,8 @@ static void genTMABulkLoad(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value size = mlir::arith::MulIOp::create(builder, loc, nelem, eleSize);
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
   barrier = builder.createConvert(loc, llvmPtrTy, barrier);
+  dst = builder.createConvert(loc, llvmPtrTy, dst);
+  src = builder.createConvert(loc, llvmPtrTy, src);
   mlir::NVVM::InlinePtxOp::create(
       builder, loc, mlir::TypeRange{}, {dst, src, size, barrier}, {},
       "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], "
