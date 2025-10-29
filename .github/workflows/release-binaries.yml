@@ -176,8 +176,9 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           #libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows-static/"
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-          #target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/s/libxml-install/"
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/c/vcpkg/packages/libxml2_x64-windows-static/"
+          # libxml2 config
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON -DBOOTSTRAP_BOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LibXml2_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/share/libxml2/ -DBOOTSTRAP_BOOTSTRAP_LibXml2_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/share/libxml2/"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
@@ -284,6 +285,8 @@ jobs:
         VCPKG_CMAKE_CONFIGURE_OPTIONS: -DLIBXML2_WITH_ZLIB=OFF -DLIBXML2_WITH_ICONV=OFF 
         VCPKG_ENV_PASSTHROUGH: VCPKG_CMAKE_CONFIGURE_OPTIONS
       run: |
+        # Specify [core] to disable extra features so we don't add extra dll dependencies.
+        # Even with [core] there is still one dll dependency which is bcrypt.dll.
         vcpkg install libxml2[core]:x64-windows-static
         #find / -iname 'libxml*.lib'
         ls -l  /c/vcpkg/packages/libxml2_x64-windows-static/lib/
@@ -308,9 +311,6 @@ jobs:
         # -DLIBXML2_DEFINITIONS=-DLIBXML_STATIC \
         cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -DLLVM_ENABLE_LIBXML2=FORCE_ON \
-            -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON \
-            -DLibXml2_DIR=/c/vcpkg/packages/libxml2_x64-windows-static/share/libxml2/ \
             -C clang/cmake/caches/Release.cmake \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
