@@ -3413,8 +3413,8 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = G->getGlobal();
     bool HasLocalLinkage = GV->hasLocalLinkage() || GV->hasPrivateLinkage();
-    bool HasHiddenVisibility = GV->hasHiddenVisibility() ||
-                               GV->hasProtectedVisibility();
+    bool HasHiddenVisibility =
+        GV->hasHiddenVisibility() || GV->hasProtectedVisibility();
     if (GV->isDeclarationForLinker())
       CalleeIsLocal = HasLocalLinkage || HasHiddenVisibility;
     else
@@ -3422,21 +3422,15 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (IsTailCall) {
-    IsTailCall = isEligibleForTailCallOptimization(
+    bool Eligible = isEligibleForTailCallOptimization(
         CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>(), IsMustTail);
-    if (IsTailCall) {
-      if (IsMustTail) {
-        if (!CalleeIsLocal)
-          report_fatal_error("failed to perform tail call elimination on a call "
-                             "site marked musttail");
-      } else {
-        IsTailCall &= CalleeIsLocal;
-      }
+    if (!Eligible || !CalleeIsLocal) {
+      IsTailCall = false;
+      if (IsMustTail)
+        report_fatal_error("failed to perform tail call elimination on a call "
+                           "site marked musttail");
     }
   }
-  if (!IsTailCall && IsMustTail)
-    report_fatal_error("failed to perform tail call elimination on a call "
-                       "site marked musttail");
 
   if (IsTailCall)
     ++NumTailCalls;
