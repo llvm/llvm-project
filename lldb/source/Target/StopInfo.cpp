@@ -255,6 +255,13 @@ public:
     ThreadSP thread_sp(m_thread_wp.lock());
     if (!thread_sp)
       return {};
+   
+    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
+    if (!frame_sp)
+      return {};
+    if (!frame_sp->IsInlined() && inlined_stack)
+      return {};
+   
     BreakpointSiteSP bp_site_sp(
         thread_sp->GetProcess()->GetBreakpointSiteList().FindByID(m_value));
     if (!bp_site_sp)

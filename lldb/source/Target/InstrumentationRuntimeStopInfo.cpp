@@ -48,6 +48,12 @@ InstrumentationRuntimeStopInfo::GetSuggestedStackFrameIndex(
   ThreadSP thread_sp = GetThread();
   if (!thread_sp)
     return std::nullopt;
+    
+  StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
+  if (!frame_sp)
+    return {};
+  if (!frame_sp->IsInlined() && inlined_stack)
+    return {};
 
   // Defensive upper-bound of when we stop walking up the frames in
   // case we somehow ended up looking at an infinite recursion.
