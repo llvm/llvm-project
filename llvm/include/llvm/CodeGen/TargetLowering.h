@@ -5575,8 +5575,8 @@ public:
   /// \param N Node to expand
   /// \param IsNegative indicate negated abs
   /// \returns The expansion result or SDValue() if it fails.
-  virtual SDValue expandABS(SDNode *N, SelectionDAG &DAG,
-                            bool IsNegative = false) const;
+  SDValue expandABS(SDNode *N, SelectionDAG &DAG,
+                    bool IsNegative = false) const;
 
   /// Expand ABDS/ABDU nodes. Expands vector/scalar ABDS/ABDU nodes.
   /// \param N Node to expand
