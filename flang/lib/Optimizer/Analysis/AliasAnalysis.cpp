@@ -212,6 +212,10 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     if (lhsSrc.origin == rhsSrc.origin) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
+      // TODO: we should return PartialAlias here. Need to decide
+      // if returning PartialAlias for fir.pack_array is okay;
+      // if not, then we need to handle it specially to still return
+      // MayAlias.
       if (approximateSource)
         return AliasResult::MayAlias;
       return AliasResult::MustAlias;
@@ -559,10 +563,19 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           type = SourceKind::Allocate;
           breakFromLoop = true;
         })
-        .Case<fir::ConvertOp>([&](auto op) {
-          // Skip ConvertOp's and track further through the operand.
-          v = op->getOperand(0);
+        .Case<mlir::ViewLikeOpInterface>([&](auto op) {
+          if (isPointerReference(ty))
+            attributes.set(Attribute::Pointer);
+          v = op.getViewSource();
           defOp = v.getDefiningOp();
+          // If the source is a box, and the result is not a box,
+          // then this is one of the box "unpacking" operations,
+          // so we should set followingData.
+          if (mlir::isa<fir::BaseBoxType>(v.getType()) &&
+              !mlir::isa<fir::BaseBoxType>(ty))
+            followBoxData = true;
+          if (!op.isSameStart())
+            approximateSource = true;
         })
         .Case<fir::PackArrayOp>([&](auto op) {
           // The packed array is not distinguishable from the original
@@ -577,15 +590,6 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           defOp = v.getDefiningOp();
           if (mlir::isa<fir::BaseBoxType>(v.getType()))
             followBoxData = true;
-        })
-        .Case<fir::ArrayCoorOp, fir::CoordinateOp>([&](auto op) {
-          if (isPointerReference(ty))
-            attributes.set(Attribute::Pointer);
-          v = op->getOperand(0);
-          defOp = v.getDefiningOp();
-          if (mlir::isa<fir::BaseBoxType>(v.getType()))
-            followBoxData = true;
-          approximateSource = true;
         })
         .Case<fir::EmboxOp, fir::ReboxOp>([&](auto op) {
           if (followBoxData) {

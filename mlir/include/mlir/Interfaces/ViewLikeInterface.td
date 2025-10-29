@@ -23,21 +23,45 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = [
-    InterfaceMethod<
-      "Returns the source buffer from which the view is created.",
-      "::mlir::Value", "getViewSource">,
-    InterfaceMethod<
-      /*desc=*/[{ Returns the buffer which the view created. }],
-      /*retTy=*/"::mlir::Value",
-      /*methodName=*/"getViewDest",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
+  let methods =
+      [InterfaceMethod<
+           "Returns the source buffer from which the view is created.",
+           "::mlir::Value", "getViewSource">,
+       InterfaceMethod<
+           /*desc=*/[{ Returns the buffer which the view created. }],
+           /*retTy=*/"::mlir::Value",
+           /*methodName=*/"getViewDest",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
         return $_op->getResult(0);
-      }]
-    >
-  ];
+      }]>,
+       InterfaceMethod<
+           /*desc=*/
+           [{ Returns true iff the source buffer and the resulting view start at the same "address". }],
+           /*retTy=*/"bool",
+           /*methodName=*/"isSameStart",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        return false;
+      }]>,
+       InterfaceMethod<
+           /*desc=*/
+           [{ Returns true iff the resulting view is a complete view of the source buffer, i.e. isSameStart() is true and the result has the same total size and is not a subview of the input. }],
+           /*retTy=*/"bool",
+           /*methodName=*/"isCompleteView",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        return false;
+      }]>];
+
+  let verify = [{
+    auto concreteOp = ::mlir::cast<ConcreteOp>($_op);
+    // isCompleteView() == true implies isSameStart() == true.
+    return !concreteOp.isCompleteView() || concreteOp.isSameStart() ? ::mlir::success() : ::mlir::failure();
+  }];
 }
 
 def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface"> {

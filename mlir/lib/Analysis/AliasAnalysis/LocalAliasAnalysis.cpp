@@ -40,9 +40,10 @@ using namespace mlir;
 static constexpr unsigned maxUnderlyingValueSearchDepth = 10;
 
 /// Given a value, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output);
+static void
+collectUnderlyingAddressValues(Value value, unsigned maxDepth,
+                               DenseMap<Value, bool> &visited, bool maybeOffset,
+                               SmallVectorImpl<std::pair<Value, bool>> &output);
 
 /// Given a RegionBranchOpInterface operation  (`branch`), a Value`inputValue`
 /// which is an input for the provided successor (`initialSuccessor`), try to
@@ -50,7 +51,8 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
 static void collectUnderlyingAddressValues2(
     RegionBranchOpInterface branch, RegionSuccessor initialSuccessor,
     Value inputValue, unsigned inputIndex, unsigned maxDepth,
-    DenseSet<Value> &visited, SmallVectorImpl<Value> &output) {
+    DenseMap<Value, bool> &visited, bool maybeOffset,
+    SmallVectorImpl<std::pair<Value, bool>> &output) {
   LDBG() << "collectUnderlyingAddressValues2: "
          << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
   LDBG() << " with initialSuccessor " << initialSuccessor;
@@ -60,7 +62,7 @@ static void collectUnderlyingAddressValues2(
   ValueRange inputs = initialSuccessor.getSuccessorInputs();
   if (inputs.empty()) {
     LDBG() << "  input is empty, enqueue value";
-    output.push_back(inputValue);
+    output.push_back({inputValue, maybeOffset});
     return;
   }
   unsigned firstInputIndex, lastInputIndex;
@@ -75,7 +77,7 @@ static void collectUnderlyingAddressValues2(
     LDBG() << "  !! Input index " << inputIndex << " out of range "
            << firstInputIndex << " to " << lastInputIndex
            << ", adding input value to output";
-    output.push_back(inputValue);
+    output.push_back({inputValue, maybeOffset});
     return;
   }
   SmallVector<Value> predecessorValues;
@@ -84,14 +86,15 @@ static void collectUnderlyingAddressValues2(
   LDBG() << "  Found " << predecessorValues.size() << " predecessor values";
   for (Value predecessorValue : predecessorValues) {
     LDBG() << "    Processing predecessor value: " << predecessorValue;
-    collectUnderlyingAddressValues(predecessorValue, maxDepth, visited, output);
+    collectUnderlyingAddressValues(predecessorValue, maxDepth, visited,
+                                   maybeOffset, output);
   }
 }
 
 /// Given a result, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    OpResult result, unsigned maxDepth, DenseMap<Value, bool> &visited,
+    bool maybeOffset, SmallVectorImpl<std::pair<Value, bool>> &output) {
   LDBG() << "collectUnderlyingAddressValues (OpResult): " << result;
   LDBG() << "  maxDepth: " << maxDepth;
 
@@ -101,8 +104,8 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op)) {
     if (result == view.getViewDest()) {
       LDBG() << "  Unwrapping view to source: " << view.getViewSource();
-      return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
-                                            visited, output);
+      return collectUnderlyingAddressValues(
+          view.getViewSource(), maxDepth, visited, !view.isSameStart(), output);
     }
   }
   // Check to see if we can reason about the control flow of this op.
@@ -110,18 +113,18 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
     LDBG() << "  Processing region branch operation";
     return collectUnderlyingAddressValues2(
         branch, RegionSuccessor(op, op->getResults()), result,
-        result.getResultNumber(), maxDepth, visited, output);
+        result.getResultNumber(), maxDepth, visited, maybeOffset, output);
   }
 
   LDBG() << "  Adding result to output: " << result;
-  output.push_back(result);
+  output.push_back({result, maybeOffset});
 }
 
 /// Given a block argument, collect all of the underlying values being
 /// addressed.
-static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    BlockArgument arg, unsigned maxDepth, DenseMap<Value, bool> &visited,
+    bool maybeOffset, SmallVectorImpl<std::pair<Value, bool>> &output) {
   LDBG() << "collectUnderlyingAddressValues (BlockArgument): " << arg;
   LDBG() << "  maxDepth: " << maxDepth;
   LDBG() << "  argNumber: " << arg.getArgNumber();
@@ -140,7 +143,7 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       if (!branch) {
         LDBG() << "    Cannot analyze control flow, adding argument to output";
         // We can't analyze the control flow, so bail out early.
-        output.push_back(arg);
+        output.push_back({arg, maybeOffset});
         return;
       }
 
@@ -150,11 +153,12 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       if (!operand) {
         LDBG() << "    No operand found for argument, adding to output";
         // We can't analyze the control flow, so bail out early.
-        output.push_back(arg);
+        output.push_back({arg, maybeOffset});
         return;
       }
       LDBG() << "    Processing operand from predecessor: " << operand;
-      collectUnderlyingAddressValues(operand, maxDepth, visited, output);
+      collectUnderlyingAddressValues(operand, maxDepth, visited, maybeOffset,
+                                     output);
     }
     return;
   }
@@ -183,54 +187,67 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
     if (!found) {
       LDBG()
           << "  No matching region successor found, adding argument to output";
-      output.push_back(arg);
+      output.push_back({arg, maybeOffset});
       return;
     }
-    return collectUnderlyingAddressValues2(
-        branch, regionSuccessor, arg, argNumber, maxDepth, visited, output);
+    return collectUnderlyingAddressValues2(branch, regionSuccessor, arg,
+                                           argNumber, maxDepth, visited,
+                                           maybeOffset, output);
   }
 
   LDBG()
       << "  Cannot reason about underlying address, adding argument to output";
   // We can't reason about the underlying address of this argument.
-  output.push_back(arg);
+  output.push_back({arg, maybeOffset});
 }
 
 /// Given a value, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    Value value, unsigned maxDepth, DenseMap<Value, bool> &visited,
+    bool maybeOffset, SmallVectorImpl<std::pair<Value, bool>> &output) {
   LDBG() << "collectUnderlyingAddressValues: " << value;
   LDBG() << "  maxDepth: " << maxDepth;
 
   // Check that we don't infinitely recurse.
-  if (!visited.insert(value).second) {
-    LDBG() << "  Value already visited, skipping";
-    return;
+  auto it = visited.find(value);
+  if (it != visited.end()) {
+    // If maybeOffset is true, we have to propagate it up
+    // the operands chain. If the value has already been visited
+    // with a false maybeOffset, we have to visit it again.
+    if (!maybeOffset || it->second) {
+      LDBG() << "  Value already visited, skipping";
+      return;
+    }
+
+    LDBG() << "  Revisiting value due to potential offset";
+    it->second = true;
+  } else {
+    visited.try_emplace(value, maybeOffset);
   }
   if (maxDepth == 0) {
     LDBG() << "  Max depth reached, adding value to output";
-    output.push_back(value);
+    output.push_back({value, maybeOffset});
     return;
   }
   --maxDepth;
 
   if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     LDBG() << "  Processing as BlockArgument";
-    return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
+    return collectUnderlyingAddressValues(arg, maxDepth, visited, maybeOffset,
+                                          output);
   }
   LDBG() << "  Processing as OpResult";
   collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
-                                 output);
+                                 maybeOffset, output);
 }
 
 /// Given a value, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(Value value,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    Value value, SmallVectorImpl<std::pair<Value, bool>> &output) {
   LDBG() << "collectUnderlyingAddressValues: " << value;
-  DenseSet<Value> visited;
+  DenseMap<Value, bool> visited;
   collectUnderlyingAddressValues(value, maxUnderlyingValueSearchDepth, visited,
-                                 output);
+                                 /*maybeOffset=*/false, output);
   LDBG() << "  Collected " << output.size() << " underlying values";
 }
 
@@ -446,7 +463,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
   }
 
   // Get the underlying values being addressed.
-  SmallVector<Value, 8> lhsValues, rhsValues;
+  SmallVector<std::pair<Value, bool>, 8> lhsValues, rhsValues;
   collectUnderlyingAddressValues(lhs, lhsValues);
   collectUnderlyingAddressValues(rhs, rhsValues);
 
@@ -462,14 +479,25 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 
   // Check the alias results against each of the underlying values.
   std::optional<AliasResult> result;
-  for (Value lhsVal : lhsValues) {
-    for (Value rhsVal : rhsValues) {
+  for (auto [lhsVal, lhsPartial] : lhsValues) {
+    for (auto [rhsVal, rhsPartial] : rhsValues) {
       LDBG() << "  Checking underlying values: " << lhsVal << " vs " << rhsVal;
       AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
       LDBG() << "  Result: "
              << (nextResult == AliasResult::MustAlias ? "MustAlias"
                  : nextResult == AliasResult::NoAlias ? "NoAlias"
                                                       : "MayAlias");
+      // If the original lhs/rhs may be an offsetted access
+      // of the memory objects pointed to by lhsVal/rhsVal,
+      // we'd better turn MustAlias results into MayAlias.
+      // It is possible that MustAlias and PartialAlias
+      // are both dynamically possible for these two references,
+      // so MayAlias should be conservatively correct.
+      if (nextResult == AliasResult::MustAlias && (lhsPartial || rhsPartial)) {
+        nextResult = AliasResult::MayAlias;
+        LDBG() << "  Adjusted result (due to potentially partial overlap): "
+                  "MayAlias";
+      }
       result = result ? result->merge(nextResult) : nextResult;
     }
   }

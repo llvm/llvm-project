@@ -272,3 +272,121 @@ func.func @distinct_objects(%arg: memref<?xf32>, %arg1: memref<?xf32>) attribute
   %0, %1 = memref.distinct_objects %arg, %arg1 {test.ptr = "distinct"} : memref<?xf32>, memref<?xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "view_like_offset"
+
+// The current LocalAliasAnalysis algortithm is quite conservative
+// about differentiating PartialAlias and MustAlias, and it often
+// returns MayAlias for PartialAlias/MustAlias situations.
+
+// These are the PartialAlias cases (reported as MayAlias),
+// where LocalAliasAnalysis used to incorrectly return MustAlias:
+// CHECK-DAG: view_with_offset#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: complete_view1#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: complete_view2#0 <-> func.region0#0: MayAlias
+
+// These are the MustAlias cases, where MayAlias is returned currently:
+// CHECK-DAG: view_with_offset#0 <-> complete_view1#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> complete_view2#0: MayAlias
+// CHECK-DAG: complete_view1#0 <-> complete_view2#0: MayAlias
+func.func @view_like_offset(%arg: memref<?xi8>) attributes {test.ptr = "func"} {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %view_with_offset = memref.view %arg[%c1][] {test.ptr = "view_with_offset"} : memref<?xi8> to memref<8xi8>
+  %complete_view1 = memref.view %view_with_offset[%c0][] {test.ptr = "complete_view1"} : memref<8xi8> to memref<8xi8>
+  %complete_view2 = memref.view %view_with_offset[%c0][] {test.ptr = "complete_view2"} : memref<8xi8> to memref<8xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "view_like_offset_with_cfg1"
+
+// These are the PartialAlias cases (reported as MayAlias),
+// where LocalAliasAnalysis used to incorrectly return MustAlias:
+// CHECK-DAG: complete_view_if#0 <-> view_with_offset#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> if_view#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> complete_view1#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> complete_view2#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> func.region0#0: MayAlias
+
+// These are correctly classified as MustAlias:
+// CHECK-DAG: complete_view_if#0 <-> func.region0#0: MustAlias
+
+// TODO: these must be MustAlias:
+// CHECK-DAG: if_view#0 <-> complete_view1#0: MayAlias
+// CHECK-DAG: if_view#0 <-> complete_view2#0: MayAlias
+// CHECK-DAG: complete_view1#0 <-> complete_view2#0: MayAlias
+
+// These should be MayAlias, because the references are either
+// MustAlias or PartialAlias depending on the runtime condition:
+// CHECK-DAG: complete_view_if#0 <-> if_view#0: MayAlias
+// CHECK-DAG: complete_view_if#0 <-> complete_view1#0: MayAlias
+// CHECK-DAG: complete_view_if#0 <-> complete_view2#0: MayAlias
+// CHECK-DAG: if_view#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: complete_view1#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: complete_view2#0 <-> func.region0#0: MayAlias
+func.func @view_like_offset_with_cfg1(%arg: memref<?xi8>, %cond: i1) attributes {test.ptr = "func"} {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.if %cond -> (memref<8xi8>) {
+    %complete_view_if = memref.view %arg[%c0][] {test.ptr = "complete_view_if"} : memref<?xi8> to memref<8xi8>
+    scf.yield %complete_view_if : memref<8xi8>
+  } else {
+    %view_with_offset = memref.view %arg[%c1][] {test.ptr = "view_with_offset"} : memref<?xi8> to memref<8xi8>
+    scf.yield %view_with_offset : memref<8xi8>
+  } {test.ptr = "if_view"}
+  %complete_view1 = memref.view %0[%c0][] {test.ptr = "complete_view1"} : memref<8xi8> to memref<8xi8>
+  %complete_view2 = memref.view %0[%c0][] {test.ptr = "complete_view2"} : memref<8xi8> to memref<8xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "view_like_offset_with_cfg2"
+
+// This test is a different version of view_like_offset_with_cfg1:
+// the then and else clauses are swapped, and this affects
+// the visiting order. The two tests check that the visiting
+// order does not matter.
+
+// These are the PartialAlias cases (reported as MayAlias),
+// where LocalAliasAnalysis used to incorrectly return MustAlias:
+// CHECK-DAG: view_with_offset#0 <-> complete_view_if#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> if_view#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> complete_view1#0: MayAlias
+// CHECK-DAG: if_view#0 <-> func.region0#0: MayAlias
+
+// These are correctly classified as MustAlias:
+// CHECK-DAG: complete_view_if#0 <-> func.region0#0: MustAlias
+
+// TODO: these must be MustAlias:
+// CHECK-DAG: if_view#0 <-> complete_view1#0: MayAlias
+// CHECK-DAG: if_view#0 <-> complete_view2#0: MayAlias
+// CHECK-DAG: complete_view1#0 <-> complete_view2#0: MayAlias
+
+// These should be MayAlias, because the references are either
+// MustAlias or PartialAlias depending on the runtime condition:
+// CHECK-DAG: complete_view_if#0 <-> if_view#0: MayAlias
+// CHECK-DAG: complete_view_if#0 <-> complete_view1#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> complete_view2#0: MayAlias
+// CHECK-DAG: complete_view_if#0 <-> complete_view2#0: MayAlias
+// CHECK-DAG: view_with_offset#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: complete_view1#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: complete_view2#0 <-> func.region0#0: MayAlias
+func.func @view_like_offset_with_cfg2(%arg: memref<?xi8>, %cond: i1) attributes {test.ptr = "func"} {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.if %cond -> (memref<8xi8>) {
+    %view_with_offset = memref.view %arg[%c1][] {test.ptr = "view_with_offset"} : memref<?xi8> to memref<8xi8>
+    scf.yield %view_with_offset : memref<8xi8>
+  } else {
+    %complete_view_if = memref.view %arg[%c0][] {test.ptr = "complete_view_if"} : memref<?xi8> to memref<8xi8>
+    scf.yield %complete_view_if : memref<8xi8>
+  } {test.ptr = "if_view"}
+  %complete_view1 = memref.view %0[%c0][] {test.ptr = "complete_view1"} : memref<8xi8> to memref<8xi8>
+  %complete_view2 = memref.view %0[%c0][] {test.ptr = "complete_view2"} : memref<8xi8> to memref<8xi8>
+  return
+}
