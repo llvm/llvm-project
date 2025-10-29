@@ -18,11 +18,12 @@ define void @test_load_zext() #0 {
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    s_mov_b32 s0, DescriptorBuffer@abs32@lo
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s0, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[2:3], -1
