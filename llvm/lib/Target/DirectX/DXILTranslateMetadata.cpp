@@ -472,6 +472,16 @@ static void cleanModuleFlags(Module &M) {
     M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
 }
 
+using GlobalMDList = std::array<StringLiteral, 7>;
+
+// The following are compatible with DXIL but not emit with clang, they can
+// be added when applicable:
+// dx.typeAnnotations, dx.viewIDState, dx.dxrPayloadAnnotations
+static GlobalMDList CompatibleNamedModuleMDs = {
+    "llvm.ident",     "llvm.module.flags", "dx.resources",   "dx.valver",
+    "dx.shaderModel", "dx.version",        "dx.entryPoints",
+};
+
 static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                                     DXILResourceTypeMap &DRTM,
                                     const ModuleShaderFlags &ShaderFlags,
@@ -526,19 +536,17 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
 
   cleanModuleFlags(M);
 
-  // dx.rootsignatures will have been parsed from its metadata form as its
-  // binary form as part of the RootSignatureAnalysisWrapper, so safely
-  // remove it as it is not recognized in DXIL
-  if (NamedMDNode *RootSignature = M.getNamedMetadata("dx.rootsignatures"))
-    RootSignature->eraseFromParent();
+  // Finally, strip all module metadata that is not explicitly specified in the
+  // allow-list
+  SmallVector<NamedMDNode *> ToStrip;
 
-  // llvm.errno.tbaa was recently added but is not supported in LLVM 3.7 and
-  // causes all tests using the DXIL Validator to fail.
-  //
-  // This is a temporary fix and should be replaced with a allowlist once
-  // we have determined all metadata that the DXIL Validator allows
-  if (NamedMDNode *ErrNo = M.getNamedMetadata("llvm.errno.tbaa"))
-    ErrNo->eraseFromParent();
+  for (NamedMDNode &NamedMD : M.named_metadata())
+    if (!NamedMD.getName().starts_with("llvm.dbg.") &&
+        !llvm::is_contained(CompatibleNamedModuleMDs, NamedMD.getName()))
+      ToStrip.push_back(&NamedMD);
+
+  for (NamedMDNode *NamedMD : ToStrip)
+    NamedMD->eraseFromParent();
 }
 
 PreservedAnalyses DXILTranslateMetadata::run(Module &M,
