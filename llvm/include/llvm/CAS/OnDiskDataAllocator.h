@@ -64,7 +64,7 @@ public:
 
   /// \returns the buffer that was allocated at \p create time, with size
   /// \p UserHeaderSize.
-  MutableArrayRef<uint8_t> getUserHeader();
+  MutableArrayRef<uint8_t> getUserHeader() const;
 
   size_t size() const;
   size_t capacity() const;

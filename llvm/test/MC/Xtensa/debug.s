@@ -11,7 +11,7 @@ break 1, 1
 
 # Instruction format RRRN
 # CHECK-INST: break.n 1
-# CHECK: encoding: [0x2c,0xf1]
+# CHECK: encoding: [0x2d,0xf1]
 break.n 1
 
 # Instruction format RRR

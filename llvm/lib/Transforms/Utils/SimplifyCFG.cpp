@@ -5959,7 +5959,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
-    for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
+    unsigned E = PreviousEdges - 1;
+    // Remove all incoming values from OtherDest if OtherDest is unreachable.
+    if (NewBI->isUnconditional())
+      ++E;
+    for (unsigned I = 0; I != E; ++I)
       cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
   }
 
@@ -7547,6 +7551,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 /// log2(C)-indexed value table (instead of traditionally emitting a load of the
 /// address of the jump target, and indirectly jump to it).
 static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
+                                        DomTreeUpdater *DTU,
                                         const DataLayout &DL,
                                         const TargetTransformInfo &TTI) {
   Value *Condition = SI->getCondition();
@@ -7569,12 +7574,6 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   if (SI->getNumCases() < 4)
     return false;
 
-  // We perform this optimization only for switches with
-  // unreachable default case.
-  // This assumtion will save us from checking if `Condition` is a power of two.
-  if (!SI->defaultDestUnreachable())
-    return false;
-
   // Check that switch cases are powers of two.
   SmallVector<uint64_t, 4> Values;
   for (const auto &Case : SI->cases()) {
@@ -7593,6 +7592,24 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     return false;
 
   Builder.SetInsertPoint(SI);
+
+  if (!SI->defaultDestUnreachable()) {
+    // Let non-power-of-two inputs jump to the default case, when the latter is
+    // reachable.
+    auto *PopC = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, Condition);
+    auto *IsPow2 = Builder.CreateICmpEQ(PopC, ConstantInt::get(CondTy, 1));
+
+    auto *OrigBB = SI->getParent();
+    auto *DefaultCaseBB = SI->getDefaultDest();
+    BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
+    auto It = OrigBB->getTerminator()->getIterator();
+    BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    It->eraseFromParent();
+
+    addPredecessorToBlock(DefaultCaseBB, OrigBB, SplitBB);
+    if (DTU)
+      DTU->applyUpdates({{DominatorTree::Insert, OrigBB, DefaultCaseBB}});
+  }
 
   // Replace each case with its trailing zeros number.
   for (auto &Case : SI->cases()) {
@@ -7736,8 +7753,7 @@ struct SwitchSuccWrapper {
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
 };
 
-namespace llvm {
-template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
+template <> struct llvm::DenseMapInfo<const SwitchSuccWrapper *> {
   static const SwitchSuccWrapper *getEmptyKey() {
     return static_cast<SwitchSuccWrapper *>(
         DenseMapInfo<void *>::getEmptyKey());
@@ -7805,7 +7821,6 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     return true;
   }
 };
-} // namespace llvm
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {
@@ -7951,7 +7966,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
                              Options.ConvertSwitchToLookupTable))
       return requestResimplify();
 
-  if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
+  if (simplifySwitchOfPowersOfTwo(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
   if (reduceSwitchRange(SI, Builder, DL, TTI))

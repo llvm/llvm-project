@@ -847,8 +847,7 @@ public:
   /// This is usually true on most targets. But some targets, like Thumb1,
   /// have immediate shift instructions, but no immediate "and" instruction;
   /// this makes the fold unprofitable.
-  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                                 CombineLevel Level) const {
+  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N) const {
     return true;
   }
 
@@ -1434,9 +1433,9 @@ public:
   /// \p High as its lowest and highest case values, and expects \p NumCmps
   /// case value comparisons. Check if the number of destinations, comparison
   /// metric, and range are all suitable.
-  bool isSuitableForBitTests(unsigned NumDests, unsigned NumCmps,
-                             const APInt &Low, const APInt &High,
-                             const DataLayout &DL) const {
+  bool isSuitableForBitTests(
+      const DenseMap<const BasicBlock *, unsigned int> &DestCmps,
+      const APInt &Low, const APInt &High, const DataLayout &DL) const {
     // FIXME: I don't think NumCmps is the correct metric: a single case and a
     // range of cases both require only one branch to lower. Just looking at the
     // number of clusters and destinations should be enough to decide whether to
@@ -1445,6 +1444,20 @@ public:
     // To lower a range with bit tests, the range must fit the bitwidth of a
     // machine word.
     if (!rangeFitsInWord(Low, High, DL))
+      return false;
+
+    unsigned NumDests = DestCmps.size();
+    unsigned NumCmps = 0;
+    unsigned int MaxBitTestEntry = 0;
+    for (auto &DestCmp : DestCmps) {
+      NumCmps += DestCmp.second;
+      if (DestCmp.second > MaxBitTestEntry)
+        MaxBitTestEntry = DestCmp.second;
+    }
+
+    // Comparisons might be cheaper for small number of comparisons, which can
+    // be Arch Target specific.
+    if (MaxBitTestEntry < getMinimumBitTestCmps())
       return false;
 
     // Decide whether it's profitable to lower this range with bit tests. Each
@@ -2056,6 +2069,9 @@ public:
 
   virtual bool isJumpTableRelative() const;
 
+  /// Retuen the minimum of largest number of comparisons in BitTest.
+  unsigned getMinimumBitTestCmps() const;
+
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   Register getStackPointerRegisterToSaveRestore() const {
@@ -2128,7 +2144,7 @@ public:
   /// performs validation and error handling, returns the function. Otherwise,
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
   /// Should be used only when getIRStackGuard returns nullptr.
-  virtual Function *getSSPStackGuardCheck(const Module &M) const;
+  Function *getSSPStackGuardCheck(const Module &M) const;
 
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -2460,6 +2476,12 @@ public:
     return ISD::ANY_EXTEND;
   }
 
+  /// Returns how the platform's atomic rmw operations expect their input
+  /// argument to be extended (ZERO_EXTEND, SIGN_EXTEND, or ANY_EXTEND).
+  virtual ISD::NodeType getExtendForAtomicRMWArg(unsigned Op) const {
+    return ISD::ANY_EXTEND;
+  }
+
   /// @}
 
   /// Returns true if we should normalize
@@ -2571,6 +2593,9 @@ protected:
   /// Indicate the maximum number of entries in jump tables.
   /// Set to zero to generate unlimited jump tables.
   void setMaximumJumpTableSize(unsigned);
+
+  /// Set the minimum of largest of number of comparisons to generate BitTest.
+  void setMinimumBitTestCmps(unsigned Val);
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -3571,6 +3596,10 @@ public:
     return nullptr;
   }
 
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
+    return Libcalls;
+  }
+
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     Libcalls.setLibcallImpl(Call, Impl);
   }
@@ -3710,6 +3739,9 @@ private:
   /// backend supports.
   unsigned MinCmpXchgSizeInBits;
 
+  /// The minimum of largest number of comparisons to use bit test for switch.
+  unsigned MinimumBitTestCmps;
+
   /// This indicates if the target supports unaligned atomic operations.
   bool SupportsUnalignedAtomics;
 
@@ -3729,7 +3761,7 @@ private:
   /// register class is the largest legal super-reg register class of the
   /// register class of the specified type. e.g. On x86, i8, i16, and i32's
   /// representative class would be GR32.
-  const TargetRegisterClass *RepRegClassForVT[MVT::VALUETYPE_SIZE] = {0};
+  const TargetRegisterClass *RepRegClassForVT[MVT::VALUETYPE_SIZE] = {nullptr};
 
   /// This indicates the "cost" of the "representative" register class for each
   /// ValueType. The cost is used by the scheduler to approximate register
@@ -3807,10 +3839,6 @@ private:
 
   /// The list of libcalls that the target will use.
   RTLIB::RuntimeLibcallsInfo Libcalls;
-
-  /// The ISD::CondCode that should be used to test the result of each of the
-  /// comparison libcall against zero.
-  ISD::CondCode CmpLibcallCCs[RTLIB::UNKNOWN_LIBCALL];
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.
