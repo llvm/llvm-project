@@ -167,20 +167,31 @@ static Value convertToValue(ConversionPatternRewriter &rewriter, Location loc,
 /// Helper to divide a Value by a constant integer.
 static Value divideByConstant(ConversionPatternRewriter &rewriter, Location loc,
                               Value val, int64_t constant) {
+  // If the constant is a power of 2, use right shift for division.
+  if (llvm::isPowerOf2_64(constant)) {
+    int64_t shiftAmount = llvm::Log2_64(constant);
+    return arith::ShRUIOp::create(
+               rewriter, loc, val,
+               createConstantIndex(rewriter, loc, shiftAmount))
+        .getResult();
+  }
   auto constantOp = createConstantIndex(rewriter, loc, constant);
   return arith::DivUIOp::create(rewriter, loc, val, constantOp).getResult();
 }
 
+/// This function takes a larger register block `data` and generates multiple
+/// smaller loads (size given by `newTensorDesc`) to fill in the `data` block
+/// starting from `offsets`.
 static Value generateLoads(ConversionPatternRewriter &rewriter,
                            TypedValue<VectorType> data,
                            SmallVector<OpFoldResult> offsets,
-                           SmallVector<int64_t> &supportedShape,
                            TypedValue<xegpu::TensorDescType> newTensorDesc,
                            xegpu::LoadNdOp origLoadOp) {
   Location loc = data.getLoc();
   assert(offsets.size() >= 2 && "Expecting at least 2 offsets for 2D LoadNdOp");
   Value offsetX = convertToValue(rewriter, loc, offsets[offsets.size() - 2]);
   Value offsetY = convertToValue(rewriter, loc, offsets[offsets.size() - 1]);
+  SmallVector<int64_t> supportedShape(newTensorDesc.getType().getShape());
   // Compute the ratio between original shape and supported shape. We need to
   // generate loads in this ratio arrangement.
   auto shapeRatio = computeShapeRatio(data.getType().getShape(),
@@ -219,6 +230,10 @@ static Value generateLoads(ConversionPatternRewriter &rewriter,
   return data;
 }
 
+/// Checks is a CreateNdDescOp can be optimized for transpose, if so creates a
+/// new CreateNdDescOp with optimized tensor desc type. This involves extracting
+/// the base pointer from the original memory source and adjusting the shape and
+/// strides of the tensor desc to fit with the new optimized transpose layout.
 class XeGPUCreateNdDescOpPattern final
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
 public:
@@ -277,6 +292,10 @@ public:
   }
 };
 
+/// Checks if a LoadNdOp consumes a tensor desc type that was rewritten for
+/// tranpose optimization. If so, rewrites the LoadNdOp to to align with the
+/// adjusted tensor desc type. This can result in multiple LoadNdOps being
+/// generated to fill in the original load shape.
 class XeGPULoadNdDescOpPattern final
     : public OpConversionPattern<xegpu::LoadNdOp> {
 public:
@@ -329,7 +348,6 @@ public:
                 .getResult();
         slice = generateLoads(
             rewriter, cast<TypedValue<VectorType>>(slice), modifiedOffsets,
-            hwSupportedShape,
             cast<TypedValue<xegpu::TensorDescType>>(adaptor.getTensorDesc()),
             loadNdOp);
         // BitCast back to original load shape without array length.
@@ -351,7 +369,6 @@ public:
         rewriter.getZeroAttr(origVectorType));
     data = generateLoads(
         rewriter, cast<TypedValue<VectorType>>(data), modifiedOffsets,
-        hwSupportedShape,
         cast<TypedValue<xegpu::TensorDescType>>(adaptor.getTensorDesc()),
         loadNdOp);
     auto bitCastOp = vector::BitCastOp::create(rewriter, loadNdOp->getLoc(),
@@ -364,6 +381,10 @@ public:
   }
 };
 
+/// Vector ExtractOp must be processed if the original tensor desc type has
+/// array length greater than 1. In this case, the LoadNdOp is replaced with
+/// multiple LoadNdOps for each array slice making the extraction unnecessary.
+/// In this case, we simply remove the ExtractOp.
 class VectorExtractOpPattern final
     : public OpConversionPattern<vector::ExtractOp> {
 public:
@@ -371,6 +392,7 @@ public:
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // Check if the source of the extraction is split to multiple values.
     if (adaptor.getSource().size() == 1)
       return failure();
     auto mixedPos = extractOp.getMixedPosition();
@@ -403,7 +425,7 @@ struct XeGPUOptimizeTransposePass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    // CreateNdDescOp and LoadNdOp with invalid transpose layout must be
+    // CreateNdDescOp and LoadNdOp with optimizable tensor desc types must be
     // converted.
     target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
         [&](xegpu::CreateNdDescOp createNdOp) {
@@ -413,6 +435,9 @@ struct XeGPUOptimizeTransposePass final
         [&](xegpu::LoadNdOp loadNdOp) {
           return !canBeOptimized(loadNdOp.getTensorDescType());
         });
+    // Vector ExtractOps can have optimizable layouts if they extract from
+    // LoadNdOps with array length greater than 1. These ExtractOps must be
+    // converted.
     target.addDynamicallyLegalOp<vector::ExtractOp>(
         [&](vector::ExtractOp extractOp) {
           auto layout = xegpu::getDistributeLayoutAttr(extractOp.getResult());
