@@ -93,14 +93,16 @@ define amdgpu_cs i32 @branch_divergent_ballot_ne_zero_non_compare(i32 %v) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; CHECK-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; CHECK-NEXT:    s_and_b64 s[0:1], vcc, exec
+; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB7_2
+; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], s[4:5]
-; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_branch .LBB7_3
+; CHECK-NEXT:  .LBB7_2: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB7_3
+; CHECK-NEXT:  .LBB7_3:
   %c = trunc i32 %v to i1
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %c)
   %ballot_ne_zero = icmp ne i64 %ballot, 0
@@ -144,9 +146,11 @@ define amdgpu_cs i32 @branch_divergent_ballot_eq_zero_non_compare(i32 %v) {
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB9_2
 ; CHECK-NEXT:  ; %bb.1: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB9_3
+; CHECK-NEXT:  .LBB9_2: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB9_3
+; CHECK-NEXT:  .LBB9_3:
   %c = trunc i32 %v to i1
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %c)
   %ballot_eq_zero = icmp eq i64 %ballot, 0
@@ -185,14 +189,16 @@ false:
 define amdgpu_cs i32 @branch_divergent_ballot_ne_zero_compare(i32 %v) {
 ; CHECK-LABEL: branch_divergent_ballot_ne_zero_compare:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, 12, v0
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 12, v0
+; CHECK-NEXT:    s_cmp_eq_u64 vcc, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB11_2
+; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_branch .LBB11_3
+; CHECK-NEXT:  .LBB11_2: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB11_3
+; CHECK-NEXT:  .LBB11_3:
   %c = icmp ult i32 %v, 12
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %c)
   %ballot_ne_zero = icmp ne i64 %ballot, 0
@@ -229,13 +235,15 @@ define amdgpu_cs i32 @branch_divergent_ballot_eq_zero_compare(i32 %v) {
 ; CHECK-LABEL: branch_divergent_ballot_eq_zero_compare:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 12, v0
-; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; CHECK-NEXT:    s_cmp_lg_u64 vcc, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB13_2
 ; CHECK-NEXT:  ; %bb.1: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB13_3
+; CHECK-NEXT:  .LBB13_2: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB13_3
+; CHECK-NEXT:  .LBB13_3:
   %c = icmp ult i32 %v, 12
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %c)
   %ballot_eq_zero = icmp eq i64 %ballot, 0
@@ -271,16 +279,18 @@ false:
 define amdgpu_cs i32 @branch_divergent_ballot_ne_zero_and(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: branch_divergent_ballot_ne_zero_and:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_cmp_le_u32_e32 vcc, 12, v0
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s[0:1], 34, v1
-; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[0:1]
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 12, v0
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s[0:1], 34, v1
+; CHECK-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
+; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB15_2
+; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], s[4:5]
-; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_branch .LBB15_3
+; CHECK-NEXT:  .LBB15_2: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB15_3
+; CHECK-NEXT:  .LBB15_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
@@ -331,9 +341,11 @@ define amdgpu_cs i32 @branch_divergent_ballot_eq_zero_and(i32 %v1, i32 %v2) {
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB17_2
 ; CHECK-NEXT:  ; %bb.1: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB17_3
+; CHECK-NEXT:  .LBB17_2: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB17_3
+; CHECK-NEXT:  .LBB17_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c

@@ -2069,6 +2069,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   if (isPassEnabled(EnableImageIntrinsicOptimizer))
     addPass(AMDGPUImageIntrinsicOptimizerPass(TM));
 
+  if (EnableUniformIntrinsicCombine)
+    addPass(AMDGPUUniformIntrinsicCombinePass());
   // This can be disabled by passing ::Disable here or on the command line
   // with --expand-variadics-override=disable.
   addPass(ExpandVariadicsPass(ExpandVariadicsMode::Lowering));

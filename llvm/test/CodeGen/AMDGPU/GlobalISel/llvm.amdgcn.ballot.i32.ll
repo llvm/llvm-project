@@ -89,15 +89,17 @@ define amdgpu_cs i32 @branch_divergent_ballot_ne_zero_non_compare(i32 %v) {
 ; CHECK-LABEL: branch_divergent_ballot_ne_zero_non_compare:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
-; CHECK-NEXT:    s_mov_b32 s0, 42
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; CHECK-NEXT:    s_xor_b32 s2, vcc_lo, -1
-; CHECK-NEXT:    s_and_saveexec_b32 s1, s2
-; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_and_b32 s0, vcc_lo, exec_lo
+; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB7_2
+; CHECK-NEXT:  ; %bb.1: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB7_3
+; CHECK-NEXT:  .LBB7_2: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB7_3
+; CHECK-NEXT:  .LBB7_3:
   %c = trunc i32 %v to i1
   %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %c)
   %ballot_ne_zero = icmp ne i32 %ballot, 0
@@ -182,27 +184,18 @@ false:
 }
 
 define amdgpu_cs i32 @branch_divergent_ballot_ne_zero_compare(i32 %v) {
-; GFX10-LABEL: branch_divergent_ballot_ne_zero_compare:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_cmp_le_u32_e32 vcc_lo, 12, v0
-; GFX10-NEXT:    s_mov_b32 s0, 42
-; GFX10-NEXT:    s_and_saveexec_b32 s1, vcc_lo
-; GFX10-NEXT:  ; %bb.1: ; %false
-; GFX10-NEXT:    s_mov_b32 s0, 33
-; GFX10-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: branch_divergent_ballot_ne_zero_compare:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mov_b32 s0, 42
-; GFX11-NEXT:    s_mov_b32 s1, exec_lo
-; GFX11-NEXT:    v_cmpx_le_u32_e32 12, v0
-; GFX11-NEXT:  ; %bb.1: ; %false
-; GFX11-NEXT:    s_mov_b32 s0, 33
-; GFX11-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: branch_divergent_ballot_ne_zero_compare:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
+; CHECK-NEXT:    s_cmp_eq_u32 vcc_lo, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB11_2
+; CHECK-NEXT:  ; %bb.1: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB11_3
+; CHECK-NEXT:  .LBB11_2: ; %false
+; CHECK-NEXT:    s_mov_b32 s0, 33
+; CHECK-NEXT:    s_branch .LBB11_3
+; CHECK-NEXT:  .LBB11_3:
   %c = icmp ult i32 %v, 12
   %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %c)
   %ballot_ne_zero = icmp ne i32 %ballot, 0
@@ -236,27 +229,18 @@ false:
 }
 
 define amdgpu_cs i32 @branch_divergent_ballot_eq_zero_compare(i32 %v) {
-; GFX10-LABEL: branch_divergent_ballot_eq_zero_compare:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
-; GFX10-NEXT:    s_mov_b32 s0, 42
-; GFX10-NEXT:    s_and_saveexec_b32 s1, vcc_lo
-; GFX10-NEXT:  ; %bb.1: ; %false
-; GFX10-NEXT:    s_mov_b32 s0, 33
-; GFX10-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10-NEXT:    ; return to shader part epilog
-;
-; GFX11-LABEL: branch_divergent_ballot_eq_zero_compare:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_mov_b32 s0, 42
-; GFX11-NEXT:    s_mov_b32 s1, exec_lo
-; GFX11-NEXT:    v_cmpx_gt_u32_e32 12, v0
-; GFX11-NEXT:  ; %bb.1: ; %false
-; GFX11-NEXT:    s_mov_b32 s0, 33
-; GFX11-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: branch_divergent_ballot_eq_zero_compare:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
+; CHECK-NEXT:    s_cmp_lg_u32 vcc_lo, 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB13_2
+; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_mov_b32 s0, 33
+; CHECK-NEXT:    s_branch .LBB13_3
+; CHECK-NEXT:  .LBB13_2: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB13_3
+; CHECK-NEXT:  .LBB13_3:
   %c = icmp ult i32 %v, 12
   %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %c)
   %ballot_eq_zero = icmp eq i32 %ballot, 0
@@ -292,16 +276,18 @@ false:
 define amdgpu_cs i32 @branch_divergent_ballot_ne_zero_and(i32 %v1, i32 %v2) {
 ; CHECK-LABEL: branch_divergent_ballot_ne_zero_and:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, 12, v0
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s0, 34, v1
-; CHECK-NEXT:    s_or_b32 s2, vcc_lo, s0
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, 34, v1
+; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB15_2
+; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
-; CHECK-NEXT:    s_and_saveexec_b32 s1, s2
-; CHECK-NEXT:  ; %bb.1: ; %false
+; CHECK-NEXT:    s_branch .LBB15_3
+; CHECK-NEXT:  .LBB15_2: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB15_3
+; CHECK-NEXT:  .LBB15_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
@@ -352,9 +338,11 @@ define amdgpu_cs i32 @branch_divergent_ballot_eq_zero_and(i32 %v1, i32 %v2) {
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB17_2
 ; CHECK-NEXT:  ; %bb.1: ; %false
 ; CHECK-NEXT:    s_mov_b32 s0, 33
-; CHECK-NEXT:  ; %bb.2: ; %UnifiedReturnBlock
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT:    s_branch .LBB17_3
+; CHECK-NEXT:  .LBB17_2: ; %true
+; CHECK-NEXT:    s_mov_b32 s0, 42
+; CHECK-NEXT:    s_branch .LBB17_3
+; CHECK-NEXT:  .LBB17_3:
   %v1c = icmp ult i32 %v1, 12
   %v2c = icmp ugt i32 %v2, 34
   %c = and i1 %v1c, %v2c
@@ -368,8 +356,14 @@ false:
 }
 
 define amdgpu_cs i32 @branch_uniform_ballot_eq_zero_and(i32 inreg %v1, i32 inreg %v2) {
+; CHECK-LABEL: branch_uniform_ballot_eq_zero_and:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_cmp_lt_u32 s0, 12
+; CHECK-NEXT:    s_cselect_b32 s0, 1, 0
+; CHECK-NEXT:    s_cmp_gt_u32 s1, 34
+; CHECK-NEXT:    s_cselect_b32 s1, 1, 0
+; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB18_2
 ; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42

@@ -18,9 +18,15 @@ define amdgpu_kernel void @readfirstlane_with_readlane(ptr addrspace(1) %out) {
 ; CHECK-LABEL: readfirstlane_with_readlane:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_bfe_u32 v1, v0, 10, 10
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v1
+; CHECK-NEXT:    v_readlane_b32 s2, v0, s2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_b32 v1, v0, s[0:1]
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -34,9 +40,12 @@ define amdgpu_kernel void @readlane_with_firstlane(ptr addrspace(1) %out) {
 ; CHECK-LABEL: readlane_with_firstlane:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_b32 v1, v0, s[0:1]
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %v1 = call i32 @llvm.amdgcn.readfirstlane(i32 %tidx)
@@ -49,9 +58,15 @@ define amdgpu_kernel void @readlane_readlane(ptr addrspace(1) %out) {
 ; CHECK-LABEL: readlane_readlane:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_bfe_u32 v1, v0, 10, 10
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v1
+; CHECK-NEXT:    v_readlane_b32 s2, v0, s2
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_b32 v1, v0, s[0:1]
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
@@ -82,9 +97,10 @@ define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
+; CHECK-NEXT:    v_permlane64_b32 v1, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_b32 v1, v0, s[0:1]
+; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tid)
@@ -98,9 +114,10 @@ define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %o
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, 1, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:    v_permlane64_b32 v1, v1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:    s_endpgm
