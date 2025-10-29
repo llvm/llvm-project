@@ -8477,7 +8477,8 @@ LegalizerHelper::lowerFPTOINT_SAT(MachineInstr &MI) {
   return Legalized;
 }
 
-// f64 -> f16 conversion using round-to-nearest-even rounding mode.
+// f64 -> f16 conversion using round-to-nearest-even rounding mode for scalars
+// and round-to-odd for vectors.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   const LLT S1 = LLT::scalar(1);
@@ -8487,8 +8488,31 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   assert(MRI.getType(Dst).getScalarType() == LLT::scalar(16) &&
          MRI.getType(Src).getScalarType() == LLT::scalar(64));
 
-  if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
-    return UnableToLegalize;
+  if (MRI.getType(Src).isVector()) {
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    LLT SrcTy = MRI.getType(Src);
+
+    LLT MidTy = LLT::fixed_vector(SrcTy.getNumElements(), LLT::scalar(32));
+
+    MachineInstrBuilder Mid;
+    MachineInstrBuilder Fin;
+    MIRBuilder.setInstrAndDebugLoc(MI);
+    switch (MI.getOpcode()) {
+    default:
+      return UnableToLegalize;
+    case TargetOpcode::G_FPTRUNC: {
+      Mid = MIRBuilder.buildFPTruncOdd(MidTy, Src);
+      Fin = MIRBuilder.buildFPTrunc(DstTy, Mid.getReg(0));
+      break;
+    }
+    }
+
+    MRI.replaceRegWith(Dst, Fin.getReg(0));
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   if (MI.getFlag(MachineInstr::FmAfn)) {
     unsigned Flags = MI.getFlags();

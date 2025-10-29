@@ -819,7 +819,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
       .libcallFor({{s16, s128}, {s32, s128}, {s64, s128}})
       .moreElementsToNextPow2(1)
-      .customIf([](const LegalityQuery &Q) {
+      .lowerIf([](const LegalityQuery &Q) {
         LLT DstTy = Q.Types[0];
         LLT SrcTy = Q.Types[1];
         return SrcTy.isFixedVector() && DstTy.isFixedVector() &&
@@ -1479,10 +1479,6 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizeICMP(MI, MRI, MIRBuilder);
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(MI, Helper);
-  case TargetOpcode::G_FPTRUNC:
-    // In order to vectorise f16 to f64 properly, we need to use f32 as an
-    // intermediary
-    return legalizeFptrunc(MI, MIRBuilder, MRI);
   }
 
   llvm_unreachable("expected switch to return");
@@ -2406,34 +2402,6 @@ bool AArch64LegalizerInfo::legalizePrefetch(MachineInstr &MI,
   unsigned PrfOp = (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
 
   MIB.buildInstr(AArch64::G_AARCH64_PREFETCH).addImm(PrfOp).add(AddrVal);
-  MI.eraseFromParent();
-  return true;
-}
-
-bool AArch64LegalizerInfo::legalizeFptrunc(
-    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
-    MachineRegisterInfo &MRI) const {
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(Dst);
-  LLT SrcTy = MRI.getType(Src);
-
-  LLT MidTy = LLT::fixed_vector(SrcTy.getNumElements(), LLT::scalar(32));
-
-  MachineInstrBuilder Mid;
-  MachineInstrBuilder Fin;
-  MIRBuilder.setInstrAndDebugLoc(MI);
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case TargetOpcode::G_FPTRUNC: {
-    Mid = MIRBuilder.buildFPTruncOdd(MidTy, Src);
-    Fin = MIRBuilder.buildFPTrunc(DstTy, Mid.getReg(0));
-    break;
-  }
-  }
-
-  MRI.replaceRegWith(Dst, Fin.getReg(0));
   MI.eraseFromParent();
   return true;
 }
