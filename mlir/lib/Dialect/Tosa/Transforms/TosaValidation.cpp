@@ -1217,7 +1217,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
         return true;
       }
     }
-  } else if (mlir::isa<tosa::shapeType>(type))
+  } else if (isa<tosa::shapeType>(type))
     return true;
   else if (isa<tosa::mxint8Type>(type))
     return true;
