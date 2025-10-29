@@ -507,7 +507,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
   };
 
   unsigned I = StartAt;
-  for (unsigned E = Changes.size(); I != E; ++I) {
+  unsigned E = Changes.size();
+  for (; I != E; ++I) {
     auto &CurrentChange = Changes[I];
     if (CurrentChange.indentAndNestingLevel() < IndentAndNestingLevel)
       break;
@@ -652,8 +653,8 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 
   // Pass entire lines to the function so that it can update the state of all
   // tokens that move.
-  for (EndOfSequence = I; EndOfSequence < Changes.size() &&
-                          Changes[EndOfSequence].NewlinesBefore == 0;
+  for (EndOfSequence = I;
+       EndOfSequence < E && Changes[EndOfSequence].NewlinesBefore == 0;
        ++EndOfSequence) {
   }
   AlignCurrentSequence();
