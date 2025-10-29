@@ -38083,7 +38083,9 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBF8PS: Opc = X86::TDPBF8PS; break;
     case X86::PTDPBHF8PS: Opc = X86::TDPBHF8PS; break;
     case X86::PTDPHBF8PS: Opc = X86::TDPHBF8PS; break;
-    case X86::PTDPHF8PS: Opc = X86::TDPHF8PS; break;
+    case X86::PTDPHF8PS:
+      Opc = X86::TDPHF8PS;
+      break;
     case X86::PTMMULTF32PS:
       Opc = X86::TMMULTF32PS;
       break;
