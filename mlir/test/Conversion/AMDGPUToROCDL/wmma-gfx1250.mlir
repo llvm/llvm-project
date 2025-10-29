@@ -91,7 +91,7 @@ func.func @wmma_k128(%arg0 : vector<64xf8E4M3FN>, %arg1 : vector<64xf8E5M2>,
 
 // -----
 
-func.func @wmma_to_rocdl(%arg0 : vector<8xf16>, %arg1 : vector<8xf32>) {
+func.func @wmma_unsupported_k(%arg0 : vector<8xf16>, %arg1 : vector<8xf32>) {
   // expected-error@below {{'amdgpu.wmma' op no intrinsic matching WMMA on the given chipset}}
   // expected-error@below {{failed to legalize operation 'amdgpu.wmma'}}
   amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 : vector<8xf16>, vector<8xf16>, vector<8xf32>
