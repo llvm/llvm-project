@@ -92,7 +92,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
   const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
-  if (!Subtarget.useLoadStorePairs())
+  if (!Subtarget.useMIPSLoadStorePairs())
     return false;
 
   bool MadeChange = false;

@@ -58,37 +58,78 @@ static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
              "is followed by a block that either has a terminating "
              "deoptimizing call or is terminated with an unreachable"));
 
-void llvm::detachDeadBlocks(
-    ArrayRef<BasicBlock *> BBs,
-    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-    bool KeepOneInputPHIs) {
+/// Zap all the instructions in the block and replace them with an unreachable
+/// instruction and notify the basic block's successors that one of their
+/// predecessors is going away.
+static void
+emptyAndDetachBlock(BasicBlock *BB,
+                    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                    bool KeepOneInputPHIs) {
+  // Loop through all of our successors and make sure they know that one
+  // of their predecessors is going away.
+  SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
+  for (BasicBlock *Succ : successors(BB)) {
+    Succ->removePredecessor(BB, KeepOneInputPHIs);
+    if (Updates && UniqueSuccessors.insert(Succ).second)
+      Updates->push_back({DominatorTree::Delete, BB, Succ});
+  }
+
+  // Zap all the instructions in the block.
+  while (!BB->empty()) {
+    Instruction &I = BB->back();
+    // If this instruction is used, replace uses with an arbitrary value.
+    // Because control flow can't get here, we don't care what we replace the
+    // value with. Note that since this block is unreachable, and all values
+    // contained within it must dominate their uses, that all uses will
+    // eventually be removed (they are themselves dead).
+    if (!I.use_empty())
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+    BB->back().eraseFromParent();
+  }
+  new UnreachableInst(BB->getContext(), BB);
+  assert(BB->size() == 1 && isa<UnreachableInst>(BB->getTerminator()) &&
+         "The successor list of BB isn't empty before "
+         "applying corresponding DTU updates.");
+}
+
+void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
+                            SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                            bool KeepOneInputPHIs) {
+  SmallPtrSet<BasicBlock *, 4> UniqueEHRetBlocksToDelete;
   for (auto *BB : BBs) {
-    // Loop through all of our successors and make sure they know that one
-    // of their predecessors is going away.
-    SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
-    for (BasicBlock *Succ : successors(BB)) {
-      Succ->removePredecessor(BB, KeepOneInputPHIs);
-      if (Updates && UniqueSuccessors.insert(Succ).second)
-        Updates->push_back({DominatorTree::Delete, BB, Succ});
+    auto NonFirstPhiIt = BB->getFirstNonPHIIt();
+    if (NonFirstPhiIt != BB->end()) {
+      Instruction &I = *NonFirstPhiIt;
+      // Exception handling funclets need to be explicitly addressed.
+      // These funclets must begin with cleanuppad or catchpad and end with
+      // cleanupred or catchret. The return instructions can be in different
+      // basic blocks than the pad instruction. If we would only delete the
+      // first block, the we would have possible cleanupret and catchret
+      // instructions with poison arguments, which wouldn't be valid.
+      if (isa<FuncletPadInst>(I)) {
+        UniqueEHRetBlocksToDelete.clear();
+
+        for (User *User : I.users()) {
+          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+          // If we have a cleanupret or catchret block, replace it with just an
+          // unreachable. The other alternative, that may use a catchpad is a
+          // catchswitch. That does not need special handling for now.
+          if (isa<CatchReturnInst>(ReturnInstr) ||
+              isa<CleanupReturnInst>(ReturnInstr)) {
+            BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
+            UniqueEHRetBlocksToDelete.insert(ReturnInstrBB);
+          }
+        }
+
+        for (BasicBlock *EHRetBB : UniqueEHRetBlocksToDelete)
+          emptyAndDetachBlock(EHRetBB, Updates, KeepOneInputPHIs);
+      }
     }
 
-    // Zap all the instructions in the block.
-    while (!BB->empty()) {
-      Instruction &I = BB->back();
-      // If this instruction is used, replace uses with an arbitrary value.
-      // Because control flow can't get here, we don't care what we replace the
-      // value with.  Note that since this block is unreachable, and all values
-      // contained within it must dominate their uses, that all uses will
-      // eventually be removed (they are themselves dead).
-      if (!I.use_empty())
-        I.replaceAllUsesWith(PoisonValue::get(I.getType()));
-      BB->back().eraseFromParent();
-    }
-    new UnreachableInst(BB->getContext(), BB);
-    assert(BB->size() == 1 &&
-           isa<UnreachableInst>(BB->getTerminator()) &&
-           "The successor list of BB isn't empty before "
-           "applying corresponding DTU updates.");
+    UniqueEHRetBlocksToDelete.clear();
+
+    // Detaching and emptying the current basic block.
+    emptyAndDetachBlock(BB, Updates, KeepOneInputPHIs);
   }
 }
 

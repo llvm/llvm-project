@@ -229,6 +229,10 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (F.hasMinSize())
     Key += "+minsize";
 
+  DenormalMode DM = F.getDenormalModeRaw();
+  if (DM != DenormalMode::getIEEE())
+    Key += "denormal-fp-math=" + DM.str();
+
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -236,7 +240,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                        F.hasMinSize());
+                                       F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -331,7 +335,7 @@ char ARMExecutionDomainFix::ID;
 
 INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
   "ARM Execution Domain Fix", false, false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis)
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
   "ARM Execution Domain Fix", false, false)
 

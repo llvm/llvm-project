@@ -45,6 +45,9 @@ std::int32_t RTNAME(Fseek)(int unit, std::int64_t zeroBasedPos, int whence,
     const char *sourceFileName, int lineNumber);
 std::int64_t RTNAME(Ftell)(int unit);
 
+// FNUM maps a Fortran unit number to its UNIX file descriptor
+std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber);
+
 // GNU Fortran 77 compatibility function IARGC.
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)();
 

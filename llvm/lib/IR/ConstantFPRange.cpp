@@ -391,3 +391,23 @@ ConstantFPRange ConstantFPRange::unionWith(const ConstantFPRange &CR) const {
   return ConstantFPRange(minnum(Lower, CR.Lower), maxnum(Upper, CR.Upper),
                          MayBeQNaN | CR.MayBeQNaN, MayBeSNaN | CR.MayBeSNaN);
 }
+
+ConstantFPRange ConstantFPRange::abs() const {
+  if (isNaNOnly())
+    return *this;
+  // Check if the range is all non-negative or all non-positive.
+  if (Lower.isNegative() == Upper.isNegative()) {
+    if (Lower.isNegative())
+      return negate();
+    return *this;
+  }
+  // The range contains both positive and negative values.
+  APFloat NewLower = APFloat::getZero(getSemantics());
+  APFloat NewUpper = maxnum(-Lower, Upper);
+  return ConstantFPRange(std::move(NewLower), std::move(NewUpper), MayBeQNaN,
+                         MayBeSNaN);
+}
+
+ConstantFPRange ConstantFPRange::negate() const {
+  return ConstantFPRange(-Upper, -Lower, MayBeQNaN, MayBeSNaN);
+}

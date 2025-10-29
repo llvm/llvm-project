@@ -96,6 +96,7 @@ __m128i test_mm_maddubs_epi16(__m128i a, __m128i b) {
   // CHECK: call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_maddubs_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_maddubs_epi16((__m128i)(__v16qi){1, 1, 2, 2, 3, 3, 4, 4, 1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v16qs){2, 3, 4, 5, 6, 7, 8, 9, -1, -1, -2, -2, -3, -3, -4, -4}), 5, 18, 39, 68, -3, -14, -33, -60));
 
 __m128i test_mm_mulhrs_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_mulhrs_epi16

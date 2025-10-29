@@ -792,7 +792,7 @@ ClangExpressionParser::ClangExpressionParser(
   // 6. Set up the source management objects inside the compiler
   m_compiler->createFileManager();
   if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(m_compiler->getFileManager());
+    m_compiler->createSourceManager();
   m_compiler->createPreprocessor(TU_Complete);
 
   switch (expr.Language().AsLanguageType()) {
@@ -1307,6 +1307,10 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   m_compiler->setSema(nullptr);
 
   adapter->EndSourceFile();
+  // Creating persistent variables can trigger diagnostic emission.
+  // Make sure we reset the manager so we don't get asked to handle
+  // diagnostics after we finished parsing.
+  adapter->ResetManager();
 
   unsigned num_errors = adapter->getNumErrors();
 
@@ -1321,8 +1325,6 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   if (!num_errors) {
     type_system_helper->CommitPersistentDecls();
   }
-
-  adapter->ResetManager();
 
   return num_errors;
 }

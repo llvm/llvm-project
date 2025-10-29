@@ -802,7 +802,6 @@ public:
         ValueRange{paddedInput, fakeWindowDims}, filledEmptyTensor, strideAttr,
         dilationAttr);
 
-    rewriter.setInsertionPointAfter(op);
     NanPropagationMode nanMode = op.getNanMode();
     rewriter.replaceOp(op, resultOp);
 

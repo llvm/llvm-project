@@ -370,7 +370,7 @@ body:            |
     ; HAZARD-LABEL: name: inline_sdwa_hazard
     ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; HAZARD-NEXT: {{  $}}
-    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
     ; HAZARD-NEXT: S_NOP 0
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
     ; HAZARD-NEXT: S_ENDPGM 0
@@ -378,10 +378,10 @@ body:            |
     ; NOHAZARD-LABEL: name: inline_sdwa_hazard
     ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; NOHAZARD-NEXT: {{  $}}
-    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
     ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
     ; NOHAZARD-NEXT: S_ENDPGM 0
-  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
   renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
   S_ENDPGM 0
 ...
@@ -397,17 +397,17 @@ body:            |
     ; HAZARD-NEXT: {{  $}}
     ; HAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
     ; HAZARD-NEXT: S_NOP 0
-    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
     ; HAZARD-NEXT: S_ENDPGM 0
     ;
     ; NOHAZARD-LABEL: name: sdwa_inline_hazard
     ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; NOHAZARD-NEXT: {{  $}}
     ; NOHAZARD-NEXT: renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
-    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
     ; NOHAZARD-NEXT: S_ENDPGM 0
   renamable $vgpr0 = V_ADD_U16_sdwa 0, $vgpr1, 0, $vgpr2, 0, 1, 0, 3, 3, implicit $exec, implicit killed $vgpr0(tied-def 0)
-  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
   S_ENDPGM 0
 ...
 
@@ -421,19 +421,19 @@ body:            |
     ; HAZARD-LABEL: name: inline_inline_hazard
     ; HAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; HAZARD-NEXT: {{  $}}
-    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
     ; HAZARD-NEXT: S_NOP 0
-    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+    ; HAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
     ; HAZARD-NEXT: S_ENDPGM 0
     ;
     ; NOHAZARD-LABEL: name: inline_inline_hazard
     ; NOHAZARD: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $exec, $mode
     ; NOHAZARD-NEXT: {{  $}}
-    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
-    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
+    ; NOHAZARD-NEXT: INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
     ; NOHAZARD-NEXT: S_ENDPGM 0
-  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
-  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def $vgpr0, 2031625 /* reguse:VGPR_32 */, $vgpr1
+  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
+  INLINEASM &"v_or_b32 $0, 0, $1", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def $vgpr0, 1835017 /* reguse:VGPR_32 */, $vgpr1
   S_ENDPGM 0
 ...
 

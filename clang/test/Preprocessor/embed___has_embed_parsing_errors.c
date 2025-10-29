@@ -247,3 +247,6 @@
    expected-error@+2 {{expected value in expression}}
 #if __has_embed (__FILE__ limit(-100000000000000000)) != __STDC_EMBED_NOT_FOUND__
 #endif
+
+#if __has_embed("") // expected-error {{empty filename}}
+#endif

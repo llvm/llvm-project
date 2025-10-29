@@ -70,6 +70,10 @@ static unsigned getSEWOpNum(const MachineInstr &MI) {
   return RISCVII::getSEWOpNum(MI.getDesc());
 }
 
+static unsigned getVecPolicyOpNum(const MachineInstr &MI) {
+  return RISCVII::getVecPolicyOpNum(MI.getDesc());
+}
+
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
 /// not a load or store which ignores SEW.
 static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
@@ -124,7 +128,7 @@ static bool hasUndefinedPassthru(const MachineInstr &MI) {
   // All undefined passthrus should be $noreg: see
   // RISCVDAGToDAGISel::doPeepholeNoRegPassThru
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
-  return UseMO.getReg() == RISCV::NoRegister || UseMO.isUndef();
+  return !UseMO.getReg().isValid() || UseMO.isUndef();
 }
 
 /// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
@@ -986,7 +990,7 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
 
     // If there is a policy operand, use it.
     if (RISCVII::hasVecPolicyOp(TSFlags)) {
-      const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
+      const MachineOperand &Op = MI.getOperand(getVecPolicyOpNum(MI));
       uint64_t Policy = Op.getImm();
       assert(Policy <=
                  (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
@@ -1450,7 +1454,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
           Register Reg = VLOp.getReg();
 
           // Erase the AVL operand from the instruction.
-          VLOp.setReg(RISCV::NoRegister);
+          VLOp.setReg(Register());
           VLOp.setIsKill(false);
           if (LIS) {
             LiveInterval &LI = LIS->getInterval(Reg);
@@ -1659,7 +1663,7 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       return;
     Register OldVLReg = MO.getReg();
-    MO.setReg(RISCV::NoRegister);
+    MO.setReg(Register());
 
     if (LIS)
       LIS->shrinkToUses(&LIS->getInterval(OldVLReg));

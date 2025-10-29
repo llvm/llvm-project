@@ -55,15 +55,8 @@ foldConstantCastPair(
   Type *MidTy = Op->getType();
   Instruction::CastOps firstOp = Instruction::CastOps(Op->getOpcode());
   Instruction::CastOps secondOp = Instruction::CastOps(opc);
-
-  // Assume that pointers are never more than 64 bits wide, and only use this
-  // for the middle type. Otherwise we could end up folding away illegal
-  // bitcasts between address spaces with different sizes.
-  IntegerType *FakeIntPtrTy = Type::getInt64Ty(DstTy->getContext());
-
-  // Let CastInst::isEliminableCastPair do the heavy lifting.
   return CastInst::isEliminableCastPair(firstOp, secondOp, SrcTy, MidTy, DstTy,
-                                        nullptr, FakeIntPtrTy, nullptr);
+                                        /*DL=*/nullptr);
 }
 
 static Constant *FoldBitCast(Constant *V, Type *DestTy) {

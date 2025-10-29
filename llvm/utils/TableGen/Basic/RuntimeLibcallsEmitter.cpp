@@ -547,16 +547,6 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         "  struct LibcallImplPair {\n"
         "    RTLIB::Libcall Func;\n"
         "    RTLIB::LibcallImpl Impl;\n"
-        "  };\n"
-        "  auto setLibcallsImpl = [this](\n"
-        "    ArrayRef<LibcallImplPair> Libcalls,\n"
-        "    std::optional<llvm::CallingConv::ID> CC = {})\n"
-        "  {\n"
-        "    for (const auto [Func, Impl] : Libcalls) {\n"
-        "      setLibcallImpl(Func, Impl);\n"
-        "      if (CC)\n"
-        "        setLibcallImplCallingConv(Impl, *CC);\n"
-        "    }\n"
         "  };\n";
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
@@ -682,18 +672,37 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       Funcs.erase(UniqueI, Funcs.end());
 
-      OS << indent(IndentDepth + 2) << "setLibcallsImpl({\n";
+      OS << indent(IndentDepth + 2)
+         << "static const LibcallImplPair LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      if (FuncsWithCC.CallingConv)
+        OS << '_' << FuncsWithCC.CallingConv->getName();
+
+      OS << "[] = {\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
-        OS << indent(IndentDepth + 4);
+        OS << indent(IndentDepth + 6);
         LibCallImpl->emitTableEntry(OS);
       }
-      OS << indent(IndentDepth + 2) << "}";
+
+      OS << indent(IndentDepth + 2) << "};\n\n"
+         << indent(IndentDepth + 2)
+         << "for (const auto [Func, Impl] : LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      if (FuncsWithCC.CallingConv)
+        OS << '_' << FuncsWithCC.CallingConv->getName();
+
+      OS << ") {\n"
+         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
+
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
             FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-        OS << ", " << CCEnum;
+        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
+           << CCEnum << ");\n";
       }
-      OS << ");\n\n";
+
+      OS << indent(IndentDepth + 2) << "}\n";
+      OS << '\n';
 
       if (!SubsetPredicate.isAlwaysAvailable()) {
         OS << indent(IndentDepth);

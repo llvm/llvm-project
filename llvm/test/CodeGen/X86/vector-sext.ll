@@ -1409,11 +1409,11 @@ define <2 x i64> @load_sext_2i1_to_2i64(ptr%ptr) {
 ; X86-SSE2-NEXT:    movzbl %al, %eax
 ; X86-SSE2-NEXT:    negl %eax
 ; X86-SSE2-NEXT:    movd %eax, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,1,1]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,0,0,0]
 ; X86-SSE2-NEXT:    andl $1, %ecx
 ; X86-SSE2-NEXT:    negl %ecx
 ; X86-SSE2-NEXT:    movd %ecx, %xmm0
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-SSE2-NEXT:    retl
 ;

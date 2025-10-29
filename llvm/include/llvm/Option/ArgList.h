@@ -20,6 +20,7 @@
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cstddef>
 #include <initializer_list>
@@ -279,6 +280,22 @@ public:
   /// which are guaranteed to be the first strings in the argument string
   /// list.
   virtual unsigned getNumInputArgStrings() const = 0;
+
+  /// getSubCommand - Find subcommand from the arguments if the usage is valid.
+  ///
+  /// \param AllSubCommands - A list of all valid subcommands.
+  /// \param HandleMultipleSubcommands - A callback for the case where multiple
+  /// subcommands are present in the arguments. It gets a list of all found
+  /// subcommands.
+  /// \param HandleOtherPositionals - A callback for the case where positional
+  /// arguments that are not subcommands are present.
+  /// \return The name of the subcommand found. If no subcommand is found,
+  /// this returns an empty StringRef. If multiple subcommands are found, the
+  /// first one is returned.
+  StringRef getSubCommand(
+      ArrayRef<OptTable::SubCommand> AllSubCommands,
+      std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
+      std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;
 
   /// @}
   /// @name Argument Lookup Utilities

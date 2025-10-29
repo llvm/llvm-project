@@ -1445,6 +1445,49 @@ def : Pat<(v16i8 (wasm_narrow_u (v8i16 V128:$left), (v8i16 V128:$right))),
 def : Pat<(v8i16 (wasm_narrow_u (v4i32 V128:$left), (v4i32 V128:$right))),
           (NARROW_U_I16x8 $left, $right)>;
 
+// Recognize a saturating truncation and convert into the corresponding
+// narrow_TYPE_s or narrow_TYPE_u instruction.
+multiclass SignedSaturatingTruncate<ValueType input, ValueType output,
+                                    Instruction narrow, int minval,
+                                    int maxval, int mask> {
+  def : Pat<
+    (output (wasm_narrow_u
+      (and (smin (smax (input V128:$a), (splat_vector (i32 minval))),
+           (splat_vector (i32 maxval))), (splat_vector (i32 mask))),
+      (and (smin (smax (input V128:$b), (splat_vector (i32 minval))),
+           (splat_vector (i32 maxval))), (splat_vector (i32 mask)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_u
+      (and (smax (smin (input V128:$a), (splat_vector (i32 maxval))),
+           (splat_vector (i32 minval))), (splat_vector (i32 mask))),
+      (and (smax (smin (input V128:$b), (splat_vector (i32 maxval))),
+           (splat_vector (i32 minval))), (splat_vector (i32 mask)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+}
+
+defm : SignedSaturatingTruncate<v8i16, v16i8, NARROW_S_I8x16, -128, 127, 0xFF>;
+defm : SignedSaturatingTruncate<v4i32, v8i16, NARROW_S_I16x8, -32768, 32767, 0xFFFF>;
+
+multiclass UnsignedSaturatingTruncate<ValueType input, ValueType output,
+                                    Instruction narrow, int maxval> {
+  def : Pat<
+    (output (wasm_narrow_u
+      (umin (input V128:$a), (splat_vector (i32 maxval))),
+      (umin (input V128:$b), (splat_vector (i32 maxval)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+}
+
+defm : UnsignedSaturatingTruncate<v8i16, v16i8, NARROW_U_I8x16, 0xFF>;
+defm : UnsignedSaturatingTruncate<v4i32, v8i16, NARROW_U_I16x8, 0xFFFF>;
+
 // Bitcasts are nops
 // Matching bitcast t1 to t1 causes strange errors, so avoid repeating types
 foreach t1 = AllVecs in
@@ -1503,6 +1546,51 @@ def : Pat<(v2f64 (extloadv2f32 (i64 I64:$addr))),
 
 defm Q15MULR_SAT_S :
   SIMDBinary<I16x8, int_wasm_q15mulr_sat_signed, "q15mulr_sat_s", 0x82>;
+
+//===----------------------------------------------------------------------===//
+// Partial reductions, using: dot, extmul and extadd_pairwise
+//===----------------------------------------------------------------------===//
+// MLA: v8i16 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v8i16 V128:$lhs),
+                                                         (v8i16 V128:$rhs))),
+          (ADD_I32x4 (DOT $lhs, $rhs), $acc)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v8i16 V128:$lhs),
+                                                         (v8i16 V128:$rhs))),
+          (ADD_I32x4 (ADD_I32x4 (EXTMUL_LOW_U_I32x4 $lhs, $rhs),
+                                (EXTMUL_HIGH_U_I32x4 $lhs, $rhs)),
+                     $acc)>;
+// MLA: v16i8 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$lhs),
+                                                         (v16i8 V128:$rhs))),
+          (ADD_I32x4 (ADD_I32x4 (DOT (extend_low_s_I16x8 $lhs),
+                                     (extend_low_s_I16x8 $rhs)),
+                                (DOT (extend_high_s_I16x8 $lhs),
+                                     (extend_high_s_I16x8 $rhs))),
+                      $acc)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v16i8 V128:$lhs),
+                                                         (v16i8 V128:$rhs))),
+          (ADD_I32x4 (ADD_I32x4 (extadd_pairwise_u_I32x4 (EXTMUL_LOW_U_I16x8 $lhs, $rhs)),
+                                (extadd_pairwise_u_I32x4 (EXTMUL_HIGH_U_I16x8 $lhs, $rhs))),
+                     $acc)>;
+
+// Accumulate: v8i16 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v8i16 V128:$in),
+                                                         (I16x8.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_s_I32x4 $in), $acc)>;
+
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v8i16 V128:$in),
+                                                         (I16x8.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_u_I32x4 $in), $acc)>;
+
+// Accumulate: v16i8 -> v4i32
+def : Pat<(v4i32 (partial_reduce_smla (v4i32 V128:$acc), (v16i8 V128:$in),
+                                                         (I8x16.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_s_I32x4 (extadd_pairwise_s_I16x8 $in)),
+                     $acc)>;
+def : Pat<(v4i32 (partial_reduce_umla (v4i32 V128:$acc), (v16i8 V128:$in),
+                                                         (I8x16.splat (i32 1)))),
+          (ADD_I32x4 (extadd_pairwise_u_I32x4 (extadd_pairwise_u_I16x8 $in)),
+                     $acc)>;
 
 //===----------------------------------------------------------------------===//
 // Relaxed swizzle

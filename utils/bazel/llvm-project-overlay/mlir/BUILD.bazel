@@ -367,7 +367,6 @@ cc_library(
         "include/mlir/Bytecode/*.h",
     ]) + [
         "include/mlir/IR/OpAsmOpInterface.h.inc",
-        "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/InferIntRangeInterface.h",
         "include/mlir/Interfaces/SideEffectInterfaces.h",
@@ -375,6 +374,7 @@ cc_library(
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/IR/PDLPatternMatch.h.inc",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/FoldInterfaces.h",
     ],
@@ -1207,6 +1207,20 @@ cc_binary(
     deps = [
         ":MLIRBindingsPythonCore",
         ":MLIRBindingsPythonHeadersAndDeps",
+        "@nanobind",
+    ],
+)
+
+cc_binary(
+    name = "_mlirDialectsIRDL.so",
+    srcs = ["lib/Bindings/Python/DialectIRDL.cpp"],
+    copts = PYBIND11_COPTS,
+    features = PYBIND11_FEATURES,
+    linkshared = 1,
+    linkstatic = 0,
+    deps = [
+        ":CAPIIR",
+        ":MLIRBindingsPythonNanobindHeadersAndDeps",
         "@nanobind",
     ],
 )
@@ -4793,6 +4807,7 @@ cc_library(
         ":InliningUtils",
         ":MaskableOpInterface",
         ":MaskingOpInterface",
+        ":MemOpInterfaces",
         ":MemRefDialect",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
@@ -6076,6 +6091,7 @@ cc_library(
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeInterface",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":NVVMRequiresSMTraitsIncGen",
@@ -6280,6 +6296,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":GPUDialect",
         ":IR",
+        ":InferIntRangeInterface",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
         ":SideEffectInterfaces",
@@ -6670,6 +6687,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":SMTIncGen",
+        ":SideEffectInterfaces",
         ":Support",
         "//llvm:Support",
     ],
@@ -7698,6 +7716,7 @@ cc_library(
         "lib/Transforms/*.cpp",
     ]),
     hdrs = [
+        "include/mlir/Transforms/BubbleDownMemorySpaceCasts.h",
         "include/mlir/Transforms/CSE.h",
         "include/mlir/Transforms/EndomorphismSimplification.h",
         "include/mlir/Transforms/HomomorphismSimplification.h",
@@ -7715,6 +7734,7 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterface",
+        ":MemOpInterfaces",
         ":MemorySlotInterfaces",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
@@ -7780,6 +7800,7 @@ cc_library(
         ":SCFDialect",
         ":TransformUtils",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -9306,6 +9327,7 @@ cc_library(
         ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
+        ":TransformSMTExtension",
         ":TransformTuneExtension",
         ":UBToLLVM",
         ":VectorToLLVM",
@@ -9414,6 +9436,7 @@ cc_binary(
         "//mlir/test:TestMemRef",
         "//mlir/test:TestMemRefToLLVMWithTransforms",
         "//mlir/test:TestNVGPU",
+        "//mlir/test:TestOpenACC",
         "//mlir/test:TestPDLL",
         "//mlir/test:TestPass",
         "//mlir/test:TestReducer",
@@ -9973,6 +9996,7 @@ cc_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h",
     ],
     deps = [
+        ":ArithDialect",
         ":AtomicInterfaces",
         ":AtomicInterfacesIncGen",
         ":BytecodeOpInterface",
@@ -11060,6 +11084,7 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":MaskableOpInterfaceTdFiles",
         ":MaskingOpInterfaceTdFiles",
+        ":MemOpInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":VectorInterfacesTdFiles",
@@ -11812,6 +11837,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/PDLExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/PDLExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":PDLDialect",
         ":PDLInterpDialect",
@@ -11863,6 +11889,49 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "TransformSMTExtensionOpsTdFiles",
+    srcs = ["include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td"],
+    includes = ["include"],
+    deps = [
+        ":SideEffectInterfacesTdFiles",
+        ":TransformDialectTdFiles",
+        ":TransformInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformSMTExtensionOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.h.inc": [
+            "-gen-op-decls",
+        ],
+        "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.cpp.inc": [
+            "-gen-op-defs",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/SMTExtension/SMTExtensionOps.td",
+    deps = [
+        ":TransformSMTExtensionOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "TransformSMTExtension",
+    srcs = glob(["lib/Dialect/Transform/SMTExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/SMTExtension/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":IR",
+        ":SMTDialect",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformSMTExtensionOpsIncGen",
+    ],
+)
+
 gentbl_cc_library(
     name = "TransformIRDLExtensionOpsIncGen",
     tbl_outs = {
@@ -11883,6 +11952,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/IRDLExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/IRDLExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":IRDLDialect",
         ":IRDLInterfacesIncGen",
@@ -11924,7 +11994,9 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/DebugExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/DebugExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
+        ":SideEffectInterfaces",
         ":Support",
         ":TransformDebugExtensionOpsIncGen",
         ":TransformDialect",
@@ -11961,6 +12033,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/LoopExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.h"]),
     deps = [
+        ":BytecodeOpInterface",
         ":IR",
         ":LoopLikeInterface",
         ":Rewrite",
@@ -12565,6 +12638,15 @@ cc_library(
 )
 
 td_library(
+    name = "MemOpInterfacesTdFiles",
+    srcs = ["include/mlir/Interfaces/MemOpInterfaces.td"],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+    ],
+)
+
+td_library(
     name = "MemRefOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/MemRef/IR/MemRefBase.td",
@@ -12575,12 +12657,24 @@ td_library(
         ":ArithOpsTdFiles",
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":MemOpInterfacesTdFiles",
         ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":ShapedOpInterfacesTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "MemOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Interfaces/MemOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Interfaces/MemOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/MemOpInterfaces.td",
+    deps = [":MemOpInterfacesTdFiles"],
 )
 
 gentbl_cc_library(
@@ -12614,6 +12708,19 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "MemOpInterfaces",
+    srcs = ["lib/Interfaces/MemOpInterfaces.cpp"],
+    hdrs = ["include/mlir/Interfaces/MemOpInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":DialectUtils",
+        ":IR",
+        ":MemOpInterfacesIncGen",
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "MemRefDialect",
     srcs = glob(
         [
@@ -12642,6 +12749,7 @@ cc_library(
         ":InferIntRangeInterface",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":MemOpInterfaces",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
         ":MemorySlotInterfaces",
@@ -12974,6 +13082,7 @@ cc_library(
         ":MPIOpsIncGen",
         ":MPITypesIncGen",
         ":MemRefDialect",
+        ":SideEffectInterfaces",
         "//llvm:Support",
     ],
 )

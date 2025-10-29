@@ -200,6 +200,12 @@ public:
   /// with another range.  The resultant range is guaranteed to include the
   /// elements of both sets, but may contain more.
   LLVM_ABI ConstantFPRange unionWith(const ConstantFPRange &CR) const;
+
+  /// Calculate absolute value range.
+  LLVM_ABI ConstantFPRange abs() const;
+
+  /// Calculate range of negated values.
+  LLVM_ABI ConstantFPRange negate() const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ConstantFPRange &CR) {

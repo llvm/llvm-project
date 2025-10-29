@@ -319,9 +319,12 @@ public:
       Opts["__opencl_c_images"] = true;
       Opts["__opencl_c_3d_image_writes"] = true;
       Opts["cl_khr_3d_image_writes"] = true;
+      Opts["__opencl_c_program_scope_global_variables"] = true;
 
-      Opts["__opencl_c_generic_address_space"] =
-          GPUKind >= llvm::AMDGPU::GK_GFX700;
+      if (GPUKind >= llvm::AMDGPU::GK_GFX700) {
+        Opts["__opencl_c_generic_address_space"] = true;
+        Opts["__opencl_c_device_enqueue"] = true;
+      }
     }
   }
 

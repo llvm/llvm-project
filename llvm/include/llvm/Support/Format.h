@@ -78,16 +78,6 @@ public:
 /// printed, this synthesizes the string into a temporary buffer provided and
 /// returns whether or not it is big enough.
 
-// Helper to validate that format() parameters are scalars or pointers.
-template <typename... Args> struct validate_format_parameters;
-template <typename Arg, typename... Args>
-struct validate_format_parameters<Arg, Args...> {
-  static_assert(std::is_scalar_v<Arg>,
-                "format can't be used with non fundamental / non pointer type");
-  validate_format_parameters() { validate_format_parameters<Args...>(); }
-};
-template <> struct validate_format_parameters<> {};
-
 template <typename... Ts>
 class format_object final : public format_object_base {
   std::tuple<Ts...> Vals;
@@ -105,7 +95,9 @@ class format_object final : public format_object_base {
 public:
   format_object(const char *fmt, const Ts &... vals)
       : format_object_base(fmt), Vals(vals...) {
-    validate_format_parameters<Ts...>();
+    static_assert(
+        (std::is_scalar_v<Ts> && ...),
+        "format can't be used with non fundamental / non pointer type");
   }
 
   int snprint(char *Buffer, unsigned BufferSize) const override {

@@ -4,9 +4,12 @@ static_library("CAS") {
     "ActionCache.cpp",
     "ActionCaches.cpp",
     "BuiltinCAS.cpp",
+    "DatabaseFile.cpp",
     "InMemoryCAS.cpp",
     "MappedFileRegionArena.cpp",
     "ObjectStore.cpp",
     "OnDiskCommon.cpp",
+    "OnDiskDataAllocator.cpp",
+    "OnDiskTrieRawHashMap.cpp",
   ]
 }

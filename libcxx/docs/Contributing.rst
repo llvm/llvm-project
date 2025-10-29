@@ -330,6 +330,17 @@ has been merged, an LLVM premerge maintainer (a Google employee) must use
 terraform to apply the change to the running GKE cluster.
 
 
+Monitoring premerge testing performance
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The llvm-premerge-libcxx runners mentioned above collect metrics regarding the
+time the tests spend queued up before they start running and also the time it
+takes the tests to actually complete running. These metrics are collected and
+aggregated (based on stage and PR), and the results can be seen at the
+`Libc++ Premerge Testing dashboard
+<https://llvm.grafana.net/public-dashboards/0bd453e8b3034733a1b0ff8c7728086d>`__
+.
+
 run-buildbot-container
 ~~~~~~~~~~~~~~~~~~~~~~
 

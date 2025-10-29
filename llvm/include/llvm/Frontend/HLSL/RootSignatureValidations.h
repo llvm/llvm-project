@@ -28,19 +28,21 @@ LLVM_ABI bool verifyRootFlag(uint32_t Flags);
 LLVM_ABI bool verifyVersion(uint32_t Version);
 LLVM_ABI bool verifyRegisterValue(uint32_t RegisterValue);
 LLVM_ABI bool verifyRegisterSpace(uint32_t RegisterSpace);
-LLVM_ABI bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal);
+LLVM_ABI bool verifyRootDescriptorFlag(uint32_t Version,
+                                       dxbc::RootDescriptorFlags Flags);
 LLVM_ABI bool verifyRangeType(uint32_t Type);
 LLVM_ABI bool verifyDescriptorRangeFlag(uint32_t Version,
                                         dxil::ResourceClass Type,
-                                        dxbc::DescriptorRangeFlags FlagsVal);
+                                        dxbc::DescriptorRangeFlags Flags);
+LLVM_ABI bool verifyStaticSamplerFlags(uint32_t Version,
+                                       dxbc::StaticSamplerFlags Flags);
 LLVM_ABI bool verifyNumDescriptors(uint32_t NumDescriptors);
 LLVM_ABI bool verifyMipLODBias(float MipLODBias);
 LLVM_ABI bool verifyMaxAnisotropy(uint32_t MaxAnisotropy);
 LLVM_ABI bool verifyLOD(float LOD);
 
-LLVM_ABI bool verifyBoundOffset(uint32_t Offset);
 LLVM_ABI bool verifyNoOverflowedOffset(uint64_t Offset);
-LLVM_ABI uint64_t computeRangeBound(uint32_t Offset, uint32_t Size);
+LLVM_ABI uint64_t computeRangeBound(uint64_t Offset, uint32_t Size);
 
 } // namespace rootsig
 } // namespace hlsl

@@ -50,6 +50,7 @@ enum OperandConstraint {
 /// See the accessors for a description of what these are.
 enum OperandFlags {
   LookupPtrRegClass = 0,
+  LookupRegClassByHwMode,
   Predicate,
   OptionalDef,
   BranchTarget
@@ -85,10 +86,13 @@ enum OperandType {
 /// indicating the register class for register operands, etc.
 class MCOperandInfo {
 public:
-  /// This specifies the register class enumeration of the operand
-  /// if the operand is a register.  If isLookupPtrRegClass is set, then this is
-  /// an index that is passed to TargetRegisterInfo::getPointerRegClass(x) to
-  /// get a dynamic register class.
+  /// This specifies the register class enumeration of the operand if the
+  /// operand is a register. If LookupRegClassByHwMode is set, then this is an
+  /// index into a table in TargetInstrInfo or MCInstrInfo which contains the
+  /// real register class ID.
+  ///
+  /// If isLookupPtrRegClass is set, then this is an index that is passed to
+  /// TargetRegisterInfo::getPointerRegClass(x) to get a dynamic register class.
   int16_t RegClass;
 
   /// These are flags from the MCOI::OperandFlags enum.
@@ -102,8 +106,15 @@ public:
 
   /// Set if this operand is a pointer value and it requires a callback
   /// to look up its register class.
+  // TODO: Deprecated in favor of isLookupRegClassByHwMode
   bool isLookupPtrRegClass() const {
     return Flags & (1 << MCOI::LookupPtrRegClass);
+  }
+
+  /// Set if this operand is a value that requires the current hwmode to look up
+  /// its register class.
+  bool isLookupRegClassByHwMode() const {
+    return Flags & (1 << MCOI::LookupRegClassByHwMode);
   }
 
   /// Set if this is one of the operands that made up of the predicate
@@ -521,7 +532,7 @@ public:
   /// Returns true if this instruction is a candidate for remat. This
   /// flag is only used in TargetInstrInfo method isTriviallyRematerializable.
   ///
-  /// If this flag is set, the isReallyTriviallyReMaterializable() method is
+  /// If this flag is set, the isReMaterializableImpl() method is
   /// called to verify the instruction is really rematerializable.
   bool isRematerializable() const {
     return Flags & (1ULL << MCID::Rematerializable);

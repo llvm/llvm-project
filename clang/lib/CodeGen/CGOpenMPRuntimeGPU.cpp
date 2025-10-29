@@ -869,6 +869,8 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
       CGM.getLangOpts().OpenMPOffloadMandatory,
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
+  Config.setDefaultTargetAS(
+      CGM.getContext().getTargetInfo().getTargetAddressSpace(LangAS::Default));
   OMPBuilder.setConfig(Config);
 
   if (!CGM.getLangOpts().OpenMPIsTargetDevice)
@@ -899,10 +901,34 @@ void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
   // Nothing to do.
 }
 
+llvm::Value *CGOpenMPRuntimeGPU::emitMessageClause(CodeGenFunction &CGF,
+                                                   const Expr *Message,
+                                                   SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_message);
+  return nullptr;
+}
+
+llvm::Value *
+CGOpenMPRuntimeGPU::emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                       SourceLocation Loc) {
+  CGM.getDiags().Report(Loc, diag::warn_omp_gpu_unsupported_clause)
+      << getOpenMPClauseName(OMPC_severity);
+  return nullptr;
+}
+
 void CGOpenMPRuntimeGPU::emitNumThreadsClause(
     CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
     OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
-    const Expr *Message) {
+    SourceLocation SeverityLoc, const Expr *Message,
+    SourceLocation MessageLoc) {
+  if (Modifier == OMPC_NUMTHREADS_strict) {
+    CGM.getDiags().Report(Loc,
+                          diag::warn_omp_gpu_unsupported_modifier_for_clause)
+        << "strict" << getOpenMPClauseName(OMPC_num_threads);
+    return;
+  }
+
   // Nothing to do.
 }
 
@@ -1219,7 +1245,10 @@ void CGOpenMPRuntimeGPU::emitParallelCall(
     llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
     if (WFn)
       ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
-    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
+    llvm::Type *FnPtrTy = llvm::PointerType::get(
+        CGF.getLLVMContext(), CGM.getDataLayout().getProgramAddressSpace());
+
+    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, FnPtrTy);
 
     // Create a private scope that will globalize the arguments
     // passed from the outside of the target region.

@@ -1399,8 +1399,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
   ctx.arg.dtltoDistributorArgs =
       args::getStrings(args, OPT_thinlto_distributor_arg);
-  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler_eq);
-  ctx.arg.dtltoCompilerArgs = args::getStrings(args, OPT_thinlto_compiler_arg);
+  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_remote_compiler_eq);
+  ctx.arg.dtltoCompilerArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_arg);
   ctx.arg.dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   ctx.arg.dynamicLinker = getDynamicLinker(ctx, args);
   ctx.arg.ehFrameHdr =
@@ -1510,8 +1511,14 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
   ctx.arg.printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
-  ctx.arg.printGcSections =
-      args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  if (auto *arg =
+          args.getLastArg(OPT_print_gc_sections, OPT_no_print_gc_sections,
+                          OPT_print_gc_sections_eq)) {
+    if (arg->getOption().matches(OPT_print_gc_sections))
+      ctx.arg.printGcSections = "-";
+    else if (arg->getOption().matches(OPT_print_gc_sections_eq))
+      ctx.arg.printGcSections = arg->getValue();
+  }
   ctx.arg.printMemoryUsage = args.hasArg(OPT_print_memory_usage);
   ctx.arg.printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
   ctx.arg.printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);

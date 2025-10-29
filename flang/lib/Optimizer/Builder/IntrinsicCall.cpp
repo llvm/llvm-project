@@ -6989,8 +6989,33 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
 }
 
 // MOD
+static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
+                              mlir::Value a, mlir::Value p) {
+  auto fastmathFlags = mlir::arith::FastMathFlags::contract;
+  auto fastmathAttr =
+      mlir::arith::FastMathFlagsAttr::get(builder.getContext(), fastmathFlags);
+  mlir::Value divResult =
+      mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
+  mlir::Type intType = builder.getIntegerType(
+      a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
+  mlir::Value intResult = builder.createConvert(loc, intType, divResult);
+  mlir::Value cnvResult = builder.createConvert(loc, a.getType(), intResult);
+  mlir::Value mulResult =
+      mlir::arith::MulFOp::create(builder, loc, cnvResult, p, fastmathAttr);
+  mlir::Value subResult =
+      mlir::arith::SubFOp::create(builder, loc, a, mulResult, fastmathAttr);
+  return subResult;
+}
+
 mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
+  auto mod = builder.getModule();
+  bool dontUseFastRealMod = false;
+  bool canUseApprox = mlir::arith::bitEnumContainsAny(
+      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
+  if (auto attr = mod->getAttrOfType<mlir::BoolAttr>("fir.no_fast_real_mod"))
+    dontUseFastRealMod = attr.getValue();
+
   assert(args.size() == 2);
   if (resultType.isUnsignedInteger()) {
     mlir::Type signlessType = mlir::IntegerType::get(
@@ -7002,9 +7027,16 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (mlir::isa<mlir::IntegerType>(resultType))
     return mlir::arith::RemSIOp::create(builder, loc, args[0], args[1]);
 
-  // Use runtime.
-  return builder.createConvert(
-      loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
+  if (resultType.isFloat() && canUseApprox && !dontUseFastRealMod) {
+    // Treat MOD as an approximate function and code-gen inline code
+    // instead of calling into the Fortran runtime library.
+    return builder.createConvert(loc, resultType,
+                                 genFastMod(builder, loc, args[0], args[1]));
+  } else {
+    // Use runtime.
+    return builder.createConvert(
+        loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
+  }
 }
 
 // MODULO
