@@ -89,8 +89,12 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
 
         bp_events = [e for e in self.dap_server.events if e["event"] == "breakpoint"]
 
-        main_bp_events = [e for e in bp_events if e['body']['breakpoint']['id'] == main_bp_id]
-        foo_bp_events = [e for e in bp_events if e['body']['breakpoint']['id'] == foo_bp_id]
+        main_bp_events = [
+            e for e in bp_events if e["body"]["breakpoint"]["id"] == main_bp_id
+        ]
+        foo_bp_events = [
+            e for e in bp_events if e["body"]["breakpoint"]["id"] == foo_bp_id
+        ]
 
         self.assertTrue(main_bp_events)
         self.assertTrue(foo_bp_events)

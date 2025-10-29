@@ -474,7 +474,7 @@ class DebugCommunication(object):
         """
         packet["seq"] = self.sequence
         self.sequence += 1
-        
+
         # Encode our command dictionary as a JSON string
         json_str = json.dumps(packet, separators=(",", ":"))
 

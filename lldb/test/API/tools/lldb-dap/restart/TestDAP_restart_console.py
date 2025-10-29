@@ -102,7 +102,7 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(stopped_threads), 1, "Expected the main thread to be stopped on entry."
         )
-        self.assertEqual(stopped_threads[0]['reason'], 'entry')
+        self.assertEqual(stopped_threads[0]["reason"], "entry")
 
         # Then, if we continue, we should hit the breakpoint at main.
         self.dap_server.request_continue()
@@ -116,7 +116,7 @@ class TestDAP_restart_console(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             len(stopped_threads), 1, "Expected the main thread to be stopped on entry."
         )
-        self.assertEqual(stopped_threads[0]['reason'], 'entry')
+        self.assertEqual(stopped_threads[0]["reason"], "entry")
 
         # continue to main
         self.dap_server.request_continue()
