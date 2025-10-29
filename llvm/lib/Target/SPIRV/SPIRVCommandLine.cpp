@@ -163,7 +163,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_kernel_attributes",
          SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes},
         {"SPV_ALTERA_blocking_pipes",
-         SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes}};
+         SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes},
+        {"SPV_KHR_relaxed_extended_instruction",
+         SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

@@ -11,9 +11,9 @@
 ; CHECK-MIR-DAG: [[STR_S:%[0-9]+:id\(s32\)]] = OpString 97
 ; CHECK-MIR: [[DBG_VAR_S:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 11, [[STR_S]], [[DBG_INT]], [[DBG_SOURCE]]
 ; CHECK-MIR: [[DBG_FUNC:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 10, {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_CU]], {{%[0-9]+\:[a-z0-9\(\)]+}}
-; CHECK-MIR-DAG: [[STR_PID:%[0-9]+:id\(s32\)]] = OpString 7500912
-; CHECK-MIR: [[dbg_global:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 18, [[STR_PID]], [[DBG_INT]], [[DBG_SOURCE]]
 ; CHECK-MIR: [[dbg_global1:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 13, [[DBG_INT]], [[DBG_FUNC]]
+; CHECK-MIR-DAG: [[STR_PID:%[0-9]+:id\(s32\)]] = OpString 7500912
+; CHECK-MIR: [[dbg_global:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 18, [[STR_PID]], [[dbg_global1]], [[DBG_SOURCE]]
 
 ; CHECK-SPIRV-DAG: [[int_str:%[0-9]+]] = OpString "int"
 ; CHECK-SPIRV-DAG: [[struct_str:%[0-9]+]] = OpString "S"
@@ -24,9 +24,9 @@
 ; CHECK-SPIRV: [[dbg_int:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypeBasic [[int_str]] %[[#]] %[[#]] %[[#]]
 ; CHECK-SPIRV: [[dbg_member:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypeMember [[member_a_str]] [[dbg_int]] [[dbg_src]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#]]
 ; CHECK-SPIRV: [[dbg_struct:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypeComposite [[struct_str]] %[[#]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] %[[#]] %[[#]] [[dbg_member]]
+; CHECK-SPIRV: [[dbg_ptr:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypePtrToMember [[dbg_int]] [[dbg_struct]]
 ; CHECK-SPIRV: [[dbg_none:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugInfoNone
-; CHECK-SPIRV: OpExtInst [[void_ty]] %[[#]] DebugGlobalVariable [[ptr_str]] [[dbg_int]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] [[dbg_none]] %[[#]]
-; CHECK-SPIRV: OpExtInst [[void_ty]] %[[#]] DebugTypePtrToMember [[dbg_int]] [[dbg_struct]]
+; CHECK-SPIRV: OpExtInst [[void_ty]] %[[#]] DebugGlobalVariable [[ptr_str]] [[dbg_ptr]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] [[dbg_none]] %[[#]]
 
 ; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 

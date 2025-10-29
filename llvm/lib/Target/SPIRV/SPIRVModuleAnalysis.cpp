@@ -647,7 +647,7 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         const unsigned OpCode = MI.getOpcode();
         if (OpCode == SPIRV::OpString) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
-        } else if (OpCode == SPIRV::OpExtInst && MI.getOperand(2).isImm() &&
+        } else if ((OpCode == SPIRV::OpExtInst|| OpCode == SPIRV::OpExtInstWithForwardRefsKHR) && MI.getOperand(2).isImm() &&
                    MI.getOperand(2).getImm() ==
                        SPIRV::InstructionSet::
                            NonSemantic_Shader_DebugInfo_100) {
@@ -2086,6 +2086,16 @@ void addInstrRequirements(const MachineInstr &MI,
         SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate);
     Reqs.addCapability(
         SPIRV::Capability::SubgroupMatrixMultiplyAccumulateINTEL);
+    break;
+  }
+  case SPIRV::OpExtInstWithForwardRefsKHR: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_relaxed_extended_instruction))
+      report_fatal_error("OpExtInstWithForwardRefsKHR instruction requires the "
+                         "following SPIR-V "
+                         "extension: SPV_KHR_relaxed_extended_instruction",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
     break;
   }
   case SPIRV::OpBitwiseFunctionINTEL: {

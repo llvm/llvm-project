@@ -9,10 +9,10 @@
 ; CHECK-MIR-DAG: [[DBG_CU:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 1, {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_SOURCE]], {{%[0-9]+\:[a-z0-9\(\)]+}}
 ; CHECK-MIR-DAG: [[STR_INT:%[0-9]+:id\(s32\)]] = OpString 7630441
 ; CHECK-MIR-DAG: [[DBG_BASIC_INT:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 2, [[STR_INT]]
-; CHECK-MIR-DAG: [[STR_VAR:%[0-9]+:id\(s32\)]] = OpString 97
-; CHECK-MIR-DAG: [[STR_EMPTY:%[0-9]+:id\(s32\)]] = OpString 0
-; CHECK-MIR-DAG: [[DBG_GLOBAL:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 18, [[STR_VAR]], [[DBG_BASIC_INT]], [[DBG_SOURCE]], {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_CU]]
 ; CHECK-MIR-DAG: [[DBG_QUAL:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 4, [[DBG_BASIC_INT]], {{%[0-9]+\:[a-z0-9\(\)]+}}
+; CHECK-MIR-DAG: [[STR_VAR:%[0-9]+:id\(s32\)]] = OpString 97
+; CHECK-MIR: [[STR_EMPTY:%[0-9]+:id\(s32\)]] = OpString 0
+; CHECK-MIR: [[DBG_GLOBAL:%[0-9]+:id\(s32\)]] = OpExtInst [[TYPE_VOID]], 3, 18, [[STR_VAR]], [[DBG_QUAL]], [[DBG_SOURCE]], {{%[0-9]+\:[a-z0-9\(\)]+}}, {{%[0-9]+\:[a-z0-9\(\)]+}}, [[DBG_CU]]
 
 ; CHECK-SPIRV: [[int_str:%[0-9]+]] = OpString "int"
 ; CHECK-SPIRV: [[a_str:%[0-9]+]] = OpString "a"
@@ -21,7 +21,6 @@
 ; CHECK-SPIRV: [[dbg_src:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugSource
 ; CHECK-SPIRV: [[dbg_cu:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugCompilationUnit %[[#]] %[[#]] [[dbg_src]]
 ; CHECK-SPIRV: [[dbg_int:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugTypeBasic [[int_str]]
-; CHECK-SPIRV: [[dbg_none:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugInfoNone
 ; CHECK-SPIRV: [[dbg_qual:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugTypeQualifier [[dbg_int]]
 
 ; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
