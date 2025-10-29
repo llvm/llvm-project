@@ -531,4 +531,29 @@ InstructionCost LoongArchTTIImpl::getVectorInstrCost(
          RegisterFileMoveCost;
 }
 
+InstructionCost LoongArchTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                                  Align Alignment,
+                                                  unsigned AddressSpace,
+                                                  TTI::TargetCostKind CostKind,
+                                                  TTI::OperandValueInfo OpInfo,
+                                                  const Instruction *I) const {
+
+  // Legalize the type.
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+
+  switch (CostKind) {
+  default:
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+  case TTI::TCK_RecipThroughput:
+    return 2 * LT.first;
+  case TTI::TCK_Latency:
+    unsigned Cost = 4;
+    if (Src->isFloatingPointTy() || Src->isVectorTy()) {
+      Cost += 1;
+    }
+    return Cost * LT.first;
+  }
+}
+
 // TODO: Implement more hooks to provide TTI machinery for LoongArch.
