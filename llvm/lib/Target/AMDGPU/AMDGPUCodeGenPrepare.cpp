@@ -2111,20 +2111,18 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntLo(IntrinsicInst &I) const {
       ST.makeLIDRangeMetadata(NewCall);
       return true;
     }
-    // When work group evenly splits into waves and wave size is power-of-2,
-    // we can compute lane ID within wave using bit masking:
-    // lane_id = workitem.id.x & (wave_size - 1).
+    // When work group evenly splits into waves, we can compute lane ID within
+    // wave using bit masking: lane_id = workitem.id.x & (wave_size - 1).
     if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
-      if (isPowerOf2_32(Wave)) {
-        IRBuilder<> B(&I);
-        CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-        ST.makeLIDRangeMetadata(Tid);
-        Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
-        Value *AndInst = B.CreateAnd(Tid, Mask);
-        BasicBlock::iterator BI(&I);
-        ReplaceInstWithValue(BI, AndInst);
-        return true;
-      }
+      // Construct optimized sequence: workitem.id.x & (wave_size - 1)
+      IRBuilder<> B(&I);
+      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+      ST.makeLIDRangeMetadata(Tid);
+      Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
+      Value *AndInst = B.CreateAnd(Tid, Mask);
+      BasicBlock::iterator BI(&I);
+      ReplaceInstWithValue(BI, AndInst);
+      return true;
     }
   }
 
@@ -2162,11 +2160,9 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
   using namespace PatternMatch;
 
   // Check for pattern: mbcnt.hi(~0, mbcnt.lo(~0, 0))
-  if (!match(I.getArgOperand(0), m_AllOnes()))
-    return false;
-
-  if (!match(I.getArgOperand(1),
-             m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(m_AllOnes(), m_Zero())))
+  if (!match(&I, m_Intrinsic<Intrinsic::amdgcn_mbcnt_hi>(
+                     m_AllOnes(), m_Intrinsic<Intrinsic::amdgcn_mbcnt_lo>(
+                                      m_AllOnes(), m_Zero()))))
     return false;
 
   if (auto MaybeX = ST.getReqdWorkGroupSize(F, 0)) {
@@ -2182,21 +2178,18 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
       ST.makeLIDRangeMetadata(NewCall);
       return true;
     }
-    // When work group evenly splits into waves and wave size is power-of-2,
-    // we can compute lane ID within wave using bit masking:
-    // lane_id = workitem.id.x & (wave_size - 1).
+    // When work group evenly splits into waves, we can compute lane ID within
+    // wave using bit masking: lane_id = workitem.id.x & (wave_size - 1).
     if (ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true)) {
-      if (isPowerOf2_32(Wave)) {
-        // Construct optimized sequence: workitem.id.x & (wave_size - 1)
-        IRBuilder<> B(&I);
-        CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
-        ST.makeLIDRangeMetadata(Tid);
-        Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
-        Value *AndInst = B.CreateAnd(Tid, Mask);
-        BasicBlock::iterator BI(&I);
-        ReplaceInstWithValue(BI, AndInst);
-        return true;
-      }
+      // Construct optimized sequence: workitem.id.x & (wave_size - 1)
+      IRBuilder<> B(&I);
+      CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+      ST.makeLIDRangeMetadata(Tid);
+      Constant *Mask = ConstantInt::get(Tid->getType(), Wave - 1);
+      Value *AndInst = B.CreateAnd(Tid, Mask);
+      BasicBlock::iterator BI(&I);
+      ReplaceInstWithValue(BI, AndInst);
+      return true;
     }
   } else {
     // When ST.getReqdWorkGroupSize() fails, use metadata. And only optimize the
