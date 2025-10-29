@@ -136,6 +136,7 @@ auipc t1, %tlsdesc_hi(baz)
 # NORELAX-RELOC-NEXT: R_RISCV_TLSDESC_HI20 baz 0x0
 # NORELAX-RELOC-NOT: R_RISCV_RELAX
 # RELAX-RELOC-NEXT: R_RISCV_TLSDESC_HI20 baz 0x0
+# RELAX-RELOC-NEXT: R_RISCV_RELAX - 0x0
 
 ## %hi/%lo on an absolute symbol (not yet defined) leads to relocations when relaxation is enabled.
 lui t2, %hi(abs)
