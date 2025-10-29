@@ -10678,15 +10678,6 @@ TargetLowering::getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr,
       Index, PtrArithFlags);
 }
 
-SDValue TargetLowering::getInboundsVectorElementPointer(SelectionDAG &DAG,
-                                                        SDValue VecPtr,
-                                                        EVT VecVT,
-                                                        SDValue Index) const {
-  SDNodeFlags PtrArithFlags =
-      SDNodeFlags::NoUnsignedWrap | SDNodeFlags::InBounds;
-  return getVectorElementPointer(DAG, VecPtr, VecVT, Index, PtrArithFlags);
-}
-
 SDValue
 TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
                                        EVT VecVT, EVT SubVecVT, SDValue Index,

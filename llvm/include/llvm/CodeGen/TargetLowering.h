@@ -5661,7 +5661,11 @@ public:
   /// bounds. \p VecPtr is guaranteed to point to the beginning of a memory
   /// location large enough for the vector.
   SDValue getInboundsVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr,
-                                          EVT VecVT, SDValue Index) const;
+                                          EVT VecVT, SDValue Index) const {
+    return getVectorElementPointer(DAG, VecPtr, VecVT, Index,
+                                   SDNodeFlags::NoUnsignedWrap |
+                                       SDNodeFlags::InBounds);
+  }
 
   /// Get a pointer to a sub-vector of type \p SubVecVT at index \p Idx located
   /// in memory for a vector of type \p VecVT starting at a base address of
