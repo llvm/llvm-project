@@ -25,7 +25,6 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation DoubleCaretLoc) {
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false)) {
-    SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
     return ExprError();
   }
 
