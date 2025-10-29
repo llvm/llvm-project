@@ -273,7 +273,7 @@ jobs:
         cmake -G Ninja -S llvm -B build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -DLLVM_RELEASE_ENABLE_PROJECTS="mlir" \
-            -DLLVM_RELEASE_ENABLE_RUTNIMES="" \
+            -DLLVM_RELEASE_ENABLE_RUNTIMES="" \
             -DLLVM_RELEASE_FINAL_STAGE_TARGETS="check-mlir" \
             -C clang/cmake/caches/Release.cmake
     - name: Build and Test
