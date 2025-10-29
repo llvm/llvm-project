@@ -3431,11 +3431,10 @@ static bool interp__builtin_ia32_shuffle_generic(
     if (ShouldZero && ShouldZero(DstIdx, ShuffleMask)) {
       // Zero out this element
       if (ElemT == PT_Float) {
-        Dst.elem<Floating>(DstIdx) = Floating(S.getASTContext().getFloatTypeSemantics(VecT->getElementType()));
+        Dst.elem<Floating>(DstIdx) = Floating(
+            S.getASTContext().getFloatTypeSemantics(VecT->getElementType()));
       } else {
-        INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-          Dst.elem<T>(DstIdx) = T::from(0);
-        });
+        INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(DstIdx) = T::from(0); });
       }
     } else {
       auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);

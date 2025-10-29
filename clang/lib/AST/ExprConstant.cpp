@@ -11647,7 +11647,8 @@ static bool evalShuffleGeneric(
     if (ShouldZero && ShouldZero(DstIdx, ShuffleMask)) {
       // Zero out this element
       QualType ElemTy = VT->getElementType();
-      ResultElements.push_back(APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
+      ResultElements.push_back(
+          APValue(APFloat::getZero(Info.Ctx.getFloatTypeSemantics(ElemTy))));
     } else {
       auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
       const APValue &Src = (SrcVecIdx == 0) ? A : B;
@@ -12492,7 +12493,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APValue R;
     if (!evalShuffleGeneric(
             Info, E, R,
-            [](unsigned DstIdx, unsigned Mask) -> std::pair<unsigned, unsigned> {
+            [](unsigned DstIdx,
+               unsigned Mask) -> std::pair<unsigned, unsigned> {
               // Bits [7:6]: select element from source vector Y (0-3)
               // Bits [5:4]: select destination position (0-3)
               unsigned SrcElem = (Mask >> 6) & 0x3;
