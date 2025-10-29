@@ -46,6 +46,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
@@ -1271,50 +1272,59 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
-  EmitFunctionProlog(*CurFnInfo, CurFn, Args);
+    EmitFunctionProlog(*CurFnInfo, CurFn, Args);
 
   if (const CXXMethodDecl *MD = dyn_cast_if_present<CXXMethodDecl>(D);
       MD && !MD->isStatic()) {
     bool IsInLambda =
         MD->getParent()->isLambda() && MD->getOverloadedOperator() == OO_Call;
-    if (MD->isImplicitObjectMemberFunction())
-      CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
-    if (IsInLambda) {
-      // We're in a lambda; figure out the captures.
-      MD->getParent()->getCaptureFields(LambdaCaptureFields,
-                                        LambdaThisCaptureField);
-      if (LambdaThisCaptureField) {
-        // If the lambda captures the object referred to by '*this' - either by
-        // value or by reference, make sure CXXThisValue points to the correct
-        // object.
 
-        // Get the lvalue for the field (which is a copy of the enclosing object
-        // or contains the address of the enclosing object).
-        LValue ThisFieldLValue = EmitLValueForLambdaField(LambdaThisCaptureField);
-        if (!LambdaThisCaptureField->getType()->isPointerType()) {
-          // If the enclosing object was captured by value, just use its
-          // address. Sign this pointer.
-          CXXThisValue = ThisFieldLValue.getPointer(*this);
-        } else {
-          // Load the lvalue pointed to by the field, since '*this' was captured
-          // by reference.
-          CXXThisValue =
-              EmitLoadOfLValue(ThisFieldLValue, SourceLocation()).getScalarVal();
+    const FunctionDecl *FD = dyn_cast_if_present<FunctionDecl>(D);
+    bool IsNaked = FD && FD->hasAttr<NakedAttr>();
+
+    if (!IsNaked) {
+      if (MD->isImplicitObjectMemberFunction())
+        CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
+
+      if (IsInLambda) {
+        // We're in a lambda; figure out the captures.
+        MD->getParent()->getCaptureFields(LambdaCaptureFields,
+                                          LambdaThisCaptureField);
+        if (LambdaThisCaptureField) {
+          // If the lambda captures the object referred to by '*this' - either by
+          // value or by reference, make sure CXXThisValue points to the correct
+          // object.
+
+          // Get the lvalue for the field (which is a copy of the enclosing object
+          // or contains the address of the enclosing object).
+          LValue ThisFieldLValue =
+              EmitLValueForLambdaField(LambdaThisCaptureField);
+          if (!LambdaThisCaptureField->getType()->isPointerType()) {
+            // If the enclosing object was captured by value, just use its
+            // address. Sign this pointer.
+            CXXThisValue = ThisFieldLValue.getPointer(*this);
+          } else {
+            // Load the lvalue pointed to by the field, since '*this' was captured
+            // by reference.
+            CXXThisValue =
+                EmitLoadOfLValue(ThisFieldLValue, SourceLocation()).getScalarVal();
+          }
         }
-      }
-      for (auto *FD : MD->getParent()->fields()) {
-        if (FD->hasCapturedVLAType()) {
-          auto *ExprArg = EmitLoadOfLValue(EmitLValueForLambdaField(FD),
-                                           SourceLocation()).getScalarVal();
-          auto VAT = FD->getCapturedVLAType();
-          VLASizeMap[VAT->getSizeExpr()] = ExprArg;
+
+        for (auto *FD : MD->getParent()->fields()) {
+          if (FD->hasCapturedVLAType()) {
+            auto *ExprArg = EmitLoadOfLValue(EmitLValueForLambdaField(FD),
+                                             SourceLocation()).getScalarVal();
+            auto VAT = FD->getCapturedVLAType();
+            VLASizeMap[VAT->getSizeExpr()] = ExprArg;
+          }
         }
+      } else if (MD->isImplicitObjectMemberFunction()) {
+        // Not in a lambda; just use 'this' from the method.
+        // FIXME: Should we generate a new load for each use of 'this'?  The
+        // fast register allocator would be happier...
+        CXXThisValue = CXXABIThisValue;
       }
-    } else if (MD->isImplicitObjectMemberFunction()) {
-      // Not in a lambda; just use 'this' from the method.
-      // FIXME: Should we generate a new load for each use of 'this'?  The
-      // fast register allocator would be happier...
-      CXXThisValue = CXXABIThisValue;
     }
 
     // Check the 'this' pointer once per function, if it's available.
