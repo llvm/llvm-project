@@ -11,7 +11,7 @@
 ;     A[3*i - 2] = 1;
 ; }
 ;
-; FIXME: DependenceAnalsysis currently detects no dependency between
+; FIXME: DependenceAnalysis currently detects no dependency between
 ; `A[-3*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
 ;
 ;  memory access       | i == 1           | i == max_i
@@ -73,7 +73,7 @@ exit:
 ;   A[3*i + 1] = 1;
 ; }
 ;
-; FIXME: DependenceAnalsysis currently detects no dependency between
+; FIXME: DependenceAnalysis currently detects no dependency between
 ; `A[-3*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
 ;
 ;  memory access       | i == 0 | i == 1           | i == max_i - 1 | i == max_i
