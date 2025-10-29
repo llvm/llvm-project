@@ -28,7 +28,7 @@ namespace tidy {
 class RenamerClangTidyCheck : public ClangTidyCheck {
 public:
   RenamerClangTidyCheck(StringRef CheckName, ClangTidyContext *Context);
-  ~RenamerClangTidyCheck();
+  ~RenamerClangTidyCheck() override;
 
   /// Derived classes should not implement any matching logic themselves; this
   /// class will do the matching and call the derived class'
