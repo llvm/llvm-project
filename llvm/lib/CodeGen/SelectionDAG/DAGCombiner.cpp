@@ -18369,13 +18369,11 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
     }
   }
 
-  SDValue X, Y;
-
-  // (fma 1.0, X, Y) or (fma X, 1.0, Y) -> (fadd X, Y)
-  SDValue C1 = DAG.getConstantFP(1.0, DL, VT);
-  if (sd_match(N,
-               m_c_TernaryOp(ISD::FMA, m_Specific(C1), m_Value(X), m_Value(Y))))
-    return matcher.getNode(ISD::FADD, DL, VT, X, Y);
+  // FIXME: Support splat of constant.
+  if (N0CFP && N0CFP->isExactlyValue(1.0))
+    return matcher.getNode(ISD::FADD, DL, VT, N1, N2);
+  if (N1CFP && N1CFP->isExactlyValue(1.0))
+    return matcher.getNode(ISD::FADD, DL, VT, N0, N2);
 
   // Canonicalize (fma c, x, y) -> (fma x, c, y)
   if (DAG.isConstantFPBuildVectorOrConstantFP(N0) &&
