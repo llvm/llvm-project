@@ -161,7 +161,7 @@ bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   std::set<int> KnownRegs;
 
-  for (auto Use : MI.all_uses()) {
+  for (auto &Use : MI.all_uses()) {
     auto *Def = getDefIgnoringCopies(Use.getReg(), MRI);
 
     if (!Def) {
@@ -187,7 +187,7 @@ bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
       }
 
       // Unmerge should only use one register so we can use the last one
-      for (auto UnmergeUse : Def->all_uses())
+      for (auto &UnmergeUse : Def->all_uses())
         UnmergeSrcTemp = UnmergeUse.getReg();
 
       // Track unique sources for the G_UNMERGE_VALUES
