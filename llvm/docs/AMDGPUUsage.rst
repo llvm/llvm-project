@@ -1189,15 +1189,19 @@ The AMDGPU backend implements some target extension types.
 Named Barriers
 ~~~~~~~~~~~~~~
 
-Named barriers are represented as memory objects of type
-``target("amdgcn.named.barrier", 0)``. They are allocated as global variables
-in the LDS address space. They do not occupy regular LDS memory, but their
-lifetime and allocation granularity matches that of global variables in LDS.
+Named barriers are fixed function hardware barrier objects that are available
+in gfx12.5+ in addition to the traditional default barriers.
 
-The following types built from named barriers are supported in global variables,
-defined recursively:
+In LLVM IR, named barriers are represented by global variables of type
+``target("amdgcn.named.barrier", 0)`` in the LDS address space. Named barrier
+global variables do not occupy actual LDS memory, but their lifetime and
+allocation scope matches that of global variables in LDS. Programs in LLVM IR
+refer to named barriers using pointers.
 
-* a standalone ``target("amdgcn.named.barrier", 0)``
+The following named barrier types are supported in global variables, defined
+recursively:
+
+* a single, standalone ``target("amdgcn.named.barrier", 0)``
 * an array of supported types
 * a struct containing a single element of supported type
 
@@ -1207,15 +1211,12 @@ defined recursively:
       @foo = addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] undef
       @baz = addrspace(3) global { target("amdgcn.named.barrier", 0) } undef
 
-Barrier types may not be used in ``alloca``.
+      ...
 
-The integral representation of a pointer to a valid named barrier is in the
-range ``0x0080'0010`` to ``0x0080'0100`` (inclusive). The representation is
-formed by the expression ``0x0080'0000 | (id << 4)``, where ``id`` is the
-hardware barrier ID. The integral representation of the null named barrier is
-``0x0080'0000``.
+      %foo.i = getelementptr [2 x target("amdgcn.named.barrier", 0)], ptr addrspace(3) @foo, i32 0, i32 %i
+      call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %foo.i, i32 0)
 
-It is not legal to attempt to form a pointer to any non-named barrier objects.
+Named barrier types may not be used in ``alloca``.
 
 It is undefined behavior to use a pointer to any part of a named barrier object
 as the pointer operand of a regular memory access instruction or intrinsic.
@@ -6721,11 +6722,10 @@ Named barriers may be signaled by the intrinsics:
 
 .. code-block:: llvm
 
-  declare void @llvm.amdgcn.s.barrier.signal(i32 %barrier_hw_id)
   declare void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %barrier_ptr, i32 %member_count)
 
-If the second form is used and ``member_count`` is non-zero, the operation is
-an *initializing* signal, else it is *non*-initializing.
+If ``member_count`` is non-zero, the operation is an *initializing* signal,
+else it is *non*-initializing.
 
 Named barriers may be initialized explicitly using:
 
