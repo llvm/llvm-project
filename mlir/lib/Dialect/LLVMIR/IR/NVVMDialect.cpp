@@ -867,15 +867,20 @@ LogicalResult MmaOp::verify() {
 }
 
 LogicalResult ShflOp::verify() {
-  if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
-    return success();
   auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
-  auto elementType = (type && type.getBody().size() == 2)
-                         ? llvm::dyn_cast<IntegerType>(type.getBody()[1])
-                         : nullptr;
-  if (!elementType || elementType.getWidth() != 1)
-    return emitError("expected return type to be a two-element struct with "
-                     "i1 as the second element");
+
+  if ((*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid")) {
+    auto elementType = (type && type.getBody().size() == 2)
+                           ? llvm::dyn_cast<IntegerType>(type.getBody()[1])
+                           : nullptr;
+    if (!elementType || elementType.getWidth() != 1)
+      return emitOpError("expected return type to be a two-element struct with "
+                         "i1 as the second element");
+  } else {
+    if (type)
+      return emitOpError("\"return_value_and_is_valid\" attribute must be "
+                         "specified when returning the predicate");
+  }
   return success();
 }
 
@@ -2450,6 +2455,9 @@ LogicalResult Tcgen05LdOp::verify() {
   LogicalResult result = success();
   if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
     result = emitError("shape 16x32bx2 requires offset argument");
+  
+  if (getShape() != NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && getOffset())
+    result = emitError("offset argument is only supported for shape 16x32bx2");
 
   auto resTy = getRes().getType();
   unsigned resLen = isa<VectorType>(resTy)

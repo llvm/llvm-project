@@ -684,6 +684,13 @@ func.func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3
 
 // -----
 
+func.func @nvvm_invalid_shfl_pred_4(%arg0 : i32, %arg1 : f32, %arg2 : i32, %arg3 : i32) {
+  // expected-error@+1 {{"return_value_and_is_valid" attribute must be specified when returning the predicate}}
+  %0 = nvvm.shfl.sync bfly %arg0, %arg1, %arg2, %arg3 : f32 -> !llvm.struct<(f32, i1)>
+}
+
+// -----
+
 func.func @nvvm_invalid_mma_0(%a0 : f16, %a1 : f16,
                          %b0 : vector<2xf16>, %b1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
