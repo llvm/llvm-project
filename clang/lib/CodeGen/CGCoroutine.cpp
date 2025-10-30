@@ -53,6 +53,10 @@ struct clang::CodeGen::CGCoroData {
   // handler, this is null.
   llvm::Value *ResumeEHVar = nullptr;
 
+  // Stores the i1 that identify if control flows off the end of the coroutine
+  // body
+  llvm::PHINode *BodyDone = nullptr;
+
   // Stores the jump destination just before the coroutine memory is freed.
   // This is the destination that every suspend point jumps to for the cleanup
   // branch.
@@ -599,14 +603,18 @@ namespace {
 struct CallCoroDelete final : public EHScopeStack::Cleanup {
   Stmt *Deallocate;
 
-  // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
+  void Emit(CodeGenFunction &CGF, Flags F) override {
+    // Cleanup always happens on unwind. No need for pre-cleanup block.
+    if (F.isForNormalCleanup())
+      EmitPreCleanupBB(CGF);
+    // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
 
-  // Note: That deallocation will be emitted twice: once for a normal exit and
-  // once for exceptional exit. This usage is safe because Deallocate does not
-  // contain any declarations. The SubStmtBuilder::makeNewAndDeleteExpr()
-  // builds a single call to a deallocation function which is safe to emit
-  // multiple times.
-  void Emit(CodeGenFunction &CGF, Flags) override {
+    // Note: That deallocation will be emitted twice: once for a normal exit and
+    // once for exceptional exit. This usage is safe because Deallocate does not
+    // contain any declarations. The SubStmtBuilder::makeNewAndDeleteExpr()
+    // builds a single call to a deallocation function which is safe to emit
+    // multiple times.
+
     // Remember the current point, as we are going to emit deallocation code
     // first to get to coro.free instruction that is an argument to a delete
     // call.
@@ -642,6 +650,37 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     CGF.Builder.SetInsertPoint(AfterFreeBB);
   }
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
+
+private:
+  // [dcl.fct.def.coroutine]: The coroutine state is destroyed when control
+  // flows off the end of the coroutine or the destroy member function of a
+  // coroutine handle that refers to the coroutine is invoked.
+  void EmitPreCleanupBB(CodeGenFunction &CGF) {
+    auto &Builder = CGF.Builder;
+    auto &Data = *CGF.CurCoro.Data;
+    auto *BodyDone = Data.BodyDone;
+    BasicBlock *SaveInsertBlock = Builder.GetInsertBlock();
+    BasicBlock *PreConvBB = BodyDone->getParent();
+    BasicBlock *AfterConvBB =
+        cast<llvm::BranchInst>(PreConvBB->getTerminator())->getSuccessor(1);
+    BasicBlock *CleanupBB = AfterConvBB->getSingleSuccessor();
+    BasicBlock *PreCleanupBB = CleanupBB->splitBasicBlock(
+        CleanupBB->getFirstNonPHIIt(), "pre.coro.cleanup", true);
+    Builder.SetInsertPoint(PreCleanupBB);
+    PreCleanupBB->getTerminator()->eraseFromParent();
+
+    auto *NeedCleanup = Builder.CreatePHI(
+        Builder.getInt1Ty(), llvm::pred_size(PreCleanupBB), "is.completed");
+    for (auto *Pred : llvm::predecessors(PreCleanupBB)) {
+      auto *V = (Pred == AfterConvBB) ? cast<Value>(BodyDone)
+                                      : cast<Value>(Builder.getTrue());
+      NeedCleanup->addIncoming(V, Pred);
+    }
+
+    auto *RetBB = Data.CleanupJD.getBlock();
+    Builder.CreateCondBr(NeedCleanup, CleanupBB, RetBB);
+    Builder.SetInsertPoint(SaveInsertBlock);
+  }
 };
 }
 
@@ -691,6 +730,22 @@ struct GetReturnObjectManager {
   // split its emission in two parts. EmitGroAlloca emits an alloca and sets up
   // cleanups. Later when coroutine promise is available we initialize the gro
   // and sets the flag that the cleanup is now active.
+  void EmitGroActive() {
+    if (DirectEmit)
+      return;
+
+    auto *GroDeclStmt = dyn_cast_or_null<DeclStmt>(S.getResultDecl());
+    if (!GroDeclStmt) {
+      // If get_return_object returns void, no need to do an alloca.
+      return;
+    }
+
+    // Set GRO flag that it is not initialized yet
+    GroActiveFlag = CGF.CreateTempAlloca(Builder.getInt1Ty(), CharUnits::One(),
+                                         "gro.active");
+    Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
+  }
+
   void EmitGroAlloca() {
     if (DirectEmit)
       return;
@@ -702,11 +757,6 @@ struct GetReturnObjectManager {
     }
 
     auto *GroVarDecl = cast<VarDecl>(GroDeclStmt->getSingleDecl());
-
-    // Set GRO flag that it is not initialized yet
-    GroActiveFlag = CGF.CreateTempAlloca(Builder.getInt1Ty(), CharUnits::One(),
-                                         "gro.active");
-    Builder.CreateStore(Builder.getFalse(), GroActiveFlag);
 
     GroEmission = CGF.EmitAutoVarAlloca(*GroVarDecl);
 
@@ -768,6 +818,38 @@ struct GetReturnObjectManager {
     CGF.EmitAutoVarInit(GroEmission);
     Builder.CreateStore(Builder.getTrue(), GroActiveFlag);
   }
+
+  void EmitGroConv() {
+    auto *InsertPt = Builder.GetInsertBlock();
+    auto *PreConvBB = CGF.CurCoro.Data->SuspendBB;
+    auto *AfterConvBB = CGF.createBasicBlock("after.gro.conv", CGF.CurFn, InsertPt);
+    Builder.SetInsertPoint(AfterConvBB);
+    BasicBlock *AfterFinalBB = nullptr;
+    if (InsertPt) {
+      AfterFinalBB = InsertPt->getSinglePredecessor();
+      InsertPt->replaceAllUsesWith(PreConvBB);
+      Builder.CreateBr(InsertPt);
+    }
+
+    auto *ConvBB = CGF.createBasicBlock("gro.conv", CGF.CurFn, AfterConvBB);
+    Builder.SetInsertPoint(ConvBB);
+    Builder.CreateBr(AfterConvBB);
+
+    CGF.EmitBlock(PreConvBB);
+    PreConvBB->moveBefore(ConvBB);
+    auto *BodyDone =
+        Builder.CreatePHI(Builder.getInt1Ty(), llvm::pred_size(PreConvBB));
+    for (auto *Pred : llvm::predecessors(PreConvBB)) {
+      auto *V = (Pred == AfterFinalBB) ? Builder.getTrue() : Builder.getFalse();
+      BodyDone->addIncoming(V, Pred);
+    }
+    CGF.CurCoro.Data->BodyDone = BodyDone;
+    auto *InRampFn = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_ramp);
+    auto *InRamp = Builder.CreateCall(InRampFn, {}, "InRamp");
+    Builder.CreateCondBr(InRamp, ConvBB, AfterConvBB);
+
+    Builder.SetInsertPoint(InsertPt == nullptr ? AfterConvBB : InsertPt);
+  }
 };
 } // namespace
 
@@ -790,12 +872,13 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *InitBB = createBasicBlock("coro.init");
   auto *FinalBB = createBasicBlock("coro.final");
   auto *RetBB = createBasicBlock("coro.ret");
+  auto *PreConvBB = createBasicBlock("pre.gvo.conv");
 
   auto *CoroId = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_id),
       {Builder.getInt32(NewAlign), NullPtr, NullPtr, NullPtr});
   createCoroData(*this, CurCoro, CoroId);
-  CurCoro.Data->SuspendBB = RetBB;
+  CurCoro.Data->SuspendBB = PreConvBB;
   assert(ShouldEmitLifetimeMarkers &&
          "Must emit lifetime intrinsics for coroutines");
 
@@ -840,7 +923,6 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   CurCoro.Data->CoroBegin = CoroBegin;
 
   GetReturnObjectManager GroManager(*this, S);
-  GroManager.EmitGroAlloca();
 
   CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(RetBB);
   {
@@ -884,6 +966,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       // not needed.
     }
 
+    GroManager.EmitGroActive();
     EmitStmt(S.getPromiseDeclStmt());
 
     Address PromiseAddr = GetAddrOfLocalVar(S.getPromiseDecl());
@@ -895,6 +978,7 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     CoroId->setArgOperand(1, PromiseAddrVoidPtr);
 
     // Now we have the promise, initialize the GRO
+    GroManager.EmitGroAlloca();
     GroManager.EmitGroInit();
 
     EHStack.pushCleanup<CallCoroEnd>(EHCleanup);
@@ -950,11 +1034,12 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
       // We don't need FinalBB. Emit it to make sure the block is deleted.
       EmitBlock(FinalBB, /*IsFinished=*/true);
     }
+    GroManager.EmitGroConv();
   }
 
   EmitBlock(RetBB);
-  // Emit coro.end before getReturnStmt (and parameter destructors), since
-  // resume and destroy parts of the coroutine should not include them.
+  // Emit coro.end before ret instruction, since resume and destroy parts of the
+  // coroutine should return void.
   llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
   Builder.CreateCall(CoroEnd,
                      {NullPtr, Builder.getFalse(),
@@ -973,8 +1058,13 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // shouldn't change the AST.
     if (PreviousRetValue)
       cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
+    // Send GRO conversion to ConvBB
+    auto *ConvBB =
+        cast<llvm::BranchInst>(PreConvBB->getTerminator())->getSuccessor(0);
+    auto FromIt = ++RetBB->getFirstInsertionPt();
+    auto ToIt = RetBB->getTerminator()->getIterator();
+    ConvBB->splice(ConvBB->getFirstNonPHIIt(), RetBB, FromIt, ToIt);
   }
-
   // LLVM require the frontend to mark the coroutine.
   CurFn->setPresplitCoroutine();
 
