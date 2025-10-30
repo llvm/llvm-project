@@ -1363,7 +1363,7 @@ def make_ir_generalizer(version, no_meta_details):
     ]
 
     prefix = r"(\s*)"
-    suffix = r"([,\s\(\)\}]|\Z)"
+    suffix = r"([,\s\(\)\}\]]|\Z)"
 
     # values = [
     #     nameless_value
