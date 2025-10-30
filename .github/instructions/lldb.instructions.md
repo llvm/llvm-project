@@ -16,14 +16,16 @@ When reviewing code, focus on:
 - Header files must have proper header guards.
 - Non-trivial classes and public methods should have Doxygen documentation.
 - Use `//` or `///` comments normally; avoid block comments unless necessary.
+- Non-trivial code should have comments explaining what it does and why. Avoid comments that explain how it does it at a micro level.
 
 ## Language & Compiler Issues
 
 - Write portable code; wrap non-portable code in interfaces.
 - Do not use RTTI or exceptions.
 - Prefer C++-style casts over C-style casts.
-- Avoid static constructors or global objects with heavy initialization.
+- Do not use static constructors.
 - Use `class` or `struct` consistently; `struct` only for all-public data.
+- When then same class is declared or defined multiple times, make sure it's consistently done using either `class` or `struct`.
 
 ## Headers & Library Layering
 
@@ -37,7 +39,7 @@ When reviewing code, focus on:
 ## Control Flow & Structure
 
 - Prefer early exits over deep nesting.
-- Avoid `else` after `return`, `continue`, `break`, or `goto`.
+- Do not use `else` after `return`, `continue`, `break`, or `goto`.
 - Encapsulate loops that compute predicates into helper functions.
 
 ## Naming
@@ -50,27 +52,28 @@ When reviewing code, focus on:
 ## General Guidelines
 
 - Use `assert` liberally; prefer `llvm_unreachable` for unreachable states.
-- Avoid `using namespace std;` in headers.
-- Ensure at least one out-of-line virtual method per class with virtuals.
-- For `switch` on enums, omit `default` to catch missing cases.
-- Prefer range-based `for` loops.
+- Do not use `using namespace std;` in headers.
+- Provide a virtual method anchor for classes defined in headers.
+- Do not use default labels in fully covered switches over enumerations.
+- Use range-based for loops wherever possible.
 - Capture `end()` outside loops if not using range-based iteration.
-- Use LLVM’s `raw_ostream` instead of `<iostream>`.
-- Avoid `std::endl`; use `\n` unless flushing is needed.
-- Methods in class definitions are already inline—don’t add `inline`.
+- Including `<iostream>` is forbidded. Use LLVM’s `raw_ostream` instead.
+- Don’t use `inline` when defining a function in a class definition.
 
 ## Microscopic Details
 
 - Preserve existing style in modified code.
 - Prefer pre-increment (`++i`) when value is unused.
+- Use `private`, `protected`, or `public` keyword as appropriate to restrict class member visibility.
 - Omit braces for single-statement `if`, `else`, `while`, `for` unless needed.
 
 ## Review Style
 
 - Be specific and actionable in feedback.
 - Explain the "why" behind recommendations.
-- Link back to the LLVM Coding Standars: https://llvm.org/docs/CodingStandards.html.
+- Link back to the LLVM Coding Standards: https://llvm.org/docs/CodingStandards.html.
 - Ask clarifying questions when code intent is unclear.
 
-Remember that these standards are **guidelines**. Always prioritize consistency
-with the style that is already being used by the surrounding code.
+Ignore formatting and assume that's handled by external tools like `clang-format` and `black`.
+Remember that these standards are **guidelines**.
+Always prioritize consistency with the style that is already being used by the surrounding code.
