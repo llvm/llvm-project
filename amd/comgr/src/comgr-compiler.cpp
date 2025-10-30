@@ -1884,6 +1884,7 @@ amd_comgr_status_t AMDGPUCompiler::compileSpirvToRelocatable() {
   amd_comgr_data_set_t TranslatedSpirvT;
   if (auto Status = amd_comgr_create_data_set(&TranslatedSpirvT))
     return Status;
+  ScopedDataSetReleaser SDSR(TranslatedSpirvT);
   DataSet *TranslatedSpirv = DataSet::convert(TranslatedSpirvT);
 
   if (auto Status = translateSpirvToBitcodeImpl(InSet, TranslatedSpirv))
