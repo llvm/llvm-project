@@ -5122,7 +5122,7 @@ bool SimplifyCFGOpt::tryToSimplifyUncondBranchWithICmpInIt(
 /// case. This is called when we find an icmp instruction (a seteq/setne with a
 /// constant) and its following select instruction as the only TWO instruction
 /// in a block that ends with an uncond branch.  We are looking for a very
-/// specific pattern that occurs when "  
+/// specific pattern that occurs when "
 ///    if (A == 1) return C1;
 ///    if (A == 2) return C2;
 ///    if (A < 3) return C3;
