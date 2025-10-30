@@ -57,6 +57,60 @@ return:
   ret i32 %phi
 }
 
+define i32 @exiting-used-in-exit_callbr(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
+; CHECK-LABEL: @exiting-used-in-exit_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A:%.*]] []
+; CHECK:       A:
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP1]])
+; CHECK-NEXT:            to label [[B:%.*]] [label %A.target.return]
+; CHECK:       B:
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP41]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
+; CHECK-NEXT:            to label [[A]] [label %B.target.C]
+; CHECK:       C:
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[MYTMP41_MOVED:%.*]], 1
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[RETURN:%.*]] []
+; CHECK:       return:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[INC]], [[C:%.*]] ], [ [[PHI_MOVED:%.*]], [[LOOP_EXIT_GUARD:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK:       A.target.return:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       B.target.C:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A_TARGET_RETURN:%.*]] ], [ [[MYTMP41]], [[B_TARGET_C:%.*]] ]
+; CHECK-NEXT:    [[PHI_MOVED]] = phi i32 [ [[MYTMP42]], [[A_TARGET_RETURN]] ], [ poison, [[B_TARGET_C]] ]
+; CHECK-NEXT:    [[GUARD_RETURN:%.*]] = phi i1 [ true, [[A_TARGET_RETURN]] ], [ false, [[B_TARGET_C]] ]
+; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[C]]
+;
+entry:
+  callbr void asm "", ""() to label %A []
+
+A:
+  %mytmp42 = load i32, ptr %arg1, align 4
+  %cmp1 = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp1) to label %B [label %return]
+
+B:
+  %mytmp41 = load i32, ptr %arg2, align 4
+  %cmp = icmp slt i32 %mytmp41, 0
+  callbr void asm "", "r,!i"(i1 %cmp) to label %A [label %C]
+
+C:
+  %inc = add i32 %mytmp41, 1
+  callbr void asm "", ""() to label %return []
+
+return:
+  %phi = phi i32 [ %inc, %C ], [ %mytmp42, %A ]
+  ret i32 %phi
+}
+
 ; Loop consists of A, B and C:
 ; - A is the header
 ; - A and C are exiting blocks
@@ -107,6 +161,63 @@ C:
 D:
   %inc = add i32 %mytmp41, 1
   br label %return
+
+return:
+  ret i32 0
+}
+
+define i32 @internal-used-in-exit_callbr(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
+; CHECK-LABEL: @internal-used-in-exit_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A:%.*]] []
+; CHECK:       A:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP1]])
+; CHECK-NEXT:            to label [[B:%.*]] [label %A.target.return]
+; CHECK:       B:
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[C:%.*]] []
+; CHECK:       C:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
+; CHECK-NEXT:            to label [[A]] [label %C.target.D]
+; CHECK:       D:
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[MYTMP41_MOVED:%.*]], 1
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[RETURN:%.*]] []
+; CHECK:       return:
+; CHECK-NEXT:    ret i32 0
+; CHECK:       A.target.return:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; CHECK:       C.target.D:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A_TARGET_RETURN:%.*]] ], [ [[MYTMP41]], [[C_TARGET_D:%.*]] ]
+; CHECK-NEXT:    [[GUARD_RETURN:%.*]] = phi i1 [ true, [[A_TARGET_RETURN]] ], [ false, [[C_TARGET_D]] ]
+; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[D:%.*]]
+;
+entry:
+  %mytmp42 = load i32, ptr %arg1, align 4
+  callbr void asm "", ""() to label %A []
+
+A:
+  %cmp1 = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp1) to label %B [label %return]
+
+B:
+  %mytmp41 = load i32, ptr %arg2, align 4
+  callbr void asm "", ""() to label %C []
+
+C:
+  %cmp = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp) to label %A [label %D]
+
+D:
+  %inc = add i32 %mytmp41, 1
+  callbr void asm "", ""() to label %return []
 
 return:
   ret i32 0
@@ -172,6 +283,68 @@ return:
   ret i32 %phi
 }
 
+define i32 @mixed-use-in-exit_callbr(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
+; CHECK-LABEL: @mixed-use-in-exit_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP2]])
+; CHECK-NEXT:            to label [[A:%.*]] [label %return]
+; CHECK:       A:
+; CHECK-NEXT:    [[MYTMP43:%.*]] = add i32 [[MYTMP42]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP1]])
+; CHECK-NEXT:            to label [[B:%.*]] [label %A.target.return]
+; CHECK:       B:
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[C:%.*]] []
+; CHECK:       C:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
+; CHECK-NEXT:            to label [[A]] [label %C.target.D]
+; CHECK:       D:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[RETURN:%.*]] []
+; CHECK:       return:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[MYTMP41_MOVED:%.*]], [[D:%.*]] ], [ [[MYTMP42]], [[ENTRY:%.*]] ], [ [[PHI_MOVED:%.*]], [[LOOP_EXIT_GUARD:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK:       A.target.return:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       C.target.D:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A_TARGET_RETURN:%.*]] ], [ [[MYTMP41]], [[C_TARGET_D:%.*]] ]
+; CHECK-NEXT:    [[PHI_MOVED]] = phi i32 [ [[MYTMP43]], [[A_TARGET_RETURN]] ], [ poison, [[C_TARGET_D]] ]
+; CHECK-NEXT:    [[GUARD_RETURN:%.*]] = phi i1 [ true, [[A_TARGET_RETURN]] ], [ false, [[C_TARGET_D]] ]
+; CHECK-NEXT:    br i1 [[GUARD_RETURN]], label [[RETURN]], label [[D]]
+;
+entry:
+  %mytmp42 = load i32, ptr %arg1, align 4
+  %cmp2 = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp2) to label %A [label %return]
+
+A:
+  %mytmp43 = add i32 %mytmp42, 1
+  %cmp1 = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp1) to label %B [label %return]
+
+B:
+  %mytmp41 = load i32, ptr %arg2, align 4
+  callbr void asm "", ""() to label %C []
+
+C:
+  %cmp = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp) to label %A [label %D]
+
+D:
+  callbr void asm "", ""() to label %return []
+
+return:
+  %phi = phi i32 [ %mytmp41, %D ], [ %mytmp43, %A ], [%mytmp42, %entry]
+  ret i32 %phi
+}
+
 ; Loop consists of A, B and C:
 ; - A is the header
 ; - A and C are exiting blocks
@@ -231,6 +404,69 @@ D:
 
 E:
   br label %return
+
+return:
+  %phi = phi i32 [ %mytmp41, %D ], [ %mytmp42, %E ]
+  ret i32 %phi
+}
+
+define i32 @phi-via-external-block_callbr(ptr %arg1, ptr %arg2) local_unnamed_addr align 2 {
+; CHECK-LABEL: @phi-via-external-block_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MYTMP42:%.*]] = load i32, ptr [[ARG1:%.*]], align 4
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[A:%.*]] []
+; CHECK:       A:
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP1]])
+; CHECK-NEXT:            to label [[B:%.*]] [label %A.target.E]
+; CHECK:       B:
+; CHECK-NEXT:    [[MYTMP41:%.*]] = load i32, ptr [[ARG2:%.*]], align 4
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[C:%.*]] []
+; CHECK:       C:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MYTMP42]], 0
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[CMP]])
+; CHECK-NEXT:            to label [[A]] [label %C.target.D]
+; CHECK:       D:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[RETURN:%.*]] []
+; CHECK:       E:
+; CHECK-NEXT:    callbr void asm "", ""()
+; CHECK-NEXT:            to label [[RETURN]] []
+; CHECK:       return:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[MYTMP41_MOVED:%.*]], [[D:%.*]] ], [ [[MYTMP42]], [[E:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK:       A.target.E:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; CHECK:       C.target.D:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[MYTMP41_MOVED]] = phi i32 [ poison, [[A_TARGET_E:%.*]] ], [ [[MYTMP41]], [[C_TARGET_D:%.*]] ]
+; CHECK-NEXT:    [[GUARD_E:%.*]] = phi i1 [ true, [[A_TARGET_E]] ], [ false, [[C_TARGET_D]] ]
+; CHECK-NEXT:    br i1 [[GUARD_E]], label [[E]], label [[D]]
+;
+entry:
+  %mytmp42 = load i32, ptr %arg1, align 4
+  callbr void asm "", ""() to label %A []
+
+A:
+  %cmp1 = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp1) to label %B [label %E]
+
+B:
+  %mytmp41 = load i32, ptr %arg2, align 4
+  callbr void asm "", ""() to label %C []
+
+C:
+  %cmp = icmp slt i32 %mytmp42, 0
+  callbr void asm "", "r,!i"(i1 %cmp) to label %A [label %D]
+
+D:
+  callbr void asm "", ""() to label %return []
+
+E:
+  callbr void asm "", ""() to label %return []
 
 return:
   %phi = phi i32 [ %mytmp41, %D ], [ %mytmp42, %E ]
