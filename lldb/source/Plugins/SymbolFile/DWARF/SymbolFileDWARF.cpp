@@ -2500,7 +2500,6 @@ static llvm::StringRef ClangToItaniumCtorKind(clang::CXXCtorType kind) {
   case clang::CXXCtorType::Ctor_CopyingClosure:
   case clang::CXXCtorType::Ctor_DefaultClosure:
   case clang::CXXCtorType::Ctor_Comdat:
-  case clang::CXXDtorType::Dtor_VectorDeleting:
     llvm_unreachable("Unexpected constructor kind.");
   }
   llvm_unreachable("Fully covered switch above");
