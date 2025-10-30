@@ -3221,21 +3221,35 @@ define i64 @sqdmlsl_d(i32 %A, i32 %B, i64 %C) nounwind {
 }
 
 define <16 x i8> @test_pmull_64(i64 %l, i64 %r) nounwind {
-; CHECK-LABEL: test_pmull_64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x1
-; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_pmull_64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d0, x1
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_pmull_64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov d0, x0
+; CHECK-GI-NEXT:    fmov d1, x1
+; CHECK-GI-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-GI-NEXT:    ret
   %val = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l, i64 %r)
   ret <16 x i8> %val
 }
 
 define <16 x i8> @test_pmull_high_64(<2 x i64> %l, <2 x i64> %r) nounwind {
-; CHECK-LABEL: test_pmull_high_64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    pmull2 v0.1q, v0.2d, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_pmull_high_64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    pmull2 v0.1q, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_pmull_high_64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
+; CHECK-GI-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-GI-NEXT:    ret
   %l_hi = extractelement <2 x i64> %l, i32 1
   %r_hi = extractelement <2 x i64> %r, i32 1
   %val = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l_hi, i64 %r_hi)
@@ -3243,13 +3257,22 @@ define <16 x i8> @test_pmull_high_64(<2 x i64> %l, <2 x i64> %r) nounwind {
 }
 
 define <16 x i8> @test_commutable_pmull_64(i64 %l, i64 %r) nounwind {
-; CHECK-LABEL: test_commutable_pmull_64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x1
-; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
-; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_commutable_pmull_64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov d0, x1
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-SD-NEXT:    add v0.16b, v0.16b, v0.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_commutable_pmull_64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov d0, x0
+; CHECK-GI-NEXT:    fmov d1, x1
+; CHECK-GI-NEXT:    pmull v2.1q, v0.1d, v1.1d
+; CHECK-GI-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-GI-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECK-GI-NEXT:    ret
   %1 = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l, i64 %r)
   %2 = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %r, i64 %l)
   %3 = add <16 x i8> %1, %2

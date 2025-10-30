@@ -2716,14 +2716,24 @@ entry:
 }
 
 define i128 @test_vmull_p64(i64 %a, i64 %b) #4 {
-; CHECK-LABEL: test_vmull_p64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov d0, x1
-; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
-; CHECK-NEXT:    mov x1, v0.d[1]
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_vmull_p64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov d0, x1
+; CHECK-SD-NEXT:    fmov d1, x0
+; CHECK-SD-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_vmull_p64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    fmov d0, x0
+; CHECK-GI-NEXT:    fmov d1, x1
+; CHECK-GI-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    ret
 entry:
   %vmull2.i = tail call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %a, i64 %b)
   %vmull3.i = bitcast <16 x i8> %vmull2.i to i128
@@ -2731,12 +2741,22 @@ entry:
 }
 
 define i128 @test_vmull_high_p64(<2 x i64> %a, <2 x i64> %b) #4 {
-; CHECK-LABEL: test_vmull_high_p64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    pmull2 v0.1q, v0.2d, v1.2d
-; CHECK-NEXT:    mov x1, v0.d[1]
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_vmull_high_p64:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    pmull2 v0.1q, v0.2d, v1.2d
+; CHECK-SD-NEXT:    mov x1, v0.d[1]
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_vmull_high_p64:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    mov d1, v1.d[1]
+; CHECK-GI-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x0, d0
+; CHECK-GI-NEXT:    fmov x1, d1
+; CHECK-GI-NEXT:    ret
 entry:
   %0 = extractelement <2 x i64> %a, i32 1
   %1 = extractelement <2 x i64> %b, i32 1
