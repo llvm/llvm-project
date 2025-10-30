@@ -1319,8 +1319,8 @@ public:
   bool AllFixupsOutsideLoop = true;
 
   /// This records whether all of the fixups using this LSRUse are unconditional
-  /// within the loop, meaning they will be executed in every iteration of the
-  /// loop.
+  /// within the loop, meaning they will be executed on every path to the loop
+  /// latch. This includes fixups before early exits.
   bool AllFixupsUnconditional = true;
 
   /// RigidFormula is set to true to guarantee that this use will be associated
