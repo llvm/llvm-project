@@ -441,7 +441,7 @@ Check aliases
    :doc:`cert-dcl50-cpp <cert/dcl50-cpp>`, :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`cert-dcl51-cpp <cert/dcl51-cpp>`, :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
-   :docs:`cert-dcl58-cpp <cert/dcl58-cpp>`, :doc:`bugprone-dont-modify-std-namespace <bugprone/dont-modify-std-namespace>`,
+   :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`, :doc:`bugprone-dont-modify-std-namespace <bugprone/dont-modify-std-namespace>`,
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
