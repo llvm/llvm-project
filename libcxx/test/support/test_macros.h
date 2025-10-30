@@ -508,16 +508,6 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #define TEST_NO_UNIQUE_ADDRESS
 #endif
 
-#if TEST_STD_VER >= 17 && __has_cpp_attribute(maybe_unused)
-#  define TEST_MAYBE_UNUSED [[maybe_unused]]
-#elif __has_cpp_attribute(__maybe_unused__)
-#  define TEST_MAYBE_UNUSED [[__maybe_unused__]]
-#elif __has_cpp_attribute(gnu::unused)
-#  define TEST_MAYBE_UNUSED [[gnu::unused]]
-#else
-#  define TEST_MAYBE_UNUSED
-#endif
-
 #ifdef _LIBCPP_SHORT_WCHAR
 #  define TEST_SHORT_WCHAR
 #endif
