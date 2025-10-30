@@ -749,7 +749,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
                                        const CallExpr *Call,
                                        unsigned BuiltinOp) {
   const Pointer &ResultPtr = S.Stk.pop<Pointer>();
-  if (ResultPtr.isDummy())
+  if (ResultPtr.isDummy() || !ResultPtr.isBlockPointer())
     return false;
 
   PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
@@ -859,7 +859,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   APSInt RHS = popToAPSInt(S.Stk, RHST);
   APSInt LHS = popToAPSInt(S.Stk, LHST);
 
-  if (CarryOutPtr.isDummy())
+  if (CarryOutPtr.isDummy() || !CarryOutPtr.isBlockPointer())
     return false;
 
   APSInt CarryOut;
@@ -1940,6 +1940,9 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     pushInteger(S, 0, Call->getType());
     return true;
   }
+
+  if (!PtrA.isBlockPointer() || !PtrB.isBlockPointer())
+    return false;
 
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
@@ -3293,6 +3296,60 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool evalICmpImm(uint8_t Imm, const APSInt &A, const APSInt &B,
+                        bool IsUnsigned) {
+  switch (Imm & 0x7) {
+  case 0x00: // _MM_CMPINT_EQ
+    return (A == B);
+  case 0x01: // _MM_CMPINT_LT
+    return IsUnsigned ? A.ult(B) : A.slt(B);
+  case 0x02: // _MM_CMPINT_LE
+    return IsUnsigned ? A.ule(B) : A.sle(B);
+  case 0x03: // _MM_CMPINT_FALSE
+    return false;
+  case 0x04: // _MM_CMPINT_NE
+    return (A != B);
+  case 0x05: // _MM_CMPINT_NLT
+    return IsUnsigned ? A.ugt(B) : A.sgt(B);
+  case 0x06: // _MM_CMPINT_NLE
+    return IsUnsigned ? A.uge(B) : A.sge(B);
+  case 0x07: // _MM_CMPINT_TRUE
+    return true;
+  default:
+    llvm_unreachable("Invalid Op");
+  }
+}
+
+static bool interp__builtin_ia32_cmp_mask(InterpState &S, CodePtr OpPC,
+                                          const CallExpr *Call, unsigned ID,
+                                          bool IsUnsigned) {
+  assert(Call->getNumArgs() == 4);
+
+  APSInt Mask = popToAPSInt(S, Call->getArg(3));
+  APSInt Opcode = popToAPSInt(S, Call->getArg(2));
+  unsigned CmpOp = static_cast<unsigned>(Opcode.getZExtValue());
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+
+  assert(LHS.getNumElems() == RHS.getNumElems());
+
+  APInt RetMask = APInt::getZero(LHS.getNumElems());
+  unsigned VectorLen = LHS.getNumElems();
+  PrimType ElemT = LHS.getFieldDesc()->getPrimType();
+
+  for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+    APSInt A, B;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      A = LHS.elem<T>(ElemNum).toAPSInt();
+      B = RHS.elem<T>(ElemNum).toAPSInt();
+    });
+    RetMask.setBitVal(ElemNum,
+                      Mask[ElemNum] && evalICmpImm(CmpOp, A, B, IsUnsigned));
+  }
+  pushInteger(S, RetMask, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
                                             const CallExpr *Call) {
   assert(Call->getNumArgs() == 1);
@@ -3347,6 +3404,33 @@ static bool interp__builtin_x86_byteshift(
     }
   }
 
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_ia32_shuffle_generic(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::pair<unsigned, unsigned>(unsigned, unsigned)>
+        GetSourceIndex) {
+
+  assert(Call->getNumArgs() == 3);
+  unsigned ShuffleMask = popToAPSInt(S, Call->getArg(2)).getZExtValue();
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
+    const Pointer &Src = (SrcVecIdx == 0) ? A : B;
+    TYPE_SWITCH(ElemT, { Dst.elem<T>(DstIdx) = Src.elem<T>(SrcIdx); });
+  }
   Dst.initializeAllElements();
 
   return true;
@@ -4282,6 +4366,42 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_selectpd_512:
     return interp__builtin_select(S, OpPC, Call);
 
+  case X86::BI__builtin_ia32_shufps:
+  case X86::BI__builtin_ia32_shufps256:
+  case X86::BI__builtin_ia32_shufps512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 4;
+          unsigned NumSelectableElems = NumElemPerLane / 2;
+          unsigned BitsPerElem = 2;
+          unsigned IndexMask = 0x3;
+          unsigned MaskBits = 8;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned ElemInLane = DstIdx % NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+          return std::pair<unsigned, unsigned>{SrcIdx, LaneOffset + Index};
+        });
+  case X86::BI__builtin_ia32_shufpd:
+  case X86::BI__builtin_ia32_shufpd256:
+  case X86::BI__builtin_ia32_shufpd512:
+    return interp__builtin_ia32_shuffle_generic(
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          unsigned NumElemPerLane = 2;
+          unsigned NumSelectableElems = NumElemPerLane / 2;
+          unsigned BitsPerElem = 1;
+          unsigned IndexMask = 0x1;
+          unsigned MaskBits = 8;
+          unsigned Lane = DstIdx / NumElemPerLane;
+          unsigned ElemInLane = DstIdx % NumElemPerLane;
+          unsigned LaneOffset = Lane * NumElemPerLane;
+          unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
+          unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
+          unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
+          return std::pair<unsigned, unsigned>{SrcIdx, LaneOffset + Index};
+        });
   case X86::BI__builtin_ia32_pshufb128:
   case X86::BI__builtin_ia32_pshufb256:
   case X86::BI__builtin_ia32_pshufb512:
@@ -4422,6 +4542,35 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
 
+  case X86::BI__builtin_ia32_cmpb128_mask:
+  case X86::BI__builtin_ia32_cmpw128_mask:
+  case X86::BI__builtin_ia32_cmpd128_mask:
+  case X86::BI__builtin_ia32_cmpq128_mask:
+  case X86::BI__builtin_ia32_cmpb256_mask:
+  case X86::BI__builtin_ia32_cmpw256_mask:
+  case X86::BI__builtin_ia32_cmpd256_mask:
+  case X86::BI__builtin_ia32_cmpq256_mask:
+  case X86::BI__builtin_ia32_cmpb512_mask:
+  case X86::BI__builtin_ia32_cmpw512_mask:
+  case X86::BI__builtin_ia32_cmpd512_mask:
+  case X86::BI__builtin_ia32_cmpq512_mask:
+    return interp__builtin_ia32_cmp_mask(S, OpPC, Call, BuiltinID,
+                                         /*IsUnsigned=*/false);
+
+  case X86::BI__builtin_ia32_ucmpb128_mask:
+  case X86::BI__builtin_ia32_ucmpw128_mask:
+  case X86::BI__builtin_ia32_ucmpd128_mask:
+  case X86::BI__builtin_ia32_ucmpq128_mask:
+  case X86::BI__builtin_ia32_ucmpb256_mask:
+  case X86::BI__builtin_ia32_ucmpw256_mask:
+  case X86::BI__builtin_ia32_ucmpd256_mask:
+  case X86::BI__builtin_ia32_ucmpq256_mask:
+  case X86::BI__builtin_ia32_ucmpb512_mask:
+  case X86::BI__builtin_ia32_ucmpw512_mask:
+  case X86::BI__builtin_ia32_ucmpd512_mask:
+  case X86::BI__builtin_ia32_ucmpq512_mask:
+    return interp__builtin_ia32_cmp_mask(S, OpPC, Call, BuiltinID,
+                                         /*IsUnsigned=*/true);
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
   case X86::BI__builtin_ia32_pslldqi512_byteshift:

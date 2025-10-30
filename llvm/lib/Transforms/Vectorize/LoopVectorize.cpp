@@ -4378,8 +4378,21 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
   const SCEV *TC =
       vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
-  RemainingIterations =
-      SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+  const SCEV *KnownMinTC;
+  bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
+  // Use versions of TC and VF in which both are either scalable or fixed.
+  if (ScalableTC == MainLoopVF.isScalable())
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
+  else if (ScalableTC) {
+    const SCEV *EstimatedTC = SE.getMulExpr(
+        KnownMinTC,
+        SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
+    RemainingIterations = SE.getURemExpr(
+        EstimatedTC, SE.getElementCount(TCType, MainLoopVF * IC));
+  } else
+    RemainingIterations =
+        SE.getURemExpr(TC, SE.getElementCount(TCType, EstimatedRuntimeVF * IC));
 
   // No iterations left to process in the epilogue.
   if (RemainingIterations->isZero())
@@ -5737,13 +5750,18 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
              getMemoryInstructionCost(I, ElementCount::getFixed(1))));
         UpdateMemOpUserCost(cast<LoadInst>(I));
       } else if (const auto *Group = getInterleavedAccessGroup(I)) {
-        // Scalarize an interleave group of address loads.
-        for (unsigned I = 0; I < Group->getFactor(); ++I) {
-          if (Instruction *Member = Group->getMember(I)) {
-            setWideningDecision(
-                Member, VF, CM_Scalarize,
-                (VF.getKnownMinValue() *
-                 getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
+        // Scalarize all members of this interleaved group when any member
+        // is used as an address. The address-used load skips scalarization
+        // overhead, other members include it.
+        for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
+          if (Instruction *Member = Group->getMember(Idx)) {
+            InstructionCost Cost =
+                AddrDefs.contains(Member)
+                    ? (VF.getKnownMinValue() *
+                       getMemoryInstructionCost(Member,
+                                                ElementCount::getFixed(1)))
+                    : getMemInstScalarizationCost(Member, VF);
+            setWideningDecision(Member, VF, CM_Scalarize, Cost);
             UpdateMemOpUserCost(cast<LoadInst>(Member));
           }
         }
@@ -7530,12 +7548,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 VPIRMetadata(*Load, LVer), I->getDebugLoc());
+                                 Load->getAlign(), VPIRMetadata(*Load, LVer),
+                                 I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, VPIRMetadata(*Store, LVer),
-                                I->getDebugLoc());
+                                Reverse, Store->getAlign(),
+                                VPIRMetadata(*Store, LVer), I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also

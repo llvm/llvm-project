@@ -4681,6 +4681,8 @@ cc_library(
         ":ControlFlowDialect",
         ":IR",
         ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -12086,6 +12088,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/TuneExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.h"]),
     deps = [
+        ":ControlFlowInterfaces",
         ":IR",
         ":TransformDialect",
         ":TransformDialectInterfaces",
