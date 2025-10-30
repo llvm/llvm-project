@@ -1180,7 +1180,7 @@ TEST_P(ASTMatchersTest, PredefinedExpr) {
 }
 
 TEST_P(ASTMatchersTest, FileScopeAsmDecl) {
-  EXPECT_TRUE(matches("__asm__(\"nop\");", fileScopeAsmDecl()));
+  EXPECT_TRUE(matches("__asm(\"nop\");", fileScopeAsmDecl()));
   EXPECT_TRUE(
       notMatches("void foo() { __asm(\"mov al, 2\"); }", fileScopeAsmDecl()));
 }
@@ -2448,7 +2448,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
                       "int main() {"
                       "  int a;"
                       "  f(a);"
-                      "}", matcher));
+                      "}",
+                      matcher));
   EXPECT_FALSE(matches("template <class ...T> void f(T &...args) {"
                        "  [...args = args] () mutable {"
                        "  }();"
@@ -2456,7 +2457,8 @@ TEST_P(ASTMatchersTest, LambdaCaptureTest_BindsToCaptureOfReferenceType) {
                        "int main() {"
                        "  int a;"
                        "  f(a);"
-                       "}", matcher));
+                       "}",
+                       matcher));
 }
 
 TEST_P(ASTMatchersTest, IsDerivedFromRecursion) {
@@ -2634,7 +2636,7 @@ TEST(ASTMatchersTestObjC, ObjCStringLiteral) {
                           "    [Test someFunction:@\"Ola!\"]; "
                           "}\n"
                           "@end ";
-    EXPECT_TRUE(matchesObjC(Objc1String, objcStringLiteral()));
+  EXPECT_TRUE(matchesObjC(Objc1String, objcStringLiteral()));
 }
 
 TEST(ASTMatchersTestObjC, ObjCDecls) {
