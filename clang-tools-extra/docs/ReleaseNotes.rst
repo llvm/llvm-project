@@ -69,6 +69,11 @@ Potentially Breaking Changes
   - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
+  
+- Modified the custom message format of :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` by hiding the default suffix
+  when the reason starts with the character `>` in the `CustomFunctions` option.
+  The warning locations are not changed, but the message is different.
 
 Improvements to clangd
 ----------------------
@@ -316,9 +321,9 @@ Changes in existing checks
   detection.
   
 - Improved :doc:`bugprone-unsafe-functions
-  <clang-tidy/checks/bugprone/unsafe-functions>` check by omitting the custom 
-  replacement string, when the reason starts with the character `>` in the
-  `CustomFunctions` option.
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
+  suffix when the reason starts with the character `>` in the `CustomFunctions`
+  option.
 
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
