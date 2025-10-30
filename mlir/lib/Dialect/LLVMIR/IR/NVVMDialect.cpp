@@ -2455,7 +2455,7 @@ LogicalResult Tcgen05LdOp::verify() {
   LogicalResult result = success();
   if (getShape() == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && !getOffset())
     result = emitError("shape 16x32bx2 requires offset argument");
-  
+
   if (getShape() != NVVM::Tcgen05LdStShape::SHAPE_16X32BX2 && getOffset())
     result = emitError("offset argument is only supported for shape 16x32bx2");
 
