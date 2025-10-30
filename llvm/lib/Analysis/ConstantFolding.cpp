@@ -1225,7 +1225,8 @@ Constant *llvm::ConstantFoldCompareInstOperands(
 
       // Only do this transformation if the int is intptrty in size, otherwise
       // there is a truncation or extension that we aren't modeling.
-      if (CE0->getOpcode() == Instruction::PtrToInt) {
+      if (CE0->getOpcode() == Instruction::PtrToInt ||
+          CE0->getOpcode() == Instruction::PtrToAddr) {
         Type *IntPtrTy = DL.getIntPtrType(CE0->getOperand(0)->getType());
         if (CE0->getType() == IntPtrTy) {
           Constant *C = CE0->getOperand(0);
@@ -1252,7 +1253,8 @@ Constant *llvm::ConstantFoldCompareInstOperands(
 
         // Only do this transformation if the int is intptrty in size, otherwise
         // there is a truncation or extension that we aren't modeling.
-        if (CE0->getOpcode() == Instruction::PtrToInt) {
+        if (CE0->getOpcode() == Instruction::PtrToInt ||
+            CE0->getOpcode() == Instruction::PtrToAddr) {
           Type *IntPtrTy = DL.getIntPtrType(CE0->getOperand(0)->getType());
           if (CE0->getType() == IntPtrTy &&
               CE0->getOperand(0)->getType() == CE1->getOperand(0)->getType()) {
