@@ -601,10 +601,20 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
 
-    if (!Subtarget->hasVFP2Base())
+    if (!Subtarget->hasVFP2Base()) {
       setAllExpand(MVT::f32);
-    if (!Subtarget->hasFP64())
+    } else {
+      for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                      ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
+        setOperationAction(Op, MVT::f32, Legal);
+    }
+    if (!Subtarget->hasFP64()) {
       setAllExpand(MVT::f64);
+    } else {
+      for (auto Op : {ISD::STRICT_FADD, ISD::STRICT_FSUB, ISD::STRICT_FMUL,
+                      ISD::STRICT_FDIV, ISD::STRICT_FMA, ISD::STRICT_FSQRT})
+        setOperationAction(Op, MVT::f64, Legal);
+    }
   }
 
   if (Subtarget->hasFullFP16()) {
@@ -1281,12 +1291,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (!Subtarget->hasFPARMv8Base() || !Subtarget->hasFP64()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, LibCall);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, LibCall);
     }
 
     // fp16 is a special v7 extension that adds f16 <-> f32 conversions.
     if (!Subtarget->hasFP16()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, LibCall);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, LibCall);
     }
 
     // Strict floating-point comparisons need custom lowering.
@@ -1333,31 +1347,42 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // FP16 often need to be promoted to call lib functions
+  // clang-format off
   if (Subtarget->hasFullFP16()) {
-    setOperationAction(ISD::FREM, MVT::f16, Promote);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
-    setOperationAction(ISD::FSIN, MVT::f16, Promote);
-    setOperationAction(ISD::FCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FTAN, MVT::f16, Promote);
-    setOperationAction(ISD::FSINCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FPOWI, MVT::f16, Promote);
-    setOperationAction(ISD::FPOW, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP2, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP10, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG10, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG2, MVT::f16, Promote);
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
     setOperationAction(ISD::LROUND, MVT::f16, Expand);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
+  
+    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                  ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                  ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                  ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                  ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                  ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                  ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                  ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                  ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                  ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                  ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                  ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                  ISD::STRICT_FTAN}) {
+        setOperationAction(Op, MVT::f16, Promote);
+    }
 
-    setOperationAction(ISD::FROUND, MVT::f16, Legal);
-    setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
-    setOperationAction(ISD::FTRUNC, MVT::f16, Legal);
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, Legal);
-    setOperationAction(ISD::FRINT, MVT::f16, Legal);
-    setOperationAction(ISD::FFLOOR, MVT::f16, Legal);
-    setOperationAction(ISD::FCEIL, MVT::f16, Legal);
+    // Round-to-integer need custom lowering for fp16, as Promote doesn't work
+    // because the result type is integer.
+    for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
+      setOperationAction(Op, MVT::f16, Custom);
+  
+    for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
+                    ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR, 
+                    ISD::FCEIL,          ISD::STRICT_FROUND,     ISD::STRICT_FROUNDEVEN,
+                    ISD::STRICT_FTRUNC,  ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT, 
+                    ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
+      setOperationAction(Op, MVT::f16, Legal);
+    }
+    // clang-format on
   }
 
   if (Subtarget->hasNEON()) {
@@ -10725,6 +10750,19 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerCMP(Op, DAG);
   case ISD::ABS:
     return LowerABS(Op, DAG);
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT: {
+    assert((Op.getOperand(1).getValueType() == MVT::f16 ||
+            Op.getOperand(1).getValueType() == MVT::bf16) &&
+           "Expected custom lowering of rounding operations only for f16");
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
+                              {Op.getOperand(0), Op.getOperand(1)});
+    return DAG.getNode(Op.getOpcode(), DL, {Op.getValueType(), MVT::Other},
+                       {Ext.getValue(1), Ext.getValue(0)});
+  }
   }
 }
 
@@ -22069,6 +22107,11 @@ bool ARMTargetLowering::isComplexDeinterleavingOperationSupported(
   return Subtarget->hasMVEIntegerOps() &&
          (ScalarTy->isIntegerTy(8) || ScalarTy->isIntegerTy(16) ||
           ScalarTy->isIntegerTy(32));
+}
+
+ArrayRef<MCPhysReg> ARMTargetLowering::getRoundingControlRegisters() const {
+  static const MCPhysReg RCRegs[] = {ARM::FPSCR_RM};
+  return RCRegs;
 }
 
 Value *ARMTargetLowering::createComplexDeinterleavingIR(

@@ -641,3 +641,35 @@ func.func @parallel_reduction_1d_outside() {
 // CHECK: scf.parallel
 // CHECK-NEXT: scf.parallel
 // CHECK: scf.reduce
+
+// -----
+
+// CHECK-LABEL: @nested_parallel_with_side_effect
+func.func @nested_parallel_with_side_effect() {
+  %c65536 = arith.constant 65536 : index
+  %c2 = arith.constant 2 : index
+  %c256 = arith.constant 256 : index
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c1 = arith.constant 1 : index
+  %alloc_0 = memref.alloc() : memref<2x256x256xf32>
+  %alloc_1 = memref.alloc() : memref<2x4x256x256xf32>
+  %alloc_2 = memref.alloc() : memref<4x4xf32>
+  %alloc_3 = memref.alloc() : memref<4x4xf32>
+  scf.parallel (%arg2, %arg3, %arg4) = (%c0, %c0, %c0) to (%c2, %c4, %c65536) step (%c1, %c1, %c1) {
+    %1 = arith.remsi %arg4, %c256 : index
+    %2 = arith.divsi %arg4, %c256 : index
+    %4 = memref.load %alloc_0[%arg2, %2, %1] : memref<2x256x256xf32>
+    memref.store %4, %alloc_1[%arg2, %arg3, %2, %1] : memref<2x4x256x256xf32>
+    scf.parallel (%arg5) = (%c0) to (%c4) step (%c1) {
+      %5 = memref.load %alloc_2[%arg5, %c0] : memref<4x4xf32>
+      memref.store %5, %alloc_3[%arg5, %c0] : memref<4x4xf32>
+      scf.reduce
+    } {mapping = [#gpu.loop_dim_map<processor = thread_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+    scf.reduce
+  } {mapping = [#gpu.loop_dim_map<processor = block_z, map = (d0) -> (d0), bound = (d0) -> (d0)>, #gpu.loop_dim_map<processor = block_y, map = (d0) -> (d0), bound = (d0) -> (d0)>, #gpu.loop_dim_map<processor = block_x, map = (d0) -> (d0), bound = (d0) -> (d0)>]}
+  return
+}
+
+// CHECK: gpu.launch
+// CHECK-NOT: scf.parallel

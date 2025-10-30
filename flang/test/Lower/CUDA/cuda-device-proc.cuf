@@ -468,7 +468,18 @@ attributes(global) subroutine test_bulk_g2s(a)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_bulk_g2s
-! CHECK: nvvm.cp.async.bulk.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : <7>, <1>
+! CHECK: %[[BARRIER:.*]]:2 = hlfir.declare %4 {data_attr = #cuf.cuda<shared>, uniq_name = "_QFtest_bulk_g2sEbarrier1"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+! CHECK: %[[DST:.*]]:2 = hlfir.declare %16(%17) {data_attr = #cuf.cuda<shared>, uniq_name = "_QFtest_bulk_g2sEtmpa"} : (!fir.ref<!fir.array<1024xf64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1024xf64>>, !fir.ref<!fir.array<1024xf64>>)
+! CHECK: %[[COUNT:.*]]:2 = hlfir.declare %19 {data_attr = #cuf.cuda<device>, uniq_name = "_QFtest_bulk_g2sEtx_count"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)    
+! CHECK: %[[SRC:.*]] = hlfir.designate %{{.*}} (%{{.*}})  : (!fir.box<!fir.array<?xf64>>, i64) -> !fir.ref<f64>
+! CHECK: %[[COUNT_LOAD:.*]] = fir.load %20#0 : !fir.ref<i32>
+! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
+! CHECK: %[[BARRIER_3:.*]] = llvm.addrspacecast %[[BARRIER_PTR]] : !llvm.ptr to !llvm.ptr<3>
+! CHECK: %[[DST_PTR:.*]] = fir.convert %[[DST]]#0 : (!fir.ref<!fir.array<1024xf64>>) -> !llvm.ptr
+! CHECK: %[[DST_7:.*]] = llvm.addrspacecast %[[DST_PTR]] : !llvm.ptr to !llvm.ptr<7>
+! CHECK: %[[SRC_PTR:.*]] = fir.convert %[[SRC]] : (!fir.ref<f64>) -> !llvm.ptr
+! CHECK: %[[SRC_3:.*]] = llvm.addrspacecast %[[SRC_PTR]] : !llvm.ptr to !llvm.ptr<1>
+! CHECK: nvvm.cp.async.bulk.shared.cluster.global %[[DST_7]], %[[SRC_3]], %[[BARRIER_3]], %[[COUNT_LOAD]] : <7>, <1>
 
 attributes(global) subroutine test_bulk_s2g(a)
   real(8), device :: a(*)
@@ -533,7 +544,7 @@ end subroutine
 ! CHECK: %[[ELEM_SIZE:.*]] = arith.constant 8 : i32
 ! CHECK: %[[SIZE:.*]] = arith.muli %[[COUNT]], %[[ELEM_SIZE]] : i32
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
-! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xcomplex<f32>>>, !fir.ref<complex<f32>>, i32, !llvm.ptr)
+! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !llvm.ptr, !llvm.ptr, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
 
 attributes(global) subroutine test_tma_bulk_load_c8(a, n)
@@ -552,7 +563,7 @@ end subroutine
 ! CHECK: %[[ELEM_SIZE:.*]] = arith.constant 16 : i32
 ! CHECK: %[[SIZE:.*]] = arith.muli %[[COUNT]], %[[ELEM_SIZE]] : i32
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
-! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xcomplex<f64>>>, !fir.ref<complex<f64>>, i32, !llvm.ptr)
+! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !llvm.ptr, !llvm.ptr, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
 
 attributes(global) subroutine test_tma_bulk_load_i4(a, n)
@@ -571,7 +582,7 @@ end subroutine
 ! CHECK: %[[ELEM_SIZE:.*]] = arith.constant 4 : i32
 ! CHECK: %[[SIZE:.*]] = arith.muli %[[COUNT]], %[[ELEM_SIZE]] : i32
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
-! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xi32>>, !fir.ref<i32>, i32, !llvm.ptr)
+! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !llvm.ptr, !llvm.ptr, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
 
 attributes(global) subroutine test_tma_bulk_load_i8(a, n)
@@ -590,7 +601,7 @@ end subroutine
 ! CHECK: %[[ELEM_SIZE:.*]] = arith.constant 8 : i32
 ! CHECK: %[[SIZE:.*]] = arith.muli %[[COUNT]], %[[ELEM_SIZE]] : i32
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
-! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xi64>>, !fir.ref<i64>, i32, !llvm.ptr)
+! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !llvm.ptr, !llvm.ptr, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
 
 attributes(global) subroutine test_tma_bulk_load_r2(a, n)
@@ -609,7 +620,7 @@ end subroutine
 ! CHECK: %[[ELEM_SIZE:.*]] = arith.constant 2 : i32
 ! CHECK: %[[SIZE:.*]] = arith.muli %[[COUNT]], %[[ELEM_SIZE]] : i32
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
-! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xf16>>, !fir.ref<f16>, i32, !llvm.ptr)
+! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !llvm.ptr, !llvm.ptr, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
 
 attributes(global) subroutine test_tma_bulk_load_r4(a, n)
@@ -628,7 +639,7 @@ end subroutine
 ! CHECK: %[[ELEM_SIZE:.*]] = arith.constant 4 : i32
 ! CHECK: %[[SIZE:.*]] = arith.muli %[[COUNT]], %[[ELEM_SIZE]] : i32
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
-! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xf32>>, !fir.ref<f32>, i32, !llvm.ptr)
+! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !llvm.ptr, !llvm.ptr, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
 
 attributes(global) subroutine test_tma_bulk_load_r8(a, n)
@@ -647,7 +658,7 @@ end subroutine
 ! CHECK: %[[ELEM_SIZE:.*]] = arith.constant 8 : i32
 ! CHECK: %[[SIZE:.*]] = arith.muli %[[COUNT]], %[[ELEM_SIZE]] : i32
 ! CHECK: %[[BARRIER_PTR:.*]] = fir.convert %[[BARRIER]]#0 : (!fir.ref<i64>) -> !llvm.ptr
-! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !fir.ref<!fir.array<1024xf64>>, !fir.ref<f64>, i32, !llvm.ptr)
+! CHECK: nvvm.inline_ptx "cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%0], [%1], %2, [%3];" ro(%{{.*}}, %{{.*}}, %[[SIZE]], %[[BARRIER_PTR]] : !llvm.ptr, !llvm.ptr, i32, !llvm.ptr)
 ! CHECK: nvvm.inline_ptx "mbarrier.expect_tx.relaxed.cta.shared::cta.b64 [%0], %1;" ro(%[[BARRIER_PTR]], %[[SIZE]] : !llvm.ptr, i32)
 
 attributes(global) subroutine test_tma_bulk_store_c4(c, n)
