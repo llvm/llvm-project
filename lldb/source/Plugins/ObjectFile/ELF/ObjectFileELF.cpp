@@ -2735,9 +2735,8 @@ static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint64_t *dst = reinterpret_cast<uint64_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset64(rel));
+    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
+                      ELFRelocation::RelocOffset64(rel);
     uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
     memcpy(dst, &val_offset, sizeof(uint64_t));
   }
@@ -2762,9 +2761,8 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
-    uint32_t *dst = reinterpret_cast<uint32_t *>(
-        data_buffer->GetBytes() + rel_section->GetFileOffset() +
-        ELFRelocation::RelocOffset32(rel));
+    void *const dst = data_buffer->GetBytes() + rel_section->GetFileOffset() +
+                      ELFRelocation::RelocOffset32(rel);
     memcpy(dst, &truncated_addr, sizeof(uint32_t));
   }
 }
