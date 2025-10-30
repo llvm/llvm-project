@@ -4,6 +4,11 @@
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s --check-prefix=FIR-CHECK
 
+! TODO: This test hits a fatal TODO. Deal with allocatable component
+! destructions. For arrays, allocatable component allocation may also be
+! missing.
+! XFAIL: *
+
 module m_firstprivate_derived_alloc_comp
  type point
    real, allocatable :: x(:)

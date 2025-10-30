@@ -161,7 +161,7 @@ private:
 
 public:
   /// Default constructor creates empty storage (invalid state)
-  VocabStorage() : Sections(), TotalSize(0), Dimension(0) {}
+  VocabStorage() = default;
 
   /// Create a VocabStorage with pre-organized section data
   VocabStorage(std::vector<std::vector<Embedding>> &&SectionData);
@@ -575,7 +575,7 @@ public:
   /// cached embeddings should be invalidated to ensure
   /// correctness/recomputation. This is a no-op for SymbolicEmbedder but
   /// removes all the cached entries in FlowAwareEmbedder.
-  virtual void invalidateEmbeddings() { return; }
+  virtual void invalidateEmbeddings() {}
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.

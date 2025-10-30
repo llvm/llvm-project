@@ -40,7 +40,7 @@ typedef void *omp_depend_t;
 /// API declarations
 ///{
 
-int omp_get_default_device(void) __attribute__((weak));
+int omp_get_default_device(void);
 
 ///}
 

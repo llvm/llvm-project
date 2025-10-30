@@ -1852,6 +1852,11 @@ public:
                  llvm::function_ref<void(const SymbolID &, const Symbol &)>)
       const override {}
 
+  void
+  reverseRelations(const RelationsRequest &,
+                   llvm::function_ref<void(const SymbolID &, const Symbol &)>)
+      const override {}
+
   llvm::unique_function<IndexContents(llvm::StringRef) const>
   indexedFiles() const override {
     return [](llvm::StringRef) { return IndexContents::None; };

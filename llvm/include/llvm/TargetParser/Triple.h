@@ -115,6 +115,7 @@ public:
   enum SubArchType {
     NoSubArch,
 
+    ARMSubArch_v9_7a,
     ARMSubArch_v9_6a,
     ARMSubArch_v9_5a,
     ARMSubArch_v9_4a,
@@ -935,7 +936,8 @@ public:
             getEnvironment() == Triple::GNUEABIHF ||
             getEnvironment() == Triple::GNUEABIHFT64 ||
             getEnvironment() == Triple::OpenHOS ||
-            getEnvironment() == Triple::MuslEABIHF || isAndroid()) &&
+            getEnvironment() == Triple::MuslEABIHF || isOSFuchsia() ||
+            isAndroid()) &&
            isOSBinFormatELF() && !isOSNetBSD();
   }
 

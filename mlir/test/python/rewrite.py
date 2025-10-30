@@ -17,15 +17,16 @@ def run(f):
 def testRewritePattern():
     def to_muli(op, rewriter):
         with rewriter.ip:
-            new_op = arith.muli(op.operands[0], op.operands[1], loc=op.location)
+            assert isinstance(op, arith.AddIOp)
+            new_op = arith.muli(op.lhs, op.rhs, loc=op.location)
         rewriter.replace_op(op, new_op.owner)
 
     def constant_1_to_2(op, rewriter):
-        c = op.attributes["value"].value
+        c = op.value.value
         if c != 1:
             return True  # failed to match
         with rewriter.ip:
-            new_op = arith.constant(op.result.type, 2, loc=op.location)
+            new_op = arith.constant(op.type, 2, loc=op.location)
         rewriter.replace_op(op, [new_op])
 
     with Context():

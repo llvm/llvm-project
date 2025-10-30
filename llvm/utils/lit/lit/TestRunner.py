@@ -92,12 +92,12 @@ class ShellEnvironment(object):
     we maintain a dir stack for pushd/popd.
     """
 
-    def __init__(self, cwd, env, umask=-1, ulimit={}):
+    def __init__(self, cwd, env, umask=-1, ulimit=None):
         self.cwd = cwd
         self.env = dict(env)
         self.umask = umask
         self.dirStack = []
-        self.ulimit = ulimit
+        self.ulimit = ulimit if ulimit else {}
 
     def change_dir(self, newdir):
         if os.path.isabs(newdir):
@@ -945,7 +945,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             path = (
                 cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
             )
-            executable = lit.util.which(args[0], shenv.env["PATH"])
+            executable = lit.util.which(args[0], path)
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 
