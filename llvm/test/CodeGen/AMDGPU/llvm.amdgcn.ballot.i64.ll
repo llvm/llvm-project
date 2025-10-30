@@ -557,3 +557,15 @@ exit:
   store i64 %ballot, ptr addrspace(1) %out
   ret void
 }
+
+define amdgpu_cs i64 @compare_bfloats(bfloat %x, bfloat %y) {
+; CHECK-LABEL: compare_bfloats:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s[0:1], v0, v1
+; CHECK-NEXT:    ; return to shader part epilog
+  %cmp = fcmp ogt bfloat %x, %y
+  %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 %cmp)
+  ret i64 %ballot
+}

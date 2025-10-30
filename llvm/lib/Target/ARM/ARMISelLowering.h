@@ -1009,6 +1009,8 @@ class VectorType;
 
     bool isUnsupportedFloatingType(EVT VT) const;
 
+    ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
                     SDValue ARMcc, SDValue Flags, SelectionDAG &DAG) const;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,

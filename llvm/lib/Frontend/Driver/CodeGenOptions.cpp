@@ -12,7 +12,6 @@
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
-extern llvm::cl::opt<bool> DebugInfoCorrelate;
 extern llvm::cl::opt<llvm::InstrProfCorrelator::ProfCorrelatorKind>
     ProfileCorrelate;
 } // namespace llvm
@@ -64,8 +63,7 @@ TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
 }
 
 std::string getDefaultProfileGenName() {
-  return llvm::DebugInfoCorrelate ||
-                 llvm::ProfileCorrelate != InstrProfCorrelator::NONE
+  return llvm::ProfileCorrelate != InstrProfCorrelator::NONE
              ? "default_%m.proflite"
              : "default_%m.profraw";
 }
