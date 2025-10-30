@@ -117,7 +117,7 @@ public:
   // Overview [stacktrace.basic.overview]
 
   using value_type             = stacktrace_entry;
-  using const_reference        = value_type const&;
+  using const_reference        = const value_type&;
   using reference              = value_type&;
   using const_iterator         = decltype(__entries_.cbegin());
   using iterator               = const_iterator;
@@ -131,12 +131,14 @@ public:
   // Creation and assignment [stacktrace.basic.cons]
 
   _LIBCPP_ALWAYS_INLINE // Omit this function from the trace
-  static basic_stacktrace current(const allocator_type& __alloc = allocator_type()) noexcept {
+  static basic_stacktrace
+  current(const allocator_type& __alloc = allocator_type()) noexcept {
     return current(0, __default_max_depth, __alloc);
   }
 
   _LIBCPP_ALWAYS_INLINE // Omit this function from the trace
-  static basic_stacktrace current(size_type __skip, const allocator_type& __alloc = allocator_type()) noexcept {
+  static basic_stacktrace
+  current(size_type __skip, const allocator_type& __alloc = allocator_type()) noexcept {
     return current(__skip, __default_max_depth, __alloc);
   }
 
@@ -159,22 +161,25 @@ public:
     return __ret;
   }
 
-  _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc)
-      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(__alloc) {}
-
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace const& __other, allocator_type const& __alloc)
-      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(__other.__entries_, __alloc) {}
-
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, allocator_type const& __alloc)
-      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(std::move(__other.__entries_), __alloc) {}
-
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace() noexcept(is_nothrow_default_constructible_v<allocator_type>)
       : basic_stacktrace(allocator_type()) {}
 
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace const& __other) noexcept       = default;
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept            = default;
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other)     = default;
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(basic_stacktrace&& __other) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc)
+      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(__alloc) {}
+
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other) noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept      = default;
+
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other, const allocator_type& __alloc)
+      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(__other.__entries_, __alloc) {}
+
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, const allocator_type& __alloc)
+      : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(std::move(__other.__entries_), __alloc) {}
+
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other) = default;
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(basic_stacktrace&& __other) noexcept(
+      allocator_traits<_Allocator>::propagate_on_container_move_assignment::value ||
+      allocator_traits<_Allocator>::is_always_equal::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI ~basic_stacktrace() = default;
 
