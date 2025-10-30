@@ -132,3 +132,18 @@ if target:
                             # We do have a symbol, print some info for the symbol
                             print(symbol)
 ```
+
+### Expected Output
+
+Exact output varies by system, but you should see something like this:
+
+```
+Creating a target for './a.out'
+SBBreakpoint: id = 1, name = 'main', module = a.out, locations = 1
+SBProcess: pid = 2593449, state = stopped, threads = 1, executable = a.out
+thread #1: tid = 2593449, 0x0000aaaaaaaa0714 a.out`main at test.c:3:9, name = 'test.o', stop reason = breakpoint 1.1
+frame #0: 0x0000aaaaaaaa0714 a.out`main at test.c:3:9
+SBFunction: id = 0x0000002e, name = main, type = main
+a.out[0x714]: mov    w0, #0x0                  ; =0
+a.out[0x718]: ret
+```

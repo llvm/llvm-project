@@ -559,16 +559,65 @@ func.func @sched_barrier() {
 }
 
 // CHECK-LABEL: func @mfma
-func.func @mfma(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
-  // CHECK: amdgpu.mfma
-  %0 = amdgpu.mfma %arg0 * %arg0 + %arg1 { abid = 1 : i32, cbsz = 1 : i32, k = 1 : i32, m = 32 : i32, n = 32 : i32, blocks = 2 : i32 } blgp = bcast_second_32 : f32, f32, vector<32xf32>
+func.func @mfma(%arg0 : vector<4xf16>, %arg1 : vector<4xf32>) -> vector<4xf32> {
+  // CHECK: amdgpu.mfma 16x16x16
+  %0 = amdgpu.mfma 16x16x16 %arg0 * %arg0 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  func.return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @mfma_with_blocks
+func.func @mfma_with_blocks(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
+  // CHECK: amdgpu.mfma 32x32x1
+  %0 = amdgpu.mfma 32x32x1 %arg0 * %arg0 + %arg1 { abid = 1 : i32, cbsz = 1 : i32, blocks = 2 : i32 } blgp = bcast_second_32 : f32, f32, vector<32xf32>
   func.return %0 : vector<32xf32>
 }
 
-// CHECK-LABEL: func @wmma
-func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> {
-  // CHECK: amdgpu.wmma
-  %0 = amdgpu.wmma %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xf16>
+// CHECK-LABEL: func @wmma_f16_16x16x16_f16
+func.func @wmma_f16_16x16x16_f16(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x16
+  %0 = amdgpu.wmma 16x16x16 %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// CHECK-LABEL: func @wmma_i32_16x16x32_i4
+func.func @wmma_i32_16x16x32_i4(%arg0 : vector<16xi4>, %arg1 : vector<8xi32>) -> vector<8xi32> {
+  // CHECK: amdgpu.wmma 16x16x32
+  %0 = amdgpu.wmma 16x16x32 %arg0 * %arg0 + %arg1 : vector<16xi4>, vector<16xi4>, vector<8xi32>
+  func.return %0 : vector<8xi32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x4_f32
+func.func @wmma_f32_16x16x4_f32(%arg0 : vector<2xf32>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x4
+  %0 = amdgpu.wmma 16x16x4 %arg0 * %arg0 + %arg1 : vector<2xf32>, vector<2xf32>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x64_f8
+func.func @wmma_f32_16x16x64_f8(%arg0 : vector<32xf8E4M3FN>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f32_16x16x64_bf8
+func.func @wmma_f32_16x16x64_bf8(%arg0 : vector<32xf8E5M2>, %arg1 : vector<8xf32>) -> vector<8xf32> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<8xf32>
+  func.return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @wmma_f16_16x16x64_bf8
+func.func @wmma_f16_16x16x64_bf8(%arg0 : vector<32xf8E5M2>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E5M2>, vector<32xf8E5M2>, vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// CHECK-LABEL: func @wmma_f16_16x16x64_f8
+func.func @wmma_f16_16x16x64_f8(%arg0 : vector<32xf8E4M3FN>, %arg1 : vector<8xf16>) -> vector<8xf16> {
+  // CHECK: amdgpu.wmma 16x16x64
+  %0 = amdgpu.wmma 16x16x64 %arg0 * %arg0 + %arg1 : vector<32xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf16>
   func.return %0 : vector<8xf16>
 }
 
@@ -595,8 +644,8 @@ func.func @permlane32_swap(%arg0 : f32) -> f32 {
 
 // CHECK-LABEL: func @scaled_mfma
 func.func @scaled_mfma(%arg0 : f8E8M0FNU, %arg1 : vector<32xf6E2M3FN>, %arg2 : vector<16xf32>) -> vector<16xf32> {
-  // CHECK: amdgpu.scaled_mfma
-  %0 = amdgpu.scaled_mfma(%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 { k = 64 : i32, m = 32 : i32, n = 32 : i32 } : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+  // CHECK: amdgpu.scaled_mfma 32x32x64
+  %0 = amdgpu.scaled_mfma 32x32x64 (%arg0[0] * %arg1) * (%arg0[1] * %arg1) + %arg2 : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
   func.return %0 : vector<16xf32>
 }
 

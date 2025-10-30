@@ -94,6 +94,9 @@ Changes to Vectorizers
 Changes to the AArch64 Backend
 ------------------------------
 
+* Assembler/disassembler support has been added for Armv9.7-A (2025)
+  architecture extensions.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -188,6 +191,10 @@ Changes to LLDB
 * The `show-progress` setting, which became a NOOP with the introduction of the
   statusline, now defaults to off and controls using OSC escape codes to show a
   native progress bar in supporting terminals like Ghostty and ConEmu.
+* The default PDB reader on Windows was changed from DIA to native, which uses 
+  LLVM's PDB and CodeView support. You can switch back to the DIA reader with
+  `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
+  DIA reader will be removed in a future version of LLDB.
 
 Changes to BOLT
 ---------------------------------

@@ -2713,27 +2713,12 @@ llvm::Value *CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
 }
 
 llvm::Value *
-CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
-                                   const OMPMessageClause *MessageClause) {
-  return emitMessageClause(
-      CGF, MessageClause ? MessageClause->getMessageString() : nullptr,
-      MessageClause->getBeginLoc());
-}
-
-llvm::Value *
 CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity,
                                     SourceLocation Loc) {
   // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
   // as if sev-level is fatal."
   return llvm::ConstantInt::get(CGM.Int32Ty,
                                 Severity == OMPC_SEVERITY_warning ? 1 : 2);
-}
-
-llvm::Value *
-CGOpenMPRuntime::emitSeverityClause(const OMPSeverityClause *SeverityClause) {
-  return emitSeverityClause(SeverityClause ? SeverityClause->getSeverityKind()
-                                           : OMPC_SEVERITY_unknown,
-                            SeverityClause->getBeginLoc());
 }
 
 void CGOpenMPRuntime::emitNumThreadsClause(
@@ -3746,6 +3731,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
     DestructorsFlag = 0x8,
     PriorityFlag = 0x20,
     DetachableFlag = 0x40,
+    FreeAgentFlag = 0x80,
   };
   unsigned Flags = Data.Tied ? TiedFlag : 0;
   bool NeedsCleanup = false;
@@ -3754,6 +3740,11 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
         checkDestructorsRequired(KmpTaskTWithPrivatesQTyRD, Privates);
     if (NeedsCleanup)
       Flags = Flags | DestructorsFlag;
+  }
+  if (const auto *Clause = D.getSingleClause<OMPThreadsetClause>()) {
+    OpenMPThreadsetKind Kind = Clause->getThreadsetKind();
+    if (Kind == OMPC_THREADSET_omp_pool)
+      Flags = Flags | FreeAgentFlag;
   }
   if (Data.Priority.getInt())
     Flags = Flags | PriorityFlag;
