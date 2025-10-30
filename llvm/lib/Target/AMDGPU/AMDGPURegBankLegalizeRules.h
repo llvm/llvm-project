@@ -223,7 +223,8 @@ enum LoweringMethodID {
   UniCstExt,
   SplitLoad,
   WidenLoad,
-  WidenMMOToS32
+  WidenMMOToS32,
+  UnpackAExt
 };
 
 enum FastRulesTypes {

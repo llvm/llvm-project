@@ -297,8 +297,7 @@ declare i32 @llvm.abs.i32(i32, i1 immarg)
 define i32 @abs_i32(i32 %x) {
 ; CHECK-LABEL: abs_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a0, a0
-; CHECK-NEXT:    abs a0, a0
+; CHECK-NEXT:    absw a0, a0
 ; CHECK-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   ret i32 %abs
@@ -307,8 +306,7 @@ define i32 @abs_i32(i32 %x) {
 define signext i32 @abs_i32_sext(i32 signext %x) {
 ; CHECK-LABEL: abs_i32_sext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    abs a0, a0
-; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    absw a0, a0
 ; CHECK-NEXT:    ret
   %abs = tail call i32 @llvm.abs.i32(i32 %x, i1 true)
   ret i32 %abs

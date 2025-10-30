@@ -470,7 +470,19 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackAExt})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}});
+
+  addRulesForGOpcs({G_UADDO, G_USUBO}, Standard)
+      .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32}})
+      .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}});
+
+  addRulesForGOpcs({G_UADDE, G_USUBE}, Standard)
+      .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr32AExtBoolInReg}})
+      .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32, Vcc}});
 
   addRulesForGOpcs({G_MUL}, Standard).Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
