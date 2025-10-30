@@ -16,6 +16,7 @@
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include <stack>
@@ -66,8 +67,9 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
     for (unsigned i = 0; i < I->getNumDefs() && !ScalarType; ++i) {
       for (const auto &Use :
            MRI.use_nodbg_instructions(I->getOperand(i).getReg())) {
-        assert(Use.getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
-               "Expected use of G_UNMERGE_VALUES to be a G_BUILD_VECTOR");
+        if (Use.getOpcode() != TargetOpcode::G_BUILD_VECTOR)
+          continue;
+
         if (auto *VecType =
                 GR->getSPIRVTypeForVReg(Use.getOperand(0).getReg())) {
           ScalarType = GR->getScalarOrVectorComponentType(VecType);
@@ -133,10 +135,10 @@ static SPIRVType *deduceTypeFromOperandRange(MachineInstr *I,
   return ResType;
 }
 
-static SPIRVType *deduceTypeForResultRegister(MachineInstr *Use,
-                                              Register UseRegister,
-                                              SPIRVGlobalRegistry *GR,
-                                              MachineIRBuilder &MIB) {
+static SPIRVType *deduceTypeFromResultRegister(MachineInstr *Use,
+                                               Register UseRegister,
+                                               SPIRVGlobalRegistry *GR,
+                                               MachineIRBuilder &MIB) {
   for (const MachineOperand &MO : Use->defs()) {
     if (!MO.isReg())
       continue;
@@ -159,16 +161,43 @@ static SPIRVType *deduceTypeFromUses(Register Reg, MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
     SPIRVType *ResType = nullptr;
+    LLVM_DEBUG(dbgs() << "Looking at use " << Use);
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
     case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     case TargetOpcode::G_UNMERGE_VALUES:
-      LLVM_DEBUG(dbgs() << "Looking at use " << Use << "\n");
-      ResType = deduceTypeForResultRegister(&Use, Reg, GR, MIB);
+    case TargetOpcode::G_ADD:
+    case TargetOpcode::G_SUB:
+    case TargetOpcode::G_MUL:
+    case TargetOpcode::G_SDIV:
+    case TargetOpcode::G_UDIV:
+    case TargetOpcode::G_SREM:
+    case TargetOpcode::G_UREM:
+    case TargetOpcode::G_FADD:
+    case TargetOpcode::G_FSUB:
+    case TargetOpcode::G_FMUL:
+    case TargetOpcode::G_FDIV:
+    case TargetOpcode::G_FREM:
+    case TargetOpcode::G_FMA:
+      ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
+      break;
+    case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    case TargetOpcode::G_INTRINSIC: {
+      auto IntrinsicID = cast<GIntrinsic>(Use).getIntrinsicID();
+      if (IntrinsicID == Intrinsic::spv_insertelt) {
+        if (Reg == Use.getOperand(2).getReg())
+          ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
+      } else if (IntrinsicID == Intrinsic::spv_extractelt) {
+        if (Reg == Use.getOperand(2).getReg())
+          ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
+      }
       break;
     }
-    if (ResType)
+    }
+    if (ResType) {
+      LLVM_DEBUG(dbgs() << "Deduced type from use " << *ResType);
       return ResType;
+    }
   }
   return nullptr;
 }
