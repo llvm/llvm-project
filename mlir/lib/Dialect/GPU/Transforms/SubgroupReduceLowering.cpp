@@ -444,9 +444,10 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
       // for an illustration of how this within-cluster broadcast works with a
       // swizzle.
       if (ci.subgroupSize == 64 && ci.clusterSize == 32) {
-        res = amdgpu::SwizzleBitModeOp::create(rewriter, loc, res, /*and*/ 0,
-                                               /*or*/ 31,
-                                               /*xor*/ 0);
+        res =
+            amdgpu::SwizzleBitModeOp::create(rewriter, loc, res, /*and_mask=*/0,
+                                             /*or_mask=*/31,
+                                             /*xor_mask=*/0);
       }
     } else if (chipset.majorVersion <= 12) {
       // Use a permute lane to cross rows (row 1 <-> row 0, row 3 <-> row 2).
