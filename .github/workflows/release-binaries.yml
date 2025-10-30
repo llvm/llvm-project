@@ -190,7 +190,7 @@ jobs:
           else
             version_suffix=".$rc_version"
           fi
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LLVM_VERSION_SUFFIX=$version_suffix"
+          target_cmake_flags="$target_cmake_flags -DLLVM_VERSION_SUFFIX=$version_suffix"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
