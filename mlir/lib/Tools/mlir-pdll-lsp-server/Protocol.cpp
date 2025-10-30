@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
 

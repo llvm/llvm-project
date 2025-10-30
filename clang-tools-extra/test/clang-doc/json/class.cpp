@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/_ZTV7MyClass.json
+// RUN: FileCheck %s < %t/json/_ZTV7MyClass.json
 
 struct Foo;
 

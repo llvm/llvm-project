@@ -57,6 +57,52 @@ define <4 x i1> @test_signed_v4i1_v4f32(<4 x float> %f) nounwind {
   ret <4 x i1> %x
 }
 
+define <4 x i1> @test_freeze_signed_v4i1_v4f32(<4 x float> %f) nounwind {
+; CHECK-LABEL: test_freeze_signed_v4i1_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm0[3,3]
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    ucomiss %xmm1, %xmm1
+; CHECK-NEXT:    maxss %xmm2, %xmm1
+; CHECK-NEXT:    xorps %xmm3, %xmm3
+; CHECK-NEXT:    minss %xmm3, %xmm1
+; CHECK-NEXT:    cvttss2si %xmm1, %ecx
+; CHECK-NEXT:    cmovpl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    movaps %xmm0, %xmm4
+; CHECK-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
+; CHECK-NEXT:    ucomiss %xmm4, %xmm4
+; CHECK-NEXT:    maxss %xmm2, %xmm4
+; CHECK-NEXT:    minss %xmm3, %xmm4
+; CHECK-NEXT:    cvttss2si %xmm4, %ecx
+; CHECK-NEXT:    cmovpl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm4
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
+; CHECK-NEXT:    movaps %xmm0, %xmm1
+; CHECK-NEXT:    maxss %xmm2, %xmm1
+; CHECK-NEXT:    minss %xmm3, %xmm1
+; CHECK-NEXT:    cvttss2si %xmm1, %ecx
+; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    cmovpl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    maxss %xmm2, %xmm0
+; CHECK-NEXT:    minss %xmm3, %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    cmovpl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm0
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm4[0]
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %x = call <4 x i1> @llvm.fptosi.sat.v4i1.v4f32(<4 x float> %f)
+  %y = freeze <4 x i1> %x
+  ret <4 x i1> %y
+}
+
 define <4 x i8> @test_signed_v4i8_v4f32(<4 x float> %f) nounwind {
 ; CHECK-LABEL: test_signed_v4i8_v4f32:
 ; CHECK:       # %bb.0:

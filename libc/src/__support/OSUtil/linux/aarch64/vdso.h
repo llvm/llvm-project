@@ -23,6 +23,8 @@ LIBC_INLINE constexpr cpp::string_view symbol_name(VDSOSym sym) {
     return "__kernel_clock_gettime";
   case VDSOSym::ClockGetRes:
     return "__kernel_clock_getres";
+  case VDSOSym::GetRandom:
+    return "__kernel_getrandom";
   default:
     return "";
   }

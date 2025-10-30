@@ -27,11 +27,11 @@ namespace targets {
 // getPointerWidthV().
 
 static const char *const DataLayoutStringR600 =
-    "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
+    "e-m:e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128"
     "-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1";
 
 static const char *const DataLayoutStringAMDGCN =
-    "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
+    "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
     "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-"
     "v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-"
     "v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
@@ -197,12 +197,11 @@ bool AMDGPUTargetInfo::initFeatureMap(
     const std::vector<std::string> &FeatureVec) const {
 
   using namespace llvm::AMDGPU;
-  fillAMDGPUFeatureMap(CPU, getTriple(), Features);
+
   if (!TargetInfo::initFeatureMap(Features, Diags, CPU, FeatureVec))
     return false;
 
-  // TODO: Should move this logic into TargetParser
-  auto HasError = insertWaveSizeFeature(CPU, getTriple(), Features);
+  auto HasError = fillAMDGPUFeatureMap(CPU, getTriple(), Features);
   switch (HasError.first) {
   default:
     break;
@@ -251,7 +250,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
     BFloat16Format = &llvm::APFloat::BFloat();
   }
 
-  HasLegalHalfType = true;
+  HasFastHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
 
@@ -357,12 +356,6 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFastFMA())
     Builder.defineMacro("FP_FAST_FMA");
 
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE__", Twine(WavefrontSize),
-                      "compile-time-constant access to the wavefront size will "
-                      "be removed in a future release");
-  Builder.defineMacro("__AMDGCN_WAVEFRONT_SIZE", Twine(WavefrontSize),
-                      "compile-time-constant access to the wavefront size will "
-                      "be removed in a future release");
   Builder.defineMacro("__AMDGCN_CUMODE__", Twine(CUMode));
 }
 

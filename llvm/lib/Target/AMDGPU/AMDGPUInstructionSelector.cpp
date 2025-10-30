@@ -221,12 +221,22 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 bool AMDGPUInstructionSelector::selectCOPY_SCC_VCC(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
+  Register VCCReg = I.getOperand(1).getReg();
+  MachineInstr *Cmp;
 
-  unsigned CmpOpc =
-      STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
-  MachineInstr *Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc))
-                          .addReg(I.getOperand(1).getReg())
-                          .addImm(0);
+  if (STI.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    unsigned CmpOpc =
+        STI.isWave64() ? AMDGPU::S_CMP_LG_U64 : AMDGPU::S_CMP_LG_U32;
+    Cmp = BuildMI(*BB, &I, DL, TII.get(CmpOpc)).addReg(VCCReg).addImm(0);
+  } else {
+    // For gfx7 and earlier, S_CMP_LG_U64 doesn't exist, so we use S_OR_B64
+    // which sets SCC as a side effect.
+    Register DeadDst = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    Cmp = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_OR_B64), DeadDst)
+              .addReg(VCCReg)
+              .addReg(VCCReg);
+  }
+
   if (!constrainSelectedInstRegOperands(*Cmp, TII, TRI, RBI))
     return false;
 
@@ -1989,39 +1999,6 @@ bool AMDGPUInstructionSelector::selectInitWholeWave(MachineInstr &MI) const {
   return selectImpl(MI, *CoverageInfo);
 }
 
-bool AMDGPUInstructionSelector::selectSBarrier(MachineInstr &MI) const {
-  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    unsigned WGSize = STI.getFlatWorkGroupSizes(MF->getFunction()).second;
-    if (WGSize <= STI.getWavefrontSize()) {
-      // If the workgroup fits in a wave, remove s_barrier_signal and lower
-      // s_barrier/s_barrier_wait to wave_barrier.
-      if (IntrinsicID == Intrinsic::amdgcn_s_barrier ||
-          IntrinsicID == Intrinsic::amdgcn_s_barrier_wait) {
-        MachineBasicBlock *MBB = MI.getParent();
-        const DebugLoc &DL = MI.getDebugLoc();
-        BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::WAVE_BARRIER));
-      }
-      MI.eraseFromParent();
-      return true;
-    }
-  }
-
-  if (STI.hasSplitBarriers() && IntrinsicID == Intrinsic::amdgcn_s_barrier) {
-    // On GFX12 lower s_barrier into s_barrier_signal_imm and s_barrier_wait
-    MachineBasicBlock *MBB = MI.getParent();
-    const DebugLoc &DL = MI.getDebugLoc();
-    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
-        .addImm(AMDGPU::Barrier::WORKGROUP);
-    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_BARRIER_WAIT))
-        .addImm(AMDGPU::Barrier::WORKGROUP);
-    MI.eraseFromParent();
-    return true;
-  }
-
-  return selectImpl(MI, *CoverageInfo);
-}
-
 static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
                          bool &IsTexFail) {
   if (TexFailCtrl)
@@ -2039,19 +2016,27 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   MachineInstr &MI, const AMDGPU::ImageDimIntrinsicInfo *Intr) const {
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
+  unsigned IntrOpcode = Intr->BaseOpcode;
+
+  // For image atomic: use no-return opcode if result is unused.
+  if (Intr->AtomicNoRetBaseOpcode != Intr->BaseOpcode) {
+    Register ResultDef = MI.getOperand(0).getReg();
+    if (MRI->use_nodbg_empty(ResultDef))
+      IntrOpcode = Intr->AtomicNoRetBaseOpcode;
+  }
 
   const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
-    AMDGPU::getMIMGBaseOpcodeInfo(Intr->BaseOpcode);
+      AMDGPU::getMIMGBaseOpcodeInfo(IntrOpcode);
 
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfo(Intr->Dim);
-  unsigned IntrOpcode = Intr->BaseOpcode;
   const bool IsGFX10Plus = AMDGPU::isGFX10Plus(STI);
   const bool IsGFX11Plus = AMDGPU::isGFX11Plus(STI);
   const bool IsGFX12Plus = AMDGPU::isGFX12Plus(STI);
 
   const unsigned ArgOffset = MI.getNumExplicitDefs() + 1;
 
-  Register VDataIn, VDataOut;
+  Register VDataIn = AMDGPU::NoRegister;
+  Register VDataOut = AMDGPU::NoRegister;
   LLT VDataTy;
   int NumVDataDwords = -1;
   bool IsD16 = MI.getOpcode() == AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16 ||
@@ -2082,7 +2067,8 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   unsigned DMaskLanes = 0;
 
   if (BaseOpcode->Atomic) {
-    VDataOut = MI.getOperand(0).getReg();
+    if (!BaseOpcode->NoReturn)
+      VDataOut = MI.getOperand(0).getReg();
     VDataIn = MI.getOperand(2).getReg();
     LLT Ty = MRI->getType(VDataIn);
 
@@ -2132,8 +2118,9 @@ bool AMDGPUInstructionSelector::selectImageIntrinsic(
   assert((!IsTexFail || DMaskLanes >= 1) && "should have legalized this");
 
   unsigned CPol = MI.getOperand(ArgOffset + Intr->CachePolicyIndex).getImm();
-  if (BaseOpcode->Atomic)
-    CPol |= AMDGPU::CPol::GLC; // TODO no-return optimization
+  // Keep GLC only when the atomic's result is actually used.
+  if (BaseOpcode->Atomic && !BaseOpcode->NoReturn)
+    CPol |= AMDGPU::CPol::GLC;
   if (CPol & ~((IsGFX12Plus ? AMDGPU::CPol::ALL : AMDGPU::CPol::ALL_pregfx12) |
                AMDGPU::CPol::VOLATILE))
     return false;
@@ -2338,10 +2325,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, false);
   case Intrinsic::amdgcn_init_whole_wave:
     return selectInitWholeWave(I);
-  case Intrinsic::amdgcn_s_barrier:
-  case Intrinsic::amdgcn_s_barrier_signal:
-  case Intrinsic::amdgcn_s_barrier_wait:
-    return selectSBarrier(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
@@ -2368,8 +2351,10 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     return selectDSBvhStackIntrinsic(I);
+  case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
+  case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_get_barrier_state:
@@ -3481,10 +3466,14 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
           : 0); // swz
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
+  // Don't set the offset value here because the pointer points to the base of
+  // the buffer.
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
-  LoadPtrI.Offset = MI.getOperand(6 + OpOffset).getImm();
+
   MachinePointerInfo StorePtrI = LoadPtrI;
-  StorePtrI.V = nullptr;
+  LoadPtrI.V = PoisonValue::get(PointerType::get(MF->getFunction().getContext(),
+                                                 AMDGPUAS::BUFFER_RESOURCE));
+  LoadPtrI.AddrSpace = AMDGPUAS::BUFFER_RESOURCE;
   StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
 
   auto F = LoadMMO->getFlags() &
@@ -3662,13 +3651,17 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   if (isSGPR(Addr))
     MIB.addReg(VOffset);
 
-  MIB.add(MI.getOperand(4))  // offset
-     .add(MI.getOperand(5)); // cpol
+  MIB.add(MI.getOperand(4)); // offset
+
+  unsigned Aux = MI.getOperand(5).getImm();
+  MIB.addImm(Aux & ~AMDGPU::CPol::VIRTUAL_BITS); // cpol
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
   LoadPtrI.Offset = MI.getOperand(4).getImm();
   MachinePointerInfo StorePtrI = LoadPtrI;
+  LoadPtrI.V = PoisonValue::get(PointerType::get(MF->getFunction().getContext(),
+                                                 AMDGPUAS::GLOBAL_ADDRESS));
   LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
   StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
   auto F = LoadMMO->getFlags() &
@@ -4988,66 +4981,6 @@ AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
   return selectVOP3PRetHelper(Root, true);
 }
 
-// Select neg_lo from the i1 immediate operand.
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // Value is in Imm operand as i1 sign extended to int64_t.
-  // 1(-1) promotes packed values to signed, 0 treats them as unsigned.
-  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
-         "expected i1 value");
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  if (Root.getImm() == -1)
-    Mods ^= SISrcMods::NEG;
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
-}
-
-// Select both neg_lo and neg_hi from the i1 immediate operand. This is
-// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
-// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3PModsNegs(MachineOperand &Root) const {
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // Value is in Imm operand as i1 sign extended to int64_t.
-  // 1(-1) promotes packed values to signed, 0 treats them as unsigned.
-  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
-         "expected i1 value");
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  if (Root.getImm() == -1)
-    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
-}
-
-// Select neg, abs, or both neg and abs from the i16 immediate operans.
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3PModsNegAbs(MachineOperand &Root) const {
-
-  assert(Root.isImm() && "Modifier for C must be an immediate");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  switch (Root.getImm()) {
-  default: // Any other value will be silently ignored (considered as 0).
-    break;
-  case 1:
-    Mods ^= SISrcMods::NEG;
-    break;
-  case 2:
-    Mods ^= SISrcMods::ABS;
-    break;
-  case 3:
-    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
-    break;
-  }
-
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
-}
-
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
     MachineOperand &Root) const {
@@ -5581,11 +5514,18 @@ AMDGPUInstructionSelector::selectFlatOffsetImpl(MachineOperand &Root,
 
   Register PtrBase;
   int64_t ConstOffset;
-  std::tie(PtrBase, ConstOffset) =
+  bool IsInBounds;
+  std::tie(PtrBase, ConstOffset, IsInBounds) =
       getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
 
-  if (ConstOffset == 0 || (FlatVariant == SIInstrFlags::FlatScratch &&
-                           !isFlatScratchBaseLegal(Root.getReg())))
+  // Adding the offset to the base address with an immediate in a FLAT
+  // instruction must not change the memory aperture in which the address falls.
+  // Therefore we can only fold offsets from inbounds GEPs into FLAT
+  // instructions.
+  if (ConstOffset == 0 ||
+      (FlatVariant == SIInstrFlags::FlatScratch &&
+       !isFlatScratchBaseLegal(Root.getReg())) ||
+      (FlatVariant == SIInstrFlags::FLAT && !IsInBounds))
     return Default;
 
   unsigned AddrSpace = (*MI->memoperands_begin())->getAddrSpace();
@@ -5637,7 +5577,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(Addr, *MRI);
 
   if (ConstOffset != 0) {
     if (NeedIOffset &&
@@ -5796,6 +5737,16 @@ AMDGPUInstructionSelector::selectGlobalSAddrCPol(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrCPolM0(MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 2).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
 }
@@ -5812,6 +5763,17 @@ AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoIOffsetM0(
+    MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 2).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol, false);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
   Register Addr = Root.getReg();
   Register PtrBase;
@@ -5820,7 +5782,8 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(Addr, *MRI);
 
   if (ConstOffset != 0 && isFlatScratchBaseLegal(Addr) &&
       TII.isLegalFLATOffset(ConstOffset, AMDGPUAS::PRIVATE_ADDRESS,
@@ -5896,7 +5859,8 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(Addr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(Addr, *MRI);
 
   Register OrigAddr = Addr;
   if (ConstOffset != 0 &&
@@ -6002,7 +5966,8 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
   Register PtrBase;
   int64_t ConstOffset;
-  std::tie(PtrBase, ConstOffset) = getPtrBaseWithConstantOffset(VAddr, *MRI);
+  std::tie(PtrBase, ConstOffset, std::ignore) =
+      getPtrBaseWithConstantOffset(VAddr, *MRI);
   if (ConstOffset != 0) {
     if (TII.isLegalMUBUFImmOffset(ConstOffset) &&
         (!STI.privateMemoryResourceIsRangeChecked() ||
@@ -6241,8 +6206,8 @@ AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const 
 
   Register PtrBase;
   int64_t Offset;
-  std::tie(PtrBase, Offset) =
-    getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
+  std::tie(PtrBase, Offset, std::ignore) =
+      getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
 
   if (Offset) {
     if (isDSOffsetLegal(PtrBase, Offset)) {
@@ -6303,8 +6268,8 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
 
   Register PtrBase;
   int64_t Offset;
-  std::tie(PtrBase, Offset) =
-    getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
+  std::tie(PtrBase, Offset, std::ignore) =
+      getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
 
   if (Offset) {
     int64_t OffsetValue0 = Offset;
@@ -6325,22 +6290,25 @@ AMDGPUInstructionSelector::selectDSReadWrite2Impl(MachineOperand &Root,
 }
 
 /// If \p Root is a G_PTR_ADD with a G_CONSTANT on the right hand side, return
-/// the base value with the constant offset. There may be intervening copies
-/// between \p Root and the identified constant. Returns \p Root, 0 if this does
-/// not match the pattern.
-std::pair<Register, int64_t>
+/// the base value with the constant offset, and if the offset computation is
+/// known to be inbounds. There may be intervening copies between \p Root and
+/// the identified constant. Returns \p Root, 0, false if this does not match
+/// the pattern.
+std::tuple<Register, int64_t, bool>
 AMDGPUInstructionSelector::getPtrBaseWithConstantOffset(
-  Register Root, const MachineRegisterInfo &MRI) const {
+    Register Root, const MachineRegisterInfo &MRI) const {
   MachineInstr *RootI = getDefIgnoringCopies(Root, MRI);
   if (RootI->getOpcode() != TargetOpcode::G_PTR_ADD)
-    return {Root, 0};
+    return {Root, 0, false};
 
   MachineOperand &RHS = RootI->getOperand(2);
   std::optional<ValueAndVReg> MaybeOffset =
       getIConstantVRegValWithLookThrough(RHS.getReg(), MRI);
   if (!MaybeOffset)
-    return {Root, 0};
-  return {RootI->getOperand(1).getReg(), MaybeOffset->Value.getSExtValue()};
+    return {Root, 0, false};
+  bool IsInBounds = RootI->getFlag(MachineInstr::MIFlag::InBounds);
+  return {RootI->getOperand(1).getReg(), MaybeOffset->Value.getSExtValue(),
+          IsInBounds};
 }
 
 static void addZeroImm(MachineInstrBuilder &MIB) {
@@ -6418,7 +6386,8 @@ AMDGPUInstructionSelector::parseMUBUFAddress(Register Src) const {
   Register PtrBase;
   int64_t Offset;
 
-  std::tie(PtrBase, Offset) = getPtrBaseWithConstantOffset(Src, *MRI);
+  std::tie(PtrBase, Offset, std::ignore) =
+      getPtrBaseWithConstantOffset(Src, *MRI);
   if (isUInt<32>(Offset)) {
     Data.N0 = PtrBase;
     Data.Offset = Offset;
@@ -6817,6 +6786,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
+    case Intrinsic::amdgcn_s_barrier_join:
+      return AMDGPU::S_BARRIER_JOIN_IMM;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -6824,6 +6795,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
+    case Intrinsic::amdgcn_s_barrier_join:
+      return AMDGPU::S_BARRIER_JOIN_M0;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };
@@ -6874,8 +6847,11 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
       BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0).addReg(TmpReg4);
   constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
 
+  unsigned Opc = IntrID == Intrinsic::amdgcn_s_barrier_init
+                     ? AMDGPU::S_BARRIER_INIT_M0
+                     : AMDGPU::S_BARRIER_SIGNAL_M0;
   MachineInstrBuilder MIB;
-  MIB = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_M0));
+  MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
 
   I.eraseFromParent();
   return true;
@@ -7100,6 +7076,38 @@ void AMDGPUInstructionSelector::renderRoundMode(MachineInstrBuilder &MIB,
   // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
   // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
   MIB.addImm((MI.getOperand(OpIdx).getImm() + 3) % 4);
+}
+
+void AMDGPUInstructionSelector::renderVOP3PModsNeg(MachineInstrBuilder &MIB,
+                                                   const MachineInstr &MI,
+                                                   int OpIdx) const {
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (MI.getOperand(OpIdx).getImm())
+    Mods ^= SISrcMods::NEG;
+  MIB.addImm((int64_t)Mods);
+}
+
+void AMDGPUInstructionSelector::renderVOP3PModsNegs(MachineInstrBuilder &MIB,
+                                                    const MachineInstr &MI,
+                                                    int OpIdx) const {
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (MI.getOperand(OpIdx).getImm())
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  MIB.addImm((int64_t)Mods);
+}
+
+void AMDGPUInstructionSelector::renderVOP3PModsNegAbs(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  unsigned Val = MI.getOperand(OpIdx).getImm();
+  unsigned Mods = SISrcMods::OP_SEL_1; // default: none
+  if (Val == 1) // neg
+    Mods ^= SISrcMods::NEG;
+  if (Val == 2) // abs
+    Mods ^= SISrcMods::ABS;
+  if (Val == 3) // neg and abs
+    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
+  MIB.addImm((int64_t)Mods);
 }
 
 void AMDGPUInstructionSelector::renderPrefetchLoc(MachineInstrBuilder &MIB,

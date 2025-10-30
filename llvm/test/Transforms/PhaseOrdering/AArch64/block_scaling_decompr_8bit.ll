@@ -94,7 +94,7 @@ define dso_local noundef i32 @_Z33block_scaling_decompr_8bitjPK27compressed_data
 ; CHECK-NEXT:    [[DST_ADDR_1]] = getelementptr inbounds nuw i8, ptr [[DST_ADDR_052]], i64 48
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT58]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP4]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -801,8 +801,6 @@ attributes #2 = { nocallback nofree nosync nounwind willreturn memory(none) }
 !4 = distinct !{!4, !5}
 !5 = !{!"llvm.loop.mustprogress"}
 ;.
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]]}
 ; CHECK: [[META5]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META6]] = !{!"llvm.loop.unswitch.nontrivial.disable"}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META5]]}
 ;.

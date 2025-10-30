@@ -1,4 +1,4 @@
-//===--- BracesAroundStatement.h - clang-tidy ------- -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,7 +68,7 @@ private:
 /// The algorithm computing them respects comment before and after the statement
 /// and adds line breaks before the braces accordingly.
 BraceInsertionHints
-getBraceInsertionsHints(const Stmt *const S, const LangOptions &LangOpts,
+getBraceInsertionsHints(const Stmt *S, const LangOptions &LangOpts,
                         const SourceManager &SM, SourceLocation StartLoc,
                         SourceLocation EndLocHint = SourceLocation());
 

@@ -28,6 +28,7 @@
 namespace llvm {
 
 class AssumeInst;
+struct OperandBundleUse;
 class Function;
 class raw_ostream;
 class TargetTransformInfo;
@@ -65,7 +66,7 @@ private:
 
   /// Vector of weak value handles to calls of the \@llvm.assume
   /// intrinsic.
-  SmallVector<ResultElem, 4> AssumeHandles;
+  SmallVector<WeakVH, 4> AssumeHandles;
 
   class LLVM_ABI AffectedValueCallbackVH final : public CallbackVH {
     AssumptionCache *AC;
@@ -148,7 +149,7 @@ public:
   /// FIXME: We should replace this with pointee_iterator<filter_iterator<...>>
   /// when we can write that to filter out the null values. Then caller code
   /// will become simpler.
-  MutableArrayRef<ResultElem> assumptions() {
+  MutableArrayRef<WeakVH> assumptions() {
     if (!Scanned)
       scanFunction();
     return AssumeHandles;
@@ -165,6 +166,11 @@ public:
 
     return AVI->second;
   }
+
+  /// Determine which values are affected by this assume operand bundle.
+  static void
+  findValuesAffectedByOperandBundle(OperandBundleUse Bundle,
+                                    function_ref<void(Value *)> InsertAffected);
 };
 
 /// A function analysis which provides an \c AssumptionCache.

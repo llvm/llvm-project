@@ -1,3 +1,6 @@
+/// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
+
 /// This test validates that modules that depend on prebuilt modules 
 ///   resolve `is-in-stable-directories` correctly. 
 /// The steps are: 
@@ -5,8 +8,7 @@
 ///   that is seemingly from the sysroot. However, it depends on a local header that is overlaid.
 /// 2. Build the PCH & dependency PCMs.
 /// 3. Scan a source file that transitively depends on the same modules as the pcm.
- 
-// REQUIRES: shell
+
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/overlay.json.template > %t/overlay.json

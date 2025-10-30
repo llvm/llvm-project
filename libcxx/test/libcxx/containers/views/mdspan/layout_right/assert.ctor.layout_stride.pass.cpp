@@ -12,7 +12,7 @@
 // XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 // ADDITIONAL_COMPILE_FLAGS: -Wno-ctad-maybe-unsupported
 
-// FIXME: https://github.com/llvm/llvm-project/issues/64719
+// FIXME: https://llvm.org/PR64719
 // There appear to be some issues around ctad which make it
 // currently impossible to get this code warning free.
 // Thus added the additional compile flag above

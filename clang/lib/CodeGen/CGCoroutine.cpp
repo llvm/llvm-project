@@ -575,17 +575,19 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
     llvm::Function *CoroEndFn = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
     // See if we have a funclet bundle to associate coro.end with. (WinEH)
     auto Bundles = getBundlesForCoroEnd(CGF);
-    auto *CoroEnd =
-      CGF.Builder.CreateCall(CoroEndFn,
-                             {NullPtr, CGF.Builder.getTrue(),
-                              llvm::ConstantTokenNone::get(CoroEndFn->getContext())},
-                             Bundles);
+    CGF.Builder.CreateCall(
+        CoroEndFn,
+        {NullPtr, CGF.Builder.getTrue(),
+         llvm::ConstantTokenNone::get(CoroEndFn->getContext())},
+        Bundles);
     if (Bundles.empty()) {
       // Otherwise, (landingpad model), create a conditional branch that leads
       // either to a cleanup block or a block with EH resume instruction.
       auto *ResumeBB = CGF.getEHResumeBlock(/*isCleanup=*/true);
       auto *CleanupContBB = CGF.createBasicBlock("cleanup.cont");
-      CGF.Builder.CreateCondBr(CoroEnd, ResumeBB, CleanupContBB);
+      auto *CoroIsInRampFn = CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_ramp);
+      auto *CoroIsInRamp = CGF.Builder.CreateCall(CoroIsInRampFn);
+      CGF.Builder.CreateCondBr(CoroIsInRamp, CleanupContBB, ResumeBB);
       CGF.EmitBlock(CleanupContBB);
     }
   }

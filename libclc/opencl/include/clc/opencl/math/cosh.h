@@ -10,10 +10,10 @@
 #define __CLC_OPENCL_MATH_COSH_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define FUNCTION cosh
+#define __CLC_FUNCTION cosh
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_MATH_COSH_H__

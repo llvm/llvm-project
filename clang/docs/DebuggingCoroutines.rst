@@ -9,14 +9,14 @@ Introduction
 ============
 
 Coroutines in C++ were introduced in C++20, and the user experience for
-debugging them can still be challenging. This document guides you how to most
+debugging them can still be challenging. This document guides you on how to most
 efficiently debug coroutines and how to navigate existing shortcomings in
 debuggers and compilers.
 
 Coroutines are generally used either as generators or for asynchronous
 programming. In this document, we will discuss both use cases. Even if you are
 using coroutines for asynchronous programming, you should still read the
-generators section, as it will introduce foundational debugging techniques also
+generators section, as it introduces foundational debugging techniques also
 applicable to the debugging of asynchronous programs.
 
 Both compilers (clang, gcc, ...) and debuggers (lldb, gdb, ...) are
@@ -34,15 +34,15 @@ scripting. This guide comes with a basic GDB script for coroutine debugging.
 This guide will first showcase the more polished, bleeding-edge experience, but
 will also show you how to debug coroutines with older toolchains. In general,
 the older your toolchain, the deeper you will have to dive into the
-implementation details of coroutines (such as their ABI). The further down in
-this document you go, the more low-level, technical the content will become. If
+implementation details of coroutines (such as their ABI). The further down you go in
+this document, the more low-level, technical the content will become. If
 you are on an up-to-date toolchain, you will hopefully be able to stop reading
 earlier.
 
 Debugging generators
 ====================
 
-One of the two major use cases for coroutines in C++ are generators, i.e.,
+One of the two major use cases for coroutines in C++ is generators, i.e.,
 functions which can produce values via ``co_yield``. Values are produced
 lazily, on-demand. For this purpose, every time a new value is requested, the
 coroutine gets resumed. As soon as it reaches a ``co_yield`` and thereby
@@ -141,7 +141,7 @@ a regular function.
 
 Note the two additional variables ``__promise`` and ``__coro_frame``. Those
 show the internal state of the coroutine. They are not relevant for our
-generator example, but will be relevant for asynchronous programming described
+generator example but will be relevant for asynchronous programming described
 in the next section.
 
 Stepping out of a coroutine
@@ -174,13 +174,13 @@ Inspecting a suspended coroutine
 --------------------------------
 
 The ``print10Elements`` function receives an opaque ``generator`` type. Let's
-assume we are suspended at the ``++gen;`` line, and want to inspect the
+assume we are suspended at the ``++gen;`` line and want to inspect the
 generator and its internal state.
 
 To do so, we can simply look into the ``gen.hdl`` variable. LLDB comes with a
 pretty printer for ``std::coroutine_handle`` which will show us the internal
-state of the coroutine. For GDB, you will have to use the ``show-coro-frame``
-command provided by the :ref:`gdb-script`.
+state of the coroutine. For GDB, the pretty printer is provided by a script,
+see :ref:`gdb-script` for setup instructions.
 
 .. image:: ./coro-generator-suspended.png
 
@@ -188,7 +188,7 @@ We can see two function pointers ``resume`` and ``destroy``. These pointers
 point to the resume / destroy functions. By inspecting those function pointers,
 we can see that our ``generator`` is actually backed by our ``fibonacci``
 coroutine. When using VS Code + lldb-dap, you can Cmd+Click on the function
-address (``0x555...`` in the screenshot) to directly jump to the function
+address (``0x555...`` in the screenshot) to jump directly to the function
 definition backing your coroutine handle.
 
 Next, we see the ``promise``. In our case, this reveals the current value of
@@ -206,23 +206,16 @@ Tracking the exact suspension point
 
 Among the compiler-generated members, the ``__coro_index`` is particularly
 important. This member identifies the suspension point at which the coroutine
-is currently suspended.
+is currently suspended. However, it is non-trivial to map this number back to
+a source code location.
 
-However, it is non-trivial to map this number back to a source code location.
-The compiler emits debug info labels for the suspension points. This allows us
-to map the suspension point index back to a source code location. In gdb, we
-can use the ``info line`` command to get the source code location of the
-suspension point.
+For GDB, the provided :ref:`gdb-script` already takes care of this and provides
+the exact line number of the suspension point as part of the coroutine handle's
+summary string. Unfortunately, LLDB's pretty-printer does not support this, yet.
+Furthermore, those labels are only emitted starting with clang 21.0.
 
-::
-
-  (gdb) info line -function coro_task -label __coro_resume_2
-  Line 45 of "llvm-example.cpp" starts at address 0x1b1b <_ZL9coro_taski.resume+555> and ends at 0x1b46 <_ZL9coro_taski.resume+598>.
-  Line 45 of "llvm-example.cpp" starts at address 0x201b <_ZL9coro_taski.destroy+555> and ends at 0x2046 <_ZL9coro_taski.destroy+598>.
-  Line 45 of "llvm-example.cpp" starts at address 0x253b <_ZL9coro_taski.cleanup+555> and ends at 0x2566 <_ZL9coro_taski.cleanup+598>.
-
-LLDB does not support looking up labels. Furthermore, those labels are only emitted
-starting with clang 21.0.
+When debugging with LLDB or when using older clang versions, we will have to use
+a different approach.
 
 For simple cases, you might still be able to guess the suspension point correctly.
 Alternatively, you might also want to modify your coroutine library to store
@@ -247,12 +240,12 @@ the line number of the current suspension point in the promise:
   };
 
 This stores the return address of ``await_suspend`` within the promise.
-Thereby, we can read it back from the promise of a suspended coroutine, and map
+Thereby, we can read it back from the promise of a suspended coroutine and map
 it to an exact source code location. For a complete example, see the ``task``
 type used below for asynchronous programming.
 
 Alternatively, we can modify the C++ code to store the line number in the
-promise type. We can use a ``std::source_location`` to get the line number of
+promise type. We can use ``std::source_location`` to get the line number of
 the await and store it inside the ``promise_type``. In the debugger, we can
 then read the line number from the promise of the suspended coroutine.
 
@@ -270,7 +263,7 @@ then read the line number from the promise of the suspended coroutine.
   };
 
 The downside of both approaches is that they come at the price of additional
-runtime cost. In particular the second approach increases binary size, since it
+runtime cost. In particular, the second approach increases binary size, since it
 requires additional ``std::source_location`` objects, and those source
 locations are not stripped by split-dwarf. Whether the first approach is worth
 the additional runtime cost is a trade-off you need to make yourself.
@@ -285,7 +278,7 @@ provide custom debugging support, so in addition to this guide, you might want
 to check out their documentation.
 
 When using coroutines for asynchronous programming, your library usually
-provides you some ``task`` type. This type usually looks similar to this:
+provides you with some ``task`` type. This type usually looks similar to this:
 
 .. code-block:: c++
 
@@ -479,7 +472,7 @@ One such solution is to store the list of in-flight coroutines in a collection:
   };
 
 With this in place, it is possible to inspect ``inflight_coroutines`` from the
-debugger, and rely on LLDB's ``std::coroutine_handle`` pretty-printer to
+debugger and rely on LLDB's ``std::coroutine_handle`` pretty-printer to
 inspect the coroutines.
 
 This technique will track *all* coroutines, also the ones which are currently
@@ -498,8 +491,8 @@ LLDB before 21.0 did not yet show the ``__coro_frame`` inside
 ``coroutine_handle``. To inspect the coroutine frame, you had to use the
 approach described in the :ref:`devirtualization` section.
 
-LLDB before 18.0 was hiding the ``__promise`` and ``__coro_frame``
-variable by default. The variables are still present, but they need to be
+LLDB before 18.0 hid the ``__promise`` and ``__coro_frame``
+variables by default. The variables are still present, but they need to be
 explicitly added to the "watch" pane in VS Code or requested via
 ``print __promise`` and ``print __coro_frame`` from the debugger console.
 
@@ -511,9 +504,9 @@ section.
 Toolchain Implementation Details
 ================================
 
-This section covers the ABI, as well as additional compiler-specific behavior.
+This section covers the ABI as well as additional compiler-specific behavior.
 The ABI is followed by all compilers, on all major systems, including Windows,
-Linux and macOS. Different compilers emit different debug information, though.
+Linux, and macOS. Different compilers emit different debug information, though.
 
 Ramp, resume and destroy functions
 ----------------------------------
@@ -595,7 +588,7 @@ functions as their first two members. As such, we can read the function
 pointers from the coroutine frame and then obtain the function's name from its
 address.
 
-The promise is guaranteed to be at a 16 byte offset from the coroutine frame.
+The promise is guaranteed to be at a 16-byte offset from the coroutine frame.
 If we have a coroutine handle at address 0x416eb0, we can hence reinterpret-cast
 the promise as follows:
 
@@ -607,8 +600,8 @@ Implementation in clang / LLVM
 ------------------------------
 
 The C++ Coroutines feature in the Clang compiler is implemented in two parts of
-the compiler. Semantic analysis is performed in Clang, and Coroutine
-construction and optimization takes place in the LLVM middle-end.
+the compiler. Semantic analysis is performed in Clang, and coroutine
+construction and optimization take place in the LLVM middle-end.
 
 For each coroutine function, the frontend generates a single corresponding
 LLVM-IR function. This function uses special ``llvm.coro.suspend`` intrinsics
@@ -622,7 +615,7 @@ points into the coroutine frame. Most of the heavy lifting to preserve debugging
 information is done in this pass. This pass needs to rewrite all variable
 locations to point into the coroutine frame.
 
-Afterwards, a couple of additional optimizations are applied, before code
+Afterwards, a couple of additional optimizations are applied before code
 gets emitted, but none of them are really interesting regarding debugging
 information.
 
@@ -636,8 +629,8 @@ However, this is not possible for coroutine frames because the frames are
 constructed in the LLVM middle-end.
 
 To mitigate this problem, the LLVM middle end attempts to generate some debug
-information, which is unfortunately incomplete, since much of the language
-specific information is missing in the middle end.
+information, which is unfortunately incomplete, since much of the
+language-specific information is missing in the middle end.
 
 .. _devirtualization:
 
@@ -655,42 +648,26 @@ There are two possible approaches to do so:
    We can lookup their types and thereby get the types of promise
    and coroutine frame.
 
-In gdb, one can use the following approach to devirtualize coroutine type,
-assuming we have a ``std::coroutine_handle`` is at address 0x418eb0:
+In general, the second approach is preferred, as it is more portable.
 
-::
-
-  (gdb) # Get the address of coroutine frame
-  (gdb) print/x *0x418eb0
-  $1 = 0x4019e0
-  (gdb) # Get the linkage name for the coroutine
-  (gdb) x 0x4019e0
-  0x4019e0 <_ZL9coro_taski>:  0xe5894855
-  (gdb) # Turn off the demangler temporarily to avoid the debugger misunderstanding the name.
-  (gdb) set demangle-style none
-  (gdb) # The coroutine frame type is 'linkage_name.coro_frame_ty'
-  (gdb) print  ('_ZL9coro_taski.coro_frame_ty')*(0x418eb0)
-  $2 = {__resume_fn = 0x4019e0 <coro_task(int)>, __destroy_fn = 0x402000 <coro_task(int)>, __promise = {...}, ...}
-
-In practice, one would use the ``show-coro-frame`` command provided by the
-:ref:`gdb-script`.
+To do so, we look up the types in the destroy function and not the resume function
+because the resume function pointer will be set to a ``nullptr`` as soon as a
+coroutine reaches its final suspension point. If we used the resume function,
+devirtualization would hence fail for all coroutines that have reached their final
+suspension point.
 
 LLDB comes with devirtualization support out of the box, as part of the
-pretty-printer for ``std::coroutine_handle``. Internally, this pretty-printer
-uses the second approach. We look up the types in the destroy function and not
-the resume function because the resume function pointer will be set to a
-nullptr as soon as a coroutine reaches its final suspension point. If we used
-the resume function, devirtualization would hence fail for all coroutines that
-have reached their final suspension point.
+pretty-printer for ``std::coroutine_handle``. For GDB, a similar pretty-printer
+is provided by the :ref:`gdb-script`.
 
 Interpreting the coroutine frame in optimized builds
 ----------------------------------------------------
 
 The ``__coro_frame`` variable usually refers to the coroutine frame of an
-*in-flight* coroutine. This means, the coroutine is currently executing.
+*in-flight* coroutine. This means the coroutine is currently executing.
 However, the compiler only guarantees the coroutine frame to be in a consistent
 state while the coroutine is suspended. As such, the variables inside the
-``__coro_frame`` variable might be outdated, in particular when optimizations
+``__coro_frame`` variable might be outdated, particularly when optimizations
 are enabled.
 
 Furthermore, when optimizations are enabled, the compiler will layout the
@@ -731,7 +708,7 @@ despite ``a`` being frequently incremented.
 
 While this might be surprising, this is a result of the optimizer recognizing
 that it can eliminate most of the load/store operations.
-The above code gets optimized to the equivalent of:
+The above code is optimized to the equivalent of:
 
 .. code-block:: c++
 
@@ -754,6 +731,26 @@ not directly correspond to ``a``, but is instead a variable generated to assist
 the compiler in code generation. The variables in an optimized coroutine frame
 should not be thought of as directly representing the variables in the C++
 source.
+
+
+Mapping suspension point indices to source code locations
+---------------------------------------------------------
+
+To aid in mapping a ``__coro_index`` back to a source code location, clang 21.0
+and newer emit special, compiler-generated labels for the suspension points.
+
+In gdb, we can use the ``info line`` command to get the source code location of
+the suspension point.
+
+::
+
+  (gdb) info line -function coro_task -label __coro_resume_2
+  Line 45 of "llvm-example.cpp" starts at address 0x1b1b <_ZL9coro_taski.resume+555> and ends at 0x1b46 <_ZL9coro_taski.resume+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x201b <_ZL9coro_taski.destroy+555> and ends at 0x2046 <_ZL9coro_taski.destroy+598>.
+  Line 45 of "llvm-example.cpp" starts at address 0x253b <_ZL9coro_taski.cleanup+555> and ends at 0x2566 <_ZL9coro_taski.cleanup+598>.
+
+LLDB does not support looking up labels, yet. For this reason, LLDB's pretty-printer
+does not show the exact line number of the suspension point.
 
 
 Resources
@@ -1017,156 +1014,270 @@ Note that this script requires LLDB 21.0 or newer.
 GDB Debugger Script
 -------------------
 
-For GDB, the following script provides a couple of useful commands:
+The following script provides:
 
-* ``async-bt`` to print the stack trace of a coroutine
-* ``show-coro-frame`` to print the coroutine frame, similar to
-  LLDB's builtin pretty-printer for coroutine frames
+* a pretty-printer for coroutine handles
+* a frame filter to add coroutine frames to the built-in ``bt`` command
+* the ``get_coro_frame`` and ``get_coro_promise`` functions to be used in
+  expressions, e.g. ``p get_coro_promise(fib.coro_hdl)->current_state``
+
+It can be loaded into GDB using ``source gdb_coro_debugging.py``.
+To load this by default, add this command to your ``~/.gdbinit`` file.
 
 .. code-block:: python
 
-  # debugging-helper.py
+  # gdb_coro_debugging.py
   import gdb
   from gdb.FrameDecorator import FrameDecorator
 
-  class SymValueWrapper():
-      def __init__(self, symbol, value):
-          self.sym = symbol
-          self.val = value
+  import typing
+  import re
 
-      def __str__(self):
-          return str(self.sym) + " = " + str(self.val)
+  def _load_pointer_at(addr: int):
+      return gdb.Value(addr).reinterpret_cast(gdb.lookup_type('void').pointer().pointer()).dereference()
 
-  def get_long_pointer_size():
-      return gdb.lookup_type('long').pointer().sizeof
+  """
+  Devirtualized coroutine frame.
 
-  def cast_addr2long_pointer(addr):
-      return gdb.Value(addr).cast(gdb.lookup_type('long').pointer())
+  Devirtualizes the promise and frame pointer types by inspecting
+  the destroy function.
 
-  def dereference(addr):
-      return long(cast_addr2long_pointer(addr).dereference())
+  Implements `to_string` and `children` to be used by `gdb.printing.PrettyPrinter`.
+  Base class for `CoroutineHandlePrinter`.
+  """
+  class DevirtualizedCoroFrame:
+      def __init__(self, frame_ptr_raw: int, val: gdb.Value | None = None):
+          self.val = val
+          self.frame_ptr_raw = frame_ptr_raw
 
-  class CoroutineFrame(object):
-      def __init__(self, task_addr):
-          self.frame_addr = task_addr
-          self.resume_addr = task_addr
-          self.destroy_addr = task_addr + get_long_pointer_size()
-          self.promise_addr = task_addr + get_long_pointer_size() * 2
-          # In the example, the continuation is the first field member of the promise_type.
-          # So they have the same addresses.
-          # If we want to generalize the scripts to other coroutine types, we need to be sure
-          # the continuation field is the first member of promise_type.
-          self.continuation_addr = self.promise_addr
+          # Get the resume and destroy pointers.
+          if frame_ptr_raw == 0:
+              self.resume_ptr = None
+              self.destroy_ptr = None
+              self.promise_ptr = None
+              self.frame_ptr = gdb.Value(frame_ptr_raw).reinterpret_cast(gdb.lookup_type("void").pointer())
+              return
 
-      def next_task_addr(self):
-          return dereference(self.continuation_addr)
+          # Get the resume and destroy pointers.
+          self.resume_ptr = _load_pointer_at(frame_ptr_raw)
+          self.destroy_ptr = _load_pointer_at(frame_ptr_raw + 8)
 
+          # Devirtualize the promise and frame pointer types.
+          frame_type = gdb.lookup_type("void")
+          promise_type = gdb.lookup_type("void")
+          self.destroy_func = gdb.block_for_pc(int(self.destroy_ptr))
+          if self.destroy_func is not None:
+              frame_var = gdb.lookup_symbol("__coro_frame", self.destroy_func, gdb.SYMBOL_VAR_DOMAIN)[0]
+              if frame_var is not None:
+                  frame_type = frame_var.type
+              promise_var = gdb.lookup_symbol("__promise", self.destroy_func, gdb.SYMBOL_VAR_DOMAIN)[0]
+              if promise_var is not None:
+                  promise_type = promise_var.type.strip_typedefs()
+
+          # If the type has a template argument, prefer it over the devirtualized type.
+          if self.val is not None:
+              promise_type_template_arg = self.val.type.template_argument(0)
+              if promise_type_template_arg is not None and promise_type_template_arg.code != gdb.TYPE_CODE_VOID:
+                  promise_type = promise_type_template_arg
+
+          self.promise_ptr = gdb.Value(frame_ptr_raw + 16).reinterpret_cast(promise_type.pointer())
+          self.frame_ptr = gdb.Value(frame_ptr_raw).reinterpret_cast(frame_type.pointer())
+
+          # Try to get the suspension point index and look up the exact line entry.
+          self.suspension_point_index = int(self.frame_ptr.dereference()["__coro_index"]) if frame_type.code == gdb.TYPE_CODE_STRUCT else None
+          self.resume_func = gdb.block_for_pc(int(self.resume_ptr))
+          self.resume_label = None
+          if self.resume_func is not None and self.suspension_point_index is not None:
+              label_name = f"__coro_resume_{self.suspension_point_index}"
+              self.resume_label = gdb.lookup_symbol(label_name, self.resume_func, gdb.SYMBOL_LABEL_DOMAIN)[0]
+
+      def get_function_name(self):
+          if self.destroy_func is None:
+              return None
+          name = self.destroy_func.function.name
+          # Strip the "clone" suffix if it exists.
+          if "() [clone " in name:
+              name = name[:name.index("() [clone ")]
+          return name
+
+      def to_string(self):
+          result = "coro(" + str(self.frame_ptr_raw) + ")"
+          if self.destroy_func is not None:
+              result += ": " + self.get_function_name()
+          if self.resume_label is not None:
+              result += ", line " + str(self.resume_label.line)
+          if self.suspension_point_index is not None:
+              result += ", suspension point " + str(self.suspension_point_index)
+          return result
+
+      def children(self):
+          if self.resume_ptr is None:
+              return [
+                  ("coro_frame", self.frame_ptr),
+              ]
+          else:
+              return [
+                  ("resume", self.resume_ptr),
+                  ("destroy", self.destroy_ptr),
+                  ("promise", self.promise_ptr),
+                  ("coro_frame", self.frame_ptr)
+              ]
+
+
+  # Works for both libc++ and libstdc++.
+  libcxx_corohdl_regex = re.compile('^std::__[A-Za-z0-9]+::coroutine_handle<.+>$|^std::coroutine_handle<.+>(( )?&)?$')
+
+  def _extract_coro_frame_ptr_from_handle(val: gdb.Value):
+      if libcxx_corohdl_regex.match(val.type.strip_typedefs().name) is None:
+          raise ValueError("Expected a std::coroutine_handle, got %s" % val.type.strip_typedefs().name)
+
+      # We expect the coroutine handle to have a single field, which is the frame pointer.
+      # This heuristic works for both libc++ and libstdc++.
+      fields = val.type.fields()
+      if len(fields) != 1:
+          raise ValueError("Expected 1 field, got %d" % len(fields))
+      return int(val[fields[0]])
+
+
+  """
+  Pretty printer for `std::coroutine_handle<T>`
+
+  Works for both libc++ and libstdc++.
+
+  It prints the coroutine handle as a struct with the following fields:
+  - resume: the resume function pointer
+  - destroy: the destroy function pointer
+  - promise: the promise pointer
+  - coro_frame: the coroutine frame pointer
+
+  Most of the functionality is implemented in `DevirtualizedCoroFrame`.
+  """
+  class CoroutineHandlePrinter(DevirtualizedCoroFrame):
+      def __init__(self, val : gdb.Value):
+          frame_ptr_raw = _extract_coro_frame_ptr_from_handle(val)
+          super(CoroutineHandlePrinter, self).__init__(frame_ptr_raw, val)
+
+
+  def build_pretty_printer():
+      pp = gdb.printing.RegexpCollectionPrettyPrinter("coroutine")
+      pp.add_printer('std::coroutine_handle', libcxx_corohdl_regex, CoroutineHandlePrinter)
+      return pp
+
+  gdb.printing.register_pretty_printer(
+      gdb.current_objfile(),
+      build_pretty_printer())
+
+
+  """
+  Get the coroutine frame pointer from a coroutine handle.
+
+  Usage:
+  ```
+  p *get_coro_frame(coroutine_hdl)
+  ```
+  """
+  class GetCoroFrame(gdb.Function):
+      def __init__(self):
+          super(GetCoroFrame, self).__init__("get_coro_frame")
+
+      def invoke(self, coroutine_hdl_raw):
+          return CoroutineHandlePrinter(coroutine_hdl_raw).frame_ptr
+
+  GetCoroFrame()
+
+
+  """
+  Get the coroutine frame pointer from a coroutine handle.
+
+  Usage:
+  ```
+  p *get_coro_promise(coroutine_hdl)
+  ```
+  """
+  class GetCoroFrame(gdb.Function):
+      def __init__(self):
+          super(GetCoroFrame, self).__init__("get_coro_promise")
+
+      def invoke(self, coroutine_hdl_raw):
+          return CoroutineHandlePrinter(coroutine_hdl_raw).promise_ptr
+
+  GetCoroFrame()
+
+
+  """
+  Decorator for coroutine frames.
+
+  Used by `CoroutineFrameFilter` to add the coroutine frames to the built-in `bt` command.
+  """
   class CoroutineFrameDecorator(FrameDecorator):
-      def __init__(self, coro_frame):
-          super(CoroutineFrameDecorator, self).__init__(None)
+      def __init__(self, coro_frame: DevirtualizedCoroFrame, inferior_frame: gdb.Frame):
+          super(CoroutineFrameDecorator, self).__init__(inferior_frame)
           self.coro_frame = coro_frame
-          self.resume_func = dereference(self.coro_frame.resume_addr)
-          self.resume_func_block = gdb.block_for_pc(self.resume_func)
-          if self.resume_func_block is None:
-              raise Exception('Not stackless coroutine.')
-          self.line_info = gdb.find_pc_line(self.resume_func)
-
-      def address(self):
-          return self.resume_func
-
-      def filename(self):
-          return self.line_info.symtab.filename
-
-      def frame_args(self):
-          return [SymValueWrapper("frame_addr", cast_addr2long_pointer(self.coro_frame.frame_addr)),
-                  SymValueWrapper("promise_addr", cast_addr2long_pointer(self.coro_frame.promise_addr)),
-                  SymValueWrapper("continuation_addr", cast_addr2long_pointer(self.coro_frame.continuation_addr))
-                  ]
 
       def function(self):
-          return self.resume_func_block.function.print_name
+          func_name = self.coro_frame.get_function_name()
+          if func_name is not None:
+              return "[async] " + func_name
+          return "[async] coroutine (coro_frame=" + str(self.coro_frame.frame_ptr_raw) + ")"
+
+      def address(self):
+          return None
+
+      def filename(self):
+          if self.coro_frame.destroy_func is not None:
+              return self.coro_frame.destroy_func.function.symtab.filename
+          return None
 
       def line(self):
-          return self.line_info.line
+          if self.coro_frame.resume_label is not None:
+              return self.coro_frame.resume_label.line
+          return None
 
-  class StripDecorator(FrameDecorator):
-      def __init__(self, frame):
-          super(StripDecorator, self).__init__(frame)
-          self.frame = frame
-          f = frame.function()
-          self.function_name = f
+      def frame_args(self):
+          return []
 
-      def __str__(self, shift = 2):
-          addr = "" if self.address() is None else '%#x' % self.address() + " in "
-          location = "" if self.filename() is None else " at " + self.filename() + ":" + str(self.line())
-          return addr + self.function() + " " + str([str(args) for args in self.frame_args()]) + location
+      def frame_locals(self):
+          return []
 
-  class CoroutineFilter:
-      def create_coroutine_frames(self, task_addr):
-          frames = []
-          while task_addr != 0:
-              coro_frame = CoroutineFrame(task_addr)
-              frames.append(CoroutineFrameDecorator(coro_frame))
-              task_addr = coro_frame.next_task_addr()
-          return frames
 
-  class AsyncStack(gdb.Command):
+  def _get_continuation(promise: gdb.Value) -> DevirtualizedCoroFrame | None:
+      try:
+          # TODO: adjust this according for your coroutine framework
+          return DevirtualizedCoroFrame(_extract_coro_frame_ptr_from_handle(promise["continuation"]))
+      except Exception as e:
+          return None
+
+
+  def _create_coroutine_frames(coro_frame: DevirtualizedCoroFrame, inferior_frame: gdb.Frame):
+      while coro_frame is not None:
+          yield CoroutineFrameDecorator(coro_frame, inferior_frame)
+          coro_frame = _get_continuation(coro_frame.promise_ptr)
+
+
+  """
+  Frame filter to add coroutine frames to the built-in `bt` command.
+  """
+  class CppCoroutineFrameFilter():
       def __init__(self):
-          super(AsyncStack, self).__init__("async-bt", gdb.COMMAND_USER)
+          self.name = "CppCoroutineFrameFilter"
+          self.priority = 50
+          self.enabled = True
+          # Register this frame filter with the global frame_filters dictionary.
+          gdb.frame_filters[self.name] = self
 
-      def invoke(self, arg, from_tty):
-          coroutine_filter = CoroutineFilter()
-          argv = gdb.string_to_argv(arg)
-          if len(argv) == 0:
+      def filter(self, frame_iter: typing.Iterable[gdb.FrameDecorator]):
+          for frame in frame_iter:
+              yield frame
+              inferior_frame = frame.inferior_frame()
               try:
-                  task = gdb.parse_and_eval('__coro_frame')
-                  task = int(str(task.address), 16)
+                  promise_ptr = inferior_frame.read_var("__promise")
               except Exception:
-                  print ("Can't find __coro_frame in current context.\n" +
-                        "Please use `async-bt` in stackless coroutine context.")
-                  return
-          elif len(argv) != 1:
-              print("usage: async-bt <pointer to task>")
-              return
-          else:
-              task = int(argv[0], 16)
+                  continue
+              parent_coro = _get_continuation(promise_ptr)
+              if parent_coro is not None:
+                  yield from _create_coroutine_frames(parent_coro, inferior_frame)
 
-          frames = coroutine_filter.create_coroutine_frames(task)
-          i = 0
-          for f in frames:
-              print '#'+ str(i), str(StripDecorator(f))
-              i += 1
-          return
-
-  AsyncStack()
-
-  class ShowCoroFrame(gdb.Command):
-      def __init__(self):
-          super(ShowCoroFrame, self).__init__("show-coro-frame", gdb.COMMAND_USER)
-
-      def invoke(self, arg, from_tty):
-          argv = gdb.string_to_argv(arg)
-          if len(argv) != 1:
-              print("usage: show-coro-frame <address of coroutine frame>")
-              return
-
-          addr = int(argv[0], 16)
-          block = gdb.block_for_pc(long(cast_addr2long_pointer(addr).dereference()))
-          if block is None:
-              print "block " + str(addr) + " is None."
-              return
-
-          # Disable demangling since gdb will treat names starting with `_Z`(The marker for Itanium ABI) specially.
-          gdb.execute("set demangle-style none")
-
-          coro_frame_type = gdb.lookup_type(block.function.linkage_name + ".coro_frame_ty")
-          coro_frame_ptr_type = coro_frame_type.pointer()
-          coro_frame = gdb.Value(addr).cast(coro_frame_ptr_type).dereference()
-
-          gdb.execute("set demangle-style auto")
-          gdb.write(coro_frame.format_string(pretty_structs = True))
-
-  ShowCoroFrame()
+  CppCoroutineFrameFilter()
 
 Further Reading
 ---------------
@@ -1180,5 +1291,5 @@ The authors of the Folly libraries wrote a blog post series on how they debug co
 * `Async stack traces in folly: Improving debugging in the developer lifecycle <https://developers.facebook.com/blog/post/2021/10/21/async-stack-traces-folly-improving-debugging-developer-lifecycle/>`_
 
 Besides some topics also covered here (stack traces from the debugger), Folly's blog post series also covers
-more additional topics, such as capturing async stack traces in performance profiles via eBPF filters
+additional topics, such as capturing async stack traces in performance profiles via eBPF filters
 and printing async stack traces on crashes.

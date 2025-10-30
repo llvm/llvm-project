@@ -22,13 +22,13 @@ define ptr @test2(i32 %width) {
 
 declare ptr @llvm.stacksave()
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 
 define void @test3() {
   %a = alloca i32
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 

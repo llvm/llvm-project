@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FlangOmpReportVisitor.h"
+#include "flang/Common/idioms.h"
 #include "flang/Parser/openmp-utils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -58,39 +59,22 @@ SourcePosition OpenMPCounterVisitor::getLocation(const OmpWrapperType &w) {
 }
 SourcePosition OpenMPCounterVisitor::getLocation(
     const OpenMPDeclarativeConstruct &c) {
+  const parser::AllCookedSources &allCooked{parsing->allCooked()};
   return std::visit(
-      [&](const auto &o) -> SourcePosition {
-        return parsing->allCooked().GetSourcePositionRange(o.source)->first;
+      common::visitors{
+          [&](const parser::OmpMetadirectiveDirective &o) -> SourcePosition {
+            return allCooked.GetSourcePositionRange(o.v.source)->first;
+          },
+          [&](const auto &o) -> SourcePosition {
+            return allCooked.GetSourcePositionRange(o.source)->first;
+          },
       },
       c.u);
 }
 SourcePosition OpenMPCounterVisitor::getLocation(const OpenMPConstruct &c) {
-  return std::visit(
-      Fortran::common::visitors{
-          [&](const OpenMPStandaloneConstruct &c) -> SourcePosition {
-            return parsing->allCooked().GetSourcePositionRange(c.source)->first;
-          },
-          // OpenMPSectionsConstruct, OpenMPLoopConstruct,
-          // OpenMPBlockConstruct, OpenMPCriticalConstruct Get the source from
-          // the directive field.
-          [&](const auto &c) -> SourcePosition {
-            const CharBlock &source{std::get<0>(c.t).source};
-            return parsing->allCooked().GetSourcePositionRange(source)->first;
-          },
-          [&](const OpenMPAtomicConstruct &c) -> SourcePosition {
-            const CharBlock &source{c.source};
-            return parsing->allCooked().GetSourcePositionRange(source)->first;
-          },
-          [&](const OpenMPSectionConstruct &c) -> SourcePosition {
-            const CharBlock &source{c.source};
-            return parsing->allCooked().GetSourcePositionRange(source)->first;
-          },
-          [&](const OpenMPUtilityConstruct &c) -> SourcePosition {
-            const CharBlock &source{c.source};
-            return parsing->allCooked().GetSourcePositionRange(source)->first;
-          },
-      },
-      c.u);
+  return parsing->allCooked()
+      .GetSourcePositionRange(omp::GetOmpDirectiveName(c).source)
+      ->first;
 }
 
 std::string OpenMPCounterVisitor::getName(const OmpWrapperType &w) {
@@ -101,22 +85,8 @@ std::string OpenMPCounterVisitor::getName(const OmpWrapperType &w) {
   return getName(*std::get<const OpenMPDeclarativeConstruct *>(w));
 }
 std::string OpenMPCounterVisitor::getName(const OpenMPDeclarativeConstruct &c) {
-  return std::visit( //
-      Fortran::common::visitors{
-          [&](const OpenMPUtilityConstruct &o) -> std::string {
-            const CharBlock &source{o.source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const OmpMetadirectiveDirective &o) -> std::string {
-            const CharBlock &source{o.source};
-            return normalize_construct_name(source.ToString());
-          },
-          [&](const auto &o) -> std::string {
-            const CharBlock &source{std::get<Verbatim>(o.t).source};
-            return normalize_construct_name(source.ToString());
-          },
-      },
-      c.u);
+  return normalize_construct_name(
+      omp::GetOmpDirectiveName(c).source.ToString());
 }
 std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
   return normalize_construct_name(

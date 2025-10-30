@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -triple \
-// RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -o - | \
+// RUN:   dxil-pc-shadermodel6.4-compute %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -triple \
 // RUN:   spirv-pc-vulkan-compute %s -emit-llvm -o - | \

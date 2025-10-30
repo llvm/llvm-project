@@ -256,7 +256,7 @@ define void @flag_setting() {
 ; CHECK-SD-NEXT:    b.gt .LBB2_4
 ; CHECK-SD-NEXT:  // %bb.1: // %test2
 ; CHECK-SD-NEXT:    tst x9, x10, lsl #63
-; CHECK-SD-NEXT:    b.lt .LBB2_4
+; CHECK-SD-NEXT:    b.mi .LBB2_4
 ; CHECK-SD-NEXT:  // %bb.2: // %test3
 ; CHECK-SD-NEXT:    tst x9, x10, asr #12
 ; CHECK-SD-NEXT:    b.gt .LBB2_4
@@ -277,7 +277,7 @@ define void @flag_setting() {
 ; CHECK-GI-NEXT:    b.gt .LBB2_4
 ; CHECK-GI-NEXT:  // %bb.1: // %test2
 ; CHECK-GI-NEXT:    tst x9, x10, lsl #63
-; CHECK-GI-NEXT:    b.lt .LBB2_4
+; CHECK-GI-NEXT:    b.mi .LBB2_4
 ; CHECK-GI-NEXT:  // %bb.2: // %test3
 ; CHECK-GI-NEXT:    asr x10, x10, #12
 ; CHECK-GI-NEXT:    tst x10, x9

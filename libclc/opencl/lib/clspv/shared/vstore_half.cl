@@ -18,37 +18,37 @@
 
 #pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
-#define ROUND_VEC1(out, in, ROUNDF) out = ROUNDF(in);
-#define ROUND_VEC2(out, in, ROUNDF)                                            \
-  ROUND_VEC1(out.lo, in.lo, ROUNDF);                                           \
-  ROUND_VEC1(out.hi, in.hi, ROUNDF);
-#define ROUND_VEC3(out, in, ROUNDF)                                            \
-  ROUND_VEC1(out.s0, in.s0, ROUNDF);                                           \
-  ROUND_VEC1(out.s1, in.s1, ROUNDF);                                           \
-  ROUND_VEC1(out.s2, in.s2, ROUNDF);
-#define ROUND_VEC4(out, in, ROUNDF)                                            \
-  ROUND_VEC2(out.lo, in.lo, ROUNDF);                                           \
-  ROUND_VEC2(out.hi, in.hi, ROUNDF);
-#define ROUND_VEC8(out, in, ROUNDF)                                            \
-  ROUND_VEC4(out.lo, in.lo, ROUNDF);                                           \
-  ROUND_VEC4(out.hi, in.hi, ROUNDF);
-#define ROUND_VEC16(out, in, ROUNDF)                                           \
-  ROUND_VEC8(out.lo, in.lo, ROUNDF);                                           \
-  ROUND_VEC8(out.hi, in.hi, ROUNDF);
+#define __CLC_ROUND_VEC1(out, in, ROUNDF) out = ROUNDF(in);
+#define __CLC_ROUND_VEC2(out, in, ROUNDF)                                      \
+  __CLC_ROUND_VEC1(out.lo, in.lo, ROUNDF);                                     \
+  __CLC_ROUND_VEC1(out.hi, in.hi, ROUNDF);
+#define __CLC_ROUND_VEC3(out, in, ROUNDF)                                      \
+  __CLC_ROUND_VEC1(out.s0, in.s0, ROUNDF);                                     \
+  __CLC_ROUND_VEC1(out.s1, in.s1, ROUNDF);                                     \
+  __CLC_ROUND_VEC1(out.s2, in.s2, ROUNDF);
+#define __CLC_ROUND_VEC4(out, in, ROUNDF)                                      \
+  __CLC_ROUND_VEC2(out.lo, in.lo, ROUNDF);                                     \
+  __CLC_ROUND_VEC2(out.hi, in.hi, ROUNDF);
+#define __CLC_ROUND_VEC8(out, in, ROUNDF)                                      \
+  __CLC_ROUND_VEC4(out.lo, in.lo, ROUNDF);                                     \
+  __CLC_ROUND_VEC4(out.hi, in.hi, ROUNDF);
+#define __CLC_ROUND_VEC16(out, in, ROUNDF)                                     \
+  __CLC_ROUND_VEC8(out.lo, in.lo, ROUNDF);                                     \
+  __CLC_ROUND_VEC8(out.hi, in.hi, ROUNDF);
 
-#define __FUNC(SUFFIX, VEC_SIZE, TYPE, AS, ROUNDF)                             \
+#define __CLC_XFUNC_IMPL(SUFFIX, VEC_SIZE, TYPE, AS, ROUNDF)                   \
   void _CLC_OVERLOAD vstore_half_##VEC_SIZE(TYPE, size_t, AS half *);          \
   _CLC_OVERLOAD _CLC_DEF void vstore_half##SUFFIX(TYPE vec, size_t offset,     \
                                                   AS half *mem) {              \
     TYPE rounded_vec;                                                          \
-    ROUND_VEC##VEC_SIZE(rounded_vec, vec, ROUNDF);                             \
+    __CLC_ROUND_VEC##VEC_SIZE(rounded_vec, vec, ROUNDF);                       \
     vstore_half_##VEC_SIZE(rounded_vec, offset, mem);                          \
   }                                                                            \
   void _CLC_OVERLOAD vstorea_half_##VEC_SIZE(TYPE, size_t, AS half *);         \
   _CLC_OVERLOAD _CLC_DEF void vstorea_half##SUFFIX(TYPE vec, size_t offset,    \
                                                    AS half *mem) {             \
     TYPE rounded_vec;                                                          \
-    ROUND_VEC##VEC_SIZE(rounded_vec, vec, ROUNDF);                             \
+    __CLC_ROUND_VEC##VEC_SIZE(rounded_vec, vec, ROUNDF);                       \
     vstorea_half_##VEC_SIZE(rounded_vec, offset, mem);                         \
   }
 
@@ -134,17 +134,18 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rte(float x) {
   return roundup ? __clc_rti(x) : __clc_rtz(x);
 }
 
-#define __XFUNC(SUFFIX, VEC_SIZE, TYPE, AS)                                    \
-  __FUNC(SUFFIX, VEC_SIZE, TYPE, AS, __clc_rte)                                \
-  __FUNC(SUFFIX##_rtz, VEC_SIZE, TYPE, AS, __clc_rtz)                          \
-  __FUNC(SUFFIX##_rtn, VEC_SIZE, TYPE, AS, __clc_rtn)                          \
-  __FUNC(SUFFIX##_rtp, VEC_SIZE, TYPE, AS, __clc_rtp)                          \
-  __FUNC(SUFFIX##_rte, VEC_SIZE, TYPE, AS, __clc_rte)
+#define __CLC_XFUNC(SUFFIX, VEC_SIZE, TYPE, AS)                                \
+  __CLC_XFUNC_IMPL(SUFFIX, VEC_SIZE, TYPE, AS, __clc_rte)                      \
+  __CLC_XFUNC_IMPL(SUFFIX##_rtz, VEC_SIZE, TYPE, AS, __clc_rtz)                \
+  __CLC_XFUNC_IMPL(SUFFIX##_rtn, VEC_SIZE, TYPE, AS, __clc_rtn)                \
+  __CLC_XFUNC_IMPL(SUFFIX##_rtp, VEC_SIZE, TYPE, AS, __clc_rtp)                \
+  __CLC_XFUNC_IMPL(SUFFIX##_rte, VEC_SIZE, TYPE, AS, __clc_rte)
 
-#define FUNC(SUFFIX, VEC_SIZE, TYPE, AS) __XFUNC(SUFFIX, VEC_SIZE, TYPE, AS)
+#define __CLC_FUNC(SUFFIX, VEC_SIZE, TYPE, AS)                                 \
+  __CLC_XFUNC(SUFFIX, VEC_SIZE, TYPE, AS)
 
 #define __CLC_BODY "vstore_half.inc"
 #include <clc/math/gentype.inc>
-#undef FUNC
-#undef __XFUNC
-#undef __FUNC
+#undef __CLC_FUNC
+#undef __CLC_XFUNC
+#undef __CLC_XFUNC_IMPL

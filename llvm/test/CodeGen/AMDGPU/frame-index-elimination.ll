@@ -360,7 +360,8 @@ entry:
 ; s_add_i32.
 
 ; GCN-LABEL: {{^}}fi_sop2_s_add_u32_literal_error:
-; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0, 0x2010
+; GCN: s_movk_i32 [[S_MOVK_I32_:s[0-9]+]], 0x1000
+; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0x1010, [[S_MOVK_I32_]]
 ; GCN: s_addc_u32 [[ADD_HI:s[0-9]+]], s{{[0-9]+}}, 0
 define amdgpu_kernel void @fi_sop2_s_add_u32_literal_error() #0 {
 entry:

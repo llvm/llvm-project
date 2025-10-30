@@ -242,17 +242,14 @@ define <2 x i64> @testDoubleword(<2 x i64> %a, i64 %b, i64 %idx) {
 ; AIX-P8-32-LABEL: testDoubleword:
 ; AIX-P8-32:       # %bb.0: # %entry
 ; AIX-P8-32-NEXT:    add r6, r6, r6
-; AIX-P8-32-NEXT:    addi r5, r1, -32
+; AIX-P8-32-NEXT:    addi r5, r1, -16
 ; AIX-P8-32-NEXT:    rlwinm r7, r6, 2, 28, 29
-; AIX-P8-32-NEXT:    stxvw4x v2, 0, r5
+; AIX-P8-32-NEXT:    stxvd2x v2, 0, r5
 ; AIX-P8-32-NEXT:    stwx r3, r5, r7
-; AIX-P8-32-NEXT:    addi r3, r1, -16
-; AIX-P8-32-NEXT:    lxvw4x vs0, 0, r5
-; AIX-P8-32-NEXT:    addi r5, r6, 1
-; AIX-P8-32-NEXT:    rlwinm r5, r5, 2, 28, 29
-; AIX-P8-32-NEXT:    stxvw4x vs0, 0, r3
-; AIX-P8-32-NEXT:    stwx r4, r3, r5
-; AIX-P8-32-NEXT:    lxvw4x v2, 0, r3
+; AIX-P8-32-NEXT:    addi r3, r6, 1
+; AIX-P8-32-NEXT:    rlwinm r3, r3, 2, 28, 29
+; AIX-P8-32-NEXT:    stwx r4, r5, r3
+; AIX-P8-32-NEXT:    lxvd2x v2, 0, r5
 ; AIX-P8-32-NEXT:    blr
 entry:
   %vecins = insertelement <2 x i64> %a, i64 %b, i64 %idx
@@ -426,17 +423,14 @@ define <4 x float> @testFloat2(<4 x float> %a, ptr %b, i32 zeroext %idx1, i32 ze
 ; AIX-P8-LABEL: testFloat2:
 ; AIX-P8:       # %bb.0: # %entry
 ; AIX-P8-NEXT:    lwz r6, 0(r3)
-; AIX-P8-NEXT:    rlwinm r4, r4, 2, 28, 29
-; AIX-P8-NEXT:    addi r7, r1, -32
+; AIX-P8-NEXT:    lwz r3, 1(r3)
+; AIX-P8-NEXT:    addi r7, r1, -16
 ; AIX-P8-NEXT:    stxvw4x v2, 0, r7
 ; AIX-P8-NEXT:    rlwinm r5, r5, 2, 28, 29
+; AIX-P8-NEXT:    rlwinm r4, r4, 2, 28, 29
 ; AIX-P8-NEXT:    stwx r6, r7, r4
-; AIX-P8-NEXT:    addi r4, r1, -16
-; AIX-P8-NEXT:    lxvw4x vs0, 0, r7
-; AIX-P8-NEXT:    lwz r3, 1(r3)
-; AIX-P8-NEXT:    stxvw4x vs0, 0, r4
-; AIX-P8-NEXT:    stwx r3, r4, r5
-; AIX-P8-NEXT:    lxvw4x v2, 0, r4
+; AIX-P8-NEXT:    stwx r3, r7, r5
+; AIX-P8-NEXT:    lxvw4x v2, 0, r7
 ; AIX-P8-NEXT:    blr
 entry:
   %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 1
@@ -493,38 +487,32 @@ define <4 x float> @testFloat3(<4 x float> %a, ptr %b, i32 zeroext %idx1, i32 ze
 ;
 ; AIX-P8-64-LABEL: testFloat3:
 ; AIX-P8-64:       # %bb.0: # %entry
+; AIX-P8-64-NEXT:    li r7, 1
 ; AIX-P8-64-NEXT:    lis r6, 1
-; AIX-P8-64-NEXT:    rlwinm r4, r4, 2, 28, 29
-; AIX-P8-64-NEXT:    addi r7, r1, -32
 ; AIX-P8-64-NEXT:    rlwinm r5, r5, 2, 28, 29
+; AIX-P8-64-NEXT:    rlwinm r4, r4, 2, 28, 29
+; AIX-P8-64-NEXT:    rldic r7, r7, 36, 27
 ; AIX-P8-64-NEXT:    lwzx r6, r3, r6
+; AIX-P8-64-NEXT:    lwzx r3, r3, r7
+; AIX-P8-64-NEXT:    addi r7, r1, -16
 ; AIX-P8-64-NEXT:    stxvw4x v2, 0, r7
 ; AIX-P8-64-NEXT:    stwx r6, r7, r4
-; AIX-P8-64-NEXT:    li r4, 1
-; AIX-P8-64-NEXT:    lxvw4x vs0, 0, r7
-; AIX-P8-64-NEXT:    rldic r4, r4, 36, 27
-; AIX-P8-64-NEXT:    lwzx r3, r3, r4
-; AIX-P8-64-NEXT:    addi r4, r1, -16
-; AIX-P8-64-NEXT:    stxvw4x vs0, 0, r4
-; AIX-P8-64-NEXT:    stwx r3, r4, r5
-; AIX-P8-64-NEXT:    lxvw4x v2, 0, r4
+; AIX-P8-64-NEXT:    stwx r3, r7, r5
+; AIX-P8-64-NEXT:    lxvw4x v2, 0, r7
 ; AIX-P8-64-NEXT:    blr
 ;
 ; AIX-P8-32-LABEL: testFloat3:
 ; AIX-P8-32:       # %bb.0: # %entry
 ; AIX-P8-32-NEXT:    lis r6, 1
-; AIX-P8-32-NEXT:    rlwinm r4, r4, 2, 28, 29
-; AIX-P8-32-NEXT:    addi r7, r1, -32
 ; AIX-P8-32-NEXT:    rlwinm r5, r5, 2, 28, 29
+; AIX-P8-32-NEXT:    rlwinm r4, r4, 2, 28, 29
+; AIX-P8-32-NEXT:    addi r7, r1, -16
 ; AIX-P8-32-NEXT:    lwzx r6, r3, r6
+; AIX-P8-32-NEXT:    lwz r3, 0(r3)
 ; AIX-P8-32-NEXT:    stxvw4x v2, 0, r7
 ; AIX-P8-32-NEXT:    stwx r6, r7, r4
-; AIX-P8-32-NEXT:    addi r4, r1, -16
-; AIX-P8-32-NEXT:    lxvw4x vs0, 0, r7
-; AIX-P8-32-NEXT:    lwz r3, 0(r3)
-; AIX-P8-32-NEXT:    stxvw4x vs0, 0, r4
-; AIX-P8-32-NEXT:    stwx r3, r4, r5
-; AIX-P8-32-NEXT:    lxvw4x v2, 0, r4
+; AIX-P8-32-NEXT:    stwx r3, r7, r5
+; AIX-P8-32-NEXT:    lxvw4x v2, 0, r7
 ; AIX-P8-32-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, ptr %b, i64 65536
@@ -940,25 +928,21 @@ entry:
 define <2 x double> @testDoubleImm1(<2 x double> %a, double %b) {
 ; CHECK-LABEL: testDoubleImm1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd v2, v2, vs1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testDoubleImm1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-BE-NEXT:    xxpermdi v2, vs1, v2, 1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testDoubleImm1:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-P9-NEXT:    xxpermdi v2, vs1, v2, 1
 ; CHECK-P9-NEXT:    blr
 ;
 ; AIX-P8-LABEL: testDoubleImm1:
 ; AIX-P8:       # %bb.0: # %entry
-; AIX-P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; AIX-P8-NEXT:    xxpermdi v2, vs1, v2, 1
 ; AIX-P8-NEXT:    blr
 entry:

@@ -22,7 +22,7 @@ void PythonTestSuite::SetUp() {
   // test suite.
   Py_InitializeEx(0);
   m_gil_state = PyGILState_Ensure();
-  PyRun_SimpleString("import sys");
+  python::RunSimpleString("import sys");
 }
 
 void PythonTestSuite::TearDown() {
@@ -90,7 +90,8 @@ PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(
   return nullptr;
 }
 
-int lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
+uint32_t
+lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
     PyObject *implementor, const char *child_name) {
   return 0;
 }
@@ -101,6 +102,11 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBData(PyObject *data) {
 }
 
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(
+    PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(
     PyObject *data) {
   return nullptr;
 }
@@ -127,6 +133,11 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data) {
 
 void *
 lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data) {
   return nullptr;
 }
 

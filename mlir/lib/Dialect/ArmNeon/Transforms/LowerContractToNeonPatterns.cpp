@@ -158,13 +158,11 @@ protected:
                              PatternRewriter &rewriter) {
     // Check iterator types for matrix multiplication.
     SmallVector<vector::IteratorType> itTypes = op.getIteratorTypesArray();
-    if (!((itTypes.size() == 3 &&
-           (itTypes[0] == vector::IteratorType::parallel &&
-            itTypes[1] == vector::IteratorType::parallel &&
-            itTypes[2] == vector::IteratorType::reduction)) ||
-          (itTypes.size() == 2 &&
-           (itTypes[0] == vector::IteratorType::parallel &&
-            itTypes[1] == vector::IteratorType::reduction))))
+    if ((itTypes.size() != 3 || itTypes[0] != vector::IteratorType::parallel ||
+         itTypes[1] != vector::IteratorType::parallel ||
+         itTypes[2] != vector::IteratorType::reduction) &&
+        (itTypes.size() != 2 || itTypes[0] != vector::IteratorType::parallel ||
+         itTypes[1] != vector::IteratorType::reduction))
       return rewriter.notifyMatchFailure(
           op, "iterator types do not correspond to matrix multiplication");
 

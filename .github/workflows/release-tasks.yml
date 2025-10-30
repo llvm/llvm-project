@@ -38,7 +38,7 @@ jobs:
           sudo apt-get install python3-github
 
       - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Create Release
         env:
@@ -54,6 +54,9 @@ jobs:
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
+    secrets:
+      WWW_RELEASES_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
 
   release-doxygen:
     name: Build and Upload Release Doxygen
@@ -129,7 +132,7 @@ jobs:
           sudo apt-get install python3-github
 
       - name: Checkout LLVM
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           sparse-checkout: llvm/utils/release/github-upload-release.py
           sparse-checkout-cone-mode: false

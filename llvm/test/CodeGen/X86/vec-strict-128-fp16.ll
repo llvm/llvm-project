@@ -79,7 +79,7 @@ define <8 x half> @f11(<2 x double> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsd2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = extractelement <2 x double> %a0, i32 0
   %cvt = call half @llvm.experimental.constrained.fptrunc.f16.f64(double %ext,
@@ -140,7 +140,7 @@ define <8 x half> @f17(<4 x float> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f17:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = extractelement <4 x float> %a0, i32 0
   %cvt = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %ext,

@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -split-input-file -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Physical64 Vulkan requires #spirv.vce<v1.3, [Shader, Linkage, CooperativeMatrixKHR, VulkanMemoryModel, Float16, Addresses], [SPV_KHR_cooperative_matrix, SPV_KHR_vulkan_memory_model]> {
   // CHECK-LABEL: @matrix_access_chain
   spirv.func @matrix_access_chain(%arg0 : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>, %arg1 : i32) -> !spirv.ptr<vector<3xf32>, Function> "None" {
     // CHECK: {{%.*}} = spirv.AccessChain {{%.*}}[{{%.*}}] : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, Function>
@@ -67,7 +72,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Float16], [SPV_KHR_storage_buffer_storage_class]> {
   // CHECK: spirv.GlobalVariable {{@.*}} : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, StorageBuffer>
   spirv.GlobalVariable @var0 : !spirv.ptr<!spirv.matrix<3 x vector<3xf32>>, StorageBuffer>
 

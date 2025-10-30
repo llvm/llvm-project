@@ -1,5 +1,4 @@
 // clang-format off
-// UNSUPPORTED: system-aix
 //
 // Tests that a global destructor is ran on platforms with gnu exception support.
 //

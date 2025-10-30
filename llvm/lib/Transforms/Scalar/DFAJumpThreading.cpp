@@ -60,8 +60,8 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -90,6 +90,7 @@ STATISTIC(NumTransforms, "Number of transformations done");
 STATISTIC(NumCloned, "Number of blocks cloned");
 STATISTIC(NumPaths, "Number of individual paths threaded");
 
+namespace llvm {
 static cl::opt<bool>
     ClViewCfgBefore("dfa-jump-view-cfg-before",
                     cl::desc("View the CFG before DFA Jump Threading"),
@@ -121,8 +122,23 @@ static cl::opt<unsigned>
                   cl::desc("Maximum cost accepted for the transformation"),
                   cl::Hidden, cl::init(50));
 
-namespace {
+static cl::opt<double> MaxClonedRate(
+    "dfa-max-cloned-rate",
+    cl::desc(
+        "Maximum cloned instructions rate accepted for the transformation"),
+    cl::Hidden, cl::init(7.5));
 
+static cl::opt<unsigned>
+    MaxOuterUseBlocks("dfa-max-out-use-blocks",
+                      cl::desc("Maximum unduplicated blocks with outer uses "
+                               "accepted for the transformation"),
+                      cl::Hidden, cl::init(40));
+
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // namespace llvm
+
+namespace {
 class SelectInstToUnfold {
   SelectInst *SI;
   PHINode *SIUse;
@@ -136,24 +152,18 @@ public:
   explicit operator bool() const { return SI && SIUse; }
 };
 
-void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
-            std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-            std::vector<BasicBlock *> *NewBBs);
-
 class DFAJumpThreading {
 public:
-  DFAJumpThreading(AssumptionCache *AC, DominatorTree *DT, LoopInfo *LI,
+  DFAJumpThreading(AssumptionCache *AC, DomTreeUpdater *DTU, LoopInfo *LI,
                    TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE)
-      : AC(AC), DT(DT), LI(LI), TTI(TTI), ORE(ORE) {}
+      : AC(AC), DTU(DTU), LI(LI), TTI(TTI), ORE(ORE) {}
 
   bool run(Function &F);
   bool LoopInfoBroken;
 
 private:
   void
-  unfoldSelectInstrs(DominatorTree *DT,
-                     const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  unfoldSelectInstrs(const SmallVector<SelectInstToUnfold, 4> &SelectInsts) {
     SmallVector<SelectInstToUnfold, 4> Stack(SelectInsts);
 
     while (!Stack.empty()) {
@@ -161,23 +171,25 @@ private:
 
       std::vector<SelectInstToUnfold> NewSIsToUnfold;
       std::vector<BasicBlock *> NewBBs;
-      unfold(&DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
+      unfold(DTU, LI, SIToUnfold, &NewSIsToUnfold, &NewBBs);
 
       // Put newly discovered select instructions into the work list.
       llvm::append_range(Stack, NewSIsToUnfold);
     }
   }
 
+  static void unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                     SelectInstToUnfold SIToUnfold,
+                     std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                     std::vector<BasicBlock *> *NewBBs);
+
   AssumptionCache *AC;
-  DominatorTree *DT;
+  DomTreeUpdater *DTU;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
 };
-
-} // end anonymous namespace
-
-namespace {
+} // namespace
 
 /// Unfold the select instruction held in \p SIToUnfold by replacing it with
 /// control flow.
@@ -186,17 +198,18 @@ namespace {
 /// created basic blocks into \p NewBBs.
 ///
 /// TODO: merge it with CodeGenPrepare::optimizeSelectInst() if possible.
-void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
-            std::vector<SelectInstToUnfold> *NewSIsToUnfold,
-            std::vector<BasicBlock *> *NewBBs) {
+void DFAJumpThreading::unfold(DomTreeUpdater *DTU, LoopInfo *LI,
+                              SelectInstToUnfold SIToUnfold,
+                              std::vector<SelectInstToUnfold> *NewSIsToUnfold,
+                              std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
-  BasicBlock *StartBlock = SI->getParent();
+  assert(SI->hasOneUse());
+  // The select may come indirectly, instead of from where it is defined.
+  BasicBlock *StartBlock = SIUse->getIncomingBlock(*SI->use_begin());
   BranchInst *StartBlockTerm =
       dyn_cast<BranchInst>(StartBlock->getTerminator());
-
   assert(StartBlockTerm);
-  assert(SI->hasOneUse());
 
   if (StartBlockTerm->isUnconditional()) {
     BasicBlock *EndBlock = StartBlock->getUniqueSuccessor();
@@ -254,9 +267,12 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
 
     // Insert the real conditional branch based on the original condition.
     StartBlockTerm->eraseFromParent();
-    BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
-    DTU->applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock},
-                       {DominatorTree::Insert, StartBlock, NewBlock}});
+    auto *BI =
+        BranchInst::Create(EndBlock, NewBlock, SI->getCondition(), StartBlock);
+    if (!ProfcheckDisableMetadataFixes)
+      BI->setMetadata(LLVMContext::MD_prof,
+                      SI->getMetadata(LLVMContext::MD_prof));
+    DTU->applyUpdates({{DominatorTree::Insert, StartBlock, NewBlock}});
   } else {
     BasicBlock *EndBlock = SIUse->getParent();
     BasicBlock *NewBlockT = BasicBlock::Create(
@@ -289,7 +305,11 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
     //  (Use)
     BranchInst::Create(EndBlock, NewBlockF);
     // Insert the real conditional branch based on the original condition.
-    BranchInst::Create(EndBlock, NewBlockF, SI->getCondition(), NewBlockT);
+    auto *BI =
+        BranchInst::Create(EndBlock, NewBlockF, SI->getCondition(), NewBlockT);
+    if (!ProfcheckDisableMetadataFixes)
+      BI->setMetadata(LLVMContext::MD_prof,
+                      SI->getMetadata(LLVMContext::MD_prof));
     DTU->applyUpdates({{DominatorTree::Insert, NewBlockT, NewBlockF},
                        {DominatorTree::Insert, NewBlockT, EndBlock},
                        {DominatorTree::Insert, NewBlockF, EndBlock}});
@@ -333,7 +353,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   }
 
   // Preserve loop info
-  if (Loop *L = LI->getLoopFor(SI->getParent())) {
+  if (Loop *L = LI->getLoopFor(StartBlock)) {
     for (BasicBlock *NewBB : *NewBBs)
       L->addBasicBlockToLoop(NewBB, *LI);
   }
@@ -343,10 +363,12 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   SI->eraseFromParent();
 }
 
+namespace {
 struct ClonedBlock {
   BasicBlock *BB;
   APInt State; ///< \p State corresponds to the next value of a switch stmnt.
 };
+} // namespace
 
 typedef std::deque<BasicBlock *> PathType;
 typedef std::vector<PathType> PathsType;
@@ -363,19 +385,13 @@ typedef DenseMap<BasicBlock *, CloneList> DuplicateBlockMap;
 typedef MapVector<Instruction *, std::vector<Instruction *>> DefMap;
 
 inline raw_ostream &operator<<(raw_ostream &OS, const PathType &Path) {
-  OS << "< ";
-  for (const BasicBlock *BB : Path) {
-    std::string BBName;
-    if (BB->hasName())
-      raw_string_ostream(BBName) << BB->getName();
-    else
-      raw_string_ostream(BBName) << BB;
-    OS << BBName << " ";
-  }
-  OS << ">";
+  auto BBNames = llvm::map_range(
+      Path, [](const BasicBlock *BB) { return BB->getNameOrAsOperand(); });
+  OS << "< " << llvm::join(BBNames, ", ") << " >";
   return OS;
 }
 
+namespace {
 /// ThreadingPath is a path in the control flow of a loop that can be threaded
 /// by cloning necessary basic blocks and replacing conditional branches with
 /// unconditional ones. A threading path includes a list of basic blocks, the
@@ -385,6 +401,10 @@ struct ThreadingPath {
   APInt getExitValue() const { return ExitVal; }
   void setExitValue(const ConstantInt *V) {
     ExitVal = V->getValue();
+    IsExitValSet = true;
+  }
+  void setExitValue(const APInt &V) {
+    ExitVal = V;
     IsExitValSet = true;
   }
   bool isExitValueSet() const { return IsExitValSet; }
@@ -403,7 +423,7 @@ struct ThreadingPath {
   }
 
   void print(raw_ostream &OS) const {
-    OS << Path << " [ " << ExitVal << ", " << DBB->getName() << " ]";
+    OS << Path << " [ " << ExitVal << ", " << DBB->getNameOrAsOperand() << " ]";
   }
 
 private:
@@ -447,7 +467,7 @@ private:
   /// Also, collect select instructions to unfold.
   bool isCandidate(const SwitchInst *SI) {
     std::deque<std::pair<Value *, BasicBlock *>> Q;
-    SmallSet<Value *, 16> SeenValues;
+    SmallPtrSet<Value *, 16> SeenValues;
     SelectInsts.clear();
 
     Value *SICond = SI->getCondition();
@@ -511,7 +531,7 @@ private:
 
   void addToQueue(Value *Val, BasicBlock *BB,
                   std::deque<std::pair<Value *, BasicBlock *>> &Q,
-                  SmallSet<Value *, 16> &SeenValues) {
+                  SmallPtrSet<Value *, 16> &SeenValues) {
     if (SeenValues.insert(Val).second)
       Q.push_back({Val, BB});
   }
@@ -522,7 +542,7 @@ private:
 
     Instruction *SIUse = dyn_cast<Instruction>(SI->user_back());
     // The use of the select inst should be either a phi or another select.
-    if (!SIUse && !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
+    if (!SIUse || !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
       return false;
 
     BasicBlock *SIBB = SI->getParent();
@@ -534,6 +554,8 @@ private:
       return false;
 
     // Only fold the select coming from directly where it is defined.
+    // TODO: We have dealt with the select coming indirectly now. This
+    // constraint can be relaxed.
     PHINode *PHIUser = dyn_cast<PHINode>(SIUse);
     if (PHIUser && PHIUser->getIncomingBlock(*SI->use_begin()) != SIBB)
       return false;
@@ -567,42 +589,8 @@ struct AllSwitchPaths {
   BasicBlock *getSwitchBlock() { return SwitchBlock; }
 
   void run() {
-    StateDefMap StateDef = getStateDefMap();
-    if (StateDef.empty()) {
-      ORE->emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "SwitchNotPredictable",
-                                        Switch)
-               << "Switch instruction is not predictable.";
-      });
-      return;
-    }
-
-    auto *SwitchPhi = cast<PHINode>(Switch->getOperand(0));
-    auto *SwitchPhiDefBB = SwitchPhi->getParent();
-    VisitedBlocks VB;
-    // Get paths from the determinator BBs to SwitchPhiDefBB
-    std::vector<ThreadingPath> PathsToPhiDef =
-        getPathsFromStateDefMap(StateDef, SwitchPhi, VB);
-    if (SwitchPhiDefBB == SwitchBlock) {
-      TPaths = std::move(PathsToPhiDef);
-      return;
-    }
-
-    // Find and append paths from SwitchPhiDefBB to SwitchBlock.
-    PathsType PathsToSwitchBB =
-        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1);
-    if (PathsToSwitchBB.empty())
-      return;
-
-    std::vector<ThreadingPath> TempList;
-    for (const ThreadingPath &Path : PathsToPhiDef) {
-      for (const PathType &PathToSw : PathsToSwitchBB) {
-        ThreadingPath PathCopy(Path);
-        PathCopy.appendExcludingFirst(PathToSw);
-        TempList.push_back(PathCopy);
-      }
-    }
-    TPaths = std::move(TempList);
+    findTPaths();
+    unifyTPaths();
   }
 
 private:
@@ -611,13 +599,16 @@ private:
   typedef DenseMap<const BasicBlock *, const PHINode *> StateDefMap;
   std::vector<ThreadingPath> getPathsFromStateDefMap(StateDefMap &StateDef,
                                                      PHINode *Phi,
-                                                     VisitedBlocks &VB) {
+                                                     VisitedBlocks &VB,
+                                                     unsigned PathsLimit) {
     std::vector<ThreadingPath> Res;
     auto *PhiBB = Phi->getParent();
     VB.insert(PhiBB);
 
     VisitedBlocks UniqueBlocks;
     for (auto *IncomingBB : Phi->blocks()) {
+      if (Res.size() >= PathsLimit)
+        break;
       if (!UniqueBlocks.insert(IncomingBB).second)
         continue;
       if (!SwitchOuterLoop->contains(IncomingBB))
@@ -653,8 +644,9 @@ private:
 
       // Direct predecessor, just add to the path.
       if (IncomingPhiDefBB == IncomingBB) {
-        std::vector<ThreadingPath> PredPaths =
-            getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
+        assert(PathsLimit > Res.size());
+        std::vector<ThreadingPath> PredPaths = getPathsFromStateDefMap(
+            StateDef, IncomingPhi, VB, PathsLimit - Res.size());
         for (ThreadingPath &Path : PredPaths) {
           Path.push_back(PhiBB);
           Res.push_back(std::move(Path));
@@ -667,13 +659,17 @@ private:
         continue;
 
       PathsType IntermediatePaths;
-      IntermediatePaths =
-          paths(IncomingPhiDefBB, IncomingBB, VB, /* PathDepth = */ 1);
+      assert(PathsLimit > Res.size());
+      auto InterPathLimit = PathsLimit - Res.size();
+      IntermediatePaths = paths(IncomingPhiDefBB, IncomingBB, VB,
+                                /* PathDepth = */ 1, InterPathLimit);
       if (IntermediatePaths.empty())
         continue;
 
+      assert(InterPathLimit >= IntermediatePaths.size());
+      auto PredPathLimit = InterPathLimit / IntermediatePaths.size();
       std::vector<ThreadingPath> PredPaths =
-          getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
+          getPathsFromStateDefMap(StateDef, IncomingPhi, VB, PredPathLimit);
       for (const ThreadingPath &Path : PredPaths) {
         for (const PathType &IPath : IntermediatePaths) {
           ThreadingPath NewPath(Path);
@@ -688,7 +684,7 @@ private:
   }
 
   PathsType paths(BasicBlock *BB, BasicBlock *ToBB, VisitedBlocks &Visited,
-                  unsigned PathDepth) {
+                  unsigned PathDepth, unsigned PathsLimit) {
     PathsType Res;
 
     // Stop exploring paths after visiting MaxPathLength blocks
@@ -713,8 +709,10 @@ private:
 
     // Some blocks have multiple edges to the same successor, and this set
     // is used to prevent a duplicate path from being generated
-    SmallSet<BasicBlock *, 4> Successors;
+    SmallPtrSet<BasicBlock *, 4> Successors;
     for (BasicBlock *Succ : successors(BB)) {
+      if (Res.size() >= PathsLimit)
+        break;
       if (!Successors.insert(Succ).second)
         continue;
 
@@ -736,14 +734,12 @@ private:
       // coverage and compile time.
       if (LI->getLoopFor(Succ) != CurrLoop)
         continue;
-
-      PathsType SuccPaths = paths(Succ, ToBB, Visited, PathDepth + 1);
+      assert(PathsLimit > Res.size());
+      PathsType SuccPaths =
+          paths(Succ, ToBB, Visited, PathDepth + 1, PathsLimit - Res.size());
       for (PathType &Path : SuccPaths) {
         Path.push_front(BB);
         Res.push_back(Path);
-        if (Res.size() >= MaxNumPaths) {
-          return Res;
-        }
       }
     }
     // This block could now be visited again from a different predecessor. Note
@@ -762,7 +758,7 @@ private:
 
     SmallVector<PHINode *, 8> Stack;
     Stack.push_back(FirstDef);
-    SmallSet<Value *, 16> SeenValues;
+    SmallPtrSet<Value *, 16> SeenValues;
 
     while (!Stack.empty()) {
       PHINode *CurPhi = Stack.pop_back_val();
@@ -786,28 +782,107 @@ private:
     return Res;
   }
 
+  // Find all threadable paths.
+  void findTPaths() {
+    StateDefMap StateDef = getStateDefMap();
+    if (StateDef.empty()) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "SwitchNotPredictable",
+                                        Switch)
+               << "Switch instruction is not predictable.";
+      });
+      return;
+    }
+
+    auto *SwitchPhi = cast<PHINode>(Switch->getOperand(0));
+    auto *SwitchPhiDefBB = SwitchPhi->getParent();
+    VisitedBlocks VB;
+    // Get paths from the determinator BBs to SwitchPhiDefBB
+    std::vector<ThreadingPath> PathsToPhiDef =
+        getPathsFromStateDefMap(StateDef, SwitchPhi, VB, MaxNumPaths);
+    if (SwitchPhiDefBB == SwitchBlock || PathsToPhiDef.empty()) {
+      TPaths = std::move(PathsToPhiDef);
+      return;
+    }
+
+    assert(MaxNumPaths >= PathsToPhiDef.size() && !PathsToPhiDef.empty());
+    auto PathsLimit = MaxNumPaths / PathsToPhiDef.size();
+    // Find and append paths from SwitchPhiDefBB to SwitchBlock.
+    PathsType PathsToSwitchBB =
+        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1, PathsLimit);
+    if (PathsToSwitchBB.empty())
+      return;
+
+    std::vector<ThreadingPath> TempList;
+    for (const ThreadingPath &Path : PathsToPhiDef) {
+      for (const PathType &PathToSw : PathsToSwitchBB) {
+        ThreadingPath PathCopy(Path);
+        PathCopy.appendExcludingFirst(PathToSw);
+        TempList.push_back(PathCopy);
+      }
+    }
+    TPaths = std::move(TempList);
+  }
+
+  /// Fast helper to get the successor corresponding to a particular case value
+  /// for a switch statement.
+  BasicBlock *getNextCaseSuccessor(const APInt &NextState) {
+    // Precompute the value => successor mapping
+    if (CaseValToDest.empty()) {
+      for (auto Case : Switch->cases()) {
+        APInt CaseVal = Case.getCaseValue()->getValue();
+        CaseValToDest[CaseVal] = Case.getCaseSuccessor();
+      }
+    }
+
+    auto SuccIt = CaseValToDest.find(NextState);
+    return SuccIt == CaseValToDest.end() ? Switch->getDefaultDest()
+                                         : SuccIt->second;
+  }
+
+  // Two states are equivalent if they have the same switch destination.
+  // Unify the states in different threading path if the states are equivalent.
+  void unifyTPaths() {
+    SmallDenseMap<BasicBlock *, APInt> DestToState;
+    for (ThreadingPath &Path : TPaths) {
+      APInt NextState = Path.getExitValue();
+      BasicBlock *Dest = getNextCaseSuccessor(NextState);
+      auto [StateIt, Inserted] = DestToState.try_emplace(Dest, NextState);
+      if (Inserted)
+        continue;
+      if (NextState != StateIt->second) {
+        LLVM_DEBUG(dbgs() << "Next state in " << Path << " is equivalent to "
+                          << StateIt->second << "\n");
+        Path.setExitValue(StateIt->second);
+      }
+    }
+  }
+
   unsigned NumVisited = 0;
   SwitchInst *Switch;
   BasicBlock *SwitchBlock;
   OptimizationRemarkEmitter *ORE;
   std::vector<ThreadingPath> TPaths;
+  DenseMap<APInt, BasicBlock *> CaseValToDest;
   LoopInfo *LI;
   Loop *SwitchOuterLoop;
 };
 
 struct TransformDFA {
-  TransformDFA(AllSwitchPaths *SwitchPaths, DominatorTree *DT,
+  TransformDFA(AllSwitchPaths *SwitchPaths, DomTreeUpdater *DTU,
                AssumptionCache *AC, TargetTransformInfo *TTI,
                OptimizationRemarkEmitter *ORE,
                SmallPtrSet<const Value *, 32> EphValues)
-      : SwitchPaths(SwitchPaths), DT(DT), AC(AC), TTI(TTI), ORE(ORE),
+      : SwitchPaths(SwitchPaths), DTU(DTU), AC(AC), TTI(TTI), ORE(ORE),
         EphValues(EphValues) {}
 
-  void run() {
+  bool run() {
     if (isLegalAndProfitableToTransform()) {
       createAllExitPaths();
       NumTransforms++;
+      return true;
     }
+    return false;
   }
 
 private:
@@ -817,6 +892,7 @@ private:
   /// also returns false if it is illegal to clone some required block.
   bool isLegalAndProfitableToTransform() {
     CodeMetrics Metrics;
+    uint64_t NumClonedInst = 0;
     SwitchInst *Switch = SwitchPaths->getSwitchInst();
 
     // Don't thread switch without multiple successors.
@@ -826,7 +902,6 @@ private:
     // Note that DuplicateBlockMap is not being used as intended here. It is
     // just being used to ensure (BB, State) pairs are only counted once.
     DuplicateBlockMap DuplicateMap;
-
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
       PathType PathBBs = TPath.getPath();
       APInt NextState = TPath.getExitValue();
@@ -837,6 +912,7 @@ private:
       BasicBlock *VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
       if (!VisitedBB) {
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -854,6 +930,7 @@ private:
         if (VisitedBB)
           continue;
         Metrics.analyzeBasicBlock(BB, *TTI, EphValues);
+        NumClonedInst += BB->sizeWithoutDebug();
         DuplicateMap[BB].push_back({BB, NextState});
       }
 
@@ -888,6 +965,44 @@ private:
         });
         return false;
       }
+    }
+
+    // Too much cloned instructions slow down later optimizations, especially
+    // SLPVectorizer.
+    // TODO: Thread the switch partially before reaching the threshold.
+    uint64_t NumOrigInst = 0;
+    uint64_t NumOuterUseBlock = 0;
+    for (auto *BB : DuplicateMap.keys()) {
+      NumOrigInst += BB->sizeWithoutDebug();
+      // Only unduplicated blocks with single predecessor require new phi
+      // nodes.
+      for (auto *Succ : successors(BB))
+        if (!DuplicateMap.count(Succ) && Succ->getSinglePredecessor())
+          NumOuterUseBlock++;
+    }
+
+    if (double(NumClonedInst) / double(NumOrigInst) > MaxClonedRate) {
+      LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
+                           "instructions wll be cloned\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
+               << "Too much instructions will be cloned.";
+      });
+      return false;
+    }
+
+    // Too much unduplicated blocks with outer uses may cause too much
+    // insertions of phi nodes for duplicated definitions. TODO: Drop this
+    // threshold if we come up with another way to reduce the number of inserted
+    // phi nodes.
+    if (NumOuterUseBlock > MaxOuterUseBlocks) {
+      LLVM_DEBUG(dbgs() << "DFA Jump Threading: Not jump threading, too much "
+                           "blocks with outer uses\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotProfitable", Switch)
+               << "Too much blocks with outer uses.";
+      });
+      return false;
     }
 
     InstructionCost DuplicationCost = 0;
@@ -940,8 +1055,6 @@ private:
 
   /// Transform each threading path to effectively jump thread the DFA.
   void createAllExitPaths() {
-    DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Eager);
-
     // Move the switch block to the end of the path, since it will be duplicated
     BasicBlock *SwitchBlock = SwitchPaths->getSwitchBlock();
     for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
@@ -955,18 +1068,18 @@ private:
     DuplicateBlockMap DuplicateMap;
     DefMap NewDefs;
 
-    SmallSet<BasicBlock *, 16> BlocksToClean;
+    SmallPtrSet<BasicBlock *, 16> BlocksToClean;
     BlocksToClean.insert_range(successors(SwitchBlock));
 
-    for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
-      createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, &DTU);
+    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths()) {
+      createExitPath(NewDefs, TPath, DuplicateMap, BlocksToClean, DTU);
       NumPaths++;
     }
 
     // After all paths are cloned, now update the last successor of the cloned
     // path so it skips over the switch statement
-    for (ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
-      updateLastSuccessor(TPath, DuplicateMap, &DTU);
+    for (const ThreadingPath &TPath : SwitchPaths->getThreadingPaths())
+      updateLastSuccessor(TPath, DuplicateMap, DTU);
 
     // For each instruction that was cloned and used outside, update its uses
     updateSSA(NewDefs);
@@ -982,9 +1095,9 @@ private:
   /// To remember the correct destination, we have to duplicate blocks
   /// corresponding to each state. Also update the terminating instruction of
   /// the predecessors, and phis in the successor blocks.
-  void createExitPath(DefMap &NewDefs, ThreadingPath &Path,
+  void createExitPath(DefMap &NewDefs, const ThreadingPath &Path,
                       DuplicateBlockMap &DuplicateMap,
-                      SmallSet<BasicBlock *, 16> &BlocksToClean,
+                      SmallPtrSet<BasicBlock *, 16> &BlocksToClean,
                       DomTreeUpdater *DTU) {
     APInt NextState = Path.getExitValue();
     const BasicBlock *Determinator = Path.getDeterminatorBB();
@@ -1071,7 +1184,25 @@ private:
     }
     // SSAUpdater handles phi placement and renaming uses with the appropriate
     // value.
-    SSAUpdate.RewriteAllUses(DT);
+    SSAUpdate.RewriteAllUses(&DTU->getDomTree());
+  }
+
+  /// Helper to get the successor corresponding to a particular case value for
+  /// a switch statement.
+  /// TODO: Unify it with SwitchPaths->getNextCaseSuccessor(SwitchInst *Switch)
+  /// by updating cached value => successor mapping during threading.
+  static BasicBlock *getNextCaseSuccessor(SwitchInst *Switch,
+                                          const APInt &NextState) {
+    BasicBlock *NextCase = nullptr;
+    for (auto Case : Switch->cases()) {
+      if (Case.getCaseValue()->getValue() == NextState) {
+        NextCase = Case.getCaseSuccessor();
+        break;
+      }
+    }
+    if (!NextCase)
+      NextCase = Switch->getDefaultDest();
+    return NextCase;
   }
 
   /// Clones a basic block, and adds it to the CFG.
@@ -1153,19 +1284,18 @@ private:
     // value for the new predecessor ClonedBB. The value will either be the same
     // value from BB or a cloned value.
     for (BasicBlock *Succ : BlocksToUpdate) {
-      for (auto II = Succ->begin(); PHINode *Phi = dyn_cast<PHINode>(II);
-           ++II) {
-        Value *Incoming = Phi->getIncomingValueForBlock(BB);
+      for (PHINode &Phi : Succ->phis()) {
+        Value *Incoming = Phi.getIncomingValueForBlock(BB);
         if (Incoming) {
           if (isa<Constant>(Incoming)) {
-            Phi->addIncoming(Incoming, ClonedBB);
+            Phi.addIncoming(Incoming, ClonedBB);
             continue;
           }
           Value *ClonedVal = VMap[Incoming];
           if (ClonedVal)
-            Phi->addIncoming(ClonedVal, ClonedBB);
+            Phi.addIncoming(ClonedVal, ClonedBB);
           else
-            Phi->addIncoming(Incoming, ClonedBB);
+            Phi.addIncoming(Incoming, ClonedBB);
         }
       }
     }
@@ -1228,7 +1358,7 @@ private:
   ///
   /// Note that this is an optional step and would have been done in later
   /// optimizations, but it makes the CFG significantly easier to work with.
-  void updateLastSuccessor(ThreadingPath &TPath,
+  void updateLastSuccessor(const ThreadingPath &TPath,
                            DuplicateBlockMap &DuplicateMap,
                            DomTreeUpdater *DTU) {
     APInt NextState = TPath.getExitValue();
@@ -1260,27 +1390,19 @@ private:
   void cleanPhiNodes(BasicBlock *BB) {
     // If BB is no longer reachable, remove any remaining phi nodes
     if (pred_empty(BB)) {
-      std::vector<PHINode *> PhiToRemove;
-      for (auto II = BB->begin(); PHINode *Phi = dyn_cast<PHINode>(II); ++II) {
-        PhiToRemove.push_back(Phi);
-      }
-      for (PHINode *PN : PhiToRemove) {
-        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
-        PN->eraseFromParent();
+      for (PHINode &PN : make_early_inc_range(BB->phis())) {
+        PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+        PN.eraseFromParent();
       }
       return;
     }
 
     // Remove any incoming values that come from an invalid predecessor
-    for (auto II = BB->begin(); PHINode *Phi = dyn_cast<PHINode>(II); ++II) {
-      std::vector<BasicBlock *> BlocksToRemove;
-      for (BasicBlock *IncomingBB : Phi->blocks()) {
-        if (!isPredecessor(BB, IncomingBB))
-          BlocksToRemove.push_back(IncomingBB);
-      }
-      for (BasicBlock *BB : BlocksToRemove)
-        Phi->removeIncomingValue(BB);
-    }
+    for (PHINode &Phi : BB->phis())
+      Phi.removeIncomingValueIf([&](unsigned Index) {
+        BasicBlock *IncomingBB = Phi.getIncomingBlock(Index);
+        return !isPredecessor(BB, IncomingBB);
+      });
   }
 
   /// Checks if BB was already cloned for a particular next state value. If it
@@ -1297,34 +1419,20 @@ private:
     return It != ClonedBBs.end() ? (*It).BB : nullptr;
   }
 
-  /// Helper to get the successor corresponding to a particular case value for
-  /// a switch statement.
-  BasicBlock *getNextCaseSuccessor(SwitchInst *Switch, const APInt &NextState) {
-    BasicBlock *NextCase = nullptr;
-    for (auto Case : Switch->cases()) {
-      if (Case.getCaseValue()->getValue() == NextState) {
-        NextCase = Case.getCaseSuccessor();
-        break;
-      }
-    }
-    if (!NextCase)
-      NextCase = Switch->getDefaultDest();
-    return NextCase;
-  }
-
   /// Returns true if IncomingBB is a predecessor of BB.
   bool isPredecessor(BasicBlock *BB, BasicBlock *IncomingBB) {
     return llvm::is_contained(predecessors(BB), IncomingBB);
   }
 
   AllSwitchPaths *SwitchPaths;
-  DominatorTree *DT;
+  DomTreeUpdater *DTU;
   AssumptionCache *AC;
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
   SmallPtrSet<const Value *, 32> EphValues;
   std::vector<ThreadingPath> TPaths;
 };
+} // namespace
 
 bool DFAJumpThreading::run(Function &F) {
   LLVM_DEBUG(dbgs() << "\nDFA Jump threading: " << F.getName() << "\n");
@@ -1360,7 +1468,7 @@ bool DFAJumpThreading::run(Function &F) {
                       << "candidate for jump threading\n");
     LLVM_DEBUG(SI->dump());
 
-    unfoldSelectInstrs(DT, Switch.getSelectInsts());
+    unfoldSelectInstrs(Switch.getSelectInsts());
     if (!Switch.getSelectInsts().empty())
       MadeChanges = true;
 
@@ -1382,7 +1490,7 @@ bool DFAJumpThreading::run(Function &F) {
   }
 
 #ifdef NDEBUG
-  LI->verify(*DT);
+  LI->verify(DTU->getDomTree());
 #endif
 
   SmallPtrSet<const Value *, 32> EphValues;
@@ -1390,21 +1498,23 @@ bool DFAJumpThreading::run(Function &F) {
     CodeMetrics::collectEphemeralValues(&F, AC, EphValues);
 
   for (AllSwitchPaths SwitchPaths : ThreadableLoops) {
-    TransformDFA Transform(&SwitchPaths, DT, AC, TTI, ORE, EphValues);
-    Transform.run();
-    MadeChanges = true;
-    LoopInfoBroken = true;
+    TransformDFA Transform(&SwitchPaths, DTU, AC, TTI, ORE, EphValues);
+    if (Transform.run())
+      MadeChanges = LoopInfoBroken = true;
   }
 
+  DTU->flush();
+
 #ifdef EXPENSIVE_CHECKS
-  assert(DT->verify(DominatorTree::VerificationLevel::Full));
   verifyFunction(F, &dbgs());
 #endif
 
+  if (MadeChanges && VerifyDomInfo)
+    assert(DTU->getDomTree().verify(DominatorTree::VerificationLevel::Full) &&
+           "Failed to maintain validity of domtree!");
+
   return MadeChanges;
 }
-
-} // end anonymous namespace
 
 /// Integrate with the new Pass Manager
 PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
@@ -1414,7 +1524,9 @@ PreservedAnalyses DFAJumpThreadingPass::run(Function &F,
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   OptimizationRemarkEmitter ORE(&F);
-  DFAJumpThreading ThreadImpl(&AC, &DT, &LI, &TTI, &ORE);
+
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  DFAJumpThreading ThreadImpl(&AC, &DTU, &LI, &TTI, &ORE);
   if (!ThreadImpl.run(F))
     return PreservedAnalyses::all();
 

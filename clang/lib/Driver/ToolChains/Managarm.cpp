@@ -193,10 +193,8 @@ void Managarm::addLibStdCxxIncludePaths(
   if (!GCCInstallation.isValid())
     return;
 
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-
   // Try generic GCC detection.
-  Generic_GCC::addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args, TripleStr);
+  addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args);
 }
 
 SanitizerMask Managarm::getSupportedSanitizers() const {

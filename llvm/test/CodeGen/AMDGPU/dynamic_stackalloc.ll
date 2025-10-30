@@ -2536,12 +2536,13 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX11-SDAG-LABEL: test_dynamic_stackalloc_device_divergent_non_standard_size_i16:
 ; GFX11-SDAG:       ; %bb.0:
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-SDAG-NEXT:    v_mov_b16_e32 v1.h, 0
+; GFX11-SDAG-NEXT:    v_mov_b16_e32 v1.l, v0.l
 ; GFX11-SDAG-NEXT:    s_mov_b32 s4, s33
 ; GFX11-SDAG-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-SDAG-NEXT:    s_mov_b32 s0, 0
 ; GFX11-SDAG-NEXT:    s_mov_b32 s33, s32
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v1, 2, 15
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s32, 16
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v0, 0x7fff0, v0

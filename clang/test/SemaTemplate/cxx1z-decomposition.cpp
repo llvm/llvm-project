@@ -15,7 +15,7 @@ namespace std {
 template<> struct std::tuple_size<C> { enum { value = 2 }; };
 
 template<typename T> int decomp(T &t) { 
-  auto &[a, b] = t; // expected-error {{type 'D' decomposes into 3 elements, but only 2 names were provided}}
+  auto &[a, b] = t; // expected-error {{type 'D' binds to 3 elements, but only 2 names were provided}}
   return a + b; // expected-error {{cannot initialize return object of type 'int' with an rvalue of type 'int *'}}
 }
 

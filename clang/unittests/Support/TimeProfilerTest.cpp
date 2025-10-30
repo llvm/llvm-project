@@ -52,8 +52,6 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
     FS->addFile(Header.getKey(), 0,
                 MemoryBuffer::getMemBuffer(Header.getValue()));
   }
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), FS));
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   std::vector<const char *> Args = {Standard.data(), File.data()};
@@ -63,8 +61,9 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.createDiagnostics(Files->getVirtualFileSystem());
-  Compiler.setFileManager(Files.get());
+  Compiler.setVirtualFileSystem(std::move(FS));
+  Compiler.createDiagnostics();
+  Compiler.createFileManager();
 
   class TestFrontendAction : public ASTFrontendAction {
   private:

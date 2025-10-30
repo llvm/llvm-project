@@ -13,10 +13,12 @@
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -182,13 +184,16 @@ static bool isLegalToInline(InlinerInterface &interface, Region *src,
                             IRMapping &valueMapping) {
   for (auto &block : *src) {
     for (auto &op : block) {
+      // UnrealizedConversionCastOp is inlineable but cannot implement the
+      // inliner interface due to layering constraints.
+      if (isa<UnrealizedConversionCastOp>(op))
+        continue;
+
       // Check this operation.
       if (!interface.isLegalToInline(&op, insertRegion,
                                      shouldCloneInlinedRegion, valueMapping)) {
-        LLVM_DEBUG({
-          llvm::dbgs() << "* Illegal to inline because of op: ";
-          op.dump();
-        });
+        LDBG() << "* Illegal to inline because of op: "
+               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
         return false;
       }
       // Check any nested regions.

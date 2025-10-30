@@ -164,10 +164,9 @@ def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;
 def ARMWrapperJT     : SDNode<"ARMISD::WrapperJT",   SDTIntUnaryOp>;
 
 def ARMcallseq_start : SDNode<"ISD::CALLSEQ_START", SDT_ARMCallSeqStart,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOutGlue]>;
 def ARMcallseq_end   : SDNode<"ISD::CALLSEQ_END",   SDT_ARMCallSeqEnd,
-                              [SDNPHasChain, SDNPSideEffect,
-                               SDNPOptInGlue, SDNPOutGlue]>;
+                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 def ARMcopystructbyval : SDNode<"ARMISD::COPY_STRUCT_BYVAL" ,
                                 SDT_ARMStructByVal,
                                 [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
@@ -474,15 +473,15 @@ def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 
 // An 'fmul' node with a single use.
 let HasOneUse = 1 in
-def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs)>;
+def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (any_fmul node:$lhs, node:$rhs)>;
 
 // An 'fadd' node which checks for single non-hazardous use.
-def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
+def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
 // An 'fsub' node which checks for single non-hazardous use.
-def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
+def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
@@ -766,7 +765,6 @@ class MVEVectorIndexOperand<int NumLanes> : AsmOperandClass {
 class MVEVectorIndex<int NumLanes> : Operand<i32> {
   let PrintMethod = "printVectorIndex";
   let ParserMatchClass = MVEVectorIndexOperand<NumLanes>;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // shift_imm: An integer that encodes a shift amount and the type of shift
@@ -1182,7 +1180,6 @@ def PostIdxImm8AsmOperand : AsmOperandClass { let Name = "PostIdxImm8"; }
 def postidx_imm8 : MemOperand {
   let PrintMethod = "printPostIdxImm8Operand";
   let ParserMatchClass = PostIdxImm8AsmOperand;
-  let MIOperandInfo = (ops i32imm);
 }
 
 // postidx_imm8s4 := +/- [0,1020]
@@ -5189,12 +5186,6 @@ def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
 }
 
 let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
-  // Pseudo instruction that combines movs + predicated rsbmi
-  // to implement integer ABS
-  def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
-}
-
-let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,
@@ -6448,7 +6439,7 @@ def : ARMInstAlias<"neg${s}${p} $Rd, $Rm",
                    (RSBri GPR:$Rd, GPR:$Rm, 0, pred:$p, cc_out:$s)>;
 
 // Pre-v6, 'mov r0, r0' was used as a NOP encoding.
-def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, zero_reg), 0>,
+def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, (cc_out zero_reg)), 0>,
          Requires<[IsARM, NoV6]>;
 
 // MUL/UMLAL/SMLAL/UMULL/SMULL are available on all arches, but
@@ -6543,6 +6534,38 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
 }
 
 def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
+
+//===----------------------------------------------------------------------===//
+// KCFI check pseudo-instruction.
+//===----------------------------------------------------------------------===//
+// KCFI_CHECK pseudo-instruction for Kernel Control-Flow Integrity.
+// Expands to a sequence that verifies the function pointer's type hash.
+// Different sizes for different architectures due to different expansions.
+
+def KCFI_CHECK_ARM
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsARM]> {
+  let Size = 40; // worst-case 10 instructions @ 4 bytes each
+                 // (push, bic, ldr, 4x eor, pop, beq, udf)
+}
+
+def KCFI_CHECK_Thumb2
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb2]> {
+  let Size = 34; // worst-case (push.w[2], bic[4], ldr[4], 4x eor[16], pop.w[2],
+                 // beq.w[4], udf[2])
+}
+
+def KCFI_CHECK_Thumb1
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb1Only]> {
+  let Size = 38; // worst-case 19 instructions @ 2 bytes each
+                 // (2x push, 3x bic-helper, subs+ldr, 13x type-building, cmp,
+                 // 2x pop, beq, bkpt)
+}
 
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.

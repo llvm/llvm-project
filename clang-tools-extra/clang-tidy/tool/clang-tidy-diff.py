@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- clang-tidy-diff.py - ClangTidy Diff Checker -----------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -28,6 +28,7 @@ import glob
 import json
 import multiprocessing
 import os
+import queue
 import re
 import shutil
 import subprocess
@@ -41,13 +42,6 @@ try:
     import yaml
 except ImportError:
     yaml = None
-
-is_py2 = sys.version[0] == "2"
-
-if is_py2:
-    import Queue as queue
-else:
-    import queue as queue
 
 
 def run_tidy(task_queue, lock, timeout, failed_files):
@@ -264,6 +258,11 @@ def main():
         help="Upgrades clang-tidy warnings to errors. Same format as '-checks'.",
         default="",
     )
+    parser.add_argument(
+        "-hide-progress",
+        action="store_true",
+        help="Hide progress",
+    )
 
     clang_tidy_args = []
     argv = sys.argv[1:]
@@ -318,7 +317,8 @@ def main():
     if max_task_count == 0:
         max_task_count = multiprocessing.cpu_count()
     max_task_count = min(len(lines_by_file), max_task_count)
-    print(f"Running clang-tidy in {max_task_count} threads...")
+    if not args.hide_progress:
+        print(f"Running clang-tidy in {max_task_count} threads...")
 
     combine_fixes = False
     export_fixes_dir = None
@@ -414,7 +414,8 @@ def main():
         return_code = 1
 
     if combine_fixes:
-        print("Writing fixes to " + args.export_fixes + " ...")
+        if not args.hide_progress:
+            print(f"Writing fixes to {args.export_fixes} ...")
         try:
             merge_replacement_files(export_fixes_dir, args.export_fixes)
         except:

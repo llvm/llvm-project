@@ -5,9 +5,9 @@ target datalayout = "e-p:32:32-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx--nvidiacl"
 
 ; Vector versions of the intrinsics are scalarized, so keep them scalar
-define <2 x i8> @cltz_test(<2 x i8> %x) #0 {
+define <2 x i8> @cltz_test(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @cltz_test(
-; CHECK-SAME: <2 x i8> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i8> [[X]], i32 0
 ; CHECK-NEXT:    [[CALL_I:%.*]] = call i8 @llvm.ctlz.i8(i8 [[TMP0]], i1 false)
@@ -27,10 +27,9 @@ entry:
   ret <2 x i8> %vecinit2
 }
 
-
-define <2 x i8> @cltz_test_poison(<2 x i8> %x) #0 {
+define <2 x i8> @cltz_test_poison(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i8> @cltz_test_poison(
-; CHECK-SAME: <2 x i8> [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <2 x i8> [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i8> [[X]], i32 0
 ; CHECK-NEXT:    [[CALL_I:%.*]] = call i8 @llvm.ctlz.i8(i8 [[TMP0]], i1 false)
@@ -50,7 +49,5 @@ entry:
   ret <2 x i8> %vecinit2
 }
 
-declare i8 @llvm.ctlz.i8(i8, i1) #3
-
-attributes #0 = { alwaysinline nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare i8 @llvm.ctlz.i8(i8, i1)
+ "unsafe-fp-math"="false"

@@ -13,13 +13,13 @@ entry:
   %Index.addr.i2 = alloca i32, align 4
   %this.addr.i = alloca ptr, align 4
   %Index.addr.i = alloca i32, align 4
-  ; CHECK: [[IN:%.*]] = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_1_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
-  %_ZL2In_h.i.i = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_1_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK: [[IN:%.*]] = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
+  %_ZL2In_h.i.i = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.RawBuffer", <4 x float>, 1, 0) %_ZL2In_h.i.i, ptr @_ZL2In, align 4
   store ptr @_ZL2In, ptr %this.addr.i.i, align 4
   %this1.i.i = load ptr, ptr %this.addr.i.i, align 4
-  ; CHECK: [[OUT:%.*]] = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_v4f32_1_0t(i32 100, i32 0, i32 1, i32 0, i1 false, ptr null)
-  %_ZL3Out_h.i.i = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_v4f32_1_0t(i32 100, i32 0, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK: [[OUT:%.*]] = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_v4f32_1_0t(i32 100, i32 0, i32 1, i32 0, ptr null)
+  %_ZL3Out_h.i.i = call target("dx.RawBuffer", <4 x float>, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_v4f32_1_0t(i32 100, i32 0, i32 1, i32 0, ptr null)
   store target("dx.RawBuffer", <4 x float>, 1, 0) %_ZL3Out_h.i.i, ptr @_ZL3Out, align 4
   store ptr @_ZL3Out, ptr %this.addr.i.i.i, align 4
   %this1.i.i.i = load ptr, ptr %this.addr.i.i.i, align 4

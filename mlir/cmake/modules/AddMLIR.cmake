@@ -174,8 +174,7 @@ function(add_mlir_dialect dialect dialect_namespace)
   mlir_tablegen(${dialect}Types.cpp.inc -gen-typedef-defs -typedefs-dialect=${dialect_namespace})
   mlir_tablegen(${dialect}Dialect.h.inc -gen-dialect-decls -dialect=${dialect_namespace})
   mlir_tablegen(${dialect}Dialect.cpp.inc -gen-dialect-defs -dialect=${dialect_namespace})
-  add_public_tablegen_target(MLIR${dialect}IncGen)
-  add_dependencies(mlir-headers MLIR${dialect}IncGen)
+  add_mlir_dialect_tablegen_target(MLIR${dialect}IncGen)
 endfunction()
 
 # Declare sharded dialect operation declarations and definitions
@@ -190,7 +189,7 @@ function(add_sharded_ops ops_target shard_count)
     tablegen(MLIR_SRC_SHARDER ${SHARDED_SRC} -op-shard-index=${index})
     set(TABLEGEN_OUTPUT ${TABLEGEN_OUTPUT} ${CMAKE_CURRENT_BINARY_DIR}/${SHARDED_SRC})
   endforeach()
-  add_public_tablegen_target(MLIR${ops_target}ShardGen)
+  add_mlir_dialect_tablegen_target(MLIR${ops_target}ShardGen)
   set(SHARDED_SRCS ${SHARDED_SRCS} PARENT_SCOPE)
 endfunction()
 
@@ -199,10 +198,23 @@ function(add_mlir_interface interface)
   set(LLVM_TARGET_DEFINITIONS ${interface}.td)
   mlir_tablegen(${interface}.h.inc -gen-op-interface-decls)
   mlir_tablegen(${interface}.cpp.inc -gen-op-interface-defs)
-  add_public_tablegen_target(MLIR${interface}IncGen)
-  add_dependencies(mlir-generic-headers MLIR${interface}IncGen)
+  add_mlir_generic_tablegen_target(MLIR${interface}IncGen)
 endfunction()
 
+# Add a dialect-specific tablegen target that generates headers in the include directory.
+# In most cases, this is what should be used after invoking `mlir_tablegen`.
+macro(add_mlir_dialect_tablegen_target target)
+  add_public_tablegen_target(${target})
+  add_dependencies(mlir-headers ${target})
+endmacro()
+
+# Add a dialect-independent tablegen target that generates headers in the include directory.
+# Generally this is used for files outside of the Dialects/ folder, and also for interfaces
+# that do not depend on dialect-specific headers.
+macro(add_mlir_generic_tablegen_target target)
+  add_public_tablegen_target(${target})
+  add_dependencies(mlir-generic-headers ${target})
+endmacro()
 
 # Generate Documentation
 function(add_mlir_doc doc_filename output_file output_directory command)
@@ -388,6 +400,9 @@ function(add_mlir_library name)
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
+    if(ARG_INSTALL_WITH_TOOLCHAIN)
+      set_target_properties(${name} PROPERTIES MLIR_INSTALL_WITH_TOOLCHAIN TRUE)
+    endif()
     if(NOT ARG_DISABLE_INSTALL)
       add_mlir_library_install(${name})
     endif()
@@ -617,26 +632,27 @@ endfunction(add_mlir_aggregate)
 # This is usually done as part of add_mlir_library but is broken out for cases
 # where non-standard library builds can be installed.
 function(add_mlir_library_install name)
-  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
-  install(TARGETS ${name}
-    COMPONENT ${name}
-    ${export_to_mlirtargets}
-    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    # Note that CMake will create a directory like:
-    #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
-    # and put object files there.
-    OBJECTS DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-  )
+  get_target_property(_install_with_toolchain ${name} MLIR_INSTALL_WITH_TOOLCHAIN)
+  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR _install_with_toolchain)
+    get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
+    install(TARGETS ${name}
+      COMPONENT ${name}
+      ${export_to_mlirtargets}
+      LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+      ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+      # Note that CMake will create a directory like:
+      #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
+      # and put object files there.
+      OBJECTS DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    )
 
-  if (NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(install-${name}
-                            DEPENDS ${name}
-                            COMPONENT ${name})
-  endif()
-  set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
+    if (NOT LLVM_ENABLE_IDE)
+      add_llvm_install_targets(install-${name}
+                              DEPENDS ${name}
+                              COMPONENT ${name})
+    endif()
+    set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
   endif()
   set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
 endfunction()

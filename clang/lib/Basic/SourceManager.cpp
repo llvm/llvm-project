@@ -608,8 +608,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
-  llvm::ErrorOr<bool> NeedConversion =
-      llvm::needConversion(Filename.str().c_str());
+  llvm::ErrorOr<bool> NeedConversion = llvm::needConversion(Filename);
   if (NeedConversion && *NeedConversion) {
     // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
     // conversion.
@@ -1171,14 +1170,14 @@ unsigned SourceManager::getColumnNumber(FileID FID, unsigned FilePos,
         if (Buf[FilePos - 1] == '\r' || Buf[FilePos - 1] == '\n')
           --FilePos;
       }
-      return FilePos - LineStart + 1;
+      return (FilePos - LineStart) + 1;
     }
   }
 
   unsigned LineStart = FilePos;
   while (LineStart && Buf[LineStart-1] != '\n' && Buf[LineStart-1] != '\r')
     --LineStart;
-  return FilePos-LineStart+1;
+  return (FilePos - LineStart) + 1;
 }
 
 // isInvalid - Return the result of calling loc.isInvalid(), and
