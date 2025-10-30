@@ -1181,6 +1181,8 @@ TEST_P(ASTMatchersTest, PredefinedExpr) {
 
 TEST_P(ASTMatchersTest, FileScopeAsmDecl) {
   EXPECT_TRUE(matches("__asm__(\"nop\");", fileScopeAsmDecl()));
+  EXPECT_TRUE(
+      notMatches("void foo() { __asm(\"mov al, 2\"); }", fileScopeAsmDecl()));
 }
 
 TEST_P(ASTMatchersTest, AsmStatement) {
