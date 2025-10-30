@@ -138,7 +138,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
-        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
@@ -157,6 +156,23 @@ jobs:
             build_runs_on=$test_runs_on
             ;;
         esac
+
+        case "$build_runs_on" in
+          # These runners cannot build the full release package faster than
+          # the 6 hours timeout limit, so we need to use a configuration
+          # that builds more quickly.
+          macos-14)
+            bootstrap_prefix="BOOTSTRAP"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
+            ;;
+          *)
+            bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
+            ;;
+        esac
+
+        target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_CPACK_PACKAGE_FILE_NAME=$release_binary_basename"
+
+        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
 
@@ -200,8 +216,7 @@ jobs:
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang/cmake/caches/Release.cmake \
-            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+            -C clang/cmake/caches/Release.cmake
 
     - name: Build
       shell: bash
