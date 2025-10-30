@@ -3536,12 +3536,14 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
 static int MCPUHelp() {
   if (!TripleName.empty()) {
     std::string Error;
-    const Target *DummyTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    Triple DummyTriple(TripleName);
+    const Target *DummyTarget =
+        TargetRegistry::lookupTarget(DummyTriple, Error);
     if (!DummyTarget) {
       outs() << Error << '\n';
       return 2;
     }
-    DummyTarget->createMCSubtargetInfo(TripleName, MCPU, "");
+    DummyTarget->createMCSubtargetInfo(DummyTriple, MCPU, "");
   }
   return 0;
 }
