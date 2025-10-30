@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_BASIC_STACKTRACE_H
-#define _LIBCPP_BASIC_STACKTRACE_H
+#ifndef _LIBCPP___BASIC_STACKTRACE_H
+#define _LIBCPP___BASIC_STACKTRACE_H
 
 #include <__config>
 
@@ -23,6 +23,7 @@ _LIBCPP_PUSH_MACROS
 #include <__cstddef/size_t.h>
 #include <__functional/function.h>
 #include <__functional/hash.h>
+#include <__fwd/format.h>
 #include <__iterator/iterator.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator_traits.h>
@@ -31,12 +32,10 @@ _LIBCPP_PUSH_MACROS
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__vector/vector.h>
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <utility>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__fwd/format.h>
 #  include <__fwd/ostream.h>
 #endif // _LIBCPP_HAS_LOCALIZATION
 
@@ -186,26 +185,24 @@ public:
   // (19.6.4.3)
   // [stacktrace.basic.obs], observers
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept {
-    return __entries_.get_allocator();
-  }
+  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __entries_.get_allocator(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __entries_.begin(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __entries_.end(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { return __entries_.rbegin(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const noexcept { return __entries_.rend(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __entries_.begin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __entries_.end(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { return __entries_.rbegin(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const noexcept { return __entries_.rend(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept { return __entries_.cbegin(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept { return __entries_.cend(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const noexcept { return __entries_.crbegin(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const noexcept { return __entries_.crend(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept { return __entries_.cbegin(); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept { return __entries_.cend(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crbegin() const noexcept { return __entries_.crbegin(); }
+  _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const noexcept { return __entries_.crend(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __entries_.empty(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_type size() const noexcept { return __entries_.size(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_type max_size() const noexcept { return __entries_.max_size(); }
+  _LIBCPP_HIDE_FROM_ABI bool empty() const noexcept { return __entries_.empty(); }
+  _LIBCPP_HIDE_FROM_ABI size_type size() const noexcept { return __entries_.size(); }
+  _LIBCPP_HIDE_FROM_ABI size_type max_size() const noexcept { return __entries_.max_size(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __i) const { return __entries_[__i]; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __i) const { return __entries_.at(__i); }
+  _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __i) const { return __entries_[__i]; }
+  _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __i) const { return __entries_.at(__i); }
 
   // (19.6.4.4)
   // [stacktrace.basic.cmp], comparisons
@@ -269,14 +266,17 @@ swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexc
 }
 
 #  if _LIBCPP_HAS_LOCALIZATION
-template <class _Allocator>
-_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
-  return ((__stacktrace::_Trace const&)__stacktrace).write_to(__os);
-}
+
 template <class _Allocator>
 _LIBCPP_HIDE_FROM_ABI inline string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::_Trace const&)__stacktrace).to_string();
 }
+
+template <class _Allocator>
+_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
+  return ((__stacktrace::_Trace const&)__stacktrace).write_to(__os);
+}
+
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
 // (19.6.6)
@@ -284,12 +284,8 @@ _LIBCPP_HIDE_FROM_ABI inline string to_string(const basic_stacktrace<_Allocator>
 
 template <class _Allocator>
 struct hash<basic_stacktrace<_Allocator>> {
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __context) const noexcept {
-    size_t __ret = 1;
-    for (auto const& __entry : __context.__entries_) {
-      __ret += hash<uintptr_t>()(__entry.native_handle());
-    }
-    return __ret;
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
+    return hash(__trace.__entries_)();
   }
 };
 
@@ -344,4 +340,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_BASIC_STACKTRACE_H
+#endif // _LIBCPP___BASIC_STACKTRACE_H

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_ENTRY_H
-#define _LIBCPP_STACKTRACE_ENTRY_H
+#ifndef _LIBCPP___STACKTRACE_ENTRY_H
+#define _LIBCPP___STACKTRACE_ENTRY_H
 
 #include <__config>
 #include <cstring>
@@ -22,13 +22,13 @@ _LIBCPP_PUSH_MACROS
 
 #include <__assert>
 #include <__functional/function.h>
+#include <__fwd/format.h>
 #include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <__fwd/format.h>
 #  include <__fwd/ostream.h>
 #endif // _LIBCPP_HAS_LOCALIZATION
 
@@ -114,23 +114,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr stacktrace_entry& operator=(const stacktrace_entry&) noexcept = default;
 
   // (19.6.3.3) [stacktrace.entry.obs], observers
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr native_handle_type native_handle() const noexcept {
-    return __base_.__addr_;
-  }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return native_handle() != 0; }
+  _LIBCPP_HIDE_FROM_ABI constexpr native_handle_type native_handle() const noexcept { return __base_.__addr_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return native_handle() != 0; }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_.view()); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_.view()); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
+  _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_.view()); }
+  _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_.view()); }
+  _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
   operator==(const stacktrace_entry& __x, const stacktrace_entry& __y) noexcept {
     return __x.native_handle() == __y.native_handle();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
   operator<=>(const stacktrace_entry& __x, const stacktrace_entry& __y) noexcept {
     return __x.native_handle() <=> __y.native_handle();
   }
@@ -139,15 +137,16 @@ public:
 // (19.6.4.6)
 // Non-member functions [stacktrace.basic.nonmem]
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI string to_string(const stacktrace_entry& __entry);
-
 #  if _LIBCPP_HAS_LOCALIZATION
-_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry) {
-  return __entry.__base_.write_to(__os);
-}
-_LIBCPP_HIDE_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry) {
+
+_LIBCPP_HIDE_FROM_ABI inline string to_string(const std::stacktrace_entry& __entry) {
   return __entry.__base_.to_string();
 }
+
+_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const std::stacktrace_entry& __entry) {
+  return __entry.__base_.write_to(__os);
+}
+
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
 // (19.6.5)
@@ -158,8 +157,8 @@ _LIBCPP_HIDE_FROM_ABI inline string to_string(std::stacktrace_entry const& __ent
 // Hash support [stacktrace.basic.hash]
 
 template <>
-struct _LIBCPP_HIDE_FROM_ABI hash<stacktrace_entry> {
-  [[nodiscard]] size_t operator()(stacktrace_entry const& __entry) const noexcept {
+struct hash<stacktrace_entry> {
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(stacktrace_entry const& __entry) const noexcept {
     auto __addr = __entry.native_handle();
     return hash<uintptr_t>()(__addr);
   }
@@ -171,4 +170,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STACKTRACE_ENTRY_H
+#endif // _LIBCPP___STACKTRACE_ENTRY_H
