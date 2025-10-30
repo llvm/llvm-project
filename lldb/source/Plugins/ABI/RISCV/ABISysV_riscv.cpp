@@ -643,11 +643,10 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
   }
   // Floating point return type.
   else if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
     bool is_complex = false;
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        float_count == 1 && !is_complex) {
+    if (compiler_type.IsFloatingPointType(is_complex) &&
+        !(type_flags & eTypeIsVector) && !is_complex) {
       const uint32_t arch_fp_flags =
           arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
       return_valobj_sp = GetValObjFromFPRegs(
