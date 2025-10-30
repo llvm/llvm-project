@@ -26,6 +26,8 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Support/Debug.h"
 #include <list>
@@ -453,6 +455,21 @@ public:
     return true;
   }
 
+  bool Pre(const parser::OmpStylizedDeclaration &x) {
+    static llvm::StringMap<Symbol::Flag> map{
+        {"omp_in", Symbol::Flag::OmpInVar},
+        {"omp_orig", Symbol::Flag::OmpOrigVar},
+        {"omp_out", Symbol::Flag::OmpOutVar},
+        {"omp_priv", Symbol::Flag::OmpPrivVar},
+    };
+    if (auto &name{std::get<parser::ObjectName>(x.var.t)}; name.symbol) {
+      if (auto found{map.find(name.ToString())}; found != map.end()) {
+        ResolveOmp(name, found->second,
+            const_cast<Scope &>(DEREF(name.symbol).owner()));
+      }
+    }
+    return false;
+  }
   bool Pre(const parser::OmpMetadirectiveDirective &x) {
     PushContext(x.v.source, llvm::omp::Directive::OMPD_metadirective);
     return true;
@@ -3092,26 +3109,6 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
 
       if (ompFlag == Symbol::Flag::OmpAllocate) {
         AddAllocateName(name);
-      }
-    }
-    if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
-        IsAllocatable(*symbol) &&
-        !IsNestedInDirective(llvm::omp::Directive::OMPD_allocate)) {
-      context_.Say(designator.source,
-          "List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement"_err_en_US);
-    }
-    bool checkScope{ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective};
-    // In 5.1 the scope check only applies to declarative allocate.
-    if (version == 50 && !checkScope) {
-      checkScope = ompFlag == Symbol::Flag::OmpExecutableAllocateDirective;
-    }
-    if (checkScope) {
-      if (omp::GetScopingUnit(GetContext().scope) !=
-          omp::GetScopingUnit(symbol->GetUltimate().owner())) {
-        context_.Say(designator.source, // 2.15.3
-            "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
-            parser::ToUpperCaseLetters(
-                llvm::omp::getOpenMPDirectiveName(directive, version)));
       }
     }
     if (ompFlag == Symbol::Flag::OmpReduction) {

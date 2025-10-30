@@ -9,7 +9,7 @@
 @.str1 = private unnamed_addr constant [3 x i8] c"ab\00", align 1
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @main(i32 %argc, ptr nocapture readnone %argv) #0 {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) {
 entry:
   %data = alloca [2 x i8], align 1
   call fastcc void @memcpy2(ptr %data, ptr @.str, i64 1)
@@ -18,7 +18,7 @@ entry:
 }
 
 ; Function Attrs: inlinehint nounwind ssp uwtable
-define internal fastcc void @memcpy2(ptr nocapture %dst, ptr nocapture readonly %src, i64 %size) #1 {
+define internal fastcc void @memcpy2(ptr nocapture %dst, ptr nocapture readonly %src, i64 %size) {
 entry:
   %vla = alloca i64, i64 %size, align 16
   call void @llvm.memcpy.p0.p0.i64(ptr %vla, ptr %src, i64 %size, i1 false)
@@ -27,11 +27,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #2
-
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { inlinehint nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
 
 !llvm.ident = !{!0}
 

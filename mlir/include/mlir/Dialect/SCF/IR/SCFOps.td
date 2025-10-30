@@ -77,7 +77,7 @@ def ConditionOp : SCF_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def ExecuteRegionOp : SCF_Op<"execute_region", [
-    DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>, RecursiveMemoryEffects]> {
   let summary = "operation that executes its region exactly once";
   let description = [{
     The `scf.execute_region` operation is used to allow multiple blocks within SCF
@@ -644,6 +644,13 @@ def ForallOp : SCF_Op<"forall", [
 
     /// Returns true if the mapping specified for this forall op is linear.
     bool usesLinearMapping();
+
+    /// RegionBranchOpInterface
+
+    OperandRange getEntrySuccessorOperands(RegionSuccessor successor) {
+      return getInits();
+    }
+
   }];
 }
 

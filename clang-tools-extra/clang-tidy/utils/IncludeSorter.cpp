@@ -118,9 +118,8 @@ static int compareHeaders(StringRef LHS, StringRef RHS,
   return LHS.compare(RHS);
 }
 
-IncludeSorter::IncludeSorter(const SourceManager *SourceMgr,
-                             const FileID FileID, StringRef FileName,
-                             IncludeStyle Style)
+IncludeSorter::IncludeSorter(const SourceManager *SourceMgr, FileID FileID,
+                             StringRef FileName, IncludeStyle Style)
     : SourceMgr(SourceMgr), Style(Style), CurrentFileID(FileID),
       CanonicalFile(makeCanonicalName(FileName, Style)) {}
 
