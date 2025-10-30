@@ -357,30 +357,29 @@ define amdgpu_kernel void @infinite_loop_nest_ret_callbr(ptr addrspace(1) %out) 
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    ;;#ASMEND
 ; SI-NEXT:  ; %bb.1: ; %outer_loop.preheader
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x3e7
-; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5
+; SI-NEXT:    s_and_b64 s[0:1], exec, 0
 ; SI-NEXT:    s_branch .LBB7_3
 ; SI-NEXT:  .LBB7_2: ; %loop.exit.guard
 ; SI-NEXT:    ; in Loop: Header=BB7_3 Depth=1
-; SI-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; SI-NEXT:    s_mov_b64 s[4:5], 0
+; SI-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; SI-NEXT:    s_cbranch_vccnz .LBB7_5
 ; SI-NEXT:  .LBB7_3: ; %outer_loop
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    ;;#ASMEND
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; SI-NEXT:    s_mov_b64 s[4:5], -1
+; SI-NEXT:    s_mov_b64 s[2:3], -1
+; SI-NEXT:    s_mov_b64 vcc, s[0:1]
 ; SI-NEXT:    s_cbranch_vccz .LBB7_2
 ; SI-NEXT:  ; %bb.4: ; %TransitionBlock.target.outer_loop
 ; SI-NEXT:    ; in Loop: Header=BB7_3 Depth=1
-; SI-NEXT:    s_mov_b64 s[4:5], 0
+; SI-NEXT:    s_mov_b64 s[2:3], 0
 ; SI-NEXT:    s_branch .LBB7_2
 ; SI-NEXT:  .LBB7_5: ; Inline asm indirect target
 ; SI-NEXT:    ; %UnifiedReturnBlock
