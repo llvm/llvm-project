@@ -3428,7 +3428,7 @@ static bool interp__builtin_ia32_shuffle_generic(
 
   for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
     auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, ShuffleMask);
-    
+
     if (SrcIdx < 0) {
       // Zero out this element
       if (ElemT == PT_Float) {
@@ -4393,7 +4393,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
           unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
           unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
-          return std::pair<unsigned, int>{SrcIdx, static_cast<int>(LaneOffset + Index)};
+          return std::pair<unsigned, int>{SrcIdx,
+                                          static_cast<int>(LaneOffset + Index)};
         });
   case X86::BI__builtin_ia32_shufpd:
   case X86::BI__builtin_ia32_shufpd256:
@@ -4411,12 +4412,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           unsigned SrcIdx = ElemInLane >= NumSelectableElems ? 1 : 0;
           unsigned BitIndex = (DstIdx * BitsPerElem) % MaskBits;
           unsigned Index = (ShuffleMask >> BitIndex) & IndexMask;
-          return std::pair<unsigned, int>{SrcIdx, static_cast<int>(LaneOffset + Index)};
+          return std::pair<unsigned, int>{SrcIdx,
+                                          static_cast<int>(LaneOffset + Index)};
         });
   case X86::BI__builtin_ia32_insertps128:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call,
-        [](unsigned DstIdx, unsigned Mask) {
+        S, OpPC, Call, [](unsigned DstIdx, unsigned Mask) {
           // Bits [3:0]: zero mask - if bit is set, zero this element
           if ((Mask & (1 << DstIdx)) != 0) {
             return std::pair<unsigned, int>{0, -1};
