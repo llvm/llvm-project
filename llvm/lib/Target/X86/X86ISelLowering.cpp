@@ -53487,9 +53487,10 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                               const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
 
-  // Check if the previous op in the chain was a matching normal load.
+  // Only handle normal stores and its chain was a matching normal load.
   auto *Ld = dyn_cast<LoadSDNode>(St->getChain());
-  if (!Ld || !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
+  if (!ISD::isNormalStore(St) || !St->isSimple() || !Ld ||
+      !ISD::isNormalLoad(Ld) || !Ld->isSimple() ||
       Ld->getBasePtr() != St->getBasePtr() ||
       Ld->getOffset() != St->getOffset())
     return SDValue();
@@ -53498,8 +53499,8 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   SDValue StoredVal = St->getValue();
   EVT VT = StoredVal.getValueType();
 
-  // Only narrow normal stores of larger than legal scalar integers.
-  if (!ISD::isNormalStore(St) || !St->isSimple() || !VT.isScalarInteger() ||
+  // Only narrow larger than legal scalar integers.
+  if (!VT.isScalarInteger() ||
       VT.getSizeInBits() <= (Subtarget.is64Bit() ? 64 : 32))
     return SDValue();
 
