@@ -485,3 +485,88 @@ TEST_F(OpenACCUtilsTest, getVariableNameFromCopyin) {
   std::string varName = getVariableName(copyinOp->getAccVar());
   EXPECT_EQ(varName, name);
 }
+
+//===----------------------------------------------------------------------===//
+// getRecipeName Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivateScalarMemref) {
+  // Create a scalar memref type
+  auto scalarMemrefTy = MemRefType::get({}, b.getI32Type());
+
+  // Test private recipe with scalar memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, scalarMemrefTy);
+  EXPECT_EQ(recipeName, "privatization_memref_i32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameFirstprivateScalarMemref) {
+  // Create a scalar memref type
+  auto scalarMemrefTy = MemRefType::get({}, b.getF32Type());
+
+  // Test firstprivate recipe with scalar memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::firstprivate_recipe, scalarMemrefTy);
+  EXPECT_EQ(recipeName, "firstprivatization_memref_f32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameReductionScalarMemref) {
+  // Create a scalar memref type
+  auto scalarMemrefTy = MemRefType::get({}, b.getI64Type());
+
+  // Test reduction recipe with scalar memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::reduction_recipe, scalarMemrefTy);
+  EXPECT_EQ(recipeName, "reduction_memref_i64_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivate2DMemref) {
+  // Create a 2D memref type
+  auto memref2DTy = MemRefType::get({5, 10}, b.getF32Type());
+
+  // Test private recipe with 2D memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, memref2DTy);
+  EXPECT_EQ(recipeName, "privatization_memref_5x10xf32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameFirstprivate2DMemref) {
+  // Create a 2D memref type
+  auto memref2DTy = MemRefType::get({8, 16}, b.getF64Type());
+
+  // Test firstprivate recipe with 2D memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::firstprivate_recipe, memref2DTy);
+  EXPECT_EQ(recipeName, "firstprivatization_memref_8x16xf64_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameReduction2DMemref) {
+  // Create a 2D memref type
+  auto memref2DTy = MemRefType::get({4, 8}, b.getI32Type());
+
+  // Test reduction recipe with 2D memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::reduction_recipe, memref2DTy);
+  EXPECT_EQ(recipeName, "reduction_memref_4x8xi32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivateDynamicMemref) {
+  // Create a memref with dynamic dimensions
+  auto dynamicMemrefTy =
+      MemRefType::get({ShapedType::kDynamic, 10}, b.getI32Type());
+
+  // Test private recipe with dynamic memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, dynamicMemrefTy);
+  EXPECT_EQ(recipeName, "privatization_memref_Ux10xi32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivateUnrankedMemref) {
+  // Create an unranked memref type
+  auto unrankedMemrefTy = UnrankedMemRefType::get(b.getI32Type(), 0);
+
+  // Test private recipe with unranked memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, unrankedMemrefTy);
+  EXPECT_EQ(recipeName, "privatization_memref_Zxi32_");
+}
