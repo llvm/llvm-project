@@ -613,6 +613,7 @@ clang-format
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
 - Add ``AllowBreakBeforeQtProperty`` option.
+- Add ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to ``IntegerLiteralSeparator``.
 
 libclang
 --------

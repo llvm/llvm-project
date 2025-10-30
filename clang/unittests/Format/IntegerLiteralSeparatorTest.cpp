@@ -243,6 +243,22 @@ TEST_F(IntegerLiteralSeparatorTest, FloatingPoint) {
                Style);
 }
 
+TEST_F(IntegerLiteralSeparatorTest, MaxDigitsNoSeparator) {
+  auto Style = getLLVMStyle();
+  Style.IntegerLiteralSeparator.Decimal = 3;
+  Style.IntegerLiteralSeparator.DecimalMaxDigitsNoSeparator = 4;
+  Style.IntegerLiteralSeparator.DecimalMinDigits = 7;
+  verifyFormat("d0 = 2023;\n"
+               "d1 = 123456;\n"
+               "d2 = 123'456;\n"
+               "d3 = 5'000'000;",
+               "d0 = 20'2'3;\n"
+               "d1 = 123456;\n"
+               "d2 = 1234'56;\n"
+               "d3 = 5000000;",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
