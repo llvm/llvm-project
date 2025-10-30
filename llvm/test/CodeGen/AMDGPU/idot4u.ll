@@ -2730,18 +2730,15 @@ define amdgpu_kernel void @udot4_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b16 v1.h, 8, v4.l
 ; GFX11-DL-TRUE16-NEXT:    v_mad_u16 v0.l, v3.l, v4.l, v0.l
 ; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v2.l, v2.l, v6.l
-; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v6.l, 0
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-DL-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v1.l
 ; GFX11-DL-TRUE16-NEXT:    v_mul_lo_u16 v0.h, v0.h, v1.h
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-DL-TRUE16-NEXT:    v_lshlrev_b16 v2.l, 8, v2.l
-; GFX11-DL-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v6.l
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-DL-TRUE16-NEXT:    v_lshlrev_b16 v7.l, 8, v0.h
+; GFX11-DL-TRUE16-NEXT:    v_lshlrev_b16 v6.l, 8, v0.h
+; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-DL-TRUE16-NEXT:    v_or_b16 v6.h, v1.l, v2.l
-; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-DL-TRUE16-NEXT:    v_or_b32_e32 v1, v7, v6
-; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
+; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v6
 ; GFX11-DL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-DL-TRUE16-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
 ; GFX11-DL-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 8, v2

@@ -137,6 +137,16 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/OpenACCOps.td
+  SOURCES
+    dialects/openacc.py
+  DIALECT_NAME acc
+  DEPENDS acc_common_td
+  )
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/GPUOps.td
   SOURCES_GLOB dialects/gpu/*.py
   DIALECT_NAME gpu
@@ -339,6 +349,15 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/ShardOps.td
+  SOURCES
+    dialects/shard.py
+  DIALECT_NAME shard
+  GEN_ENUM_BINDINGS)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/MLProgramOps.td
   SOURCES
     dialects/ml_program.py
@@ -440,11 +459,11 @@ declare_mlir_dialect_python_bindings(
   DIALECT_NAME smt)
 
 declare_mlir_dialect_python_bindings(
-  ADD_TO_PARENT MLIRPythonSources.Dialects
-  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/SPIRVOps.td
-  SOURCES dialects/spirv.py
-  DIALECT_NAME spirv)
+    ADD_TO_PARENT MLIRPythonSources.Dialects
+    ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+    TD_FILE dialects/SPIRVOps.td
+    SOURCES dialects/spirv.py
+    DIALECT_NAME spirv)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -501,6 +520,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
   MODULE_NAME _mlir
   ADD_TO_PARENT MLIRPythonSources.Core
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     MainModule.cpp
     IRAffine.cpp
@@ -539,6 +559,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
 declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
   MODULE_NAME _mlirRegisterEverything
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     RegisterEverything.cpp
   PRIVATE_LINK_LIBS
@@ -549,10 +570,11 @@ declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
     MLIRCAPIRegisterEverything
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
   MODULE_NAME _mlirDialectsLinalg
   ADD_TO_PARENT MLIRPythonSources.Dialects.linalg
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectLinalg.cpp
   PRIVATE_LINK_LIBS
@@ -562,10 +584,11 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Nanobind
     MLIRCAPILinalg
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Pybind
   MODULE_NAME _mlirDialectsGPU
   ADD_TO_PARENT MLIRPythonSources.Dialects.gpu
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectGPU.cpp
   PRIVATE_LINK_LIBS
@@ -575,10 +598,11 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.GPU.Nanobind
     MLIRCAPIGPU
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
   MODULE_NAME _mlirDialectsLLVM
   ADD_TO_PARENT MLIRPythonSources.Dialects.llvm
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectLLVM.cpp
   PRIVATE_LINK_LIBS
@@ -586,12 +610,15 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Nanobind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILLVM
+    # Misnomer - this is only the LLVMIR translation target.
+    MLIRCAPITarget
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind
   MODULE_NAME _mlirDialectsQuant
   ADD_TO_PARENT MLIRPythonSources.Dialects.quant
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectQuant.cpp
   PRIVATE_LINK_LIBS
@@ -601,10 +628,11 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Nanobind
     MLIRCAPIQuant
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Pybind
   MODULE_NAME _mlirDialectsNVGPU
   ADD_TO_PARENT MLIRPythonSources.Dialects.nvgpu
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectNVGPU.cpp
   PRIVATE_LINK_LIBS
@@ -614,10 +642,11 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.NVGPU.Nanobind
     MLIRCAPINVGPU
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Pybind
   MODULE_NAME _mlirDialectsPDL
   ADD_TO_PARENT MLIRPythonSources.Dialects.pdl
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectPDL.cpp
   PRIVATE_LINK_LIBS
@@ -627,10 +656,11 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.PDL.Nanobind
     MLIRCAPIPDL
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
   MODULE_NAME _mlirDialectsSparseTensor
   ADD_TO_PARENT MLIRPythonSources.Dialects.sparse_tensor
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectSparseTensor.cpp
   PRIVATE_LINK_LIBS
@@ -640,10 +670,11 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Nanobind
     MLIRCAPISparseTensor
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
   MODULE_NAME _mlirDialectsTransform
   ADD_TO_PARENT MLIRPythonSources.Dialects.transform
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectTransform.cpp
   PRIVATE_LINK_LIBS
@@ -653,10 +684,11 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Nanobind
     MLIRCAPITransformDialect
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.IRDL.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.IRDL.Pybind
   MODULE_NAME _mlirDialectsIRDL
   ADD_TO_PARENT MLIRPythonSources.Dialects.irdl
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectIRDL.cpp
   PRIVATE_LINK_LIBS
@@ -670,6 +702,7 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
   MODULE_NAME _mlirAsyncPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.async
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     AsyncPasses.cpp
   PRIVATE_LINK_LIBS
@@ -683,6 +716,7 @@ if(MLIR_ENABLE_EXECUTION_ENGINE)
     MODULE_NAME _mlirExecutionEngine
     ADD_TO_PARENT MLIRPythonSources.ExecutionEngine
     ROOT_DIR "${PYTHON_SOURCE_DIR}"
+    PYTHON_BINDINGS_LIBRARY nanobind
     SOURCES
       ExecutionEngineModule.cpp
     PRIVATE_LINK_LIBS
@@ -696,6 +730,7 @@ declare_mlir_python_extension(MLIRPythonExtension.GPUDialectPasses
   MODULE_NAME _mlirGPUPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.gpu
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     GPUPasses.cpp
   PRIVATE_LINK_LIBS
@@ -708,6 +743,7 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
   MODULE_NAME _mlirLinalgPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.linalg
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     LinalgPasses.cpp
   PRIVATE_LINK_LIBS
@@ -716,10 +752,11 @@ declare_mlir_python_extension(MLIRPythonExtension.LinalgPasses
     MLIRCAPILinalg
 )
 
-declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Nanobind
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Pybind
   MODULE_NAME _mlirDialectsSMT
   ADD_TO_PARENT MLIRPythonSources.Dialects.smt
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectSMT.cpp
     # Headers must be included explicitly so they are installed.
@@ -736,6 +773,7 @@ declare_mlir_python_extension(MLIRPythonExtension.SparseTensorDialectPasses
   MODULE_NAME _mlirSparseTensorPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.sparse_tensor
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     SparseTensorPasses.cpp
   PRIVATE_LINK_LIBS
@@ -748,6 +786,7 @@ declare_mlir_python_extension(MLIRPythonExtension.TransformInterpreter
   MODULE_NAME _mlirTransformInterpreter
   ADD_TO_PARENT MLIRPythonSources.Dialects.transform
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     TransformInterpreter.cpp
   PRIVATE_LINK_LIBS
@@ -789,10 +828,23 @@ if(MLIR_INCLUDE_TESTS)
     ADD_TO_PARENT MLIRPythonTestSources.Dialects.PythonTest
     SOURCES "dialects/_python_test_ops_gen.py")
 
+  declare_mlir_python_extension(MLIRPythonTestSources.PythonTestExtensionPybind11
+    MODULE_NAME _mlirPythonTestPybind11
+    ADD_TO_PARENT MLIRPythonTestSources.Dialects
+    ROOT_DIR "${MLIR_SOURCE_DIR}/test/python/lib"
+    PYTHON_BINDINGS_LIBRARY pybind11
+    SOURCES
+      PythonTestModulePybind11.cpp
+    PRIVATE_LINK_LIBS
+      LLVMSupport
+    EMBED_CAPI_LINK_LIBS
+      MLIRCAPIPythonTestDialect
+  )
   declare_mlir_python_extension(MLIRPythonTestSources.PythonTestExtensionNanobind
     MODULE_NAME _mlirPythonTestNanobind
     ADD_TO_PARENT MLIRPythonTestSources.Dialects
     ROOT_DIR "${MLIR_SOURCE_DIR}/test/python/lib"
+    PYTHON_BINDINGS_LIBRARY nanobind
     SOURCES
       PythonTestModuleNanobind.cpp
     PRIVATE_LINK_LIBS
@@ -842,9 +894,16 @@ if(NOT LLVM_ENABLE_IDE)
   )
 endif()
 
+set(_mlir_python_stubgen_enabled ON)
 # Stubgen doesn't work when cross-compiling (stubgen will run in the host interpreter and then fail
 # to find the extension module for the host arch).
-if(NOT CMAKE_CROSSCOMPILING)
+# Note: Stubgen requires some extra handling to work properly when sanitizers are enabled,
+# so we skip running it in that case now.
+if(CMAKE_CROSSCOMPILING OR (NOT LLVM_USE_SANITIZER STREQUAL ""))
+  set(_mlir_python_stubgen_enabled OFF)
+endif()
+
+if(_mlir_python_stubgen_enabled)
   # _mlir stubgen
   # Note: All this needs to come before add_mlir_python_modules(MLIRPythonModules so that the install targets for the
   # generated type stubs get created.
@@ -933,7 +992,7 @@ endif()
 ################################################################################
 
 set(_declared_sources MLIRPythonSources MLIRPythonExtension.RegisterEverything)
-if(NOT CMAKE_CROSSCOMPILING)
+if(_mlir_python_stubgen_enabled)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
 
@@ -946,7 +1005,7 @@ add_mlir_python_modules(MLIRPythonModules
   COMMON_CAPI_LINK_LIBS
     MLIRPythonCAPI
 )
-if(NOT CMAKE_CROSSCOMPILING)
+if(_mlir_python_stubgen_enabled)
   add_dependencies(MLIRPythonModules "${_mlir_typestub_gen_target}")
   if(MLIR_INCLUDE_TESTS)
     add_dependencies(MLIRPythonModules "${_mlirPythonTestNanobind_typestub_gen_target}")

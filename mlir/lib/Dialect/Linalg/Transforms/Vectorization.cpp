@@ -524,6 +524,40 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
 
   if (!mask) {
     LDBG() << "No mask required";
+    if (assumeDynamicDimsMatchVecSizes) {
+      llvm::TypeSwitch<Operation *>(opToMask)
+          .Case<vector::TransferReadOp, vector::TransferWriteOp>(
+              [&](auto xferOp) {
+                // For vector.transfer_read and vector.transfer_write, there is
+                // also the `in-bounds` attribute that has to be set explicitly
+                // to true. Otherwise, "out-of-bounds" access will be assumed
+                // and masks will be generated while lowering these.
+                LDBG() << "Assuming dynamic dimensions match vector sizes and "
+                          "setting their in-bounds to true!";
+                SmallVector<bool> inBoundsMap = xferOp.getInBoundsValues();
+                ShapedType xferType = xferOp.getShapedType();
+                AffineMap permMap = xferOp.getPermutationMap();
+                // Only set the in-bounds values to true for dynamic dims.
+                // Different mechanisms will set these accordingly for the
+                // static dims.
+                for (unsigned i = 0; i < xferOp.getTransferRank(); i++) {
+                  auto dimExpr = dyn_cast<AffineDimExpr>(permMap.getResult(i));
+                  // Skip broadcast dimensions.
+                  if (!dimExpr)
+                    continue;
+                  unsigned pos = dimExpr.getPosition();
+                  if (xferType.isDynamicDim(pos))
+                    inBoundsMap[i] = true;
+                }
+                rewriter.modifyOpInPlace(xferOp, [&]() {
+                  xferOp.setInBoundsAttr(
+                      rewriter.getBoolArrayAttr(inBoundsMap));
+                });
+              })
+          .Default([](Operation *op) {
+            // No-op if the operation is not an xfer read or write.
+          });
+    }
     return opToMask;
   }
 
@@ -3877,21 +3911,21 @@ struct Conv1DGenerator
     Value lhs = vector::TransferReadOp::create(
         rewriter, loc, lhsType, lhsShaped, ValueRange{zero, zero, zero},
         /*padding=*/arith::getZeroConstant(rewriter, loc, lhsEltType));
-    auto maybeMaskedLhs = maybeMaskXferOp(
+    auto *maybeMaskedLhs = maybeMaskXferOp(
         lhsType.getShape(), lhsType.getScalableDims(), lhs.getDefiningOp());
 
     // Read rhs slice of size {kw, c} @ [0, 0].
     Value rhs = vector::TransferReadOp::create(
         rewriter, loc, rhsType, rhsShaped, ValueRange{zero, zero},
         /*padding=*/arith::getZeroConstant(rewriter, loc, rhsEltType));
-    auto maybeMaskedRhs = maybeMaskXferOp(
+    auto *maybeMaskedRhs = maybeMaskXferOp(
         rhsType.getShape(), rhsType.getScalableDims(), rhs.getDefiningOp());
 
     // Read res slice of size {n, w, c} @ [0, 0, 0].
     Value res = vector::TransferReadOp::create(
         rewriter, loc, resType, resShaped, ValueRange{zero, zero, zero},
         /*padding=*/arith::getZeroConstant(rewriter, loc, resEltType));
-    auto maybeMaskedRes = maybeMaskXferOp(
+    auto *maybeMaskedRes = maybeMaskXferOp(
         resType.getShape(), resType.getScalableDims(), res.getDefiningOp());
 
     //===------------------------------------------------------------------===//

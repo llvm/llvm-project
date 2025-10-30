@@ -878,7 +878,7 @@ struct BubbleUpBitCastForStridedSliceInsert
 // This transforms IR like:
 //   %1 = vector.bitcast %0: vector<8xf16> to vector<4xf32>
 // Into:
-//   %cst = vector.splat %c0_f32 : vector<4xf32>
+//   %cst = vector.broadcast %c0_f32 : f32 to vector<4xf32>
 //   %1 = vector.extract_strided_slice %0 {
 //          offsets = [0], sizes = [4], strides = [1]
 //        } : vector<8xf16> to vector<4xf16>
@@ -987,8 +987,8 @@ static Type cloneOrReplace(Type type, Type newElementType) {
   return newElementType;
 }
 
-/// If `value` is the result of a splat or broadcast operation, return the input
-/// of the splat/broadcast operation.
+/// If `value` is the result of a broadcast operation, return the input
+/// of the broadcast operation.
 static Value getBroadcastLikeSource(Value value) {
 
   Operation *op = value.getDefiningOp();
@@ -998,13 +998,10 @@ static Value getBroadcastLikeSource(Value value) {
   if (auto broadcast = dyn_cast<vector::BroadcastOp>(op))
     return broadcast.getSource();
 
-  if (auto splat = dyn_cast<vector::SplatOp>(op))
-    return splat.getInput();
-
   return {};
 }
 
-/// Reorders elementwise(broadcast/splat) to broadcast(elementwise). Ex:
+/// Reorders elementwise(broadcast) to broadcast(elementwise). Ex:
 ///
 /// Example:
 /// ```
@@ -1017,9 +1014,6 @@ static Value getBroadcastLikeSource(Value value) {
 /// %r = arith.addi %arg0, %arg1 : index
 /// %b = vector.broadcast %r : index to vector<1x4xindex>
 /// ```
-///
-/// Both `vector.broadcast` and `vector.splat` are supported as broadcasting
-/// ops.
 struct ReorderElementwiseOpsOnBroadcast final
     : public OpTraitRewritePattern<OpTrait::Elementwise> {
   using OpTraitRewritePattern::OpTraitRewritePattern;
@@ -1045,29 +1039,29 @@ struct ReorderElementwiseOpsOnBroadcast final
     Type resultElemType = resultType.getElementType();
 
     // Get the type of the first non-constant operand
-    Value splatSource;
+    Value broadcastSource;
     for (Value operand : op->getOperands()) {
       Operation *definingOp = operand.getDefiningOp();
       if (!definingOp)
         return failure();
       if (definingOp->hasTrait<OpTrait::ConstantLike>())
         continue;
-      splatSource = getBroadcastLikeSource(operand);
+      broadcastSource = getBroadcastLikeSource(operand);
       break;
     }
-    if (!splatSource)
+    if (!broadcastSource)
       return failure();
     Type unbroadcastResultType =
-        cloneOrReplace(splatSource.getType(), resultElemType);
+        cloneOrReplace(broadcastSource.getType(), resultElemType);
 
     // Make sure that all operands are broadcast from identically-shaped types:
-    //  * scalar (`vector.broadcast` + `vector.splat`), or
+    //  * scalar (`vector.broadcast`), or
     //  * vector (`vector.broadcast`).
     // Otherwise the re-ordering wouldn't be safe.
-    if (!llvm::all_of(op->getOperands(), [splatSource](Value val) {
+    if (!llvm::all_of(op->getOperands(), [broadcastSource](Value val) {
           if (auto source = getBroadcastLikeSource(val))
             return haveSameShapeAndScaling(source.getType(),
-                                           splatSource.getType());
+                                           broadcastSource.getType());
           SplatElementsAttr splatConst;
           return matchPattern(val, m_Constant(&splatConst));
         })) {
@@ -1271,19 +1265,18 @@ public:
   }
 };
 
-/// Pattern to rewrite vector.store(vector.splat) -> vector/memref.store.
+/// Pattern to rewrite vector.store(vector.broadcast) -> vector/memref.store.
 ///
 /// Example:
 /// ```
-/// %0 = vector.splat %arg2 : vector<1xf32>
+/// %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
 /// vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
 /// ```
 /// Gets converted to:
 /// ```
 /// memref.store %arg2, %arg0[%arg1] : memref<?xf32>
 /// ```
-class StoreOpFromSplatOrBroadcast final
-    : public OpRewritePattern<vector::StoreOp> {
+class StoreOpFromBroadcast final : public OpRewritePattern<vector::StoreOp> {
 public:
   using Base::Base;
 
@@ -1308,9 +1301,9 @@ public:
       return rewriter.notifyMatchFailure(
           op, "value to store is not from a broadcast");
 
-    // Checking for single use so we can remove splat.
-    Operation *splat = toStore.getDefiningOp();
-    if (!splat->hasOneUse())
+    // Checking for single use so we can remove broadcast.
+    Operation *broadcast = toStore.getDefiningOp();
+    if (!broadcast->hasOneUse())
       return rewriter.notifyMatchFailure(op, "expected single op use");
 
     Value base = op.getBase();
@@ -1321,7 +1314,7 @@ public:
     } else {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(op, source, base, indices);
     }
-    rewriter.eraseOp(splat);
+    rewriter.eraseOp(broadcast);
     return success();
   }
 };
@@ -2391,8 +2384,8 @@ void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
 void mlir::vector::populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
   // TODO: Consider converting these patterns to canonicalizations.
-  patterns.add<ExtractOpFromLoad, StoreOpFromSplatOrBroadcast>(
-      patterns.getContext(), benefit);
+  patterns.add<ExtractOpFromLoad, StoreOpFromBroadcast>(patterns.getContext(),
+                                                        benefit);
 }
 
 void mlir::vector::populateChainedVectorReductionFoldingPatterns(

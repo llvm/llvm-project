@@ -420,23 +420,23 @@ static MCUInfo AVRMcus[] = {
 
 static bool ArchHasELPM(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("31", "51", "6", true)
-    .Cases("102", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"31", "51", "6"}, true)
+      .Cases({"102", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasELPMX(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("51", "6", true)
-    .Cases("102", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"51", "6"}, true)
+      .Cases({"102", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasMOVW(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("25", "35", "4", "5", "51", "6", true)
-    .Cases("102", "103", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"25", "35", "4", "5", "51", "6"}, true)
+      .Cases({"102", "103", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasLPMX(StringRef Arch) {
@@ -445,16 +445,16 @@ static bool ArchHasLPMX(StringRef Arch) {
 
 static bool ArchHasMUL(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("4", "5", "51", "6", true)
-    .Cases("102", "103", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"4", "5", "51", "6"}, true)
+      .Cases({"102", "103", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHasJMPCALL(StringRef Arch) {
   return llvm::StringSwitch<bool>(Arch)
-    .Cases("3", "31", "35", "5", "51", "6", true)
-    .Cases("102", "103", "104", "105", "106", "107", true)
-    .Default(false);
+      .Cases({"3", "31", "35", "5", "51", "6"}, true)
+      .Cases({"102", "103", "104", "105", "106", "107"}, true)
+      .Default(false);
 }
 
 static bool ArchHas3BytePC(StringRef Arch) {

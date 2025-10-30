@@ -72,6 +72,7 @@ DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpAlwaysModifier);
+DECLARE_DESCRIPTOR(parser::OmpAttachModifier);
 DECLARE_DESCRIPTOR(parser::OmpAutomapModifier);
 DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
 DECLARE_DESCRIPTOR(parser::OmpCloseModifier);
