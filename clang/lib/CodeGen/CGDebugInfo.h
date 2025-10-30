@@ -468,9 +468,7 @@ public:
 
   /// Update the current source location. If \arg Loc is invalid it is
   /// ignored.
-  void setLocation(SourceLocation Loc) {
-    setLocation(getPresumedFileLoc(Loc));        
-  }
+  void setLocation(SourceLocation Loc) { setLocation(getPresumedFileLoc(Loc)); }
 
   /// Update the current presumed location. If \arg PLoc is invalid it is
   /// ignored.

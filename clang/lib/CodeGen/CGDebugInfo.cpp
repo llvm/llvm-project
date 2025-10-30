@@ -661,10 +661,10 @@ unsigned CGDebugInfo::getColumnNumber(const PresumedLoc &PLoc,
   if (!Force && !CGM.getCodeGenOpts().DebugColumnInfo)
     return 0;
 
+  if (PLoc.isValid())
+    return PLoc.getColumn();
   // If the location is invalid then use the current column.
-  if (PLoc.isInvalid())
-    PLoc = CurPLoc;
-  return PLoc.isValid() ? PLoc.getColumn() : 0;
+  return CurPLoc.isValid() ? CurPLoc.getColumn() : 0;
 }
 
 StringRef CGDebugInfo::getCurrentDirname() {
