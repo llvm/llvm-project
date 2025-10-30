@@ -6,8 +6,8 @@ When reviewing code, focus on:
 
 ## Language, Libraries & Standards
 
-- Target C++17 and avoids vendor-specific extensions.
-- For Python scripts, follow PEP 8 formatting and use tools like `black` or `darker`.
+- Target C++17 and avoid vendor-specific extensions.
+- For Python scripts, follow PEP 8.
 - Prefer standard library or LLVM support libraries instead of reinventing data structures.
 
 ## Comments & Documentation
