@@ -224,28 +224,8 @@ static void generateFusedElementwiseOpRegion(
   auto consumer = cast<LinalgOp>(fusedOperand->getOwner());
   // Build the region of the fused op.
 
-  // Since some ops, like `linalg.map`, do not have block arguments for init
-  // operands then we first "generalize" the block by adding arguments for init
-  // operands when they aren't present. We detect this case by checking if
-  // `getOpOperandsMatchingBBargs() == getDpsInputOperands()`.
-  // TODO: This is hacky and should not be merged. Keeping for now for testing
-  // purposes in the meantime, but need a better way
   Block &producerBlock = producer->getRegion(0).front();
-  bool addOutputArgsProducer =
-      producer.getOpOperandsMatchingBBargs() == producer.getDpsInputOperands();
-  if (addOutputArgsProducer) {
-    for (auto init : producer.getDpsInits())
-      producerBlock.addArgument(getElementTypeOrSelf(init.getType()),
-                                producer.getLoc());
-  }
   Block &consumerBlock = consumer->getRegion(0).front();
-  bool addOutputArgsConsumer =
-      consumer.getOpOperandsMatchingBBargs() == consumer.getDpsInputOperands();
-  if (addOutputArgsConsumer) {
-    for (auto init : consumer.getDpsInits())
-      consumerBlock.addArgument(getElementTypeOrSelf(init.getType()),
-                                consumer.getLoc());
-  }
   OpBuilder::InsertionGuard guard(rewriter);
   Block *fusedBlock = rewriter.createBlock(&fusedOp->getRegion(0));
   IRMapping mapper;
@@ -355,14 +335,6 @@ static void generateFusedElementwiseOpRegion(
   // Sanity checks.
   assert(fusedBlock->getNumArguments() == fusedOp->getNumOperands() &&
          "Ill-formed GenericOp region");
-  // Erase added args in case that the ops are still live after fusion.
-  // TODO: Remove along with hacky code above.
-  if (addOutputArgsProducer)
-    producerBlock.eraseArguments(producer.getNumDpsInputs(),
-                                 producer.getNumDpsInits());
-  if (addOutputArgsConsumer)
-    consumerBlock.eraseArguments(consumer.getNumDpsInputs(),
-                                 consumer.getNumDpsInits());
 }
 
 FailureOr<mlir::linalg::ElementwiseOpFusionResult>

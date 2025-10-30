@@ -89,7 +89,7 @@ func.func @map_ops_mixed_types(%arg0: tensor<8xf32>, %arg1: tensor<8xf32>) -> te
   %0 = linalg.map {math.sqrt} ins(%arg0 : tensor<8xf32>) outs(%initf : tensor<8xf32>)
   %1 = linalg.map {math.exp} ins(%arg1 : tensor<8xf32>) outs(%initf : tensor<8xf32>)
   %2 = linalg.map ins(%0, %1 : tensor<8xf32>, tensor<8xf32>) outs (%init : tensor<8xi1>)
-    (%in0 : f32, %in1 : f32) {
+    (%in0 : f32, %in1 : f32, %out : f32) {
       %cmp = arith.cmpf olt, %in0, %in1 : f32
       linalg.yield %cmp : i1
   }
@@ -150,7 +150,7 @@ func.func @elementwise_ops(%in1: tensor<8xf32>, %in2: tensor<8x10xf32>) -> tenso
 func.func @map_multi_ops(%arg0: tensor<8xf32>, %arg1: tensor<8xf32>, %arg2: tensor<8xf32>) -> tensor<8xf32> {
     %fill = tensor.empty() : tensor<8xf32>
     %add_exp = linalg.map ins(%arg0, %arg1: tensor<8xf32>, tensor<8xf32>) outs(%fill: tensor<8xf32>)
-    (%in0 : f32, %in1 : f32) {
+    (%in0 : f32, %in1 : f32, %out : f32) {
       %add = arith.addf %in0, %in1 : f32
       %exp = math.exp %add : f32
       linalg.yield %exp : f32
