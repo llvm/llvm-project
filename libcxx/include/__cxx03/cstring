@@ -59,7 +59,7 @@ size_t strlen(const char* s);
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_constant_evaluated.h>
 
-#include <__cxx03/string.h>
+#include <string.h>
 
 #ifndef _LIBCPP___CXX03_STRING_H
 #   error <cstring> tried including <string.h> but didn't find libc++'s <string.h> header. \

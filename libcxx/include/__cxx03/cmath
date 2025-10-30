@@ -324,9 +324,9 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <__cxx03/limits>
 #include <__cxx03/version>
 
-#include <__cxx03/math.h>
+#include <math.h>
 
-#ifndef _LIBCPP___CXX03_MATH_H
+#ifndef _LIBCPP_MATH_H
 #   error <cmath> tried including <math.h> but didn't find libc++'s <math.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \

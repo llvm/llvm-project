@@ -11,6 +11,7 @@
 
 #include <__cxx03/__config>
 #include <__cxx03/__random/log2.h>
+#include <__cxx03/cstddef>
 #include <__cxx03/cstdint>
 #include <__cxx03/limits>
 

@@ -33,8 +33,6 @@
 # TODO: Fix seemingly circular inclusion or <wchar.h> on AIX
 # UNSUPPORTED: LIBCXX-AIX-FIXME
 
-# UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
-
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 

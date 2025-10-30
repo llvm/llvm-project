@@ -13,9 +13,11 @@
 #include <__cxx03/__config>
 #include <__cxx03/__functional/weak_result_type.h>
 #include <__cxx03/__fwd/functional.h>
+#include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/decay.h>
 #include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_reference_wrapper.h>
+#include <__cxx03/__type_traits/is_same.h>
 #include <__cxx03/__type_traits/is_void.h>
 #include <__cxx03/__type_traits/remove_cvref.h>
 #include <__cxx03/cstddef>

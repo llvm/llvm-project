@@ -594,6 +594,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__memory/allocator.h>
 #include <__cxx03/__type_traits/is_allocator.h>
+#include <__cxx03/__type_traits/is_final.h>
 #include <__cxx03/__type_traits/type_identity.h>
 #include <__cxx03/__utility/forward.h>
 #include <__cxx03/stdexcept>

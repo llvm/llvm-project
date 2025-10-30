@@ -20,6 +20,7 @@
 #include <__cxx03/__fwd/bit_reference.h>
 #include <__cxx03/__iterator/segmented_iterator.h>
 #include <__cxx03/__string/constexpr_c_functions.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_integral.h>
 #include <__cxx03/__type_traits/is_same.h>
 #include <__cxx03/__type_traits/is_signed.h>

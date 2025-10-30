@@ -135,6 +135,7 @@ template <size_t I, class T, size_t N> const T&& get(const array<T, N>&&) noexce
 #include <__cxx03/__utility/integer_sequence.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/unreachable.h>
+#include <__cxx03/cstddef>
 #include <__cxx03/stdexcept>
 #include <__cxx03/version>
 

@@ -51,6 +51,10 @@ size_t strlen(const char* s);
 
 */
 
+#if __has_include_next(<string.h>)
+#  include_next <string.h>
+#endif
+
 #if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/string.h>
 #else
@@ -58,10 +62,6 @@ size_t strlen(const char* s);
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
-#  endif
-
-#  if __has_include_next(<string.h>)
-#    include_next <string.h>
 #  endif
 
 // MSVCRT, GNU libc and its derivates may already have the correct prototype in

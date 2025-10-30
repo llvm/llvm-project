@@ -584,6 +584,9 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__cxx03/__memory/allocator.h>
 #include <__cxx03/__tree>
 #include <__cxx03/__type_traits/is_allocator.h>
+#include <__cxx03/__type_traits/is_empty.h>
+#include <__cxx03/__type_traits/is_final.h>
+#include <__cxx03/__type_traits/type_identity.h>
 #include <__cxx03/__utility/forward.h>
 #include <__cxx03/__utility/piecewise_construct.h>
 #include <__cxx03/__utility/swap.h>
