@@ -599,6 +599,40 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
   }
 }
 
+TEST_F(DWARFASTParserClangTests, TestSpecDeclExistsError) {
+  // Tests that parsing a ClassTemplateSpecializationDecl that already exists
+  // is handled gracefully.
+  auto BufferOrError = llvm::MemoryBuffer::getFile(
+      GetInputFilePath("DW_AT_spec_decl_exists-test.yaml"), /*IsText=*/true);
+  ASSERT_TRUE(BufferOrError);
+  YAMLModuleTester t(BufferOrError.get()->getBuffer());
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  llvm::SmallVector<lldb::TypeSP, 2> specializations;
+  for (DWARFDIE die : cu_die.children()) {
+    SymbolContext sc;
+    bool new_type = false;
+    auto type = ast_parser.ParseTypeFromDWARF(sc, die, &new_type);
+    llvm::StringRef die_name = llvm::StringRef(die.GetName());
+    if (die_name.starts_with("_Optional_payload")) {
+      specializations.push_back(std::move(type));
+    }
+  }
+
+  ASSERT_EQ(specializations.size(), 2U);
+  ASSERT_NE(specializations[0], nullptr);
+  ASSERT_EQ(specializations[1], nullptr);
+}
+
 TEST_F(DWARFASTParserClangTests, TestUniqueDWARFASTTypeMap_CppInsertMapFind) {
   // This tests the behaviour of UniqueDWARFASTTypeMap under
   // following scenario:

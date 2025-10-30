@@ -2529,7 +2529,7 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
 
   // If both arms are void, so be it.
   if (!yieldTy)
-    yieldTy = VoidTy;
+    yieldTy = voidTy;
 
   // Insert required yields.
   for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
