@@ -230,7 +230,7 @@ namespace cwg211 { // cwg211: 2.7
   };
 } // namespace cwg211
 
-namespace cwg212 { // cwg212: yes
+namespace cwg212 { // cwg212: 2.7
   template<typename T> struct Base;
   template<typename T> struct Derived;
 
