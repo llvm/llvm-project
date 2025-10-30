@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-inconsistent-ifelse-braces %t
 
 bool cond(const char *) { return false; }
-
 void do_something(const char *) {}
 
 // Positive tests.
