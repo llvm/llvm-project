@@ -1,11 +1,9 @@
-# REQUIRES: system-linux
-; RUN: rm -rf %t
-; RUN: mkdir %t
+; RUN: split-file %p/Inputs/dwarf4-str-split-dwarf.s %t
 ; RUN: cd %t
 ; RUN: llvm-mc --split-dwarf-file=main.dwo --triple=x86_64-unknown-linux-gnu \
-; RUN: --filetype=obj %p/Inputs/dwarf4-debug-str-split-dwarf-main.s -o=main.o
+; RUN: --filetype=obj main.s -o=main.o
 ; RUN: llvm-mc --split-dwarf-file=helper.dwo --triple=x86_64-unknown-linux-gnu \
-; RUN: --filetype=obj %p/Inputs/dwarf4-debug-str-split-dwarf-helper.s -o=helper.o
+; RUN: --filetype=obj helper.s -o=helper.o
 ; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o helper.o -o main.exe
 ; RUN: llvm-dwp -e main.exe -o main.exe.dwp
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-str main.exe.dwp \
@@ -22,6 +20,7 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets helper.dwo.dwo \
 ; RUN: | FileCheck -check-prefix=BOLT-HELPER-STR-OFFSETS %s
 
+;; For DWARF4.
 ;; Test input into bolt a DWP file.
 ;; Make sure output in the .dwo files has current str and str_offsets information.
 
