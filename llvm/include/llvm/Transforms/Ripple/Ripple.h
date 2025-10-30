@@ -596,7 +596,7 @@ class Ripple;
 class NDLoadStoreFactory {
 public:
   NDLoadStoreFactory(IRBuilder<> &IrBuilder, Module &Mod, Ripple &MyRipple)
-      : IrBuilder(IrBuilder), Mod(Mod), MyRipple(MyRipple){};
+      : IrBuilder(IrBuilder), Mod(Mod), MyRipple(MyRipple) {};
 
   /// @brief Generates a n-d load of a data set described by AddressSeries
   /// @param AddressSeries represents the sequence of addresses to be loaded
@@ -688,7 +688,7 @@ private:
 
 class ExternalRippleFunction {
   Function *F;
-  FunctionType *NormalizedFunType;
+  FunctionType *CanonicalizedType;
   StringRef ScalarName;
   TensorShape ReturnShape;
   SmallVector<TensorShape, 0> ArgShapes;
@@ -707,17 +707,16 @@ public:
   /// If a return signature @p RetSig is present and the type of the return
   /// value is a pointer, returns the return signature type. If @p
   /// ForceSignature is true and RetSig is valid, returns the RetSig type.
-  static Type *
-  getTrueReturnType(const Function *F,
-                    std::optional<ReturnSignatureInfo> RetSig = std::nullopt,
-                    bool ForceSignature = false);
-  Type *
-  getTrueReturnType(std::optional<ReturnSignatureInfo> RetSig = std::nullopt,
-                    bool ForceSignature = false) const;
+  static Type *getCanonicalReturnType(
+      const Function *F,
+      std::optional<ReturnSignatureInfo> RetSig = std::nullopt,
+      bool ForceSignature = false);
+  Type *getCanonicalReturnType(
+      std::optional<ReturnSignatureInfo> RetSig = std::nullopt,
+      bool ForceSignature = false) const;
 
-  /// @brief Get the Function's argument types, skipping mask argument if
-  /// @p SkipMask is true and the return as argument (StructRet) if
-  /// @p SkipStructRet is true.
+  /// @brief Get the Function's argument types, skipping the mask argument if
+  /// @p SkipMask is true.
   /// @p ReturnSignature an optional type and shape of the return tensor from
   /// the ripple function signature
   /// @p ArgumentSignatures an optional type and shape of the arguments tensor
@@ -725,19 +724,20 @@ public:
   /// @p ForceSignature Forces returning the signature type when available, the
   /// default is relying on the LLVM type system's type when available and only
   /// relying on the signature for passing by value using a pointer.
-  static SmallVector<Type *, 0> getTrueArgumentTypes(
+  /// If @p HasBlockShapeArgument is true, the first argument is dropped after
+  /// canonicalization of the function type.
+  static SmallVector<Type *, 0> getCanonicalArgumentTypes(
       const Function *F, const Argument *SkipMask = nullptr,
-      bool SkipStructRet = true,
       std::optional<ReturnSignatureInfo> ReturnSignature = std::nullopt,
       const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures =
           SmallVector<ArgumentSignatureInfo, 1>(),
-      bool ForceSignature = false);
-  SmallVector<Type *, 0> getTrueArgumentTypes(
-      bool SkipMask = true, bool SkipStructRet = true,
+      bool ForceSignature = false, bool HasBlockShapeArgument = false);
+  SmallVector<Type *, 0> getCanonicalArgumentTypes(
+      bool SkipMask = true,
       std::optional<ReturnSignatureInfo> ReturnSignature = std::nullopt,
       const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures =
           SmallVector<ArgumentSignatureInfo, 1>(),
-      bool ForceSignature = false) const;
+      bool ForceSignature = false, bool HasBlockShapeArgument = false) const;
 
   /// @brief Sole constructor of ExternalRippleFunction
   ///
@@ -814,24 +814,49 @@ public:
   /// @pre isElementWiseFunction() is true
   const TensorShape &elementWiseShape() const;
 
-  /// @brief Checks if a call to scalar @p Fun with the @p ArgShapes shapes can
-  /// be emulated by this function.
+  /// @brief Checks if a call to scalar @p FName with the canonicalized
+  /// prototype (i.e., using canonicalizeFunctionType()) @p FType is a potential
+  /// match for this external function.
   ///
-  /// @pre Expects a normalized function type and argument shape list
+  /// @note in order to check this and additionally match the argument(s) and
+  /// return tensor shapes, use ExternalRippleFunction::matchesFunction
+  ///
+  /// @pre Expects a canonicalized function type and argument shape list
+  bool matchesFunctionNameAndScalarPrototype(StringRef FName,
+                                             const FunctionType *FType) const;
+
+  /// @brief Checks if a call to scalar @p FName with the canonicalized
+  /// prototype @p FType and argument shapes @p CallArgShapes is a match for
+  /// this external function.
+  ///
+  /// If @p ReturnBcastShape is not nullptr, an additional condition is added:
+  /// the external function return shape needs to be broadcastable to @p
+  /// ReturnBcastShape.
+  ///
+  /// @pre Expects a canonicalized function type and argument shape list
   /// This methods gracefully handles function attributes such as sret and byval
   bool matchesFunction(StringRef FName, const FunctionType *FType,
-                       ArrayRef<const TensorShape *> CallArgShapes) const;
+                       ArrayRef<const TensorShape *> CallArgShapes,
+                       TensorShape *ReturnBcastShape) const;
 
-  /// @brief Normalizes the function type by moving sret argument to the return
-  /// type and replace pointer byval argument by the byval type. Uses the return
-  /// and argument signatures to get the type for passing by value through a
-  /// pointer without type information.
-  static FunctionType *normalizeFunctionType(
+  /// @brief Canonicalizes the function type by moving sret argument to the
+  /// return type and replace pointer byval argument by the byval type. Uses the
+  /// return and argument signatures to get the type for passing by value
+  /// through a pointer without type information.
+  static FunctionType *canonicalizeFunctionType(
       const Function *F, const Argument *MaskArgument = nullptr,
       std::optional<ReturnSignatureInfo> ReturnSignature = std::nullopt,
       const SmallVectorImpl<ArgumentSignatureInfo> &AgumentSignatures =
           SmallVector<ArgumentSignatureInfo, 1>(),
-      bool ForceSignature = false);
+      bool ForceSignature = false, bool HasSingleBlockShapeArgument = false);
+  static FunctionType *
+  canonicalizeFunctionType(const Function *F,
+                           const Argument *MaskArgument = nullptr,
+                           bool HasSingleBlockShapeArgument = false) {
+    return canonicalizeFunctionType(F, MaskArgument, std::nullopt,
+                                    SmallVector<ArgumentSignatureInfo, 1>(),
+                                    false, HasSingleBlockShapeArgument);
+  }
   /// @brief If @p F has an sret argument, removes the value at the sret
   /// argument index from @p C. Otherwise does nothing.
   /// @pre C.size() == F->arg_size()
@@ -854,9 +879,7 @@ public:
                                   const Ripple &Ripple) const;
 
   /// @brief True whether this external function returns void, false otherwise.
-  bool returnsVoid() const {
-    return getTrueReturnType(getFunction())->isVoidTy();
-  }
+  bool returnsVoid() const;
 
   /// @brief True if @p F follows Ripple naming convention, i.e., is prefixed by
   /// "ripple_".
@@ -885,6 +908,17 @@ public:
   /// @brief returns the argument that is treated as mask by ripple, or nullptr
   /// if no candidate are available
   static Argument *getMaskArgument(Function *F);
+
+  /// @brief returns the index of CI of the first canonicalized argument of the
+  /// call instruction (should be 0 or 1 because of "sret", i.e., return as
+  /// argument pointer)
+  static std::optional<unsigned>
+  getFirstNonSretArgumentIndex(const CallInst *CI);
+
+  /// @brief Returns an intrinsic to ripple set block shape if it is the first
+  /// argument of @p CI, otherwise nullptr is returned.
+  static IntrinsicInst *tryMatchFirstArgWithBlockShape(const Ripple &Ripple,
+                                                       const CallInst *CI);
 
 private:
   /// @brief Remove the ripple prefix from \p Fun's name.
@@ -1169,6 +1203,24 @@ public:
   /// instance of the Ripple class.
   OptimizationRemarkEmitter &getORE();
 
+  /// @brief Try and locate the block shape of the pointer use @p
+  /// RippleBlockShapePtr.
+  /// @returns the ripple_block_shape intrinsic if found, nullptr otherwise
+  IntrinsicInst *getBlockShapeIntrinsic(const Use &RippleBlockShapePtr) const {
+    return const_cast<Ripple *>(this)->getBlockShapeIntrinsicHelper<false>(
+        RippleBlockShapePtr);
+  }
+
+  /// @brief Try and locate the block shape of the pointer use @p
+  /// RippleBlockShapePtr.
+  /// @returns the ripple_block_shape intrinsic if found, nullptr otherwise
+  /// @note This call generates error diagnostics if we cannot disambiguate
+  /// between two or more block shapes intrinsics
+  IntrinsicInst *
+  getBlockShapeIntrinsicReporting(const Use &RippleBlockShapePtr) {
+    return getBlockShapeIntrinsicHelper<true>(RippleBlockShapePtr);
+  }
+
 private:
   /// @brief Datatype returned when constructing linear series
   /// This also make sure that linear series are deleted when no more in use,
@@ -1403,13 +1455,6 @@ private:
   /// @brief CallInsts that are inside a vector conditional region and requires
   /// masking
   DenseSet<AssertingVH<const CallInst>> MaskedCalls;
-
-  /// @brief Look for the block shape corresponding to a struct
-  /// "ripple_block_shape*".
-  /// The template parameter is used to specialize the function for checking
-  /// ripple semantics (true) and fast access (false)
-  template <bool = false>
-  IntrinsicInst *getBlockShapeIntrinsic(const Use &RippleBlockShapePtr);
 
   /// @brief ensor index from a ripple index
   /// @param idAndIdx A PE id and index
@@ -2006,6 +2051,13 @@ private:
   promotedIntrinsicArgShapesAndReturnTy(const CallInst &CI,
                                         const TensorShape &TShape,
                                         Intrinsic::ID VectorIntrId) const;
+
+  /// @brief Look for the block shape corresponding to a struct
+  /// "ripple_block_shape*".
+  /// The template parameter is used to specialize the function for checking
+  /// ripple semantics (true) and fast access (false)
+  template <bool = false>
+  IntrinsicInst *getBlockShapeIntrinsicHelper(const Use &RippleBlockShapePtr);
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Ripple::CSState &State) {

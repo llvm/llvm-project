@@ -3339,17 +3339,31 @@ void Ripple::genVectorInstructions() {
   auto replacebyExternalRippleFunctionCall =
       [&](ExternalRippleFunction &ExternF, CallInst *CallToReplace,
           Value *MaskForExternalFun, const TensorShape &ToShape) -> void {
+    auto *BS = ExternalRippleFunction::tryMatchFirstArgWithBlockShape(
+        *this, CallToReplace);
     // We replace the call by a call to the external function
     SmallVector<Value *, 0> CallArguments;
-    for (unsigned ArgIdx = 0, E = CallToReplace->arg_size(); ArgIdx < E;
-         ++ArgIdx) {
+    for (unsigned ArgIdx = 0, ExtArgIdx = 0, E = CallToReplace->arg_size();
+         ArgIdx < E; ++ArgIdx, ++ExtArgIdx) {
+
       Use &OriginalArg = CallToReplace->getArgOperandUse(ArgIdx);
-      auto [Replacement, ReplacementShape] = getTensorUse(OriginalArg);
-      assert(*ReplacementShape == ExternF.getArgOperandShape(ArgIdx) &&
-             "Expected matching Tensor shape to non-element wise "
-             "external ripple functions");
-      CallArguments.push_back(Replacement);
+
+      // Skip the block shape argument for external ripple functions as per
+      // ripple speficication
+      if (OriginalArg == BS) {
+        ExtArgIdx--;
+      } else {
+        auto [Replacement, ReplacementShape] = getTensorUse(OriginalArg);
+        // When BS is present, the other arguments must not be tensors
+        assert(!BS || *ReplacementShape == ScalarShape);
+        // Sanity check
+        assert(*ReplacementShape == ExternF.getArgOperandShape(ExtArgIdx) &&
+               "Expected matching Tensor shape to non-element wise "
+               "external ripple functions");
+        CallArguments.push_back(Replacement);
+      }
     }
+
     irBuilder.SetInsertPoint(CallToReplace);
     Value *ExternFunCall = genFunctionCallHandleArgAttributes(
         CallToReplace, ExternF, ToShape, CallArguments, MaskForExternalFun);
@@ -3377,6 +3391,11 @@ void Ripple::genVectorInstructions() {
       }
       return Vector;
     };
+
+    // Should not be reachable by external ripple function construction
+    if (ExternalRippleFunction::tryMatchFirstArgWithBlockShape(*this, Call))
+      llvm_unreachable("Element-wise without tensor argument is not a valid "
+                       "external ripple function");
 
     const auto &ExternElemWiseShape = ExternF.elementWiseShape();
     LLVM_DEBUG(dbgs() << "Extern call shape: " << ExternElemWiseShape << "\n");
@@ -6562,13 +6581,14 @@ Ripple::inferShapeFromOperands(const Instruction *I, bool AllowPartialPhi,
       return StoreShape;
     }
   } else if (auto *Call = dyn_cast<CallInst>(I)) {
-    if (rippleVectorizeCall(*Call)) {
+    auto *ExternalRippleMatch =
+        findExternalRippleFunctionFor(Call, /* RequiresMask */ false);
+    if (rippleVectorizeCall(*Call) || ExternalRippleMatch) {
       // Here we don't check for masks but we'll raise an error later if the
       // function cannot be masked and requires one.
       // The reason why is that we can't fall-back to non-external function call
       // once we selected one because the shape may be different
-      if (auto *ExternalRippleMatch =
-              findExternalRippleFunctionFor(Call, /* RequiresMask */ false)) {
+      if (ExternalRippleMatch) {
         auto CallShape = ExternalRippleMatch->returnTensorShape(Call, *this);
         if (!CallShape) {
           // This can only fail if the call is element-wise and we cannot
@@ -7156,14 +7176,18 @@ Error Ripple::checkRippleStore(const StoreInst *Store) const {
 }
 
 Error Ripple::checkRippleExternCall(const CallInst *Call) {
-  if (getRippleShape(Call).isScalar())
+  bool HasBlockShapeArg = any_of(
+      Call->args(), [this](auto &Arg) { return getBlockShapeIntrinsic(Arg); });
+  if (!HasBlockShapeArg && getRippleShape(Call).isScalar())
     return Error::success();
   bool IsMaskedRippleCall = MaskedCalls.contains(Call);
+  auto *ExternF = findExternalRippleFunctionFor(Call, IsMaskedRippleCall);
   if (IsMaskedRippleCall) {
     // Warn when the call has to be masked but the external ripple function
     // does not support masking
-    if (!findExternalRippleFunctionFor(Call, true)) {
+    if (!ExternF) {
       if (auto *ExternalF = findExternalRippleFunctionFor(Call, false)) {
+
         std::string ErrMsg;
         llvm::raw_string_ostream RSO(ErrMsg);
         RSO << "call to an external ripple function ("
@@ -7182,7 +7206,7 @@ Error Ripple::checkRippleExternCall(const CallInst *Call) {
     }
   }
 
-  if (auto *ExternF = findExternalRippleFunctionFor(Call, IsMaskedRippleCall))
+  if (ExternF) {
     if (ExternF->isElementWiseFunction())
       if (Function *CalledF = Call->getCalledFunction())
         if (any_of(CalledF->args(),
@@ -7193,7 +7217,58 @@ Error Ripple::checkRippleExternCall(const CallInst *Call) {
               "arguments; please fill up a support request with the Ripple "
               "team");
           F.getContext().diagnose(DI);
+          return createStringError(inconvertibleErrorCode(),
+                                   "cannot slice element-wise byval argument");
         }
+  } else if (HasBlockShapeArg) {
+    Function *CalledF = Call->getCalledFunction();
+    auto *BS =
+        ExternalRippleFunction::tryMatchFirstArgWithBlockShape(*this, Call);
+    // No mask argument on the scalar call site
+    auto *CanonicalCalledFTy = ExternalRippleFunction::canonicalizeFunctionType(
+        CalledF, /*MaskArgument*/ nullptr, BS);
+    // Report an error that there exist an external ripple function w/ this name
+    // and argument types but we couldn't select it
+    if (CalledF && CalledF->isDeclaration() &&
+        any_of(ExternalRippleFunctions,
+               [CalledF, CanonicalCalledFTy](
+                   std::unique_ptr<ExternalRippleFunction> &ExternFCandidate) {
+                 return ExternFCandidate->matchesFunctionNameAndScalarPrototype(
+                     CalledF->getName(), CanonicalCalledFTy);
+               })) {
+      const auto &BlockShape = setShapeToTensorShape(BS);
+      LLVM_DEBUG(dbgs() << "Block shape " << BlockShape);
+      F.getContext().diagnose(DiagnosticInfoRippleWithLoc(
+          DS_Error, F, sanitizeRippleLocation(Call),
+          "no matching external ripple function found; ensure the "
+          "block shape is compatible with one of the declared external "
+          "functions"));
+      std::string NoteMessage;
+      {
+        raw_string_ostream RSO(NoteMessage);
+        RSO << "using this block with shape " << BlockShape;
+      }
+      F.getContext().diagnose(DiagnosticInfoRippleWithLoc(
+          DS_Note, F, sanitizeRippleLocation(BS), NoteMessage));
+      return createStringError(
+          inconvertibleErrorCode(),
+          "External void-arg ripple function without candidate");
+    } else {
+      LLVM_DEBUG(dbgs() << "Found call with BS " << *Call << "\n");
+      if (!CalledF || (!CalledF->isIntrinsic() && CalledF->isDeclaration())) {
+        DiagnosticInfoRippleWithLoc DI(
+            DS_Error, F, sanitizeRippleLocation(Call),
+            "Passing a ripple block shape to a function call with no "
+            "known "
+            "definition is not allowed. Make sure that the function is "
+            "available for ripple processing.");
+        F.getContext().diagnose(DI);
+        return createStringError(inconvertibleErrorCode(),
+                                 "Call to declaration with BS");
+      }
+    }
+  }
+
   return Error::success();
 }
 
@@ -7711,6 +7786,10 @@ StringRef ExternalRippleFunction::removeRipplePrefix(const Function *Fun) {
   return Fun->getName().split(RipplePrefix).second;
 }
 
+bool ExternalRippleFunction::returnsVoid() const {
+  return CanonicalizedType->getReturnType()->isVoidTy();
+}
+
 bool ExternalRippleFunction::usesRippleNamingConvention(const Function *F) {
   return F->getName().starts_with(RipplePrefix);
 }
@@ -7748,8 +7827,8 @@ ExternalRippleFunction::createExternalFunction(Function *F,
   bool HasMaskOpt =
       any_of(OptionList, [](StringRef S) { return S == MaskedOption; });
   Argument *MaskArg = HasMaskOpt ? getMaskArgument(F) : nullptr;
-  auto *NormalizedFTy =
-      normalizeFunctionType(F, MaskArg, ReturnSignature, ArgumentSignatures);
+  auto *CanonicalFTy =
+      canonicalizeFunctionType(F, MaskArg, ReturnSignature, ArgumentSignatures);
   bool AnyError = false;
   if (ReturnSignature) {
     auto &[ReturnMultidimType, ReturnMultidimTS] = *ReturnSignature;
@@ -7759,7 +7838,7 @@ ExternalRippleFunction::createExternalFunction(Function *F,
     if (ReturnMultidimTS.rank() > TensorRank)
       return nullptr;
     // Check that the type agrees with the return shape
-    if (auto *VecRetTy = dyn_cast<VectorType>(NormalizedFTy->getReturnType())) {
+    if (auto *VecRetTy = dyn_cast<VectorType>(CanonicalFTy->getReturnType())) {
       if (VecRetTy->getElementCount().getFixedValue() !=
           ReturnMultidimTS.flatShape()) {
         std::string ErrMsg;
@@ -7787,20 +7866,20 @@ ExternalRippleFunction::createExternalFunction(Function *F,
                            "rank, not considering\n");
       return nullptr;
     }
-    if (ArgIdx >= NormalizedFTy->getNumParams()) {
+    if (ArgIdx >= CanonicalFTy->getNumParams()) {
       std::string ErrMsg;
       {
         raw_string_ostream RSO(ErrMsg);
         RSO << "the external ripple function '" << F->getName()
             << "' tensor shape argument index " << ArgIdx
             << " is out of bound; function has only "
-            << NormalizedFTy->getNumParams() << " arguments";
+            << CanonicalFTy->getNumParams() << " arguments";
       }
       DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
       F->getContext().diagnose(Diag);
       AnyError = true;
     } else if (auto *ArgVecTy =
-                   dyn_cast<VectorType>(NormalizedFTy->getParamType(ArgIdx))) {
+                   dyn_cast<VectorType>(CanonicalFTy->getParamType(ArgIdx))) {
       if (ArgVecTy->getElementCount().getFixedValue() != ArgTS.flatShape()) {
         std::string ErrMsg;
         {
@@ -7821,16 +7900,22 @@ ExternalRippleFunction::createExternalFunction(Function *F,
   if (AnyError)
     return nullptr;
   // Check vector-ness
-  bool AnyVectorType = isa<VectorType>(NormalizedFTy->getReturnType()) ||
-                       any_of(NormalizedFTy->params(), [](auto &Param) {
-                         return isa<VectorType>(Param);
-                       });
+  bool HasVectorArgs = any_of(CanonicalFTy->params(), [](auto &Param) {
+    return isa<VectorType>(Param);
+  });
+  bool AnyVectorType =
+      isa<VectorType>(CanonicalFTy->getReturnType()) || HasVectorArgs;
   if (!AnyVectorType)
     return nullptr;
 
   bool IsElementWise =
       any_of(OptionList, [](StringRef S) { return S == ElementWiseOption; });
   if (IsElementWise) {
+
+    // Element-wise with no tensor argument does not make any sense
+    if (!HasVectorArgs)
+      return nullptr;
+
     // Check that all vectors have the same size
     VectorType *SharedVectorTy = nullptr;
     for (auto &Arg : F->args()) {
@@ -7915,24 +8000,26 @@ void ExternalRippleFunction::eraseValueAtSretIndex(const Function *F,
     C.erase(C.begin() + StructRetArgIt->getArgNo());
 }
 
-FunctionType *ExternalRippleFunction::normalizeFunctionType(
+FunctionType *ExternalRippleFunction::canonicalizeFunctionType(
     const Function *F, const Argument *MaskArg,
     std::optional<ReturnSignatureInfo> RetSig,
     const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures,
-    bool ForceSignature) {
-  return FunctionType::get(getTrueReturnType(F, RetSig, ForceSignature),
-                           getTrueArgumentTypes(F, MaskArg, true, RetSig,
-                                                ArgumentSignatures,
-                                                ForceSignature),
-                           F->isVarArg());
+    bool ForceSignature, bool HasBlockShapeArgument) {
+  if (!F)
+    return nullptr;
+  return FunctionType::get(
+      getCanonicalReturnType(F, RetSig, ForceSignature),
+      getCanonicalArgumentTypes(F, MaskArg, RetSig, ArgumentSignatures,
+                                ForceSignature, HasBlockShapeArgument),
+      F->isVarArg());
 }
 
-bool ExternalRippleFunction::matchesFunction(
-    StringRef FName, const FunctionType *FType,
-    ArrayRef<const TensorShape *> CallArgShapes) const {
-  LLVM_DEBUG(dbgs() << "Checking " << FName << " against "
-                    << getFunction()->getName() << "'s scalar name "
-                    << scalarFunctionName() << "\n");
+bool ExternalRippleFunction::matchesFunctionNameAndScalarPrototype(
+    StringRef FName, const FunctionType *FType) const {
+  LLVM_DEBUG(dbgs() << "Checking '" << FName << "' prototype '" << *FType
+                    << "' against " << getFunction()->getName()
+                    << "'s scalar name '" << scalarFunctionName()
+                    << "' prototype '" << *CanonicalizedType << "'\n");
 
   // Either both are void or both return something
   bool NameMatch = scalarFunctionName() == FName;
@@ -7940,20 +8027,28 @@ bool ExternalRippleFunction::matchesFunction(
 
   // Match return-ness and element types
   Type *ExternalRetTy = FType->getReturnType();
-  Type *FunRetTy = NormalizedFunType->getReturnType();
+  Type *FunRetTy = CanonicalizedType->getReturnType();
   bool ReturnMatch =
       ExternalRetTy->getScalarType() == FunRetTy->getScalarType();
   LLVM_DEBUG(dbgs() << "Return matches: " << ReturnMatch << "\n");
 
   // Match argumentCount and element types
-  bool ArgumentMatch = all_of_zip(FType->params(), NormalizedFunType->params(),
+  bool ArgumentMatch = all_of_zip(FType->params(), CanonicalizedType->params(),
                                   [](auto &ArgTy, auto &ExternArgTy) {
                                     return ArgTy->getScalarType() ==
                                            ExternArgTy->getScalarType();
                                   });
   LLVM_DEBUG(dbgs() << "Argument matches: " << ArgumentMatch << "\n");
 
-  if (!NameMatch || !ReturnMatch || !ArgumentMatch)
+  return NameMatch && ReturnMatch && ArgumentMatch;
+}
+
+bool ExternalRippleFunction::matchesFunction(
+    StringRef FName, const FunctionType *FType,
+    ArrayRef<const TensorShape *> CallArgShapes,
+    TensorShape *BlockShapeArgumentShape) const {
+
+  if (!matchesFunctionNameAndScalarPrototype(FName, FType))
     return false;
 
   // Check tensor shape
@@ -7974,6 +8069,12 @@ bool ExternalRippleFunction::matchesFunction(
       // Exact match required
       if (*ArgShape != ExternalShape)
         return false;
+    }
+  }
+  if (BlockShapeArgumentShape) {
+    if (Error E = getReturnShape().canCombineWith(*BlockShapeArgumentShape)) {
+      consumeError(std::move(E));
+      return false;
     }
   }
   return true;
@@ -8031,6 +8132,13 @@ Ripple::findExternalRippleFunctionFor(const CallInst *Call,
   LLVM_DEBUG(dbgs() << "Looking at external ripple candidates for " << *Call
                     << "\n");
 
+  StringRef FunName = Call->getCalledOperand()->getName();
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call)) {
+    StringRef IntrinsicLibName = intrinsicToLibName(II);
+    if (!IntrinsicLibName.empty())
+      FunName = IntrinsicLibName;
+  }
+
   SmallVector<const TensorShape *, 0> CallArgShapes;
   for (auto &Arg : Call->args()) {
     // External ripple function spec does no have support for native vector
@@ -8042,22 +8150,36 @@ Ripple::findExternalRippleFunctionFor(const CallInst *Call,
                       << *CallArgShapes.back() << "\n");
   }
 
-  StringRef FunName = Call->getCalledOperand()->getName();
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call)) {
-    StringRef IntrinsicLibName = intrinsicToLibName(II);
-    if (!IntrinsicLibName.empty())
-      FunName = IntrinsicLibName;
-  }
-
   // If it's a function we normalize the type and arguments
   ExternalRippleFunction::eraseValueAtSretIndex(CalledFunction, CallArgShapes);
+
+  // We look for external ripple function if:
+  // 1. We have any tensor and no block (regular candidate)
+  // 2. We have no tensor and a block as first argument
+  bool AnyTensor =
+      any_of(CallArgShapes, [](auto *Shape) { return Shape->isVector(); });
+  IntrinsicInst *BlockShapeAsFirstArg =
+      ExternalRippleFunction::tryMatchFirstArgWithBlockShape(*this, Call);
+  bool IsRegularCandidate = !BlockShapeAsFirstArg && AnyTensor;
+  bool IsCandidateWithBlock = BlockShapeAsFirstArg && !AnyTensor;
+  if (!IsRegularCandidate && !IsCandidateWithBlock)
+    return nullptr;
+
+  if (BlockShapeAsFirstArg)
+    CallArgShapes.erase(CallArgShapes.begin());
+
   FunctionType *FunType = CalledFunction->getFunctionType();
-  FunType = ExternalRippleFunction::normalizeFunctionType(CalledFunction);
+  // No mask argument on the scalar call site
+  FunType = ExternalRippleFunction::canonicalizeFunctionType(
+      CalledFunction, /*MaskArgument*/ nullptr, BlockShapeAsFirstArg);
 
   // Looking for existing matches
   ExternalRippleFunction *MaskedF = nullptr, *UnmaskedF = nullptr;
+  TensorShape BlockShapeTShape = setShapeToTensorShape(BlockShapeAsFirstArg);
   for (auto &ExternalFunction : ExternalRippleFunctions) {
-    if (ExternalFunction->matchesFunction(FunName, FunType, CallArgShapes)) {
+    if (ExternalFunction->matchesFunction(
+            FunName, FunType, CallArgShapes,
+            BlockShapeAsFirstArg ? &BlockShapeTShape : nullptr)) {
       if (ExternalFunction->isMaskable()) {
         MaskedF = MaskedF ? MaskedF : ExternalFunction.get();
       } else {
@@ -8218,7 +8340,7 @@ void ExternalRippleFunction::applyOptions(
       ElementWiseFunction = true;
       [[maybe_unused]] auto &ElShape = elementWiseShape();
       assert(ElShape.isVector() &&
-             (getTrueReturnType()->isVoidTy() || getReturnShape() == ElShape) &&
+             (returnsVoid() || getReturnShape() == ElShape) &&
              all_of(ArgShapes,
                     [&](const auto &Shape) {
                       return Shape.isScalar() || Shape == ElShape;
@@ -8250,7 +8372,7 @@ ExternalRippleFunction::splitOptions(StringRef OptionsAndBaseName) {
   return {OptionsAndBaseName, std::move(OptionList)};
 }
 
-Type *ExternalRippleFunction::getTrueReturnType(
+Type *ExternalRippleFunction::getCanonicalReturnType(
     const Function *F, std::optional<ReturnSignatureInfo> RetSig,
     bool ForceSignature) {
   if (RetSig && ForceSignature)
@@ -8268,16 +8390,16 @@ Type *ExternalRippleFunction::getTrueReturnType(
   return F->getReturnType();
 }
 
-Type *ExternalRippleFunction::getTrueReturnType(
+Type *ExternalRippleFunction::getCanonicalReturnType(
     std::optional<ReturnSignatureInfo> RetSig, bool ForceSignature) const {
-  return getTrueReturnType(getFunction(), RetSig, ForceSignature);
+  return getCanonicalReturnType(getFunction(), RetSig, ForceSignature);
 }
 
-SmallVector<Type *, 0> ExternalRippleFunction::getTrueArgumentTypes(
-    const Function *F, const Argument *SkipMask, bool SkipStructRet,
+SmallVector<Type *, 0> ExternalRippleFunction::getCanonicalArgumentTypes(
+    const Function *F, const Argument *SkipMask,
     std::optional<ReturnSignatureInfo> RetSig,
     const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures,
-    bool ForceSignature) {
+    bool ForceSignature, bool HasBlockShapeArgument) {
   SmallVector<Type *, 0> ArgTypes;
   ArgTypes.reserve(F->arg_size());
   unsigned NumArgSkipped = 0;
@@ -8291,7 +8413,7 @@ SmallVector<Type *, 0> ExternalRippleFunction::getTrueArgumentTypes(
     bool ForceRetSignature = ForceSignature && RetSig;
     bool ForceArgSignature = ForceSignature && FoundArgSig;
 
-    if (SkipMask == &Arg || (Arg.hasStructRetAttr() && SkipStructRet)) {
+    if (SkipMask == &Arg || /*is the return*/ Arg.hasStructRetAttr()) {
       NumArgSkipped++;
       continue;
     } else if (Arg.hasStructRetAttr() && ForceRetSignature)
@@ -8307,17 +8429,22 @@ SmallVector<Type *, 0> ExternalRippleFunction::getTrueArgumentTypes(
     } else
       ArgTypes.push_back(Arg.getType());
   }
+  if (HasBlockShapeArgument) {
+    if (ArgTypes.empty())
+      llvm_unreachable("Cannot canonicalize blockshape argument when no "
+                       "arguments are present");
+    ArgTypes.erase(ArgTypes.begin());
+  }
   return ArgTypes;
 }
 
-SmallVector<Type *, 0> ExternalRippleFunction::getTrueArgumentTypes(
-    bool SkipMask, bool SkipStructRet,
-    std::optional<ReturnSignatureInfo> RetSig,
+SmallVector<Type *, 0> ExternalRippleFunction::getCanonicalArgumentTypes(
+    bool SkipMask, std::optional<ReturnSignatureInfo> RetSig,
     const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures,
-    bool ForceSignature) const {
-  return getTrueArgumentTypes(
-      getFunction(), SkipMask ? getTensorMaskArgument() : nullptr,
-      SkipStructRet, RetSig, ArgumentSignatures, ForceSignature);
+    bool ForceSignature, bool HasBlockShapeArgument) const {
+  return getCanonicalArgumentTypes(
+      getFunction(), SkipMask ? getTensorMaskArgument() : nullptr, RetSig,
+      ArgumentSignatures, ForceSignature, HasBlockShapeArgument);
 }
 
 Value *Ripple::genFunctionCallHandleArgAttributes(
@@ -8466,9 +8593,9 @@ ExternalRippleFunction::ExternalRippleFunction(
               RS.begin());
     ReturnShape = TensorShape(std::move(RS));
   } else {
-    ReturnShape = TensorShape(ShapeFromType(getTrueReturnType()));
+    ReturnShape = TensorShape(ShapeFromType(getCanonicalReturnType()));
   }
-  for (auto &Params : getTrueArgumentTypes()) {
+  for (auto &Params : getCanonicalArgumentTypes()) {
     unsigned ArgIdx = ArgShapes.size();
     if (auto Found = llvm::find_if(
             ArgumentSignatures,
@@ -8500,6 +8627,13 @@ ExternalRippleFunction::ExternalRippleFunction(
     }
   }
 
+  auto MaskArg =
+      any_of(Options, [](StringRef Option) { return Option == MaskedOption; })
+          ? getMaskArgument(F)
+          : nullptr;
+  CanonicalizedType =
+      canonicalizeFunctionType(F, MaskArg, ReturnSignature, ArgumentSignatures);
+
   applyOptions(Options);
 
   if (!IsPureOtherThanSretAndByVal) {
@@ -8522,8 +8656,6 @@ ExternalRippleFunction::ExternalRippleFunction(
       }
     }
   }
-  NormalizedFunType = normalizeFunctionType(
-      F, getTensorMaskArgument(), ReturnSignature, ArgumentSignatures);
 }
 
 bool ExternalRippleFunction::hasTensorMaskArgument() const {
@@ -8552,16 +8684,16 @@ void ExternalRippleFunction::print(raw_ostream &ROS) const {
     }
   } else
     ROS << " Is not maskable!";
-  ROS << "\n  Return type and shape: [" << *getTrueReturnType() << ", "
+  ROS << "\n  Return type and shape: [" << *getCanonicalReturnType() << ", "
       << getReturnShape() << "]\n"
       << "  Arg types and shapes: (";
-  auto ArgTypes = getTrueArgumentTypes();
+  auto ArgTypes = getCanonicalArgumentTypes();
   for (size_t Idx = 0, E = ArgTypes.size(); Idx < E; ++Idx) {
     if (Idx > 0)
       ROS << ", ";
     ROS << "[" << *ArgTypes[Idx] << ", " << getArgOperandShape(Idx) << "]";
   }
-  ROS << "\n  Normalized function type: " << *NormalizedFunType << "\n";
+  ROS << ")\n  Canonicalized function type: " << *CanonicalizedType << "\n";
 }
 
 Type *ExternalRippleFunction::getTrueMaskType(const Argument *Mask) {
@@ -9378,9 +9510,10 @@ Ripple::getSpecializationMaskShape(llvm::iterator_range<IteratorT> Args) const {
 }
 
 template <bool ReportAmbiguity>
-IntrinsicInst *Ripple::getBlockShapeIntrinsic(const Use &RippleBlockShapePtr) {
+IntrinsicInst *
+Ripple::getBlockShapeIntrinsicHelper(const Use &RippleBlockShapePtr) {
   std::array<Instruction *, 2> Clobbering = {};
-  auto diagnoseAmbiguity = [this, &Clobbering](Instruction *BSAccess) {
+  auto diagnoseAmbiguity = [this, &Clobbering](const Instruction *BSAccess) {
     {
       DiagnosticInfoRippleWithLoc DI(
           DS_Error, F, sanitizeRippleLocation(BSAccess),
@@ -9403,18 +9536,19 @@ IntrinsicInst *Ripple::getBlockShapeIntrinsic(const Use &RippleBlockShapePtr) {
   SmallPtrSet<Value *, 8> Visited;
   std::function<IntrinsicInst *(Value *)> getBlockShapeIntrinsicHelper;
   getBlockShapeIntrinsicHelper = [&](Value *BSPtr) -> IntrinsicInst * {
-    if (!Visited.insert(BSPtr).second)
+    if (!Visited.insert(BSPtr).second || !BSPtr->getType()->isPointerTy())
       return nullptr;
     // Most likely case in SSA
     if (auto *II = intrinsicWithId(dyn_cast<Instruction>(BSPtr),
                                    {Intrinsic::ripple_block_setshape})) {
       return II;
       // Most likely case in O0, coming from clang
-    } else if (auto *LoadBS = dyn_cast<LoadInst>(BSPtr)) {
+    } else if (const auto *LoadBS = dyn_cast<LoadInst>(BSPtr)) {
       IntrinsicInst *BS = nullptr;
       visitAllClobberingInstructions(
           cast<MemoryUse>(MemSSA.getMemoryAccess(LoadBS)),
-          [&](Instruction *Clobber) -> bool {
+          [&BS, &Clobbering, &diagnoseAmbiguity, &getBlockShapeIntrinsicHelper,
+           LoadBS](Instruction *Clobber) -> bool {
             LLVM_DEBUG(dbgs() << "Visiting clobber " << *Clobber << "\n");
             if (auto *Store = dyn_cast<StoreInst>(Clobber)) {
               Value *RippleSetShape = Store->getValueOperand();
@@ -9490,6 +9624,8 @@ Ripple::getRippleGetSizeValue(const IntrinsicInst *RippleGetSize) {
 
 TensorShape
 Ripple::setShapeToTensorShape(const IntrinsicInst *RippleSetShape) const {
+  if (!RippleSetShape)
+    return ShapeIgnoredByRipple;
   assert(RippleSetShape->getIntrinsicID() == Intrinsic::ripple_block_setshape);
   TensorShape::Shape BlockShape(tensorRank(), DimSize(1));
   PEIdentifier ProcElem = *getConstantOperandValue(RippleSetShape, 0);
@@ -9521,7 +9657,7 @@ Error Ripple::checkBlockShapeUsage(const Function &F) {
   for (auto &I : instructions(F)) {
     if (const IntrinsicInst *II = rippleIntrinsicsWithBlockShapeOperand(&I)) {
       auto &BlockShapeOperandUse = II->getArgOperandUse(0);
-      auto *BS = getBlockShapeIntrinsic<true>(BlockShapeOperandUse);
+      auto *BS = getBlockShapeIntrinsicReporting(BlockShapeOperandUse);
       if (!BS) {
         DiagnosticInfoRippleWithLoc DI(
             DS_Error, F, sanitizeRippleLocation(II),
@@ -9530,25 +9666,9 @@ Error Ripple::checkBlockShapeUsage(const Function &F) {
         return createStringError(inconvertibleErrorCode(),
                                  "Cannot find BS for ripple construct");
       }
-    } else if (auto *CallI = dyn_cast<CallInst>(&I)) {
-      for (auto &Arg : CallI->args()) {
-        if (getBlockShapeIntrinsic(Arg)) {
-          LLVM_DEBUG(dbgs() << "Found call with BS " << *CallI << "\n");
-          if (!CallI->getCalledFunction() ||
-              (!CallI->getCalledFunction()->isIntrinsic() &&
-               CallI->getCalledFunction()->isDeclaration())) {
-            DiagnosticInfoRippleWithLoc DI(
-                DS_Error, F, sanitizeRippleLocation(CallI),
-                "Passing a ripple block shape to a function call with no known "
-                "definition is not allowed. Make sure that the function is "
-                "available for ripple processing.");
-            F.getContext().diagnose(DI);
-            return createStringError(inconvertibleErrorCode(),
-                                     "Call to declaration with BS");
-          }
-        }
-      }
     }
+    // Since the introduction of external ripple functions using the block
+    // shape, we check BS usage in function call in checkRippleExternCall
   }
   return Error::success();
 }
@@ -10113,6 +10233,31 @@ Argument *ExternalRippleFunction::getMaskArgument(Function *F) {
     MaskArg = F->getArg(F->arg_size() - 2);
   }
   return MaskArg;
+}
+
+std::optional<unsigned>
+ExternalRippleFunction::getFirstNonSretArgumentIndex(const CallInst *CI) {
+  if (Function *CalledF = CI->getCalledFunction()) {
+    for (unsigned ArgIdx = 0; ArgIdx < CalledF->arg_size(); ++ArgIdx) {
+      if (!CalledF->getArg(ArgIdx)->hasStructRetAttr())
+        return ArgIdx;
+    }
+  }
+  return std::nullopt;
+}
+
+IntrinsicInst *
+ExternalRippleFunction::tryMatchFirstArgWithBlockShape(const Ripple &Ripple,
+                                                       const CallInst *CI) {
+  if (!CI)
+    return nullptr;
+
+  IntrinsicInst *BlockShapeAsFirstArg = nullptr;
+  if (auto FirstNonSret = getFirstNonSretArgumentIndex(CI)) {
+    BlockShapeAsFirstArg =
+        Ripple.getBlockShapeIntrinsic(CI->getArgOperandUse(*FirstNonSret));
+  }
+  return BlockShapeAsFirstArg;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
