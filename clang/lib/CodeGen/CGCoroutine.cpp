@@ -604,9 +604,9 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   Stmt *Deallocate;
 
   void Emit(CodeGenFunction &CGF, Flags F) override {
-    // Cleanup always happens on unwind. No need for pre-cleanup block.
+    // Cleanup always happens on unwind. No need for pre-cleanup check.
     if (F.isForNormalCleanup())
-      EmitPreCleanupBB(CGF);
+      EmitPreCleanup(CGF);
     // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
 
     // Note: That deallocation will be emitted twice: once for a normal exit and
@@ -652,10 +652,7 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
 
 private:
-  // [dcl.fct.def.coroutine]: The coroutine state is destroyed when control
-  // flows off the end of the coroutine or the destroy member function of a
-  // coroutine handle that refers to the coroutine is invoked.
-  void EmitPreCleanupBB(CodeGenFunction &CGF) {
+  void EmitPreCleanup(CodeGenFunction &CGF) {
     auto &Builder = CGF.Builder;
     auto &Data = *CGF.CurCoro.Data;
     auto *BodyDone = Data.BodyDone;
@@ -664,21 +661,11 @@ private:
     BasicBlock *AfterConvBB =
         cast<llvm::BranchInst>(PreConvBB->getTerminator())->getSuccessor(1);
     BasicBlock *CleanupBB = AfterConvBB->getSingleSuccessor();
-    BasicBlock *PreCleanupBB = CleanupBB->splitBasicBlock(
-        CleanupBB->getFirstNonPHIIt(), "pre.coro.cleanup", true);
-    Builder.SetInsertPoint(PreCleanupBB);
-    PreCleanupBB->getTerminator()->eraseFromParent();
+    BasicBlock *RetBB = Data.CleanupJD.getBlock();
 
-    auto *NeedCleanup = Builder.CreatePHI(
-        Builder.getInt1Ty(), llvm::pred_size(PreCleanupBB), "is.completed");
-    for (auto *Pred : llvm::predecessors(PreCleanupBB)) {
-      auto *V = (Pred == AfterConvBB) ? cast<Value>(BodyDone)
-                                      : cast<Value>(Builder.getTrue());
-      NeedCleanup->addIncoming(V, Pred);
-    }
-
-    auto *RetBB = Data.CleanupJD.getBlock();
-    Builder.CreateCondBr(NeedCleanup, CleanupBB, RetBB);
+    AfterConvBB->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(AfterConvBB);
+    Builder.CreateCondBr(BodyDone, CleanupBB, RetBB);
     Builder.SetInsertPoint(SaveInsertBlock);
   }
 };
@@ -726,10 +713,10 @@ struct GetReturnObjectManager {
   }
 
   // The gro variable has to outlive coroutine frame and coroutine promise, but,
-  // it can only be initialized after coroutine promise was created, thus, we
-  // split its emission in two parts. EmitGroAlloca emits an alloca and sets up
-  // cleanups. Later when coroutine promise is available we initialize the gro
-  // and sets the flag that the cleanup is now active.
+  // it can only be initialized after coroutine promise was created. Thus,
+  // EmitGroActive emits a flag and sets it to false. Later when coroutine
+  // promise is available we initialize the gro and set the flag indicating that
+  // the cleanup is now active.
   void EmitGroActive() {
     if (DirectEmit)
       return;
@@ -822,7 +809,8 @@ struct GetReturnObjectManager {
   void EmitGroConv() {
     auto *InsertPt = Builder.GetInsertBlock();
     auto *PreConvBB = CGF.CurCoro.Data->SuspendBB;
-    auto *AfterConvBB = CGF.createBasicBlock("after.gro.conv", CGF.CurFn, InsertPt);
+    auto *AfterConvBB =
+        CGF.createBasicBlock("after.gro.conv", CGF.CurFn, InsertPt);
     Builder.SetInsertPoint(AfterConvBB);
     BasicBlock *AfterFinalBB = nullptr;
     if (InsertPt) {

@@ -66,11 +66,7 @@ int f() {
   // CHECK-NEXT: br label %[[AfterGroConv]]
 
   // CHECK: [[AfterGroConv]]:
-  // CHECK-NEXT: br label %[[PreCleanup:.+]]
-
-  // CHECK: [[PreCleanup]]:
-  // CHECK-NEXT: %[[NeedCleanup:.+]] = phi i1 [ %10, %after.gro.conv ]
-  // CHECK-NEXT: br i1 %[[NeedCleanup]], label %cleanup.cont10, label %[[CoroRet:.+]]
+  // CHECK-NEXT: br i1 %10, label %cleanup.cont10, label %[[CoroRet:.+]]
 
   // CHECK: cleanup.cont10:
   // CHECK-NEXT: br label %[[Cleanup:.+]]
