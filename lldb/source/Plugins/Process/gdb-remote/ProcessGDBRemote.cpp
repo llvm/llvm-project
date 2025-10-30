@@ -2869,6 +2869,10 @@ bool ProcessGDBRemote::SupportsMemoryTagging() {
   return m_gdb_comm.GetMemoryTaggingSupported();
 }
 
+bool ProcessGDBRemote::SupportsResumeWithoutDisablingBreakpoints() {
+  return m_gdb_comm.GetResumeWithoutDisablingBreakpointsSupported();
+}
+
 llvm::Expected<std::vector<uint8_t>>
 ProcessGDBRemote::DoReadMemoryTags(lldb::addr_t addr, size_t len,
                                    int32_t type) {

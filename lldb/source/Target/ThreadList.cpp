@@ -494,6 +494,49 @@ void ThreadList::DiscardThreadPlans() {
     (*pos)->DiscardThreadPlans(true);
 }
 
+void ThreadList::SetUpStepOverBreakpointBeforeResumeIfNeeded(
+    ThreadSP thread_to_run, RunDirection &direction) {
+  // If the process doesn't need the client to disable breakpoints before
+  // issuing a resume operation, we can skip the step-over breakpoint plan
+  // setup.
+  if (!m_process.SupportsResumeWithoutDisablingBreakpoints())
+    return;
+
+  // Give all the threads that are likely to run a chance to set up their
+  // step over breakpoint behavior.
+  if (thread_to_run != nullptr) {
+    if (thread_to_run->SetupToStepOverBreakpointIfNeeded(direction)) {
+      // We only need to step over breakpoints when running forward, and the
+      // step-over-breakpoint plan itself wants to run forward, so this
+      // keeps our desired direction.
+      assert(thread_to_run->GetCurrentPlan()->GetDirection() == direction);
+    }
+  } else {
+    collection::iterator end = m_threads.end();
+    for (auto pos = m_threads.begin(); pos != end; ++pos) {
+      ThreadSP thread_sp(*pos);
+      if (thread_sp->GetResumeState() != eStateSuspended) {
+        if (thread_sp->IsOperatingSystemPluginThread() &&
+            !thread_sp->GetBackingThread())
+          continue;
+        if (thread_sp->SetupToStepOverBreakpointIfNeeded(direction)) {
+          // We only need to step over breakpoints when running forward, and the
+          // step-over-breakpoint plan itself wants to run forward, so this
+          // keeps our desired direction.
+          assert(thread_sp->GetCurrentPlan()->GetDirection() == direction);
+          // You can't say "stop others" and also want yourself to be suspended.
+          assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
+          thread_to_run = thread_sp;
+          if (thread_sp->ShouldRunBeforePublicStop()) {
+            // This takes precedence, so if we find one of these, service it:
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
 bool ThreadList::WillResume(RunDirection &direction) {
   // Run through the threads and perform their momentary actions. But we only
   // do this for threads that are running, user suspended threads stay where
@@ -558,46 +601,7 @@ bool ThreadList::WillResume(RunDirection &direction) {
     direction = m_process.GetBaseDirection();
   }
 
-  // Give all the threads that are likely to run a last chance to set up their
-  // state before we negotiate who is actually going to get a chance to run...
-  // Don't set to resume suspended threads, and if any thread wanted to stop
-  // others, only call setup on the threads that request StopOthers...
-  if (thread_to_run != nullptr) {
-    // See if any thread wants to run stopping others.  If it does, then we
-    // won't setup the other threads for resume, since they aren't going to get
-    // a chance to run.  This is necessary because the SetupForResume might add
-    // "StopOthers" plans which would then get to be part of the who-gets-to-run
-    // negotiation, but they're coming in after the fact, and the threads that
-    // are already set up should take priority.
-    if (thread_to_run->SetupToStepOverBreakpointIfNeeded(direction)) {
-      // We only need to step over breakpoints when running forward, and the
-      // step-over-breakpoint plan itself wants to run forward, so this
-      // keeps our desired direction.
-      assert(thread_to_run->GetCurrentPlan()->GetDirection() == direction);
-    }
-  } else {
-    for (pos = m_threads.begin(); pos != end; ++pos) {
-      ThreadSP thread_sp(*pos);
-      if (thread_sp->GetResumeState() != eStateSuspended) {
-        if (thread_sp->IsOperatingSystemPluginThread() &&
-            !thread_sp->GetBackingThread())
-          continue;
-        if (thread_sp->SetupToStepOverBreakpointIfNeeded(direction)) {
-          // We only need to step over breakpoints when running forward, and the
-          // step-over-breakpoint plan itself wants to run forward, so this
-          // keeps our desired direction.
-          assert(thread_sp->GetCurrentPlan()->GetDirection() == direction);
-          // You can't say "stop others" and also want yourself to be suspended.
-          assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
-          thread_to_run = thread_sp;
-          if (thread_sp->ShouldRunBeforePublicStop()) {
-            // This takes precedence, so if we find one of these, service it:
-            break;
-          }
-        }
-      }
-    }
-  }
+  SetUpStepOverBreakpointBeforeResumeIfNeeded(thread_to_run, direction);
 
   if (thread_to_run != nullptr) {
     Log *log = GetLog(LLDBLog::Step);

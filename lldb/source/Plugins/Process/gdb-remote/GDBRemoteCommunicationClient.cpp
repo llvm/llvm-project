@@ -373,6 +373,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_reverse_continue = eLazyBoolNo;
   m_supports_reverse_step = eLazyBoolNo;
   m_supports_multi_mem_read = eLazyBoolNo;
+  m_supports_resume_without_disabling_breakpoints = eLazyBoolNo;
 
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
@@ -434,6 +435,8 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_reverse_step = eLazyBoolYes;
       else if (x == "MultiMemRead+")
         m_supports_multi_mem_read = eLazyBoolYes;
+      else if (x == "resume-without-disabling-breakpoints+")
+        m_supports_resume_without_disabling_breakpoints = eLazyBoolYes;
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -684,6 +687,13 @@ bool GDBRemoteCommunicationClient::GetMemoryTaggingSupported() {
     GetRemoteQSupported();
   }
   return m_supports_memory_tagging == eLazyBoolYes;
+}
+
+bool GDBRemoteCommunicationClient::
+    GetResumeWithoutDisablingBreakpointsSupported() {
+  if (m_supports_resume_without_disabling_breakpoints == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_resume_without_disabling_breakpoints == eLazyBoolYes;
 }
 
 DataBufferSP GDBRemoteCommunicationClient::ReadMemoryTags(lldb::addr_t addr,

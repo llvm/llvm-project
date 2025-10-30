@@ -126,6 +126,17 @@ public:
   ///
   bool WillResume(lldb::RunDirection &direction);
 
+  /// Set up a step-over breakpoint plan before resuming if needed..
+  ///
+  /// \param[in] thread_to_run
+  ///     An optional thread that will have the run priority in the resume.
+  ///
+  /// \param[in] direction
+  ///     The direction to run in.
+  void
+  SetUpStepOverBreakpointBeforeResumeIfNeeded(lldb::ThreadSP thread_to_run,
+                                              lldb::RunDirection &direction);
+
   void DidResume();
 
   void DidStop();

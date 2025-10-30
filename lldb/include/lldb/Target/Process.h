@@ -3076,6 +3076,8 @@ protected:
   ///     false otherwise.
   virtual bool SupportsMemoryTagging() { return false; }
 
+  virtual bool SupportsResumeWithoutDisablingBreakpoints() { return false; }
+
   /// Does the final operation to read memory tags. E.g. sending a GDB packet.
   /// It assumes that ReadMemoryTags has checked that memory tagging is enabled
   /// and has expanded the memory range as needed.
