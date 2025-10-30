@@ -953,6 +953,10 @@ def warn_fortify_source_overflow
 def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
+def warn_fortify_destination_size_mismatch
+    : Warning<"'%0' size argument is too large; source buffer has size %2,"
+              " but size argument is %1">,
+      InGroup<FortifySource>;
 
 def warn_fortify_strlen_overflow: Warning<
   "'%0' will always overflow; destination buffer has size %1,"
