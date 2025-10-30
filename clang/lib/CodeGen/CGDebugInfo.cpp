@@ -655,7 +655,8 @@ unsigned CGDebugInfo::getLineNumber(const PresumedLoc &PLoc) const {
   return PLoc.getLine();
 }
 
-unsigned CGDebugInfo::getColumnNumber(const PresumedLoc & PLoc, bool Force) const {
+unsigned CGDebugInfo::getColumnNumber(const PresumedLoc & PLoc,
+                                      bool Force) const {
   // We may not want column information at all.
   if (!Force && !CGM.getCodeGenOpts().DebugColumnInfo)
     return 0;
@@ -5036,8 +5037,8 @@ void CGDebugInfo::CreateLexicalBlock(const PresumedLoc &PLoc) {
   if (!LexicalBlockStack.empty())
     Back = LexicalBlockStack.back().get();
   LexicalBlockStack.emplace_back(DBuilder.createLexicalBlock(
-      cast<llvm::DIScope>(Back), getOrCreateFile(CurPLoc), getLineNumber(CurPLoc),
-      getColumnNumber(CurPLoc)));
+      cast<llvm::DIScope>(Back), getOrCreateFile(CurPLoc),
+      getLineNumber(CurPLoc), getColumnNumber(CurPLoc)));
 }
 
 PresumedLoc CGDebugInfo::getPresumedLoc(SourceLocation Loc) const {
@@ -5624,8 +5625,7 @@ bool operator<(const BlockLayoutChunk &l, const BlockLayoutChunk &r) {
 void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
     const CGBlockInfo &Block, const ASTContext &Context,
     const PresumedLoc &PLoc, const llvm::StructLayout &BlockLayout,
-    llvm::DIFile *Unit,
-    SmallVectorImpl<llvm::Metadata *> &Fields) {
+    llvm::DIFile *Unit, SmallVectorImpl<llvm::Metadata *> &Fields) {
   // Blocks in OpenCL have unique constraints which make the standard fields
   // redundant while requiring size and align fields for enqueue_kernel. See
   // initializeForBlockHeader in CGBlocks.cpp
@@ -5637,9 +5637,9 @@ void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
                                      BlockLayout.getElementOffsetInBits(1),
                                      Unit, Unit));
   } else {
-    Fields.push_back(createFieldType("__isa", Context.VoidPtrTy, PLoc, AS_public,
-                                     BlockLayout.getElementOffsetInBits(0),
-                                     Unit, Unit));
+    Fields.push_back(
+        createFieldType("__isa", Context.VoidPtrTy, PLoc, AS_public,
+                        BlockLayout.getElementOffsetInBits(0), Unit, Unit));
     Fields.push_back(createFieldType("__flags", Context.IntTy, PLoc, AS_public,
                                      BlockLayout.getElementOffsetInBits(1),
                                      Unit, Unit));
@@ -5682,8 +5682,8 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       CGM.getDataLayout().getStructLayout(block.StructureType);
 
   SmallVector<llvm::Metadata *, 16> fields;
-  collectDefaultFieldsForBlockLiteralDeclare(block, C, PLoc, *blockLayout, tunit,
-                                             fields);
+  collectDefaultFieldsForBlockLiteralDeclare(block, C, PLoc, *blockLayout,
+                                             tunit, fields);
 
   // We want to sort the captures by offset, not because DWARF
   // requires this, but because we're paranoid about debuggers.
@@ -6340,7 +6340,8 @@ void CGDebugInfo::EmitUsingDirective(const UsingDirectiveDecl &UD) {
       PLoc = CurPLoc;
     DBuilder.createImportedModule(
         getCurrentContextDescriptor(cast<Decl>(UD.getDeclContext())),
-        getOrCreateNamespace(NSDecl), getOrCreateFile(PLoc), getLineNumber(PLoc));
+        getOrCreateNamespace(NSDecl), getOrCreateFile(PLoc),
+        getLineNumber(PLoc));
   }
 }
 
