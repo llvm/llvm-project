@@ -2034,7 +2034,8 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
       if (!LastExtract || LastExtract->comesBefore(Extract))
         LastExtract = Extract;
     }
-    // Check execution is guaranteed from extend to last extract.
+    // Check that the last extract (and hence all previous ones) are guaranteed
+    // to execute if Ext executes.
     AllExtractsTriggerUB =
         AllExtractsTriggerUB &&
         all_of(make_range(Ext->getIterator(), LastExtract->getIterator()),
