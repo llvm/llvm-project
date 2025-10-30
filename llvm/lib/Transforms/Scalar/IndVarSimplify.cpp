@@ -1859,6 +1859,37 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
         }
       }
 
+  // If the loop body uses a convergence token defined within the loop, skip
+  // predication. This is to avoid changing the convergence behavior of the
+  // loop.
+  SmallVector<BasicBlock *, 16> blocks = ExitingBlocks;
+  SmallVector<Value *, 16> tokens = {};
+  size_t index = 0; // Assume Exiting Blocks are sorted.
+  while (index < blocks.size()) {
+    BasicBlock *BB = blocks[index];
+    index++;
+    const auto exitingBlockName = BB->getName();
+    for (Instruction &I : *BB) {
+      // Check if the instruction uses any convergence tokens.
+      if (auto *CB = dyn_cast<CallBase>(&I);
+          CB && !isa<ConvergenceControlInst>(&I)) {
+        auto token = CB->getConvergenceControlToken();
+        if (token && llvm::is_contained(tokens, token)) {
+          return false;
+        }
+      }
+      if (isa<ConvergenceControlInst>(&I)) {
+        tokens.push_back(cast<Value>(&I));
+      }
+    }
+
+    for (BasicBlock *Succ : successors(BB)) {
+      const auto succName = Succ->getName();
+      if (Succ != L->getLoopLatch() && !llvm::is_contained(blocks, Succ))
+        blocks.push_back(Succ);
+    }
+  }
+
   bool Changed = false;
   // Finally, do the actual predication for all predicatable blocks.  A couple
   // of notes here:
