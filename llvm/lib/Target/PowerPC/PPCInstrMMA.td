@@ -765,7 +765,7 @@ let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v512i1 (int_ppc_mma_xvf64gerpn v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
             (XVF64GERWPN $ATi, $XA, RCCp.BToVSRC)>;
   def : Pat<(v512i1 (int_ppc_mma_xvf64gernp v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
-            (XVF64GERNP $ATi, $XA, RCCp.BToVSRC)>;
+            (XVF64GERWNP $ATi, $XA, RCCp.BToVSRC)>;
   def : Pat<(v512i1 (int_ppc_mma_xvf64gernn v512i1:$ATi, v256i1:$XA, v16i8:$XB)),
             (XVF64GERWNN $ATi, $XA, RCCp.BToVSRC)>;
 
