@@ -5750,13 +5750,18 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
              getMemoryInstructionCost(I, ElementCount::getFixed(1))));
         UpdateMemOpUserCost(cast<LoadInst>(I));
       } else if (const auto *Group = getInterleavedAccessGroup(I)) {
-        // Scalarize an interleave group of address loads.
-        for (unsigned I = 0; I < Group->getFactor(); ++I) {
-          if (Instruction *Member = Group->getMember(I)) {
-            setWideningDecision(
-                Member, VF, CM_Scalarize,
-                (VF.getKnownMinValue() *
-                 getMemoryInstructionCost(Member, ElementCount::getFixed(1))));
+        // Scalarize all members of this interleaved group when any member
+        // is used as an address. The address-used load skips scalarization
+        // overhead, other members include it.
+        for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
+          if (Instruction *Member = Group->getMember(Idx)) {
+            InstructionCost Cost =
+                AddrDefs.contains(Member)
+                    ? (VF.getKnownMinValue() *
+                       getMemoryInstructionCost(Member,
+                                                ElementCount::getFixed(1)))
+                    : getMemInstScalarizationCost(Member, VF);
+            setWideningDecision(Member, VF, CM_Scalarize, Cost);
             UpdateMemOpUserCost(cast<LoadInst>(Member));
           }
         }
@@ -8335,11 +8340,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
               &R) ||
           (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
-
-      // FIXME: VPlan0, which models a copy of the original scalar loop, should
-      // not use VPWidenPHIRecipe to model the phis.
-      assert((isa<VPWidenPHIRecipe>(&R) || isa<VPInstruction>(&R)) &&
-             UnderlyingValue && "unsupported recipe");
+      assert(isa<VPInstruction>(&R) && UnderlyingValue && "unsupported recipe");
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
       // VPlan.
