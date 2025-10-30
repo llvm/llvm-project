@@ -3039,7 +3039,7 @@ void SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
 /// For ViewLikeOpInterface.
 Value SubViewOp::getViewSource() { return getSource(); }
 
-bool SubViewOp::isSameStart() {
+bool SubViewOp::isKnownToHaveSameStart() {
   // TODO: we can recognize simple constant operands.
   if (!getOffsets().empty())
     return false;
@@ -3687,7 +3687,7 @@ LogicalResult ViewOp::verify() {
 
 Value ViewOp::getViewSource() { return getSource(); }
 
-bool ViewOp::isSameStart() {
+bool ViewOp::isKnownToHaveSameStart() {
   IntegerAttr offsetAttr;
   if (matchPattern(getByteShift(), m_Constant(&offsetAttr)))
     return offsetAttr.getValue().isZero();

@@ -2875,8 +2875,8 @@ def fir_ConvertOp
     static bool canBeConverted(mlir::Type inType, mlir::Type outType);
     static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
     mlir::Value getViewSource() { return getValue(); }
-    bool isSameStart() { return true; }
-    bool isCompleteView() { return true; }
+    bool isKnownToHaveSameStart() { return true; }
+    bool isKnownToBeCompleteView() { return true; }
   }];
   let hasCanonicalizer = 1;
 }

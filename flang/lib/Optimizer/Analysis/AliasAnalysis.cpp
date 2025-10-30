@@ -574,7 +574,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           if (mlir::isa<fir::BaseBoxType>(v.getType()) &&
               !mlir::isa<fir::BaseBoxType>(ty))
             followBoxData = true;
-          if (!op.isSameStart())
+          if (!op.isKnownToHaveSameStart())
             approximateSource = true;
         })
         .Case<fir::PackArrayOp>([&](auto op) {

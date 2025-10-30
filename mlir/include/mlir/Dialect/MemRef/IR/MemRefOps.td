@@ -2351,9 +2351,9 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     static FailureOr<Value> rankReduceIfNeeded(
       OpBuilder &b, Location loc, Value value, ArrayRef<int64_t> desiredShape);
 
-    /// Return true iff the input and the resulting views start
-    /// at the same address.
-    bool isSameStart();
+    /// Return true iff the input and the resulting views
+    /// are known to start at the same address.
+    bool isKnownToHaveSameStart();
   }];
 
   let hasCanonicalizer = 1;
@@ -2464,9 +2464,9 @@ def MemRef_ViewOp : MemRef_Op<"view", [
       return {getSizes().begin(), getSizes().end()};
     }
 
-    /// Return true iff the input and the resulting views start
-    /// at the same address.
-    bool isSameStart();
+    /// Return true iff the input and the resulting views
+    /// are known to start at the same address.
+    bool isKnownToHaveSameStart();
   }];
 
   let assemblyFormat = [{

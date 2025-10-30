@@ -105,7 +105,8 @@ static void collectUnderlyingAddressValues(
     if (result == view.getViewDest()) {
       LDBG() << "  Unwrapping view to source: " << view.getViewSource();
       return collectUnderlyingAddressValues(
-          view.getViewSource(), maxDepth, visited, !view.isSameStart(), output);
+          view.getViewSource(), maxDepth, visited,
+          !view.isKnownToHaveSameStart(), output);
     }
   }
   // Check to see if we can reason about the control flow of this op.
