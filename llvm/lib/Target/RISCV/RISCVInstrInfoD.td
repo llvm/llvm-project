@@ -71,6 +71,7 @@ defvar DExtsRV64 = [DExt, ZdinxExt];
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtD] in {
+let canFoldAsLoad = 1 in
 def FLD : FPLoad_r<0b011, "fld", FPR64, WriteFLD64>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
