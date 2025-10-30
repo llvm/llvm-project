@@ -655,7 +655,7 @@ unsigned CGDebugInfo::getLineNumber(const PresumedLoc &PLoc) const {
   return PLoc.getLine();
 }
 
-unsigned CGDebugInfo::getColumnNumber(const PresumedLoc & PLoc,
+unsigned CGDebugInfo::getColumnNumber(const PresumedLoc &PLoc,
                                       bool Force) const {
   // We may not want column information at all.
   if (!Force && !CGM.getCodeGenOpts().DebugColumnInfo)
@@ -2114,10 +2114,10 @@ void CGDebugInfo::CollectRecordNormalField(
   } else {
     auto Align = getDeclAlignIfRequired(field, CGM.getContext());
     llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(field);
-    FieldType = createFieldType(
-        name, type, getPresumedFileLoc(field->getLocation()),
-        field->getAccess(), OffsetInBits, Align, tunit, RecordTy, RD,
-        Annotations);
+    FieldType =
+        createFieldType(name, type, getPresumedFileLoc(field->getLocation()),
+                        field->getAccess(), OffsetInBits, Align, tunit,
+                        RecordTy, RD, Annotations);
   }
 
   elements.push_back(FieldType);
@@ -2969,8 +2969,8 @@ void CGDebugInfo::addHeapAllocSiteMetadata(llvm::CallBase *CI,
   if (AllocatedTy->isVoidType())
     node = llvm::MDNode::get(CGM.getLLVMContext(), {});
   else
-    node = getOrCreateType(AllocatedTy,
-                           getOrCreateFile(getPresumedFileLoc(Loc)));
+    node =
+        getOrCreateType(AllocatedTy, getOrCreateFile(getPresumedFileLoc(Loc)));
 
   CI->setMetadata("heapallocsite", node);
 }
