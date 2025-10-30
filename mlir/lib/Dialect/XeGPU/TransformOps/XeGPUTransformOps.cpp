@@ -537,6 +537,85 @@ void transform::InsertPrefetchOp::getEffects(
   modifiesPayload(effects);
 }
 
+void transform::ConvertLayoutOp::build(OpBuilder &builder,
+                                       OperationState &ostate, Value target,
+                                       ArrayRef<OpFoldResult> mixedSgLayout,
+                                       ArrayRef<OpFoldResult> mixedSgData,
+                                       ArrayRef<OpFoldResult> mixedInstData) {
+  SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
+  SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
+  dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
+  dispatchIndexOpFoldResults(mixedSgData, dynamicSgData, staticSgData);
+  dispatchIndexOpFoldResults(mixedInstData, dynamicInstData, staticInstData);
+  build(builder, ostate, target.getType(),
+        /*target=*/target,
+        /*sg_layout=*/dynamicSgLayout,
+        /*sg_data=*/dynamicSgData,
+        /*inst_data=*/dynamicInstData,
+        /*static_sg_layout=*/staticSgLayout,
+        /*static_sg_data=*/staticSgData,
+        /*static_inst_data=*/staticInstData);
+}
+
+DiagnosedSilenceableFailure
+transform::ConvertLayoutOp::apply(transform::TransformRewriter &rewriter,
+                                  transform::TransformResults &results,
+                                  transform::TransformState &state) {
+  auto targetValues = state.getPayloadValues(getTarget());
+  if (!llvm::hasSingleElement(targetValues)) {
+    return emitDefiniteFailure()
+           << "requires exactly one target value handle (got "
+           << llvm::range_size(targetValues) << ")";
+  }
+
+  auto value = *targetValues.begin();
+
+  xegpu::LayoutAttr layoutAttr = nullptr;
+  auto status = getLayoutAttrFromOperands(getContext(), state, (*this),
+                                          getMixedSgLayout(), getMixedSgData(),
+                                          getMixedInstData(), layoutAttr);
+  if (!status.succeeded())
+    return status;
+
+  // Get load op.
+  auto maybeLoadOp = findProducerOfType<xegpu::LoadNdOp>(value);
+  if (!maybeLoadOp) {
+    return emitSilenceableFailure(getLoc()) << "Could not find load op.";
+  }
+  auto loadOp = *maybeLoadOp;
+  // Get load op operand value layout
+  auto producerLayoutAttr =
+      xegpu::getDistributeLayoutAttr(loadOp.getOperand(0));
+  if (!producerLayoutAttr) {
+    return emitSilenceableFailure(getLoc())
+           << "Operand producer op does not have a layout attr.";
+  }
+
+  if (producerLayoutAttr != layoutAttr) {
+    rewriter.setInsertionPointAfter(loadOp.getOperation());
+    auto source = loadOp.getResult();
+    auto convLayoutOp = xegpu::ConvertLayoutOp::create(
+        rewriter, loadOp.getLoc(), source.getType(), source, producerLayoutAttr,
+        layoutAttr);
+    // Replace load op result with the converted layout.
+    rewriter.replaceUsesWithIf(
+        source, convLayoutOp.getResult(), [&](OpOperand &use) {
+          return use.getOwner() != convLayoutOp.getOperation();
+        });
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ConvertLayoutOp::getEffects(
+    ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getSgLayoutMutable(), effects);
+  onlyReadsHandle(getSgDataMutable(), effects);
+  onlyReadsHandle(getInstDataMutable(), effects);
+  modifiesPayload(effects);
+}
+
 namespace {
 class XeGPUTransformDialectExtension
     : public transform::TransformDialectExtension<

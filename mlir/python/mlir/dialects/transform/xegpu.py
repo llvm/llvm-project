@@ -211,3 +211,46 @@ def insert_prefetch(
     ip=None,
 ) -> OpResult:
     return InsertPrefetchOp(target, nb_prefetch=nb_prefetch, loc=loc, ip=ip).result
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ConvertLayoutOp(ConvertLayoutOp):
+    """Specialization for ConvertLayoutOp class."""
+
+    def __init__(
+        self,
+        target: Value,
+        sg_layout: MixedValues,
+        sg_data: MixedValues,
+        *,
+        inst_data: Optional[MixedValues] = None,
+        loc=None,
+        ip=None,
+    ):
+        inst_data = [] if inst_data is None else inst_data
+        (
+            dynamic_sg_layout,
+            static_sg_layout,
+            _,
+        ) = _dispatch_dynamic_index_list(sg_layout)
+        (
+            dynamic_sg_data,
+            static_sg_data,
+            _,
+        ) = _dispatch_dynamic_index_list(sg_data)
+        (
+            dynamic_inst_data,
+            static_inst_data,
+            _,
+        ) = _dispatch_dynamic_index_list(inst_data)
+        super().__init__(
+            target,
+            dynamic_sg_layout,
+            dynamic_sg_data,
+            dynamic_inst_data,
+            static_sg_layout=static_sg_layout,
+            static_sg_data=static_sg_data,
+            static_inst_data=static_inst_data,
+            loc=loc,
+            ip=ip,
+        )

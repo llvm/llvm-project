@@ -193,3 +193,47 @@ def insertPrefetchNbPrefetchParam():
     # CHECK: %[[PARAM_OP:.*]] = transform.param.constant 2
     # CHECK: transform.xegpu.insert_prefetch %[[OPR]]
     # CHECK-SAME: nb_prefetch = %[[PARAM_OP]]
+
+
+@run
+def ConvertLayoutMinimal():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
+        xegpu.ConvertLayoutOp(
+            operand,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: ConvertLayoutMinimal
+    # CHECK: transform.xegpu.convert_layout %
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+
+
+@run
+def ConvertLayout():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [1])
+        xegpu.ConvertLayoutOp(
+            operand,
+            sg_layout=[6, 4],
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: ConvertLayout
+    # CHECK: transform.xegpu.convert_layout %
+    # CHECK: sg_layout = [6, 4]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
