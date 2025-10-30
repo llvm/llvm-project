@@ -362,13 +362,12 @@ static Value computeOffsets(PatternRewriter &rewriter, OpType gatScatOp,
 // the collapsed dimensions. Returns the new memref value and the remaining
 // offsets for the last targetRank dimensions. For example:
 //   input: %memref = memref<2x4x8x32xf32>, offsets=[%i0, %i1, %i2, %i3],
-//   targetRank=2 output: %memref[%i0, %i1, 0, 0] -> memref<8x32xf32>, returned
-//   offsets: [%i2, %i3]
+//   output: %memref[%i0, %i1, 0, 0] -> memref<8x32xf32>, offsets: [%i2, %i3]
 static std::pair<Value, SmallVector<OpFoldResult>>
 convertMemrefAndOffsetsToTargetRank(PatternRewriter &rewriter, Location loc,
                                     Value memref,
                                     SmallVector<OpFoldResult> offsets,
-                                    int64_t targetRank) {
+                                    int64_t targetRank = 2) {
   auto memrefType = cast<MemRefType>(memref.getType());
   unsigned rank = memrefType.getRank();
 
