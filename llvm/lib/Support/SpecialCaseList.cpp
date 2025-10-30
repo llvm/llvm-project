@@ -89,14 +89,68 @@ void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
       return A.Name.size() < B.Name.size();
     });
   }
+
+  for (const auto &G : reverse(Globs)) {
+    StringRef Prefix = G.Pattern.prefix();
+    StringRef Suffix = G.Pattern.suffix();
+
+    if (Suffix.empty() && Prefix.empty()) {
+      // If both prefix and suffix are empty put into special tree to search by
+      // substring in a middle.
+      StringRef Substr = G.Pattern.longest_substr();
+      if (!Substr.empty()) {
+        // But only if substring is not empty. Searching this tree is more
+        // expensive.
+        auto &V = SubstrToGlob.emplace(Substr).first->second;
+        V.emplace_back(&G);
+        continue;
+      }
+    }
+
+    auto &SToGlob = PrefixSuffixToGlob.emplace(Prefix).first->second;
+    auto &V = SToGlob.emplace(reverse(Suffix)).first->second;
+    V.emplace_back(&G);
+  }
 }
 
 void SpecialCaseList::GlobMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
-  for (const auto &G : reverse(Globs))
-    if (G.Pattern.match(Query))
-      return Cb(G.Name, G.LineNo);
+  if (!PrefixSuffixToGlob.empty()) {
+    for (const auto &[_, SToGlob] : PrefixSuffixToGlob.find_prefixes(Query)) {
+      for (const auto &[_, V] : SToGlob.find_prefixes(reverse(Query))) {
+        for (const auto *G : V) {
+          if (G->Pattern.match(Query)) {
+            Cb(G->Name, G->LineNo);
+            // As soon as we find a match in the vector, we can break for this
+            // vector, since the globs are already sorted by priority within the
+            // prefix group. However, we continue searching other prefix groups
+            // in the map, as they may contain a better match overall.
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!SubstrToGlob.empty()) {
+    // As we don't know when substring exactly starts, we will try all
+    // possibilities. In most cases search will fail on first characters.
+    for (StringRef Q = Query; !Q.empty(); Q = Q.drop_front()) {
+      for (const auto &[_, V] : SubstrToGlob.find_prefixes(Q)) {
+        for (const auto *G : V) {
+          if (G->Pattern.match(Query)) {
+            Cb(G->Name, G->LineNo);
+            // As soon as we find a match in the vector, we can break for this
+            // vector, since the globs are already sorted by priority within the
+            // prefix group. However, we continue searching other prefix groups
+            // in the map, as they may contain a better match overall.
+            break;
+          }
+        }
+      }
+    }
+  }
 }
 
 SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
@@ -111,7 +165,7 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber) {
   return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
-LLVM_ABI void SpecialCaseList::Matcher::preprocess(bool BySize) {
+void SpecialCaseList::Matcher::preprocess(bool BySize) {
   return std::visit([&](auto &V) { return V.preprocess(BySize); }, M);
 }
 

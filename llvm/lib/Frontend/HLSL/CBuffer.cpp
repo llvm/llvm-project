@@ -43,8 +43,13 @@ std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
   for (const MDNode *MD : CBufMD->operands()) {
     assert(MD->getNumOperands() && "Invalid cbuffer metadata");
 
-    auto *Handle = cast<GlobalVariable>(
-        cast<ValueAsMetadata>(MD->getOperand(0))->getValue());
+    // For an unused cbuffer, the handle may have been optimized out
+    Metadata *OpMD = MD->getOperand(0);
+    if (!OpMD)
+      continue;
+
+    auto *Handle =
+        cast<GlobalVariable>(cast<ValueAsMetadata>(OpMD)->getValue());
     CBufferMapping &Mapping = Result->Mappings.emplace_back(Handle);
 
     for (int I = 1, E = MD->getNumOperands(); I < E; ++I) {

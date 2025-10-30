@@ -23,6 +23,7 @@ target_link_libraries(tco PRIVATE
   FIROpenMPSupport
   FlangOpenMPTransforms
   FortranSupport
+  MIFDialect
 )
 
 mlir_target_link_libraries(tco PRIVATE

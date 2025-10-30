@@ -29,7 +29,7 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
 
 static bool isLockGuard(const QualType &Type) {
   if (const auto *Record = Type->getAsCanonical<RecordType>())
-    if (const RecordDecl *Decl = Record->getOriginalDecl())
+    if (const RecordDecl *Decl = Record->getDecl())
       return isLockGuardDecl(Decl);
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
@@ -217,7 +217,8 @@ void UseScopedLockCheck::diagOnSingleLock(
 
   // Create Fix-its only if we can find the constructor call to properly handle
   // 'std::lock_guard l(m, std::adopt_lock)' case.
-  const auto *CtorCall = dyn_cast<CXXConstructExpr>(LockGuard->getInit());
+  const auto *CtorCall =
+      dyn_cast_if_present<CXXConstructExpr>(LockGuard->getInit());
   if (!CtorCall)
     return;
 
