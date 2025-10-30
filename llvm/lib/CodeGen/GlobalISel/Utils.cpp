@@ -1893,6 +1893,8 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
   case TargetOpcode::G_UADDSAT:
   case TargetOpcode::G_SSUBSAT:
   case TargetOpcode::G_USUBSAT:
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
     return false;
   case TargetOpcode::G_SSHLSAT:
   case TargetOpcode::G_USHLSAT:
