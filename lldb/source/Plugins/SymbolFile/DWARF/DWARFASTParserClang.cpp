@@ -814,13 +814,13 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     // there...
     [[fallthrough]];
 
-  case DW_TAG_base_type: {
+  case DW_TAG_base_type:
     resolve_state = Type::ResolveState::Full;
     clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
         attrs.name.GetStringRef(), attrs.encoding,
         attrs.byte_size.value_or(0) * 8);
     break;
-  }
+
   case DW_TAG_pointer_type:
     encoding_data_type = Type::eEncodingIsPointerUID;
     break;
