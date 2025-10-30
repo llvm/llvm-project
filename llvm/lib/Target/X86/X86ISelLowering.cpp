@@ -48778,10 +48778,9 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
       SDValue BC0 = peekThroughBitcasts(Op0);
       if (BC0.getOpcode() == X86ISD::PCMPEQ &&
           ISD::isBuildVectorAllZeros(BC0.getOperand(1).getNode())) {
-        SDLoc DL(EFLAGS);
         CC = (CC == X86::COND_B ? X86::COND_E : X86::COND_NE);
-        SDValue X = DAG.getBitcast(OpVT, BC0.getOperand(0));
-        return DAG.getNode(EFLAGS.getOpcode(), DL, VT, X, X);
+        SDValue X = DAG.getBitcast(OpVT, DAG.getFreeze(BC0.getOperand(0)));
+        return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, X, X);
       }
     }
   }
@@ -48837,7 +48836,7 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
               MVT FloatSVT = MVT::getFloatingPointVT(EltBits);
               MVT FloatVT =
                   MVT::getVectorVT(FloatSVT, OpVT.getSizeInBits() / EltBits);
-              Res = DAG.getBitcast(FloatVT, Res);
+              Res = DAG.getBitcast(FloatVT, DAG.getFreeze(Res));
               return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, Res, Res);
             } else if (EltBits == 16) {
               MVT MovmskVT = BCVT.is128BitVector() ? MVT::v16i8 : MVT::v32i8;
@@ -48856,8 +48855,10 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
     }
 
     // TESTZ(X,-1) == TESTZ(X,X)
-    if (ISD::isBuildVectorAllOnes(Op1.getNode()))
+    if (ISD::isBuildVectorAllOnes(Op1.getNode())) {
+      Op0 = DAG.getFreeze(Op0);
       return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op0, Op0);
+    }
 
     // TESTZ(OR(LO(X),HI(X)),OR(LO(Y),HI(Y))) -> TESTZ(X,Y)
     // TODO: Add COND_NE handling?
