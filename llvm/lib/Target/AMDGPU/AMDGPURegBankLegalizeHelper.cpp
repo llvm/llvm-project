@@ -616,6 +616,23 @@ void RegBankLegalizeHelper::lowerSplitTo32(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+void RegBankLegalizeHelper::lowerSplitTo16(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  assert(MRI.getType(Dst) == V2S16);
+  auto [Op0Lo32, Op0Hi32] = unpackAExt(MI.getOperand(1).getReg());
+  auto [Op1Lo32, Op1Hi32] = unpackAExt(MI.getOperand(2).getReg());
+  unsigned Opc = MI.getOpcode();
+  auto Flags = MI.getFlags();
+  auto Op0Lo = B.buildTrunc(SgprRB_S16, Op0Lo32);
+  auto Op0Hi = B.buildTrunc(SgprRB_S16, Op0Hi32);
+  auto Op1Lo = B.buildTrunc(SgprRB_S16, Op1Lo32);
+  auto Op1Hi = B.buildTrunc(SgprRB_S16, Op1Hi32);
+  auto Lo = B.buildInstr(Opc, {SgprRB_S16}, {Op0Lo, Op1Lo}, Flags);
+  auto Hi = B.buildInstr(Opc, {SgprRB_S16}, {Op0Hi, Op1Hi}, Flags);
+  B.buildMergeLikeInstr(Dst, {Lo, Hi});
+  MI.eraseFromParent();
+}
+
 void RegBankLegalizeHelper::lowerSplitTo32Select(MachineInstr &MI) {
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -688,6 +705,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerUnpackBitShift(MI);
   case UnpackMinMax:
     return lowerUnpackMinMax(MI);
+  case ScalarizeToS16:
+    return lowerSplitTo16(MI);
   case Ext32To64: {
     const RegisterBank *RB = MRI.getRegBank(MI.getOperand(0).getReg());
     MachineInstrBuilder Hi;
