@@ -518,24 +518,6 @@ fi
         if backend_result == FailureType.BackEnd:
             return backend_result
 
-        # Try running w/ -emit-llvm to generate an IR file,
-        # if it succeeds we have a backend failure, and can use llc.
-        if not self.check_expected_output(
-            args=self.clang_args + ["-emit-llvm", "-o", self.ir_file]
-        ):
-            print("Checking llc for failure")
-            if self.check_expected_output(
-                cmd=self.llc,
-                args=[self.opt_level, "-filetype=obj"],
-                filename=self.ir_file,
-            ):
-                print("Found BackEnd Crash")
-                return FailureType.BackEnd
-            elif os.path.exists(self.ir_file):
-                # clean up the IR file if we generated it, but won't use it.
-                print(f"clean up {self.ir_file}, since we can't repro w/ llc")
-                os.remove(self.ir_file)
-
         # The IR file will be in 'self.ir_file'
         self.extract_crashing_ir()
         return self.check_middle_end()
