@@ -561,6 +561,17 @@ auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
   return A;
 }
 
+/// \brief Find the innermost cycle containing both given blocks.
+///
+/// \returns the innermost cycle containing both \p A and \p B
+///          or nullptr if there is no such cycle.
+template <typename ContextT>
+auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(BlockT *A,
+                                                        BlockT *B) const
+    -> CycleT * {
+  return getSmallestCommonCycle(getCycle(A), getCycle(B));
+}
+
 /// \brief get the depth for the cycle which containing a given block.
 ///
 /// \returns the depth for the innermost cycle containing \p Block or 0 if it is
