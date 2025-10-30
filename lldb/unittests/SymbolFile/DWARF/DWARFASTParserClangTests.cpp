@@ -1672,7 +1672,7 @@ DWARF:
         - AbbrCode: 0x2
           Values:
             - Value: 0x0
-            - Value: 0x3e
+            - Value: 0x05
             - Value: 0x01
             - Value: 0x02
 ...
