@@ -141,7 +141,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
-        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
           ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
@@ -150,6 +149,8 @@ jobs:
           macos-13)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               build_runs_on="${{ inputs.runs-on }}"
+              # Disable MLIR on pull requests since that will be tested in a different job.
+              target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly'"
             else
               build_runs_on="macos-13-large"
             fi
@@ -168,6 +169,23 @@ jobs:
             build_runs_on=$test_runs_on
             ;;
         esac
+
+        case "$build_runs_on" in
+          # These runners cannot build the full release package faster than
+          # the 6 hours timeout limit, so we need to use a configuration
+          # that builds more quickly.
+          macos-13 | macos-14)
+            bootstrap_prefix="BOOTSTRAP"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF"
+            ;;
+          *)
+            bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
+            ;;
+        esac
+
+        target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_CPACK_PACKAGE_FILE_NAME=$release_binary_basename"
+
+        echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
 
@@ -211,8 +229,7 @@ jobs:
         # so we need to set some extra cmake flags to disable this.
         cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
-            -C clang/cmake/caches/Release.cmake \
-            -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
+            -C clang/cmake/caches/Release.cmake
 
     - name: Build
       shell: bash
@@ -220,7 +237,7 @@ jobs:
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-    
+
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
@@ -234,6 +251,35 @@ jobs:
       continue-on-error: true
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+
+  # Use a separate job to test some of the projects when running on the smaller runners.
+  test-release-package-mac-other-projects:
+    name: "Test Release Package Mac OS (other projects)"
+    needs:
+      - prepare
+    if: >-
+      github.event_name == 'pull_request' &&
+      needs.prepare.outputs.build-runs-on == 'macos-13'
+    runs-on: ${{ needs.prepare.outputs.build-runs-on }}
+    steps:
+    - name: Checkout LLVM
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        ref: ${{ needs.prepare.outputs.ref }}
+    - name: Install Ninja
+      uses: llvm/actions/install-ninja@a1ea791b03c8e61f53a0e66f2f73db283aa0f01e # main
+    - name: Configure
+      run: |
+        cmake -G Ninja -S llvm -B build \
+            ${{ needs.prepare.outputs.target-cmake-flags }} \
+            -DLLVM_RELEASE_ENABLE_PROJECTS="mlir" \
+            -DLLVM_RELEASE_ENABLE_RUNTIMES="" \
+            -DLLVM_RELEASE_FINAL_STAGE_TARGETS="check-mlir" \
+            -C clang/cmake/caches/Release.cmake
+    - name: Build and Test
+      run: |
+        ninja -C build stage2-check-mlir
+
 
   upload-release-binaries:
     name: "Upload Release Binaries"
