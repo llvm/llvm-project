@@ -7,8 +7,7 @@ constant char *constant_p_NULL = NULL;
 // CHECK-LABEL: cmp_constant
 // CHECK: icmp eq ptr addrspace(2) %p, null
 char cmp_constant(constant char* p) {
-  if (p != 0)
+  if (p)
     return *p;
-  else
-    return 0;
+  return 0;
 }
