@@ -1,0 +1,39 @@
+# RUN: yaml2obj --docnum=1 %s -o %t.o
+
+# RUN: llvm-readobj --headers %t.o 2>&1 | FileCheck %s --check-prefix=CASE-INVALID
+
+# CASE-INVALID: SectionHeaderOffset: 0
+# CASE-INVALID: ProgramHeaderCount: 65535 (corrupt)
+# CASE-INVALID: unable to dump program headers: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65535, e_phentsize = 56
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  EPhNum:  65535
+  EShOff:  0
+ProgramHeaders:
+  - Type: PT_LOAD
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+
+# RUN: llvm-readobj --headers %t2.o 2>&1 | FileCheck %s --check-prefix=CASE-VALID
+
+# CASE-VALID: SectionHeaderOffset: 0
+# CASE-VALID: ProgramHeaderCount: 65535 (65536)
+# CASE-VALID: unable to dump program headers: program headers are longer than binary of size 336: e_phoff = 0x40, e_phnum = 65536, e_phentsize = 56
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+  EPhNum:  65535
+Sections:
+  - Type: SHT_NULL
+    Info: 65536
+ProgramHeaders:
+  - Type: PT_LOAD
