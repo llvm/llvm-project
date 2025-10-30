@@ -93,7 +93,7 @@ Configuration files:
     WarningsAsErrors:             ''
     HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
     ImplementationFileExtensions: ['c','cc','cpp','cxx']
-    HeaderFilterRegex:            ''
+    HeaderFilterRegex:            '.*'
     FormatStyle:                  none
     InheritParentConfig:          true
     User:                         user
@@ -132,14 +132,16 @@ file, if any.
 
 static cl::opt<std::string> HeaderFilter("header-filter", desc(R"(
 Regular expression matching the names of the
-headers to output diagnostics from. Diagnostics
+headers to output diagnostics from. The default
+value is '.*', i.e. diagnostics from all non-system
+headers are displayed by default. Diagnostics
 from the main file of each translation unit are
 always displayed.
 Can be used together with -line-filter.
 This option overrides the 'HeaderFilterRegex'
 option in .clang-tidy file, if any.
 )"),
-                                         cl::init(""),
+                                         cl::init(".*"),
                                          cl::cat(ClangTidyCategory));
 
 static cl::opt<std::string> ExcludeHeaderFilter("exclude-header-filter",
@@ -379,9 +381,9 @@ static void printStats(const ClangTidyStats &Stats) {
                    << " with check filters";
     llvm::errs() << ").\n";
     if (Stats.ErrorsIgnoredNonUserCode)
-      llvm::errs() << "Use -header-filter=.* to display errors from all "
-                      "non-system headers. Use -system-headers to display "
-                      "errors from system headers as well.\n";
+      llvm::errs() << "Use -header-filter=.* or leave it as default to display "
+                      "errors from all non-system headers. Use -system-headers "
+                      "to display errors from system headers as well.\n";
   }
 }
 
