@@ -1131,9 +1131,14 @@ bool DependenceInfo::haveSameSD(const Loop *SrcLoop,
   if (SE->hasLoopInvariantBackedgeTakenCount(DstLoop))
     DstUP = SE->getBackedgeTakenCount(DstLoop);
 
-  if (SrcUB != nullptr && DstUP != nullptr &&
-      SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcUB, DstUP))
-    return true;
+  if (SrcUB != nullptr && DstUP != nullptr) {
+    Type *WiderType = SE->getWiderType(SrcUB->getType(), DstUP->getType());
+    SrcUB = SE->getNoopOrZeroExtend(SrcUB, WiderType);
+    DstUP = SE->getNoopOrZeroExtend(DstUP, WiderType);
+
+    if (SE->isKnownPredicate(ICmpInst::ICMP_EQ, SrcUB, DstUP))
+      return true;
+  }
 
   return false;
 }
