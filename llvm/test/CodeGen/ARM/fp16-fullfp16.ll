@@ -98,12 +98,18 @@ define i32 @test_fptosi_i32(ptr %p) {
   ret i32 %r
 }
 
-; FIXME
-;define i64 @test_fptosi_i64(ptr %p) {
-;  %a = load half, ptr %p, align 2
-;  %r = fptosi half %a to i64
-;  ret i64 %r
-;}
+define i64 @test_fptosi_i64(ptr %p) {
+; CHECK-LABEL: test_fptosi_i64:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    bl __fixhfdi
+; CHECK-NEXT:    pop {r11, pc}
+  %a = load half, ptr %p, align 2
+  %r = fptosi half %a to i64
+  ret i64 %r
+}
 
 define i32 @test_fptoui_i32(ptr %p) {
 ; CHECK-LABEL: test_fptoui_i32:
@@ -116,12 +122,18 @@ define i32 @test_fptoui_i32(ptr %p) {
   ret i32 %r
 }
 
-; FIXME
-;define i64 @test_fptoui_i64(ptr %p) {
-;  %a = load half, ptr %p, align 2
-;  %r = fptoui half %a to i64
-;  ret i64 %r
-;}
+define i64 @test_fptoui_i64(ptr %p) {
+; CHECK-LABEL: test_fptoui_i64:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    ldrh r0, [r0]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    bl __fixunshfdi
+; CHECK-NEXT:    pop {r11, pc}
+  %a = load half, ptr %p, align 2
+  %r = fptoui half %a to i64
+  ret i64 %r
+}
 
 define void @test_sitofp_i32(i32 %a, ptr %p) {
 ; CHECK-LABEL: test_sitofp_i32:
@@ -145,19 +157,31 @@ define void @test_uitofp_i32(i32 %a, ptr %p) {
   ret void
 }
 
-; FIXME
-;define void @test_sitofp_i64(i64 %a, ptr %p) {
-;  %r = sitofp i64 %a to half
-;  store half %r, ptr %p
-;  ret void
-;}
+define void @test_sitofp_i64(i64 %a, ptr %p) {
+; CHECK-LABEL: test_sitofp_i64:
+; CHECK:         .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    bl __floatdihf
+; CHECK-NEXT:    vstr.16 s0, [r4]
+; CHECK-NEXT:    pop {r4, pc}
+  %r = sitofp i64 %a to half
+  store half %r, ptr %p
+  ret void
+}
 
-; FIXME
-;define void @test_uitofp_i64(i64 %a, ptr %p) {
-;  %r = uitofp i64 %a to half
-;  store half %r, ptr %p
-;  ret void
-;}
+define void @test_uitofp_i64(i64 %a, ptr %p) {
+; CHECK-LABEL: test_uitofp_i64:
+; CHECK:         .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    bl __floatundihf
+; CHECK-NEXT:    vstr.16 s0, [r4]
+; CHECK-NEXT:    pop {r4, pc}
+  %r = uitofp i64 %a to half
+  store half %r, ptr %p
+  ret void
+}
 
 define void @test_fptrunc_float(float %f, ptr %p) {
 ; CHECK-LABEL: test_fptrunc_float:
@@ -612,6 +636,902 @@ define void @test_fmuladd(ptr %p, ptr %q, ptr %r) {
   store half %v, ptr %p
   ret void
 }
+
+; Half-precision intrinsics
+
+define half @add_f16(half %x, half %y) #0 {
+; CHECK-LABEL: add_f16:
+; CHECK:         vadd.f16 s0, s0, s1
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.fadd.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sub_f16(half %x, half %y) #0 {
+; CHECK-LABEL: sub_f16:
+; CHECK:         vsub.f16 s0, s0, s1
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.fsub.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @mul_f16(half %x, half %y) #0 {
+; CHECK-LABEL: mul_f16:
+; CHECK:         vmul.f16 s0, s0, s1
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.fmul.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @div_f16(half %x, half %y) #0 {
+; CHECK-LABEL: div_f16:
+; CHECK:         vdiv.f16 s0, s0, s1
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.fdiv.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @frem_f16(half %x, half %y) #0 {
+; CHECK-LABEL: frem_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.frem.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @fma_f16(half %x, half %y, half %z) #0 {
+; CHECK-LABEL: fma_f16:
+; CHECK:         vfma.f16 s2, s0, s1
+; CHECK-NEXT:    vmov.f32 s0, s2
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.fma.f16(half %x, half %y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @fmuladd_f16(half %x, half %y, half %z) #0 {
+; CHECK-LABEL: fmuladd_f16:
+; CHECK:         vfma.f16 s2, s0, s1
+; CHECK-NEXT:    vmov.f32 s0, s2
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.fmuladd.f16(half %x, half %y, half %z, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define i32 @fptosi_i32_f16(half %x) #0 {
+; CHECK-LABEL: fptosi_i32_f16:
+; CHECK:         vcvt.s32.f16 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+  %val = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %x, metadata !"fpexcept.strict") #0
+  ret i32 %val
+}
+
+define i32 @fptoui_i32_f16(half %x) #0 {
+; CHECK-LABEL: fptoui_i32_f16:
+; CHECK:         vcvt.s32.f16 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+  %val = call i32 @llvm.experimental.constrained.fptoui.i32.f16(half %x, metadata !"fpexcept.strict") #0
+  ret i32 %val
+}
+
+define i64 @fptosi_i64_f16(half %x) #0 {
+; CHECK-LABEL: fptosi_i64_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vmov.f16 r0, s0
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    bl __fixhfdi
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call i64 @llvm.experimental.constrained.fptosi.i64.f16(half %x, metadata !"fpexcept.strict") #0
+  ret i64 %val
+}
+
+define i64 @fptoui_i64_f16(half %x) #0 {
+; CHECK-LABEL: fptoui_i64_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vmov.f16 r0, s0
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    bl __fixunshfdi
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call i64 @llvm.experimental.constrained.fptoui.i64.f16(half %x, metadata !"fpexcept.strict") #0
+  ret i64 %val
+}
+
+define half @sitofp_f16_i32(i32 %x) #0 {
+; CHECK-LABEL: sitofp_f16_i32:
+; CHECK:         .pad #8
+; CHECK-NEXT:    sub sp, sp, #8
+; CHECK-NEXT:    movw r1, #0
+; CHECK-NEXT:    eor r0, r0, #-2147483648
+; CHECK-NEXT:    movt r1, #17200
+; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    str r1, [sp, #4]
+; CHECK-NEXT:    vldr d16, .LCPI57_0
+; CHECK-NEXT:    vldr d17, [sp]
+; CHECK-NEXT:    vsub.f64 d16, d17, d16
+; CHECK-NEXT:    vcvtb.f16.f64 s0, d16
+; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 3
+; CHECK-NEXT:  .LCPI57_0:
+; CHECK-NEXT:    .long 2147483648
+; CHECK-NEXT:    .long 1127219200
+  %val = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @uitofp_f16_i32(i32 %x) #0 {
+; CHECK-LABEL: uitofp_f16_i32:
+; CHECK:         .pad #8
+; CHECK-NEXT:    sub sp, sp, #8
+; CHECK-NEXT:    movw r1, #0
+; CHECK-NEXT:    str r0, [sp]
+; CHECK-NEXT:    movt r1, #17200
+; CHECK-NEXT:    vldr d16, .LCPI58_0
+; CHECK-NEXT:    str r1, [sp, #4]
+; CHECK-NEXT:    vldr d17, [sp]
+; CHECK-NEXT:    vsub.f64 d16, d17, d16
+; CHECK-NEXT:    vcvtb.f16.f64 s0, d16
+; CHECK-NEXT:    add sp, sp, #8
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 3
+; CHECK-NEXT:  .LCPI58_0:
+; CHECK-NEXT:    .long 0
+; CHECK-NEXT:    .long 1127219200
+  %val = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sitofp_f16_i64(i64 %x) #0 {
+; CHECK-LABEL: sitofp_f16_i64:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __floatdihf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.sitofp.f16.i64(i64 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @uitofp_f16_i64(i64 %x) #0 {
+; CHECK-LABEL: uitofp_f16_i64:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __floatundihf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.uitofp.f16.i64(i64 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sitofp_f16_i128(i128 %x) #0 {
+; CHECK-LABEL: sitofp_f16_i128:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __floattihf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.sitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @uitofp_f16_i128(i128 %x) #0 {
+; CHECK-LABEL: uitofp_f16_i128:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __floatuntihf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.uitofp.f16.i128(i128 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sqrt_f16(half %x) #0 {
+; CHECK-LABEL: sqrt_f16:
+; CHECK:         vsqrt.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.sqrt.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @powi_f16(half %x, i32 %y) #0 {
+; CHECK-LABEL: powi_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl __powisf2
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.powi.f16(half %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sin_f16(half %x) #0 {
+; CHECK-LABEL: sin_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl sinf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.sin.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @cos_f16(half %x) #0 {
+; CHECK-LABEL: cos_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl cosf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.cos.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @tan_f16(half %x) #0 {
+; CHECK-LABEL: tan_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl tanf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.tan.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @asin_f16(half %x) #0 {
+; CHECK-LABEL: asin_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl asinf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.asin.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @acos_f16(half %x) #0 {
+; CHECK-LABEL: acos_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl acosf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.acos.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @atan_f16(half %x) #0 {
+; CHECK-LABEL: atan_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl atanf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.atan.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @atan2_f16(half %x, half %y) #0 {
+; CHECK-LABEL: atan2_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-NEXT:    bl atan2f
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.atan2.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @sinh_f16(half %x) #0 {
+; CHECK-LABEL: sinh_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl sinhf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.sinh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @cosh_f16(half %x) #0 {
+; CHECK-LABEL: cosh_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl coshf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.cosh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @tanh_f16(half %x) #0 {
+; CHECK-LABEL: tanh_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl tanhf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.tanh.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @pow_f16(half %x, half %y) #0 {
+; CHECK-LABEL: pow_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vcvtb.f32.f16 s1, s1
+; CHECK-NEXT:    bl powf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.pow.f16(half %x, half %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @log_f16(half %x) #0 {
+; CHECK-LABEL: log_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl logf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.log.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @log10_f16(half %x) #0 {
+; CHECK-LABEL: log10_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl log10f
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.log10.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @log2_f16(half %x) #0 {
+; CHECK-LABEL: log2_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl log2f
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.log2.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @exp_f16(half %x) #0 {
+; CHECK-LABEL: exp_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl expf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.exp.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @exp2_f16(half %x) #0 {
+; CHECK-LABEL: exp2_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl exp2f
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.exp2.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @rint_f16(half %x) #0 {
+; CHECK-LABEL: rint_f16:
+; CHECK:         vrintx.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.rint.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @nearbyint_f16(half %x) #0 {
+; CHECK-LABEL: nearbyint_f16:
+; CHECK:         vrintr.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.nearbyint.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define i32 @lrint_f16(half %x) #0 {
+; CHECK-LABEL: lrint_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl lrintf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call i32 @llvm.experimental.constrained.lrint.i32.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret i32 %val
+}
+
+define i64 @llrint_f16(half %x) #0 {
+; CHECK-LABEL: llrint_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl llrintf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call i64 @llvm.experimental.constrained.llrint.i64.f16(half %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret i64 %val
+}
+
+define half @maxnum_f16(half %x, half %y) #0 {
+; CHECK-LABEL: maxnum_f16:
+; CHECK:         vmaxnm.f16 s0, s0, s1
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.maxnum.f16(half %x, half %y, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @minnum_f16(half %x, half %y) #0 {
+; CHECK-LABEL: minnum_f16:
+; CHECK:         vminnm.f16 s0, s0, s1
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.minnum.f16(half %x, half %y, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @ceil_f16(half %x) #0 {
+; CHECK-LABEL: ceil_f16:
+; CHECK:         vrintp.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.ceil.f16(half %x, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @floor_f16(half %x) #0 {
+; CHECK-LABEL: floor_f16:
+; CHECK:         vrintm.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.floor.f16(half %x, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define i32 @lround_f16(half %x) #0 {
+; CHECK-LABEL: lround_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl lroundf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call i32 @llvm.experimental.constrained.lround.i32.f16(half %x, metadata !"fpexcept.strict") #0
+  ret i32 %val
+}
+
+define i64 @llround_f16(half %x) #0 {
+; CHECK-LABEL: llround_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl llroundf
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call i64 @llvm.experimental.constrained.llround.i64.f16(half %x, metadata !"fpexcept.strict") #0
+  ret i64 %val
+}
+
+define half @round_f16(half %x) #0 {
+; CHECK-LABEL: round_f16:
+; CHECK:         vrinta.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.round.f16(half %x, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @roundeven_f16(half %x) #0 {
+; CHECK-LABEL: roundeven_f16:
+; CHECK:         vrintn.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.roundeven.f16(half %x, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @trunc_f16(half %x) #0 {
+; CHECK-LABEL: trunc_f16:
+; CHECK:         vrintz.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.trunc.f16(half %x, metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define half @ldexp_f16(half %x, i32 %y) #0 {
+; CHECK-LABEL: ldexp_f16:
+; CHECK:         .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bl ldexpf
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    pop {r11, pc}
+  %val = call half @llvm.experimental.constrained.ldexp.f16.i32(half %x, i32 %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define i32 @fcmp_olt_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_olt_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwmi r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_ole_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_ole_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwls r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_ogt_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_ogt_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_oge_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_oge_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwge r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_oeq_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_oeq_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movweq r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_one_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_one_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwmi r0, #1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_ult_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_ult_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwlt r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_ule_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_ule_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwle r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_ugt_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_ugt_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_uge_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_uge_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwpl r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_ueq_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_ueq_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movweq r0, #1
+; CHECK-NEXT:    movwvs r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmp_une_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmp_une_f16:
+; CHECK:         vcmp.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwne r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f16(half %a, half %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_olt_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_olt_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwmi r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_ole_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_ole_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwls r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_ogt_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_ogt_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_oge_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_oge_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwge r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_oeq_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_oeq_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movweq r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_one_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_one_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwmi r0, #1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_ult_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_ult_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwlt r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_ule_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_ule_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwle r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_ugt_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_ugt_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_uge_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_uge_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwpl r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_ueq_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_ueq_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movweq r0, #1
+; CHECK-NEXT:    movwvs r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @fcmps_une_f16(half %a, half %b) #0 {
+; CHECK-LABEL: fcmps_une_f16:
+; CHECK:         vcmpe.f16 s0, s1
+; CHECK-NEXT:    mov r0, #0
+; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NEXT:    movwne r0, #1
+; CHECK-NEXT:    bx lr
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f16(half %a, half %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+
+; Intrinsics to convert between floating-point types
+
+define half @fptrunc_f16_f32(float %x) #0 {
+; CHECK-LABEL: fptrunc_f16_f32:
+; CHECK:         vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret half %val
+}
+
+define float @fpext_f32_f16(half %x) #0 {
+; CHECK-LABEL: fpext_f32_f16:
+; CHECK:         vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    bx lr
+  %val = call float @llvm.experimental.constrained.fpext.f32.f16(half %x, metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+
+attributes #0 = { strictfp }
+
+declare half @llvm.experimental.constrained.fadd.f16(half, half, metadata, metadata)
+declare half @llvm.experimental.constrained.fsub.f16(half, half, metadata, metadata)
+declare half @llvm.experimental.constrained.fmul.f16(half, half, metadata, metadata)
+declare half @llvm.experimental.constrained.fdiv.f16(half, half, metadata, metadata)
+declare half @llvm.experimental.constrained.frem.f16(half, half, metadata, metadata)
+declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, metadata)
+declare half @llvm.experimental.constrained.fmuladd.f16(half, half, half, metadata, metadata)
+declare i32 @llvm.experimental.constrained.fptosi.i32.f16(half, metadata)
+declare i32 @llvm.experimental.constrained.fptoui.i32.f16(half, metadata)
+declare i64 @llvm.experimental.constrained.fptosi.i64.f16(half, metadata)
+declare i64 @llvm.experimental.constrained.fptoui.i64.f16(half, metadata)
+declare half @llvm.experimental.constrained.sitofp.f16.i32(i32, metadata, metadata)
+declare half @llvm.experimental.constrained.uitofp.f16.i32(i32, metadata, metadata)
+declare half @llvm.experimental.constrained.sitofp.f16.i64(i64, metadata, metadata)
+declare half @llvm.experimental.constrained.uitofp.f16.i64(i64, metadata, metadata)
+declare half @llvm.experimental.constrained.sitofp.f16.i128(i128, metadata, metadata)
+declare half @llvm.experimental.constrained.uitofp.f16.i128(i128, metadata, metadata)
+declare half @llvm.experimental.constrained.sqrt.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.powi.f16(half, i32, metadata, metadata)
+declare half @llvm.experimental.constrained.sin.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.cos.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.tan.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.pow.f16(half, half, metadata, metadata)
+declare half @llvm.experimental.constrained.log.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.log10.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.log2.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.exp.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.exp2.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.rint.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.nearbyint.f16(half, metadata, metadata)
+declare i32 @llvm.experimental.constrained.lrint.i32.f16(half, metadata, metadata)
+declare i64 @llvm.experimental.constrained.llrint.i64.f16(half, metadata, metadata)
+declare half @llvm.experimental.constrained.maxnum.f16(half, half, metadata)
+declare half @llvm.experimental.constrained.minnum.f16(half, half, metadata)
+declare half @llvm.experimental.constrained.ceil.f16(half, metadata)
+declare half @llvm.experimental.constrained.floor.f16(half, metadata)
+declare i32 @llvm.experimental.constrained.lround.i32.f16(half, metadata)
+declare i64 @llvm.experimental.constrained.llround.i64.f16(half, metadata)
+declare half @llvm.experimental.constrained.round.f16(half, metadata)
+declare half @llvm.experimental.constrained.roundeven.f16(half, metadata)
+declare half @llvm.experimental.constrained.trunc.f16(half, metadata)
+declare i1 @llvm.experimental.constrained.fcmps.f16(half, half, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f16(half, half, metadata, metadata)
+
+declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.fpext.f32.f16(half, metadata)
+
 
 declare half @llvm.sqrt.f16(half %a)
 declare half @llvm.powi.f16.i32(half %a, i32 %b)
