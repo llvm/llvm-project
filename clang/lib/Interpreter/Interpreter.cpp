@@ -351,15 +351,23 @@ const char *const Runtimes = R"(
   EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
+static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
+createJITTargetMachineBuilder(const std::string &TT) {
+  if (TT == llvm::sys::getProcessTriple())
+    return llvm::orc::JITTargetMachineBuilder::detectHost();
+
+  return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
+}
+
 llvm::Expected<std::pair<std::unique_ptr<llvm::orc::LLJITBuilder>, uint32_t>>
 Interpreter::outOfProcessJITBuilder(JITConfig Config) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
   uint32_t childPid = -1;
+
   if (!Config.OOPExecutor.empty()) {
     // Launch an out-of-process executor locally in a child process.
     auto ResultOrErr = IncrementalExecutor::launchExecutor(
-        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize,
-        Config.CustomizeFork);
+        Config.OOPExecutor, Config.UseSharedMemory, Config.SlabAllocateSize);
     if (!ResultOrErr)
       return ResultOrErr.takeError();
     childPid = ResultOrErr->second;
@@ -382,8 +390,10 @@ Interpreter::outOfProcessJITBuilder(JITConfig Config) {
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;
   if (EPC) {
-    auto JBOrErr = clang::Interpreter::createLLJITBuilder(
-        std::move(EPC), Config.OrcRuntimePath);
+    std::string RuntimePath =
+        Config.OrcRuntimePath ? *Config.OrcRuntimePath : "";
+    auto JBOrErr =
+        clang::Interpreter::createLLJITBuilder(std::move(EPC), RuntimePath);
     if (!JBOrErr)
       return JBOrErr.takeError();
     JB = std::move(*JBOrErr);
@@ -423,9 +433,7 @@ llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
   llvm::Error Err = llvm::Error::success();
 
-  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
-
-  if (Config.IsOutOfProcess) {
+  if (Config.IsOutOfProcess && !Config.OrcRuntimePath) {
     const TargetInfo &TI = CI->getTarget();
     const llvm::Triple &Triple = TI.getTriple();
 
@@ -441,16 +449,21 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
           "Failed to create driver compilation for out-of-process JIT",
           std::error_code());
     }
-    if (Config.OrcRuntimePath == "") {
-      const clang::driver::ToolChain &TC = C->getDefaultToolChain();
-
-      auto OrcRuntimePathOrErr = getOrcRuntimePath(TC);
-      if (!OrcRuntimePathOrErr) {
-        return OrcRuntimePathOrErr.takeError();
-      }
-
-      Config.OrcRuntimePath = *OrcRuntimePathOrErr;
+    const clang::driver::ToolChain &TC = C->getDefaultToolChain();
+    auto OrcRuntimePathOrErr = getOrcRuntimePath(TC);
+    if (!OrcRuntimePathOrErr) {
+      return OrcRuntimePathOrErr.takeError();
     }
+
+    Config.OrcRuntimePath = *OrcRuntimePathOrErr;
+  }
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
+  if (Config.IsOutOfProcess) {
+    auto JBOrErr = Config.MakeJITBuilder(Config);
+    if (!JBOrErr)
+      return JBOrErr.takeError();
+    JB = std::move(*JBOrErr);
   }
 
   auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
@@ -586,16 +599,6 @@ Interpreter::Parse(llvm::StringRef Code) {
   return LastPTU;
 }
 
-static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
-createJITTargetMachineBuilder(const std::string &TT) {
-  if (TT == llvm::sys::getProcessTriple())
-    // This fails immediately if the target backend is not registered
-    return llvm::orc::JITTargetMachineBuilder::detectHost();
-
-  // If the target backend is not registered, LLJITBuilder::create() will fail
-  return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
-}
-
 llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
 Interpreter::createLLJITBuilder(
     std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
@@ -625,39 +628,16 @@ llvm::Error Interpreter::CreateExecutor(JITConfig Config) {
                                                "No code generator available",
                                                std::error_code());
 
-  const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
-  llvm::Triple TargetTriple(TT);
-  bool IsWindowsTarget = TargetTriple.isOSWindows();
-
-  if (!IsWindowsTarget && Config.IsOutOfProcess) {
-    if (!JITBuilder) {
-      auto ResOrErr = outOfProcessJITBuilder(Config);
-      if (!ResOrErr)
-        return ResOrErr.takeError();
-      JITBuilder = std::move(ResOrErr->first);
-      Config.ExecutorPID = ResOrErr->second;
-    }
-    if (!JITBuilder)
-      return llvm::make_error<llvm::StringError>(
-          "Operation failed. No LLJITBuilder for out-of-process JIT",
-          std::error_code());
-  }
-
   if (!JITBuilder) {
-    auto JTMB = createJITTargetMachineBuilder(TT);
-    if (!JTMB)
-      return JTMB.takeError();
-    if (Config.CM)
-      JTMB->setCodeModel(Config.CM);
-    auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
-    if (!JB)
-      return JB.takeError();
-    JITBuilder = std::move(*JB);
+    // Use the factory function to create the builder
+    auto JBOrErr = Config.MakeJITBuilder(Config);
+    if (!JBOrErr)
+      return JBOrErr.takeError();
+    JITBuilder = std::move(*JBOrErr);
   }
 
   llvm::Error Err = llvm::Error::success();
 
-  // Fix: Declare Executor as the appropriate unique_ptr type
   std::unique_ptr<IncrementalExecutor> Executor;
 
 #ifdef __EMSCRIPTEN__
@@ -798,5 +778,25 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
 #endif
 
   return llvm::Error::success();
+}
+
+llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+Interpreter::JITConfig::makeDefaultJITBuilder(const JITConfig &Config) {
+  // Handle out-of-process JIT case
+  if (Config.IsOutOfProcess) {
+    if (!Config.OOPExecutor.empty() || !Config.OOPExecutorConnect.empty()) {
+      auto ResOrErr = Interpreter::outOfProcessJITBuilder(Config);
+      if (!ResOrErr)
+        return ResOrErr.takeError();
+      return std::move(ResOrErr->first);
+    }
+  }
+
+  std::string TT = llvm::sys::getProcessTriple();
+  auto JTMB = createJITTargetMachineBuilder(TT);
+  if (!JTMB)
+    return JTMB.takeError();
+
+  return IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
 }
 } // end namespace clang
