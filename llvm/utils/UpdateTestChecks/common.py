@@ -2292,42 +2292,24 @@ def add_checks(
                     ignore_all_comments=not check_inst_comments,
                 )
 
-                # This could be selectively enabled with an optional invocation argument.
-                # Disabled for now: better to check everything. Be safe rather than sorry.
-
-                # Handle the first line of the function body as a special case because
-                # it's often just noise (a useless asm comment or entry label).
-                # if func_body[0].startswith("#") or func_body[0].startswith("entry:"):
-                #  is_blank_line = True
-                # else:
-                #  output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
-                #  is_blank_line = False
-
-                is_blank_line = False
 
                 for func_line in func_body:
                     if func_line.strip() == "":
-                        is_blank_line = True
+                        # Instead of skipping blank lines, using CHECK_EMPTY is more defensive.
+                        output_lines.append(
+                            "{} {}-EMPTY:".format(comment_marker, checkprefix)
+                        )
                         continue
                     if not check_inst_comments:
                         # Do not waste time checking IR comments unless necessary.
                         func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
 
-                    # Skip blank lines instead of checking them.
-                    if is_blank_line:
-                        output_lines.append(
-                            "{} {}:       {}".format(
-                                comment_marker, checkprefix, func_line
-                            )
+                    check_suffix = "-NEXT" if not is_filtered else ""
+                    output_lines.append(
+                        "{} {}{}:  {}".format(
+                            comment_marker, checkprefix, check_suffix, func_line
                         )
-                    else:
-                        check_suffix = "-NEXT" if not is_filtered else ""
-                        output_lines.append(
-                            "{} {}{}:  {}".format(
-                                comment_marker, checkprefix, check_suffix, func_line
-                            )
-                        )
-                    is_blank_line = False
+                    )
 
                 # Add space between different check prefixes and also before the first
                 # line of code in the test function.
