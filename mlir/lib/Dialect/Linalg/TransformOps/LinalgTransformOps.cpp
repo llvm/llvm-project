@@ -2464,6 +2464,8 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
         rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
     if (failed(maybePadOps)) {
@@ -4497,7 +4499,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
             maybeTransformed = decomposeWinogradOutputTransformOp(rewriter, op);
             return true;
           })
-          .Default([&](Operation *op) { return false; });
+          .Default(false);
 
   if (!supported) {
     DiagnosedSilenceableFailure diag =

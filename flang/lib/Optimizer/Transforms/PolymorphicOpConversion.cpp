@@ -246,7 +246,8 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     args.append(dispatch.getArgs().begin(), dispatch.getArgs().end());
     rewriter.replaceOpWithNewOp<fir::CallOp>(
         dispatch, resTypes, nullptr, args, dispatch.getArgAttrsAttr(),
-        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr());
+        dispatch.getResAttrsAttr(), dispatch.getProcedureAttrsAttr(),
+        /*inline_attr*/ fir::FortranInlineEnumAttr{});
     return mlir::success();
   }
 
