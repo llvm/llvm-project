@@ -674,3 +674,18 @@ func.func @dead_value_loop_ivs_no_result(%lb: index, %ub: index, %step: index, %
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @op_block_have_dead_arg
+func.func @op_block_have_dead_arg(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
+  omp.wsloop {
+    omp.loop_nest (%arg4) : i64 = (%arg0) to (%arg1) step (%arg2)  {
+      cf.cond_br %arg3, ^bb1(%arg0 : i64), ^bb1(%arg1 : i64)
+    ^bb1(%0: i64):
+        omp.yield
+    }
+  }
+// CHECK-NEXT: return
+  return
+}
