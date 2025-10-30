@@ -10003,7 +10003,7 @@ static llvm::Value *emitDeviceID(
 static std::pair<llvm::Value *, OMPDynGroupprivateFallbackType>
 emitDynCGroupMem(const OMPExecutableDirective &D, CodeGenFunction &CGF) {
   llvm::Value *DynGP = CGF.Builder.getInt32(0);
-  OMPDynGroupprivateFallbackType DynGPFallback;
+  auto DynGPFallback = OMPDynGroupprivateFallbackType::Abort;
 
   if (auto *DynGPClause = D.getSingleClause<OMPDynGroupprivateClause>()) {
     CodeGenFunction::RunCleanupsScope DynGPScope(CGF);
@@ -10034,7 +10034,6 @@ emitDynCGroupMem(const OMPExecutableDirective &D, CodeGenFunction &CGF) {
                                                   /*IgnoreResultAssign=*/true);
     DynGP = CGF.Builder.CreateIntCast(DynCGMemVal, CGF.Int32Ty,
                                       /*isSigned=*/false);
-    DynGPFallback = OMPDynGroupprivateFallbackType::Abort;
   }
   return {DynGP, DynGPFallback};
 }
