@@ -4820,19 +4820,9 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        Right.MatchingParen->isNot(BK_Block))) {
     return !Style.Cpp11BracedListStyle || Style.SpacesInParensOptions.Other;
   }
-  if (Left.is(TT_BlockComment)) {
-    // No whitespace in x(/*foo=*/1), except for JavaScript.
-    const StringRef Trimmed = Left.TokenText.rtrim(" \t");
-    bool EndsWithAssignmentComment = Trimmed.ends_with("=*/");
-    const FormatStyle::CommentSpaceMode BeforeClosingMode =
-        getBeforeClosingSpaceMode(Style, Left);
-    if (!EndsWithAssignmentComment && Trimmed.ends_with("= */") &&
-        (BeforeClosingMode == FormatStyle::CommentSpaceMode::Always ||
-         BeforeClosingMode == FormatStyle::CommentSpaceMode::Never)) {
-      EndsWithAssignmentComment = true;
-    }
-    return Style.isJavaScript() || !EndsWithAssignmentComment;
-  }
+  if (Left.is(TT_BlockComment))
+    return Style.isJavaScript() ||
+           Left.getBlockCommentKind() != CommentKind::Parameter;
 
   // Space between template and attribute.
   // e.g. template <typename T> [[nodiscard]] ...
