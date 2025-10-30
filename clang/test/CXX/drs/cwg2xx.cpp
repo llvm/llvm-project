@@ -242,7 +242,8 @@ namespace cwg212 { // cwg212: yes
     // OK, calls void* overload.
     int *a = overload(p);
 
-    Base<int> *q = p; // expected-error {{cannot initialize}}
+    Base<int> *q = p;
+    // expected-error@-1 {{cannot initialize a variable of type 'Base<int> *' with an lvalue of type 'Derived<int> *'}}
   }
 
   template<typename T> struct Base {};
