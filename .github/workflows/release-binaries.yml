@@ -386,6 +386,7 @@ jobs:
         path: |
           S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
           S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
+          S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/CPackConfig.cmake
 
   upload-release-binaries:
     name: "Upload Release Binaries"
