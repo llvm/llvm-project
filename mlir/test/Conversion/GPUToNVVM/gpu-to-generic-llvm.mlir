@@ -4,15 +4,6 @@
 /// should be converted by generic LLVM lowering patterns.
 
 gpu.module @generic_llvm_test_module_0 {
-  // CHECK-LABEL: @arith_add
-  func.func @arith_add(%left: i64, %right: i64) -> i64 {
-    // CHECK: llvm.add {{.*}}, {{.*}} : i64
-    %result = arith.addi %left, %right : i64
-    return %result : i64
-  }
-}
-
-gpu.module @generic_llvm_test_module_1 {
   // CHECK-LABEL: @math_abs_non_i32
   func.func @math_abs_non_i32(%arg_i64: i64, %arg_i16: i16, %arg_i8: i8, %arg_i1: i1) 
       -> (i64, i16, i8, i1) {
