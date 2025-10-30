@@ -134,7 +134,10 @@ define i16 @for_phi_removed(ptr  %src) {
 ; UNROLL-NO-IC:       [[VECTOR_BODY]]:
 ; UNROLL-NO-IC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; UNROLL-NO-IC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
-; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
+; UNROLL-NO-IC-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = select i1 [[TMP4]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 104
@@ -197,7 +200,10 @@ define i16 @for_phi_removed(ptr  %src) {
 ; SINK-AFTER:       [[VECTOR_BODY]]:
 ; SINK-AFTER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; SINK-AFTER-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
-; SINK-AFTER-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], 0
+; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; SINK-AFTER-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; SINK-AFTER-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[BROADCAST_SPLAT]], zeroinitializer
+; SINK-AFTER-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; SINK-AFTER-NEXT:    [[TMP2:%.*]] = select i1 [[TMP4]], <4 x i16> splat (i16 1), <4 x i16> zeroinitializer
 ; SINK-AFTER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; SINK-AFTER-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 108
