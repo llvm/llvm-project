@@ -264,8 +264,6 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
 
     auto tdesc = adaptor.getTensorDesc();
     auto tdescTy = op.getTensorDescType();
-    if (tdescTy.getRank() != 2)
-      return rewriter.notifyMatchFailure(op, "Expected 2D tensor descriptor.");
     auto elemType = tdescTy.getElementType();
     auto elemBitSize = elemType.getIntOrFloatBitWidth();
     if (elemBitSize % 8 != 0)
@@ -294,71 +292,73 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
-    // Convert base pointer (i64) to LLVM pointer type.
-    Value basePtrLLVM =
-        LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
-    // Compute element byte size and surface width in bytes.
-    Value elemByteSize = arith::ConstantIntOp::create(
-        rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
-    Value surfaceW =
-        arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
+    if (tdescTy.getRank() == 2) {
+      // Convert base pointer (i64) to LLVM pointer type.
+      Value basePtrLLVM =
+          LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
+      // Compute element byte size and surface width in bytes.
+      Value elemByteSize = arith::ConstantIntOp::create(
+          rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
+      Value surfaceW =
+          arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
 
-    // Get tile sizes and vblocks from the tensor descriptor type.
-    auto tileW = tdescTy.getDimSize(1);
-    auto tileH = tdescTy.getDimSize(0);
-    int32_t vblocks = tdescTy.getArrayLength();
-    if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
-      Value src = adaptor.getValue();
-      // If store value is a scalar, get value from op instead of adaptor.
-      // Adaptor might have optimized away single element vector
-      if (src.getType().isIntOrFloat()) {
-        src = op.getValue();
-      }
-      VectorType srcVecTy = dyn_cast<VectorType>(src.getType());
-      if (!srcVecTy)
-        return rewriter.notifyMatchFailure(
-            op, "Expected store value to be a vector type.");
-      // Get flat vector type of integer type with matching element bit size.
-      VectorType newSrcVecTy =
-          encodeVectorTypeTo(srcVecTy, rewriter.getIntegerType(elemBitSize));
-      if (srcVecTy != newSrcVecTy)
-        src = vector::BitCastOp::create(rewriter, loc, newSrcVecTy, src);
-      auto storeCacheControl =
-          translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
-      xevm::BlockStore2dOp::create(
-          rewriter, loc, basePtrLLVM, surfaceW, baseShapeH, surfaceW, offsetW,
-          offsetH, elemBitSize, tileW, tileH, src,
-          xevm::StoreCacheControlAttr::get(ctxt, storeCacheControl));
-      rewriter.eraseOp(op);
-    } else {
-      auto loadCacheControl =
-          translateLoadXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
-      if constexpr (std::is_same_v<OpType, xegpu::PrefetchNdOp>) {
-        xevm::BlockPrefetch2dOp::create(
+      // Get tile sizes and vblocks from the tensor descriptor type.
+      auto tileW = tdescTy.getDimSize(1);
+      auto tileH = tdescTy.getDimSize(0);
+      int32_t vblocks = tdescTy.getArrayLength();
+      if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
+        Value src = adaptor.getValue();
+        // If store value is a scalar, get value from op instead of adaptor.
+        // Adaptor might have optimized away single element vector
+        if (src.getType().isIntOrFloat()) {
+          src = op.getValue();
+        }
+        VectorType srcVecTy = dyn_cast<VectorType>(src.getType());
+        if (!srcVecTy)
+          return rewriter.notifyMatchFailure(
+              op, "Expected store value to be a vector type.");
+        // Get flat vector type of integer type with matching element bit size.
+        VectorType newSrcVecTy =
+            encodeVectorTypeTo(srcVecTy, rewriter.getIntegerType(elemBitSize));
+        if (srcVecTy != newSrcVecTy)
+          src = vector::BitCastOp::create(rewriter, loc, newSrcVecTy, src);
+        auto storeCacheControl =
+            translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
+        xevm::BlockStore2dOp::create(
             rewriter, loc, basePtrLLVM, surfaceW, baseShapeH, surfaceW, offsetW,
-            offsetH, elemBitSize, tileW, tileH, vblocks,
-            xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
+            offsetH, elemBitSize, tileW, tileH, src,
+            xevm::StoreCacheControlAttr::get(ctxt, storeCacheControl));
         rewriter.eraseOp(op);
       } else {
-        VectorType dstVecTy = cast<VectorType>(op.getValue().getType());
-        const bool vnni = op.getPacked().value_or(false);
-        auto transposeValue = op.getTranspose();
-        bool transpose =
-            transposeValue.has_value() && transposeValue.value()[0] == 1;
-        VectorType loadedTy = encodeVectorTypeTo(
-            dstVecTy, vnni ? rewriter.getI32Type()
-                           : rewriter.getIntegerType(elemBitSize));
+        auto loadCacheControl =
+            translateLoadXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
+        if constexpr (std::is_same_v<OpType, xegpu::PrefetchNdOp>) {
+          xevm::BlockPrefetch2dOp::create(
+              rewriter, loc, basePtrLLVM, surfaceW, baseShapeH, surfaceW,
+              offsetW, offsetH, elemBitSize, tileW, tileH, vblocks,
+              xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
+          rewriter.eraseOp(op);
+        } else {
+          VectorType dstVecTy = cast<VectorType>(op.getValue().getType());
+          const bool vnni = op.getPacked().value_or(false);
+          auto transposeValue = op.getTranspose();
+          bool transpose =
+              transposeValue.has_value() && transposeValue.value()[0] == 1;
+          VectorType loadedTy = encodeVectorTypeTo(
+              dstVecTy, vnni ? rewriter.getI32Type()
+                             : rewriter.getIntegerType(elemBitSize));
 
-        Value resultFlatVec = xevm::BlockLoad2dOp::create(
-            rewriter, loc, loadedTy, basePtrLLVM, surfaceW, baseShapeH,
-            surfaceW, offsetW, offsetH, elemBitSize, tileW, tileH, vblocks,
-            transpose, vnni,
-            xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
-        resultFlatVec = vector::BitCastOp::create(
-            rewriter, loc,
-            encodeVectorTypeTo(loadedTy, dstVecTy.getElementType()),
-            resultFlatVec);
-        rewriter.replaceOp(op, resultFlatVec);
+          Value resultFlatVec = xevm::BlockLoad2dOp::create(
+              rewriter, loc, loadedTy, basePtrLLVM, surfaceW, baseShapeH,
+              surfaceW, offsetW, offsetH, elemBitSize, tileW, tileH, vblocks,
+              transpose, vnni,
+              xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
+          resultFlatVec = vector::BitCastOp::create(
+              rewriter, loc,
+              encodeVectorTypeTo(loadedTy, dstVecTy.getElementType()),
+              resultFlatVec);
+          rewriter.replaceOp(op, resultFlatVec);
+        }
       }
     }
     return success();
