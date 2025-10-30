@@ -918,8 +918,7 @@ define aarch64_sve_vector_pcs void @zpr_ppr_csr_vla(i64 %n) {
 ; CHECK-NEXT:    ldr z10, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    addvl sp, x29, #-1
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
@@ -1074,8 +1073,7 @@ define void @sve_locals_zpr_ppr_csr_vla(i64 %n, <vscale x 16 x i1> %pred, <vscal
 ; CHECK-NEXT:    ldr z10, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z9, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #1024
-; CHECK-NEXT:    addvl sp, sp, #4
+; CHECK-NEXT:    addvl sp, x29, #-1
 ; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
