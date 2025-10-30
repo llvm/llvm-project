@@ -1836,7 +1836,7 @@ bool NVPTXDAGToDAGISel::tryFence(SDNode *N) {
   return true;
 }
 
-NVPTXScopes::NVPTXScopes(LLVMContext &C) {
+NVPTXScopes::NVPTXScopes(LLVMContext &C) : Context(&C) {
   Scopes[C.getOrInsertSyncScopeID("singlethread")] = NVPTX::Scope::Thread;
   Scopes[C.getOrInsertSyncScopeID("")] = NVPTX::Scope::System;
   Scopes[C.getOrInsertSyncScopeID("block")] = NVPTX::Scope::Block;
@@ -1851,11 +1851,24 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
 
   auto S = Scopes.find(ID);
   if (S == Scopes.end()) {
-    // TODO:
-    // - Add API to LLVMContext to get the name of a single scope.
-    // - Use that API here to print an error containing the name
-    //   of this Unknown ID.
-    report_fatal_error(formatv("Could not find scope ID={}.", int(ID)));
+    // Get the actual scope name from LLVMContext for a better error message
+    std::string scopeName = "<unknown>";
+    if (auto name = Context->getSyncScopeName(ID))
+      scopeName = name->str();
+
+    // Build list of supported syncscopes programmatically
+    std::string supportedScopes;
+    for (const auto &Entry : Scopes) {
+      if (!supportedScopes.empty())
+        supportedScopes += ", ";
+      if (auto name = Context->getSyncScopeName(Entry.first))
+        supportedScopes += name->empty() ? "<empty string>" : name->str();
+    }
+
+    reportFatalUsageError(
+        formatv("NVPTX backend does not support syncscope \"{0}\" (ID={1}).\n"
+                "Supported syncscopes are: {2}.",
+                scopeName, int(ID), supportedScopes));
   }
   return S->second;
 }
