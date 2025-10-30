@@ -26,18 +26,20 @@ module @gemm attributes {gpu.container_module} {
     // the SG thread layout of [8, 4]. Because runtime will linearize
     // the x dimension first (we need y dimension to be linearized first).
     // So just use linearized thread layout of [512, 1] wi threads.
-    gpu.launch_func  @math_kernels::@gpu_maximumf blocks in (%c1, %c1, %c1) threads in (%c512, %c1, %c1) args(%input1_gpu : memref<256x256xf32>, %input2_gpu : memref<256x256xf32>, %result_gpu : memref<256x256xf32>)
-    gpu.launch_func  @math_kernels::@gpu_maximumf_with_fastmath blocks in (%c1, %c1, %c1) threads in (%c512, %c1, %c1) args(%input1_gpu : memref<256x256xf32>, %input2_gpu : memref<256x256xf32>, %result_gpu : memref<256x256xf32>)
+    gpu.launch_func  @arith_maximumf_module::@gpu_maximumf blocks in (%c1, %c1, %c1) threads in (%c512, %c1, %c1) args(%input1_gpu : memref<256x256xf32>, %input2_gpu : memref<256x256xf32>, %result_gpu : memref<256x256xf32>)
+    gpu.launch_func  @arith_maximumf_fastmath_module::@gpu_maximumf_with_fastmath blocks in (%c1, %c1, %c1) threads in (%c512, %c1, %c1) args(%input1_gpu : memref<256x256xf32>, %input2_gpu : memref<256x256xf32>, %result_gpu_with_fastmath : memref<256x256xf32>)
 
     %result_host = memref.alloc() : memref<256x256xf32>
     %result_host_with_fastmath = memref.alloc() : memref<256x256xf32>
     gpu.memcpy %result_host, %result_gpu : memref<256x256xf32>, memref<256x256xf32>
-    gpu.dealloc %input_gpu : memref<256x256xf32>
+    gpu.memcpy %result_host_with_fastmath, %result_gpu_with_fastmath : memref<256x256xf32>, memref<256x256xf32>
+    gpu.dealloc %input1_gpu : memref<256x256xf32>
+    gpu.dealloc %input2_gpu : memref<256x256xf32>
     gpu.dealloc %result_gpu : memref<256x256xf32>
     return %result_host, %result_host_with_fastmath : memref<256x256xf32>, memref<256x256xf32>
   }
 
-  gpu.module @math_kernels   {
+  gpu.module @arith_maximumf_module {
     gpu.func @gpu_maximumf(%input1_gpu : memref<256x256xf32>, %input2_gpu : memref<256x256xf32>, %result_gpu : memref<256x256xf32>) kernel  {
       %c256 = arith.constant 256 : index
       %block_id_x = gpu.block_id x
@@ -48,12 +50,14 @@ module @gemm attributes {gpu.container_module} {
       %input_val_1 = xegpu.load_nd %input_tdesc_1[%m, %n] : !xegpu.tensor_desc<256x256xf32, #map> -> vector<256x256xf32>
       %input_tdesc_2 = xegpu.create_nd_tdesc %input2_gpu : memref<256x256xf32> -> !xegpu.tensor_desc<256x256xf32, #map>
       %input_val_2 = xegpu.load_nd %input_tdesc_2[%m, %n] : !xegpu.tensor_desc<256x256xf32, #map> -> vector<256x256xf32>
-      %result_val = arith.maximumf %input_val_1, %input_val_2 : vector<256x256xf32>
+      %result_val = arith.maximumf %input_val_1, %input_val_2 {layout_result_0 = #map} : vector<256x256xf32>
       %result_tdesc = xegpu.create_nd_tdesc %result_gpu : memref<256x256xf32> -> !xegpu.tensor_desc<256x256xf32, #map>
       xegpu.store_nd %result_val, %result_tdesc[%m, %n] : vector<256x256xf32>, !xegpu.tensor_desc<256x256xf32, #map>
       gpu.return
     }
+  }
 
+  gpu.module @arith_maximumf_fastmath_module {
     // Kernel with fastmath attribute
     gpu.func @gpu_maximumf_with_fastmath(%input1_gpu : memref<256x256xf32>, %input2_gpu : memref<256x256xf32>, %result_gpu : memref<256x256xf32>) kernel  {
       %c256 = arith.constant 256 : index
@@ -65,7 +69,7 @@ module @gemm attributes {gpu.container_module} {
       %input_val_1 = xegpu.load_nd %input_tdesc_1[%m, %n] : !xegpu.tensor_desc<256x256xf32, #map> -> vector<256x256xf32>
       %input_tdesc_2 = xegpu.create_nd_tdesc %input2_gpu : memref<256x256xf32> -> !xegpu.tensor_desc<256x256xf32, #map>
       %input_val_2 = xegpu.load_nd %input_tdesc_2[%m, %n] : !xegpu.tensor_desc<256x256xf32, #map> -> vector<256x256xf32>
-      %result_val = arith.maximumf %input_val_1, %input_val_2 fastmath<fast> : vector<256x256xf32>
+      %result_val = arith.maximumf %input_val_1, %input_val_2 fastmath<fast> {layout_result_0 = #map} : vector<256x256xf32>
       %result_tdesc = xegpu.create_nd_tdesc %result_gpu : memref<256x256xf32> -> !xegpu.tensor_desc<256x256xf32, #map>
       xegpu.store_nd %result_val, %result_tdesc[%m, %n] : vector<256x256xf32>, !xegpu.tensor_desc<256x256xf32, #map>
       gpu.return
