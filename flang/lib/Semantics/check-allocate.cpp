@@ -470,7 +470,7 @@ static bool HaveCompatibleLengths(
   }
 }
 
-bool IsSameAllocation(const SomeExpr *root, const SomeExpr *path) {
+bool AreSameAllocation(const SomeExpr *root, const SomeExpr *path) {
   if (root && path) {
     // For now we just use equality of expressions. If we implement a more
     // sophisticated alias analysis we should use it here.
@@ -712,11 +712,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   }
 
   if (const SomeExpr *allocObj{GetExpr(context, allocateObject_)}) {
-    if (IsSameAllocation(allocObj, allocateInfo_.statVar)) {
+    if (AreSameAllocation(allocObj, allocateInfo_.statVar)) {
       context.Say(allocateInfo_.statSource.value_or(name_.source),
           "STAT variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
-    if (IsSameAllocation(allocObj, allocateInfo_.msgVar)) {
+    if (AreSameAllocation(allocObj, allocateInfo_.msgVar)) {
       context.Say(allocateInfo_.msgSource.value_or(name_.source),
           "ERRMSG variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
