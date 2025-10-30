@@ -6,9 +6,8 @@ define void @shufflevector_halves_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_halves_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
+; CHECK-NEXT:    vpackev.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -23,9 +22,9 @@ define void @shufflevector_halves_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_halves_b_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 177
+; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
+; CHECK-NEXT:    vpackod.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -40,9 +39,9 @@ define void @shufflevector_halves_b_2(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_halves_b_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI2_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 177
+; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
+; CHECK-NEXT:    vpackod.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -57,9 +56,9 @@ define void @shufflevector_halves_b_3(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_halves_b_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 27
+; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
+; CHECK-NEXT:    vpackev.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -74,10 +73,9 @@ define void @shufflevector_halves_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_halves_h:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    vshuf.h $vr1, $vr0, $vr0
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
+; CHECK-NEXT:    vpackev.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
@@ -91,10 +89,10 @@ define void @shufflevector_halves_h_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_halves_h_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI5_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    vshuf.h $vr1, $vr0, $vr0
-; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 177
+; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
+; CHECK-NEXT:    vpackod.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i16>, ptr %a
@@ -108,9 +106,10 @@ define void @shufflevector_quarters_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_quarters_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI6_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI6_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 216
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 216
+; CHECK-NEXT:    vreplvei.h $vr1, $vr0, 4
+; CHECK-NEXT:    vpackev.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -125,9 +124,10 @@ define void @shufflevector_quarters_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_quarters_b_1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI7_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI7_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 216
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 141
+; CHECK-NEXT:    vreplvei.h $vr1, $vr0, 4
+; CHECK-NEXT:    vpackod.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -142,9 +142,10 @@ define void @shufflevector_quarters_b_2(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_quarters_b_2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI8_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI8_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 141
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 216
+; CHECK-NEXT:    vreplvei.h $vr1, $vr0, 4
+; CHECK-NEXT:    vpackev.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -159,9 +160,10 @@ define void @shufflevector_quarters_b_3(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_quarters_b_3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI9_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI9_0)
-; CHECK-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; CHECK-NEXT:    vshuf4i.h $vr0, $vr0, 141
+; CHECK-NEXT:    vshuf4i.b $vr0, $vr0, 141
+; CHECK-NEXT:    vreplvei.h $vr1, $vr0, 4
+; CHECK-NEXT:    vpackod.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

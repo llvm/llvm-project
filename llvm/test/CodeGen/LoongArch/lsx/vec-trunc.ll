@@ -28,20 +28,18 @@ define void @load_trunc_2i64_to_2i16(ptr %ptr, ptr %dst) nounwind {
 ; LA32-LABEL: load_trunc_2i64_to_2i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA32-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI1_0)
-; LA32-NEXT:    vshuf.h $vr1, $vr0, $vr0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr1, 0
+; LA32-NEXT:    vreplvei.w $vr1, $vr0, 2
+; LA32-NEXT:    vpackev.h $vr0, $vr1, $vr0
+; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_2i64_to_2i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI1_0)
-; LA64-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI1_0)
-; LA64-NEXT:    vshuf.h $vr1, $vr0, $vr0
-; LA64-NEXT:    vstelm.w $vr1, $a1, 0, 0
+; LA64-NEXT:    vreplvei.w $vr1, $vr0, 2
+; LA64-NEXT:    vpackev.h $vr0, $vr1, $vr0
+; LA64-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA64-NEXT:    ret
   %a = load <2 x i64>, ptr %ptr
   %trunc = trunc <2 x i64> %a to <2 x i16>
@@ -53,18 +51,16 @@ define void @load_trunc_2i64_to_2i8(ptr %ptr, ptr %dst) nounwind {
 ; LA32-LABEL: load_trunc_2i64_to_2i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI2_0)
-; LA32-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; LA32-NEXT:    vreplvei.w $vr1, $vr0, 2
+; LA32-NEXT:    vpackev.b $vr0, $vr1, $vr0
 ; LA32-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_2i64_to_2i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA64-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI2_0)
-; LA64-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; LA64-NEXT:    vreplvei.w $vr1, $vr0, 2
+; LA64-NEXT:    vpackev.b $vr0, $vr1, $vr0
 ; LA64-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; LA64-NEXT:    ret
   %a = load <2 x i64>, ptr %ptr
@@ -100,9 +96,10 @@ define void @load_trunc_4i32_to_4i8(ptr %ptr, ptr %dst) nounwind {
 ; LA32-LABEL: load_trunc_4i32_to_4i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA32-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI4_0)
-; LA32-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; LA32-NEXT:    vshuf4i.h $vr0, $vr0, 216
+; LA32-NEXT:    vshuf4i.b $vr0, $vr0, 216
+; LA32-NEXT:    vreplvei.h $vr1, $vr0, 4
+; LA32-NEXT:    vpackev.h $vr0, $vr1, $vr0
 ; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 0
 ; LA32-NEXT:    st.w $a0, $a1, 0
 ; LA32-NEXT:    ret
@@ -110,9 +107,10 @@ define void @load_trunc_4i32_to_4i8(ptr %ptr, ptr %dst) nounwind {
 ; LA64-LABEL: load_trunc_4i32_to_4i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vld $vr0, $a0, 0
-; LA64-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA64-NEXT:    vld $vr1, $a0, %pc_lo12(.LCPI4_0)
-; LA64-NEXT:    vshuf.b $vr0, $vr0, $vr0, $vr1
+; LA64-NEXT:    vshuf4i.h $vr0, $vr0, 216
+; LA64-NEXT:    vshuf4i.b $vr0, $vr0, 216
+; LA64-NEXT:    vreplvei.h $vr1, $vr0, 4
+; LA64-NEXT:    vpackev.h $vr0, $vr1, $vr0
 ; LA64-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA64-NEXT:    ret
   %a = load <4 x i32>, ptr %ptr
@@ -174,21 +172,23 @@ define void @load_trunc_2i32_to_2i8(ptr %ptr, ptr %dst) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.w $a2, $a0, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI7_0)
-; LA32-NEXT:    vld $vr0, $a3, %pc_lo12(.LCPI7_0)
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; LA32-NEXT:    vshuf.b $vr0, $vr0, $vr1, $vr0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    vshuf4i.h $vr0, $vr0, 216
+; LA32-NEXT:    vshuf4i.b $vr0, $vr0, 216
+; LA32-NEXT:    vreplvei.h $vr1, $vr0, 4
+; LA32-NEXT:    vpackev.h $vr0, $vr1, $vr0
 ; LA32-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: load_trunc_2i32_to_2i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI7_0)
-; LA64-NEXT:    vld $vr0, $a2, %pc_lo12(.LCPI7_0)
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a0, 0
-; LA64-NEXT:    vshuf.b $vr0, $vr0, $vr1, $vr0
+; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    vshuf4i.h $vr0, $vr0, 216
+; LA64-NEXT:    vshuf4i.b $vr0, $vr0, 216
+; LA64-NEXT:    vreplvei.h $vr1, $vr0, 4
+; LA64-NEXT:    vpackev.h $vr0, $vr1, $vr0
 ; LA64-NEXT:    vstelm.h $vr0, $a1, 0, 0
 ; LA64-NEXT:    ret
   %a = load <2 x i32>, ptr %ptr

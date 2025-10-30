@@ -1738,6 +1738,105 @@ lowerVECTOR_SHUFFLE_IsReverse(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
                      DAG.getConstant(27, DL, Subtarget.getGRLenVT()));
 }
 
+/// Lower VECTOR_SHUFFLE whose result elements is all undef except for the
+/// first two or four elements which are from the half or quarter parts of the
+/// source vector.
+///
+/// It is possible to do optimization for VECTOR_SHUFFLE whose mask likes:
+///   <i, i+n/2, -1, ...>
+/// where n is the number of elements in the vector and i is in [0, n/2). Or:
+///   <i, i+4, i+8, i+12, -1, ...> (Only v16i8, and the first four can be undef)
+/// where i is in [0, 4).
+///
+/// For example: <0, 4, -1, ...> or <0, 4, 8, 12, -1, ...>, which appears when
+/// legalizing ISD::TRUNCATE in ReplaceNodeResults().
+static SDValue
+lowerVECTOR_SHUFFLE_HalvesOrQuarters(const SDLoc &DL, ArrayRef<int> Mask,
+                                     MVT VT, SDValue V1, SelectionDAG &DAG,
+                                     const LoongArchSubtarget &Subtarget) {
+  if (VT != MVT::v16i8 && VT != MVT::v8i16)
+    return SDValue();
+
+  int HalfSize = Mask.size() / 2;
+  int QuarterSize = Mask.size() / 4;
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  auto allUndefFrom = [&](unsigned idx) -> bool {
+    return llvm::all_of(Mask.drop_front(idx), [](int M) { return M == -1; });
+  };
+
+  auto buildShuffled = [&](MVT CastVT, ArrayRef<int> ShuffleMask) {
+    SDValue Cast = DAG.getBitcast(CastVT, V1);
+    SDValue Shuf = DAG.getVectorShuffle(CastVT, DL, Cast, Cast, ShuffleMask);
+    return DAG.getBitcast(VT, Shuf);
+  };
+
+  // Check pattern: <i, i+HalfSize, -1, ...>
+  int M0 = Mask[0], M1 = Mask[1];
+  if (M0 >= 0 && M0 < HalfSize && M1 == M0 + HalfSize && allUndefFrom(2)) {
+    SDValue SrcVec = V1;
+    // Shuffle vector for various masks to place needed elements at front.
+    if (M0 >= QuarterSize && M0 < QuarterSize + 2)
+      SrcVec = buildShuffled(MVT::v4i32, {1, 0, 3, 2});
+    else if (M0 >= 2 && M0 < 4) // Only v16i8 meets this.
+      SrcVec = buildShuffled(MVT::v8i16, {1, 0, 3, 2, 5, 4, 7, 6});
+    else if (M0 >= 6 && M0 < 8) // Only v16i8 meets this.
+      SrcVec = buildShuffled(MVT::v8i16, {3, 2, 1, 0, 7, 6, 5, 4});
+
+    // Broadcast the needed high part elements.
+    SDValue VecHi = DAG.getNode(LoongArchISD::VREPLVEI, DL, MVT::v4i32,
+                                DAG.getBitcast(MVT::v4i32, SrcVec),
+                                DAG.getConstant(2, DL, GRLenVT));
+
+    unsigned Opc = (M0 % 2) ? LoongArchISD::VPACKOD : LoongArchISD::VPACKEV;
+    return DAG.getNode(Opc, DL, VT, DAG.getBitcast(VT, VecHi), SrcVec);
+  }
+
+  // Only consider quarter cases for v16i8.
+  if (VT != MVT::v16i8)
+    return SDValue();
+
+  // Check pattern: <i, i+4, i+8, i+12, -1, ...>
+  // Still succeeds even if the first four elements have undef.
+  bool FromQuarters = false;
+  int First = -1;
+  for (int i = 0; i < QuarterSize && !FromQuarters; ++i) {
+    FromQuarters = llvm::all_of(llvm::seq<int>(0, 4), [&](int j) {
+      return Mask[j] == -1 || Mask[j] == i + j * 4;
+    });
+    if (FromQuarters)
+      First = i;
+  }
+
+  if (FromQuarters && allUndefFrom(4)) {
+    SmallVector<int, 8> ShufMask =
+        (First < 2) ? SmallVector<int, 8>{0, 2, 1, 3, 4, 6, 5, 7}
+                    : SmallVector<int, 8>{1, 3, 0, 2, 5, 7, 4, 6};
+    SmallVector<int, 16> ExtractMask =
+        (First % 2) ? SmallVector<int, 16>{1, 3,  0, 2,  5,  7,  4,  6,
+                                           9, 11, 8, 10, 13, 15, 12, 14}
+                    : SmallVector<int, 16>{0, 2,  1, 3,  4,  6,  5,  7,
+                                           8, 10, 9, 11, 12, 14, 13, 15};
+
+    // Shuffle vector for various masks to place needed elements at front.
+    MVT ShufVT = MVT::v8i16;
+    SDValue SrcVec = buildShuffled(ShufVT, ShufMask);
+    SDValue Extract = DAG.getVectorShuffle(VT, DL, SrcVec, SrcVec, ExtractMask);
+
+    // Broadcast the needed high part elements.
+    SDValue VecHi = DAG.getNode(LoongArchISD::VREPLVEI, DL, ShufVT,
+                                DAG.getBitcast(ShufVT, Extract),
+                                DAG.getConstant(4, DL, GRLenVT));
+
+    unsigned Opc = (First % 2) ? LoongArchISD::VPACKOD : LoongArchISD::VPACKEV;
+    SDValue Result =
+        DAG.getNode(Opc, DL, ShufVT, VecHi, DAG.getBitcast(ShufVT, Extract));
+    return DAG.getBitcast(VT, Result);
+  }
+
+  return SDValue();
+}
+
 /// Lower VECTOR_SHUFFLE into VPACKEV (if possible).
 ///
 /// VPACKEV interleaves the even elements from each vector.
@@ -2043,6 +2142,9 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       return Result;
     if ((Result =
              lowerVECTOR_SHUFFLE_IsReverse(DL, Mask, VT, V1, DAG, Subtarget)))
+      return Result;
+    if ((Result = lowerVECTOR_SHUFFLE_HalvesOrQuarters(DL, Mask, VT, V1, DAG,
+                                                       Subtarget)))
       return Result;
 
     // TODO: This comment may be enabled in the future to better match the
