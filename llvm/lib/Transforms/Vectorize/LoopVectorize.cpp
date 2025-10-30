@@ -4455,6 +4455,13 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     LLVM_DEBUG(dbgs() << "LEV: Maximum Trip Count for Epilogue: "
                       << MaxTripCount << "\n");
   }
+  // Check if the RemainingIterations is scalable.
+  const SCEV *KnownMinRemIter = nullptr, *EstimatedRemIter = nullptr;
+  bool ScalableRemIter = match(RemainingIterations, m_scev_c_Mul(m_SCEV(KnownMinRemIter), m_SCEVVScale()));
+  if (ScalableRemIter)
+    EstimatedRemIter = SE.getMulExpr(
+        KnownMinRemIter,
+        SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
 
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
@@ -4473,12 +4480,27 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
     // If NextVF is greater than the number of remaining iterations, the
     // epilogue loop would be dead. Skip such factors.
-    ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
-        estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
-    if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
-                            SE.getElementCount(TCType, EstimatedRuntimeNextVF),
+    if (ScalableRemIter == NextVF.Width.isScalable()) {
+      if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
+                            SE.getElementCount(TCType, NextVF.Width),
                             RemainingIterations))
-      continue;
+        continue;
+    }
+    // Handle the case where NextVF and RemainingIterations are in different
+    // numerical spaces.
+    else if (NextVF.Width.isScalable()) {
+      ElementCount EstimatedRuntimeNextVF = ElementCount::getFixed(
+          estimateElementCount(NextVF.Width, CM.getVScaleForTuning()));
+      if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
+                              SE.getElementCount(TCType, EstimatedRuntimeNextVF),
+                              RemainingIterations))
+        continue;
+    } else {
+      if (SE.isKnownPredicate(CmpInst::ICMP_UGT,
+                              SE.getElementCount(TCType, NextVF.Width),
+                              EstimatedRemIter))
+        continue;
+    }
 
     if (Result.Width.isScalar() ||
         isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking(),
