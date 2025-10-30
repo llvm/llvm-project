@@ -29,6 +29,7 @@ AST_MATCHER(Stmt, isMacroExpansion) {
 
 AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
 
+// Preserve same name as AST_MATCHER(isNULLMacroExpansion)
 // NOLINTNEXTLINE(llvm-prefer-static-over-anonymous-namespace)
 bool isNULLMacroExpansion(const Stmt *Statement, ASTContext &Context) {
   SourceManager &SM = Context.getSourceManager();
