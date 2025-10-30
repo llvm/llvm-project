@@ -4701,13 +4701,11 @@ def femit_dwarf_unwind_EQ : Joined<["-"], "femit-dwarf-unwind=">,
   NormalizedValues<["Always", "NoCompactUnwind", "Default"]>,
   NormalizedValuesScope<"llvm::EmitDwarfUnwindType">,
   MarshallingInfoEnum<CodeGenOpts<"EmitDwarfUnwind">, "Default">;
-defm emit_compact_unwind_non_canonical
-    : BoolFOption<"emit-compact-unwind-non-canonical",
-                  CodeGenOpts<"EmitCompactUnwindNonCanonical">, DefaultFalse,
-                  PosFlag<SetTrue, [], [ClangOption, CC1Option, CC1AsOption],
-                          "Try emitting Compact-Unwind for non-canonical "
-                          "entries. Maybe overridden by other constraints">,
-                  NegFlag<SetFalse>>;
+defm emit_compact_unwind_non_canonical : BoolFOption<"emit-compact-unwind-non-canonical",
+  CodeGenOpts<"EmitCompactUnwindNonCanonical">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, CC1AsOption],
+          "Try emitting Compact-Unwind for non-canonical entries. Maybe overridden by other constraints">,
+  NegFlag<SetFalse>>;
 def g_Flag : Flag<["-"], "g">, Group<g_Group>,
     Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
     HelpText<"Generate source-level debug information">;

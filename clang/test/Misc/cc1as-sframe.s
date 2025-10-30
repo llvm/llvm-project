@@ -3,6 +3,6 @@
 // RUN: llvm-readelf -S %t.o | FileCheck %s
 
 // CHECK: .sframe
-.cfi_startproc        
+.cfi_startproc
         call foo
 .cfi_endproc
