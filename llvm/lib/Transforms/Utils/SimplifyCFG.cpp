@@ -1866,10 +1866,18 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // If either of the blocks has it's address taken, then we can't do this fold,
   // because the code we'd hoist would no longer run when we jump into the block
   // by it's address.
+  SmallVector<BasicBlock *, 4> UniqSuccessors;
+  UniqSuccessors.reserve(BB->getTerminator()->getNumSuccessors());
   for (auto *Succ : successors(BB)) {
     if (Succ->hasAddressTaken())
       return false;
-    if (Succ->getSinglePredecessor())
+    // Collect all unique successors, using vec instead of set to preserve
+    // order.
+    if (find(UniqSuccessors, Succ) == UniqSuccessors.end())
+      UniqSuccessors.push_back(Succ);
+    // Use getUniquePredecessor instead of getSinglePredecessor to support
+    // multi-cases successors in switch.
+    if (Succ->getUniquePredecessor())
       continue;
     // If Succ has >1 predecessors, continue to check if the Succ contains only
     // one `unreachable` inst. Since executing `unreachable` inst is an UB, we
@@ -1882,7 +1890,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
-  for (auto *Succ : successors(BB)) {
+  for (auto *Succ : UniqSuccessors) {
     BasicBlock::iterator SuccItr = Succ->begin();
     if (isa<PHINode>(*SuccItr))
       return false;
@@ -1893,19 +1901,19 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // Check if all instructions in the successor blocks match. This allows
     // hoisting all instructions and removing the blocks we are hoisting from,
     // so does not add any new instructions.
-    SmallVector<BasicBlock *> Succs = to_vector(successors(BB));
+
     // Check if sizes and terminators of all successors match.
-    bool AllSame = none_of(Succs, [&Succs](BasicBlock *Succ) {
-      Instruction *Term0 = Succs[0]->getTerminator();
+    bool AllSame = none_of(UniqSuccessors, [&UniqSuccessors](BasicBlock *Succ) {
+      Instruction *Term0 = UniqSuccessors[0]->getTerminator();
       Instruction *Term = Succ->getTerminator();
       return !Term->isSameOperationAs(Term0) ||
              !equal(Term->operands(), Term0->operands()) ||
-             Succs[0]->size() != Succ->size();
+             UniqSuccessors[0]->size() != Succ->size();
     });
     if (!AllSame)
       return false;
     if (AllSame) {
-      LockstepReverseIterator<true> LRI(Succs);
+      LockstepReverseIterator<true> LRI(UniqSuccessors);
       while (LRI.isValid()) {
         Instruction *I0 = (*LRI)[0];
         if (any_of(*LRI, [I0](Instruction *I) {
@@ -2156,9 +2164,13 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
       Updates.push_back({DominatorTree::Insert, TIParent, Succ});
   }
 
-  if (DTU)
-    for (BasicBlock *Succ : successors(TI))
+  if (DTU) {
+    // TI might be a switch with multi-cases destination, so we need to care for
+    // the duplication of successors.
+    SmallPtrSet<BasicBlock *, 4> UniqSuccs(llvm::from_range, successors(TI));
+    for (BasicBlock *Succ : UniqSuccs)
       Updates.push_back({DominatorTree::Delete, TIParent, Succ});
+  }
 
   eraseTerminatorAndDCECond(TI);
   if (DTU)
