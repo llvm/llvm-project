@@ -4897,7 +4897,7 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
       ASTContext &C = Reader.getContext();
       if (!C.dtorHasOperatorDelete(Dtor, ASTContext::OperatorDeleteKind::Array))
         C.addOperatorDeleteForVDtor(Dtor, Del,
-                                   ASTContext::OperatorDeleteKind::Array);
+                                    ASTContext::OperatorDeleteKind::Array);
       break;
     }
     case DeclUpdateKind::CXXResolvedDtorGlobArrayDelete: {
