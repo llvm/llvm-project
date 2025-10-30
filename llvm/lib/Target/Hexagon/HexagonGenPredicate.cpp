@@ -51,11 +51,11 @@ private:
   const TargetRegisterInfo &TRI;
 };
 
-  raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR)
-    LLVM_ATTRIBUTE_UNUSED;
-  raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR) {
-    return OS << printReg(PR.Reg.Reg, &PR.TRI, PR.Reg.SubReg);
-  }
+[[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                         const PrintRegister &PR);
+raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &PR) {
+  return OS << printReg(PR.Reg.Reg, &PR.TRI, PR.Reg.SubReg);
+}
 
   class HexagonGenPredicate : public MachineFunctionPass {
   public:

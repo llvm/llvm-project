@@ -364,10 +364,7 @@ static DataLayoutSpecInterface getSpec(Operation *operation) {
   return llvm::TypeSwitch<Operation *, DataLayoutSpecInterface>(operation)
       .Case<ModuleOp, DataLayoutOpInterface>(
           [&](auto op) { return op.getDataLayoutSpec(); })
-      .Default([](Operation *) {
-        llvm_unreachable("expected an op with data layout spec");
-        return DataLayoutSpecInterface();
-      });
+      .DefaultUnreachable("expected an op with data layout spec");
 }
 
 static TargetSystemSpecInterface getTargetSystemSpec(Operation *operation) {

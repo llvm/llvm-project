@@ -83,7 +83,9 @@ static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
 
+namespace llvm {
 extern cl::opt<bool> IndexedCodeGenDataLazyLoading;
+} // end namespace llvm
 
 static void exitWithError(Twine Message, StringRef Whence = "",
                           StringRef Hint = "") {

@@ -77,9 +77,9 @@ LIBC_INLINE constexpr NumberPair<T> split(T a) {
   NumberPair<T> r{0.0, 0.0};
   // CN = 2^N.
   constexpr T CN = static_cast<T>(1 << N);
-  constexpr T C = CN + 1.0;
-  double t1 = C * a;
-  double t2 = a - t1;
+  constexpr T C = CN + T(1);
+  T t1 = C * a;
+  T t2 = a - t1;
   r.hi = t1 + t2;
   r.lo = a - r.hi;
   return r;
@@ -144,8 +144,9 @@ LIBC_INLINE NumberPair<T> exact_mult(T a, T b) {
   return r;
 }
 
-LIBC_INLINE DoubleDouble quick_mult(double a, const DoubleDouble &b) {
-  DoubleDouble r = exact_mult(a, b.hi);
+template <typename T = double>
+LIBC_INLINE NumberPair<T> quick_mult(T a, const NumberPair<T> &b) {
+  NumberPair<T> r = exact_mult(a, b.hi);
   r.lo = multiply_add(a, b.lo, r.lo);
   return r;
 }

@@ -5,17 +5,20 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "arm64-apple-macosx15.0.0"
 
 ; From: https://github.com/llvm/llvm-project/issues/161420. This test checks that
-; two `luti4` instructions are emitted. FIXME: This is currently broken!
+; two `luti4` instructions are emitted.
 define void @pluto(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) #0 {
 ; CHECK-LABEL: pluto:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    mov w8, #0 ; =0x0
 ; CHECK-NEXT:    ldr zt0, [x1]
-; CHECK-NEXT:    ldr z0, [x3]
+; CHECK-NEXT:    ldr z4, [x3]
 ; CHECK-NEXT:    ptrue pn8.h
-; CHECK-NEXT:    ld1h { z4.h - z7.h }, pn8/z, [x0]
-; CHECK-NEXT:    luti4 { z0.h - z3.h }, zt0, z0[0]
-; CHECK-NEXT:    fmla za.h[w8, 2, vgx4], { z4.h - z7.h }, { z0.h - z3.h }
+; CHECK-NEXT:    ld1h { z0.h - z3.h }, pn8/z, [x0]
+; CHECK-NEXT:    luti4 { z16.h - z19.h }, zt0, z4[0]
+; CHECK-NEXT:    fmla za.h[w8, 0, vgx4], { z0.h - z3.h }, { z16.h - z19.h }
+; CHECK-NEXT:    ldr zt0, [x2]
+; CHECK-NEXT:    luti4 { z4.h - z7.h }, zt0, z4[0]
+; CHECK-NEXT:    fmla za.h[w8, 2, vgx4], { z0.h - z3.h }, { z4.h - z7.h }
 ; CHECK-NEXT:    ret
 bb:
   tail call void @llvm.aarch64.sme.ldr.zt(i32 0, ptr %arg1)

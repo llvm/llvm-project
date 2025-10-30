@@ -92,7 +92,7 @@ class ConstantOp(ConstantOp):
 
     @property
     def value(self):
-        return Attribute(self.operation.attributes["value"])
+        return self.operation.attributes["value"]
 
     @property
     def literal_value(self) -> Union[int, float]:

@@ -123,6 +123,8 @@ private:
   void lowerSplitTo32(MachineInstr &MI);
   void lowerSplitTo32Select(MachineInstr &MI);
   void lowerSplitTo32SExtInReg(MachineInstr &MI);
+  void lowerUnpackMinMax(MachineInstr &MI);
+  void lowerUnpackAExt(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU

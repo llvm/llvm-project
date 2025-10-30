@@ -4,6 +4,9 @@
 set(core_files
   builtins.h
   float.h
+  __float_float.h
+  __float_header_macro.h
+  __float_infinity_nan.h
   inttypes.h
   iso646.h
   limits.h

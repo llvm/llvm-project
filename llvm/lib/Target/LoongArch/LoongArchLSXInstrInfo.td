@@ -2155,10 +2155,10 @@ def : Pat<(f64 f64imm_vldi:$in),
           (f64 (EXTRACT_SUBREG (VLDI (to_f64imm_vldi f64imm_vldi:$in)), sub_64))>;
 
 // abs
-def : Pat<(abs v16i8:$vj), (VMAX_B v16i8:$vj, (VNEG_B v16i8:$vj))>;
-def : Pat<(abs v8i16:$vj), (VMAX_H v8i16:$vj, (VNEG_H v8i16:$vj))>;
-def : Pat<(abs v4i32:$vj), (VMAX_W v4i32:$vj, (VNEG_W v4i32:$vj))>;
-def : Pat<(abs v2i64:$vj), (VMAX_D v2i64:$vj, (VNEG_D v2i64:$vj))>;
+def : Pat<(abs v16i8:$vj), (VSIGNCOV_B v16i8:$vj, v16i8:$vj)>;
+def : Pat<(abs v8i16:$vj), (VSIGNCOV_H v8i16:$vj, v8i16:$vj)>;
+def : Pat<(abs v4i32:$vj), (VSIGNCOV_W v4i32:$vj, v4i32:$vj)>;
+def : Pat<(abs v2i64:$vj), (VSIGNCOV_D v2i64:$vj, v2i64:$vj)>;
 
 // VABSD_{B/H/W/D}[U]
 defm : PatVrVr<abds, "VABSD">;

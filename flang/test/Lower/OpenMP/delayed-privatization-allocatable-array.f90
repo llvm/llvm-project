@@ -37,7 +37,6 @@ end subroutine
 ! CHECK-NEXT:     %[[SHAPE:.*]] = fir.shape %[[DIMS]]#1
 ! CHECK-NEXT:     %[[MEM:.*]] = fir.allocmem !fir.array<?xi32>, %[[DIMS]]#1
 ! CHECK-NEXT:     %[[DECL:.*]]:2 = hlfir.declare %[[MEM]](%[[SHAPE]])
-! CHECK-NEXT:     %[[TRUE:.*]] = arith.constant true
 ! CHECK-NEXT:     %[[C0_2:.*]] = arith.constant 0 : index
 ! CHECK-NEXT:     %[[DIMS_2:.*]]:3 = fir.box_dims %[[PRIV_ARG_VAL]], %[[C0_2]]
 ! CHECK-NEXT:     %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIMS_2]]#0, %[[DIMS_2]]#1

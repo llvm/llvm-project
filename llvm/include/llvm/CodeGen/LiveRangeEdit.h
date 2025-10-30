@@ -75,23 +75,13 @@ private:
   /// FirstNew - Index of the first register added to NewRegs.
   const unsigned FirstNew;
 
-  /// ScannedRemattable - true when remattable values have been identified.
-  bool ScannedRemattable = false;
-
   /// DeadRemats - The saved instructions which have already been dead after
   /// rematerialization but not deleted yet -- to be done in postOptimization.
   SmallPtrSet<MachineInstr *, 32> *DeadRemats;
 
-  /// Remattable - Values defined by remattable instructions as identified by
-  /// tii.isTriviallyReMaterializable().
-  SmallPtrSet<const VNInfo *, 4> Remattable;
-
   /// Rematted - Values that were actually rematted, and so need to have their
   /// live range trimmed or entirely removed.
   SmallPtrSet<const VNInfo *, 4> Rematted;
-
-  /// scanRemattable - Identify the Parent values that may rematerialize.
-  void scanRemattable();
 
   /// foldAsLoad - If LI has a single use and a single def that can be folded as
   /// a load, eliminate the register by folding the def into the use.
@@ -175,11 +165,6 @@ public:
 
   Register create() { return createFrom(getReg()); }
 
-  /// anyRematerializable - Return true if any parent values may be
-  /// rematerializable.  This function must be called before
-  /// canRematerializeAt is called..
-  bool anyRematerializable();
-
   /// Remat - Information needed to rematerialize at a specific location.
   struct Remat {
     const VNInfo *const ParentVNI;  // parent_'s value at the remat location.
@@ -189,9 +174,9 @@ public:
     explicit Remat(const VNInfo *ParentVNI) : ParentVNI(ParentVNI) {}
   };
 
-  /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
+  /// canRematerializeAt - Determine if RM.Orig can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.
-  bool canRematerializeAt(Remat &RM, VNInfo *OrigVNI, SlotIndex UseIdx);
+  bool canRematerializeAt(Remat &RM, SlotIndex UseIdx);
 
   /// rematerializeAt - Rematerialize RM.ParentVNI into DestReg by inserting an
   /// instruction into MBB before MI. The new instruction is mapped, but

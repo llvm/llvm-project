@@ -797,10 +797,11 @@ bool ABIWindows_x86_64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   std::string Name = std::string(reg_info->name);
   bool IsCalleeSaved =
       llvm::StringSwitch<bool>(Name)
-          .Cases("rbx", "ebx", "rbp", "ebp", "rdi", "edi", "rsi", "esi", true)
-          .Cases("rsp", "esp", "r12", "r13", "r14", "r15", "sp", "fp", true)
-          .Cases("xmm6", "xmm7", "xmm8", "xmm9", "xmm10", "xmm11", "xmm12",
-                 "xmm13", "xmm14", "xmm15", true)
+          .Cases({"rbx", "ebx", "rbp", "ebp", "rdi", "edi", "rsi", "esi"}, true)
+          .Cases({"rsp", "esp", "r12", "r13", "r14", "r15", "sp", "fp"}, true)
+          .Cases({"xmm6", "xmm7", "xmm8", "xmm9", "xmm10", "xmm11", "xmm12",
+                  "xmm13", "xmm14", "xmm15"},
+                 true)
           .Default(false);
   return IsCalleeSaved;
 }

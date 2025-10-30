@@ -224,7 +224,8 @@ static cl::opt<bool> EnableScalableAutovecInStreamingMode(
 static bool isSMEABIRoutineCall(const CallInst &CI,
                                 const AArch64TargetLowering &TLI) {
   const auto *F = CI.getCalledFunction();
-  return F && SMEAttrs(F->getName(), TLI).isSMEABIRoutine();
+  return F &&
+         SMEAttrs(F->getName(), TLI.getRuntimeLibcallsInfo()).isSMEABIRoutine();
 }
 
 /// Returns true if the function has explicit operations that can only be
@@ -355,7 +356,7 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   // change only once and avoid inlining of G into F.
 
   SMEAttrs FAttrs(*F);
-  SMECallAttrs CallAttrs(Call, getTLI());
+  SMECallAttrs CallAttrs(Call, &getTLI()->getRuntimeLibcallsInfo());
 
   if (SMECallAttrs(FAttrs, CallAttrs.callee()).requiresSMChange()) {
     if (F == Call.getCaller()) // (1)
@@ -957,23 +958,50 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return TyL.first + ExtraCost;
   }
   case Intrinsic::get_active_lane_mask: {
-    auto *RetTy = dyn_cast<FixedVectorType>(ICA.getReturnType());
-    if (RetTy) {
-      EVT RetVT = getTLI()->getValueType(DL, RetTy);
-      EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-      if (!getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT) &&
-          !getTLI()->isTypeLegal(RetVT)) {
-        // We don't have enough context at this point to determine if the mask
-        // is going to be kept live after the block, which will force the vXi1
-        // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
-        // For now, we just assume the vectorizer created this intrinsic and
-        // the result will be the input for a PHI. In this case the cost will
-        // be extremely high for fixed-width vectors.
-        // NOTE: getScalarizationOverhead returns a cost that's far too
-        // pessimistic for the actual generated codegen. In reality there are
-        // two instructions generated per lane.
-        return RetTy->getNumElements() * 2;
+    auto RetTy = cast<VectorType>(ICA.getReturnType());
+    EVT RetVT = getTLI()->getValueType(DL, RetTy);
+    EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    if (getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT))
+      break;
+
+    if (RetTy->isScalableTy()) {
+      if (TLI->getTypeAction(RetTy->getContext(), RetVT) !=
+          TargetLowering::TypeSplitVector)
+        break;
+
+      auto LT = getTypeLegalizationCost(RetTy);
+      InstructionCost Cost = LT.first;
+      // When SVE2p1 or SME2 is available, we can halve getTypeLegalizationCost
+      // as get_active_lane_mask may lower to the sve_whilelo_x2 intrinsic, e.g.
+      //   nxv32i1 = get_active_lane_mask(base, idx) ->
+      //    {nxv16i1, nxv16i1} = sve_whilelo_x2(base, idx)
+      if (ST->hasSVE2p1() || ST->hasSME2()) {
+        Cost /= 2;
+        if (Cost == 1)
+          return Cost;
       }
+
+      // If more than one whilelo intrinsic is required, include the extra cost
+      // required by the saturating add & select required to increment the
+      // start value after the first intrinsic call.
+      Type *OpTy = ICA.getArgTypes()[0];
+      IntrinsicCostAttributes AddAttrs(Intrinsic::uadd_sat, OpTy, {OpTy, OpTy});
+      InstructionCost SplitCost = getIntrinsicInstrCost(AddAttrs, CostKind);
+      Type *CondTy = OpTy->getWithNewBitWidth(1);
+      SplitCost += getCmpSelInstrCost(Instruction::Select, OpTy, CondTy,
+                                      CmpInst::ICMP_UGT, CostKind);
+      return Cost + (SplitCost * (Cost - 1));
+    } else if (!getTLI()->isTypeLegal(RetVT)) {
+      // We don't have enough context at this point to determine if the mask
+      // is going to be kept live after the block, which will force the vXi1
+      // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
+      // For now, we just assume the vectorizer created this intrinsic and
+      // the result will be the input for a PHI. In this case the cost will
+      // be extremely high for fixed-width vectors.
+      // NOTE: getScalarizationOverhead returns a cost that's far too
+      // pessimistic for the actual generated codegen. In reality there are
+      // two instructions generated per lane.
+      return cast<FixedVectorType>(RetTy)->getNumElements() * 2;
     }
     break;
   }
@@ -1577,18 +1605,26 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
 }
 
 static bool isAllActivePredicate(Value *Pred) {
-  // Look through convert.from.svbool(convert.to.svbool(...) chain.
   Value *UncastedPred;
+
+  // Look through predicate casts that only remove lanes.
   if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
-                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
-                          m_Value(UncastedPred)))))
-    // If the predicate has the same or less lanes than the uncasted
-    // predicate then we know the casting has no effect.
-    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
-        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
-      Pred = UncastedPred;
+                      m_Value(UncastedPred)))) {
+    auto *OrigPredTy = cast<ScalableVectorType>(Pred->getType());
+    Pred = UncastedPred;
+
+    if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                        m_Value(UncastedPred))))
+      // If the predicate has the same or less lanes than the uncasted predicate
+      // then we know the casting has no effect.
+      if (OrigPredTy->getMinNumElements() <=
+          cast<ScalableVectorType>(UncastedPred->getType())
+              ->getMinNumElements())
+        Pred = UncastedPred;
+  }
+
   auto *C = dyn_cast<Constant>(Pred);
-  return (C && C->isAllOnesValue());
+  return C && C->isAllOnesValue();
 }
 
 // Simplify `V` by only considering the operations that affect active lanes.
@@ -5632,75 +5668,97 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
     TTI::TargetCostKind CostKind) const {
   InstructionCost Invalid = InstructionCost::getInvalid();
-  InstructionCost Cost(TTI::TCC_Basic);
 
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
-  // Sub opcodes currently only occur in chained cases.
-  // Independent partial reduction subtractions are still costed as an add
+  if (VF.isFixed() && !ST->isSVEorStreamingSVEAvailable() &&
+      (!ST->isNeonAvailable() || !ST->hasDotProd()))
+    return Invalid;
+
   if ((Opcode != Instruction::Add && Opcode != Instruction::Sub) ||
       OpAExtend == TTI::PR_None)
     return Invalid;
 
-  // We only support multiply binary operations for now, and for muls we
-  // require the types being extended to be the same.
-  // NOTE: For muls AArch64 supports lowering mixed extensions to a usdot but
-  // only if the i8mm or sve/streaming features are available.
-  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB ||
-                OpBExtend == TTI::PR_None ||
-                (OpAExtend != OpBExtend && !ST->hasMatMulInt8() &&
-                 !ST->isSVEorStreamingSVEAvailable())))
-    return Invalid;
   assert((BinOp || (OpBExtend == TTI::PR_None && !InputTypeB)) &&
+         (!BinOp || (OpBExtend != TTI::PR_None && InputTypeB)) &&
          "Unexpected values for OpBExtend or InputTypeB");
 
-  EVT InputEVT = EVT::getEVT(InputTypeA);
-  EVT AccumEVT = EVT::getEVT(AccumType);
+  // We only support multiply binary operations for now, and for muls we
+  // require the types being extended to be the same.
+  if (BinOp && (*BinOp != Instruction::Mul || InputTypeA != InputTypeB))
+    return Invalid;
 
-  unsigned VFMinValue = VF.getKnownMinValue();
+  bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
+  if (IsUSDot && !ST->hasMatMulInt8())
+    return Invalid;
 
-  if (VF.isScalable()) {
-    if (!ST->isSVEorStreamingSVEAvailable())
+  unsigned Ratio =
+      AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
+  if (VF.getKnownMinValue() <= Ratio)
+    return Invalid;
+
+  VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
+  VectorType *AccumVectorType =
+      VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
+  // We don't yet support all kinds of legalization.
+  auto TC = TLI->getTypeConversion(AccumVectorType->getContext(),
+                                   EVT::getEVT(AccumVectorType));
+  switch (TC.first) {
+  default:
+    return Invalid;
+  case TargetLowering::TypeLegal:
+  case TargetLowering::TypePromoteInteger:
+  case TargetLowering::TypeSplitVector:
+    // The legalised type (e.g. after splitting) must be legal too.
+    if (TLI->getTypeAction(AccumVectorType->getContext(), TC.second) !=
+        TargetLowering::TypeLegal)
       return Invalid;
-
-    // Don't accept a partial reduction if the scaled accumulator is vscale x 1,
-    // since we can't lower that type.
-    unsigned Scale =
-        AccumEVT.getScalarSizeInBits() / InputEVT.getScalarSizeInBits();
-    if (VFMinValue == Scale)
-      return Invalid;
+    break;
   }
-  if (VF.isFixed() &&
-      (!ST->isNeonAvailable() || !ST->hasDotProd() || AccumEVT == MVT::i64))
-    return Invalid;
 
-  if (InputEVT == MVT::i8) {
-    switch (VFMinValue) {
-    default:
-      return Invalid;
-    case 8:
-      if (AccumEVT == MVT::i32)
-        Cost *= 2;
-      else if (AccumEVT != MVT::i64)
-        return Invalid;
-      break;
-    case 16:
-      if (AccumEVT == MVT::i64)
-        Cost *= 2;
-      else if (AccumEVT != MVT::i32)
-        return Invalid;
-      break;
-    }
-  } else if (InputEVT == MVT::i16) {
-    // FIXME: Allow i32 accumulator but increase cost, as we would extend
-    //        it to i64.
-    if (VFMinValue != 8 || AccumEVT != MVT::i64)
-      return Invalid;
-  } else
-    return Invalid;
+  std::pair<InstructionCost, MVT> AccumLT =
+      getTypeLegalizationCost(AccumVectorType);
+  std::pair<InstructionCost, MVT> InputLT =
+      getTypeLegalizationCost(InputVectorType);
 
-  return Cost;
+  InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
+
+  // Prefer using full types by costing half-full input types as more expensive.
+  if (TypeSize::isKnownLT(InputVectorType->getPrimitiveSizeInBits(),
+                          TypeSize::getScalable(128)))
+    // FIXME: This can be removed after the cost of the extends are folded into
+    // the dot-product expression in VPlan, after landing:
+    //  https://github.com/llvm/llvm-project/pull/147302
+    Cost *= 2;
+
+  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {
+    // i16 -> i64 is natively supported for udot/sdot
+    if (AccumLT.second.getScalarType() == MVT::i64 &&
+        InputLT.second.getScalarType() == MVT::i16)
+      return Cost;
+    // i8 -> i64 is supported with an extra level of extends
+    if (AccumLT.second.getScalarType() == MVT::i64 &&
+        InputLT.second.getScalarType() == MVT::i8)
+      // FIXME: This cost should probably be a little higher, e.g. Cost + 2
+      // because it requires two extra extends on the inputs. But if we'd change
+      // that now, a regular reduction would be cheaper because the costs of
+      // the extends in the IR are still counted. This can be fixed
+      // after https://github.com/llvm/llvm-project/pull/147302 has landed.
+      return Cost;
+  }
+
+  // i8 -> i32 is natively supported for udot/sdot/usdot, both for NEON and SVE.
+  if (ST->isSVEorStreamingSVEAvailable() ||
+      (AccumLT.second.isFixedLengthVector() && ST->isNeonAvailable() &&
+       ST->hasDotProd())) {
+    if (AccumLT.second.getScalarType() == MVT::i32 &&
+        InputLT.second.getScalarType() == MVT::i8)
+      return Cost;
+  }
+
+  // Add additional cost for the extends that would need to be inserted.
+  return Cost + 2;
 }
 
 InstructionCost

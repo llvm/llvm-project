@@ -32,6 +32,7 @@
 ; CHECK-DAG: OpDecorate [[g]] Binding 0
 ; CHECK-DAG: OpDecorate [[h]] DescriptorSet 10
 ; CHECK-DAG: OpDecorate [[h]] Binding 3
+; CHECK-NOT: OpDecorate [[h]] Binding 4
 ; CHECK-DAG: OpDecorate [[i]] DescriptorSet 10
 ; CHECK-DAG: OpDecorate [[i]] Binding 2
 
@@ -44,30 +45,34 @@ entry:
   %3 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.6)
   %4 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 10, i32 1, i32 1, i32 0, ptr nonnull @.str.8)
   %5 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 2, i32 10, i32 1, i32 0, ptr nonnull @.str.10)
-  %6 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 10, i32 1, i32 0, ptr nonnull @.str.12)
-  %7 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 10, i32 2, i32 1, i32 0, ptr nonnull @.str.14)
-  %8 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %1, i32 0)
-  %9 = load i32, ptr addrspace(11) %8, align 4
-  %10 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %2, i32 0)
-  %11 = load i32, ptr addrspace(11) %10, align 4
-  %add.i = add nsw i32 %11, %9
-  %12 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %3, i32 0)
-  %13 = load i32, ptr addrspace(11) %12, align 4
-  %add4.i = add nsw i32 %add.i, %13
-  %14 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %4, i32 0)
-  %15 = load i32, ptr addrspace(11) %14, align 4
-  %add6.i = add nsw i32 %add4.i, %15
-  %16 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %5, i32 0)
-  %17 = load i32, ptr addrspace(11) %16, align 4
-  %add8.i = add nsw i32 %add6.i, %17
-  %18 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %6, i32 0)
-  %19 = load i32, ptr addrspace(11) %18, align 4
-  %add10.i = add nsw i32 %add8.i, %19
-  %20 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %7, i32 0)
-  %21 = load i32, ptr addrspace(11) %20, align 4
-  %add12.i = add nsw i32 %add10.i, %21
-  %22 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %0, i32 0)
-  store i32 %add12.i, ptr addrspace(11) %22, align 4
+  %6 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 10, i32 2, i32 0, ptr nonnull @.str.12)
+  %7 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 3, i32 10, i32 2, i32 1, ptr nonnull @.str.12)
+  %8 = tail call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_0t(i32 10, i32 2, i32 1, i32 0, ptr nonnull @.str.14)
+  %9 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %1, i32 0)
+  %10 = load i32, ptr addrspace(11) %9, align 4
+  %11 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %2, i32 0)
+  %12 = load i32, ptr addrspace(11) %11, align 4
+  %add.i = add nsw i32 %12, %10
+  %13 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %3, i32 0)
+  %14 = load i32, ptr addrspace(11) %13, align 4
+  %add4.i = add nsw i32 %add.i, %14
+  %15 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %4, i32 0)
+  %16 = load i32, ptr addrspace(11) %15, align 4
+  %add6.i = add nsw i32 %add4.i, %16
+  %17 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %5, i32 0)
+  %18 = load i32, ptr addrspace(11) %17, align 4
+  %add8.i = add nsw i32 %add6.i, %18
+  %19 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %6, i32 0)
+  %20 = load i32, ptr addrspace(11) %19, align 4
+  %add10.i = add nsw i32 %add8.i, %20
+  %21 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %7, i32 0)
+  %22 = load i32, ptr addrspace(11) %21, align 4
+  %add12.i = add nsw i32 %add10.i, %22
+  %23 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %8, i32 0)
+  %24 = load i32, ptr addrspace(11) %23, align 4
+  %add14.i = add nsw i32 %add12.i, %24
+  %25 = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.SignedImage_i32_5_2_0_0_2_0t(target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 0) %0, i32 0)
+  store i32 %add14.i, ptr addrspace(11) %25, align 4
   ret void
 }
 

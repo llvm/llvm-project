@@ -116,9 +116,9 @@ subroutine test
   call optionalAllocatable(null(mold=ip0))
   call optionalAllocatable(null(mold=ia0)) ! fine
   call optionalAllocatable(null()) ! fine
-  !ERROR: Null pointer argument requires an explicit interface
+  !ERROR: Null pointer argument 'NULL()' requires an explicit interface
   call implicit(null())
-  !ERROR: Null pointer argument requires an explicit interface
+  !ERROR: Null pointer argument 'null(mold=ip0)' requires an explicit interface
   call implicit(null(mold=ip0))
   !ERROR: A NULL() pointer is not allowed for 'x=' intrinsic argument
   print *, sin(null(rp0))

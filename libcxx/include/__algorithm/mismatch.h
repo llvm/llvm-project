@@ -60,7 +60,7 @@ __mismatch(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Pred& __pred, _Pro
 template <class _Iter>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter, _Iter>
 __mismatch_vectorized(_Iter __first1, _Iter __last1, _Iter __first2) {
-  using __value_type              = __iter_value_type<_Iter>;
+  using __value_type              = __iterator_value_type<_Iter>;
   constexpr size_t __unroll_count = 4;
   constexpr size_t __vec_size     = __native_vector_size<__value_type>;
   using __vec                     = __simd_vector<__value_type, __vec_size>;

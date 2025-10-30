@@ -308,3 +308,223 @@ TEST(SSAUpdaterBulk, TwoBBLoop) {
   EXPECT_EQ(Phi->getIncomingValueForBlock(Entry), ConstantInt::get(I32Ty, 0));
   EXPECT_EQ(Phi->getIncomingValueForBlock(Loop), I);
 }
+
+TEST(SSAUpdaterBulk, SimplifyPHIs) {
+  const char *IR = R"(
+      define void @main(i32 %val, i1 %cond) {
+      entry:
+          br i1 %cond, label %left, label %right
+      left:
+          %add = add i32 %val, 1
+          br label %exit
+      right:
+          %sub = sub i32 %val, 1
+          br label %exit
+      exit:
+          %phi = phi i32 [ %sub, %right ], [ %add, %left ]
+          %cmp = icmp slt i32 0, 42
+          ret void
+      }
+  )";
+
+  llvm::LLVMContext Context;
+  llvm::SMDiagnostic Err;
+  std::unique_ptr<llvm::Module> M = llvm::parseAssemblyString(IR, Err, Context);
+  ASSERT_NE(M, nullptr) << "Failed to parse IR: " << Err.getMessage();
+
+  Function *F = M->getFunction("main");
+  auto *Entry = &F->getEntryBlock();
+  auto *Left = Entry->getTerminator()->getSuccessor(0);
+  auto *Right = Entry->getTerminator()->getSuccessor(1);
+  auto *Exit = Left->getSingleSuccessor();
+  auto *Val = &*F->arg_begin();
+  auto *Phi = &Exit->front();
+  auto *Cmp = &*std::next(Exit->begin());
+  auto *Add = &Left->front();
+  auto *Sub = &Right->front();
+
+  SSAUpdaterBulk Updater;
+  Type *I32Ty = Type::getInt32Ty(Context);
+
+  // Use %val directly instead of creating a phi.
+  unsigned ValVar = Updater.AddVariable("Val", I32Ty);
+  Updater.AddAvailableValue(ValVar, Left, Val);
+  Updater.AddAvailableValue(ValVar, Right, Val);
+  Updater.AddUse(ValVar, &Cmp->getOperandUse(0));
+
+  // Use existing %phi for %add and %sub values.
+  unsigned AddSubVar = Updater.AddVariable("AddSub", I32Ty);
+  Updater.AddAvailableValue(AddSubVar, Left, Add);
+  Updater.AddAvailableValue(AddSubVar, Right, Sub);
+  Updater.AddUse(AddSubVar, &Cmp->getOperandUse(1));
+
+  auto ExitSizeBefore = Exit->size();
+  DominatorTree DT(*F);
+  Updater.RewriteAndOptimizeAllUses(DT);
+
+  //  Output for Exit->dump():
+  //  exit:                                             ; preds = %right, %left
+  //    %phi = phi i32 [ %sub, %right ], [ %add, %left ]
+  //    %cmp = icmp slt i32 %val, %phi
+  //    ret void
+
+  ASSERT_EQ(Exit->size(), ExitSizeBefore);
+  ASSERT_EQ(&Exit->front(), Phi);
+  EXPECT_EQ(Val, Cmp->getOperand(0));
+  EXPECT_EQ(Phi, Cmp->getOperand(1));
+}
+
+bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
+                                   BasicBlock::phi_iterator FirstExistingPN);
+
+// Helper to run both versions on the same input.
+static void RunEliminateNewDuplicatePHINode(
+    const char *AsmText,
+    std::function<void(BasicBlock &,
+                       bool(BasicBlock *BB, BasicBlock::phi_iterator))>
+        Check) {
+  LLVMContext C;
+
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(AsmText, Err, C);
+  if (!M) {
+    Err.print("UtilsTests", errs());
+    return;
+  }
+
+  Function *F = M->getFunction("main");
+  auto BBIt = std::find_if(F->begin(), F->end(), [](const BasicBlock &Block) {
+    return Block.getName() == "testbb";
+  });
+  ASSERT_NE(BBIt, F->end());
+  Check(*BBIt, EliminateNewDuplicatePHINodes);
+}
+
+static BasicBlock::phi_iterator getPhiIt(BasicBlock &BB, unsigned Idx) {
+  return std::next(BB.phis().begin(), Idx);
+}
+
+static PHINode *getPhi(BasicBlock &BB, unsigned Idx) {
+  return &*getPhiIt(BB, Idx);
+}
+
+static int getNumPHIs(BasicBlock &BB) {
+  return std::distance(BB.phis().begin(), BB.phis().end());
+}
+
+TEST(SSAUpdaterBulk, EliminateNewDuplicatePHINodes_OrderExisting) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ]
+          %np1 = phi i32 [ 1, %entry ]
+          %ep0 = phi i32 [ 1, %entry ]
+          %ep1 = phi i32 [ 1, %entry ]
+          %u = add i32 %np0, %np1
+          ret void
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %ep0 = phi i32 [ 1, %entry ]
+    //   %ep1 = phi i32 [ 1, %entry ]
+    //   %u = add i32 %ep0, %ep0
+    EXPECT_EQ(getNumPHIs(BB), 2);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), EP0);
+    EXPECT_EQ(Add.getOperand(1), EP0);
+    (void)EP1; // Avoid "unused" warning.
+  });
+}
+
+TEST(SSAUpdaterBulk, EliminateNewDuplicatePHINodes_OrderNew) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ]
+          %np1 = phi i32 [ 1, %entry ]
+          %ep0 = phi i32 [ 2, %entry ]
+          %ep1 = phi i32 [ 2, %entry ]
+          %u = add i32 %np0, %np1
+          ret void
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> NP0 = getPhi(BB, 0);
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %np0 = phi i32 [ 1, %entry ]
+    //   %ep0 = phi i32 [ 2, %entry ]
+    //   %ep1 = phi i32 [ 2, %entry ]
+    //   %u = add i32 %np0, %np0
+    EXPECT_EQ(getNumPHIs(BB), 3);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), NP0);
+    EXPECT_EQ(Add.getOperand(1), NP0);
+    (void)EP0;
+    (void)EP1; // Avoid "unused" warning.
+  });
+}
+
+TEST(SSAUpdaterBulk, EliminateNewDuplicatePHINodes_NewRefExisting) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+          %np1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+          %ep0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+          %ep1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+          %u = add i32 %np0, %np1
+          br label %testbb
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %ep0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+    //   %ep1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+    //   %u = add i32 %ep0, %ep1
+    EXPECT_EQ(getNumPHIs(BB), 2);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), EP0);
+    EXPECT_EQ(Add.getOperand(1), EP1);
+  });
+}
+
+TEST(SSAUpdaterBulk, EliminateNewDuplicatePHINodes_ExistingRefNew) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ], [ %np0, %testbb ]
+          %np1 = phi i32 [ 1, %entry ], [ %np1, %testbb ]
+          %ep0 = phi i32 [ 1, %entry ], [ %np0, %testbb ]
+          %ep1 = phi i32 [ 1, %entry ], [ %np1, %testbb ]
+          %u = add i32 %np0, %np1
+          br label %testbb
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %ep0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+    //   %ep1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+    //   %u = add i32 %ep0, %ep1
+    EXPECT_EQ(getNumPHIs(BB), 2);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), EP0);
+    EXPECT_EQ(Add.getOperand(1), EP1);
+  });
+}

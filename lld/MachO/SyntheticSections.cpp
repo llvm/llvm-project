@@ -1746,6 +1746,8 @@ void CStringSection::finalizeContents() {
 void DeduplicatedCStringSection::finalizeContents() {
   // Find the largest alignment required for each string.
   DenseMap<CachedHashStringRef, Align> strToAlignment;
+  // Used for tail merging only
+  std::vector<CachedHashStringRef> deduplicatedStrs;
   for (const CStringInputSection *isec : inputs) {
     for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
       if (!piece.live)
@@ -1754,9 +1756,46 @@ void DeduplicatedCStringSection::finalizeContents() {
       assert(isec->align != 0);
       auto align = getStringPieceAlignment(isec, piece);
       auto [it, wasInserted] = strToAlignment.try_emplace(s, align);
+      if (config->tailMergeStrings && wasInserted)
+        deduplicatedStrs.push_back(s);
       if (!wasInserted && it->second < align)
         it->second = align;
     }
+  }
+
+  // Like lexigraphical sort, except we read strings in reverse and take the
+  // longest string first
+  // TODO: We could improve performance by implementing our own sort that avoids
+  // comparing characters we know to be the same. See
+  // StringTableBuilder::multikeySort() for details
+  llvm::sort(deduplicatedStrs, [](const auto &left, const auto &right) {
+    for (const auto &[leftChar, rightChar] :
+         llvm::zip(llvm::reverse(left.val()), llvm::reverse(right.val()))) {
+      if (leftChar == rightChar)
+        continue;
+      return leftChar < rightChar;
+    }
+    return left.size() > right.size();
+  });
+  std::optional<CachedHashStringRef> mergeCandidate;
+  DenseMap<CachedHashStringRef, std::pair<CachedHashStringRef, uint64_t>>
+      tailMergeMap;
+  for (auto &s : deduplicatedStrs) {
+    if (!mergeCandidate || !mergeCandidate->val().ends_with(s.val())) {
+      mergeCandidate = s;
+      continue;
+    }
+    uint64_t tailMergeOffset = mergeCandidate->size() - s.size();
+    // TODO: If the tail offset is incompatible with this string's alignment, we
+    // might be able to find another superstring with a compatible tail offset.
+    // The difficulty is how to do this efficiently
+    const auto &align = strToAlignment.at(s);
+    if (!isAligned(align, tailMergeOffset))
+      continue;
+    auto &mergeCandidateAlign = strToAlignment[*mergeCandidate];
+    if (align > mergeCandidateAlign)
+      mergeCandidateAlign = align;
+    tailMergeMap.try_emplace(s, *mergeCandidate, tailMergeOffset);
   }
 
   // Sort the strings for performance and compression size win, and then
@@ -1765,6 +1804,18 @@ void DeduplicatedCStringSection::finalizeContents() {
   for (auto &[isec, i] : priorityBuilder.buildCStringPriorities(inputs)) {
     auto &piece = isec->pieces[i];
     auto s = isec->getCachedHashStringRef(i);
+    // Any string can be tail merged with itself with an offset of zero
+    uint64_t tailMergeOffset = 0;
+    auto mergeIt =
+        config->tailMergeStrings ? tailMergeMap.find(s) : tailMergeMap.end();
+    if (mergeIt != tailMergeMap.end()) {
+      auto &[superString, offset] = mergeIt->second;
+      // s can be tail merged with superString. Do not layout s. Instead layout
+      // superString if we haven't already
+      assert(superString.val().ends_with(s.val()));
+      s = superString;
+      tailMergeOffset = offset;
+    }
     auto [it, wasInserted] = stringOffsetMap.try_emplace(s, /*placeholder*/ 0);
     if (wasInserted) {
       // Avoid computing the offset until we are sure we will need to
@@ -1772,9 +1823,12 @@ void DeduplicatedCStringSection::finalizeContents() {
       it->second = offset;
       size = offset + s.size() + 1; // account for null terminator
     }
-    // If the string was already in stringOffsetMap, it is a duplicate and we
-    // only need to assign the offset.
-    piece.outSecOff = it->second;
+    piece.outSecOff = it->second + tailMergeOffset;
+    if (mergeIt != tailMergeMap.end()) {
+      auto &tailMergedString = mergeIt->first;
+      stringOffsetMap[tailMergedString] = piece.outSecOff;
+      assert(isAligned(strToAlignment.at(tailMergedString), piece.outSecOff));
+    }
   }
   for (CStringInputSection *isec : inputs)
     isec->isFinal = true;
