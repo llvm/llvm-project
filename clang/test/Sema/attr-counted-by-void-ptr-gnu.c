@@ -90,9 +90,10 @@ void assign_to_pointer(struct test_void_ptr_gnu* t) {
   t->count = 0;
 }
 
-void assign_from_malloc(struct test_void_ptr_gnu* t) {
-  extern void* malloc(unsigned long);
-  t->buf = malloc(100);
+extern void* my_allocator(unsigned long);
+
+void assign_from_allocator(struct test_void_ptr_gnu* t) {
+  t->buf = my_allocator(100);
   t->count = 100;
 }
 
