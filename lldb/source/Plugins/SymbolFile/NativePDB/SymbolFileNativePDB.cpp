@@ -1157,7 +1157,7 @@ void SymbolFileNativePDB::AddSymbols(Symtab &symtab) {
     }
   };
 
-  // the address map is sorted by the address of a symbol
+  // The address map is sorted by the address of a symbol.
   for (auto pid : m_index->publics().getAddressMap()) {
     PdbGlobalSymId global{pid, true};
     CVSymbol sym = m_index->ReadSymbolRecord(global);
