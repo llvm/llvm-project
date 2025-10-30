@@ -285,7 +285,11 @@ _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stac
 template <class _Allocator>
 struct hash<basic_stacktrace<_Allocator>> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
-    return hash(__trace.__entries_)();
+    size_t __ret = 0xc3a5c85c97cb3127ull; // just a big prime number; taken from __functional/hash.h
+    for (stacktrace_entry const& __e : __trace.__entries_) {
+      __ret = (__ret << 1) ^ __e.__base_.hash();
+    }
+    return __ret;
   }
 };
 
