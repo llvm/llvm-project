@@ -1008,7 +1008,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   if (isa<VariableArrayType>(arrayType)) {
     assert(cir::MissingFeatures::vlas());
     cgm.errorNYI(*currSrcLoc, "VLAs");
-    return builder.getConstInt(*currSrcLoc, SizeTy, 0);
+    return builder.getConstInt(*currSrcLoc, sizeTy, 0);
   }
 
   uint64_t countFromCLAs = 1;
@@ -1037,7 +1037,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   }
 
   baseType = eltType;
-  return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
+  return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
@@ -1074,7 +1074,7 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
     elementType = type->getElementType();
     mlir::Value vlaSize = vlaSizeMap[type->getSizeExpr()];
     assert(vlaSize && "no size for VLA!");
-    assert(vlaSize.getType() == SizeTy);
+    assert(vlaSize.getType() == sizeTy);
 
     if (!numElements) {
       numElements = vlaSize;
@@ -1188,7 +1188,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.
           // FIXME: What about when size's type is larger than size_t?
-          entry = builder.createIntCast(size, SizeTy);
+          entry = builder.createIntCast(size, sizeTy);
         }
       }
       type = vat->getElementType();
