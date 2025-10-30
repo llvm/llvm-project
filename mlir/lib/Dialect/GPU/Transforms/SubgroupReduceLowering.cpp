@@ -414,7 +414,6 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                                      gpu::convertReductionKind(mode), res, dpp);
   }
   if (ci.clusterSize >= 32) {
-
     if (chipset.majorVersion <= 9) {
       // Broadcast last value from each row to next row.
       // Use row mask to avoid polluting row 0 (and row 2 if wave-64).
@@ -424,31 +423,24 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                                   /*bound_ctrl*/ false);
       res = vector::makeArithReduction(
           rewriter, loc, gpu::convertReductionKind(mode), res, dpp);
-      if (ci.subgroupSize == 32) {
-        Value lane31 =
-            arith::ConstantOp::create(rewriter, loc, rewriter.getI32Type(),
-                                      rewriter.getI32IntegerAttr(31));
-        res = ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res,
-                                        lane31);
-      }
 
-      // At this point, lanes [16, 32) contain the full reduction over lanes
-      // [0, 32), but lanes [0, 16) do not. Similarly, lanes [48, 64) contain
-      // the full reduction over lanes [32, 64), but lanes [32, 48) do not.
+      // For subgroupSize = 64, at this point lanes [16, 32) contain the full
+      // reduction over lanes [0, 32), but lanes [0, 16) do not. Similarly,
+      // lanes [48, 64) contain the full reduction over lanes [32, 64), but
+      // lanes [32, 48) do not.
       //
-      // If subgroup size is 64, and cluster size is 64, we don't need lanes [0,
-      // 16) and [32, 48) to have the correct cluster-32 reduction values this
-      // point, as only lane 63's value will ultimately be read in this
-      // full-cluster case.
+      // If subgroup size is 64 and cluster size is 64, we don't need lanes [0,
+      // 16) and [32, 48) to have the correct cluster-32 reduction values at
+      // this point, because only lane 63's value will ultimately be read in
+      // this full-cluster case.
       //
-      // If subgroup size is 64, and cluster size is 32, we need to ensure that
+      // If subgroup size is 64 and cluster size is 32, we need to ensure that
       // lanes [0, 16) and [32, 48) have the correct final cluster-32 reduction
-      // values (subgroup reduce must guarantee that all lanes within the
-      // cluster contain the final reduction value). We do this by broadcasting
-      // lane 31's value to lanes [0, 16) and lanes 63's value to lanes [32,
-      // 48).
+      // values (subgroup_reduce guarantees that all lanes within each cluster
+      // contain the final reduction value). We do this by broadcasting lane
+      // 31's value to lanes [0, 16) and lanes 63's value to lanes [32, 48).
       //
-      // See https://gpuopen.com/learn/amd-gcn-assembly-cross-lane-operations/
+      // See https://gpuopen.com/learn/amd-gcn-assembly-cross-lane-operations
       // for an illustration of how this within-cluster broadcast works with a
       // swizzle.
       if (ci.subgroupSize == 64 && ci.clusterSize == 32) {
@@ -470,6 +462,12 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
       return rewriter.notifyMatchFailure(
           op, "Subgroup reduce lowering to DPP not currently supported for "
               "this device.");
+    }
+    if (ci.subgroupSize == 32) {
+      Value lane31 = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(31));
+      res =
+          ROCDL::ReadlaneOp::create(rewriter, loc, res.getType(), res, lane31);
     }
   }
   if (ci.clusterSize >= 64) {
