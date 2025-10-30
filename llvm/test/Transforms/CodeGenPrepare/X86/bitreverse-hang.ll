@@ -21,7 +21,7 @@
 @b = common global i32 0, align 4
 
 ; CHECK: define i32 @fn1
-define i32 @fn1() #0 {
+define i32 @fn1() {
 entry:
   %b.promoted = load i32, ptr @b, align 4, !tbaa !2
   br label %for.body
@@ -39,8 +39,6 @@ for.end:                                          ; preds = %for.body
   store i32 %or, ptr @b, align 4, !tbaa !2
   ret i32 undef
 }
-
-attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

@@ -406,7 +406,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   // LatchExitVPB, taking care to preserve the original predecessor & successor
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
-  auto *R = Plan.createVPRegionBlock();
+  auto *R = Plan.createLoopRegion();
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);

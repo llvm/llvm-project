@@ -264,6 +264,12 @@
 #define LIBCPP_ONLY(...) static_assert(true, "")
 #endif
 
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  define LIBCPP_NON_FROZEN_ASSERT(...) static_assert(true, "")
+#else
+#  define LIBCPP_NON_FROZEN_ASSERT(...) LIBCPP_ASSERT(__VA_ARGS__)
+#endif
+
 #if __has_cpp_attribute(nodiscard)
 #  define TEST_NODISCARD [[nodiscard]]
 #else
@@ -523,13 +529,6 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_IF_AIX(arg_true, arg_false) arg_true
 #else
 #  define TEST_IF_AIX(arg_true, arg_false) arg_false
-#endif
-
-// Clang-18 has support for deducing this, but it does not set the FTM.
-#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
-// This is a C++20 featue, so we don't care whether the compiler could support it
-#elif defined(_LIBCPP_VERSION) && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
-#  define TEST_HAS_EXPLICIT_THIS_PARAMETER
 #endif
 
 // Placement `operator new`/`operator new[]` are not yet constexpr in C++26

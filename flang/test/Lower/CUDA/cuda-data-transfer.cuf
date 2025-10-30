@@ -542,3 +542,20 @@ end subroutine
 ! CHECK-NOT: cuf.data_transfer
 ! CHECK: hlfir.assign
 ! CHECK-NOT: cuf.data_transfer
+
+! Data transfer with conversion with more complex elemental
+! Check that the data transfer is placed before the elemental op.
+subroutine sub29()
+  real(2), device, allocatable :: a(:)
+  real(4), allocatable :: ha(:)
+  allocate(a(10))
+  allocate(ha(10))
+  ha = a
+  deallocate(a)
+end subroutine
+
+! CHECK-LABEL:  func.func @_QPsub29()
+! CHECK: %[[TMP:.*]] = fir.allocmem !fir.array<?xf16>, %24#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TMP_BUFFER:.*]]:2 = hlfir.declare %[[TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf16>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf16>>, !fir.heap<!fir.array<?xf16>>)
+! CHECK: cuf.data_transfer %{{.*}} to %[[TMP_BUFFER]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.heap<!fir.array<?xf16>>>, !fir.box<!fir.array<?xf16>>
+! CHECK: hlfir.elemental 

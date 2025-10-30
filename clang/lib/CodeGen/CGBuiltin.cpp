@@ -1673,7 +1673,7 @@ static llvm::Value *EmitX86BitTestIntrinsic(CodeGenFunction &CGF,
       CGF.getLLVMContext(),
       CGF.getContext().getTypeSize(E->getArg(1)->getType()));
   llvm::FunctionType *FTy =
-      llvm::FunctionType::get(CGF.Int8Ty, {CGF.UnqualPtrTy, IntType}, false);
+      llvm::FunctionType::get(CGF.Int8Ty, {CGF.DefaultPtrTy, IntType}, false);
 
   llvm::InlineAsm *IA =
       llvm::InlineAsm::get(FTy, Asm, Constraints, /*hasSideEffects=*/true);
@@ -4504,6 +4504,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
     }
     return RValue::get(AI);
+  }
+
+  case Builtin::BI__builtin_infer_alloc_token: {
+    llvm::MDNode *MDN = buildAllocToken(E);
+    llvm::Value *MDV = MetadataAsValue::get(getLLVMContext(), MDN);
+    llvm::Function *F =
+        CGM.getIntrinsic(llvm::Intrinsic::alloc_token_id, {IntPtrTy});
+    llvm::CallBase *TokenID = Builder.CreateCall(F, MDV);
+    return RValue::get(TokenID);
   }
 
   case Builtin::BIbzero:
