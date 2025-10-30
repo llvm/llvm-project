@@ -30,7 +30,7 @@ struct Foo {
 
 static_assert(alignof(Foo) == 8);
 int main() {
-  // CHECK: runtime error: constructor call with pointer from overloaded operator new on misaligned address 0x{{.*}} for type 'Foo', which requires target minimum assumed alignment of 16
+  // CHECK: runtime error: constructor call with pointer from operator new on misaligned address 0x{{.*}} for type 'Foo', which requires target minimum assumed 16 byte alignment
   Foo *f = new Foo;
   return 0;
 }
