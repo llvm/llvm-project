@@ -1174,7 +1174,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
-  StringRef Name = Ty->isUnsigned() ? "unsigned _BitInt" : "_BitInt";
+  SmallString<32> Name;
+  llvm::raw_svector_ostream OS(Name);
+  OS << (Ty->isUnsigned() ? "unsigned _BitInt(" : "_BitInt(")
+     << Ty->getNumBits() << ")";
   llvm::dwarf::TypeKind Encoding = Ty->isUnsigned()
                                        ? llvm::dwarf::DW_ATE_unsigned
                                        : llvm::dwarf::DW_ATE_signed;
