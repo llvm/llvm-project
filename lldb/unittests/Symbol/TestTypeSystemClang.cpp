@@ -272,6 +272,14 @@ TEST_F(TestTypeSystemClang, TestGetBuiltinTypeForDWARFEncodingAndBitSize) {
                 "_BitInt", llvm::dwarf::DW_ATE_signed, 2)
                 .GetTypeName(),
             "_BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt(129)", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "_BitInt", llvm::dwarf::DW_ATE_signed, 129)
+                .GetTypeName(),
+            "_BitInt(129)");
 
   EXPECT_FALSE(GetBuiltinTypeForDWARFEncodingAndBitSize(
                    "unsigned _BitIn", llvm::dwarf::DW_ATE_unsigned, 2)
@@ -300,6 +308,14 @@ TEST_F(TestTypeSystemClang, TestGetBuiltinTypeForDWARFEncodingAndBitSize) {
                 "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 2)
                 .GetTypeName(),
             "unsigned _BitInt(2)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt(129)", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
+  EXPECT_EQ(GetBuiltinTypeForDWARFEncodingAndBitSize(
+                "unsigned _BitInt", llvm::dwarf::DW_ATE_unsigned, 129)
+                .GetTypeName(),
+            "unsigned _BitInt(129)");
 }
 
 TEST_F(TestTypeSystemClang, TestBitIntTypeInfo) {
