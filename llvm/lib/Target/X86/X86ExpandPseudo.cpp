@@ -667,6 +667,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
+    // clang-format off
     case X86::PTCMMIMFP16PSV:  Opc = X86::TCMMIMFP16PS; break;
     case X86::PTCMMRLFP16PSV:  Opc = X86::TCMMRLFP16PS; break;
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
@@ -674,25 +675,13 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     case X86::PTDPBUSDV:   Opc = X86::TDPBUSD; break;
     case X86::PTDPBUUDV:   Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PSV: Opc = X86::TDPBF16PS; break;
-    case X86::PTDPFP16PSV:
-      Opc = X86::TDPFP16PS;
-      break;
-    case X86::PTMMULTF32PSV:
-      Opc = X86::TMMULTF32PS;
-      break;
-    case X86::PTDPBF8PSV:
-      Opc = X86::TDPBF8PS;
-      break;
-    case X86::PTDPBHF8PSV:
-      Opc = X86::TDPBHF8PS;
-      break;
-    case X86::PTDPHBF8PSV:
-      Opc = X86::TDPHBF8PS;
-      break;
-    case X86::PTDPHF8PSV:
-      Opc = X86::TDPHF8PS;
-      break;
-
+    case X86::PTDPFP16PSV: Opc = X86::TDPFP16PS; break;
+    case X86::PTMMULTF32PSV: Opc = X86::TMMULTF32PS; break;
+    case X86::PTDPBF8PSV: Opc = X86::TDPBF8PS; break;
+    case X86::PTDPBHF8PSV: Opc = X86::TDPBHF8PS; break;
+    case X86::PTDPHBF8PSV: Opc = X86::TDPHBF8PS; break;
+    case X86::PTDPHF8PSV: Opc = X86::TDPHF8PS; break;
+    // clang-format on
     default:
       llvm_unreachable("Unexpected Opcode");
     }

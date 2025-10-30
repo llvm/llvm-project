@@ -269,7 +269,7 @@ void X86FastPreTileConfig::reload(MachineBasicBlock::iterator UseMI,
 
 static unsigned getTileDefNum(MachineRegisterInfo *MRI, Register Reg) {
   if (Reg.isVirtual() &&
-      MRI->getRegClass(Reg)->getID() == X86::TILERegClassID) {
+      (MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)) {
     return 1;
   }
 

@@ -4736,8 +4736,8 @@ static bool isAMXOpcode(unsigned Opc) {
     return false;
   case X86::TILELOADD:
   case X86::TILESTORED:
-  case X86::TILESTORED_EVEX:
   case X86::TILELOADD_EVEX:
+  case X86::TILESTORED_EVEX:
     return true;
   }
 }

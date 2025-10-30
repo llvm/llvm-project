@@ -29,7 +29,7 @@ let Namespace = "X86" in {
   def sub_xmm      : SubRegIndex<128>;
   def sub_ymm      : SubRegIndex<256>;
   def sub_mask_0   : SubRegIndex<-1>;
-  def sub_mask_1 : SubRegIndex<-1, -1>;
+  def sub_mask_1   : SubRegIndex<-1, -1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -429,7 +429,7 @@ def TMM3:  X86Reg<"tmm3",   3>;
 def TMM4:  X86Reg<"tmm4",   4>;
 def TMM5:  X86Reg<"tmm5",   5>;
 def TMM6:  X86Reg<"tmm6",   6>;
-def TMM7 : X86Reg<"tmm7", 7>;
+def TMM7:  X86Reg<"tmm7",   7>;
 }
 
 // Floating point stack registers. These don't map one-to-one to the FP
