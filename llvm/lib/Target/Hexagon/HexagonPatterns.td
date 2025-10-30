@@ -3438,7 +3438,7 @@ multiclass FloatClass<SDPatternOperator IntOp, InstHexagon MI,
                       PatFrag RegPred> {
   let AddedComplexity = 100 in {
     def: Pat<(i1 (seteq (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
-              (C2_not (MI RegPred:$Rs, u5_0ImmPred_timm:$u5))>;
+             (C2_not (MI RegPred:$Rs, u5_0ImmPred_timm:$u5))>;
     def: Pat<(i1 (setne (IntOp RegPred:$Rs, u5_0ImmPred_timm:$u5), 0)),
              (MI RegPred:$Rs, u5_0ImmPred_timm:$u5)>;
   }
