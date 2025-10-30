@@ -409,7 +409,7 @@ private:
   void CreateLexicalBlock(const PresumedLoc &PLoc);
 
   /// Returns the presumed location for given SourceLocation.
-  PresumedLoc getPresumedLoc(SourceLocation Loc) const;
+  PresumedLoc getPresumedFileLoc(SourceLocation Loc) const;
 
   /// If target-specific LLVM \p AddressSpace directly maps to target-specific
   /// DWARF address space, appends extended dereferencing mechanism to complex
