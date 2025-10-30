@@ -48868,12 +48868,12 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
         const APInt &Mask = KnownOp1.getConstant();
         if (Mask.isSignMask()) {
           MVT FpVT = MVT::getVectorVT(MVT::f64, OpVT.getSizeInBits() / 64);
-          Op0 = DAG.getBitcast(FpVT, Op0);
+          Op0 = DAG.getBitcast(FpVT, DAG.getFreeze(Op0));
           return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, Op0, Op0);
         }
         if (Mask.isSplat(32) && Mask.trunc(32).isSignMask()) {
           MVT FpVT = MVT::getVectorVT(MVT::f32, OpVT.getSizeInBits() / 32);
-          Op0 = DAG.getBitcast(FpVT, Op0);
+          Op0 = DAG.getBitcast(FpVT, DAG.getFreeze(Op0));
           return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, Op0, Op0);
         }
       }
