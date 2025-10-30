@@ -90,6 +90,24 @@ namespace cwg5 { // cwg5: 3.1
   const C c = e;
 } // namespace cwg5
 
+namespace cwg6 { // cwg6 codegen is tested in cwg6.cpp
+#if __cplusplus >= 201103L
+  struct Counter {
+    int copies;
+    constexpr Counter(int copies) : copies(copies) {}
+    constexpr Counter(const Counter& other) : copies(other.copies + 1) {}
+  };
+
+  // Passing an lvalue by value makes a non-elidable copy.
+  constexpr int PassByValue(Counter c) { return c.copies; }
+  constexpr int PassByValue2(Counter c) { return PassByValue(c); }
+  constexpr int PassByValue3(Counter c) { return PassByValue2(c); }
+  static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
+  static_assert(PassByValue2(Counter(0)) == 1, "expect 1 copy");
+  static_assert(PassByValue3(Counter(0)) == 2, "expect 2 copies");
+#endif
+} // namespace cwg6
+
 namespace cwg7 { // cwg7: 3.4
   class A { public: ~A(); };
   class B : virtual private A {}; // #cwg7-B

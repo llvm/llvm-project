@@ -230,6 +230,37 @@ namespace cwg211 { // cwg211: 2.7
   };
 } // namespace cwg211
 
+namespace cwg212 { // cwg212: yes
+  template<typename T> struct Base;
+  template<typename T> struct Derived;
+
+  int *overload(void*);
+  float *overload(Base<int>*);
+  double *overload(Base<long>*);
+
+  void f(Derived<int> *p) {
+    // OK, calls void* overload.
+    int *a = overload(p);
+
+    Base<int> *q = p; // expected-error {{cannot initialize}}
+  }
+
+  template<typename T> struct Base {};
+  template<typename T> struct Derived : Base<T> {};
+
+  void g(Derived<long> *p) {
+    // OK, instantiates and calls Base<long>* overlod.
+    double *b = overload(p);
+    (void)b;
+  }
+
+  void h(Derived<float> *p) {
+    // OK, instantiates and converts.
+    Base<float> *q = p;
+    (void)q;
+  }
+}
+
 namespace cwg213 { // cwg213: 2.7
   template <class T> struct A : T {
     void h(T t) {
@@ -592,6 +623,9 @@ namespace cwg231 { // cwg231: 2.7
     //   expected-note@#cwg231-i {{'inner::i' declared here}}
   }
 } // namespace cwg231
+
+// 232 is NAD; the desired behavior is described in 2823.
+// cwg232: dup 2823
 
 // cwg234: na
 // cwg235: na
