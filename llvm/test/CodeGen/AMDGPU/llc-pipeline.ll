@@ -39,6 +39,7 @@
 ; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O0-NEXT:        Function Alias Analysis Results
 ; GCN-O0-NEXT:    Externalize enqueued block runtime handles
+; GCN-O0-NEXT:    AMDGPU lowering of special LDS variables
 ; GCN-O0-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
@@ -187,6 +188,7 @@
 ; GCN-O1-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-NEXT:        Function Alias Analysis Results
 ; GCN-O1-NEXT:    Externalize enqueued block runtime handles
+; GCN-O1-NEXT:    AMDGPU lowering of special LDS variables
 ; GCN-O1-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:    FunctionPass Manager
@@ -474,6 +476,7 @@
 ; GCN-O1-OPTS-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:        Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:    Externalize enqueued block runtime handles
+; GCN-O1-OPTS-NEXT:    AMDGPU lowering of special LDS variables
 ; GCN-O1-OPTS-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
@@ -791,6 +794,7 @@
 ; GCN-O2-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:        Function Alias Analysis Results
 ; GCN-O2-NEXT:    Externalize enqueued block runtime handles
+; GCN-O2-NEXT:    AMDGPU lowering of special LDS variables
 ; GCN-O2-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:    FunctionPass Manager
@@ -1112,6 +1116,7 @@
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
 ; GCN-O3-NEXT:    Externalize enqueued block runtime handles
+; GCN-O3-NEXT:    AMDGPU lowering of special LDS variables
 ; GCN-O3-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager
