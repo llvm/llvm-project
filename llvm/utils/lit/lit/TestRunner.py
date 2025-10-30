@@ -600,11 +600,12 @@ def executeBuiltinUmask(cmd, shenv):
 
 def executeBuiltinUlimit(cmd, shenv):
     """executeBuiltinUlimit - Change the current limits."""
-    if os.name != "posix":
+    try:
+        # Try importing the resource module (available on POSIX systems) and
+        # emit an error where it does not exist (e.g., Windows).
+        import resource
+    except ImportError:
         raise InternalShellError(cmd, "'ulimit' not supported on this system")
-    # Import resource here after we confirm we are on a POSIX system as the
-    # module does not exist on Windows.
-    import resource
     if len(cmd.args) != 3:
         raise InternalShellError(cmd, "'ulimit' requires two arguments")
     try:
@@ -960,7 +961,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             path = (
                 cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
             )
-            executable = lit.util.which(args[0], shenv.env["PATH"])
+            executable = lit.util.which(args[0], path)
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 
