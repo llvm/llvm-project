@@ -574,7 +574,7 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
 
 static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
                                             llvm::Type *Ty, unsigned Location,
-                                            StringRef Name = "") {
+                                            StringRef Name) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
