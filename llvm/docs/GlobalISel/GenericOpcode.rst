@@ -536,6 +536,12 @@ G_FPTRUNC
 
 Convert a floating point value to a narrower type.
 
+G_FPTRUNC_ODD
+^^^^^^^^^^^^^
+
+Convert a floating point value to a narrower type using round-to-odd rounding 
+mode.
+
 G_FPTOSI, G_FPTOUI, G_SITOFP, G_UITOFP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

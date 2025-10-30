@@ -8489,27 +8489,24 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
          MRI.getType(Src).getScalarType() == LLT::scalar(64));
 
   if (MRI.getType(Src).isVector()) {
-    Register Dst = MI.getOperand(0).getReg();
-    Register Src = MI.getOperand(1).getReg();
-    LLT DstTy = MRI.getType(Dst);
     LLT SrcTy = MRI.getType(Src);
 
     LLT MidTy = LLT::fixed_vector(SrcTy.getNumElements(), LLT::scalar(32));
 
-    MachineInstrBuilder Mid;
-    MachineInstrBuilder Fin;
-    MIRBuilder.setInstrAndDebugLoc(MI);
-    switch (MI.getOpcode()) {
-    default:
-      return UnableToLegalize;
-    case TargetOpcode::G_FPTRUNC: {
-      Mid = MIRBuilder.buildFPTruncOdd(MidTy, Src);
-      Fin = MIRBuilder.buildFPTrunc(DstTy, Mid.getReg(0));
-      break;
-    }
-    }
+    // Check if G_FPTRUNC_ODD has been added to the legalizer and the resultant
+    // types can be legalized.
+    auto LegalizeAction =
+        LI.getAction({TargetOpcode::G_FPTRUNC_ODD, {MidTy, SrcTy}}).Action;
 
-    MRI.replaceRegWith(Dst, Fin.getReg(0));
+    if (LegalizeAction == LegalizeActions::Unsupported ||
+        LegalizeAction == LegalizeActions::NotFound)
+      return UnableToLegalize;
+
+    MIRBuilder.setInstrAndDebugLoc(MI);
+
+    MachineInstrBuilder Mid = MIRBuilder.buildFPTruncOdd(MidTy, Src);
+    MIRBuilder.buildFPTrunc(Dst, Mid.getReg(0));
+
     MI.eraseFromParent();
     return Legalized;
   }
