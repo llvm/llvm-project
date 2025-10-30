@@ -410,13 +410,12 @@ define i1 @single_value_with_mask(i32 %x) {
 ; OPTNOLUT-NEXT:      i32 21, label %[[END]]
 ; OPTNOLUT-NEXT:      i32 48, label %[[END]]
 ; OPTNOLUT-NEXT:      i32 16, label %[[END]]
+; OPTNOLUT-NEXT:      i32 80, label %[[END]]
 ; OPTNOLUT-NEXT:    ]
 ; OPTNOLUT:       [[DEFAULT]]:
-; OPTNOLUT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 80
-; OPTNOLUT-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i1 false, i1 true
 ; OPTNOLUT-NEXT:    br label %[[END]]
 ; OPTNOLUT:       [[END]]:
-; OPTNOLUT-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ [[SEL]], %[[DEFAULT]] ]
+; OPTNOLUT-NEXT:    [[RES:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ false, %[[ENTRY]] ], [ true, %[[DEFAULT]] ], [ false, %[[ENTRY]] ]
 ; OPTNOLUT-NEXT:    ret i1 [[RES]]
 ;
 ; TTINOLUT-LABEL: define i1 @single_value_with_mask(
