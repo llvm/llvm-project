@@ -8630,6 +8630,7 @@ def vtordisp_mode_EQ : Joined<["-"], "vtordisp-mode=">,
   MarshallingInfoInt<LangOpts<"VtorDispMode">, "1">;
 def fnative_int16_type : Flag<["-"], "fnative-int16-type">,
   HelpText<"Use 16 bit integer types">,
+  // This option is implied unless we are in HLSL lang mode
   ImpliedByAnyOf<[!strconcat("!", hlsl.KeyPath)]>,
   MarshallingInfoFlag<LangOpts<"NativeInt16Type">>;
 def fnative_half_type: Flag<["-"], "fnative-half-type">,
