@@ -330,9 +330,8 @@ VariableAnnotator::annotateStructured(Instruction &inst, Target &target,
 
   // If we lost module context, mark all live variables as undefined.
   if (!module_sp) {
-    for (const auto &KV : Live_) {
+    for (const auto &KV : Live_)
       annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
-    }
     Live_.clear();
     return annotations;
   }
@@ -344,9 +343,8 @@ VariableAnnotator::annotateStructured(Instruction &inst, Target &target,
   if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
       !sc.function) {
     // No function context: everything dies here.
-    for (const auto &KV : Live_) {
+    for (const auto &KV : Live_)
       annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
-    }
     Live_.clear();
     return annotations;
   }
@@ -416,16 +414,13 @@ VariableAnnotator::annotateStructured(Instruction &inst, Target &target,
     const Declaration &decl = v->GetDeclaration();
     if (decl.GetFile()) {
       decl_file = decl.GetFile().GetFilename().AsCString();
-      if (decl.GetLine() > 0) {
+      if (decl.GetLine() > 0)
         decl_line = decl.GetLine();
-      }
     }
 
-    if (Type *type = v->GetType()) {
-      if (const char *type_str = type->GetName().AsCString()) {
+    if (Type *type = v->GetType())
+      if (const char *type_str = type->GetName().AsCString())
         type_name = type_str;
-      }
-    }
 
     Current.try_emplace(
         v->GetID(), VarState{std::string(name), std::string(loc), start_addr,
@@ -449,11 +444,9 @@ VariableAnnotator::annotateStructured(Instruction &inst, Target &target,
 
   // 2) Ends: anything that was live but is not in Current becomes
   // <kUndefLocation>.
-  for (const auto &KV : Live_) {
-    if (!Current.count(KV.first)) {
+  for (const auto &KV : Live_)
+    if (!Current.count(KV.first))
       annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
-    }
-  }
 
   // Commit new state.
   Live_ = std::move(Current);

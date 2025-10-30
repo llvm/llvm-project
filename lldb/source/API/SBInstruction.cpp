@@ -357,23 +357,20 @@ SBInstruction::GetVariableAnnotations(lldb::SBTarget target) {
 
   SBStructuredData result;
 
-  if (!m_opaque_sp || !m_opaque_sp->IsValid() || !target.IsValid()) {
+  if (!m_opaque_sp || !m_opaque_sp->IsValid() || !target.IsValid())
     return result;
-  }
 
   lldb::InstructionSP inst_sp = m_opaque_sp->GetSP();
   lldb::TargetSP target_sp = target.GetSP();
 
-  if (!inst_sp || !target_sp) {
+  if (!inst_sp || !target_sp)
     return result;
-  }
 
   const Address &addr = inst_sp->GetAddress();
   ModuleSP module_sp = addr.GetModule();
 
-  if (!module_sp) {
+  if (!module_sp)
     return result;
-  }
 
   VariableAnnotator annotator;
   std::vector<VariableAnnotation> annotations =
@@ -396,17 +393,14 @@ SBInstruction::GetVariableAnnotations(lldb::SBTarget target) {
     dict_sp->AddItem(
         "register_kind",
         std::make_shared<StructuredData::UnsignedInteger>(ann.register_kind));
-    if (ann.decl_file.has_value()) {
+    if (ann.decl_file.has_value())
       dict_sp->AddStringItem("decl_file", *ann.decl_file);
-    }
-    if (ann.decl_line.has_value()) {
+    if (ann.decl_line.has_value())
       dict_sp->AddItem(
           "decl_line",
           std::make_shared<StructuredData::UnsignedInteger>(*ann.decl_line));
-    }
-    if (ann.type_name.has_value()) {
+    if (ann.type_name.has_value())
       dict_sp->AddStringItem("type_name", *ann.type_name);
-    }
 
     array_sp->AddItem(dict_sp);
   }
