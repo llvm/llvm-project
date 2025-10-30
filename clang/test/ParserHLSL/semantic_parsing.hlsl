@@ -33,7 +33,7 @@ void FrenchPony(int GI : garçon_de_café) { }
 void UnicodePony(int GI : ℮) { }
 
 // Since P1949 seems Emojis are not allowed, even if in the range
-// mentionned in N3337.
+// mentioned in N3337.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p1949r7.html
 
 // expected-error@+2 {{unexpected character <U+1F60A>}}
