@@ -182,7 +182,9 @@ jobs:
           # We are using the Wix generator which doesn't support strings in
           # the version, so strip out the git suffix and replace the -rc3 suffix
           # with .3.
+          set +o pipefail
           rc_version=`grep -o 'LLVM_VERSION_SUFFIX -rc[0-9]' cmake/Modules/LLVMVersion.cmake | cut -d ' ' -f 2 | sed 's/-rc//g'`
+          set -o pipefail
           if [ -z "$rc_version" ]; then
             version_suffix=""
           else
