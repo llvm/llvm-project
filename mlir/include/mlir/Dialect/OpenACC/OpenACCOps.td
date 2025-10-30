@@ -152,6 +152,26 @@ def OpenACC_LoopParMode : I32EnumAttr<
   let genSpecializedAttr = 0;
 }
 
+def OpenACC_PrivateRecipe : I32EnumAttrCase<"private_recipe", 0>;
+def OpenACC_FirstprivateRecipe : I32EnumAttrCase<"firstprivate_recipe", 1>;
+def OpenACC_ReductionRecipe : I32EnumAttrCase<"reduction_recipe", 2>;
+
+def OpenACC_RecipeKind : I32EnumAttr<
+    "RecipeKind",
+    "Encodes the options for kinds of recipes availabie in acc dialect",
+    [
+      OpenACC_PrivateRecipe, OpenACC_FirstprivateRecipe,
+      OpenACC_ReductionRecipe]> {
+  let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
+def OpenACC_RecipeKindAttr : EnumAttr<OpenACC_Dialect,
+                                             OpenACC_RecipeKind,
+                                             "recipe_kind"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
 
