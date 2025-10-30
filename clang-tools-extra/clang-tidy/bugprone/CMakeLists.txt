@@ -21,6 +21,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
   DerivedMethodShadowingBaseMethodCheck.cpp
+  DontModifyStdNamespaceCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
