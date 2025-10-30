@@ -2175,8 +2175,8 @@ define <2 x i8> @or_sgt_select_smax_to_abs(<2 x i8> %a){
   ret <2 x i8> %or
 }
 
-define <2 x i8> @or_lgt_select_smax_to_abs(<2 x i8> %a){
-; CHECK-LABEL: @or_lgt_select_smax_to_abs(
+define <2 x i8> @or_slt_select_smax_to_abs(<2 x i8> %a){
+; CHECK-LABEL: @or_slt_select_smax_to_abs(
 ; CHECK-NEXT:    [[OR:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[A:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i8> [[OR]]
 ;
