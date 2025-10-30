@@ -11,7 +11,7 @@
 # RUN: not %{lit} -a -v %{inputs}/shtest-ulimit --order=lexical \
 # RUN:   | FileCheck -DBASE_NOFILE_LIMIT=%{readfile:%t.nofile_limit} %s
 
-# CHECK: -- Testing: 4 tests{{.*}}
+# CHECK: -- Testing: 3 tests{{.*}}
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit-bad-arg.txt ({{[^)]*}})
 # CHECK: ulimit -n
@@ -25,9 +25,3 @@
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_reset.txt ({{[^)]*}})
 # CHECK: RLIMIT_NOFILE=[[BASE_NOFILE_LIMIT]]
-
-# CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_unlimited.txt ({{[^)]*}})
-# CHECK: ulimit -f 5
-# CHECK: RLIMIT_FSIZE=5
-# CHECK: ulimit -f unlimited
-# CHECK: RLIMIT_FSIZE=-1
