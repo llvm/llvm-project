@@ -37,22 +37,6 @@ CommentKind classifyBlockComment(StringRef Text) {
   // Allow '$' in identifiers. This is required for languages like JavaScript
   // which clang-format supports, to correctly classify parameter/sentinel
   // comments such as /*$scope=*/ or /*$FALLTHROUGH*/.
-  const auto IsIdentifierStart = [](char C) {
-    return llvm::isAlpha(C) || C == '_' || C == '$';
-  };
-  const auto IsIdentifierBody = [](char C) {
-    return llvm::isAlnum(C) || C == '_' || C == '$';
-  };
-  const auto IsIdentifierLike = [&](StringRef Value) {
-    if (Value.empty())
-      return false;
-    if (!IsIdentifierStart(Value.front()))
-      return false;
-    for (char C : Value.drop_front())
-      if (!IsIdentifierBody(C))
-        return false;
-    return true;
-  };
   const auto IsUppercaseWord = [](StringRef Value) {
     if (Value.empty())
       return false;
@@ -68,11 +52,8 @@ CommentKind classifyBlockComment(StringRef Text) {
 
   if (!HasWhitespace && IsUppercaseWord(Content))
     return CommentKind::Sentinel;
-  if (Content.ends_with('=')) {
-    const StringRef MaybeIdentifier = Content.drop_back().rtrim();
-    if (IsIdentifierLike(MaybeIdentifier))
-      return CommentKind::Parameter;
-  }
+  if (Content.ends_with('='))
+    return CommentKind::Parameter;
   return CommentKind::Plain;
 }
 } // namespace
