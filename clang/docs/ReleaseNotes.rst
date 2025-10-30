@@ -659,6 +659,7 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Exposed ``clang_Cursor_isFunctionInlined``.
 - Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
 - Add all missing ``CursorKind``s, ``TypeKind``s and
   ``ExceptionSpecificationKind``s from ``Index.h``
