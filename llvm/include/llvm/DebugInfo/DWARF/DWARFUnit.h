@@ -143,7 +143,11 @@ public:
       decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
 
   LLVM_ABI DWARFUnit *getUnitForOffset(uint64_t Offset) const;
-  LLVM_ABI DWARFUnit *getUnitForIndexEntry(const DWARFUnitIndex::Entry &E);
+  /// Returns the Unit from the .debug_info or .debug_types section by the index
+  /// entry.
+  LLVM_ABI DWARFUnit *
+  getUnitForIndexEntry(const DWARFUnitIndex::Entry &E, DWARFSectionKind Sec,
+                       const DWARFSection *Section = nullptr);
 
   /// Read units from a .debug_info or .debug_types section.  Calls made
   /// before finishedInfoUnits() are assumed to be for .debug_info sections,
@@ -563,7 +567,7 @@ public:
 
   die_iterator_range dies() {
     extractDIEsIfNeeded(false);
-    return die_iterator_range(DieArray.begin(), DieArray.end());
+    return DieArray;
   }
 
   virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) = 0;

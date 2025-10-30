@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/log10f.h"
-#include "common_constants.h" // Lookup table for (1/f)
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -18,6 +17,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/common_constants.h" // Lookup table for (1/f)
 
 // This is an algorithm for log10(x) in single precision which is
 // correctly rounded for all rounding modes, based on the implementation of
@@ -104,6 +104,7 @@ static constexpr double LOG10_R[128] = {
     0x1.30cb3a7bb3625p-2, 0x1.34413509f79ffp-2};
 
 LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
+  using namespace common_constants_internal;
   constexpr double LOG10_2 = 0x1.34413509f79ffp-2;
 
   using FPBits = typename fputil::FPBits<float>;

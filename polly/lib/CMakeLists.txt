@@ -43,7 +43,6 @@ add_llvm_pass_plugin(Polly
   NO_MODULE
   SUBPROJECT Polly
   Analysis/DependenceInfo.cpp
-  Analysis/PolyhedralInfo.cpp
   Analysis/ScopDetection.cpp
   Analysis/ScopDetectionDiagnostic.cpp
   Analysis/ScopInfo.cpp

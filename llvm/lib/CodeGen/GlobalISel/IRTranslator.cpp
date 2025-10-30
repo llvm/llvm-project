@@ -139,7 +139,7 @@ class DILocationVerifier : public GISelChangeObserver {
 
 public:
   DILocationVerifier() = default;
-  ~DILocationVerifier() = default;
+  ~DILocationVerifier() override = default;
 
   const Instruction *getCurrentInst() const { return CurrInst; }
   void setCurrentInst(const Instruction *Inst) { CurrInst = Inst; }
@@ -1862,14 +1862,18 @@ bool IRTranslator::translateVectorDeinterleave2Intrinsic(
 
 void IRTranslator::getStackGuard(Register DstReg,
                                  MachineIRBuilder &MIRBuilder) {
+  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
+  if (!Global) {
+    LLVMContext &Ctx = MIRBuilder.getContext();
+    Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+    MIRBuilder.buildUndef(DstReg);
+    return;
+  }
+
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   MRI->setRegClass(DstReg, TRI->getPointerRegClass());
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
-
-  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
-  if (!Global)
-    return;
 
   unsigned AddrSpace = Global->getType()->getPointerAddressSpace();
   LLT PtrTy = LLT::pointer(AddrSpace, DL->getPointerSizeInBits(AddrSpace));
@@ -2360,6 +2364,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder.buildFFrexp(VRegs[0], VRegs[1],
                            getOrCreateVReg(*CI.getArgOperand(0)),
                            MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
+  case Intrinsic::modf: {
+    ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
+    MIRBuilder.buildModf(VRegs[0], VRegs[1],
+                         getOrCreateVReg(*CI.getArgOperand(0)),
+                         MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
   case Intrinsic::sincos: {
@@ -3348,6 +3359,54 @@ bool IRTranslator::translateShuffleVector(const User &U,
     Mask = SVI->getShuffleMask();
   else
     Mask = cast<ConstantExpr>(U).getShuffleMask();
+
+  // As GISel does not represent <1 x > vectors as a separate type from scalars,
+  // we transform shuffle_vector with a scalar output to an
+  // ExtractVectorElement. If the input type is also scalar it becomes a Copy.
+  unsigned DstElts = cast<FixedVectorType>(U.getType())->getNumElements();
+  unsigned SrcElts =
+      cast<FixedVectorType>(U.getOperand(0)->getType())->getNumElements();
+  if (DstElts == 1) {
+    unsigned M = Mask[0];
+    if (SrcElts == 1) {
+      if (M == 0 || M == 1)
+        return translateCopy(U, *U.getOperand(M), MIRBuilder);
+      MIRBuilder.buildUndef(getOrCreateVReg(U));
+    } else {
+      Register Dst = getOrCreateVReg(U);
+      if (M < SrcElts) {
+        MIRBuilder.buildExtractVectorElementConstant(
+            Dst, getOrCreateVReg(*U.getOperand(0)), M);
+      } else if (M < SrcElts * 2) {
+        MIRBuilder.buildExtractVectorElementConstant(
+            Dst, getOrCreateVReg(*U.getOperand(1)), M - SrcElts);
+      } else {
+        MIRBuilder.buildUndef(Dst);
+      }
+    }
+    return true;
+  }
+
+  // A single element src is transformed to a build_vector.
+  if (SrcElts == 1) {
+    SmallVector<Register> Ops;
+    Register Undef;
+    for (int M : Mask) {
+      LLT SrcTy = getLLTForType(*U.getOperand(0)->getType(), *DL);
+      if (M == 0 || M == 1) {
+        Ops.push_back(getOrCreateVReg(*U.getOperand(M)));
+      } else {
+        if (!Undef.isValid()) {
+          Undef = MRI->createGenericVirtualRegister(SrcTy);
+          MIRBuilder.buildUndef(Undef);
+        }
+        Ops.push_back(Undef);
+      }
+    }
+    MIRBuilder.buildBuildVector(getOrCreateVReg(U), Ops);
+    return true;
+  }
+
   ArrayRef<int> MaskAlloc = MF->allocateShuffleMask(Mask);
   MIRBuilder
       .buildInstr(TargetOpcode::G_SHUFFLE_VECTOR, {getOrCreateVReg(U)},

@@ -20,7 +20,9 @@ using namespace llvm;
 using namespace remarks;
 using namespace llvm::remarkutil;
 
-namespace filter {
+// Note: Avoid using the identifier "filter" in this file, as it is prone to
+// namespace collision with headers that might get included e.g.
+// curses.h.
 
 static cl::SubCommand FilterSub("filter",
                                 "Filter remarks based on specified criteria.");
@@ -46,12 +48,8 @@ static Error tryFilter() {
     return MaybeParser.takeError();
   auto &Parser = **MaybeParser;
 
-  Format SerializerFormat = OutputFormat;
-  if (SerializerFormat == Format::Auto) {
-    SerializerFormat = Parser.ParserFormat;
-    if (OutputFileName.empty() || OutputFileName == "-")
-      SerializerFormat = Format::YAML;
-  }
+  Format SerializerFormat =
+      getSerializerFormat(OutputFileName, OutputFormat, Parser.ParserFormat);
 
   auto MaybeOF = getOutputFileForRemarks(OutputFileName, SerializerFormat);
   if (!MaybeOF)
@@ -80,5 +78,3 @@ static Error tryFilter() {
 }
 
 static CommandRegistration FilterReg(&FilterSub, tryFilter);
-
-} // namespace filter

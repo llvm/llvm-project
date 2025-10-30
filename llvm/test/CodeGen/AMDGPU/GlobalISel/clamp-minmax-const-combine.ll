@@ -206,7 +206,7 @@ define <2 x half> @test_max_K0min_K1Val_v2f16(<2 x half> %a) #1 {
 
 ; global nnan function attribute always forces clamp combine
 
-define float @test_min_max_global_nnan(float %a) #3 {
+define float @test_min_max_global_nnan(float %a) {
 ; GFX10-LABEL: test_min_max_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -223,11 +223,11 @@ define float @test_min_max_global_nnan(float %a) #3 {
 ; GFX12-NEXT:    v_max_num_f32_e64 v0, v0, v0 clamp
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %maxnum = call float @llvm.maxnum.f32(float %a, float 0.0)
-  %fmed = call float @llvm.minnum.f32(float %maxnum, float 1.0)
+  %fmed = call nnan float @llvm.minnum.f32(float %maxnum, float 1.0)
   ret float %fmed
 }
 
-define float @test_max_min_global_nnan(float %a) #3 {
+define float @test_max_min_global_nnan(float %a) {
 ; GFX10-LABEL: test_max_min_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -244,7 +244,7 @@ define float @test_max_min_global_nnan(float %a) #3 {
 ; GFX12-NEXT:    v_max_num_f32_e64 v0, v0, v0 clamp
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %minnum = call float @llvm.minnum.f32(float %a, float 1.0)
-  %fmed = call float @llvm.maxnum.f32(float %minnum, float 0.0)
+  %fmed = call nnan float @llvm.maxnum.f32(float %minnum, float 0.0)
   ret float %fmed
 }
 
@@ -414,5 +414,4 @@ declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
 attributes #0 = {"amdgpu-ieee"="true"}
 attributes #1 = {"amdgpu-ieee"="false"}
 attributes #2 = {"amdgpu-ieee"="true" "amdgpu-dx10-clamp"="true"}
-attributes #3 = {"no-nans-fp-math"="true"}
 attributes #4 = {"amdgpu-ieee"="true" "amdgpu-dx10-clamp"="false"}

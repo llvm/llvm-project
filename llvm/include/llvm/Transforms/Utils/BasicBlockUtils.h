@@ -19,8 +19,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Printable.h"
 #include <cassert>
 
 namespace llvm {
@@ -260,6 +262,34 @@ LLVM_ABI BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
                                LoopInfo *LI = nullptr,
                                MemorySSAUpdater *MSSAU = nullptr,
                                const Twine &BBName = "");
+
+/// \brief Create a new intermediate target block for a callbr edge.
+///
+/// Create a new basic block between a callbr instruction and one of its
+/// successors. The new block replaces the original successor in the callbr
+/// instruction and unconditionally branches to the original successor. This
+/// is useful for normalizing control flow, e.g., when transforming
+/// irreducible loops.
+///
+/// \param CallBrBlock    block containing the callbr instruction
+/// \param Succ           original successor block
+/// \param SuccIdx        index of the original successor in the callbr
+///                       instruction
+/// \param DTU            optional \p DomTreeUpdater for updating the
+///                       dominator tree
+/// \param CI             optional \p CycleInfo for updating cycle membership
+/// \param LI             optional \p LoopInfo for updating loop membership
+/// \param UpdatedLI      optional output flag indicating if \p LoopInfo has
+///                       been updated
+///
+/// \returns newly created intermediate target block
+///
+/// \note This function updates PHI nodes, dominator tree, loop info, and
+/// cycle info as needed.
+LLVM_ABI BasicBlock *
+SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ, unsigned SuccIdx,
+                DomTreeUpdater *DTU = nullptr, CycleInfo *CI = nullptr,
+                LoopInfo *LI = nullptr, bool *UpdatedLI = nullptr);
 
 /// Sets the unwind edge of an instruction to a particular successor.
 LLVM_ABI void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ);
@@ -610,6 +640,10 @@ LLVM_ABI void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 // Check whether the function only has simple terminator:
 // br/brcond/unreachable/ret
 LLVM_ABI bool hasOnlySimpleTerminator(const Function &F);
+
+/// Print BasicBlock \p BB as an operand or print "<nullptr>" if \p BB is a
+/// nullptr.
+LLVM_ABI Printable printBasicBlock(const BasicBlock *BB);
 
 } // end namespace llvm
 

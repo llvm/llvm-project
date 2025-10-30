@@ -221,6 +221,318 @@ define <vscale x 4 x i64> @interleave2_nxv4i64(<vscale x 2 x i64> %vec0, <vscale
   ret <vscale x 4 x i64> %retval
 }
 
+define <vscale x 6 x half> @interleave3_nxv6f16(<vscale x 2 x half> %vec0, <vscale x 2 x half> %vec1, <vscale x 2 x half> %vec2) {
+; CHECK-LABEL: interleave3_nxv6f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 6 x half> @llvm.vector.interleave3.nxv6f16(<vscale x 2 x half> %vec0, <vscale x 2 x half> %vec1, <vscale x 2 x half> %vec2)
+  ret <vscale x 6 x half> %retval
+}
+
+define <vscale x 12 x half> @interleave3_nxv12f16(<vscale x 4 x half> %vec0, <vscale x 4 x half> %vec1, <vscale x 4 x half> %vec2) {
+; CHECK-LABEL: interleave3_nxv12f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-5
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x28, 0x1e, 0x22 // sp + 16 + 40 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    addpl x8, sp, #4
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [sp]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    st1h { z2.s }, p0, [x8, #7, mul vl]
+; CHECK-NEXT:    str z0, [sp, #3, mul vl]
+; CHECK-NEXT:    ldr z1, [sp, #4, mul vl]
+; CHECK-NEXT:    ldr z0, [sp, #3, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #5
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 12 x half> @llvm.vector.interleave3.nxv12f16(<vscale x 4 x half> %vec0, <vscale x 4 x half> %vec1, <vscale x 4 x half> %vec2)
+  ret <vscale x 12 x half> %retval
+}
+
+define <vscale x 24 x half> @interleave3_nxv24f16(<vscale x 8 x half> %vec0, <vscale x 8 x half> %vec1, <vscale x 8 x half> %vec2) {
+; CHECK-LABEL: interleave3_nxv24f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 24 x half> @llvm.vector.interleave3.nxv24f16(<vscale x 8 x half> %vec0, <vscale x 8 x half> %vec1, <vscale x 8 x half> %vec2)
+  ret <vscale x 24 x half> %retval
+}
+
+define <vscale x 6 x float> @interleave3_nxv6f32(<vscale x 2 x float> %vec0, <vscale x 2 x float> %vec1, <vscale x 2 x float> %vec2) {
+; CHECK-LABEL: interleave3_nxv6f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-5
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x28, 0x1e, 0x22 // sp + 16 + 40 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    addpl x8, sp, #4
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [sp]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    st1w { z2.d }, p0, [x8, #7, mul vl]
+; CHECK-NEXT:    str z0, [sp, #3, mul vl]
+; CHECK-NEXT:    ldr z1, [sp, #4, mul vl]
+; CHECK-NEXT:    ldr z0, [sp, #3, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #5
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 6 x float> @llvm.vector.interleave3.nxv6f32(<vscale x 2 x float> %vec0, <vscale x 2 x float> %vec1, <vscale x 2 x float> %vec2)
+  ret <vscale x 6 x float> %retval
+}
+
+define <vscale x 12 x float> @interleave3_nxv12f32(<vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1, <vscale x 4 x float> %vec2) {
+; CHECK-LABEL: interleave3_nxv12f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 12 x float> @llvm.vector.interleave3.nxv12f32(<vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1, <vscale x 4 x float> %vec2)
+  ret <vscale x 12 x float> %retval
+}
+
+define <vscale x 6 x double> @interleave3_nxv6f64(<vscale x 2 x double> %vec0, <vscale x 2 x double> %vec1, <vscale x 2 x double> %vec2) {
+; CHECK-LABEL: interleave3_nxv6f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 6 x double>@llvm.vector.interleave3.nxv6f64(<vscale x 2 x double> %vec0, <vscale x 2 x double> %vec1, <vscale x 2 x double> %vec2)
+  ret <vscale x 6 x double> %retval
+}
+
+define <vscale x 6 x bfloat> @interleave3_nxv6bf16(<vscale x 2 x bfloat> %vec0, <vscale x 2 x bfloat> %vec1, <vscale x 2 x bfloat> %vec2) {
+; CHECK-LABEL: interleave3_nxv6bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #2, mul vl]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z2.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 6 x bfloat> @llvm.vector.interleave3.nxv6bf16(<vscale x 2 x bfloat> %vec0, <vscale x 2 x bfloat> %vec1, <vscale x 2 x bfloat> %vec2)
+  ret <vscale x 6 x bfloat> %retval
+}
+
+define <vscale x 12 x bfloat> @interleave3_nxv12bf16(<vscale x 4 x bfloat> %vec0, <vscale x 4 x bfloat> %vec1, <vscale x 4 x bfloat> %vec2) {
+; CHECK-LABEL: interleave3_nxv12bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-5
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x28, 0x1e, 0x22 // sp + 16 + 40 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    addpl x8, sp, #4
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z1, [sp]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    st1h { z2.s }, p0, [x8, #7, mul vl]
+; CHECK-NEXT:    str z0, [sp, #3, mul vl]
+; CHECK-NEXT:    ldr z1, [sp, #4, mul vl]
+; CHECK-NEXT:    ldr z0, [sp, #3, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #5
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 12 x bfloat> @llvm.vector.interleave3.nxv12bf16(<vscale x 4 x bfloat> %vec0, <vscale x 4 x bfloat> %vec1, <vscale x 4 x bfloat> %vec2)
+  ret <vscale x 12 x bfloat> %retval
+}
+
+define <vscale x 24 x bfloat> @interleave3_nxv24bf16(<vscale x 8 x bfloat> %vec0, <vscale x 8 x bfloat> %vec1, <vscale x 8 x bfloat> %vec2) {
+; CHECK-LABEL: interleave3_nxv24bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 24 x bfloat> @llvm.vector.interleave3.nxv24bf16(<vscale x 8 x bfloat> %vec0, <vscale x 8 x bfloat> %vec1, <vscale x 8 x bfloat> %vec2)
+  ret <vscale x 24 x bfloat> %retval
+}
+
+; Integers
+
+define <vscale x 48 x i8> @interleave3_nxv48i8(<vscale x 16 x i8> %vec0, <vscale x 16 x i8> %vec1, <vscale x 16 x i8> %vec2) {
+; CHECK-LABEL: interleave3_nxv48i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3b { z0.b - z2.b }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 48 x i8> @llvm.vector.interleave3.nxv48i8(<vscale x 16 x i8> %vec0, <vscale x 16 x i8> %vec1, <vscale x 16 x i8> %vec2)
+  ret <vscale x 48 x i8> %retval
+}
+
+define <vscale x 24 x i16> @interleave3_nxv24i16(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1, <vscale x 8 x i16> %vec2) {
+; CHECK-LABEL: interleave3_nxv24i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 24 x i16> @llvm.vector.interleave3.nxv24i16(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1, <vscale x 8 x i16> %vec2)
+  ret <vscale x 24 x i16> %retval
+}
+
+define <vscale x 12 x i32> @interleave3_nxv12i32(<vscale x 4 x i32> %vec0, <vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2) {
+; CHECK-LABEL: interleave3_nxv12i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 12 x i32> @llvm.vector.interleave3.nxv12i32(<vscale x 4 x i32> %vec0, <vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2)
+  ret <vscale x 12 x i32> %retval
+}
+
+define <vscale x 6 x i64> @interleave3_nxv6i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1, <vscale x 2 x i64> %vec2) {
+; CHECK-LABEL: interleave3_nxv6i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z2, [sp, #2, mul vl]
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 6 x i64> @llvm.vector.interleave3.nxv6i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1, <vscale x 2 x i64> %vec2)
+  ret <vscale x 6 x i64> %retval
+}
+
 define <vscale x 64 x i8> @interleave4_nxv16i8(<vscale x 16 x i8> %vec0, <vscale x 16 x i8> %vec1, <vscale x 16 x i8> %vec2, <vscale x 16 x i8> %vec3) {
 ; SVE-LABEL: interleave4_nxv16i8:
 ; SVE:       // %bb.0:

@@ -124,15 +124,17 @@ define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr noc
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[N]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[N]], 1
-; CHECK-NEXT:    br i1 [[TMP0]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_BODY_PREHEADER_NEW:%.*]]
 ; CHECK:       for.body.preheader.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i32 [[N]], -2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[I_09_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INC_1:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_EPIL:%.*]]
-; CHECK:       for.body.epil:
+; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_EPIL_PREHEADER]]
+; CHECK:       for.body.epil.preheader:
+; CHECK-NEXT:    [[I_09_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INC_1:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[I_09_UNR]]
 ; CHECK-NEXT:    [[I_EPIL:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1_EPIL:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i32 [[I_09_UNR]]

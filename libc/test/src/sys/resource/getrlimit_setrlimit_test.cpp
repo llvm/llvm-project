@@ -27,8 +27,11 @@ TEST_F(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   // successfully. Next, close the files and set the file descriptor limit
   // to 4. This will allow us to open one of those file but not the other.
 
-  constexpr const char *TEST_FILE1 = "testdata/resource_limits1.test";
-  constexpr const char *TEST_FILE2 = "testdata/resource_limits2.test";
+  constexpr const char *TEST_FILE1_NAME = "resource_limits1.test";
+  constexpr const char *TEST_FILE2_NAME = "resource_limits2.test";
+
+  auto TEST_FILE1 = libc_make_test_file_path(TEST_FILE1_NAME);
+  auto TEST_FILE2 = libc_make_test_file_path(TEST_FILE2_NAME);
 
   int fd1 = LIBC_NAMESPACE::open(TEST_FILE1, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd1, 0);

@@ -1061,8 +1061,8 @@ InlineCommandRenderKind Sema::getInlineCommandRenderKind(StringRef Name) const {
 
   return llvm::StringSwitch<InlineCommandRenderKind>(Name)
       .Case("b", InlineCommandRenderKind::Bold)
-      .Cases("c", "p", InlineCommandRenderKind::Monospaced)
-      .Cases("a", "e", "em", InlineCommandRenderKind::Emphasized)
+      .Cases({"c", "p"}, InlineCommandRenderKind::Monospaced)
+      .Cases({"a", "e", "em"}, InlineCommandRenderKind::Emphasized)
       .Case("anchor", InlineCommandRenderKind::Anchor)
       .Default(InlineCommandRenderKind::Normal);
 }

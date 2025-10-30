@@ -3677,7 +3677,7 @@ bool MipsAsmParser::expandBranchImm(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                       Out, STI))
       return true;
 
-    if (IsLikely) {
+    if (IsLikely && MemOffsetOp.isExpr()) {
       TOut.emitRRX(OpCode, DstRegOp.getReg(), ATReg,
               MCOperand::createExpr(MemOffsetOp.getExpr()), IDLoc, STI);
       TOut.emitRRI(Mips::SLL, Mips::ZERO, Mips::ZERO, 0, IDLoc, STI);
