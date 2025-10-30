@@ -867,6 +867,14 @@ clang-format
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
 - Add ``AllowBreakBeforeQtProperty`` option.
+- Add ``BreakAfterOpenBracketBracedList'', ``BreakAfterOpenBracketFunction'',
+  ``BreakAfterOpenBracketIf``, ``BreakAfterOpenBracketLoop``,
+  ``BreakAfterOpenBracketSwitch``, ``BreakBeforeCloseBracketBracedList'',
+  ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+  ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch`` options.
+- Deprecate ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
+  ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
+  ``bool`` type.
 
 libclang
 --------
@@ -905,6 +913,7 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Exposed ``clang_Cursor_isFunctionInlined``.
 - Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
 - Add all missing ``CursorKind``s, ``TypeKind``s and
   ``ExceptionSpecificationKind``s from ``Index.h``
