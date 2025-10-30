@@ -1772,12 +1772,20 @@ static unsigned sForm(MachineInstr &Instr) {
 
   case AArch64::ADDSWrr:
   case AArch64::ADDSWri:
+  case AArch64::ADDSWrx:
   case AArch64::ADDSXrr:
   case AArch64::ADDSXri:
+  case AArch64::ADDSXrx:
   case AArch64::SUBSWrr:
   case AArch64::SUBSWri:
+  case AArch64::SUBSWrx:
   case AArch64::SUBSXrr:
   case AArch64::SUBSXri:
+  case AArch64::SUBSXrx:
+  case AArch64::ADCSWr:
+  case AArch64::ADCSXr:
+  case AArch64::SBCSWr:
+  case AArch64::SBCSXr:
     return Instr.getOpcode();
 
   case AArch64::ADDWrr:
@@ -1788,6 +1796,10 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::ADDSXrr;
   case AArch64::ADDXri:
     return AArch64::ADDSXri;
+  case AArch64::ADDWrx:
+    return AArch64::ADDSWrx;
+  case AArch64::ADDXrx:
+    return AArch64::ADDSXrx;
   case AArch64::ADCWr:
     return AArch64::ADCSWr;
   case AArch64::ADCXr:
@@ -1800,6 +1812,10 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::SUBSXrr;
   case AArch64::SUBXri:
     return AArch64::SUBSXri;
+  case AArch64::SUBWrx:
+    return AArch64::SUBSWrx;
+  case AArch64::SUBXrx:
+    return AArch64::SUBSXrx;
   case AArch64::SBCWr:
     return AArch64::SBCSWr;
   case AArch64::SBCXr:
