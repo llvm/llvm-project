@@ -232,6 +232,12 @@ jobs:
     runs-on: ${{ needs.prepare.outputs.build-runs-on }}
     steps:
 
+    # See https://llvm.org/docs/GettingStarted.html#id4
+    - name: Disable autocrlf for git on Windows
+      if: runner.os == 'Windows'
+      run: |
+        git config --global core.autocrlf false
+
     - name: Checkout LLVM
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
