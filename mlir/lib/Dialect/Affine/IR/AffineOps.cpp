@@ -2637,7 +2637,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
     // results.
     return forOp.getInits();
   }
-  SmallVector<OpFoldResult, 4> replacements;
+  SmallVector<OpFoldResult> replacements;
   auto yieldOp = cast<AffineYieldOp>(forOp.getBody()->getTerminator());
   auto iterArgs = forOp.getRegionIterArgs();
   bool hasValDefinedOutsideLoop = false;
