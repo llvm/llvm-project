@@ -9,7 +9,6 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 
-
 # CHECK: BBAddrMap [
 # CHECK-NEXT: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 1: version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when callsite offsets feature is enabled: version = 2 feature = 32
 Sections:
@@ -18,8 +17,6 @@ Sections:
     Entries:
       - Version: 2
         Feature: 0x20
-
-
 
 # CHECK: BBAddrMap [
 # CHECK-NEXT: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 2: version should be >= 4 for SHT_LLVM_BB_ADDR_MAP when basic block hash feature is enabled: version = 3 feature = 64

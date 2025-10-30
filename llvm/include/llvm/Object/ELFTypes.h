@@ -842,14 +842,14 @@ struct BBAddrMap {
 
     // Encodes to minimum bit width representation.
     uint16_t encode() const {
-      return (static_cast<uint8_t>(FuncEntryCount) << 0) |
-             (static_cast<uint8_t>(BBFreq) << 1) |
-             (static_cast<uint8_t>(BrProb) << 2) |
-             (static_cast<uint8_t>(MultiBBRange) << 3) |
-             (static_cast<uint8_t>(OmitBBEntries) << 4) |
-             (static_cast<uint8_t>(CallsiteEndOffsets) << 5) |
-             (static_cast<uint8_t>(BBHash) << 6) |
-             (static_cast<uint8_t>(PostLinkCfg) << 7);
+      return (static_cast<uint16_t>(FuncEntryCount) << 0) |
+             (static_cast<uint16_t>(BBFreq) << 1) |
+             (static_cast<uint16_t>(BrProb) << 2) |
+             (static_cast<uint16_t>(MultiBBRange) << 3) |
+             (static_cast<uint16_t>(OmitBBEntries) << 4) |
+             (static_cast<uint16_t>(CallsiteEndOffsets) << 5) |
+             (static_cast<uint16_t>(BBHash) << 6) |
+             (static_cast<uint16_t>(PostLinkCfg) << 7);
     }
 
     // Decodes from minimum bit width representation and validates no
