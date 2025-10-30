@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -302,19 +299,11 @@ static void test_valid_values() {
            "%OM='00'\t"
            "%S='00'\t"
            "%OS='00'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='12:00:00 AM'\t"
-#    else
            "%r='12:00:00 午前'\t"
-#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
 #  elif defined(_WIN32)
@@ -339,19 +328,11 @@ static void test_valid_values() {
            "%OM='31'\t"
            "%S='30.123'\t"
            "%OS='30.123'\t"
-#  if defined(__APPLE__)
-           "%p='PM'\t"
-#  else
            "%p='午後'\t"
-#  endif
            "%R='23:31'\t"
            "%T='23:31:30.123'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='11:31:30 PM'\t"
-#    else
            "%r='11:31:30 午後'\t"
-#    endif
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
 #  elif defined(_WIN32)
@@ -376,19 +357,11 @@ static void test_valid_values() {
            "%OM='02'\t"
            "%S='01.123456789012'\t"
            "%OS='01.123456789012'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='03:02'\t"
            "%T='03:02:01.123456789012'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='03:02:01 AM'\t"
-#    else
            "%r='03:02:01 午前'\t"
-#    endif
            "%X='03時02分01秒'\t"
            "%EX='03時02分01秒'\t"
 #  elif defined(_WIN32)
@@ -413,19 +386,11 @@ static void test_valid_values() {
            "%OM='01'\t"
            "%S='01'\t"
            "%OS='01'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='01:01'\t"
            "%T='01:01:01'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='01:01:01 AM'\t"
-#    else
            "%r='01:01:01 午前'\t"
-#    endif
            "%X='01時01分01秒'\t"
            "%EX='01時01分01秒'\t"
 #  elif defined(_WIN32)

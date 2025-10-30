@@ -600,18 +600,33 @@ def executeBuiltinUmask(cmd, shenv):
 
 def executeBuiltinUlimit(cmd, shenv):
     """executeBuiltinUlimit - Change the current limits."""
-    if os.name != "posix":
+    try:
+        # Try importing the resource module (available on POSIX systems) and
+        # emit an error where it does not exist (e.g., Windows).
+        import resource
+    except ImportError:
         raise InternalShellError(cmd, "'ulimit' not supported on this system")
     if len(cmd.args) != 3:
         raise InternalShellError(cmd, "'ulimit' requires two arguments")
     try:
-        new_limit = int(cmd.args[2])
+        if cmd.args[2] == "unlimited":
+            new_limit = resource.RLIM_INFINITY
+        else:
+            new_limit = int(cmd.args[2])
     except ValueError as err:
         raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
     if cmd.args[1] == "-v":
-        shenv.ulimit["RLIMIT_AS"] = new_limit * 1024
+        if new_limit != resource.RLIM_INFINITY:
+            new_limit = new_limit * 1024
+        shenv.ulimit["RLIMIT_AS"] = new_limit
     elif cmd.args[1] == "-n":
         shenv.ulimit["RLIMIT_NOFILE"] = new_limit
+    elif cmd.args[1] == "-s":
+        if new_limit != resource.RLIM_INFINITY:
+            new_limit = new_limit * 1024
+        shenv.ulimit["RLIMIT_STACK"] = new_limit
+    elif cmd.args[1] == "-f":
+        shenv.ulimit["RLIMIT_FSIZE"] = new_limit
     else:
         raise InternalShellError(
             cmd, "'ulimit' does not support option: %s" % cmd.args[1]
@@ -945,7 +960,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             path = (
                 cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
             )
-            executable = lit.util.which(args[0], shenv.env["PATH"])
+            executable = lit.util.which(args[0], path)
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 
