@@ -875,28 +875,12 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: mask_v8i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: mask_v8i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
-; AVX2-NEXT:    vptest %ymm1, %ymm0
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: mask_v8i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: mask_v8i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vtestps %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %1 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a0)
   %2 = and i32 %1, 2147483648
   %3 = icmp eq i32 %2, 0
@@ -965,28 +949,12 @@ define i1 @signtest_v8i32(<8 x i32> %a0) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: signtest_v8i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: signtest_v8i32:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
-; AVX2-NEXT:    vptest %ymm1, %ymm0
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: signtest_v8i32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372039002259456,9223372039002259456,9223372039002259456,9223372039002259456]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: signtest_v8i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vtestps %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %1 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a0)
   %2 = icmp sgt i32 %1, -1
   ret i1 %2
@@ -1010,28 +978,12 @@ define i1 @signtest_v4i64(<4 x i64> %a0) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: signtest_v4i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
-; AVX1-NEXT:    sete %al
-; AVX1-NEXT:    vzeroupper
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: signtest_v4i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vptest %ymm1, %ymm0
-; AVX2-NEXT:    sete %al
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: signtest_v4i64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; AVX-LABEL: signtest_v4i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vtestpd %ymm0, %ymm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %1 = call i64 @llvm.vector.reduce.or.v4i64(<4 x i64> %a0)
   %2 = icmp sgt i64 %1, -1
   ret i1 %2

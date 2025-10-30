@@ -48860,6 +48860,26 @@ static SDValue combinePTESTCC(SDValue EFLAGS, X86::CondCode &CC,
       return DAG.getNode(EFLAGS.getOpcode(), SDLoc(EFLAGS), VT, Op0, Op0);
     }
 
+    // Attempt to convert PTESTZ(X,SIGNMASK) -> VTESTPD/PSZ(X,X) on AVX targets.
+    if (EFLAGS.getOpcode() == X86ISD::PTEST && Subtarget.hasAVX()) {
+      KnownBits KnownOp1 = DAG.computeKnownBits(Op1);
+      assert(KnownOp1.getBitWidth() == 64 &&
+             "Illegal PTEST vector element width");
+      if (KnownOp1.isConstant()) {
+        const APInt &Mask = KnownOp1.getConstant();
+        if (Mask.isSignMask()) {
+          MVT FpVT = MVT::getVectorVT(MVT::f64, OpVT.getSizeInBits() / 64);
+          Op0 = DAG.getBitcast(FpVT, DAG.getFreeze(Op0));
+          return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, Op0, Op0);
+        }
+        if (Mask.isSplat(32) && Mask.trunc(32).isSignMask()) {
+          MVT FpVT = MVT::getVectorVT(MVT::f32, OpVT.getSizeInBits() / 32);
+          Op0 = DAG.getBitcast(FpVT, DAG.getFreeze(Op0));
+          return DAG.getNode(X86ISD::TESTP, SDLoc(EFLAGS), VT, Op0, Op0);
+        }
+      }
+    }
+
     // TESTZ(OR(LO(X),HI(X)),OR(LO(Y),HI(Y))) -> TESTZ(X,Y)
     // TODO: Add COND_NE handling?
     if (CC == X86::COND_E && OpVT.is128BitVector() && Subtarget.hasAVX()) {

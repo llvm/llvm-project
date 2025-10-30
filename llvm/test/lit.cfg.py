@@ -753,10 +753,17 @@ if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 170
     config.available_features.add("unix-sockets")
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
-if not re.match(
-    r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
-    config.target_triple,
-) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
+if (
+    not re.match(
+        r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
+        config.target_triple,
+    )
+    and not re.match(
+        r"^arm64(e)?-apple-(macos|darwin)",
+        config.target_triple,
+    )
+    and not re.match(r".*-zos.*", config.target_triple)
+):
     config.available_features.add("debug_frame")
 
 if config.enable_backtrace:

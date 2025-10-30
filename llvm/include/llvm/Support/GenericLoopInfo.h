@@ -615,6 +615,17 @@ public:
     return L ? L->getLoopDepth() : 0;
   }
 
+  /// \brief Find the innermost loop containing both given loops.
+  ///
+  /// \returns the innermost loop containing both \p A and \p B
+  ///          or nullptr if there is no such loop.
+  LoopT *getSmallestCommonLoop(LoopT *A, LoopT *B) const;
+  /// \brief Find the innermost loop containing both given blocks.
+  ///
+  /// \returns the innermost loop containing both \p A and \p B
+  ///          or nullptr if there is no such loop.
+  LoopT *getSmallestCommonLoop(BlockT *A, BlockT *B) const;
+
   // True if the block is a loop header node
   bool isLoopHeader(const BlockT *BB) const {
     const LoopT *L = getLoopFor(BB);

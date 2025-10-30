@@ -674,6 +674,79 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
   return SplitBlock(BB, BB->getTerminator(), DT, LI, MSSAU, BBName);
 }
 
+/// Helper function to update the cycle or loop information after inserting a
+/// new block between a callbr instruction and one of its target blocks.  Adds
+/// the new block to the innermost cycle or loop that the callbr instruction and
+/// the original target block share.
+/// \p LCI            cycle or loop information to update
+/// \p CallBrBlock    block containing the callbr instruction
+/// \p CallBrTarget   new target block of the callbr instruction
+/// \p Succ           original target block of the callbr instruction
+template <typename TI, typename T>
+static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
+                                BasicBlock *CallBrTarget, BasicBlock *Succ) {
+  static_assert(std::is_same_v<TI, CycleInfo> || std::is_same_v<TI, LoopInfo>,
+                "type must be CycleInfo or LoopInfo");
+  if (!LCI)
+    return false;
+
+  T *LC;
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
+  else
+    LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
+  if (!LC)
+    return false;
+
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LCI->addBlockToCycle(CallBrTarget, LC);
+  else
+    LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+
+  return true;
+}
+
+BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
+                                  unsigned SuccIdx, DomTreeUpdater *DTU,
+                                  CycleInfo *CI, LoopInfo *LI,
+                                  bool *UpdatedLI) {
+  CallBrInst *CallBr = dyn_cast<CallBrInst>(CallBrBlock->getTerminator());
+  assert(CallBr && "expected callbr terminator");
+  assert(SuccIdx < CallBr->getNumSuccessors() &&
+         Succ == CallBr->getSuccessor(SuccIdx) && "invalid successor index");
+
+  // Create a new block between callbr and the specified successor.
+  // splitBlockBefore cannot be re-used here since it cannot split if the split
+  // point is a PHI node (because BasicBlock::splitBasicBlockBefore cannot
+  // handle that). But we don't need to rewire every part of a potential PHI
+  // node. We only care about the edge between CallBrBlock and the original
+  // successor.
+  BasicBlock *CallBrTarget =
+      BasicBlock::Create(CallBrBlock->getContext(),
+                         CallBrBlock->getName() + ".target." + Succ->getName(),
+                         CallBrBlock->getParent());
+  // Rewire control flow from the new target block to the original successor.
+  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
+  // Rewire control flow from callbr to the new target block.
+  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+  // Jump from the new target block to the original successor.
+  BranchInst::Create(Succ, CallBrTarget);
+
+  bool Updated =
+      updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock, CallBrTarget, Succ);
+  if (UpdatedLI)
+    *UpdatedLI = Updated;
+  updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+  if (DTU) {
+    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ))
+      DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ},
+                         {DominatorTree::Insert, CallBrTarget, Succ}});
+  }
+
+  return CallBrTarget;
+}
+
 void llvm::setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {
   if (auto *II = dyn_cast<InvokeInst>(TI))
     II->setUnwindDest(Succ);

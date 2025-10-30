@@ -18,12 +18,12 @@ define void @loop_1(i1 %PredEntry, i1 %PredB, i1 %PredC, i1 %PredD) {
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       G:
-; CHECK-NEXT:    br label [[F:%.*]]
+; CHECK-NEXT:    br label [[Y:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    [[GUARD_E:%.*]] = phi i1 [ true, [[B]] ], [ false, [[C]] ], [ false, [[D]] ]
-; CHECK-NEXT:    br i1 [[GUARD_E]], label [[E:%.*]], label [[F]]
+; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[B]] ], [ false, [[C]] ], [ false, [[D]] ]
+; CHECK-NEXT:    br i1 [[GUARD_X]], label [[X:%.*]], label [[Y]]
 ;
 entry:
   br i1 %PredEntry, label %A, label %G
@@ -39,6 +39,67 @@ C:
 
 D:
   br i1 %PredD, label %A, label %F
+
+E:
+  br label %exit
+
+F:
+  br label %exit
+
+G:
+  br label %F
+
+exit:
+  ret void
+}
+
+define void @loop_1_callbr(i1 %PredEntry, i1 %PredB, i1 %PredC, i1 %PredD) {
+; CHECK-LABEL: @loop_1_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[PREDENTRY:%.*]], label [[A:%.*]], label [[G:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[B:%.*]]
+; CHECK:       B:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
+; CHECK-NEXT:            to label [[C:%.*]] [label %B.target.E]
+; CHECK:       C:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDC:%.*]])
+; CHECK-NEXT:            to label [[D:%.*]] [label %C.target.F]
+; CHECK:       D:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDD:%.*]])
+; CHECK-NEXT:            to label [[A]] [label %D.target.F]
+; CHECK:       E:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       G:
+; CHECK-NEXT:    br label [[Y:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       B.target.E:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; CHECK:       C.target.F:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       D.target.F:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[B_TARGET_E:%.*]] ], [ false, [[C_TARGET_F:%.*]] ], [ false, [[D_TARGET_F:%.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD_X]], label [[X:%.*]], label [[Y]]
+;
+entry:
+  br i1 %PredEntry, label %A, label %G
+
+A:
+  br label %B
+
+B:
+  callbr void asm "", "r,!i"(i1 %PredB) to label %C [label %E]
+
+C:
+  callbr void asm "", "r,!i"(i1 %PredC) to label %D [label %F]
+
+D:
+  callbr void asm "", "r,!i"(i1 %PredD) to label %A [label %F]
 
 E:
   br label %exit
@@ -91,6 +152,70 @@ B:
 
 C:
   br i1 %PredC, label %D, label %Z
+
+D:
+  br label %A
+
+X:
+  br label %exit
+
+Y:
+  br label %exit
+
+Z:
+  br label %exit
+
+exit:
+  ret void
+}
+
+define void @loop_2_callbr(i1 %PredA, i1 %PredB, i1 %PredC) {
+; CHECK-LABEL: @loop_2_callbr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[A:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDA:%.*]])
+; CHECK-NEXT:            to label [[B:%.*]] [label %A.target.X]
+; CHECK:       B:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDB:%.*]])
+; CHECK-NEXT:            to label [[C:%.*]] [label %B.target.Y]
+; CHECK:       C:
+; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PREDC:%.*]])
+; CHECK-NEXT:            to label [[D:%.*]] [label %C.target.Z]
+; CHECK:       D:
+; CHECK-NEXT:    br label [[A]]
+; CHECK:       X:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       Y:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       Z:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A.target.X:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD:%.*]]
+; CHECK:       B.target.Y:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       C.target.Z:
+; CHECK-NEXT:    br label [[LOOP_EXIT_GUARD]]
+; CHECK:       loop.exit.guard:
+; CHECK-NEXT:    [[GUARD_X:%.*]] = phi i1 [ true, [[A_TARGET_X:%.*]] ], [ false, [[B_TARGET_Y:%.*]] ], [ false, [[C_TARGET_Z:%.*]] ]
+; CHECK-NEXT:    [[GUARD_Y:%.*]] = phi i1 [ false, [[A_TARGET_X]] ], [ true, [[B_TARGET_Y]] ], [ false, [[C_TARGET_Z]] ]
+; CHECK-NEXT:    br i1 [[GUARD_X]], label [[X:%.*]], label [[LOOP_EXIT_GUARD1:%.*]]
+; CHECK:       loop.exit.guard1:
+; CHECK-NEXT:    br i1 [[GUARD_Y]], label [[Y:%.*]], label [[Z:%.*]]
+;
+entry:
+  br label %A
+
+A:
+  callbr void asm "", "r,!i"(i1 %PredA) to label %B [label %X]
+
+B:
+  callbr void asm "", "r,!i"(i1 %PredB) to label %C [label %Y]
+
+C:
+  callbr void asm "", "r,!i"(i1 %PredC) to label %D [label %Z]
 
 D:
   br label %A
