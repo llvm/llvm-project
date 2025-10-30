@@ -4336,7 +4336,7 @@ OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
   if (auto splat =
           llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
+    return DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
 
   // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
   return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getSource());
