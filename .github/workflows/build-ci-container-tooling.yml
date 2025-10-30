@@ -72,7 +72,7 @@ jobs:
       - name: Test Container
         run: |
           # Use --pull=never to ensure we are testing the just built image.
-          podman run --pull=never --rm -it ${{ steps.vars.outputs.container-name-format-tag }} /usr/bin/bash -x -c 'cd $HOME && clang-format --version | grep version && black --version | grep black'
+          podman run --pull=never --rm -it ${{ steps.vars.outputs.container-name-format-tag }} /usr/bin/bash -x -c 'cd $HOME && clang-format --version | grep version && git-clang-format -h | grep usage && black --version | grep black'
           podman run --pull=never --rm -it ${{ steps.vars.outputs.container-name-lint-tag }} /usr/bin/bash -x -c 'cd $HOME && clang-tidy --version | grep version && clang-tidy-diff.py -h | grep usage'
 
   push-ci-container:

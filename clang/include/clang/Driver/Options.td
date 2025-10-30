@@ -545,15 +545,16 @@ multiclass BoolFOption<string flag_base, KeyPathAndMacro kpm,
               Group<f_Group>;
 }
 
-// Creates a BoolOption where both of the flags are prefixed with "g" and have
-// the Group<g_Group>.
+// Creates a BoolOption where both of the flags are prefixed with "g".
+// Does *not* map to g_Group, because that is reserved for flags that are
+// intended to enable (or disable) debug info, which is not appropriate for a
+// negative boolean flag (-gno-${feature}).
 // Used for -cc1 frontend options. Driver-only options do not map to
 // CompilerInvocation.
 multiclass BoolGOption<string flag_base, KeyPathAndMacro kpm,
                        Default default, FlagDef flag1, FlagDef flag2,
                        BothFlags both = BothFlags<[]>> {
-  defm NAME : BoolOption<"g", flag_base, kpm, default, flag1, flag2, both>,
-              Group<g_Group>;
+  defm NAME : BoolOption<"g", flag_base, kpm, default, flag1, flag2, both>;
 }
 
 multiclass BoolMOption<string flag_base, KeyPathAndMacro kpm,
@@ -1954,7 +1955,7 @@ defm borland_extensions : BoolFOption<"borland-extensions",
           "Accept non-standard constructs supported by the Borland compiler">,
   NegFlag<SetFalse>>;
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption, FC1Option]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,
   Flags<[]>, HelpText<"Load the clang builtins module map file.">;
 defm caret_diagnostics : BoolFOption<"caret-diagnostics",
@@ -2046,7 +2047,7 @@ def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>,
   MarshallingInfoInt<LangOpts<"ConstexprCallDepth">, "512">;
 def fconstexpr_steps_EQ : Joined<["-"], "fconstexpr-steps=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Set the maximum number of steps in constexpr function evaluation">,
+  HelpText<"Set the maximum number of steps in constexpr function evaluation (0 = no limit)">,
   MarshallingInfoInt<LangOpts<"ConstexprStepLimit">, "1048576">;
 def fexperimental_new_constant_interpreter : Flag<["-"], "fexperimental-new-constant-interpreter">, Group<f_Group>,
   HelpText<"Enable the experimental new constant interpreter">,
@@ -2749,6 +2750,10 @@ def falloc_token_max_EQ : Joined<["-"], "falloc-token-max=">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<N>">,
   HelpText<"Limit to maximum N allocation tokens (0 = no max)">;
+
+def falloc_token_mode_EQ : Joined<["-"], "falloc-token-mode=">,
+  Group<f_Group>, Visibility<[CC1Option]>,
+  HelpText<"Set the allocation token mode (experimental)">;
 
 def fallow_runtime_check_skip_hot_cutoff_EQ
     : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
@@ -3558,7 +3563,7 @@ def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, 
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AssumeSaneOperatorNew">>;
 def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"Disable implicit builtin knowledge of functions">;
 def fno_builtin_ : Joined<["-"], "fno-builtin-">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -4367,7 +4372,7 @@ def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
   HelpText<"Do not process trigraph sequences">,
   Visibility<[ClangOption, CC1Option]>;
 def funique_source_file_names: Flag<["-"], "funique-source-file-names">, Group<f_Group>,
-  HelpText<"Allow the compiler to assume that each translation unit has a unique "                       
+  HelpText<"Allow the compiler to assume that each translation unit has a unique "
            "source file identifier (see -funique-source-file-identifier) at link time">;
 def fno_unique_source_file_names: Flag<["-"], "fno-unique-source-file-names">;
 def unique_source_file_identifier_EQ: Joined<["-"], "funique-source-file-identifier=">, Group<f_Group>,
@@ -4533,6 +4538,12 @@ defm data_sections : BoolFOption<"data-sections",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Place each data in its own section">,
   NegFlag<SetFalse>>;
+defm experimental_call_graph_section
+    : BoolFOption<"experimental-call-graph-section",
+                  CodeGenOpts<"CallGraphSection">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                          "Emit a call graph section">,
+                  NegFlag<SetFalse>>;
 defm stack_size_section : BoolFOption<"stack-size-section",
   CodeGenOpts<"StackSizeSection">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -4845,8 +4856,7 @@ defm structor_decl_linkage_names
                   NegFlag<SetFalse>,
                   PosFlag<SetTrue, [], [],
                           "Attach linkage names to C++ constructor/destructor "
-                          "declarations in DWARF."
-                          "Implies -g.">,
+                          "declarations in DWARF.">,
                   BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
                   DocBrief<[{On some ABIs (e.g., Itanium), constructors and destructors may have multiple variants. Historically, when generating DWARF, Clang did not attach ``DW_AT_linkage_name`` to structor DIEs because there were multiple possible manglings (depending on the structor variant) that could be used. With ``-gstructor-decl-linkage-names``, for ABIs with structor variants, we attach a "unified" mangled name to structor declarations DIEs which debuggers can use to look up all the definitions for a structor declaration. E.g., a "unified" mangled name ``_ZN3FooC4Ev`` may have multiple definitions associated with it such as ``_ZN3FooC1Ev`` and ``_ZN3FooC2Ev``.
 
@@ -4855,7 +4865,7 @@ defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],
         "Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code"
-        " in some debuggers. DWARF only. Implies -g.">,
+        " in some debuggers. DWARF only.">,
     BothFlags<[], [ClangOption, CLOption, CC1Option]>>;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
@@ -5970,10 +5980,10 @@ def : Flag<["-"], "nocudainc">, Alias<no_offload_inc>;
 def no_offloadlib
     : Flag<["--"], "no-offloadlib">,
       MarshallingInfoFlag<LangOpts<"NoGPULib">>,
-      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-      HelpText<"Do not link device library for CUDA/HIP device compilation">;
+      Visibility<[ClangOption, CC1Option, CLOption, FlangOption, FC1Option]>,
+      HelpText<"Do not link device library for CUDA/HIP/SYCL device compilation">;
 def offloadlib : Flag<["--"], "offloadlib">,
-                 Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                 Visibility<[ClangOption, CC1Option, CLOption, FlangOption, FC1Option]>,
                  HelpText<"Link device libraries for GPU device compilation">;
 def : Flag<["-"], "nogpulib">,
       Alias<no_offloadlib>,
@@ -5989,7 +5999,6 @@ def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
 def nomultidefs : Flag<["-"], "nomultidefs">;
 def nopie : Flag<["-"], "nopie">, Visibility<[ClangOption, FlangOption]>, Flags<[TargetSpecific]>; // OpenBSD
-def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>;
 def noprebind : Flag<["-"], "noprebind">;
 def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
@@ -6103,7 +6112,6 @@ defm pthread : BoolOption<"", "pthread",
   PosFlag<SetTrue, [], [ClangOption], "Support POSIX threads in generated code">,
   NegFlag<SetFalse>,
   BothFlags<[], [ClangOption, CC1Option, FlangOption, FC1Option]>>;
-def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;
 def remap : Flag<["-"], "remap">;
@@ -6116,7 +6124,7 @@ def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
 def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
-  Flags<[NoXarchOption, HelpHidden]>,
+  Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
@@ -6205,11 +6213,12 @@ def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Flags<[NoArgumentUnused]>;
 def std_default_EQ : Joined<["-"], "std-default=">;
 def std_EQ : Joined<["-", "--"], "std=">,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  Group<CompileOnly_Group>, HelpText<"Language standard to compile for">,
-  ValuesCode<[{
+             Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+             Group<CompileOnly_Group>,
+             HelpText<"Language standard to compile for">,
+             ValuesCode<[{
     static constexpr const char VALUES_CODE [] =
-    #define LANGSTANDARD(id, name, lang, desc, features) name ","
+    #define LANGSTANDARD(id, name, lang, desc, features, version) name ","
     #define LANGSTANDARD_ALIAS(id, alias) alias ","
     #include "clang/Basic/LangStandards.def"
     ;
@@ -6497,6 +6506,8 @@ def fpic : Flag<["-"], "fpic">, Group<f_Group>;
 def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
 def fpie : Flag<["-"], "fpie">, Group<f_Group>;
 def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
+def pie : Flag<["-"], "pie">, Group<Link_Group>;
+def no_pie : Flag<["-"], "no-pie">, Group<Link_Group>;
 
 } // let Vis = [Default, FlangOption]
 
@@ -6547,6 +6558,8 @@ def mv75 : Flag<["-"], "mv75">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv75"]>;
 def mv79 : Flag<["-"], "mv79">, Group<m_hexagon_Features_Group>,
   Alias<mcpu_EQ>, AliasArgs<["hexagonv79"]>;
+def mv81 : Flag<["-"], "mv81">, Group<m_hexagon_Features_Group>,
+  Alias<mcpu_EQ>, AliasArgs<["hexagonv81"]>;
 def mhexagon_hvx : Flag<["-"], "mhvx">, Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon Vector eXtensions">;
 def mhexagon_hvx_EQ : Joined<["-"], "mhvx=">,
@@ -7178,7 +7191,7 @@ defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
   HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
-def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+def static_libflangrt : Flag<["-"], "static-libflangrt">,
   HelpText<"Link the flang-rt static library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
@@ -9593,6 +9606,15 @@ def fhlsl_spv_use_unknown_image_format
                "attribute. If this option is not used, the format is inferred "
                "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
+
+def fhlsl_spv_enable_maximal_reconvergence
+    : Flag<["-"], "fspv-enable-maximal-reconvergence">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Enables the MaximallyReconvergesKHR execution mode for this "
+               "module. This ensures that control flow reconverges at "
+               "well-defined merge points as defined by the Vulkan spec.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
