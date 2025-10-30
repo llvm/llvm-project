@@ -4,5 +4,5 @@
 unsigned _BitInt(17) a;
 _BitInt(2) b;
 
-// CHECK: !DIBasicType(name: "_BitInt", size: 8, dataSize: 2, encoding: DW_ATE_signed)
-// CHECK: !DIBasicType(name: "unsigned _BitInt", size: 32,  dataSize: 17, encoding: DW_ATE_unsigned)
+// CHECK: !DIBasicType(name: "_BitInt(2)", size: 8, dataSize: 2, encoding: DW_ATE_signed)
+// CHECK: !DIBasicType(name: "unsigned _BitInt(17)", size: 32,  dataSize: 17, encoding: DW_ATE_unsigned)

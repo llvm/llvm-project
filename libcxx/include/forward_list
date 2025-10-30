@@ -284,17 +284,6 @@ struct __forward_node_traits {
   typedef _NodePtr __node_pointer;
   typedef __forward_begin_node<_NodePtr> __begin_node;
   typedef __rebind_pointer_t<_NodePtr, __begin_node> __begin_node_pointer;
-
-// TODO(LLVM 22): Remove this check
-#  ifndef _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
-  static_assert(sizeof(__begin_node_pointer) == sizeof(__node_pointer) && _LIBCPP_ALIGNOF(__begin_node_pointer) ==
-                    _LIBCPP_ALIGNOF(__node_pointer),
-                "It looks like you are using std::forward_list with a fancy pointer type that thas a different "
-                "representation depending on whether it points to a forward_list base pointer or a forward_list node "
-                "pointer (both of which are implementation details of the standard library). This means that your ABI "
-                "is being broken between LLVM 19 and LLVM 20. If you don't care about your ABI being broken, define "
-                "the _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB macro to silence this diagnostic.");
-#  endif
 };
 
 template <class _NodePtr>

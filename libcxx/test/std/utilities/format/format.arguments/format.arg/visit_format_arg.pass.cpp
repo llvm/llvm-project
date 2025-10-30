@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <format>
 
 // template<class Visitor, class Context>
@@ -24,10 +26,6 @@
 #include "test_macros.h"
 #include "make_string.h"
 #include "min_allocator.h"
-
-#if TEST_STD_VER >= 26 && defined(TEST_HAS_EXPLICIT_THIS_PARAMETER)
-TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
-#endif
 
 template <class Context, class To, class From>
 void test(From value) {
