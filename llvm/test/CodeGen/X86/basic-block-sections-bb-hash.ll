@@ -1,23 +1,11 @@
-; BB section test with basic block hashes.
-;
-; RUN: llc %s -O0 -mtriple=x86_64-pc-linux -function-sections -filetype=obj -basic-block-address-map -emit-bb-hash -o %t.o
-; RUN: obj2yaml %t.o -o %t.yaml
-;
-;; Profile for version 1:
+;; BB section test with basic block hashes.
+
+;; basic block sections Profile with bb hashes
 ; RUN: echo 'v1' > %t
 ; RUN: echo 'f foo' >> %t
 ; RUN: echo 'g 0:10,1:9,2:1 1:8,3:8 2:2,3:2 3:11' >> %t
 ; RUN: echo 'c 0 2 3' >> %t
-
-; These commands read BB hashes from SHT_LLVM_BB_ADDR_MAP 
-; and put them into the basic blocks sections profile.
-; RUN: grep -E '^\s+(- ID:|Hash:)' %t.yaml | \
-; RUN: grep -B1 'Hash:' | \
-; RUN: sed 's/^\s*//; s/^- ID: *//; s/Hash: *0x//' | \
-; RUN: paste -d: - - | \
-; RUN: tr '\n' ' ' | \
-; RUN: sed 's/ $/\n/; s/^/h /' >> %t
-;
+; RUN: echo 'h 0:64863A11B5CA0000 1:54F1E80D6B270006 2:54F1F4E66B270008 3:C8BC6041A2CB0009' >> %t
 ; RUN: llc < %s -O0 -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=%t | FileCheck %s
 ;
 define void @foo(i1 zeroext) nounwind {
