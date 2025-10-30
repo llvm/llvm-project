@@ -1759,8 +1759,16 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
     return getOperand(0);
   }
 
+  bool isInvariantCond() const {
+    return getCond()->isDefinedOutsideLoopRegions();
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override;
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getCond() && isInvariantCond();
+  }
 };
 
 /// A recipe for handling GEP instructions.
