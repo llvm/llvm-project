@@ -70,6 +70,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
+  case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
   case VPScalarIVStepsSC:
@@ -86,6 +87,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenPHISC:
+  case VPWidenPointerInductionSC:
   case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
@@ -119,6 +121,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
+  case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
@@ -134,6 +137,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
+  case VPWidenPointerInductionSC:
   case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
@@ -3358,7 +3362,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
     Type *ScalarPtrTy = Ctx.Types.inferScalarType(PtrOp);
     const Align Alignment = getLoadStoreAlignment(UI);
-    unsigned AS = getLoadStoreAddressSpace(UI);
+    unsigned AS = cast<PointerType>(ScalarPtrTy)->getAddressSpace();
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
     InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
@@ -3525,7 +3529,6 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
@@ -3575,7 +3578,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
@@ -3630,7 +3632,6 @@ static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
@@ -3674,8 +3675,8 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -3699,7 +3700,6 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
   VPValue *StoredVPValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
 
@@ -3742,7 +3742,6 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
 
@@ -3785,8 +3784,8 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -4252,7 +4251,8 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
       getNumDefinedValues() > 0 ? getVPValue(InsertPosIdx)
                                 : getStoredValues()[InsertPosIdx]);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  unsigned AS = getLoadStoreAddressSpace(InsertPos);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
 
   unsigned InterleaveFactor = IG->getFactor();
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
