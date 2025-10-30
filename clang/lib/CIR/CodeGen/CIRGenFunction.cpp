@@ -264,11 +264,11 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // If we now have one after `applyCleanup`, hook it up properly.
     if (!cleanupBlock && localScope->getCleanupBlock(builder)) {
       cleanupBlock = localScope->getCleanupBlock(builder);
-      builder.create<cir::BrOp>(insPt->back().getLoc(), cleanupBlock);
+      cir::BrOp::create(builder, insPt->back().getLoc(), cleanupBlock);
       if (!cleanupBlock->mightHaveTerminator()) {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToEnd(cleanupBlock);
-        builder.create<cir::YieldOp>(localScope->endLoc);
+        cir::YieldOp::create(builder, localScope->endLoc);
       }
     }
 
@@ -286,7 +286,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
             }
           }
 
-          builder.create<cir::BrOp>(*returnLoc, returnBlock);
+          cir::BrOp::create(builder, *returnLoc, returnBlock);
           return;
         }
       }
@@ -298,8 +298,8 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // Ternary ops have to deal with matching arms for yielding types
     // and do return a value, it must do its own cir.yield insertion.
     if (!localScope->isTernary() && !insPt->mightHaveTerminator()) {
-      !retVal ? builder.create<cir::YieldOp>(localScope->endLoc)
-              : builder.create<cir::YieldOp>(localScope->endLoc, retVal);
+      !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
+              : cir::YieldOp::create(builder, localScope->endLoc, retVal);
     }
   };
 
@@ -331,7 +331,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
 
   // If there's a cleanup block, branch to it, nothing else to do.
   if (cleanupBlock) {
-    builder.create<cir::BrOp>(curBlock->back().getLoc(), cleanupBlock);
+    cir::BrOp::create(builder, curBlock->back().getLoc(), cleanupBlock);
     return;
   }
 
@@ -349,12 +349,12 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   assert(fn && "emitReturn from non-function");
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
-    auto value = builder.create<cir::LoadOp>(
-        loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
-    return builder.create<cir::ReturnOp>(loc,
-                                         llvm::ArrayRef(value.getResult()));
+    auto value = cir::LoadOp::create(
+        builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+    return cir::ReturnOp::create(builder, loc,
+                                 llvm::ArrayRef(value.getResult()));
   }
-  return builder.create<cir::ReturnOp>(loc);
+  return cir::ReturnOp::create(builder, loc);
 }
 
 // This is copied from CodeGenModule::MayDropFunctionReturn.  This is a
@@ -389,9 +389,9 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
     if (shouldEmitUnreachable) {
       assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
-        builder.create<cir::TrapOp>(localScope->endLoc);
+        cir::TrapOp::create(builder, localScope->endLoc);
       else
-        builder.create<cir::UnreachableOp>(localScope->endLoc);
+        cir::UnreachableOp::create(builder, localScope->endLoc);
       builder.clearInsertionPoint();
       return;
     }
@@ -410,6 +410,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
@@ -548,6 +550,49 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                                          cir::FuncType funcType) {
   const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
+
+  if (funcDecl->isInlineBuiltinDeclaration()) {
+    // When generating code for a builtin with an inline declaration, use a
+    // mangled name to hold the actual body, while keeping an external
+    // declaration in case the function pointer is referenced somewhere.
+    std::string fdInlineName = (cgm.getMangledName(funcDecl) + ".inline").str();
+    cir::FuncOp clone =
+        mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
+    if (!clone) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(fn);
+      clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
+                                  fn.getFunctionType());
+      clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+      clone.setSymVisibility("private");
+      clone.setInlineKind(cir::InlineKind::AlwaysInline);
+    }
+    fn.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
+    fn.setSymVisibility("private");
+    fn = clone;
+  } else {
+    // Detect the unusual situation where an inline version is shadowed by a
+    // non-inline version. In that case we should pick the external one
+    // everywhere. That's GCC behavior too.
+    for (const FunctionDecl *pd = funcDecl->getPreviousDecl(); pd;
+         pd = pd->getPreviousDecl()) {
+      if (LLVM_UNLIKELY(pd->isInlineBuiltinDeclaration())) {
+        std::string inlineName = funcDecl->getName().str() + ".inline";
+        if (auto inlineFn = mlir::cast_or_null<cir::FuncOp>(
+                cgm.getGlobalValue(inlineName))) {
+          // Replace all uses of the .inline function with the regular function
+          // FIXME: This performs a linear walk over the module. Introduce some
+          // caching here.
+          if (inlineFn
+                  .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
+                  .failed())
+            llvm_unreachable("Failed to replace inline builtin symbol uses");
+          inlineFn.erase();
+        }
+        break;
+      }
+    }
+  }
 
   SourceLocation loc = funcDecl->getLocation();
   Stmt *body = funcDecl->getBody();
@@ -820,6 +865,10 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                std::string("l-value not implemented for '") +
                                    e->getStmtClassName() + "'");
     return LValue();
+  case Expr::ConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
+  case Expr::BinaryConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
   case Expr::ArraySubscriptExprClass:
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
@@ -864,6 +913,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::OpaqueValueExprClass:
+    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
   case Expr::ChooseExprClass:
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   }
@@ -957,7 +1008,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   if (isa<VariableArrayType>(arrayType)) {
     assert(cir::MissingFeatures::vlas());
     cgm.errorNYI(*currSrcLoc, "VLAs");
-    return builder.getConstInt(*currSrcLoc, SizeTy, 0);
+    return builder.getConstInt(*currSrcLoc, sizeTy, 0);
   }
 
   uint64_t countFromCLAs = 1;
@@ -986,7 +1037,7 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   }
 
   baseType = eltType;
-  return builder.getConstInt(*currSrcLoc, SizeTy, countFromCLAs);
+  return builder.getConstInt(*currSrcLoc, sizeTy, countFromCLAs);
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
@@ -1004,6 +1055,41 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
   SourceLocation loc = expr->getExprLoc();
   return emitAlignmentAssumption(ptrValue, ty, loc, assumptionLoc, alignment,
                                  offsetValue);
+}
+
+CIRGenFunction::VlaSizePair CIRGenFunction::getVLASize(QualType type) {
+  const VariableArrayType *vla =
+      cgm.getASTContext().getAsVariableArrayType(type);
+  assert(vla && "type was not a variable array type!");
+  return getVLASize(vla);
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLASize(const VariableArrayType *type) {
+  // The number of elements so far; always size_t.
+  mlir::Value numElements;
+
+  QualType elementType;
+  do {
+    elementType = type->getElementType();
+    mlir::Value vlaSize = vlaSizeMap[type->getSizeExpr()];
+    assert(vlaSize && "no size for VLA!");
+    assert(vlaSize.getType() == sizeTy);
+
+    if (!numElements) {
+      numElements = vlaSize;
+    } else {
+      // It's undefined behavior if this wraps around, so mark it that way.
+      // FIXME: Teach -fsanitize=undefined to trap this.
+
+      numElements =
+          builder.createMul(numElements.getLoc(), numElements, vlaSize,
+                            cir::OverflowBehavior::NoUnsignedWrap);
+    }
+  } while ((type = getContext().getAsVariableArrayType(elementType)));
+
+  assert(numElements && "Undefined elements number");
+  return {numElements, elementType};
 }
 
 // TODO(cir): Most of this function can be shared between CIRGen
@@ -1086,7 +1172,26 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
       break;
 
     case Type::VariableArray: {
-      cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType VLA");
+      // Losing element qualification here is fine.
+      const VariableArrayType *vat = cast<clang::VariableArrayType>(ty);
+
+      // Unknown size indication requires no size computation.
+      // Otherwise, evaluate and record it.
+      if (const Expr *sizeExpr = vat->getSizeExpr()) {
+        // It's possible that we might have emitted this already,
+        // e.g. with a typedef and a pointer to it.
+        mlir::Value &entry = vlaSizeMap[sizeExpr];
+        if (!entry) {
+          mlir::Value size = emitScalarExpr(sizeExpr);
+          assert(!cir::MissingFeatures::sanitizers());
+
+          // Always zexting here would be wrong if it weren't
+          // undefined behavior to have a negative bound.
+          // FIXME: What about when size's type is larger than size_t?
+          entry = builder.createIntCast(size, sizeTy);
+        }
+      }
+      type = vat->getElementType();
       break;
     }
 

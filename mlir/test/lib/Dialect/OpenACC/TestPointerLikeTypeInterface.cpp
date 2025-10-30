@@ -196,13 +196,15 @@ void TestPointerLikeTypeInterfacePass::testGenAllocate(
   newBuilder.setInsertionPointAfter(op);
 
   // Call the genAllocate API
+  bool needsFree = false;
   Value allocRes = pointerType.genAllocate(newBuilder, loc, "test_alloc",
-                                           result.getType(), result);
+                                           result.getType(), result, needsFree);
 
   if (allocRes) {
     llvm::errs() << "Successfully generated alloc for operation: ";
     op->print(llvm::errs());
     llvm::errs() << "\n";
+    llvm::errs() << "\tneeds free: " << (needsFree ? "true" : "false") << "\n";
 
     // Print all operations that were inserted
     for (Operation *insertedOp : tracker.insertedOps) {
@@ -230,8 +232,8 @@ void TestPointerLikeTypeInterfacePass::testGenFree(Operation *op, Value result,
 
   // Call the genFree API
   auto typedResult = cast<TypedValue<PointerLikeType>>(result);
-  bool success =
-      pointerType.genFree(newBuilder, loc, typedResult, result.getType());
+  bool success = pointerType.genFree(newBuilder, loc, typedResult, result,
+                                     result.getType());
 
   if (success) {
     llvm::errs() << "Successfully generated free for operation: ";

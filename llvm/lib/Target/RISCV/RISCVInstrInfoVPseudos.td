@@ -128,9 +128,6 @@ defvar TAIL_AGNOSTIC = 1;
 defvar TU_MU = 0;
 defvar TA_MU = 1;
 defvar TA_MA = 3;
-defvar DONT_CARE_ALTFMT = 0;
-defvar IS_NOT_ALTFMT = 1;
-defvar IS_ALTFMT = 2;
 
 //===----------------------------------------------------------------------===//
 // Utilities.
@@ -5865,20 +5862,6 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction,
   }
 }
 
-multiclass VPatConversionWF_VF_BF<string intrinsic, string instruction,
-                                  bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in
-  {
-    defvar fvti = fvtiToFWti.Vti;
-    defvar fwti = fvtiToFWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                 GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversion<intrinsic, instruction, "V",
-                          fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
-                          fvti.LMul, fwti.RegClass, fvti.RegClass, isSEWAware>;
-  }
-}
-
 multiclass VPatConversionVI_WF<string intrinsic, string instruction> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar vti = vtiToWti.Vti;
@@ -5969,20 +5952,6 @@ multiclass VPatConversionVF_WF_RTZ<string intrinsic, string instruction,
     defm : VPatConversionRTZ<intrinsic, instruction, "W",
                              fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
                              fvti.LMul, fvti.RegClass, fwti.RegClass, isSEWAware>;
-  }
-}
-
-multiclass VPatConversionVF_WF_BF_RM<string intrinsic, string instruction,
-                                     bit isSEWAware = 0> {
-  foreach fvtiToFWti = AllWidenableBF16ToFloatVectors in {
-    defvar fvti = fvtiToFWti.Vti;
-    defvar fwti = fvtiToFWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
-                                 GetVTypePredicates<fwti>.Predicates) in
-    defm : VPatConversionRoundingMode<intrinsic, instruction, "W",
-                                      fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
-                                      fvti.LMul, fvti.RegClass, fwti.RegClass,
-                                      isSEWAware>;
   }
 }
 

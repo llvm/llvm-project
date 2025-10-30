@@ -106,6 +106,9 @@ co_invoke_fn co_invoke;
 // CIR-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !rec_folly3A3Acoro3A3Aco_invoke_fn
 
 // CIR: cir.func builtin private @__builtin_coro_id(!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> !u32i
+// CIR:  cir.func builtin private @__builtin_coro_alloc(!u32i) -> !cir.bool
+// CIR:  cir.func builtin private @__builtin_coro_size() -> !u64i
+// CIR:  cir.func builtin private @__builtin_coro_begin(!u32i, !cir.ptr<!void>) -> !cir.ptr<!void>
 
 using VoidTask = folly::coro::Task<void>;
 
@@ -114,10 +117,24 @@ VoidTask silly_task() {
 }
 
 // CIR: cir.func coroutine dso_local @_Z10silly_taskv() -> ![[VoidTask]]
-// CHECK: %[[#VoidTaskAddr:]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
+// CIR: %[[VoidTaskAddr:.*]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
+// CIR: %[[SavedFrameAddr:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["__coro_frame_addr"]
 
 // Get coroutine id with __builtin_coro_id.
 
 // CIR: %[[NullPtr:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR: %[[Align:.*]] = cir.const #cir.int<16> : !u32i
 // CIR: %[[CoroId:.*]] = cir.call @__builtin_coro_id(%[[Align]], %[[NullPtr]], %[[NullPtr]], %[[NullPtr]])
+
+// Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
+// call __builtin_coro_begin for the final coroutine frame address.
+
+// CIR: %[[ShouldAlloc:.*]] = cir.call @__builtin_coro_alloc(%[[CoroId]]) : (!u32i) -> !cir.bool
+// CIR: cir.store{{.*}} %[[NullPtr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CIR: cir.if %[[ShouldAlloc]] {
+// CIR:   %[[CoroSize:.*]] = cir.call @__builtin_coro_size() : () -> !u64i
+// CIR:   %[[AllocAddr:.*]] = cir.call @_Znwm(%[[CoroSize]]) : (!u64i) -> !cir.ptr<!void>
+// CIR:   cir.store{{.*}} %[[AllocAddr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CIR: }
+// CIR: %[[Load0:.*]] = cir.load{{.*}} %[[SavedFrameAddr]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR: %[[CoroFrameAddr:.*]] = cir.call @__builtin_coro_begin(%[[CoroId]], %[[Load0]])

@@ -818,8 +818,7 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   if (!DefMI)
     return false;
 
-  const TargetMachine& TM = DefMI->getMF()->getTarget();
-  if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
+  if (DefMI->getFlag(MachineInstr::FmNoNans))
     return true;
 
   // If the value is a constant, we can obviously see if it is a NaN or not.

@@ -10,7 +10,8 @@ import string
 import subprocess
 import signal
 import sys
-import threading
+import warnings
+import selectors
 import time
 from typing import (
     Any,
@@ -26,6 +27,10 @@ from typing import (
     TypedDict,
     Literal,
 )
+
+# set timeout based on whether ASAN was enabled or not. Increase
+# timeout by a factor of 10 if ASAN is enabled.
+DEFAULT_TIMEOUT = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
 
 ## DAP type references
 
@@ -134,35 +139,6 @@ def dump_memory(base_addr, data, num_per_line, outfile):
         outfile.write("\n")
 
 
-def read_packet(
-    f: IO[bytes], trace_file: Optional[IO[str]] = None
-) -> Optional[ProtocolMessage]:
-    """Decode a JSON packet that starts with the content length and is
-    followed by the JSON bytes from a file 'f'. Returns None on EOF.
-    """
-    line = f.readline().decode("utf-8")
-    if len(line) == 0:
-        return None  # EOF.
-
-    # Watch for line that starts with the prefix
-    prefix = "Content-Length: "
-    if line.startswith(prefix):
-        # Decode length of JSON bytes
-        length = int(line[len(prefix) :])
-        # Skip empty line
-        separator = f.readline().decode()
-        if separator != "":
-            Exception("malformed DAP content header, unexpected line: " + separator)
-        # Read JSON bytes
-        json_str = f.read(length).decode()
-        if trace_file:
-            trace_file.write("from adapter:\n%s\n" % (json_str))
-        # Decode the JSON bytes into a python dictionary
-        return json.loads(json_str)
-
-    raise Exception("unexpected malformed message from lldb-dap: " + line)
-
-
 def packet_type_is(packet, packet_type):
     return "type" in packet and packet["type"] == packet_type
 
@@ -194,16 +170,8 @@ class DebugCommunication(object):
         self.log_file = log_file
         self.send = send
         self.recv = recv
-
-        # Packets that have been received and processed but have not yet been
-        # requested by a test case.
-        self._pending_packets: List[Optional[ProtocolMessage]] = []
-        # Received packets that have not yet been processed.
-        self._recv_packets: List[Optional[ProtocolMessage]] = []
-        # Used as a mutex for _recv_packets and for notify when _recv_packets
-        # changes.
-        self._recv_condition = threading.Condition()
-        self._recv_thread = threading.Thread(target=self._read_packet_thread)
+        self.selector = selectors.DefaultSelector()
+        self.selector.register(recv, selectors.EVENT_READ)
 
         # session state
         self.init_commands = init_commands
@@ -229,9 +197,6 @@ class DebugCommunication(object):
         # keyed by breakpoint id
         self.resolved_breakpoints: dict[str, Breakpoint] = {}
 
-        # trigger enqueue thread
-        self._recv_thread.start()
-
     @classmethod
     def encode_content(cls, s: str) -> bytes:
         return ("Content-Length: %u\r\n\r\n%s" % (len(s), s)).encode("utf-8")
@@ -247,17 +212,46 @@ class DebugCommunication(object):
                 f"seq mismatch in response {command['seq']} != {response['request_seq']}"
             )
 
-    def _read_packet_thread(self):
-        try:
-            while True:
-                packet = read_packet(self.recv, trace_file=self.trace_file)
-                # `packet` will be `None` on EOF. We want to pass it down to
-                # handle_recv_packet anyway so the main thread can handle unexpected
-                # termination of lldb-dap and stop waiting for new packets.
-                if not self._handle_recv_packet(packet):
-                    break
-        finally:
-            dump_dap_log(self.log_file)
+    def _read_packet(
+        self,
+        timeout: float = DEFAULT_TIMEOUT,
+    ) -> Optional[ProtocolMessage]:
+        """Decode a JSON packet that starts with the content length and is
+        followed by the JSON bytes from self.recv. Returns None on EOF.
+        """
+
+        ready = self.selector.select(timeout)
+        if not ready:
+            warnings.warn(
+                "timeout occurred waiting for a packet, check if the test has a"
+                " negative assertion and see if it can be inverted.",
+                stacklevel=4,
+            )
+            return None  # timeout
+
+        line = self.recv.readline().decode("utf-8")
+        if len(line) == 0:
+            return None  # EOF.
+
+        # Watch for line that starts with the prefix
+        prefix = "Content-Length: "
+        if line.startswith(prefix):
+            # Decode length of JSON bytes
+            length = int(line[len(prefix) :])
+            # Skip empty line
+            separator = self.recv.readline().decode()
+            if separator != "":
+                Exception("malformed DAP content header, unexpected line: " + separator)
+            # Read JSON bytes
+            json_str = self.recv.read(length).decode()
+            if self.trace_file:
+                self.trace_file.write(
+                    "%s from adapter:\n%s\n" % (time.time(), json_str)
+                )
+            # Decode the JSON bytes into a python dictionary
+            return json.loads(json_str)
+
+        raise Exception("unexpected malformed message from lldb-dap: " + line)
 
     def get_modules(
         self, start_module: Optional[int] = None, module_count: Optional[int] = None
@@ -282,64 +276,34 @@ class DebugCommunication(object):
     def collect_output(
         self,
         category: str,
-        timeout: float,
         pattern: Optional[str] = None,
         clear=True,
     ) -> str:
         """Collect output from 'output' events.
         Args:
             category: The category to collect.
-            timeout: The max duration for collecting output.
             pattern:
                 Optional, if set, return once this pattern is detected in the
                 collected output.
         Returns:
             The collected output.
         """
-        deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + DEFAULT_TIMEOUT
         output = self.get_output(category, clear)
         while deadline >= time.monotonic() and (
             pattern is None or pattern not in output
         ):
-            event = self.wait_for_event(["output"], timeout=deadline - time.monotonic())
+            event = self.wait_for_event(["output"])
             if not event:  # Timeout or EOF
                 break
             output += self.get_output(category, clear=clear)
         return output
 
-    def _enqueue_recv_packet(self, packet: Optional[ProtocolMessage]):
-        with self.recv_condition:
-            self.recv_packets.append(packet)
-            self.recv_condition.notify()
-
-    def _handle_recv_packet(self, packet: Optional[ProtocolMessage]) -> bool:
-        """Handles an incoming packet.
-
-        Called by the read thread that is waiting for all incoming packets
-        to store the incoming packet in "self._recv_packets" in a thread safe
-        way. This function will then signal the "self._recv_condition" to
-        indicate a new packet is available.
-
-        Args:
-            packet: A new packet to store.
-
-        Returns:
-            True if the caller should keep calling this function for more
-            packets.
-        """
-        with self._recv_condition:
-            self._recv_packets.append(packet)
-            self._recv_condition.notify()
-            # packet is None on EOF
-            return packet is not None and not (
-                packet["type"] == "response" and packet["command"] == "disconnect"
-            )
-
     def _recv_packet(
         self,
         *,
         predicate: Optional[Callable[[ProtocolMessage], bool]] = None,
-        timeout: Optional[float] = None,
+        timeout: Optional[float] = DEFAULT_TIMEOUT,
     ) -> Optional[ProtocolMessage]:
         """Processes received packets from the adapter.
         Updates the DebugCommunication stateful properties based on the received
@@ -358,42 +322,34 @@ class DebugCommunication(object):
             The first matching packet for the given predicate, if specified,
             otherwise None.
         """
-        assert (
-            threading.current_thread != self._recv_thread
-        ), "Must not be called from the _recv_thread"
+        deadline = time.time() + timeout
 
-        def process_until_match():
-            self._process_recv_packets()
-            for i, packet in enumerate(self._pending_packets):
-                if packet is None:
-                    # We need to return a truthy value to break out of the
-                    # wait_for, use `EOFError` as an indicator of EOF.
-                    return EOFError()
-                if predicate and predicate(packet):
-                    self._pending_packets.pop(i)
-                    return packet
+        while time.time() < deadline:
+            packet = self._read_packet(timeout=deadline - time.time())
+            if packet is None:
+                return None
+            self._process_recv_packet(packet)
+            if not predicate or predicate(packet):
+                return packet
 
-        with self._recv_condition:
-            packet = self._recv_condition.wait_for(process_until_match, timeout)
-            return None if isinstance(packet, EOFError) else packet
-
-    def _process_recv_packets(self) -> None:
+    def _process_recv_packet(self, packet) -> None:
         """Process received packets, updating the session state."""
-        with self._recv_condition:
-            for packet in self._recv_packets:
-                # Handle events that may modify any stateful properties of
-                # the DAP session.
-                if packet and packet["type"] == "event":
-                    self._handle_event(packet)
-                elif packet and packet["type"] == "request":
-                    # Handle reverse requests and keep processing.
-                    self._handle_reverse_request(packet)
-                # Move the packet to the pending queue.
-                self._pending_packets.append(packet)
-            self._recv_packets.clear()
+        if packet and ("seq" not in packet or packet["seq"] == 0):
+            warnings.warn(
+                f"received a malformed packet, expected 'seq != 0' for {packet!r}"
+            )
+        # Handle events that may modify any stateful properties of
+        # the DAP session.
+        if packet and packet["type"] == "event":
+            self._handle_event(packet)
+        elif packet and packet["type"] == "request":
+            # Handle reverse requests and keep processing.
+            self._handle_reverse_request(packet)
 
     def _handle_event(self, packet: Event) -> None:
         """Handle any events that modify debug session state we track."""
+        self.events.append(packet)
+
         event = packet["event"]
         body: Optional[Dict] = packet.get("body", None)
 
@@ -446,6 +402,8 @@ class DebugCommunication(object):
             self.invalidated_event = packet
         elif event == "memory":
             self.memory_event = packet
+        elif event == "module":
+            self.module_events.append(packet)
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -514,18 +472,14 @@ class DebugCommunication(object):
 
         Returns the seq number of the request.
         """
-        # Set the seq for requests.
-        if packet["type"] == "request":
-            packet["seq"] = self.sequence
-            self.sequence += 1
-        else:
-            packet["seq"] = 0
+        packet["seq"] = self.sequence
+        self.sequence += 1
 
         # Encode our command dictionary as a JSON string
         json_str = json.dumps(packet, separators=(",", ":"))
 
         if self.trace_file:
-            self.trace_file.write("to adapter:\n%s\n" % (json_str))
+            self.trace_file.write("%s to adapter:\n%s\n" % (time.time(), json_str))
 
         length = len(json_str)
         if length > 0:
@@ -555,53 +509,51 @@ class DebugCommunication(object):
 
         return cast(Optional[Response], self._recv_packet(predicate=predicate))
 
-    def wait_for_event(
-        self, filter: List[str] = [], timeout: Optional[float] = None
-    ) -> Optional[Event]:
+    def wait_for_event(self, filter: List[str] = []) -> Optional[Event]:
         """Wait for the first event that matches the filter."""
 
         def predicate(p: ProtocolMessage):
             return p["type"] == "event" and p["event"] in filter
 
         return cast(
-            Optional[Event], self._recv_packet(predicate=predicate, timeout=timeout)
+            Optional[Event],
+            self._recv_packet(predicate=predicate),
         )
 
-    def wait_for_stopped(
-        self, timeout: Optional[float] = None
-    ) -> Optional[List[Event]]:
+    def wait_for_stopped(self) -> Optional[List[Event]]:
         stopped_events = []
-        stopped_event = self.wait_for_event(
-            filter=["stopped", "exited"], timeout=timeout
-        )
+        stopped_event = self.wait_for_event(filter=["stopped", "exited"])
         while stopped_event:
             stopped_events.append(stopped_event)
             # If we exited, then we are done
             if stopped_event["event"] == "exited":
                 break
+
             # Otherwise we stopped and there might be one or more 'stopped'
             # events for each thread that stopped with a reason, so keep
             # checking for more 'stopped' events and return all of them
-            stopped_event = self.wait_for_event(
-                filter=["stopped", "exited"], timeout=0.25
+            # Use a shorter timeout for additional stopped events
+            def predicate(p: ProtocolMessage):
+                return p["type"] == "event" and p["event"] in ["stopped", "exited"]
+
+            stopped_event = cast(
+                Optional[Event], self._recv_packet(predicate=predicate, timeout=0.25)
             )
         return stopped_events
 
-    def wait_for_breakpoint_events(self, timeout: Optional[float] = None):
+    def wait_for_breakpoint_events(self):
         breakpoint_events: list[Event] = []
         while True:
-            event = self.wait_for_event(["breakpoint"], timeout=timeout)
+            event = self.wait_for_event(["breakpoint"])
             if not event:
                 break
             breakpoint_events.append(event)
         return breakpoint_events
 
-    def wait_for_breakpoints_to_be_verified(
-        self, breakpoint_ids: list[str], timeout: Optional[float] = None
-    ):
+    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: list[str]):
         """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
         while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
-            breakpoint_event = self.wait_for_event(["breakpoint"], timeout=timeout)
+            breakpoint_event = self.wait_for_event(["breakpoint"])
             if breakpoint_event is None:
                 break
 
@@ -614,14 +566,14 @@ class DebugCommunication(object):
             )
         ]
 
-    def wait_for_exited(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event(["exited"], timeout=timeout)
+    def wait_for_exited(self):
+        event_dict = self.wait_for_event(["exited"])
         if event_dict is None:
             raise ValueError("didn't get exited event")
         return event_dict
 
-    def wait_for_terminated(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event(["terminated"], timeout)
+    def wait_for_terminated(self):
+        event_dict = self.wait_for_event(["terminated"])
         if event_dict is None:
             raise ValueError("didn't get terminated event")
         return event_dict
@@ -908,6 +860,8 @@ class DebugCommunication(object):
         if restartArguments:
             command_dict["arguments"] = restartArguments
 
+        # Clear state, the process is about to restart...
+        self._process_continued(True)
         response = self._send_recv(command_dict)
         # Caller must still call wait_for_stopped.
         return response
@@ -1474,8 +1428,10 @@ class DebugCommunication(object):
 
     def terminate(self):
         self.send.close()
-        if self._recv_thread.is_alive():
-            self._recv_thread.join()
+        self.recv.close()
+        self.selector.close()
+        if self.log_file:
+            dump_dap_log(self.log_file)
 
     def request_setInstructionBreakpoints(self, memory_reference=[]):
         breakpoints = []
@@ -1572,6 +1528,7 @@ class DebugAdapterServer(DebugCommunication):
             stdout=subprocess.PIPE,
             stderr=sys.stderr,
             env=adapter_env,
+            bufsize=0,
         )
 
         if connection is None:
@@ -1610,7 +1567,7 @@ class DebugAdapterServer(DebugCommunication):
                     # new messages will arrive and it should shutdown on its
                     # own.
                     process.stdin.close()
-                    process.wait(timeout=20)
+                    process.wait(timeout=DEFAULT_TIMEOUT)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()

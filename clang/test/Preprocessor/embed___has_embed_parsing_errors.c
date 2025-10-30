@@ -250,3 +250,35 @@
 
 #if __has_embed("") // expected-error {{empty filename}}
 #endif
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed (__FILE__  foo limit(1)
+#endif
+
+//--- test3.c
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed (__FILE__  foo
+#endif
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed ("a" foo()
+#endif
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed ("a" bar() foo
+#endif
+
+// expected-error@+3 {{missing ')' after '__has_embed'}} \
+   expected-error@+3 {{expected value in expression}} \
+   expected-note@+3 {{to match this '('}}
+#if __has_embed (__FILE__ limit(1) foo
+int a = __has_embed (__FILE__);
+#endif

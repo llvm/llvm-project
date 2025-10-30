@@ -5504,7 +5504,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid FILE type in AST file");
             return;
           }
-          Context.setFILEDecl(Tag->getOriginalDecl());
+          Context.setFILEDecl(Tag->getDecl());
         }
       }
     }
@@ -5525,7 +5525,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid jmp_buf type in AST file");
             return;
           }
-          Context.setjmp_bufDecl(Tag->getOriginalDecl());
+          Context.setjmp_bufDecl(Tag->getDecl());
         }
       }
     }
@@ -5543,7 +5543,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Sigjmp_bufType->getAs<TagType>();
           assert(Tag && "Invalid sigjmp_buf type in AST file");
-          Context.setsigjmp_bufDecl(Tag->getOriginalDecl());
+          Context.setsigjmp_bufDecl(Tag->getDecl());
         }
       }
     }
@@ -5578,7 +5578,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Ucontext_tType->getAs<TagType>();
           assert(Tag && "Invalid ucontext_t type in AST file");
-          Context.setucontext_tDecl(Tag->getOriginalDecl());
+          Context.setucontext_tDecl(Tag->getDecl());
         }
       }
     }
@@ -5811,7 +5811,13 @@ bool ASTReader::readASTFileControlBlock(
 
     // FIXME: This allows use of the VFS; we do not allow use of the
     // VFS when actually loading a module.
-    auto BufferOrErr = FileMgr.getBufferForFile(Filename);
+    auto Entry =
+        Filename == "-" ? FileMgr.getSTDIN() : FileMgr.getFileRef(Filename);
+    if (!Entry) {
+      llvm::consumeError(Entry.takeError());
+      return true;
+    }
+    auto BufferOrErr = FileMgr.getBufferForFile(*Entry);
     if (!BufferOrErr)
       return true;
     OwnedBuffer = std::move(*BufferOrErr);
@@ -11249,6 +11255,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_mergeable:
     C = new (Context) OMPMergeableClause();
     break;
+  case llvm::omp::OMPC_threadset:
+    C = new (Context) OMPThreadsetClause();
+    break;
   case llvm::omp::OMPC_read:
     C = new (Context) OMPReadClause();
     break;
@@ -11650,6 +11659,17 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultVariableCategory(
       Record.readEnum<OpenMPDefaultClauseVariableCategory>());
   C->setDefaultVariableCategoryLocation(Record.readSourceLocation());
+}
+
+// Read the parameter of threadset clause. This will have been saved when
+// OMPClauseWriter is called.
+void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  SourceLocation ThreadsetKindLoc = Record.readSourceLocation();
+  C->setThreadsetKindLoc(ThreadsetKindLoc);
+  OpenMPThreadsetKind TKind =
+      static_cast<OpenMPThreadsetKind>(Record.readInt());
+  C->setThreadsetKind(TKind);
 }
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {

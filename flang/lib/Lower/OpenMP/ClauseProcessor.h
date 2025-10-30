@@ -194,8 +194,7 @@ private:
 
   void processMapObjects(
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
-      const omp::ObjectList &objects,
-      llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
+      const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,

@@ -51,6 +51,8 @@ private:
   void extract(const CXXOperatorCallExpr *Op);
 };
 
+} // namespace
+
 void ChainedComparisonData::add(const Expr *Operand) {
   if (!Name.empty())
     Name += ' ';
@@ -110,8 +112,6 @@ void ChainedComparisonData::extract(const Expr *Op) {
       extract(OverloadedOp);
   }
 }
-
-} // namespace
 
 void ChainedComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto OperatorMatcher = expr(anyOf(

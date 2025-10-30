@@ -194,7 +194,8 @@ void AssignmentContext::CheckShape(parser::CharBlock at, const SomeExpr *expr) {
 
 template <typename A> void AssignmentContext::PushWhereContext(const A &x) {
   const auto &expr{std::get<parser::LogicalExpr>(x.t)};
-  CheckShape(expr.thing.value().source, GetExpr(context_, expr));
+  CheckShape(
+      parser::UnwrapRef<parser::Expr>(expr).source, GetExpr(context_, expr));
   ++whereDepth_;
 }
 

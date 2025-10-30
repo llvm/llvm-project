@@ -504,7 +504,7 @@ undefined.
 G_ABDS, G_ABDU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Compute the absolute difference (signed and unsigned), e.g. abs(x-y).
+Compute the absolute difference (signed and unsigned), e.g. trunc(abs(ext(x)-ext(y)).
 
 .. code-block:: none
 
