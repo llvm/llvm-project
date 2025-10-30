@@ -2618,7 +2618,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                   DwarfVersion, llvm::DebuggerKind::Default);
         }
       } else if (Value == "--gsframe") {
-        CmdArgs.push_back("--gsframe");
+        if (Triple.isOSBinFormatELF() && Triple.isX86()) {
+          CmdArgs.push_back("--gsframe");
+        } else {
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << Value << D.getTargetTriple();
+          break;
+        }
       } else if (Value.starts_with("-mcpu") || Value.starts_with("-mfpu") ||
                  Value.starts_with("-mhwdiv") || Value.starts_with("-march")) {
         // Do nothing, we'll validate it later.
