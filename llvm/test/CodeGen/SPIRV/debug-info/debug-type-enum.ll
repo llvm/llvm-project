@@ -3,16 +3,6 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-@c = dso_local global i32 1, align 4, !dbg !0
-
-define dso_local noundef i32 @main() !dbg !21 {
-entry:
-  %retval = alloca i32, align 4
-  store i32 0, ptr %retval, align 4
-  %0 = load i32, ptr @c, align 4, !dbg !23
-  ret i32 %0, !dbg !24
-}
-
 ; CHECK-MIR-DAG: [[TYPE_I32:%[0-9]+:type]] = OpTypeInt 32, 0
 ; CHECK-MIR-DAG: [[TYPE_VOID:%[0-9]+:type\(s64\)]] = OpTypeVoid
 ; CHECK-MIR-DAG: [[C_NULL:%[0-9]+:iid]] = OpConstantNull [[TYPE_I32]]
@@ -42,6 +32,16 @@ entry:
 ; CHECK-SPIRV-DAG: %[[DBG_ENUM_COLOR:[0-9]+]] = OpExtInst %[[VOID]] {{%[0-9]+}} DebugTypeEnum %[[STR_COLOR]] %[[DBG_TY_INT]] %[[DBG_SRC]] {{%[0-9]+}} {{%[0-9]+}} %[[DBG_CU]] {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} %[[STR_RED]] {{%[0-9]+}} %[[STR_GREEN]] {{%[0-9]+}} %[[STR_BLUE]]
 
 ; CHECK-OPTION-NOT: DebugTypeEnum
+
+@c = dso_local global i32 1, align 4, !dbg !0
+
+define dso_local noundef i32 @main() !dbg !21 {
+entry:
+  %retval = alloca i32, align 4
+  store i32 0, ptr %retval, align 4
+  %0 = load i32, ptr @c, align 4, !dbg !23
+  ret i32 %0, !dbg !24
+}
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!13, !14, !15, !16, !17, !18, !19}
