@@ -371,3 +371,9 @@ bool DeviceTy::useAutoZeroCopy() {
 bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
   return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
 }
+
+uint64_t DeviceTy::getMaxSharedTeamMemory() {
+  using DeviceQueryKind = llvm::omp::target::plugin::DeviceQueryKind;
+  return RTL->query_device_info(
+      RTLDeviceID, DeviceQueryKind::DEVICE_QUERY_MAX_SHARED_TEAM_MEM);
+}
