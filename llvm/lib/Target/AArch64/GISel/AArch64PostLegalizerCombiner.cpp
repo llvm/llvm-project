@@ -144,20 +144,24 @@ bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
 // )
 // ->
 // G_CONCAT_VECTORS(
+//   src,
 //   undef
-//   src
 // )
 bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
                               Register &UnmergeSrc) {
   assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
 
-  unsigned UnmergeInstrCount = 0;
+  unsigned UnmergeUseCount = 0;
   unsigned UndefInstrCount = 0;
 
   unsigned UnmergeEltCount = 0;
   unsigned UnmergeEltSize = 0;
 
+  unsigned BuildOperandCount = MI.getNumOperands();
+  bool EncounteredUndef = false;
+
   Register UnmergeSrcTemp;
+  MachineInstr *UnmergeInstr;
 
   std::set<int> KnownRegs;
 
@@ -170,14 +174,21 @@ bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
 
     unsigned Opcode = Def->getOpcode();
 
+    // Ensure that the unmerged instructions are consecutive and before the
+    // undefined values by checking we don't encounter an undef before we reach
+    // half way
+    if (EncounteredUndef && UnmergeUseCount < BuildOperandCount / 2)
+      return false;
+
     switch (Opcode) {
     default:
       return false;
     case TargetOpcode::G_IMPLICIT_DEF:
       ++UndefInstrCount;
+      EncounteredUndef = true;
       break;
     case TargetOpcode::G_UNMERGE_VALUES:
-      ++UnmergeInstrCount;
+      ++UnmergeUseCount;
 
       UnmergeEltSize = MRI.getType(Use.getReg()).getScalarSizeInBits();
       UnmergeEltCount = Def->getNumDefs();
@@ -197,8 +208,10 @@ bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
 
       KnownRegs.insert(RegId);
 
-      // We know the unmerge is a valid target now so store the register.
+      // We know the unmerge is a valid target now so store the register & the
+      // instruction.
       UnmergeSrc = UnmergeSrcTemp;
+      UnmergeInstr = Def;
 
       break;
     }
@@ -207,9 +220,20 @@ bool matchCombineBuildUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
   // Only want to match patterns that pad half of a vector with undefined. We
   // also want to ensure that these values come from a single unmerge and all
   // unmerged values are consumed.
-  if (UndefInstrCount != UnmergeInstrCount ||
-      UnmergeEltCount != UnmergeInstrCount || KnownRegs.size() != 1) {
+  if (UndefInstrCount != UnmergeUseCount ||
+      UnmergeEltCount != UnmergeUseCount || KnownRegs.size() != 1) {
     return false;
+  }
+
+  // Check the operands of the unmerge are used in the same order they are
+  // defined G_BUILD_VECTOR always defines 1 output so we know the uses start
+  // from index 1
+  for (unsigned OperandIndex = 0; OperandIndex < UnmergeUseCount;
+       ++OperandIndex) {
+    Register BuildReg = MI.getOperand(OperandIndex + 1).getReg();
+    Register UnmergeReg = UnmergeInstr->getOperand(OperandIndex).getReg();
+    if (BuildReg != UnmergeReg)
+      return false;
   }
 
   return true;

@@ -334,7 +334,7 @@ def combine_mul_cmlt : GICombineRule<
 
 def combine_build_unmerge : GICombineRule<
   (defs root:$root, register_matchinfo:$unmergeSrc),
-  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+  (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
          [{ return matchCombineBuildUnmerge(*${root}, MRI, ${unmergeSrc}); }]),
   (apply [{ applyCombineBuildUnmerge(*${root}, MRI, B, ${unmergeSrc}); }])
 >;
