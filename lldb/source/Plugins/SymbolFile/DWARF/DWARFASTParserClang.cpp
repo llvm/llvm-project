@@ -465,6 +465,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       byte_size = form_value.Unsigned();
       break;
 
+    case DW_AT_bit_size:
+      data_bit_size = form_value.Unsigned();
+      break;
+
     case DW_AT_alignment:
       alignment = form_value.Unsigned();
       break;
