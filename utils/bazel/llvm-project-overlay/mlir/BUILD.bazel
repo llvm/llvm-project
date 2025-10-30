@@ -4678,11 +4678,11 @@ cc_library(
         ":BufferizationDialect",
         ":BufferizationInterfaces",
         ":BufferizationTransforms",
-        ":TransformUtils",
         ":ControlFlowDialect",
-        ":Pass",
         ":IR",
         ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
