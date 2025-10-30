@@ -914,7 +914,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             dummyName);
       }
       // INTENT(OUT) and INTENT(IN OUT) cases are caught elsewhere
-    } else {
+    } else if (!actualIsAllocatable &&
+        !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)) {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
           dummyName);
@@ -929,7 +930,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             dummy, actual, *scope,
             /*isAssumedRank=*/dummyIsAssumedRank, actualIsPointer);
       }
-    } else if (!actualIsPointer) {
+    } else if (!actualIsPointer &&
+        !dummy.ignoreTKR.test(common::IgnoreTKR::Pointer)) {
       messages.Say(
           "Actual argument associated with POINTER %s must also be POINTER unless INTENT(IN)"_err_en_US,
           dummyName);
