@@ -383,16 +383,14 @@ struct LowerGpuOpsToNVVMOpsPass final
     LLVMConversionTarget target(getContext());
 
     // Set higher benefit, so patterns will run before generic LLVM lowering.
+    // Make sure the benefit here is higher than ArithToLLVMDialectInterface and
+    // MathToLLVMDialectInterface.
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns,
                                         /*benefit=*/10);
 
     llvm::SmallDenseSet<StringRef> allowedDialectsSet(allowedDialects.begin(),
                                                       allowedDialects.end());
     for (Dialect *dialect : getContext().getLoadedDialects()) {
-      // Skip math patterns as nvvm needs custom math lowering.
-      if (isa<math::MathDialect>(dialect))
-        continue;
-
       bool allowed = allowedDialectsSet.contains(dialect->getNamespace());
       // Empty `allowedDialectsSet` means all dialects are allowed.
       if (!allowedDialectsSet.empty() && !allowed)
