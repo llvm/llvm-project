@@ -12,6 +12,7 @@
 #include "__llvm-libc-common.h"
 #include "llvm-libc-macros/float16-macros.h"
 
+#include "llvm-libc-macros/CONST_FUNC_A.h"
 #include "llvm-libc-macros/test_more-macros.h"
 #include "llvm-libc-macros/test_small-macros.h"
 #include "llvm-libc-types/float128.h"

@@ -2326,3 +2326,23 @@ TEST(LlvmLibcStrftimeTest, TimeFormatFullDateTime) {
 //    size_t written = 0;
 //    SimplePaddedNum spn;
 //  }
+
+TEST(LlvmLibcStrftimeTest, BufferTooSmall) {
+  struct tm time;
+  char buffer[1];
+
+  time.tm_year = get_adjusted_year(2025);
+  time.tm_mon = 10;
+  time.tm_mday = 24;
+
+  size_t written =
+      LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%F", &time);
+  EXPECT_EQ(written, size_t{0});
+
+  char buffer2[10];
+
+  // The string "2025-11-24" is 10 chars,
+  // so strftime needs 10 + 1 bytes to write the string and the null terminator.
+  written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer2), "%F", &time);
+  EXPECT_EQ(written, size_t{0});
+}

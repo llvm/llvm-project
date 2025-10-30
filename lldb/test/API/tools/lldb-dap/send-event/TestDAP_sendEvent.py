@@ -32,7 +32,7 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
             ],
         )
         self.set_source_breakpoints(source, [breakpoint_line])
-        self.continue_to_next_stop()
+        self.do_continue()
 
         custom_event = self.dap_server.wait_for_event(
             filter=["my-custom-event-no-body"]
