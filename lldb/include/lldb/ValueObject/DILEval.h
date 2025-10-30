@@ -61,7 +61,7 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
-  Visit(const CStyleCastNode *node) override;
+  Visit(const CastNode *node) override;
 
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,

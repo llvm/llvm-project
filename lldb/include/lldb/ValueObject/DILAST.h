@@ -21,7 +21,7 @@ enum class NodeKind {
   eArraySubscriptNode,
   eBitExtractionNode,
   eBooleanLiteralNode,
-  eCStyleCastNode,
+  eCastNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
@@ -36,12 +36,12 @@ enum class UnaryOpKind {
   Deref,  // "*"
 };
 
-/// The C-Style casts allowed by DIL.
-enum class CStyleCastKind {
-  eEnumeration,
-  eNullptr,
-  eReference,
-  eNone,
+/// The type casts allowed by DIL.
+enum class CastKind {
+  eEnumeration, /// Casting from a scalar to an enumeration type
+  eNullptr,     /// Casting to a nullptr type
+  eReference,   /// Casting to a reference type
+  eNone,        /// Type promotion casting
 };
 
 /// Forward declaration, for use in DIL AST nodes. Definition is at the very
@@ -253,27 +253,27 @@ private:
   bool m_value;
 };
 
-class CStyleCastNode : public ASTNode {
+class CastNode : public ASTNode {
 public:
-  CStyleCastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
-                 CStyleCastKind kind)
-      : ASTNode(location, NodeKind::eCStyleCastNode), m_type(type),
+  CastNode(uint32_t location, CompilerType type, ASTNodeUP operand,
+                 CastKind kind)
+      : ASTNode(location, NodeKind::eCastNode), m_type(type),
         m_operand(std::move(operand)), m_cast_kind(kind) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   CompilerType GetType() const { return m_type; }
   ASTNode *GetOperand() const { return m_operand.get(); }
-  CStyleCastKind GetCastKind() const { return m_cast_kind; }
+  CastKind GetCastKind() const { return m_cast_kind; }
 
   static bool classof(const ASTNode *node) {
-    return node->GetKind() == NodeKind::eCStyleCastNode;
+    return node->GetKind() == NodeKind::eCastNode;
   }
 
 private:
   CompilerType m_type;
   ASTNodeUP m_operand;
-  CStyleCastKind m_cast_kind;
+  CastKind m_cast_kind;
 };
 
 /// This class contains one Visit method for each specialized type of
@@ -300,7 +300,7 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const CStyleCastNode *node) = 0;
+  Visit(const CastNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

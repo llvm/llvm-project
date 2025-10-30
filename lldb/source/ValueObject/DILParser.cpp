@@ -93,42 +93,43 @@ ASTNodeUP DILParser::ParseExpression() { return ParseCastExpression(); }
 //   "(" type_id ")" cast_expression
 
 ASTNodeUP DILParser::ParseCastExpression() {
-  // This can be a C-style cast, try parsing the contents as a type declaration.
-  if (CurToken().Is(Token::l_paren)) {
-    Token token = CurToken();
-    uint32_t loc = token.GetLocation();
+  if (!CurToken().Is(Token::l_paren))
+    return ParseUnaryExpression();
 
-    // Enable lexer backtracking, so that we can rollback in case it's not
-    // actually a type declaration.
+  // This could be a type cast, try parsing the contents as a type declaration.
+  Token token = CurToken();
+  uint32_t loc = token.GetLocation();
 
-    // Start tentative parsing (save token location/idx, for possible rollback).
-    uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+  // Enable lexer backtracking, so that we can rollback in case it's not
+  // actually a type declaration.
 
-    // Consume the token only after enabling the backtracking.
+  // Start tentative parsing (save token location/idx, for possible rollback).
+  uint32_t save_token_idx = m_dil_lexer.GetCurrentTokenIdx();
+
+  // Consume the token only after enabling the backtracking.
+  m_dil_lexer.Advance();
+
+  // Try parsing the type declaration. If the returned value is not valid,
+  // then we should rollback and try parsing the expression.
+  auto type_id = ParseTypeId();
+  if (type_id) {
+    // Successfully parsed the type declaration. Commit the backtracked
+    // tokens and parse the cast_expression.
+
+    if (!type_id.value().IsValid())
+      return std::make_unique<ErrorNode>();
+
+    Expect(Token::r_paren);
     m_dil_lexer.Advance();
+    auto rhs = ParseCastExpression();
 
-    // Try parsing the type declaration. If the returned value is not valid,
-    // then we should rollback and try parsing the expression.
-    auto type_id = ParseTypeId();
-    if (type_id) {
-      // Successfully parsed the type declaration. Commit the backtracked
-      // tokens and parse the cast_expression.
-
-      if (!type_id.value().IsValid())
-        return std::make_unique<ErrorNode>();
-
-      Expect(Token::r_paren);
-      m_dil_lexer.Advance();
-      auto rhs = ParseCastExpression();
-
-      return std::make_unique<CStyleCastNode>(
-          loc, type_id.value(), std::move(rhs), CStyleCastKind::eNone);
-    }
-
-    // Failed to parse the contents of the parentheses as a type declaration.
-    // Rollback the lexer and try parsing it as unary_expression.
-    TentativeParsingRollback(save_token_idx);
+    return std::make_unique<CastNode>(
+        loc, type_id.value(), std::move(rhs), CastKind::eNone);
   }
+
+  // Failed to parse the contents of the parentheses as a type declaration.
+  // Rollback the lexer and try parsing it as unary_expression.
+  TentativeParsingRollback(save_token_idx);
 
   return ParseUnaryExpression();
 }

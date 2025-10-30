@@ -609,7 +609,7 @@ Interpreter::Visit(const BooleanLiteralNode *node) {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-Interpreter::Visit(const CStyleCastNode *node) {
+Interpreter::Visit(const CastNode *node) {
   auto operand_or_err = Evaluate(node->GetOperand());
   if (!operand_or_err)
     return operand_or_err;
