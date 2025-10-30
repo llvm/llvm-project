@@ -11243,8 +11243,7 @@ bool RecordExprEvaluator::VisitCastExpr(const CastExpr *E) {
     // flatten the source
     SmallVector<APValue> SrcEls;
     SmallVector<QualType> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes,
-                        NEls))
+    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes, NEls))
       return Error(E);
 
     // cast the elements and construct our struct result
@@ -13622,8 +13621,7 @@ bool ArrayExprEvaluator::VisitCastExpr(const CastExpr *E) {
     // flatten the source
     SmallVector<APValue> SrcEls;
     SmallVector<QualType> SrcTypes;
-    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes,
-                        NEls))
+    if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes, NEls))
       return Error(E);
 
     // cast the elements
