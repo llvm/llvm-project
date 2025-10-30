@@ -76,6 +76,7 @@ struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
+  bool FromSymtab;
 
   uint64_t getFuncSize() {
     uint64_t Sum = 0;

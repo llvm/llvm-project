@@ -831,13 +831,21 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
 }
 
 void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
-  // Load binary functions from symbol table when Debug info is incomplete
-  const SmallVector<StringRef> Suffixes(
-      {".destroy", ".resume", ".llvm.", ".cold", ".warm"});
+  // Load binary functions from symbol table when Debug info is incomplete.
+  // Strip the internal suffixes which are not reflected in the DWARF info.
+  const SmallVector<StringRef, 6> Suffixes(
+      {
+        // Internal suffixes from CoroSplit pass
+        ".cleanup", ".destroy", ".resume",
+        // Internal suffixes from Bolt
+        ".cold", ".warm",
+        // Compiler internal
+        ".llvm.",
+      });
   StringRef FileName = Obj->getFileName();
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
-    const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
+    const uint64_t StartAddr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
     uint64_t Size = 0;
     if (isa<ELFObjectFileBase>(Symbol.getObject())) {
@@ -855,25 +863,26 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
     auto &Func = Ret.first->second;
     if (Ret.second) {
       Func.FuncName = Ret.first->first;
+      Func.FromSymtab = true;
       HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
     }
 
-    if (auto Range = findFuncRange(Addr)) {
-      if (Ret.second && ShowDetailedWarning)
+    if (auto Range = findFuncRange(StartAddr)) {
+      if (Ret.second && Range->getFuncName() != SymName && ShowDetailedWarning)
         WithColor::warning()
-            << "Symbol " << Name << " start address "
-            << format("%8" PRIx64, Addr) << " already exists in DWARF at "
-            << format("%8" PRIx64, Range->StartAddress) << " in function "
-            << Range->getFuncName() << "\n";
+            << "Conflicting symbol " << Name << " already exists in DWARF as "
+            << Range->getFuncName() << " at address " << format("%8" PRIx64, StartAddr)
+            << ". The DWARF indicates a range from " << format("%8" PRIx64, Range->StartAddress) << " to "
+            << format("%8" PRIx64, Range->EndAddress) << "\n";
     } else {
       // Store/Update Function Range from SymTab
-      Func.Ranges.emplace_back(Addr, Addr + Size);
+      Func.Ranges.emplace_back(StartAddr, StartAddr + Size);
 
-      auto R = StartAddrToFuncRangeMap.emplace(Addr, FuncRange());
+      auto R = StartAddrToFuncRangeMap.emplace(StartAddr, FuncRange());
       FuncRange &FRange = R.first->second;
       FRange.Func = &Func;
-      FRange.StartAddress = Addr;
-      FRange.EndAddress = Addr + Size;
+      FRange.StartAddress = StartAddr;
+      FRange.EndAddress = StartAddr + Size;
     }
   }
 }
@@ -902,8 +911,10 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
     // BinaryFunction indexed by the name.
     auto Ret = BinaryFunctions.emplace(Name, BinaryFunction());
     auto &Func = Ret.first->second;
-    if (Ret.second)
+    if (Ret.second) {
       Func.FuncName = Ret.first->first;
+      Func.FromSymtab = false;
+    }
 
     for (const auto &Range : Ranges) {
       uint64_t StartAddress = Range.LowPC;

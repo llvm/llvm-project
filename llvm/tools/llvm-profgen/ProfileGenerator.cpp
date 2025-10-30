@@ -449,62 +449,29 @@ bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
   // Go through all the stacks, ranges and branches in sample counters, use
   // the start of the range to look up the function it belongs and record the
   // function.
-  uint64_t ErrStkAddr = 0, ErrFuncRange = 0, ErrSrc = 0, ErrTgt = 0;
-  uint64_t TotalStkAddr = 0, TotalFuncRange = 0, TotalSrc = 0, TotalTgt = 0;
   for (const auto &CI : *SampleCounters) {
     if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
       for (auto StackAddr : CtxKey->Context) {
-        uint64_t Inc = Binary->addressIsCode(StackAddr) ? 1 : 0;
-        TotalStkAddr += Inc;
         if (FuncRange *FRange = Binary->findFuncRange(StackAddr))
           ProfiledFunctions.insert(FRange->Func);
-        else
-          ErrStkAddr += Inc;
       }
     }
 
     for (auto Item : CI.second.RangeCounter) {
       uint64_t StartAddress = Item.first.first;
-      uint64_t Inc = Binary->addressIsCode(StartAddress) ? Item.second : 0;
-      TotalFuncRange += Inc;
       if (FuncRange *FRange = Binary->findFuncRange(StartAddress))
         ProfiledFunctions.insert(FRange->Func);
-      else
-        ErrFuncRange += Inc;
     }
 
     for (auto Item : CI.second.BranchCounter) {
       uint64_t SourceAddress = Item.first.first;
       uint64_t TargetAddress = Item.first.second;
-      uint64_t SrcInc = Binary->addressIsCode(SourceAddress) ? Item.second : 0;
-      uint64_t TgtInc = Binary->addressIsCode(TargetAddress) ? Item.second : 0;
-      TotalSrc += SrcInc;
       if (FuncRange *FRange = Binary->findFuncRange(SourceAddress))
         ProfiledFunctions.insert(FRange->Func);
-      else
-        ErrSrc += SrcInc;
-      TotalTgt += TgtInc;
       if (FuncRange *FRange = Binary->findFuncRange(TargetAddress))
         ProfiledFunctions.insert(FRange->Func);
-      else
-        ErrTgt += TgtInc;
     }
   }
-
-  if (ErrStkAddr)
-    emitWarningSummary(
-        ErrStkAddr, TotalStkAddr,
-        "of stack address samples do not belong to any function");
-  if (ErrFuncRange)
-    emitWarningSummary(
-        ErrFuncRange, TotalFuncRange,
-        "of function range samples do not belong to any function");
-  if (ErrSrc)
-    emitWarningSummary(ErrSrc, TotalSrc,
-                       "of LBR source samples do not belong to any function");
-  if (ErrTgt)
-    emitWarningSummary(ErrTgt, TotalTgt,
-                       "of LBR target samples do not belong to any function");
   return true;
 }
 

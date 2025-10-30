@@ -1274,6 +1274,8 @@ void PerfScriptReader::warnInvalidRange() {
 
   const char *EndNotBoundaryMsg = "Range is not on instruction boundary, "
                                   "likely due to profile and binary mismatch.";
+  const char *DanglingRangeMsg = "Range does not belong to any functions, "
+                                 "likely from PLT, .init or .fini section.";
   const char *RangeCrossFuncMsg =
       "Fall through range should not cross function boundaries, likely due to "
       "profile and binary mismatch.";
@@ -1281,6 +1283,8 @@ void PerfScriptReader::warnInvalidRange() {
 
   uint64_t TotalRangeNum = 0;
   uint64_t InstNotBoundary = 0;
+  uint64_t UnmatchedRange = 0;
+  uint64_t RecoveredRange = 0;
   uint64_t RangeCrossFunc = 0;
   uint64_t BogusRange = 0;
 
@@ -1300,8 +1304,14 @@ void PerfScriptReader::warnInvalidRange() {
     }
 
     auto *FRange = Binary->findFuncRange(StartAddress);
-    if (!FRange)
+    if (!FRange) {
+      UnmatchedRange += I.second;
+      WarnInvalidRange(StartAddress, EndAddress, DanglingRangeMsg);
       continue;
+    }
+
+    if (FRange->Func->FromSymtab)
+      RecoveredRange += I.second;
 
     if (EndAddress >= FRange->EndAddress) {
       RangeCrossFunc += I.second;
@@ -1319,6 +1329,12 @@ void PerfScriptReader::warnInvalidRange() {
   emitWarningSummary(
       InstNotBoundary, TotalRangeNum,
       "of samples are from ranges that are not on instruction boundary.");
+  emitWarningSummary(
+      UnmatchedRange, TotalRangeNum,
+      "of samples are from ranges that do not belong to any functions.");
+  emitWarningSummary(
+      RecoveredRange, TotalRangeNum,
+      "of samples are from ranges that belong to functions recovered from symbol table.");
   emitWarningSummary(
       RangeCrossFunc, TotalRangeNum,
       "of samples are from ranges that do cross function boundaries.");
