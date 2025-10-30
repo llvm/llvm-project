@@ -6,8 +6,9 @@
 # Case 4: Specify Entries.
 # CHECK:        Name: .llvm_bb_addr_map (1)
 # CHECK:        SectionData (
-# CHECK-NEXT:     0000: 02072000 00000000 0000010B 010203E8
-# CHECK-NEXT:     0010: 07E80702 0CEEDDBB F70E0D91 A2C48801
+# CHECK-NEXT:     0000: 02872000 00000000 0000010B 010203E8
+# CHECK-NEXT:     0010: 07E80764 020CEEDD BBF70E28 0D91A2C4
+# CHECK-NEXT:     0020: 880100
 # CHECK-NEXT:   )
 
 # Case 7: Not including a field which is enabled in feature doesn't emit value
@@ -26,12 +27,12 @@ Sections:
 ## Test the following cases:
 
 ## 1) We can produce an .llvm_bb_addr_map section from a description with
-##    Entries and PGO Analysis data.
+##    Entries and PGO Analysis and Post Link data.
   - Name: '.llvm_bb_addr_map (1)'
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version: 2
-        Feature: 0x7
+        Feature: 0x87
         BBRanges:
           - BaseAddress: 0x0000000000000020
             BBEntries:
@@ -42,12 +43,14 @@ Sections:
     PGOAnalyses:
       - FuncEntryCount: 1000
         PGOBBEntries:
-          - BBFreq:        1000
+          - BBFreq:          1000
+            PostLinkBBFreq:  100
             Successors:
-              - ID:        12
-                BrProb:    0xeeeeeeee
-              - ID:        13
-                BrProb:    0x11111111
+              - ID:               12
+                BrProb:           0xeeeeeeee
+                PostLinkBrFreq:   40
+              - ID:               13
+                BrProb:           0x11111111
 
 ## 2) According to feature we have FuncEntryCount but none is provided in yaml
   - Name: '.llvm_bb_addr_map (2)'
@@ -66,7 +69,7 @@ Sections:
 
 ## Check that yaml2obj generates a warning when we use unsupported feature.
 # RUN: yaml2obj --docnum=2  %s 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
-# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0xf0
+# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0x100
 
 --- !ELF
 FileHeader:
@@ -79,4 +82,4 @@ Sections:
     Entries:
       - Version: 2
 ##  Specify unsupported feature
-        Feature: 0xF0
+        Feature: 0x100

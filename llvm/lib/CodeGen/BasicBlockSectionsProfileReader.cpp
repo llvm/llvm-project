@@ -287,6 +287,25 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       }
       continue;
     }
+    case 'h': { // Basic block hash secifier.
+      // Skip the profile when the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
+      for (auto BBIDHashStr : Values) {
+        auto [BBIDStr, HashStr] = BBIDHashStr.split(':');
+        unsigned long long BBID = 0, Hash = 0;
+        if (getAsUnsignedInteger(BBIDStr, 10, BBID))
+          return createProfileParseError(Twine("unsigned integer expected: '") +
+                                         BBIDStr + "'");
+        if (getAsUnsignedInteger(HashStr, 16, Hash))
+          return createProfileParseError(
+              Twine("unsigned integer expected in hex format: '") + HashStr +
+              "'");
+        FI->second.BBHashes[BBID] = Hash;
+      }
+      continue;
+    }
     default:
       return createProfileParseError(Twine("invalid specifier: '") +
                                      Twine(Specifier) + "'");

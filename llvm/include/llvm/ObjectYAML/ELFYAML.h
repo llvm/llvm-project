@@ -166,7 +166,7 @@ struct BBAddrMapEntry {
     std::optional<llvm::yaml::Hex64> Hash;
   };
   uint8_t Version;
-  llvm::yaml::Hex8 Feature;
+  llvm::yaml::Hex16 Feature;
 
   struct BBRangeEntry {
     llvm::yaml::Hex64 BaseAddress;
@@ -203,8 +203,10 @@ struct PGOAnalysisMapEntry {
     struct SuccessorEntry {
       uint32_t ID;
       llvm::yaml::Hex32 BrProb;
+      std::optional<uint32_t> PostLinkBrFreq;
     };
     std::optional<uint64_t> BBFreq;
+    std::optional<uint32_t> PostLinkBBFreq;
     std::optional<std::vector<SuccessorEntry>> Successors;
   };
   std::optional<uint64_t> FuncEntryCount;

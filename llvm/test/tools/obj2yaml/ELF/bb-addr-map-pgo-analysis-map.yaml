@@ -15,7 +15,7 @@
 # VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
 # VALID-NEXT:     Entries:
 # VALID-NEXT:       - Version: 2
-# VALID-NEXT:         Feature: 0x7
+# VALID-NEXT:         Feature: 0x87
 ## The 'BaseAddress' field is omitted when it's zero.
 # VALID-NEXT:         BBRanges:
 # VALID-NEXT:           - BBEntries:
@@ -43,17 +43,23 @@
 # VALID-NEXT:     PGOAnalyses:
 # VALID-NEXT:       - FuncEntryCount: 100
 # VALID-NEXT:         PGOBBEntries:
-# VALID-NEXT:           - BBFreq:        100
+# VALID-NEXT:           - BBFreq:           100
+# VALID-NEXT:             PostLinkBBFreq:   10
 # VALID-NEXT:             Successors:
-# VALID-NEXT:               - ID:        2
-# VALID-NEXT:                 BrProb:    0x80000000
-# VALID-NEXT:               - ID:        4
-# VALID-NEXT:                 BrProb:    0x80000000
-# VALID-NEXT:           - BBFreq:        50
+# VALID-NEXT:               - ID:              2
+# VALID-NEXT:                 BrProb:          0x80000000
+# VALID-NEXT:                 PostLinkBrFreq:  7
+# VALID-NEXT:               - ID:              4
+# VALID-NEXT:                 BrProb:          0x80000000
+# VALID-NEXT:                 PostLinkBrFreq:  0
+# VALID-NEXT:           - BBFreq:           50
+# VALID-NEXT:             PostLinkBBFreq:   0
 # VALID-NEXT:             Successors:
-# VALID-NEXT:               - ID:        4
-# VALID-NEXT:                 BrProb:    0xFFFFFFFF
-# VALID-NEXT:           - BBFreq:        100
+# VALID-NEXT:               - ID:              4
+# VALID-NEXT:                 BrProb:          0xFFFFFFFF
+# VALID-NEXT:                 PostLinkBrFreq:  0
+# VALID-NEXT:           - BBFreq:           100
+# VALID-NEXT:             PostLinkBBFreq:   3
 # VALID-NEXT:             Successors:    []
 # VALID-NEXT:         PGOBBEntries:
 # VALID-NEXT:           - BBFreq:        20
@@ -69,7 +75,7 @@ Sections:
     ShSize: [[SIZE=<none>]]
     Entries:
       - Version: 2
-        Feature: 0x7
+        Feature: 0x87
         BBRanges:
           - BaseAddress: 0x0
             BBEntries:
@@ -97,17 +103,20 @@ Sections:
     PGOAnalyses:
       - FuncEntryCount: 100
         PGOBBEntries:
-          - BBFreq:        100
+          - BBFreq:          100
+            PostLinkBBFreq:  10
             Successors:
-              - ID:        2
-                BrProb:    0x80000000
-              - ID:        4
-                BrProb:    0x80000000
-          - BBFreq:        50
+              - ID:              2
+                BrProb:          0x80000000
+                PostLinkBrFreq:  7
+              - ID:              4
+                BrProb:          0x80000000
+          - BBFreq:              50
             Successors:
-              - ID:        4
-                BrProb:    0xFFFFFFFF
-          - BBFreq:        100
+              - ID:              4
+                BrProb:          0xFFFFFFFF
+          - BBFreq:              100
+            PostLinkBBFreq:      3
             Successors: []
       - PGOBBEntries:
           - BBFreq:        20
