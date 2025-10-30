@@ -111,6 +111,9 @@ RUN sudo apt-get update \
         xz-utils \
     && sudo rm -rf /var/lib/apt/lists/*
 
+COPY ../../test/requirements.txt .
+RUN python3 -m pip install -r requirements.txt
+
 RUN <<EOF
   set -e
   wget -qO /tmp/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip
