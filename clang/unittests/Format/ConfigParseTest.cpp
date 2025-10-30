@@ -550,10 +550,12 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AlignAfterOpenBracket: AlwaysBreak", AlignAfterOpenBracket,
               true);
   CHECK_PARSE(
-      "AlignAfterOpenBracket: AlwaysBreak\nBreakAfterOpenBracketIf: false",
+      "AlignAfterOpenBracket: AlwaysBreak\n"
+      "BreakAfterOpenBracketIf: false",
       BreakAfterOpenBracketIf, false);
   CHECK_PARSE(
-      "BreakAfterOpenBracketLoop: true\nAlignAfterOpenBracket: AlwaysBreak",
+      "BreakAfterOpenBracketLoop: true\n"
+      "AlignAfterOpenBracket: AlwaysBreak",
       BreakAfterOpenBracketLoop, true);
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket, false);
   CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
