@@ -210,6 +210,8 @@ class VPUser {
 
   SmallVector<VPValue *, 2> Operands;
 
+  const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
+
   /// Removes the operand at index \p Idx. This also removes the VPUser from the
   /// use-list of the operand.
   void removeOperand(unsigned Idx) {
@@ -223,19 +225,29 @@ protected:
   void printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 #endif
 
-  VPUser(ArrayRef<VPValue *> Operands) {
+  VPUser(ArrayRef<VPValue *> Operands) : SubclassID(VPURecipeSC) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
 
+  void eraseOperands() {
+    for_each(Operands, [&](VPValue *V) { V->removeUser(*this); });
+    Operands.clear();
+  }
+
 public:
   VPUser() = delete;
+  VPUser(const unsigned char SubclassID) : SubclassID(SubclassID) {}
   VPUser(const VPUser &) = delete;
   VPUser &operator=(const VPUser &) = delete;
-  virtual ~VPUser() {
-    for (VPValue *Op : operands())
-      Op->removeUser(*this);
-  }
+  virtual ~VPUser() { eraseOperands(); }
+
+  /// An enumeration for keeping track of the concrete subclass of VPUser that
+  /// are actually instantiated.
+  enum {
+    VPURecipeSC, /// A VPUser sub-class that is a VPRecipeBase.
+    VPUBlockSC   /// A VPUser sub-class that is a VPBasicBlock.
+  };
 
   void addOperand(VPValue *Operand) {
     Operands.push_back(Operand);

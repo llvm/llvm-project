@@ -67,11 +67,6 @@ class VPRecipeBuilder {
 
   VPBuilder &Builder;
 
-  /// The mask of each VPBB, generated earlier and used for predicating recipes
-  /// in VPBB.
-  /// TODO: remove by applying predication when generating the masks.
-  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache;
-
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
   DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
@@ -138,10 +133,9 @@ public:
                   const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
-                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache)
+                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
       : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder), BlockMaskCache(BlockMaskCache) {}
+        CM(CM), PSE(PSE), Builder(Builder) {}
 
   std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
     auto It = ScaledReductionMap.find(ExitInst);
@@ -169,12 +163,6 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
-  /// Returns the *entry* mask for block \p VPBB or null if the mask is
-  /// all-true.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
-  }
-
   /// Return the recipe created for given ingredient.
   VPRecipeBase *getRecipe(Instruction *I) {
     assert(Ingredient2Recipe.count(I) &&
@@ -195,15 +183,6 @@ public:
         return R->getVPSingleValue();
     }
     return Plan.getOrAddLiveIn(V);
-  }
-
-  void updateBlockMaskCache(DenseMap<VPValue *, VPValue *> &Old2New) {
-    for (auto &[_, V] : BlockMaskCache) {
-      if (auto *New = Old2New.lookup(V)) {
-        V->replaceAllUsesWith(New);
-        V = New;
-      }
-    }
   }
 };
 } // end namespace llvm

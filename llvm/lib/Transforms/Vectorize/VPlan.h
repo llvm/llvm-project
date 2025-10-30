@@ -3982,13 +3982,15 @@ struct CastInfo<VPIRMetadata, const VPRecipeBase *>
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
-/// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
-class LLVM_ABI_FOR_TEST VPBasicBlock : public VPBlockBase {
+/// output IR instructions. All PHI-like recipes must come before any non-PHI
+/// recipes. It also has an operand corresponding to a mask on which to enter
+/// the block, which is used early in the VPlan construction.
+class LLVM_ABI_FOR_TEST VPBasicBlock : public VPBlockBase, protected VPUser {
   friend class VPlan;
 
   /// Use VPlan::createVPBasicBlock to create VPBasicBlocks.
   VPBasicBlock(const Twine &Name = "", VPRecipeBase *Recipe = nullptr)
-      : VPBlockBase(VPBasicBlockSC, Name.str()) {
+      : VPBlockBase(VPBasicBlockSC, Name.str()), VPUser(VPUBlockSC) {
     if (Recipe)
       appendRecipe(Recipe);
   }
@@ -4001,7 +4003,7 @@ protected:
   RecipeListTy Recipes;
 
   VPBasicBlock(const unsigned char BlockSC, const Twine &Name = "")
-      : VPBlockBase(BlockSC, Name.str()) {}
+      : VPBlockBase(BlockSC, Name.str()), VPUser(VPUBlockSC) {}
 
 public:
   ~VPBasicBlock() override {
@@ -4111,6 +4113,21 @@ public:
   /// the first predecessor is the single predecessor of a region, and the
   /// second predecessor is the exiting block of the region.
   const VPBasicBlock *getCFGPredecessor(unsigned Idx) const;
+
+  /// Get the entry mask of this block. nullptr is used to communicate an
+  /// all-ones mask.
+  VPValue *getEntryMask() const {
+    return getNumOperands() ? getOperand(0) : nullptr;
+  }
+
+  /// Set the entry mask of this block: used by VPlanPredicator, when
+  /// predicating blocks.
+  void setEntryMask(VPValue *M) {
+    getNumOperands() ? setOperand(0, M) : addOperand(M);
+  }
+
+  /// Erase the entry mask of this block.
+  void eraseEntryMask() { eraseOperands(); }
 
 protected:
   /// Execute the recipes in the IR basic block \p BB.

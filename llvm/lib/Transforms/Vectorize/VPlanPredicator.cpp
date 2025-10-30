@@ -32,10 +32,7 @@ class VPPredicator {
   using EdgeMaskCacheTy =
       DenseMap<std::pair<const VPBasicBlock *, const VPBasicBlock *>,
                VPValue *>;
-  using BlockMaskCacheTy = DenseMap<VPBasicBlock *, VPValue *>;
   EdgeMaskCacheTy EdgeMaskCache;
-
-  BlockMaskCacheTy BlockMaskCache;
 
   /// Create an edge mask for every destination of cases and/or default.
   void createSwitchEdgeMasks(VPInstruction *SI);
@@ -43,20 +40,6 @@ class VPPredicator {
   /// Computes and return the predicate of the edge between \p Src and \p Dst,
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
-
-  /// Returns the *entry* mask for \p VPBB.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
-  }
-
-  /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
-  /// already have a mask.
-  void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
-    // TODO: Include the masks as operands in the predicated VPlan directly to
-    // avoid keeping the map of masks beyond the predication transform.
-    assert(!getBlockInMask(VPBB) && "Mask already set");
-    BlockMaskCache[VPBB] = Mask;
-  }
 
   /// Record \p Mask as the mask of the edge from \p Src to \p Dst. The edge is
   /// expected to not have a mask already.
@@ -82,8 +65,6 @@ public:
 
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
   void convertPhisToBlends(VPBasicBlock *VPBB);
-
-  const BlockMaskCacheTy getBlockMaskCache() const { return BlockMaskCache; }
 };
 } // namespace
 
@@ -95,7 +76,7 @@ VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
   if (EdgeMask)
     return EdgeMask;
 
-  VPValue *SrcMask = getBlockInMask(Src);
+  VPValue *SrcMask = Src->getEntryMask();
 
   // If there's a single successor, there's no terminator recipe.
   if (Src->getNumSuccessors() == 1)
@@ -140,7 +121,6 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     VPValue *EdgeMask = createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
                      // too.
-      setBlockInMask(VPBB, EdgeMask);
       return EdgeMask;
     }
 
@@ -152,15 +132,13 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     BlockMask = Builder.createOr(BlockMask, EdgeMask, {});
   }
 
-  setBlockInMask(VPBB, BlockMask);
+  VPBB->setEntryMask(BlockMask);
   return BlockMask;
 }
 
 void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
-  if (!FoldTail) {
-    setBlockInMask(HeaderVPBB, nullptr);
+  if (!FoldTail)
     return;
-  }
 
   // Introduce the early-exit compare IV <= BTC to form header block mask.
   // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
@@ -175,7 +153,7 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
 
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
   VPValue *BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
-  setBlockInMask(HeaderVPBB, BlockMask);
+  HeaderVPBB->setEntryMask(BlockMask);
 }
 
 void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
@@ -201,7 +179,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
 
   // We need to handle 2 separate cases below for all entries in Dst2Compares,
   // which excludes destinations matching the default destination.
-  VPValue *SrcMask = getBlockInMask(Src);
+  VPValue *SrcMask = Src->getEntryMask();
   VPValue *DefaultMask = nullptr;
   for (const auto &[Dst, Conds] : Dst2Compares) {
     // 1. Dst is not the default destination. Dst is reached if any of the
@@ -261,8 +239,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-DenseMap<VPBasicBlock *, VPValue *>
-VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
+void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -301,5 +278,4 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
 
     PrevVPBB = VPBB;
   }
-  return Predicator.getBlockMaskCache();
 }
