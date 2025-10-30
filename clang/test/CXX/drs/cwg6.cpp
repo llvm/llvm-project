@@ -11,7 +11,7 @@
 #define noexcept throw()
 #endif
 
-namespace cwg6 { // cwg6: yes
+namespace cwg6 { // cwg6: 2.7
 #if __cplusplus >= 201103L
 struct Counter {
   int copies;
