@@ -57,8 +57,8 @@ def TilingInterface : OpInterface<"TilingInterface"> {
     For an operation to be "tiled and fused" with its (already tiled) producer,
     an operation has to implement the following additional methods (see
     description below):
-      - `getTiledImplementationFromOperandTile`
-      - `getIterationDomainTileFromOperandTile`.
+      - `getTiledImplementationFromOperandTiles`
+      - `getIterationDomainTileFromOperandTiles`.
   }];
   let cppNamespace = "::mlir";
   let methods = [
