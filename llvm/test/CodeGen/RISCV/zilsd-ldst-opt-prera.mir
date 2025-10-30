@@ -1300,11 +1300,11 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
-    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY1]], 4 :: (load (s32))
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 4 :: (load (s32))
     ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
     ; CHECK-NEXT: [[LW3:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var + 4 :: (load (s32))
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW3]]
-    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW1]], [[LW2]]
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW2]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW1]], [[LW3]]
     ; CHECK-NEXT: PseudoRET
     ;
     ; CHECK-4BYTE-LABEL: name: symbolic_operands_interleave
@@ -1313,17 +1313,16 @@ body: |
     ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
-    ; CHECK-4BYTE-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY1]], 4 :: (load (s32))
-    ; CHECK-4BYTE-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
-    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
-    ; CHECK-4BYTE-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT2:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT3:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], 0 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT2]]
+    ; CHECK-4BYTE-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT3]], [[PseudoLD_RV32_OPT1]]
     ; CHECK-4BYTE-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
     %2:gpr = LW %0, target-flags(riscv-lo) @global_var :: (load (s32))
-    %3:gpr = LW %1, 4 :: (load (s32))
-    %5:gpr = LW %0, 0 :: (load (s32))
-    %4:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32))
+    %3:gpr = LW %0, 4 :: (load (s32))
+    %4:gpr = LW %0, 0 :: (load (s32))
+    %5:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32))
     %6:gpr = ADD %2, %4
     %7:gpr = ADD %3, %5
     PseudoRET

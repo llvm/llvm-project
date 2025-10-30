@@ -535,15 +535,14 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
           return;
         }
         // Check if we've seen this exact base+offset before
-        for (const MachineInstr *PrevMI : BI->second) {
-          if (Offset == getMemoryOpOffset(*PrevMI)) {
-            // Found duplicate base+offset - stop here to process current window
-            StopHere = true;
-            break;
-          }
-        }
-        if (!StopHere)
+        if (any_of(BI->second, [&](const MachineInstr *PrevMI) {
+              return Offset == getMemoryOpOffset(*PrevMI);
+            })) {
+          // Found duplicate base+offset - stop here to process current window
+          StopHere = true;
+        } else {
           BI->second.push_back(&MI);
+        }
       };
 
       if (IsLd)
