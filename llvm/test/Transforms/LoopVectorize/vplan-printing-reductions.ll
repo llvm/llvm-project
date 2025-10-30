@@ -1081,7 +1081,7 @@ exit:
   ret i64 %red.next.lcssa
 }
 
-; A reduce.add(ext(mul(ext(A), ext(B)))) can't be turned into an
+; This reduce.add(ext(mul(ext(A), ext(B)))) can't be turned into an
 ; ExtMulAccReduction VPExpressionRecipe since the mul has two users.
 ; It can however be turned into an ExtendedReduction since that one doesn't
 ; modify the mul's operands.
