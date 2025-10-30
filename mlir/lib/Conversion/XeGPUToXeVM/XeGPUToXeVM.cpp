@@ -292,19 +292,25 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
-    if (tdescTy.getRank() == 2) {
+    // Compute element byte size.
+    Value elemByteSize = arith::ConstantIntOp::create(
+        rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
+    auto tileRank = tdescTy.getRank();
+    // Get tile width from the tensor descriptor type.
+    auto tileW = tdescTy.getDimSize(tileRank - 1);
+    if (tileRank == 2) {
       // Convert base pointer (i64) to LLVM pointer type.
       Value basePtrLLVM =
           LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, basePtr);
-      // Compute element byte size and surface width in bytes.
+      // Compute width in bytes.
       Value elemByteSize = arith::ConstantIntOp::create(
           rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
       Value surfaceW =
           arith::MulIOp::create(rewriter, loc, baseShapeW, elemByteSize);
 
-      // Get tile sizes and vblocks from the tensor descriptor type.
-      auto tileW = tdescTy.getDimSize(1);
+      // Get tile height from the tensor descriptor type.
       auto tileH = tdescTy.getDimSize(0);
+      // Get vblocks from the tensor descriptor type.
       int32_t vblocks = tdescTy.getArrayLength();
       if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
         Value src = adaptor.getValue();
@@ -359,6 +365,65 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
               resultFlatVec);
           rewriter.replaceOp(op, resultFlatVec);
         }
+      }
+    } else {
+      // Get address from base address and offsets.
+      // Offset in number of elements, need to multiply by element byte size.
+      // Compute linear offset.
+      // linearOffset = offsetH * baseShapeW + offsetW
+      Value offsetHInElems =
+          rewriter.createOrFold<arith::MulIOp>(loc, offsetH, baseShapeW);
+      Value linearOffset =
+          rewriter.createOrFold<arith::AddIOp>(loc, offsetHInElems, offsetW);
+      // Then compute byte offset by multiplying with element byte size.
+      // byteOffset = linearOffset * elemByteSize
+      Value byteOffset =
+          rewriter.createOrFold<arith::MulIOp>(loc, linearOffset, elemByteSize);
+      // Final address = basePtr + byteOffset
+      Value finalAddrI64 = rewriter.createOrFold<arith::AddIOp>(
+          loc, basePtr,
+          getValueOrCreateCastToIndexLike(rewriter, loc, rewriter.getI64Type(),
+                                          byteOffset));
+      // Convert base pointer (i64) to LLVM pointer type.
+      Value finalPtrLLVM =
+          LLVM::IntToPtrOp::create(rewriter, loc, ptrTypeLLVM, finalAddrI64);
+      if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
+        Value src = adaptor.getValue();
+        // If store value is a scalar, get value from op instead of adaptor.
+        // Adaptor might have optimized away single element vector
+        if (src.getType().isIntOrFloat()) {
+          src = op.getValue();
+        }
+        VectorType srcVecTy = dyn_cast<VectorType>(src.getType());
+        if (!srcVecTy)
+          return rewriter.notifyMatchFailure(
+              op, "Expected store value to be a vector type.");
+        // Get flat vector type of integer type with matching element bit size.
+        VectorType newSrcVecTy =
+            encodeVectorTypeTo(srcVecTy, rewriter.getIntegerType(elemBitSize));
+        if (srcVecTy != newSrcVecTy)
+          src = vector::BitCastOp::create(rewriter, loc, newSrcVecTy, src);
+        auto storeCacheControl =
+            translateStoreXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
+        rewriter.replaceOpWithNewOp<xevm::BlockStoreOp>(
+            op, finalPtrLLVM, src,
+            xevm::StoreCacheControlAttr::get(ctxt, storeCacheControl));
+      } else if constexpr (std::is_same_v<OpType, xegpu::LoadNdOp>) {
+        auto loadCacheControl =
+            translateLoadXeGPUCacheHint(op.getL1Hint(), op.getL3Hint());
+        VectorType resTy = cast<VectorType>(op.getValue().getType());
+        VectorType loadedTy =
+            encodeVectorTypeTo(resTy, rewriter.getIntegerType(elemBitSize));
+        Value load = xevm::BlockLoadOp::create(
+            rewriter, loc, loadedTy, finalPtrLLVM,
+            xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
+        if (loadedTy != resTy)
+          load = vector::BitCastOp::create(rewriter, loc, resTy, load);
+        rewriter.replaceOp(op, load);
+      } else {
+        return rewriter.notifyMatchFailure(
+            op, "Unsupported operation: xegpu.prefetch_nd with tensor "
+                "descriptor rank == 1");
       }
     }
     return success();
