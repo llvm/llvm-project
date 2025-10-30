@@ -949,7 +949,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             path = (
                 cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
             )
-            executable = lit.util.which(args[0], shenv.env["PATH"])
+            executable = lit.util.which(args[0], path)
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 

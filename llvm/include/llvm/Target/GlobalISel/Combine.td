@@ -1013,9 +1013,17 @@ def extract_vec_elt_combines : GICombineGroup<[
 def funnel_shift_from_or_shift : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_OR):$root,
-    [{ return Helper.matchOrShiftToFunnelShift(*${root}, ${info}); }]),
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, false, ${info}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
 >;
+
+def funnel_shift_from_or_shift_constants_are_legal : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_OR):$root,
+    [{ return Helper.matchOrShiftToFunnelShift(*${root}, true, ${info}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${info}); }])
+>;
+
 
 def funnel_shift_to_rotate : GICombineRule<
   (defs root:$root),
