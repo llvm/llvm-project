@@ -3533,6 +3533,19 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   return Values;
 }
 
+static int MCPUHelp() {
+  if (!TripleName.empty()) {
+    std::string Error;
+    const Target *DummyTarget = TargetRegistry::lookupTarget(TripleName, Error);
+    if (!DummyTarget) {
+      outs() << Error << '\n';
+      return 2;
+    }
+    DummyTarget->createMCSubtargetInfo(TripleName, MCPU, "");
+  }
+  return 0;
+}
+
 static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
   MachOOpt = true;
   FullLeadingAddr = true;
@@ -3825,6 +3838,10 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
   if (DisassembleAll || PrintSource || PrintLines || TracebackTable ||
       !DisassembleSymbols.empty())
     Disassemble = true;
+
+  if (!Disassemble && MCPU == "help") {
+    return MCPUHelp();
+  }
 
   if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
