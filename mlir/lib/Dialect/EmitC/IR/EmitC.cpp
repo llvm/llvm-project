@@ -845,7 +845,8 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
                                SmallVectorImpl<RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor());
+    regions.push_back(
+        RegionSuccessor(getOperation(), getOperation()->getResults()));
     return;
   }
 
@@ -854,7 +855,8 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // Don't consider the else region if it is empty.
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(RegionSuccessor());
+    regions.push_back(
+        RegionSuccessor(getOperation(), getOperation()->getResults()));
   else
     regions.push_back(RegionSuccessor(elseRegion));
 }
@@ -871,7 +873,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back();
+      regions.emplace_back(getOperation(), getOperation()->getResults());
   }
 }
 

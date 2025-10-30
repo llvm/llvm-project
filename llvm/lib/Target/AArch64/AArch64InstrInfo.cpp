@@ -122,7 +122,7 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     NumBytes = Desc.getSize() ? Desc.getSize() : 4;
 
     const auto *MFI = MF->getInfo<AArch64FunctionInfo>();
-    if (!MFI->shouldSignReturnAddress(MF))
+    if (!MFI->shouldSignReturnAddress(*MF))
       return NumBytes;
 
     const auto &STI = MF->getSubtarget<AArch64Subtarget>();

@@ -216,7 +216,6 @@ static void HandleUnsupportedAnnotationKinds(GlobalVariable &GVar,
   }
   LLVM_DEBUG(dbgs() << "Skip annotation for " << GVar.getName() << " due to "
                     << Reason << ".\n");
-  return;
 }
 
 struct AllocMatchInfo {

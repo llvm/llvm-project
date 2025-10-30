@@ -949,7 +949,8 @@ void CheckHelper::CheckObjectEntity(
             "!DIR$ IGNORE_TKR(R) may not apply in an ELEMENTAL procedure"_err_en_US);
       }
       if (IsPassedViaDescriptor(symbol)) {
-        if (IsAllocatableOrObjectPointer(&symbol)) {
+        if (IsAllocatableOrObjectPointer(&symbol) &&
+            !ignoreTKR.test(common::IgnoreTKR::Pointer)) {
           if (inExplicitExternalInterface) {
             Warn(common::UsageWarning::IgnoreTKRUsage,
                 "!DIR$ IGNORE_TKR should not apply to an allocatable or pointer"_warn_en_US);

@@ -16,12 +16,6 @@
 /// uniformity. And every instruction that's downstream and cares about dynamic
 /// uniformity must be convergent (and isel will introduce v_readfirstlane for
 /// them if their operands can't be proven statically uniform).
-///
-/// This pass is implemented as a ModulePass because intrinsic declarations
-/// exist at the module scope, allowing us to skip processing entirely if no
-/// declarations are present and to traverse their user lists directly when
-/// they are. A FunctionPass would instead require scanning every instruction
-/// in every function to find relevant intrinsics, which is far less efficient.
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -97,14 +91,12 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
           Tracker[NotOp] = true; // NOT preserves uniformity
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
-          ICmp->eraseFromParent();
           Changed = true;
         } else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
           // Case: (icmp ne %ballot, 0) -> %ballot_arg
           LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
                             << *Src << '\n');
           ICmp->replaceAllUsesWith(Src);
-          ICmp->eraseFromParent();
           Changed = true;
         }
       }
@@ -120,15 +112,17 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   return false;
 }
 
-/// Iterates over intrinsic declarations in the module to optimize their uses.
-static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
+/// Iterates over intrinsic calls in the Function to optimize.
+static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
   bool IsChanged = false;
   ValueMap<const Value *, bool> Tracker;
 
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  for (Function &F : M) {
-    switch (F.getIntrinsicID()) {
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
+    auto *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      continue;
+
+    switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_permlane64:
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
@@ -137,23 +131,61 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
     default:
       continue;
     }
-
-    for (User *U : make_early_inc_range(F.users())) {
-      auto *II = cast<IntrinsicInst>(U);
-      Function *ParentF = II->getFunction();
-      const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
-      IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
-    }
+    IsChanged |= optimizeUniformIntrinsic(*II, UI, Tracker);
   }
   return IsChanged;
 }
 
 PreservedAnalyses
-AMDGPUUniformIntrinsicCombinePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!runUniformIntrinsicCombine(M, AM))
+AMDGPUUniformIntrinsicCombinePass::run(Function &F,
+                                       FunctionAnalysisManager &AM) {
+  const auto &UI = AM.getResult<UniformityInfoAnalysis>(F);
+  if (!runUniformIntrinsicCombine(F, UI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<UniformityInfoAnalysis>();
   return PA;
+}
+
+namespace {
+class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
+public:
+  static char ID;
+  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {
+    initializeAMDGPUUniformIntrinsicCombineLegacyPass(
+        *PassRegistry::getPassRegistry());
+  }
+
+private:
+  bool runOnFunction(Function &F) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+  }
+};
+} // namespace
+
+char AMDGPUUniformIntrinsicCombineLegacy::ID = 0;
+char &llvm::AMDGPUUniformIntrinsicCombineLegacyPassID =
+    AMDGPUUniformIntrinsicCombineLegacy::ID;
+
+bool AMDGPUUniformIntrinsicCombineLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+  const UniformityInfo &UI =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  return runUniformIntrinsicCombine(F, UI);
+}
+
+INITIALIZE_PASS_BEGIN(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
+                      "AMDGPU Uniform Intrinsic Combine", false, false)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
+                    "AMDGPU Uniform Intrinsic Combine", false, false)
+
+FunctionPass *llvm::createAMDGPUUniformIntrinsicCombineLegacyPass() {
+  return new AMDGPUUniformIntrinsicCombineLegacy();
 }

@@ -209,10 +209,15 @@ namespace llvm {
     /// \param NumExtraInhabitants The number of extra inhabitants of the type.
     /// An extra inhabitant is a bit pattern that does not represent a valid
     /// value for instances of a given type. This is used by the Swift language.
+    /// \param DataSizeInBits Optionally describes the number of bits used by
+    /// the value of the object when this is less than the storage size of
+    /// SizeInBits. Default value of zero indicates the object value and storage
+    /// sizes are equal.
     LLVM_ABI DIBasicType *
     createBasicType(StringRef Name, uint64_t SizeInBits, unsigned Encoding,
                     DINode::DIFlags Flags = DINode::FlagZero,
-                    uint32_t NumExtraInhabitants = 0);
+                    uint32_t NumExtraInhabitants = 0,
+                    uint32_t DataSizeInBits = 0);
 
     /// Create debugging information entry for a binary fixed-point type.
     /// \param Name        Type name.

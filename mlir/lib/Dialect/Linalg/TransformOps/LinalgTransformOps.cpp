@@ -2464,6 +2464,8 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(targetOp);
     auto maybePadOps = rewriteAsPaddedOp(
         rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
     if (failed(maybePadOps)) {

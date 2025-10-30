@@ -7543,12 +7543,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 VPIRMetadata(*Load, LVer), I->getDebugLoc());
+                                 Load->getAlign(), VPIRMetadata(*Load, LVer),
+                                 I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, VPIRMetadata(*Store, LVer),
-                                I->getDebugLoc());
+                                Reverse, Store->getAlign(),
+                                VPIRMetadata(*Store, LVer), I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also

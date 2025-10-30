@@ -77,6 +77,24 @@ func.func @memref_expand(%m: memref<?xf32>, %sz: index) -> (index, index) {
 
 // -----
 
+//       CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-LABEL: func @memref_collapse(
+//  CHECK-SAME:     %[[sz0:.*]]: index
+//   CHECK-DAG:   %[[c2:.*]] = arith.constant 2 : index
+//   CHECK-DAG:   %[[c12:.*]] = arith.constant 12 : index
+//       CHECK:   %[[dim:.*]] = memref.dim %{{.*}}, %[[c2]] : memref<3x4x?x2xf32>
+//       CHECK:   %[[mul:.*]] = affine.apply #[[$MAP]]()[%[[dim]]]
+//       CHECK:   return %[[c12]], %[[mul]]
+func.func @memref_collapse(%sz0: index) -> (index, index) {
+  %0 = memref.alloc(%sz0) : memref<3x4x?x2xf32>
+  %1 = memref.collapse_shape %0 [[0, 1], [2, 3]] : memref<3x4x?x2xf32> into memref<12x?xf32>
+  %2 = "test.reify_bound"(%1) {dim = 0} : (memref<12x?xf32>) -> (index)
+  %3 = "test.reify_bound"(%1) {dim = 1} : (memref<12x?xf32>) -> (index)
+  return %2, %3 : index, index
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_get_global(
 //       CHECK:   %[[c4:.*]] = arith.constant 4 : index
 //       CHECK:   return %[[c4]]

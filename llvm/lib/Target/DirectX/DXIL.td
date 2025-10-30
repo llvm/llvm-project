@@ -1058,6 +1058,16 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Max>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
+    IntrinSelect<int_dx_wave_reduce_min,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Min>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_reduce_umin,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Min>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
   ];
 
   let arguments = [OverloadTy, Int8Ty, Int8Ty];
