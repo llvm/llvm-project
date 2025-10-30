@@ -14,7 +14,9 @@ struct S {
 
   void i(this S* self, const char*) __attribute__((nonnull(1)));
 
-  void j(this S* self, const char*) __attribute__((nonnull(3))); // \
+  void j(this S* self, const char*) __attribute__((nonnull(2)));
+
+  void k(this S* self, const char*) __attribute__((nonnull(3))); // \
       expected-error{{'nonnull' attribute parameter 1 is out of bounds}}
 };
 
