@@ -39,12 +39,12 @@ void XeGPUTransformDialectExtension::init() {
 
   registerTransformOps<
 #define GET_OP_LIST
-#include <mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc>
+#include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc"
       >();
 }
 
 #define GET_OP_CLASSES
-#include <mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc>
+#include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.cpp.inc"
 
 void mlir::xegpu::registerTransformDialectExtension(DialectRegistry &registry) {
   registry.addExtensions<XeGPUTransformDialectExtension>();
@@ -61,10 +61,9 @@ static DiagnosedSilenceableFailure convertMixedValuesToInt(
     if (auto attr = dyn_cast<Attribute>(ofr)) {
       if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
         result.push_back(intAttr.getInt());
-      } else {
-        return transformOp.emitDefiniteFailure() << "expected IntegerAttr";
+        continue;
       }
-      continue;
+      return transformOp.emitDefiniteFailure() << "expected IntegerAttr";
     }
 
     // Transform param case.
