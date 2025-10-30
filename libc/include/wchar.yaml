@@ -1,7 +1,7 @@
 header: wchar.h
 header_template: wchar.h.def
 macros:
-  - macro_name: NULL
+  - macro_name: "NULL"
     macro_header: null-macro.h
 types:
   - type_name: FILE
@@ -188,8 +188,8 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
-      - type: wchar_t *__restrict 
+    arguments:
+      - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
   - name: wmemmove
@@ -212,7 +212,7 @@ functions:
     standards:
       - stdc
     return_type: wchar_t *
-    arguments: 
+    arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
   - name: wcslcat
