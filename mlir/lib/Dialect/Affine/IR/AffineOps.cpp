@@ -2637,7 +2637,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
     // results.
     return forOp.getInits();
   }
-  SmallVector<OpFoldResult> replacements;
+  SmallVector<OpFoldResult, 4> replacements;
   auto yieldOp = cast<AffineYieldOp>(forOp.getBody()->getTerminator());
   auto iterArgs = forOp.getRegionIterArgs();
   bool hasValDefinedOutsideLoop = false;
@@ -2675,7 +2675,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
   // out of order.
   if (tripCount.has_value() && tripCount.value() >= 2 && iterArgsNotInOrder)
     return {};
-  return replacements;
+  return llvm::to_vector(replacements);
 }
 
 /// Canonicalize the bounds of the given loop.
