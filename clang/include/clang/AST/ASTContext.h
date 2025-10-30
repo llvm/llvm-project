@@ -3485,12 +3485,7 @@ public:
                                          bool IsTypeAware);
   bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const;
 
-  enum OperatorDeleteKind {
-    Regular,
-    GlobalRegular,
-    Array,
-    ArrayGlobal
-  };
+  enum OperatorDeleteKind { Regular, GlobalRegular, Array, ArrayGlobal };
 
   void addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
                                  FunctionDecl *OperatorDelete,

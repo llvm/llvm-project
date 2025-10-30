@@ -92,7 +92,7 @@ public:
 
   /// A virtual destructor's operator array delete has been resolved.
   virtual void ResolvedOperatorArrayDelete(const CXXDestructorDecl *DD,
-                                          const FunctionDecl *ArrayDelete) {}
+                                           const FunctionDecl *ArrayDelete) {}
 
   /// A virtual destructor's operator global array delete has been resolved.
   virtual void

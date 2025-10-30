@@ -1516,8 +1516,7 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
         CGF.createBasicBlock("dtor.call_glob_delete_after_array_destroy");
     llvm::BasicBlock *ClassDelete =
         CGF.createBasicBlock("dtor.call_class_delete_after_array_destroy");
-    CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete,
-                             GlobDelete);
+    CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
     CGF.EmitBlock(ClassDelete);
     CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
                        CGF.getContext().getCanonicalTagType(ClassDecl));

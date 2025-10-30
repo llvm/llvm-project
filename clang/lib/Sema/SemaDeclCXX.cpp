@@ -11210,10 +11210,9 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
                                                     VDeleteName);
           Destructor->setGlobalOperatorArrayDelete(GlobalArrOperatorDelete);
         } else if (!ArrOperatorDelete) {
-          ArrOperatorDelete =
-              FindDeallocationFunctionForDestructor(Loc, RD, /*Diagnose*/ false,
-                                                    /*LookForGlobal*/ true,
-                                                    VDeleteName);
+          ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+              Loc, RD, /*Diagnose*/ false,
+              /*LookForGlobal*/ true, VDeleteName);
         }
         assert(ArrOperatorDelete &&
                "Should've found at least global array delete");

@@ -13368,8 +13368,9 @@ bool ASTContext::dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
   return false;
 }
 
-FunctionDecl *ASTContext::getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
-                                        OperatorDeleteKind K) const {
+FunctionDecl *
+ASTContext::getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                      OperatorDeleteKind K) const {
   const CXXDestructorDecl *Canon = Dtor->getCanonicalDecl();
   switch (K) {
   case OperatorDeleteKind::Regular:
