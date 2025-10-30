@@ -540,10 +540,6 @@ fi
             if self.check_llc_failure():
                 print("Found BackEnd Crash")
                 return FailureType.BackEnd
-            elif os.path.exists(self.ir_file):
-                # clean up the IR file if we generated it, but won't use it.
-                print(f"clean up {self.ir_file}, since we can't repro w/ llc")
-                os.remove(self.ir_file)
 
     def extract_crashing_ir(self):
         """
