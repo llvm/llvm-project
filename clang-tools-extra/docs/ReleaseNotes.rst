@@ -70,6 +70,11 @@ Potentially Breaking Changes
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
 
+- :program:`clang-tidy` now displays warnings from all non-system headers by
+  default. Previously, users had to explicitly opt-in to header warnings using
+  `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
+  to an empty string.
+
 Improvements to clangd
 ----------------------
 
@@ -131,6 +136,11 @@ Improvements to clang-tidy
 - The :program:`check_clang_tidy.py` tool now recognizes the ``-std`` argument
   when run over C files. If ``-std`` is not specified, it defaults to
   ``c99-or-later``.
+
+- :program:`clang-tidy` now displays warnings from all non-system headers by
+  default. Previously, users had to explicitly opt-in to header warnings using
+  `-header-filter='.*'`. To disable warnings from non-system, set `-header-filter`
+  to an empty string.
 
 - :program:`clang-tidy` no longer attempts to analyze code from system headers
   by default, greatly improving performance. This behavior is disabled if the
@@ -321,6 +331,11 @@ Changes in existing checks
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
 
+- Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
+  <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
+  by adding a new option `AllowThreadLocal` that suppresses warnings on
+  non-const global variables with thread-local storage duration.
+
 - Improved :doc:`cppcoreguidelines-init-variables
   <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
   insertion location for function pointers with multiple parameters.
@@ -407,7 +422,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` by printing
-  the type of the diagnosed variable.
+  the type of the diagnosed variable and correctly generating fix-it hints for
+  parameter-pack arguments.
 
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
