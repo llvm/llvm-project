@@ -12,14 +12,7 @@ define void @sincos_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 1
 ; CHECK:    store <2 x float> [[TMP4]], ptr [[TMP7:%.*]], align 4
 ; CHECK:    store <2 x float> [[TMP5]], ptr [[TMP9:%.*]], align 4
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[IN_VAL:%.*]])
-; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -55,14 +48,7 @@ define void @sincos_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noali
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
 ; CHECK:    store <2 x double> [[TMP4]], ptr [[TMP7:%.*]], align 8
 ; CHECK:    store <2 x double> [[TMP5]], ptr [[TMP9:%.*]], align 8
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { double, double } @llvm.sincos.f64(double [[IN_VAL:%.*]])
-; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
-; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
-; CHECK:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 8
-; CHECK:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 8
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -91,9 +77,9 @@ define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly 
 ; CHECK-LABEL: define void @predicated_sincos(
 ; CHECK-SAME: float [[X:%.*]], ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) {
 ; CHECK:  [[ENTRY:.*:]]
-; CHECK:  [[VECTOR_BODY1:.*]]:
-; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY1]] ], [ [[INDEX_NEXT:%.*]], %[[IF_THEN2:.*]] ]
+; CHECK:  [[VECTOR_BODY:.*]]:
+; CHECK:  [[VECTOR_BODY1:.*:]]
+; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[IF_THEN1:.*]] ]
 ; CHECK:    [[TMP4:%.*]] = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> [[WIDE_LOAD:%.*]])
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP4]], 0
 ; CHECK:    [[TMP6:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP4]], 1
@@ -107,23 +93,14 @@ define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly 
 ; CHECK:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:  [[PRED_STORE_CONTINUE]]:
 ; CHECK:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
-; CHECK:    br i1 [[TMP12]], label %[[PRED_STORE_IF1:.*]], label %[[IF_THEN2]]
+; CHECK:    br i1 [[TMP12]], label %[[PRED_STORE_IF1:.*]], label %[[IF_THEN1]]
 ; CHECK:  [[PRED_STORE_IF1]]:
 ; CHECK:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
 ; CHECK:    store float [[TMP15]], ptr [[TMP14:%.*]], align 4
 ; CHECK:    [[TMP17:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
 ; CHECK:    store float [[TMP17]], ptr [[TMP16:%.*]], align 4
-; CHECK:    br label %[[IF_THEN2]]
-; CHECK:  [[IF_THEN2]]:
-; CHECK:  [[IF_THEN:.*:]]
-; CHECK:  [[IF_THEN3:.*:]]
-; CHECK:  [[IF_THEN4:.*:]]
-; CHECK:  [[IF_THEN1:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { float, float } @llvm.sincos.f32(float [[IN_VAL:%.*]])
-; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
+; CHECK:    br label %[[IF_THEN1]]
+; CHECK:  [[IF_THEN1]]:
 ; CHECK:  [[IF_MERGE:.*:]]
 ; CHECK:  [[FOR_END:.*:]]
 ;
@@ -167,14 +144,7 @@ define void @modf_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 1
 ; CHECK:    store <2 x float> [[TMP4]], ptr [[TMP7:%.*]], align 4
 ; CHECK:    store <2 x float> [[TMP5]], ptr [[TMP9:%.*]], align 4
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { float, float } @llvm.modf.f32(float [[IN_VAL:%.*]])
-; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -210,14 +180,7 @@ define void @modf_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
 ; CHECK:    store <2 x double> [[TMP4]], ptr [[TMP7:%.*]], align 8
 ; CHECK:    store <2 x double> [[TMP5]], ptr [[TMP9:%.*]], align 8
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { double, double } @llvm.modf.f64(double [[IN_VAL:%.*]])
-; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
-; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
-; CHECK:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 8
-; CHECK:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 8
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -253,14 +216,7 @@ define void @sincospi_f32(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP3]], 1
 ; CHECK:    store <2 x float> [[TMP4]], ptr [[TMP7:%.*]], align 4
 ; CHECK:    store <2 x float> [[TMP5]], ptr [[TMP9:%.*]], align 4
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { float, float } @llvm.sincospi.f32(float [[IN_VAL:%.*]])
-; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { float, float } [[CALL]], 0
-; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { float, float } [[CALL]], 1
-; CHECK:    store float [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 4
-; CHECK:    store float [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 4
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:
@@ -296,14 +252,7 @@ define void @sincospi_f64(ptr noalias %in, ptr noalias writeonly %out_a, ptr noa
 ; CHECK:    [[TMP5:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
 ; CHECK:    store <2 x double> [[TMP4]], ptr [[TMP7:%.*]], align 8
 ; CHECK:    store <2 x double> [[TMP5]], ptr [[TMP9:%.*]], align 8
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
-; CHECK:    [[CALL:%.*]] = tail call { double, double } @llvm.sincospi.f64(double [[IN_VAL:%.*]])
-; CHECK:    [[EXTRACT_A:%.*]] = extractvalue { double, double } [[CALL]], 0
-; CHECK:    [[EXTRACT_B:%.*]] = extractvalue { double, double } [[CALL]], 1
-; CHECK:    store double [[EXTRACT_A]], ptr [[ARRAYIDX2:%.*]], align 8
-; CHECK:    store double [[EXTRACT_B]], ptr [[ARRAYIDX4:%.*]], align 8
 ; CHECK:  [[EXIT:.*:]]
 ;
 entry:

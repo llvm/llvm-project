@@ -69,7 +69,6 @@ def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
-                                      fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
                                       shuffle_to_extract,
@@ -341,7 +340,7 @@ def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
-                        lower_vector_fcmp, form_truncstore,
+                        lower_vector_fcmp, form_truncstore, fconstant_to_constant,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,

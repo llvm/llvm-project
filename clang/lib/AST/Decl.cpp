@@ -3552,6 +3552,53 @@ void FunctionDecl::setIsTypeAwareOperatorNewOrDelete(bool IsTypeAware) {
   getASTContext().setIsTypeAwareOperatorNewOrDelete(this, IsTypeAware);
 }
 
+UsualDeleteParams FunctionDecl::getUsualDeleteParams() const {
+  UsualDeleteParams Params;
+
+  // This function should only be called for operator delete declarations.
+  assert(getDeclName().isAnyOperatorDelete());
+  if (!getDeclName().isAnyOperatorDelete())
+    return Params;
+
+  const FunctionProtoType *FPT = getType()->castAs<FunctionProtoType>();
+  auto AI = FPT->param_type_begin(), AE = FPT->param_type_end();
+
+  if (isTypeAwareOperatorNewOrDelete()) {
+    Params.TypeAwareDelete = TypeAwareAllocationMode::Yes;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // The first argument after the type-identity parameter (if any) is
+  // always a void* (or C* for a destroying operator delete for class
+  // type C).
+  ++AI;
+
+  // The next parameter may be a std::destroying_delete_t.
+  if (isDestroyingOperatorDelete()) {
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+    Params.DestroyingDelete = true;
+    assert(AI != AE);
+    ++AI;
+  }
+
+  // Figure out what other parameters we should be implicitly passing.
+  if (AI != AE && (*AI)->isIntegerType()) {
+    Params.Size = true;
+    ++AI;
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+
+  if (AI != AE && (*AI)->isAlignValT()) {
+    Params.Alignment = AlignedAllocationMode::Yes;
+    ++AI;
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
+
+  assert(AI == AE && "unexpected usual deallocation function parameter");
+  return Params;
+}
+
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {
   return getDeclLanguageLinkage(*this);
 }

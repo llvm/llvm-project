@@ -111,22 +111,20 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB2_8
 ; GFX11-NEXT:  ; %bb.5: ; %bb18.preheader
 ; GFX11-NEXT:    s_load_b128 s[28:31], s[16:17], 0x44
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_mul_hi_u32 s0, s29, s28
-; GFX11-NEXT:    s_mul_i32 s1, s29, s28
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_alignbit_b32 v0, s0, s1, 1
-; GFX11-NEXT:    s_mov_b32 s1, 0
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_mul_hi_u32 s1, s29, s28
+; GFX11-NEXT:    s_mul_i32 s0, s29, s28
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b64 s[0:1], s[0:1], 1
+; GFX11-NEXT:    s_mov_b32 s1, 0
 ; GFX11-NEXT:    s_or_b32 s0, s0, 1
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, s30
-; GFX11-NEXT:    s_mul_i32 s0, s0, s22
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mul_i32 s0, s0, s22
 ; GFX11-NEXT:    s_mul_i32 s0, s0, s20
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s0, s19, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshl_b64 s[20:21], s[0:1], 1
 ; GFX11-NEXT:    s_mov_b32 s0, s1
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[20:21]

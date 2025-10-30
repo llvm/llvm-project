@@ -1516,7 +1516,8 @@ class MIMG_IntersectRay_Helper<bit Is64, bit IsA16, bit isDual, bit isBVH8> {
   int num_addrs = !if(isBVH8, 11, !if(Is64, !if(IsA16, 9, 12), !if(IsA16, 8, 11)));
   RegisterOperand RegClass = MIMGAddrSize<num_addrs, 0>.RegClass;
 
-  defvar Size = !cast<SIRegisterClass>(RegClass.RegClass).Size;
+  defvar Size = !cast<SIRegisterClassLike>(RegClass.RegClass).Size;
+
   int VAddrDwords = !srl(Size, 5);
 
   int GFX11PlusNSAAddrs = !if(IsA16, 4, 5);

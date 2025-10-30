@@ -846,6 +846,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       Fn->addFnAttr(llvm::Attribute::SanitizeNumericalStability);
     if (SanOpts.hasOneOf(SanitizerKind::Memory | SanitizerKind::KernelMemory))
       Fn->addFnAttr(llvm::Attribute::SanitizeMemory);
+    if (SanOpts.has(SanitizerKind::AllocToken))
+      Fn->addFnAttr(llvm::Attribute::SanitizeAllocToken);
   }
   if (SanOpts.has(SanitizerKind::SafeStack))
     Fn->addFnAttr(llvm::Attribute::SafeStack);

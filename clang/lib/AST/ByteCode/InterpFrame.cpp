@@ -231,6 +231,8 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   if (auto Pt = Params.find(Off); Pt != Params.end())
     return Pointer(reinterpret_cast<Block *>(Pt->second.get()));
 
+  assert(!isBottomFrame());
+
   // Allocate memory to store the parameter and the block metadata.
   const auto &Desc = Func->getParamDescriptor(Off);
   size_t BlockSize = sizeof(Block) + Desc.second->getAllocSize();

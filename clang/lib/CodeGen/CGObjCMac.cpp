@@ -5367,7 +5367,7 @@ IvarLayoutBuilder::buildBitmap(CGObjCCommonMac &CGObjC,
 
     // Ignore scan requests that don't start at an even multiple of the
     // word size.  We can't encode them.
-    if ((beginOfScan % WordSize) != 0)
+    if (!beginOfScan.isMultipleOf(WordSize))
       continue;
 
     // Ignore scan requests that start before the instance start.

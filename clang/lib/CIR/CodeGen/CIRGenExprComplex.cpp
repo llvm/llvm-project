@@ -316,8 +316,7 @@ public:
   mlir::Value VisitVAArgExpr(VAArgExpr *e);
 
   mlir::Value VisitAtomicExpr(AtomicExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitAtomicExpr");
-    return {};
+    return cgf.emitAtomicExpr(e).getComplexValue();
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {

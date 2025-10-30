@@ -417,7 +417,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     mlir::Type pointeeType = convertType(elemTy);
 
-    resultType = builder.getPointerTo(pointeeType);
+    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
     break;
   }
 

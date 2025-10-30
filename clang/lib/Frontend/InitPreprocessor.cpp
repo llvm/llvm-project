@@ -742,7 +742,10 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_impl_coroutine", "201902L");
     Builder.defineMacro("__cpp_designated_initializers", "201707L");
     Builder.defineMacro("__cpp_impl_three_way_comparison", "201907L");
-    //Builder.defineMacro("__cpp_modules", "201907L");
+    // Intentionally to set __cpp_modules to 1.
+    // See https://github.com/llvm/llvm-project/issues/71364 for details.
+    // Builder.defineMacro("__cpp_modules", "201907L");
+    Builder.defineMacro("__cpp_modules", "1");
     Builder.defineMacro("__cpp_using_enum", "201907L");
   }
   // C++23 features.
@@ -1527,6 +1530,8 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SANITIZE_HWADDRESS__");
   if (LangOpts.Sanitize.has(SanitizerKind::Thread))
     Builder.defineMacro("__SANITIZE_THREAD__");
+  if (LangOpts.Sanitize.has(SanitizerKind::AllocToken))
+    Builder.defineMacro("__SANITIZE_ALLOC_TOKEN__");
 
   // Target OS macro definitions.
   if (PPOpts.DefineTargetOSMacros) {

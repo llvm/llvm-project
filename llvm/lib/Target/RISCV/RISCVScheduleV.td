@@ -67,42 +67,41 @@ multiclass LMULSEWWriteResMXSEW<string name, list<ProcResourceKind> resources,
 // ReleaseAtCycles predCycles if the SchedPredicate Pred is true, otherwise has
 // Latency noPredLat and ReleaseAtCycles noPredCycles. The WorstCase SchedWrite
 // is created similarly if IsWorstCase is true.
-multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
-                                 list<ProcResourceKind> resources,
-                                 int predLat, list<int> predAcquireCycles,
-                                 list<int> predReleaseCycles, int noPredLat,
-                                 list<int> noPredAcquireCycles,
-                                 list<int> noPredReleaseCycles,
-                                 string mx, bit IsWorstCase> {
-  defvar nameMX = name # "_" # mx;
-
+multiclass LMULWriteResVariantImpl<string name, string writeResName, SchedPredicateBase Pred,
+                                   list<ProcResourceKind> predResources,
+                                   int predLat, list<int> predAcquireCycles,
+                                   list<int> predReleaseCycles,
+                                   list<ProcResourceKind> noPredResources,
+                                   int noPredLat, list<int> noPredAcquireCycles,
+                                   list<int> noPredReleaseCycles,
+                                   bit IsWorstCase> {
   // Define the different behaviors
-  def nameMX # "_Pred" : SchedWriteRes<resources>{
+  def writeResName # "_Pred" : SchedWriteRes<predResources>{
     let Latency = predLat;
     let AcquireAtCycles = predAcquireCycles;
     let ReleaseAtCycles = predReleaseCycles;
   }
-  def nameMX # "_NoPred" : SchedWriteRes<resources> {
+  def writeResName # "_NoPred" : SchedWriteRes<noPredResources> {
     let Latency = noPredLat;
     let AcquireAtCycles = noPredAcquireCycles;
     let ReleaseAtCycles = noPredReleaseCycles;
   }
 
   // Define SchedVars
-  def nameMX # PredSchedVar
-      : SchedVar<Pred, [!cast<SchedWriteRes>(NAME # nameMX # "_Pred")]>;
-  def nameMX # NoPredSchedVar
-      : SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # nameMX #"_NoPred")]>;
+  def writeResName # PredSchedVar
+      : SchedVar<Pred, [!cast<SchedWriteRes>(NAME # writeResName # "_Pred")]>;
+  def writeResName # NoPredSchedVar
+      : SchedVar<NoSchedPred, [!cast<SchedWriteRes>(NAME # writeResName #"_NoPred")]>;
   // Allow multiclass to refer to SchedVars -- need to have NAME prefix.
-  defvar PredSchedVar = !cast<SchedVar>(NAME # nameMX # PredSchedVar);
-  defvar NoPredSchedVar = !cast<SchedVar>(NAME # nameMX # NoPredSchedVar);
+  defvar PredSchedVar = !cast<SchedVar>(NAME # writeResName # PredSchedVar);
+  defvar NoPredSchedVar = !cast<SchedVar>(NAME # writeResName # NoPredSchedVar);
 
   // Tie behavior to predicate
-  def NAME # nameMX # "_Variant"
+  def NAME # writeResName # "_Variant"
       : SchedWriteVariant<[PredSchedVar, NoPredSchedVar]>;
   def : SchedAlias<
-    !cast<SchedReadWrite>(nameMX),
-    !cast<SchedReadWrite>(NAME # nameMX # "_Variant")>;
+    !cast<SchedReadWrite>(writeResName),
+    !cast<SchedReadWrite>(NAME # writeResName # "_Variant")>;
 
   if IsWorstCase then {
     def NAME # name # "_WorstCase_Variant"
@@ -111,6 +110,22 @@ multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
       !cast<SchedReadWrite>(name # "_WorstCase"),
       !cast<SchedReadWrite>(NAME # name # "_WorstCase_Variant")>;
   }
+}
+
+multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
+                                 list<ProcResourceKind> predResources,
+                                 int predLat, list<int> predAcquireCycles,
+                                 list<int> predReleaseCycles,
+                                 list<ProcResourceKind> noPredResources,
+                                 int noPredLat, list<int> noPredAcquireCycles,
+                                 list<int> noPredReleaseCycles,
+                                 string mx, bit IsWorstCase> {
+  defm "" : LMULWriteResVariantImpl<name, name # "_" # mx, Pred, predResources,
+                                    predLat, predAcquireCycles,
+                                    predReleaseCycles, noPredResources,
+                                    noPredLat, noPredAcquireCycles,
+                                    noPredReleaseCycles,
+                                    IsWorstCase>;
 }
 
 // Define multiclasses to define SchedWrite, SchedRead,  WriteRes, and

@@ -87,6 +87,7 @@ Clang-Tidy Checks
    :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
+   :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
@@ -173,7 +174,6 @@ Clang-Tidy Checks
    :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
    :doc:`bugprone-virtual-near-miss <bugprone/virtual-near-miss>`, "Yes"
    :doc:`cert-dcl58-cpp <cert/dcl58-cpp>`,
-   :doc:`cert-env33-c <cert/env33-c>`,
    :doc:`cert-err33-c <cert/err33-c>`,
    :doc:`cert-err60-cpp <cert/err60-cpp>`,
    :doc:`cert-flp30-c <cert/flp30-c>`,
@@ -222,6 +222,7 @@ Clang-Tidy Checks
    :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`,
    :doc:`fuchsia-overloaded-operator <fuchsia/overloaded-operator>`,
    :doc:`fuchsia-statically-constructed-objects <fuchsia/statically-constructed-objects>`,
+   :doc:`fuchsia-temporary-objects <fuchsia/temporary-objects>`,
    :doc:`fuchsia-trailing-return <fuchsia/trailing-return>`,
    :doc:`fuchsia-virtual-inheritance <fuchsia/virtual-inheritance>`,
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
@@ -371,7 +372,7 @@ Clang-Tidy Checks
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
    :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"
    :doc:`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>`,
-   :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
+   :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`readability-const-return-type <readability/const-return-type>`, "Yes"
    :doc:`readability-container-contains <readability/container-contains>`, "Yes"
    :doc:`readability-container-data-pointer <readability/container-data-pointer>`, "Yes"
@@ -404,6 +405,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-function-ptr-dereference <readability/redundant-function-ptr-dereference>`, "Yes"
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
+   :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-smartptr-get <readability/redundant-smartptr-get>`, "Yes"
    :doc:`readability-redundant-string-cstr <readability/redundant-string-cstr>`, "Yes"
@@ -440,6 +442,7 @@ Check aliases
    :doc:`cert-dcl54-cpp <cert/dcl54-cpp>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
    :doc:`cert-dcl59-cpp <cert/dcl59-cpp>`, :doc:`google-build-namespaces <google/build-namespaces>`,
    :doc:`cert-err09-cpp <cert/err09-cpp>`, :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
+   :doc:`cert-env33-c <cert/env33-c>`, :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`cert-err34-c <cert/err34-c>`, :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`cert-err52-cpp <cert/err52-cpp>`, :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`cert-err58-cpp <cert/err58-cpp>`, :doc:`bugprone-throwing-static-initialization <bugprone/throwing-static-initialization>`,
@@ -568,12 +571,12 @@ Check aliases
    :doc:`cppcoreguidelines-non-private-member-variables-in-classes <cppcoreguidelines/non-private-member-variables-in-classes>`, :doc:`misc-non-private-member-variables-in-classes <misc/non-private-member-variables-in-classes>`,
    :doc:`cppcoreguidelines-use-default-member-init <cppcoreguidelines/use-default-member-init>`, :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`google-build-namespaces <google/build-namespaces>`,
-   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
+   :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
    :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
-   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`,
+   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,

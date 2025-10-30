@@ -36,21 +36,9 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[TMP14]])
-; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
-; CHECK:       while.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[RED_NEXT]] = add i32 [[RED]], [[VAL]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       while.end.loopexit:
-; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[WHILE_BODY]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP19]]
 ;
 ; CHECK-IN-LOOP-LABEL: @add_reduction_i32(
 ; CHECK-IN-LOOP-NEXT:  entry:
@@ -81,21 +69,9 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[TMP19:%.*]] = xor i1 [[TMP18]], true
 ; CHECK-IN-LOOP-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-IN-LOOP:       middle.block:
-; CHECK-IN-LOOP-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; CHECK-IN-LOOP:       scalar.ph:
 ; CHECK-IN-LOOP-NEXT:    br label [[WHILE_BODY:%.*]]
-; CHECK-IN-LOOP:       while.body:
-; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
-; CHECK-IN-LOOP-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
-; CHECK-IN-LOOP-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-IN-LOOP-NEXT:    [[RED_NEXT]] = add i32 [[RED]], [[VAL]]
-; CHECK-IN-LOOP-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; CHECK-IN-LOOP-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; CHECK-IN-LOOP-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-IN-LOOP:       while.end.loopexit:
-; CHECK-IN-LOOP-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi i32 [ [[RED_NEXT]], [[WHILE_BODY]] ], [ [[TMP15]], [[MIDDLE_BLOCK]] ]
-; CHECK-IN-LOOP-NEXT:    ret i32 [[RED_NEXT_LCSSA]]
+; CHECK-IN-LOOP-NEXT:    ret i32 [[TMP15]]
 ;
 entry:
   br label %while.body
@@ -141,23 +117,11 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP17]], true
-; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
-; CHECK:       while.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[PTR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[RED_NEXT]] = fadd float [[RED]], [[VAL]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       while.end.loopexit:
-; CHECK-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi float [ [[RED_NEXT]], [[WHILE_BODY]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret float [[RED_NEXT_LCSSA]]
+; CHECK-NEXT:    ret float [[TMP14]]
 ;
 ; CHECK-IN-LOOP-LABEL: @add_reduction_f32(
 ; CHECK-IN-LOOP-NEXT:  entry:
@@ -185,23 +149,11 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX1]], i64 [[TMP9]])
 ; CHECK-IN-LOOP-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-IN-LOOP-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP17]], true
-; CHECK-IN-LOOP-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-IN-LOOP-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-IN-LOOP:       middle.block:
-; CHECK-IN-LOOP-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
-; CHECK-IN-LOOP:       scalar.ph:
 ; CHECK-IN-LOOP-NEXT:    br label [[WHILE_BODY:%.*]]
-; CHECK-IN-LOOP:       while.body:
-; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
-; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
-; CHECK-IN-LOOP-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[PTR]], i64 [[INDEX]]
-; CHECK-IN-LOOP-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
-; CHECK-IN-LOOP-NEXT:    [[RED_NEXT]] = fadd float [[RED]], [[VAL]]
-; CHECK-IN-LOOP-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
-; CHECK-IN-LOOP-NEXT:    [[CMP10:%.*]] = icmp ult i64 [[INDEX_NEXT]], [[N]]
-; CHECK-IN-LOOP-NEXT:    br i1 [[CMP10]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-IN-LOOP:       while.end.loopexit:
-; CHECK-IN-LOOP-NEXT:    [[RED_NEXT_LCSSA:%.*]] = phi float [ [[RED_NEXT]], [[WHILE_BODY]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
-; CHECK-IN-LOOP-NEXT:    ret float [[RED_NEXT_LCSSA]]
+; CHECK-IN-LOOP-NEXT:    ret float [[TMP14]]
 ;
 entry:
   br label %while.body
@@ -251,32 +203,12 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = xor i1 [[TMP16]], true
-; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP25:%.*]] = call i32 @llvm.vector.reduce.xor.nxv4i32(<vscale x 4 x i32> [[TMP20]])
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 7, [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP26]], 5
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[RDX]], [[TMP27]]
-; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       for.inc:
-; CHECK-NEXT:    [[RES]] = phi i32 [ [[RDX]], [[FOR_BODY]] ], [ [[XOR]], [[IF_THEN]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[RES_LCSSA:%.*]] = phi i32 [ [[RES]], [[FOR_INC]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[RES_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP25]]
 ;
 ; CHECK-IN-LOOP-LABEL: @cond_xor_reduction(
 ; CHECK-IN-LOOP-NEXT:  entry:
@@ -308,31 +240,11 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[INDEX]], i64 [[TMP9]])
 ; CHECK-IN-LOOP-NEXT:    [[TMP22:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-IN-LOOP-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP22]], true
-; CHECK-IN-LOOP-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-IN-LOOP-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-IN-LOOP:       middle.block:
-; CHECK-IN-LOOP-NEXT:    br label [[FOR_END:%.*]]
-; CHECK-IN-LOOP:       scalar.ph:
-; CHECK-IN-LOOP-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK-IN-LOOP:       for.body:
-; CHECK-IN-LOOP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-IN-LOOP-NEXT:    [[RDX:%.*]] = phi i32 [ 7, [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
-; CHECK-IN-LOOP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
-; CHECK-IN-LOOP-NEXT:    [[TMP24:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-IN-LOOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP24]], 5
-; CHECK-IN-LOOP-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; CHECK-IN-LOOP:       if.then:
-; CHECK-IN-LOOP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; CHECK-IN-LOOP-NEXT:    [[TMP25:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-IN-LOOP-NEXT:    [[XOR:%.*]] = xor i32 [[RDX]], [[TMP25]]
-; CHECK-IN-LOOP-NEXT:    br label [[FOR_INC]]
-; CHECK-IN-LOOP:       for.inc:
-; CHECK-IN-LOOP-NEXT:    [[RES]] = phi i32 [ [[RDX]], [[FOR_BODY]] ], [ [[XOR]], [[IF_THEN]] ]
-; CHECK-IN-LOOP-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-IN-LOOP-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-IN-LOOP-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-IN-LOOP-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK-IN-LOOP:       for.end:
-; CHECK-IN-LOOP-NEXT:    [[RES_LCSSA:%.*]] = phi i32 [ [[RES]], [[FOR_INC]] ], [ [[TMP19]], [[MIDDLE_BLOCK]] ]
-; CHECK-IN-LOOP-NEXT:    ret i32 [[RES_LCSSA]]
+; CHECK-IN-LOOP-NEXT:    ret i32 [[TMP19]]
 ;
 entry:
   br label %for.body

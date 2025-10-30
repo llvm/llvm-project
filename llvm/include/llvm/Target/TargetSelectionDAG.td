@@ -205,6 +205,10 @@ def SDTSetCC : SDTypeProfile<1, 3, [        // setcc
   SDTCisInt<0>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
 ]>;
 
+def SDTFSetCC : SDTypeProfile<1, 3, [        // strict_fsetcc, strict_fsetccs
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
+]>;
+
 def SDTSelect : SDTypeProfile<1, 3, [       // select
   SDTCisInt<1>, SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>
 ]>;
@@ -699,8 +703,8 @@ def strict_bf16_to_fp  : SDNode<"ISD::STRICT_BF16_TO_FP",
 def strict_fp_to_bf16  : SDNode<"ISD::STRICT_FP_TO_BF16",
                                SDTFPToIntOp, [SDNPHasChain]>;
 
-def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
-def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
+def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTFSetCC, [SDNPHasChain]>;
+def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTFSetCC, [SDNPHasChain]>;
 
 def get_fpenv      : SDNode<"ISD::GET_FPENV", SDTGetFPStateOp, [SDNPHasChain]>;
 def set_fpenv      : SDNode<"ISD::SET_FPENV", SDTSetFPStateOp, [SDNPHasChain]>;

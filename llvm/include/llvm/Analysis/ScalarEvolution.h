@@ -1002,10 +1002,14 @@ public:
   /// (at every loop iteration).  It is, at the same time, the minimum number
   /// of times S is divisible by 2.  For example, given {4,+,8} it returns 2.
   /// If S is guaranteed to be 0, it returns the bitwidth of S.
-  LLVM_ABI uint32_t getMinTrailingZeros(const SCEV *S);
+  /// If \p CtxI is not nullptr, return a constant multiple valid at \p CtxI.
+  LLVM_ABI uint32_t getMinTrailingZeros(const SCEV *S,
+                                        const Instruction *CtxI = nullptr);
 
-  /// Returns the max constant multiple of S.
-  LLVM_ABI APInt getConstantMultiple(const SCEV *S);
+  /// Returns the max constant multiple of S. If \p CtxI is not nullptr, return
+  /// a constant multiple valid at \p CtxI.
+  LLVM_ABI APInt getConstantMultiple(const SCEV *S,
+                                     const Instruction *CtxI = nullptr);
 
   // Returns the max constant multiple of S. If S is exactly 0, return 1.
   LLVM_ABI APInt getNonZeroConstantMultiple(const SCEV *S);
@@ -1525,8 +1529,10 @@ private:
   /// Return the Value set from which the SCEV expr is generated.
   ArrayRef<Value *> getSCEVValues(const SCEV *S);
 
-  /// Private helper method for the getConstantMultiple method.
-  APInt getConstantMultipleImpl(const SCEV *S);
+  /// Private helper method for the getConstantMultiple method. If \p CtxI is
+  /// not nullptr, return a constant multiple valid at \p CtxI.
+  APInt getConstantMultipleImpl(const SCEV *S,
+                                const Instruction *Ctx = nullptr);
 
   /// Information about the number of times a particular loop exit may be
   /// reached before exiting the loop.

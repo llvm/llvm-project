@@ -319,7 +319,8 @@ void XeGPUBlockingPass::runOnOperation() {
 
   options.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
 
-  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape) {
+  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape,
+                                 bool returnSingleType = false) {
     Type elemTy = type.getElementType();
     Type newTy;
 
@@ -352,6 +353,8 @@ void XeGPUBlockingPass::runOnOperation() {
       newTy = type.clone(tileShape, elemTy);
     }
 
+    if (returnSingleType)
+      return SmallVector<Type>{newTy};
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);
     assert(ratio && "The shape of the type must be a multiple of tileShape.");

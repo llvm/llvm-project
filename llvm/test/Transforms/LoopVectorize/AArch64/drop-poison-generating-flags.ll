@@ -65,36 +65,6 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds double, ptr [[SRC_1]], i64 [[IV]]
-; CHECK-NEXT:    [[L_1:%.*]] = load double, ptr [[GEP_SRC_1]], align 8
-; CHECK-NEXT:    [[ABS:%.*]] = tail call nnan double @llvm.fabs.f64(double [[L_1]])
-; CHECK-NEXT:    [[C_0:%.*]] = fcmp olt double [[ABS]], 1.000000e+00
-; CHECK-NEXT:    br i1 [[C_0]], label %[[THEN:.*]], label %[[ELSE:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[L_2:%.*]] = load double, ptr [[SRC_2]], align 8
-; CHECK-NEXT:    [[IV_SUB_1:%.*]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[GEP_IV_SUB_1:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[IV_SUB_1]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_IV_SUB_1]], align 8
-; CHECK-NEXT:    [[C_1:%.*]] = fcmp oeq double [[L_2]], 0.000000e+00
-; CHECK-NEXT:    br i1 [[C_1]], label %[[MERGE:.*]], label %[[LOOP_LATCH]]
-; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[IV_SUB_2:%.*]] = add nsw i64 [[IV]], -1
-; CHECK-NEXT:    [[GEP_IV_SUB_2:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[IV_SUB_2]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[GEP_IV_SUB_2]], align 8
-; CHECK-NEXT:    br label %[[MERGE]]
-; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[MERGE_IV:%.*]] = phi i64 [ [[IV_SUB_2]], %[[ELSE]] ], [ [[IV_SUB_1]], %[[THEN]] ]
-; CHECK-NEXT:    [[GEP_DST_1:%.*]] = getelementptr inbounds i32, ptr [[DST_1]], i64 [[MERGE_IV]]
-; CHECK-NEXT:    store i32 10, ptr [[GEP_DST_1]], align 4
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

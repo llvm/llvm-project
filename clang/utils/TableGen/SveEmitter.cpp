@@ -243,7 +243,9 @@ public:
 
   /// Return the name, mangled with type information. The name is mangled for
   /// ClassS, so will add type suffixes such as _u32/_s32.
-  std::string getMangledName() const { return mangleName(ClassS); }
+  std::string getMangledName(ClassKind CK = ClassS) const {
+    return mangleName(CK);
+  }
 
   /// As above, but mangles the LLVM name instead.
   std::string getMangledLLVMName() const { return mangleLLVMName(); }
@@ -309,6 +311,7 @@ private:
   StringMap<uint64_t> FlagTypes;
   StringMap<uint64_t> MergeTypes;
   StringMap<uint64_t> ImmCheckTypes;
+  std::vector<llvm::StringRef> ImmCheckTypeNames;
 
 public:
   SVEEmitter(const RecordKeeper &R) : Records(R) {
@@ -320,8 +323,15 @@ public:
       FlagTypes[RV->getNameInitAsString()] = RV->getValueAsInt("Value");
     for (auto *RV : Records.getAllDerivedDefinitions("MergeType"))
       MergeTypes[RV->getNameInitAsString()] = RV->getValueAsInt("Value");
-    for (auto *RV : Records.getAllDerivedDefinitions("ImmCheckType"))
-      ImmCheckTypes[RV->getNameInitAsString()] = RV->getValueAsInt("Value");
+    for (auto *RV : Records.getAllDerivedDefinitions("ImmCheckType")) {
+      auto [it, inserted] = ImmCheckTypes.try_emplace(
+          RV->getNameInitAsString(), RV->getValueAsInt("Value"));
+      if (!inserted)
+        llvm_unreachable("Duplicate imm check");
+      if ((size_t)it->second >= ImmCheckTypeNames.size())
+        ImmCheckTypeNames.resize((size_t)it->second + 1);
+      ImmCheckTypeNames[it->second] = it->first();
+    }
   }
 
   /// Returns the enum value for the immcheck type
@@ -338,6 +348,13 @@ public:
     if (Res != FlagTypes.end())
       return Res->getValue();
     llvm_unreachable("Unsupported flag");
+  }
+
+  /// Returns the name for the immcheck type
+  StringRef getImmCheckForEnumValue(unsigned Id) {
+    if ((size_t)Id < ImmCheckTypeNames.size())
+      return ImmCheckTypeNames[Id];
+    llvm_unreachable("Unsupported imm check");
   }
 
   // Returns the SVETypeFlags for a given value and mask.
@@ -388,6 +405,9 @@ public:
 
   /// Emit all the __builtin prototypes and code needed by Sema.
   void createBuiltins(raw_ostream &o);
+
+  /// Emit all the __builtin prototypes in JSON format.
+  void createBuiltinsJSON(raw_ostream &o);
 
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createCodeGenMap(raw_ostream &o);
@@ -1552,6 +1572,82 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
   OS << "#endif // GET_SVE_BUILTIN_INFOS\n\n";
 }
 
+void SVEEmitter::createBuiltinsJSON(raw_ostream &OS) {
+  SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
+  std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
+  for (auto *R : RV)
+    createIntrinsic(R, Defs);
+
+  OS << "[\n";
+  bool FirstDef = true;
+
+  for (auto &Def : Defs) {
+    std::vector<std::string> Flags;
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsStreaming")))
+      Flags.push_back("streaming-only");
+    else if (Def->isFlagSet(getEnumValueForFlag("IsStreamingCompatible")))
+      Flags.push_back("streaming-compatible");
+    else if (Def->isFlagSet(getEnumValueForFlag("VerifyRuntimeMode")))
+      Flags.push_back("feature-dependent");
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZA")) ||
+        Def->isFlagSet(getEnumValueForFlag("IsOutZA")) ||
+        Def->isFlagSet(getEnumValueForFlag("IsInOutZA")))
+      Flags.push_back("requires-za");
+
+    if (Def->isFlagSet(getEnumValueForFlag("IsInZT0")) ||
+        Def->isFlagSet(getEnumValueForFlag("IsOutZT0")) ||
+        Def->isFlagSet(getEnumValueForFlag("IsInOutZT0")))
+      Flags.push_back("requires-zt");
+
+    if (!FirstDef)
+      OS << ",\n";
+
+    OS << "{ ";
+    OS << "\"guard\": \"" << Def->getSVEGuard() << "\",";
+    OS << "\"streaming_guard\": \"" << Def->getSMEGuard() << "\",";
+    OS << "\"flags\": \"";
+
+    for (size_t I = 0; I < Flags.size(); ++I) {
+      if (I != 0)
+        OS << ',';
+      OS << Flags[I];
+    }
+
+    OS << "\",\"builtin\": \"";
+
+    std::string BuiltinName = Def->getMangledName(Def->getClassKind());
+
+    OS << Def->getReturnType().str() << " " << BuiltinName << "(";
+    for (unsigned I = 0; I < Def->getTypes().size() - 1; ++I) {
+      if (I != 0)
+        OS << ", ";
+
+      SVEType ParamType = Def->getParamType(I);
+
+      // These are ImmCheck'd but their type names are sufficiently clear.
+      if (ParamType.isPredicatePattern() || ParamType.isPrefetchOp()) {
+        OS << ParamType.str();
+        continue;
+      }
+
+      // Pass ImmCheck information by pretending it's a type.
+      auto Iter = llvm::find_if(Def->getImmChecks(), [I](const auto &Chk) {
+        return (unsigned)Chk.getImmArgIdx() == I;
+      });
+      if (Iter != Def->getImmChecks().end())
+        OS << getImmCheckForEnumValue(Iter->getKind());
+      else
+        OS << ParamType.str();
+    }
+    OS << ");\" }";
+    FirstDef = false;
+  }
+
+  OS << "\n]\n";
+}
+
 void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
   std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
@@ -1937,6 +2033,10 @@ void EmitSveBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createBuiltins(OS);
 }
 
+void EmitSveBuiltinsJSON(const RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createBuiltinsJSON(OS);
+}
+
 void EmitSveBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createCodeGenMap(OS);
 }
@@ -1963,6 +2063,10 @@ void EmitSmeHeader(const RecordKeeper &Records, raw_ostream &OS) {
 
 void EmitSmeBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
   SVEEmitter(Records).createSMEBuiltins(OS);
+}
+
+void EmitSmeBuiltinsJSON(const RecordKeeper &Records, raw_ostream &OS) {
+  SVEEmitter(Records).createBuiltinsJSON(OS);
 }
 
 void EmitSmeBuiltinCG(const RecordKeeper &Records, raw_ostream &OS) {

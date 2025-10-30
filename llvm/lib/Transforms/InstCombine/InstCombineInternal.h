@@ -23,6 +23,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
@@ -62,14 +63,14 @@ class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
   InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
-                   bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
+                   Function &F, AAResults *AA, AssumptionCache &AC,
                    TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                    DominatorTree &DT, OptimizationRemarkEmitter &ORE,
                    BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
                    ProfileSummaryInfo *PSI, const DataLayout &DL,
                    ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, Builder, MinimizeSize, AA, AC, TLI, TTI, DT, ORE,
-                     BFI, BPI, PSI, DL, RPOT) {}
+      : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
+                     PSI, DL, RPOT) {}
 
   virtual ~InstCombinerImpl() = default;
 
@@ -469,6 +470,17 @@ private:
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
                                 unsigned Depth = 0);
 
+  SelectInst *createSelectInst(Value *C, Value *S1, Value *S2,
+                               const Twine &NameStr = "",
+                               InsertPosition InsertBefore = nullptr,
+                               Instruction *MDFrom = nullptr) {
+    SelectInst *SI =
+        SelectInst::Create(C, S1, S2, NameStr, InsertBefore, MDFrom);
+    if (!MDFrom)
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, F, DEBUG_TYPE);
+    return SI;
+  }
+
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
@@ -713,6 +725,7 @@ public:
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, CmpPredicate Pred);
+  Instruction *foldICmpWithClamp(ICmpInst &Cmp, Value *X, MinMaxIntrinsic *Min);
   Instruction *foldICmpEquality(ICmpInst &Cmp);
   Instruction *foldIRemByPowerOfTwoToBitTest(ICmpInst &I);
   Instruction *foldSignBitTest(ICmpInst &I);

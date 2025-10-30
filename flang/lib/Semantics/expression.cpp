@@ -3628,7 +3628,7 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   if (chars) {
     std::string whyNot;
     if (treatExternalAsImplicit &&
-        !chars->CanBeCalledViaImplicitInterface(&whyNot)) {
+        !chars->CanBeCalledViaImplicitInterface(&whyNot, /*checkCUDA=*/false)) {
       if (auto *msg{Say(callSite,
               "References to the procedure '%s' require an explicit interface"_err_en_US,
               DEREF(procSymbol).name())};
@@ -3644,18 +3644,23 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       Say(callSite,
           "Assumed-length character function must be defined with a length to be called"_err_en_US);
     }
+    if (!chars->IsPure()) {
+      if (const semantics::Scope *pure{semantics::FindPureProcedureContaining(
+              context_.FindScope(callSite))}) {
+        std::string name;
+        if (procSymbol) {
+          name = "'"s + procSymbol->name().ToString() + "'";
+        } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {
+          name = "'"s + intrinsic->name + "'";
+        }
+        Say(callSite,
+            "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
+            name, DEREF(pure->symbol()).name());
+      }
+    }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
         context_.FindScope(callSite), treatExternalAsImplicit,
         /*ignoreImplicitVsExplicit=*/false, specificIntrinsic);
-  }
-  if (procSymbol && !IsPureProcedure(*procSymbol)) {
-    if (const semantics::Scope *
-        pure{semantics::FindPureProcedureContaining(
-            context_.FindScope(callSite))}) {
-      Say(callSite,
-          "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-          procSymbol->name(), DEREF(pure->symbol()).name());
-    }
   }
   if (ok && !treatExternalAsImplicit && procSymbol &&
       !(chars && chars->HasExplicitInterface())) {

@@ -120,6 +120,8 @@ STATISTIC(NumVirtConstProp1Bit,
           "Number of 1 bit virtual constant propagations");
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
 
+namespace llvm {
+
 static cl::opt<PassSummaryAction> ClSummaryAction(
     "wholeprogramdevirt-summary-action",
     cl::desc("What to do with the summary when running this pass"),
@@ -174,6 +176,8 @@ static cl::list<std::string>
                       cl::Hidden, cl::CommaSeparated);
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 /// With Clang, a pure virtual class's deleting destructor is emitted as a
 /// `llvm.trap` intrinsic followed by an unreachable IR instruction. In the

@@ -718,9 +718,25 @@ void CIRGenFunction::emitAtomicInit(Expr *init, LValue dest) {
     return;
   }
 
-  case cir::TEK_Aggregate:
-    cgm.errorNYI(init->getSourceRange(), "emitAtomicInit: aggregate type");
+  case cir::TEK_Aggregate: {
+    // Fix up the destination if the initializer isn't an expression
+    // of atomic type.
+    bool zeroed = false;
+    if (!init->getType()->isAtomicType()) {
+      zeroed = atomics.emitMemSetZeroIfNecessary();
+      dest = atomics.projectValue();
+    }
+
+    // Evaluate the expression directly into the destination.
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    AggValueSlot slot = AggValueSlot::forLValue(
+        dest, AggValueSlot::IsNotDestructed, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap,
+        zeroed ? AggValueSlot::IsZeroed : AggValueSlot::IsNotZeroed);
+
+    emitAggExpr(init, slot);
     return;
+  }
   }
 
   llvm_unreachable("bad evaluation kind");

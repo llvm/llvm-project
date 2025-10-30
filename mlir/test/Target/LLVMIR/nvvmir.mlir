@@ -302,32 +302,6 @@ llvm.func @nvvm_mma_m16n8k16_bf16_bf16(%a0 : i32, %a1 : i32, %a2 : i32, %a3 : i3
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
 }
 
-// f32 return type, f16 accumulate type
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f16
-llvm.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : vector<2xf16>, %c1 : vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)> {
-  // CHECK: call { float, float, float, float } @llvm.nvvm.mma.m16n8k16.row.col.f32.f16
-  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
-  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
-}
-
-// f16 return type, f32 accumulate type
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f16_f32
-llvm.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)> {
-  // CHECK: call { <2 x half>, <2 x half> } @llvm.nvvm.mma.m16n8k16.row.col.f16.f32
-  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-}
-
 // f32 return type, f32 accumulate type
 // CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f32
 llvm.func @nvvm_mma_m16n8k16_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,

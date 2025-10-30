@@ -409,7 +409,7 @@ struct Edge {
   GlobalValue::GUID Src;
   GlobalValue::GUID Dst;
 };
-}
+} // namespace
 
 void Attributes::add(const Twine &Name, const Twine &Value,
                      const Twine &Comment) {

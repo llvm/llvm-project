@@ -60,12 +60,13 @@ class TBAAVerifier {
 
   /// \name Helper functions used by \c visitTBAAMetadata.
   /// @{
-  MDNode *getFieldNodeFromTBAABaseNode(Instruction &I, const MDNode *BaseNode,
-                                       APInt &Offset, bool IsNewFormat);
-  TBAAVerifier::TBAABaseNodeSummary verifyTBAABaseNode(Instruction &I,
+  MDNode *getFieldNodeFromTBAABaseNode(const Instruction *I,
+                                       const MDNode *BaseNode, APInt &Offset,
+                                       bool IsNewFormat);
+  TBAAVerifier::TBAABaseNodeSummary verifyTBAABaseNode(const Instruction *I,
                                                        const MDNode *BaseNode,
                                                        bool IsNewFormat);
-  TBAABaseNodeSummary verifyTBAABaseNodeImpl(Instruction &I,
+  TBAABaseNodeSummary verifyTBAABaseNodeImpl(const Instruction *I,
                                              const MDNode *BaseNode,
                                              bool IsNewFormat);
 
@@ -77,7 +78,7 @@ public:
       : Diagnostic(Diagnostic) {}
   /// Visit an instruction, or a TBAA node itself as part of a metadata, and
   /// return true if it is valid, return false if an invalid TBAA is attached.
-  LLVM_ABI bool visitTBAAMetadata(Instruction *I, const MDNode *MD);
+  LLVM_ABI bool visitTBAAMetadata(const Instruction *I, const MDNode *MD);
 };
 
 /// Check a function for errors, useful for use when debugging a

@@ -182,8 +182,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   const unsigned OutputAsmVariant = 0;
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
-  MCInstPrinter *IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
-      *MAI, *MCII, *MRI);
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
   if (!IP) {
     errs()
       << "error: unable to create instruction printer for target triple '"
@@ -204,7 +204,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<MCStreamer> Str;
 
   if (FileType == OFT_AssemblyFile) {
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");

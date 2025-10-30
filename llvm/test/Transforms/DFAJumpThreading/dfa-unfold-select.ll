@@ -463,3 +463,87 @@ unreachable:
 sw.bb:                                         ; preds = %if.end
   br label %while.cond
 }
+
+define i16 @pr160250() {
+; CHECK-LABEL: @pr160250(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_COND48:%.*]]
+; CHECK:       for.cond48:
+; CHECK-NEXT:    br i1 false, label [[CLEANUP87_JT0:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br i1 false, label [[DOT6_SI_UNFOLD_TRUE:%.*]], label [[DOT5_SI_UNFOLD_TRUE:%.*]]
+; CHECK:       .5.si.unfold.true:
+; CHECK-NEXT:    br i1 false, label [[SPEC_SELECT1_SI_UNFOLD_TRUE1:%.*]], label [[DOT5_SI_UNFOLD_FALSE_JT0:%.*]]
+; CHECK:       .5.si.unfold.true.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI1:%.*]] = phi i32 [ 0, [[IF_ELSE]] ]
+; CHECK-NEXT:    br i1 false, label [[SPEC_SELECT1_SI_UNFOLD_TRUE:%.*]], label [[DOT5_SI_UNFOLD_FALSE:%.*]]
+; CHECK:       .5.si.unfold.false:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI2:%.*]] = phi i32 [ 0, [[DOT5_SI_UNFOLD_TRUE]] ]
+; CHECK-NEXT:    br label [[SPEC_SELECT1_SI_UNFOLD_TRUE1]]
+; CHECK:       .5.si.unfold.false.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI2_JT0:%.*]] = phi i32 [ 0, [[DOT5_SI_UNFOLD_TRUE1:%.*]] ]
+; CHECK-NEXT:    br label [[SPEC_SELECT1_SI_UNFOLD_TRUE]]
+; CHECK:       spec.select1.si.unfold.true:
+; CHECK-NEXT:    [[DOT5_SI_UNFOLD_PHI:%.*]] = phi i32 [ poison, [[DOT5_SI_UNFOLD_TRUE1]] ], [ [[DOTSI_UNFOLD_PHI2]], [[DOT5_SI_UNFOLD_FALSE]] ]
+; CHECK-NEXT:    br i1 false, label [[SPEC_SELECT_SI_UNFOLD_FALSE1:%.*]], label [[SPEC_SELECT1_SI_UNFOLD_FALSE_JT1:%.*]]
+; CHECK:       spec.select1.si.unfold.true.jt0:
+; CHECK-NEXT:    [[DOT5_SI_UNFOLD_PHI_JT0:%.*]] = phi i32 [ [[DOTSI_UNFOLD_PHI1]], [[DOT5_SI_UNFOLD_TRUE]] ], [ [[DOTSI_UNFOLD_PHI2_JT0]], [[DOT5_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    br i1 false, label [[SPEC_SELECT_SI_UNFOLD_FALSE:%.*]], label [[SPEC_SELECT1_SI_UNFOLD_FALSE_JT0:%.*]]
+; CHECK:       spec.select1.si.unfold.false:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI:%.*]] = phi i32 [ 0, [[SPEC_SELECT1_SI_UNFOLD_TRUE]] ]
+; CHECK-NEXT:    br label [[SPEC_SELECT_SI_UNFOLD_FALSE1]]
+; CHECK:       spec.select1.si.unfold.false.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI_JT0:%.*]] = phi i32 [ 0, [[SPEC_SELECT1_SI_UNFOLD_TRUE1]] ]
+; CHECK-NEXT:    br label [[SPEC_SELECT_SI_UNFOLD_FALSE]]
+; CHECK:       spec.select.si.unfold.false:
+; CHECK-NEXT:    [[SPEC_SELECT1_SI_UNFOLD_PHI:%.*]] = phi i32 [ [[DOT5_SI_UNFOLD_PHI]], [[SPEC_SELECT1_SI_UNFOLD_TRUE1]] ], [ [[DOTSI_UNFOLD_PHI]], [[SPEC_SELECT1_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    br label [[CLEANUP87:%.*]]
+; CHECK:       spec.select.si.unfold.false.jt0:
+; CHECK-NEXT:    [[SPEC_SELECT1_SI_UNFOLD_PHI_JT0:%.*]] = phi i32 [ [[DOT5_SI_UNFOLD_PHI_JT0]], [[SPEC_SELECT1_SI_UNFOLD_TRUE]] ], [ [[DOTSI_UNFOLD_PHI_JT0]], [[SPEC_SELECT1_SI_UNFOLD_FALSE_JT1]] ]
+; CHECK-NEXT:    br label [[CLEANUP87_JT0]]
+; CHECK:       .6.si.unfold.true:
+; CHECK-NEXT:    br i1 false, label [[CLEANUP87]], label [[DOT6_SI_UNFOLD_FALSE_JT0:%.*]]
+; CHECK:       .6.si.unfold.true.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI3:%.*]] = phi i32 [ 0, [[IF_ELSE]] ]
+; CHECK-NEXT:    br i1 false, label [[CLEANUP87_JT0]], label [[DOT6_SI_UNFOLD_FALSE:%.*]]
+; CHECK:       .6.si.unfold.false:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI4:%.*]] = phi i32 [ 0, [[DOT6_SI_UNFOLD_TRUE]] ]
+; CHECK-NEXT:    br label [[CLEANUP87]]
+; CHECK:       .6.si.unfold.false.jt0:
+; CHECK-NEXT:    [[DOTSI_UNFOLD_PHI4_JT0:%.*]] = phi i32 [ 0, [[DOT6_SI_UNFOLD_TRUE1:%.*]] ]
+; CHECK-NEXT:    br label [[CLEANUP87_JT0]]
+; CHECK:       cleanup87:
+; CHECK-NEXT:    [[CLEANUP_DEST_SLOT_3:%.*]] = phi i32 [ [[SPEC_SELECT1_SI_UNFOLD_PHI]], [[SPEC_SELECT_SI_UNFOLD_FALSE1]] ], [ poison, [[DOT6_SI_UNFOLD_TRUE1]] ], [ [[DOTSI_UNFOLD_PHI4]], [[DOT6_SI_UNFOLD_FALSE]] ]
+; CHECK-NEXT:    switch i32 [[CLEANUP_DEST_SLOT_3]], label [[FOR_COND48_BACKEDGE:%.*]] [
+; CHECK-NEXT:      i32 0, label [[FOR_COND48_BACKEDGE]]
+; CHECK-NEXT:      i32 1, label [[FOR_COND48_BACKEDGE]]
+; CHECK-NEXT:    ]
+; CHECK:       cleanup87.jt0:
+; CHECK-NEXT:    [[CLEANUP_DEST_SLOT_3_JT0:%.*]] = phi i32 [ 0, [[FOR_COND48]] ], [ [[SPEC_SELECT1_SI_UNFOLD_PHI_JT0]], [[SPEC_SELECT_SI_UNFOLD_FALSE]] ], [ [[DOTSI_UNFOLD_PHI3]], [[DOT6_SI_UNFOLD_TRUE]] ], [ [[DOTSI_UNFOLD_PHI4_JT0]], [[DOT6_SI_UNFOLD_FALSE_JT0]] ]
+; CHECK-NEXT:    br label [[FOR_COND48_BACKEDGE]]
+; CHECK:       for.cond48.backedge:
+; CHECK-NEXT:    br label [[FOR_COND48]]
+;
+entry:
+  %.5 = select i1 false, i32 0, i32 0
+  %.6 = select i1 false, i32 0, i32 0
+  br label %for.cond48
+
+for.cond48:                                       ; preds = %for.cond48.backedge, %entry
+  br i1 false, label %cleanup87, label %if.else
+
+if.else:                                          ; preds = %for.cond48
+  %spec.select1 = select i1 false, i32 %.5, i32 0
+  %spec.select = select i1 false, i32 %.6, i32 %spec.select1
+  br label %cleanup87
+
+cleanup87:                                        ; preds = %if.else, %for.cond48
+  %cleanup.dest.slot.3 = phi i32 [ 0, %for.cond48 ], [ %spec.select, %if.else ]
+  switch i32 %cleanup.dest.slot.3, label %for.cond48.backedge [
+  i32 0, label %for.cond48.backedge
+  i32 1, label %for.cond48.backedge
+  ]
+
+for.cond48.backedge:                              ; preds = %cleanup87, %cleanup87, %cleanup87
+  br label %for.cond48
+}

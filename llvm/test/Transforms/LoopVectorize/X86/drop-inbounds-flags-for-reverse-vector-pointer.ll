@@ -39,30 +39,9 @@ define i1 @fn(ptr %nno) #0 {
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP12]])
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY20:%.*]]
-; CHECK:       loop.header:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 10, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC35:%.*]] ]
-; CHECK-NEXT:    [[SUM_01:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[SUM_1:%.*]], [[FOR_INC35]] ]
-; CHECK-NEXT:    [[REM4:%.*]] = and i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp eq i64 [[REM4]], 0
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[NNO]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    br i1 [[CMP21]], label [[IF_THEN22:%.*]], label [[FOR_INC35]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[TMP15]], 1
-; CHECK-NEXT:    [[REM27:%.*]] = urem i32 [[MUL]], 10
-; CHECK-NEXT:    br label [[FOR_INC35]]
-; CHECK:       loop.latch:
-; CHECK-NEXT:    [[REM27_PN:%.*]] = phi i32 [ [[REM27]], [[IF_THEN22]] ], [ [[TMP15]], [[FOR_BODY20]] ]
-; CHECK-NEXT:    [[SUM_1]] = or i32 [[REM27_PN]], [[SUM_01]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], 0
-; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[EXIT]], label [[FOR_BODY20]]
+; CHECK-NEXT:    br label [[FOR_INC35:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_1]], [[FOR_INC35]] ], [ [[TMP14]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[CMP41:%.*]] = icmp eq i32 [[SUM_1_LCSSA]], 0
+; CHECK-NEXT:    [[CMP41:%.*]] = icmp eq i32 [[TMP14]], 0
 ; CHECK-NEXT:    ret i1 [[CMP41]]
 ;
 entry:

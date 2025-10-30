@@ -100,6 +100,8 @@ public:
   /// is enabled) and the VTT (if the class has virtual bases).
   void generateClassData(const CXXRecordDecl *rd);
 
+  bool isVTableExternal(const clang::CXXRecordDecl *rd);
+
   /// Returns the type of a vtable with the given layout. Normally a struct of
   /// arrays of pointers, with one struct element for each vtable in the vtable
   /// group.

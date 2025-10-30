@@ -22,7 +22,7 @@ config.substitutions.append(('%{{flags}}',
 ))
 config.substitutions.append(('%{{compile_flags}}', '-nostdinc++ -I {INSTALL_ROOT}/include/c++/v1 -I %{{libcxx-dir}}/test/support'))
 config.substitutions.append(('%{{link_flags}}', '-nostdlib++ -L {INSTALL_ROOT}/lib -Wl,-rpath,{INSTALL_ROOT}/lib -lc++'))
-config.substitutions.append(('%{{exec}}', '%{{executor}} --execdir %T -- '))
+config.substitutions.append(('%{{exec}}', '%{{executor}} --execdir %{temp} -- '))
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))

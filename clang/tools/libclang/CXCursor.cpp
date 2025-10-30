@@ -687,6 +687,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPInterchangeDirectiveClass:
     K = CXCursor_OMPInterchangeDirective;
     break;
+  case Stmt::OMPFuseDirectiveClass:
+    K = CXCursor_OMPFuseDirective;
+    break;
   case Stmt::OMPForDirectiveClass:
     K = CXCursor_OMPForDirective;
     break;

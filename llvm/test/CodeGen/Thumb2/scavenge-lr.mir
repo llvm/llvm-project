@@ -147,10 +147,10 @@ body:             |
     $q5 = VLD1q64 $r3, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.zzz..sroa_cast241, align 32)
     $q1 = VMLAfq killed $q1, $q5, killed $q8, 14 /* CC::al */, $noreg
     $s8 = VLDRS %const.0, 0, 14 /* CC::al */, $noreg :: (load (s32) from constant-pool)
-    $s3 = VDIVS $s8, $s7, 14 /* CC::al */, $noreg, implicit-def $q0
-    $s2 = VDIVS $s8, $s6, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0
-    $s1 = VDIVS $s8, $s5, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0
-    $s0 = VDIVS $s8, $s4, 14 /* CC::al */, $noreg, implicit killed $q1, implicit killed $q0, implicit-def $q0
+    $s3 = VDIVS $s8, $s7, 14 /* CC::al */, $noreg, implicit-def $q0, implicit $fpscr_rm
+    $s2 = VDIVS $s8, $s6, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0, implicit $fpscr_rm
+    $s1 = VDIVS $s8, $s5, 14 /* CC::al */, $noreg, implicit killed $q0, implicit-def $q0, implicit $fpscr_rm
+    $s0 = VDIVS $s8, $s4, 14 /* CC::al */, $noreg, implicit killed $q1, implicit killed $q0, implicit-def $q0, implicit $fpscr_rm
     $r7 = t2SUBri $r0, 64, 14 /* CC::al */, $noreg, $noreg
     $q8 = VLD1q64 $r7, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.yyy..sroa_cast244, align 32)
     VSTMQIA $q8, %stack.1, 14 /* CC::al */, $noreg :: (store (s128) into %stack.1)
@@ -185,10 +185,10 @@ body:             |
     $r3 = VST1q32wb_fixed killed $r3, 16, killed $q10, 14 /* CC::al */, $noreg :: (store (s128) into %ir.zzz..sroa_cast241, align 32)
     $q10 = VLD1q64 $r3, 16, 14 /* CC::al */, $noreg :: (load (s128) from %ir.zzz..sroa_cast241 + 16, basealign 32)
     $q1 = VMLAfq killed $q1, $q10, killed $q8, 14 /* CC::al */, $noreg
-    $s23 = VDIVS $s8, $s7, 14 /* CC::al */, $noreg, implicit-def $q5
-    $s22 = VDIVS $s8, $s6, 14 /* CC::al */, $noreg, implicit killed $q5, implicit-def $q5
-    $s21 = VDIVS $s8, $s5, 14 /* CC::al */, $noreg, implicit killed $q5, implicit-def $q5
-    $s20 = VDIVS killed $s8, $s4, 14 /* CC::al */, $noreg, implicit killed $q1, implicit killed $q5, implicit-def $q5
+    $s23 = VDIVS $s8, $s7, 14 /* CC::al */, $noreg, implicit-def $q5, implicit $fpscr_rm
+    $s22 = VDIVS $s8, $s6, 14 /* CC::al */, $noreg, implicit killed $q5, implicit-def $q5, implicit $fpscr_rm
+    $s21 = VDIVS $s8, $s5, 14 /* CC::al */, $noreg, implicit killed $q5, implicit-def $q5, implicit $fpscr_rm
+    $s20 = VDIVS killed $s8, $s4, 14 /* CC::al */, $noreg, implicit killed $q1, implicit killed $q5, implicit-def $q5, implicit $fpscr_rm
     VST1q64 killed $r5, 16, $q5, 14 /* CC::al */, $noreg :: (store (s128) into %ir.xxx..sroa_cast248 + 16, basealign 32)
     VST1q64 killed $r6, 16, $q5, 14 /* CC::al */, $noreg :: (store (s128) into %ir.vvv..sroa_cast230 + 16, basealign 32)
     $q8 = VLDMQIA %stack.0, 14 /* CC::al */, $noreg :: (load (s128) from %stack.0)

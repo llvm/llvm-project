@@ -116,6 +116,8 @@ STATISTIC(NumIntAssociationsHoisted,
 STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
                                     "reassociated and hoisted out of the loop");
 
+namespace llvm {
+
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
     DisablePromotion("disable-licm-promotion", cl::Hidden, cl::init(false),
@@ -154,7 +156,7 @@ static cl::opt<unsigned> IntAssociationUpperLimit(
 // which may not be precise, since optimizeUses is capped. The result is
 // correct, but we may not get as "far up" as possible to get which access is
 // clobbering the one queried.
-cl::opt<unsigned> llvm::SetLicmMssaOptCap(
+cl::opt<unsigned> SetLicmMssaOptCap(
     "licm-mssa-optimization-cap", cl::init(100), cl::Hidden,
     cl::desc("Enable imprecision in LICM in pathological cases, in exchange "
              "for faster compile. Caps the MemorySSA clobbering calls."));
@@ -162,7 +164,7 @@ cl::opt<unsigned> llvm::SetLicmMssaOptCap(
 // Experimentally, memory promotion carries less importance than sinking and
 // hoisting. Limit when we do promotion when using MemorySSA, in order to save
 // compile time.
-cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
+cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap(
     "licm-mssa-max-acc-promotion", cl::init(250), cl::Hidden,
     cl::desc("[LICM & MemorySSA] When MSSA in LICM is disabled, this has no "
              "effect. When MSSA in LICM is enabled, then this is the maximum "
@@ -170,6 +172,8 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
              "enable memory promotion."));
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,

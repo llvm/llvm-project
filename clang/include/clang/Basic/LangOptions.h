@@ -549,8 +549,7 @@ public:
   bool CheckNew = false;
 
   /// The HLSL root signature version for dxil.
-  llvm::dxbc::RootSignatureVersion HLSLRootSigVer =
-      llvm::dxbc::RootSignatureVersion::V1_1;
+  llvm::dxbc::RootSignatureVersion HLSLRootSigVer;
 
   /// The HLSL root signature that will be used to overide the root signature
   /// used for the shader entry point.

@@ -1247,7 +1247,7 @@ private:
   /// return false if no parsing errors occurred, true otherwise.
   bool HandleAVX512Operand(OperandVector &Operands);
 
-  bool ParseZ(std::unique_ptr<X86Operand> &Z, const SMLoc &StartLoc);
+  bool ParseZ(std::unique_ptr<X86Operand> &Z, SMLoc StartLoc);
 
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
@@ -2907,8 +2907,7 @@ X86::CondCode X86AsmParser::ParseConditionCode(StringRef CC) {
 
 // true on failure, false otherwise
 // If no {z} mark was found - Parser doesn't advance
-bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z,
-                          const SMLoc &StartLoc) {
+bool X86AsmParser::ParseZ(std::unique_ptr<X86Operand> &Z, SMLoc StartLoc) {
   MCAsmParser &Parser = getParser();
   // Assuming we are just pass the '{' mark, quering the next token
   // Searched for {z}, but none was found. Return false, as no parsing error was
@@ -4018,9 +4017,14 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
       return Error(Ops[0]->getStartLoc(), "all tmm registers must be distinct");
   }
 
-  // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to
-  // check this with the legacy encoding, VEX/EVEX/XOP don't use REX.
-  if ((TSFlags & X86II::EncodingMask) == 0) {
+  // High 8-bit regs (AH/BH/CH/DH) are incompatible with encodings that imply
+  // extended prefixes:
+  //  * Legacy path that would emit a REX (e.g. uses r8..r15 or sil/dil/bpl/spl)
+  //  * EVEX
+  //  * REX2
+  // VEX/XOP don't use REX; they are excluded from the legacy check.
+  const unsigned Enc = TSFlags & X86II::EncodingMask;
+  if (Enc != X86II::VEX && Enc != X86II::XOP) {
     MCRegister HReg;
     bool UsesRex = TSFlags & X86II::REX_W;
     unsigned NumOps = Inst.getNumOperands();
@@ -4036,11 +4040,13 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         UsesRex = true;
     }
 
-    if (UsesRex && HReg) {
+    if (HReg &&
+        (Enc == X86II::EVEX || ForcedOpcodePrefix == OpcodePrefix_REX2 ||
+         ForcedOpcodePrefix == OpcodePrefix_REX || UsesRex)) {
       StringRef RegName = X86IntelInstPrinter::getRegisterName(HReg);
       return Error(Ops[0]->getStartLoc(),
-                   "can't encode '" + RegName + "' in an instruction requiring "
-                   "REX prefix");
+                   "can't encode '" + RegName.str() +
+                       "' in an instruction requiring EVEX/REX2/REX prefix");
     }
   }
 

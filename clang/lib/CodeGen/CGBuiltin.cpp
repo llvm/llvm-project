@@ -4277,18 +4277,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Ptr = EmitScalarExpr(E->getArg(1));
 
     llvm::Type *RetTy = CGM.getTypes().ConvertType(E->getType());
-    CharUnits Align = CGM.getNaturalTypeAlignment(E->getType(), nullptr);
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
-
     llvm::Value *PassThru = llvm::PoisonValue::get(RetTy);
     if (E->getNumArgs() > 2)
       PassThru = EmitScalarExpr(E->getArg(2));
 
+    CharUnits Align = CGM.getNaturalTypeAlignment(
+        E->getType()->getAs<VectorType>()->getElementType(), nullptr);
+    llvm::Value *AlignVal =
+        llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
+
     llvm::Value *Result;
     if (BuiltinID == Builtin::BI__builtin_masked_load) {
       Function *F =
-          CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, UnqualPtrTy});
+          CGM.getIntrinsic(Intrinsic::masked_load, {RetTy, Ptr->getType()});
       Result =
           Builder.CreateCall(F, {Ptr, AlignVal, Mask, PassThru}, "masked_load");
     } else {
@@ -4333,15 +4334,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     QualType ValTy = E->getArg(1)->getType();
     llvm::Type *ValLLTy = CGM.getTypes().ConvertType(ValTy);
-    llvm::Type *PtrTy = Ptr->getType();
 
-    CharUnits Align = CGM.getNaturalTypeAlignment(ValTy, nullptr);
+    CharUnits Align = CGM.getNaturalTypeAlignment(
+        E->getArg(1)->getType()->getAs<VectorType>()->getElementType(),
+        nullptr);
     llvm::Value *AlignVal =
         llvm::ConstantInt::get(Int32Ty, Align.getQuantity());
 
     if (BuiltinID == Builtin::BI__builtin_masked_store) {
-      llvm::Function *F =
-          CGM.getIntrinsic(llvm::Intrinsic::masked_store, {ValLLTy, PtrTy});
+      llvm::Function *F = CGM.getIntrinsic(llvm::Intrinsic::masked_store,
+                                           {ValLLTy, Ptr->getType()});
       Builder.CreateCall(F, {Val, Ptr, AlignVal, Mask});
     } else {
       llvm::Function *F =

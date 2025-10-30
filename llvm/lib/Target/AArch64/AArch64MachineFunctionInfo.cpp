@@ -23,12 +23,21 @@
 
 using namespace llvm;
 
+static std::optional<uint64_t>
+getSVEStackSize(const AArch64FunctionInfo &MFI,
+                uint64_t (AArch64FunctionInfo::*GetStackSize)() const) {
+  if (!MFI.hasCalculatedStackSizeSVE())
+    return std::nullopt;
+  return (MFI.*GetStackSize)();
+}
+
 yaml::AArch64FunctionInfo::AArch64FunctionInfo(
     const llvm::AArch64FunctionInfo &MFI)
     : HasRedZone(MFI.hasRedZone()),
-      StackSizeSVE(MFI.hasCalculatedStackSizeSVE()
-                       ? std::optional<uint64_t>(MFI.getStackSizeSVE())
-                       : std::nullopt),
+      StackSizeZPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizeZPR)),
+      StackSizePPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizePPR)),
       HasStackFrame(MFI.hasStackFrame()
                         ? std::optional<bool>(MFI.hasStackFrame())
                         : std::nullopt) {}
@@ -41,8 +50,9 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
   if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
-  if (YamlMFI.StackSizeSVE)
-    setStackSizeSVE(*YamlMFI.StackSizeSVE);
+  if (YamlMFI.StackSizeZPR || YamlMFI.StackSizePPR)
+    setStackSizeSVE(YamlMFI.StackSizeZPR.value_or(0),
+                    YamlMFI.StackSizePPR.value_or(0));
   if (YamlMFI.HasStackFrame)
     setHasStackFrame(*YamlMFI.HasStackFrame);
 }

@@ -127,7 +127,8 @@ define void @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop

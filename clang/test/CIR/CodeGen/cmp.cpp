@@ -407,9 +407,9 @@ void bool_cmp(bool a, bool b) {
 // CIR: %[[X_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
 
 // CIR: %[[A1:.*]] = cir.load{{.*}} %[[A_PTR]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR: %[[A1_INT:.*]] = cir.cast(bool_to_int, %[[A1]] : !cir.bool), !s32i
+// CIR: %[[A1_INT:.*]] = cir.cast bool_to_int %[[A1]] : !cir.bool -> !s32i
 // CIR: %[[B1:.*]] = cir.load{{.*}} %[[B_PTR]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR: %[[B1_INT:.*]] = cir.cast(bool_to_int, %[[B1]] : !cir.bool), !s32i
+// CIR: %[[B1_INT:.*]] = cir.cast bool_to_int %[[B1]] : !cir.bool -> !s32i
 // CIR: %{{.*}} = cir.cmp(gt, %[[A1_INT]], %[[B1_INT]]) : !s32i, !cir.bool
 // CIR: cir.store{{.*}} {{.*}}, %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 

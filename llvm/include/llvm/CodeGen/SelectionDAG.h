@@ -1959,6 +1959,10 @@ public:
   LLVM_ABI SDValue makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
                                                 SDValue NewMemOp);
 
+  /// Get all the nodes in their topological order without modifying any states.
+  LLVM_ABI void getTopologicallyOrderedNodes(
+      SmallVectorImpl<const SDNode *> &SortedNodes) const;
+
   /// Topological-sort the AllNodes list and a
   /// assign a unique node id for each node in the DAG based on their
   /// topological order. Returns the number of nodes.
@@ -2009,7 +2013,9 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
-  LLVM_ABI void dump() const;
+  /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
+  /// Sorted is true.
+  LLVM_ABI void dump(bool Sorted = false) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the

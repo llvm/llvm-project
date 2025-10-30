@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenCXXABI.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/DeclCXX.h"
@@ -210,6 +211,19 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
+static CharUnits calculateCookiePadding(CIRGenFunction &cgf,
+                                        const CXXNewExpr *e) {
+  if (!e->isArray())
+    return CharUnits::Zero();
+
+  // No cookie is required if the operator new[] being used is the
+  // reserved placement operator new[].
+  if (e->getOperatorNew()->isReservedGlobalPlacementOperator())
+    return CharUnits::Zero();
+
+  return cgf.cgm.getCXXABI().getArrayCookieSize(e);
+}
+
 static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
                                        unsigned minElements,
                                        mlir::Value &numElements,
@@ -224,8 +238,98 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     return sizeWithoutCookie;
   }
 
-  cgf.cgm.errorNYI(e->getSourceRange(), "emitCXXNewAllocSize: array");
-  return {};
+  // The width of size_t.
+  unsigned sizeWidth = cgf.cgm.getDataLayout().getTypeSizeInBits(cgf.SizeTy);
+
+  // The number of elements can be have an arbitrary integer type;
+  // essentially, we need to multiply it by a constant factor, add a
+  // cookie size, and verify that the result is representable as a
+  // size_t.  That's just a gloss, though, and it's wrong in one
+  // important way: if the count is negative, it's an error even if
+  // the cookie size would bring the total size >= 0.
+  //
+  // If the array size is constant, Sema will have prevented negative
+  // values and size overflow.
+
+  // Compute the constant factor.
+  llvm::APInt arraySizeMultiplier(sizeWidth, 1);
+  while (const ConstantArrayType *cat =
+             cgf.getContext().getAsConstantArrayType(type)) {
+    type = cat->getElementType();
+    arraySizeMultiplier *= cat->getSize();
+  }
+
+  CharUnits typeSize = cgf.getContext().getTypeSizeInChars(type);
+  llvm::APInt typeSizeMultiplier(sizeWidth, typeSize.getQuantity());
+  typeSizeMultiplier *= arraySizeMultiplier;
+
+  // Figure out the cookie size.
+  llvm::APInt cookieSize(sizeWidth,
+                         calculateCookiePadding(cgf, e).getQuantity());
+
+  // This will be a size_t.
+  mlir::Value size;
+
+  // Emit the array size expression.
+  // We multiply the size of all dimensions for NumElements.
+  // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
+  const Expr *arraySize = *e->getArraySize();
+  mlir::Attribute constNumElements =
+      ConstantEmitter(cgf.cgm, &cgf)
+          .emitAbstract(arraySize, arraySize->getType());
+  if (constNumElements) {
+    // Get an APInt from the constant
+    const llvm::APInt &count =
+        mlir::cast<cir::IntAttr>(constNumElements).getValue();
+
+    unsigned numElementsWidth = count.getBitWidth();
+
+    // The equivalent code in CodeGen/CGExprCXX.cpp handles these cases as
+    // overflow, but that should never happen. The size argument is implicitly
+    // cast to a size_t, so it can never be negative and numElementsWidth will
+    // always equal sizeWidth.
+    assert(!count.isNegative() && "Expected non-negative array size");
+    assert(numElementsWidth == sizeWidth &&
+           "Expected a size_t array size constant");
+
+    // Okay, compute a count at the right width.
+    llvm::APInt adjustedCount = count.zextOrTrunc(sizeWidth);
+
+    // Scale numElements by that.  This might overflow, but we don't
+    // care because it only overflows if allocationSize does too, and
+    // if that overflows then we shouldn't use this.
+    // This emits a constant that may not be used, but we can't tell here
+    // whether it will be needed or not.
+    numElements =
+        cgf.getBuilder().getConstInt(loc, adjustedCount * arraySizeMultiplier);
+
+    // Compute the size before cookie, and track whether it overflowed.
+    bool overflow;
+    llvm::APInt allocationSize =
+        adjustedCount.umul_ov(typeSizeMultiplier, overflow);
+
+    // Sema prevents us from hitting this case
+    assert(!overflow && "Overflow in array allocation size");
+
+    // Add in the cookie, and check whether it's overflowed.
+    if (cookieSize != 0) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "emitCXXNewAllocSize: array cookie");
+    }
+
+    size = cgf.getBuilder().getConstInt(loc, allocationSize);
+  } else {
+    // TODO: Handle the variable size case
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "emitCXXNewAllocSize: variable array size");
+  }
+
+  if (cookieSize == 0)
+    sizeWithoutCookie = size;
+  else
+    assert(sizeWithoutCookie && "didn't set sizeWithoutCookie?");
+
+  return size;
 }
 
 static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
@@ -254,13 +358,26 @@ static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
   llvm_unreachable("bad evaluation kind");
 }
 
+void CIRGenFunction::emitNewArrayInitializer(
+    const CXXNewExpr *e, QualType elementType, mlir::Type elementTy,
+    Address beginPtr, mlir::Value numElements,
+    mlir::Value allocSizeWithoutCookie) {
+  // If we have a type with trivial initialization and no initializer,
+  // there's nothing to do.
+  if (!e->hasInitializer())
+    return;
+
+  cgm.errorNYI(e->getSourceRange(), "emitNewArrayInitializer");
+}
+
 static void emitNewInitializer(CIRGenFunction &cgf, const CXXNewExpr *e,
                                QualType elementType, mlir::Type elementTy,
                                Address newPtr, mlir::Value numElements,
                                mlir::Value allocSizeWithoutCookie) {
   assert(!cir::MissingFeatures::generateDebugInfo());
   if (e->isArray()) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "emitNewInitializer: array");
+    cgf.emitNewArrayInitializer(e, elementType, elementTy, newPtr, numElements,
+                                allocSizeWithoutCookie);
   } else if (const Expr *init = e->getInitializer()) {
     storeAnyExprIntoOneUnit(cgf, init, e->getAllocatedType(), newPtr,
                             AggValueSlot::DoesNotOverlap);
@@ -330,6 +447,111 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   /// We model such elidable calls with the 'builtin' attribute.
   assert(!cir::MissingFeatures::attributeBuiltin());
   return rv;
+}
+
+namespace {
+/// Calls the given 'operator delete' on a single object.
+struct CallObjectDelete final : EHScopeStack::Cleanup {
+  mlir::Value ptr;
+  const FunctionDecl *operatorDelete;
+  QualType elementType;
+
+  CallObjectDelete(mlir::Value ptr, const FunctionDecl *operatorDelete,
+                   QualType elementType)
+      : ptr(ptr), operatorDelete(operatorDelete), elementType(elementType) {}
+
+  void emit(CIRGenFunction &cgf) override {
+    cgf.emitDeleteCall(operatorDelete, ptr, elementType);
+  }
+};
+} // namespace
+
+/// Emit the code for deleting a single object.
+static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
+                             Address ptr, QualType elementType) {
+  // C++11 [expr.delete]p3:
+  //   If the static type of the object to be deleted is different from its
+  //   dynamic type, the static type shall be a base class of the dynamic type
+  //   of the object to be deleted and the static type shall have a virtual
+  //   destructor or the behavior is undefined.
+  assert(!cir::MissingFeatures::emitTypeCheck());
+
+  const FunctionDecl *operatorDelete = de->getOperatorDelete();
+  assert(!operatorDelete->isDestroyingOperatorDelete());
+
+  // Find the destructor for the type, if applicable.  If the
+  // destructor is virtual, we'll just emit the vcall and return.
+  const CXXDestructorDecl *dtor = nullptr;
+  if (const auto *rd = elementType->getAsCXXRecordDecl()) {
+    if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
+      dtor = rd->getDestructor();
+
+      if (dtor->isVirtual()) {
+        cgf.cgm.errorNYI(de->getSourceRange(),
+                         "emitObjectDelete: virtual destructor");
+      }
+    }
+  }
+
+  // Make sure that we call delete even if the dtor throws.
+  // This doesn't have to a conditional cleanup because we're going
+  // to pop it off in a second.
+  cgf.ehStack.pushCleanup<CallObjectDelete>(
+      NormalAndEHCleanup, ptr.getPointer(), operatorDelete, elementType);
+
+  if (dtor) {
+    cgf.emitCXXDestructorCall(dtor, Dtor_Complete,
+                              /*ForVirtualBase=*/false,
+                              /*Delegating=*/false, ptr, elementType);
+  } else if (elementType.getObjCLifetime()) {
+    assert(!cir::MissingFeatures::objCLifetime());
+    cgf.cgm.errorNYI(de->getSourceRange(), "emitObjectDelete: ObjCLifetime");
+  }
+
+  // In traditional LLVM codegen null checks are emitted to save a delete call.
+  // In CIR we optimize for size by default, the null check should be added into
+  // this function callers.
+  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+
+  cgf.popCleanupBlock();
+}
+
+void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
+  const Expr *arg = e->getArgument();
+  Address ptr = emitPointerWithAlignment(arg);
+
+  // Null check the pointer.
+  //
+  // We could avoid this null check if we can determine that the object
+  // destruction is trivial and doesn't require an array cookie; we can
+  // unconditionally perform the operator delete call in that case. For now, we
+  // assume that deleted pointers are null rarely enough that it's better to
+  // keep the branch. This might be worth revisiting for a -O0 code size win.
+  //
+  // CIR note: emit the code size friendly by default for now, such as mentioned
+  // in `emitObjectDelete`.
+  assert(!cir::MissingFeatures::emitNullCheckForDeleteCalls());
+  QualType deleteTy = e->getDestroyedType();
+
+  // A destroying operator delete overrides the entire operation of the
+  // delete expression.
+  if (e->getOperatorDelete()->isDestroyingOperatorDelete()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXDeleteExpr: destroying operator delete");
+    return;
+  }
+
+  // We might be deleting a pointer to array.
+  deleteTy = getContext().getBaseElementType(deleteTy);
+  ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
+
+  if (e->isArrayForm()) {
+    assert(!cir::MissingFeatures::deleteArray());
+    cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
+    return;
+  } else {
+    emitObjectDelete(*this, e, ptr, deleteTy);
+  }
 }
 
 mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
@@ -425,7 +647,14 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   if (allocSize != allocSizeWithoutCookie)
     cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: array with cookies");
 
-  mlir::Type elementTy = convertTypeForMem(allocType);
+  mlir::Type elementTy;
+  if (e->isArray()) {
+    // For array new, use the allocated type to handle multidimensional arrays
+    // correctly
+    elementTy = convertTypeForMem(e->getAllocatedType());
+  } else {
+    elementTy = convertTypeForMem(allocType);
+  }
   Address result = builder.createElementBitCast(getLoc(e->getSourceRange()),
                                                 allocation, elementTy);
 
@@ -442,4 +671,94 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
                      allocSizeWithoutCookie);
   return result.getPointer();
+}
+
+void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
+                                    mlir::Value ptr, QualType deleteTy) {
+  assert(!cir::MissingFeatures::deleteArray());
+
+  const auto *deleteFTy = deleteFD->getType()->castAs<FunctionProtoType>();
+  CallArgList deleteArgs;
+
+  UsualDeleteParams params = deleteFD->getUsualDeleteParams();
+  auto paramTypeIt = deleteFTy->param_type_begin();
+
+  // Pass std::type_identity tag if present
+  if (isTypeAwareAllocation(params.TypeAwareDelete))
+    cgm.errorNYI(deleteFD->getSourceRange(),
+                 "emitDeleteCall: type aware delete");
+
+  // Pass the pointer itself.
+  QualType argTy = *paramTypeIt++;
+  mlir::Value deletePtr =
+      builder.createBitcast(ptr.getLoc(), ptr, convertType(argTy));
+  deleteArgs.add(RValue::get(deletePtr), argTy);
+
+  // Pass the std::destroying_delete tag if present.
+  if (params.DestroyingDelete)
+    cgm.errorNYI(deleteFD->getSourceRange(),
+                 "emitDeleteCall: destroying delete");
+
+  // Pass the size if the delete function has a size_t parameter.
+  if (params.Size) {
+    QualType sizeType = *paramTypeIt++;
+    CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
+    assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
+           "expected cir::IntType");
+    cir::ConstantOp size = builder.getConstInt(
+        *currSrcLoc, convertType(sizeType), deleteTypeSize.getQuantity());
+
+    deleteArgs.add(RValue::get(size), sizeType);
+  }
+
+  // Pass the alignment if the delete function has an align_val_t parameter.
+  if (isAlignedAllocation(params.Alignment))
+    cgm.errorNYI(deleteFD->getSourceRange(),
+                 "emitDeleteCall: aligned allocation");
+
+  assert(paramTypeIt == deleteFTy->param_type_end() &&
+         "unknown parameter to usual delete function");
+
+  // Emit the call to delete.
+  emitNewDeleteCall(*this, deleteFD, deleteFTy, deleteArgs);
+}
+
+mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
+                                            const CXXDynamicCastExpr *dce) {
+  mlir::Location loc = getLoc(dce->getSourceRange());
+
+  cgm.emitExplicitCastExprType(dce, this);
+  QualType destTy = dce->getTypeAsWritten();
+  QualType srcTy = dce->getSubExpr()->getType();
+
+  // C++ [expr.dynamic.cast]p7:
+  //   If T is "pointer to cv void," then the result is a pointer to the most
+  //   derived object pointed to by v.
+  bool isDynCastToVoid = destTy->isVoidPointerType();
+  bool isRefCast = destTy->isReferenceType();
+
+  QualType srcRecordTy;
+  QualType destRecordTy;
+  if (isDynCastToVoid) {
+    srcRecordTy = srcTy->getPointeeType();
+    // No destRecordTy.
+  } else if (const PointerType *destPTy = destTy->getAs<PointerType>()) {
+    srcRecordTy = srcTy->castAs<PointerType>()->getPointeeType();
+    destRecordTy = destPTy->getPointeeType();
+  } else {
+    srcRecordTy = srcTy;
+    destRecordTy = destTy->castAs<ReferenceType>()->getPointeeType();
+  }
+
+  assert(srcRecordTy->isRecordType() && "source type must be a record type!");
+  assert(!cir::MissingFeatures::emitTypeCheck());
+
+  if (dce->isAlwaysNull()) {
+    cgm.errorNYI(dce->getSourceRange(), "emitDynamicCastToNull");
+    return {};
+  }
+
+  auto destCirTy = mlir::cast<cir::PointerType>(convertType(destTy));
+  return cgm.getCXXABI().emitDynamicCast(*this, loc, srcRecordTy, destRecordTy,
+                                         destCirTy, isRefCast, thisAddr);
 }

@@ -292,8 +292,46 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
+
+def ROCDL_BarrierInitOp : ROCDL_IntrOp<"s.barrier.init", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` $id attr-dict";
+}
+
 def ROCDL_BarrierSignalOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal", [], 0, [0], ["id"]>,
   Arguments<(ins I32Attr:$id)> {
+  let results = (outs);
+  let assemblyFormat = "$id attr-dict";
+}
+
+def ROCDL_BarrierSignalVarOp : ROCDL_IntrOp<"s.barrier.signal.var", [], [], [], 0, 0, 0, 0, [1], ["id"]>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr, I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr `,` $id attr-dict";
+}
+
+def ROCDL_BarrierJoinOp : ROCDL_IntrOp<"s.barrier.join", [], [], [], 0>,
+  Arguments<(ins Arg<ROCDLBufferLDS, "", []>:$ptr)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs);
+  let assemblyFormat = "$ptr attr-dict";
+}
+
+def ROCDL_BarrierLeaveOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.leave", [], 0, [0], ["id"]>,
+  Arguments<(ins I16Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
   let results = (outs);
   let assemblyFormat = "$id attr-dict";
 }
@@ -302,6 +340,24 @@ def ROCDL_BarrierWaitOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.wait", [], 0, [0
   Arguments<(ins I16Attr:$id)> {
   let results = (outs);
   let assemblyFormat = "$id attr-dict";
+}
+
+def ROCDL_BarrierSignalIsfirstOp : ROCDL_ConcreteNonMemIntrOp<"s.barrier.signal.isfirst", [], 1, [0], ["id"]>,
+  Arguments<(ins I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I1:$res);
+  let assemblyFormat = "$id attr-dict `:` type($res)";
+}
+
+def ROCDL_GetBarrierStateOp : ROCDL_ConcreteNonMemIntrOp<"s.get.barrier.state", [], 1, [0], ["id"]>,
+  Arguments<(ins I32Attr:$id)> {
+  let description = [{
+    Available on gfx1250+.
+  }];
+  let results = (outs I32:$res);
+  let assemblyFormat = "$id attr-dict `:` type($res)";
 }
 
 def ROCDL_WaitDscntOp: ROCDL_ConcreteNonMemIntrOp<"s.wait.dscnt", [], 0, [0], ["count"]>,
@@ -497,7 +553,6 @@ def ROCDL_wmma_i32_16x16x32_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x32.iu4", [1]
 // LDS transpose intrinsics (available in GFX950)
 
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
-def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
 class ROCDL_LDS_Read_Tr_IntrOp<string mnemonic> :
   ROCDL_IntrOp<mnemonic, [1], [], [], 1, 0, 1> {
@@ -569,7 +624,7 @@ def ROCDL_MakeBufferRsrcOp :
   ROCDL_IntrOp<"make.buffer.rsrc", [0], [0], [Pure], 1>,
   Arguments<(ins LLVM_AnyPointer:$base,
                  I16:$stride,
-                 I32:$numRecords,
+                 I64:$numRecords,
                  I32:$flags)> {
   let results = (outs LLVM_AnyPointer:$res);
   let assemblyFormat = "operands attr-dict `:` type($base) `to` type($res)";
@@ -985,7 +1040,6 @@ class ScaleArgInfo<TypeConstraint argTyVal, string typeName> {
 //===---------------------------------------------------------------------===//
 // Scaled {fp4,bf8,fp8} to {bf16,f16,f32} conversion intrinsics
 //===---------------------------------------------------------------------===//
-
 foreach smallT = [
   ScaleArgInfo<I32, "Fp4">,
   ScaleArgInfo<ROCDL_V2I32Type, "Fp8">,
@@ -996,6 +1050,8 @@ foreach smallT = [
     ScaleArgInfo<ROCDL_V8BF16Type, "Bf16">,
     ScaleArgInfo<ROCDL_V8F32Type, "F32">,
   ] in {
+
+    // Up-scaling
     def ROCDL_CvtPkScalePk8 # largeT.nameForOp # smallT.nameForOp # Op :
           ROCDL_ConcreteNonMemIntrOp<"cvt.scale.pk8." # largeT.name # "." # smallT.name,
           [Pure], 1, [2], ["scaleSel"]>,
@@ -1010,13 +1066,48 @@ foreach smallT = [
         attr-dict $src `,` $scale `[` $scaleSel `]` `:` type($res)
       }];
     }
+
+    // Down-scaling
+    def ROCDL_CvtScaleF32Pk8 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.pk8." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name ;
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $scale `:` type($res)
+      }];
+    }
+
+
+    def ROCDL_CvtScaleF32SrPk8 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.sr.pk8." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, I32:$seed, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name # " with stochastic rounding";
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so and apply stochastic rounding. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $seed `,` $scale `:` type($res)
+      }];
+    }
   } // foreach largeT
 } // foreach smallTOp
 
 //===---------------------------------------------------------------------===//
 // Scaled {bf6,fp6} to {bf16,f16,f32} conversion intrinsics
 //===---------------------------------------------------------------------===//
-
 foreach smallT = [
   ScaleArgInfo<ROCDL_V3I32Type, "Fp6">,
   ScaleArgInfo<ROCDL_V3I32Type, "Bf6">
@@ -1357,6 +1448,37 @@ def ROCDL_CvtScaleF32PkFp4F32Op :
   }];
  let assemblyFormat = [{
     attr-dict $src0 `,` $src1 `,` $scale `->` $oldVdst `[` $dstSelIndex `]` `:` type($res)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// FMED3 operations
+//===----------------------------------------------------------------------===//
+
+def ROCDL_FMed3Op : ROCDL_IntrOp<"fmed3", [0], [], [Pure, AllTypesMatch<["res", "src0", "src1", "src2"]>], 1>,
+  Arguments<(ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src0,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src1,
+                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$src2)> {
+  let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$res);
+  let summary = "Median of three float/half values";
+  let description = [{
+    Computes the median of three floating-point values using the AMDGPU fmed3 intrinsic.
+    This operation is equivalent to `max(min(a, b), min(max(a, b), c))` but uses the
+    hardware-accelerated V_MED3_F16/V_MED3_F32 instruction for better performance.
+    
+    The operation supports both scalar and vector floating-point types (f16, f32).
+    
+    Example:
+    ```mlir
+    // Scalar f32 median
+    %result = rocdl.fmed3 %a, %b, %c : f32
+    
+    // Vector f16 median
+    %result = rocdl.fmed3 %va, %vb, %vc : vector<4xf16>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src0 `,` $src1 `,` $src2 attr-dict `:` type($res)
   }];
 }
 

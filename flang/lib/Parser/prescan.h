@@ -225,7 +225,7 @@ private:
   LineClassification ClassifyLine(const char *) const;
   LineClassification ClassifyLine(
       TokenSequence &, Provenance newlineProvenance) const;
-  void SourceFormChange(std::string &&);
+  bool SourceFormChange(std::string &&);
   bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
   bool SourceLineContinuation(TokenSequence &);
 

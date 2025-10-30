@@ -1562,26 +1562,6 @@ OpFoldResult TransposeOp::fold(FoldAdaptor adaptor) {
   return getInput1();
 }
 
-OpFoldResult tosa::LogOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
-  // Element-wise log(exp(x)) = x
-  if (auto op = input.getDefiningOp<tosa::ExpOp>()) {
-    return op.getInput1();
-  }
-
-  return {};
-}
-
-OpFoldResult tosa::ExpOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
-  // Element-wise exp(log(x)) = x
-  if (auto op = input.getDefiningOp<tosa::LogOp>()) {
-    return op.getInput1();
-  }
-
-  return {};
-}
-
 OpFoldResult tosa::NegateOp::fold(FoldAdaptor adaptor) {
   // Element-wise negate(negate(x)) = x
   // iff all zero points are constant 0

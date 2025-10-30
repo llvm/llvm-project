@@ -1,0 +1,11 @@
+{
+    "entities" : {
+        "ABS_Fp":[1, 2],
+        "ADC":[3, 4],
+        "ADD":[5, 6],
+        "ADDPDrm":[7, 8],
+        "ADDPDrr":[9, 10],
+        "ADDPSrr":[11, 12],
+        "ADDSDrm":[13, 14]
+    }
+}

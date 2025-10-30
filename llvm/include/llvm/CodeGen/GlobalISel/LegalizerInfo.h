@@ -115,14 +115,17 @@ struct LegalityQuery {
   struct MemDesc {
     LLT MemoryTy;
     uint64_t AlignInBits;
-    AtomicOrdering Ordering;
+    AtomicOrdering Ordering; //< For cmpxchg this is the success ordering.
+    AtomicOrdering FailureOrdering; //< For cmpxchg, otherwise NotAtomic.
 
     MemDesc() = default;
-    MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering)
-        : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering) {}
+    MemDesc(LLT MemoryTy, uint64_t AlignInBits, AtomicOrdering Ordering,
+            AtomicOrdering FailureOrdering)
+        : MemoryTy(MemoryTy), AlignInBits(AlignInBits), Ordering(Ordering),
+          FailureOrdering(FailureOrdering) {}
     MemDesc(const MachineMemOperand &MMO)
         : MemDesc(MMO.getMemoryType(), MMO.getAlign().value() * 8,
-                  MMO.getSuccessOrdering()) {}
+                  MMO.getSuccessOrdering(), MMO.getFailureOrdering()) {}
   };
 
   /// Operations which require memory can use this to place requirements on the

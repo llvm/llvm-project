@@ -24,6 +24,9 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
@@ -32,6 +35,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "coro-annotation-elide"
+
+static cl::opt<float> CoroElideBranchRatio(
+    "coro-elide-branch-ratio", cl::init(0.55), cl::Hidden,
+    cl::desc("Minimum BranchProbability to consider a elide a coroutine."));
+extern cl::opt<unsigned> MinBlockCounterExecution;
 
 static Instruction *getFirstNonAllocaInTheEntryBlock(Function *F) {
   for (Instruction &I : F->getEntryBlock())
@@ -145,6 +153,30 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
       bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
       bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
       if (IsCallerPresplitCoroutine && HasAttr) {
+        BranchProbability MinBranchProbability(
+            static_cast<int>(CoroElideBranchRatio * MinBlockCounterExecution),
+            MinBlockCounterExecution);
+
+        auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*Caller);
+
+        auto Prob = BranchProbability::getBranchProbability(
+            BFI.getBlockFreq(CB->getParent()).getFrequency(),
+            BFI.getEntryFreq().getFrequency());
+
+        if (Prob < MinBranchProbability) {
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(
+                       DEBUG_TYPE, "CoroAnnotationElideUnlikely", Caller)
+                   << "'" << ore::NV("callee", Callee->getName())
+                   << "' not elided in '"
+                   << ore::NV("caller", Caller->getName())
+                   << "' because of low probability: "
+                   << ore::NV("probability", Prob) << " (threshold: "
+                   << ore::NV("threshold", MinBranchProbability) << ")";
+          });
+          continue;
+        }
+
         auto *CallerN = CG.lookup(*Caller);
         auto *CallerC = CallerN ? CG.lookupSCC(*CallerN) : nullptr;
         // If CallerC is nullptr, it means LazyCallGraph hasn't visited Caller
@@ -156,7 +188,7 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
           return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
                  << "'" << ore::NV("callee", Callee->getName())
                  << "' elided in '" << ore::NV("caller", Caller->getName())
-                 << "'";
+                 << "' (probability: " << ore::NV("probability", Prob) << ")";
         });
 
         FAM.invalidate(*Caller, PreservedAnalyses::none());

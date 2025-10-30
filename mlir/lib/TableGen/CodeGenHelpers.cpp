@@ -16,6 +16,7 @@
 #include "mlir/TableGen/Pattern.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Record.h"
 
 using namespace llvm;

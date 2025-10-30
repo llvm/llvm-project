@@ -95,6 +95,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)
   GENERATE_HLSL_INTRINSIC_FUNCTION(IsInf, isinf)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(IsNaN, isnan)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Lerp, lerp)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Normalize, normalize)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Rsqrt, rsqrt)
@@ -129,6 +130,8 @@ public:
                                    resource_handlefrombinding)
   GENERATE_HLSL_INTRINSIC_FUNCTION(CreateHandleFromImplicitBinding,
                                    resource_handlefromimplicitbinding)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(NonUniformResourceIndex,
+                                   resource_nonuniformindex)
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
@@ -197,11 +200,7 @@ private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                   llvm::GlobalVariable *GV,
-                                   HLSLVkBindingAttr *VkBinding);
-  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                   llvm::GlobalVariable *GV,
-                                   HLSLResourceBindingAttr *RBA);
+                                   llvm::GlobalVariable *GV);
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;

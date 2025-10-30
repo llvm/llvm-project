@@ -1986,6 +1986,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->separateCstringLiteralSections =
       args.hasFlag(OPT_separate_cstring_literal_sections,
                    OPT_no_separate_cstring_literal_sections, false);
+  config->tailMergeStrings =
+      args.hasFlag(OPT_tail_merge_strings, OPT_no_tail_merge_strings, false);
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

@@ -48,27 +48,40 @@ bool AArch64PrologueEpilogueCommon::isVGInstruction(
   return Opc == TargetOpcode::COPY;
 }
 
-// Convenience function to determine whether I is an SVE callee save.
-static bool isSVECalleeSave(MachineBasicBlock::iterator I) {
+// Convenience function to determine whether I is part of the ZPR callee saves.
+static bool isPartOfZPRCalleeSaves(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   default:
     return false;
-  case AArch64::PTRUE_C_B:
   case AArch64::LD1B_2Z_IMM:
   case AArch64::ST1B_2Z_IMM:
   case AArch64::STR_ZXI:
-  case AArch64::STR_PXI:
   case AArch64::LDR_ZXI:
-  case AArch64::LDR_PXI:
-  case AArch64::PTRUE_B:
-  case AArch64::CPY_ZPzI_B:
-  case AArch64::CMPNE_PPzZI_B:
+  case AArch64::PTRUE_C_B:
     return I->getFlag(MachineInstr::FrameSetup) ||
            I->getFlag(MachineInstr::FrameDestroy);
-  case AArch64::SEH_SavePReg:
   case AArch64::SEH_SaveZReg:
     return true;
   }
+}
+
+// Convenience function to determine whether I is part of the PPR callee saves.
+static bool isPartOfPPRCalleeSaves(MachineBasicBlock::iterator I) {
+  switch (I->getOpcode()) {
+  default:
+    return false;
+  case AArch64::STR_PXI:
+  case AArch64::LDR_PXI:
+    return I->getFlag(MachineInstr::FrameSetup) ||
+           I->getFlag(MachineInstr::FrameDestroy);
+  case AArch64::SEH_SavePReg:
+    return true;
+  }
+}
+
+// Convenience function to determine whether I is part of the SVE callee saves.
+static bool isPartOfSVECalleeSaves(MachineBasicBlock::iterator I) {
+  return isPartOfZPRCalleeSaves(I) || isPartOfPPRCalleeSaves(I);
 }
 
 AArch64PrologueEpilogueCommon::AArch64PrologueEpilogueCommon(
@@ -82,6 +95,26 @@ AArch64PrologueEpilogueCommon::AArch64PrologueEpilogueCommon(
 
   HasFP = AFL.hasFP(MF);
   NeedsWinCFI = AFL.needsWinCFI(MF);
+
+  // Windows unwind can't represent the required stack adjustments if we have
+  // both SVE callee-saves and dynamic stack allocations, and the frame pointer
+  // is before the SVE spills.  The allocation of the frame pointer must be the
+  // last instruction in the prologue so the unwinder can restore the stack
+  // pointer correctly. (And there isn't any unwind opcode for `addvl sp, x29,
+  // -17`.)
+  //
+  // Because of this, we do spills in the opposite order on Windows: first SVE,
+  // then GPRs. The main side-effect of this is that it makes accessing
+  // parameters passed on the stack more expensive.
+  //
+  // We could consider rearranging the spills for simpler cases.
+  if (Subtarget.isTargetWindows() && AFI->getSVECalleeSavedStackSize()) {
+    if (AFI->hasStackHazardSlotIndex())
+      reportFatalUsageError("SME hazard padding is not supported on Windows");
+    SVELayout = SVEStackLayout::CalleeSavesAboveFrameRecord;
+  } else if (AFI->hasSplitSVEObjects()) {
+    SVELayout = SVEStackLayout::Split;
+  }
 }
 
 MachineBasicBlock::iterator
@@ -316,10 +349,59 @@ bool AArch64PrologueEpilogueCommon::shouldCombineCSRLocalStackBump(
 
   // When there is an SVE area on the stack, always allocate the
   // callee-saves and spills/locals separately.
-  if (AFL.getSVEStackSize(MF))
+  if (AFI->hasSVEStackSize())
     return false;
 
   return true;
+}
+
+SVEFrameSizes AArch64PrologueEpilogueCommon::getSVEStackFrameSizes() const {
+  StackOffset PPRCalleeSavesSize =
+      StackOffset::getScalable(AFI->getPPRCalleeSavedStackSize());
+  StackOffset ZPRCalleeSavesSize =
+      StackOffset::getScalable(AFI->getZPRCalleeSavedStackSize());
+  StackOffset PPRLocalsSize = AFL.getPPRStackSize(MF) - PPRCalleeSavesSize;
+  StackOffset ZPRLocalsSize = AFL.getZPRStackSize(MF) - ZPRCalleeSavesSize;
+  if (SVELayout == SVEStackLayout::Split)
+    return {{PPRCalleeSavesSize, PPRLocalsSize},
+            {ZPRCalleeSavesSize, ZPRLocalsSize}};
+  // For simplicity, attribute all locals to ZPRs when split SVE is disabled.
+  return {{PPRCalleeSavesSize, StackOffset{}},
+          {ZPRCalleeSavesSize, PPRLocalsSize + ZPRLocalsSize}};
+}
+
+struct SVEPartitions {
+  struct {
+    MachineBasicBlock::iterator Begin, End;
+  } PPR, ZPR;
+};
+
+static SVEPartitions partitionSVECS(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    StackOffset PPRCalleeSavesSize,
+                                    StackOffset ZPRCalleeSavesSize,
+                                    bool IsEpilogue) {
+  MachineBasicBlock::iterator PPRsI = MBBI;
+  MachineBasicBlock::iterator End =
+      IsEpilogue ? MBB.begin() : MBB.getFirstTerminator();
+  auto AdjustI = [&](auto MBBI) { return IsEpilogue ? std::prev(MBBI) : MBBI; };
+  // Process the SVE CS to find the starts/ends of the ZPR and PPR areas.
+  if (PPRCalleeSavesSize) {
+    PPRsI = AdjustI(PPRsI);
+    assert(isPartOfPPRCalleeSaves(*PPRsI) && "Unexpected instruction");
+    while (PPRsI != End && isPartOfPPRCalleeSaves(AdjustI(PPRsI)))
+      IsEpilogue ? (--PPRsI) : (++PPRsI);
+  }
+  MachineBasicBlock::iterator ZPRsI = PPRsI;
+  if (ZPRCalleeSavesSize) {
+    ZPRsI = AdjustI(ZPRsI);
+    assert(isPartOfZPRCalleeSaves(*ZPRsI) && "Unexpected instruction");
+    while (ZPRsI != End && isPartOfZPRCalleeSaves(AdjustI(ZPRsI)))
+      IsEpilogue ? (--ZPRsI) : (++ZPRsI);
+  }
+  if (IsEpilogue)
+    return {{PPRsI, MBBI}, {ZPRsI, PPRsI}};
+  return {{MBBI, PPRsI}, {PPRsI, ZPRsI}};
 }
 
 AArch64PrologueEmitter::AArch64PrologueEmitter(MachineFunction &MF,
@@ -541,6 +623,13 @@ void AArch64PrologueEmitter::emitPrologue() {
   // to determine the end of the prologue.
   DebugLoc DL;
 
+  // In some cases, particularly with CallingConv::SwiftTail, it is possible to
+  // have a tail-call where the caller only needs to adjust the stack pointer in
+  // the epilogue. In this case, we still need to emit a SEH prologue sequence.
+  // See `seh-minimal-prologue-epilogue.ll` test cases.
+  if (AFI->getArgumentStackToRestore())
+    HasWinCFI = true;
+
   if (AFI->shouldSignReturnAddress(MF)) {
     // If pac-ret+leaf is in effect, PAUTH_PROLOGUE pseudo instructions
     // are inserted by emitPacRetPlusLeafHardening().
@@ -594,30 +683,12 @@ void AArch64PrologueEmitter::emitPrologue() {
   bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
   unsigned FixedObject = AFL.getFixedObjectSize(MF, AFI, IsWin64, IsFunclet);
 
-  // Windows unwind can't represent the required stack adjustments if we have
-  // both SVE callee-saves and dynamic stack allocations, and the frame
-  // pointer is before the SVE spills.  The allocation of the frame pointer
-  // must be the last instruction in the prologue so the unwinder can restore
-  // the stack pointer correctly. (And there isn't any unwind opcode for
-  // `addvl sp, x29, -17`.)
-  //
-  // Because of this, we do spills in the opposite order on Windows: first SVE,
-  // then GPRs. The main side-effect of this is that it makes accessing
-  // parameters passed on the stack more expensive.
-  //
-  // We could consider rearranging the spills for simpler cases.
-  bool FPAfterSVECalleeSaves =
-      Subtarget.isTargetWindows() && AFI->getSVECalleeSavedStackSize();
-
-  if (FPAfterSVECalleeSaves && AFI->hasStackHazardSlotIndex())
-    reportFatalUsageError("SME hazard padding is not supported on Windows");
-
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
   // All of the remaining stack allocations are for locals.
   determineLocalsStackSize(NumBytes, PrologueSaveSize);
 
   MachineBasicBlock::iterator FirstGPRSaveI = PrologueBeginI;
-  if (FPAfterSVECalleeSaves) {
+  if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
     // If we're doing SVE saves first, we need to immediately allocate space
     // for fixed objects, then space for the SVE callee saves.
     //
@@ -632,7 +703,7 @@ void AArch64PrologueEmitter::emitPrologue() {
 
     // Now allocate space for the GPR callee saves.
     MachineBasicBlock::iterator MBBI = PrologueBeginI;
-    while (MBBI != EndI && isSVECalleeSave(MBBI))
+    while (MBBI != EndI && isPartOfSVECalleeSaves(MBBI))
       ++MBBI;
     FirstGPRSaveI = convertCalleeSaveRestoreToSPPrePostIncDec(
         MBBI, DL, -AFI->getCalleeSavedStackSize(), EmitAsyncCFI);
@@ -662,7 +733,7 @@ void AArch64PrologueEmitter::emitPrologue() {
   MachineBasicBlock::iterator AfterGPRSavesI = FirstGPRSaveI;
   while (AfterGPRSavesI != EndI &&
          AfterGPRSavesI->getFlag(MachineInstr::FrameSetup) &&
-         !isSVECalleeSave(AfterGPRSavesI)) {
+         !isPartOfSVECalleeSaves(AfterGPRSavesI)) {
     if (CombineSPBump &&
         // Only fix-up frame-setup load/store instructions.
         (!AFL.requiresSaveVG(MF) || !isVGInstruction(AfterGPRSavesI, TLI)))
@@ -693,61 +764,66 @@ void AArch64PrologueEmitter::emitPrologue() {
   if (AFL.windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding))
     emitWindowsStackProbe(AfterGPRSavesI, DL, NumBytes, RealignmentPadding);
 
-  StackOffset SVEStackSize = AFL.getSVEStackSize(MF);
-  StackOffset SVECalleeSavesSize = {}, SVELocalsSize = SVEStackSize;
-  MachineBasicBlock::iterator CalleeSavesEnd = AfterGPRSavesI;
-
+  auto [PPR, ZPR] = getSVEStackFrameSizes();
+  StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
+  StackOffset NonSVELocalsSize = StackOffset::getFixed(NumBytes);
   StackOffset CFAOffset =
-      StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes);
+      StackOffset::getFixed(MFI.getStackSize()) - NonSVELocalsSize;
 
-  // Process the SVE callee-saves to determine what space needs to be
-  // allocated.
   MachineBasicBlock::iterator AfterSVESavesI = AfterGPRSavesI;
-  if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
-    LLVM_DEBUG(dbgs() << "SVECalleeSavedStackSize = " << CalleeSavedSize
-                      << "\n");
-    SVECalleeSavesSize = StackOffset::getScalable(CalleeSavedSize);
-    SVELocalsSize = SVEStackSize - SVECalleeSavesSize;
-    // Find callee save instructions in frame.
-    // Note: With FPAfterSVECalleeSaves the callee saves have already been
-    // allocated.
-    if (!FPAfterSVECalleeSaves) {
-      MachineBasicBlock::iterator CalleeSavesBegin = AfterGPRSavesI;
-      assert(isSVECalleeSave(CalleeSavesBegin) && "Unexpected instruction");
-      while (isSVECalleeSave(AfterSVESavesI) &&
-             AfterSVESavesI != MBB.getFirstTerminator())
-        ++AfterSVESavesI;
-      CalleeSavesEnd = AfterSVESavesI;
+  // Allocate space for the callee saves and PPR locals (if any).
+  if (SVELayout != SVEStackLayout::CalleeSavesAboveFrameRecord) {
+    auto [PPRRange, ZPRRange] =
+        partitionSVECS(MBB, AfterGPRSavesI, PPR.CalleeSavesSize,
+                       ZPR.CalleeSavesSize, /*IsEpilogue=*/false);
+    AfterSVESavesI = ZPRRange.End;
+    if (EmitAsyncCFI)
+      emitCalleeSavedSVELocations(AfterSVESavesI);
 
-      StackOffset LocalsSize = SVELocalsSize + StackOffset::getFixed(NumBytes);
-      // Allocate space for the callee saves (if any).
-      allocateStackSpace(CalleeSavesBegin, 0, SVECalleeSavesSize,
-                         EmitAsyncCFI && !HasFP, CFAOffset,
-                         MFI.hasVarSizedObjects() || LocalsSize);
+    StackOffset AllocateBeforePPRs = SVECalleeSavesSize;
+    StackOffset AllocateAfterPPRs = PPR.LocalsSize;
+    if (SVELayout == SVEStackLayout::Split) {
+      AllocateBeforePPRs = PPR.CalleeSavesSize;
+      AllocateAfterPPRs = PPR.LocalsSize + ZPR.CalleeSavesSize;
     }
+    allocateStackSpace(PPRRange.Begin, 0, AllocateBeforePPRs,
+                       EmitAsyncCFI && !HasFP, CFAOffset,
+                       MFI.hasVarSizedObjects() || AllocateAfterPPRs ||
+                           ZPR.LocalsSize || NonSVELocalsSize);
+    CFAOffset += AllocateBeforePPRs;
+    assert(PPRRange.End == ZPRRange.Begin &&
+           "Expected ZPR callee saves after PPR locals");
+    allocateStackSpace(PPRRange.End, RealignmentPadding, AllocateAfterPPRs,
+                       EmitAsyncCFI && !HasFP, CFAOffset,
+                       MFI.hasVarSizedObjects() || ZPR.LocalsSize ||
+                           NonSVELocalsSize);
+    CFAOffset += AllocateAfterPPRs;
+  } else {
+    assert(SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord);
+    // Note: With CalleeSavesAboveFrameRecord, the SVE CS have already been
+    // allocated (and separate PPR locals are not supported, all SVE locals,
+    // both PPR and ZPR, are within the ZPR locals area).
+    assert(!PPR.LocalsSize && "Unexpected PPR locals!");
+    CFAOffset += SVECalleeSavesSize;
   }
-  CFAOffset += SVECalleeSavesSize;
 
-  if (EmitAsyncCFI)
-    emitCalleeSavedSVELocations(CalleeSavesEnd);
-
-  // Allocate space for the rest of the frame including SVE locals. Align the
+  // Allocate space for the rest of the frame including ZPR locals. Align the
   // stack as necessary.
   assert(!(AFL.canUseRedZone(MF) && NeedsRealignment) &&
          "Cannot use redzone with stack realignment");
   if (!AFL.canUseRedZone(MF)) {
-    // FIXME: in the case of dynamic re-alignment, NumBytes doesn't have
-    // the correct value here, as NumBytes also includes padding bytes,
-    // which shouldn't be counted here.
-    allocateStackSpace(CalleeSavesEnd, RealignmentPadding,
-                       SVELocalsSize + StackOffset::getFixed(NumBytes),
-                       EmitAsyncCFI && !HasFP, CFAOffset,
-                       MFI.hasVarSizedObjects());
+    // FIXME: in the case of dynamic re-alignment, NumBytes doesn't have the
+    // correct value here, as NumBytes also includes padding bytes, which
+    // shouldn't be counted here.
+    allocateStackSpace(
+        AfterSVESavesI, RealignmentPadding, ZPR.LocalsSize + NonSVELocalsSize,
+        EmitAsyncCFI && !HasFP, CFAOffset, MFI.hasVarSizedObjects());
   }
 
   // If we need a base pointer, set it up here. It's whatever the value of the
-  // stack pointer is at this point. Any variable size objects will be allocated
-  // after this, so we can still use the base pointer to reference locals.
+  // stack pointer is at this point. Any variable size objects will be
+  // allocated after this, so we can still use the base pointer to reference
+  // locals.
   //
   // FIXME: Clarify FrameSetup flags here.
   // Note: Use emitFrameOffset() like above for FP if the FrameSetup flag is
@@ -789,7 +865,8 @@ void AArch64PrologueEmitter::emitPrologue() {
       emitDefineCFAWithFP(AfterSVESavesI, FixedObject);
     } else {
       StackOffset TotalSize =
-          SVEStackSize + StackOffset::getFixed((int64_t)MFI.getStackSize());
+          AFL.getSVEStackSize(MF) +
+          StackOffset::getFixed((int64_t)MFI.getStackSize());
       CFIInstBuilder CFIBuilder(MBB, AfterSVESavesI, MachineInstr::FrameSetup);
       CFIBuilder.insertCFIInst(
           createDefCFA(RegInfo, /*FrameReg=*/AArch64::SP, /*Reg=*/AArch64::SP,
@@ -1158,7 +1235,7 @@ void AArch64PrologueEmitter::emitCalleeSavedGPRLocations(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   for (const auto &Info : CSI) {
     unsigned FrameIdx = Info.getFrameIdx();
-    if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector)
+    if (MFI.hasScalableStackID(FrameIdx))
       continue;
 
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
@@ -1184,8 +1261,10 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
                                  AFL.getOffsetOfLocalArea();
   }
 
+  StackOffset PPRStackSize = AFL.getPPRStackSize(MF);
   for (const auto &Info : CSI) {
-    if (MFI.getStackID(Info.getFrameIdx()) != TargetStackID::ScalableVector)
+    int FI = Info.getFrameIdx();
+    if (!MFI.hasScalableStackID(FI))
       continue;
 
     // Not all unwinders may know about SVE registers, so assume the lowest
@@ -1196,8 +1275,14 @@ void AArch64PrologueEmitter::emitCalleeSavedSVELocations(
       continue;
 
     StackOffset Offset =
-        StackOffset::getScalable(MFI.getObjectOffset(Info.getFrameIdx())) -
+        StackOffset::getScalable(MFI.getObjectOffset(FI)) -
         StackOffset::getFixed(AFI->getCalleeSavedStackSize(MFI));
+
+    // The scalable vectors are below (lower address) the scalable predicates
+    // with split SVE objects, so we must subtract the size of the predicates.
+    if (SVELayout == SVEStackLayout::Split &&
+        MFI.getStackID(FI) == TargetStackID::ScalableVector)
+      Offset -= PPRStackSize;
 
     CFIBuilder.insertCFIInst(
         createCFAOffset(RegInfo, Reg, Offset, IncomingVGOffsetFromDefCFA));
@@ -1274,13 +1359,10 @@ void AArch64EpilogueEmitter::emitEpilogue() {
     return;
   }
 
-  bool FPAfterSVECalleeSaves =
-      Subtarget.isTargetWindows() && AFI->getSVECalleeSavedStackSize();
-
   bool CombineSPBump = shouldCombineCSRLocalStackBump(NumBytes);
   // Assume we can't combine the last pop with the sp restore.
   bool CombineAfterCSRBump = false;
-  if (FPAfterSVECalleeSaves) {
+  if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
     AfterCSRPopSize += FixedObject;
   } else if (!CombineSPBump && PrologueSaveSize != 0) {
     MachineBasicBlock::iterator Pop = std::prev(MBB.getFirstTerminator());
@@ -1315,7 +1397,8 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   while (FirstGPRRestoreI != Begin) {
     --FirstGPRRestoreI;
     if (!FirstGPRRestoreI->getFlag(MachineInstr::FrameDestroy) ||
-        (!FPAfterSVECalleeSaves && isSVECalleeSave(FirstGPRRestoreI))) {
+        (SVELayout != SVEStackLayout::CalleeSavesAboveFrameRecord &&
+         isPartOfSVECalleeSaves(FirstGPRRestoreI))) {
       ++FirstGPRRestoreI;
       break;
     } else if (CombineSPBump)
@@ -1339,11 +1422,9 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   if (HasFP && AFI->hasSwiftAsyncContext())
     emitSwiftAsyncContextFramePointer(EpilogueEndI, DL);
 
-  const StackOffset &SVEStackSize = AFL.getSVEStackSize(MF);
-
   // If there is a single SP update, insert it before the ret and we're done.
   if (CombineSPBump) {
-    assert(!SVEStackSize && "Cannot combine SP bump with SVE");
+    assert(!AFI->hasSVEStackSize() && "Cannot combine SP bump with SVE");
 
     // When we are about to restore the CSRs, the CFA register is SP again.
     if (EmitCFI && HasFP)
@@ -1360,37 +1441,29 @@ void AArch64EpilogueEmitter::emitEpilogue() {
   NumBytes -= PrologueSaveSize;
   assert(NumBytes >= 0 && "Negative stack allocation size!?");
 
-  // Process the SVE callee-saves to determine what space needs to be
-  // deallocated.
-  StackOffset DeallocateBefore = {}, DeallocateAfter = SVEStackSize;
-  MachineBasicBlock::iterator RestoreBegin = FirstGPRRestoreI,
-                              RestoreEnd = FirstGPRRestoreI;
-  if (int64_t CalleeSavedSize = AFI->getSVECalleeSavedStackSize()) {
-    if (FPAfterSVECalleeSaves)
-      RestoreEnd = MBB.getFirstTerminator();
+  auto [PPR, ZPR] = getSVEStackFrameSizes();
+  auto [PPRRange, ZPRRange] = partitionSVECS(
+      MBB,
+      SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord
+          ? MBB.getFirstTerminator()
+          : FirstGPRRestoreI,
+      PPR.CalleeSavesSize, ZPR.CalleeSavesSize, /*IsEpilogue=*/true);
 
-    RestoreBegin = std::prev(RestoreEnd);
-    while (RestoreBegin != MBB.begin() &&
-           isSVECalleeSave(std::prev(RestoreBegin)))
-      --RestoreBegin;
-
-    assert(isSVECalleeSave(RestoreBegin) &&
-           isSVECalleeSave(std::prev(RestoreEnd)) && "Unexpected instruction");
-
-    StackOffset CalleeSavedSizeAsOffset =
-        StackOffset::getScalable(CalleeSavedSize);
-    DeallocateBefore = SVEStackSize - CalleeSavedSizeAsOffset;
-    DeallocateAfter = CalleeSavedSizeAsOffset;
-  }
+  StackOffset SVECalleeSavesSize = ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
+  StackOffset SVEStackSize =
+      SVECalleeSavesSize + PPR.LocalsSize + ZPR.LocalsSize;
+  MachineBasicBlock::iterator RestoreBegin = ZPRRange.Begin;
+  MachineBasicBlock::iterator RestoreEnd = PPRRange.End;
 
   // Deallocate the SVE area.
-  if (FPAfterSVECalleeSaves) {
+  if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
+    StackOffset SVELocalsSize = ZPR.LocalsSize + PPR.LocalsSize;
     // If the callee-save area is before FP, restoring the FP implicitly
-    // deallocates non-callee-save SVE allocations.  Otherwise, deallocate
-    // them explicitly.
+    // deallocates non-callee-save SVE allocations.  Otherwise, deallocate them
+    // explicitly.
     if (!AFI->isStackRealigned() && !MFI.hasVarSizedObjects()) {
       emitFrameOffset(MBB, FirstGPRRestoreI, DL, AArch64::SP, AArch64::SP,
-                      DeallocateBefore, TII, MachineInstr::FrameDestroy, false,
+                      SVELocalsSize, TII, MachineInstr::FrameDestroy, false,
                       NeedsWinCFI, &HasWinCFI);
     }
 
@@ -1406,60 +1479,84 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
     // Deallocate callee-save SVE registers.
     emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                    DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
+                    SVECalleeSavesSize, TII, MachineInstr::FrameDestroy, false,
                     NeedsWinCFI, &HasWinCFI);
-  } else if (SVEStackSize) {
-    int64_t SVECalleeSavedSize = AFI->getSVECalleeSavedStackSize();
-    // If we have stack realignment or variable-sized objects we must use the
-    // FP to restore SVE callee saves (as there is an unknown amount of
+  } else if (AFI->hasSVEStackSize()) {
+    // If we have stack realignment or variable-sized objects we must use the FP
+    // to restore SVE callee saves (as there is an unknown amount of
     // data/padding between the SP and SVE CS area).
     Register BaseForSVEDealloc =
         (AFI->isStackRealigned() || MFI.hasVarSizedObjects()) ? AArch64::FP
                                                               : AArch64::SP;
-    if (SVECalleeSavedSize && BaseForSVEDealloc == AArch64::FP) {
+    if (SVECalleeSavesSize && BaseForSVEDealloc == AArch64::FP) {
+      // TODO: Support stack realigment and variable-sized objects.
+      assert(
+          SVELayout != SVEStackLayout::Split &&
+          "unexpected stack realignment or variable sized objects with split "
+          "SVE stack objects");
+
       Register CalleeSaveBase = AArch64::FP;
       if (int64_t CalleeSaveBaseOffset =
               AFI->getCalleeSaveBaseToFrameRecordOffset()) {
         // If we have have an non-zero offset to the non-SVE CS base we need to
         // compute the base address by subtracting the offest in a temporary
         // register first (to avoid briefly deallocating the SVE CS).
-        CalleeSaveBase =
-            MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+        CalleeSaveBase = MBB.getParent()->getRegInfo().createVirtualRegister(
+            &AArch64::GPR64RegClass);
         emitFrameOffset(MBB, RestoreBegin, DL, CalleeSaveBase, AArch64::FP,
                         StackOffset::getFixed(-CalleeSaveBaseOffset), TII,
                         MachineInstr::FrameDestroy);
       }
-      // The code below will deallocate the stack space space by moving the
-      // SP to the start of the SVE callee-save area.
+      // The code below will deallocate the stack space space by moving the SP
+      // to the start of the SVE callee-save area.
       emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, CalleeSaveBase,
-                      StackOffset::getScalable(-SVECalleeSavedSize), TII,
-                      MachineInstr::FrameDestroy);
+                      -SVECalleeSavesSize, TII, MachineInstr::FrameDestroy);
     } else if (BaseForSVEDealloc == AArch64::SP) {
-      if (SVECalleeSavedSize) {
+      auto CFAOffset =
+          SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize);
+
+      if (SVECalleeSavesSize) {
         // Deallocate the non-SVE locals first before we can deallocate (and
         // restore callee saves) from the SVE area.
-        emitFrameOffset(
-            MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
-            StackOffset::getFixed(NumBytes), TII, MachineInstr::FrameDestroy,
-            false, NeedsWinCFI, &HasWinCFI, EmitCFI && !HasFP,
-            SVEStackSize + StackOffset::getFixed(NumBytes + PrologueSaveSize));
+        auto NonSVELocals = StackOffset::getFixed(NumBytes);
+        emitFrameOffset(MBB, ZPRRange.Begin, DL, AArch64::SP, AArch64::SP,
+                        NonSVELocals, TII, MachineInstr::FrameDestroy, false,
+                        NeedsWinCFI, &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
+        CFAOffset -= NonSVELocals;
         NumBytes = 0;
       }
 
-      emitFrameOffset(MBB, RestoreBegin, DL, AArch64::SP, AArch64::SP,
-                      DeallocateBefore, TII, MachineInstr::FrameDestroy, false,
-                      NeedsWinCFI, &HasWinCFI, EmitCFI && !HasFP,
-                      SVEStackSize +
-                          StackOffset::getFixed(NumBytes + PrologueSaveSize));
+      if (ZPR.LocalsSize) {
+        emitFrameOffset(MBB, ZPRRange.Begin, DL, AArch64::SP, AArch64::SP,
+                        ZPR.LocalsSize, TII, MachineInstr::FrameDestroy, false,
+                        NeedsWinCFI, &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
+        CFAOffset -= ZPR.LocalsSize;
+      }
 
-      emitFrameOffset(MBB, RestoreEnd, DL, AArch64::SP, AArch64::SP,
-                      DeallocateAfter, TII, MachineInstr::FrameDestroy, false,
-                      NeedsWinCFI, &HasWinCFI, EmitCFI && !HasFP,
-                      DeallocateAfter +
-                          StackOffset::getFixed(NumBytes + PrologueSaveSize));
+      StackOffset SVECalleeSavesToDealloc = SVECalleeSavesSize;
+      if (SVELayout == SVEStackLayout::Split &&
+          (PPR.LocalsSize || ZPR.CalleeSavesSize)) {
+        assert(PPRRange.Begin == ZPRRange.End &&
+               "Expected PPR restores after ZPR");
+        emitFrameOffset(MBB, PPRRange.Begin, DL, AArch64::SP, AArch64::SP,
+                        PPR.LocalsSize + ZPR.CalleeSavesSize, TII,
+                        MachineInstr::FrameDestroy, false, NeedsWinCFI,
+                        &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
+        CFAOffset -= PPR.LocalsSize + ZPR.CalleeSavesSize;
+        SVECalleeSavesToDealloc -= ZPR.CalleeSavesSize;
+      }
+
+      // If split SVE is on, this dealloc PPRs, otherwise, deallocs ZPRs + PPRs:
+      if (SVECalleeSavesToDealloc)
+        emitFrameOffset(MBB, PPRRange.End, DL, AArch64::SP, AArch64::SP,
+                        SVECalleeSavesToDealloc, TII,
+                        MachineInstr::FrameDestroy, false, NeedsWinCFI,
+                        &HasWinCFI, EmitCFI && !HasFP, CFAOffset);
     }
+
     if (EmitCFI)
-      emitCalleeSavedSVERestores(RestoreEnd);
+      emitCalleeSavedSVERestores(
+          SVELayout == SVEStackLayout::Split ? ZPRRange.End : PPRRange.End);
   }
 
   if (!HasFP) {
@@ -1617,8 +1714,7 @@ void AArch64EpilogueEmitter::emitCalleeSavedRestores(
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
 
   for (const auto &Info : CSI) {
-    if (SVE !=
-        (MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
+    if (SVE != MFI.hasScalableStackID(Info.getFrameIdx()))
       continue;
 
     MCRegister Reg = Info.getReg();

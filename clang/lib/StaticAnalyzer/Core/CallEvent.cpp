@@ -1254,6 +1254,15 @@ template <> struct DenseMapInfo<PrivateMethodKey> {
 };
 } // end namespace llvm
 
+// NOTE: This cache is a "global" variable, and it is cleared by
+// CallEventManager's constructor so we do not keep old entries when
+// loading/unloading ASTs. If we are worried about concurrency, we may  need to
+// revisit this someday. In terms of memory, this table stays around until clang
+// quits, which also may be bad if we need to release memory.
+using PrivateMethodCacheTy =
+    llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
+static PrivateMethodCacheTy PrivateMethodCache;
+
 static const ObjCMethodDecl *
 lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
                         Selector LookupSelector, bool InstanceMethod) {
@@ -1262,21 +1271,8 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
   // that repeated queries on the same ObjCIntefaceDecl and Selector
   // don't incur the same cost.  On some test cases, we can see the
   // same query being issued thousands of times.
-  //
-  // NOTE: This cache is essentially a "global" variable, but it
-  // only gets lazily created when we get here.  The value of the
-  // cache probably comes from it being global across ExprEngines,
-  // where the same queries may get issued.  If we are worried about
-  // concurrency, or possibly loading/unloading ASTs, etc., we may
-  // need to revisit this someday.  In terms of memory, this table
-  // stays around until clang quits, which also may be bad if we
-  // need to release memory.
-  using PrivateMethodCache =
-      llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
-
-  static PrivateMethodCache PMC;
   std::optional<const ObjCMethodDecl *> &Val =
-      PMC[{Interface, LookupSelector, InstanceMethod}];
+      PrivateMethodCache[{Interface, LookupSelector, InstanceMethod}];
 
   // Query lookupPrivateMethod() if the cache does not hit.
   if (!Val) {
@@ -1420,6 +1416,13 @@ void ObjCMethodCall::getInitialStackFrameContents(
     Loc SelfLoc = SVB.makeLoc(MRMgr.getVarRegion(SelfD, CalleeCtx));
     Bindings.push_back(std::make_pair(SelfLoc, SelfVal));
   }
+}
+
+CallEventManager::CallEventManager(llvm::BumpPtrAllocator &alloc)
+    : Alloc(alloc) {
+  // Clear the method cache to avoid hits when multiple AST are loaded/unloaded
+  // within a single process. This can happen with unit tests, for instance.
+  PrivateMethodCache.clear();
 }
 
 CallEventRef<>

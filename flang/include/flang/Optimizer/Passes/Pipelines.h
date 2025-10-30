@@ -158,7 +158,8 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 void createDebugPasses(mlir::PassManager &pm,
                        llvm::codegenoptions::DebugInfoKind debugLevel,
                        llvm::OptimizationLevel OptLevel,
-                       llvm::StringRef inputFilename, int32_t dwarfVersion);
+                       llvm::StringRef inputFilename, int32_t dwarfVersion,
+                       llvm::StringRef splitDwarfFile);
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,

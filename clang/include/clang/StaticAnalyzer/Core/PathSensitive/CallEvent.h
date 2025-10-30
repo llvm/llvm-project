@@ -1414,7 +1414,7 @@ class CallEventManager {
   }
 
 public:
-  CallEventManager(llvm::BumpPtrAllocator &alloc) : Alloc(alloc) {}
+  CallEventManager(llvm::BumpPtrAllocator &alloc);
 
   /// Gets an outside caller given a callee context.
   CallEventRef<> getCaller(const StackFrameContext *CalleeCtx,

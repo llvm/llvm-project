@@ -1209,6 +1209,15 @@ parser::Message *AttachDeclaration(
     message.Attach(use->location(),
         "'%s' is USE-associated with '%s' in module '%s'"_en_US, symbol.name(),
         unhosted->name(), GetUsedModule(*use).name());
+  } else if (const auto *common{
+                 unhosted->detailsIf<semantics::CommonBlockDetails>()}) {
+    parser::CharBlock at{unhosted->name()};
+    if (at.empty()) { // blank COMMON, with or without //
+      at = common->sourceLocation();
+    }
+    if (!at.empty()) {
+      message.Attach(at, "Declaration of /%s/"_en_US, unhosted->name());
+    }
   } else {
     message.Attach(
         unhosted->name(), "Declaration of '%s'"_en_US, unhosted->name());
@@ -1948,6 +1957,33 @@ private:
 bool IsVarSubexpressionOf(
     const Expr<SomeType> &sub, const Expr<SomeType> &super) {
   return VariableFinder{sub}(super);
+}
+
+std::optional<int> CountDerivedTypeAncestors(const semantics::Scope &scope) {
+  if (scope.IsDerivedType()) {
+    for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
+      const Symbol &symbol{*iter->second};
+      if (symbol.test(Symbol::Flag::ParentComp)) {
+        if (const semantics::DeclTypeSpec *type{symbol.GetType()}) {
+          if (const semantics::DerivedTypeSpec *derived{type->AsDerived()}) {
+            const semantics::Scope *parent{derived->scope()};
+            if (!parent) {
+              parent = derived->typeSymbol().scope();
+            }
+            if (parent) {
+              if (auto parentDepth{CountDerivedTypeAncestors(*parent)}) {
+                return 1 + *parentDepth;
+              }
+            }
+          }
+        }
+        return std::nullopt; // error recovery
+      }
+    }
+    return 0;
+  } else {
+    return std::nullopt; // error recovery
+  }
 }
 
 } // namespace Fortran::evaluate

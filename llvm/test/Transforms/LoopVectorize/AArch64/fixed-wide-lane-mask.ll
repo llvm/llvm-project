@@ -45,9 +45,6 @@ define void @fixed_wide_active_lane_mask(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-UF4-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 8)
 ; CHECK-UF4-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 4)
 ; CHECK-UF4-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_ENTRY]], i64 0)
-; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 4, i64 [[N]])
-; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_ENTRY2:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 8, i64 [[N]])
-; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_ENTRY3:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 12, i64 [[N]])
 ; CHECK-UF4-NEXT:    br label [[VECTOR_BODY1:%.*]]
 ; CHECK-UF4:       vector.body:
 ; CHECK-UF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY1]] ]
@@ -67,17 +64,11 @@ define void @fixed_wide_active_lane_mask(ptr noalias %dst, ptr noalias readonly 
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP18]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK5]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[BROADCAST_SPLAT]], ptr [[TMP19]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK6]])
 ; CHECK-UF4-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
-; CHECK-UF4-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 4
-; CHECK-UF4-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 8
-; CHECK-UF4-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[INDEX]], i64 [[TMP6]])
 ; CHECK-UF4-NEXT:    [[TMP12]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 12)
 ; CHECK-UF4-NEXT:    [[TMP11]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 8)
 ; CHECK-UF4-NEXT:    [[TMP10]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 4)
 ; CHECK-UF4-NEXT:    [[TMP9]] = call <4 x i1> @llvm.vector.extract.v4i1.v16i1(<16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0)
-; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT7:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP13]], i64 [[TMP6]])
-; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT8:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP14]], i64 [[TMP6]])
-; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT9:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP15]], i64 [[TMP6]])
 ; CHECK-UF4-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP9]], i32 0
 ; CHECK-UF4-NEXT:    [[TMP20:%.*]] = xor i1 [[TMP21]], true
 ; CHECK-UF4-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]

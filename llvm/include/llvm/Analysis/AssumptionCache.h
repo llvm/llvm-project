@@ -28,6 +28,7 @@
 namespace llvm {
 
 class AssumeInst;
+struct OperandBundleUse;
 class Function;
 class raw_ostream;
 class TargetTransformInfo;
@@ -165,6 +166,11 @@ public:
 
     return AVI->second;
   }
+
+  /// Determine which values are affected by this assume operand bundle.
+  static void
+  findValuesAffectedByOperandBundle(OperandBundleUse Bundle,
+                                    function_ref<void(Value *)> InsertAffected);
 };
 
 /// A function analysis which provides an \c AssumptionCache.

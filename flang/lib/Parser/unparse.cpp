@@ -2089,6 +2089,11 @@ public:
   // OpenMP Clauses & Directives
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
 
+  void Unparse(const OmpBaseVariantNames &x) {
+    Walk(std::get<0>(x.t)); // OmpObject
+    Put(":");
+    Walk(std::get<1>(x.t)); // OmpObject
+  }
   void Unparse(const OmpTypeNameList &x) { //
     Walk(x.v, ",");
   }
@@ -2340,6 +2345,13 @@ public:
       }
     }
   }
+  void Unparse(const OmpLoopRangeClause &x) {
+    Word("LOOPRANGE(");
+    Walk(std::get<0>(x.t));
+    Put(", ");
+    Walk(std::get<1>(x.t));
+    Put(")");
+  }
   void Unparse(const OmpReductionClause &x) {
     using Modifier = OmpReductionClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2487,9 +2499,6 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OmpDeclareTargetWithList &x) {
-    Put("("), Walk(x.v), Put(")");
-  }
   void Unparse(const OmpInitializerProc &x) {
     Walk(std::get<ProcedureDesignator>(x.t));
     Put("(");
@@ -2534,12 +2543,8 @@ public:
   }
   void Unparse(const OmpDeclareVariantDirective &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE VARIANT ");
-    Put("(");
-    Walk(std::get<std::optional<Name>>(x.t), ":");
-    Walk(std::get<Name>(x.t));
-    Put(")");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2560,8 +2565,8 @@ public:
 
   void Unparse(const OpenMPDeclarativeAssumes &x) {
     BeginOpenMP();
-    Word("!$OMP ASSUMES ");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2572,18 +2577,17 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &y) {
+  void Unparse(const OpenMPDeclareSimdConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE SIMD ");
-    Walk("(", std::get<std::optional<Name>>(y.t), ")");
-    Walk(std::get<OmpClauseList>(y.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
   void Unparse(const OpenMPDeclareTargetConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE TARGET ");
-    Walk(std::get<parser::OmpDeclareTargetSpecifier>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2597,10 +2601,10 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPRequiresConstruct &y) {
+  void Unparse(const OpenMPRequiresConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP REQUIRES ");
-    Walk(std::get<OmpClauseList>(y.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }

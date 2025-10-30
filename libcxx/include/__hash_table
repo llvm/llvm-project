@@ -44,6 +44,7 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__utility/swap.h>
 #include <__utility/try_key_extraction.h>
 #include <limits>
@@ -1317,23 +1318,14 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
     max_load_factor() = __u.max_load_factor();
     if (bucket_count() != 0) {
       __next_pointer __cache = __detach();
-#if _LIBCPP_HAS_EXCEPTIONS
-      try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-        const_iterator __i = __u.begin();
-        while (__cache != nullptr && __u.size() != 0) {
-          __assign_value(__cache->__upcast()->__get_value(), std::move(__u.remove(__i++)->__get_value()));
-          __next_pointer __next = __cache->__next_;
-          __node_insert_multi(__cache->__upcast());
-          __cache = __next;
-        }
-#if _LIBCPP_HAS_EXCEPTIONS
-      } catch (...) {
-        __deallocate_node(__cache);
-        throw;
+      auto __guard           = std::__make_scope_guard([&] { __deallocate_node(__cache); });
+      const_iterator __i     = __u.begin();
+      while (__cache != nullptr && __u.size() != 0) {
+        __assign_value(__cache->__upcast()->__get_value(), std::move(__u.remove(__i++)->__get_value()));
+        __next_pointer __next = __cache->__next_;
+        __node_insert_multi(__cache->__upcast());
+        __cache = __next;
       }
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      __deallocate_node(__cache);
     }
     const_iterator __i = __u.begin();
     while (__u.size() != 0)
@@ -1361,22 +1353,13 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __
 
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __cache != nullptr && __first != __last; ++__first) {
-        __assign_value(__cache->__upcast()->__get_value(), *__first);
-        __next_pointer __next = __cache->__next_;
-        __node_insert_unique(__cache->__upcast());
-        __cache = __next;
-      }
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __deallocate_node(__cache);
-      throw;
+    auto __guard           = std::__make_scope_guard([&] { __deallocate_node(__cache); });
+    for (; __cache != nullptr && __first != __last; ++__first) {
+      __assign_value(__cache->__upcast()->__get_value(), *__first);
+      __next_pointer __next = __cache->__next_;
+      __node_insert_unique(__cache->__upcast());
+      __cache = __next;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)
     __emplace_unique(*__first);
@@ -1391,22 +1374,13 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __f
                 "__assign_multi may only be called with the containers value type or the nodes value type");
   if (bucket_count() != 0) {
     __next_pointer __cache = __detach();
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      for (; __cache != nullptr && __first != __last; ++__first) {
-        __assign_value(__cache->__upcast()->__get_value(), *__first);
-        __next_pointer __next              = __cache->__next_;
-        __node_insert_multi(__cache->__upcast());
-        __cache = __next;
-      }
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __deallocate_node(__cache);
-      throw;
+    auto __guard           = std::__make_scope_guard([&] { __deallocate_node(__cache); });
+    for (; __cache != nullptr && __first != __last; ++__first) {
+      __assign_value(__cache->__upcast()->__get_value(), *__first);
+      __next_pointer __next = __cache->__next_;
+      __node_insert_multi(__cache->__upcast());
+      __cache = __next;
     }
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    __deallocate_node(__cache);
   }
   for (; __first != __last; ++__first)
     __emplace_multi(*__first);

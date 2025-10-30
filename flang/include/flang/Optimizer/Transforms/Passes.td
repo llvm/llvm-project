@@ -246,6 +246,10 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "int32_t",
            /*default=*/"0",
            "dwarf version">,
+    Option<"splitDwarfFile", "split-dwarf-file",
+           "std::string", /*default=*/"std::string{}",
+           "Name of the split dwarf file">
+
   ];
 }
 

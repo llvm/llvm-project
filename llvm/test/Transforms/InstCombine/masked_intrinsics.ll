@@ -16,6 +16,14 @@ define <2 x double> @load_zeromask(ptr %ptr, <2 x double> %passthru)  {
   ret <2 x double> %res
 }
 
+define <2 x double> @load_zero_withpoison_mask(ptr %ptr, <2 x double> %passthru)  {
+; CHECK-LABEL: @load_zero_withpoison_mask(
+; CHECK-NEXT:    ret <2 x double> [[PASSTHRU:%.*]]
+;
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0(ptr %ptr, i32 1, <2 x i1> <i1 0, i1 poison>, <2 x double> %passthru)
+  ret <2 x double> %res
+}
+
 define <2 x double> @load_onemask(ptr %ptr, <2 x double> %passthru)  {
 ; CHECK-LABEL: @load_onemask(
 ; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x double>, ptr [[PTR:%.*]], align 2
@@ -150,12 +158,29 @@ define void @store_zeromask(ptr %ptr, <2 x double> %val)  {
   ret void
 }
 
+define void @store_poisonmask(ptr %ptr, <2 x double> %val)  {
+; CHECK-LABEL: @store_poisonmask(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.store.v2f64.p0(<2 x double> %val, ptr %ptr, i32 4, <2 x i1> splat(i1 poison))
+  ret void
+}
+
 define void @store_onemask(ptr %ptr, <2 x double> %val)  {
 ; CHECK-LABEL: @store_onemask(
 ; CHECK-NEXT:    store <2 x double> [[VAL:%.*]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.store.v2f64.p0(<2 x double> %val, ptr %ptr, i32 4, <2 x i1> <i1 1, i1 1>)
+  ret void
+}
+
+define void @store_one_withpoison_mask(ptr %ptr, <2 x double> %val)  {
+; CHECK-LABEL: @store_one_withpoison_mask(
+; CHECK-NEXT:    store <2 x double> [[VAL:%.*]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.store.v2f64.p0(<2 x double> %val, ptr %ptr, i32 4, <2 x i1> <i1 1, i1 poison>)
   ret void
 }
 
@@ -189,6 +214,13 @@ define <2 x double> @gather_zeromask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
   ret <2 x double> %res
 }
 
+define <2 x double> @gather_zero_withpoison_mask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
+; CHECK-LABEL: @gather_zero_withpoison_mask(
+; CHECK-NEXT:    ret <2 x double> [[PASSTHRU:%.*]]
+;
+  %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> <i1 0, i1 poison>, <2 x double> %passthru)
+  ret <2 x double> %res
+}
 
 define <2 x double> @gather_onemask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
 ; CHECK-LABEL: @gather_onemask(
@@ -196,6 +228,15 @@ define <2 x double> @gather_onemask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> <i1 true, i1 true>, <2 x double> %passthru)
+  ret <2 x double> %res
+}
+
+define <2 x double> @gather_one_withpoisonmask(<2 x ptr> %ptrs, <2 x double> %passthru)  {
+; CHECK-LABEL: @gather_one_withpoisonmask(
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[PTRS:%.*]], i32 4, <2 x i1> <i1 true, i1 poison>, <2 x double> [[PASSTHRU:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[RES]]
+;
+  %res = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> <i1 true, i1 poison>, <2 x double> %passthru)
   ret <2 x double> %res
 }
 
@@ -254,6 +295,23 @@ define void @scatter_zeromask(<2 x ptr> %ptrs, <2 x double> %val)  {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> %val, <2 x ptr> %ptrs, i32 8, <2 x i1> zeroinitializer)
+  ret void
+}
+
+define void @scatter_zero_withpoison_mask(<2 x ptr> %ptrs, <2 x double> %val)  {
+; CHECK-LABEL: @scatter_zero_withpoison_mask(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> %val, <2 x ptr> %ptrs, i32 8, <2 x i1> <i1 0, i1 poison>)
+  ret void
+}
+
+define void @scatter_one_withpoison_mask(<2 x ptr> %ptrs, <2 x double> %val)  {
+; CHECK-LABEL: @scatter_one_withpoison_mask(
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[VAL:%.*]], <2 x ptr> [[PTRS:%.*]], i32 8, <2 x i1> <i1 true, i1 poison>)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> %val, <2 x ptr> %ptrs, i32 8, <2 x i1> <i1 1, i1 poison>)
   ret void
 }
 

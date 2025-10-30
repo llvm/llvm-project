@@ -26,6 +26,30 @@ using namespace mlir::python;
 
 namespace {
 
+class PyPatternRewriter {
+public:
+  PyPatternRewriter(MlirPatternRewriter rewriter)
+      : base(mlirPatternRewriterAsBase(rewriter)),
+        ctx(PyMlirContext::forContext(mlirRewriterBaseGetContext(base))) {}
+
+  PyInsertionPoint getInsertionPoint() const {
+    MlirBlock block = mlirRewriterBaseGetInsertionBlock(base);
+    MlirOperation op = mlirRewriterBaseGetOperationAfterInsertion(base);
+
+    if (mlirOperationIsNull(op)) {
+      MlirOperation owner = mlirBlockGetParentOperation(block);
+      auto parent = PyOperation::forOperation(ctx, owner);
+      return PyInsertionPoint(PyBlock(parent, block));
+    }
+
+    return PyInsertionPoint(PyOperation::forOperation(ctx, op));
+  }
+
+private:
+  MlirRewriterBase base;
+  PyMlirContextRef ctx;
+};
+
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
 static nb::object objectFromPDLValue(MlirPDLValue value) {
   if (MlirValue v = mlirPDLValueAsValue(value); !mlirValueIsNull(v))
@@ -38,6 +62,15 @@ static nb::object objectFromPDLValue(MlirPDLValue value) {
     return nb::cast(v);
 
   throw std::runtime_error("unsupported PDL value type");
+}
+
+static std::vector<nb::object> objectsFromPDLValues(size_t nValues,
+                                                    MlirPDLValue *values) {
+  std::vector<nb::object> args;
+  args.reserve(nValues);
+  for (size_t i = 0; i < nValues; ++i)
+    args.push_back(objectFromPDLValue(values[i]));
+  return args;
 }
 
 // Convert the Python object to a boolean.
@@ -74,11 +107,24 @@ public:
            size_t nValues, MlirPDLValue *values,
            void *userData) -> MlirLogicalResult {
           nb::handle f = nb::handle(static_cast<PyObject *>(userData));
-          std::vector<nb::object> args;
-          args.reserve(nValues);
-          for (size_t i = 0; i < nValues; ++i)
-            args.push_back(objectFromPDLValue(values[i]));
-          return logicalResultFromObject(f(rewriter, results, args));
+          return logicalResultFromObject(
+              f(PyPatternRewriter(rewriter), results,
+                objectsFromPDLValues(nValues, values)));
+        },
+        fn.ptr());
+  }
+
+  void registerConstraintFunction(const std::string &name,
+                                  const nb::callable &fn) {
+    mlirPDLPatternModuleRegisterConstraintFunction(
+        get(), mlirStringRefCreate(name.data(), name.size()),
+        [](MlirPatternRewriter rewriter, MlirPDLResultList results,
+           size_t nValues, MlirPDLValue *values,
+           void *userData) -> MlirLogicalResult {
+          nb::handle f = nb::handle(static_cast<PyObject *>(userData));
+          return logicalResultFromObject(
+              f(PyPatternRewriter(rewriter), results,
+                objectsFromPDLValues(nValues, values)));
         },
         fn.ptr());
   }
@@ -107,7 +153,7 @@ public:
         mlirPythonFrozenRewritePatternSetToCapsule(get()));
   }
 
-  static nb::object createFromCapsule(nb::object capsule) {
+  static nb::object createFromCapsule(const nb::object &capsule) {
     MlirFrozenRewritePatternSet rawPm =
         mlirPythonCapsuleToFrozenRewritePatternSet(capsule.ptr());
     if (rawPm.ptr == nullptr)
@@ -123,7 +169,9 @@ private:
 
 /// Create the `mlir.rewrite` here.
 void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
-  nb::class_<MlirPatternRewriter>(m, "PatternRewriter");
+  nb::class_<PyPatternRewriter>(m, "PatternRewriter")
+      .def_prop_ro("ip", &PyPatternRewriter::getInsertionPoint,
+                   "The current insertion point of the PatternRewriter.");
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
   //----------------------------------------------------------------------------
@@ -135,7 +183,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackValue(results, value);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
+          nb::sig("def append(self, value: " MAKE_MLIR_PYTHON_QUALNAME("ir.Value") ")")
           // clang-format on
           )
       .def(
@@ -144,7 +192,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackOperation(results, op);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
+          nb::sig("def append(self, op: " MAKE_MLIR_PYTHON_QUALNAME("ir.Operation") ")")
           // clang-format on
           )
       .def(
@@ -153,7 +201,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackType(results, type);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
+          nb::sig("def append(self, type: " MAKE_MLIR_PYTHON_QUALNAME("ir.Type") ")")
           // clang-format on
           )
       .def(
@@ -162,7 +210,7 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
             mlirPDLResultListPushBackAttribute(results, attr);
           },
           // clang-format off
-          nb::sig("def append(self, " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
+          nb::sig("def append(self, attr: " MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute") ")")
           // clang-format on
       );
   nb::class_<PyPDLPatternModule>(m, "PDLModule")
@@ -198,6 +246,13 @@ void mlir::python::populateRewriteSubmodule(nb::module_ &m) {
           [](PyPDLPatternModule &self, const std::string &name,
              const nb::callable &fn) {
             self.registerRewriteFunction(name, fn);
+          },
+          nb::keep_alive<1, 3>())
+      .def(
+          "register_constraint_function",
+          [](PyPDLPatternModule &self, const std::string &name,
+             const nb::callable &fn) {
+            self.registerConstraintFunction(name, fn);
           },
           nb::keep_alive<1, 3>());
 #endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH

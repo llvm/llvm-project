@@ -51,7 +51,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{libstdcxx-install-prefix}/lib/gcc/%{libstdcxx-version} -Wl,-rpath,%{libstdcxx-install-prefix}/lib/gcc/%{libstdcxx-version} -lstdc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T -- '
+    '%{executor} --execdir %{temp} -- '
 ))
 
 import os, site

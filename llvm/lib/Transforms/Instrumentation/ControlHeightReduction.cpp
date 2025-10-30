@@ -1591,13 +1591,30 @@ static void insertTrivialPHIs(CHRScope *Scope,
         }
         TrivialPHIs.insert(PN);
         CHR_DEBUG(dbgs() << "Insert phi " << *PN << "\n");
+        bool FoundLifetimeAnnotation = false;
         for (Instruction *UI : Users) {
+          // If we found a lifetime annotation, remove it, but set a flag
+          // to ensure that we remove all other lifetime annotations attached
+          // to the alloca.
+          if (UI->isLifetimeStartOrEnd()) {
+            UI->eraseFromParent();
+            FoundLifetimeAnnotation = true;
+            continue;
+          }
           for (unsigned J = 0, NumOps = UI->getNumOperands(); J < NumOps; ++J) {
             if (UI->getOperand(J) == &I) {
               UI->setOperand(J, PN);
             }
           }
           CHR_DEBUG(dbgs() << "Updated user " << *UI << "\n");
+        }
+        // Erase any leftover lifetime annotations for a dynamic alloca.
+        if (FoundLifetimeAnnotation) {
+          for (User *U : make_early_inc_range(I.users())) {
+            if (auto *UI = dyn_cast<Instruction>(U))
+              if (UI->isLifetimeStartOrEnd())
+                UI->eraseFromParent();
+          }
         }
       }
     }
@@ -1693,14 +1710,12 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   BasicBlock *ExitBlock = LastRegion->getExit();
   std::optional<uint64_t> ProfileCount = BFI.getBlockProfileCount(EntryBlock);
 
-  if (ExitBlock) {
-    // Insert a trivial phi at the exit block (where the CHR hot path and the
-    // cold path merges) for a value that's defined in the scope but used
-    // outside it (meaning it's alive at the exit block). We will add the
-    // incoming values for the CHR cold paths to it below. Without this, we'd
-    // miss updating phi's for such values unless there happens to already be a
-    // phi for that value there.
-    insertTrivialPHIs(Scope, EntryBlock, ExitBlock, TrivialPHIs);
+  SmallVector<AllocaInst *> StaticAllocas;
+  for (Instruction &I : *EntryBlock) {
+    if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+      if (AI->isStaticAlloca())
+        StaticAllocas.push_back(AI);
+    }
   }
 
   // Split the entry block of the first region. The new block becomes the new
@@ -1718,6 +1733,20 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
          "NewEntryBlock's only pred must be EntryBlock");
   FirstRegion->replaceEntryRecursive(NewEntryBlock);
   BasicBlock *PreEntryBlock = EntryBlock;
+
+  // Move static allocas into the pre-entry block so they stay static.
+  for (AllocaInst *AI : StaticAllocas)
+    AI->moveBefore(EntryBlock->begin());
+
+  if (ExitBlock) {
+    // Insert a trivial phi at the exit block (where the CHR hot path and the
+    // cold path merges) for a value that's defined in the scope but used
+    // outside it (meaning it's alive at the exit block). We will add the
+    // incoming values for the CHR cold paths to it below. Without this, we'd
+    // miss updating phi's for such values unless there happens to already be a
+    // phi for that value there.
+    insertTrivialPHIs(Scope, EntryBlock, ExitBlock, TrivialPHIs);
+  }
 
   ValueToValueMapTy VMap;
   // Clone the blocks in the scope (excluding the PreEntryBlock) to split into a

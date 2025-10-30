@@ -89,6 +89,11 @@ public:
     return cir::ConstRecordAttr::get(sTy, arrayAttr);
   }
 
+  cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
+    cir::ConstRecordAttr anonRecord = getAnonConstRecord(fieldsAttr);
+    return cir::TypeInfoAttr::get(anonRecord.getType(), fieldsAttr);
+  }
+
   std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
 
   std::string getUniqueRecordName(const std::string &baseName) {
@@ -115,6 +120,11 @@ public:
 
   mlir::Type getPtrToVPtrType() {
     return getPointerTo(cir::VPtrType::get(getContext()));
+  }
+
+  cir::FuncType getFuncType(llvm::ArrayRef<mlir::Type> params, mlir::Type retTy,
+                            bool isVarArg = false) {
+    return cir::FuncType::get(params, retTy, isVarArg);
   }
 
   /// Get a CIR record kind from a AST declaration tag.
@@ -365,6 +375,15 @@ public:
     assert(!cir::MissingFeatures::fastMathFlags());
 
     return cir::BinOp::create(*this, loc, cir::BinOpKind::Div, lhs, rhs);
+  }
+
+  mlir::Value createDynCast(mlir::Location loc, mlir::Value src,
+                            cir::PointerType destType, bool isRefCast,
+                            cir::DynamicCastInfoAttr info) {
+    auto castKind =
+        isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
+                                      /*relative_layout=*/false);
   }
 
   Address createBaseClassAddr(mlir::Location loc, Address addr,

@@ -41,7 +41,6 @@ public:
   void PopWhereContext();
   void Analyze(const parser::AssignmentStmt &);
   void Analyze(const parser::PointerAssignmentStmt &);
-  void Analyze(const parser::ConcurrentControl &);
   SemanticsContext &context() { return context_; }
 
 private:
@@ -76,6 +75,11 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
         whole{evaluate::UnwrapWholeSymbolOrComponentDataRef(lhs)}) {
       if (IsAllocatable(whole->GetUltimate())) {
         flags.set(DefinabilityFlag::PotentialDeallocation);
+        if (IsPolymorphic(*whole) && whereDepth_ > 0) {
+          Say(lhsLoc,
+              "Assignment to whole polymorphic allocatable '%s' may not be nested in a WHERE statement or construct"_err_en_US,
+              whole->name());
+        }
       }
     }
     if (auto whyNot{WhyNotDefinable(lhsLoc, scope, flags, lhs)}) {

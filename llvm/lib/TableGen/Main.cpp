@@ -64,14 +64,12 @@ WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
 static cl::opt<bool>
 TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
 
-namespace llvm {
-cl::opt<bool> EmitLongStrLiterals(
+cl::opt<bool> llvm::EmitLongStrLiterals(
     "long-string-literals",
     cl::desc("when emitting large string tables, prefer string literals over "
              "comma-separated char literals. This can be a readability and "
              "compile-time performance win, but upsets some compilers"),
     cl::Hidden, cl::init(true));
-} // end namespace llvm
 
 static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",

@@ -44,18 +44,12 @@ class BufferizeToAllocationOp(BufferizeToAllocationOp):
         loc=None,
         ip=None,
     ):
-        # No other types are allowed, so hard-code those here.
-        allocated_buffer_type = transform.AnyValueType.get()
-        new_ops_type = transform.AnyOpType.get()
-
         if isinstance(memory_space, int):
             memory_space = str(memory_space)
         if isinstance(memory_space, str):
             memory_space = Attribute.parse(memory_space)
 
         super().__init__(
-            allocated_buffer_type,
-            new_ops_type,
             target,
             memory_space=memory_space,
             memcpy_op=memcpy_op,

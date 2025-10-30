@@ -29,7 +29,8 @@ define void @trip1025_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapt
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body

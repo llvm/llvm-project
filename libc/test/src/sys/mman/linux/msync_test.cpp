@@ -11,10 +11,12 @@
 #include "src/sys/mman/msync.h"
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munmap.h"
-#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+
+// TODO: Replace with sysconf call once the function is properly implemented.
+constexpr size_t PAGE_SIZE = 4096;
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMsyncTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -24,7 +26,7 @@ struct PageHolder {
   void *addr;
 
   PageHolder()
-      : size(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE)),
+      : size(PAGE_SIZE),
         addr(LIBC_NAMESPACE::mmap(nullptr, size, PROT_READ | PROT_WRITE,
                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) {}
   ~PageHolder() {
