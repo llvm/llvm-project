@@ -646,6 +646,8 @@ public:
 
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(InstCounterType T, unsigned Count);
+  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
+  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
   void applyXcnt(const AMDGPU::Waitcnt &Wait);
   void updateByEvent(WaitEventType E, MachineInstr &MI);
 
@@ -1287,40 +1289,35 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
   }
 }
 
-void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
-  // On entry to a block with multiple predescessors, there may
-  // be pending SMEM and VMEM events active at the same time.
-  // In such cases, only clear one active event at a time.
-  auto applyPendingXcntGroup = [this](unsigned E) {
-    unsigned LowerBound = getScoreLB(X_CNT);
-    applyWaitcnt(X_CNT, 0);
-    PendingEvents |= (1 << E);
-    setScoreLB(X_CNT, LowerBound);
-  };
-
+bool WaitcntBrackets::hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait) {
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
-  if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP)) {
+  return Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP);
+}
+
+bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
+  // If we have pending store we cannot optimize XCnt because we do not wait for
+  // stores. VMEM loads retun in order, so if we only have loads XCnt is
+  // decremented to the same number as LOADCnt.
+  return Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
+         !hasPendingEvent(STORE_CNT) && !hasPendingEvent(SMEM_GROUP);
+}
+
+void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
+  if (hasRedundantXCntWithKmCnt(Wait)) {
     if (hasPendingEvent(VMEM_GROUP))
-      applyPendingXcntGroup(VMEM_GROUP);
+      // Only clear the SMEM_GROUP event, but VMEM_GROUP could still require handling.
+      PendingEvents &= ~(1 << SMEM_GROUP);
     else
       applyWaitcnt(X_CNT, 0);
     return;
   }
-
-  // If we have pending store we cannot optimize XCnt because we do not wait for
-  // stores. VMEM loads retun in order, so if we only have loads XCnt is
-  // decremented to the same number as LOADCnt.
-  if (Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
-      !hasPendingEvent(STORE_CNT)) {
-    if (hasPendingEvent(SMEM_GROUP))
-      applyPendingXcntGroup(SMEM_GROUP);
-    else
-      applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
-    return;
-  }
-
+  if (canOptimizeXCntWithLoadCnt(Wait))
+    // On entry to a block with multiple predescessors, there may
+    // be pending SMEM and VMEM events active at the same time.
+    // In such cases, only clear one active event at a time.
+    return applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
   applyWaitcnt(X_CNT, Wait.XCnt);
 }
 
@@ -1656,6 +1653,8 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     }
   }
 
+  // Save the pre combine waitcnt in order to make xcnt checks.
+  AMDGPU::Waitcnt PreCombine = Wait;
   if (CombinedLoadDsCntInstr) {
     // Only keep an S_WAIT_LOADCNT_DSCNT if both counters actually need
     // to be waited for. Otherwise, let the instruction be deleted so
@@ -1746,6 +1745,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   }
 
   for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
+    if ((CT == KM_CNT && ScoreBrackets.hasRedundantXCntWithKmCnt(PreCombine)) ||
+        (CT == LOAD_CNT &&
+         ScoreBrackets.canOptimizeXCntWithLoadCnt(PreCombine)))
+      // Xcnt may need to be updated depending on a pre-existing KM/LOAD_CNT
+      // due to taking the backedge of a block.
+      ScoreBrackets.applyXcnt(PreCombine);
     if (!WaitInstrs[CT])
       continue;
 
