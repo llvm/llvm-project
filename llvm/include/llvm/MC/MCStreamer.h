@@ -839,8 +839,6 @@ public:
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
-  virtual void emitPrefAlign(Align A);
-  
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
   ///

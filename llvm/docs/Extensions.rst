@@ -28,21 +28,6 @@ hexadecimal format instead of decimal if desired.
   .section .data
   .float 0x1c2.2ap3
 
-``.prefalign`` directive
-------------------------
-
-The ``.prefalign`` directive sets the preferred alignment for a section,
-and enables the section's final alignment to be set in a way that is
-dependent on the section size (currently only supported with ELF).
-
-If the section size is less than the section's minimum alignment as
-determined using ``.align`` family directives, the section's alignment
-will be equal to its minimum alignment. Otherwise, if the section size is
-between the minimum alignment and the preferred alignment, the section's
-alignment will be equal to the power of 2 greater than or equal to the
-section size. Otherwise, the section's alignment will be equal to the
-preferred alignment.
-
 Machine-specific Assembly Syntax
 ================================
 
@@ -431,7 +416,36 @@ as offsets relative to prior addresses.
 The following versioning schemes are currently supported (newer versions support
 features of the older versions).
 
-Version 3 (newest): Capable of encoding callsite offsets. Enabled by the 6th bit
+Version 4 (newest): Capable of encoding basic block hashes. This feature is
+enabled by the 7th bit of the feature byte.
+
+Example:
+
+.. code-block:: gas
+
+  .section  ".llvm_bb_addr_map","",@llvm_bb_addr_map
+  .byte     4                             # version number
+  .byte     96                            # feature byte
+  .quad     .Lfunc_begin0                 # address of the function
+  .byte     2                             # number of basic blocks
+  # BB record for BB_0
+   .byte     0                            # BB_0 ID
+   .uleb128  .Lfunc_begin0-.Lfunc_begin0  # BB_0 offset relative to function entry (always zero)
+   .byte     0                            # number of callsites in this block
+   .uleb128  .LBB_END0_0-.Lfunc_begin0    # BB_0 size
+   .byte     x                            # BB_0 metadata
+   .quad     9080480745856761856          # BB_0 hash
+  # BB record for BB_1
+   .byte     1                            # BB_1 ID
+   .uleb128  .LBB0_1-.LBB_END0_0          # BB_1 offset relative to the end of last block (BB_0).
+   .byte     2                            # number of callsites in this block
+   .uleb128  .LBB0_1_CS0-.LBB0_1          # offset of callsite end relative to the previous offset (.LBB0_1)
+   .uleb128  .LBB0_1_CS1-.LBB0_1_CS0      # offset of callsite end relative to the previous offset (.LBB0_1_CS0)
+   .uleb128  .LBB_END0_1-.LBB0_1_CS1      # BB_1 size offset (Offset of the block end relative to the previous offset).
+   .byte     y                            # BB_1 metadata
+   .quad     2363478788702666771          # BB_1 hash
+
+Version 3: Capable of encoding callsite offsets. Enabled by the 6th bit
 of the feature byte.
 
 Example:
@@ -615,6 +629,35 @@ name. The linker may place the section in whichever output section it
 sees fit (generally the section that would provide the best locality).
 
 .. _CFI jump table: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html#forward-edge-cfi-for-indirect-function-calls
+
+``SHT_LLVM_CALL_GRAPH`` Section (Call Graph)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to store the call graph. It has a type of
+``SHT_LLVM_CALL_GRAPH`` (0x6fff4c0f). Details of call graph section layout
+are described in :doc:`CallGraphSection`.
+
+For example:
+
+.. code-block:: gas
+
+  .section  ".llvm.callgraph","",@llvm_call_graph
+  .byte   0
+  .byte   7
+  .quad   .Lball
+  .quad   0
+  .byte   3
+  .quad   foo
+  .quad   bar
+  .quad   baz
+  .byte   3
+  .quad   4524972987496481828
+  .quad   3498816979441845844
+  .quad   8646233951371320954
+
+This indicates that ``ball`` calls ``foo``, ``bar`` and ``baz`` directly;
+``ball`` indirectly calls functions whose types are ``4524972987496481828``,
+``3498816979441845844`` and ``8646233951371320954``.
 
 CodeView-Dependent
 ------------------

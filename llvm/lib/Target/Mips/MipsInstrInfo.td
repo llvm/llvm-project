@@ -855,6 +855,16 @@ def calltarget  : Operand<iPTR> {
 
 def imm64: Operand<i64>;
 
+def ConstantImmAsmOperandClass : AsmOperandClass {
+  let Name = "ConstantImm";
+  let PredicateMethod = "isConstantImm";
+  let RenderMethod = "addImmOperands";
+}
+
+def ConstantImm64: Operand<i64> {
+  let ParserMatchClass = ConstantImmAsmOperandClass;
+}
+
 def simm19_lsl2 : Operand<i32> {
   let EncoderMethod = "getSimm19Lsl2Encoding";
   let DecoderMethod = "DecodeSimm19Lsl2";
@@ -2947,10 +2957,10 @@ def : MipsInstAlias<"nor\t$rs, $imm", (NORImm GPR32Opnd:$rs, GPR32Opnd:$rs,
 
 let hasDelaySlot = 1, isCTI = 1 in {
 def BneImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "bne\t$rt, $imm64, $offset">;
 def BeqImm : MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
-                               (ins imm64:$imm64, brtarget:$offset),
+                               (ins ConstantImm64:$imm64, brtarget:$offset),
                                "beq\t$rt, $imm64, $offset">;
 
 class CondBranchPseudo<string instr_asm> :
@@ -2978,7 +2988,7 @@ def BGTUL: CondBranchPseudo<"bgtul">, ISA_MIPS2_NOT_32R6_64R6;
 
 let isCTI = 1 in
 class CondBranchImmPseudo<string instr_asm> :
-  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, imm64:$imm, brtarget:$offset),
+  MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs, ConstantImm64:$imm, brtarget:$offset),
                     !strconcat(instr_asm, "\t$rs, $imm, $offset")>;
 
 def BEQLImmMacro : CondBranchImmPseudo<"beql">, ISA_MIPS2_NOT_32R6_64R6;

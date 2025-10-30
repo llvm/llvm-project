@@ -363,7 +363,7 @@ elseif(LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "${LIBC_CONFIG_PATH}/headers.txt file not found and fullbuild requested.")
 endif()
 
-# Check exclude.txt that appends to LIBC_EXCLUDE_ENTRYPOINTS list
+# Check exclude.txt that appends to TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS list
 if(EXISTS "${LIBC_CONFIG_PATH}/exclude.txt")
     include("${LIBC_CONFIG_PATH}/exclude.txt")
 endif()

@@ -85,8 +85,7 @@ private:
   unsigned BlockNumEpoch = 0;
 
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
-  uint32_t NumArgs;
-  MaybeAlign PreferredAlign;
+  size_t NumArgs;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeList AttributeSets;            ///< Parameter attributes
@@ -1043,12 +1042,6 @@ public:
   /// This method will be deprecated as the alignment property should always be
   /// defined.
   void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
-
-  /// Returns the prefalign of the given function.
-  MaybeAlign getPreferredAlignment() const { return PreferredAlign; }
-
-  /// Sets the prefalign attribute of the Function.
-  void setPreferredAlignment(MaybeAlign Align) { PreferredAlign = Align; }
 
   /// Return the value for vscale based on the vscale_range attribute or 0 when
   /// unknown.

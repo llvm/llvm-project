@@ -62,6 +62,7 @@ LLVM_ABI void initializeBasicBlockSectionsPass(PassRegistry &);
 LLVM_ABI void initializeBarrierNoopPass(PassRegistry &);
 LLVM_ABI void initializeBasicAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBlockFrequencyInfoWrapperPassPass(PassRegistry &);
+LLVM_ABI void initializeMachineBlockHashInfoPass(PassRegistry &);
 LLVM_ABI void initializeBranchFolderLegacyPass(PassRegistry &);
 LLVM_ABI void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBranchRelaxationLegacyPass(PassRegistry &);
@@ -220,6 +221,9 @@ LLVM_ABI void initializeMachinePostDominatorTreeWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineRegionInfoPassPass(PassRegistry &);
 LLVM_ABI void
 initializeMachineSanitizerBinaryMetadataLegacyPass(PassRegistry &);
+LLVM_ABI void initializeMIR2VecVocabLegacyAnalysisPass(PassRegistry &);
+LLVM_ABI void initializeMIR2VecVocabPrinterLegacyPassPass(PassRegistry &);
+LLVM_ABI void initializeMIR2VecPrinterLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineSchedulerLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineSinkingLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineTraceMetricsWrapperPassPass(PassRegistry &);

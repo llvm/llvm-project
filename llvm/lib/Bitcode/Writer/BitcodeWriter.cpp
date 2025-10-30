@@ -118,6 +118,10 @@ static cl::opt<bool>
 #endif
                                 cl::desc(""));
 
+static cl::opt<bool> PreserveBitcodeUseListOrder(
+    "preserve-bc-uselistorder", cl::Hidden, cl::init(true),
+    cl::desc("Preserve use-list order when writing LLVM bitcode."));
+
 namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
@@ -217,7 +221,10 @@ public:
                           bool ShouldPreserveUseListOrder,
                           const ModuleSummaryIndex *Index)
       : BitcodeWriterBase(Stream, StrtabBuilder), M(M),
-        VE(M, ShouldPreserveUseListOrder), Index(Index) {
+        VE(M, PreserveBitcodeUseListOrder.getNumOccurrences()
+                  ? PreserveBitcodeUseListOrder
+                  : ShouldPreserveUseListOrder),
+        Index(Index) {
     // Assign ValueIds to any callee values in the index that came from
     // indirect call profiles and were recorded as a GUID not a Value*
     // (which would have been assigned an ID by the ValueEnumerator).
@@ -228,7 +235,7 @@ public:
       return;
     for (const auto &GUIDSummaryLists : *Index)
       // Examine all summaries for this GUID.
-      for (auto &Summary : GUIDSummaryLists.second.SummaryList)
+      for (auto &Summary : GUIDSummaryLists.second.getSummaryList())
         if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
@@ -580,7 +587,7 @@ public:
         }
     } else {
       for (auto &Summaries : Index)
-        for (auto &Summary : Summaries.second.SummaryList)
+        for (auto &Summary : Summaries.second.getSummaryList())
           Callback({Summaries.first, Summary.get()}, false);
     }
   }
@@ -883,6 +890,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_STRUCT_RET;
   case Attribute::SanitizeAddress:
     return bitc::ATTR_KIND_SANITIZE_ADDRESS;
+  case Attribute::SanitizeAllocToken:
+    return bitc::ATTR_KIND_SANITIZE_ALLOC_TOKEN;
   case Attribute::SanitizeHWAddress:
     return bitc::ATTR_KIND_SANITIZE_HWADDRESS;
   case Attribute::SanitizeThread:
@@ -1644,8 +1653,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     // FUNCTION:  [strtab offset, strtab size, type, callingconv, isproto,
     //             linkage, paramattrs, alignment, section, visibility, gc,
     //             unnamed_addr, prologuedata, dllstorageclass, comdat,
-    //             prefixdata, personalityfn, DSO_Local, addrspace,
-    //             partition_strtab, partition_size, prefalign]
+    //             prefixdata, personalityfn, DSO_Local, addrspace]
     Vals.push_back(addToStrtab(F.getName()));
     Vals.push_back(F.getName().size());
     Vals.push_back(VE.getTypeID(F.getFunctionType()));
@@ -1672,7 +1680,6 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(F.getAddressSpace());
     Vals.push_back(addToStrtab(F.getPartition()));
     Vals.push_back(F.getPartition().size());
-    Vals.push_back(getEncodedAlign(F.getPreferredAlignment()));
 
     unsigned AbbrevToUse = 0;
     Stream.EmitRecord(bitc::MODULE_CODE_FUNCTION, Vals, AbbrevToUse);
@@ -1918,6 +1925,7 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
   Record.push_back(N->getEncoding());
   Record.push_back(N->getFlags());
   Record.push_back(N->getNumExtraInhabitants());
+  Record.push_back(N->getDataSizeInBits());
 
   Stream.EmitRecord(bitc::METADATA_BASIC_TYPE, Record, Abbrev);
   Record.clear();
@@ -2107,7 +2115,14 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
                                              unsigned Abbrev) {
   assert(N->isDistinct() && "Expected distinct compile units");
   Record.push_back(/* IsDistinct */ true);
-  Record.push_back(N->getSourceLanguage());
+
+  auto Lang = N->getSourceLanguage();
+  Record.push_back(Lang.getName());
+  // Set bit so the MetadataLoader can distniguish between versioned and
+  // unversioned names.
+  if (Lang.hasVersionedName())
+    Record.back() ^= (uint64_t(1) << 63);
+
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
@@ -2128,6 +2143,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   Record.push_back(N->getRangesBaseAddress());
   Record.push_back(VE.getMetadataOrNullID(N->getRawSysRoot()));
   Record.push_back(VE.getMetadataOrNullID(N->getRawSDK()));
+  Record.push_back(Lang.hasVersionedName() ? Lang.getVersion() : 0);
 
   Stream.EmitRecord(bitc::METADATA_COMPILE_UNIT, Record, Abbrev);
   Record.clear();

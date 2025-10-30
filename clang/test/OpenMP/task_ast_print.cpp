@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -verify -Wno-vla -fopenmp-simd -fopenmp-version=60 -DOMP60 -ast-print %s | FileCheck %s --check-prefix=CHECK60
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 -include-pch %t -verify -Wno-vla %s -ast-print | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -fopenmp -ast-dump  %s | FileCheck %s --check-prefix=DUMP
@@ -101,8 +103,8 @@ T tmain(T argc, T *argv) {
   a = 2;
 #pragma omp task default(none), private(argc, b) firstprivate(argv) shared(d) if (argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc, argv[b:argc], arr[:], ([argc][sizeof(T)])argv)
   foo();
-#pragma omp taskgroup task_reduction(-: argc)
-#pragma omp task if (C) mergeable priority(C) in_reduction(-: argc)
+#pragma omp taskgroup task_reduction(+: argc)
+#pragma omp task if (C) mergeable priority(C) in_reduction(+: argc)
   foo();
   return 0;
 }
@@ -119,8 +121,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<T>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(T)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(C) mergeable priority(C) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(C) mergeable priority(C) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> int tmain<int, 5>(int argc, int *argv) {
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
@@ -134,8 +136,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<int>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(int)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(5) mergeable priority(5) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 // CHECK: template<> long tmain<long, 1>(long argc, long *argv) {
 // CHECK-NEXT: long b = argc, c, d, e, f, g;
@@ -149,8 +151,8 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: a = 2;
 // CHECK-NEXT: #pragma omp task default(none) private(argc,b) firstprivate(argv) shared(d) if(argc > 0) final(S<long>::TS > 0) priority(argc) affinity(argc,argv[b:argc],arr[:],([argc][sizeof(long)])argv)
 // CHECK-NEXT: foo()
-// CHECK-NEXT: #pragma omp taskgroup task_reduction(-: argc)
-// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1) in_reduction(-: argc)
+// CHECK-NEXT: #pragma omp taskgroup task_reduction(+: argc)
+// CHECK-NEXT: #pragma omp task if(1) mergeable priority(1) in_reduction(+: argc)
 // CHECK-NEXT: foo()
 
 enum Enum {};
@@ -199,6 +201,14 @@ int main(int argc, char **argv) {
 #pragma omp task depend(inout: omp_all_memory)
   foo();
   // CHECK-NEXT: foo();
+#ifdef OMP60
+#pragma omp task threadset(omp_pool)
+#pragma omp task threadset(omp_team)
+  foo();
+#endif
+  // CHECK60: #pragma omp task threadset(omp_pool)
+  // CHECK60: #pragma omp task threadset(omp_team)
+  // CHECK60-NEXT: foo();
   return tmain<int, 5>(b, &b) + tmain<long, 1>(x, &x);
 }
 

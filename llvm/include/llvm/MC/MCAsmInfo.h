@@ -301,9 +301,6 @@ protected:
   // most targets, so defaults to true.
   bool HasFunctionAlignment = true;
 
-  // True if the target respects .prefalign directives.
-  bool HasPreferredAlignment = false;
-
   /// True if the target has .type and .size directives, this is true for most
   /// ELF targets.  Defaults to true.
   bool HasDotTypeDotSizeDirective = true;
@@ -606,7 +603,6 @@ public:
   }
 
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
-  bool hasPreferredAlignment() const { return HasPreferredAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }

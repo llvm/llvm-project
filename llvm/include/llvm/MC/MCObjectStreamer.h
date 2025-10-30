@@ -68,7 +68,7 @@ protected:
   MCObjectStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                    std::unique_ptr<MCObjectWriter> OW,
                    std::unique_ptr<MCCodeEmitter> Emitter);
-  ~MCObjectStreamer();
+  ~MCObjectStreamer() override;
 
 public:
   /// state management
@@ -137,7 +137,6 @@ public:
                             unsigned MaxBytesToEmit = 0) override;
   void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
