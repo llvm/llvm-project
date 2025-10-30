@@ -108,7 +108,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
                            *Result.SourceManager, getLangOpts())};
 
   const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(CE);
-  bool NeedsParens =
+  const bool NeedsParens =
       OpCall ? (OpCall->getOperator() != OO_Subscript)
              : !isa<DeclRefExpr, MemberExpr, ArraySubscriptExpr, CallExpr>(CE);
   if (NeedsParens)
