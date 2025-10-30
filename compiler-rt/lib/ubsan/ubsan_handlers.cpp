@@ -92,7 +92,7 @@ extern const char *const TypeCheckKinds[] = {
     "cast to virtual base of",
     "_Nonnull binding to",
     "dynamic operation on",
-    "constructor call with pointer from overloaded operator new on"};
+    "constructor call with pointer from operator new on"};
 }
 
 static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
@@ -134,7 +134,7 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data, ValueHandle Pointer,
   case ErrorType::AlignmentOnOverloadedNew:
     Diag(Loc, DL_Error, ET,
          "%0 misaligned address %1 for type %2, "
-         "which requires target minimum assumed alignment of %3")
+         "which requires target minimum assumed %3 byte alignment")
         << TypeCheckKinds[Data->TypeCheckKind] << (void *)Pointer << Data->Type
         << Alignment;
     break;
