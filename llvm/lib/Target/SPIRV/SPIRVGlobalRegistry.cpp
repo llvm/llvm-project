@@ -745,7 +745,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
                  .addDef(ResVReg)
                  .addUse(getSPIRVTypeID(BaseType))
                  .addImm(static_cast<uint32_t>(Storage));
-  if (Init != 0)
+  if (Init)
     MIB.addUse(Init->getOperand(0).getReg());
   // ISel may introduce a new register on this step, so we need to add it to
   // DT and correct its type avoiding fails on the next stage.
