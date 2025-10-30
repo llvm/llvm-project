@@ -430,7 +430,7 @@ Changes in existing checks
   in non-standard containers.
 
 - Improved :doc:`readability-container-data-pointer
-  <clang-tidy/checks/readability/container-data-pointer>`check by correctly
+  <clang-tidy/checks/readability/container-data-pointer>` check by correctly
   adding parentheses when the container expression is a dereference.
 
 - Improved :doc:`readability-container-size-empty
