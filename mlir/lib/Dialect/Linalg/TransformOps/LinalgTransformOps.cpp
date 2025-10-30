@@ -4499,7 +4499,7 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
             maybeTransformed = decomposeWinogradOutputTransformOp(rewriter, op);
             return true;
           })
-          .Default([&](Operation *op) { return false; });
+          .Default(false);
 
   if (!supported) {
     DiagnosedSilenceableFailure diag =

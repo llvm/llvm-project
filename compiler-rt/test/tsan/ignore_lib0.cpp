@@ -5,7 +5,7 @@
 // RUN: %clangxx_tsan -O1 %s -L%t-dir -lignore_lib0 %link_libcxx_tsan -o %t
 // RUN: echo running w/o suppressions:
 // RUN: echo -n %t-dir > %t.ld_library_path
-// RUN: python -c "if 'LD_LIBRARY_PATH' in __import__('os').environ: print(':' + __import__('os').environ['LD_LIBRARY_PATH'])" | tr -d '\n' >> %t.ld_library_path
+// RUN: python -c "if 'LD_LIBRARY_PATH' in __import__('os').environ: print(':' + __import__('os').environ['LD_LIBRARY_PATH'], end='')" >> %t.ld_library_path
 // RUN: env LD_LIBRARY_PATH=%{readfile:%t.ld_library_path} %deflake %run %t | FileCheck %s --check-prefix=CHECK-NOSUPP
 // RUN: echo running with suppressions:
 // RUN: env LD_LIBRARY_PATH=%{readfile:%t.ld_library_path} %env_tsan_opts=suppressions='%s.supp' %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-WITHSUPP
