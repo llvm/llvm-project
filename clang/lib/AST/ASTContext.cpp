@@ -12401,10 +12401,15 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   // Read the base type.
   switch (*Str++) {
   default: llvm_unreachable("Unknown builtin type letter!");
+  case 'e':
+    assert(HowLong == 0 && !Signed && !Unsigned &&
+           "Bad modifiers used with 'e'!");
+    Type = Context.getLangOpts().OpenCL ? Context.HalfTy : Context.Float16Ty;
+    break;
   case 'x':
     assert(HowLong == 0 && !Signed && !Unsigned &&
            "Bad modifiers used with 'x'!");
-    Type = Context.getLangOpts().OpenCL ? Context.HalfTy : Context.Float16Ty;
+    Type = Context.Float16Ty;
     break;
   case 'y':
     assert(HowLong == 0 && !Signed && !Unsigned &&
