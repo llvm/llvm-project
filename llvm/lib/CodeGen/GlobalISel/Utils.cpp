@@ -114,7 +114,7 @@ Register llvm::constrainOperandRegClass(
   // Assume physical registers are properly constrained.
   assert(Reg.isVirtual() && "PhysReg not implemented");
 
-  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI, MF);
+  const TargetRegisterClass *OpRC = TII.getRegClass(II, OpIdx, &TRI);
   // Some of the target independent instructions, like COPY, may not impose any
   // register class constraints on some of their operands: If it's a use, we can
   // skip constraining as the instruction defining the register would constrain
@@ -818,8 +818,7 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   if (!DefMI)
     return false;
 
-  const TargetMachine& TM = DefMI->getMF()->getTarget();
-  if (DefMI->getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath)
+  if (DefMI->getFlag(MachineInstr::FmNoNans))
     return true;
 
   // If the value is a constant, we can obviously see if it is a NaN or not.

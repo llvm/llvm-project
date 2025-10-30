@@ -878,10 +878,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       // Treat the enumeration as its underlying type and use the builtin type
       // class comparison.
       if (T1->getTypeClass() == Type::Enum) {
-        T1 = cast<EnumType>(T1)->getOriginalDecl()->getIntegerType();
+        T1 = cast<EnumType>(T1)->getDecl()->getIntegerType();
         assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
       } else if (T2->getTypeClass() == Type::Enum) {
-        T2 = cast<EnumType>(T2)->getOriginalDecl()->getIntegerType();
+        T2 = cast<EnumType>(T2)->getDecl()->getIntegerType();
         assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
       }
       TC = Type::Builtin;
@@ -1300,8 +1300,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, TT1->getQualifier(),
                                   TT2->getQualifier()))
       return false;
-    if (!IsStructurallyEquivalent(Context, TT1->getOriginalDecl(),
-                                  TT2->getOriginalDecl()))
+    if (!IsStructurallyEquivalent(Context, TT1->getDecl(), TT2->getDecl()))
       return false;
     break;
   }
@@ -1381,20 +1380,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                   Typename2->getIdentifier()))
       return false;
 
-    break;
-  }
-
-  case Type::DependentTemplateSpecialization: {
-    const auto *Spec1 = cast<DependentTemplateSpecializationType>(T1);
-    const auto *Spec2 = cast<DependentTemplateSpecializationType>(T2);
-    if (Spec1->getKeyword() != Spec2->getKeyword())
-      return false;
-    if (!IsStructurallyEquivalent(Context, Spec1->getDependentTemplateName(),
-                                  Spec2->getDependentTemplateName()))
-      return false;
-    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
-                                  Spec2->template_arguments()))
-      return false;
     break;
   }
 
@@ -1545,8 +1530,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // types
   if (Field1->isAnonymousStructOrUnion() &&
       Field2->isAnonymousStructOrUnion()) {
-    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getOriginalDecl();
-    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getOriginalDecl();
+    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getDecl();
+    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getDecl();
     return IsStructurallyEquivalent(Context, D1, D2);
   }
 
@@ -1777,19 +1762,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // another anonymous structure or union, respectively, if their members
   // fulfill the preceding requirements. ... Otherwise, the structure, union,
   // or enumerated types are incompatible.
-
-  // Note: "the same tag" refers to the identifier for the structure; two
-  // structures without names are not compatible within a TU. In C23, if either
-  // declaration has no name, they're not equivalent. However, the paragraph
-  // after the bulleted list goes on to talk about compatibility of anonymous
-  // structure and union members, so this prohibition only applies to top-level
-  // declarations; if either declaration is not a member, they cannot be
-  // compatible.
-  if (Context.LangOpts.C23 && (!D1->getIdentifier() || !D2->getIdentifier()) &&
-      (!D1->getDeclContext()->isRecord() || !D2->getDeclContext()->isRecord()))
-    return false;
-
-  // Otherwise, check the names for equivalence.
   if (!NameIsStructurallyEquivalent(*D1, *D2))
     return false;
 
@@ -2614,7 +2586,7 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
     // struct { ... } A;
     QualType FieldType = F->getType();
     if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
-      const RecordDecl *RecDecl = RecType->getOriginalDecl();
+      const RecordDecl *RecDecl = RecType->getDecl();
       if (RecDecl->getDeclContext() == Owner && !RecDecl->getIdentifier()) {
         if (Context.hasSameType(FieldType, AnonTy))
           break;

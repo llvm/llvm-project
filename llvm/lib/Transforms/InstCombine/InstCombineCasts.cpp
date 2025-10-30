@@ -137,13 +137,10 @@ InstCombinerImpl::isEliminableCastPair(const CastInst *CI1,
   Instruction::CastOps secondOp = CI2->getOpcode();
   Type *SrcIntPtrTy =
       SrcTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(SrcTy) : nullptr;
-  Type *MidIntPtrTy =
-      MidTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(MidTy) : nullptr;
   Type *DstIntPtrTy =
       DstTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(DstTy) : nullptr;
   unsigned Res = CastInst::isEliminableCastPair(firstOp, secondOp, SrcTy, MidTy,
-                                                DstTy, SrcIntPtrTy, MidIntPtrTy,
-                                                DstIntPtrTy);
+                                                DstTy, &DL);
 
   // We don't want to form an inttoptr or ptrtoint that converts to an integer
   // type that differs from the pointer size.
@@ -159,9 +156,9 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
   Value *Src = CI.getOperand(0);
   Type *Ty = CI.getType();
 
-  if (auto *SrcC = dyn_cast<Constant>(Src))
-    if (Constant *Res = ConstantFoldCastOperand(CI.getOpcode(), SrcC, Ty, DL))
-      return replaceInstUsesWith(CI, Res);
+  if (Value *Res =
+          simplifyCastInst(CI.getOpcode(), Src, Ty, SQ.getWithInstruction(&CI)))
+    return replaceInstUsesWith(CI, Res);
 
   // Try to eliminate a cast of a cast.
   if (auto *CSrc = dyn_cast<CastInst>(Src)) {   // A->B->C cast
@@ -977,8 +974,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // trunc ( OP i8 C1, V1) to i1 -> icmp eq V1, log_2(C1) iff C1 is power of 2
   if (DestWidth == 1 && match(Src, m_Shr(m_Power2(C1), m_Value(V1)))) {
     Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
-    Value *Icmp = Builder.CreateICmpEQ(V1, Right);
-    return replaceInstUsesWith(Trunc, Icmp);
+    return new ICmpInst(ICmpInst::ICMP_EQ, V1, Right);
   }
 
   // OP = { lshr, ashr }
@@ -986,8 +982,15 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // power of 2
   if (DestWidth == 1 && match(Src, m_Shr(m_LowBitMask(C1), m_Value(V1)))) {
     Value *Right = ConstantInt::get(V1->getType(), C1->countr_one());
-    Value *Icmp = Builder.CreateICmpULT(V1, Right);
-    return replaceInstUsesWith(Trunc, Icmp);
+    return new ICmpInst(ICmpInst::ICMP_ULT, V1, Right);
+  }
+
+  // OP = { lshr, ashr }
+  // trunc ( OP i8 C1, V1) to i1 -> icmp ugt V1, cttz(C1) - 1 iff (C1) is
+  // negative power of 2
+  if (DestWidth == 1 && match(Src, m_Shr(m_NegatedPower2(C1), m_Value(V1)))) {
+    Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
+    return new ICmpInst(ICmpInst::ICMP_UGE, V1, Right);
   }
 
   return Changed ? &Trunc : nullptr;
@@ -1522,7 +1525,15 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   }
 
   // Try to extend the entire expression tree to the wide destination type.
-  if (shouldChangeType(SrcTy, DestTy) && canEvaluateSExtd(Src, DestTy)) {
+  bool ShouldExtendExpression = true;
+  Value *TruncSrc = nullptr;
+  // It is not desirable to extend expression in the trunc + sext pattern when
+  // destination type is narrower than original (pre-trunc) type.
+  if (match(Src, m_Trunc(m_Value(TruncSrc))))
+    if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
+      ShouldExtendExpression = false;
+  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+      canEvaluateSExtd(Src, DestTy)) {
     // Okay, we can transform this!  Insert the new expression now.
     LLVM_DEBUG(
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
@@ -1542,13 +1553,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
                                       ShAmt);
   }
 
-  Value *X;
-  if (match(Src, m_Trunc(m_Value(X)))) {
+  Value *X = TruncSrc;
+  if (X) {
     // If the input has more sign bits than bits truncated, then convert
     // directly to final type.
     unsigned XBitSize = X->getType()->getScalarSizeInBits();
-    if (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)
-      return CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+    bool HasNSW = cast<TruncInst>(Src)->hasNoSignedWrap();
+    if (HasNSW || (ComputeNumSignBits(X, &Sext) > XBitSize - SrcBitSize)) {
+      auto *Res = CastInst::CreateIntegerCast(X, DestTy, /* isSigned */ true);
+      if (auto *ResTrunc = dyn_cast<TruncInst>(Res); ResTrunc && HasNSW)
+        ResTrunc->setHasNoSignedWrap(true);
+      return Res;
+    }
 
     // If input is a trunc from the destination type, then convert into shifts.
     if (Src->hasOneUse() && X->getType() == DestTy) {
@@ -1640,31 +1656,44 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
 
 /// Return a Constant* for the specified floating-point constant if it fits
 /// in the specified FP type without changing its value.
-static bool fitsInFPType(ConstantFP *CFP, const fltSemantics &Sem) {
+static bool fitsInFPType(APFloat F, const fltSemantics &Sem) {
   bool losesInfo;
-  APFloat F = CFP->getValueAPF();
   (void)F.convert(Sem, APFloat::rmNearestTiesToEven, &losesInfo);
   return !losesInfo;
 }
 
-static Type *shrinkFPConstant(ConstantFP *CFP, bool PreferBFloat) {
-  if (CFP->getType() == Type::getPPC_FP128Ty(CFP->getContext()))
-    return nullptr;  // No constant folding of this.
+static Type *shrinkFPConstant(LLVMContext &Ctx, const APFloat &F,
+                              bool PreferBFloat) {
   // See if the value can be truncated to bfloat and then reextended.
-  if (PreferBFloat && fitsInFPType(CFP, APFloat::BFloat()))
-    return Type::getBFloatTy(CFP->getContext());
+  if (PreferBFloat && fitsInFPType(F, APFloat::BFloat()))
+    return Type::getBFloatTy(Ctx);
   // See if the value can be truncated to half and then reextended.
-  if (!PreferBFloat && fitsInFPType(CFP, APFloat::IEEEhalf()))
-    return Type::getHalfTy(CFP->getContext());
+  if (!PreferBFloat && fitsInFPType(F, APFloat::IEEEhalf()))
+    return Type::getHalfTy(Ctx);
   // See if the value can be truncated to float and then reextended.
-  if (fitsInFPType(CFP, APFloat::IEEEsingle()))
-    return Type::getFloatTy(CFP->getContext());
-  if (CFP->getType()->isDoubleTy())
-    return nullptr;  // Won't shrink.
-  if (fitsInFPType(CFP, APFloat::IEEEdouble()))
-    return Type::getDoubleTy(CFP->getContext());
+  if (fitsInFPType(F, APFloat::IEEEsingle()))
+    return Type::getFloatTy(Ctx);
+  if (&F.getSemantics() == &APFloat::IEEEdouble())
+    return nullptr; // Won't shrink.
+  // See if the value can be truncated to double and then reextended.
+  if (fitsInFPType(F, APFloat::IEEEdouble()))
+    return Type::getDoubleTy(Ctx);
   // Don't try to shrink to various long double types.
   return nullptr;
+}
+
+static Type *shrinkFPConstant(ConstantFP *CFP, bool PreferBFloat) {
+  Type *Ty = CFP->getType();
+  if (Ty->getScalarType()->isPPC_FP128Ty())
+    return nullptr; // No constant folding of this.
+
+  Type *ShrinkTy =
+      shrinkFPConstant(CFP->getContext(), CFP->getValueAPF(), PreferBFloat);
+  if (ShrinkTy)
+    if (auto *VecTy = dyn_cast<VectorType>(Ty))
+      ShrinkTy = VectorType::get(ShrinkTy, VecTy);
+
+  return ShrinkTy;
 }
 
 // Determine if this is a vector of ConstantFPs and if so, return the minimal
@@ -1717,10 +1746,10 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
 
   // Try to shrink scalable and fixed splat vectors.
   if (auto *FPC = dyn_cast<Constant>(V))
-    if (isa<VectorType>(V->getType()))
+    if (auto *VTy = dyn_cast<VectorType>(V->getType()))
       if (auto *Splat = dyn_cast_or_null<ConstantFP>(FPC->getSplatValue()))
         if (Type *T = shrinkFPConstant(Splat, PreferBFloat))
-          return T;
+          return VectorType::get(T, VTy);
 
   // Try to shrink a vector of FP constants. This returns nullptr on scalable
   // vectors
@@ -1793,10 +1822,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
   Type *Ty = FPT.getType();
   auto *BO = dyn_cast<BinaryOperator>(FPT.getOperand(0));
   if (BO && BO->hasOneUse()) {
-    Type *LHSMinType =
-        getMinimumFPType(BO->getOperand(0), /*PreferBFloat=*/Ty->isBFloatTy());
-    Type *RHSMinType =
-        getMinimumFPType(BO->getOperand(1), /*PreferBFloat=*/Ty->isBFloatTy());
+    bool PreferBFloat = Ty->getScalarType()->isBFloatTy();
+    Type *LHSMinType = getMinimumFPType(BO->getOperand(0), PreferBFloat);
+    Type *RHSMinType = getMinimumFPType(BO->getOperand(1), PreferBFloat);
     unsigned OpWidth = BO->getType()->getFPMantissaWidth();
     unsigned LHSWidth = LHSMinType->getFPMantissaWidth();
     unsigned RHSWidth = RHSMinType->getFPMantissaWidth();
@@ -2120,7 +2148,7 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   return nullptr;
 }
 
-Value *InstCombinerImpl::foldPtrToIntOfGEP(Type *IntTy, Value *Ptr) {
+Value *InstCombinerImpl::foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr) {
   // Look through chain of one-use GEPs.
   Type *PtrTy = Ptr->getType();
   SmallVector<GEPOperator *> GEPs;
@@ -2182,7 +2210,7 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
       Mask->getType() == Ty)
     return BinaryOperator::CreateAnd(Builder.CreatePtrToInt(Ptr, Ty), Mask);
 
-  if (Value *V = foldPtrToIntOfGEP(Ty, SrcOp))
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
     return replaceInstUsesWith(CI, V);
 
   Value *Vec, *Scalar, *Index;
@@ -2196,6 +2224,26 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     return InsertElementInst::Create(Vec, NewCast, Index);
   }
 
+  return commonCastTransforms(CI);
+}
+
+Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
+  Value *SrcOp = CI.getPointerOperand();
+  Type *Ty = CI.getType();
+
+  // (ptrtoaddr (ptrmask P, M))
+  //    -> (and (ptrtoaddr P), M)
+  // This is generally beneficial as `and` is better supported than `ptrmask`.
+  Value *Ptr, *Mask;
+  if (match(SrcOp, m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(Ptr),
+                                                            m_Value(Mask)))) &&
+      Mask->getType() == Ty)
+    return BinaryOperator::CreateAnd(Builder.CreatePtrToAddr(Ptr), Mask);
+
+  if (Value *V = foldPtrToIntOrAddrOfGEP(Ty, SrcOp))
+    return replaceInstUsesWith(CI, V);
+
+  // FIXME: Implement variants of ptrtoint folds.
   return commonCastTransforms(CI);
 }
 

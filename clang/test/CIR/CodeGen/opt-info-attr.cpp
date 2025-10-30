@@ -13,10 +13,10 @@
 
 void f() {}
 
-// CHECK-O0: module attributes
+// CHECK-O0: module{{.*}} attributes
 // CHECK-O0-NOT: cir.opt_info
-// CHECK-O1: module attributes {{.+}}cir.opt_info = #cir.opt_info<level = 1, size = 0>{{.+}}
-// CHECK-O2: module attributes {{.+}}cir.opt_info = #cir.opt_info<level = 2, size = 0>{{.+}}
-// CHECK-O3: module attributes {{.+}}cir.opt_info = #cir.opt_info<level = 3, size = 0>{{.+}}
-// CHECK-Os: module attributes {{.+}}cir.opt_info = #cir.opt_info<level = 2, size = 1>{{.+}}
-// CHECK-Oz: module attributes {{.+}}cir.opt_info = #cir.opt_info<level = 2, size = 2>{{.+}}
+// CHECK-O1: module{{.*}} attributes {{.+}}cir.opt_info = #cir.opt_info<level = 1, size = 0>{{.+}}
+// CHECK-O2: module{{.*}} attributes {{.+}}cir.opt_info = #cir.opt_info<level = 2, size = 0>{{.+}}
+// CHECK-O3: module{{.*}} attributes {{.+}}cir.opt_info = #cir.opt_info<level = 3, size = 0>{{.+}}
+// CHECK-Os: module{{.*}} attributes {{.+}}cir.opt_info = #cir.opt_info<level = 2, size = 1>{{.+}}
+// CHECK-Oz: module{{.*}} attributes {{.+}}cir.opt_info = #cir.opt_info<level = 2, size = 2>{{.+}}

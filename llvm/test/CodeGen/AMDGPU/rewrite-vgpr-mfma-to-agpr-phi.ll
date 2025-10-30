@@ -33,8 +33,7 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi(ptr addrspace(1) %
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
 ; CHECK-NEXT:  .LBB0_3: ; %if
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    global_load_dwordx4 a[28:31], v32, s[0:1] offset:112
 ; CHECK-NEXT:    global_load_dwordx4 a[24:27], v32, s[0:1] offset:96
 ; CHECK-NEXT:    global_load_dwordx4 a[20:23], v32, s[0:1] offset:80
@@ -98,8 +97,7 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi_loop(ptr addrspace
 ; CHECK-NEXT:  .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
+; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    v_mov_b64_e32 v[62:63], v[30:31]
 ; CHECK-NEXT:    v_mov_b64_e32 v[60:61], v[28:29]
 ; CHECK-NEXT:    v_mov_b64_e32 v[58:59], v[26:27]

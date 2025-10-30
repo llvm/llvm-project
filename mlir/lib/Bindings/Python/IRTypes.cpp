@@ -501,7 +501,10 @@ public:
         "Create a complex type");
     c.def_prop_ro(
         "element_type",
-        [](PyComplexType &self) { return mlirComplexTypeGetElementType(self); },
+        [](PyComplexType &self) -> nb::typed<nb::object, PyType> {
+          return PyType(self.getContext(), mlirComplexTypeGetElementType(self))
+              .maybeDownCast();
+        },
         "Returns element type.");
   }
 };
@@ -512,7 +515,10 @@ public:
 void mlir::PyShapedType::bindDerived(ClassTy &c) {
   c.def_prop_ro(
       "element_type",
-      [](PyShapedType &self) { return mlirShapedTypeGetElementType(self); },
+      [](PyShapedType &self) -> nb::typed<nb::object, PyType> {
+        return PyType(self.getContext(), mlirShapedTypeGetElementType(self))
+            .maybeDownCast();
+      },
       "Returns the element type of the shaped type.");
   c.def_prop_ro(
       "has_rank",
@@ -633,11 +639,16 @@ public:
   using PyConcreteType::PyConcreteType;
 
   static void bindDerived(ClassTy &c) {
-    c.def_static("get", &PyVectorType::get, nb::arg("shape"),
+    c.def_static("get", &PyVectorType::getChecked, nb::arg("shape"),
                  nb::arg("element_type"), nb::kw_only(),
                  nb::arg("scalable") = nb::none(),
                  nb::arg("scalable_dims") = nb::none(),
                  nb::arg("loc") = nb::none(), "Create a vector type")
+        .def_static("get_unchecked", &PyVectorType::get, nb::arg("shape"),
+                    nb::arg("element_type"), nb::kw_only(),
+                    nb::arg("scalable") = nb::none(),
+                    nb::arg("scalable_dims") = nb::none(),
+                    nb::arg("context") = nb::none(), "Create a vector type")
         .def_prop_ro(
             "scalable",
             [](MlirType self) { return mlirVectorTypeIsScalable(self); })
@@ -652,10 +663,11 @@ public:
   }
 
 private:
-  static PyVectorType get(std::vector<int64_t> shape, PyType &elementType,
-                          std::optional<nb::list> scalable,
-                          std::optional<std::vector<int64_t>> scalableDims,
-                          DefaultingPyLocation loc) {
+  static PyVectorType
+  getChecked(std::vector<int64_t> shape, PyType &elementType,
+             std::optional<nb::list> scalable,
+             std::optional<std::vector<int64_t>> scalableDims,
+             DefaultingPyLocation loc) {
     if (scalable && scalableDims) {
       throw nb::value_error("'scalable' and 'scalable_dims' kwargs "
                             "are mutually exclusive.");
@@ -690,6 +702,42 @@ private:
       throw MLIRError("Invalid type", errors.take());
     return PyVectorType(elementType.getContext(), type);
   }
+
+  static PyVectorType get(std::vector<int64_t> shape, PyType &elementType,
+                          std::optional<nb::list> scalable,
+                          std::optional<std::vector<int64_t>> scalableDims,
+                          DefaultingPyMlirContext context) {
+    if (scalable && scalableDims) {
+      throw nb::value_error("'scalable' and 'scalable_dims' kwargs "
+                            "are mutually exclusive.");
+    }
+
+    PyMlirContext::ErrorCapture errors(context->getRef());
+    MlirType type;
+    if (scalable) {
+      if (scalable->size() != shape.size())
+        throw nb::value_error("Expected len(scalable) == len(shape).");
+
+      SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
+          *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); }));
+      type = mlirVectorTypeGetScalable(shape.size(), shape.data(),
+                                       scalableDimFlags.data(), elementType);
+    } else if (scalableDims) {
+      SmallVector<bool> scalableDimFlags(shape.size(), false);
+      for (int64_t dim : *scalableDims) {
+        if (static_cast<size_t>(dim) >= scalableDimFlags.size() || dim < 0)
+          throw nb::value_error("Scalable dimension index out of bounds.");
+        scalableDimFlags[dim] = true;
+      }
+      type = mlirVectorTypeGetScalable(shape.size(), shape.data(),
+                                       scalableDimFlags.data(), elementType);
+    } else {
+      type = mlirVectorTypeGet(shape.size(), shape.data(), elementType);
+    }
+    if (mlirTypeIsNull(type))
+      throw MLIRError("Invalid type", errors.take());
+    return PyVectorType(elementType.getContext(), type);
+  }
 };
 
 /// Ranked Tensor Type subclass - RankedTensorType.
@@ -718,14 +766,31 @@ public:
         nb::arg("shape"), nb::arg("element_type"),
         nb::arg("encoding") = nb::none(), nb::arg("loc") = nb::none(),
         "Create a ranked tensor type");
-    c.def_prop_ro("encoding",
-                  [](PyRankedTensorType &self) -> std::optional<MlirAttribute> {
-                    MlirAttribute encoding =
-                        mlirRankedTensorTypeGetEncoding(self.get());
-                    if (mlirAttributeIsNull(encoding))
-                      return std::nullopt;
-                    return encoding;
-                  });
+    c.def_static(
+        "get_unchecked",
+        [](std::vector<int64_t> shape, PyType &elementType,
+           std::optional<PyAttribute> &encodingAttr,
+           DefaultingPyMlirContext context) {
+          PyMlirContext::ErrorCapture errors(context->getRef());
+          MlirType t = mlirRankedTensorTypeGet(
+              shape.size(), shape.data(), elementType,
+              encodingAttr ? encodingAttr->get() : mlirAttributeGetNull());
+          if (mlirTypeIsNull(t))
+            throw MLIRError("Invalid type", errors.take());
+          return PyRankedTensorType(elementType.getContext(), t);
+        },
+        nb::arg("shape"), nb::arg("element_type"),
+        nb::arg("encoding") = nb::none(), nb::arg("context") = nb::none(),
+        "Create a ranked tensor type");
+    c.def_prop_ro(
+        "encoding",
+        [](PyRankedTensorType &self)
+            -> std::optional<nb::typed<nb::object, PyAttribute>> {
+          MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
+          if (mlirAttributeIsNull(encoding))
+            return std::nullopt;
+          return PyAttribute(self.getContext(), encoding).maybeDownCast();
+        });
   }
 };
 
@@ -750,6 +815,17 @@ public:
           return PyUnrankedTensorType(elementType.getContext(), t);
         },
         nb::arg("element_type"), nb::arg("loc") = nb::none(),
+        "Create a unranked tensor type");
+    c.def_static(
+        "get_unchecked",
+        [](PyType &elementType, DefaultingPyMlirContext context) {
+          PyMlirContext::ErrorCapture errors(context->getRef());
+          MlirType t = mlirUnrankedTensorTypeGet(elementType);
+          if (mlirTypeIsNull(t))
+            throw MLIRError("Invalid type", errors.take());
+          return PyUnrankedTensorType(elementType.getContext(), t);
+        },
+        nb::arg("element_type"), nb::arg("context") = nb::none(),
         "Create a unranked tensor type");
   }
 };
@@ -783,10 +859,33 @@ public:
          nb::arg("shape"), nb::arg("element_type"),
          nb::arg("layout") = nb::none(), nb::arg("memory_space") = nb::none(),
          nb::arg("loc") = nb::none(), "Create a memref type")
+        .def_static(
+            "get_unchecked",
+            [](std::vector<int64_t> shape, PyType &elementType,
+               PyAttribute *layout, PyAttribute *memorySpace,
+               DefaultingPyMlirContext context) {
+              PyMlirContext::ErrorCapture errors(context->getRef());
+              MlirAttribute layoutAttr =
+                  layout ? *layout : mlirAttributeGetNull();
+              MlirAttribute memSpaceAttr =
+                  memorySpace ? *memorySpace : mlirAttributeGetNull();
+              MlirType t =
+                  mlirMemRefTypeGet(elementType, shape.size(), shape.data(),
+                                    layoutAttr, memSpaceAttr);
+              if (mlirTypeIsNull(t))
+                throw MLIRError("Invalid type", errors.take());
+              return PyMemRefType(elementType.getContext(), t);
+            },
+            nb::arg("shape"), nb::arg("element_type"),
+            nb::arg("layout") = nb::none(),
+            nb::arg("memory_space") = nb::none(),
+            nb::arg("context") = nb::none(), "Create a memref type")
         .def_prop_ro(
             "layout",
-            [](PyMemRefType &self) -> MlirAttribute {
-              return mlirMemRefTypeGetLayout(self);
+            [](PyMemRefType &self) -> nb::typed<nb::object, PyAttribute> {
+              return PyAttribute(self.getContext(),
+                                 mlirMemRefTypeGetLayout(self))
+                  .maybeDownCast();
             },
             "The layout of the MemRef type.")
         .def(
@@ -810,11 +909,12 @@ public:
             "The layout of the MemRef type as an affine map.")
         .def_prop_ro(
             "memory_space",
-            [](PyMemRefType &self) -> std::optional<MlirAttribute> {
+            [](PyMemRefType &self)
+                -> std::optional<nb::typed<nb::object, PyAttribute>> {
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return a;
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -848,13 +948,30 @@ public:
          },
          nb::arg("element_type"), nb::arg("memory_space").none(),
          nb::arg("loc") = nb::none(), "Create a unranked memref type")
+        .def_static(
+            "get_unchecked",
+            [](PyType &elementType, PyAttribute *memorySpace,
+               DefaultingPyMlirContext context) {
+              PyMlirContext::ErrorCapture errors(context->getRef());
+              MlirAttribute memSpaceAttr = {};
+              if (memorySpace)
+                memSpaceAttr = *memorySpace;
+
+              MlirType t = mlirUnrankedMemRefTypeGet(elementType, memSpaceAttr);
+              if (mlirTypeIsNull(t))
+                throw MLIRError("Invalid type", errors.take());
+              return PyUnrankedMemRefType(elementType.getContext(), t);
+            },
+            nb::arg("element_type"), nb::arg("memory_space").none(),
+            nb::arg("context") = nb::none(), "Create a unranked memref type")
         .def_prop_ro(
             "memory_space",
-            [](PyUnrankedMemRefType &self) -> std::optional<MlirAttribute> {
+            [](PyUnrankedMemRefType &self)
+                -> std::optional<nb::typed<nb::object, PyAttribute>> {
               MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
               if (mlirAttributeIsNull(a))
                 return std::nullopt;
-              return a;
+              return PyAttribute(self.getContext(), a).maybeDownCast();
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
@@ -872,17 +989,35 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_tuple",
+        [](const std::vector<PyType> &elements,
+           DefaultingPyMlirContext context) {
+          std::vector<MlirType> mlirElements;
+          mlirElements.reserve(elements.size());
+          for (const auto &element : elements)
+            mlirElements.push_back(element.get());
+          MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
+                                        mlirElements.data());
+          return PyTupleType(context->getRef(), t);
+        },
+        nb::arg("elements"), nb::arg("context") = nb::none(),
+        "Create a tuple type");
+    c.def_static(
+        "get_tuple",
         [](std::vector<MlirType> elements, DefaultingPyMlirContext context) {
           MlirType t = mlirTupleTypeGet(context->get(), elements.size(),
                                         elements.data());
           return PyTupleType(context->getRef(), t);
         },
         nb::arg("elements"), nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get_tuple(elements: Sequence[Type], context: Context | None = None) -> TupleType"),
+        // clang-format on
         "Create a tuple type");
     c.def(
         "get_type",
-        [](PyTupleType &self, intptr_t pos) {
-          return mlirTupleTypeGetType(self, pos);
+        [](PyTupleType &self, intptr_t pos) -> nb::typed<nb::object, PyType> {
+          return PyType(self.getContext(), mlirTupleTypeGetType(self, pos))
+              .maybeDownCast();
         },
         nb::arg("pos"), "Returns the pos-th type in the tuple type.");
     c.def_prop_ro(
@@ -906,6 +1041,26 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
+        [](std::vector<PyType> inputs, std::vector<PyType> results,
+           DefaultingPyMlirContext context) {
+          std::vector<MlirType> mlirInputs;
+          mlirInputs.reserve(inputs.size());
+          for (const auto &input : inputs)
+            mlirInputs.push_back(input.get());
+          std::vector<MlirType> mlirResults;
+          mlirResults.reserve(results.size());
+          for (const auto &result : results)
+            mlirResults.push_back(result.get());
+
+          MlirType t = mlirFunctionTypeGet(context->get(), inputs.size(),
+                                           mlirInputs.data(), results.size(),
+                                           mlirResults.data());
+          return PyFunctionType(context->getRef(), t);
+        },
+        nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        "Gets a FunctionType from a list of input and result types");
+    c.def_static(
+        "get",
         [](std::vector<MlirType> inputs, std::vector<MlirType> results,
            DefaultingPyMlirContext context) {
           MlirType t =
@@ -914,6 +1069,9 @@ public:
           return PyFunctionType(context->getRef(), t);
         },
         nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
+        // clang-format off
+        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: Context | None = None) -> FunctionType"),
+        // clang-format on
         "Gets a FunctionType from a list of input and result types");
     c.def_prop_ro(
         "inputs",

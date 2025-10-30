@@ -141,8 +141,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVAsmPrinterPass(*PR);
 }
 
-static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           std::optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
@@ -154,7 +153,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool JIT)
     : CodeGenTargetMachineImpl(
           T, TT.computeDataLayout(Options.MCOptions.getABIName()), TT, CPU, FS,
-          Options, getEffectiveRelocModel(TT, RM),
+          Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<RISCVELFTargetObjectFile>()) {
   initAsmInfo();
@@ -162,6 +161,9 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
   // RISC-V supports the MachineOutliner.
   setMachineOutliner(true);
   setSupportsDefaultOutlining(true);
+
+  // RISC-V supports the debug entry values.
+  setSupportsDebugEntryValues(true);
 
   if (TT.isOSFuchsia() && !TT.isArch64Bit())
     report_fatal_error("Fuchsia is only supported for 64-bit");
@@ -395,6 +397,7 @@ public:
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addFastRegAlloc() override;
+  bool addILPOpts() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -580,9 +583,6 @@ void RISCVPassConfig::addMachineSSAOptimization() {
 
   TargetPassConfig::addMachineSSAOptimization();
 
-  if (EnableMachineCombiner)
-    addPass(&MachineCombinerID);
-
   if (TM->getTargetTriple().isRISCV64()) {
     addPass(createRISCVOptWInstrsPass());
   }
@@ -615,6 +615,13 @@ void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
+}
+
+bool RISCVPassConfig::addILPOpts() {
+  if (EnableMachineCombiner)
+    addPass(&MachineCombinerID);
+
+  return true;
 }
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {

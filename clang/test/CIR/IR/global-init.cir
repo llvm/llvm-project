@@ -1,0 +1,48 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+
+!rec_NeedsCtor = !cir.record<struct "NeedsCtor" padded {!u8i}>
+!rec_NeedsDtor = !cir.record<struct "NeedsDtor" padded {!u8i}>
+!rec_NeedsCtorDtor = !cir.record<struct "NeedsCtorDtor" padded {!u8i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @_ZN9NeedsCtorC1Ev(!cir.ptr<!rec_NeedsCtor>)
+  cir.global external @needsCtor = ctor : !rec_NeedsCtor {
+    %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
+    cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor>) -> ()
+  }
+  // CHECK: cir.global external @needsCtor = ctor : !rec_NeedsCtor {
+  // CHECK:   %0 = cir.get_global @needsCtor : !cir.ptr<!rec_NeedsCtor>
+  // CHECK:   cir.call @_ZN9NeedsCtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtor>) -> ()
+  // CHECK: }
+
+  cir.func private @_ZN9NeedsDtorD1Ev(!cir.ptr<!rec_NeedsDtor>)
+  cir.global external dso_local @needsDtor = #cir.zero : !rec_NeedsDtor dtor {
+    %0 = cir.get_global @needsDtor : !cir.ptr<!rec_NeedsDtor>
+    cir.call @_ZN9NeedsDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsDtor>) -> ()
+  }
+  // CHECK: cir.global external dso_local @needsDtor = #cir.zero : !rec_NeedsDtor dtor {
+  // CHECK:   %0 = cir.get_global @needsDtor : !cir.ptr<!rec_NeedsDtor>
+  // CHECK:   cir.call @_ZN9NeedsDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsDtor>) -> ()
+  // CHECK: }
+
+  cir.func private @_ZN13NeedsCtorDtorC1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  cir.func private @_ZN13NeedsCtorDtorD1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  cir.global external dso_local @needsCtorDtor = ctor : !rec_NeedsCtorDtor {
+    %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+    cir.call @_ZN13NeedsCtorDtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  } dtor {
+    %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+    cir.call @_ZN13NeedsCtorDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  }
+  // CHECK: cir.func private @_ZN13NeedsCtorDtorC1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  // CHECK: cir.func private @_ZN13NeedsCtorDtorD1Ev(!cir.ptr<!rec_NeedsCtorDtor>)
+  // CHECK: cir.global external dso_local @needsCtorDtor = ctor : !rec_NeedsCtorDtor {
+  // CHECK:   %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+  // CHECK:   cir.call @_ZN13NeedsCtorDtorC1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  // CHECK: } dtor {
+  // CHECK:   %0 = cir.get_global @needsCtorDtor : !cir.ptr<!rec_NeedsCtorDtor>
+  // CHECK:   cir.call @_ZN13NeedsCtorDtorD1Ev(%0) : (!cir.ptr<!rec_NeedsCtorDtor>) -> ()
+  // CHECK: }
+}

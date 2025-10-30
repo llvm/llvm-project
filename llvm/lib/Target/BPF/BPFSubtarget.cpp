@@ -43,6 +43,8 @@ static cl::opt<bool>
 static cl::opt<bool> Disable_load_acq_store_rel(
     "disable-load-acq-store-rel", cl::Hidden, cl::init(false),
     cl::desc("Disable load-acquire and store-release insns"));
+static cl::opt<bool> Disable_gotox("disable-gotox", cl::Hidden, cl::init(false),
+                                   cl::desc("Disable gotox insn"));
 
 void BPFSubtarget::anchor() {}
 
@@ -66,6 +68,7 @@ void BPFSubtarget::initializeEnvironment() {
   HasGotol = false;
   HasStoreImm = false;
   HasLoadAcqStoreRel = false;
+  HasGotox = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
@@ -96,6 +99,7 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasGotol = !Disable_gotol;
     HasStoreImm = !Disable_StoreImm;
     HasLoadAcqStoreRel = !Disable_load_acq_store_rel;
+    HasGotox = !Disable_gotox;
     return;
   }
 }

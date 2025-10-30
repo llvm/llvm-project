@@ -221,15 +221,6 @@ endif()
 # System Introspection #
 ########################
 
-# The GPU targets require a few mandatory arguments to make the standard CMake
-# check flags happy.
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
-  set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
-endif()
-
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
 check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
@@ -338,4 +329,20 @@ if (FLANG_RT_INCLUDE_TESTS)
   add_subdirectory(unittests)
 else ()
   add_custom_target(check-flang-rt)
+endif()
+
+###################
+# Install headers #
+###################
+
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  add_llvm_install_targets(install-flang-rt-headers COMPONENT flang-rt-headers)
+
+  install(DIRECTORY include/flang-rt/runtime
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang-rt"
+    COMPONENT flang-rt-headers
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".git" EXCLUDE
+    PATTERN "CMakeFiles" EXCLUDE)
 endif()

@@ -133,16 +133,58 @@ static_assert(!std::__is_replaceable<CustomMoveAssignment>::value, "");
 // ----------------------
 
 // __split_buffer
-static_assert(std::__is_replaceable<std::__split_buffer<int> >::value, "");
-static_assert(std::__is_replaceable<std::__split_buffer<NotTriviallyCopyable> >::value, "");
-static_assert(!std::__is_replaceable<std::__split_buffer<int, NonPropagatingStatefulCopyAssignAlloc<int> > >::value,
+static_assert(
+    std::__is_replaceable<std::__split_buffer<int, std::allocator<int>, std::__split_buffer_pointer_layout> >::value,
+    "");
+static_assert(std::__is_replaceable<std::__split_buffer<NotTriviallyCopyable,
+                                                        std::allocator<NotTriviallyCopyable>,
+                                                        std::__split_buffer_pointer_layout> >::value,
               "");
-static_assert(!std::__is_replaceable<std::__split_buffer<int, NonPropagatingStatefulMoveAssignAlloc<int> > >::value,
+static_assert(
+    !std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatefulCopyAssignAlloc<int>, std::__split_buffer_pointer_layout > >::
+        value,
+    "");
+static_assert(
+    !std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatefulMoveAssignAlloc<int>, std::__split_buffer_pointer_layout > >::
+        value,
+    "");
+static_assert(
+    std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatelessCopyAssignAlloc<int>, std::__split_buffer_pointer_layout > >::
+        value,
+    "");
+static_assert(
+    std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatelessMoveAssignAlloc<int>, std::__split_buffer_pointer_layout > >::
+        value,
+    "");
+
+static_assert(
+    std::__is_replaceable<std::__split_buffer<int, std::allocator<int>, std::__split_buffer_size_layout> >::value, "");
+static_assert(std::__is_replaceable<std::__split_buffer<NotTriviallyCopyable,
+                                                        std::allocator<NotTriviallyCopyable>,
+                                                        std::__split_buffer_size_layout> >::value,
               "");
-static_assert(std::__is_replaceable<std::__split_buffer<int, NonPropagatingStatelessCopyAssignAlloc<int> > >::value,
-              "");
-static_assert(std::__is_replaceable<std::__split_buffer<int, NonPropagatingStatelessMoveAssignAlloc<int> > >::value,
-              "");
+static_assert(
+    !std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatefulCopyAssignAlloc<int>, std::__split_buffer_size_layout > >::value,
+    "");
+static_assert(
+    !std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatefulMoveAssignAlloc<int>, std::__split_buffer_size_layout > >::value,
+    "");
+static_assert(
+    std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatelessCopyAssignAlloc<int>, std::__split_buffer_size_layout > >::
+        value,
+    "");
+static_assert(
+    std::__is_replaceable<
+        std::__split_buffer<int, NonPropagatingStatelessMoveAssignAlloc<int>, std::__split_buffer_size_layout > >::
+        value,
+    "");
 
 // standard library types
 // ----------------------

@@ -380,7 +380,7 @@ bool ExpandVariadics::runOnModule(Module &M) {
           if (CB->isIndirectCall()) {
             FunctionType *FTy = CB->getFunctionType();
             if (FTy->isVarArg())
-              Changed |= expandCall(M, Builder, CB, FTy, 0);
+              Changed |= expandCall(M, Builder, CB, FTy, /*NF=*/nullptr);
           }
         }
       }

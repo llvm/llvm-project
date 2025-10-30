@@ -180,8 +180,8 @@ exit:
 define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i1 %c.0) {
 ; CHECK-LABEL: define void @test_blend_feeding_replicated_store_2(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr [[DST:%.*]], i1 [[C_0:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[C_0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
@@ -344,12 +344,11 @@ define void @test_blend_feeding_replicated_store_2(ptr noalias %src, ptr %dst, i
 ; CHECK-NEXT:    [[TMP71:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP71]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 96, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 96, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[GEP_SRC1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i32 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC1]], align 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[L]], 0

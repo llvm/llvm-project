@@ -714,42 +714,6 @@ let WantsParent = true in {
 }
 
 //===----------------------------------------------------------------------===//
-// PowerPC Instruction Predicate Definitions.
-def In32BitMode  : Predicate<"!Subtarget->isPPC64()">;
-def In64BitMode  : Predicate<"Subtarget->isPPC64()">;
-def IsBookE  : Predicate<"Subtarget->isBookE()">;
-def IsNotBookE  : Predicate<"!Subtarget->isBookE()">;
-def HasOnlyMSYNC : Predicate<"Subtarget->hasOnlyMSYNC()">;
-def HasSYNC   : Predicate<"!Subtarget->hasOnlyMSYNC()">;
-def IsPPC4xx  : Predicate<"Subtarget->isPPC4xx()">;
-def IsPPC6xx  : Predicate<"Subtarget->isPPC6xx()">;
-def IsE500  : Predicate<"Subtarget->isE500()">;
-def HasSPE  : Predicate<"Subtarget->hasSPE()">;
-def HasICBT : Predicate<"Subtarget->hasICBT()">;
-def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
-def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
-def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
-def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
-def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
-def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
-def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
-def HasFPU : Predicate<"Subtarget->hasFPU()">;
-def PCRelativeMemops : Predicate<"Subtarget->hasPCRelativeMemops()">;
-def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
-
-// AIX assembler may not be modern enough to support some extended mne.
-def ModernAs: Predicate<"!Subtarget->isAIXABI() || Subtarget->HasModernAIXAs">,
-                 AssemblerPredicate<(any_of (not AIXOS), FeatureModernAIXAs)>;
-def IsAIX : Predicate<"Subtarget->isAIXABI()">;
-def NotAIX : Predicate<"!Subtarget->isAIXABI()">;
-def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
-def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
-
-//===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
 multiclass XForm_base_r3xo_r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                       string asmbase, string asmstr, list<dag> pattern> {
@@ -1318,7 +1282,7 @@ def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F),
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
   let isPredicable = 1, isReturn = 1, Uses = [LR, RM] in
     def BLR : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
-                           [(PPCretglue)]>, Requires<[In32BitMode]>;
+                           [(PPCretglue)]>, Requires<[IsPPC32]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR] in {
     let isPredicable = 1 in
       def BCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
@@ -1491,7 +1455,7 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR] in {
     let isPredicable = 1 in
       def BCTRL : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
                               "bctrl", IIC_BrB, [(PPCbctrl)]>,
-                  Requires<[In32BitMode]>;
+                  Requires<[IsPPC32]>;
 
     let isCodeGenOnly = 1 in {
       def BCCCTRL : XLForm_2_br<19, 528, 1, (outs), (ins (pred $BIBO, $CR):$cond),
@@ -1577,7 +1541,7 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR, RM], isCodeGenOnly = 1 in {
     let isPredicable = 1 in
       def BCTRL_RM : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
                                   "bctrl", IIC_BrB, [(PPCbctrl_rm)]>,
-                  Requires<[In32BitMode]>;
+                  Requires<[IsPPC32]>;
   }
 }
 
@@ -1603,7 +1567,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
   def BCTRL_LWZinto_toc:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
      (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
-     [(PPCbctrl_load_toc iaddr:$addr)]>, Requires<[In32BitMode]>;
+     [(PPCbctrl_load_toc iaddr:$addr)]>, Requires<[IsPPC32]>;
 
 }
 
@@ -1612,7 +1576,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
   def BCTRL_LWZinto_toc_RM:
     XLForm_2_ext_and_DForm_1<19, 528, 20, 0, 1, 32, (outs),
      (ins (memri $D, $RA):$addr), "bctrl\n\tlwz 2, $addr", IIC_BrB,
-     [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[In32BitMode]>;
+     [(PPCbctrl_load_toc_rm iaddr:$addr)]>, Requires<[IsPPC32]>;
 
 }
 
@@ -1621,7 +1585,7 @@ let isCodeGenOnly = 1, hasSideEffects = 0 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, isBranch = 1,
     isIndirectBranch = 1, isCall = 1, isReturn = 1, Uses = [CTR, RM]  in
 def TAILBCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
-                            []>, Requires<[In32BitMode]>;
+                            []>, Requires<[IsPPC32]>;
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7,
     isBarrier = 1, isCall = 1, isReturn = 1, Uses = [RM] in
@@ -1644,7 +1608,7 @@ let hasSideEffects = 1 in {
   def EH_SjLj_SetJmp32  : PPCCustomInserterPseudo<(outs gprc:$dst), (ins memr:$buf),
                             "#EH_SJLJ_SETJMP32",
                             [(set i32:$dst, (PPCeh_sjlj_setjmp addr:$buf))]>,
-                          Requires<[In32BitMode]>;
+                          Requires<[IsPPC32]>;
 }
 
 let hasSideEffects = 1, isBarrier = 1 in {
@@ -1652,7 +1616,7 @@ let hasSideEffects = 1, isBarrier = 1 in {
   def EH_SjLj_LongJmp32 : PPCCustomInserterPseudo<(outs), (ins memr:$buf),
                             "#EH_SJLJ_LONGJMP32",
                             [(PPCeh_sjlj_longjmp addr:$buf)]>,
-                          Requires<[In32BitMode]>;
+                          Requires<[IsPPC32]>;
 }
 
 // This pseudo is never removed from the function, as it serves as
@@ -3474,8 +3438,6 @@ def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
 def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
 def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
 
-def MMA : Predicate<"Subtarget->hasMMA()">;
-
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
 include "PPCInstrP10.td"
@@ -4359,7 +4321,22 @@ def TLBLI : XForm_16b<31, 1010, (outs), (ins gprc:$RB),
                           "tlbli $RB", IIC_LdStLoad, []>, Requires<[IsPPC6xx]>;
 
 def TLBIE : XForm_26<31, 306, (outs), (ins gprc:$RST, gprc:$RB),
-                          "tlbie $RB,$RST", IIC_SprTLBIE, []>;
+                     "tlbie $RB, $RST", IIC_SprTLBIE, []>,
+            Requires<[IsNotISA3_0]>;
+
+let Predicates = [IsISA3_0] in {
+  def TLBIEP9 : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
+                                        (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
+                                            u1imm:$PRS, u1imm:$R),
+                                        "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def TLBIE8P9
+        : XForm_RSB5_UIMM2_2UIMM1<31, 306, (outs),
+                                  (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
+                                      u1imm:$PRS, u1imm:$R),
+                                  "tlbie $RB, $RS, $RIC, $PRS, $R", []>;
+  }
+}
 
 def TLBSX : XForm_tlb<914, (outs), (ins gprc:$RA, gprc:$RB), "tlbsx $RA, $RB",
                 IIC_LdStLoad>, Requires<[IsBookE]>;
@@ -4616,6 +4593,8 @@ def : InstAlias<"mfamr $Rx", (MFSPR gprc:$Rx, 29)>;
 
 def : InstAlias<"mtpid $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsBookE]>;
 def : InstAlias<"mfpid $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsBookE]>;
+def : InstAlias<"mtpidr $Rx", (MTSPR 48, gprc:$Rx)>, Requires<[IsISA3_0]>;
+def : InstAlias<"mfpidr $Rx", (MFSPR gprc:$Rx, 48)>, Requires<[IsISA3_0]>;
 
 foreach SPRG = 4-7 in {
   def : InstAlias<"mfsprg $RT, "#SPRG, (MFSPR gprc:$RT, !add(SPRG, 256))>,
@@ -4705,7 +4684,11 @@ def : InstAlias<"mficcr $Rx", (MFSPR gprc:$Rx, 1019)>, Requires<[IsPPC4xx]>;
 
 }
 
-def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>;
+def : InstAlias<"tlbie $RB", (TLBIE R0, gprc:$RB)>,  Requires<[IsNotISA3_0]>;
+let Predicates = [IsISA3_0] in {
+  def : InstAlias<"tlbie $RB", (TLBIEP9 R0, gprc:$RB, 0, 0, 0)>;
+  def : InstAlias<"tlbie $RB, $RS", (TLBIEP9 gprc:$RB, gprc:$RS, 0, 0, 0)>;
+}
 
 def : InstAlias<"tlbrehi $RS, $A", (TLBRE2 gprc:$RS, gprc:$A, 0)>,
                 Requires<[IsPPC4xx]>;
@@ -5180,9 +5163,9 @@ def RotateInsertByte1 {
 }
 
 // Clear the upper half of the register when in 64-bit mode
-let Predicates = [In64BitMode] in
+let Predicates = [IsPPC64] in
 def : Pat<(i32 (bitreverse i32:$A)), (RLDICL_32 RotateInsertByte1.Left, 0, 32)>;
-let Predicates = [In32BitMode] in
+let Predicates = [IsPPC32] in
 def : Pat<(i32 (bitreverse i32:$A)), RotateInsertByte1.Left>;
 
 // Fast 64-bit reverse bits algorithm:

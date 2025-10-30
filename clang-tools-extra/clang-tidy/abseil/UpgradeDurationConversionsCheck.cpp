@@ -1,4 +1,4 @@
-//===--- UpgradeDurationConversionsCheck.cpp - clang-tidy -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -104,7 +104,7 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                                       hasCastKind(CK_UserDefinedConversion)))),
                             hasParent(callExpr(
                                 callee(functionDecl(
-                                    DurationFactoryFunction(),
+                                    durationFactoryFunction(),
                                     unless(hasParent(functionTemplateDecl())))),
                                 hasArgument(0, expr().bind("arg")))))
                             .bind("OuterExpr")),

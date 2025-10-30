@@ -40,6 +40,10 @@ class Value;
 /// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = TypeConverter;
+
   virtual ~TypeConverter() = default;
   TypeConverter() = default;
   // Copy the registered conversions, but not the caches
@@ -223,7 +227,7 @@ public:
   }
 
   /// Register a conversion function for attributes within types. Type
-  /// converters may call this function in order to allow hoking into the
+  /// converters may call this function in order to allow hooking into the
   /// translation of attributes that exist within types. For example, a type
   /// converter for the `memref` type could use these conversions to convert
   /// memory spaces or layouts in an extensible way.
@@ -679,6 +683,10 @@ protected:
 template <typename SourceOp>
 class OpConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpConversionPattern;
+
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
@@ -729,6 +737,10 @@ private:
 template <typename SourceOp>
 class OpInterfaceConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpInterfaceConversionPattern;
+
   OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(Pattern::MatchInterfaceOpTypeTag(),
                           SourceOp::getInterfaceID(), benefit, context) {}
@@ -773,6 +785,10 @@ private:
 template <template <typename> class TraitType>
 class OpTraitConversionPattern : public ConversionPattern {
 public:
+  /// Type alias to allow derived classes to inherit constructors with
+  /// `using Base::Base;`.
+  using Base = OpTraitConversionPattern;
+
   OpTraitConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
       : ConversionPattern(Pattern::MatchTraitOpTypeTag(),
                           TypeID::get<TraitType>(), benefit, context) {}
@@ -795,17 +811,19 @@ convertOpResultTypes(Operation *op, ValueRange operands,
 /// ops which use FunctionType to represent their type.
 void populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
-    const TypeConverter &converter);
+    const TypeConverter &converter, PatternBenefit benefit = 1);
 
 template <typename FuncOpT>
 void populateFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter) {
-  populateFunctionOpInterfaceTypeConversionPattern(FuncOpT::getOperationName(),
-                                                   patterns, converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1) {
+  populateFunctionOpInterfaceTypeConversionPattern(
+      FuncOpT::getOperationName(), patterns, converter, benefit);
 }
 
 void populateAnyFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter);
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter
@@ -1428,6 +1446,9 @@ struct ConversionConfig {
 ///
 /// In the above example, %0 can be used instead of %3 and all cast ops are
 /// folded away.
+void reconcileUnrealizedCasts(
+    const DenseSet<UnrealizedConversionCastOp> &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);
 void reconcileUnrealizedCasts(
     ArrayRef<UnrealizedConversionCastOp> castOps,
     SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps = nullptr);

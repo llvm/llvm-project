@@ -121,7 +121,7 @@ def configure_dexter_substitutions():
         tools.append(
             ToolSubst(
                 "%dexter_lldb_args",
-                f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap',
+                f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap --dap-message-log=-e',
             )
         )
 
@@ -148,7 +148,9 @@ def configure_dexter_substitutions():
         dexter_regression_test_c_builder = "clang"
         dexter_regression_test_cxx_builder = "clang++"
         dexter_regression_test_debugger = "lldb-dap"
-        dexter_regression_test_additional_flags = f'--lldb-executable "{lldb_dap_path}"'
+        dexter_regression_test_additional_flags = (
+            f'--lldb-executable "{lldb_dap_path}" --dap-message-log=-e'
+        )
         dexter_regression_test_c_flags = "-O0 -glldb -std=gnu11"
         dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
 

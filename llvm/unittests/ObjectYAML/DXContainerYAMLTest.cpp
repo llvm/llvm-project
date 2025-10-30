@@ -172,8 +172,8 @@ TEST(RootSignature, HeaderData) {
         NumStaticSamplers: 0
         StaticSamplersOffset: 48
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -224,8 +224,8 @@ TEST(RootSignature, ParseRootConstants) {
         NumStaticSamplers: 0
         StaticSamplersOffset: 48
         Parameters:
-          - ParameterType: 1
-            ShaderVisibility: 2
+          - ParameterType: Constants32Bit
+            ShaderVisibility: Hull
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15
@@ -276,8 +276,8 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 44
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV 
+        ShaderVisibility: Domain 
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -327,8 +327,8 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 48
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -379,12 +379,12 @@ TEST(RootSignature, ParseDescriptorTableV10) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 64
       Parameters:         
-      - ParameterType: 0 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: 41
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -435,12 +435,12 @@ TEST(RootSignature, ParseDescriptorTableV11) {
       NumStaticSamplers: 0
       StaticSamplersOffset: 68
       Parameters:         
-      - ParameterType: 0 # Descriptor Table
-        ShaderVisibility: 3 # Domain
+      - ParameterType: DescriptorTable
+        ShaderVisibility: Domain
         Table:
           NumRanges: 1
           Ranges:
-            - RangeType: 0
+            - RangeType: SRV
               NumDescriptors: -1
               BaseShaderRegister: 42
               RegisterSpace: 43
@@ -492,19 +492,19 @@ Parts:
       StaticSamplersOffset: 24
       Parameters: []
       Samplers: 
-        - Filter: 16 
-          AddressU: 1
-          AddressV: 2
-          AddressW: 5
+        - Filter: MinLinearMagMipPoint 
+          AddressU: Wrap
+          AddressV: Mirror
+          AddressW: MirrorOnce
           MipLODBias: 1.23
           MaxAnisotropy: 20
-          ComparisonFunc: 4
-          BorderColor: 0
+          ComparisonFunc: LessEqual
+          BorderColor: TransparentBlack
           MinLOD: 4.56
           MaxLOD: 8.90
           ShaderRegister: 31 
           RegisterSpace: 32
-          ShaderVisibility:  7
+          ShaderVisibility:  Mesh
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
     )"));
@@ -525,4 +525,55 @@ Parts:
 
   EXPECT_EQ(Storage.size(), 144u);
   EXPECT_TRUE(memcmp(Buffer, Storage.data(), 144u) == 0);
+}
+
+TEST(RootSignature, ParseStaticSamplersV13) {
+  SmallString<128> Storage;
+
+  // First read a fully explicit yaml with all sizes and offsets provided
+  ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 60 ]
+Parts:
+  - Name:            RTS0
+    Size:            76
+    RootSignature:
+      Version: 3
+      NumRootParameters: 0
+      RootParametersOffset: 24
+      NumStaticSamplers: 1
+      StaticSamplersOffset: 24
+      Parameters: []
+      Samplers: 
+        - ShaderRegister: 31 
+          RegisterSpace: 32
+          ShaderVisibility:  All
+          SAMPLER_FLAG_UINT_BORDER_COLOR: true
+      AllowInputAssemblerInputLayout: true
+      DenyGeometryShaderRootAccess: true
+    )"));
+
+  uint8_t Buffer[] = {
+      0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x90, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x52, 0x54, 0x53, 0x30, 0x4c, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x55, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7f, 0x7f,
+      0x1f, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x01, 0x00, 0x00, 0x00};
+
+  EXPECT_EQ(Storage.size(), 148U);
+  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 148U) == 0);
 }

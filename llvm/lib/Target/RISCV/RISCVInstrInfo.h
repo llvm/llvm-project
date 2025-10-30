@@ -25,6 +25,25 @@
 
 namespace llvm {
 
+// If Value is of the form C1<<C2, where C1 = 3, 5 or 9,
+// returns log2(C1 - 1) and assigns Shift = C2.
+// Otherwise, returns 0.
+template <typename T> int isShifted359(T Value, int &Shift) {
+  if (Value == 0)
+    return 0;
+  Shift = llvm::countr_zero(Value);
+  switch (Value >> Shift) {
+  case 3:
+    return 1;
+  case 5:
+    return 2;
+  case 9:
+    return 3;
+  default:
+    return 0;
+  }
+}
+
 class RISCVSubtarget;
 
 static const MachineMemOperand::Flags MONontemporalBit0 =
@@ -44,7 +63,7 @@ enum CondCode {
   COND_INVALID
 };
 
-CondCode getOppositeBranchCondition(CondCode);
+CondCode getInverseBranchCondition(CondCode);
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
@@ -75,7 +94,7 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const override {
     return MI.getOpcode() == RISCV::ADDI && MI.getOperand(1).isReg() &&

@@ -293,9 +293,8 @@ void LoopVectorizeHints::getHintsFromMetadata() {
 }
 
 void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
-  if (!Name.starts_with(Prefix()))
+  if (!Name.consume_front(Prefix()))
     return;
-  Name = Name.substr(Prefix().size(), StringRef::npos);
 
   const ConstantInt *C = mdconst::dyn_extract<ConstantInt>(Arg);
   if (!C)
@@ -1643,6 +1642,19 @@ bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
       return false;
   }
 
+  // The latch must be terminated by a BranchInst.
+  BasicBlock *Latch = Lp->getLoopLatch();
+  if (Latch && !isa<BranchInst>(Latch->getTerminator())) {
+    reportVectorizationFailure(
+        "The loop latch terminator is not a BranchInst",
+        "loop control flow is not understood by vectorizer", "CFGNotUnderstood",
+        ORE, TheLoop);
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
   return Result;
 }
 
@@ -1903,11 +1915,12 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   SafetyInfo.computeLoopSafetyInfo(TheLoop);
   // We need to know that load will be executed before we can hoist a
   // copy out to run just before the first iteration.
-  // FIXME: Currently, other restrictions prevent us from reaching this point
-  //        with a loop where the uncountable exit condition is determined
-  //        by a conditional load.
-  assert(SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop) &&
-         "Unhandled control flow in uncountable exit loop with side effects");
+  if (!SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop)) {
+    reportVectorizationFailure(
+        "Load for uncountable exit not guaranteed to execute",
+        "ConditionalUncountableExitLoad", ORE, TheLoop);
+    return false;
+  }
 
   // Prohibit any potential aliasing with any instruction in the loop which
   // might store to memory.

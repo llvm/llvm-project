@@ -3711,9 +3711,9 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-LABEL: flat_agent_atomic_fsub_ret_f64__offset12b_pos:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b64 s[0:1], 0x7f8
-; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[0:1]
+; GFX942-NEXT:    s_mov_b64 s[2:3], 0x7f8
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[2:3]
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v5
 ; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -3871,8 +3871,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, 0x7f8, v0
-; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -3922,8 +3922,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v4, vcc, 0x7f8, v0
-; GFX908-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX908-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -4157,10 +4157,10 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-LABEL: flat_agent_atomic_fsub_ret_f64__offset12b_neg:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_mov_b32 s1, -1
-; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[0:1]
+; GFX942-NEXT:    s_movk_i32 s2, 0xf800
+; GFX942-NEXT:    s_mov_b32 s3, -1
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, s[2:3]
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v5
 ; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
@@ -4318,8 +4318,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX90A-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -4369,8 +4369,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v4, vcc, 0xfffff800, v0
-; GFX908-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX908-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -5019,9 +5019,9 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-LABEL: flat_agent_atomic_fsub_noret_f64__offset12b_pos:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_mov_b64 s[0:1], 0x7f8
-; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
+; GFX942-NEXT:    s_mov_b64 s[2:3], 0x7f8
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[2:3]
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX942-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -5175,8 +5175,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7f8, v0
-; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -5225,8 +5225,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x7f8, v0
-; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX908-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -5455,10 +5455,10 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-LABEL: flat_agent_atomic_fsub_noret_f64__offset12b_neg:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    s_movk_i32 s0, 0xf800
-; GFX942-NEXT:    s_mov_b32 s1, -1
-; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
+; GFX942-NEXT:    s_movk_i32 s2, 0xf800
+; GFX942-NEXT:    s_mov_b32 s3, -1
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
+; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, s[2:3]
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX942-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
@@ -5612,8 +5612,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff800, v0
-; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX90A-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -5662,8 +5662,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0xfffff800, v0
-; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX908-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]

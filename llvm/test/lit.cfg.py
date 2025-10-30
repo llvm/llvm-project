@@ -48,15 +48,17 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 # directories.
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 
-# Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
-# binary with a no-op command for profcheck, but llvm-reduce tests have RUN
-# commands of the form llvm-reduce --test FileCheck, which explode if we
-# substitute FileCheck because llvm-reduce expects FileCheck in these tests.
-# It's not really possible to exclude these tests from the command substitution,
-# so we just exclude llvm-reduce tests from this config altogether. This should
-# be fine though as profcheck config tests are mostly concerned with opt.
 if config.enable_profcheck:
-    config.excludes = config.excludes + ["llvm-reduce"]
+    # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
+    # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
+    # commands of the form llvm-reduce --test FileCheck, which explode if we
+    # substitute FileCheck because llvm-reduce expects FileCheck in these tests.
+    # It's not really possible to exclude these tests from the command substitution,
+    # so we just exclude llvm-reduce tests from this config altogether. This should
+    # be fine though as profcheck config tests are mostly concerned with opt.
+    config.excludes.append("llvm-reduce")
+    # (Issue #161235) Temporarily exclude LoopVectorize.
+    config.excludes.append("LoopVectorize")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -156,7 +158,7 @@ if re.search(r"windows-msvc", config.target_triple):
 ld64_cmd = config.ld64_executable
 asan_rtlib = get_asan_rtlib()
 if asan_rtlib:
-    ld64_cmd = "DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
+    ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
 
@@ -751,10 +753,17 @@ if not hasattr(sys, "getwindowsversion") or sys.getwindowsversion().build >= 170
     config.available_features.add("unix-sockets")
 
 # .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
-if not re.match(
-    r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
-    config.target_triple,
-) and not re.match(r"^arm64(e)?-apple-(macos|darwin)", config.target_triple):
+if (
+    not re.match(
+        r"^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-cygnus|windows-gnu|windows-msvc|aix)",
+        config.target_triple,
+    )
+    and not re.match(
+        r"^arm64(e)?-apple-(macos|darwin)",
+        config.target_triple,
+    )
+    and not re.match(r".*-zos.*", config.target_triple)
+):
     config.available_features.add("debug_frame")
 
 if config.enable_backtrace:

@@ -58,79 +58,78 @@ static cl::opt<unsigned> MaxDeoptOrUnreachableSuccessorCheckDepth(
              "is followed by a block that either has a terminating "
              "deoptimizing call or is terminated with an unreachable"));
 
-static void replaceFuncletPadsRetWithUnreachable(Instruction &I) {
-  assert(isa<FuncletPadInst>(I) && "Instruction must be a funclet pad!");
-  for (User *User : make_early_inc_range(I.users())) {
-    Instruction *ReturnInstr = dyn_cast<Instruction>(User);
-    if (isa<CatchReturnInst>(ReturnInstr) ||
-        isa<CleanupReturnInst>(ReturnInstr)) {
-      BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
-      ReturnInstr->eraseFromParent();
-      new UnreachableInst(ReturnInstrBB->getContext(), ReturnInstrBB);
-    }
+/// Zap all the instructions in the block and replace them with an unreachable
+/// instruction and notify the basic block's successors that one of their
+/// predecessors is going away.
+static void
+emptyAndDetachBlock(BasicBlock *BB,
+                    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                    bool KeepOneInputPHIs) {
+  // Loop through all of our successors and make sure they know that one
+  // of their predecessors is going away.
+  SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
+  for (BasicBlock *Succ : successors(BB)) {
+    Succ->removePredecessor(BB, KeepOneInputPHIs);
+    if (Updates && UniqueSuccessors.insert(Succ).second)
+      Updates->push_back({DominatorTree::Delete, BB, Succ});
   }
+
+  // Zap all the instructions in the block.
+  while (!BB->empty()) {
+    Instruction &I = BB->back();
+    // If this instruction is used, replace uses with an arbitrary value.
+    // Because control flow can't get here, we don't care what we replace the
+    // value with. Note that since this block is unreachable, and all values
+    // contained within it must dominate their uses, that all uses will
+    // eventually be removed (they are themselves dead).
+    if (!I.use_empty())
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+    BB->back().eraseFromParent();
+  }
+  new UnreachableInst(BB->getContext(), BB);
+  assert(BB->size() == 1 && isa<UnreachableInst>(BB->getTerminator()) &&
+         "The successor list of BB isn't empty before "
+         "applying corresponding DTU updates.");
 }
 
-void llvm::detachDeadBlocks(
-    ArrayRef<BasicBlock *> BBs,
-    SmallVectorImpl<DominatorTree::UpdateType> *Updates,
-    bool KeepOneInputPHIs) {
+void llvm::detachDeadBlocks(ArrayRef<BasicBlock *> BBs,
+                            SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                            bool KeepOneInputPHIs) {
+  SmallPtrSet<BasicBlock *, 4> UniqueEHRetBlocksToDelete;
   for (auto *BB : BBs) {
-    // Loop through all of our successors and make sure they know that one
-    // of their predecessors is going away.
-    SmallPtrSet<BasicBlock *, 4> UniqueSuccessors;
-    for (BasicBlock *Succ : successors(BB)) {
-      Succ->removePredecessor(BB, KeepOneInputPHIs);
-      if (Updates && UniqueSuccessors.insert(Succ).second)
-        Updates->push_back({DominatorTree::Delete, BB, Succ});
-    }
-
-    // Zap all the instructions in the block.
-    while (!BB->empty()) {
-      Instruction &I = BB->back();
+    auto NonFirstPhiIt = BB->getFirstNonPHIIt();
+    if (NonFirstPhiIt != BB->end()) {
+      Instruction &I = *NonFirstPhiIt;
       // Exception handling funclets need to be explicitly addressed.
       // These funclets must begin with cleanuppad or catchpad and end with
       // cleanupred or catchret. The return instructions can be in different
       // basic blocks than the pad instruction. If we would only delete the
       // first block, the we would have possible cleanupret and catchret
       // instructions with poison arguments, which wouldn't be valid.
-      if (isa<FuncletPadInst>(I))
-        replaceFuncletPadsRetWithUnreachable(I);
+      if (isa<FuncletPadInst>(I)) {
+        UniqueEHRetBlocksToDelete.clear();
 
-      // Catchswitch instructions have handlers, that must be catchpads and
-      // an unwind label, that is either a catchpad or catchswitch.
-      if (CatchSwitchInst *CSI = dyn_cast<CatchSwitchInst>(&I)) {
-        // Iterating over the handlers and the unwind basic block and processing
-        // catchpads. If the unwind label is a catchswitch, we just replace the
-        // label with poison later on.
-        for (unsigned I = 0; I < CSI->getNumSuccessors(); I++) {
-          BasicBlock *SucBlock = CSI->getSuccessor(I);
-          Instruction &SucFstInst = *(SucBlock->getFirstNonPHIIt());
-          if (isa<FuncletPadInst>(SucFstInst)) {
-            replaceFuncletPadsRetWithUnreachable(SucFstInst);
-            // There may be catchswitch instructions using the catchpad.
-            // Just replace those with poison.
-            if (!SucFstInst.use_empty())
-              SucFstInst.replaceAllUsesWith(
-                  PoisonValue::get(SucFstInst.getType()));
-            SucFstInst.eraseFromParent();
+        for (User *User : I.users()) {
+          Instruction *ReturnInstr = dyn_cast<Instruction>(User);
+          // If we have a cleanupret or catchret block, replace it with just an
+          // unreachable. The other alternative, that may use a catchpad is a
+          // catchswitch. That does not need special handling for now.
+          if (isa<CatchReturnInst>(ReturnInstr) ||
+              isa<CleanupReturnInst>(ReturnInstr)) {
+            BasicBlock *ReturnInstrBB = ReturnInstr->getParent();
+            UniqueEHRetBlocksToDelete.insert(ReturnInstrBB);
           }
         }
-      }
 
-      // Because control flow can't get here, we don't care what we replace the
-      // value with.  Note that since this block is unreachable, and all values
-      // contained within it must dominate their uses, that all uses will
-      // eventually be removed (they are themselves dead).
-      if (!I.use_empty())
-        I.replaceAllUsesWith(PoisonValue::get(I.getType()));
-      BB->back().eraseFromParent();
+        for (BasicBlock *EHRetBB : UniqueEHRetBlocksToDelete)
+          emptyAndDetachBlock(EHRetBB, Updates, KeepOneInputPHIs);
+      }
     }
-    new UnreachableInst(BB->getContext(), BB);
-    assert(BB->size() == 1 &&
-           isa<UnreachableInst>(BB->getTerminator()) &&
-           "The successor list of BB isn't empty before "
-           "applying corresponding DTU updates.");
+
+    UniqueEHRetBlocksToDelete.clear();
+
+    // Detaching and emptying the current basic block.
+    emptyAndDetachBlock(BB, Updates, KeepOneInputPHIs);
   }
 }
 
@@ -673,6 +672,79 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
   assert(BB->getTerminator()->getNumSuccessors() == 1 &&
          "Should have a single succ!");
   return SplitBlock(BB, BB->getTerminator(), DT, LI, MSSAU, BBName);
+}
+
+/// Helper function to update the cycle or loop information after inserting a
+/// new block between a callbr instruction and one of its target blocks.  Adds
+/// the new block to the innermost cycle or loop that the callbr instruction and
+/// the original target block share.
+/// \p LCI            cycle or loop information to update
+/// \p CallBrBlock    block containing the callbr instruction
+/// \p CallBrTarget   new target block of the callbr instruction
+/// \p Succ           original target block of the callbr instruction
+template <typename TI, typename T>
+static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
+                                BasicBlock *CallBrTarget, BasicBlock *Succ) {
+  static_assert(std::is_same_v<TI, CycleInfo> || std::is_same_v<TI, LoopInfo>,
+                "type must be CycleInfo or LoopInfo");
+  if (!LCI)
+    return false;
+
+  T *LC;
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LC = LCI->getSmallestCommonCycle(CallBrBlock, Succ);
+  else
+    LC = LCI->getSmallestCommonLoop(CallBrBlock, Succ);
+  if (!LC)
+    return false;
+
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LCI->addBlockToCycle(CallBrTarget, LC);
+  else
+    LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+
+  return true;
+}
+
+BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
+                                  unsigned SuccIdx, DomTreeUpdater *DTU,
+                                  CycleInfo *CI, LoopInfo *LI,
+                                  bool *UpdatedLI) {
+  CallBrInst *CallBr = dyn_cast<CallBrInst>(CallBrBlock->getTerminator());
+  assert(CallBr && "expected callbr terminator");
+  assert(SuccIdx < CallBr->getNumSuccessors() &&
+         Succ == CallBr->getSuccessor(SuccIdx) && "invalid successor index");
+
+  // Create a new block between callbr and the specified successor.
+  // splitBlockBefore cannot be re-used here since it cannot split if the split
+  // point is a PHI node (because BasicBlock::splitBasicBlockBefore cannot
+  // handle that). But we don't need to rewire every part of a potential PHI
+  // node. We only care about the edge between CallBrBlock and the original
+  // successor.
+  BasicBlock *CallBrTarget =
+      BasicBlock::Create(CallBrBlock->getContext(),
+                         CallBrBlock->getName() + ".target." + Succ->getName(),
+                         CallBrBlock->getParent());
+  // Rewire control flow from the new target block to the original successor.
+  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
+  // Rewire control flow from callbr to the new target block.
+  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+  // Jump from the new target block to the original successor.
+  BranchInst::Create(Succ, CallBrTarget);
+
+  bool Updated =
+      updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock, CallBrTarget, Succ);
+  if (UpdatedLI)
+    *UpdatedLI = Updated;
+  updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+  if (DTU) {
+    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ))
+      DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ},
+                         {DominatorTree::Insert, CallBrTarget, Succ}});
+  }
+
+  return CallBrTarget;
 }
 
 void llvm::setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {
@@ -1793,4 +1865,14 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
       return false;
   }
   return true;
+}
+
+Printable llvm::printBasicBlock(const BasicBlock *BB) {
+  return Printable([BB](raw_ostream &OS) {
+    if (!BB) {
+      OS << "<nullptr>";
+      return;
+    }
+    BB->printAsOperand(OS);
+  });
 }

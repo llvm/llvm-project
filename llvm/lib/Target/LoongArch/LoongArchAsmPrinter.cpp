@@ -162,7 +162,7 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isImm())
     OS << ", " << OffsetMO.getImm();
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
-           OffsetMO.isMCSymbol()) {
+           OffsetMO.isMCSymbol() || OffsetMO.isCPI()) {
     OS << ", ";
     MAI->printExpr(OS, *MCO.getExpr());
   } else

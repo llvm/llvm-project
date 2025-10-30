@@ -66,6 +66,8 @@ public:
                   mlir::omp::LoopRelatedClauseOps &loopResult,
                   mlir::omp::CollapseClauseOps &collapseResult,
                   llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const;
+  bool processSizes(StatementContext &stmtCtx,
+                    mlir::omp::SizesClauseOps &result) const;
   bool processDevice(lower::StatementContext &stmtCtx,
                      mlir::omp::DeviceClauseOps &result) const;
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
@@ -192,8 +194,7 @@ private:
 
   void processMapObjects(
       lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
-      const omp::ObjectList &objects,
-      llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
+      const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,

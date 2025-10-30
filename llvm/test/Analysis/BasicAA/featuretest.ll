@@ -15,24 +15,14 @@ declare void @llvm.assume(i1)
 ; operations on another array.  Important for scientific codes.
 ;
 define i32 @different_array_test(i64 %A, i64 %B) {
-; NO_ASSUME-LABEL: @different_array_test(
-; NO_ASSUME-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
-; NO_ASSUME-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
-; NO_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[ARRAY11]], i32 4) ]
-; NO_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY11]])
-; NO_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY22]])
-; NO_ASSUME-NEXT:    [[POINTER2:%.*]] = getelementptr i32, ptr [[ARRAY22]], i64 [[B:%.*]]
-; NO_ASSUME-NEXT:    store i32 7, ptr [[POINTER2]], align 4
-; NO_ASSUME-NEXT:    ret i32 0
-;
-; USE_ASSUME-LABEL: @different_array_test(
-; USE_ASSUME-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
-; USE_ASSUME-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
-; USE_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY11]])
-; USE_ASSUME-NEXT:    call void @external(ptr nonnull [[ARRAY22]])
-; USE_ASSUME-NEXT:    [[POINTER2:%.*]] = getelementptr i32, ptr [[ARRAY22]], i64 [[B:%.*]]
-; USE_ASSUME-NEXT:    store i32 7, ptr [[POINTER2]], align 4
-; USE_ASSUME-NEXT:    ret i32 0
+; CHECK-LABEL: @different_array_test(
+; CHECK-NEXT:    [[ARRAY11:%.*]] = alloca [100 x i32], align 4
+; CHECK-NEXT:    [[ARRAY22:%.*]] = alloca [200 x i32], align 4
+; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY11]])
+; CHECK-NEXT:    call void @external(ptr nonnull [[ARRAY22]])
+; CHECK-NEXT:    [[POINTER2:%.*]] = getelementptr i32, ptr [[ARRAY22]], i64 [[B:%.*]]
+; CHECK-NEXT:    store i32 7, ptr [[POINTER2]], align 4
+; CHECK-NEXT:    ret i32 0
 ;
   %Array1 = alloca i32, i32 100
   %Array2 = alloca i32, i32 200

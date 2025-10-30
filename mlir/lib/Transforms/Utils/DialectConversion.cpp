@@ -1618,6 +1618,8 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
     if (!inputMap) {
       // This block argument was dropped and no replacement value was provided.
       // Materialize a replacement value "out of thin air".
+      // Note: Materialization must be built here because we cannot find a
+      // valid insertion point in the new block. (Will point to the old block.)
       Value mat =
           buildUnresolvedMaterialization(
               MaterializationKind::Source,
@@ -1725,29 +1727,29 @@ Value ConversionPatternRewriterImpl::findOrBuildReplacementValue(
   // (regardless of the type) and build a source materialization to the
   // original type.
   repl = lookupOrNull(value);
-  if (repl.empty()) {
-    // No replacement value is registered in the mapping. This means that the
-    // value is dropped and no longer needed. (If the value were still needed,
-    // a source materialization producing a replacement value "out of thin air"
-    // would have already been created during `replaceOp` or
-    // `applySignatureConversion`.)
-    return Value();
-  }
 
-  // Note: `computeInsertPoint` computes the "earliest" insertion point at
-  // which all values in `repl` are defined. It is important to emit the
-  // materialization at that location because the same materialization may be
-  // reused in a different context. (That's because materializations are cached
-  // in the conversion value mapping.) The insertion point of the
-  // materialization must be valid for all future users that may be created
-  // later in the conversion process.
-  Value castValue =
-      buildUnresolvedMaterialization(MaterializationKind::Source,
-                                     computeInsertPoint(repl), value.getLoc(),
-                                     /*valuesToMap=*/repl, /*inputs=*/repl,
-                                     /*outputTypes=*/value.getType(),
-                                     /*originalType=*/Type(), converter)
-          .front();
+  // Compute the insertion point of the materialization.
+  OpBuilder::InsertPoint ip;
+  if (repl.empty()) {
+    // The source materialization has no inputs. Insert it right before the
+    // value that it is replacing.
+    ip = computeInsertPoint(value);
+  } else {
+    // Compute the "earliest" insertion point at which all values in `repl` are
+    // defined. It is important to emit the materialization at that location
+    // because the same materialization may be reused in a different context.
+    // (That's because materializations are cached in the conversion value
+    // mapping.) The insertion point of the materialization must be valid for
+    // all future users that may be created later in the conversion process.
+    ip = computeInsertPoint(repl);
+  }
+  Value castValue = buildUnresolvedMaterialization(
+                        MaterializationKind::Source, ip, value.getLoc(),
+                        /*valuesToMap=*/repl, /*inputs=*/repl,
+                        /*outputTypes=*/value.getType(),
+                        /*originalType=*/Type(), converter,
+                        /*isPureTypeConversion=*/!repl.empty())
+                        .front();
   return castValue;
 }
 
@@ -1854,6 +1856,44 @@ void ConversionPatternRewriterImpl::replaceOp(
     Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(newValues.size() == op->getNumResults() &&
          "incorrect number of replacement values");
+  LLVM_DEBUG({
+    logger.startLine() << "** Replace : '" << op->getName() << "'(" << op
+                       << ")\n";
+    if (currentTypeConverter) {
+      // If the user-provided replacement types are different from the
+      // legalized types, as per the current type converter, print a note.
+      // In most cases, the replacement types are expected to match the types
+      // produced by the type converter, so this could indicate a bug in the
+      // user code.
+      for (auto [result, repls] :
+           llvm::zip_equal(op->getResults(), newValues)) {
+        Type resultType = result.getType();
+        auto logProlog = [&, repls = repls]() {
+          logger.startLine() << "   Note: Replacing op result of type "
+                             << resultType << " with value(s) of type (";
+          llvm::interleaveComma(repls, logger.getOStream(), [&](Value v) {
+            logger.getOStream() << v.getType();
+          });
+          logger.getOStream() << ")";
+        };
+        SmallVector<Type> convertedTypes;
+        if (failed(currentTypeConverter->convertTypes(resultType,
+                                                      convertedTypes))) {
+          logProlog();
+          logger.getOStream() << ", but the type converter failed to legalize "
+                                 "the original type.\n";
+          continue;
+        }
+        if (TypeRange(convertedTypes) != TypeRange(ValueRange(repls))) {
+          logProlog();
+          logger.getOStream() << ", but the legalized type(s) is/are (";
+          llvm::interleaveComma(convertedTypes, logger.getOStream(),
+                                [&](Type t) { logger.getOStream() << t; });
+          logger.getOStream() << ")\n";
+        }
+      }
+    }
+  });
 
   if (!config.allowPatternRollback) {
     // Pattern rollback is not allowed: materialize all IR changes immediately.
@@ -1897,21 +1937,8 @@ void ConversionPatternRewriterImpl::replaceOp(
   }
 
   // Create mappings for each of the new result values.
-  for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults())) {
-    if (repl.empty()) {
-      // This result was dropped and no replacement value was provided.
-      // Materialize a replacement value "out of thin air".
-      buildUnresolvedMaterialization(
-          MaterializationKind::Source, computeInsertPoint(result),
-          result.getLoc(), /*valuesToMap=*/{result}, /*inputs=*/ValueRange(),
-          /*outputTypes=*/result.getType(), /*originalType=*/Type(),
-          currentTypeConverter, /*isPureTypeConversion=*/false);
-      continue;
-    }
-
-    // Remap result to replacement value.
+  for (auto [repl, result] : llvm::zip_equal(newValues, op->getResults()))
     mapping.map(static_cast<Value>(result), std::move(repl));
-  }
 
   appendRewrite<ReplaceOperationRewrite>(op, currentTypeConverter);
   // Mark this operation and all nested ops as replaced.
@@ -2083,10 +2110,6 @@ void ConversionPatternRewriter::replaceOp(Operation *op, Operation *newOp) {
 void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-  LLVM_DEBUG({
-    impl->logger.startLine()
-        << "** Replace : '" << op->getName() << "'(" << op << ")\n";
-  });
 
   // If the current insertion point is before the erased operation, we adjust
   // the insertion point to be after the operation.
@@ -2104,10 +2127,6 @@ void ConversionPatternRewriter::replaceOpWithMultiple(
     Operation *op, SmallVector<SmallVector<Value>> &&newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
-  LLVM_DEBUG({
-    impl->logger.startLine()
-        << "** Replace : '" << op->getName() << "'(" << op << ")\n";
-  });
 
   // If the current insertion point is before the erased operation, we adjust
   // the insertion point to be after the operation.
@@ -3098,8 +3117,154 @@ unsigned OperationLegalizer::applyCostModelToPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// Reconcile Unrealized Casts
+//===----------------------------------------------------------------------===//
+
+/// Try to reconcile all given UnrealizedConversionCastOps and store the
+/// left-over ops in `remainingCastOps` (if provided). See documentation in
+/// DialectConversion.h for more details.
+/// The `isCastOpOfInterestFn` is used to filter the cast ops to proceed: the
+/// algorithm may visit an operand (or user) which is a cast op, but will not
+/// try to reconcile it if not in the filtered set.
+template <typename RangeT>
+static void reconcileUnrealizedCastsImpl(
+    RangeT castOps,
+    function_ref<bool(UnrealizedConversionCastOp)> isCastOpOfInterestFn,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  // A worklist of cast ops to process.
+  SetVector<UnrealizedConversionCastOp> worklist(llvm::from_range, castOps);
+
+  // Helper function that return the unrealized_conversion_cast op that
+  // defines all inputs of the given op (in the same order). Return "nullptr"
+  // if there is no such op.
+  auto getInputCast =
+      [](UnrealizedConversionCastOp castOp) -> UnrealizedConversionCastOp {
+    if (castOp.getInputs().empty())
+      return {};
+    auto inputCastOp =
+        castOp.getInputs().front().getDefiningOp<UnrealizedConversionCastOp>();
+    if (!inputCastOp)
+      return {};
+    if (inputCastOp.getOutputs() != castOp.getInputs())
+      return {};
+    return inputCastOp;
+  };
+
+  // Process ops in the worklist bottom-to-top.
+  while (!worklist.empty()) {
+    UnrealizedConversionCastOp castOp = worklist.pop_back_val();
+
+    // Traverse the chain of input cast ops to see if an op with the same
+    // input types can be found.
+    UnrealizedConversionCastOp nextCast = castOp;
+    while (nextCast) {
+      if (nextCast.getInputs().getTypes() == castOp.getResultTypes()) {
+        if (llvm::any_of(nextCast.getInputs(), [&](Value v) {
+              return v.getDefiningOp() == castOp;
+            })) {
+          // Ran into a cycle.
+          break;
+        }
+
+        // Found a cast where the input types match the output types of the
+        // matched op. We can directly use those inputs.
+        castOp.replaceAllUsesWith(nextCast.getInputs());
+        break;
+      }
+      nextCast = getInputCast(nextCast);
+    }
+  }
+
+  // A set of all alive cast ops. I.e., ops whose results are (transitively)
+  // used by an op that is not a cast op.
+  DenseSet<Operation *> liveOps;
+
+  // Helper function that marks the given op and transitively reachable input
+  // cast ops as alive.
+  auto markOpLive = [&](Operation *rootOp) {
+    SmallVector<Operation *> worklist;
+    worklist.push_back(rootOp);
+    while (!worklist.empty()) {
+      Operation *op = worklist.pop_back_val();
+      if (liveOps.insert(op).second) {
+        // Successfully inserted: process reachable input cast ops.
+        for (Value v : op->getOperands())
+          if (auto castOp = v.getDefiningOp<UnrealizedConversionCastOp>())
+            if (isCastOpOfInterestFn(castOp))
+              worklist.push_back(castOp);
+      }
+    }
+  };
+
+  // Find all alive cast ops.
+  for (UnrealizedConversionCastOp op : castOps) {
+    // The op may have been marked live already as being an operand of another
+    // live cast op.
+    if (liveOps.contains(op.getOperation()))
+      continue;
+    // If any of the users is not a cast op, mark the current op (and its
+    // input ops) as live.
+    if (llvm::any_of(op->getUsers(), [&](Operation *user) {
+          auto castOp = dyn_cast<UnrealizedConversionCastOp>(user);
+          return !castOp || !isCastOpOfInterestFn(castOp);
+        }))
+      markOpLive(op);
+  }
+
+  // Erase all dead cast ops.
+  for (UnrealizedConversionCastOp op : castOps) {
+    if (liveOps.contains(op)) {
+      // Op is alive and was not erased. Add it to the remaining cast ops.
+      if (remainingCastOps)
+        remainingCastOps->push_back(op);
+      continue;
+    }
+
+    // Op is dead. Erase it.
+    op->dropAllUses();
+    op->erase();
+  }
+}
+
+void mlir::reconcileUnrealizedCasts(
+    ArrayRef<UnrealizedConversionCastOp> castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  // Set of all cast ops for faster lookups.
+  DenseSet<UnrealizedConversionCastOp> castOpSet;
+  for (UnrealizedConversionCastOp op : castOps)
+    castOpSet.insert(op);
+  reconcileUnrealizedCasts(castOpSet, remainingCastOps);
+}
+
+void mlir::reconcileUnrealizedCasts(
+    const DenseSet<UnrealizedConversionCastOp> &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  reconcileUnrealizedCastsImpl(
+      llvm::make_range(castOps.begin(), castOps.end()),
+      [&](UnrealizedConversionCastOp castOp) {
+        return castOps.contains(castOp);
+      },
+      remainingCastOps);
+}
+
+namespace mlir {
+static void reconcileUnrealizedCasts(
+    const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
+        &castOps,
+    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
+  reconcileUnrealizedCastsImpl(
+      castOps.keys(),
+      [&](UnrealizedConversionCastOp castOp) {
+        return castOps.contains(castOp);
+      },
+      remainingCastOps);
+}
+} // namespace mlir
+
+//===----------------------------------------------------------------------===//
 // OperationConverter
 //===----------------------------------------------------------------------===//
+
 namespace {
 enum OpConversionMode {
   /// In this mode, the conversion will ignore failed conversions to allow
@@ -3264,18 +3429,13 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();
 
-  // Gather all unresolved materializations.
-  SmallVector<UnrealizedConversionCastOp> allCastOps;
+  // Reconcile all UnrealizedConversionCastOps that were inserted by the
+  // dialect conversion frameworks. (Not the ones that were inserted by
+  // patterns.)
   const DenseMap<UnrealizedConversionCastOp, UnresolvedMaterializationInfo>
       &materializations = rewriterImpl.unresolvedMaterializations;
-  for (auto it : materializations)
-    allCastOps.push_back(it.first);
-
-  // Reconcile all UnrealizedConversionCastOps that were inserted by the
-  // dialect conversion frameworks. (Not the one that were inserted by
-  // patterns.)
   SmallVector<UnrealizedConversionCastOp> remainingCastOps;
-  reconcileUnrealizedCasts(allCastOps, &remainingCastOps);
+  reconcileUnrealizedCasts(materializations, &remainingCastOps);
 
   // Drop markers.
   for (UnrealizedConversionCastOp castOp : remainingCastOps)
@@ -3297,79 +3457,6 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   }
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// Reconcile Unrealized Casts
-//===----------------------------------------------------------------------===//
-
-void mlir::reconcileUnrealizedCasts(
-    ArrayRef<UnrealizedConversionCastOp> castOps,
-    SmallVectorImpl<UnrealizedConversionCastOp> *remainingCastOps) {
-  SetVector<UnrealizedConversionCastOp> worklist(llvm::from_range, castOps);
-  // This set is maintained only if `remainingCastOps` is provided.
-  DenseSet<Operation *> erasedOps;
-
-  // Helper function that adds all operands to the worklist that are an
-  // unrealized_conversion_cast op result.
-  auto enqueueOperands = [&](UnrealizedConversionCastOp castOp) {
-    for (Value v : castOp.getInputs())
-      if (auto inputCastOp = v.getDefiningOp<UnrealizedConversionCastOp>())
-        worklist.insert(inputCastOp);
-  };
-
-  // Helper function that return the unrealized_conversion_cast op that
-  // defines all inputs of the given op (in the same order). Return "nullptr"
-  // if there is no such op.
-  auto getInputCast =
-      [](UnrealizedConversionCastOp castOp) -> UnrealizedConversionCastOp {
-    if (castOp.getInputs().empty())
-      return {};
-    auto inputCastOp =
-        castOp.getInputs().front().getDefiningOp<UnrealizedConversionCastOp>();
-    if (!inputCastOp)
-      return {};
-    if (inputCastOp.getOutputs() != castOp.getInputs())
-      return {};
-    return inputCastOp;
-  };
-
-  // Process ops in the worklist bottom-to-top.
-  while (!worklist.empty()) {
-    UnrealizedConversionCastOp castOp = worklist.pop_back_val();
-    if (castOp->use_empty()) {
-      // DCE: If the op has no users, erase it. Add the operands to the
-      // worklist to find additional DCE opportunities.
-      enqueueOperands(castOp);
-      if (remainingCastOps)
-        erasedOps.insert(castOp.getOperation());
-      castOp->erase();
-      continue;
-    }
-
-    // Traverse the chain of input cast ops to see if an op with the same
-    // input types can be found.
-    UnrealizedConversionCastOp nextCast = castOp;
-    while (nextCast) {
-      if (nextCast.getInputs().getTypes() == castOp.getResultTypes()) {
-        // Found a cast where the input types match the output types of the
-        // matched op. We can directly use those inputs and the matched op can
-        // be removed.
-        enqueueOperands(castOp);
-        castOp.replaceAllUsesWith(nextCast.getInputs());
-        if (remainingCastOps)
-          erasedOps.insert(castOp.getOperation());
-        castOp->erase();
-        break;
-      }
-      nextCast = getInputCast(nextCast);
-    }
-  }
-
-  if (remainingCastOps)
-    for (UnrealizedConversionCastOp op : castOps)
-      if (!erasedOps.contains(op.getOperation()))
-        remainingCastOps->push_back(op);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3734,8 +3821,9 @@ namespace {
 struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
   FunctionOpInterfaceSignatureConversion(StringRef functionLikeOpName,
                                          MLIRContext *ctx,
-                                         const TypeConverter &converter)
-      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
+                                         const TypeConverter &converter,
+                                         PatternBenefit benefit)
+      : ConversionPattern(converter, functionLikeOpName, benefit, ctx) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> /*operands*/,
@@ -3780,15 +3868,16 @@ mlir::convertOpResultTypes(Operation *op, ValueRange operands,
 
 void mlir::populateFunctionOpInterfaceTypeConversionPattern(
     StringRef functionLikeOpName, RewritePatternSet &patterns,
-    const TypeConverter &converter) {
+    const TypeConverter &converter, PatternBenefit benefit) {
   patterns.add<FunctionOpInterfaceSignatureConversion>(
-      functionLikeOpName, patterns.getContext(), converter);
+      functionLikeOpName, patterns.getContext(), converter, benefit);
 }
 
 void mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(
-    RewritePatternSet &patterns, const TypeConverter &converter) {
+    RewritePatternSet &patterns, const TypeConverter &converter,
+    PatternBenefit benefit) {
   patterns.add<AnyFunctionOpInterfaceSignatureConversion>(
-      converter, patterns.getContext());
+      converter, patterns.getContext(), benefit);
 }
 
 //===----------------------------------------------------------------------===//

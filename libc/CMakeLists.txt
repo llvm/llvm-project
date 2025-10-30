@@ -246,7 +246,7 @@ else()
     set(LIBC_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
     set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
-  if(LIBC_TARGET_OS_IS_GPU)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
     if(LIBC_TARGET_TRIPLE)
       set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LIBC_TARGET_TRIPLE})
     else()
@@ -363,7 +363,7 @@ elseif(LLVM_LIBC_FULL_BUILD)
   message(FATAL_ERROR "${LIBC_CONFIG_PATH}/headers.txt file not found and fullbuild requested.")
 endif()
 
-# Check exclude.txt that appends to LIBC_EXCLUDE_ENTRYPOINTS list
+# Check exclude.txt that appends to TARGET_LLVMLIBC_REMOVED_ENTRYPOINTS list
 if(EXISTS "${LIBC_CONFIG_PATH}/exclude.txt")
     include("${LIBC_CONFIG_PATH}/exclude.txt")
 endif()

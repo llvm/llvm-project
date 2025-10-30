@@ -12,6 +12,7 @@
 
 #include "flang/Parser/openmp-utils.h"
 
+#include "flang/Common/indirection.h"
 #include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 
@@ -59,6 +60,30 @@ const OmpObjectList *GetOmpObjectList(const OmpClause &clause) {
           },
       },
       clause.u);
+}
+
+const BlockConstruct *GetFortranBlockConstruct(
+    const ExecutionPartConstruct &epc) {
+  // ExecutionPartConstruct -> ExecutableConstruct
+  //   -> Indirection<BlockConstruct>
+  if (auto *ec{std::get_if<ExecutableConstruct>(&epc.u)}) {
+    if (auto *ind{std::get_if<common::Indirection<BlockConstruct>>(&ec->u)}) {
+      return &ind->value();
+    }
+  }
+  return nullptr;
+}
+
+const OmpCombinerExpression *GetCombinerExpr(
+    const OmpReductionSpecifier &rspec) {
+  return addr_if(std::get<std::optional<OmpCombinerExpression>>(rspec.t));
+}
+
+const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init) {
+  if (auto *wrapped{std::get_if<OmpClause::Initializer>(&init.u)}) {
+    return &wrapped->v.v;
+  }
+  return nullptr;
 }
 
 } // namespace Fortran::parser::omp
