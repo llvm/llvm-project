@@ -115,9 +115,9 @@ void DeprecatedHeadersCheck::check(
   // Emit all the remaining reports.
   for (const IncludeMarker &Marker : IncludesToBeProcessed) {
     if (Marker.Replacement.empty()) {
-      diag(Marker.DiagLoc,
-           "including '%0' has no effect in C++; consider removing it")
-          << Marker.FileName
+      diag(Marker.DiagLoc, "including '%0' has no effect %select{since C23|in "
+                           "C++}1; consider removing it")
+          << Marker.FileName << getLangOpts().CPlusPlus
           << FixItHint::CreateRemoval(Marker.ReplacementRange);
     } else {
       diag(Marker.DiagLoc, "inclusion of deprecated C++ header "
@@ -147,7 +147,9 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
       {"string.h", "cstring"}, {"time.h", "ctime"},
       {"wchar.h", "cwchar"},   {"wctype.h", "cwctype"},
   };
-  CStyledHeaderToCxx.insert(std::begin(CXX98Headers), std::end(CXX98Headers));
+
+  if (LangOpts.CPlusPlus)
+    CStyledHeaderToCxx.insert(std::begin(CXX98Headers), std::end(CXX98Headers));
 
   static constexpr std::pair<StringRef, StringRef> CXX11Headers[] = {
       {"fenv.h", "cfenv"},         {"stdint.h", "cstdint"},
@@ -157,9 +159,16 @@ IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
   if (LangOpts.CPlusPlus11)
     CStyledHeaderToCxx.insert(std::begin(CXX11Headers), std::end(CXX11Headers));
 
-  static constexpr StringRef HeadersToDelete[] = {"stdalign.h", "stdbool.h",
-                                                  "iso646.h"};
-  DeleteHeaders.insert_range(HeadersToDelete);
+  static constexpr StringRef CXXHeadersToDelete[] = {"stdalign.h", "cstdalign",
+                                                     "stdbool.h",  "cstdbool",
+                                                     "iso646.h",   "ciso646"};
+  if (LangOpts.CPlusPlus)
+    DeleteHeaders.insert_range(CXXHeadersToDelete);
+
+  static constexpr StringRef C23HeadersToDelete[] = {"stdalign.h", "stdbool.h",
+                                                     "stdnoreturn.h"};
+  if (LangOpts.C23)
+    DeleteHeaders.insert_range(C23HeadersToDelete);
 }
 
 void IncludeModernizePPCallbacks::InclusionDirective(

@@ -346,6 +346,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/avoid-c-arrays>` to not diagnose array types
   which are part of an implicit instantiation of a template.
 
+- Improved :doc:`modernize-deprecated-headers
+  <clang-tidy/checks/modernize/deprecated-headers>` to diagnose more
+  deprecated headers, in both C++ and (for the first time) in C.
+
 - Improved :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
   uses of non-standard ``enable_if`` with a signature different from
