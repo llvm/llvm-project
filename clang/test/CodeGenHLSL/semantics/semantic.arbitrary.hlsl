@@ -24,9 +24,13 @@ void main(float a : AAA, int b : B, float2 c : CC) {
 // CHECK-SPIRV:  %[[#CC0:]] = load <2 x float>, ptr addrspace(7) @CC0, align 8
 // CHECK-SPIRV:               call spir_func void @_Z4mainfiDv2_f(float %[[#AAA0]], i32 %[[#B0]], <2 x float> %[[#CC0]]) [ "convergencectrl"(token %0) ]
 
+
 // CHECK-SPIRV-DAG: ![[#METADATA_0]] = !{![[#METADATA_1:]]}
-// CHECK-SPIRV-DAG: ![[#METADATA_1]] = !{i32 30, i32 0}
 // CHECK-SPIRV-DAG: ![[#METADATA_2]] = !{![[#METADATA_3:]]}
-// CHECK-SPIRV-DAG: ![[#METADATA_3]] = !{i32 30, i32 1}
 // CHECK-SPIRV-DAG: ![[#METADATA_4]] = !{![[#METADATA_5:]]}
+
+// CHECK-SPIRV-DAG: ![[#METADATA_1]] = !{i32 30, i32 0}
+// CHECK-SPIRV-DAG: ![[#METADATA_3]] = !{i32 30, i32 1}
 // CHECK-SPIRV-DAG: ![[#METADATA_5]] = !{i32 30, i32 2}
+//                                            |      `- Location index
+//                                            `-> Decoration "Location"
