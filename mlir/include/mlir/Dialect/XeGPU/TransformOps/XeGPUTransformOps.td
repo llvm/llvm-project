@@ -200,4 +200,47 @@ def SetGPULaunchThreadsOp
   }];
 }
 
+def InsertPrefetchOp : Op<Transform_Dialect, "xegpu.insert_prefetch", [
+  DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+  TransformOpInterface
+]> {
+
+  let summary = "Adds xegpu prefetch ops to matmul operand tiles.";
+  let description = [{
+    Given a target value (e.g., `vector`) residing in a `scf.for` loop, this
+    transform finds the corresponding `xegpu.load_nd` op and inserts
+    `xegpu.prefetch` operations for the tile. The load op must reside within the
+    `scf.for` loop. Number of prefetch steps is set by the `nb_prefetch`
+    argument. Returns a handle to the created `xegpu.create_nd_desc` op.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$target,
+                   Optional<TransformAnyParamTypeOrAnyHandle>:$dynamic_nb_prefetch,
+                   DefaultValuedOptionalAttr<I64Attr, "1">:$static_nb_prefetch
+                   );
+
+  let results = (outs TransformHandleTypeInterface:$desc_op);
+
+  let assemblyFormat = [{
+    $target
+    `nb_prefetch` `=` ($dynamic_nb_prefetch^):($static_nb_prefetch)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+
+    OpFoldResult getNbPrefetch() {
+      auto cxt = getContext();
+      if (getDynamicNbPrefetch())
+        return OpFoldResult(getDynamicNbPrefetch());
+      return OpFoldResult(IntegerAttr::get(
+                          IntegerType::get(cxt, 64), getStaticNbPrefetch()));
+    }
+  }];
+}
+
 #endif // XEGPU_TRANSFORM_OPS

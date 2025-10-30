@@ -3,7 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import transform
 from mlir.dialects.transform import xegpu
-from mlir.dialects.transform import AnyValueType
+from mlir.dialects.transform import structured, AnyValueType
 
 
 def run(f):
@@ -128,3 +128,68 @@ def setGPULaunchThreadsOp():
     # CHECK-LABEL: TEST: setGPULaunchThreadsOp
     # CHECK: transform.xegpu.set_gpu_launch_threads
     # CHECK: threads = [8, 4, 1]
+
+
+@run
+def insertPrefetch0():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
+        xegpu.InsertPrefetchOp(
+            operand,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: insertPrefetch0
+    # CHECK: %[[OPR:.*]] = get_operand
+    # CHECK: transform.xegpu.insert_prefetch %[[OPR]]
+
+
+@run
+def insertPrefetchNbPrefetch():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
+        xegpu.InsertPrefetchOp(
+            operand,
+            nb_prefetch=2,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: insertPrefetchNbPrefetch
+    # CHECK: %[[OPR:.*]] = get_operand
+    # CHECK: transform.xegpu.insert_prefetch %[[OPR]]
+    # CHECK-SAME: nb_prefetch = 2
+
+
+@run
+def insertPrefetchNbPrefetchParam():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
+        int32_t = IntegerType.get_signless(32)
+        param_int32_t = transform.ParamType.get(int32_t)
+        nb_param = transform.ParamConstantOp(
+            param_int32_t,
+            IntegerAttr.get(int32_t, 2),
+        )
+        xegpu.InsertPrefetchOp(
+            operand,
+            nb_prefetch=nb_param,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: insertPrefetchNbPrefetchParam
+    # CHECK: %[[OPR:.*]] = get_operand
+    # CHECK: %[[PARAM_OP:.*]] = transform.param.constant 2
+    # CHECK: transform.xegpu.insert_prefetch %[[OPR]]
+    # CHECK-SAME: nb_prefetch = %[[PARAM_OP]]
