@@ -422,36 +422,22 @@ define void @test_pasubu_b(ptr %ret_ptr, ptr %a_ptr, ptr %b_ptr) {
 
 ; Test PLI (pack load immediate) for v2i16
 define void @test_pli_h(ptr %ret_ptr) {
-; CHECK-RV32-LABEL: test_pli_h:
-; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    pli.h a1, 42
-; CHECK-RV32-NEXT:    sw a1, 0(a0)
-; CHECK-RV32-NEXT:    ret
-;
-; CHECK-RV64-LABEL: test_pli_h:
-; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lui a1, 672
-; CHECK-RV64-NEXT:    addi a1, a1, 42
-; CHECK-RV64-NEXT:    sw a1, 0(a0)
-; CHECK-RV64-NEXT:    ret
+; CHECK-LABEL: test_pli_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a1, 42
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
   %res = add <2 x i16> <i16 42, i16 42>, <i16 0, i16 0>
   store <2 x i16> %res, ptr %ret_ptr
   ret void
 }
 
 define void @test_pli_h_negative(ptr %ret_ptr) {
-; CHECK-RV32-LABEL: test_pli_h_negative:
-; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    pli.h a1, -5
-; CHECK-RV32-NEXT:    sw a1, 0(a0)
-; CHECK-RV32-NEXT:    ret
-;
-; CHECK-RV64-LABEL: test_pli_h_negative:
-; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lui a1, 1048512
-; CHECK-RV64-NEXT:    addi a1, a1, -5
-; CHECK-RV64-NEXT:    sw a1, 0(a0)
-; CHECK-RV64-NEXT:    ret
+; CHECK-LABEL: test_pli_h_negative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a1, -5
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
   %res = add <2 x i16> <i16 -5, i16 -5>, <i16 0, i16 0>
   store <2 x i16> %res, ptr %ret_ptr
   ret void
@@ -459,18 +445,11 @@ define void @test_pli_h_negative(ptr %ret_ptr) {
 
 ; Test PLI for v4i8 with unsigned immediate
 define void @test_pli_b(ptr %ret_ptr) {
-; CHECK-RV32-LABEL: test_pli_b:
-; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    pli.b a1, 32
-; CHECK-RV32-NEXT:    sw a1, 0(a0)
-; CHECK-RV32-NEXT:    ret
-;
-; CHECK-RV64-LABEL: test_pli_b:
-; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lui a1, 131586
-; CHECK-RV64-NEXT:    addi a1, a1, 32
-; CHECK-RV64-NEXT:    sw a1, 0(a0)
-; CHECK-RV64-NEXT:    ret
+; CHECK-LABEL: test_pli_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, 32
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
   %res = add <4 x i8> <i8 32, i8 32, i8 32, i8 32>, <i8 0, i8 0, i8 0, i8 0>
   store <4 x i8> %res, ptr %ret_ptr
   ret void
@@ -485,8 +464,7 @@ define void @test_pli_b_negative(ptr %ret_ptr) {
 ;
 ; CHECK-RV64-LABEL: test_pli_b_negative:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    lui a1, 1044464
-; CHECK-RV64-NEXT:    addi a1, a1, -258
+; CHECK-RV64-NEXT:    pli.h a1, -258
 ; CHECK-RV64-NEXT:    sw a1, 0(a0)
 ; CHECK-RV64-NEXT:    ret
   %res = add <4 x i8> <i8 -2, i8 -2, i8 -2, i8 -2>, <i8 0, i8 0, i8 0, i8 0>

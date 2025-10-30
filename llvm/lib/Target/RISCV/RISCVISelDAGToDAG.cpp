@@ -1034,6 +1034,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
 
+    if (hasAllWUsers(Node) && Subtarget->hasStdExtP() &&
+        Subtarget->enablePExtCodeGen()) {
+      // If its 4 packed 8 bit integer or 2 packed signed integer, we can simply
+      // copy lower 32 bits to higher 32 bits to make it able to rematerialize
+      // to PLI_B or PLI_H
+      Imm = (Imm << 32) | (Imm & 0xFFFFFFFF);
+    }
+
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
     return;
   }
