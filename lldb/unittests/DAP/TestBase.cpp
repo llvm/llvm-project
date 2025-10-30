@@ -55,8 +55,9 @@ void TransportBase::SetUp() {
 }
 
 void TransportBase::Run() {
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
 }
 
