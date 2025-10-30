@@ -10,7 +10,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Analyses/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
@@ -155,6 +155,7 @@ getEntityLifetime(const InitializedEntity *Entity,
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
   case InitializedEntity::EK_VectorElement:
+  case InitializedEntity::EK_MatrixElement:
   case InitializedEntity::EK_ComplexElement:
     return {nullptr, LK_FullExpression};
 
@@ -361,11 +362,11 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
     if (!Callee->getIdentifier())
       return false;
     return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases("begin", "rbegin", "cbegin", "crbegin", true)
-        .Cases("end", "rend", "cend", "crend", true)
-        .Cases("c_str", "data", "get", true)
+        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
+        .Cases({"end", "rend", "cend", "crend"}, true)
+        .Cases({"c_str", "data", "get"}, true)
         // Map and set types.
-        .Cases("find", "equal_range", "lower_bound", "upper_bound", true)
+        .Cases({"find", "equal_range", "lower_bound", "upper_bound"}, true)
         .Default(false);
   }
   if (Callee->getReturnType()->isReferenceType()) {
@@ -377,7 +378,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
              OO == OverloadedOperatorKind::OO_Star;
     }
     return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases("front", "back", "at", "top", "value", true)
+        .Cases({"front", "back", "at", "top", "value"}, true)
         .Default(false);
   }
   return false;
@@ -394,14 +395,14 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   if (FD->getReturnType()->isPointerType() ||
       isRecordWithAttr<PointerAttr>(FD->getReturnType())) {
     return llvm::StringSwitch<bool>(FD->getName())
-        .Cases("begin", "rbegin", "cbegin", "crbegin", true)
-        .Cases("end", "rend", "cend", "crend", true)
+        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
+        .Cases({"end", "rend", "cend", "crend"}, true)
         .Case("data", true)
         .Default(false);
   }
   if (FD->getReturnType()->isReferenceType()) {
     return llvm::StringSwitch<bool>(FD->getName())
-        .Cases("get", "any_cast", true)
+        .Cases({"get", "any_cast"}, true)
         .Default(false);
   }
   return false;
@@ -1265,7 +1266,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       return true;
     case NotGSLPointer:
       IsGslPtrValueFromGslTempOwner = false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Report:
       break;
     }

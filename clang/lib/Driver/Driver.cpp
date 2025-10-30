@@ -308,9 +308,18 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
     auto ArgString = A->getAsString(Args);
     std::string Nearest;
     if (getOpts().findNearest(ArgString, Nearest, VisibilityMask) > 1) {
-      if (!IsCLMode() &&
-          getOpts().findExact(ArgString, Nearest,
-                              llvm::opt::Visibility(options::CC1Option))) {
+      if (IsFlangMode()) {
+        if (getOpts().findExact(ArgString, Nearest,
+                                llvm::opt::Visibility(options::FC1Option))) {
+          DiagID = diag::err_drv_unknown_argument_with_suggestion;
+          Diags.Report(DiagID) << ArgString << "-Xflang " + Nearest;
+        } else {
+          DiagID = diag::err_drv_unknown_argument;
+          Diags.Report(DiagID) << ArgString;
+        }
+      } else if (!IsCLMode() && getOpts().findExact(ArgString, Nearest,
+                                                    llvm::opt::Visibility(
+                                                        options::CC1Option))) {
         DiagID = diag::err_drv_unknown_argument_with_suggestion;
         Diags.Report(DiagID) << ArgString << "-Xclang " + Nearest;
       } else {
@@ -6836,6 +6845,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::VEToolChain>(*this, Target, Args);
       else if (Target.isOHOSFamily())
         TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
+      else if (Target.isWALI())
+        TC = std::make_unique<toolchains::WebAssembly>(*this, Target, Args);
       else
         TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
       break;

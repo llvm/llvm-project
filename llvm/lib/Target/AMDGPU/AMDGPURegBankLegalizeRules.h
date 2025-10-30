@@ -212,6 +212,7 @@ enum LoweringMethodID {
   VccExtToSel,
   UniExtToSel,
   UnpackBitShift,
+  UnpackMinMax,
   S_BFE,
   V_BFE,
   VgprToVccCopy,
@@ -222,7 +223,8 @@ enum LoweringMethodID {
   UniCstExt,
   SplitLoad,
   WidenLoad,
-  WidenMMOToS32
+  WidenMMOToS32,
+  UnpackAExt
 };
 
 enum FastRulesTypes {

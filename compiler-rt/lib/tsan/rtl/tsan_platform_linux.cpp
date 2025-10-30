@@ -415,7 +415,7 @@ void InitializePlatform() {
   // is not compiled with -pie.
 #if !SANITIZER_GO
   {
-#    if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64))
+#    if INIT_LONGJMP_XOR_KEY
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #    endif
@@ -486,7 +486,7 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
 
 // Reverse operation of libc stack pointer mangling
 static uptr UnmangleLongJmpSp(uptr mangled_sp) {
-#    if SANITIZER_ANDROID
+#    if SANITIZER_ANDROID && INIT_LONGJMP_XOR_KEY
   if (longjmp_xor_key == 0) {
     // bionic libc initialization process: __libc_init_globals ->
     // __libc_init_vdso (calls strcmp) -> __libc_init_setjmp_cookie. strcmp is
@@ -680,7 +680,8 @@ ThreadState *cur_thread() {
   // significant bit of TLS_SLOT_SANITIZER to 1. Scudo allocator uses this bit
   // as a flag to disable memory initialization. This is a workaround to get the
   // correct ThreadState pointer.
-  reinterpret_cast<ThreadState*>(addr & ~1ULL);
+  uptr addr = reinterpret_cast<uptr>(thr);
+  return reinterpret_cast<ThreadState*>(addr & ~1ULL);
 }
 
 void set_cur_thread(ThreadState *thr) {

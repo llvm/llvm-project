@@ -470,7 +470,19 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
-      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackAExt})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}});
+
+  addRulesForGOpcs({G_UADDO, G_USUBO}, Standard)
+      .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32}})
+      .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}});
+
+  addRulesForGOpcs({G_UADDE, G_USUBE}, Standard)
+      .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr32AExtBoolInReg}})
+      .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32, Vcc}});
 
   addRulesForGOpcs({G_MUL}, Standard).Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
@@ -521,6 +533,22 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32, Vgpr32}})
       .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr32, Sgpr32}, S_BFE})
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr32, Vgpr32}, V_BFE});
+
+  addRulesForGOpcs({G_SMIN, G_SMAX}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt, Sgpr32SExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackMinMax})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
+
+  addRulesForGOpcs({G_UMIN, G_UMAX}, Standard)
+      .Uni(S16, {{Sgpr32Trunc}, {Sgpr32ZExt, Sgpr32ZExt}})
+      .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
+      .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackMinMax})
+      .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
   // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT, G_FCONSTANT
   // and G_FREEZE here, rest is trivially regbankselected earlier
@@ -616,6 +644,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
       .Any({{UniS64, S64}, {{Sgpr64}, {Sgpr64}}})
       .Any({{DivS64, S64}, {{Vgpr64}, {Vgpr64}, SplitTo32SExtInReg}});
+
+  addRulesForGOpcs({G_ASSERT_ZEXT, G_ASSERT_SEXT}, Standard)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Imm}})
+      .Div(S32, {{Vgpr32}, {Vgpr32, Imm}})
+      .Uni(S64, {{Sgpr64}, {Sgpr64, Imm}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, Imm}});
 
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
@@ -878,6 +912,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS128}, {{Vgpr128}, {VgprPtr128}}});
 
   addRulesForGOpcs({G_ABS}, Standard).Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}});
+
+  addRulesForGOpcs({G_READSTEADYCOUNTER}, Standard).Uni(S64, {{Sgpr64}, {}});
 
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 

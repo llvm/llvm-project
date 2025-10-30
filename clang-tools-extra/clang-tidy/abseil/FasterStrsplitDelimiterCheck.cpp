@@ -20,8 +20,10 @@ namespace {
 
 AST_MATCHER(StringLiteral, lengthIsOne) { return Node.getLength() == 1; }
 
-std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
-                                                const ASTContext &Context) {
+} // anonymous namespace
+
+static std::optional<std::string>
+makeCharacterLiteral(const StringLiteral *Literal, const ASTContext &Context) {
   assert(Literal->getLength() == 1 &&
          "Only single character string should be matched");
   assert(Literal->getCharByteWidth() == 1 &&
@@ -52,8 +54,6 @@ std::optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
   Result[Pos] = '\'';
   return Result;
 }
-
-} // anonymous namespace
 
 void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
   // Binds to one character string literals.

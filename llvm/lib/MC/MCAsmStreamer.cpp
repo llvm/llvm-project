@@ -274,7 +274,6 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -296,7 +295,7 @@ public:
                              unsigned Flags, unsigned Isa,
                              unsigned Discriminator, StringRef FileName,
                              StringRef Location = {}) override;
-  virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
+  void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
 
@@ -1539,11 +1538,6 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
                            MaxBytesToEmit);
   else
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
-}
-
-void MCAsmStreamer::emitPrefAlign(Align Alignment) {
-  OS << "\t.prefalign\t" << Alignment.value();
-  EmitEOL();
 }
 
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,

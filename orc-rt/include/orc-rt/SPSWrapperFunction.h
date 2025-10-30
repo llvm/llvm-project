@@ -14,8 +14,11 @@
 #ifndef ORC_RT_SPSWRAPPERFUNCTION_H
 #define ORC_RT_SPSWRAPPERFUNCTION_H
 
+#include "orc-rt/Compiler.h"
 #include "orc-rt/SimplePackedSerialization.h"
 #include "orc-rt/WrapperFunction.h"
+
+#define ORC_RT_SPS_INTERFACE ORC_RT_INTERFACE
 
 namespace orc_rt {
 namespace detail {
@@ -37,12 +40,6 @@ private:
     typedef std::decay_t<T> serializable_type;
     static const T &to(const T &Arg) noexcept { return Arg; }
     static T &&from(T &&Arg) noexcept { return std::forward<T>(Arg); }
-  };
-
-  template <typename T> struct Serializable<T *> {
-    typedef ExecutorAddr serializable_type;
-    static ExecutorAddr to(T *Arg) { return ExecutorAddr::fromPtr(Arg); }
-    static T *from(ExecutorAddr A) { return A.toPtr<T *>(); }
   };
 
   template <> struct Serializable<Error> {
@@ -87,11 +84,12 @@ private:
 public:
   template <typename... ArgTs>
   std::optional<WrapperFunctionBuffer> serialize(ArgTs &&...Args) {
-    return serializeImpl(Serializable<ArgTs>::to(std::forward<ArgTs>(Args))...);
+    return serializeImpl(
+        Serializable<std::decay_t<ArgTs>>::to(std::forward<ArgTs>(Args))...);
   }
 
   template <typename ArgTuple>
-  std::optional<ArgTuple> deserialize(WrapperFunctionBuffer ArgBytes) {
+  std::optional<ArgTuple> deserialize(const WrapperFunctionBuffer &ArgBytes) {
     assert(!ArgBytes.getOutOfBandError() &&
            "Should not attempt to deserialize out-of-band error");
     SPSInputBuffer IB(ArgBytes.data(), ArgBytes.size());

@@ -211,6 +211,11 @@ void MachineFunction::init() {
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
   Alignment = STI.getTargetLowering()->getMinFunctionAlignment();
 
+  // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
+  if (!F.hasOptSize())
+    Alignment = std::max(Alignment,
+                         STI.getTargetLowering()->getPrefFunctionAlignment());
+
   // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
   // to load a type hash before the function label. Ensure functions are aligned
   // by a least 4 to avoid unaligned access, which is especially important for
@@ -323,19 +328,6 @@ DenormalMode MachineFunction::getDenormalMode(const fltSemantics &FPType) const 
 /// Should we be emitting segmented stack stuff for the function
 bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
-}
-
-Align MachineFunction::getPreferredAlignment() const {
-  Align PrefAlignment;
-
-  if (MaybeAlign A = F.getPreferredAlignment())
-    PrefAlignment = *A;
-  else if (!F.hasOptSize())
-    PrefAlignment = STI.getTargetLowering()->getPrefFunctionAlignment();
-  else
-    PrefAlignment = Align(1);
-
-  return std::max(PrefAlignment, getAlignment());
 }
 
 [[nodiscard]] unsigned
@@ -727,43 +719,41 @@ MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
   }
 }
 
-namespace llvm {
+template <>
+struct llvm::DOTGraphTraits<const MachineFunction *>
+    : public DefaultDOTGraphTraits {
+  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
-  template<>
-  struct DOTGraphTraits<const MachineFunction*> : public DefaultDOTGraphTraits {
-    DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+  static std::string getGraphName(const MachineFunction *F) {
+    return ("CFG for '" + F->getName() + "' function").str();
+  }
 
-    static std::string getGraphName(const MachineFunction *F) {
-      return ("CFG for '" + F->getName() + "' function").str();
+  std::string getNodeLabel(const MachineBasicBlock *Node,
+                           const MachineFunction *Graph) {
+    std::string OutStr;
+    {
+      raw_string_ostream OSS(OutStr);
+
+      if (isSimple()) {
+        OSS << printMBBReference(*Node);
+        if (const BasicBlock *BB = Node->getBasicBlock())
+          OSS << ": " << BB->getName();
+      } else
+        Node->print(OSS);
     }
 
-    std::string getNodeLabel(const MachineBasicBlock *Node,
-                             const MachineFunction *Graph) {
-      std::string OutStr;
-      {
-        raw_string_ostream OSS(OutStr);
+    if (OutStr[0] == '\n')
+      OutStr.erase(OutStr.begin());
 
-        if (isSimple()) {
-          OSS << printMBBReference(*Node);
-          if (const BasicBlock *BB = Node->getBasicBlock())
-            OSS << ": " << BB->getName();
-        } else
-          Node->print(OSS);
+    // Process string output to make it nicer...
+    for (unsigned i = 0; i != OutStr.length(); ++i)
+      if (OutStr[i] == '\n') { // Left justify
+        OutStr[i] = '\\';
+        OutStr.insert(OutStr.begin() + i + 1, 'l');
       }
-
-      if (OutStr[0] == '\n') OutStr.erase(OutStr.begin());
-
-      // Process string output to make it nicer...
-      for (unsigned i = 0; i != OutStr.length(); ++i)
-        if (OutStr[i] == '\n') {                            // Left justify
-          OutStr[i] = '\\';
-          OutStr.insert(OutStr.begin()+i+1, 'l');
-        }
-      return OutStr;
-    }
-  };
-
-} // end namespace llvm
+    return OutStr;
+  }
+};
 
 void MachineFunction::viewCFG() const
 {

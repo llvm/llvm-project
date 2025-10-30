@@ -38,7 +38,12 @@ public:
 
   virtual bool IsHardware() const = 0;
 
-  virtual bool ShouldStop(StoppointCallbackContext* context) = 0;
+  virtual bool ShouldStop(StoppointCallbackContext *context) { return false; };
+
+  virtual bool ShouldStop(StoppointCallbackContext *context,
+                          BreakpointLocationCollection &stopping_bp_locs) {
+    return false;
+  };
 
   virtual void Dump(Stream* stream) const = 0;
 

@@ -155,7 +155,7 @@ void X86AsmPrinter::EmitKCFITypePadding(const MachineFunction &MF,
   if (HasType)
     PrefixBytes += 5;
 
-  emitNops(offsetToAlignment(PrefixBytes, MF.getPreferredAlignment()));
+  emitNops(offsetToAlignment(PrefixBytes, MF.getAlignment()));
 }
 
 /// emitKCFITypeId - Emit the KCFI type information in architecture specific
