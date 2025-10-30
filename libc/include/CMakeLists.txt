@@ -166,7 +166,18 @@ add_header_macro(
   stdfix.h
   DEPENDS
     .llvm-libc-macros.stdfix_macros
-    .llvm-libc-types.stdfix-types
+    .llvm-libc-types.int_hk_t
+    .llvm-libc-types.int_hr_t
+    .llvm-libc-types.int_k_t
+    .llvm-libc-types.int_lk_t
+    .llvm-libc-types.int_lr_t
+    .llvm-libc-types.int_r_t
+    .llvm-libc-types.uint_uhk_t
+    .llvm-libc-types.uint_uhr_t
+    .llvm-libc-types.uint_uk_t
+    .llvm-libc-types.uint_ulk_t
+    .llvm-libc-types.uint_ulr_t
+    .llvm-libc-types.uint_ur_t
 )
 
 
@@ -769,6 +780,15 @@ add_header_macro(
     .llvm-libc-types.struct_pollfd
     .llvm-libc-types.nfds_t
     .llvm-libc-macros.poll-macros
+  )
+
+add_header_macro(
+  nl_types
+  ../libc/include/nl_types.yaml
+  nl_types.h
+  DEPENDS
+    .llvm-libc-macros.nl_types_macros
+    .llvm-libc-types.nl_catd
   )
 
 # UEFI spec references "Uefi.h" so we use that name for compatibility

@@ -29,7 +29,7 @@
 %struct.env_t = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr %skb) local_unnamed_addr #0 {
+define dso_local i32 @test(ptr %skb) local_unnamed_addr {
 entry:
   %data_end1 = getelementptr inbounds %struct.env_t, ptr %skb, i64 0, i32 1
   %0 = load i32, ptr %data_end1, align 4, !tbaa !2
@@ -49,7 +49,7 @@ if.end10:                                         ; preds = %entry
   %sub.ptr.lhs.cast = ptrtoint ptr %add.ptr to i64
   %4 = trunc i64 %sub.ptr.lhs.cast to i32
   %conv13 = sub i32 %4, %2
-  %call = tail call i32 @work(ptr nonnull %skb, i32 %conv13) #2
+  %call = tail call i32 @work(ptr nonnull %skb, i32 %conv13)
   br label %cleanup
 
 cleanup:                                          ; preds = %entry, %if.end10
@@ -59,11 +59,7 @@ cleanup:                                          ; preds = %entry, %if.end10
 
 ; CHECK: w{{[0-9]+}} = *(u32 *)(r{{[0-9]+}} + 0)
 
-declare dso_local i32 @work(ptr, i32) local_unnamed_addr #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
+declare dso_local i32 @work(ptr, i32) local_unnamed_addr
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
