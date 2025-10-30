@@ -1829,7 +1829,9 @@ inline const char *Registers_ppc64::getRegisterName(int regNum) {
 class _LIBUNWIND_HIDDEN Registers_arm64;
 extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
 
-#if !defined(__APPLE__)
+#if defined(__APPLE__)
+extern "C" void __attribute__((weak_import)) __arm_za_disable();
+#else
 extern "C" void __attribute__((weak)) __arm_za_disable();
 #endif
 
@@ -1858,8 +1860,8 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
+  void        jumpto();
   static const char *getRegisterName(int num);
-  void jumpto();
   static constexpr int lastDwarfRegNum() {
     return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64;
   }
@@ -1975,8 +1977,7 @@ Registers_arm64::operator=(const Registers_arm64 &other) {
   return *this;
 }
 
-void Registers_arm64::jumpto() {
-#if !defined(__APPLE__)
+inline void Registers_arm64::jumpto() {
   // The platform must ensure that all the following conditions are true on
   // entry to EH:
   //
@@ -1997,7 +1998,6 @@ void Registers_arm64::jumpto() {
     // abort.
     _LIBUNWIND_DEBUG_LOG("failed to call __arm_za_disable in %s", __FUNCTION__);
   }
-#endif
   __libunwind_Registers_arm64_jumpto(this);
 }
 
