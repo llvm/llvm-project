@@ -2247,7 +2247,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
   PushContextAndClauseSets(
       dirName.source, llvm::omp::Directive::OMPD_allocators);
 
-  std::vector<const parser::OmpAllocateClause *> allocs;
   for (const auto &clause : beginSpec.Clauses().v) {
     auto *alloc{std::get_if<parser::OmpClause::Allocate>(&clause.u)};
     if (!alloc) {
