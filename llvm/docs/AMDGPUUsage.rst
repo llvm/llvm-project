@@ -1218,6 +1218,7 @@ recursively:
 
 Named barrier types may not be used in ``alloca``.
 
+Named barriers do not have an underlying byte representation.
 It is undefined behavior to use a pointer to any part of a named barrier object
 as the pointer operand of a regular memory access instruction or intrinsic.
 Pointers to named barrier objects are intended to be used with dedicated
