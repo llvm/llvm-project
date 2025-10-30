@@ -82,11 +82,11 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
   if (STI.hasFeature(RISCV::FeatureStdExtP)) {
     // Check if the immediate is packed i8 or i10
     int32_t Bit63To32 = Val >> 32;
-    int32_t Bit31To0 = Val & 0xFFFFFFFF;
+    int32_t Bit31To0 = Val;
     int16_t Bit31To16 = Bit31To0 >> 16;
-    int16_t Bit15To0 = Bit31To0 & 0xFFFF;
+    int16_t Bit15To0 = Bit31To0;
     int8_t Bit15To8 = Bit15To0 >> 8;
-    int8_t Bit7To0 = Bit15To0 & 0xFF;
+    int8_t Bit7To0 = Bit15To0;
     if (Bit63To32 == Bit31To0) {
       if (IsRV64 && isInt<10>(Bit63To32)) {
         Res.emplace_back(RISCV::PLI_W, Bit63To32);
