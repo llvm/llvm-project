@@ -85,6 +85,8 @@ struct _Entry {
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
+  _LIBCPP_HIDE_FROM_ABI size_t hash() const { return std::__hash_memory(&__addr_, sizeof(uintptr_t)); }
+
   _LIBCPP_HIDE_FROM_ABI uintptr_t adjusted_addr() const;
 
   _LIBCPP_HIDE_FROM_ABI ~_Entry()                                  = default;
@@ -100,6 +102,7 @@ struct _Entry {
 class stacktrace_entry {
   friend _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry);
   friend _LIBCPP_HIDE_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry);
+  friend _LIBCPP_HIDE_FROM_ABI struct hash<stacktrace_entry>;
 
   __stacktrace::_Entry __base_{};
 
@@ -159,8 +162,7 @@ _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const std::stack
 template <>
 struct hash<stacktrace_entry> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(stacktrace_entry const& __entry) const noexcept {
-    auto __addr = __entry.native_handle();
-    return hash<uintptr_t>()(__addr);
+    return __entry.__base_.hash();
   }
 };
 
