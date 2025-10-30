@@ -539,6 +539,10 @@ def OMPC_GroupPrivate : Clause<[Spelling<"groupprivate">]> {
 def OMPC_Threads : Clause<[Spelling<"threads">]> {
   let clangClass = "OMPThreadsClause";
 }
+def OMPC_Threadset : Clause<[Spelling<"threadset">]> {
+  let clangClass = "OMPThreadsetClause";
+  let flangClass = "OmpThreadsetClause";
+}
 def OMPC_To : Clause<[Spelling<"to">]> {
   let clangClass = "OMPToClause";
   let flangClass = "OmpToClause";
@@ -1254,6 +1258,7 @@ def OMP_Task : Directive<[Spelling<"task">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
     VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Transparent, 60>,
   ];
@@ -1297,6 +1302,7 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
     VersionedClause<OMPC_Replayable, 60>,
     VersionedClause<OMPC_Transparent, 60>,
   ];
