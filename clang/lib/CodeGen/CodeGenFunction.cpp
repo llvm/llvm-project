@@ -1327,8 +1327,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     } else if (IsInLambda && MD->isImplicitObjectMemberFunction()) {
       // Populate capture fields metadata for analysis. We skip
       // EmitInstanceProlog to avoid emitting prologue code.
-      // FIXME: Naked functions cannot access captures via LLVM IR; any access
-      // must be done manually in inline assembly.
       MD->getParent()->getCaptureFields(LambdaCaptureFields,
                                         LambdaThisCaptureField);
     }
