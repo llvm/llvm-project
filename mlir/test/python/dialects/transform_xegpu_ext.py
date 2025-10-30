@@ -3,7 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import transform
 from mlir.dialects.transform import xegpu
-from mlir.dialects.transform import structured
+from mlir.dialects.transform import AnyValueType
 
 
 def run(f):
@@ -14,6 +14,21 @@ def run(f):
             f()
         print(module)
     return f
+
+
+@run
+def getDescOpDefaultIndex():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.dpas"),
+    )
+    with InsertionPoint(sequence.body):
+        operand = transform.GetOperandOp(AnyValueType.get(), sequence.bodyTarget, [0])
+        desc_handle = xegpu.GetDescOp(operand)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: getDescOpDefaultIndex
+    # CHECK: transform.xegpu.get_desc_op %
 
 
 @run

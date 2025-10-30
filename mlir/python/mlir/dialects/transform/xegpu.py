@@ -7,6 +7,7 @@ from .._xegpu_transform_ops_gen import _Dialect
 
 try:
     from ...ir import *
+    from ...dialects import transform
     from .._ods_common import _cext as _ods_cext
     from .._ods_common import (
         MixedValues,
@@ -18,6 +19,26 @@ except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
 from typing import Union, Optional
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class GetDescOp(GetDescOp):
+    """Specialization for GetDescOp class."""
+
+    def __init__(
+        self,
+        target: Value,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        desc_type = transform.AnyOpType.get()
+        super().__init__(
+            desc_type,
+            target,
+            loc=loc,
+            ip=ip,
+        )
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)

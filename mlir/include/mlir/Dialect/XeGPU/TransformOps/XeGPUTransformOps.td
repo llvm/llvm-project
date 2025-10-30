@@ -16,6 +16,23 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def GetDescOp : Op<Transform_Dialect, "xegpu.get_desc_op", [
+  DeclareOpInterfaceMethods<TransformOpInterface>,
+  NavigationTransformOpTrait, MemoryEffectsOpInterface
+]> {
+
+  let summary = "Get a handle to the descriptor op of a value.";
+  let description = [{
+    Traces the producers of the given value until an `xegpu.create_nd_tdesc`
+    descriptor op is found. Returns a handle to it.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface : $target);
+
+  let results = (outs TransformHandleTypeInterface : $descHandle);
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results)";
+}
+
 def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
