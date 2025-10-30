@@ -377,19 +377,19 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // with the appropriate scalar part. Otherwise, update operand to use the
     // part.
     if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                      m_ExtractLastPart(m_VPValue(Op0)))) ||
+                      m_VPValue(Op0))) ||
         match(&R, m_ExtractFinalLane(m_VPValue(Op0)))) {
       auto *I = cast<VPInstruction>(&R);
       addUniformForAllParts(I);
       if (Plan.hasScalarVFOnly()) {
-        bool IsPenultimate =
+        bool IsPenultimatePart =
             I->getOpcode() == VPInstruction::ExtractPenultimateElement;
-        unsigned PartIdx = IsPenultimate ? UF - 2 : UF - 1;
+        unsigned PartIdx = IsPenultimatePart ? UF - 2 : UF - 1;
         // For scalar VF, directly use the scalar part value.
         I->replaceAllUsesWith(getValueForPart(Op0, PartIdx));
         continue;
       }
-      // For vector VF, extract from the last part.
+      // For vector VF, always extract from the last part.
       R.setOperand(0, getValueForPart(Op0, UF - 1));
       continue;
     }

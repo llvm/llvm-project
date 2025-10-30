@@ -35,9 +35,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RED_RES_PART:%.+]]> = compute-reduction-result fast ir<%red>, ir<%red.next>
-; CHECK-NEXT:   EMIT vp<[[RED_RES_PART2:%.+]]> = extract-last-part vp<[[RED_RES_PART]]>
-; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = extract-last-lane vp<[[RED_RES_PART2]]>
+; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result fast ir<%red>, ir<%red.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -48,7 +46,7 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RED_RES_PART]]>, middle.block ], [ ir<0.000000e+00>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RED_RES]]>, middle.block ], [ ir<0.000000e+00>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -179,9 +177,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RED_RES_PART:%.+]]> = compute-reduction-result nnan ninf nsz ir<%sum.07>, ir<[[MULADD]]>
-; CHECK-NEXT:   EMIT vp<[[RED_RES_PART2:%.+]]> = extract-last-part vp<[[RED_RES_PART]]>
-; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = extract-last-lane vp<[[RED_RES_PART2]]>
+; CHECK-NEXT:   EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result nnan ninf nsz ir<%sum.07>, ir<[[MULADD]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<%n>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -192,7 +188,7 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME_IV:%.+]]> = phi [ vp<[[VTC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RED_RES_PART]]>, middle.block ], [ ir<0.000000e+00>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RED_RESUME:%.+]]> = phi [ vp<[[RED_RES]]>, middle.block ], [ ir<0.000000e+00>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -242,9 +238,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[RDX_RES_PART:%.+]]> = compute-find-iv-result ir<%rdx>, ir<%start>, ir<-9223372036854775808>, ir<%cond>
-; CHECK-NEXT:   EMIT vp<[[RDX_RES_PART2:%.+]]> = extract-last-part vp<[[RDX_RES_PART]]>
-; CHECK-NEXT:   EMIT vp<[[RDX_RES:%.+]]> = extract-last-lane vp<[[RDX_RES_PART2]]>
+; CHECK-NEXT:   EMIT vp<[[RDX_RES:%.+]]> = compute-find-iv-result ir<%rdx>, ir<%start>, ir<-9223372036854775808>, ir<%cond>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<{{.+}}>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
@@ -255,7 +249,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
 ; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<{{.+}}>, middle.block ], [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[RDX_RES_PART]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[RDX_RES]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ;
 entry:
   br label %loop
@@ -503,14 +497,12 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<%10> = compute-reduction-result ir<%accum>, vp<%8>
-; CHECK-NEXT:   EMIT vp<%11> = extract-last-part vp<%10>
-; CHECK-NEXT:   EMIT vp<%12> = extract-last-lane vp<%11>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<%2>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<%12> from middle.block)
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<%10> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
@@ -623,14 +615,12 @@ define i32 @print_mulacc_negated(ptr %a, ptr %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<%10> = compute-reduction-result ir<%accum>, vp<%8>
-; CHECK-NEXT:   EMIT vp<%11> = extract-last-part vp<%10>
-; CHECK-NEXT:   EMIT vp<%12> = extract-last-lane vp<%11>
 ; CHECK-NEXT:   EMIT vp<%cmp.n> = icmp eq ir<1024>, vp<%2>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<%12> from middle.block)
+; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<%10> from middle.block)
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:

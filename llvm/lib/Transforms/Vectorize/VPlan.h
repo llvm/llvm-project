@@ -1400,9 +1400,9 @@ public:
     return true;
   }
 
-  /// Update the recipes first operand to the last lane of the operand using \p
-  /// Builder. Must only be used for VPIRInstructions with at least one operand
-  /// wrapping a PHINode.
+  /// Update the recipe's first operand to the final lane of the operand using
+  /// \p Builder. Must only be used for VPIRInstructions with at least one
+  /// operand wrapping a PHINode.
   void extractFinalLaneOfFirstOperand(VPBuilder &Builder);
 };
 

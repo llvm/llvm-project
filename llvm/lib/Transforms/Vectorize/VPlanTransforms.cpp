@@ -1402,7 +1402,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       if (!vputils::isSingleScalar(RepOrWidenR) ||
           !all_of(RepOrWidenR->users(), [RepOrWidenR](const VPUser *U) {
             return U->usesScalars(RepOrWidenR) ||
-                   match(cast<VPRecipeBase>(U), m_ExtractLastPart(m_VPValue()));
+                   match(cast<VPRecipeBase>(U),
+                         m_CombineOr(m_ExtractLastPart(m_VPValue()),
+                                     m_ExtractLastLane(m_VPValue())));
           }))
         continue;
 
@@ -3473,7 +3475,7 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (ExitIRI->getNumOperands() != 1) {
       // The first of two operands corresponds to the latch exit, via MiddleVPBB
-      // predecessor. Extract its last lane.
+      // predecessor. Extract its final lane.
       ExitIRI->extractFinalLaneOfFirstOperand(MiddleBuilder);
     }
 
@@ -4561,10 +4563,8 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
                                                              Range))
         return;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractPenultimateElement,
-          MiddleBuilder.createNaryOp(VPInstruction::ExtractLastPart,
-                                     FOR->getBackedgeValue()),
-          {}, "vector.recur.extract.for.phi");
+          VPInstruction::ExtractPenultimateElement, FOR->getBackedgeValue(), {},
+          "vector.recur.extract.for.phi");
       cast<VPInstruction>(&R)->replaceAllUsesWith(PenultimateElement);
     }
   }

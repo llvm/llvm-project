@@ -964,8 +964,7 @@ define i16 @print_first_order_recurrence_and_result(ptr %ptr) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RESUME_1_PART:%.+]]> = extract-last-part ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-last-lane vp<[[RESUME_1_PART]]>
-; CHECK-NEXT:   EMIT vp<[[FOR_RESULT_PART:%.+]]> = extract-last-part ir<%for.1.next>
-; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element vp<[[FOR_RESULT_PART]]>
+; CHECK-NEXT:   EMIT vp<[[FOR_RESULT:%.+]]> = extract-penultimate-element ir<%for.1.next>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph

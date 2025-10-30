@@ -905,6 +905,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       // Extract lane VF - Offset from the operand.
       Res = State.get(getOperand(0), VPLane::getLaneFromEnd(State.VF, Offset));
     } else {
+      // TODO: Remove ExtractLastLane for scalar VFs.
       assert(Offset <= 1 && "invalid offset to extract from");
       Res = State.get(getOperand(0));
     }
