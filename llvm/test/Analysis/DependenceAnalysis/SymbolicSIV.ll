@@ -384,7 +384,7 @@ define void @symbolicsiv6(ptr %A, ptr %B, i64 %n, i64 %N, i64 %M) nounwind uwtab
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx7, align 4 --> Dst: %0 = load i32, ptr %arrayidx7, align 4
@@ -440,7 +440,7 @@ define void @symbolicsiv7(ptr %A, ptr %B, i64 %n, i64 %N, i64 %M) nounwind uwtab
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %conv, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: %1 = load i32, ptr %arrayidx6, align 4
-; CHECK-NEXT:    da analyze - flow [<>]!
+; CHECK-NEXT:    da analyze - flow [*|<]!
 ; CHECK-NEXT:  Src: store i32 %conv, ptr %arrayidx, align 4 --> Dst: store i32 %1, ptr %B.addr.02, align 4
 ; CHECK-NEXT:    da analyze - confused!
 ; CHECK-NEXT:  Src: %1 = load i32, ptr %arrayidx6, align 4 --> Dst: %1 = load i32, ptr %arrayidx6, align 4
