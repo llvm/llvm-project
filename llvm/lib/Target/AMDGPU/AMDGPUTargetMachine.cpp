@@ -466,6 +466,11 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::Hidden);
 
 static cl::opt<bool>
+    EnableLowerSpecialLDS("amdgpu-enable-lower-special-lds",
+                          cl::desc("Enable lowering of special lds pass."),
+                          cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
     EnableSwLowerLDS("amdgpu-enable-sw-lower-lds",
                      cl::desc("Enable lowering of lds to global memory pass "
                               "and asan instrument resulting IR."),
@@ -963,6 +968,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         // We want to support the -lto-partitions=N option as "best effort".
         // For that, we need to lower LDS earlier in the pipeline before the
         // module is partitioned for codegen.
+        if (EnableLowerSpecialLDS)
+          PM.addPass(AMDGPULowerSpecialLDSPass());
         if (EnableSwLowerLDS)
           PM.addPass(AMDGPUSwLowerLDSPass(*this));
         if (EnableLowerModuleLDS)
@@ -1333,6 +1340,10 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Make enqueued block runtime handles externally visible.
   addPass(createAMDGPUExportKernelRuntimeHandlesLegacyPass());
+
+  // Lower special LDS accesses.
+  if (EnableLowerSpecialLDS)
+    addPass(createAMDGPULowerSpecialLDSLegacyPass());
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
@@ -2080,6 +2091,9 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   addPass(AlwaysInlinerPass());
 
   addPass(AMDGPUExportKernelRuntimeHandlesPass());
+
+  if (EnableLowerSpecialLDS)
+    addPass(AMDGPULowerSpecialLDSPass());
 
   if (EnableSwLowerLDS)
     addPass(AMDGPUSwLowerLDSPass(TM));
