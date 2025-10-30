@@ -4820,9 +4820,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        Right.MatchingParen->isNot(BK_Block))) {
     return !Style.Cpp11BracedListStyle || Style.SpacesInParensOptions.Other;
   }
-  if (Left.is(TT_BlockComment))
+  if (Left.is(TT_BlockComment)) {
     return Style.isJavaScript() ||
            Left.getBlockCommentKind() != CommentKind::Parameter;
+  }
 
   // Space between template and attribute.
   // e.g. template <typename T> [[nodiscard]] ...
