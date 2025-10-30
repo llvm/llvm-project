@@ -178,7 +178,17 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
           # libxml2 config
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON -DBOOTSTRAP_BOOTSTRAP_CMAKE_FIND_PACKAGE_PREFER_CONFIG=ON"
-        fi
+
+          # We are using the Wix generator which doesn't support strings in
+          # the version, so strip out the git suffix and replace the -rc3 suffix
+          # with .3.
+          rc_version=`grep -o 'LLVM_VERSION_SUFFIX -rc[0-9]' cmake/Modules/LLVMVersion.cmake | cut -d ' ' -f 2 | sed 's/-rc//g'`
+          if [ -z "$rc_version" ]; then
+            version_suffix=""
+          else
+            version_suffix=".$rc_version"
+          fi
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LLVM_VERSION_SUFFIX=$version_suffix"
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
