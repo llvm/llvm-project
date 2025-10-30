@@ -9,25 +9,25 @@ define i32 @test(i32 %x) {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB1]],label %bb2], RenamedOp: [[CMP]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB1]],label [[BB2:%.*]]], RenamedOp: [[CMP]] }
 ; CHECK-NEXT:    [[CMP_0:%.*]] = bitcast i1 [[CMP]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB1]],label %bb2], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB1]],label [[BB2]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:    br i1 [[CMP]], label [[BB2:%.*]], label [[EXIT1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB2]], label [[EXIT1:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB2]],label %bb3], RenamedOp: [[CMP_0]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB2]],label [[BB3:%.*]]], RenamedOp: [[CMP_0]] }
 ; CHECK-NEXT:    [[CMP_0_1:%.*]] = bitcast i1 [[CMP_0]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB2]],label %bb3], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB2]],label [[BB3]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0_1:%.*]] = bitcast i32 [[X_0]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB2]],label %exit2], RenamedOp: [[X_0]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB2]],label [[EXIT2:%.*]]], RenamedOp: [[X_0]] }
 ; CHECK-NEXT:    [[X_0_4:%.*]] = bitcast i32 [[X_0]] to i32
-; CHECK-NEXT:    br i1 [[CMP_0]], label [[BB3:%.*]], label [[EXIT2:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_0]], label [[BB3]], label [[EXIT2]]
 ; CHECK:       bb3:
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB3]],label %exit3], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB3]],label [[EXIT3:%.*]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0_1_2:%.*]] = bitcast i32 [[X_0_1]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB3]],label %exit4], RenamedOp: [[X_0_1]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB3]],label [[EXIT4:%.*]]], RenamedOp: [[X_0_1]] }
 ; CHECK-NEXT:    [[X_0_1_3:%.*]] = bitcast i32 [[X_0_1]] to i32
-; CHECK-NEXT:    br i1 [[CMP_0_1]], label [[EXIT3:%.*]], label [[EXIT4:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_0_1]], label [[EXIT3]], label [[EXIT4]]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       exit2:

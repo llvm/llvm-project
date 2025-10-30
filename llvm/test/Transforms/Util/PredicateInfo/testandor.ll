@@ -10,17 +10,17 @@ define void @test_or(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = or i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = or i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label %neither], RenamedOp: [[Z]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = or i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label [[NEITHER:%.*]]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[XZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[XZ]] }
 ; CHECK-NEXT:    [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[YZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[YZ]] }
 ; CHECK-NEXT:    [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
-; CHECK-NEXT:    br i1 [[Z]], label [[ONEOF:%.*]], label [[NEITHER:%.*]]
+; CHECK-NEXT:    br i1 [[Z]], label [[ONEOF:%.*]], label [[NEITHER]]
 ; CHECK:       oneof:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])
 ; CHECK-NEXT:    call void @foo(i1 [[YZ]])
@@ -60,17 +60,17 @@ define void @test_or_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 true, i1 [[YZ]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = select i1 [[XZ]], i1 true, i1 [[YZ]] Edge: [label [[TMP0:%.*]],label %neither], RenamedOp: [[Z]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = select i1 [[XZ]], i1 true, i1 [[YZ]] Edge: [label [[TMP0:%.*]],label [[NEITHER:%.*]]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[XZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[XZ]] }
 ; CHECK-NEXT:    [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[YZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[YZ]] }
 ; CHECK-NEXT:    [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %neither], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[NEITHER]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
-; CHECK-NEXT:    br i1 [[Z]], label [[ONEOF:%.*]], label [[NEITHER:%.*]]
+; CHECK-NEXT:    br i1 [[Z]], label [[ONEOF:%.*]], label [[NEITHER]]
 ; CHECK:       oneof:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])
 ; CHECK-NEXT:    call void @foo(i1 [[YZ]])
@@ -110,17 +110,17 @@ define void @test_and(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = and i1 [[XZ]], [[YZ]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = and i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label %nope], RenamedOp: [[Z]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = and i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label [[NOPE:%.*]]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[XZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH:%.*]]], RenamedOp: [[XZ]] }
 ; CHECK-NEXT:    [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[YZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[YZ]] }
 ; CHECK-NEXT:    [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
-; CHECK-NEXT:    br i1 [[Z]], label [[BOTH:%.*]], label [[NOPE:%.*]]
+; CHECK-NEXT:    br i1 [[Z]], label [[BOTH]], label [[NOPE]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ_0]])
 ; CHECK-NEXT:    call void @foo(i1 [[YZ_0]])
@@ -160,17 +160,17 @@ define void @test_and_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XZ:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[YZ:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = select i1 [[XZ]], i1 [[YZ]], i1 false
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = select i1 [[XZ]], i1 [[YZ]], i1 false Edge: [label [[TMP0:%.*]],label %nope], RenamedOp: [[Z]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = select i1 [[XZ]], i1 [[YZ]], i1 false Edge: [label [[TMP0:%.*]],label [[NOPE:%.*]]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[XZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH:%.*]]], RenamedOp: [[XZ]] }
 ; CHECK-NEXT:    [[XZ_0:%.*]] = bitcast i1 [[XZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[YZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[YZ]] }
 ; CHECK-NEXT:    [[YZ_0:%.*]] = bitcast i1 [[YZ]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast i32 [[Y]] to i32
-; CHECK-NEXT:    br i1 [[Z]], label [[BOTH:%.*]], label [[NOPE:%.*]]
+; CHECK-NEXT:    br i1 [[Z]], label [[BOTH]], label [[NOPE]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ_0]])
 ; CHECK-NEXT:    call void @foo(i1 [[YZ_0]])
@@ -210,17 +210,17 @@ define void @testandsame(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[XGT:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[XLT:%.*]] = icmp slt i32 [[X]], 100
 ; CHECK-NEXT:    [[Z:%.*]] = and i1 [[XGT]], [[XLT]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = and i1 [[XGT]], [[XLT]] Edge: [label [[TMP0:%.*]],label %nope], RenamedOp: [[Z]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = and i1 [[XGT]], [[XLT]] Edge: [label [[TMP0:%.*]],label [[NOPE:%.*]]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[Z_0:%.*]] = bitcast i1 [[Z]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XGT]] = icmp sgt i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[XGT]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XGT]] = icmp sgt i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH:%.*]]], RenamedOp: [[XGT]] }
 ; CHECK-NEXT:    [[XGT_0:%.*]] = bitcast i1 [[XGT]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XGT]] = icmp sgt i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XGT]] = icmp sgt i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XLT]] = icmp slt i32 [[X]], 100 Edge: [label [[TMP0]],label %both], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XLT]] = icmp slt i32 [[X]], 100 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0_1:%.*]] = bitcast i32 [[X_0]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XLT]] = icmp slt i32 [[X]], 100 Edge: [label [[TMP0]],label %both], RenamedOp: [[XLT]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XLT]] = icmp slt i32 [[X]], 100 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[XLT]] }
 ; CHECK-NEXT:    [[XLT_0:%.*]] = bitcast i1 [[XLT]] to i1
-; CHECK-NEXT:    br i1 [[Z]], label [[BOTH:%.*]], label [[NOPE:%.*]]
+; CHECK-NEXT:    br i1 [[Z]], label [[BOTH]], label [[NOPE]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XGT_0]])
 ; CHECK-NEXT:    call void @foo(i1 [[XLT_0]])
@@ -264,17 +264,17 @@ define void @testandassume(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i1 [[XZ]] to i1
 ; CHECK-NEXT:  ; assume predicate info { Comparison: [[Z]] = and i1 [[XZ]], [[YZ]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i1 [[Z]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = and i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label %nope], RenamedOp: [[TMP5]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = and i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label [[NOPE:%.*]]], RenamedOp: [[TMP5]] }
 ; CHECK-NEXT:    [[DOT0:%.*]] = bitcast i1 [[TMP5]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[XZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH:%.*]]], RenamedOp: [[XZ]] }
 ; CHECK-NEXT:    [[DOT01:%.*]] = bitcast i1 [[TMP4]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XZ]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[DOT02:%.*]] = bitcast i32 [[TMP3]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[YZ]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[YZ]] }
 ; CHECK-NEXT:    [[DOT03:%.*]] = bitcast i1 [[TMP2]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[YZ]] = icmp eq i32 [[Y]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[DOT04:%.*]] = bitcast i32 [[TMP1]] to i32
-; CHECK-NEXT:    br i1 [[TMP5]], label [[BOTH:%.*]], label [[NOPE:%.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BOTH]], label [[NOPE]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[DOT01]])
 ; CHECK-NEXT:    call void @foo(i1 [[DOT03]])
@@ -311,9 +311,9 @@ define void @testorassume(i32 %x, i32 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
 ; CHECK-NEXT:  ; assume predicate info { Comparison: [[Z]] = or i1 [[XZ]], [[YZ]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i1 [[Z]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = or i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label %nope], RenamedOp: [[TMP1]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[Z]] = or i1 [[XZ]], [[YZ]] Edge: [label [[TMP0:%.*]],label [[NOPE:%.*]]], RenamedOp: [[TMP1]] }
 ; CHECK-NEXT:    [[DOT0:%.*]] = bitcast i1 [[TMP1]] to i1
-; CHECK-NEXT:    br i1 [[TMP1]], label [[BOTH:%.*]], label [[NOPE:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BOTH:%.*]], label [[NOPE]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @foo(i1 [[XZ]])
 ; CHECK-NEXT:    call void @foo(i1 [[YZ]])
@@ -344,17 +344,17 @@ define void @test_and_one_unknown_cond(i32 %x, i1 %c1) {
 ; CHECK-LABEL: @test_and_one_unknown_cond(
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[A:%.*]] = and i1 [[C1:%.*]], [[C2]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A]] = and i1 [[C1]], [[C2]] Edge: [label [[TMP0:%.*]],label %both], RenamedOp: [[A]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A]] = and i1 [[C1]], [[C2]] Edge: [label [[TMP0:%.*]],label [[BOTH:%.*]]], RenamedOp: [[A]] }
 ; CHECK-NEXT:    [[A_0:%.*]] = bitcast i1 [[A]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A]] = and i1 [[C1]], [[C2]] Edge: [label [[TMP0]],label %nope], RenamedOp: [[A]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A]] = and i1 [[C1]], [[C2]] Edge: [label [[TMP0]],label [[NOPE:%.*]]], RenamedOp: [[A]] }
 ; CHECK-NEXT:    [[A_1:%.*]] = bitcast i1 [[A]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[C1]] Edge: [label [[TMP0]],label %both], RenamedOp: [[C1]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[C1]] Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[C1]] }
 ; CHECK-NEXT:    [[C1_0:%.*]] = bitcast i1 [[C1]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[C2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[C2]] }
 ; CHECK-NEXT:    [[C2_0:%.*]] = bitcast i1 [[C2]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:    br i1 [[A]], label [[BOTH:%.*]], label [[NOPE:%.*]]
+; CHECK-NEXT:    br i1 [[A]], label [[BOTH]], label [[NOPE]]
 ; CHECK:       both:
 ; CHECK-NEXT:    call void @bar(i32 [[X_0]])
 ; CHECK-NEXT:    call void @foo(i1 [[C1_0]])
@@ -391,17 +391,17 @@ define void @test_or_one_unknown_cond(i32 %x, i1 %c1) {
 ; CHECK-LABEL: @test_or_one_unknown_cond(
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    [[A:%.*]] = or i1 [[C1:%.*]], [[C2]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A]] = or i1 [[C1]], [[C2]] Edge: [label [[TMP0:%.*]],label %nope], RenamedOp: [[A]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A]] = or i1 [[C1]], [[C2]] Edge: [label [[TMP0:%.*]],label [[NOPE:%.*]]], RenamedOp: [[A]] }
 ; CHECK-NEXT:    [[A_0:%.*]] = bitcast i1 [[A]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A]] = or i1 [[C1]], [[C2]] Edge: [label [[TMP0]],label %both_inverted], RenamedOp: [[A]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A]] = or i1 [[C1]], [[C2]] Edge: [label [[TMP0]],label [[BOTH_INVERTED:%.*]]], RenamedOp: [[A]] }
 ; CHECK-NEXT:    [[A_1:%.*]] = bitcast i1 [[A]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[C1]] Edge: [label [[TMP0]],label %both_inverted], RenamedOp: [[C1]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[C1]] Edge: [label [[TMP0]],label [[BOTH_INVERTED]]], RenamedOp: [[C1]] }
 ; CHECK-NEXT:    [[C1_0:%.*]] = bitcast i1 [[C1]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both_inverted], RenamedOp: [[C2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH_INVERTED]]], RenamedOp: [[C2]] }
 ; CHECK-NEXT:    [[C2_0:%.*]] = bitcast i1 [[C2]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label %both_inverted], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[C2]] = icmp eq i32 [[X]], 0 Edge: [label [[TMP0]],label [[BOTH_INVERTED]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:    br i1 [[A]], label [[NOPE:%.*]], label [[BOTH_INVERTED:%.*]]
+; CHECK-NEXT:    br i1 [[A]], label [[NOPE]], label [[BOTH_INVERTED]]
 ; CHECK:       both_inverted:
 ; CHECK-NEXT:    call void @bar(i32 [[X_0]])
 ; CHECK-NEXT:    call void @foo(i1 [[C1_0]])
@@ -438,19 +438,19 @@ define void @test_and_chain(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test_and_chain(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C:%.*]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[AND2]] = and i1 [[AND1]], [[C]] Edge: [label [[TMP0:%.*]],label %if], RenamedOp: [[AND2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[AND2]] = and i1 [[AND1]], [[C]] Edge: [label [[TMP0:%.*]],label [[IF:%.*]]], RenamedOp: [[AND2]] }
 ; CHECK-NEXT:    [[AND2_0:%.*]] = bitcast i1 [[AND2]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[AND2]] = and i1 [[AND1]], [[C]] Edge: [label [[TMP0]],label %else], RenamedOp: [[AND2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[AND2]] = and i1 [[AND1]], [[C]] Edge: [label [[TMP0]],label [[ELSE:%.*]]], RenamedOp: [[AND2]] }
 ; CHECK-NEXT:    [[AND2_1:%.*]] = bitcast i1 [[AND2]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[AND1]] = and i1 [[A]], [[B]] Edge: [label [[TMP0]],label %if], RenamedOp: [[AND1]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[AND1]] = and i1 [[A]], [[B]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[AND1]] }
 ; CHECK-NEXT:    [[AND1_0:%.*]] = bitcast i1 [[AND1]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[A]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[A]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A]] }
 ; CHECK-NEXT:    [[A_0:%.*]] = bitcast i1 [[A]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[B]] Edge: [label [[TMP0]],label %if], RenamedOp: [[B]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[B]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[B]] }
 ; CHECK-NEXT:    [[B_0:%.*]] = bitcast i1 [[B]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[C]] Edge: [label [[TMP0]],label %if], RenamedOp: [[C]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[C]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[C]] }
 ; CHECK-NEXT:    [[C_0:%.*]] = bitcast i1 [[C]] to i1
-; CHECK-NEXT:    br i1 [[AND2]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[AND2]], label [[IF]], label [[ELSE]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A_0]])
 ; CHECK-NEXT:    call void @foo(i1 [[B_0]])
@@ -491,19 +491,19 @@ define void @test_or_chain(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test_or_chain(
 ; CHECK-NEXT:    [[OR1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[C:%.*]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[OR2]] = or i1 [[OR1]], [[C]] Edge: [label [[TMP0:%.*]],label %if], RenamedOp: [[OR2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[OR2]] = or i1 [[OR1]], [[C]] Edge: [label [[TMP0:%.*]],label [[IF:%.*]]], RenamedOp: [[OR2]] }
 ; CHECK-NEXT:    [[OR2_0:%.*]] = bitcast i1 [[OR2]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[OR2]] = or i1 [[OR1]], [[C]] Edge: [label [[TMP0]],label %else], RenamedOp: [[OR2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[OR2]] = or i1 [[OR1]], [[C]] Edge: [label [[TMP0]],label [[ELSE:%.*]]], RenamedOp: [[OR2]] }
 ; CHECK-NEXT:    [[OR2_1:%.*]] = bitcast i1 [[OR2]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[OR1]] = or i1 [[A]], [[B]] Edge: [label [[TMP0]],label %else], RenamedOp: [[OR1]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[OR1]] = or i1 [[A]], [[B]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[OR1]] }
 ; CHECK-NEXT:    [[OR1_0:%.*]] = bitcast i1 [[OR1]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[A]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[A]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A]] }
 ; CHECK-NEXT:    [[A_0:%.*]] = bitcast i1 [[A]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[B]] Edge: [label [[TMP0]],label %else], RenamedOp: [[B]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[B]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[B]] }
 ; CHECK-NEXT:    [[B_0:%.*]] = bitcast i1 [[B]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[C]] Edge: [label [[TMP0]],label %else], RenamedOp: [[C]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison:i1 [[C]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[C]] }
 ; CHECK-NEXT:    [[C_0:%.*]] = bitcast i1 [[C]] to i1
-; CHECK-NEXT:    br i1 [[OR2]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[OR2]], label [[IF]], label [[ELSE]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A]])
 ; CHECK-NEXT:    call void @foo(i1 [[B]])
@@ -544,15 +544,15 @@ define void @test_and_or_mixed(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test_and_or_mixed(
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[OR]], [[C:%.*]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[AND]] = and i1 [[OR]], [[C]] Edge: [label [[TMP0:%.*]],label %if], RenamedOp: [[AND]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[AND]] = and i1 [[OR]], [[C]] Edge: [label [[TMP0:%.*]],label [[IF:%.*]]], RenamedOp: [[AND]] }
 ; CHECK-NEXT:    [[AND_0:%.*]] = bitcast i1 [[AND]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[AND]] = and i1 [[OR]], [[C]] Edge: [label [[TMP0]],label %else], RenamedOp: [[AND]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[AND]] = and i1 [[OR]], [[C]] Edge: [label [[TMP0]],label [[ELSE:%.*]]], RenamedOp: [[AND]] }
 ; CHECK-NEXT:    [[AND_1:%.*]] = bitcast i1 [[AND]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[OR]] = or i1 [[A]], [[B]] Edge: [label [[TMP0]],label %if], RenamedOp: [[OR]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[OR]] = or i1 [[A]], [[B]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[OR]] }
 ; CHECK-NEXT:    [[OR_0:%.*]] = bitcast i1 [[OR]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[C]] Edge: [label [[TMP0]],label %if], RenamedOp: [[C]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison:i1 [[C]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[C]] }
 ; CHECK-NEXT:    [[C_0:%.*]] = bitcast i1 [[C]] to i1
-; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[AND]], label [[IF]], label [[ELSE]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A]])
 ; CHECK-NEXT:    call void @foo(i1 [[B]])
@@ -605,25 +605,25 @@ define void @test_deep_and_chain(i1 %a1) {
 ; CHECK-NEXT:    [[A13:%.*]] = and i1 [[A12]], true
 ; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], true
 ; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], true
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A15]] = and i1 [[A14]], true Edge: [label [[TMP0:%.*]],label %if], RenamedOp: [[A15]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A15]] = and i1 [[A14]], true Edge: [label [[TMP0:%.*]],label [[IF:%.*]]], RenamedOp: [[A15]] }
 ; CHECK-NEXT:    [[A15_0:%.*]] = bitcast i1 [[A15]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A15]] = and i1 [[A14]], true Edge: [label [[TMP0]],label %else], RenamedOp: [[A15]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A15]] = and i1 [[A14]], true Edge: [label [[TMP0]],label [[ELSE:%.*]]], RenamedOp: [[A15]] }
 ; CHECK-NEXT:    [[A15_1:%.*]] = bitcast i1 [[A15]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A14]] = and i1 [[A13]], true Edge: [label [[TMP0]],label %if], RenamedOp: [[A14]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A14]] = and i1 [[A13]], true Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A14]] }
 ; CHECK-NEXT:    [[A14_0:%.*]] = bitcast i1 [[A14]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A13]] = and i1 [[A12]], true Edge: [label [[TMP0]],label %if], RenamedOp: [[A13]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A13]] = and i1 [[A12]], true Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A13]] }
 ; CHECK-NEXT:    [[A13_0:%.*]] = bitcast i1 [[A13]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A12]] = and i1 [[A11]], true Edge: [label [[TMP0]],label %if], RenamedOp: [[A12]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A12]] = and i1 [[A11]], true Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A12]] }
 ; CHECK-NEXT:    [[A12_0:%.*]] = bitcast i1 [[A12]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A11]] = and i1 [[A10]], true Edge: [label [[TMP0]],label %if], RenamedOp: [[A11]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A11]] = and i1 [[A10]], true Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A11]] }
 ; CHECK-NEXT:    [[A11_0:%.*]] = bitcast i1 [[A11]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A10]] = and i1 [[A9]], true Edge: [label [[TMP0]],label %if], RenamedOp: [[A10]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A10]] = and i1 [[A9]], true Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A10]] }
 ; CHECK-NEXT:    [[A10_0:%.*]] = bitcast i1 [[A10]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A9]] = and i1 [[A8]], true Edge: [label [[TMP0]],label %if], RenamedOp: [[A9]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A9]] = and i1 [[A8]], true Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A9]] }
 ; CHECK-NEXT:    [[A9_0:%.*]] = bitcast i1 [[A9]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A8]] = and i1 [[A7]], true Edge: [label [[TMP0]],label %if], RenamedOp: [[A8]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A8]] = and i1 [[A7]], true Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A8]] }
 ; CHECK-NEXT:    [[A8_0:%.*]] = bitcast i1 [[A8]] to i1
-; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[A15]], label [[IF]], label [[ELSE]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A1]])
 ; CHECK-NEXT:    call void @foo(i1 [[A2]])
@@ -728,25 +728,25 @@ define void @test_deep_and_tree(i1 %a1) {
 ; CHECK-NEXT:    [[A13:%.*]] = and i1 [[A12]], [[A12]]
 ; CHECK-NEXT:    [[A14:%.*]] = and i1 [[A13]], [[A13]]
 ; CHECK-NEXT:    [[A15:%.*]] = and i1 [[A14]], [[A14]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A15]] = and i1 [[A14]], [[A14]] Edge: [label [[TMP0:%.*]],label %if], RenamedOp: [[A15]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A15]] = and i1 [[A14]], [[A14]] Edge: [label [[TMP0:%.*]],label [[IF:%.*]]], RenamedOp: [[A15]] }
 ; CHECK-NEXT:    [[A15_0:%.*]] = bitcast i1 [[A15]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A15]] = and i1 [[A14]], [[A14]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A15]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A15]] = and i1 [[A14]], [[A14]] Edge: [label [[TMP0]],label [[ELSE:%.*]]], RenamedOp: [[A15]] }
 ; CHECK-NEXT:    [[A15_1:%.*]] = bitcast i1 [[A15]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A14]] = and i1 [[A13]], [[A13]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A14]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A14]] = and i1 [[A13]], [[A13]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A14]] }
 ; CHECK-NEXT:    [[A14_0:%.*]] = bitcast i1 [[A14]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A13]] = and i1 [[A12]], [[A12]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A13]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A13]] = and i1 [[A12]], [[A12]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A13]] }
 ; CHECK-NEXT:    [[A13_0:%.*]] = bitcast i1 [[A13]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A12]] = and i1 [[A11]], [[A11]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A12]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A12]] = and i1 [[A11]], [[A11]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A12]] }
 ; CHECK-NEXT:    [[A12_0:%.*]] = bitcast i1 [[A12]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A11]] = and i1 [[A10]], [[A10]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A11]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A11]] = and i1 [[A10]], [[A10]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A11]] }
 ; CHECK-NEXT:    [[A11_0:%.*]] = bitcast i1 [[A11]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A10]] = and i1 [[A9]], [[A9]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A10]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A10]] = and i1 [[A9]], [[A9]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A10]] }
 ; CHECK-NEXT:    [[A10_0:%.*]] = bitcast i1 [[A10]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A9]] = and i1 [[A8]], [[A8]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A9]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A9]] = and i1 [[A8]], [[A8]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A9]] }
 ; CHECK-NEXT:    [[A9_0:%.*]] = bitcast i1 [[A9]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A8]] = and i1 [[A7]], [[A7]] Edge: [label [[TMP0]],label %if], RenamedOp: [[A8]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A8]] = and i1 [[A7]], [[A7]] Edge: [label [[TMP0]],label [[IF]]], RenamedOp: [[A8]] }
 ; CHECK-NEXT:    [[A8_0:%.*]] = bitcast i1 [[A8]] to i1
-; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[A15]], label [[IF]], label [[ELSE]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A1]])
 ; CHECK-NEXT:    call void @foo(i1 [[A2]])
@@ -851,25 +851,25 @@ define void @test_deep_or_tree(i1 %a1) {
 ; CHECK-NEXT:    [[A13:%.*]] = or i1 [[A12]], [[A12]]
 ; CHECK-NEXT:    [[A14:%.*]] = or i1 [[A13]], [[A13]]
 ; CHECK-NEXT:    [[A15:%.*]] = or i1 [[A14]], [[A14]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A15]] = or i1 [[A14]], [[A14]] Edge: [label [[TMP0:%.*]],label %if], RenamedOp: [[A15]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[A15]] = or i1 [[A14]], [[A14]] Edge: [label [[TMP0:%.*]],label [[IF:%.*]]], RenamedOp: [[A15]] }
 ; CHECK-NEXT:    [[A15_0:%.*]] = bitcast i1 [[A15]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A15]] = or i1 [[A14]], [[A14]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A15]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A15]] = or i1 [[A14]], [[A14]] Edge: [label [[TMP0]],label [[ELSE:%.*]]], RenamedOp: [[A15]] }
 ; CHECK-NEXT:    [[A15_1:%.*]] = bitcast i1 [[A15]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A14]] = or i1 [[A13]], [[A13]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A14]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A14]] = or i1 [[A13]], [[A13]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A14]] }
 ; CHECK-NEXT:    [[A14_0:%.*]] = bitcast i1 [[A14]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A13]] = or i1 [[A12]], [[A12]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A13]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A13]] = or i1 [[A12]], [[A12]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A13]] }
 ; CHECK-NEXT:    [[A13_0:%.*]] = bitcast i1 [[A13]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A12]] = or i1 [[A11]], [[A11]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A12]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A12]] = or i1 [[A11]], [[A11]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A12]] }
 ; CHECK-NEXT:    [[A12_0:%.*]] = bitcast i1 [[A12]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A11]] = or i1 [[A10]], [[A10]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A11]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A11]] = or i1 [[A10]], [[A10]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A11]] }
 ; CHECK-NEXT:    [[A11_0:%.*]] = bitcast i1 [[A11]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A10]] = or i1 [[A9]], [[A9]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A10]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A10]] = or i1 [[A9]], [[A9]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A10]] }
 ; CHECK-NEXT:    [[A10_0:%.*]] = bitcast i1 [[A10]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A9]] = or i1 [[A8]], [[A8]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A9]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A9]] = or i1 [[A8]], [[A8]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A9]] }
 ; CHECK-NEXT:    [[A9_0:%.*]] = bitcast i1 [[A9]] to i1
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A8]] = or i1 [[A7]], [[A7]] Edge: [label [[TMP0]],label %else], RenamedOp: [[A8]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[A8]] = or i1 [[A7]], [[A7]] Edge: [label [[TMP0]],label [[ELSE]]], RenamedOp: [[A8]] }
 ; CHECK-NEXT:    [[A8_0:%.*]] = bitcast i1 [[A8]] to i1
-; CHECK-NEXT:    br i1 [[A15]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[A15]], label [[IF]], label [[ELSE]]
 ; CHECK:       if:
 ; CHECK-NEXT:    call void @foo(i1 [[A1]])
 ; CHECK-NEXT:    call void @foo(i1 [[A2]])
@@ -1105,11 +1105,11 @@ define i32 @test_and_with_phinode(i32 %x) {
 ; CHECK-NEXT:    [[XGE1:%.*]] = icmp uge i32 [[X:%.*]], 1
 ; CHECK-NEXT:    [[XLT2:%.*]] = icmp ult i32 [[X]], 2
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[XGE1]], [[XLT2]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XGE1]] = icmp uge i32 [[X]], 1 Edge: [label [[ENTRY:%.*]],label %phi], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XGE1]] = icmp uge i32 [[X]], 1 Edge: [label [[ENTRY:%.*]],label [[PHI:%.*]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0_1:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XLT2]] = icmp ult i32 [[X]], 2 Edge: [label [[ENTRY]],label %phi], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[XLT2]] = icmp ult i32 [[X]], 2 Edge: [label [[ENTRY]],label [[PHI]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0_2:%.*]] = bitcast i32 [[X_0_1]] to i32
-; CHECK-NEXT:    br i1 [[AND]], label [[PHI:%.*]], label [[NOPE:%.*]]
+; CHECK-NEXT:    br i1 [[AND]], label [[PHI]], label [[NOPE:%.*]]
 ; CHECK:       nope:
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:

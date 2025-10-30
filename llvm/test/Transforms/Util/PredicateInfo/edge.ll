@@ -5,9 +5,9 @@ define i32 @f1(i32 %x) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB0:%.*]],label %bb2], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp eq i32 [[X]], 0 Edge: [label [[BB0:%.*]],label [[BB2:%.*]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:    br i1 [[CMP]], label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB2]], label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
@@ -30,9 +30,9 @@ define i32 @f2(i32 %x) {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 0
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp ne i32 [[X]], 0 Edge: [label [[BB0:%.*]],label %bb2], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp ne i32 [[X]], 0 Edge: [label [[BB0:%.*]],label [[BB2:%.*]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:    br i1 [[CMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB1:%.*]], label [[BB2]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
@@ -54,10 +54,10 @@ bb2:
 define i32 @f3(i32 %x) {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  bb0:
-; CHECK-NEXT:  ; switch predicate info { CaseValue: i32 0 Edge: [label [[BB0:%.*]],label %bb2], RenamedOp: [[X:%.*]] }
+; CHECK-NEXT:  ; switch predicate info { CaseValue: i32 0 Edge: [label [[BB0:%.*]],label [[BB2:%.*]]], RenamedOp: [[X:%.*]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
 ; CHECK-NEXT:    switch i32 [[X]], label [[BB1:%.*]] [
-; CHECK-NEXT:      i32 0, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB2]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
@@ -81,9 +81,9 @@ define double @fcmp_oeq_not_zero(double %x, double %y) {
 ; CHECK-LABEL: @fcmp_oeq_not_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[Y:%.*]], 2.000000e+00
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = fcmp oeq double [[Y]], 2.000000e+00 Edge: [label [[ENTRY:%.*]],label %if], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = fcmp oeq double [[Y]], 2.000000e+00 Edge: [label [[ENTRY:%.*]],label [[IF:%.*]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast double [[Y]] to double
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[RETURN:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF]], label [[RETURN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[X:%.*]], [[Y_0]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -109,9 +109,9 @@ define double @fcmp_une_not_zero(double %x, double %y) {
 ; CHECK-LABEL: @fcmp_une_not_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[Y:%.*]], 2.000000e+00
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = fcmp une double [[Y]], 2.000000e+00 Edge: [label [[ENTRY:%.*]],label %else], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = fcmp une double [[Y]], 2.000000e+00 Edge: [label [[ENTRY:%.*]],label [[ELSE:%.*]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast double [[Y]] to double
-; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[X:%.*]], [[Y_0]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -137,9 +137,9 @@ define double @fcmp_oeq_zero(double %x, double %y) {
 ; CHECK-LABEL: @fcmp_oeq_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[Y:%.*]], 0.000000e+00
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = fcmp oeq double [[Y]], 0.000000e+00 Edge: [label [[ENTRY:%.*]],label %if], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = fcmp oeq double [[Y]], 0.000000e+00 Edge: [label [[ENTRY:%.*]],label [[IF:%.*]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast double [[Y]] to double
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[RETURN:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF]], label [[RETURN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[X:%.*]], [[Y_0]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -165,9 +165,9 @@ define double @fcmp_une_zero(double %x, double %y) {
 ; CHECK-LABEL: @fcmp_une_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[Y:%.*]], -0.000000e+00
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = fcmp une double [[Y]], -0.000000e+00 Edge: [label [[ENTRY:%.*]],label %else], RenamedOp: [[Y]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = fcmp une double [[Y]], -0.000000e+00 Edge: [label [[ENTRY:%.*]],label [[ELSE:%.*]]], RenamedOp: [[Y]] }
 ; CHECK-NEXT:    [[Y_0:%.*]] = bitcast double [[Y]] to double
-; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[X:%.*]], [[Y_0]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -195,9 +195,9 @@ define double @fcmp_oeq_maybe_zero(double %x, double %y, double %z1, double %z2)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Z:%.*]] = fadd double [[Z1:%.*]], [[Z2:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[Y:%.*]], [[Z]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = fcmp oeq double [[Y]], [[Z]] Edge: [label [[ENTRY:%.*]],label %if], RenamedOp: [[Z]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = fcmp oeq double [[Y]], [[Z]] Edge: [label [[ENTRY:%.*]],label [[IF:%.*]]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[Z_0:%.*]] = bitcast double [[Z]] to double
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[RETURN:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF]], label [[RETURN:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[X:%.*]], [[Z_0]]
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -225,9 +225,9 @@ define double @fcmp_une_maybe_zero(double %x, double %y, double %z1, double %z2)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Z:%.*]] = fadd double [[Z1:%.*]], [[Z2:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double [[Y:%.*]], [[Z]]
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = fcmp une double [[Y]], [[Z]] Edge: [label [[ENTRY:%.*]],label %else], RenamedOp: [[Z]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = fcmp une double [[Y]], [[Z]] Edge: [label [[ENTRY:%.*]],label [[ELSE:%.*]]], RenamedOp: [[Z]] }
 ; CHECK-NEXT:    [[Z_0:%.*]] = bitcast double [[Z]] to double
-; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[ELSE:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[ELSE]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[X:%.*]], [[Z_0]]
 ; CHECK-NEXT:    br label [[RETURN]]

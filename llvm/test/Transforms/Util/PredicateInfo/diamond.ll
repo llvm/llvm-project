@@ -5,13 +5,13 @@ define i1 @f(i32 %x, i1 %y) {
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp sge i32 [[X]], 0 Edge: [label [[BB0]],label %bb2], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP]] = icmp sge i32 [[X]], 0 Edge: [label [[BB0]],label [[BB2:%.*]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:    br i1 [[CMP]], label [[BB2:%.*]], label [[BB3:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB2]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw nsw i32 [[X]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X2]], 2
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP2]] = icmp sge i32 [[X2]], 2 Edge: [label [[BB1]],label %bb2], RenamedOp: [[X2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 1 Comparison: [[CMP2]] = icmp sge i32 [[X2]], 2 Edge: [label [[BB1]],label [[BB2]]], RenamedOp: [[X2]] }
 ; CHECK-NEXT:    [[X2_0:%.*]] = bitcast i32 [[X2]] to i32
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB2]], label [[BB3]]
 ; CHECK:       bb2:
@@ -40,13 +40,13 @@ define i1 @g(i32 %x, i1 %y) {
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb0:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp sge i32 [[X]], 0 Edge: [label [[BB0]],label %bb2], RenamedOp: [[X]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP]] = icmp sge i32 [[X]], 0 Edge: [label [[BB0]],label [[BB2:%.*]]], RenamedOp: [[X]] }
 ; CHECK-NEXT:    [[X_0:%.*]] = bitcast i32 [[X]] to i32
-; CHECK-NEXT:    br i1 [[CMP]], label [[BB3:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[BB3:%.*]], label [[BB2]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[X2:%.*]] = add nuw nsw i32 [[X]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[X2]], 2
-; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP2]] = icmp sge i32 [[X2]], 2 Edge: [label [[BB1]],label %bb2], RenamedOp: [[X2]] }
+; CHECK-NEXT:  ; branch predicate info { TrueEdge: 0 Comparison: [[CMP2]] = icmp sge i32 [[X2]], 2 Edge: [label [[BB1]],label [[BB2]]], RenamedOp: [[X2]] }
 ; CHECK-NEXT:    [[X2_0:%.*]] = bitcast i32 [[X2]] to i32
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB3]], label [[BB2]]
 ; CHECK:       bb2:
