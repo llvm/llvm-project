@@ -5042,7 +5042,7 @@ void CGDebugInfo::CreateLexicalBlock(const PresumedLoc &PLoc) {
 
 PresumedLoc CGDebugInfo::getPresumedLoc(SourceLocation Loc) const {
   const SourceManager &SM = CGM.getContext().getSourceManager();
-  return SM.getPresumedLoc(Loc);
+  return SM.getPresumedLoc(SM.getFileLoc(Loc));
 }
 
 void CGDebugInfo::AppendAddressSpaceXDeref(
