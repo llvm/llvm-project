@@ -267,20 +267,16 @@ void X86FastPreTileConfig::reload(MachineBasicBlock::iterator UseMI,
                     << printReg(TileReg, TRI) << '\n');
 }
 
-static unsigned getTileDefNum(MachineRegisterInfo *MRI, Register Reg) {
+static bool isTileRegister(MachineRegisterInfo *MRI, Register Reg) {
   if (Reg.isVirtual() &&
       (MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)) {
-    return 1;
+    return true;
   }
 
   if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-    return 1;
+    return true;
 
-  return 0;
-}
-
-static bool isTileRegister(MachineRegisterInfo *MRI, Register VirtReg) {
-  return getTileDefNum(MRI, VirtReg) > 0;
+  return false;
 }
 
 static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
@@ -292,7 +288,7 @@ static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
   if (!MO.isReg())
     return false;
 
-  return getTileDefNum(MRI, MO.getReg()) > 0;
+  return isTileRegister(MRI, MO.getReg());
 }
 
 static ShapeT getShape(MachineRegisterInfo *MRI, Register TileReg) {
