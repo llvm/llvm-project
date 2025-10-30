@@ -15,13 +15,13 @@
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 using namespace mlir::affine;
 
 #define DEBUG_TYPE "decompose-affine-ops"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define DBGSNL() (llvm::dbgs() << "\n")
 
 /// Count the number of loops surrounding `operand` such that operand could be
 /// hoisted above.
@@ -88,8 +88,8 @@ static AffineApplyOp createSubApply(RewriterBase &rewriter,
   auto rhsMap = AffineMap::get(m.getNumDims(), m.getNumSymbols(), expr, ctx);
   SmallVector<Value> rhsOperands = originalOp->getOperands();
   canonicalizeMapAndOperands(&rhsMap, &rhsOperands);
-  return rewriter.create<AffineApplyOp>(originalOp.getLoc(), rhsMap,
-                                        rhsOperands);
+  return AffineApplyOp::create(rewriter, originalOp.getLoc(), rhsMap,
+                               rhsOperands);
 }
 
 FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
@@ -115,7 +115,7 @@ FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
     return rewriter.notifyMatchFailure(
         op, "only add or mul binary expr can be reassociated");
 
-  LLVM_DEBUG(DBGS() << "Start decomposeIntoFinerGrainedOps: " << op << "\n");
+  LDBG() << "Start decomposeIntoFinerGrainedOps: " << op;
 
   // 2. Iteratively extract the RHS subexpressions while the top-level binary
   // expr kind remains the same.
@@ -125,11 +125,11 @@ FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
     auto currentBinExpr = dyn_cast<AffineBinaryOpExpr>(remainingExp);
     if (!currentBinExpr || currentBinExpr.getKind() != binExpr.getKind()) {
       subExpressions.push_back(remainingExp);
-      LLVM_DEBUG(DBGS() << "--terminal: " << subExpressions.back() << "\n");
+      LDBG() << "--terminal: " << subExpressions.back();
       break;
     }
     subExpressions.push_back(currentBinExpr.getRHS());
-    LLVM_DEBUG(DBGS() << "--subExpr: " << subExpressions.back() << "\n");
+    LDBG() << "--subExpr: " << subExpressions.back();
     remainingExp = currentBinExpr.getLHS();
   }
 
@@ -146,9 +146,7 @@ FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
   llvm::stable_sort(subExpressions, [&](AffineExpr e1, AffineExpr e2) {
     return getMaxSymbol(e1) < getMaxSymbol(e2);
   });
-  LLVM_DEBUG(
-      llvm::interleaveComma(subExpressions, DBGS() << "--sorted subexprs: ");
-      llvm::dbgs() << "\n");
+  LDBG() << "--sorted subexprs: " << llvm::interleaved(subExpressions);
 
   // 4. Merge sorted subExpressions iteratively, thus achieving reassociation.
   auto s0 = getAffineSymbolExpr(0, ctx);
@@ -160,9 +158,9 @@ FailureOr<AffineApplyOp> mlir::affine::decompose(RewriterBase &rewriter,
   auto current = createSubApply(rewriter, op, subExpressions[0]);
   for (int64_t i = 1, e = subExpressions.size(); i < e; ++i) {
     Value tmp = createSubApply(rewriter, op, subExpressions[i]);
-    current = rewriter.create<AffineApplyOp>(op.getLoc(), binMap,
-                                             ValueRange{current, tmp});
-    LLVM_DEBUG(DBGS() << "--reassociate into: " << current << "\n");
+    current = AffineApplyOp::create(rewriter, op.getLoc(), binMap,
+                                    ValueRange{current, tmp});
+    LDBG() << "--reassociate into: " << current;
   }
 
   // 5. Replace original op.

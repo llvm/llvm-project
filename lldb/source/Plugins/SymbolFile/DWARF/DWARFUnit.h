@@ -164,9 +164,11 @@ public:
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
-  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
-                              lldb::offset_t &offset,
-                              std::vector<Value> &stack) const override;
+  virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+                                      lldb::offset_t &offset,
+                                      RegisterContext *reg_ctx,
+                                      lldb::RegisterKind reg_kind,
+                                      std::vector<Value> &stack) const override;
 
   bool ParseDWARFLocationList(const DataExtractor &data,
                               DWARFExpressionList &loc_list) const;

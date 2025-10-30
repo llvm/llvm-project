@@ -5,10 +5,9 @@
 define signext i32 @sum(ptr noalias nocapture noundef readonly %0, i32 noundef signext %1) {
 ; LA464-LABEL: sum:
 ; LA464:       # %bb.0:
-; LA464-NEXT:    ori $a2, $zero, 1
-; LA464-NEXT:    blt $a1, $a2, .LBB0_4
-; LA464-NEXT:  # %bb.1:
 ; LA464-NEXT:    move $a2, $zero
+; LA464-NEXT:    blez $a1, .LBB0_3
+; LA464-NEXT:  # %bb.1:
 ; LA464-NEXT:    bstrpick.d $a1, $a1, 31, 0
 ; LA464-NEXT:    .p2align 4, , 16
 ; LA464-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
@@ -17,11 +16,7 @@ define signext i32 @sum(ptr noalias nocapture noundef readonly %0, i32 noundef s
 ; LA464-NEXT:    addi.d $a1, $a1, -1
 ; LA464-NEXT:    addi.d $a0, $a0, 4
 ; LA464-NEXT:    bnez $a1, .LBB0_2
-; LA464-NEXT:  # %bb.3:
-; LA464-NEXT:    move $a0, $a2
-; LA464-NEXT:    ret
-; LA464-NEXT:  .LBB0_4:
-; LA464-NEXT:    move $a2, $zero
+; LA464-NEXT:  .LBB0_3:
 ; LA464-NEXT:    move $a0, $a2
 ; LA464-NEXT:    ret
   %3 = icmp sgt i32 %1, 0

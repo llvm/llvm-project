@@ -25,7 +25,7 @@
 namespace clang {
 namespace format {
 
-static constexpr StringRef Blanks = " \t\v\f\r";
+static constexpr StringRef Blanks(" \t\v\f\r");
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
@@ -306,8 +306,10 @@ BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
     // In Verilog, all strings are quoted by double quotes, joined by commas,
     // and wrapped in braces.  The comma is always before the newline.
     assert(QuoteStyle == DoubleQuotes);
-    LeftBraceQuote = Style.Cpp11BracedListStyle ? "{\"" : "{ \"";
-    RightBraceQuote = Style.Cpp11BracedListStyle ? "\"}" : "\" }";
+    LeftBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "{\"" : "{ \"";
+    RightBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "\"}" : "\" }";
     Postfix = "\",";
     Prefix = "\"";
   } else {
@@ -513,7 +515,7 @@ BreakableBlockComment::BreakableBlockComment(
     Decoration = "";
   }
   for (size_t i = 1, e = Content.size(); i < e && !Decoration.empty(); ++i) {
-    const StringRef &Text = Content[i];
+    const StringRef Text(Content[i]);
     if (i + 1 == e) {
       // If the last line is empty, the closing "*/" will have a star.
       if (Text.empty())

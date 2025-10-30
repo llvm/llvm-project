@@ -155,52 +155,52 @@ void g(SomeClass &c, ...);
 void testUseFirstArgAfterDelete() {
   int *p = new int;
   delete p;
-  f(p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMiddleArgAfterDelete(int *p) {
   delete p;
-  f(0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseLastArgAfterDelete(int *p) {
   delete p;
-  f(0, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(0, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseSeveralArgsAfterDelete(int *p) {
   delete p;
-  f(p, p, p); // newdelete-warning{{Use of memory after it is freed}}
+  f(p, p, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseRefArgAfterDelete(SomeClass &c) {
   delete &c;
-  g(c); // newdelete-warning{{Use of memory after it is freed}}
+  g(c); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testVariadicArgAfterDelete() {
   SomeClass c;
   int *p = new int;
   delete p;
-  g(c, 0, p); // newdelete-warning{{Use of memory after it is freed}}
+  g(c, 0, p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseMethodArgAfterDelete(int *p) {
   SomeClass *c = new SomeClass;
   delete p;
-  c->f(p); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testUseThisAfterDelete() {
   SomeClass *c = new SomeClass;
   delete c;
-  c->f(0); // newdelete-warning{{Use of memory after it is freed}}
+  c->f(0); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testDoubleDelete() {
   int *p = new int;
   delete p;
-  delete p; // newdelete-warning{{Attempt to free released memory}}
+  delete p; // newdelete-warning{{Attempt to release already released memory}}
 }
 
 void testExprDeleteArg() {
@@ -412,7 +412,7 @@ public:
 void testDoubleDeleteClassInstance() {
   DerefClass *foo = new DerefClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to free released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 class EmptyClass{
@@ -424,7 +424,7 @@ public:
 void testDoubleDeleteEmptyClass() {
   EmptyClass *foo = new EmptyClass();
   delete foo;
-  delete foo; // newdelete-warning {{Attempt to free released memory}}
+  delete foo; // newdelete-warning {{Attempt to release already released memory}}
 }
 
 struct Base {

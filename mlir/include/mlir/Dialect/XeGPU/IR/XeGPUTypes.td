@@ -16,13 +16,17 @@ include "mlir/IR/BuiltinTypes.td"
 def XeGPU_IntType: AnyTypeOf<[I1, I8, I16, I32, I64, SI1, SI8, SI16, SI32, SI64, UI1, UI8, UI16, UI32, UI64]>;
 def XeGPU_FloatType: AnyTypeOf<[F16, F32, F64, BF16, TF32]>;
 def XeGPU_ScalarType: AnyTypeOf<[XeGPU_IntType, XeGPU_FloatType]>;
-def XeGPU_BaseAddrType: AnyTypeOf<[Non0RankedMemRefOf<[XeGPU_ScalarType]>, UI64, UI32, I64, I32]>;
+def XeGPU_PointerType : AnyTypeOf<[UI64, UI32, I64, I32]>;
+def XeGPU_BaseAddrType
+    : AnyTypeOf<[Non0RankedMemRefOf<[XeGPU_ScalarType]>, XeGPU_PointerType]>;
 def XeGPU_DpasOprType: FixedVectorOfRankAndType<[1, 2, 3], [XeGPU_ScalarType]>;
 def XeGPU_DpasResType: FixedVectorOfRankAndType<[1, 2], [XeGPU_ScalarType]>;
 def XeGPU_OffsetType: FixedVectorOfNonZeroRankOf<[Index]>;
 def XeGPU_MaskType: FixedVectorOfNonZeroRankOf<[I1]>;
 def XeGPU_ValueType: FixedVectorOfNonZeroRankOf<[XeGPU_ScalarType]>;
-def XeGPU_Vector2DType: FixedVectorOfRankAndType<[2], [XeGPU_ScalarType]>;
+def XeGPU_VectorType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
+def XeGPU_GatherScatterBaseAddrType
+    : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
 
 // common base class for types in XeGPU dialect
 class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
@@ -131,12 +135,12 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::cast<TensorDescType>(cloneWith(getShape(), elementType));
     }
 
-    BlockTensorDescAttr getEncodingAsBlockTensorDescAttr() const {
-      return llvm::dyn_cast_if_present<BlockTensorDescAttr>(getEncoding());
-    }
-
-    ScatterTensorDescAttr getEncodingAsScatterTensorDescAttr() const {
-      return llvm::dyn_cast_if_present<ScatterTensorDescAttr>(getEncoding());
+    template <typename T,
+              typename = std::enable_if_t<
+                            std::is_same_v<T, BlockTensorDescAttr> ||
+                            std::is_same_v<T, ScatterTensorDescAttr>>>
+    T getEncodingOfType() const {
+      return llvm::dyn_cast_if_present<T>(getEncoding());
     }
 
     LayoutAttr getLayoutAttr() const {
@@ -144,49 +148,35 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     }
 
     xegpu::MemorySpace getMemorySpace() const {
-      auto block_attr = getEncodingAsBlockTensorDescAttr();
-      if (block_attr && block_attr.getMemorySpace())
-        return block_attr.getMemorySpace().getValue();
+      if (auto attr = getEncodingOfType<BlockTensorDescAttr>())
+        return attr.getMemorySpace().getValue();
 
-      auto scatter_attr = getEncodingAsScatterTensorDescAttr();
-      if (scatter_attr && scatter_attr.getMemorySpace())
-        return scatter_attr.getMemorySpace().getValue();
-
-      // return default value
-      return MemorySpace::Global;
+      auto attr = getEncodingOfType<ScatterTensorDescAttr>();
+      return attr.getMemorySpace().getValue();
     }
 
     // get the ArrayLength for blocked TensorDesc
     int getArrayLength() {
-      auto attr = getEncoding();
-      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
-      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
-      if (block_attr && block_attr.getArrayLength())
-        return block_attr.getArrayLength().getInt();
-      // return default value
-      return 1;
+      auto attr = getEncodingOfType<BlockTensorDescAttr>();
+      assert(attr && "invalid on non BlockTensorDescAttr.");
+      return attr.getArrayLength().getInt();
     }
 
     bool getBoundaryCheck() {
-      auto attr = getEncoding();
-      auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
-      assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
-      if (block_attr && block_attr.getBoundaryCheck())
-        return block_attr.getBoundaryCheck().getValue();
-      // return default value
-      return true;
+      auto attr = getEncodingOfType<BlockTensorDescAttr>();
+      assert(attr && "invalid on non BlockTensorDescAttr.");
+      return attr.getBoundaryCheck().getValue();
     }
 
     bool isScattered() {
-      return bool(getEncodingAsScatterTensorDescAttr());
+      return bool(getEncodingOfType<ScatterTensorDescAttr>());
     }
 
     // get the ChunkSize for scattered TensorDesc
     int getChunkSizeAsInt() {
-      auto attr = getEncoding();
-      auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
-      assert(scatter_attr && "invalid on non ScatterTensorDescAttr.");
-      return scatter_attr.getChunkSizeAsInt();
+      auto attr = getEncodingOfType<ScatterTensorDescAttr>();
+      assert(attr && "invalid on non ScatterTensorDescAttr.");
+      return attr.getChunkSizeAsInt();
     }
 
     /// Helper to drop all layout information from the TensorDesc type.
@@ -203,6 +193,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   let genVerifyDecl = 1;
 }
 
+def XeGPU_GatherScatterSourceType
+    : AnyTypeOf<[XeGPU_TensorDesc, XeGPU_GatherScatterBaseAddrType]>;
 
 def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
   let summary = "!xegpu.nbarrier a custom XeGPU type representing a barrier.";
@@ -212,6 +204,111 @@ def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
       return Base::get(context);
     };
   }];
+}
+
+def XeGPU_MemDesc: XeGPUTypeDef<"MemDesc", "mem_desc", [ShapedTypeInterface], "mlir::Type"> {
+  let summary = "MemDesc describing the data in SLM";
+  let description = [{
+    MemDesc represents a block of data stored in shared local memory.
+    By default, unless a layout attribute is provided, the data is stored
+    contiguously in row-major order within the region.
+
+    Examples:
+    ```mlir
+    // A multi-dimensional array stored in column-major order.
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128]>>
+
+    // A multi-dimensional array stored in a blocked layout. Elements within the same block
+    // are stored contiguously in memory. Blocks are stored in row-major order.
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<block = [8, 8]>>
+
+    // A multi-dimensional array stored in column-major order with blocked layout.
+    !xegpu.mem_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [8, 8]>>
+    ```
+  }];
+  let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
+                        "mlir::Type": $elementType,
+                        OptionalParameter<"MemLayoutAttr">: $mem_layout);
+
+  let extraClassDeclaration = [{
+    bool hasRank() const { return true; }
+
+    MemDescType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape, Type elementType) const {
+      return MemDescType::get(getContext(), shape.value_or(getShape()), elementType, getMemLayout());
+    }
+
+    ArrayAttr getStrideAttr() {
+      auto layout = getMemLayout();
+      if (layout && layout.hasAttr("stride")) {
+        return layout.getStrideAttr();
+      }
+      // derive and return default strides
+      SmallVector<int64_t> defaultStrides;
+      llvm::append_range(defaultStrides, getShape().drop_front());
+      llvm::append_values(defaultStrides, 1);
+      Builder builder(getContext());
+      return builder.getI64ArrayAttr(defaultStrides);
+    }
+
+    ArrayAttr getBlockAttr() {
+      auto layout = getMemLayout();
+      if (layout && layout.hasAttr("block")) {
+        return layout.getBlockAttr();
+      }
+      Builder builder(getContext());
+      return builder.getI64ArrayAttr({});
+    }
+
+    /// Heuristic to determine if the MemDesc uses column-major layout,
+    /// based on the rank and the value of the first stride dimension.
+    bool isColMajor() {
+      auto dim0 = dyn_cast<IntegerAttr>(getStrideAttr()[0]);
+      return getRank() == 2 && dim0.getInt() == 1;
+    }
+
+    // Get the Blocking shape for a MemDescType, Which is represented
+    // as an attribute in MemDescType. By default it is the shape
+    // of the mdescTy
+    SmallVector<int64_t> getBlockShape() {
+      SmallVector<int64_t> size(getShape());
+      ArrayAttr blockAttr = getBlockAttr();
+      if (!blockAttr.empty()) {
+        size.clear();
+        for (auto attr : blockAttr.getValue()) {
+          size.push_back(cast<IntegerAttr>(attr).getInt());
+        }
+      }
+      return size;
+    }
+
+    // Get strides as vector of integer. 
+    // If it contains block attribute, the strides are blocked strides.
+    //
+    // The blocking is applied to the base matrix shape derived from the
+    // memory descriptor's stride information. If the matrix described by
+    // the memory descriptor is not contiguous, it is assumed that the base
+    // matrix is contiguous and follows the same memory layout.
+    //
+    // It first computes the original matrix shape using the stride info,
+    // then computes the number of blocks in each dimension of original shape,
+    // then compute the outer block shape and stride,
+    // then combines the inner and outer block shape and stride
+    // e.g. for `mem_desc<32x256xf16, @block=[16, 8], @strides=[1, 32]>`
+    // its memory layout tuple is ([2,32,16,8],[128,256,1,16])
+    // for  `mem_desc<256x32xf16, @block=[8, 16]>` with default @stride[32, 1]
+    // its memory layout tuple is ([32,2,8,16],[256,128,16,1])
+    SmallVector<int64_t> getStrideShape();
+    
+    /// Generates instructions to compute the linearize offset 
+    //  if the memory descriptor is blocked, it returns linearize offset based on the blocked layout
+    //  the strides of memory descriptor is always considered regardless of blocked or not
+    Value getLinearOffsets(OpBuilder &builder,
+               Location loc, ArrayRef<OpFoldResult> offsets);
+
+
+  }];
+
+  let hasCustomAssemblyFormat = true;
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUTYPES_TD

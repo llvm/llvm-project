@@ -15,24 +15,22 @@ define void @_Z3fn1v() {
 ; CHECK-NEXT:    [[J_SROA_0_0_COPYLOAD:%.*]] = load i8, ptr [[X5]], align 1
 ; CHECK-NEXT:    br label [[DOTPREHEADER4_LR_PH:%.*]]
 ; CHECK:       .preheader4.lr.ph:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[X4]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext i8 [[J_SROA_0_0_COPYLOAD]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[X4]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    br label [[DOTPREHEADER4:%.*]]
 ; CHECK:       .preheader4:
 ; CHECK-NEXT:    [[K_09:%.*]] = phi ptr [ undef, [[DOTPREHEADER4_LR_PH]] ], [ [[X25:%.*]], [[X22:%.*]] ]
 ; CHECK-NEXT:    [[X8:%.*]] = icmp ult i32 0, 4
 ; CHECK-NEXT:    br i1 [[X8]], label [[DOTPREHEADER_LR_PH:%.*]], label [[X22]]
 ; CHECK:       .preheader.lr.ph:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[K_09]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label [[DOTPREHEADER:%.*]]
 ; CHECK:       .preheader:
 ; CHECK-NEXT:    br label [[X17:%.*]]
 ; CHECK:       x17:
 ; CHECK-NEXT:    br i1 false, label [[DOTPREHEADER]], label [[DOT_CRIT_EDGE_8:%.*]]
 ; CHECK:       ._crit_edge.8:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[K_09]], i64 [[TMP5]]
 ; CHECK-NEXT:    br label [[X22]]
 ; CHECK:       x22:
 ; CHECK-NEXT:    [[K_1_LCSSA:%.*]] = phi ptr [ [[SCEVGEP]], [[DOT_CRIT_EDGE_8]] ], [ [[K_09]], [[DOTPREHEADER4]] ]

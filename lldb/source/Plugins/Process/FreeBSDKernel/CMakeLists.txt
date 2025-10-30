@@ -2,7 +2,7 @@ set(FBSDKERNEL_LIBS)
 if(FBSDVMCore_FOUND)
   list(APPEND FBSDKERNEL_LIBS fbsdvmcore)
 endif()
-if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "FreeBSD")
   list(APPEND FBSDKERNEL_LIBS kvm)
 endif()
 

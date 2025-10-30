@@ -1,0 +1,41 @@
+# RUN: llc -run-pass=prologepilog -mtriple arm64-apple-ios -o - -simplify-mir \
+# RUN:    -verify-machineinstrs %s | FileCheck %s
+
+# CHECK:  hasStackFrame:   true
+
+--- |
+
+  define i32 @f(i32 %a, i32 %b) #0 {
+    %local_array = alloca [10 x i32], align 4
+    %temp = alloca i32, align 4
+    store i32 %a, ptr %temp, align 4
+    %loaded = load i32, ptr %temp, align 4
+    %gep = getelementptr inbounds [10 x i32], ptr %local_array, i64 0, i64 5
+    store i32 %loaded, ptr %gep, align 4
+    %result = add i32 %loaded, %b
+    %blah = call i32 @foo(i32 noundef %result)
+    ret i32 %blah
+  }
+
+  declare i32 @foo(i32 noundef)
+
+...
+---
+name:            f
+frameInfo:
+  adjustsStack:    true
+stack:
+  - { id: 0, name: local_array, size: 40, alignment: 4, local-offset: -40 }
+  - { id: 1, name: temp, size: 4, alignment: 4, local-offset: -44 }
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+
+    STRWui renamable $w0, %stack.1.temp, 0
+    STRWui renamable $w0, %stack.0.local_array, 5
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    $w0 = ADDWrr killed renamable $w0, killed renamable $w1
+    BL @foo, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $w0, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    RET_ReallyLR implicit $w0
+...

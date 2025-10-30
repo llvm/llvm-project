@@ -41,8 +41,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 // DWARFExpression constructor
 DWARFExpression::DWARFExpression() : m_data() {}
@@ -67,7 +67,8 @@ void DWARFExpression::UpdateValue(uint64_t const_value,
 }
 
 void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
-                                   ABI *abi) const {
+                                   ABI *abi,
+                                   llvm::DIDumpOptions options) const {
   auto *MCRegInfo = abi ? &abi->GetMCRegisterInfo() : nullptr;
   auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum,
                                  bool IsEH) -> llvm::StringRef {
@@ -79,10 +80,9 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
         return llvm::StringRef(RegName);
     return {};
   };
-  llvm::DIDumpOptions DumpOpts;
-  DumpOpts.GetNameForDWARFReg = GetRegName;
+  options.GetNameForDWARFReg = GetRegName;
   llvm::DWARFExpression E(m_data.GetAsLLVM(), m_data.GetAddressByteSize());
-  llvm::printDwarfExpression(&E, s->AsRawOstream(), DumpOpts, nullptr);
+  llvm::printDwarfExpression(&E, s->AsRawOstream(), options, nullptr);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
@@ -91,9 +91,10 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
-static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
-                                             lldb::RegisterKind reg_kind,
-                                             uint32_t reg_num, Value &value) {
+llvm::Error
+DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                           lldb::RegisterKind reg_kind,
+                                           uint32_t reg_num, Value &value) {
   if (reg_ctx == nullptr)
     return llvm::createStringError("no register context in frame");
 
@@ -908,8 +909,6 @@ static llvm::Error Evaluate_DW_OP_deref(DWARFExpression::Stack &stack,
               " for DW_OP_deref",
               pointer_addr),
           error.takeError());
-    if (ABISP abi_sp = process->GetABI())
-      pointer_value = abi_sp->FixCodeAddress(pointer_value);
     stack.back().GetScalar() = pointer_value;
     stack.back().ClearContext();
   } break;
@@ -1974,14 +1973,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
                   piece_byte_size,
                   (uint64_t)curr_piece_source_value.GetScalar().GetByteSize());
             }
-            // Create curr_piece with bit_size. By default Scalar
-            // grows to the nearest host integer type.
-            llvm::APInt fail_value(1, 0, false);
-            llvm::APInt ap_int = scalar.UInt128(fail_value);
-            assert(ap_int.getBitWidth() >= bit_size);
-            llvm::ArrayRef<uint64_t> buf{ap_int.getRawData(),
-                                         ap_int.getNumWords()};
-            curr_piece.GetScalar() = Scalar(llvm::APInt(bit_size, buf));
+
+            // We have seen a case where we have expression like:
+            //      DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x28
+            // here we are assuming the compiler was trying to zero
+            // extend the value that we should append to the buffer.
+            scalar.TruncOrExtendTo(bit_size, /*sign=*/false);
+            curr_piece.GetScalar() = scalar;
           } break;
           }
 
@@ -2078,7 +2076,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     case DW_OP_implicit_pointer: {
       dwarf4_location_description_kind = Implicit;
-      return llvm::createStringError("Could not evaluate %s.",
+      return llvm::createStringError("could not evaluate %s",
                                      DW_OP_value_to_name(op));
     }
 
@@ -2195,7 +2193,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         // Note that we don't have to parse FDEs because this DWARF expression
         // is commonly evaluated with a valid stack frame.
         StackID id = frame->GetStackID();
-        addr_t cfa = id.GetCallFrameAddress();
+        addr_t cfa = id.GetCallFrameAddressWithMetadata();
         if (cfa != LLDB_INVALID_ADDRESS) {
           stack.push_back(Scalar(cfa));
           stack.back().SetValueType(Value::ValueType::LoadAddress);
@@ -2302,7 +2300,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     default:
       if (dwarf_cu) {
-        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, stack)) {
+        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, reg_ctx,
+                                             reg_kind, stack)) {
           break;
         }
       }

@@ -920,10 +920,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER: {
     assert(!Subtarget->isAIXABI() &&
            "AIX does not support patchable function entry!");
-    // PATCHABLE_FUNCTION_ENTER on little endian is for XRAY support which is
-    // handled in PPCLinuxAsmPrinter.
-    if (MAI->isLittleEndian())
-      return;
     const Function &F = MF->getFunction();
     unsigned Num = 0;
     (void)F.getFnAttribute("patchable-function-entry")
@@ -1789,7 +1785,13 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
     // XRAY is only supported on PPC Linux little endian.
-    if (!MAI->isLittleEndian())
+    const Function &F = MF->getFunction();
+    unsigned Num = 0;
+    (void)F.getFnAttribute("patchable-function-entry")
+        .getValueAsString()
+        .getAsInteger(10, Num);
+
+    if (!MAI->isLittleEndian() || Num)
       break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
@@ -2155,7 +2157,8 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
 
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
-    TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym), LocalOffsetExp);
+    TS->emitLocalEntry(static_cast<MCSymbolELF *>(CurrentFnSym),
+                       LocalOffsetExp);
   } else if (Subtarget->isUsingPCRelativeCalls()) {
     // When generating the entry point for a function we have a few scenarios
     // based on whether or not that function uses R2 and whether or not that
@@ -2182,7 +2185,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyStart() {
         MF->hasInlineAsm() || (!PPCFI->usesTOCBasePtr() && UsesX2OrR2)) {
       PPCTargetStreamer *TS =
           static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
-      TS->emitLocalEntry(cast<MCSymbolELF>(CurrentFnSym),
+      TS->emitLocalEntry(static_cast<MCSymbolELF *>(CurrentFnSym),
                          MCConstantExpr::create(1, OutContext));
     }
   }
@@ -2274,9 +2277,9 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
 
 void PPCAIXAsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   // Setup CurrentFnDescSym and its containing csect.
-  MCSectionXCOFF *FnDescSec =
-      cast<MCSectionXCOFF>(getObjFileLowering().getSectionForFunctionDescriptor(
-          &MF.getFunction(), TM));
+  auto *FnDescSec = static_cast<MCSectionXCOFF *>(
+      getObjFileLowering().getSectionForFunctionDescriptor(&MF.getFunction(),
+                                                           TM));
   FnDescSec->setAlignment(Align(Subtarget->isPPC64() ? 8 : 4));
 
   CurrentFnDescSym = FnDescSec->getQualNameSymbol();
@@ -2401,7 +2404,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
             << static_cast<unsigned>(((V) & (TracebackTable::Field##Mask)) >>  \
                                      (TracebackTable::Field##Shift))
 
-  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobaLinkage);
+  GENBOOLCOMMENT("", FirstHalfOfMandatoryField, IsGlobalLinkage);
   GENBOOLCOMMENT(", ", FirstHalfOfMandatoryField, IsOutOfLineEpilogOrPrologue);
   EmitComment();
 
@@ -2669,9 +2672,9 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
     MCSymbol *EHInfoSym =
         TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(MF);
     MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(EHInfoSym, TOCType_EHBlock);
-    const MCSymbol *TOCBaseSym =
-        cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
-            ->getQualNameSymbol();
+    const MCSymbol *TOCBaseSym = static_cast<const MCSectionXCOFF *>(
+                                     getObjFileLowering().getTOCBaseSection())
+                                     ->getQualNameSymbol();
     const MCExpr *Exp =
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCEntry, Ctx),
                                 MCSymbolRefExpr::create(TOCBaseSym, Ctx), Ctx);
@@ -2766,7 +2769,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   if (GV->hasComdat())
     report_fatal_error("COMDAT not yet supported by AIX.");
 
-  MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
+  auto *GVSym = static_cast<MCSymbolXCOFF *>(getSymbol(GV));
 
   if (GV->isDeclarationForLinker()) {
     emitLinkage(GV, GVSym);
@@ -2788,7 +2791,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     }
   }
 
-  MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
+  auto *Csect = static_cast<MCSectionXCOFF *>(
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
 
   // Switch to the containing csect.
@@ -2859,7 +2862,7 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   MCSectionSubPair Current = OutStreamer->getCurrentSection();
   // Emit function descriptor.
   OutStreamer->switchSection(
-      cast<MCSymbolXCOFF>(CurrentFnDescSym)->getRepresentedCsect());
+      static_cast<MCSymbolXCOFF *>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
   for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
@@ -2869,9 +2872,9 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   OutStreamer->emitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
                          PointerSize);
   // Emit TOC base address.
-  const MCSymbol *TOCBaseSym =
-      cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
-          ->getQualNameSymbol();
+  const MCSymbol *TOCBaseSym = static_cast<const MCSectionXCOFF *>(
+                                   getObjFileLowering().getTOCBaseSection())
+                                   ->getQualNameSymbol();
   OutStreamer->emitValue(MCSymbolRefExpr::create(TOCBaseSym, OutContext),
                          PointerSize);
   // Emit a null environment pointer.
@@ -2994,12 +2997,13 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;
-      Name += cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName();
+      Name += static_cast<const MCSymbolXCOFF *>(I.first.first)
+                  ->getSymbolTableName();
       MCSymbol *S = OutContext.getOrCreateSymbol(Name);
-      TCEntry = cast<MCSectionXCOFF>(
+      TCEntry = static_cast<MCSectionXCOFF *>(
           getObjFileLowering().getSectionForTOCEntry(S, TM));
     } else {
-      TCEntry = cast<MCSectionXCOFF>(
+      TCEntry = static_cast<MCSectionXCOFF *>(
           getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
     }
     OutStreamer->switchSection(TCEntry);
@@ -3054,7 +3058,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
       return;
 
     SectionKind GOKind = getObjFileLowering().getKindForGlobal(GO, TM);
-    MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
+    auto *Csect = static_cast<MCSectionXCOFF *>(
         getObjFileLowering().SectionForGlobal(GO, GOKind, TM));
 
     Align GOAlign = getGVAlignment(GO, GO->getDataLayout());
@@ -3112,7 +3116,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     setCsectAlignment(&G);
     std::optional<CodeModel::Model> OptionalCodeModel = G.getCodeModel();
     if (OptionalCodeModel)
-      setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&G)),
+      setOptionalCodeModel(static_cast<MCSymbolXCOFF *>(getSymbol(&G)),
                            *OptionalCodeModel);
   }
 
@@ -3139,7 +3143,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (GVar) {
       std::optional<CodeModel::Model> OptionalCodeModel = GVar->getCodeModel();
       if (OptionalCodeModel)
-        setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&Alias)),
+        setOptionalCodeModel(static_cast<MCSymbolXCOFF *>(getSymbol(&Alias)),
                              *OptionalCodeModel);
     }
 
@@ -3190,8 +3194,8 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::BL_NOP: {
     const MachineOperand &MO = MI->getOperand(0);
     if (MO.isSymbol()) {
-      MCSymbolXCOFF *S =
-          cast<MCSymbolXCOFF>(OutContext.getOrCreateSymbol(MO.getSymbolName()));
+      auto *S = static_cast<MCSymbolXCOFF *>(
+          OutContext.getOrCreateSymbol(MO.getSymbolName()));
       ExtSymSDNodeSymbols.insert(S);
     }
   } break;
@@ -3316,9 +3320,9 @@ void PPCAIXAsmPrinter::emitTTypeReference(const GlobalValue *GV,
       GlobalType = TOCType_GlobalExternal;
     MCSymbol *TypeInfoSym = TM.getSymbol(GV);
     MCSymbol *TOCEntry = lookUpOrCreateTOCEntry(TypeInfoSym, GlobalType);
-    const MCSymbol *TOCBaseSym =
-        cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
-            ->getQualNameSymbol();
+    const MCSymbol *TOCBaseSym = static_cast<const MCSectionXCOFF *>(
+                                     getObjFileLowering().getTOCBaseSection())
+                                     ->getQualNameSymbol();
     auto &Ctx = OutStreamer->getContext();
     const MCExpr *Exp =
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCEntry, Ctx),

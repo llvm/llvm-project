@@ -20,7 +20,7 @@
 ]
 
 //
-// Test the lowering of `vector.contract` using the `LowerContractionToSVEI8MMPattern`
+// Test the lowering of `vector.contract` using the `LowerContractionToSVEBFMMLAPattern`
 //
 // The operation that the `vector.contract` in this test performs is matrix
 // multiplication with accumulate
@@ -42,7 +42,7 @@
 // registers in the layout expected by FEAT_I8MM instructions.
 // Such a `vector.contract` is representative of the code we aim to generate
 // by scalable vectorisation of `linalg.mmt4d`.
-// See mlir/lib/Dialect/ArmSVE/Transforms/LowerContractionToSVEI8MMPattern.cpp
+// See mlir/lib/Dialect/ArmSVE/Transforms/LowerContractToSVEPatterns.cpp
 // for more information and rationale about these shapes.
 //
 // In this specific test we use M == 4 and N == 4
@@ -312,7 +312,7 @@ func.func @test_usmmla() attributes {no_inline} {
 
 // Test the operation where LHS is interpreted as signed and RHS is interpreted
 // as unsigned. In this test we ultimately emit end execute the `usmmla`
-// instruction with reversed operands, see `LowerContractionToSVEI8MMPattern.cpp`
+// instruction with reversed operands, see `LowerContractToSVEPatterns.cpp`
 // for more details.
 
 // CHECK-IR-LABEL: llvm.func @test_summla

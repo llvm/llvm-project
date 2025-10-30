@@ -346,17 +346,16 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       Displacement *= -1;
     }
 
-    // Track whether B is before a relaxable instruction and whether A is after
-    // a relaxable instruction. If SA and SB are separated by a linker-relaxable
-    // instruction, the difference cannot be resolved as it may be changed by
-    // the linker.
+    // Track whether B is before a relaxable instruction/alignment and whether A
+    // is after a relaxable instruction/alignment. If SA and SB are separated by
+    // a linker-relaxable instruction/alignment, the difference cannot be
+    // resolved as it may be changed by the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
     for (auto F = FB; F; F = F->getNext()) {
-      auto DF = F->getKind() == MCFragment::FT_Data ? F : nullptr;
-      if (DF && DF->isLinkerRelaxable()) {
-        if (&*F != FB || SBOffset != DF->getContents().size())
+      if (F && F->isLinkerRelaxable()) {
+        if (&*F != FB || SBOffset != F->getSize())
           BBeforeRelax = true;
-        if (&*F != FA || SAOffset == DF->getContents().size())
+        if (&*F != FA || SAOffset == F->getSize())
           AAfterRelax = true;
         if (BBeforeRelax && AAfterRelax)
           return;
@@ -370,20 +369,15 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       }
 
       int64_t Num;
-      unsigned Count;
-      if (DF) {
-        Displacement += DF->getContents().size();
-      } else if (F->getKind() == MCFragment::FT_Relaxable &&
+      if (F->getKind() == MCFragment::FT_Data) {
+        Displacement += F->getFixedSize();
+      } else if ((F->getKind() == MCFragment::FT_Relaxable ||
+                  F->getKind() == MCFragment::FT_Align) &&
                  Asm->hasFinalLayout()) {
         // Before finishLayout, a relaxable fragment's size is indeterminate.
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
         Displacement += F->getSize();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(F);
-                 AF && Layout && AF->hasEmitNops() &&
-                 !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
-                     *AF, Count)) {
-        Displacement += Asm->computeFragmentSize(*AF);
       } else if (auto *FF = dyn_cast<MCFillFragment>(F);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();

@@ -99,6 +99,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
     libc.src.stdlib.free
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -582,6 +585,88 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
     libc.src.math.ufromfpxf128
+  )
+endif()
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.bf16add
+  libc.src.math.bf16addf
+  libc.src.math.bf16addl
+  libc.src.math.bf16div
+  libc.src.math.bf16divf
+  libc.src.math.bf16divl
+  libc.src.math.bf16fma
+  libc.src.math.bf16fmaf
+  libc.src.math.bf16fmal
+  libc.src.math.bf16mul
+  libc.src.math.bf16mulf
+  libc.src.math.bf16mull
+  libc.src.math.bf16sub
+  libc.src.math.bf16subf
+  libc.src.math.bf16subl
+  libc.src.math.canonicalizebf16
+  libc.src.math.ceilbf16
+  libc.src.math.copysignbf16
+  libc.src.math.fabsbf16
+  libc.src.math.fdimbf16
+  libc.src.math.floorbf16
+  libc.src.math.fmaxbf16
+  libc.src.math.fmaximumbf16
+  libc.src.math.fmaximum_magbf16
+  libc.src.math.fmaximum_mag_numbf16
+  libc.src.math.fmaximum_numbf16
+  libc.src.math.fminbf16
+  libc.src.math.fminimumbf16
+  libc.src.math.fminimum_magbf16
+  libc.src.math.fminimum_mag_numbf16
+  libc.src.math.fminimum_numbf16
+  libc.src.math.fmodbf16
+  libc.src.math.frexpbf16
+  libc.src.math.fromfpbf16
+  libc.src.math.fromfpxbf16
+  libc.src.math.getpayloadbf16
+  libc.src.math.ilogbbf16
+  libc.src.math.iscanonicalbf16
+  libc.src.math.issignalingbf16
+  libc.src.math.ldexpbf16
+  libc.src.math.llogbbf16
+  libc.src.math.llrintbf16
+  libc.src.math.llroundbf16
+  libc.src.math.log_bf16
+  libc.src.math.logbbf16
+  libc.src.math.lrintbf16
+  libc.src.math.lroundbf16
+  libc.src.math.modfbf16
+  libc.src.math.nanbf16
+  libc.src.math.nearbyintbf16
+  libc.src.math.nextafterbf16
+  libc.src.math.nextdownbf16
+  libc.src.math.nexttowardbf16
+  libc.src.math.nextupbf16
+  libc.src.math.remainderbf16
+  libc.src.math.remquobf16
+  libc.src.math.rintbf16
+  libc.src.math.roundbf16
+  libc.src.math.roundevenbf16
+  libc.src.math.scalblnbf16
+  libc.src.math.scalbnbf16
+  libc.src.math.setpayloadbf16
+  libc.src.math.setpayloadsigbf16
+  libc.src.math.sqrtbf16
+  libc.src.math.truncbf16
+  libc.src.math.totalorderbf16
+  libc.src.math.totalordermagbf16
+  libc.src.math.ufromfpbf16
+  libc.src.math.ufromfpxbf16
+)
+
+if(LIBC_TYPES_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C++23 mixed bfloat16 and _Float128 entrypoints
+    libc.src.math.bf16addf128
+    libc.src.math.bf16mulf128
+    libc.src.math.bf16subf128
   )
 endif()
 

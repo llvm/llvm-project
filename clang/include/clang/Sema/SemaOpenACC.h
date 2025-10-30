@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAOPENACC_H
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OpenACCKinds.h"
@@ -176,10 +177,6 @@ private:
 
     void checkFor();
 
-    //  void checkRangeFor(); ?? ERICH
-    //  const ValueDecl *checkInit();
-    //  void checkCond(const ValueDecl *Init);
-    //  void checkInc(const ValueDecl *Init);
   public:
     // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
@@ -231,6 +228,11 @@ private:
 
   bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                               SourceLocation ClauseLoc);
+  bool CreateReductionCombinerRecipe(
+      SourceLocation loc, OpenACCReductionOperator ReductionOperator,
+      QualType VarTy,
+      llvm::SmallVectorImpl<OpenACCReductionRecipe::CombinerRecipe>
+          &CombinerRecipes);
 
 public:
   // Needed from the visitor, so should be public.
@@ -240,6 +242,12 @@ public:
   bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
+
+  OpenACCPrivateRecipe CreatePrivateInitRecipe(const Expr *VarExpr);
+  OpenACCFirstPrivateRecipe CreateFirstPrivateInitRecipe(const Expr *VarExpr);
+  OpenACCReductionRecipeWithStorage
+  CreateReductionInitRecipe(OpenACCReductionOperator ReductionOperator,
+                            const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -908,6 +916,7 @@ public:
   ExprResult CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
                                OpenACCReductionOperator ReductionOp,
                                Expr *VarExpr);
+  bool CheckReductionVarType(Expr *VarExpr);
 
   /// Called to check the 'var' type is a variable of pointer type, necessary
   /// for 'deviceptr' and 'attach' clauses. Returns true on success.
@@ -947,7 +956,9 @@ public:
                        OpenACCDirectiveKind DirectiveKind,
                        SourceLocation BeginLoc, SourceLocation LParenLoc,
                        OpenACCReductionOperator ReductionOp,
-                       ArrayRef<Expr *> Vars, SourceLocation EndLoc);
+                       ArrayRef<Expr *> Vars,
+                       ArrayRef<OpenACCReductionRecipeWithStorage> Recipes,
+                       SourceLocation EndLoc);
 
   ExprResult BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);
   ExprResult ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc);

@@ -11,6 +11,6 @@
 
 #include <clc/internal/clc.h>
 
-_CLC_OVERLOAD _CLC_DECL size_t __clc_get_group_id(uint dim);
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL size_t __clc_get_group_id(uint dim);
 
 #endif // __CLC_WORKITEM_CLC_GET_GROUP_ID_H__

@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <numeric>
 
@@ -70,8 +71,7 @@ TensorType inferReshapeExpandedType(TensorType inputType,
 
         // Calculate the product of all elements in 'newShape' except for the -1
         // placeholder, which we discard by negating the result.
-        int64_t totalSizeNoPlaceholder = -std::accumulate(
-            newShape.begin(), newShape.end(), 1, std::multiplies<int64_t>());
+        int64_t totalSizeNoPlaceholder = -llvm::product_of(newShape);
 
         // If there is a 0 component in 'newShape', resolve the placeholder as
         // 0.
@@ -229,8 +229,8 @@ public:
   matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
     auto loc = reshape.getLoc();
-    auto resultType = cast_if_present<ShapedType>(
-        getTypeConverter()->convertType(reshape.getType()));
+    auto resultType =
+        getTypeConverter()->convertType<ShapedType>(reshape.getType());
     if (!resultType) {
       return rewriter.notifyMatchFailure(reshape.getLoc(),
                                          "could not convert result type");
@@ -308,15 +308,15 @@ public:
       if (ShapedType::isStatic(sizes.back()))
         continue;
 
-      auto dim = rewriter.create<tensor::DimOp>(loc, input, index);
-      auto offset = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIndexAttr(sliceStarts[index]));
-      dynSizes.push_back(rewriter.create<arith::SubIOp>(loc, dim, offset));
+      auto dim = tensor::DimOp::create(rewriter, loc, input, index);
+      auto offset = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(sliceStarts[index]));
+      dynSizes.push_back(arith::SubIOp::create(rewriter, loc, dim, offset));
     }
 
-    auto newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
-        sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}), dynSizes,
-        ValueRange({}), rewriter.getDenseI64ArrayAttr(sliceStarts),
+    auto newSliceOp = tensor::ExtractSliceOp::create(
+        rewriter, sliceOp.getLoc(), sliceOp.getType(), input, ValueRange({}),
+        dynSizes, ValueRange({}), rewriter.getDenseI64ArrayAttr(sliceStarts),
         rewriter.getDenseI64ArrayAttr(sizes),
         rewriter.getDenseI64ArrayAttr(strides));
 
@@ -361,7 +361,7 @@ public:
 
     Value padConstant = rewriter.createOrFold<tensor::ExtractOp>(
         loc, padOp.getPadConst(),
-        ValueRange({rewriter.create<arith::ConstantIndexOp>(loc, 0)}));
+        ValueRange({arith::ConstantIndexOp::create(rewriter, loc, 0)}));
 
     if (!padConstant) {
       return rewriter.notifyMatchFailure(
@@ -375,16 +375,16 @@ public:
     highValues.reserve(rank);
 
     for (int i = 0; i < rank; i++) {
-      Value lowVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIndexAttr(paddingVals[2 * i]));
-      Value highVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIndexAttr(paddingVals[2 * i + 1]));
+      Value lowVal = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(paddingVals[2 * i]));
+      Value highVal = arith::ConstantOp::create(
+          rewriter, loc, rewriter.getIndexAttr(paddingVals[2 * i + 1]));
       lowValues.push_back(lowVal);
       highValues.push_back(highVal);
     }
 
-    auto newPadOp = rewriter.create<tensor::PadOp>(
-        loc, padOp.getType(), input, lowValues, highValues, padConstant);
+    auto newPadOp = tensor::PadOp::create(rewriter, loc, padOp.getType(), input,
+                                          lowValues, highValues, padConstant);
 
     rewriter.replaceOp(padOp, newPadOp.getResult());
     return success();
@@ -402,7 +402,7 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
     Location loc = op.getLoc();
     int axis = op.getAxis();
     Value axisValue =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(axis));
+        arith::ConstantOp::create(rewriter, loc, rewriter.getIndexAttr(axis));
     int64_t rank = resultType.getRank();
 
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
@@ -439,8 +439,9 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
       }
     }
 
-    Value result = rewriter.create<tensor::EmptyOp>(
-        loc, resultType.getShape(), resultType.getElementType(), dynDims);
+    Value result =
+        tensor::EmptyOp::create(rewriter, loc, resultType.getShape(),
+                                resultType.getElementType(), dynDims);
 
     for (auto [arg, offset] : llvm::zip(adaptor.getOperands(), axisOffsets)) {
       auto sizes = tensor::getMixedSizes(rewriter, op.getLoc(), arg);

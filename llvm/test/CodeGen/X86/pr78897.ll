@@ -22,7 +22,7 @@ define <16 x i8> @produceShuffleVectorForByte(i8 zeroext %0) nounwind {
 ; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [17,17,17,17,17,17,17,17,u,u,u,u,u,u,u,u]
+; X86-SSE2-NEXT:    movq {{.*#+}} xmm1 = [17,17,17,17,17,17,17,17,0,0,0,0,0,0,0,0]
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm1
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,1,1]
 ; X86-SSE2-NEXT:    movd %xmm2, %esi

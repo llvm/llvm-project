@@ -14,36 +14,20 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Extract author email
         id: author
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          # Use Github GraphQL APIs to get the email associated with the PR author because this takes into account the GitHub settings for email privacy.
-          query='
-          query($login: String!) {
-            user(login: $login) {
-              email
-            }
-          }'
-
-          PR_AUTHOR=${{ github.event.pull_request.user.login }}
-
-          email=$(gh api graphql -f login="$PR_AUTHOR" -f query="$query" --jq '.data.user.email')
-          echo "EMAIL_AUTHOR_GH_UI=$email" >> "$GITHUB_OUTPUT"
-
+          git log -1
+          echo "EMAIL=$(git show -s --format='%ae' HEAD~0)" >> $GITHUB_OUTPUT
           # Create empty comment file
           echo "[]" > comments
 
-      # When EMAIL_AUTHOR_GH_UI is NULL, author's email is hidden in GitHub UI.
-      # In this case, we warn the user to turn off "Keep my email addresses private"
-      # setting in their account.
       - name: Validate author email
-        if: ${{ steps.author.outputs.EMAIL_AUTHOR_GH_UI == '' }}
+        if: ${{ endsWith(steps.author.outputs.EMAIL, 'noreply.github.com')  }}
         env:
           COMMENT: >-
             ⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.<br/>
@@ -55,7 +39,7 @@ jobs:
           [{"body" : "$COMMENT"}]
           EOF
 
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: workflow-args

@@ -28,7 +28,7 @@ int main(int, char**) {
   static_assert(test_constraints<std::deque, int, double>());
 
   // TODO(varconst): `deque`'s constructors currently aren't exception-safe.
-  // See https://github.com/llvm/llvm-project/issues/62056.
+  // See https://llvm.org/PR62056.
   //test_exception_safety_throwing_copy<std::deque>();
   //test_exception_safety_throwing_allocator<std::deque, int>();
 

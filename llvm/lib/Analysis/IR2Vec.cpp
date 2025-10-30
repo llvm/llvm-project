@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Module.h"
@@ -32,11 +33,11 @@ using namespace ir2vec;
 #define DEBUG_TYPE "ir2vec"
 
 STATISTIC(VocabMissCounter,
-          "Number of lookups to entites not present in the vocabulary");
+          "Number of lookups to entities not present in the vocabulary");
 
 namespace llvm {
 namespace ir2vec {
-static cl::OptionCategory IR2VecCategory("IR2Vec Options");
+cl::OptionCategory IR2VecCategory("IR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
 static cl::opt<std::string>
@@ -52,6 +53,15 @@ cl::opt<float> TypeWeight("ir2vec-type-weight", cl::Optional, cl::init(0.5),
 cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::Optional, cl::init(0.2),
                          cl::desc("Weight for argument embeddings"),
                          cl::cat(IR2VecCategory));
+cl::opt<IR2VecKind> IR2VecEmbeddingKind(
+    "ir2vec-kind", cl::Optional,
+    cl::values(clEnumValN(IR2VecKind::Symbolic, "symbolic",
+                          "Generate symbolic embeddings"),
+               clEnumValN(IR2VecKind::FlowAware, "flow-aware",
+                          "Generate flow-aware embeddings")),
+    cl::init(IR2VecKind::Symbolic), cl::desc("IR2Vec embedding kind"),
+    cl::cat(IR2VecCategory));
+
 } // namespace ir2vec
 } // namespace llvm
 
@@ -123,8 +133,12 @@ bool Embedding::approximatelyEquals(const Embedding &RHS,
                                     double Tolerance) const {
   assert(this->size() == RHS.size() && "Vectors must have the same dimension");
   for (size_t Itr = 0; Itr < this->size(); ++Itr)
-    if (std::abs((*this)[Itr] - RHS[Itr]) > Tolerance)
+    if (std::abs((*this)[Itr] - RHS[Itr]) > Tolerance) {
+      LLVM_DEBUG(errs() << "Embedding mismatch at index " << Itr << ": "
+                        << (*this)[Itr] << " vs " << RHS[Itr]
+                        << "; Tolerance: " << Tolerance << "\n");
       return false;
+    }
   return true;
 }
 
@@ -139,219 +153,169 @@ void Embedding::print(raw_ostream &OS) const {
 // Embedder and its subclasses
 //===----------------------------------------------------------------------===//
 
-Embedder::Embedder(const Function &F, const Vocabulary &Vocab)
-    : F(F), Vocab(Vocab), Dimension(Vocab.getDimension()),
-      OpcWeight(::OpcWeight), TypeWeight(::TypeWeight), ArgWeight(::ArgWeight) {
-}
-
 std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
                                            const Vocabulary &Vocab) {
   switch (Mode) {
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocab);
+  case IR2VecKind::FlowAware:
+    return std::make_unique<FlowAwareEmbedder>(F, Vocab);
   }
   return nullptr;
 }
 
-const InstEmbeddingsMap &Embedder::getInstVecMap() const {
-  if (InstVecMap.empty())
-    computeEmbeddings();
-  return InstVecMap;
-}
+Embedding Embedder::computeEmbeddings() const {
+  Embedding FuncVector(Dimension, 0.0);
 
-const BBEmbeddingsMap &Embedder::getBBVecMap() const {
-  if (BBVecMap.empty())
-    computeEmbeddings();
-  return BBVecMap;
-}
+  if (F.isDeclaration())
+    return FuncVector;
 
-const Embedding &Embedder::getBBVector(const BasicBlock &BB) const {
-  auto It = BBVecMap.find(&BB);
-  if (It != BBVecMap.end())
-    return It->second;
-  computeEmbeddings(BB);
-  return BBVecMap[&BB];
-}
-
-const Embedding &Embedder::getFunctionVector() const {
-  // Currently, we always (re)compute the embeddings for the function.
-  // This is cheaper than caching the vector.
-  computeEmbeddings();
+  // Consider only the basic blocks that are reachable from entry
+  for (const BasicBlock *BB : depth_first(&F))
+    FuncVector += computeEmbeddings(*BB);
   return FuncVector;
 }
 
-void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
+Embedding Embedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
   // We consider only the non-debug and non-pseudo instructions
-  for (const auto &I : BB.instructionsWithoutDebug()) {
-    Embedding ArgEmb(Dimension, 0);
-    for (const auto &Op : I.operands())
-      ArgEmb += Vocab[Op];
-    auto InstVector =
-        Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
-    InstVecMap[&I] = InstVector;
-    BBVector += InstVector;
-  }
-  BBVecMap[&BB] = BBVector;
+  for (const auto &I : BB.instructionsWithoutDebug())
+    BBVector += computeEmbeddings(I);
+  return BBVector;
 }
 
-void SymbolicEmbedder::computeEmbeddings() const {
-  if (F.isDeclaration())
-    return;
+Embedding SymbolicEmbedder::computeEmbeddings(const Instruction &I) const {
+  // Currently, we always (re)compute the embeddings for symbolic embedder.
+  // This is cheaper than caching the vectors.
+  Embedding ArgEmb(Dimension, 0);
+  for (const auto &Op : I.operands())
+    ArgEmb += Vocab[*Op];
+  auto InstVector =
+      Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
+  if (const auto *IC = dyn_cast<CmpInst>(&I))
+    InstVector += Vocab[IC->getPredicate()];
+  return InstVector;
+}
 
-  // Consider only the basic blocks that are reachable from entry
-  for (const BasicBlock *BB : depth_first(&F)) {
-    computeEmbeddings(*BB);
-    FuncVector += BBVecMap[BB];
+Embedding FlowAwareEmbedder::computeEmbeddings(const Instruction &I) const {
+  // If we have already computed the embedding for this instruction, return it
+  auto It = InstVecMap.find(&I);
+  if (It != InstVecMap.end())
+    return It->second;
+
+  // TODO: Handle call instructions differently.
+  // For now, we treat them like other instructions
+  Embedding ArgEmb(Dimension, 0);
+  for (const auto &Op : I.operands()) {
+    // If the operand is defined elsewhere, we use its embedding
+    if (const auto *DefInst = dyn_cast<Instruction>(Op)) {
+      auto DefIt = InstVecMap.find(DefInst);
+      // Fixme (#159171): Ideally we should never miss an instruction
+      // embedding here.
+      // But when we have cyclic dependencies (e.g., phi
+      // nodes), we might miss the embedding. In such cases, we fall back to
+      // using the vocabulary embedding. This can be fixed by iterating to a
+      // fixed-point, or by using a simple solver for the set of simultaneous
+      // equations.
+      // Another case when we might miss an instruction embedding is when
+      // the operand instruction is in a different basic block that has not
+      // been processed yet. This can be fixed by processing the basic blocks
+      // in a topological order.
+      if (DefIt != InstVecMap.end())
+        ArgEmb += DefIt->second;
+      else
+        ArgEmb += Vocab[*Op];
+    }
+    // If the operand is not defined by an instruction, we use the
+    // vocabulary
+    else {
+      LLVM_DEBUG(errs() << "Using embedding from vocabulary for operand: "
+                        << *Op << "=" << Vocab[*Op][0] << "\n");
+      ArgEmb += Vocab[*Op];
+    }
   }
+  // Create the instruction vector by combining opcode, type, and arguments
+  // embeddings
+  auto InstVector =
+      Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
+  if (const auto *IC = dyn_cast<CmpInst>(&I))
+    InstVector += Vocab[IC->getPredicate()];
+  InstVecMap[&I] = InstVector;
+  return InstVector;
 }
 
 // ==----------------------------------------------------------------------===//
-// Vocabulary
+// VocabStorage
 //===----------------------------------------------------------------------===//
 
-Vocabulary::Vocabulary(VocabVector &&Vocab)
-    : Vocab(std::move(Vocab)), Valid(true) {}
+VocabStorage::VocabStorage(std::vector<std::vector<Embedding>> &&SectionData)
+    : Sections(std::move(SectionData)), TotalSize([&] {
+        assert(!Sections.empty() && "Vocabulary has no sections");
+        // Compute total size across all sections
+        size_t Size = 0;
+        for (const auto &Section : Sections) {
+          assert(!Section.empty() && "Vocabulary section is empty");
+          Size += Section.size();
+        }
+        return Size;
+      }()),
+      Dimension([&] {
+        // Get dimension from the first embedding in the first section - all
+        // embeddings must have the same dimension
+        assert(!Sections.empty() && "Vocabulary has no sections");
+        assert(!Sections[0].empty() && "First section of vocabulary is empty");
+        unsigned ExpectedDim = static_cast<unsigned>(Sections[0][0].size());
 
-bool Vocabulary::isValid() const {
-  return Vocab.size() == (MaxOpcodes + MaxTypeIDs + MaxOperandKinds) && Valid;
+        // Verify that all embeddings across all sections have the same
+        // dimension
+        [[maybe_unused]] auto allSameDim =
+            [ExpectedDim](const std::vector<Embedding> &Section) {
+              return std::all_of(Section.begin(), Section.end(),
+                                 [ExpectedDim](const Embedding &Emb) {
+                                   return Emb.size() == ExpectedDim;
+                                 });
+            };
+        assert(std::all_of(Sections.begin(), Sections.end(), allSameDim) &&
+               "All embeddings must have the same dimension");
+
+        return ExpectedDim;
+      }()) {}
+
+const Embedding &VocabStorage::const_iterator::operator*() const {
+  assert(SectionId < Storage->Sections.size() && "Invalid section ID");
+  assert(LocalIndex < Storage->Sections[SectionId].size() &&
+         "Local index out of range");
+  return Storage->Sections[SectionId][LocalIndex];
 }
 
-size_t Vocabulary::size() const {
-  assert(Valid && "IR2Vec Vocabulary is invalid");
-  return Vocab.size();
-}
-
-unsigned Vocabulary::getDimension() const {
-  assert(Valid && "IR2Vec Vocabulary is invalid");
-  return Vocab[0].size();
-}
-
-const Embedding &Vocabulary::operator[](unsigned Opcode) const {
-  assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
-  return Vocab[Opcode - 1];
-}
-
-const Embedding &Vocabulary::operator[](Type::TypeID TypeId) const {
-  assert(static_cast<unsigned>(TypeId) < MaxTypeIDs && "Invalid type ID");
-  return Vocab[MaxOpcodes + static_cast<unsigned>(TypeId)];
-}
-
-const ir2vec::Embedding &Vocabulary::operator[](const Value *Arg) const {
-  OperandKind ArgKind = getOperandKind(Arg);
-  return Vocab[MaxOpcodes + MaxTypeIDs + static_cast<unsigned>(ArgKind)];
-}
-
-StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
-  assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
-#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
-  if (Opcode == NUM) {                                                         \
-    return #OPCODE;                                                            \
+VocabStorage::const_iterator &VocabStorage::const_iterator::operator++() {
+  ++LocalIndex;
+  // Check if we need to move to the next section
+  if (SectionId < Storage->getNumSections() &&
+      LocalIndex >= Storage->Sections[SectionId].size()) {
+    assert(LocalIndex == Storage->Sections[SectionId].size() &&
+           "Local index should be at the end of the current section");
+    LocalIndex = 0;
+    ++SectionId;
   }
-#include "llvm/IR/Instruction.def"
-#undef HANDLE_INST
-  return "UnknownOpcode";
+  return *this;
 }
 
-StringRef Vocabulary::getVocabKeyForTypeID(Type::TypeID TypeID) {
-  switch (TypeID) {
-  case Type::VoidTyID:
-    return "VoidTy";
-  case Type::HalfTyID:
-  case Type::BFloatTyID:
-  case Type::FloatTyID:
-  case Type::DoubleTyID:
-  case Type::X86_FP80TyID:
-  case Type::FP128TyID:
-  case Type::PPC_FP128TyID:
-    return "FloatTy";
-  case Type::IntegerTyID:
-    return "IntegerTy";
-  case Type::FunctionTyID:
-    return "FunctionTy";
-  case Type::StructTyID:
-    return "StructTy";
-  case Type::ArrayTyID:
-    return "ArrayTy";
-  case Type::PointerTyID:
-  case Type::TypedPointerTyID:
-    return "PointerTy";
-  case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
-    return "VectorTy";
-  case Type::LabelTyID:
-    return "LabelTy";
-  case Type::TokenTyID:
-    return "TokenTy";
-  case Type::MetadataTyID:
-    return "MetadataTy";
-  case Type::X86_AMXTyID:
-  case Type::TargetExtTyID:
-    return "UnknownTy";
-  }
-  return "UnknownTy";
+bool VocabStorage::const_iterator::operator==(
+    const const_iterator &Other) const {
+  return Storage == Other.Storage && SectionId == Other.SectionId &&
+         LocalIndex == Other.LocalIndex;
 }
 
-StringRef Vocabulary::getVocabKeyForOperandKind(Vocabulary::OperandKind Kind) {
-  unsigned Index = static_cast<unsigned>(Kind);
-  assert(Index < MaxOperandKinds && "Invalid OperandKind");
-  return OperandKindNames[Index];
+bool VocabStorage::const_iterator::operator!=(
+    const const_iterator &Other) const {
+  return !(*this == Other);
 }
 
-Vocabulary::VocabVector Vocabulary::createDummyVocabForTest(unsigned Dim) {
-  VocabVector DummyVocab;
-  float DummyVal = 0.1f;
-  // Create a dummy vocabulary with entries for all opcodes, types, and
-  // operand
-  for ([[maybe_unused]] unsigned _ :
-       seq(0u, Vocabulary::MaxOpcodes + Vocabulary::MaxTypeIDs +
-                   Vocabulary::MaxOperandKinds)) {
-    DummyVocab.push_back(Embedding(Dim, DummyVal));
-    DummyVal += 0.1f;
-  }
-  return DummyVocab;
-}
-
-// Helper function to classify an operand into OperandKind
-Vocabulary::OperandKind Vocabulary::getOperandKind(const Value *Op) {
-  if (isa<Function>(Op))
-    return OperandKind::FunctionID;
-  if (isa<PointerType>(Op->getType()))
-    return OperandKind::PointerID;
-  if (isa<Constant>(Op))
-    return OperandKind::ConstantID;
-  return OperandKind::VariableID;
-}
-
-StringRef Vocabulary::getStringKey(unsigned Pos) {
-  assert(Pos < MaxOpcodes + MaxTypeIDs + MaxOperandKinds &&
-         "Position out of bounds in vocabulary");
-  // Opcode
-  if (Pos < MaxOpcodes)
-    return getVocabKeyForOpcode(Pos + 1);
-  // Type
-  if (Pos < MaxOpcodes + MaxTypeIDs)
-    return getVocabKeyForTypeID(static_cast<Type::TypeID>(Pos - MaxOpcodes));
-  // Operand
-  return getVocabKeyForOperandKind(
-      static_cast<OperandKind>(Pos - MaxOpcodes - MaxTypeIDs));
-}
-
-// For now, assume vocabulary is stable unless explicitly invalidated.
-bool Vocabulary::invalidate(Module &M, const PreservedAnalyses &PA,
-                            ModuleAnalysisManager::Invalidator &Inv) const {
-  auto PAC = PA.getChecker<IR2VecVocabAnalysis>();
-  return !(PAC.preservedWhenStateless());
-}
-
-// ==----------------------------------------------------------------------===//
-// IR2VecVocabAnalysis
-//===----------------------------------------------------------------------===//
-
-Error IR2VecVocabAnalysis::parseVocabSection(
-    StringRef Key, const json::Value &ParsedVocabValue, VocabMap &TargetVocab,
-    unsigned &Dim) {
+Error VocabStorage::parseVocabSection(StringRef Key,
+                                      const json::Value &ParsedVocabValue,
+                                      VocabMap &TargetVocab, unsigned &Dim) {
   json::Path::Root Path("");
   const json::Object *RootObj = ParsedVocabValue.getAsObject();
   if (!RootObj)
@@ -386,9 +350,141 @@ Error IR2VecVocabAnalysis::parseVocabSection(
   return Error::success();
 }
 
+// ==----------------------------------------------------------------------===//
+// Vocabulary
+//===----------------------------------------------------------------------===//
+
+StringRef Vocabulary::getVocabKeyForOpcode(unsigned Opcode) {
+  assert(Opcode >= 1 && Opcode <= MaxOpcodes && "Invalid opcode");
+#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
+  if (Opcode == NUM) {                                                         \
+    return #OPCODE;                                                            \
+  }
+#include "llvm/IR/Instruction.def"
+#undef HANDLE_INST
+  return "UnknownOpcode";
+}
+
+// Helper function to classify an operand into OperandKind
+Vocabulary::OperandKind Vocabulary::getOperandKind(const Value *Op) {
+  if (isa<Function>(Op))
+    return OperandKind::FunctionID;
+  if (isa<PointerType>(Op->getType()))
+    return OperandKind::PointerID;
+  if (isa<Constant>(Op))
+    return OperandKind::ConstantID;
+  return OperandKind::VariableID;
+}
+
+unsigned Vocabulary::getPredicateLocalIndex(CmpInst::Predicate P) {
+  if (P >= CmpInst::FIRST_FCMP_PREDICATE && P <= CmpInst::LAST_FCMP_PREDICATE)
+    return P - CmpInst::FIRST_FCMP_PREDICATE;
+  else
+    return P - CmpInst::FIRST_ICMP_PREDICATE +
+           (CmpInst::LAST_FCMP_PREDICATE - CmpInst::FIRST_FCMP_PREDICATE + 1);
+}
+
+CmpInst::Predicate Vocabulary::getPredicateFromLocalIndex(unsigned LocalIndex) {
+  unsigned fcmpRange =
+      CmpInst::LAST_FCMP_PREDICATE - CmpInst::FIRST_FCMP_PREDICATE + 1;
+  if (LocalIndex < fcmpRange)
+    return static_cast<CmpInst::Predicate>(CmpInst::FIRST_FCMP_PREDICATE +
+                                           LocalIndex);
+  else
+    return static_cast<CmpInst::Predicate>(CmpInst::FIRST_ICMP_PREDICATE +
+                                           LocalIndex - fcmpRange);
+}
+
+StringRef Vocabulary::getVocabKeyForPredicate(CmpInst::Predicate Pred) {
+  static SmallString<16> PredNameBuffer;
+  if (Pred < CmpInst::FIRST_ICMP_PREDICATE)
+    PredNameBuffer = "FCMP_";
+  else
+    PredNameBuffer = "ICMP_";
+  PredNameBuffer += CmpInst::getPredicateName(Pred);
+  return PredNameBuffer;
+}
+
+StringRef Vocabulary::getStringKey(unsigned Pos) {
+  assert(Pos < NumCanonicalEntries && "Position out of bounds in vocabulary");
+  // Opcode
+  if (Pos < MaxOpcodes)
+    return getVocabKeyForOpcode(Pos + 1);
+  // Type
+  if (Pos < OperandBaseOffset)
+    return getVocabKeyForCanonicalTypeID(
+        static_cast<CanonicalTypeID>(Pos - MaxOpcodes));
+  // Operand
+  if (Pos < PredicateBaseOffset)
+    return getVocabKeyForOperandKind(
+        static_cast<OperandKind>(Pos - OperandBaseOffset));
+  // Predicates
+  return getVocabKeyForPredicate(getPredicate(Pos - PredicateBaseOffset));
+}
+
+// For now, assume vocabulary is stable unless explicitly invalidated.
+bool Vocabulary::invalidate(Module &M, const PreservedAnalyses &PA,
+                            ModuleAnalysisManager::Invalidator &Inv) const {
+  auto PAC = PA.getChecker<IR2VecVocabAnalysis>();
+  return !(PAC.preservedWhenStateless());
+}
+
+VocabStorage Vocabulary::createDummyVocabForTest(unsigned Dim) {
+  float DummyVal = 0.1f;
+
+  // Create sections for opcodes, types, operands, and predicates
+  // Order must match Vocabulary::Section enum
+  std::vector<std::vector<Embedding>> Sections;
+  Sections.reserve(4);
+
+  // Opcodes section
+  std::vector<Embedding> OpcodeSec;
+  OpcodeSec.reserve(MaxOpcodes);
+  for (unsigned I = 0; I < MaxOpcodes; ++I) {
+    OpcodeSec.emplace_back(Dim, DummyVal);
+    DummyVal += 0.1f;
+  }
+  Sections.push_back(std::move(OpcodeSec));
+
+  // Types section
+  std::vector<Embedding> TypeSec;
+  TypeSec.reserve(MaxCanonicalTypeIDs);
+  for (unsigned I = 0; I < MaxCanonicalTypeIDs; ++I) {
+    TypeSec.emplace_back(Dim, DummyVal);
+    DummyVal += 0.1f;
+  }
+  Sections.push_back(std::move(TypeSec));
+
+  // Operands section
+  std::vector<Embedding> OperandSec;
+  OperandSec.reserve(MaxOperandKinds);
+  for (unsigned I = 0; I < MaxOperandKinds; ++I) {
+    OperandSec.emplace_back(Dim, DummyVal);
+    DummyVal += 0.1f;
+  }
+  Sections.push_back(std::move(OperandSec));
+
+  // Predicates section
+  std::vector<Embedding> PredicateSec;
+  PredicateSec.reserve(MaxPredicateKinds);
+  for (unsigned I = 0; I < MaxPredicateKinds; ++I) {
+    PredicateSec.emplace_back(Dim, DummyVal);
+    DummyVal += 0.1f;
+  }
+  Sections.push_back(std::move(PredicateSec));
+
+  return VocabStorage(std::move(Sections));
+}
+
+// ==----------------------------------------------------------------------===//
+// IR2VecVocabAnalysis
+//===----------------------------------------------------------------------===//
+
 // FIXME: Make this optional. We can avoid file reads
 // by auto-generating a default vocabulary during the build time.
-Error IR2VecVocabAnalysis::readVocabulary() {
+Error IR2VecVocabAnalysis::readVocabulary(VocabMap &OpcVocab,
+                                          VocabMap &TypeVocab,
+                                          VocabMap &ArgVocab) {
   auto BufOrError = MemoryBuffer::getFileOrSTDIN(VocabFile, /*IsText=*/true);
   if (!BufOrError)
     return createFileError(VocabFile, BufOrError.getError());
@@ -400,16 +496,16 @@ Error IR2VecVocabAnalysis::readVocabulary() {
     return ParsedVocabValue.takeError();
 
   unsigned OpcodeDim = 0, TypeDim = 0, ArgDim = 0;
-  if (auto Err =
-          parseVocabSection("Opcodes", *ParsedVocabValue, OpcVocab, OpcodeDim))
+  if (auto Err = VocabStorage::parseVocabSection("Opcodes", *ParsedVocabValue,
+                                                 OpcVocab, OpcodeDim))
     return Err;
 
-  if (auto Err =
-          parseVocabSection("Types", *ParsedVocabValue, TypeVocab, TypeDim))
+  if (auto Err = VocabStorage::parseVocabSection("Types", *ParsedVocabValue,
+                                                 TypeVocab, TypeDim))
     return Err;
 
-  if (auto Err =
-          parseVocabSection("Arguments", *ParsedVocabValue, ArgVocab, ArgDim))
+  if (auto Err = VocabStorage::parseVocabSection("Arguments", *ParsedVocabValue,
+                                                 ArgVocab, ArgDim))
     return Err;
 
   if (!(OpcodeDim == TypeDim && TypeDim == ArgDim))
@@ -419,7 +515,9 @@ Error IR2VecVocabAnalysis::readVocabulary() {
   return Error::success();
 }
 
-void IR2VecVocabAnalysis::generateNumMappedVocab() {
+void IR2VecVocabAnalysis::generateVocabStorage(VocabMap &OpcVocab,
+                                               VocabMap &TypeVocab,
+                                               VocabMap &ArgVocab) {
 
   // Helper for handling missing entities in the vocabulary.
   // Currently, we use a zero vector. In the future, we will throw an error to
@@ -436,7 +534,7 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
 
   // Handle Opcodes
   std::vector<Embedding> NumericOpcodeEmbeddings(Vocabulary::MaxOpcodes,
-                                                 Embedding(Dim, 0));
+                                                 Embedding(Dim));
   for (unsigned Opcode : seq(0u, Vocabulary::MaxOpcodes)) {
     StringRef VocabKey = Vocabulary::getVocabKeyForOpcode(Opcode + 1);
     auto It = OpcVocab.find(VocabKey.str());
@@ -445,27 +543,23 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
     else
       handleMissingEntity(VocabKey.str());
   }
-  Vocab.insert(Vocab.end(), NumericOpcodeEmbeddings.begin(),
-               NumericOpcodeEmbeddings.end());
 
-  // Handle Types
-  std::vector<Embedding> NumericTypeEmbeddings(Vocabulary::MaxTypeIDs,
-                                               Embedding(Dim, 0));
-  for (unsigned TypeID : seq(0u, Vocabulary::MaxTypeIDs)) {
-    StringRef VocabKey =
-        Vocabulary::getVocabKeyForTypeID(static_cast<Type::TypeID>(TypeID));
+  // Handle Types - only canonical types are present in vocabulary
+  std::vector<Embedding> NumericTypeEmbeddings(Vocabulary::MaxCanonicalTypeIDs,
+                                               Embedding(Dim));
+  for (unsigned CTypeID : seq(0u, Vocabulary::MaxCanonicalTypeIDs)) {
+    StringRef VocabKey = Vocabulary::getVocabKeyForCanonicalTypeID(
+        static_cast<Vocabulary::CanonicalTypeID>(CTypeID));
     if (auto It = TypeVocab.find(VocabKey.str()); It != TypeVocab.end()) {
-      NumericTypeEmbeddings[TypeID] = It->second;
+      NumericTypeEmbeddings[CTypeID] = It->second;
       continue;
     }
     handleMissingEntity(VocabKey.str());
   }
-  Vocab.insert(Vocab.end(), NumericTypeEmbeddings.begin(),
-               NumericTypeEmbeddings.end());
 
   // Handle Arguments/Operands
   std::vector<Embedding> NumericArgEmbeddings(Vocabulary::MaxOperandKinds,
-                                              Embedding(Dim, 0));
+                                              Embedding(Dim));
   for (unsigned OpKind : seq(0u, Vocabulary::MaxOperandKinds)) {
     Vocabulary::OperandKind Kind = static_cast<Vocabulary::OperandKind>(OpKind);
     StringRef VocabKey = Vocabulary::getVocabKeyForOperandKind(Kind);
@@ -476,15 +570,37 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
     }
     handleMissingEntity(VocabKey.str());
   }
-  Vocab.insert(Vocab.end(), NumericArgEmbeddings.begin(),
-               NumericArgEmbeddings.end());
+
+  // Handle Predicates: part of Operands section. We look up predicate keys
+  // in ArgVocab.
+  std::vector<Embedding> NumericPredEmbeddings(Vocabulary::MaxPredicateKinds,
+                                               Embedding(Dim, 0));
+  for (unsigned PK : seq(0u, Vocabulary::MaxPredicateKinds)) {
+    StringRef VocabKey =
+        Vocabulary::getVocabKeyForPredicate(Vocabulary::getPredicate(PK));
+    auto It = ArgVocab.find(VocabKey.str());
+    if (It != ArgVocab.end()) {
+      NumericPredEmbeddings[PK] = It->second;
+      continue;
+    }
+    handleMissingEntity(VocabKey.str());
+  }
+
+  // Create section-based storage instead of flat vocabulary
+  // Order must match Vocabulary::Section enum
+  std::vector<std::vector<Embedding>> Sections(4);
+  Sections[static_cast<unsigned>(Vocabulary::Section::Opcodes)] =
+      std::move(NumericOpcodeEmbeddings); // Section::Opcodes
+  Sections[static_cast<unsigned>(Vocabulary::Section::CanonicalTypes)] =
+      std::move(NumericTypeEmbeddings); // Section::CanonicalTypes
+  Sections[static_cast<unsigned>(Vocabulary::Section::Operands)] =
+      std::move(NumericArgEmbeddings); // Section::Operands
+  Sections[static_cast<unsigned>(Vocabulary::Section::Predicates)] =
+      std::move(NumericPredEmbeddings); // Section::Predicates
+
+  // Create VocabStorage from organized sections
+  Vocab.emplace(std::move(Sections));
 }
-
-IR2VecVocabAnalysis::IR2VecVocabAnalysis(const VocabVector &Vocab)
-    : Vocab(Vocab) {}
-
-IR2VecVocabAnalysis::IR2VecVocabAnalysis(VocabVector &&Vocab)
-    : Vocab(std::move(Vocab)) {}
 
 void IR2VecVocabAnalysis::emitError(Error Err, LLVMContext &Ctx) {
   handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
@@ -496,8 +612,8 @@ IR2VecVocabAnalysis::Result
 IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   auto Ctx = &M.getContext();
   // If vocabulary is already populated by the constructor, use it.
-  if (!Vocab.empty())
-    return Vocabulary(std::move(Vocab));
+  if (Vocab.has_value())
+    return Vocabulary(std::move(Vocab.value()));
 
   // Otherwise, try to read from the vocabulary file.
   if (VocabFile.empty()) {
@@ -506,7 +622,9 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
                    "set it using --ir2vec-vocab-path");
     return Vocabulary(); // Return invalid result
   }
-  if (auto Err = readVocabulary()) {
+
+  VocabMap OpcVocab, TypeVocab, ArgVocab;
+  if (auto Err = readVocabulary(OpcVocab, TypeVocab, ArgVocab)) {
     emitError(std::move(Err), *Ctx);
     return Vocabulary();
   }
@@ -521,9 +639,9 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   scaleVocabSection(ArgVocab, ArgWeight);
 
   // Generate the numeric lookup vocabulary
-  generateNumMappedVocab();
+  generateVocabStorage(OpcVocab, TypeVocab, ArgVocab);
 
-  return Vocabulary(std::move(Vocab));
+  return Vocabulary(std::move(Vocab.value()));
 }
 
 // ==----------------------------------------------------------------------===//
@@ -532,12 +650,11 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 
 PreservedAnalyses IR2VecPrinterPass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
-  auto Vocabulary = MAM.getResult<IR2VecVocabAnalysis>(M);
+  auto &Vocabulary = MAM.getResult<IR2VecVocabAnalysis>(M);
   assert(Vocabulary.isValid() && "IR2Vec Vocabulary is invalid");
 
   for (Function &F : M) {
-    std::unique_ptr<Embedder> Emb =
-        Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
+    auto Emb = Embedder::create(IR2VecEmbeddingKind, F, Vocabulary);
     if (!Emb) {
       OS << "Error creating IR2Vec embeddings \n";
       continue;
@@ -548,25 +665,17 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
     Emb->getFunctionVector().print(OS);
 
     OS << "Basic block vectors:\n";
-    const auto &BBMap = Emb->getBBVecMap();
     for (const BasicBlock &BB : F) {
-      auto It = BBMap.find(&BB);
-      if (It != BBMap.end()) {
-        OS << "Basic block: " << BB.getName() << ":\n";
-        It->second.print(OS);
-      }
+      OS << "Basic block: " << BB.getName() << ":\n";
+      Emb->getBBVector(BB).print(OS);
     }
 
     OS << "Instruction vectors:\n";
-    const auto &InstMap = Emb->getInstVecMap();
     for (const BasicBlock &BB : F) {
       for (const Instruction &I : BB) {
-        auto It = InstMap.find(&I);
-        if (It != InstMap.end()) {
-          OS << "Instruction: ";
-          I.print(OS);
-          It->second.print(OS);
-        }
+        OS << "Instruction: ";
+        I.print(OS);
+        Emb->getInstVector(I).print(OS);
       }
     }
   }
@@ -575,7 +684,7 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
 
 PreservedAnalyses IR2VecVocabPrinterPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
-  auto IR2VecVocabulary = MAM.getResult<IR2VecVocabAnalysis>(M);
+  auto &IR2VecVocabulary = MAM.getResult<IR2VecVocabAnalysis>(M);
   assert(IR2VecVocabulary.isValid() && "IR2Vec Vocabulary is invalid");
 
   // Print each entry

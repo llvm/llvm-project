@@ -9,7 +9,7 @@
 #include <clc/math/clc_asinpi.h>
 #include <clc/opencl/math/asinpi.h>
 
-#define FUNCTION asinpi
+#define __CLC_FUNCTION asinpi
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

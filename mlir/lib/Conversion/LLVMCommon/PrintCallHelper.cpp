@@ -66,23 +66,23 @@ LogicalResult mlir::LLVM::createPrintStrCall(
       DenseElementsAttr::get(dataAttrType, llvm::ArrayRef(elementVals));
   auto arrayTy =
       LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), elementVals.size());
-  auto globalOp = builder.create<LLVM::GlobalOp>(
-      loc, arrayTy, /*constant=*/true, LLVM::Linkage::Private,
+  auto globalOp = LLVM::GlobalOp::create(
+      builder, loc, arrayTy, /*isConstant=*/true, LLVM::Linkage::Private,
       ensureSymbolNameIsUnique(moduleOp, symbolName, symbolTables), dataAttr);
 
   auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
   // Emit call to `printStr` in runtime library.
   builder.restoreInsertionPoint(ip);
   auto msgAddr =
-      builder.create<LLVM::AddressOfOp>(loc, ptrTy, globalOp.getName());
+      LLVM::AddressOfOp::create(builder, loc, ptrTy, globalOp.getName());
   SmallVector<LLVM::GEPArg> indices(1, 0);
   Value gep =
-      builder.create<LLVM::GEPOp>(loc, ptrTy, arrayTy, msgAddr, indices);
+      LLVM::GEPOp::create(builder, loc, ptrTy, arrayTy, msgAddr, indices);
   FailureOr<LLVM::LLVMFuncOp> printer =
       LLVM::lookupOrCreatePrintStringFn(builder, moduleOp, runtimeFunctionName);
   if (failed(printer))
     return failure();
-  builder.create<LLVM::CallOp>(loc, TypeRange(),
-                               SymbolRefAttr::get(printer.value()), gep);
+  LLVM::CallOp::create(builder, loc, TypeRange(),
+                       SymbolRefAttr::get(printer.value()), gep);
   return success();
 }

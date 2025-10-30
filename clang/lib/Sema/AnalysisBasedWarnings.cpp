@@ -29,7 +29,7 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
-#include "clang/Analysis/Analyses/LifetimeSafety.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/Analysis/Analyses/ReachableCode.h"
 #include "clang/Analysis/Analyses/ThreadSafety.h"
 #include "clang/Analysis/Analyses/UninitializedValues.h"
@@ -227,14 +227,11 @@ static bool hasRecursiveCallInPath(const FunctionDecl *FD, CFGBlock &Block) {
 
     // Skip function calls which are qualified with a templated class.
     if (const DeclRefExpr *DRE =
-            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts())) {
-      if (NestedNameSpecifier *NNS = DRE->getQualifier()) {
-        if (NNS->getKind() == NestedNameSpecifier::TypeSpec &&
-            isa<TemplateSpecializationType>(NNS->getAsType())) {
+            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts()))
+      if (NestedNameSpecifier NNS = DRE->getQualifier();
+          NNS.getKind() == NestedNameSpecifier::Kind::Type)
+        if (isa_and_nonnull<TemplateSpecializationType>(NNS.getAsType()))
           continue;
-        }
-      }
-    }
 
     const CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(CE);
     if (!MCE || isa<CXXThisExpr>(MCE->getImplicitObjectArgument()) ||
@@ -503,8 +500,12 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
 
   TransferFunctions TF(VD);
   BackwardDataflowWorklist Worklist(*AC.getCFG(), AC);
+  llvm::DenseSet<const CFGBlock *> Visited;
   Worklist.enqueueBlock(&VarBlk);
   while (const CFGBlock *B = Worklist.dequeue()) {
+    if (Visited.contains(B))
+      continue;
+    Visited.insert(B);
     // First check the current block.
     for (CFGBlock::const_reverse_iterator ri = B->rbegin(), re = B->rend();
          ri != re; ++ri) {
@@ -522,8 +523,7 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
     }
 
     // If all checked blocks satisfy the condition, the check is finished.
-    if (std::all_of(BlocksToCheck.begin(), BlocksToCheck.end(),
-                    BlockSatisfiesCondition))
+    if (llvm::all_of(BlocksToCheck, BlockSatisfiesCondition))
       return true;
 
     // If this block does not contain the variable definition, check
@@ -578,7 +578,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     // mark them as live.
     for (const auto *B : *cfg) {
       if (!live[B->getBlockID()]) {
-        if (B->pred_begin() == B->pred_end()) {
+        if (B->preds().empty()) {
           const Stmt *Term = B->getTerminatorStmt();
           if (isa_and_nonnull<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses
@@ -983,10 +983,9 @@ static void DiagUninitUse(Sema &S, const VarDecl *VD, const UninitUse &Use,
   case UninitUse::AfterDecl:
   case UninitUse::AfterCall:
     S.Diag(VD->getLocation(), diag::warn_sometimes_uninit_var)
-      << VD->getDeclName() << IsCapturedByBlock
-      << (Use.getKind() == UninitUse::AfterDecl ? 4 : 5)
-      << const_cast<DeclContext*>(VD->getLexicalDeclContext())
-      << VD->getSourceRange();
+        << VD->getDeclName() << IsCapturedByBlock
+        << (Use.getKind() == UninitUse::AfterDecl ? 4 : 5)
+        << VD->getLexicalDeclContext() << VD->getSourceRange();
     S.Diag(Use.getUser()->getBeginLoc(), diag::note_uninit_var_use)
         << IsCapturedByBlock << Use.getUser()->getSourceRange();
     return;
@@ -2606,6 +2605,16 @@ public:
 #endif
   }
 
+  void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                        bool IsRelatedToDecl,
+                                        ASTContext &Ctx) override {
+    SourceLocation Loc;
+
+    Loc = Node.get<Stmt>()->getBeginLoc();
+    S.Diag(Loc, diag::warn_unsafe_buffer_usage_unique_ptr_array_access)
+        << Node.getSourceRange();
+  }
+
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
     return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
   }
@@ -2780,6 +2789,31 @@ public:
   }
 };
 
+namespace clang::lifetimes {
+namespace {
+class LifetimeSafetyReporterImpl : public LifetimeSafetyReporter {
+
+public:
+  LifetimeSafetyReporterImpl(Sema &S) : S(S) {}
+
+  void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
+                          SourceLocation FreeLoc, Confidence C) override {
+    S.Diag(IssueExpr->getExprLoc(),
+           C == Confidence::Definite
+               ? diag::warn_lifetime_safety_loan_expires_permissive
+               : diag::warn_lifetime_safety_loan_expires_strict)
+        << IssueExpr->getEndLoc();
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+    S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
+        << UseExpr->getEndLoc();
+  }
+
+private:
+  Sema &S;
+};
+} // namespace
+} // namespace clang::lifetimes
+
 void clang::sema::AnalysisBasedWarnings::IssueWarnings(
      TranslationUnitDecl *TU) {
   if (!TU)
@@ -2880,6 +2914,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
+  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
+
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
   // FIXME: This isn't the right factoring.  This is here for initial
@@ -2887,11 +2923,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // expect to always be CFGElements and then fill in the BuildOptions
   // appropriately.  This is essentially a layering violation.
   if (P.enableCheckUnreachable || P.enableThreadSafetyAnalysis ||
-      P.enableConsumedAnalysis) {
+      P.enableConsumedAnalysis || EnableLifetimeSafetyAnalysis) {
     // Unreachable code analysis and thread safety require a linearized CFG.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
-  }
-  else {
+  } else {
     AC.getCFGBuildOptions()
       .setAlwaysAdd(Stmt::BinaryOperatorClass)
       .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
@@ -2902,8 +2937,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
-  bool EnableLifetimeSafetyAnalysis = !Diags.isIgnored(
-      diag::warn_experimental_lifetime_safety_dummy_warning, D->getBeginLoc());
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
@@ -3030,8 +3063,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
   if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
-    if (CFG *cfg = AC.getCFG())
-      runLifetimeSafetyAnalysis(*cast<DeclContext>(D), *cfg, AC);
+    if (AC.getCFG()) {
+      lifetimes::LifetimeSafetyReporterImpl LifetimeSafetyReporter(S);
+      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetyReporter);
+    }
   }
   // Check for violations of "called once" parameter properties.
   if (S.getLangOpts().ObjC && !S.getLangOpts().CPlusPlus &&

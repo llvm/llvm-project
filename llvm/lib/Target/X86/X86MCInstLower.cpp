@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Mangler.h"
@@ -833,6 +834,7 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
     CallInst.setOpcode(CallOpcode);
     CallInst.addOperand(CallTargetMCOp);
     OutStreamer->emitInstruction(CallInst, getSubtargetInfo());
+    maybeEmitNopAfterCallForWindowsEH(&MI);
   }
 
   // Record our statepoint node in the same section used by STACKMAP
@@ -1430,21 +1432,6 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
     OutStreamer->emitLabel(FallthroughLabel);
 }
 
-// Returns instruction preceding MBBI in MachineFunction.
-// If MBBI is the first instruction of the first basic block, returns null.
-static MachineBasicBlock::const_iterator
-PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
-  const MachineBasicBlock *MBB = MBBI->getParent();
-  while (MBBI == MBB->begin()) {
-    if (MBB == &MBB->getParent()->front())
-      return MachineBasicBlock::const_iterator();
-    MBB = MBB->getPrevNode();
-    MBBI = MBB->end();
-  }
-  --MBBI;
-  return MBBI;
-}
-
 static unsigned getSrcIdx(const MachineInstr* MI, unsigned SrcIdx) {
   if (X86II::isKMasked(MI->getDesc().TSFlags)) {
     // Skip mask operand.
@@ -1941,6 +1928,17 @@ static void addConstantComments(const MachineInstr *MI,
 #define INSTR_CASE(Prefix, Instr, Suffix, Postfix)                             \
   case X86::Prefix##Instr##Suffix##rm##Postfix:
 
+#define CASE_AVX512_ARITH_RM(Instr)                                            \
+  INSTR_CASE(V, Instr, Z128, )                                                 \
+  INSTR_CASE(V, Instr, Z128, k)                                                \
+  INSTR_CASE(V, Instr, Z128, kz)                                               \
+  INSTR_CASE(V, Instr, Z256, )                                                 \
+  INSTR_CASE(V, Instr, Z256, k)                                                \
+  INSTR_CASE(V, Instr, Z256, kz)                                               \
+  INSTR_CASE(V, Instr, Z, )                                                    \
+  INSTR_CASE(V, Instr, Z, k)                                                   \
+  INSTR_CASE(V, Instr, Z, kz)
+
 #define CASE_ARITH_RM(Instr)                                                   \
   INSTR_CASE(, Instr, , )   /* SSE */                                          \
   INSTR_CASE(V, Instr, , )  /* AVX-128 */                                      \
@@ -1956,40 +1954,26 @@ static void addConstantComments(const MachineInstr *MI,
   INSTR_CASE(V, Instr, Z, kz)
 
     // TODO: Add additional instructions when useful.
-    CASE_ARITH_RM(PMADDUBSW) {
-      unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 8) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
-      }
-      break;
-    }
-
+    CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
+    CASE_ARITH_RM(PMULDQ)
+    CASE_ARITH_RM(PMULUDQ)
+    CASE_ARITH_RM(PMULLD)
+    CASE_AVX512_ARITH_RM(PMULLQ)
     CASE_ARITH_RM(PMULLW)
     CASE_ARITH_RM(PMULHW)
     CASE_ARITH_RM(PMULHUW)
     CASE_ARITH_RM(PMULHRSW) {
       unsigned SrcIdx = getSrcIdx(MI, 1);
       if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        if (C->getType()->getScalarSizeInBits() == 16) {
-          std::string Comment;
-          raw_string_ostream CS(Comment);
-          unsigned VectorWidth =
-              X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-          CS << "[";
-          printConstant(C, VectorWidth, CS);
-          CS << "]";
-          OutStreamer.AddComment(CS.str());
-        }
+        std::string Comment;
+        raw_string_ostream CS(Comment);
+        unsigned VectorWidth =
+            X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+        CS << "[";
+        printConstant(C, VectorWidth, CS);
+        CS << "]";
+        OutStreamer.AddComment(CS.str());
       }
       break;
     }
@@ -2271,6 +2255,9 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       OutStreamer->AddComment("EVEX TO EVEX Compression ", false);
   }
 
+  // We use this to suppress NOP padding for Windows EH.
+  bool IsTailJump = false;
+
   switch (MI->getOpcode()) {
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");
@@ -2325,6 +2312,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Lower this as normal, but add a comment.
     OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
     break;
 
   case X86::TAILJMPr:
@@ -2340,6 +2328,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Lower these as normal, but add some comments.
     OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
     break;
 
   case X86::TAILJMPm64_REX:
@@ -2349,6 +2338,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
     break;
 
   case X86::TAILJMPr64_REX: {
@@ -2361,6 +2351,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     OutStreamer->AddComment("TAILCALL");
+    IsTailJump = true;
     break;
   }
 
@@ -2537,26 +2528,6 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
-    // Windows unwinder will not invoke function's exception handler if IP is
-    // either in prologue or in epilogue.  This behavior causes a problem when a
-    // call immediately precedes an epilogue, because the return address points
-    // into the epilogue.  To cope with that, we insert a 'nop' if it ends up
-    // immediately after a CALL in the final emitted code.
-    MachineBasicBlock::const_iterator MBBI(MI);
-    // Check if preceded by a call and emit nop if so.
-    for (MBBI = PrevCrossBBInst(MBBI);
-         MBBI != MachineBasicBlock::const_iterator();
-         MBBI = PrevCrossBBInst(MBBI)) {
-      // Pseudo instructions that aren't a call are assumed to not emit any
-      // code. If they do, we worst case generate unnecessary noops after a
-      // call.
-      if (MBBI->isCall() || !MBBI->isPseudo()) {
-        if (MBBI->isCall())
-          EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
-        break;
-      }
-    }
-
     EmitSEHInstruction(MI);
     return;
   }
@@ -2585,6 +2556,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       EmitAndCountInstruction(MCInstBuilder(X86::REX64_PREFIX));
       emitCallInstruction(TmpInst);
       emitNop(*OutStreamer, 5, Subtarget);
+      maybeEmitNopAfterCallForWindowsEH(MI);
       return;
     }
 
@@ -2605,6 +2577,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       // For Import Call Optimization to work, we need a 3-byte nop after the
       // call instruction.
       emitNop(*OutStreamer, 3, Subtarget);
+      maybeEmitNopAfterCallForWindowsEH(MI);
       return;
     }
     break;
@@ -2638,6 +2611,10 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   if (MI->isCall()) {
     emitCallInstruction(TmpInst);
+    // Since tail calls transfer control without leaving a stack frame, there is
+    // never a need for NOP padding tail calls.
+    if (!IsTailJump)
+      maybeEmitNopAfterCallForWindowsEH(MI);
     return;
   }
 
@@ -2657,6 +2634,164 @@ void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
   // Then emit the call
   OutStreamer->emitInstruction(MCI, getSubtargetInfo());
+}
+
+// Determines whether a NOP is required after a CALL, so that Windows EH
+// IP2State tables have the correct information.
+//
+// On most Windows platforms (AMD64, ARM64, ARM32, IA64, but *not* x86-32),
+// exception handling works by looking up instruction pointers in lookup
+// tables. These lookup tables are stored in .xdata sections in executables.
+// One element of the lookup tables are the "IP2State" tables (Instruction
+// Pointer to State).
+//
+// If a function has any instructions that require cleanup during exception
+// unwinding, then it will have an IP2State table. Each entry in the IP2State
+// table describes a range of bytes in the function's instruction stream, and
+// associates an "EH state number" with that range of instructions. A value of
+// -1 means "the null state", which does not require any code to execute.
+// A value other than -1 is an index into the State table.
+//
+// The entries in the IP2State table contain byte offsets within the instruction
+// stream of the function. The Windows ABI requires that these offsets are
+// aligned to instruction boundaries; they are not permitted to point to a byte
+// that is not the first byte of an instruction.
+//
+// Unfortunately, CALL instructions present a problem during unwinding. CALL
+// instructions push the address of the instruction after the CALL instruction,
+// so that execution can resume after the CALL. If the CALL is the last
+// instruction within an IP2State region, then the return address (on the stack)
+// points to the *next* IP2State region. This means that the unwinder will
+// use the wrong cleanup funclet during unwinding.
+//
+// To fix this problem, the Windows AMD64 ABI requires that CALL instructions
+// are never placed at the end of an IP2State region. Stated equivalently, the
+// end of a CALL instruction cannot be aligned to an IP2State boundary.  If a
+// CALL instruction would occur at the end of an IP2State region, then the
+// compiler must insert a NOP instruction after the CALL. The NOP instruction
+// is placed in the same EH region as the CALL instruction, so that the return
+// address points to the NOP and the unwinder will locate the correct region.
+//
+// NOP padding is only necessary on Windows AMD64 targets. On ARM64 and ARM32,
+// instructions have a fixed size so the unwinder knows how to "back up" by
+// one instruction.
+//
+// Interaction with Import Call Optimization (ICO):
+//
+// Import Call Optimization (ICO) is a compiler + OS feature on Windows which
+// improves the performance and security of DLL imports. ICO relies on using a
+// specific CALL idiom that can be replaced by the OS DLL loader. This removes
+// a load and indirect CALL and replaces it with a single direct CALL.
+//
+// To achieve this, ICO also inserts NOPs after the CALL instruction. If the
+// end of the CALL is aligned with an EH state transition, we *also* insert
+// a single-byte NOP.  **Both forms of NOPs must be preserved.**  They cannot
+// be combined into a single larger NOP; nor can the second NOP be removed.
+//
+// This is necessary because, if ICO is active and the call site is modified
+// by the loader, the loader will end up overwriting the NOPs that were inserted
+// for ICO. That means that those NOPs cannot be used for the correct
+// termination of the exception handling region (the IP2State transition),
+// so we still need an additional NOP instruction.  The NOPs cannot be combined
+// into a longer NOP (which is ordinarily desirable) because then ICO would
+// split one instruction, producing a malformed instruction after the ICO call.
+void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
+  // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
+  // (Don't let the name fool you: Itanium refers to table-based exception
+  // handling, not the Itanium architecture.)
+  if (MAI->getExceptionHandlingType() != ExceptionHandling::WinEH ||
+      MAI->getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
+    return;
+  }
+
+  bool HasEHPersonality = MF->getWinEHFuncInfo() != nullptr;
+
+  // Set up MBB iterator, initially positioned on the same MBB as MI.
+  MachineFunction::const_iterator MFI(MI->getParent());
+  MachineFunction::const_iterator MFE(MF->end());
+
+  // Set up instruction iterator, positioned immediately *after* MI.
+  MachineBasicBlock::const_iterator MBBI(MI);
+  MachineBasicBlock::const_iterator MBBE = MI->getParent()->end();
+  ++MBBI; // Step over MI
+
+  // This loop iterates MBBs
+  for (;;) {
+    // This loop iterates instructions
+    for (; MBBI != MBBE; ++MBBI) {
+      // Check the instruction that follows this CALL.
+      const MachineInstr &NextMI = *MBBI;
+
+      // If there is an EH_LABEL after this CALL, then there is an EH state
+      // transition after this CALL. This is exactly the situation which
+      // requires NOP padding.
+      if (NextMI.isEHLabel()) {
+        if (HasEHPersonality) {
+          EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
+          return;
+        }
+        // We actually want to continue, in case there is an SEH_BeginEpilogue
+        // instruction after the EH_LABEL. In some situations, IR is produced
+        // that contains EH_LABEL pseudo-instructions, even when we are not
+        // generating IP2State tables. We still need to insert a NOP before
+        // SEH_BeginEpilogue in that case.
+        continue;
+      }
+
+      // Somewhat similarly, if the CALL is the last instruction before the
+      // SEH prologue, then we also need a NOP. This is necessary because the
+      // Windows stack unwinder will not invoke a function's exception handler
+      // if the instruction pointer is in the function prologue or epilogue.
+      //
+      // We always emit a NOP before SEH_BeginEpilogue, even if there is no
+      // personality function (unwind info) for this frame. This is the same
+      // behavior as MSVC.
+      if (NextMI.getOpcode() == X86::SEH_BeginEpilogue) {
+        EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
+        return;
+      }
+
+      if (!NextMI.isPseudo() && !NextMI.isMetaInstruction()) {
+        // We found a real instruction. During the CALL, the return IP will
+        // point to this instruction. Since this instruction has the same EH
+        // state as the call itself (because there is no intervening EH_LABEL),
+        // the IP2State table will be accurate; there is no need to insert a
+        // NOP.
+        return;
+      }
+
+      // The next instruction is a pseudo-op. Ignore it and keep searching.
+      // Because these instructions do not generate any machine code, they
+      // cannot prevent the IP2State table from pointing at the wrong
+      // instruction during a CALL.
+    }
+
+    // We've reached the end of this MBB. Find the next MBB in program order.
+    // MBB order should be finalized by this point, so falling across MBBs is
+    // expected.
+    ++MFI;
+    if (MFI == MFE) {
+      // No more blocks; we've reached the end of the function. This should
+      // only happen with no-return functions, but double-check to be sure.
+      if (HasEHPersonality) {
+        // If the CALL has no successors, then it is a noreturn function.
+        // Insert an INT3 instead of a NOP. This accomplishes the same purpose,
+        // but is more clear to read. Also, analysis tools will understand
+        // that they should not continue disassembling after the CALL (unless
+        // there are other branches to that label).
+        if (MI->getParent()->succ_empty())
+          EmitAndCountInstruction(MCInstBuilder(X86::INT3));
+        else
+          EmitAndCountInstruction(MCInstBuilder(X86::NOOP));
+      }
+      return;
+    }
+
+    // Set up iterator to scan the next basic block.
+    const MachineBasicBlock *NextMBB = &*MFI;
+    MBBI = NextMBB->instr_begin();
+    MBBE = NextMBB->instr_end();
+  }
 }
 
 void X86AsmPrinter::emitLabelAndRecordForImportCallOptimization(

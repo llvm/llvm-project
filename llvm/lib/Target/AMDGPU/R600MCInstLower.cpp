@@ -20,6 +20,8 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 
+using namespace llvm;
+
 namespace {
 class R600MCInstLower : public AMDGPUMCInstLower {
 public:

@@ -446,7 +446,7 @@ constexpr bool test() {
   }
 
   // Make sure std::equal behaves properly with std::vector<bool> iterators with custom size types.
-  // See issue: https://github.com/llvm/llvm-project/issues/126369.
+  // See issue: https://llvm.org/PR126369.
   {
     //// Tests for std::equal with aligned bits
 

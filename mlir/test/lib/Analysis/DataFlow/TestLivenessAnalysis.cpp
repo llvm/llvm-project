@@ -33,7 +33,6 @@ struct TestLivenessAnalysisPass
 
   void runOnOperation() override {
     auto &livenessAnalysis = getAnalysis<RunLivenessAnalysis>();
-
     Operation *op = getOperation();
 
     raw_ostream &os = llvm::outs();

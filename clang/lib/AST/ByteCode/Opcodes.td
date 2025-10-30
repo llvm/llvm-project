@@ -412,7 +412,7 @@ def CheckDecl : Opcode {
 
 def CheckEnumValue : Opcode {
   let Args = [ArgEnumDecl];
-  let Types = [FixedSizeIntegralTypeClass];
+  let Types = [IntegralTypeClass];
   let HasGroup = 1;
 }
 
@@ -510,6 +510,7 @@ def StoreBitFieldActivate : StoreBitFieldOpcode {}
 def StoreBitFieldActivatePop : StoreBitFieldOpcode {}
 
 def Activate : Opcode {}
+def ActivateThisField : Opcode { let Args = [ArgUint32]; }
 
 // [Pointer, Value] -> []
 def Init : StoreOpcode {}
@@ -611,12 +612,25 @@ class OverflowOpcode : Opcode {
   let HasGroup = 1;
 }
 
+class OverflowBitfieldOpcode : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgBool, ArgUint32];
+  let HasGroup = 1;
+}
+
 def Inc : OverflowOpcode;
+def IncBitfield : OverflowBitfieldOpcode;
 def IncPop : OverflowOpcode;
+def IncPopBitfield : OverflowBitfieldOpcode;
 def PreInc : OverflowOpcode;
+def PreIncBitfield : OverflowBitfieldOpcode;
+
 def Dec : OverflowOpcode;
+def DecBitfield : OverflowBitfieldOpcode;
 def DecPop : OverflowOpcode;
+def DecPopBitfield : OverflowBitfieldOpcode;
 def PreDec : OverflowOpcode;
+def PreDecBitfield : OverflowBitfieldOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;
@@ -734,6 +748,8 @@ def PtrPtrCast : Opcode {
 
 }
 
+def FnPtrCast : Opcode;
+
 def DecayPtr : Opcode {
   let Types = [PtrTypeClass, PtrTypeClass];
   let HasGroup = 1;
@@ -794,6 +810,7 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
+def InvalidStore : Opcode { let Args = [ArgTypePtr]; }
 def CheckPseudoDtor : Opcode {}
 
 def InvalidDeclRef : Opcode {
@@ -849,31 +866,26 @@ def Free : Opcode {
   let Args = [ArgBool, ArgBool];
 }
 
-def CheckNewTypeMismatch : Opcode {
-  let Args = [ArgExpr];
-}
-
-def InvalidNewDeleteExpr : Opcode {
-  let Args = [ArgExpr];
-}
-
+def CheckNewTypeMismatch : Opcode { let Args = [ArgExpr]; }
 def CheckNewTypeMismatchArray : Opcode {
   let Types = [IntegerTypeClass];
   let Args = [ArgExpr];
   let HasGroup = 1;
 }
+def InvalidNewDeleteExpr : Opcode { let Args = [ArgExpr]; }
 
 def IsConstantContext: Opcode;
 def CheckAllocations : Opcode;
+def CheckNull : Opcode;
 
 def BitCastTypeClass : TypeClass {
   let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64,
-               IntAP, IntAPS, Bool, Float, Ptr];
+               IntAP, IntAPS, Bool, Float, Ptr, MemberPtr];
 }
 
 def BitCastPrim : Opcode {
   let Types = [BitCastTypeClass];
-  let Args = [ArgBool, ArgUint32, ArgFltSemantics];
+  let Args = [ArgBool, ArgUint32, ArgFltSemantics, ArgTypePtr];
   let HasGroup = 1;
 }
 

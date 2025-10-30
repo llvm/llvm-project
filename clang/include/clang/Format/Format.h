@@ -94,7 +94,7 @@ struct FormatStyle {
     ///
     /// \note
     ///  This currently only applies to braced initializer lists (when
-    ///  ``Cpp11BracedListStyle`` is ``true``) and parentheses.
+    ///  ``Cpp11BracedListStyle`` is not ``Block``) and parentheses.
     /// \endnote
     BAS_BlockIndent,
   };
@@ -732,6 +732,12 @@ struct FormatStyle {
   /// \version 18
   BreakBeforeNoexceptSpecifierStyle AllowBreakBeforeNoexceptSpecifier;
 
+  /// Allow breaking before ``Q_Property`` keywords ``READ``, ``WRITE``, etc. as
+  /// if they were preceded by a comma (``,``). This allows them to be formatted
+  /// according to ``BinPackParameters``.
+  /// \version 22
+  bool AllowBreakBeforeQtProperty;
+
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -831,7 +837,7 @@ struct FormatStyle {
     /// Never merge functions into a single line.
     SFS_None,
     /// Only merge functions defined inside a class. Same as ``inline``,
-    /// except it does not implies ``empty``: i.e. top level empty functions
+    /// except it does not imply ``empty``: i.e. top level empty functions
     /// are not merged either.
     /// \code
     ///   class Foo {
@@ -2549,29 +2555,67 @@ struct FormatStyle {
   /// \version 3.7
   unsigned ContinuationIndentWidth;
 
-  /// If ``true``, format braced lists as best suited for C++11 braced
-  /// lists.
-  ///
-  /// Important differences:
-  ///
-  /// * No spaces inside the braced list.
-  /// * No line break before the closing brace.
-  /// * Indentation with the continuation indent, not with the block indent.
-  ///
-  /// Fundamentally, C++11 braced lists are formatted exactly like function
-  /// calls would be formatted in their place. If the braced list follows a name
-  /// (e.g. a type or variable name), clang-format formats as if the ``{}`` were
-  /// the parentheses of a function call with that name. If there is no name,
-  /// a zero-length name is assumed.
-  /// \code
-  ///    true:                                  false:
-  ///    vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
-  ///    vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
-  ///    f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
-  ///    new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
-  /// \endcode
+  /// Different ways to handle braced lists.
+  enum BracedListStyle : int8_t {
+    /// Best suited for pre C++11 braced lists.
+    ///
+    /// * Spaces inside the braced list.
+    /// * Line break before the closing brace.
+    /// * Indentation with the block indent.
+    ///
+    /// \code
+    ///    vector<int> x{ 1, 2, 3, 4 };
+    ///    vector<T> x{ {}, {}, {}, {} };
+    ///    f(MyMap[{ composite, key }]);
+    ///    new int[3]{ 1, 2, 3 };
+    ///    Type name{ // Comment
+    ///               value
+    ///    };
+    /// \endcode
+    BLS_Block,
+    /// Best suited for C++11 braced lists.
+    ///
+    /// * No spaces inside the braced list.
+    /// * No line break before the closing brace.
+    /// * Indentation with the continuation indent.
+    ///
+    /// Fundamentally, C++11 braced lists are formatted exactly like function
+    /// calls would be formatted in their place. If the braced list follows a
+    /// name (e.g. a type or variable name), clang-format formats as if the
+    /// ``{}`` were the parentheses of a function call with that name. If there
+    /// is no name, a zero-length name is assumed.
+    /// \code
+    ///    vector<int> x{1, 2, 3, 4};
+    ///    vector<T> x{{}, {}, {}, {}};
+    ///    f(MyMap[{composite, key}]);
+    ///    new int[3]{1, 2, 3};
+    ///    Type name{ // Comment
+    ///        value};
+    /// \endcode
+    BLS_FunctionCall,
+    /// Same as ``FunctionCall``, except for the handling of a comment at the
+    /// begin, it then aligns everything following with the comment.
+    ///
+    /// * No spaces inside the braced list. (Even for a comment at the first
+    ///   position.)
+    /// * No line break before the closing brace.
+    /// * Indentation with the continuation indent, except when followed by a
+    ///   line comment, then it uses the block indent.
+    ///
+    /// \code
+    ///    vector<int> x{1, 2, 3, 4};
+    ///    vector<T> x{{}, {}, {}, {}};
+    ///    f(MyMap[{composite, key}]);
+    ///    new int[3]{1, 2, 3};
+    ///    Type name{// Comment
+    ///              value};
+    /// \endcode
+    BLS_AlignFirstComment,
+  };
+
+  /// The style to handle braced lists.
   /// \version 3.4
-  bool Cpp11BracedListStyle;
+  BracedListStyle Cpp11BracedListStyle;
 
   /// This option is **deprecated**. See ``DeriveLF`` and ``DeriveCRLF`` of
   /// ``LineEnding``.
@@ -2976,7 +3020,19 @@ struct FormatStyle {
     ///      #endif
     ///    #endif
     /// \endcode
-    PPDIS_BeforeHash
+    PPDIS_BeforeHash,
+    /// Leaves indentation of directives as-is.
+    /// \note
+    ///  Ignores ``PPIndentWidth``.
+    /// \endnote
+    /// \code
+    ///   #if FOO
+    ///     #if BAR
+    ///   #include <foo>
+    ///     #endif
+    ///   #endif
+    /// \endcode
+    PPDIS_Leave
   };
 
   /// The preprocessor directive indenting style to use.
@@ -3557,6 +3613,73 @@ struct FormatStyle {
   /// For example: TESTSUITE
   /// \version 9
   std::vector<std::string> NamespaceMacros;
+
+  /// Control over each component in a numeric literal.
+  enum NumericLiteralComponentStyle : int8_t {
+    /// Leave this component of the literal as is.
+    NLCS_Leave,
+    /// Format this component with uppercase characters.
+    NLCS_Upper,
+    /// Format this component with lowercase characters.
+    NLCS_Lower,
+  };
+
+  /// Separate control for each numeric literal component.
+  ///
+  /// For example, the config below will leave exponent letters alone, reformat
+  /// hexadecimal digits in lowercase, reformat numeric literal prefixes in
+  /// uppercase, and reformat suffixes in lowercase.
+  /// \code
+  ///   NumericLiteralCase:
+  ///     ExponentLetter: Leave
+  ///     HexDigit: Lower
+  ///     Prefix: Upper
+  ///     Suffix: Lower
+  /// \endcode
+  struct NumericLiteralCaseStyle {
+    /// Format floating point exponent separator letter case.
+    /// \code
+    ///   float a = 6.02e23 + 1.0E10; // Leave
+    ///   float a = 6.02E23 + 1.0E10; // Upper
+    ///   float a = 6.02e23 + 1.0e10; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle ExponentLetter;
+    /// Format hexadecimal digit case.
+    /// \code
+    ///   a = 0xaBcDeF; // Leave
+    ///   a = 0xABCDEF; // Upper
+    ///   a = 0xabcdef; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle HexDigit;
+    /// Format integer prefix case.
+    /// \code
+    ///    a = 0XF0 | 0b1; // Leave
+    ///    a = 0XF0 | 0B1; // Upper
+    ///    a = 0xF0 | 0b1; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle Prefix;
+    /// Format suffix case. This option excludes case-sensitive reserved
+    /// suffixes, such as ``min`` in C++.
+    /// \code
+    ///   a = 1uLL; // Leave
+    ///   a = 1ULL; // Upper
+    ///   a = 1ull; // Lower
+    /// \endcode
+    NumericLiteralComponentStyle Suffix;
+
+    bool operator==(const NumericLiteralCaseStyle &R) const {
+      return ExponentLetter == R.ExponentLetter && HexDigit == R.HexDigit &&
+             Prefix == R.Prefix && Suffix == R.Suffix;
+    }
+
+    bool operator!=(const NumericLiteralCaseStyle &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Capitalization style for numeric literals.
+  /// \version 22
+  NumericLiteralCaseStyle NumericLiteralCase;
 
   /// Controls bin-packing Objective-C protocol conformance list
   /// items into as few lines as possible when they go over ``ColumnLimit``.
@@ -4385,8 +4508,18 @@ struct FormatStyle {
     ///    #include "B/a.h"           #include "a/b.h"
     /// \endcode
     bool IgnoreCase;
+    /// When sorting includes in each block, only take file extensions into
+    /// account if two includes compare equal otherwise.
+    /// \code
+    ///    true:                          false:
+    ///    # include "A.h"         vs.    # include "A-util.h"
+    ///    # include "A.inc"              # include "A.h"
+    ///    # include "A-util.h"           # include "A.inc"
+    /// \endcode
+    bool IgnoreExtension;
     bool operator==(const SortIncludesOptions &R) const {
-      return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase;
+      return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase &&
+             IgnoreExtension == R.IgnoreExtension;
     }
     bool operator!=(const SortIncludesOptions &R) const {
       return !(*this == R);
@@ -4694,6 +4827,13 @@ struct FormatStyle {
     ///      <conditional-body>                     <conditional-body>
     /// \endcode
     bool AfterIfMacros;
+    /// If ``true``, put a space between alternative operator ``not`` and the
+    /// opening parenthesis.
+    /// \code
+    ///    true:                                  false:
+    ///    return not (a || b);            vs.    return not(a || b);
+    /// \endcode
+    bool AfterNot;
     /// If ``true``, put a space between operator overloading and opening
     /// parentheses.
     /// \code
@@ -4742,9 +4882,9 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterPlacementOperator(true),
-          AfterRequiresInClause(false), AfterRequiresInExpression(false),
-          BeforeNonEmptyParentheses(false) {}
+          AfterNot(false), AfterOverloadedOperator(false),
+          AfterPlacementOperator(true), AfterRequiresInClause(false),
+          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -4753,6 +4893,7 @@ struct FormatStyle {
                  Other.AfterFunctionDeclarationName &&
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
+             AfterNot == Other.AfterNot &&
              AfterOverloadedOperator == Other.AfterOverloadedOperator &&
              AfterPlacementOperator == Other.AfterPlacementOperator &&
              AfterRequiresInClause == Other.AfterRequiresInClause &&
@@ -4795,14 +4936,45 @@ struct FormatStyle {
   /// \version 7
   bool SpaceBeforeRangeBasedForLoopColon;
 
-  /// If ``true``, spaces will be inserted into ``{}``.
-  /// \code
-  ///    true:                                false:
-  ///    void f() { }                   vs.   void f() {}
-  ///    while (true) { }                     while (true) {}
-  /// \endcode
+  /// This option is **deprecated**. See ``Block`` of ``SpaceInEmptyBraces``.
   /// \version 10
-  bool SpaceInEmptyBlock;
+  // bool SpaceInEmptyBlock;
+
+  /// Style of when to insert a space in empty braces.
+  enum SpaceInEmptyBracesStyle : int8_t {
+    /// Always insert a space in empty braces.
+    /// \code
+    ///    void f() { }
+    ///    class Unit { };
+    ///    auto a = [] { };
+    ///    int x{ };
+    /// \endcode
+    SIEB_Always,
+    /// Only insert a space in empty blocks.
+    /// \code
+    ///    void f() { }
+    ///    class Unit { };
+    ///    auto a = [] { };
+    ///    int x{};
+    /// \endcode
+    SIEB_Block,
+    /// Never insert a space in empty braces.
+    /// \code
+    ///    void f() {}
+    ///    class Unit {};
+    ///    auto a = [] {};
+    ///    int x{};
+    /// \endcode
+    SIEB_Never
+  };
+
+  /// Specifies when to insert a space in empty braces.
+  /// \note
+  ///  This option doesn't apply to initializer braces if
+  ///  ``Cpp11BracedListStyle`` is not ``Block``.
+  /// \endnote
+  /// \version 22
+  SpaceInEmptyBracesStyle SpaceInEmptyBraces;
 
   /// If ``true``, spaces may be inserted into ``()``.
   /// This option is **deprecated**. See ``InEmptyParentheses`` of
@@ -5330,6 +5502,7 @@ struct FormatStyle {
                R.AllowAllParametersOfDeclarationOnNextLine &&
            AllowBreakBeforeNoexceptSpecifier ==
                R.AllowBreakBeforeNoexceptSpecifier &&
+           AllowBreakBeforeQtProperty == R.AllowBreakBeforeQtProperty &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseExpressionOnASingleLine ==
                R.AllowShortCaseExpressionOnASingleLine &&
@@ -5420,6 +5593,7 @@ struct FormatStyle {
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
+           NumericLiteralCase == R.NumericLiteralCase &&
            ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==
@@ -5476,7 +5650,7 @@ struct FormatStyle {
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
-           SpaceInEmptyBlock == R.SpaceInEmptyBlock &&
+           SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&

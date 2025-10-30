@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tahiti < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=fiji < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 ; This ends up using all 255 registers and requires register
 ; scavenging which will fail to find an unsued register.
@@ -22,8 +22,6 @@
 ; GFX9-DAG: s_mov_b32 s[[DESC3:[0-9]+]], 0xe00000
 
 ; OFFREG is offset system SGPR
-; GCN: buffer_store_dword {{v[0-9]+}}, off, s[[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Spill
-; GCN: buffer_load_dword v{{[0-9]+}}, off, s[[[DESC0]]:[[DESC3]]], 0 offset:{{[0-9]+}} ; 4-byte Folded Reload
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 640
 

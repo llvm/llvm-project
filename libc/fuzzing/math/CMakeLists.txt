@@ -196,3 +196,39 @@ add_libc_fuzzer(
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
 )
+
+add_libc_fuzzer(
+  cbrt_fuzz
+  NEED_MPFR
+  SRCS
+    cbrt_fuzz.cpp
+  DEPENDS
+    libc.src.math.cbrt
+)
+
+add_libc_fuzzer(
+  fsqrt_fuzz
+  NEED_MPFR
+  SRCS
+    fsqrt_fuzz.cpp
+  DEPENDS
+    libc.src.math.fsqrt
+)
+
+add_libc_fuzzer(
+  f16sqrt_fuzz
+  NEED_MPFR
+  SRCS
+    f16sqrt_fuzz.cpp
+  DEPENDS
+    libc.src.math.f16sqrt
+)
+
+add_libc_fuzzer(
+  hypot_fuzz
+  NEED_MPFR
+  SRCS
+    hypot_fuzz.cpp
+  DEPENDS
+    libc.src.math.hypot
+)

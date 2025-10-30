@@ -50,8 +50,8 @@ void FuncDialect::initialize() {
 Operation *FuncDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
   if (ConstantOp::isBuildableWith(value, type))
-    return builder.create<ConstantOp>(loc, type,
-                                      llvm::cast<FlatSymbolRefAttr>(value));
+    return ConstantOp::create(builder, loc, type,
+                              llvm::cast<FlatSymbolRefAttr>(value));
   return nullptr;
 }
 

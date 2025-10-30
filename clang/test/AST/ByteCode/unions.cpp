@@ -79,10 +79,9 @@ namespace DefaultInit {
 
   constexpr U1 u1; /// OK.
 
-  constexpr int foo() { // expected-error {{never produces a constant expression}}
+  constexpr int foo() {
     U1 u;
-    return u.a; // both-note {{read of member 'a' of union with active member 'b'}} \
-                // expected-note {{read of member 'a' of union with active member 'b'}}
+    return u.a; // both-note {{read of member 'a' of union with active member 'b'}}
   }
   static_assert(foo() == 42); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
@@ -847,6 +846,87 @@ namespace Activation2 {
   }
   static_assert(change_member_indirectly() == 4);
 }
+
+namespace CopyCtorMutable {
+  struct E {
+    union {
+      int a;
+      mutable int b; // both-note {{here}}
+    };
+  };
+  constexpr E e1 = {{1}};
+  constexpr E e2 = e1; // both-error {{constant}} \
+                       // both-note {{read of mutable member 'b'}} \
+                       // both-note {{in call}}
+}
+
+
+namespace NonTrivialCtor {
+  struct A { int x = 1; constexpr int f() { return 1; } };
+  struct B : A { int y = 1; constexpr int g() { return 2; } };
+  struct C {
+    int x;
+    constexpr virtual int f() = 0;
+  };
+  struct D : C {
+    int y;
+    constexpr virtual int f() override { return 3; }
+  };
+
+  union U {
+    int n;
+    B b;
+    D d;
+  };
+
+  consteval int test(int which) {
+    if (which == 0) {}
+
+    U u{.n = 5};
+    assert_active(u);
+    assert_active(u.n);
+    assert_inactive(u.b);
+
+    switch (which) {
+    case 0:
+      u.b.x = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.f();
+    case 1:
+      u.b.y = 10; // both-note {{assignment to member 'b' of union with active member 'n'}}
+      return u.b.g();
+    case 2:
+      u.d.x = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+     return u.d.f();
+    case 3:
+    u.d.y = 10; // both-note {{assignment to member 'd' of union with active member 'n'}}
+      return u.d.f();
+    }
+
+    return 1;
+  }
+  static_assert(test(0)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(1)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(2)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+  static_assert(test(3)); // both-error {{not an integral constant expression}} \
+                          // both-note {{in call}}
+
+}
+
+namespace PrimitiveFieldInitActivates {
+  /// The initializer of a needs the field to be active _before_ it's visited.
+  template<int> struct X {};
+  union V {
+    int a, b;
+    constexpr V(X<0>) : a(a = 1) {} // ok
+    constexpr V(X<2>) : a() { b = 1; } // ok
+  };
+  constinit V v0 = X<0>();
+  constinit V v2 = X<2>();
+}
+
 #endif
 
 namespace AddressComparison {
@@ -886,3 +966,24 @@ namespace AddressComparison {
   static_assert(&U2.a[0] != &U2.b[1]);
   static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
 }
+
+#if __cplusplus >= 202002L
+namespace UnionMemberOnePastEnd {
+  constexpr bool b() {
+    union  {
+      int p;
+    };
+    return &p == (&p + 1);
+  }
+  static_assert(!b());
+}
+
+namespace ActicvateInvalidPtr {
+  constexpr void bar() { // both-error {{never produces a constant expression}}
+    union {
+      int a[1];
+    } foo;
+    foo.a[1] = 0; // both-note {{assignment to dereferenced one-past-the-end pointer}}
+  }
+}
+#endif

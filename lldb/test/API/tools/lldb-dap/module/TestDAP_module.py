@@ -1,15 +1,14 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap module request
 """
 
-import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import re
 
-
+# Flakey in Github CI runs, see https://github.com/llvm/llvm-project/issues/137660.
+@skipIfLinux
 class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
     def run_test(self, symbol_basename, expect_debug_info_size):
         program_basename = "a.out.stripped"
@@ -55,7 +54,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
 
         if expect_debug_info_size:
             self.assertTrue(
-                self.waitUntil(check_symbols_loaded_with_size),
+                self.wait_until(check_symbols_loaded_with_size),
                 "expect has debug info size",
             )
 
@@ -65,18 +64,17 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(program, program_module["path"])
         self.assertIn("addressRange", program_module)
 
+        self.continue_to_exit()
+
         # Collect all the module names we saw as events.
         module_new_names = []
         module_changed_names = []
-        module_event = self.dap_server.wait_for_event("module", 1)
-        while module_event is not None:
+        for module_event in self.dap_server.module_events:
             reason = module_event["body"]["reason"]
             if reason == "new":
                 module_new_names.append(module_event["body"]["module"]["name"])
             elif reason == "changed":
                 module_changed_names.append(module_event["body"]["module"]["name"])
-
-            module_event = self.dap_server.wait_for_event("module", 1)
 
         # Make sure we got an event for every active module.
         self.assertNotEqual(len(module_new_names), 0)
@@ -87,7 +85,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # symbols got added.
         self.assertNotEqual(len(module_changed_names), 0)
         self.assertIn(program_module["name"], module_changed_names)
-        self.continue_to_exit()
 
     @skipIfWindows
     def test_modules(self):

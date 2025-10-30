@@ -31,7 +31,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-static constexpr float16 expf16(float16 x) {
+LIBC_INLINE static constexpr float16 expf16(float16 x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr fputil::ExceptValues<float16, 2> EXPF16_EXCEPTS_LO = {{
       // (input, RZ output, RU offset, RD offset, RN offset)

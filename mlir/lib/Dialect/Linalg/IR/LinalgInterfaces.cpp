@@ -68,8 +68,14 @@ bool linalg::isaCopyOpInterface(LinalgOp op) {
       !mapRange.back().isIdentity()) {
     return false;
   }
-  // Region.
-  return llvm::hasSingleElement(op.getBlock()->getOperations());
+  // Check yield first block argument.
+  Block *body = op.getBlock();
+  if (body->getOperations().size() != 1)
+    return false;
+  auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
+  if (!yieldOp || yieldOp.getNumOperands() != 1)
+    return false;
+  return yieldOp->getOperand(0) == body->getArgument(0);
 }
 
 //===----------------------------------------------------------------------===//
@@ -242,10 +248,8 @@ static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
     return false;
 
   auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
-  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
-      yieldOp->getOperand(0).getDefiningOp() != oper)
-    return false;
-  return true;
+  return !(!yieldOp || yieldOp.getNumOperands() != 1 ||
+           yieldOp->getOperand(0).getDefiningOp() != oper);
 }
 
 bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op) {
@@ -266,10 +270,8 @@ bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
   // Check both inputs are used (elementwise).
   OpOperand *inputOpOperand0 = op.getDpsInputOperand(0);
   OpOperand *inputOpOperand1 = op.getDpsInputOperand(1);
-  if (!op.payloadUsesValueFromOperand(inputOpOperand0) ||
-      !op.payloadUsesValueFromOperand(inputOpOperand1))
-    return false;
-  return true;
+  return !(!op.payloadUsesValueFromOperand(inputOpOperand0) ||
+           !op.payloadUsesValueFromOperand(inputOpOperand1));
 }
 
 //===----------------------------------------------------------------------===//
@@ -313,7 +315,8 @@ bool mlir::linalg::detail::isContractionBody(
 
   Value yielded = getSourceSkipUnary(terminator->getOperand(0));
   Operation *reductionOp = yielded.getDefiningOp();
-  if (reductionOp->getNumResults() != 1 || reductionOp->getNumOperands() != 2) {
+  if (!reductionOp || reductionOp->getNumResults() != 1 ||
+      reductionOp->getNumOperands() != 2) {
     errs << "expected reduction op to be binary";
     return false;
   }
@@ -470,10 +473,10 @@ inferContractionDimsImpl(ArrayRef<AffineMap> indexingMaps,
       SmallVector<unsigned, 2>(ac.begin(), ac.end()),
       SmallVector<unsigned, 2>(bc.begin(), bc.end()),
       SmallVector<unsigned, 2>(ra.begin(), ra.end())};
-  llvm::sort(dimensions.batch.begin(), dimensions.batch.end());
-  llvm::sort(dimensions.m.begin(), dimensions.m.end());
-  llvm::sort(dimensions.n.begin(), dimensions.n.end());
-  llvm::sort(dimensions.k.begin(), dimensions.k.end());
+  llvm::sort(dimensions.batch);
+  llvm::sort(dimensions.m);
+  llvm::sort(dimensions.n);
+  llvm::sort(dimensions.k);
   return dimensions;
 }
 
@@ -791,12 +794,12 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
       SmallVector<unsigned, 2>(depth.begin(), depth.end()),
       /*strides=*/SmallVector<int64_t, 2>{},
       /*dilations=*/SmallVector<int64_t, 2>{}};
-  llvm::sort(dimensions.batch.begin(), dimensions.batch.end());
-  llvm::sort(dimensions.outputImage.begin(), dimensions.outputImage.end());
-  llvm::sort(dimensions.outputChannel.begin(), dimensions.outputChannel.end());
-  llvm::sort(dimensions.filterLoop.begin(), dimensions.filterLoop.end());
-  llvm::sort(dimensions.inputChannel.begin(), dimensions.inputChannel.end());
-  llvm::sort(dimensions.depth.begin(), dimensions.depth.end());
+  llvm::sort(dimensions.batch);
+  llvm::sort(dimensions.outputImage);
+  llvm::sort(dimensions.outputChannel);
+  llvm::sort(dimensions.filterLoop);
+  llvm::sort(dimensions.inputChannel);
+  llvm::sort(dimensions.depth);
 
   // Use the op carried strides/dilations attribute if present.
   auto nativeStrides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
@@ -1271,8 +1274,7 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     return op->emitOpError("expected the shape-to-loops map to be non-null");
 
   // Check the region has exactly one block.
-  if (linalgOp->getNumRegions() != 1 ||
-      !llvm::hasSingleElement(linalgOp->getRegion(0)))
+  if (linalgOp->getNumRegions() != 1 || !linalgOp->getRegion(0).hasOneBlock())
     return op->emitOpError("expects to have 1 region with 1 block");
 
   // Simplifying assumption: bbargs match 1-1 with shape operands elemental

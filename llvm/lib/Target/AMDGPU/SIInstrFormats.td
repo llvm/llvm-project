@@ -317,9 +317,11 @@ def CPolBit {
   int SLC = 1;
   int DLC = 2;
   int SCC = 4;
+  int NV = 5;
+  int SCAL = 11;
 }
 
-class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
+class VOPDstOperand<RegisterClassLike rc> : RegisterOperand<rc, "printVOPDst">;
 
 def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
   let EncoderMethod = "getMachineOpValueT16";
@@ -471,6 +473,7 @@ class VIMAGE_VSAMPLE_Common <bits<8> op> : Enc96 {
   let Inst{4} = r128;
   let Inst{5} = d16;
   let Inst{6} = a16;
+  let Inst{7} = cpol{5}; // nv
   let Inst{21-14} = op;
   let Inst{25-22} = dmask;
   let Inst{39-32} = vdata;

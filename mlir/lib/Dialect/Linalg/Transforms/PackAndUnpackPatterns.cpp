@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -81,9 +82,8 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
                ArrayRef<ReassociationIndices> reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter
-        .create<tensor::ExpandShapeOp>(loc, newOperandType, operand,
-                                       reassociation)
+    return tensor::ExpandShapeOp::create(rewriter, loc, newOperandType, operand,
+                                         reassociation)
         .getResult();
   }
 
@@ -143,8 +143,8 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
                        Type newOperandType, ArrayAttr reassociation) const {
     if (operand.getType() == newOperandType)
       return operand;
-    return rewriter.create<tensor::CollapseShapeOp>(loc, newOperandType,
-                                                    operand, reassociation);
+    return tensor::CollapseShapeOp::create(rewriter, loc, newOperandType,
+                                           operand, reassociation);
   }
 
   /// Returns success() if it is unpacking on the innermost dimension.
@@ -220,6 +220,33 @@ public:
       if (!isEqualConstantIntOrValue(paddingValue, constantPaddingValue))
         return failure();
 
+    // Folding is not allowed if it were to introduce artificial padding.
+    // Folding is also disabled in the case of dynamic dimensions and/or tile
+    // sizes - that is because it would be impossible to compute the padding
+    // size and hence to establish whether "artificial" padding would be
+    // created.
+    RankedTensorType unpackedType = packOp.getSourceType();
+    SmallVector<int64_t> outerShapeWithoutTranspose =
+        getPackedOuterShapeWithoutTransposition(packOp);
+    for (auto [pos, tileSize, high] :
+         llvm::zip_equal(packOp.getInnerDimsPos(), packOp.getStaticInnerTiles(),
+                         padOp.getMixedHighPad())) {
+      if (unpackedType.isDynamicDim(pos))
+        return failure();
+      if (ShapedType::isDynamic(outerShapeWithoutTranspose[pos]))
+        return failure();
+      if (ShapedType::isDynamic(tileSize))
+        return failure();
+      std::optional<int64_t> cstHigh = getConstantIntValue(high);
+      if (!cstHigh)
+        return failure();
+      int64_t paddingSize = outerShapeWithoutTranspose[pos] * tileSize -
+                            unpackedType.getDimSize(pos);
+      // Do not fold the op if it requires artificial padding.
+      if (paddingSize + cstHigh.value() >= tileSize)
+        return failure();
+    }
+
     rewriter.replaceOpWithNewOp<PackOp>(
         packOp, padOp.getSource(), packOp.getDest(), packOp.getInnerDimsPos(),
         packOp.getMixedTiles(), constantPaddingValue,
@@ -251,22 +278,13 @@ public:
     if (controlFn && !controlFn(&sliceOp.getSourceMutable()))
       return failure();
 
-    if (sliceOp.getResultType().getRank() != unpackOp.getDestType().getRank()) {
-      return rewriter.notifyMatchFailure(
-          sliceOp, "rank-reduced folding is not supported");
-    }
-
-    // Check all offsets are zeros, and all strides are ones.
-    if (!areAllConstantIntValue(sliceOp.getMixedOffsets(), 0) ||
-        !areAllConstantIntValue(sliceOp.getMixedStrides(), 1)) {
-      return rewriter.notifyMatchFailure(
-          sliceOp, "expects offsets to be 0s and strides to be 1s");
-    }
+    if (!unpackOp.canFoldSliceOp(sliceOp))
+      return failure();
 
     // Create a new empty output tensor.
     Type elementType = unpackOp.getDestType().getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
-        sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
+    Value output = tensor::EmptyOp::create(
+        rewriter, sliceOp.getLoc(), sliceOp.getMixedSizes(), elementType);
     rewriter.replaceOpWithNewOp<UnPackOp>(
         sliceOp, unpackOp.getSource(), output, unpackOp.getInnerDimsPos(),
         unpackOp.getMixedTiles(), unpackOp.getOuterDimsPerm());
@@ -330,7 +348,7 @@ public:
     auto innerDimsPos = packOp.getInnerDimsPos();
     auto mixedInnerTiles = packOp.getMixedTiles();
     auto outerDimsPerm = packOp.getOuterDimsPerm();
-    auto transposePerm = maybePerm.value();
+    const auto &transposePerm = maybePerm.value();
     SmallVector<int64_t> newOuterDimsPermVec;
     SmallVector<int64_t> newInnerDimsPosVec;
     SmallVector<OpFoldResult> newMixedInnerTilesVec;
@@ -529,8 +547,8 @@ public:
 
     auto elemType =
         cast<ShapedType>(unPackOp->getResultTypes()[0]).getElementType();
-    Value output = rewriter.create<tensor::EmptyOp>(
-        unPackOp->getLoc(), unpackOpResultDims[0], elemType);
+    Value output = tensor::EmptyOp::create(rewriter, unPackOp->getLoc(),
+                                           unpackOpResultDims[0], elemType);
 
     rewriter.replaceOpWithNewOp<UnPackOp>(
         unPackOp, linalgOp->getOperand(0), output, newInnerDimsPosVec,

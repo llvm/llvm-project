@@ -1,4 +1,4 @@
-//===--- SignedCharMisuseCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ namespace clang::tidy::bugprone {
 /// implicit conversion happens.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/signed-char-misuse.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/signed-char-misuse.html
 class SignedCharMisuseCheck : public ClangTidyCheck {
 public:
   SignedCharMisuseCheck(StringRef Name, ClangTidyContext *Context);
@@ -35,7 +35,7 @@ private:
       const ast_matchers::internal::Matcher<clang::QualType> &IntegerType,
       const std::string &CastBindName) const;
 
-  const StringRef CharTypdefsToIgnoreList;
+  const StringRef CharTypedefsToIgnoreList;
   const bool DiagnoseSignedUnsignedCharComparisons;
 };
 

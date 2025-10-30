@@ -237,9 +237,18 @@ EVT X86TargetLowering::getSetCCResultType(const DataLayout &DL,
 bool X86TargetLowering::functionArgumentNeedsConsecutiveRegisters(
     Type *Ty, CallingConv::ID CallConv, bool isVarArg,
     const DataLayout &DL) const {
-  // i128 split into i64 needs to be allocated to two consecutive registers,
-  // or spilled to the stack as a whole.
-  return Ty->isIntegerTy(128);
+  // On x86-64 i128 is split into two i64s and needs to be allocated to two
+  // consecutive registers, or spilled to the stack as a whole. On x86-32 i128
+  // is split to four i32s and never actually passed in registers, but we use
+  // the consecutive register mark to match it in TableGen.
+  if (Ty->isIntegerTy(128))
+    return true;
+
+  // On x86-32, fp128 acts the same as i128.
+  if (Subtarget.is32Bit() && Ty->isFP128Ty())
+    return true;
+
+  return false;
 }
 
 /// Helper for getByValTypeAlignment to determine
@@ -293,7 +302,7 @@ EVT X86TargetLowering::getOptimalMemOpType(
     if (Op.size() >= 16 &&
         (!Subtarget.isUnalignedMem16Slow() || Op.isAligned(Align(16)))) {
       // FIXME: Check if unaligned 64-byte accesses are slow.
-      if (Op.size() >= 64 && Subtarget.hasAVX512() && Subtarget.hasEVEX512() &&
+      if (Op.size() >= 64 && Subtarget.hasAVX512() &&
           (Subtarget.getPreferVectorWidth() >= 512)) {
         return Subtarget.hasBWI() ? MVT::v64i8 : MVT::v16i32;
       }
@@ -407,7 +416,7 @@ bool X86TargetLowering::allowsMemoryAccess(LLVMContext &Context,
         return true;
       return false;
     case 512:
-      if (Subtarget.hasAVX512() && Subtarget.hasEVEX512())
+      if (Subtarget.hasAVX512())
         return true;
       return false;
     default:
@@ -538,7 +547,7 @@ unsigned X86TargetLowering::getAddressSpace() const {
 
 static bool hasStackGuardSlotTLS(const Triple &TargetTriple) {
   return TargetTriple.isOSGlibc() || TargetTriple.isOSFuchsia() ||
-         (TargetTriple.isAndroid() && !TargetTriple.isAndroidVersionLT(17));
+         TargetTriple.isAndroid();
 }
 
 static Constant* SegmentOffset(IRBuilderBase &IRB,
@@ -597,16 +606,24 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 
 void X86TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
+    // MSVC CRT provides functionalities for stack protection.
     // MSVC CRT has a global variable holding security cookie.
-    M.getOrInsertGlobal("__security_cookie",
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
-    FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-        "__security_check_cookie", Type::getVoidTy(M.getContext()),
-        PointerType::getUnqual(M.getContext()));
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
+
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
       F->setCallingConv(CallingConv::X86_FastCall);
       F->addParamAttr(0, Attribute::AttrKind::InReg);
@@ -621,24 +638,6 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
       hasStackGuardSlotTLS(Subtarget.getTargetTriple()))
     return;
   TargetLowering::insertSSPDeclarations(M);
-}
-
-Value *X86TargetLowering::getSDagStackGuard(const Module &M) const {
-  // MSVC CRT has a global variable holding security cookie.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
-    return M.getGlobalVariable("__security_cookie");
-  }
-  return TargetLowering::getSDagStackGuard(M);
-}
-
-Function *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
-    return M.getFunction("__security_check_cookie");
-  }
-  return TargetLowering::getSSPStackGuardCheck(M);
 }
 
 Value *
@@ -2051,6 +2050,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
 
+  // Set type id for call site info.
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
+
   if (IsIndirectCall && !IsWin64 &&
       M->getModuleFlag("import-call-optimization"))
     errorUnsupported(DAG, dl,
@@ -2768,6 +2771,38 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
   return Bytes == MFI.getObjectSize(FI);
 }
 
+static bool
+mayBeSRetTailCallCompatible(const TargetLowering::CallLoweringInfo &CLI,
+                            Register CallerSRetReg) {
+  const auto &Outs = CLI.Outs;
+  const auto &OutVals = CLI.OutVals;
+
+  // We know the caller has a sret pointer argument (CallerSRetReg). Locate the
+  // operand index within the callee that may have a sret pointer too.
+  unsigned Pos = 0;
+  for (unsigned E = Outs.size(); Pos != E; ++Pos)
+    if (Outs[Pos].Flags.isSRet())
+      break;
+  // Bail out if the callee has not any sret argument.
+  if (Pos == Outs.size())
+    return false;
+
+  // At this point, either the caller is forwarding its sret argument to the
+  // callee, or the callee is being passed a different sret pointer. We now look
+  // for a CopyToReg, where the callee sret argument is written into a new vreg
+  // (which should later be %rax/%eax, if this is returned).
+  SDValue SRetArgVal = OutVals[Pos];
+  for (SDNode *User : SRetArgVal->users()) {
+    if (User->getOpcode() != ISD::CopyToReg)
+      continue;
+    Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+    if (Reg == CallerSRetReg && User->getOperand(2) == SRetArgVal)
+      return true;
+  }
+
+  return false;
+}
+
 /// Check whether the call is eligible for tail call optimization. Targets
 /// that want to do tail call optimization should implement this function.
 /// Note that the x86 backend does not check musttail calls for eligibility! The
@@ -2789,6 +2824,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
 
   // If -tailcallopt is specified, make fastcc functions tail-callable.
   MachineFunction &MF = DAG.getMachineFunction();
+  X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
   const Function &CallerF = MF.getFunction();
 
   // If the function return type is x86_fp80 and the callee return type is not,
@@ -2825,14 +2861,15 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   if (RegInfo->hasStackRealignment(MF))
     return false;
 
-  // Also avoid sibcall optimization if we're an sret return fn and the callee
-  // is incompatible. See comment in LowerReturn about why hasStructRetAttr is
-  // insufficient.
-  if (MF.getInfo<X86MachineFunctionInfo>()->getSRetReturnReg()) {
+  // Avoid sibcall optimization if we are an sret return function and the callee
+  // is incompatible, unless such premises are proven wrong. See comment in
+  // LowerReturn about why hasStructRetAttr is insufficient.
+  if (Register SRetReg = FuncInfo->getSRetReturnReg()) {
     // For a compatible tail call the callee must return our sret pointer. So it
     // needs to be (a) an sret function itself and (b) we pass our sret as its
     // sret. Condition #b is harder to determine.
-    return false;
+    if (!mayBeSRetTailCallCompatible(CLI, SRetReg))
+      return false;
   } else if (IsCalleePopSRet)
     // The callee pops an sret, so we cannot tail-call, as our caller doesn't
     // expect that.
@@ -2954,8 +2991,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       X86::isCalleePop(CalleeCC, Subtarget.is64Bit(), isVarArg,
                        MF.getTarget().Options.GuaranteedTailCallOpt);
 
-  if (unsigned BytesToPop =
-          MF.getInfo<X86MachineFunctionInfo>()->getBytesToPopOnReturn()) {
+  if (unsigned BytesToPop = FuncInfo->getBytesToPopOnReturn()) {
     // If we have bytes to pop, the callee must pop them.
     bool CalleePopMatches = CalleeWillPop && BytesToPop == StackArgsSize;
     if (!CalleePopMatches)

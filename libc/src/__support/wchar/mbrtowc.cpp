@@ -8,7 +8,6 @@
 
 #include "src/__support/wchar/mbrtowc.h"
 #include "hdr/errno_macros.h"
-#include "hdr/types/mbstate_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
@@ -37,7 +36,8 @@ ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
   }
   auto wc = char_conv.pop_utf32();
   if (wc.has_value()) {
-    *pwc = wc.value();
+    if (pwc != nullptr)
+      *pwc = wc.value();
     // null terminator -> return 0
     if (wc.value() == L'\0')
       return 0;

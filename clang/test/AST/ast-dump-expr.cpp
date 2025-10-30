@@ -115,34 +115,34 @@ void Casting(const S *s) {
 template <typename... Ts>
 void UnaryExpressions(int *p) {
   sizeof...(Ts);
-  // CHECK: SizeOfPackExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:15> 'unsigned long' 0x{{[^ ]*}} Ts
+  // CHECK: SizeOfPackExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:15> '__size_t':'unsigned long' 0x{{[^ ]*}} Ts
 
   noexcept(p - p);
   // CHECK: CXXNoexceptExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:17> 'bool'
-  // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:12, col:16> 'long' '-'
+  // CHECK-NEXT: BinaryOperator 0x{{[^ ]*}} <col:12, col:16> '__ptrdiff_t':'long' '-'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:16> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
   ::new int;
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'int *' global Function 0x{{[^ ]*}} 'operator new' 'void *(unsigned long)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:9> 'int *' global Function 0x{{[^ ]*}} 'operator new' 'void *(__size_t)'
 
   new (int);
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(unsigned long)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:11> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(__size_t)'
 
   new int{12};
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(unsigned long)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> 'int *' Function 0x{{[^ ]*}} 'operator new' 'void *(__size_t)'
   // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:10, col:13> 'int'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 12
 
   new int[2];
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(unsigned long)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(__size_t)'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 2
 
   new int[2]{1, 2};
-  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(unsigned long)'
+  // CHECK: CXXNewExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:18> 'int *' array Function 0x{{[^ ]*}} 'operator new[]' 'void *(__size_t)'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:11> 'int' 2
   // CHECK-NEXT: InitListExpr 0x{{[^ ]*}} <col:13, col:18> 'int[2]'
@@ -164,7 +164,7 @@ void UnaryExpressions(int *p) {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:8> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
   ::delete p;
-  // CHECK: CXXDeleteExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'void' global Function 0x{{[^ ]*}} 'operator delete' 'void (void *, unsigned long) noexcept'
+  // CHECK: CXXDeleteExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:12> 'void' global Function 0x{{[^ ]*}} 'operator delete' 'void (void *, __size_t) noexcept'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:12> 'int *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'int *'
 
@@ -219,13 +219,10 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:5> '<bound member function type>' .~S 0x{{[^ ]*}}
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S' lvalue ParmVar 0x{{[^ ]*}} 'a' 'S'
 
-  // FIXME: similarly, there is no way to distinguish the construct below from
-  // the p->~S() case.
   p->::S::~S();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:14> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:12> '<bound member function type>' ->~S 0x{{[^ ]*}}
-  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'S'
-  // CHECK-NEXT: NestedNameSpecifier Global
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec '::S'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'S *'
 
@@ -597,5 +594,5 @@ struct S {
 void f() {
   S(S(0, 1));
 }
-// CHECK: CXXTemporaryObjectExpr {{.*}} <col:5, col:11> 'S':'GH143711::S' 'void (int, int)'
+// CHECK: CXXTemporaryObjectExpr {{.*}} <col:5, col:11> 'S' 'void (int, int)'
 }

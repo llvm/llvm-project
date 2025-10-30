@@ -93,7 +93,7 @@ struct resumable5 {
 };
 
 resumable f1(int) {
-  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable, int>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f1'}}
+  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable, int>::promise_type' (aka 'typename resumable::promise_type') is not usable with the function signature of 'f1'}}
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable_tan1 {{type aware 'operator new' declared here}}
   // expected-note@#resumable_tan2 {{type aware 'operator new' declared here}}
@@ -101,7 +101,7 @@ resumable f1(int) {
 }
 
 resumable f2(float) {
-  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable, float>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f2'}}
+  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable, float>::promise_type' (aka 'typename resumable::promise_type') is not usable with the function signature of 'f2'}}
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable_tan1 {{type aware 'operator new' declared here}}
   // expected-note@#resumable_tan2 {{type aware 'operator new' declared here}}
@@ -109,7 +109,7 @@ resumable f2(float) {
 }
 
 resumable2 f3(int, float, const char*, Allocator) {
-  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable2, int, float, const char *, Allocator>::promise_type' (aka 'resumable2::promise_type') is not usable with the function signature of 'f3'}}
+  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable2, int, float, const char *, Allocator>::promise_type' (aka 'typename resumable2::promise_type') is not usable with the function signature of 'f3'}}
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable2_tan1 {{type aware 'operator new' declared here}}
   co_yield 1;
@@ -117,7 +117,7 @@ resumable2 f3(int, float, const char*, Allocator) {
 }
 
 resumable f4(int n = 10) {
-  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable, int>::promise_type' (aka 'resumable::promise_type') is not usable with the function signature of 'f4'}}
+  // expected-error@-1 {{'operator new' provided by 'std::coroutine_traits<resumable, int>::promise_type' (aka 'typename resumable::promise_type') is not usable with the function signature of 'f4'}}
   // expected-note@-2 {{type aware 'operator new' will not be used for coroutine allocation}}
   // expected-note@#resumable_tan1 {{type aware 'operator new' declared here}}
   // expected-note@#resumable_tan2 {{type aware 'operator new' declared here}}

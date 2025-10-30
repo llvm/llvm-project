@@ -86,6 +86,7 @@ current state, follow the links to their respective issues:
 
 * `RISC-V <https://github.com/llvm/llvm-project/issues/55383>`_
 * `LoongArch <https://github.com/llvm/llvm-project/issues/112693>`_
+* `WebAssembly <https://github.com/llvm/llvm-project/issues/150449>`_
 
 Get Involved
 ------------

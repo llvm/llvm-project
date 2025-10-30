@@ -743,3 +743,31 @@ module {
     return
   }
 }
+
+// SIBLING-MAXIMAL-LABEL: memref_cast_reused
+func.func @memref_cast_reused(%arg: memref<*xf32>) {
+  %alloc = memref.cast %arg : memref<*xf32> to memref<10xf32>
+  %alloc_0 = memref.alloc() : memref<10xf32>
+  %alloc_1 = memref.alloc() : memref<10xf32>
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst_2 = arith.constant 1.000000e+00 : f32
+  affine.for %arg0 = 0 to 10 {
+    %0 = affine.load %alloc[%arg0] : memref<10xf32>
+    %1 = arith.addf %0, %cst_2 : f32
+    affine.store %1, %alloc_0[%arg0] : memref<10xf32>
+  }
+  affine.for %arg0 = 0 to 10 {
+    %0 = affine.load %alloc[%arg0] : memref<10xf32>
+    %1 = affine.load %alloc_1[0] : memref<10xf32>
+    %2 = arith.addf %0, %1 : f32
+    affine.store %2, %alloc_1[0] : memref<10xf32>
+  }
+  // SIBLING-MAXIMAL:      affine.for %{{.*}} = 0 to 10
+  // SIBLING-MAXIMAL:        addf
+  // SIBLING-MAXIMAL-NEXT:   affine.store
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   affine.load
+  // SIBLING-MAXIMAL-NEXT:   addf
+  // SIBLING-MAXIMAL-NEXT:   affine.store
+  return
+}

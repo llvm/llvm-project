@@ -26,6 +26,7 @@ struct support::adapt_operations<std::multiset<K>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::multiset<int>>("std::multiset<int>");
+  support::associative_container_benchmarks<std::multiset<std::string>>("std::multiset<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

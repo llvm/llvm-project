@@ -19,11 +19,10 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/IntEqClasses.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #define DEBUG_TYPE "affine-min-max"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 using namespace mlir;
 using namespace mlir::affine;
@@ -39,7 +38,7 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
   ValueRange operands = affineOp.getOperands();
   static constexpr bool isMin = std::is_same_v<AffineOp, AffineMinOp>;
 
-  LLVM_DEBUG({ DBGS() << "analyzing value: `" << affineOp << "`\n"; });
+  LDBG() << "analyzing value: `" << affineOp;
 
   // Create a `Variable` list with values corresponding to each of the results
   // in the affine affineMap.
@@ -48,12 +47,9 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
       [&](unsigned i) {
         return Variable(affineMap.getSliceMap(i, 1), operands);
       });
-  LLVM_DEBUG({
-    DBGS() << "- constructed variables are: "
-           << llvm::interleaved_array(llvm::map_range(
-                  variables, [](const Variable &v) { return v.getMap(); }))
-           << "`\n";
-  });
+  LDBG() << "- constructed variables are: "
+         << llvm::interleaved_array(llvm::map_range(
+                variables, [](const Variable &v) { return v.getMap(); }));
 
   // Get the comparison operation.
   ComparisonOperator cmpOp =
@@ -72,10 +68,8 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
     // Initialize the bound.
     Variable *bound = &v;
 
-    LLVM_DEBUG({
-      DBGS() << "- inspecting variable: #" << i << ", with map: `" << v.getMap()
-             << "`\n";
-    });
+    LDBG() << "- inspecting variable: #" << i << ", with map: `" << v.getMap()
+           << "`\n";
 
     // Check against the other variables.
     for (size_t j = i + 1; j < variables.size(); ++j) {
@@ -87,10 +81,8 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
       // Get the bound of the equivalence class or itself.
       Variable *nv = bounds.lookup_or(jEqClass, &variables[j]);
 
-      LLVM_DEBUG({
-        DBGS() << "- comparing with variable: #" << jEqClass
-               << ", with map: " << nv->getMap() << "\n";
-      });
+      LDBG() << "- comparing with variable: #" << jEqClass
+             << ", with map: " << nv->getMap();
 
       // Compare the variables.
       FailureOr<bool> cmpResult =
@@ -98,18 +90,14 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
 
       // The variables cannot be compared.
       if (failed(cmpResult)) {
-        LLVM_DEBUG({
-          DBGS() << "-- classes: #" << i << ", #" << jEqClass
-                 << " cannot be merged\n";
-        });
+        LDBG() << "-- classes: #" << i << ", #" << jEqClass
+               << " cannot be merged";
         continue;
       }
 
       // Join the equivalent classes and update the bound if necessary.
-      LLVM_DEBUG({
-        DBGS() << "-- merging classes: #" << i << ", #" << jEqClass
-               << ", is cmp(lhs, rhs): " << *cmpResult << "`\n";
-      });
+      LDBG() << "-- merging classes: #" << i << ", #" << jEqClass
+             << ", is cmp(lhs, rhs): " << *cmpResult << "`";
       if (*cmpResult) {
         boundedClasses.join(eqClass, jEqClass);
       } else {
@@ -124,8 +112,7 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
 
   // Return if there's no simplification.
   if (bounds.size() >= affineMap.getNumResults()) {
-    LLVM_DEBUG(
-        { DBGS() << "- the affine operation couldn't get simplified\n"; });
+    LDBG() << "- the affine operation couldn't get simplified";
     return false;
   }
 
@@ -135,13 +122,11 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
   for (auto [k, bound] : bounds)
     results.push_back(bound->getMap().getResult(0));
 
-  LLVM_DEBUG({
-    DBGS() << "- starting from map: " << affineMap << "\n";
-    DBGS() << "- creating new map with: \n";
-    DBGS() << "--- dims: " << affineMap.getNumDims() << "\n";
-    DBGS() << "--- syms: " << affineMap.getNumSymbols() << "\n";
-    DBGS() << "--- res: " << llvm::interleaved_array(results) << "\n";
-  });
+  LDBG() << "- starting from map: " << affineMap;
+  LDBG() << "- creating new map with:";
+  LDBG() << "--- dims: " << affineMap.getNumDims();
+  LDBG() << "--- syms: " << affineMap.getNumSymbols();
+  LDBG() << "--- res: " << llvm::interleaved_array(results);
 
   affineMap =
       AffineMap::get(0, affineMap.getNumSymbols() + affineMap.getNumDims(),
@@ -149,7 +134,7 @@ static bool simplifyAffineMinMaxOp(RewriterBase &rewriter, AffineOp affineOp) {
 
   // Update the affine op.
   rewriter.modifyOpInPlace(affineOp, [&]() { affineOp.setMap(affineMap); });
-  LLVM_DEBUG({ DBGS() << "- simplified affine op: `" << affineOp << "`\n"; });
+  LDBG() << "- simplified affine op: `" << affineOp << "`";
   return true;
 }
 
@@ -166,10 +151,12 @@ LogicalResult mlir::affine::simplifyAffineMinMaxOps(RewriterBase &rewriter,
                                                     bool *modified) {
   bool changed = false;
   for (Operation *op : ops) {
-    if (auto minOp = dyn_cast<AffineMinOp>(op))
+    if (auto minOp = dyn_cast<AffineMinOp>(op)) {
       changed = simplifyAffineMinOp(rewriter, minOp) || changed;
-    else if (auto maxOp = cast<AffineMaxOp>(op))
-      changed = simplifyAffineMaxOp(rewriter, maxOp) || changed;
+      continue;
+    }
+    auto maxOp = cast<AffineMaxOp>(op);
+    changed = simplifyAffineMaxOp(rewriter, maxOp) || changed;
   }
   RewritePatternSet patterns(rewriter.getContext());
   AffineMaxOp::getCanonicalizationPatterns(patterns, rewriter.getContext());
@@ -259,6 +246,6 @@ void SimplifyAffineMinMaxPass::runOnOperation() {
   patterns.add<SimplifyAffineMaxOp, SimplifyAffineMinOp, SimplifyAffineApplyOp>(
       func.getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  if (failed(applyPatternsGreedily(func, std::move(frozenPatterns))))
+  if (failed(applyPatternsGreedily(func, frozenPatterns)))
     return signalPassFailure();
 }

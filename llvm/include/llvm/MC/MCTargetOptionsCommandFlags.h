@@ -40,6 +40,8 @@ LLVM_ABI EmitDwarfUnwindType getEmitDwarfUnwind();
 
 LLVM_ABI bool getEmitCompactUnwindNonCanonical();
 
+LLVM_ABI bool getEmitSFrameUnwind();
+
 LLVM_ABI bool getShowMCInst();
 
 LLVM_ABI bool getFatalWarnings();

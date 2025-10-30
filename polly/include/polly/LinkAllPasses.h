@@ -18,7 +18,7 @@
 #include "polly/Support/DumpFunctionPass.h"
 #include "polly/Support/DumpModulePass.h"
 #include "llvm/ADT/StringRef.h"
-#include <cstdlib>
+#include "llvm/Support/AlwaysTrue.h"
 
 namespace llvm {
 class Pass;
@@ -42,8 +42,6 @@ llvm::Pass *createJSONExporterPass();
 llvm::Pass *createJSONImporterPass();
 llvm::Pass *createJSONImporterPrinterLegacyPass(llvm::raw_ostream &OS);
 llvm::Pass *createPollyCanonicalizePass();
-llvm::Pass *createPolyhedralInfoPass();
-llvm::Pass *createPolyhedralInfoPrinterLegacyPass(llvm::raw_ostream &OS);
 llvm::Pass *createScopDetectionWrapperPassPass();
 llvm::Pass *createScopDetectionPrinterLegacyPass(llvm::raw_ostream &OS);
 llvm::Pass *createScopInfoRegionPassPass();
@@ -72,11 +70,10 @@ extern char &CodePreparationID;
 namespace {
 struct PollyForcePassLinking {
   PollyForcePassLinking() {
-    // We must reference the passes in such a way that compilers will not
-    // delete it all as dead code, even with whole program optimization,
-    // yet is effectively a NO-OP. As the compiler isn't smart enough
-    // to know that getenv() never returns -1, this will do the job.
-    if (std::getenv("bar") != (char *)-1)
+    // We must reference the passes in such a way that compilers will not delete
+    // it all as dead code, even with whole program optimization, yet is
+    // effectively a NO-OP.
+    if (llvm::getNonFoldableAlwaysTrue())
       return;
 
     polly::createCodePreparationPass();
@@ -99,8 +96,6 @@ struct PollyForcePassLinking {
     polly::createScopInfoWrapperPassPass();
     polly::createScopInfoPrinterLegacyFunctionPass(llvm::outs());
     polly::createPollyCanonicalizePass();
-    polly::createPolyhedralInfoPass();
-    polly::createPolyhedralInfoPrinterLegacyPass(llvm::outs());
     polly::createIslAstInfoWrapperPassPass();
     polly::createIslAstInfoPrinterLegacyPass(llvm::outs());
     polly::createCodeGenerationPass();
@@ -124,7 +119,7 @@ struct PollyForcePassLinking {
 
 namespace llvm {
 void initializeCodePreparationPass(llvm::PassRegistry &);
-void initializeScopInlinerPass(llvm::PassRegistry &);
+void initializeScopInlinerWrapperPassPass(llvm::PassRegistry &);
 void initializeScopDetectionWrapperPassPass(llvm::PassRegistry &);
 void initializeScopDetectionPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeScopInfoRegionPassPass(PassRegistry &);
@@ -156,8 +151,6 @@ void initializeDeLICMPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeSimplifyWrapperPassPass(llvm::PassRegistry &);
 void initializeSimplifyPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializePruneUnprofitableWrapperPassPass(llvm::PassRegistry &);
-void initializePolyhedralInfoPass(llvm::PassRegistry &);
-void initializePolyhedralInfoPrinterLegacyPassPass(llvm::PassRegistry &);
 } // namespace llvm
 
 #endif

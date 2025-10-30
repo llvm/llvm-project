@@ -350,11 +350,6 @@ class Sema;
     LLVM_PREFERRED_TYPE(bool)
     unsigned BindsToRvalue : 1;
 
-    /// Whether this was an identity conversion with qualification
-    /// conversion for the implicit object argument.
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsImplicitObjectArgumentQualificationConversion : 1;
-
     /// Whether this binds an implicit object argument to a
     /// non-static member function without a ref-qualifier.
     LLVM_PREFERRED_TYPE(bool)
@@ -453,11 +448,11 @@ class Sema;
 #endif
         return true;
       }
+      if (!C.hasSameType(getFromType(), getToType(2)))
+        return false;
       if (BindsToRvalue && IsLvalueReference)
         return false;
-      if (IsImplicitObjectArgumentQualificationConversion)
-        return C.hasSameUnqualifiedType(getFromType(), getToType(2));
-      return C.hasSameType(getFromType(), getToType(2));
+      return true;
     }
 
     ImplicitConversionRank getRank() const;
@@ -1207,12 +1202,12 @@ class Sema;
 
       /// Would use of this function result in a rewrite using a different
       /// operator?
-      bool isRewrittenOperator(const FunctionDecl *FD) {
+      bool isRewrittenOperator(const FunctionDecl *FD) const {
         return OriginalOperator &&
                FD->getDeclName().getCXXOverloadedOperator() != OriginalOperator;
       }
 
-      bool isAcceptableCandidate(const FunctionDecl *FD) {
+      bool isAcceptableCandidate(const FunctionDecl *FD) const {
         if (!OriginalOperator)
           return true;
 
@@ -1239,7 +1234,7 @@ class Sema;
       }
       /// Determines whether this operator could be implemented by a function
       /// with reversed parameter order.
-      bool isReversible() {
+      bool isReversible() const {
         return AllowRewrittenCandidates && OriginalOperator &&
                (getRewrittenOverloadedOperator(OriginalOperator) != OO_None ||
                 allowsReversed(OriginalOperator));
@@ -1247,13 +1242,13 @@ class Sema;
 
       /// Determine whether reversing parameter order is allowed for operator
       /// Op.
-      bool allowsReversed(OverloadedOperatorKind Op);
+      bool allowsReversed(OverloadedOperatorKind Op) const;
 
       /// Determine whether we should add a rewritten candidate for \p FD with
       /// reversed parameter order.
       /// \param OriginalArgs are the original non reversed arguments.
       bool shouldAddReversed(Sema &S, ArrayRef<Expr *> OriginalArgs,
-                             FunctionDecl *FD);
+                             FunctionDecl *FD) const;
     };
 
   private:
@@ -1496,8 +1491,6 @@ class Sema;
     OverloadingResult
     BestViableFunctionImpl(Sema &S, SourceLocation Loc,
                            OverloadCandidateSet::iterator &Best);
-    void PerfectViableFunction(Sema &S, SourceLocation Loc,
-                               OverloadCandidateSet::iterator &Best);
   };
 
   bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,

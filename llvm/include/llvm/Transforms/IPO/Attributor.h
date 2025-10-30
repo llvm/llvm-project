@@ -3325,7 +3325,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
-  virtual ~AbstractAttribute() = default;
+  ~AbstractAttribute() override = default;
 
   /// Compile time access to the IR attribute kind.
   static constexpr Attribute::AttrKind IRAttributeKind = Attribute::None;
@@ -5588,7 +5588,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 // Synthetic root node for the Attributor's internal call graph.
 struct AttributorCallGraph : public AACallGraphNode {
   AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
-  virtual ~AttributorCallGraph() = default;
+  ~AttributorCallGraph() override = default;
 
   AACallEdgeIterator optimisticEdgesBegin() const override {
     return AACallEdgeIterator(A, A.Functions.begin());
@@ -6494,7 +6494,7 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
   }
 
   constexpr static const std::optional<TypeSize> HasNoAllocationSize =
-      std::optional<TypeSize>(TypeSize(-1, true));
+      std::make_optional<TypeSize>(-1, true);
 
   LLVM_ABI static const char ID;
 };

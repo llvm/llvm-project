@@ -248,6 +248,10 @@ static bool splitMBB(BlockSplitInfo &BSI) {
   }
   addIncomingValuesToPHIs(NewBRTarget, ThisMBB, NewMBB, MRI);
 
+  // Set the call frame size on ThisMBB to the new basic blocks.
+  // See https://reviews.llvm.org/D156113.
+  NewMBB->setCallFrameSize(TII->getCallFrameSizeAt(ThisMBB->back()));
+
   LLVM_DEBUG(dbgs() << "After splitting, ThisMBB:\n"; ThisMBB->dump());
   LLVM_DEBUG(dbgs() << "NewMBB:\n"; NewMBB->dump());
   LLVM_DEBUG(dbgs() << "New branch-to block:\n"; NewBRTarget->dump());

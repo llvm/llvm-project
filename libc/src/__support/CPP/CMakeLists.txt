@@ -17,8 +17,10 @@ add_header_library(
   DEPENDS
     .limits
     .type_traits
+    libc.hdr.stdint_proxy
     libc.src.__support.macros.attributes
     libc.src.__support.macros.sanitizer
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
@@ -39,6 +41,8 @@ add_header_library(
   functional
   HDRS
     functional.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -168,6 +172,7 @@ add_header_library(
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
     libc.src.__support.macros.properties.types
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.complex_types
 )
 
@@ -205,5 +210,23 @@ add_object_library(
     libc.hdr.func.malloc
     libc.hdr.func.aligned_alloc
     libc.src.__support.common
+    libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.os
+)
+
+add_header_library(
+  tuple
+  HDRS
+    tuple.h
+  DEPENDS
+    .utility
+)
+
+add_header_library(
+  simd
+  HDRS
+    simd.h
+  DEPENDS
+    .utility
+    .tuple
 )

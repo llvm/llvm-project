@@ -9,31 +9,19 @@
 #include "DAP.h"
 #include "Protocol/ProtocolBase.h"
 #include "TestBase.h"
-#include "Transport.h"
-#include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <chrono>
-#include <memory>
 #include <optional>
 
-using namespace llvm;
-using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap_tests;
 using namespace lldb_dap::protocol;
+using namespace testing;
 
 class DAPTest : public TransportBase {};
 
 TEST_F(DAPTest, SendProtocolMessages) {
-  DAP dap{
-      /*log=*/nullptr,
-      /*default_repl_mode=*/ReplMode::Auto,
-      /*pre_init_commands=*/{},
-      /*transport=*/*to_dap,
-  };
-  dap.Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
-  ASSERT_THAT_EXPECTED(
-      from_dap->Read<protocol::Message>(std::chrono::milliseconds(1)),
-      HasValue(testing::VariantWith<Event>(testing::FieldsAre(
-          /*event=*/"my-event", /*body=*/std::nullopt))));
+  dap->Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
+  EXPECT_CALL(client, Received(IsEvent("my-event")));
+  Run();
 }

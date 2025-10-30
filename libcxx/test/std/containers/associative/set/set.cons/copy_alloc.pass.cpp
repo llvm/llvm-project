@@ -12,36 +12,95 @@
 
 // set(const set& m, const allocator_type& a);
 
-#include <set>
 #include <cassert>
-#include <iterator>
+#include <set>
 
-#include "test_macros.h"
 #include "../../../test_compare.h"
+#include "min_allocator.h"
+#include "test_macros.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
-  typedef int V;
-  V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
-  typedef test_less<int> C;
-  typedef test_allocator<V> A;
-  std::set<int, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(7));
-  std::set<int, C, A> m(mo, A(3));
-  assert(m.get_allocator() == A(3));
-  assert(m.key_comp() == C(5));
-  assert(m.size() == 3);
-  assert(std::distance(m.begin(), m.end()) == 3);
-  assert(*m.begin() == 1);
-  assert(*std::next(m.begin()) == 2);
-  assert(*std::next(m.begin(), 2) == 3);
+template <class Alloc>
+void test_alloc(const Alloc& new_alloc) {
+  { // Simple check
+    using Set = std::set<int, std::less<int>, Alloc>;
 
-  assert(mo.get_allocator() == A(7));
-  assert(mo.key_comp() == C(5));
-  assert(mo.size() == 3);
-  assert(std::distance(mo.begin(), mo.end()) == 3);
-  assert(*mo.begin() == 1);
-  assert(*std::next(mo.begin()) == 2);
-  assert(*std::next(mo.begin(), 2) == 3);
+    int arr[] = {1, 2, 3};
+    const Set orig(std::begin(arr), std::end(arr));
+    Set copy(orig, new_alloc);
+    assert(copy.size() == 3);
+    assert(*std::next(copy.begin(), 0) == 1);
+    assert(*std::next(copy.begin(), 1) == 2);
+    assert(*std::next(copy.begin(), 2) == 3);
+    assert(std::next(copy.begin(), 3) == copy.end());
+    assert(copy.get_allocator() == new_alloc);
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 3);
+    assert(*std::next(orig.begin(), 0) == 1);
+    assert(*std::next(orig.begin(), 1) == 2);
+    assert(*std::next(orig.begin(), 2) == 3);
+    assert(std::next(orig.begin(), 3) == orig.end());
+  }
+
+  { // copy empty set
+    using Set = std::set<int, std::less<int>, Alloc>;
+
+    const Set orig;
+    Set copy = orig;
+    assert(copy.size() == 0);
+    assert(copy.begin() == copy.end());
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 0);
+    assert(orig.begin() == orig.end());
+  }
+
+  { // only some leaf nodes exist
+    using Set = std::set<int, std::less<int>, Alloc>;
+
+    int arr[] = {1, 2, 3, 4, 5};
+    const Set orig(std::begin(arr), std::end(arr));
+    Set copy = orig;
+    assert(copy.size() == 5);
+    assert(*std::next(copy.begin(), 0) == 1);
+    assert(*std::next(copy.begin(), 1) == 2);
+    assert(*std::next(copy.begin(), 2) == 3);
+    assert(*std::next(copy.begin(), 3) == 4);
+    assert(*std::next(copy.begin(), 4) == 5);
+    assert(std::next(copy.begin(), 5) == copy.end());
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 5);
+    assert(*std::next(orig.begin(), 0) == 1);
+    assert(*std::next(orig.begin(), 1) == 2);
+    assert(*std::next(orig.begin(), 2) == 3);
+    assert(*std::next(orig.begin(), 3) == 4);
+    assert(*std::next(orig.begin(), 4) == 5);
+    assert(std::next(orig.begin(), 5) == orig.end());
+  }
+}
+
+void test() {
+  test_alloc(std::allocator<int>());
+  test_alloc(test_allocator<int>(25)); // Make sure that the new allocator is actually used
+  test_alloc(min_allocator<int>());    // Make sure that fancy pointers work
+
+  { // Ensure that the comparator is copied
+    int arr[] = {1, 2, 3};
+    const std::set<int, test_less<int> > orig(std::begin(arr), std::end(arr), test_less<int>(3));
+    std::set<int, test_less<int> > copy(orig, std::allocator<int>());
+    assert(copy.size() == 3);
+    assert(copy.key_comp() == test_less<int>(3));
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 3);
+    assert(orig.key_comp() == test_less<int>(3));
+  }
+}
+
+int main(int, char**) {
+  test();
 
   return 0;
 }

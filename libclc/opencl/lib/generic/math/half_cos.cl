@@ -9,8 +9,8 @@
 #include <clc/math/clc_half_cos.h>
 #include <clc/opencl/math/half_cos.h>
 
-#define __FLOAT_ONLY
-#define FUNCTION half_cos
+#define __CLC_FLOAT_ONLY
+#define __CLC_FUNCTION half_cos
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

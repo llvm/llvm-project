@@ -124,7 +124,6 @@ private:
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
   bool selectInitWholeWave(MachineInstr &MI) const;
-  bool selectSBarrier(MachineInstr &MI) const;
   bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
 
   bool selectImageIntrinsic(MachineInstr &MI,
@@ -156,6 +155,7 @@ private:
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
+  bool selectSBarrierLeave(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
                                                    bool IsCanonicalizing = true,
@@ -200,13 +200,6 @@ private:
   selectVOP3PModsDOT(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
-  selectVOP3PModsNeg(MachineOperand &Root) const;
-  InstructionSelector::ComplexRendererFns
-  selectVOP3PModsNegs(MachineOperand &Root) const;
-  InstructionSelector::ComplexRendererFns
-  selectVOP3PModsNegAbs(MachineOperand &Root) const;
-
-  InstructionSelector::ComplexRendererFns
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
@@ -232,8 +225,10 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
+  bool selectScaleOffset(MachineOperand &Root, Register &Offset,
+                         bool IsSigned) const;
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
-                        int64_t *Offset) const;
+                        int64_t *Offset, bool *ScaleOffset) const;
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
@@ -254,7 +249,20 @@ private:
   selectScratchOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
+                    bool NeedIOffset = true) const;
+  InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrCPol(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrCPolM0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrGLC(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;
@@ -291,7 +299,7 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDSReadWrite2(MachineOperand &Root, unsigned size) const;
 
-  std::pair<Register, int64_t>
+  std::tuple<Register, int64_t, bool>
   getPtrBaseWithConstantOffset(Register Root,
                                const MachineRegisterInfo &MRI) const;
 
@@ -407,6 +415,17 @@ private:
 
   void renderRoundMode(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+
+  void renderVOP3PModsNeg(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
+  void renderVOP3PModsNegs(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                           int OpIdx) const;
+  void renderVOP3PModsNegAbs(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                             int OpIdx) const;
+
+  void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
+
   void renderScaledMAIIntrinsicOperand(MachineInstrBuilder &MIB,
                                        const MachineInstr &MI, int OpIdx) const;
 
@@ -417,6 +436,19 @@ private:
   // shift amount operand's `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const MachineInstr &MI, unsigned ShAmtBits) const;
 
+  /// Match a zero extend from a 32-bit value to 64-bits.
+  Register matchZeroExtendFromS32(Register Reg) const;
+  /// Match a sign extend from a 32-bit value to 64-bits.
+  Register matchSignExtendFromS32(Register Reg) const;
+  /// Match a zero extend from a 32-bit value to 64-bits, or \p Reg itself if it
+  /// is 32-bit.
+  Register matchZeroExtendFromS32OrS32(Register Reg) const;
+  /// Match a sign extend from a 32-bit value to 64-bits, or \p Reg itself if it
+  /// is 32-bit.
+  Register matchSignExtendFromS32OrS32(Register Reg) const;
+  /// Match either sign or zero extend depending on the \p IsSigned from a
+  /// 32-bit value to 64-bits, or \p Reg itself if it is 32-bit.
+  Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
   /// Match an any extend from a 32-bit value to 64-bit.
   Register matchAnyExtendFromS32(Register Reg) const;
 

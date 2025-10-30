@@ -632,7 +632,8 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
         ++opArgIdx;
         continue;
       }
-      if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
+      if (auto *operand =
+              llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
         if (argTree.isVariadic()) {
           if (!operand->isVariadic()) {
             auto error = formatv("variadic DAG construct can't match op {0}'s "
@@ -1023,6 +1024,32 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
   int depth = 0;
   emitMatch(tree, opName, depth);
 
+  // Some of the operands could be bound to the same symbol name, we need
+  // to enforce equality constraint on those.
+  // This has to happen before user provided constraints, which may assume the
+  // same name checks are already performed, since in the pattern source code
+  // the user provided constraints appear later.
+  // TODO: we should be able to emit equality checks early
+  // and short circuit unnecessary work if vars are not equal.
+  for (auto symbolInfoIt = symbolInfoMap.begin();
+       symbolInfoIt != symbolInfoMap.end();) {
+    auto range = symbolInfoMap.getRangeOfEqualElements(symbolInfoIt->first);
+    auto startRange = range.first;
+    auto endRange = range.second;
+
+    auto firstOperand = symbolInfoIt->second.getVarName(symbolInfoIt->first);
+    for (++startRange; startRange != endRange; ++startRange) {
+      auto secondOperand = startRange->second.getVarName(symbolInfoIt->first);
+      emitMatchCheck(
+          opName,
+          formatv("*{0}.begin() == *{1}.begin()", firstOperand, secondOperand),
+          formatv("\"Operands '{0}' and '{1}' must be equal\"", firstOperand,
+                  secondOperand));
+    }
+
+    symbolInfoIt = endRange;
+  }
+
   for (auto &appliedConstraint : pattern.getConstraints()) {
     auto &constraint = appliedConstraint.constraint;
     auto &entities = appliedConstraint.entities;
@@ -1065,29 +1092,6 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
                              llvm::join(entities, ", "),
                              escapeString(constraint.getSummary())));
     }
-  }
-
-  // Some of the operands could be bound to the same symbol name, we need
-  // to enforce equality constraint on those.
-  // TODO: we should be able to emit equality checks early
-  // and short circuit unnecessary work if vars are not equal.
-  for (auto symbolInfoIt = symbolInfoMap.begin();
-       symbolInfoIt != symbolInfoMap.end();) {
-    auto range = symbolInfoMap.getRangeOfEqualElements(symbolInfoIt->first);
-    auto startRange = range.first;
-    auto endRange = range.second;
-
-    auto firstOperand = symbolInfoIt->second.getVarName(symbolInfoIt->first);
-    for (++startRange; startRange != endRange; ++startRange) {
-      auto secondOperand = startRange->second.getVarName(symbolInfoIt->first);
-      emitMatchCheck(
-          opName,
-          formatv("*{0}.begin() == *{1}.begin()", firstOperand, secondOperand),
-          formatv("\"Operands '{0}' and '{1}' must be equal\"", firstOperand,
-                  secondOperand));
-    }
-
-    symbolInfoIt = endRange;
   }
 
   LLVM_DEBUG(llvm::dbgs() << "--- done emitting match logic ---\n");
@@ -1695,7 +1699,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
 
     // Then create the op.
     os.scope("", "\n}\n").os
-        << formatv("{0} = rewriter.create<{1}>({2}, tblgen_values, {3});",
+        << formatv("{0} = {1}::create(rewriter, {2}, tblgen_values, {3});",
                    valuePackName, resultOp.getQualCppClassName(), locToUse,
                    useProperties ? "tblgen_props" : "tblgen_attrs");
     return resultValue;
@@ -1714,7 +1718,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     // aggregate-parameter builders.
     createSeparateLocalVarsForOpArgs(tree, childNodeNames);
 
-    os.scope().os << formatv("{0} = rewriter.create<{1}>({2}", valuePackName,
+    os.scope().os << formatv("{0} = {1}::create(rewriter, {2}", valuePackName,
                              resultOp.getQualCppClassName(), locToUse);
     supplyValuesForOpArgs(tree, childNodeNames, depth);
     os << "\n  );\n}\n";
@@ -1753,7 +1757,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
                       resultIndex + i);
     }
   }
-  os << formatv("{0} = rewriter.create<{1}>({2}, tblgen_types, "
+  os << formatv("{0} = {1}::create(rewriter, {2}, tblgen_types, "
                 "tblgen_values, {3});\n",
                 valuePackName, resultOp.getQualCppClassName(), locToUse,
                 useProperties ? "tblgen_props" : "tblgen_attrs");
@@ -1772,8 +1776,8 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
 
   int valueIndex = 0; // An index for uniquing local variable names.
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
-    const auto *operand =
-        llvm::dyn_cast_if_present<NamedTypeConstraint *>(resultOp.getArg(argIndex));
+    const auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(
+        resultOp.getArg(argIndex));
     // We do not need special handling for attributes or properties.
     if (!operand)
       continue;
@@ -1828,7 +1832,8 @@ void PatternEmitter::supplyValuesForOpArgs(
 
     Argument opArg = resultOp.getArg(argIndex);
     // Handle the case of operand first.
-    if (auto *operand = llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
+    if (auto *operand =
+            llvm::dyn_cast_if_present<NamedTypeConstraint *>(opArg)) {
       if (!operand->name.empty())
         os << "/*" << operand->name << "=*/";
       os << childNodeNames.lookup(argIndex);
@@ -2115,7 +2120,7 @@ static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
   }
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated("
+  os << "[[maybe_unused]] void populateWithGenerated("
         "::mlir::RewritePatternSet &patterns) {\n";
   for (const auto &name : rewriterNames) {
     os << "  patterns.add<" << name << ">(patterns.getContext());\n";

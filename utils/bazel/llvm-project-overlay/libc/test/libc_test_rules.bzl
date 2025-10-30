@@ -12,6 +12,7 @@ They come in two flavors:
 When performing tests we make sure to always use the internal version.
 """
 
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 load("//libc:libc_build_rules.bzl", "libc_common_copts")
 load("//libc:libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 
@@ -44,6 +45,7 @@ def libc_test(
       **kwargs: Attributes relevant for a cc_test.
     """
     deps = deps + [
+        "//libc:hdr_stdint_proxy",
         "//libc:__support_macros_config",
         "//libc:__support_libc_errno",
         "//libc:errno",
@@ -57,8 +59,7 @@ def libc_test(
 
     if full_build:
         copts = copts + _FULL_BUILD_COPTS
-
-    native.cc_test(
+    cc_test(
         name = name,
         local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
         deps = deps,
@@ -76,7 +77,7 @@ def libc_test_library(name, copts = [], local_defines = [], **kwargs):
       local_defines: See cc_library.local_defines.
       **kwargs: Other attributes relevant to cc_library (e.g. "deps").
     """
-    native.cc_library(
+    cc_library(
         name = name,
         testonly = True,
         copts = copts + libc_common_copts(),

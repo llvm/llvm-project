@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -71,7 +72,7 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
   }
 }
 
-static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
+static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
                              OptimizationRemarkEmitter &ORE,
                              const LowerAllowCheckPass::Options &Opts) {
@@ -159,7 +160,7 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   OptimizationRemarkEmitter &ORE =
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE, Opts)
+  return lowerAllowChecks(F, BFI, PSI, ORE, Opts)
              // We do not change the CFG, we only replace the intrinsics with
              // true or false.
              ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
@@ -184,22 +185,14 @@ void LowerAllowCheckPass::printPipeline(
   // correctness.
   // TODO: print shorter output by combining adjacent runs, etc.
   int i = 0;
-  bool printed = false;
+  ListSeparator LS(";");
   for (unsigned int cutoff : Opts.cutoffs) {
-    if (cutoff > 0) {
-      if (printed)
-        OS << ";";
-      OS << "cutoffs[" << i << "]=" << cutoff;
-      printed = true;
-    }
-
+    if (cutoff > 0)
+      OS << LS << "cutoffs[" << i << "]=" << cutoff;
     i++;
   }
-  if (Opts.runtime_check) {
-    if (printed)
-      OS << ";";
-    OS << "runtime_check=" << Opts.runtime_check;
-  }
+  if (Opts.runtime_check)
+    OS << LS << "runtime_check=" << Opts.runtime_check;
 
   OS << '>';
 }

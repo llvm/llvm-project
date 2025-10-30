@@ -54,4 +54,12 @@ program test
   call c_f_pointer(scalarC, c2ptr)
   !WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type or kind CHARACTER(KIND=4,LEN=1_8) [-Winteroperability]
   call c_f_pointer(scalarC, unicodePtr)
+
+  !ERROR: SHAPE= argument to C_F_POINTER() may not appear when FPTR= is scalar
+  !ERROR: LOWER= argument to C_F_POINTER() may not appear when FPTR= is scalar
+  call c_f_pointer(scalarC, scalarIntF, [1_8], [0_8])
+  !ERROR: LOWER= argument to C_F_POINTER() must be a rank-one array.
+  call c_f_pointer(scalarC, arrayIntF, shape=[1_8], lower=rankTwoArray)
+  !ERROR: SHAPE= argument to C_F_POINTER() must appear when FPTR= is an array
+  call c_f_pointer(scalarC, arrayIntF, lower=[0])
 end program
