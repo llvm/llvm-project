@@ -62,10 +62,6 @@ void WhitespaceManager::replaceWhitespace(FormatToken &Tok, unsigned Newlines,
                            Spaces, StartOfTokenColumn, Newlines, "", "",
                            IsAligned, InPPDirective && !Tok.IsFirst,
                            /*IsInsideToken=*/false));
-  if (Style.ReflowComments == FormatStyle::RCS_Never) {
-    applyAfterOpeningBlockCommentSpacing(Style, Tok, *this, InPPDirective);
-    applyBeforeClosingBlockCommentSpacing(Style, Tok, *this, InPPDirective);
-  }
 }
 
 void WhitespaceManager::addUntouchableToken(const FormatToken &Tok,
