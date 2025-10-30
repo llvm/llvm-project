@@ -75,6 +75,13 @@ class TestHeaderGenIntegration(unittest.TestCase):
 
         self.compare_files(output_file, expected_output_file)
 
+    def test_sorting(self):
+        yaml_file = self.source_dir / "input" / "sorting.yaml"
+        expected_output_file = self.source_dir / "expected_output" / "sorting.h"
+        output_file = self.output_dir / "sorting.h"
+        self.run_script(yaml_file, output_file)
+        self.compare_files(output_file, expected_output_file)
+
 
 def main():
     parser = argparse.ArgumentParser(description="TestHeaderGenIntegration arguments")

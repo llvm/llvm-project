@@ -8340,11 +8340,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
               &R) ||
           (isa<VPInstruction>(&R) && !UnderlyingValue))
         continue;
-
-      // FIXME: VPlan0, which models a copy of the original scalar loop, should
-      // not use VPWidenPHIRecipe to model the phis.
-      assert((isa<VPWidenPHIRecipe>(&R) || isa<VPInstruction>(&R)) &&
-             UnderlyingValue && "unsupported recipe");
+      assert(isa<VPInstruction>(&R) && UnderlyingValue && "unsupported recipe");
 
       // TODO: Gradually replace uses of underlying instruction by analyses on
       // VPlan.
