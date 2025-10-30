@@ -416,7 +416,7 @@ class DAPTestCaseBase(TestBase):
         return self.dap_server.wait_for_stopped()
 
     def continue_to_breakpoint(self, breakpoint_id: str):
-        self.continue_to_breakpoints([breakpoint_id])
+        self.continue_to_breakpoints((breakpoint_id))
 
     def continue_to_breakpoints(self, breakpoint_ids):
         self.do_continue()
