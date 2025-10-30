@@ -1,7 +1,7 @@
 header: stdio.h
 header_template: stdio.h.def
 macros:
-  - macro_name: NULL
+  - macro_name: "NULL"
     macro_header: null-macro.h
   - macro_name: stdout
     macro_value: stdout

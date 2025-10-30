@@ -322,7 +322,7 @@ promoteSubViews(ImplicitLocOpBuilder &b,
                 tmp = arith::ConstantOp::create(b, IntegerAttr::get(et, 0));
               return complex::CreateOp::create(b, t, tmp, tmp);
             })
-            .Default([](auto) { return Value(); });
+            .Default(nullptr);
     if (!fillVal)
       return failure();
     linalg::FillOp::create(b, fillVal, promotionInfo->fullLocalView);

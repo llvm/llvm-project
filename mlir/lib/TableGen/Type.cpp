@@ -56,7 +56,7 @@ std::optional<StringRef> TypeConstraint::getBuilderCall() const {
         StringRef value = init->getValue();
         return value.empty() ? std::optional<StringRef>() : value;
       })
-      .Default([](auto *) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 // Return the C++ type for this type (which may just be ::mlir::Type).

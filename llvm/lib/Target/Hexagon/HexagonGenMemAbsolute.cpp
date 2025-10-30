@@ -34,13 +34,13 @@ STATISTIC(HexagonNumStoreAbsConversions,
 namespace {
 
 class HexagonGenMemAbsolute : public MachineFunctionPass {
-  const HexagonInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
+  const HexagonInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
 public:
   static char ID;
-  HexagonGenMemAbsolute() : MachineFunctionPass(ID), TII(0), MRI(0), TRI(0) {}
+  HexagonGenMemAbsolute() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Hexagon Generate Load/Store Set Absolute Address Instruction";

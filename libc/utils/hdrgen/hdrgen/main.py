@@ -105,6 +105,7 @@ def main():
                 return 2
             header.merge(merge_from_header)
 
+        assert header.name, f"`header: name.h` line is required in {yaml_file}"
         return header
 
     if args.json:
