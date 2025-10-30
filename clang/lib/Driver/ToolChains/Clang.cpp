@@ -6172,7 +6172,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Pass options for controlling the default header search paths.
   if (Args.hasArg(options::OPT_nostdinc)) {
     CmdArgs.push_back("-nostdsysteminc");
-    CmdArgs.push_back("-nobuiltininc");
+    if (!Args.hasArg(options::OPT_ibuiltininc)) {
+      CmdArgs.push_back("-nobuiltininc");
+    }
   } else {
     if (Args.hasArg(options::OPT_nostdlibinc))
       CmdArgs.push_back("-nostdsysteminc");
