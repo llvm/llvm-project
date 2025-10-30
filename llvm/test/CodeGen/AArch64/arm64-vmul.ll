@@ -2,45 +2,6 @@
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for pmull8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for commutable_pmull8h
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmulh_1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_2d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_4s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2s_strict
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_4s_strict
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_indexed_2d_strict
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmla_indexed_scalar_2s_strict
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmla_indexed_scalar_4s_strict
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmla_indexed_scalar_2d_strict
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmulh_lane_1s
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmlal_lane_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmlsl_lane_1d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pmull_from_extract_dup_low
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pmull_from_extract_dup_high
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pmull_from_extract_duplane_low
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for pmull_from_extract_duplane_high
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v4f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for scalar_fmls_from_extract_v2f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f32_1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v4f32_1
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_with_fneg_before_extract_v2f64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmlal_d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmlsl_d
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_pmull_64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_pmull_high_64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_commutable_pmull_64
-
 define <8 x i16> @smull8h(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: smull8h:
 ; CHECK:       // %bb.0:
@@ -2895,11 +2856,18 @@ define <8 x i16> @pmull_from_extract_dup_low(<16 x i8> %lhs, i8 %rhs) {
 }
 
 define <8 x i16> @pmull_from_extract_dup_high(<16 x i8> %lhs, i8 %rhs) {
-; CHECK-LABEL: pmull_from_extract_dup_high:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v1.16b, w0
-; CHECK-NEXT:    pmull2 v0.8h, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: pmull_from_extract_dup_high:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    dup v1.16b, w0
+; CHECK-SD-NEXT:    pmull2 v0.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: pmull_from_extract_dup_high:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    dup v1.8b, w0
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    pmull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %rhsvec.0 = insertelement <8 x i8> undef, i8 %rhs, i32 0
   %rhsvec = shufflevector <8 x i8> %rhsvec.0, <8 x i8> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 
@@ -2924,12 +2892,20 @@ define <8 x i16> @pmull_from_extract_duplane_low(<16 x i8> %lhs, <8 x i8> %rhs) 
 }
 
 define <8 x i16> @pmull_from_extract_duplane_high(<16 x i8> %lhs, <8 x i8> %rhs) {
-; CHECK-LABEL: pmull_from_extract_duplane_high:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    dup v1.16b, v1.b[0]
-; CHECK-NEXT:    pmull2 v0.8h, v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: pmull_from_extract_duplane_high:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    dup v1.16b, v1.b[0]
+; CHECK-SD-NEXT:    pmull2 v0.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: pmull_from_extract_duplane_high:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov d0, v0.d[1]
+; CHECK-GI-NEXT:    dup v1.8b, v1.b[0]
+; CHECK-GI-NEXT:    pmull v0.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    ret
   %lhs.high = shufflevector <16 x i8> %lhs, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %rhs.high = shufflevector <8 x i8> %rhs, <8 x i8> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 

@@ -2,11 +2,6 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon,+aes | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-none-linux-gnu -mattr=+neon,+aes -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for test_vmull_p8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_vmull_high_p8
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_vmull_p64
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_vmull_high_p64
-
 declare <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8>, <8 x i8>)
 declare <16 x i8> @llvm.aarch64.neon.pmull64(i64, i64) #5
 declare <2 x i64> @llvm.aarch64.neon.sqdmull.v2i64(<2 x i32>, <2 x i32>)
