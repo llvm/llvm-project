@@ -1064,8 +1064,7 @@ static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
 }
 
 /// Try to simplify VPSingleDefRecipe \p Def.
-static void simplifySingleDefRecipe(VPSingleDefRecipe *Def,
-                                    VPTypeAnalysis &TypeInfo) {
+static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   VPlan *Plan = Def->getParent()->getPlan();
 
   // Simplification of live-in IR values for SingleDef recipes using
@@ -1372,7 +1371,7 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
-        simplifySingleDefRecipe(Def, TypeInfo);
+        simplifyRecipe(Def, TypeInfo);
   }
 }
 
