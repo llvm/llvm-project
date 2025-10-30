@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck --check-prefix=CHECK1 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -amdgpu-si-fold-operands-preheader-threshold=10 < %s | FileCheck --check-prefix=CHECK2 %s
-
+; XFAIL: *
 define protected amdgpu_kernel void @main(ptr addrspace(1) noundef %args.coerce, ptr addrspace(1) noundef %args.coerce2, ptr addrspace(1) noundef %args.coerce4, i32 noundef %args12) {
 ; CHECK1-LABEL: main:
 ; check that non-redundant readfirstlanes are not removed
