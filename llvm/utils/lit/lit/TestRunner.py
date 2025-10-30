@@ -826,6 +826,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         not_args = []
         not_count = 0
         not_crash = False
+
+        # Expand all late substitutions.
+        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
+
         while True:
             if args[0] == "env":
                 # Create a copy of the global environment and modify it for
@@ -874,9 +878,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
         # Ensure args[0] is hashable.
         args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
-
-        # Expand all late substitutions.
-        args = _expandLateSubstitutions(j, args, cmd_shenv.cwd)
 
         inproc_builtin = inproc_builtins.get(args[0], None)
         if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
