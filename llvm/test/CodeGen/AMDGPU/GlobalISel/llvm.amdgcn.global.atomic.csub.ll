@@ -39,7 +39,7 @@ define i32 @global_atomic_csub(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %ret
 }
 
@@ -84,7 +84,7 @@ define i32 @global_atomic_csub_offset(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   ret i32 %ret
 }
 
@@ -123,7 +123,7 @@ define void @global_atomic_csub_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -168,7 +168,7 @@ define void @global_atomic_csub_offset_nortn(ptr addrspace(1) %ptr, i32 %data) {
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -215,7 +215,7 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(ptr addrspace(1) 
 ; GFX12-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   store i32 %ret, ptr addrspace(1) poison
   ret void
 }
@@ -260,9 +260,11 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset_nortn(ptr addrspa
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
-  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst
+  %ret = atomicrmw usub_sat ptr addrspace(1) %gep, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
 attributes #0 = { nounwind willreturn }
 attributes #1 = { argmemonly nounwind }
+
+!0 = !{}

@@ -18592,22 +18592,6 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::Add:
     // PCIe supports add and xchg for system atomics.
     return atomicSupportedIfLegalIntType(RMW);
-  case AtomicRMWInst::USubCond:
-    if (Subtarget->hasCondSubInsts()) {
-      if (auto *IT = dyn_cast<IntegerType>(RMW->getType())) {
-        if (IT->getBitWidth() == 32)
-          return TargetLowering::AtomicExpansionKind::None;
-      }
-    }
-    return TargetLowering::AtomicExpansionKind::CmpXChg;
-  case AtomicRMWInst::USubSat:
-    if (Subtarget->hasSubClampInsts()) {
-      if (auto *IT = dyn_cast<IntegerType>(RMW->getType())) {
-        if (IT->getBitWidth() == 32)
-          return TargetLowering::AtomicExpansionKind::None;
-      }
-    }
-    return TargetLowering::AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Sub:
   case AtomicRMWInst::And:
   case AtomicRMWInst::Or:
@@ -18617,7 +18601,19 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::UMax:
   case AtomicRMWInst::UMin:
   case AtomicRMWInst::UIncWrap:
-  case AtomicRMWInst::UDecWrap: {
+  case AtomicRMWInst::UDecWrap:
+  case AtomicRMWInst::USubCond:
+  case AtomicRMWInst::USubSat: {
+    if (Op == AtomicRMWInst::USubCond && !Subtarget->hasCondSubInsts())
+      return AtomicExpansionKind::CmpXChg;
+    if (Op == AtomicRMWInst::USubSat && !Subtarget->hasSubClampInsts())
+      return AtomicExpansionKind::CmpXChg;
+    if (Op == AtomicRMWInst::USubCond || Op == AtomicRMWInst::USubSat) {
+      auto *IT = dyn_cast<IntegerType>(RMW->getType());
+      if (!IT || IT->getBitWidth() != 32)
+        return AtomicExpansionKind::CmpXChg;
+    }
+
     if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
         AS == AMDGPUAS::BUFFER_FAT_POINTER) {
       if (Subtarget->hasEmulatedSystemScopeAtomics())

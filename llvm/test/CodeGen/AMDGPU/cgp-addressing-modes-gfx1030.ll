@@ -51,7 +51,7 @@ entry:
 
 if:
   %in.gep = getelementptr i32, ptr addrspace(1) %in, i32 7
-  %val = atomicrmw usub_sat ptr addrspace(1) %in.gep, i32 2 seq_cst
+  %val = atomicrmw usub_sat ptr addrspace(1) %in.gep, i32 2 seq_cst, !amdgpu.no.remote.memory !0
   br label %endif
 
 endif:
@@ -69,3 +69,5 @@ declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 attributes #0 = { argmemonly nounwind }
 attributes #1 = { nounwind readnone willreturn }
 attributes #2 = { argmemonly nounwind willreturn }
+
+!0 = !{}

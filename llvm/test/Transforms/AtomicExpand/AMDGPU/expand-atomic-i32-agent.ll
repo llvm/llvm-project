@@ -166,10 +166,10 @@ define i32 @test_atomicrmw_sub_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_sub_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_sub_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_sub_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -204,6 +204,10 @@ define i32 @test_atomicrmw_sub_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_sub_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw sub ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -300,10 +304,10 @@ define i32 @test_atomicrmw_and_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_and_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_and_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_and_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -338,6 +342,10 @@ define i32 @test_atomicrmw_and_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_and_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -519,10 +527,10 @@ define i32 @test_atomicrmw_or_i32_global_agent(ptr addrspace(1) %ptr, i32 %value
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_or_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_or_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_or_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -557,6 +565,10 @@ define i32 @test_atomicrmw_or_i32_global_agent(ptr addrspace(1) %ptr, i32 %value
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_or_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw or ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -653,10 +665,10 @@ define i32 @test_atomicrmw_xor_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_xor_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_xor_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_xor_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -691,6 +703,10 @@ define i32 @test_atomicrmw_xor_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_xor_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw xor ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -791,10 +807,10 @@ define i32 @test_atomicrmw_max_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_max_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_max_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_max_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -831,6 +847,10 @@ define i32 @test_atomicrmw_max_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_max_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw max ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw max ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -931,10 +951,10 @@ define i32 @test_atomicrmw_min_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_min_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_min_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_min_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -971,6 +991,10 @@ define i32 @test_atomicrmw_min_i32_global_agent(ptr addrspace(1) %ptr, i32 %valu
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_min_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw min ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw min ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -1071,10 +1095,10 @@ define i32 @test_atomicrmw_umax_i32_global_agent(ptr addrspace(1) %ptr, i32 %val
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_umax_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_umax_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_umax_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1111,6 +1135,10 @@ define i32 @test_atomicrmw_umax_i32_global_agent(ptr addrspace(1) %ptr, i32 %val
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_umax_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umax ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw umax ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -1211,10 +1239,10 @@ define i32 @test_atomicrmw_umin_i32_global_agent(ptr addrspace(1) %ptr, i32 %val
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_umin_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_umin_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_umin_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1251,6 +1279,10 @@ define i32 @test_atomicrmw_umin_i32_global_agent(ptr addrspace(1) %ptr, i32 %val
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_umin_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw umin ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw umin ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -1355,10 +1387,10 @@ define i32 @test_atomicrmw_uinc_wrap_i32_global_agent(ptr addrspace(1) %ptr, i32
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_uinc_wrap_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_uinc_wrap_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_uinc_wrap_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1397,6 +1429,10 @@ define i32 @test_atomicrmw_uinc_wrap_i32_global_agent(ptr addrspace(1) %ptr, i32
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_uinc_wrap_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -1509,10 +1545,10 @@ define i32 @test_atomicrmw_udec_wrap_i32_global_agent(ptr addrspace(1) %ptr, i32
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret i32 [[NEWLOADED]]
 ;
-; GFX940-LABEL: define i32 @test_atomicrmw_udec_wrap_i32_global_agent(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
-; GFX940-NEXT:    ret i32 [[RES]]
+; GFX942-LABEL: define i32 @test_atomicrmw_udec_wrap_i32_global_agent(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX942-NEXT:    ret i32 [[RES]]
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_udec_wrap_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1555,6 +1591,10 @@ define i32 @test_atomicrmw_udec_wrap_i32_global_agent(ptr addrspace(1) %ptr, i32
 ; GFX12-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
 ; GFX12-NEXT:    ret i32 [[RES]]
 ;
+; GFX940-LABEL: define i32 @test_atomicrmw_udec_wrap_i32_global_agent(
+; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX940-NEXT:    ret i32 [[RES]]
   %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i32 %value syncscope("agent") seq_cst
   ret i32 %res
 }
@@ -2160,12 +2200,30 @@ define i32 @test_atomicrmw_usub_sat_i32_global_agent(ptr addrspace(1) %ptr, i32 
 ;
 ; GFX10-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_agent(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[RES:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[NEW:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[LOADED]], i32 [[VALUE]])
+; GFX10-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
+; GFX10-NEXT:    [[RES]] = extractvalue { i32, i1 } [[TMP2]], 0
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
 ; GFX10-NEXT:    ret i32 [[RES]]
 ;
 ; GFX11-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_agent(
 ; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], i32 [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX11-NEXT:    [[RES:%.*]] = atomicrmw usub_sat ptr addrspace(1) [[PTR]], i32 [[VALUE]] syncscope("agent") seq_cst, align 4
+; GFX11-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR]], align 4
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[NEW:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[LOADED]], i32 [[VALUE]])
+; GFX11-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1
+; GFX11-NEXT:    [[RES]] = extractvalue { i32, i1 } [[TMP2]], 0
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
 ; GFX11-NEXT:    ret i32 [[RES]]
 ;
 ; GFX12-LABEL: define i32 @test_atomicrmw_usub_sat_i32_global_agent(
