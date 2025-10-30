@@ -5210,7 +5210,7 @@ static void calculeStackSlotSizeForParameter_AIX(const PPCSubtarget &Subtarget,
       break;
     case MVT::f32:
     case MVT::f64:
-      Size = ArgVT.getStoreSize();
+      Size = IsPPC64 ? 8 : ArgVT.getStoreSize();
       Alignment = Align(4);
       break;
     case MVT::v4f32:
