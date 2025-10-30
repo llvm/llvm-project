@@ -1625,6 +1625,7 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
           // dead def so that the interferences are properly modeled.
           if (!SR.liveAt(DefIndex))
             SR.createDeadDef(DefIndex, Alloc);
+          SR.LaneMask = DstMask & SR.LaneMask;
         }
       }
       if (UpdatedSubRanges)
