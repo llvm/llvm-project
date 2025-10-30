@@ -2500,6 +2500,7 @@ static llvm::StringRef ClangToItaniumCtorKind(clang::CXXCtorType kind) {
   case clang::CXXCtorType::Ctor_CopyingClosure:
   case clang::CXXCtorType::Ctor_DefaultClosure:
   case clang::CXXCtorType::Ctor_Comdat:
+  case clang::CXXDtorType::Dtor_VectorDeleting:
     llvm_unreachable("Unexpected constructor kind.");
   }
   llvm_unreachable("Fully covered switch above");
@@ -2516,6 +2517,7 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Unified:
     return "D4";
   case clang::CXXDtorType::Dtor_Comdat:
+  case clang::CXXDtorType::Dtor_VectorDeleting:
     llvm_unreachable("Unexpected destructor kind.");
   }
   llvm_unreachable("Fully covered switch above");

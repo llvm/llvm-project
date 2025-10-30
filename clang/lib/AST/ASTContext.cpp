@@ -13347,8 +13347,6 @@ void ASTContext::addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
     GlobalArrayOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
         OperatorDelete;
     break;
-  default:
-    llvm_unreachable("Unknown operator delete kind");
   }
 }
 
@@ -13366,8 +13364,6 @@ bool ASTContext::dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
   case OperatorDeleteKind::ArrayGlobal:
     return GlobalArrayOperatorDeletesForVirtualDtor.contains(
         Dtor->getCanonicalDecl());
-  default:
-    llvm_unreachable("Unknown operator delete kind");
   }
   return false;
 }
@@ -13392,8 +13388,6 @@ FunctionDecl *ASTContext::getOperatorDeleteForVDtor(const CXXDestructorDecl *Dto
     if (GlobalArrayOperatorDeletesForVirtualDtor.contains(Canon))
       return GlobalArrayOperatorDeletesForVirtualDtor[Canon];
     return nullptr;
-  default:
-    llvm_unreachable("Unknown operator delete kind");
   }
   return nullptr;
 }
