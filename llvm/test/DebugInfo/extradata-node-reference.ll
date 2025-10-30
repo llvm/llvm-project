@@ -3,6 +3,8 @@
 
 ; REQUIRES: object-emission
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s -check-prefix=CHECK-IR
+; RUN: verify-uselistorder %s
 
 ; Example 1: BitField with storage offset (extraData: i64 0)
 %struct.BitField = type { i8 }
@@ -33,9 +35,17 @@
 ; extraData node definitions
 !15 = !{i64 0}       ; BitField storage offset
 !22 = !{i32 42}      ; Static member constant value
-!33 = !{!42}
+!33 = !{i32 100}     ; Discriminant value
 !41 = !{i32 0}       ; VBPtr offset
-!42 = !{i32 100}     ; Discriminant value
+
+; CHECK-IR: !9 = !DIDerivedType(tag: DW_TAG_member, name: "const_val", scope: !7, file: !3, line: 11, baseType: !10, flags: DIFlagStaticMember, extraData: !12)
+; CHECK-IR: !12 = !{i32 42}
+; CHECK-IR: !20 = !DIDerivedType(tag: DW_TAG_member, name: "variant_some", scope: !17, file: !3, baseType: !11, size: 32, extraData: !21)
+; CHECK-IR: !21 = !{i32 100}
+; CHECK-IR: !27 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !25, baseType: !28, extraData: !29)
+; CHECK-IR: !29 = !{i32 0}
+; CHECK-IR: !32 = !DIDerivedType(tag: DW_TAG_member, name: "field", scope: !30, file: !3, line: 6, baseType: !11, size: 3, flags: DIFlagBitField, extraData: !33)
+; CHECK-IR: !33 = !{i64 0}
 
 ; CHECK: {{.*}} DW_TAG_variable
 ; CHECK: {{.*}} DW_AT_name	("bf")

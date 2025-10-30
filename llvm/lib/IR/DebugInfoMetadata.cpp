@@ -967,7 +967,7 @@ DIType *DIDerivedType::getClassType() const {
 // handling extra data MDTuple unwrapping if needed.
 static ConstantAsMetadata *extractConstantMetadata(Metadata *ExtraData) {
   Metadata *ED = ExtraData;
-  while (auto *Tuple = dyn_cast_or_null<MDTuple>(ED)) {
+  if (auto *Tuple = dyn_cast_or_null<MDTuple>(ED)) {
     if (Tuple->getNumOperands() != 1)
       return nullptr;
     ED = Tuple->getOperand(0);
