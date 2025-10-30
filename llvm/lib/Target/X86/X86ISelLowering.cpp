@@ -53523,7 +53523,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
     return SDValue();
 
   // Split the shift into an alignment shift that moves the active i32 block to
-  // bottom and a modulo shift that can act on the i32.
+  // the bottom bits for truncation and a modulo shift that can act on the i32.
   EVT AmtVT = ShAmt.getValueType();
   SDValue AlignAmt = DAG.getNode(ISD::AND, DL, AmtVT, ShAmt,
                                  DAG.getSignedConstant(-32LL, DL, AmtVT));
