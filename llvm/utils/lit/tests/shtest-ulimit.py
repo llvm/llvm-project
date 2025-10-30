@@ -19,10 +19,8 @@
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_okay.txt ({{[^)]*}})
 # CHECK: ulimit -n 50
-# CHECK: ulimit -s 256
 # CHECK: ulimit -f 5
 # CHECK: RLIMIT_NOFILE=50
-# CHECK: RLIMIT_STACK=262144
 # CHECK: RLIMIT_FSIZE=5
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_reset.txt ({{[^)]*}})

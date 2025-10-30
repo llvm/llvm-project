@@ -104,7 +104,7 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                                       hasCastKind(CK_UserDefinedConversion)))),
                             hasParent(callExpr(
                                 callee(functionDecl(
-                                    DurationFactoryFunction(),
+                                    durationFactoryFunction(),
                                     unless(hasParent(functionTemplateDecl())))),
                                 hasArgument(0, expr().bind("arg")))))
                             .bind("OuterExpr")),
