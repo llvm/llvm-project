@@ -143,6 +143,8 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     if (IsVoidPtrInGNUMode) {
       // Emit a warning that this is a GNU extension
       Diag(FD->getBeginLoc(), diag::ext_gnu_counted_by_void_ptr) << Kind;
+      Diag(FD->getBeginLoc(), diag::note_gnu_counted_by_void_ptr_use_sized_by)
+          << Kind;
     } else {
       InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
     }

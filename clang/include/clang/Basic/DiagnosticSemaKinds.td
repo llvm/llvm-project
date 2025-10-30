@@ -8120,6 +8120,11 @@ def ext_gnu_counted_by_void_ptr
           "on a pointer to void is a GNU extension, treated as "
           "'%select{sized_by|sized_by|sized_by_or_null|sized_by_or_null}0'">,
       InGroup<GNUPointerArith>;
+def note_gnu_counted_by_void_ptr_use_sized_by
+    : Note<"use "
+           "'%select{__sized_by|__sized_by|__sized_by_or_null|__sized_by_or_"
+           "null}0' "
+           "to suppress this warning">;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
 def ext_c2y_increment_complex : Extension<
