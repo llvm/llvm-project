@@ -1706,12 +1706,11 @@ bool BinaryFunction::scanExternalRefs() {
                 : TargetFunction->getSymbol();
       } else {
         TargetFunction->setIgnored();
-        Success = false;
         BC.outs() << "BOLT-WARNING: Ignoring entry point at address 0x"
                   << Twine::utohexstr(Address)
                   << " in constant island of function " << *TargetFunction
                   << '\n';
-        break;
+        continue;
       }
     }
 
