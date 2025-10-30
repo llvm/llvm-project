@@ -687,7 +687,7 @@ m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
 }
 
-template <typename Addr_t, typename Mask_t, bool Reverse> struct Load_match {
+template <typename Addr_t, typename Mask_t> struct Load_match {
   Addr_t Addr;
   Mask_t Mask;
 
@@ -695,29 +695,21 @@ template <typename Addr_t, typename Mask_t, bool Reverse> struct Load_match {
 
   template <typename OpTy> bool match(const OpTy *V) const {
     auto *Load = dyn_cast<VPWidenLoadRecipe>(V);
-    if (!Load || Load->isReverse() != Reverse || !Addr.match(Load->getAddr()) ||
-        !Load->isMasked() || !Mask.match(Load->getMask()))
+    if (!Load || !Addr.match(Load->getAddr()) || !Load->isMasked() ||
+        !Mask.match(Load->getMask()))
       return false;
     return true;
   }
 };
 
-/// Match a non-reversed masked load.
+/// Match a (possibly reversed) masked load.
 template <typename Addr_t, typename Mask_t>
-inline Load_match<Addr_t, Mask_t, false> m_Load(const Addr_t &Addr,
-                                                const Mask_t &Mask) {
-  return Load_match<Addr_t, Mask_t, false>(Addr, Mask);
+inline Load_match<Addr_t, Mask_t> m_MaskedLoad(const Addr_t &Addr,
+                                               const Mask_t &Mask) {
+  return Load_match<Addr_t, Mask_t>(Addr, Mask);
 }
 
-/// Match a reversed masked load.
-template <typename Addr_t, typename Mask_t>
-inline Load_match<Addr_t, Mask_t, true> m_ReverseLoad(const Addr_t &Addr,
-                                                      const Mask_t &Mask) {
-  return Load_match<Addr_t, Mask_t, true>(Addr, Mask);
-}
-
-template <typename Addr_t, typename Val_t, typename Mask_t, bool Reverse>
-struct Store_match {
+template <typename Addr_t, typename Val_t, typename Mask_t> struct Store_match {
   Addr_t Addr;
   Val_t Val;
   Mask_t Mask;
@@ -727,26 +719,19 @@ struct Store_match {
 
   template <typename OpTy> bool match(const OpTy *V) const {
     auto *Store = dyn_cast<VPWidenStoreRecipe>(V);
-    if (!Store || Store->isReverse() != Reverse ||
-        !Addr.match(Store->getAddr()) || !Val.match(Store->getStoredValue()) ||
-        !Store->isMasked() || !Mask.match(Store->getMask()))
+    if (!Store || !Addr.match(Store->getAddr()) ||
+        !Val.match(Store->getStoredValue()) || !Store->isMasked() ||
+        !Mask.match(Store->getMask()))
       return false;
     return true;
   }
 };
 
-/// Match a non-reversed masked store.
+/// Match a (possibly reversed) masked store.
 template <typename Addr_t, typename Val_t, typename Mask_t>
-inline Store_match<Addr_t, Val_t, Mask_t, false>
-m_Store(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
-  return Store_match<Addr_t, Val_t, Mask_t, false>(Addr, Val, Mask);
-}
-
-/// Match a reversed masked store.
-template <typename Addr_t, typename Val_t, typename Mask_t>
-inline Store_match<Addr_t, Val_t, Mask_t, true>
-m_ReverseStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
-  return Store_match<Addr_t, Val_t, Mask_t, true>(Addr, Val, Mask);
+inline Store_match<Addr_t, Val_t, Mask_t>
+m_MaskedStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
+  return Store_match<Addr_t, Val_t, Mask_t>(Addr, Val, Mask);
 }
 
 template <typename Op0_t, typename Op1_t>

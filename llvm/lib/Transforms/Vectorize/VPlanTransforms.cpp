@@ -2563,24 +2563,28 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   };
 
   if (match(&CurRecipe,
-            m_Load(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))))
+            m_MaskedLoad(m_VPValue(Addr), m_RemoveMask(HeaderMask, Mask))) &&
+      !cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
   if (match(&CurRecipe,
-            m_ReverseLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
-      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))))
+            m_MaskedLoad(m_VPValue(EndPtr), m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
+      cast<VPWidenLoadRecipe>(CurRecipe).isReverse())
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
                                     AdjustEndPtr(EndPtr), EVL, Mask);
 
-  if (match(&CurRecipe, m_Store(m_VPValue(Addr), m_VPValue(),
-                                m_RemoveMask(HeaderMask, Mask))))
+  if (match(&CurRecipe, m_MaskedStore(m_VPValue(Addr), m_VPValue(),
+                                      m_RemoveMask(HeaderMask, Mask))) &&
+      !cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
                                      EVL, Mask);
 
-  if (match(&CurRecipe, m_ReverseStore(m_VPValue(EndPtr), m_VPValue(),
-                                       m_RemoveMask(HeaderMask, Mask))) &&
-      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))))
+  if (match(&CurRecipe, m_MaskedStore(m_VPValue(EndPtr), m_VPValue(),
+                                      m_RemoveMask(HeaderMask, Mask))) &&
+      match(EndPtr, m_VecEndPtr(m_VPValue(Addr), m_Specific(&Plan->getVF()))) &&
+      cast<VPWidenStoreRecipe>(CurRecipe).isReverse())
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe),
                                      AdjustEndPtr(EndPtr), EVL, Mask);
 
