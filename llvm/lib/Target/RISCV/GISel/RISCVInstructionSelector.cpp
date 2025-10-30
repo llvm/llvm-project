@@ -92,6 +92,8 @@ private:
   void emitFence(AtomicOrdering FenceOrdering, SyncScope::ID FenceSSID,
                  MachineIRBuilder &MIB) const;
   bool selectUnmergeValues(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool selectIntrinsicWithSideEffects(MachineInstr &I,
+                                      MachineIRBuilder &MIB) const;
 
   ComplexRendererFns selectShiftMask(MachineOperand &Root,
                                      unsigned ShiftWidth) const;
@@ -714,6 +716,88 @@ static unsigned selectRegImmLoadStoreOp(unsigned GenericOpc, unsigned OpSize) {
   return GenericOpc;
 }
 
+bool RISCVInstructionSelector::selectIntrinsicWithSideEffects(
+    MachineInstr &I, MachineIRBuilder &MIB) const {
+  // Find the intrinsic ID.
+  unsigned IntrinID = cast<GIntrinsic>(I).getIntrinsicID();
+  // Select the instruction.
+  switch (IntrinID) {
+  default:
+    return false;
+  case Intrinsic::riscv_vlm:
+  case Intrinsic::riscv_vle:
+  case Intrinsic::riscv_vle_mask:
+  case Intrinsic::riscv_vlse:
+  case Intrinsic::riscv_vlse_mask: {
+    bool IsMasked = IntrinID == Intrinsic::riscv_vle_mask ||
+                    IntrinID == Intrinsic::riscv_vlse_mask;
+    bool IsStrided = IntrinID == Intrinsic::riscv_vlse ||
+                     IntrinID == Intrinsic::riscv_vlse_mask;
+    LLT VT = MRI->getType(I.getOperand(0).getReg());
+    unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
+
+    // Result vector
+    const Register DstReg = I.getOperand(0).getReg();
+
+    // Sources
+    bool HasPassthruOperand = IntrinID != Intrinsic::riscv_vlm;
+    unsigned CurOp = 2;
+    SmallVector<SrcOp, 4> SrcOps; // Source registers.
+
+    // Passthru
+    if (HasPassthruOperand) {
+      auto PassthruReg = I.getOperand(CurOp++).getReg();
+      SrcOps.push_back(PassthruReg);
+    } else {
+      SrcOps.push_back(Register(RISCV::NoRegister));
+    }
+
+    // Base Pointer
+    auto PtrReg = I.getOperand(CurOp++).getReg();
+    SrcOps.push_back(PtrReg);
+
+    // Stride
+    if (IsStrided) {
+      auto StrideReg = I.getOperand(CurOp++).getReg();
+      SrcOps.push_back(StrideReg);
+    }
+
+    // Mask
+    if (IsMasked) {
+      auto MaskReg = I.getOperand(CurOp++).getReg();
+      SrcOps.push_back(MaskReg);
+    }
+
+    RISCVVType::VLMUL LMUL = RISCVTargetLowering::getLMUL(getMVTForLLT(VT));
+    const RISCV::VLEPseudo *P =
+        RISCV::getVLEPseudo(IsMasked, IsStrided, /*FF*/ false, Log2SEW,
+                            static_cast<unsigned>(LMUL));
+
+    auto PseudoMI = MIB.buildInstr(P->Pseudo, {DstReg}, SrcOps);
+
+    // Select VL
+    auto VLOpFn = renderVLOp(I.getOperand(CurOp++));
+    for (auto &RenderFn : *VLOpFn)
+      RenderFn(PseudoMI);
+
+    // SEW
+    PseudoMI.addImm(Log2SEW);
+
+    // Policy
+    uint64_t Policy = RISCVVType::MASK_AGNOSTIC;
+    if (IsMasked)
+      Policy = I.getOperand(CurOp++).getImm();
+    PseudoMI.addImm(Policy);
+
+    // Memref
+    PseudoMI.cloneMemRefs(I);
+
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*PseudoMI, TII, TRI, RBI);
+  }
+  }
+}
+
 bool RISCVInstructionSelector::select(MachineInstr &MI) {
   MachineIRBuilder MIB(MI);
 
@@ -984,6 +1068,8 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
 
     return constrainSelectedInstRegOperands(*NewInst, TII, TRI, RBI);
   }
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    return selectIntrinsicWithSideEffects(MI, MIB);
   default:
     return false;
   }
