@@ -145,6 +145,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
       Diag(FD->getBeginLoc(), diag::ext_gnu_counted_by_void_ptr) << Kind;
       Diag(FD->getBeginLoc(), diag::note_gnu_counted_by_void_ptr_use_sized_by)
           << Kind;
+      assert(InvalidTypeKind == CountedByInvalidPointeeTypeKind::VALID);
     } else {
       InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
     }
