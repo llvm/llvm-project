@@ -142,3 +142,13 @@ TEST(TypeSwitchTest, DefaultUnreachableWithVoid) {
   EXPECT_DEATH((void)translate(DerivedD()), "Unhandled type");
 #endif
 }
+
+TEST(TypeSwitchTest, DefaultNullopt) {
+  auto translate = [](auto value) {
+    return TypeSwitch<Base *, std::optional<int>>(&value)
+        .Case([](DerivedA *) { return 0; })
+        .Default(std::nullopt);
+  };
+  EXPECT_EQ(0, translate(DerivedA()));
+  EXPECT_EQ(std::nullopt, translate(DerivedD()));
+}
