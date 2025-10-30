@@ -449,7 +449,7 @@ endif()
 # Build the modules files if a Fortran compiler is available.
 # Only LLVM_ENABLE_RUNTIMES=openmp is supported, LLVM_ENABLE_PROJECTS=openmp
 # has been deprecated.
-if(LLVM_RUNTIMES_BUILD AND RUNTIMES_FLANG_MODULES_ENABLED)
+if(LIBOMP_FORTRAN_MODULES)
   add_library(libomp-mod OBJECT
     omp_lib.F90
   )
