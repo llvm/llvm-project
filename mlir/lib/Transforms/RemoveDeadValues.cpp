@@ -887,11 +887,16 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 ///  original function.
 /// }
 ///
-/// Returns true if any IR changes were made, false otherwise.
+/// changed = true if any IR changes were made.
+///
+/// Cloning has to be Interface-based because downstream projects may use their
+/// own func/call/return ops.
 static LogicalResult processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
-                                   RunLivenessAnalysis &la, bool &changed) {
-  Operation *callableOp = callOp.resolveCallable();
-  auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
+                                   RunLivenessAnalysis &la,
+                                   SymbolTableCollection *symbolTable,
+                                   bool &changed) {
+  Operation *callableOp = callOp.resolveCallableInTable(symbolTable);
+  auto funcOp = dyn_cast_or_null<FunctionOpInterface>(callableOp);
   if (!funcOp || !funcOp.isPublic())
     return LogicalResult::success();
 
@@ -907,7 +912,8 @@ static LogicalResult processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
     OpBuilder rewriter(moduleOp.getContext());
 
     // Clone function and create private version
-    FunctionOpInterface clonedFunc = cast<FunctionOpInterface>(funcOp.clone());
+    FunctionOpInterface clonedFunc =
+        cast<FunctionOpInterface>(funcOp->cloneWithoutRegions());
 
     // Set visibility = 'private' and a new name for the cloned function
     SymbolTable::setSymbolVisibility(clonedFunc,
@@ -930,20 +936,15 @@ static LogicalResult processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
           << funcOp.getName();
       return result;
     }
-
     LDBG() << "Redirected all callsites from " << funcOp.getName() << " to "
            << newName;
 
-    // Transform the original funcOp into a wrapper that calls the cloned
-    // function
-    Region &funcBody = funcOp.getFunctionBody();
+    Region &clonedFuncBody = clonedFunc.getFunctionBody();
+    // Move the body from funcOp to clonedFunc
+    clonedFuncBody.takeBody(funcOp.getFunctionBody());
 
-    // Clean the original function body
-    funcBody.dropAllReferences();
-    funcBody.getBlocks().clear();
-
-    // Create a new entry block for the wrapper function
-    Block *wrapperBlock = rewriter.createBlock(&funcBody);
+    // Create a new entry block for the wrapper function in funcOp
+    Block *wrapperBlock = rewriter.createBlock(&funcOp.getFunctionBody());
 
     // Add block arguments that match the function signature
     for (Type argType : funcOp.getArgumentTypes()) {
@@ -964,9 +965,9 @@ static LogicalResult processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
     rewriter.insert(clonedCallOp);
 
     // Create return operation of the same type as the original function's
-    // return
+    // returnOp.
     Operation *returnOp = nullptr;
-    for (Block &block : clonedFunc.getFunctionBody()) {
+    for (Block &block : clonedFuncBody) {
       if (block.getNumSuccessors() > 0)
         continue;
 
@@ -980,7 +981,7 @@ static LogicalResult processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
     if (returnOp) {
       Operation *newReturnOp = returnOp->clone();
       newReturnOp->setOperands(clonedCallOp->getResults());
-      newReturnOp->setLoc(funcOp.getLoc());
+      newReturnOp->setLoc(returnOp->getLoc());
       rewriter.insert(newReturnOp);
     }
     changed = true; // Changes were made
@@ -998,11 +999,12 @@ void RemoveDeadValues::runOnOperation() {
   // inter-procedural.
   if (la->getSolverConfig().isInterprocedural() && isa<ModuleOp>(module)) {
     bool changed = false;
+    SymbolTableCollection symbolTable;
     WalkResult walkResult =
         module->walk([&](CallOpInterface callOp) -> WalkResult {
-          return processCallOp(callOp, cast<ModuleOp>(module), *la, changed);
+          return processCallOp(callOp, cast<ModuleOp>(module), *la,
+                               &symbolTable, changed);
         });
-
     if (walkResult.wasInterrupted()) {
       signalPassFailure();
       return;
