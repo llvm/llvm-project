@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
-// The tested functionality needs deducing this.
-// XFAIL: apple-clang
 
 // <format>
 

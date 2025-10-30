@@ -1456,6 +1456,12 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db">;
 } // Predicates = [HasStdExtP, IsRV32]
 
+//===----------------------------------------------------------------------===//
+// Codegen patterns
+//===----------------------------------------------------------------------===//
+
+def riscv_absw : RVSDNode<"ABSW", SDTIntUnaryOp>;
+
 def SDT_RISCVPLI : SDTypeProfile<1, 1, [SDTCisVec<0>,
                                         SDTCisInt<0>,
                                         SDTCisInt<1>]>;
@@ -1470,10 +1476,6 @@ def SDT_RISCVPASUBU : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                            SDTCisSameAs<0, 1>,
                                            SDTCisSameAs<0, 2>]>;
 def riscv_pasubu : RVSDNode<"PASUBU", SDT_RISCVPASUBU>;
-
-//===----------------------------------------------------------------------===//
-// Codegen patterns
-//===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtP] in {
   def : PatGpr<abs, ABS>;
@@ -1535,6 +1537,8 @@ let Predicates = [HasStdExtP, IsRV32] in {
 } // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
+  def : PatGpr<riscv_absw, ABSW>;
+
   // 32-bit PLI SD node pattern
   def: Pat<(v2i32 (riscv_pli simm10:$imm10)), (PLI_W simm10:$imm10)>;
 

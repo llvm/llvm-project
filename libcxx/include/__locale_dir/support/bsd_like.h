@@ -24,7 +24,9 @@
 #  include <wctype.h>
 #endif
 
-#include <xlocale.h>
+#if __has_include(<xlocale.h>)
+#  include <xlocale.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
