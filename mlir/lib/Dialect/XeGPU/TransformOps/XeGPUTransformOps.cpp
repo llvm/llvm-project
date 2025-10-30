@@ -7,26 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
-#include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
-#include "mlir/Dialect/SCF/Utils/Utils.h"
-#include "mlir/Dialect/Transform/IR/TransformDialect.h"
-#include "mlir/Dialect/Transform/IR/TransformTypes.h"
-#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
-#include "mlir/Dialect/Transform/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/IR/DialectRegistry.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Support/LLVM.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 
 #include <numeric>
 
@@ -129,11 +113,11 @@ static DiagnosedSilenceableFailure convertMixedValuesToInt(
 
 /// Create a layout attribute from the given parameters.
 xegpu::LayoutAttr createLayoutAttr(MLIRContext *ctx, ArrayRef<int32_t> sgLayout,
-                                   ArrayRef<int32_t> sgData,
+                                   std::optional<ArrayRef<int32_t>> sgData,
                                    std::optional<ArrayRef<int32_t>> instData) {
   return xegpu::LayoutAttr::get(
       ctx, DenseI32ArrayAttr::get(ctx, sgLayout),
-      DenseI32ArrayAttr::get(ctx, sgData),
+      sgData ? DenseI32ArrayAttr::get(ctx, sgData.value()) : nullptr,
       instData ? DenseI32ArrayAttr::get(ctx, instData.value()) : nullptr,
       /*lane_layout=*/nullptr,
       /*lane_data=*/nullptr,
@@ -211,12 +195,17 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
       convertMixedValuesToInt(state, transformOp, sgData, getMixedSgData());
   if (!status.succeeded())
     return status;
+  auto maybeSgData =
+      sgData.empty() ? std::nullopt : std::optional<ArrayRef<int32_t>>(sgData);
 
   SmallVector<int32_t> instData;
   status =
       convertMixedValuesToInt(state, transformOp, instData, getMixedInstData());
   if (!status.succeeded())
     return status;
+  auto maybeInstData = instData.empty()
+                           ? std::nullopt
+                           : std::optional<ArrayRef<int32_t>>(instData);
 
   // For now only create_nd_desc op is supported.
   auto descOp = dyn_cast<xegpu::CreateNdDescOp>(target);
@@ -229,8 +218,8 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Set layout attr in desc op's return type. Replaces old desc op.
-  auto layoutAttr =
-      createLayoutAttr(rewriter.getContext(), sgLayout, sgData, instData);
+  auto layoutAttr = createLayoutAttr(rewriter.getContext(), sgLayout,
+                                     maybeSgData, maybeInstData);
   auto newdescOp = setDescLayout(rewriter, descOp, layoutAttr);
 
   // Map result handles.

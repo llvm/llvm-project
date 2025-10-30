@@ -28,13 +28,15 @@ class SetDescLayoutOp(SetDescLayoutOp):
         self,
         target: Union[Operation, Value],
         sg_layout: MixedValues,
-        sg_data: MixedValues,
-        inst_data: MixedValues,
         *,
+        sg_data: MixedValues = None,
+        inst_data: MixedValues = None,
         loc=None,
         ip=None,
     ):
         target_value = _get_op_result_or_value(target)
+        sg_data = [] if sg_data is None else sg_data
+        inst_data = [] if inst_data is None else inst_data
         (
             dynamic_sg_layout,
             static_sg_layout,

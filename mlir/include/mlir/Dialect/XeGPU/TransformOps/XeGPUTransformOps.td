@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef XEGPU_EXTENSION
-#define XEGPU_EXTENSION
+#ifndef XEGPU_TRANSFORM_OPS
+#define XEGPU_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
@@ -27,11 +27,12 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   TransformOpInterface
 ]> {
 
-  let summary = "Set xegpu.layout attribute to an xegpu op result.";
+  let summary = "Set xegpu.layout attribute to a xegpu.create_nd_desc op result.";
   let description = [{
     Given an `xegpu.create_nd_desc` operation, this transform adds `xegpu.layout`
     attribute to the result tensor descriptor. The layout is defined by the
-    `sg_layout`, `sg_data` and `inst_data` attributes. Returns a handle to the transformed op.
+    `sg_layout`, and optional `sg_data` and `inst_data` attributes. Returns a handle
+    to the transformed op.
   }];
 
   let arguments = (ins
@@ -56,8 +57,8 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   let assemblyFormat = [{
     $target
     `sg_layout` `=` custom<DynamicIndexList>($sg_layout, $static_sg_layout)
-    `sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)
-    `inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)
+    (`sg_data` `=` custom<DynamicIndexList>($sg_data, $static_sg_data)^)?
+    (`inst_data` `=` custom<DynamicIndexList>($inst_data, $static_inst_data)^)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -82,4 +83,4 @@ def SetDescLayoutOp : Op<Transform_Dialect, "xegpu.set_desc_layout", [
   }];
 }
 
-#endif // XEGPU_EXTENSION
+#endif // XEGPU_TRANSFORM_OPS

@@ -15,7 +15,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 
 #define GET_OP_CLASSES
-#include <mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h.inc>
+#include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h.inc"
 
 namespace mlir {
 class DialectRegistry;
