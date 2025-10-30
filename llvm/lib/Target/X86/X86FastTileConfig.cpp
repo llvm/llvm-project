@@ -93,10 +93,10 @@ static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
     // register is not rewritten yet.
     if (Reg.isVirtual()) {
       if (MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)
-        return false;
+        return true;
     }
     if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-      return false;
+      return true;
   }
 
   return false;
