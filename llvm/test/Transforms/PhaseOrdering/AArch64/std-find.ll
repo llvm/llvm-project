@@ -9,7 +9,6 @@ define i64 @std_find_i16_constant_offset_with_assumptions(ptr %first.coerce, i16
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[FIRST_COERCE]], i64 2) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[FIRST_COERCE]], i64 256) ]
-; CHECK-NEXT:    [[COERCE_VAL_IP:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 256
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i16> poison, i16 [[S]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -27,6 +26,7 @@ define i64 @std_find_i16_constant_offset_with_assumptions(ptr %first.coerce, i16
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_SPLIT]]:
+; CHECK-NEXT:    [[COERCE_VAL_IP:%.*]] = getelementptr i8, ptr [[FIRST_COERCE]], i64 256
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[RETURN:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP0]], i1 true)

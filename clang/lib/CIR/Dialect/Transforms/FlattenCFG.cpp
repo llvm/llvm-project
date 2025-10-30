@@ -606,10 +606,12 @@ public:
     // `cir.try_call`.
     llvm::SmallVector<cir::CallOp, 4> callsToRewrite;
     tryOp.getTryRegion().walk([&](CallOp op) {
+      if (op.getNothrow())
+        return;
+
       // Only grab calls within immediate closest TryOp scope.
       if (op->getParentOfType<cir::TryOp>() != tryOp)
         return;
-      assert(!cir::MissingFeatures::opCallExceptionAttr());
       callsToRewrite.push_back(op);
     });
 
