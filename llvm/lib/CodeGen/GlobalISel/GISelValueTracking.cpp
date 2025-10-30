@@ -631,7 +631,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     // With [US]ADDE, a carry bit may be added in.
     KnownBits Carry(1);
     if (Opcode == TargetOpcode::G_UADDE || Opcode == TargetOpcode::G_SADDE) {
-      computeKnownBitsImpl(MI.getOperand(4).getReg(), Known, DemandedElts,
+      computeKnownBitsImpl(MI.getOperand(4).getReg(), Carry, DemandedElts,
                            Depth + 1);
       // Carry has bit width 1
       Carry = Carry.trunc(1);
