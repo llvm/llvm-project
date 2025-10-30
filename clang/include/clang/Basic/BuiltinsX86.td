@@ -327,10 +327,6 @@ let Features = "ssse3", Attributes = [NoThrow, Const, Constexpr, RequiredVectorW
   }
 }
 
-let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
-  def insertps128 : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
-}
-
 let Features = "sse4.1", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def roundps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Constant int)">;
   def roundss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant int)">;
@@ -345,6 +341,7 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, RequiredVectorWidth<128>]
 
 let Features = "sse4.1",
     Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+  def insertps128 : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
   def ptestz128
       : X86Builtin<"int(_Vector<2, long long int>, _Vector<2, long long int>)">;
   def ptestc128
