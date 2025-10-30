@@ -16,6 +16,7 @@
 #include "llvm/Support/Program.h"
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 using namespace lldb;
@@ -91,13 +92,13 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   startupinfo.hStdOutput =
       stdout_handle ? stdout_handle : ::GetStdHandle(STD_OUTPUT_HANDLE);
 
-  std::vector<HANDLE> inherited_handles;
+  std::unordered_set<HANDLE> inherited_handles;
   if (startupinfo.hStdError)
-    inherited_handles.push_back(startupinfo.hStdError);
+    inherited_handles.insert(startupinfo.hStdError);
   if (startupinfo.hStdInput)
-    inherited_handles.push_back(startupinfo.hStdInput);
+    inherited_handles.insert(startupinfo.hStdInput);
   if (startupinfo.hStdOutput)
-    inherited_handles.push_back(startupinfo.hStdOutput);
+    inherited_handles.insert(startupinfo.hStdOutput);
 
   SIZE_T attributelist_size = 0;
   InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
@@ -120,13 +121,15 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     const FileAction *act = launch_info.GetFileActionAtIndex(i);
     if (act->GetAction() == FileAction::eFileActionDuplicate &&
         act->GetFD() == act->GetActionArgument())
-      inherited_handles.push_back(reinterpret_cast<HANDLE>(act->GetFD()));
+      inherited_handles.insert(reinterpret_cast<HANDLE>(act->GetFD()));
   }
   if (!inherited_handles.empty()) {
+    std::vector<HANDLE> handles(inherited_handles.begin(),
+                                inherited_handles.end());
     if (!UpdateProcThreadAttribute(
             startupinfoex.lpAttributeList, /*dwFlags=*/0,
-            PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherited_handles.data(),
-            inherited_handles.size() * sizeof(HANDLE),
+            PROC_THREAD_ATTRIBUTE_HANDLE_LIST, handles.data(),
+            handles.size() * sizeof(HANDLE),
             /*lpPreviousValue=*/nullptr, /*lpReturnSize=*/nullptr)) {
       error = Status(::GetLastError(), eErrorTypeWin32);
       return HostProcess();

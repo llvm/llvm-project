@@ -196,9 +196,9 @@ private:
                            SPIRVCodeGenContext &Ctx,
                            const DenseMap<StringRef, Register> &MacroDefRegs);
 
-  void emitDebugTypeEnum(
-      const SmallPtrSetImpl<const DICompositeType *> &EnumTypes,
-      SPIRVCodeGenContext &Ctx);
+  void
+  emitDebugTypeEnum(const SmallPtrSetImpl<const DICompositeType *> &EnumTypes,
+                    SPIRVCodeGenContext &Ctx);
 
   void emitDebugQualifiedTypes(
       const SmallPtrSetImpl<DIDerivedType *> &QualifiedDerivedTypes,
@@ -904,7 +904,7 @@ void SPIRVEmitNonSemanticDI::emitDebugPointerTypes(
                                                        Ctx.I32Ty, false, false);
 
     const DIType *BaseTy = PointerDerivedType->getBaseType();
-      bool HasForwardRef = false;
+    bool HasForwardRef = false;
     Register BaseTypeReg =
         findBaseTypeRegisterRecursive(BaseTy, Ctx, HasForwardRef);
 
