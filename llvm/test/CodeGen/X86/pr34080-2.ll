@@ -61,14 +61,14 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    imull $3600000, 20(%ebx), %ecx # imm = 0x36EE80
 ; CHECK-NEXT:    imull $60000, 24(%ebx), %eax # imm = 0xEA60
 ; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    sarl $31, %ecx
 ; CHECK-NEXT:    fldl 28(%ebx)
 ; CHECK-NEXT:    fmuls {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00
-; CHECK-NEXT:    movw %cx, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    sarl $31, %ecx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    orl $3072, %edx # imm = 0xC00
+; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)

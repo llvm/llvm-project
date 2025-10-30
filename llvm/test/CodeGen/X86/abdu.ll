@@ -328,35 +328,38 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl 24(%ebp), %edi
 ; X86-NEXT:    movl 28(%ebp), %esi
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    subl 40(%ebp), %edi
 ; X86-NEXT:    sbbl 44(%ebp), %esi
 ; X86-NEXT:    sbbl 48(%ebp), %edx
 ; X86-NEXT:    sbbl 52(%ebp), %ecx
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    xorl %eax, %edi
-; X86-NEXT:    subl %eax, %edi
-; X86-NEXT:    sbbl %eax, %esi
-; X86-NEXT:    sbbl %eax, %edx
-; X86-NEXT:    sbbl %eax, %ecx
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %ebx
+; X86-NEXT:    xorl %ebx, %ecx
+; X86-NEXT:    xorl %ebx, %edx
+; X86-NEXT:    xorl %ebx, %esi
+; X86-NEXT:    xorl %ebx, %edi
+; X86-NEXT:    subl %ebx, %edi
+; X86-NEXT:    sbbl %ebx, %esi
+; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    sbbl %ebx, %ecx
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
@@ -386,35 +389,38 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl 24(%ebp), %edi
 ; X86-NEXT:    movl 28(%ebp), %esi
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    subl 40(%ebp), %edi
 ; X86-NEXT:    sbbl 44(%ebp), %esi
 ; X86-NEXT:    sbbl 48(%ebp), %edx
 ; X86-NEXT:    sbbl 52(%ebp), %ecx
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    xorl %eax, %edi
-; X86-NEXT:    subl %eax, %edi
-; X86-NEXT:    sbbl %eax, %esi
-; X86-NEXT:    sbbl %eax, %edx
-; X86-NEXT:    sbbl %eax, %ecx
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %ebx
+; X86-NEXT:    xorl %ebx, %ecx
+; X86-NEXT:    xorl %ebx, %edx
+; X86-NEXT:    xorl %ebx, %esi
+; X86-NEXT:    xorl %ebx, %edi
+; X86-NEXT:    subl %ebx, %edi
+; X86-NEXT:    sbbl %ebx, %esi
+; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    sbbl %ebx, %ecx
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
@@ -556,35 +562,38 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl 24(%ebp), %edi
 ; X86-NEXT:    movl 28(%ebp), %esi
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    subl 40(%ebp), %edi
 ; X86-NEXT:    sbbl 44(%ebp), %esi
 ; X86-NEXT:    sbbl 48(%ebp), %edx
 ; X86-NEXT:    sbbl 52(%ebp), %ecx
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    xorl %eax, %edi
-; X86-NEXT:    subl %eax, %edi
-; X86-NEXT:    sbbl %eax, %esi
-; X86-NEXT:    sbbl %eax, %edx
-; X86-NEXT:    sbbl %eax, %ecx
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %ebx
+; X86-NEXT:    xorl %ebx, %ecx
+; X86-NEXT:    xorl %ebx, %edx
+; X86-NEXT:    xorl %ebx, %esi
+; X86-NEXT:    xorl %ebx, %edi
+; X86-NEXT:    subl %ebx, %edi
+; X86-NEXT:    sbbl %ebx, %esi
+; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    sbbl %ebx, %ecx
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
@@ -728,35 +737,38 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl 24(%ebp), %edi
 ; X86-NEXT:    movl 28(%ebp), %esi
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    subl 40(%ebp), %edi
 ; X86-NEXT:    sbbl 44(%ebp), %esi
 ; X86-NEXT:    sbbl 48(%ebp), %edx
 ; X86-NEXT:    sbbl 52(%ebp), %ecx
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    xorl %eax, %edi
-; X86-NEXT:    subl %eax, %edi
-; X86-NEXT:    sbbl %eax, %esi
-; X86-NEXT:    sbbl %eax, %edx
-; X86-NEXT:    sbbl %eax, %ecx
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %ebx
+; X86-NEXT:    xorl %ebx, %ecx
+; X86-NEXT:    xorl %ebx, %edx
+; X86-NEXT:    xorl %ebx, %esi
+; X86-NEXT:    xorl %ebx, %edi
+; X86-NEXT:    subl %ebx, %edi
+; X86-NEXT:    sbbl %ebx, %esi
+; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    sbbl %ebx, %ecx
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
@@ -901,35 +913,38 @@ define i128 @abd_select_i128(i128 %a, i128 %b) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl 24(%ebp), %edi
 ; X86-NEXT:    movl 28(%ebp), %esi
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    subl 40(%ebp), %edi
 ; X86-NEXT:    sbbl 44(%ebp), %esi
 ; X86-NEXT:    sbbl 48(%ebp), %edx
 ; X86-NEXT:    sbbl 52(%ebp), %ecx
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    xorl %eax, %ecx
-; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    xorl %eax, %esi
-; X86-NEXT:    xorl %eax, %edi
-; X86-NEXT:    subl %eax, %edi
-; X86-NEXT:    sbbl %eax, %esi
-; X86-NEXT:    sbbl %eax, %edx
-; X86-NEXT:    sbbl %eax, %ecx
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    sbbl %ebx, %ebx
+; X86-NEXT:    xorl %ebx, %ecx
+; X86-NEXT:    xorl %ebx, %edx
+; X86-NEXT:    xorl %ebx, %esi
+; X86-NEXT:    xorl %ebx, %edi
+; X86-NEXT:    subl %ebx, %edi
+; X86-NEXT:    sbbl %ebx, %esi
+; X86-NEXT:    sbbl %ebx, %edx
+; X86-NEXT:    sbbl %ebx, %ecx
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %edx, 8(%eax)
 ; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;

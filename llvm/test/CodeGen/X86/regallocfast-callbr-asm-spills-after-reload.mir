@@ -36,7 +36,7 @@ body:             |
     %6:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32))
     %5:gr32_norex2 = COPY %6
     %4:gr32_norex2 = COPY %5
-    INLINEASM_BR &"  subl $$11, $0;  cmpl $$11, $0; je ${2:l};", 0 /* attdialect */, 2686986 /* regdef:GR32_NOREX2 */, def %4, 2147483657 /* reguse tiedto:$0 */, %4(tied-def 3), 13 /* imm */, %bb.3, 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
+    INLINEASM_BR &"  subl $$11, $0;  cmpl $$11, $0; je ${2:l};", 0 /* attdialect */, 2490378 /* regdef:GR32_NOREX2 */, def %4, 2147483657 /* reguse tiedto:$0 */, %4(tied-def 3), 13 /* imm */, %bb.3, 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
     %1:gr32 = COPY %4
     JMP_1 %bb.1
 
