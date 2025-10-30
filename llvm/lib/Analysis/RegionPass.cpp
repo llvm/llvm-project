@@ -191,12 +191,14 @@ public:
   bool runOnRegion(Region *R, RGPassManager &RGM) override {
     if (!isFunctionInPrintList(R->getEntry()->getParent()->getName()))
       return false;
-    Out << Banner;
+
+    IRDumpStream dmp("region", Banner, Out);
+    dmp.os() << Banner;
     for (const auto *BB : R->blocks()) {
       if (BB)
-        BB->print(Out);
+        BB->print(dmp.os());
       else
-        Out << "Printing <null> Block";
+        dmp.os() << "Printing <null> Block";
     }
 
     return false;

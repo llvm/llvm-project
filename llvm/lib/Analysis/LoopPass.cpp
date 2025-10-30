@@ -51,7 +51,8 @@ public:
     auto BBI = llvm::find_if(L->blocks(), [](BasicBlock *BB) { return BB; });
     if (BBI != L->blocks().end() &&
         isFunctionInPrintList((*BBI)->getParent()->getName())) {
-      printLoop(*L, OS, Banner);
+      IRDumpStream dmp("loop", Banner, OS);
+      printLoop(*L, dmp.os(), Banner);
     }
     return false;
   }

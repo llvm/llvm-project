@@ -675,18 +675,20 @@ namespace {
 
     bool runOnSCC(CallGraphSCC &SCC) override {
       bool BannerPrinted = false;
+
+      IRDumpStream dmp("call-graph-scc", Banner, OS);
       auto PrintBannerOnce = [&]() {
         if (BannerPrinted)
           return;
-        OS << Banner;
+        dmp.os() << Banner;
         BannerPrinted = true;
       };
 
       bool NeedModule = llvm::forcePrintModuleIR();
       if (isFunctionInPrintList("*") && NeedModule) {
         PrintBannerOnce();
-        OS << "\n";
-        SCC.getCallGraph().getModule().print(OS, nullptr);
+        dmp.os() << "\n";
+        SCC.getCallGraph().getModule().print(dmp.os(), nullptr);
         return false;
       }
       bool FoundFunction = false;
@@ -696,18 +698,18 @@ namespace {
             FoundFunction = true;
             if (!NeedModule) {
               PrintBannerOnce();
-              F->print(OS);
+              F->print(dmp.os());
             }
           }
         } else if (isFunctionInPrintList("*")) {
           PrintBannerOnce();
-          OS << "\nPrinting <null> Function\n";
+          dmp.os() << "\nPrinting <null> Function\n";
         }
       }
       if (NeedModule && FoundFunction) {
         PrintBannerOnce();
-        OS << "\n";
-        SCC.getCallGraph().getModule().print(OS, nullptr);
+        dmp.os() << "\n";
+        SCC.getCallGraph().getModule().print(dmp.os(), nullptr);
       }
       return false;
     }
