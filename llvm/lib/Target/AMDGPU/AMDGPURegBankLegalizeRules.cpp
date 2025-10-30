@@ -915,6 +915,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_READSTEADYCOUNTER}, Standard).Uni(S64, {{Sgpr64}, {}});
 
+  addRulesForGOpcs({G_READCYCLECOUNTER}).Any({{UniS64}, {{Sgpr64}, {}}});
+
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 
   addRulesForGOpcs({G_FADD}, Standard)
