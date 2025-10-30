@@ -366,7 +366,7 @@ LogicalResult ConvertF4x2ToF16x2Op::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Stochastic Rounding Conversion Ops - getIntrinsicID implementations
+// Stochastic Rounding Conversion Ops
 //===----------------------------------------------------------------------===//
 
 LogicalResult ConvertF32x2ToF16x2Op::verify() {
