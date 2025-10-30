@@ -464,13 +464,14 @@ define double @test_load_used_by_other_load_scev(ptr %ptr.a, ptr %ptr.b, ptr %pt
 ; I64-NEXT:  [[ENTRY:.*]]:
 ; I64-NEXT:    br label %[[OUTER_LOOP:.*]]
 ; I64:       [[OUTER_LOOP_LOOPEXIT:.*]]:
+; I64-NEXT:    [[RESULT_LCSSA:%.*]] = phi double [ [[RESULT:%.*]], [[INNER_LOOP:%.*]] ], [ [[TMP29:%.*]], %[[MIDDLE_BLOCK:.*]] ]
 ; I64-NEXT:    br label %[[OUTER_LOOP]]
 ; I64:       [[OUTER_LOOP]]:
-; I64-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP29:%.*]], %[[OUTER_LOOP_LOOPEXIT]] ]
+; I64-NEXT:    [[ACCUM:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[RESULT_LCSSA]], %[[OUTER_LOOP_LOOPEXIT]] ]
 ; I64-NEXT:    [[COND:%.*]] = call i1 @cond()
-; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; I64-NEXT:    br i1 [[COND]], label %[[INNER_LOOP_PREHEADER:.*]], [[EXIT:label %.*]]
 ; I64:       [[INNER_LOOP_PREHEADER]]:
-; I64-NEXT:    br label %[[VECTOR_PH:.*]]
+; I64-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I64:       [[VECTOR_PH]]:
 ; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I64:       [[VECTOR_BODY]]:
@@ -507,12 +508,12 @@ define double @test_load_used_by_other_load_scev(ptr %ptr.a, ptr %ptr.b, ptr %pt
 ; I64-NEXT:    [[TMP26:%.*]] = insertelement <2 x double> [[TMP25]], double [[TMP24]], i32 1
 ; I64-NEXT:    [[TMP27:%.*]] = fdiv <2 x double> [[TMP26]], [[TMP22]]
 ; I64-NEXT:    [[TMP28:%.*]] = fsub <2 x double> [[TMP19]], [[TMP27]]
-; I64-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; I64-NEXT:    br label %[[MIDDLE_BLOCK]]
 ; I64:       [[MIDDLE_BLOCK]]:
 ; I64-NEXT:    [[TMP29]] = extractelement <2 x double> [[TMP28]], i32 1
-; I64-NEXT:    br label %[[OUTER_LOOP_LOOPEXIT]]
-; I64:       [[EXIT]]:
-; I64-NEXT:    ret double [[ACCUM]]
+; I64-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x double> [[TMP18]], i32 1
+; I64-NEXT:    br i1 true, label %[[OUTER_LOOP_LOOPEXIT]], label %[[SCALAR_PH]]
+; I64:       [[SCALAR_PH]]:
 ;
 ; I32-LABEL: define double @test_load_used_by_other_load_scev(
 ; I32-SAME: ptr [[PTR_A:%.*]], ptr [[PTR_B:%.*]], ptr [[PTR_C:%.*]]) {
