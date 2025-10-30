@@ -3849,7 +3849,7 @@ static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
                              : Info.Ctx.getIntTypeForBitwidth(64, false);
       Result = APValue(Info.Ctx.MakeIntValue(IntResult, IntType));
     }
-    if (DestTy->isFloatingType()) {
+    if (DestTy->isRealFloatingType()) {
       APValue Result2 = APValue(APFloat(0.0));
       if (!HandleIntToFloatCast(Info, E, FPO,
                                 Info.Ctx.getIntTypeForBitwidth(64, false),
@@ -4048,9 +4048,9 @@ static unsigned elementwiseSize(EvalInfo &Info, QualType BaseTy) {
     if (Type->isConstantArrayType()) {
       QualType ElTy = cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))
                           ->getElementType();
-      uint64_t Size =
+      uint64_t ArrSize =
           cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))->getZExtSize();
-      for (uint64_t I = 0; I < Size; ++I) {
+      for (uint64_t I = 0; I < ArrSize; ++I) {
         WorkList.push_back(ElTy);
       }
       continue;
@@ -11239,11 +11239,12 @@ bool RecordExprEvaluator::VisitCastExpr(const CastExpr *E) {
         return false;
     }
 
+    unsigned NEls = elementwiseSize(Info, E->getType());
     // flatten the source
     SmallVector<APValue> SrcEls;
     SmallVector<QualType> SrcTypes;
     if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes,
-                        UINT_MAX))
+                        NEls))
       return Error(E);
 
     // cast the elements and construct our struct result
@@ -13617,11 +13618,12 @@ bool ArrayExprEvaluator::VisitCastExpr(const CastExpr *E) {
         return false;
     }
 
+    unsigned NEls = elementwiseSize(Info, E->getType());
     // flatten the source
     SmallVector<APValue> SrcEls;
     SmallVector<QualType> SrcTypes;
     if (!flattenAPValue(Info.Ctx, Val, SE->getType(), SrcEls, SrcTypes,
-                        UINT_MAX))
+                        NEls))
       return Error(E);
 
     // cast the elements

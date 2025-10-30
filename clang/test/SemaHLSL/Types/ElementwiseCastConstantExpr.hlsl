@@ -38,7 +38,6 @@ export void fn() {
   // result type int
   // truncate from struct
   constexpr B1 SB1 = {1.0, 3.0};
-  constexpr float Blah = SB1.A;
   constexpr int X = (int)SB1;
   _Static_assert(X == 1, "Woo!");
 

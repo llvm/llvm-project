@@ -32,7 +32,6 @@ export void fn() {
   // splat from a vector of size 1
   
   constexpr float1 Y = {1.0};
-  constexpr int1 A1 = {1};
   constexpr float4 F4 = (float4)Y;
   _Static_assert(F4[0] == 1.0, "Woo!");
   _Static_assert(F4[1] == 1.0, "Woo!");
@@ -51,6 +50,7 @@ export void fn() {
   _Static_assert(B6[5] == 3, "Woo!");
 
   // splat from a vector of size 1
+  constexpr int1 A1 = {1};
   constexpr uint64_t2 A7[2] = (uint64_t2[2])A1;
   _Static_assert(A7[0][0] == 1, "Woo!");
   _Static_assert(A7[0][1] == 1, "Woo!");
