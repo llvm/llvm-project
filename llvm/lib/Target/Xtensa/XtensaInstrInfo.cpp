@@ -122,8 +122,10 @@ void XtensaInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addReg(SrcReg, getKillRegState(KillSrc));
     return;
-  } else if (STI.hasSingleFloat() && Xtensa::FPRRegClass.contains(SrcReg) &&
-             Xtensa::FPRRegClass.contains(DestReg))
+  }
+
+  if (STI.hasSingleFloat() && Xtensa::FPRRegClass.contains(SrcReg) &&
+      Xtensa::FPRRegClass.contains(DestReg))
     Opcode = Xtensa::MOV_S;
   else if (STI.hasSingleFloat() && Xtensa::FPRRegClass.contains(SrcReg) &&
            Xtensa::ARRegClass.contains(DestReg))
