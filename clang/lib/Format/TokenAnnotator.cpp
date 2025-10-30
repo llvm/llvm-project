@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TokenAnnotator.h"
-#include "BreakableToken.h"
 #include "FormatToken.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/SmallPtrSet.h"
