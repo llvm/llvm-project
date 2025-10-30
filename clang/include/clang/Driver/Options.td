@@ -1955,7 +1955,7 @@ defm borland_extensions : BoolFOption<"borland-extensions",
           "Accept non-standard constructs supported by the Borland compiler">,
   NegFlag<SetFalse>>;
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>;
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption, FC1Option]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,
   Flags<[]>, HelpText<"Load the clang builtins module map file.">;
 defm caret_diagnostics : BoolFOption<"caret-diagnostics",
@@ -3563,7 +3563,7 @@ def fno_assume_sane_operator_new : Flag<["-"], "fno-assume-sane-operator-new">, 
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AssumeSaneOperatorNew">>;
 def fno_builtin : Flag<["-"], "fno-builtin">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"Disable implicit builtin knowledge of functions">;
 def fno_builtin_ : Joined<["-"], "fno-builtin-">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
@@ -5980,10 +5980,10 @@ def : Flag<["-"], "nocudainc">, Alias<no_offload_inc>;
 def no_offloadlib
     : Flag<["--"], "no-offloadlib">,
       MarshallingInfoFlag<LangOpts<"NoGPULib">>,
-      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-      HelpText<"Do not link device library for CUDA/HIP device compilation">;
+      Visibility<[ClangOption, CC1Option, CLOption, FlangOption, FC1Option]>,
+      HelpText<"Do not link device library for CUDA/HIP/SYCL device compilation">;
 def offloadlib : Flag<["--"], "offloadlib">,
-                 Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                 Visibility<[ClangOption, CC1Option, CLOption, FlangOption, FC1Option]>,
                  HelpText<"Link device libraries for GPU device compilation">;
 def : Flag<["-"], "nogpulib">,
       Alias<no_offloadlib>,
@@ -5999,7 +5999,6 @@ def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
 def nomultidefs : Flag<["-"], "nomultidefs">;
 def nopie : Flag<["-"], "nopie">, Visibility<[ClangOption, FlangOption]>, Flags<[TargetSpecific]>; // OpenBSD
-def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>;
 def noprebind : Flag<["-"], "noprebind">;
 def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
@@ -6113,7 +6112,6 @@ defm pthread : BoolOption<"", "pthread",
   PosFlag<SetTrue, [], [ClangOption], "Support POSIX threads in generated code">,
   NegFlag<SetFalse>,
   BothFlags<[], [ClangOption, CC1Option, FlangOption, FC1Option]>>;
-def pie : Flag<["-"], "pie">, Group<Link_Group>;
 def static_pie : Flag<["-"], "static-pie">, Group<Link_Group>;
 def read__only__relocs : Separate<["-"], "read_only_relocs">;
 def remap : Flag<["-"], "remap">;
@@ -6508,6 +6506,8 @@ def fpic : Flag<["-"], "fpic">, Group<f_Group>;
 def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
 def fpie : Flag<["-"], "fpie">, Group<f_Group>;
 def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
+def pie : Flag<["-"], "pie">, Group<Link_Group>;
+def no_pie : Flag<["-"], "no-pie">, Group<Link_Group>;
 
 } // let Vis = [Default, FlangOption]
 

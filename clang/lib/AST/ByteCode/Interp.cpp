@@ -1651,8 +1651,8 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
 
   QualType DynamicType = TypePtr.getType();
   if (TypePtr.isStatic() || TypePtr.isConst()) {
-    const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
-    if (!VD->isConstexpr()) {
+    if (const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
+        VD && !VD->isConstexpr()) {
       const Expr *E = S.Current->getExpr(OpPC);
       APValue V = TypePtr.toAPValue(S.getASTContext());
       QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
@@ -1683,20 +1683,6 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
   const FunctionDecl *Callee = Func->getDecl();
 
-  if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
-
-  // C++2a [class.abstract]p6:
-  //   the effect of making a virtual call to a pure virtual function [...] is
-  //   undefined
-  if (Callee->isPureVirtual()) {
-    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_pure_virtual_call,
-             1)
-        << Callee;
-    S.Note(Callee->getLocation(), diag::note_declared_at);
-    return false;
-  }
-
   const CXXRecordDecl *DynamicDecl = nullptr;
   if (!GetDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
     return false;
@@ -1706,7 +1692,8 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
-  if (StaticDecl != DynamicDecl) {
+  if (StaticDecl != DynamicDecl &&
+      !llvm::is_contained(S.InitializingBlocks, ThisPtr.block())) {
     if (!DynamicDecl->isDerivedFrom(StaticDecl))
       return false;
     Overrider = S.getContext().getOverridingFunction(DynamicDecl, StaticDecl,
@@ -1714,6 +1701,17 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
   } else {
     Overrider = InitialFunction;
+  }
+
+  // C++2a [class.abstract]p6:
+  //   the effect of making a virtual call to a pure virtual function [...] is
+  //   undefined
+  if (Overrider->isPureVirtual()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_pure_virtual_call,
+             1)
+        << Callee;
+    S.Note(Callee->getLocation(), diag::note_declared_at);
+    return false;
   }
 
   if (Overrider != InitialFunction) {

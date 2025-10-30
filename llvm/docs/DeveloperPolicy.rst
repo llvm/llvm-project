@@ -1189,6 +1189,55 @@ Suggested disclaimer for the project README and the main project web page:
    necessarily a reflection of the completeness or stability of the code, it
    does indicate that the project is not yet endorsed as a component of LLVM.
 
+Adding or enabling a new LLVM pass
+----------------------------------
+
+The guidelines here are primarily targeted at the enablement of new major
+passes in the target-independent optimization pipeline. Small additions, or
+backend-specific passes, require a lesser degree of care. Before creating a new
+pass, consider whether the functionality can be integrated into an existing
+pass first. This is often both faster and more powerful.
+
+When adding a new pass, the goal should be to enable it as part of the default
+optimization pipeline as early as possible and then continue development
+incrementally. (This does not apply to passes that are only relevant for
+specific uses of LLVM, such as GC support passes.)
+
+The recommended workflow is:
+
+1. Implement a basic version of the pass and add it to the pass pipeline behind
+   a flag that is disabled by default. The initial version should focus on
+   handling simple cases correctly and efficiently.
+2. Enable the pass by default. Separating this step allows easily disabling the
+   pass if issues are encountered, without having to revert the entire
+   implementation.
+3. Incrementally extend the pass with new functionality. As the pass is already
+   enabled, it becomes easier to identify the specific change that has caused a
+   regression in correctness, optimization quality or compile-time.
+
+When enabling a pass, certain requirements must be met (in no particular order):
+
+ * **Maintenance:** The pass (and any analyses it depends on) must have at
+   least one maintainer.
+ * **Usefulness:** There should be evidence that the pass improves performance
+   (or whatever metric it optimizes for) on real-world workloads. Improvements
+   seen only on synthetic benchmarks may be insufficient.
+ * **Compile-Time:** The pass should not have a large impact on compile-time,
+   where the evaluation of what "large" means is up to reviewer discretion, and
+   may differ based on the value the pass provides. In any case, it is expected
+   that a concerted effort has been made to mitigate the compile-time impact,
+   both for the average case, and for pathological cases.
+ * **Correctness:** The pass should have no known correctness issues (except
+   global correctness issues that affect all of LLVM). If an old pass is being
+   enabled (rather than implementing a new one incrementally), additional due
+   diligence is required. The pass should be fully reviewed to ensure that it
+   still complies with current quality standards. Fuzzing with disabled
+   profitability checks may help gain additional confidence in the
+   implementation.
+
+If non-trivial issues are found in a newly enabled pass, it may be temporarily
+disabled again, until the issues have been resolved.
+
 .. _copyright-license-patents:
 
 Copyright, License, and Patents
