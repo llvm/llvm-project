@@ -7,34 +7,100 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
 #include "Dataflow.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
 namespace clang::lifetimes::internal {
+
+// Pre-pass to find persistent origins. An origin is persistent if it is
+// referenced in more than one basic block.
+static llvm::BitVector computePersistentOrigins(FactManager &FactMgr,
+                                                const CFG &C) {
+  llvm::TimeTraceScope("ComputePersistentOrigins");
+  llvm::BitVector PersistentOrigins(FactMgr.getOriginMgr().getOrigins().size() +
+                                    1);
+
+  llvm::DenseMap<OriginID, const CFGBlock *> OriginToBlock;
+  for (const CFGBlock *B : C) {
+    for (const Fact *F : FactMgr.getFacts(B)) {
+      auto CheckOrigin = [&](OriginID OID) {
+        if (PersistentOrigins.test(OID.Value))
+          return;
+        auto It = OriginToBlock.find(OID);
+        if (It == OriginToBlock.end())
+          OriginToBlock[OID] = B;
+        else if (It->second != B) {
+          // We saw this origin in more than one block.
+          PersistentOrigins.set(OID.Value);
+        }
+      };
+
+      switch (F->getKind()) {
+      case Fact::Kind::Issue:
+        CheckOrigin(F->getAs<IssueFact>()->getOriginID());
+        break;
+      case Fact::Kind::OriginFlow: {
+        const auto *OF = F->getAs<OriginFlowFact>();
+        CheckOrigin(OF->getDestOriginID());
+        CheckOrigin(OF->getSrcOriginID());
+        break;
+      }
+      case Fact::Kind::ReturnOfOrigin:
+        CheckOrigin(F->getAs<ReturnOfOriginFact>()->getReturnedOriginID());
+        break;
+      case Fact::Kind::Use:
+        CheckOrigin(F->getAs<UseFact>()->getUsedOrigin(FactMgr.getOriginMgr()));
+        break;
+      case Fact::Kind::Expire:
+      case Fact::Kind::TestPoint:
+        break;
+      }
+    }
+  }
+  return PersistentOrigins;
+}
+
 namespace {
+
 /// Represents the dataflow lattice for loan propagation.
 ///
 /// This lattice tracks which loans each origin may hold at a given program
 /// point.The lattice has a finite height: An origin's loan set is bounded by
 /// the total number of loans in the function.
-/// TODO(opt): To reduce the lattice size, propagate origins of declarations,
-/// not expressions, because expressions are not visible across blocks.
 struct Lattice {
   /// The map from an origin to the set of loans it contains.
-  OriginLoanMap Origins = OriginLoanMap(nullptr);
+  /// Origins that appear in multiple blocks. Participates in join operations.
+  OriginLoanMap PersistentOrigins = OriginLoanMap(nullptr);
+  /// Origins confined to a single block. Discarded at block boundaries.
+  OriginLoanMap BlockLocalOrigins = OriginLoanMap(nullptr);
 
-  explicit Lattice(const OriginLoanMap &S) : Origins(S) {}
+  explicit Lattice(const OriginLoanMap &Persistent,
+                   const OriginLoanMap &BlockLocal)
+      : PersistentOrigins(Persistent), BlockLocalOrigins(BlockLocal) {}
   Lattice() = default;
 
   bool operator==(const Lattice &Other) const {
-    return Origins == Other.Origins;
+    return PersistentOrigins == Other.PersistentOrigins &&
+           BlockLocalOrigins == Other.BlockLocalOrigins;
   }
   bool operator!=(const Lattice &Other) const { return !(*this == Other); }
 
   void dump(llvm::raw_ostream &OS) const {
     OS << "LoanPropagationLattice State:\n";
-    if (Origins.isEmpty())
+    OS << " Persistent Origins:\n";
+    if (PersistentOrigins.isEmpty())
       OS << "  <empty>\n";
-    for (const auto &Entry : Origins) {
+    for (const auto &Entry : PersistentOrigins) {
+      if (Entry.second.isEmpty())
+        OS << "  Origin " << Entry.first << " contains no loans\n";
+      for (const LoanID &LID : Entry.second)
+        OS << "  Origin " << Entry.first << " contains Loan " << LID << "\n";
+    }
+    OS << " Block-Local Origins:\n";
+    if (BlockLocalOrigins.isEmpty())
+      OS << "  <empty>\n";
+    for (const auto &Entry : BlockLocalOrigins) {
       if (Entry.second.isEmpty())
         OS << "  Origin " << Entry.first << " contains no loans\n";
       for (const LoanID &LID : Entry.second)
@@ -50,7 +116,8 @@ public:
                OriginLoanMap::Factory &OriginLoanMapFactory,
                LoanSet::Factory &LoanSetFactory)
       : DataflowAnalysis(C, AC, F), OriginLoanMapFactory(OriginLoanMapFactory),
-        LoanSetFactory(LoanSetFactory) {}
+        LoanSetFactory(LoanSetFactory),
+        PersistentOrigins(computePersistentOrigins(F, C)) {}
 
   using Base::transfer;
 
@@ -59,10 +126,10 @@ public:
   Lattice getInitialState() { return Lattice{}; }
 
   /// Merges two lattices by taking the union of loans for each origin.
-  // TODO(opt): Keep the state small by removing origins which become dead.
+  /// Only persistent origins are joined; block-local origins are discarded.
   Lattice join(Lattice A, Lattice B) {
     OriginLoanMap JoinedOrigins = utils::join(
-        A.Origins, B.Origins, OriginLoanMapFactory,
+        A.PersistentOrigins, B.PersistentOrigins, OriginLoanMapFactory,
         [&](const LoanSet *S1, const LoanSet *S2) {
           assert((S1 || S2) && "unexpectedly merging 2 empty sets");
           if (!S1)
@@ -74,16 +141,15 @@ public:
         // Asymmetric join is a performance win. For origins present only on one
         // branch, the loan set can be carried over as-is.
         utils::JoinKind::Asymmetric);
-    return Lattice(JoinedOrigins);
+    return Lattice(JoinedOrigins, OriginLoanMapFactory.getEmptyMap());
   }
 
   /// A new loan is issued to the origin. Old loans are erased.
   Lattice transfer(Lattice In, const IssueFact &F) {
     OriginID OID = F.getOriginID();
     LoanID LID = F.getLoanID();
-    return Lattice(OriginLoanMapFactory.add(
-        In.Origins, OID,
-        LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID)));
+    LoanSet NewLoans = LoanSetFactory.add(LoanSetFactory.getEmptySet(), LID);
+    return setLoans(In, OID, NewLoans);
   }
 
   /// A flow from source to destination. If `KillDest` is true, this replaces
@@ -98,7 +164,7 @@ public:
     LoanSet SrcLoans = getLoans(In, SrcOID);
     LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
 
-    return Lattice(OriginLoanMapFactory.add(In.Origins, DestOID, MergedLoans));
+    return setLoans(In, DestOID, MergedLoans);
   }
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const {
@@ -106,14 +172,33 @@ public:
   }
 
 private:
+  /// Returns true if the origin is persistent (referenced in multiple blocks).
+  bool isPersistent(OriginID OID) const {
+    return PersistentOrigins.test(OID.Value);
+  }
+
+  Lattice setLoans(Lattice L, OriginID OID, LoanSet Loans) {
+    if (isPersistent(OID))
+      return Lattice(OriginLoanMapFactory.add(L.PersistentOrigins, OID, Loans),
+                     L.BlockLocalOrigins);
+    return Lattice(L.PersistentOrigins,
+                   OriginLoanMapFactory.add(L.BlockLocalOrigins, OID, Loans));
+  }
+
   LoanSet getLoans(Lattice L, OriginID OID) const {
-    if (auto *Loans = L.Origins.lookup(OID))
+    const OriginLoanMap *Map =
+        isPersistent(OID) ? &L.PersistentOrigins : &L.BlockLocalOrigins;
+    if (auto *Loans = Map->lookup(OID))
       return *Loans;
     return LoanSetFactory.getEmptySet();
   }
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
   LoanSet::Factory &LoanSetFactory;
+  /// Origins that appear in multiple basic blocks and must participate in join
+  /// operations. Origins not in this set are block-local and can be discarded
+  /// at block boundaries.
+  llvm::BitVector PersistentOrigins;
 };
 } // namespace
 

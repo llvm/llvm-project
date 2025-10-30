@@ -543,7 +543,6 @@ TEST_F(LifetimeAnalysisTest, PointersInACycle) {
   EXPECT_THAT(Origin("p1"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p2"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
   EXPECT_THAT(Origin("p3"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
-  EXPECT_THAT(Origin("temp"), HasLoansTo({"v1", "v2", "v3"}, "after_loop"));
 }
 
 TEST_F(LifetimeAnalysisTest, PointersAndExpirationInACycle) {
