@@ -195,6 +195,13 @@ InliningInfo getInliningInfo(const BinaryFunction &BF) {
         if (BC.MIB->isPush(Inst) || BC.MIB->isPop(Inst))
           continue;
 
+        // Pointer signing and authenticatin instructions are used around
+        // Push and Pop. These are also straightforward to handle.
+        if (BC.isAArch64() &&
+            (BC.MIB->isPSignOnLR(Inst) || BC.MIB->isPAuthOnLR(Inst) ||
+             BC.MIB->isPAuthAndRet(Inst)))
+          continue;
+
         DirectSP |= BC.MIB->hasDefOfPhysReg(Inst, SPReg) ||
                     BC.MIB->hasUseOfPhysReg(Inst, SPReg);
       }
@@ -338,6 +345,17 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
                                 BC.Ctx.get());
       }
 
+      // Handling fused authentication and return instructions (Armv8.3-A):
+      // if the Return here is RETA(A|B), we have to keep the authentication
+      // part.
+      // RETAA -> AUTIASP + RET
+      // RETAB -> AUTIBSP + RET
+      if (BC.isAArch64() && BC.MIB->isPAuthAndRet(Inst)) {
+        MCInst Auth;
+        BC.MIB->createMatchingAuth(Inst, Auth);
+        InsertII =
+            std::next(InlinedBB->insertInstruction(InsertII, std::move(Auth)));
+      }
       if (CSIsTailCall || (!MIB.isCall(Inst) && !MIB.isReturn(Inst))) {
         InsertII =
             std::next(InlinedBB->insertInstruction(InsertII, std::move(Inst)));
