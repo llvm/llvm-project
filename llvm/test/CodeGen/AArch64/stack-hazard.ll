@@ -3612,8 +3612,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #64
-; CHECK64-NEXT:    addvl sp, sp, #16
+; CHECK64-NEXT:    addvl sp, x29, #-2
 ; CHECK64-NEXT:    .cfi_restore z8
 ; CHECK64-NEXT:    .cfi_restore z9
 ; CHECK64-NEXT:    .cfi_restore z10
@@ -3899,8 +3898,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
-; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #16
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, x29, #-2
 ; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z8
 ; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z9
 ; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z10
@@ -4166,8 +4164,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #64
-; CHECK64-NEXT:    addvl sp, sp, #16
+; CHECK64-NEXT:    addvl sp, x29, #-2
 ; CHECK64-NEXT:    .cfi_restore z8
 ; CHECK64-NEXT:    .cfi_restore z9
 ; CHECK64-NEXT:    .cfi_restore z10
@@ -4432,8 +4429,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
-; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #16
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, x29, #-2
 ; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z8
 ; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z9
 ; CHECK1024-SPLITSVE-NEXT:    .cfi_restore z10
@@ -4678,8 +4674,7 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK64-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK64-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK64-NEXT:    add sp, sp, #64
-; CHECK64-NEXT:    addvl sp, sp, #16
+; CHECK64-NEXT:    addvl sp, x29, #-2
 ; CHECK64-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK64-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK64-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
@@ -4910,8 +4905,7 @@ define i32 @svecc_call_dynamic_and_scalable_alloca(<4 x i16> %P0, i32 %P1, i32 %
 ; CHECK1024-SPLITSVE-NEXT:    ldr z10, [sp, #13, mul vl] // 16-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr z9, [sp, #14, mul vl] // 16-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr z8, [sp, #15, mul vl] // 16-byte Folded Reload
-; CHECK1024-SPLITSVE-NEXT:    add sp, sp, #1024
-; CHECK1024-SPLITSVE-NEXT:    addvl sp, sp, #16
+; CHECK1024-SPLITSVE-NEXT:    addvl sp, x29, #-2
 ; CHECK1024-SPLITSVE-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
 ; CHECK1024-SPLITSVE-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
