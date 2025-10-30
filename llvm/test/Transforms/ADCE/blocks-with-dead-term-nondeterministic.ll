@@ -5,7 +5,7 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ; CHECK: uselistorder label %bb16, { 1, 0 }
 ; Function Attrs: noinline nounwind ssp uwtable
-define void @ham(i1 %arg) local_unnamed_addr #0 {
+define void @ham(i1 %arg) local_unnamed_addr {
 bb:
   br i1 false, label %bb1, label %bb22
 
@@ -63,8 +63,6 @@ bb21:                                             ; preds = %bb20, %bb19
 bb22:                                             ; preds = %bb21, %bb
   ret void
 }
-
-attributes #0 = { noinline nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 

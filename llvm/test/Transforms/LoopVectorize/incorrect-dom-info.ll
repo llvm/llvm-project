@@ -53,8 +53,8 @@ thread-pre-split.loopexit:                        ; preds = %11, %.thread-pre-sp
   br i1 false, label %thread-pre-split._crit_edge, label %.lr.ph21
 
 .lr.ph21:                                         ; preds = %26, %thread-pre-split.loopexit, %thread-pre-split.preheader
-  %d.020 = phi ptr [ undef, %26 ], [ %d.1.lcssa, %thread-pre-split.loopexit ], [ undef, %thread-pre-split.preheader ]
-  %10 = phi i64 [ %28, %26 ], [ undef, %thread-pre-split.loopexit ], [ undef, %thread-pre-split.preheader ]
+  %d.020 = phi ptr [ zeroinitializer, %26 ], [ %d.1.lcssa, %thread-pre-split.loopexit ], [ zeroinitializer, %thread-pre-split.preheader ]
+  %10 = phi i64 [ %28, %26 ], [ zeroinitializer, %thread-pre-split.loopexit ], [ zeroinitializer, %thread-pre-split.preheader ]
   br i1 %arg, label %11, label %22
 
 ; <label>:11                                      ; preds = %.lr.ph21
@@ -135,7 +135,7 @@ thread-pre-split5:                                ; preds = %.lr.ph
   ret void
 }
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

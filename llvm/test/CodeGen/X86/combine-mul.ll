@@ -66,7 +66,7 @@ define <4 x i32> @combine_vec_mul_pow2a(<4 x i32> %x) {
 define <4 x i32> @combine_vec_mul_pow2b(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_pow2b:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,16]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_pow2b:
@@ -120,12 +120,12 @@ define <4 x i32> @combine_vec_mul_negpow2a(<4 x i32> %x) {
 define <4 x i32> @combine_vec_mul_negpow2b(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_negpow2b:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4294967295,4294967294,4294967292,4294967280]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_negpow2b:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4294967295,4294967294,4294967292,4294967280]
 ; AVX-NEXT:    retq
   %1 = mul <4 x i32> %x, <i32 -1, i32 -2, i32 -4, i32 -16>
   ret <4 x i32> %1
@@ -176,12 +176,12 @@ define <4 x i64> @combine_vec_mul_negpow2c(<4 x i64> %x) {
 define <4 x i32> @combine_vec_mul_shl_const(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_shl_const:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,12,1280,458752]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_shl_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,12,1280,458752]
 ; AVX-NEXT:    retq
   %1 = shl <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>
   %2 = mul <4 x i32> %1, <i32 1, i32 3, i32 5, i32 7>
@@ -193,7 +193,7 @@ define <4 x i32> @combine_vec_mul_shl_oneuse0(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_mul_shl_oneuse0:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmulld %xmm1, %xmm0
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,4,256,65536]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_shl_oneuse0:
@@ -210,7 +210,7 @@ define <4 x i32> @combine_vec_mul_shl_oneuse1(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_mul_shl_oneuse1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmulld %xmm1, %xmm0
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,4,256,65536]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_shl_oneuse1:
@@ -226,7 +226,7 @@ define <4 x i32> @combine_vec_mul_shl_oneuse1(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @combine_vec_mul_shl_multiuse0(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_mul_shl_multiuse0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,4,256,65536]
 ; SSE-NEXT:    pmulld %xmm0, %xmm1
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -246,7 +246,7 @@ define <4 x i32> @combine_vec_mul_shl_multiuse0(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @combine_vec_mul_shl_multiuse1(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_mul_shl_multiuse1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [2,4,256,65536]
 ; SSE-NEXT:    pmulld %xmm0, %xmm1
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -268,13 +268,13 @@ define <4 x i32> @combine_vec_mul_shl_multiuse1(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @combine_vec_mul_add(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_add:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,6,2,0]
 ; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_add:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,6,2,0]
 ; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = add <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>

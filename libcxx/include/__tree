@@ -823,18 +823,6 @@ public:
   using __node_allocator _LIBCPP_NODEBUG = __rebind_alloc<__alloc_traits, __node>;
   using __node_traits _LIBCPP_NODEBUG    = allocator_traits<__node_allocator>;
 
-// TODO(LLVM 22): Remove this check
-#ifndef _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
-  static_assert(sizeof(__node_base_pointer) == sizeof(__end_node_pointer) && _LIBCPP_ALIGNOF(__node_base_pointer) ==
-                    _LIBCPP_ALIGNOF(__end_node_pointer),
-                "It looks like you are using std::__tree (an implementation detail for (multi)map/set) with a fancy "
-                "pointer type that thas a different representation depending on whether it points to a __tree base "
-                "pointer or a __tree node pointer (both of which are implementation details of the standard library). "
-                "This means that your ABI is being broken between LLVM 19 and LLVM 20. If you don't care about your "
-                "ABI being broken, define the _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB macro to silence this "
-                "diagnostic.");
-#endif
-
 private:
   // check for sane allocator pointer rebinding semantics. Rebinding the
   // allocator for a new pointer type should be exactly the same as rebinding
@@ -1119,15 +1107,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI _InsertReturnType __node_handle_insert_unique(_NodeHandle&&);
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_unique(const_iterator, _NodeHandle&&);
-  template <class _Tree>
-  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_unique(_Tree& __source);
+  template <class _Comp2>
+  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_unique(__tree<_Tp, _Comp2, _Allocator>& __source);
 
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_multi(_NodeHandle&&);
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI iterator __node_handle_insert_multi(const_iterator, _NodeHandle&&);
-  template <class _Tree>
-  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_multi(_Tree& __source);
+  template <class _Comp2>
+  _LIBCPP_HIDE_FROM_ABI void __node_handle_merge_multi(__tree<_Tp, _Comp2, _Allocator>& __source);
 
   template <class _NodeHandle>
   _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(key_type const&);
@@ -2020,11 +2008,10 @@ _LIBCPP_HIDE_FROM_ABI _NodeHandle __tree<_Tp, _Compare, _Allocator>::__node_hand
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-template <class _Tree>
-_LIBCPP_HIDE_FROM_ABI void __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_unique(_Tree& __source) {
-  static_assert(is_same<typename _Tree::__node_pointer, __node_pointer>::value, "");
-
-  for (typename _Tree::iterator __i = __source.begin(); __i != __source.end();) {
+template <class _Comp2>
+_LIBCPP_HIDE_FROM_ABI void
+__tree<_Tp, _Compare, _Allocator>::__node_handle_merge_unique(__tree<_Tp, _Comp2, _Allocator>& __source) {
+  for (iterator __i = __source.begin(); __i != __source.end();) {
     __node_pointer __src_ptr = __i.__get_np();
     auto [__parent, __child] = __find_equal(__src_ptr->__get_value());
     ++__i;
@@ -2065,11 +2052,10 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_multi(const_iterator __h
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-template <class _Tree>
-_LIBCPP_HIDE_FROM_ABI void __tree<_Tp, _Compare, _Allocator>::__node_handle_merge_multi(_Tree& __source) {
-  static_assert(is_same<typename _Tree::__node_pointer, __node_pointer>::value, "");
-
-  for (typename _Tree::iterator __i = __source.begin(); __i != __source.end();) {
+template <class _Comp2>
+_LIBCPP_HIDE_FROM_ABI void
+__tree<_Tp, _Compare, _Allocator>::__node_handle_merge_multi(__tree<_Tp, _Comp2, _Allocator>& __source) {
+  for (iterator __i = __source.begin(); __i != __source.end();) {
     __node_pointer __src_ptr = __i.__get_np();
     __end_node_pointer __parent;
     __node_base_pointer& __child = __find_leaf_high(__parent, __src_ptr->__get_value());

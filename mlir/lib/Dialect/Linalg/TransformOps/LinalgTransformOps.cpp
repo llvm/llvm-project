@@ -437,13 +437,15 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     for (auto [pos, dim] : llvm::enumerate(type.getShape())) {
       if (!ShapedType::isDynamic(dim))
         continue;
-      Value cst = rewriter.create<arith::ConstantIndexOp>(tensor.getLoc(), pos);
-      auto dimOp = rewriter.create<tensor::DimOp>(tensor.getLoc(), tensor, cst);
+      Value cst =
+          arith::ConstantIndexOp::create(rewriter, tensor.getLoc(), pos);
+      auto dimOp =
+          tensor::DimOp::create(rewriter, tensor.getLoc(), tensor, cst);
       preservedOps.insert(dimOp);
       dynamicDims.push_back(dimOp);
     }
-    auto allocation = rewriter.create<bufferization::AllocTensorOp>(
-        tensor.getLoc(), type, dynamicDims);
+    auto allocation = bufferization::AllocTensorOp::create(
+        rewriter, tensor.getLoc(), type, dynamicDims);
     // Set memory space if provided.
     if (getMemorySpaceAttr())
       allocation.setMemorySpaceAttr(getMemorySpaceAttr());
@@ -452,8 +454,8 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     // Only insert a materialization (typically bufferizes to a copy) when the
     // value may be read from.
     if (needsMaterialization) {
-      auto copy = rewriter.create<bufferization::MaterializeInDestinationOp>(
-          tensor.getLoc(), tensor, allocated);
+      auto copy = bufferization::MaterializeInDestinationOp::create(
+          rewriter, tensor.getLoc(), tensor, allocated);
       preservedOps.insert(copy);
       promoted.push_back(copy.getResult());
     } else {
@@ -2457,26 +2459,26 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
     }
 
     // Set options.
-    TilingInterface paddedOp;
     PadTilingInterfaceOptions options;
     options.setPaddingValues(paddingValues)
         .setPaddingSizes(getMixedPaddingSizes())
         .setPadToMultipleOf(getPadToMultipleOf());
 
-    // Apply padding.
-    SmallVector<tensor::PadOp> newPadOps;
-    FailureOr<TilingInterface> maybePaddedOp = rewriteAsPaddedOp(
-        rewriter, cast<TilingInterface>(targetOp.getOperation()), options,
-        newPadOps);
-    if (failed(maybePaddedOp)) {
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPointAfter(targetOp);
+    auto maybePadOps = rewriteAsPaddedOp(
+        rewriter, cast<TilingInterface>(targetOp.getOperation()), options);
+    if (failed(maybePadOps)) {
       auto diag = emitSilenceableError() << "failed to pad op";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
+    const auto &[paddedOperands, paddedOp, slicedResults] = maybePadOps.value();
 
     // Set transform results.
-    paddedOps.push_back(cast<TilingInterface>(maybePaddedOp->getOperation()));
-    padOps.append(newPadOps.begin(), newPadOps.end());
+    paddedOps.push_back(paddedOp);
+    padOps.append(paddedOperands.begin(), paddedOperands.end());
+    rewriter.replaceOp(targetOp.getOperation(), slicedResults);
   }
 
   results.set(cast<OpResult>(getPadded()), paddedOps);

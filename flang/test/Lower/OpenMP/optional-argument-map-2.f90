@@ -96,7 +96,7 @@ end module mod
 ! CHECK-NO-FPRIV:     }
 ! CHECK-NO-FPRIV:  %[[VAL_13:.*]] = arith.subi %[[VAL_14:.*]]#0, %[[VAL_10]] : index
 ! CHECK-NO-FPRIV:  %[[VAL_15:.*]] = omp.map.bounds lower_bound(%[[VAL_9]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_14]]#0 : index) stride(%[[VAL_14]]#1 : index) start_idx(%[[VAL_9]] : index) {stride_in_bytes = true}
-! CHECK-NO-FPRIV:  %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>, !fir.char<1,?>) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) bounds(%[[VAL_15]]) -> !fir.ref<!fir.char<1,?>> {name = "a"}
+! CHECK-NO-FPRIV:  %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>, !fir.char<1,?>) map_clauses(implicit) capture(ByCopy) bounds(%[[VAL_15]]) -> !fir.ref<!fir.char<1,?>> {name = "a"}
 ! CHECK-NO-FPRIV:  fir.store %[[ARG0]] to %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
 ! CHECK-NO-FPRIV:  %[[VAL_17:.*]] = arith.constant 0 : index
 ! CHECK-NO-FPRIV:  %[[VAL_18:.*]] = arith.constant 1 : index
