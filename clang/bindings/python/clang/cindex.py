@@ -4315,7 +4315,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_isAnonymous", [Cursor], bool),
     ("clang_Cursor_isAnonymousRecordDecl", [Cursor], bool),
     ("clang_Cursor_isBitField", [Cursor], bool),
-    ("clang_Cursor_isFunctionInlined", [Cursor], bool),
+    ("clang_Cursor_isFunctionInlined", [Cursor], c_uint),
     ("clang_Location_isInSystemHeader", [SourceLocation], bool),
     ("clang_PrintingPolicy_dispose", [PrintingPolicy]),
     ("clang_PrintingPolicy_getProperty", [PrintingPolicy, c_int], c_uint),
