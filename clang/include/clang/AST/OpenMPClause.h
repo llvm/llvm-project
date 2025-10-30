@@ -1424,6 +1424,86 @@ public:
   }
 };
 
+/// This represents 'threadset' clause in the '#pragma omp task ...' directive.
+///
+/// \code
+/// #pragma omp task threadset(omp_pool)
+/// \endcode
+/// In this example directive '#pragma omp task' has simple 'threadset'
+/// clause with kind 'omp_pool'.
+class OMPThreadsetClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'threadset' clause.
+  OpenMPThreadsetKind Kind = OMPC_THREADSET_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindLoc;
+
+  /// Set kind of the clauses.
+  ///
+  /// \param K Argument of clause.
+  void setThreadsetKind(OpenMPThreadsetKind K) { Kind = K; }
+
+  /// Set argument location.
+  ///
+  /// \param KLoc Argument location.
+  void setThreadsetKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
+
+public:
+  /// Build 'threadset' clause with argument \a A ('omp_team' or 'omp_pool').
+  ///
+  /// \param A Argument of the clause ('omp_team' or 'omp_pool').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPThreadsetClause(OpenMPThreadsetKind A, SourceLocation ALoc,
+                     SourceLocation StartLoc, SourceLocation LParenLoc,
+                     SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_threadset, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Kind(A), KindLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPThreadsetClause()
+      : OMPClause(llvm::omp::OMPC_threadset, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPThreadsetKind getThreadsetKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getThreadsetKindLoc() const { return KindLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_threadset;
+  }
+};
+
 /// This represents 'proc_bind' clause in the '#pragma omp ...'
 /// directive.
 ///
