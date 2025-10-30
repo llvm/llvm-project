@@ -667,7 +667,7 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
-    // clang-format off
+      // clang-format off
     case X86::PTCMMIMFP16PSV:  Opc = X86::TCMMIMFP16PS; break;
     case X86::PTCMMRLFP16PSV:  Opc = X86::TCMMRLFP16PS; break;
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
