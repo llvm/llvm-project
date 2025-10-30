@@ -64,7 +64,9 @@ namespace cwg2819 { // cwg2819: 19 c++26
 namespace cwg2823 { // cwg2823: no
 #if __cplusplus >= 201103L
   constexpr int *p = 0;
-  constexpr int *q1 = &*p; // expected-error {{constant expression}} expected-note {{dereferencing a null pointer}}
+  constexpr int *q1 = &*p;
+  // expected-error@-1 {{constexpr variable 'q1' must be initialized by a constant expression}}
+  //   expected-note@-2 {{dereferencing a null pointer is not allowed in a constant expression}}
   // FIXME: invalid: dereferencing a null pointer.
   constexpr int *q2 = &p[0];
 
