@@ -1059,8 +1059,8 @@ struct NamedInstrProfRecord : InstrProfRecord {
   uint64_t Hash;
 
   // We reserve this bit as the flag for context sensitive profile record.
-  static constexpr unsigned CS_FLAG_IN_FUNC_HASH = 60;
   static constexpr uint64_t FUNC_HASH_MASK = 0x0FFF'FFFF'FFFF'FFFF;
+  static constexpr unsigned CS_FLAG_IN_FUNC_HASH = 60;
 
   NamedInstrProfRecord() = default;
   NamedInstrProfRecord(StringRef Name, uint64_t Hash,
