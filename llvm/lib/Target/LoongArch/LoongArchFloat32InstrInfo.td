@@ -188,7 +188,6 @@ def : PatFprFpr<fminnum, FMIN_S, FPR32>;
 def : PatFpr<fneg, FNEG_S, FPR32>;
 def : PatFpr<fabs, FABS_S, FPR32>;
 def : PatFpr<fsqrt, FSQRT_S, FPR32>;
-def : PatFpr<flog2, FLOGB_S, FPR32>;
 def : Pat<(fdiv fpimm1, (fsqrt FPR32:$fj)), (FRSQRT_S FPR32:$fj)>;
 let Predicates = [HasBasicF, IsLA64] in {
 def : Pat<(fdiv (loongarch_movgr2fr_w_la64 (i64 1065353216)), (fsqrt FPR32:$fj)),
@@ -366,6 +365,7 @@ def : Pat<(f32 (uint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
 // FP Rounding
 let Predicates = [HasBasicF, IsLA64] in {
 def : PatFpr<frint, FRINT_S, FPR32>;
+def : PatFpr<flog2, FLOGB_S, FPR32>;
 } // Predicates = [HasBasicF, IsLA64]
 
 let Predicates = [HasBasicF, IsLA32] in {
