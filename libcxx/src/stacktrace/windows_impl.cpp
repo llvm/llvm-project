@@ -17,6 +17,11 @@
 #  include <psapi.h>
 #  include <stacktrace>
 
+#  if defined(_MSC_VER)
+#    pragma comment(lib, "dbghelp")
+#    pragma comment(lib, "psapi")
+#  endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
@@ -160,7 +165,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
     IMAGEHLP_SYMBOL* sym = reinterpret_cast<IMAGEHLP_SYMBOL*>(space);
     sym->SizeOfStruct    = sizeof(IMAGEHLP_SYMBOL);
     sym->MaxNameLength   = _Entry::__max_sym_len;
-    uintptr_t symdisp{0};
+    DWORD symdisp{0};
     DWORD linedisp{0};
     IMAGEHLP_LINE line;
     if (SymGetSymFromAddr(proc, entry.__addr_, &symdisp, sym)) {
