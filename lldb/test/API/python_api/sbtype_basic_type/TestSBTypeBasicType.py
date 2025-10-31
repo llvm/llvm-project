@@ -36,3 +36,17 @@ class TestCase(TestBase):
         # Check the size of the chosen aliases of basic types.
         self.assertEqual(self.target().FindFirstType("__int128_t").size, 16)
         self.assertEqual(self.target().FindFirstType("__uint128_t").size, 16)
+
+        # "_BitInt(...)" and "unsigned _BitInt(...)" are GNU C compiler extensions
+        # that are supported by LLVM C(++) compiler as well.
+        #
+        # We check that LLDB is able to map the names of these types
+        # (as reported by LLDB for variables of this type)
+        # to the corresponding SBType objects.
+        self.assertEqual(self.target().FindFirstType("_BitInt(65)").name, "_BitInt(65)")
+        self.assertEqual(self.target().FindFirstType("_BitInt(65)").size, 16)
+        self.assertEqual(
+            self.target().FindFirstType("unsigned _BitInt(65)").name,
+            "unsigned _BitInt(65)",
+        )
+        self.assertEqual(self.target().FindFirstType("unsigned _BitInt(65)").size, 16)
