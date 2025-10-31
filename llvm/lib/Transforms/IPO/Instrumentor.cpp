@@ -218,7 +218,7 @@ bool InstrumentorImpl::instrumentInstruction(Instruction &I,
   IIRB.returnAllocas();
 
   return Changed;
-};
+}
 
 bool InstrumentorImpl::instrumentFunction(Function &Fn) {
   bool Changed = false;
