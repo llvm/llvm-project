@@ -130,6 +130,27 @@ private:
 
   RelocUnion reloc;
 };
+
+lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
+  assert(lhs && rhs);
+
+  // We only take the RHS is the LHS is SHT_NOBITS, which would be
+  // represented as a size of 0. Where we can take the rhs.
+  if (lhs->GetByteSize() == 0)
+    return rhs;
+
+  auto *log = GetLog(LLDBLog::Object);
+  // Now that we're taking the lhs, we should do some sanity checks to warn the user
+  // if this debuginfo/dwp looks invalid.
+  if (lhs->GetByteSize() != rhs->GetByteSize())
+    LLDB_LOGF(log, "WARNING: Mistamched sizes for section %s, expected: %" PRIx64" actual: %" PRIx64, lhs->GetTypeAsCString(), lhs->GetByteSize(), rhs->GetByteSize());
+
+  if (lhs->GetFileAddress() != rhs->GetFileAddress())
+    LLDB_LOGF(log, "WARNING: Mismatch addresses for section %s, expected: %" PRIx64" actual: %" PRIx64, lhs->GetTypeAsCString(), lhs->GetFileAddress(), rhs->GetFileAddress());
+
+  return lhs;
+}
+
 } // end anonymous namespace
 
 ELFRelocation::ELFRelocation(unsigned type) {
@@ -1967,10 +1988,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
     provider.AddSection(std::move(*InfoOr), std::move(section_sp));
   }
 
-  // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the
-  // unified section list.
-  if (GetType() != eTypeDebugInfo)
-    unified_section_list = *m_sections_up;
+  // Merge the two, keeping any unique sections
+  std::shared_ptr<SectionList> merged_section_list = SectionList::Merge(unified_section_list, *m_sections_up, MergeSections);
+  unified_section_list = *merged_section_list;
 
   // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
   // embedded in there and replace the one in the original object file (if any).
