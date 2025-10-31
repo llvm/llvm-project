@@ -108,7 +108,7 @@ private:
   GccIRCompiler(Ctx &ctx);
   std::vector<std::unique_ptr<MemoryBuffer>> files;
   static GccIRCompiler *singleton;
-  struct ld_plugin_tv *tv;
+  SmallVector<struct ld_plugin_tv> tv;
   ld_plugin_claim_file_handler claimFileHandler;
 #if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
   ld_plugin_claim_file_handler_v2 claimFileHandlerV2;

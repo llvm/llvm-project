@@ -445,16 +445,11 @@ GccIRCompiler *GccIRCompiler::getInstance(Ctx &ctx) {
 
 GccIRCompiler::GccIRCompiler(Ctx &ctx) : IRCompiler(ctx) {
   singleton = nullptr;
-
-  // TODO: Properly find the right size.
-  int tvsz = 100;
-  tv = new ld_plugin_tv[tvsz];
   initializeTv();
 }
 
 GccIRCompiler::~GccIRCompiler() {
   singleton = nullptr;
-  delete[] tv;
 }
 
 void GccIRCompiler::loadPlugin() {
@@ -476,7 +471,7 @@ void GccIRCompiler::loadPlugin() {
   assert(sizeof(ld_plugin_onload) == sizeof(void *));
   std::memcpy(&onload, &tmp, sizeof(ld_plugin_onload));
 
-  (*onload)(tv);
+  (*onload)(tv.data());
 }
 
 enum ld_plugin_status regClaimFile(ld_plugin_claim_file_handler handler) {
@@ -549,13 +544,12 @@ ld_plugin_status addInputFile(const char *pathname) {
 }
 
 void GccIRCompiler::initializeTv() {
-  int i = 0;
-
 #define TVU_SETTAG(t, f, v)                                                    \
   {                                                                            \
-    tv[i].tv_tag = t;                                                          \
-    tv[i].tv_u.tv_##f = v;                                                     \
-    i++;                                                                       \
+    ld_plugin_tv a;                                                            \
+    a.tv_tag = t;                                                              \
+    a.tv_u.tv_##f = v;                                                         \
+    tv.push_back(a);                                                           \
   }
 
   TVU_SETTAG(LDPT_MESSAGE, message, message);
