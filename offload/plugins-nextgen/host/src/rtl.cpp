@@ -240,7 +240,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  void *allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
     if (Size == 0)
       return nullptr;
 
@@ -257,9 +257,9 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Free the memory. Use std::free in all cases.
-  int free(void *TgtPtr, TargetAllocTy Kind) override {
+  Error free(void *TgtPtr, TargetAllocTy Kind) override {
     std::free(TgtPtr);
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -342,12 +342,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "initAsyncInfoImpl not supported");
-  }
-
-  /// This plugin does not support interoperability
-  Error initDeviceInfoImpl(__tgt_device_info *DeviceInfo) override {
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "initDeviceInfoImpl not supported");
   }
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,

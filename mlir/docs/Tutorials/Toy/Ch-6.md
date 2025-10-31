@@ -245,7 +245,7 @@ define void @main()
 ```
 
 The full code listing for dumping LLVM IR can be found in
-`examples/toy/Ch6/toy.cpp` in the `dumpLLVMIR()` function:
+`examples/toy/Ch6/toyc.cpp` in the `dumpLLVMIR()` function:
 
 ```c++
 

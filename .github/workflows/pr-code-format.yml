@@ -12,6 +12,8 @@ on:
 jobs:
   code_formatter:
     runs-on: ubuntu-24.04
+    container:
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-format'
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -39,24 +41,6 @@ jobs:
           echo "Formatting files:"
           echo "$CHANGED_FILES"
 
-      # The clang format version should always be upgraded to the first version
-      # of a release cycle (x.1.0) or the last version of a release cycle, or
-      # if there have been relevant clang-format backports.
-      - name: Install clang-format
-        uses: aminya/setup-cpp@17c11551771948abc5752bbf3183482567c7caf0 # v1.1.1
-        with:
-          clangformat: 21.1.0
-
-      - name: Setup Python env
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'llvm/utils/git/requirements_formatting.txt'
-
-      - name: Install python dependencies
-        run: pip install -r llvm/utils/git/requirements_formatting.txt
-
       - name: Run code formatter
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -72,7 +56,7 @@ jobs:
             --end-rev HEAD \
             --changed-files "$CHANGED_FILES"
 
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: workflow-args

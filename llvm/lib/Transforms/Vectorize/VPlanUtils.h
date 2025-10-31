@@ -37,60 +37,15 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
-const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+const SCEV *getSCEVExprForVPValue(const VPValue *V, ScalarEvolution &SE,
+                                  const Loop *L = nullptr);
 
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
-inline bool isSingleScalar(const VPValue *VPV) {
-  auto PreservesUniformity = [](unsigned Opcode) -> bool {
-    if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
-      return true;
-    switch (Opcode) {
-    case Instruction::GetElementPtr:
-    case Instruction::ICmp:
-    case Instruction::FCmp:
-    case Instruction::Select:
-    case VPInstruction::Not:
-    case VPInstruction::Broadcast:
-    case VPInstruction::PtrAdd:
-      return true;
-    default:
-      return false;
-    }
-  };
-
-  // A live-in must be uniform across the scope of VPlan.
-  if (VPV->isLiveIn())
-    return true;
-
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
-    const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
-    // Don't consider recipes in replicate regions as uniform yet; their first
-    // lane cannot be accessed when executing the replicate region for other
-    // lanes.
-    if (RegionOfR && RegionOfR->isReplicator())
-      return false;
-    return Rep->isSingleScalar() || (PreservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), isSingleScalar));
-  }
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
-          VPWidenSelectRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return PreservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isSingleScalar);
-  }
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           (PreservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isSingleScalar));
-
-  // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
-  return isa<VPExpandSCEVRecipe>(VPV);
-}
+bool isSingleScalar(const VPValue *VPV);
 
 /// Return true if \p V is a header mask in \p Plan.
-bool isHeaderMask(const VPValue *V, VPlan &Plan);
+bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
@@ -101,6 +56,10 @@ bool isUniformAcrossVFsAndUFs(VPValue *V);
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
 VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
+
+/// Get the VF scaling factor applied to the recipe's output, if the recipe has
+/// one.
+unsigned getVFScaleFactor(VPRecipeBase *R);
 
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and

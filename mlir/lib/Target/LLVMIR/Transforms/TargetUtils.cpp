@@ -43,16 +43,17 @@ getTargetMachine(mlir::LLVM::TargetAttrInterface attr) {
       llvm::cast_if_present<LLVM::TargetFeaturesAttr>(attr.getFeatures());
   std::string features = featuresAttr ? featuresAttr.getFeaturesString() : "";
 
+  llvm::Triple parsedTriple(triple);
   std::string error;
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple, error);
+      llvm::TargetRegistry::lookupTarget(parsedTriple, error);
   if (!target || !error.empty()) {
     LDBG() << "Looking up target '" << triple << "' failed: " << error << "\n";
     return failure();
   }
 
-  return std::unique_ptr<llvm::TargetMachine>(target->createTargetMachine(
-      llvm::Triple(triple), chipAKAcpu, features, {}, {}));
+  return std::unique_ptr<llvm::TargetMachine>(
+      target->createTargetMachine(parsedTriple, chipAKAcpu, features, {}, {}));
 }
 
 FailureOr<llvm::DataLayout>

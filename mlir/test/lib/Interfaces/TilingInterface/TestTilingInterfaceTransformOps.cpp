@@ -581,7 +581,8 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
   };
 
   scf::SCFTilingOptions::GenerateLoopTerminatorFn terminatorFn =
-      [&](RewriterBase &rewriter, Location loc, ValueRange tiledResults,
+      [&](RewriterBase &rewriter, Location loc,
+          ArrayRef<LoopLikeOpInterface> loops, ValueRange tiledResults,
           ArrayRef<SmallVector<OpFoldResult>> resultOffsets,
           ArrayRef<SmallVector<OpFoldResult>> resultSizes,
           ValueRange destinationTensors) -> LogicalResult {

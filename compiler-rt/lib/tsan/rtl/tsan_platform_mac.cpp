@@ -239,7 +239,7 @@ void InitializePlatformEarly() {
     Report(
         "ThreadSanitizer: Unsupported virtual memory layout: Address %p is "
         "already mapped.\n",
-        HiAppMemEnd() - 1);
+        (void*)(HiAppMemEnd() - 1));
     Die();
   }
 #endif
@@ -259,7 +259,9 @@ void InitializePlatform() {
 
   ThreadEventCallbacks callbacks = {
       .create = ThreadCreateCallback,
+      .start = nullptr,
       .terminate = ThreadTerminateCallback,
+      .destroy = nullptr,
   };
   InstallPthreadIntrospectionHook(callbacks);
 #endif

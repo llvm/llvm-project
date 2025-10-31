@@ -30,9 +30,10 @@ namespace format {
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
   TYPE(AttributeLParen)                                                        \
+  TYPE(AttributeLSquare)                                                       \
   TYPE(AttributeMacro)                                                         \
   TYPE(AttributeRParen)                                                        \
-  TYPE(AttributeSquare)                                                        \
+  TYPE(AttributeRSquare)                                                       \
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
@@ -55,7 +56,7 @@ namespace format {
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
-  /* l_brace of if/for/while */                                                \
+  /* l_brace of if/for/while/switch/catch */                                   \
   TYPE(ControlStatementLBrace)                                                 \
   TYPE(ControlStatementRBrace)                                                 \
   TYPE(CppCastLParen)                                                          \
@@ -127,9 +128,17 @@ namespace format {
   TYPE(ObjCBlockLParen)                                                        \
   TYPE(ObjCDecl)                                                               \
   TYPE(ObjCForIn)                                                              \
+  /* The square brackets surrounding a method call, the colon separating the   \
+   * method or parameter name and the argument inside the square brackets, and \
+   * the colon separating the method or parameter name and the type inside the \
+   * method declaration. */                                                    \
   TYPE(ObjCMethodExpr)                                                         \
+  /* The '+' or '-' at the start of the line. */                               \
   TYPE(ObjCMethodSpecifier)                                                    \
   TYPE(ObjCProperty)                                                           \
+  /* The parentheses following '@selector' and the colon following the method  \
+   * or parameter name inside the parentheses. */                              \
+  TYPE(ObjCSelector)                                                           \
   TYPE(ObjCStringLiteral)                                                      \
   TYPE(OverloadedOperator)                                                     \
   TYPE(OverloadedOperatorLParen)                                               \
@@ -146,6 +155,9 @@ namespace format {
   TYPE(RequiresExpression)                                                     \
   TYPE(RequiresExpressionLBrace)                                               \
   TYPE(RequiresExpressionLParen)                                               \
+  /* The hash key in languages that have hash literals, not including the      \
+   * field name in the C++ struct literal. Also the method or parameter name   \
+   * in the Objective-C method declaration or call. */                         \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \
@@ -645,10 +657,19 @@ public:
     return is(K1) || isOneOf(K2, Ks...);
   }
   template <typename T> bool isNot(T Kind) const { return !is(Kind); }
+  template <typename... Ts> bool isNoneOf(Ts... Ks) const {
+    return !isOneOf(Ks...);
+  }
 
   bool isIf(bool AllowConstexprMacro = true) const {
     return is(tok::kw_if) || endsSequence(tok::kw_constexpr, tok::kw_if) ||
            (endsSequence(tok::identifier, tok::kw_if) && AllowConstexprMacro);
+  }
+
+  bool isLoop(const FormatStyle &Style) const {
+    return isOneOf(tok::kw_for, tok::kw_while) ||
+           (Style.isJavaScript() && isNot(tok::l_paren) && Previous &&
+            Previous->is(tok::kw_for));
   }
 
   bool closesScopeAfterBlock() const {
@@ -748,7 +769,7 @@ public:
   /// Returns \c true if this is a "." or "->" accessing a member.
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
-           !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
+           isNoneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
                     TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 

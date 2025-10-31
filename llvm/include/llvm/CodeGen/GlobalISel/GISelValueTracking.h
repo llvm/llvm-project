@@ -58,7 +58,7 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
 
 public:
   GISelValueTracking(MachineFunction &MF, unsigned MaxDepth = 6);
-  ~GISelValueTracking() = default;
+  ~GISelValueTracking() override = default;
 
   const MachineFunction &getMachineFunction() const { return MF; }
 

@@ -48,7 +48,7 @@ namespace {
 ///
 struct VectorMaskedLoadOpConverter final
     : OpRewritePattern<vector::MaskedLoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedLoadOp maskedLoadOp,
                                 PatternRewriter &rewriter) const override {
@@ -64,7 +64,6 @@ struct VectorMaskedLoadOpConverter final
     Value mask = maskedLoadOp.getMask();
     Value base = maskedLoadOp.getBase();
     Value iValue = maskedLoadOp.getPassThru();
-    std::optional<uint64_t> alignment = maskedLoadOp.getAlignment();
     auto indices = llvm::to_vector_of<Value>(maskedLoadOp.getIndices());
     Value one = arith::ConstantOp::create(rewriter, loc, indexType,
                                           IntegerAttr::get(indexType, 1));
@@ -76,7 +75,7 @@ struct VectorMaskedLoadOpConverter final
           [&](OpBuilder &builder, Location loc) {
             auto loadedValue = memref::LoadOp::create(
                 builder, loc, base, indices, /*nontemporal=*/false,
-                alignment.value_or(0));
+                llvm::MaybeAlign(maskedLoadOp.getAlignment().value_or(0)));
             auto combinedValue =
                 vector::InsertOp::create(builder, loc, loadedValue, iValue, i);
             scf::YieldOp::create(builder, loc, combinedValue.getResult());
@@ -118,7 +117,7 @@ struct VectorMaskedLoadOpConverter final
 ///
 struct VectorMaskedStoreOpConverter final
     : OpRewritePattern<vector::MaskedStoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::MaskedStoreOp maskedStoreOp,
                                 PatternRewriter &rewriter) const override {
@@ -135,7 +134,6 @@ struct VectorMaskedStoreOpConverter final
     Value base = maskedStoreOp.getBase();
     Value value = maskedStoreOp.getValueToStore();
     bool nontemporal = false;
-    std::optional<uint64_t> alignment = maskedStoreOp.getAlignment();
     auto indices = llvm::to_vector_of<Value>(maskedStoreOp.getIndices());
     Value one = arith::ConstantOp::create(rewriter, loc, indexType,
                                           IntegerAttr::get(indexType, 1));
@@ -145,8 +143,9 @@ struct VectorMaskedStoreOpConverter final
       auto ifOp = scf::IfOp::create(rewriter, loc, maskBit, /*else=*/false);
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto extractedValue = vector::ExtractOp::create(rewriter, loc, value, i);
-      memref::StoreOp::create(rewriter, loc, extractedValue, base, indices,
-                              nontemporal, alignment.value_or(0));
+      memref::StoreOp::create(
+          rewriter, loc, extractedValue, base, indices, nontemporal,
+          llvm::MaybeAlign(maskedStoreOp.getAlignment().value_or(0)));
 
       rewriter.setInsertionPointAfter(ifOp);
       indices.back() =

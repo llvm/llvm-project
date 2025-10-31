@@ -163,7 +163,7 @@ private:
 ///   : vector<7xi16>, vector<7xi16>
 /// ```
 struct InterleaveToShuffle final : OpRewritePattern<vector::InterleaveOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::InterleaveOp op,
                                 PatternRewriter &rewriter) const override {
