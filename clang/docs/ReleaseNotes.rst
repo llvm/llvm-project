@@ -401,6 +401,8 @@ Improvements to Clang's diagnostics
   or continue (#GH166013)
 - Clang now emits a diagnostic in case `vector_size` or `ext_vector_type`
   attributes are used with a negative size (#GH165463).
+- Clang now detects potential missing format attributes on function declarations
+  when calling format functions. (#GH60718)
 
 Improvements to Clang's time-trace
 ----------------------------------
