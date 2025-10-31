@@ -1150,6 +1150,10 @@ public:
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
   virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
+  virtual InstructionUniformity
+  getInstructionUniformity(const Instruction &I) const {
+    return InstructionUniformity::Default;
+  }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
