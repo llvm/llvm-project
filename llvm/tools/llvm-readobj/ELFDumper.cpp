@@ -5307,18 +5307,15 @@ static std::optional<object::SectionRef>
 getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
   // Get the .llvm.callgraph section.
   StringRef CallGraphSectionName(".llvm.callgraph");
-  std::optional<object::SectionRef> CallGraphSection;
   for (auto Sec : ObjF.sections()) {
-    StringRef Name;
-    if (Expected<StringRef> NameOrErr = Sec.getName())
-      Name = *NameOrErr;
-    else
+    if (Expected<StringRef> NameOrErr = Sec.getName()) {
+      StringRef Name = *NameOrErr;
+      if (Name == CallGraphSectionName)
+        return Sec;
+    } else
       consumeError(NameOrErr.takeError());
-
-    if (Name == CallGraphSectionName)
-      return Sec;
   }
-  return CallGraphSection;
+  return std::nullopt;
 }
 
 namespace callgraph {
