@@ -1574,3 +1574,17 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   }
   return BaseT::getNumberOfParts(Tp);
 }
+
+InstructionUniformity
+GCNTTIImpl::getInstructionUniformity(const Instruction &I) const {
+  if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::amdgcn_permlane16:
+    case Intrinsic::amdgcn_permlanex16:
+      return InstructionUniformity::EitherOfFirstTwoOp;
+    default:
+      break;
+    }
+  }
+  return InstructionUniformity::Default;
+}

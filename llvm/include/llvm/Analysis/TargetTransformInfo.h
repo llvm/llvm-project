@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InterestingMemoryOperand.h"
 #include "llvm/IR/FMF.h"
@@ -1999,6 +2000,7 @@ public:
   /// Returns true if GEP should not be used to index into vectors for this
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
+  InstructionUniformity getInstructionUniformity(const Instruction &I) const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

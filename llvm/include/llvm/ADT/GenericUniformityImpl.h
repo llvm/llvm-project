@@ -51,6 +51,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "uniformity"
@@ -407,6 +408,11 @@ public:
   void recordTemporalDivergence(ConstValueRefT, const InstructionT *,
                                 const CycleT *);
 
+  bool isOperandUniform(const InstructionT &I, InstructionUniformity IU) const;
+
+  /// \brief keep track of target instruction that can be proven uniform.
+  void addUniformInstruction(const InstructionT *I, InstructionUniformity IU);
+
 protected:
   const ContextT &Context;
   const FunctionT &F;
@@ -419,6 +425,11 @@ protected:
 
   // Internal worklist for divergence propagation.
   std::vector<const InstructionT *> Worklist;
+
+  // Map containing tracked instruction that can be proven uniform based on its
+  // operand Uniformity.
+  llvm::DenseMap<const InstructionT *, InstructionUniformity>
+      UniformInstruction;
 
   /// \brief Mark \p Term as divergent and push all Instructions that become
   /// divergent as a result on the worklist.
@@ -785,6 +796,11 @@ void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
   if (isAlwaysUniform(I))
     return;
+  auto It = UniformInstruction.find(&I);
+  if (It != UniformInstruction.end() && isOperandUniform(I, It->second)) {
+    addUniformOverride(I);
+    return;
+  }
   bool Marked = false;
   if (I.isTerminator()) {
     Marked = DivergentTermBlocks.insert(I.getParent()).second;
@@ -814,6 +830,12 @@ template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::addUniformOverride(
     const InstructionT &Instr) {
   UniformOverrides.insert(&Instr);
+}
+
+template <typename ContextT>
+void GenericUniformityAnalysisImpl<ContextT>::addUniformInstruction(
+    const InstructionT *I, InstructionUniformity IU) {
+  UniformInstruction[I] = IU;
 }
 
 // Mark as divergent all external uses of values defined in \p DefCycle.
