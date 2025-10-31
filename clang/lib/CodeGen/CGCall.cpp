@@ -6277,6 +6277,21 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     pushDestroy(QualType::DK_nontrivial_c_struct, Ret.getAggregateAddress(),
                 RetTy);
 
+  if (CalleeDecl) {
+    // Generate function declaration DISuprogram in order to be used
+    // in debug info about call sites.
+    if (CGDebugInfo *DI = getDebugInfo()) {
+      CodeGenFunction CalleeCGF(CGM);
+      const GlobalDecl &CalleeGlobalDecl =
+          Callee.getAbstractInfo().getCalleeDecl();
+      CalleeCGF.CurGD = CalleeGlobalDecl;
+      FunctionArgList Args;
+      QualType ResTy = CalleeCGF.BuildFunctionArgList(CalleeGlobalDecl, Args);
+      DI->EmitFuncDeclForCallSite(
+          CI, DI->getFunctionType(CalleeDecl, ResTy, Args), CalleeGlobalDecl);
+    }
+  }
+
   return Ret;
 }
 

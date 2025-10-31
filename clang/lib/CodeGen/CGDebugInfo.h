@@ -511,7 +511,7 @@ public:
   /// This is needed for call site debug info.
   void EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                QualType CalleeType,
-                               const FunctionDecl *CalleeDecl);
+                               GlobalDecl CalleeGlobalDecl);
 
   /// Constructs the debug code for exiting a function.
   void EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn);
