@@ -433,7 +433,7 @@ public:
   std::optional<uint64_t>
   GetByteStride(ExecutionContextScope *exe_scope) const;
   
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
