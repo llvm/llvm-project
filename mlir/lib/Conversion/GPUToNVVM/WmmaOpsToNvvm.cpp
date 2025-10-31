@@ -371,15 +371,15 @@ struct WmmaElementwiseOpToNVVMLowering
         cast<gpu::MMAMatrixType>(subgroupMmaElementwiseOp.getType()));
 
     // If the element is not a struct, it means it's a scalar f64.
-    LLVM::LLVMStructType structDestTy = dyn_cast<LLVM::LLVMStructType>(destType);
+    LLVM::LLVMStructType structDestTy =
+        dyn_cast<LLVM::LLVMStructType>(destType);
     if (!structDestTy) {
       SmallVector<Value> operands;
       for (auto operand : adaptor.getOperands()) {
         operands.push_back(operand);
       }
-      Value element =
-          createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.getOpType(),
-                         operands);
+      Value element = createScalarOp(
+          rewriter, loc, subgroupMmaElementwiseOp.getOpType(), operands);
       rewriter.replaceOp(subgroupMmaElementwiseOp, element);
       return success();
     }
