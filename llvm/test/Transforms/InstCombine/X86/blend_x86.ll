@@ -287,9 +287,9 @@ define <4 x float> @sel_v16i8_bitcast_shuffle_bitcast_cmp(<8 x float> %a, <8 x f
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <8 x float> [[A]] to <8 x i32>
 ; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x float> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <8 x i32> [[A_BC]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <8 x i32> [[B_BC]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i1> [[CMP]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[B_LO]], <4 x i32> [[A_LO]]
 ; CHECK-NEXT:    [[RES:%.*]] = bitcast <4 x i32> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[RES]]

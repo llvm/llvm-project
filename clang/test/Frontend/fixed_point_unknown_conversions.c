@@ -26,11 +26,11 @@ void func(void) {
   accum = ic;      // expected-error{{conversion between fixed point and '_Complex int' is not yet supported}}
   accum = s;       // expected-error{{assigning to '_Accum' from incompatible type 'struct S'}}
   accum = ptr;     // expected-error{{assigning to '_Accum' from incompatible type 'int *'}}
-  accum_ptr = ptr; // expected-warning{{incompatible pointer types assigning to '_Accum *' from 'int *'}}
+  accum_ptr = ptr; // expected-error{{incompatible pointer types assigning to '_Accum *' from 'int *'}}
 
   dc = accum;      // expected-error{{conversion between fixed point and '_Complex double' is not yet supported}}
   ic = accum;      // expected-error{{conversion between fixed point and '_Complex int' is not yet supported}}
   s = accum;       // expected-error{{assigning to 'struct S' from incompatible type '_Accum'}}
   ptr = accum;     // expected-error{{assigning to 'int *' from incompatible type '_Accum'}}
-  ptr = accum_ptr; // expected-warning{{incompatible pointer types assigning to 'int *' from '_Accum *'}}
+  ptr = accum_ptr; // expected-error{{incompatible pointer types assigning to 'int *' from '_Accum *'}}
 }

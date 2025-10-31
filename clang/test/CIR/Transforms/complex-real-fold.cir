@@ -1,4 +1,4 @@
-// RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
+// RUN: cir-opt %s -cir-canonicalize -split-input-file -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 
@@ -20,4 +20,20 @@ module {
   // CHECK:   cir.return %[[TMP]] : !s32i
   // CHECK: }
 
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func dso_local @fold_complex_real_from_create_test(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %0 = cir.complex.create %arg0, %arg1 : !s32i -> !cir.complex<!s32i>
+    %1 = cir.complex.real %0 : !cir.complex<!s32i> -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK: cir.func dso_local @fold_complex_real_from_create_test(%[[ARG_0:.*]]: !s32i, %[[ARG_1:.*]]: !s32i) -> !s32i {
+  // CHECK:   cir.return %[[ARG_0]] : !s32i
+  // CHECK: }
 }

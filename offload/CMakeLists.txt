@@ -4,7 +4,8 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "liboffload")
 
-if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+# Permit redefining OPENMP_STANDALONE_BUILD when doing a runtimes build.
+if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(offload C CXX ASM)
 else()
@@ -22,6 +23,8 @@ elseif(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
   message(WARNING "libomptarget on 32-bit systems is not supported!")
   return()
 endif()
+
+set(OFFLOAD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 if(OPENMP_STANDALONE_BUILD)
   set(OFFLOAD_LIBDIR_SUFFIX "" CACHE STRING
@@ -369,8 +372,8 @@ add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
-add_subdirectory(DeviceRTL)
 add_subdirectory(tools)
+add_subdirectory(docs)
 
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
@@ -380,15 +383,5 @@ add_subdirectory(liboffload)
 # Add tests.
 if(OFFLOAD_INCLUDE_TESTS)
   add_subdirectory(test)
-
-  # Add unit tests if GMock/GTest is present
-  if(NOT LLVM_THIRD_PARTY_DIR)
-    set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
-  endif()
-  if(EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET llvm_gtest)
-    add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-  endif()
-  if(TARGET llvm_gtest)
-    add_subdirectory(unittests)
-  endif()
+  add_subdirectory(unittests)
 endif()

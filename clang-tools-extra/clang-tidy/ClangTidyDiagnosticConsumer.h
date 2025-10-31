@@ -1,4 +1,4 @@
-//===--- ClangTidyDiagnosticConsumer.h - clang-tidy -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 #include <optional>
+#include <utility>
 
 namespace clang {
 
@@ -68,10 +69,13 @@ struct ClangTidyStats {
 /// \endcode
 class ClangTidyContext {
 public:
+  ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider)
+      : ClangTidyContext(std::move(OptionsProvider), false, false, false) {}
   /// Initializes \c ClangTidyContext instance.
   ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
-                   bool AllowEnablingAnalyzerAlphaCheckers = false,
-                   bool EnableModuleHeadersParsing = false);
+                   bool AllowEnablingAnalyzerAlphaCheckers,
+                   bool EnableModuleHeadersParsing,
+                   bool ExperimentalCustomChecks);
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
@@ -210,6 +214,10 @@ public:
     return EnableModuleHeadersParsing;
   }
 
+  // whether experimental custom checks can be enabled.
+  // enabled with `--experimental-custom-checks`
+  bool canExperimentalCustomChecks() const { return ExperimentalCustomChecks; }
+
   void setSelfContainedDiags(bool Value) { SelfContainedDiags = Value; }
 
   bool areDiagsSelfContained() const { return SelfContainedDiags; }
@@ -258,6 +266,7 @@ private:
 
   bool AllowEnablingAnalyzerAlphaCheckers;
   bool EnableModuleHeadersParsing;
+  bool ExperimentalCustomChecks;
 
   bool SelfContainedDiags = false;
 

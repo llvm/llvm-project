@@ -161,6 +161,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   Style.Language = FormatStyle::LK_Cpp;
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
+  CHECK_PARSE_BOOL(AllowBreakBeforeQtProperty);
   CHECK_PARSE_BOOL(AllowShortCaseExpressionOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
@@ -175,7 +176,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
-  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
@@ -200,7 +200,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(RemoveSemicolon);
   CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
-  CHECK_PARSE_BOOL(SpaceInEmptyBlock);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
@@ -249,6 +248,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions,
                           AfterFunctionDefinitionName);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterIfMacros);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterNot);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterOverloadedOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterPlacementOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
@@ -259,6 +259,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, Enabled);
   CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreCase);
+  CHECK_PARSE_NESTED_BOOL(SortIncludes, IgnoreExtension);
 }
 
 #undef CHECK_PARSE_BOOL
@@ -686,6 +687,17 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
 
+  Style.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
+  CHECK_PARSE("SpaceInEmptyBraces: Always", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Always);
+  CHECK_PARSE("SpaceInEmptyBraces: Block", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Block);
+  CHECK_PARSE("SpaceInEmptyBraces: Never", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Never);
+  // For backward compatibility:
+  CHECK_PARSE("SpaceInEmptyBlock: true", SpaceInEmptyBraces,
+              FormatStyle::SIEB_Block);
+
   // For backward compatibility:
   Style.SpacesInParens = FormatStyle::SIPO_Never;
   Style.SpacesInParensOptions = {};
@@ -942,6 +954,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   CHECK_PARSE_LIST(JavaImportGroups);
   CHECK_PARSE_LIST(Macros);
+  CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
   CHECK_PARSE_LIST(TableGenBreakingDAGArgOperators);
@@ -979,17 +992,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               IncludeStyle.IncludeIsMainSourceRegex, "abc$");
 
   Style.SortIncludes = {};
-  CHECK_PARSE("SortIncludes: true", SortIncludes,
-              FormatStyle::SortIncludesOptions(
-                  {/*Enabled=*/true, /*IgnoreCase=*/false}));
+  CHECK_PARSE(
+      "SortIncludes: true", SortIncludes,
+      FormatStyle::SortIncludesOptions(
+          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: false", SortIncludes,
               FormatStyle::SortIncludesOptions({}));
-  CHECK_PARSE("SortIncludes: CaseInsensitive", SortIncludes,
-              FormatStyle::SortIncludesOptions(
-                  {/*Enabled=*/true, /*IgnoreCase=*/true}));
-  CHECK_PARSE("SortIncludes: CaseSensitive", SortIncludes,
-              FormatStyle::SortIncludesOptions(
-                  {/*Enabled=*/true, /*IgnoreCase=*/false}));
+  CHECK_PARSE(
+      "SortIncludes: CaseInsensitive", SortIncludes,
+      FormatStyle::SortIncludesOptions(
+          {/*Enabled=*/true, /*IgnoreCase=*/true, /*IgnoreExtension=*/false}));
+  CHECK_PARSE(
+      "SortIncludes: CaseSensitive", SortIncludes,
+      FormatStyle::SortIncludesOptions(
+          {/*Enabled=*/true, /*IgnoreCase=*/false, /*IgnoreExtension=*/false}));
   CHECK_PARSE("SortIncludes: Never", SortIncludes,
               FormatStyle::SortIncludesOptions({}));
 
@@ -1122,6 +1138,18 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SDS_Leave);
   CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
               FormatStyle::SDS_Never);
+
+  CHECK_PARSE("Cpp11BracedListStyle: Block", Cpp11BracedListStyle,
+              FormatStyle::BLS_Block);
+  CHECK_PARSE("Cpp11BracedListStyle: FunctionCall", Cpp11BracedListStyle,
+              FormatStyle::BLS_FunctionCall);
+  CHECK_PARSE("Cpp11BracedListStyle: AlignFirstComment", Cpp11BracedListStyle,
+              FormatStyle::BLS_AlignFirstComment);
+  // For backward compatibility:
+  CHECK_PARSE("Cpp11BracedListStyle: false", Cpp11BracedListStyle,
+              FormatStyle::BLS_Block);
+  CHECK_PARSE("Cpp11BracedListStyle: true", Cpp11BracedListStyle,
+              FormatStyle::BLS_AlignFirstComment);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
@@ -1247,6 +1275,13 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               IndentWidth, 56u);
 }
 
+TEST(ConfigParseTest, AllowCommentOnlyConfigFile) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+  EXPECT_EQ(parseConfiguration("#Language: C", &Style), ParseError::Success);
+  EXPECT_EQ(Style.Language, FormatStyle::LK_Cpp);
+}
+
 TEST(ConfigParseTest, AllowCppForC) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_C;
@@ -1267,7 +1302,7 @@ TEST(ConfigParseTest, AllowCppForC) {
             ParseError::Success);
 }
 
-TEST(ConfigParseTest, HandleNonCppDotHFile) {
+TEST(ConfigParseTest, HandleDotHFile) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   EXPECT_EQ(parseConfiguration("Language: C", &Style,
@@ -1278,11 +1313,14 @@ TEST(ConfigParseTest, HandleNonCppDotHFile) {
 
   Style = {};
   Style.Language = FormatStyle::LK_Cpp;
-  EXPECT_EQ(parseConfiguration("Language: ObjC", &Style,
+  EXPECT_EQ(parseConfiguration("Language: Cpp\n"
+                               "...\n"
+                               "Language: C",
+                               &Style,
                                /*AllowUnknownOptions=*/false,
                                /*IsDotHFile=*/true),
             ParseError::Success);
-  EXPECT_EQ(Style.Language, FormatStyle::LK_ObjC);
+  EXPECT_EQ(Style.Language, FormatStyle::LK_Cpp);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {

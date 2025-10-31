@@ -15,6 +15,7 @@
 #ifndef LLVM_MC_MCINST_H
 #define LLVM_MC_MCINST_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
@@ -210,7 +211,11 @@ public:
   MCOperand &getOperand(unsigned i) { return Operands[i]; }
   unsigned getNumOperands() const { return Operands.size(); }
 
+  ArrayRef<MCOperand> getOperands() const { return Operands; }
   void addOperand(const MCOperand Op) { Operands.push_back(Op); }
+  void setOperands(ArrayRef<MCOperand> Ops) {
+    Operands.assign(Ops.begin(), Ops.end());
+  }
 
   using iterator = SmallVectorImpl<MCOperand>::iterator;
   using const_iterator = SmallVectorImpl<MCOperand>::const_iterator;

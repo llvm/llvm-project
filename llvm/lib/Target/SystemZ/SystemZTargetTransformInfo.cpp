@@ -436,20 +436,6 @@ bool SystemZTTIImpl::isLSRCostLess(
              C2.ScaleCost, C2.SetupCost);
 }
 
-bool SystemZTTIImpl::areInlineCompatible(const Function *Caller,
-                                         const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Support only equal feature bitsets. Restriction should be relaxed in the
-  // future to allow inlining when callee's bits are subset of the caller's.
-  return CallerBits == CalleeBits;
-}
-
 unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   bool Vector = (ClassID == 1);
   if (!Vector)

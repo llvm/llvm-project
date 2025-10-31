@@ -180,6 +180,45 @@ FunctionType::getWithoutArgsAndResults(const BitVector &argIndices,
 }
 
 //===----------------------------------------------------------------------===//
+// GraphType
+//===----------------------------------------------------------------------===//
+
+unsigned GraphType::getNumInputs() const { return getImpl()->numInputs; }
+
+ArrayRef<Type> GraphType::getInputs() const { return getImpl()->getInputs(); }
+
+unsigned GraphType::getNumResults() const { return getImpl()->numResults; }
+
+ArrayRef<Type> GraphType::getResults() const { return getImpl()->getResults(); }
+
+GraphType GraphType::clone(TypeRange inputs, TypeRange results) const {
+  return get(getContext(), inputs, results);
+}
+
+/// Returns a new function type with the specified arguments and results
+/// inserted.
+GraphType GraphType::getWithArgsAndResults(ArrayRef<unsigned> argIndices,
+                                           TypeRange argTypes,
+                                           ArrayRef<unsigned> resultIndices,
+                                           TypeRange resultTypes) {
+  SmallVector<Type> argStorage, resultStorage;
+  TypeRange newArgTypes =
+      insertTypesInto(getInputs(), argIndices, argTypes, argStorage);
+  TypeRange newResultTypes =
+      insertTypesInto(getResults(), resultIndices, resultTypes, resultStorage);
+  return clone(newArgTypes, newResultTypes);
+}
+
+/// Returns a new function type without the specified arguments and results.
+GraphType GraphType::getWithoutArgsAndResults(const BitVector &argIndices,
+                                              const BitVector &resultIndices) {
+  SmallVector<Type> argStorage, resultStorage;
+  TypeRange newArgTypes = filterTypesOut(getInputs(), argIndices, argStorage);
+  TypeRange newResultTypes =
+      filterTypesOut(getResults(), resultIndices, resultStorage);
+  return clone(newArgTypes, newResultTypes);
+}
+//===----------------------------------------------------------------------===//
 // OpaqueType
 //===----------------------------------------------------------------------===//
 
@@ -321,7 +360,7 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
                          ArrayRef<int64_t> shape, Type elementType,
                          Attribute encoding) {
   for (int64_t s : shape)
-    if (s < 0 && !ShapedType::isDynamic(s))
+    if (s < 0 && ShapedType::isStatic(s))
       return emitError() << "invalid tensor dimension size";
   if (auto v = llvm::dyn_cast_or_null<VerifiableTensorEncoding>(encoding))
     if (failed(v.verifyEncoding(shape, elementType, emitError)))
@@ -644,7 +683,7 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
 
   // Negative sizes are not allowed except for `kDynamic`.
   for (int64_t s : shape)
-    if (s < 0 && !ShapedType::isDynamic(s))
+    if (s < 0 && ShapedType::isStatic(s))
       return emitError() << "invalid memref size";
 
   assert(layout && "missing layout specification");

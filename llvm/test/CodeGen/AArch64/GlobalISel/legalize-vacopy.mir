@@ -24,20 +24,20 @@ body: |
     ; CHECK-LINUX-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK-LINUX-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY1]](p0) :: (load (s64))
     ; CHECK-LINUX-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-    ; CHECK-LINUX-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; CHECK-LINUX-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
     ; CHECK-LINUX-NEXT: [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (load (s64) from unknown-address + 8)
     ; CHECK-LINUX-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK-LINUX-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C1]](s64)
+    ; CHECK-LINUX-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C1]](s64)
     ; CHECK-LINUX-NEXT: [[LOAD2:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD1]](p0) :: (load (s64) from unknown-address + 16)
     ; CHECK-LINUX-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
-    ; CHECK-LINUX-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY1]], [[C2]](s64)
+    ; CHECK-LINUX-NEXT: [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY1]], [[C2]](s64)
     ; CHECK-LINUX-NEXT: [[LOAD3:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD2]](p0) :: (load (s64) from unknown-address + 24)
     ; CHECK-LINUX-NEXT: G_STORE [[LOAD]](s64), [[COPY]](p0) :: (store (s64))
-    ; CHECK-LINUX-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C]](s64)
+    ; CHECK-LINUX-NEXT: [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s64)
     ; CHECK-LINUX-NEXT: G_STORE [[LOAD1]](s64), [[PTR_ADD3]](p0) :: (store (s64) into unknown-address + 8)
-    ; CHECK-LINUX-NEXT: [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s64)
+    ; CHECK-LINUX-NEXT: [[PTR_ADD4:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C1]](s64)
     ; CHECK-LINUX-NEXT: G_STORE [[LOAD2]](s64), [[PTR_ADD4]](p0) :: (store (s64) into unknown-address + 16)
-    ; CHECK-LINUX-NEXT: [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C2]](s64)
+    ; CHECK-LINUX-NEXT: [[PTR_ADD5:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C2]](s64)
     ; CHECK-LINUX-NEXT: G_STORE [[LOAD3]](s64), [[PTR_ADD5]](p0) :: (store (s64) into unknown-address + 24)
     ; CHECK-LINUX-NEXT: RET_ReallyLR
         %0:_(p0) = COPY $x0

@@ -62,8 +62,8 @@ public:
   typedef T (*NextTowardFunc)(T, long double);
 
   void testNaN(NextTowardFunc func) {
-    ASSERT_FP_EQ(func(nan, 0), nan);
-    ASSERT_FP_EQ(func(0, to_nan), nan);
+    ASSERT_FP_EQ(func(nan, to_zero), nan);
+    ASSERT_FP_EQ(func(zero, to_nan), nan);
   }
 
   void testBoundaries(NextTowardFunc func) {

@@ -27,7 +27,6 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -98,6 +97,9 @@ static cl::opt<bool> EnableUnswitchCostMultiplier(
 static cl::opt<int> UnswitchSiblingsToplevelDiv(
     "unswitch-siblings-toplevel-div", cl::init(2), cl::Hidden,
     cl::desc("Toplevel siblings divisor for cost multiplier."));
+static cl::opt<int> UnswitchParentBlocksDiv(
+    "unswitch-parent-blocks-div", cl::init(8), cl::Hidden,
+    cl::desc("Outer loop size divisor for cost multiplier."));
 static cl::opt<int> UnswitchNumInitialUnscaledCandidates(
     "unswitch-num-initial-unscaled-candidates", cl::init(8), cl::Hidden,
     cl::desc("Number of unswitch candidates that are ignored when calculating "
@@ -2809,9 +2811,9 @@ static BranchInst *turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
 }
 
 /// Cost multiplier is a way to limit potentially exponential behavior
-/// of loop-unswitch. Cost is multipied in proportion of 2^number of unswitch
-/// candidates available. Also accounting for the number of "sibling" loops with
-/// the idea to account for previous unswitches that already happened on this
+/// of loop-unswitch. Cost is multiplied in proportion of 2^number of unswitch
+/// candidates available. Also consider the number of "sibling" loops with
+/// the idea of accounting for previous unswitches that already happened on this
 /// cluster of loops. There was an attempt to keep this formula simple,
 /// just enough to limit the worst case behavior. Even if it is not that simple
 /// now it is still not an attempt to provide a detailed heuristic size
@@ -2842,7 +2844,19 @@ static int CalculateUnswitchCostMultiplier(
     return 1;
   }
 
+  // Each invariant non-trivial condition, after being unswitched, is supposed
+  // to have its own specialized sibling loop (the invariant condition has been
+  // hoisted out of the child loop into a newly-cloned loop). When unswitching
+  // conditions in nested loops, the basic block size of the outer loop should
+  // not be altered. If such a size significantly increases across unswitching
+  // invocations, something may be wrong; so adjust the final cost taking this
+  // into account.
   auto *ParentL = L.getParentLoop();
+  int ParentLoopSizeMultiplier = 1;
+  if (ParentL)
+    ParentLoopSizeMultiplier =
+        std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
+
   int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
                                : std::distance(LI.begin(), LI.end()));
   // Count amount of clones that all the candidates might cause during
@@ -2887,14 +2901,16 @@ static int CalculateUnswitchCostMultiplier(
   // at an upper bound.
   int CostMultiplier;
   if (ClonesPower > Log2_32(UnswitchThreshold) ||
-      SiblingsMultiplier > UnswitchThreshold)
+      SiblingsMultiplier > UnswitchThreshold ||
+      ParentLoopSizeMultiplier > UnswitchThreshold)
     CostMultiplier = UnswitchThreshold;
   else
     CostMultiplier = std::min(SiblingsMultiplier * (1 << ClonesPower),
                               (int)UnswitchThreshold);
 
   LLVM_DEBUG(dbgs() << "  Computed multiplier  " << CostMultiplier
-                    << " (siblings " << SiblingsMultiplier << " * clones "
+                    << " (siblings " << SiblingsMultiplier << " * parent size "
+                    << ParentLoopSizeMultiplier << " * clones "
                     << (1 << ClonesPower) << ")"
                     << " for unswitch candidate: " << TI << "\n");
   return CostMultiplier;
@@ -3594,8 +3610,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
                          AssumptionCache &AC, AAResults &AA,
                          TargetTransformInfo &TTI, bool Trivial,
                          bool NonTrivial, ScalarEvolution *SE,
-                         MemorySSAUpdater *MSSAU, ProfileSummaryInfo *PSI,
-                         BlockFrequencyInfo *BFI, LPMUpdater &LoopUpdater) {
+                         MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater) {
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
 
@@ -3635,35 +3650,6 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
   if (F->hasOptSize())
     return false;
 
-  // Returns true if Loop L's loop nest is cold, i.e. if the headers of L,
-  // of the loops L is nested in, and of the loops nested in L are all cold.
-  auto IsLoopNestCold = [&](const Loop *L) {
-    // Check L and all of its parent loops.
-    auto *Parent = L;
-    while (Parent) {
-      if (!PSI->isColdBlock(Parent->getHeader(), BFI))
-        return false;
-      Parent = Parent->getParentLoop();
-    }
-    // Next check all loops nested within L.
-    SmallVector<const Loop *, 4> Worklist;
-    llvm::append_range(Worklist, L->getSubLoops());
-    while (!Worklist.empty()) {
-      auto *CurLoop = Worklist.pop_back_val();
-      if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
-        return false;
-      llvm::append_range(Worklist, CurLoop->getSubLoops());
-    }
-    return true;
-  };
-
-  // Skip cold loops in cold loop nests, as unswitching them brings little
-  // benefit but increases the code size
-  if (PSI && PSI->hasProfileSummary() && BFI && IsLoopNestCold(&L)) {
-    LLVM_DEBUG(dbgs() << " Skip cold loop: " << L << "\n");
-    return false;
-  }
-
   // Perform legality checks.
   if (!isSafeForNoNTrivialUnswitching(L, LI))
     return false;
@@ -3688,11 +3674,6 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LPMUpdater &U) {
   Function &F = *L.getHeader()->getParent();
   (void)F;
-  ProfileSummaryInfo *PSI = nullptr;
-  if (auto OuterProxy =
-          AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR)
-              .getCachedResult<ModuleAnalysisManagerFunctionProxy>(F))
-    PSI = OuterProxy->getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << L
                     << "\n");
 
@@ -3703,7 +3684,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
       AR.MSSA->verifyMemorySSA();
   }
   if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.AA, AR.TTI, Trivial, NonTrivial,
-                    &AR.SE, MSSAU ? &*MSSAU : nullptr, PSI, AR.BFI, U))
+                    &AR.SE, MSSAU ? &*MSSAU : nullptr, U))
     return PreservedAnalyses::all();
 
   if (AR.MSSA && VerifyMemorySSA)

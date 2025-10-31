@@ -86,7 +86,7 @@ private:
   }
 
   bool parseExpansion() {
-    if (!Current->isOneOf(tok::equal, tok::eof))
+    if (Current->isNoneOf(tok::equal, tok::eof))
       return false;
     if (Current->is(tok::equal))
       nextToken();
@@ -226,7 +226,7 @@ MacroExpander::expand(FormatToken *ID,
     New->MacroCtx = MacroExpansion(MR_Hidden);
     pushToken(New);
   }
-  assert(Result.size() >= 1 && Result.back()->is(tok::eof));
+  assert(!Result.empty() && Result.back()->is(tok::eof));
   if (Result.size() > 1) {
     ++Result[0]->MacroCtx->StartOfExpansion;
     ++Result[Result.size() - 2]->MacroCtx->EndOfExpansion;

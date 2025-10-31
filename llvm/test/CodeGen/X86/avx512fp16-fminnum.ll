@@ -497,7 +497,7 @@ define half @test_minnum_const_op1(half %x) {
 ; CHECK-LABEL: test_minnum_const_op1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vminsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7e,0x08,0x5d,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %r = call half @llvm.minnum.f16(half 1.0, half %x)
   ret half %r
@@ -507,7 +507,7 @@ define half @test_minnum_const_op2(half %x) {
 ; CHECK-LABEL: test_minnum_const_op2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vminsh {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7e,0x08,0x5d,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %r = call half @llvm.minnum.f16(half %x, half 1.0)
   ret half %r

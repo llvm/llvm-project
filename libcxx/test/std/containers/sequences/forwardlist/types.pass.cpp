@@ -24,8 +24,6 @@
 //   ...
 // };
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <forward_list>
 #include <type_traits>
 

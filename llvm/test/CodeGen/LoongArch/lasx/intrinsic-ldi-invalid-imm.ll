@@ -1,3 +1,4 @@
+; RUN: not llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s 2>&1 | FileCheck %s
 ; RUN: not llc --mtriple=loongarch64 --mattr=+lasx < %s 2>&1 | FileCheck %s
 
 declare <4 x i64> @llvm.loongarch.lasx.xvldi(i32)

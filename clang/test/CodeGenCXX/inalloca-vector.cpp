@@ -56,7 +56,7 @@ void __fastcall fastcall_receive_vec(__m128 x, __m128 y, __m128 z, __m128 w, int
 // CHECK-SAME: (<4 x float> inreg noundef %x,
 // CHECK-SAME: <4 x float> inreg noundef %y,
 // CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: ptr inreg noundef %0,
+// CHECK-SAME: ptr dead_on_return inreg noundef %0,
 // CHECK-SAME: i32 inreg noundef %edx,
 // CHECK-SAME: ptr inalloca(<{ ptr, %struct.NonTrivial }>) %1)
 
@@ -73,6 +73,6 @@ void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
 // CHECK-SAME: <4 x float> inreg noundef %x,
 // CHECK-SAME: <4 x float> inreg noundef %y,
 // CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: ptr inreg noundef %0,
+// CHECK-SAME: ptr dead_on_return inreg noundef %0,
 // CHECK-SAME: i32 inreg noundef %edx,
 // CHECK-SAME: ptr inalloca(<{ ptr, %struct.NonTrivial }>) %1)

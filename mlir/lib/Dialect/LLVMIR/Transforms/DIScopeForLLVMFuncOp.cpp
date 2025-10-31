@@ -9,9 +9,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Pass/Pass.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Path.h"
 
 namespace mlir {
@@ -79,7 +77,7 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   auto subprogramFlags = LLVM::DISubprogramFlags::Optimized;
   if (!llvmFunc.isExternal()) {
     id = DistinctAttr::create(UnitAttr::get(context));
-    subprogramFlags = subprogramFlags | LLVM::DISubprogramFlags::Definition;
+    subprogramFlags |= LLVM::DISubprogramFlags::Definition;
   } else {
     compileUnitAttr = {};
   }

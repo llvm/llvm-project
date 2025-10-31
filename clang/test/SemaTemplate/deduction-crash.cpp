@@ -166,9 +166,9 @@ namespace PR51872_part1 {
   template<int> class T1 { template <struct U1> T1(); };
   // expected-error@-1 {{non-type template parameter has incomplete type 'struct U1'}}
   // expected-note@-2  {{forward declaration of 'PR51872_part1::U1'}}
-  // expected-note@-3  {{implicit deduction guide declared as 'template <int> T1(T1<value-parameter-0-0>) -> T1<value-parameter-0-0>'}}
+  // expected-note@-3  {{implicit deduction guide declared as 'template <int> T1(PR51872_part1::T1<value-parameter-0-0>) -> PR51872_part1::T1<value-parameter-0-0>'}}
 
   T1 t1 = 0;
   // expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'T1'}}
-  // expected-note@-7  {{candidate template ignored: could not match 'T1<value-parameter-0-0>' against 'int'}}
+  // expected-note@-7  {{candidate template ignored: could not match 'PR51872_part1::T1<value-parameter-0-0>' against 'int'}}
 }

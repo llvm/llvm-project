@@ -1,6 +1,12 @@
 // RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip %s | FileCheck %s
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv %s | spirv-val %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// Note: Since the output of this test (optionally) gets validated by spirv-val,
+// we cannot use splits.
+
+spirv.module Logical Vulkan requires #spirv.vce<v1.3,
+             [VulkanMemoryModel, Shader, Int64, Int16, Int8, Float64, Float16, CooperativeMatrixKHR, TensorsARM, Linkage],
+             [SPV_KHR_vulkan_memory_model, SPV_KHR_cooperative_matrix, SPV_ARM_tensors]> {
   // CHECK-LABEL: @bool_const
   spirv.func @bool_const() -> () "None" {
     // CHECK: spirv.Constant true
@@ -305,4 +311,6 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %coop = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
     spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   }
+
+  spirv.EntryPoint "GLCompute" @bool_const
 }

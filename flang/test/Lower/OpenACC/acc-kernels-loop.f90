@@ -663,7 +663,7 @@ subroutine acc_kernels_loop
 ! CHECK:      acc.kernels {{.*}} {
 ! CHECK:        [[TILESIZE1:%.*]] = arith.constant 2 : i32
 ! CHECK:        [[TILESIZE2:%.*]] = arith.constant 2 : i32
-! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator
@@ -689,7 +689,7 @@ subroutine acc_kernels_loop
   END DO
 
 ! CHECK:      acc.kernels {{.*}} {
-! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32, %arg1 : i32) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.terminator

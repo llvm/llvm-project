@@ -310,7 +310,8 @@ public:
 
   // Exploring the type
 
-  virtual const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) = 0;
+  virtual const llvm::fltSemantics &
+  GetFloatTypeSemantics(size_t byte_size, lldb::Format format) = 0;
 
   virtual llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
@@ -447,7 +448,9 @@ public:
   /// \param[out] output Stream to dup the AST into.
   /// \param[in] filter If empty, dump whole AST. If non-empty, will only
   /// dump decls whose names contain \c filter.
-  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter) = 0;
+  /// \param[in] show_color If true, prints the AST color-highlighted.
+  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+                    bool show_color) = 0;
 
   /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;

@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_COPYSIGN_H__
+#define __CLC_OPENCL_MATH_COPYSIGN_H__
+
 #define __CLC_FUNCTION copysign
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
 #undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_MATH_COPYSIGN_H__

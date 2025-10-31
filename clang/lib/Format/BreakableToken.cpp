@@ -25,19 +25,7 @@
 namespace clang {
 namespace format {
 
-static constexpr StringRef Blanks = " \t\v\f\r";
-static bool IsBlank(char C) {
-  switch (C) {
-  case ' ':
-  case '\t':
-  case '\v':
-  case '\f':
-  case '\r':
-    return true;
-  default:
-    return false;
-  }
-}
+static constexpr StringRef Blanks(" \t\v\f\r");
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
@@ -193,7 +181,7 @@ getStringSplit(StringRef Text, unsigned UsedColumns, unsigned ColumnLimit,
     if (Chars > MaxSplit || Text.size() <= Advance)
       break;
 
-    if (IsBlank(Text[0]))
+    if (Blanks.contains(Text[0]))
       SpaceOffset = SplitPoint;
     if (Text[0] == '/')
       SlashOffset = SplitPoint;
@@ -318,8 +306,10 @@ BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
     // In Verilog, all strings are quoted by double quotes, joined by commas,
     // and wrapped in braces.  The comma is always before the newline.
     assert(QuoteStyle == DoubleQuotes);
-    LeftBraceQuote = Style.Cpp11BracedListStyle ? "{\"" : "{ \"";
-    RightBraceQuote = Style.Cpp11BracedListStyle ? "\"}" : "\" }";
+    LeftBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "{\"" : "{ \"";
+    RightBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "\"}" : "\" }";
     Postfix = "\",";
     Prefix = "\"";
   } else {
@@ -525,7 +515,7 @@ BreakableBlockComment::BreakableBlockComment(
     Decoration = "";
   }
   for (size_t i = 1, e = Content.size(); i < e && !Decoration.empty(); ++i) {
-    const StringRef &Text = Content[i];
+    const StringRef Text(Content[i]);
     if (i + 1 == e) {
       // If the last line is empty, the closing "*/" will have a star.
       if (Text.empty())
@@ -939,14 +929,12 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       }
 
       if (Lines[i].size() != IndentPrefix.size()) {
-        PrefixSpaceChange[i] = FirstLineSpaceChange;
-
-        if (SpacesInPrefix + PrefixSpaceChange[i] < Minimum) {
-          PrefixSpaceChange[i] +=
-              Minimum - (SpacesInPrefix + PrefixSpaceChange[i]);
-        }
-
         assert(Lines[i].size() > IndentPrefix.size());
+
+        PrefixSpaceChange[i] = SpacesInPrefix + FirstLineSpaceChange < Minimum
+                                   ? Minimum - SpacesInPrefix
+                                   : FirstLineSpaceChange;
+
         const auto FirstNonSpace = Lines[i][IndentPrefix.size()];
         const bool IsFormatComment = LineTok && switchesFormatting(*LineTok);
         const bool LineRequiresLeadingSpace =

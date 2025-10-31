@@ -4,7 +4,7 @@
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK: [[LO:%[0-9]+]]:_(s64) = G_LOAD %0(p0) :: (load (s64) from %ir.ptr)
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
-; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR]], [[CST]](s64)
+; CHECK: [[GEP:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR]], [[CST]](s64)
 ; CHECK: [[HI:%[0-9]+]]:_(s64) = G_LOAD [[GEP]](p0) :: (load (s64) from %ir.ptr + 8)
 
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp

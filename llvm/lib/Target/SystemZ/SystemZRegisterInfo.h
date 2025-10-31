@@ -101,7 +101,7 @@ public:
   int getStackPointerBias() final { return 2048; }
 
   /// Destroys the object. Bogus destructor overriding base class destructor
-  ~SystemZXPLINK64Registers() = default;
+  ~SystemZXPLINK64Registers() override = default;
 };
 
 /// ELF calling convention specific use registers
@@ -124,7 +124,7 @@ public:
   int getStackPointerBias() final { return 0; }
 
   /// Destroys the object. Bogus destructor overriding base class destructor
-  ~SystemZELFRegisters() = default;
+  ~SystemZELFRegisters() override = default;
 };
 
 struct SystemZRegisterInfo : public SystemZGenRegisterInfo {
@@ -135,8 +135,7 @@ public:
   /// This is currently only used by LOAD_STACK_GUARD, which requires a non-%r0
   /// register, hence ADDR64.
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind=0) const override {
+  getPointerRegClass(unsigned Kind = 0) const override {
     return &SystemZ::ADDR64BitRegClass;
   }
 

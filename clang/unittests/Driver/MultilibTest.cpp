@@ -131,7 +131,7 @@ TEST(MultilibTest, Construction3) {
                                             E = M.flags().end();
        I != E; ++I) {
     ASSERT_TRUE(llvm::StringSwitch<bool>(*I)
-                    .Cases("+f1", "+f2", "-f3", true)
+                    .Cases({"+f1", "+f2", "-f3"}, true)
                     .Default(false));
   }
 }

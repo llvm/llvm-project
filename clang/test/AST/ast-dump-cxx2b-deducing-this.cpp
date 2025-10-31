@@ -33,5 +33,5 @@ struct B {
   operator A(this B);
 };
 A a = A(B{});
-// CHECK: CallExpr 0x{{[^ ]*}} <col:9, col:11> 'A':'GH130272::A'
+// CHECK: CallExpr 0x{{[^ ]*}} <col:9, col:11> 'A'
 }

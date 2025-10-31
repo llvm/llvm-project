@@ -21,7 +21,7 @@ add_flangrt_library(flang_rt.cuda STATIC SHARED
     # libflang_rt.runtime depends on a certain version of CUDA. To be able to have
     # multiple build of this library with different CUDA version, the version is
     # added to the library name.
-    OUTPUT_NAME "flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR}"
+    OUTPUT_NAME "flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}"
   INCLUDE_DIRECTORIES
     PRIVATE ${CUDAToolkit_INCLUDE_DIRS}
   INSTALL_WITH_TOOLCHAIN

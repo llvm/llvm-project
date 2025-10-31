@@ -1,4 +1,4 @@
-//===--- ReadabilityTidyModule.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,10 +47,12 @@
 #include "RedundantFunctionPtrDereferenceCheck.h"
 #include "RedundantInlineSpecifierCheck.h"
 #include "RedundantMemberInitCheck.h"
+#include "RedundantParenthesesCheck.h"
 #include "RedundantPreprocessorCheck.h"
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
+#include "RedundantTypenameCheck.h"
 #include "ReferenceToConstructedTemporaryCheck.h"
 #include "SimplifyBooleanExprCheck.h"
 #include "SimplifySubscriptExprCheck.h"
@@ -61,6 +63,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseConcisePreprocessorDirectivesCheck.h"
 #include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
@@ -137,8 +140,12 @@ public:
         "readability-redundant-function-ptr-dereference");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
         "readability-redundant-member-init");
+    CheckFactories.registerCheck<RedundantParenthesesCheck>(
+        "readability-redundant-parentheses");
     CheckFactories.registerCheck<RedundantPreprocessorCheck>(
         "readability-redundant-preprocessor");
+    CheckFactories.registerCheck<RedundantTypenameCheck>(
+        "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
         "readability-reference-to-constructed-temporary");
     CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
@@ -173,6 +180,8 @@ public:
         "readability-uppercase-literal-suffix");
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
+    CheckFactories.registerCheck<UseConcisePreprocessorDirectivesCheck>(
+        "readability-use-concise-preprocessor-directives");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
   }

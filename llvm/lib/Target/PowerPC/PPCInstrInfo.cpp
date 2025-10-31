@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -87,8 +88,8 @@ static cl::opt<bool> EnableFMARegPressureReduction(
 // Pin the vtable to this file.
 void PPCInstrInfo::anchor() {}
 
-PPCInstrInfo::PPCInstrInfo(PPCSubtarget &STI)
-    : PPCGenInstrInfo(PPC::ADJCALLSTACKDOWN, PPC::ADJCALLSTACKUP,
+PPCInstrInfo::PPCInstrInfo(const PPCSubtarget &STI)
+    : PPCGenInstrInfo(STI, PPC::ADJCALLSTACKDOWN, PPC::ADJCALLSTACKUP,
                       /* CatchRetOpcode */ -1,
                       STI.isPPC64() ? PPC::BLR8 : PPC::BLR),
       Subtarget(STI), RI(STI.getTargetMachine()) {}
@@ -1074,7 +1075,7 @@ Register PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 // For opcodes with the ReMaterializable flag set, this function is called to
 // verify the instruction is really rematable.
-bool PPCInstrInfo::isReallyTriviallyReMaterializable(
+bool PPCInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
@@ -1111,7 +1112,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::DMXXSETACCZ:
     return true;
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 Register PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
@@ -1863,6 +1864,48 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addReg(SrcRegSub1)
         .addReg(SrcRegSub1, getKillRegState(KillSrc));
     return;
+  } else if ((PPC::WACCRCRegClass.contains(DestReg) ||
+              PPC::WACC_HIRCRegClass.contains(DestReg)) &&
+             (PPC::WACCRCRegClass.contains(SrcReg) ||
+              PPC::WACC_HIRCRegClass.contains(SrcReg))) {
+
+    Opc = PPC::WACCRCRegClass.contains(SrcReg) ? PPC::DMXXEXTFDMR512
+                                               : PPC::DMXXEXTFDMR512_HI;
+
+    RegScavenger RS;
+    RS.enterBasicBlockEnd(MBB);
+    RS.backward(std::next(I));
+
+    Register TmpReg1 = RS.scavengeRegisterBackwards(PPC::VSRpRCRegClass, I,
+                                                    /* RestoreAfter */ false, 0,
+                                                    /* AllowSpill */ false);
+
+    RS.setRegUsed(TmpReg1);
+    Register TmpReg2 = RS.scavengeRegisterBackwards(PPC::VSRpRCRegClass, I,
+                                                    /* RestoreAfter */ false, 0,
+                                                    /* AllowSpill */ false);
+
+    BuildMI(MBB, I, DL, get(Opc))
+        .addReg(TmpReg1, RegState::Define)
+        .addReg(TmpReg2, RegState::Define)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+
+    Opc = PPC::WACCRCRegClass.contains(DestReg) ? PPC::DMXXINSTDMR512
+                                                : PPC::DMXXINSTDMR512_HI;
+
+    BuildMI(MBB, I, DL, get(Opc), DestReg)
+        .addReg(TmpReg1, RegState::Kill)
+        .addReg(TmpReg2, RegState::Kill);
+
+    return;
+  } else if (PPC::DMRRCRegClass.contains(DestReg) &&
+             PPC::DMRRCRegClass.contains(SrcReg)) {
+
+    BuildMI(MBB, I, DL, get(PPC::DMMR), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+
+    return;
+
   } else
     llvm_unreachable("Impossible reg-to-reg copy");
 
@@ -2099,33 +2142,23 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   assert(UseIdx < UseMI.getNumOperands() && "Cannot find Reg in UseMI");
   assert(UseIdx < UseMCID.getNumOperands() && "No operand description for Reg");
 
-  const MCOperandInfo *UseInfo = &UseMCID.operands()[UseIdx];
-
   // We can fold the zero if this register requires a GPRC_NOR0/G8RC_NOX0
   // register (which might also be specified as a pointer class kind).
-  if (UseInfo->isLookupPtrRegClass()) {
-    if (UseInfo->RegClass /* Kind */ != 1)
-      return false;
-  } else {
-    if (UseInfo->RegClass != PPC::GPRC_NOR0RegClassID &&
-        UseInfo->RegClass != PPC::G8RC_NOX0RegClassID)
-      return false;
-  }
+
+  const MCOperandInfo &UseInfo = UseMCID.operands()[UseIdx];
+  int16_t RegClass = getOpRegClassID(UseInfo);
+  if (UseInfo.RegClass != PPC::GPRC_NOR0RegClassID &&
+      UseInfo.RegClass != PPC::G8RC_NOX0RegClassID)
+    return false;
 
   // Make sure this is not tied to an output register (or otherwise
   // constrained). This is true for ST?UX registers, for example, which
   // are tied to their output registers.
-  if (UseInfo->Constraints != 0)
+  if (UseInfo.Constraints != 0)
     return false;
 
-  MCRegister ZeroReg;
-  if (UseInfo->isLookupPtrRegClass()) {
-    bool isPPC64 = Subtarget.isPPC64();
-    ZeroReg = isPPC64 ? PPC::ZERO8 : PPC::ZERO;
-  } else {
-    ZeroReg = UseInfo->RegClass == PPC::G8RC_NOX0RegClassID ?
-              PPC::ZERO8 : PPC::ZERO;
-  }
+  MCRegister ZeroReg =
+      RegClass == PPC::G8RC_NOX0RegClassID ? PPC::ZERO8 : PPC::ZERO;
 
   LLVM_DEBUG(dbgs() << "Folded immediate zero for: ");
   LLVM_DEBUG(UseMI.dump());

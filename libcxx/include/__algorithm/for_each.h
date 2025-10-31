@@ -16,14 +16,10 @@
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
-#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -39,7 +35,7 @@ __for_each(_InputIterator __first, _Sent __last, _Func& __f, _Proj& __proj) {
 template <class _SegmentedIterator,
           class _Func,
           class _Proj,
-          __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
+          __enable_if_t<__is_segmented_iterator_v<_SegmentedIterator>, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _SegmentedIterator
 __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Func& __func, _Proj& __proj) {
   using __local_iterator_t = typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator;
@@ -59,7 +55,5 @@ for_each(_InputIterator __first, _InputIterator __last, _Func __f) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_FOR_EACH_H

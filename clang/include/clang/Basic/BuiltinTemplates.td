@@ -88,3 +88,7 @@ foreach Ref = ["", "lvalue", "rvalue"] in {
 //           typename ...Operands>
 def __hlsl_spirv_type : HLSLBuiltinTemplate<
 [Uint32T, Uint32T, Uint32T, Class<"Operands", /*is_variadic=*/1>]>;
+
+// template <class ...Args>
+def __builtin_dedup_pack
+    : CPlusPlusBuiltinTemplate<[Class<"Args", /*is_variadic=*/1>]>;

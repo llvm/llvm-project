@@ -317,10 +317,6 @@ namespace llvm {
     /// Construct an empty MutableArrayRef.
     /*implicit*/ MutableArrayRef() = default;
 
-    /// Construct an empty MutableArrayRef from std::nullopt.
-    /*implicit*/ LLVM_DEPRECATED("Use {} or MutableArrayRef<T>() instead", "{}")
-    MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
-
     /// Construct a MutableArrayRef from a single element.
     /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
 
@@ -551,7 +547,8 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator==(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator==(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return ArrayRef<T>(LHS).equals(RHS);
   }
 
@@ -561,8 +558,30 @@ namespace llvm {
   }
 
   template <typename T>
-  inline bool operator!=(SmallVectorImpl<T> &LHS, ArrayRef<T> RHS) {
+  [[nodiscard]] inline bool operator!=(const SmallVectorImpl<T> &LHS,
+                                       ArrayRef<T> RHS) {
     return !(LHS == RHS);
+  }
+
+  template <typename T>
+  inline bool operator<(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
+                                        RHS.end());
+  }
+
+  template <typename T>
+  inline bool operator>(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return RHS < LHS;
+  }
+
+  template <typename T>
+  inline bool operator<=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS > RHS);
+  }
+
+  template <typename T>
+  inline bool operator>=(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+    return !(LHS < RHS);
   }
 
   /// @}

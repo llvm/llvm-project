@@ -11,13 +11,11 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -27,28 +25,28 @@ using namespace mlir::sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 #define CMPI(p, l, r)                                                          \
-  (builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::p, (l), (r))       \
+  (arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::p, (l), (r))      \
        .getResult())
 
 #define C_IDX(v) (constantIndex(builder, loc, (v)))
-#define YIELD(vs) (builder.create<scf::YieldOp>(loc, (vs)))
-#define ADDI(lhs, rhs) (builder.create<arith::AddIOp>(loc, (lhs), (rhs)))
-#define ANDI(lhs, rhs) (builder.create<arith::AndIOp>(loc, (lhs), (rhs)))
-#define SUBI(lhs, rhs) (builder.create<arith::SubIOp>(loc, (lhs), (rhs)))
-#define MULI(lhs, rhs) (builder.create<arith::MulIOp>(loc, (lhs), (rhs)))
-#define REMUI(lhs, rhs) (builder.create<arith::RemUIOp>(loc, (lhs), (rhs)))
-#define DIVUI(lhs, rhs) (builder.create<arith::DivUIOp>(loc, (lhs), (rhs)))
-#define SELECT(c, l, r) (builder.create<arith::SelectOp>(loc, (c), (l), (r)))
+#define YIELD(vs) (scf::YieldOp::create(builder, loc, (vs)))
+#define ADDI(lhs, rhs) (arith::AddIOp::create(builder, loc, (lhs), (rhs)))
+#define ANDI(lhs, rhs) (arith::AndIOp::create(builder, loc, (lhs), (rhs)))
+#define SUBI(lhs, rhs) (arith::SubIOp::create(builder, loc, (lhs), (rhs)))
+#define MULI(lhs, rhs) (arith::MulIOp::create(builder, loc, (lhs), (rhs)))
+#define REMUI(lhs, rhs) (arith::RemUIOp::create(builder, loc, (lhs), (rhs)))
+#define DIVUI(lhs, rhs) (arith::DivUIOp::create(builder, loc, (lhs), (rhs)))
+#define SELECT(c, l, r) (arith::SelectOp::create(builder, loc, (c), (l), (r)))
 
 //===----------------------------------------------------------------------===//
 // Debugging utils
 //===----------------------------------------------------------------------===//
 
 #ifndef NDEBUG
-LLVM_ATTRIBUTE_UNUSED static void dumpIndexMemRef(OpBuilder &builder,
-                                                  Location loc, Value memref) {
-  memref = builder.create<memref::CastOp>(
-      loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
+[[maybe_unused]] static void dumpIndexMemRef(OpBuilder &builder, Location loc,
+                                             Value memref) {
+  memref = memref::CastOp::create(
+      builder, loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
   createFuncCall(builder, loc, "printMemrefInd", TypeRange{},
                  ValueRange{memref}, EmitCInterface::On);
 }
@@ -263,7 +261,7 @@ void LoopEmitter::initializeLoopEmit(
         denseTp = bufferization::getMemRefTypeWithFullyDynamicLayout(rtp);
 
       Value denseVal =
-          builder.create<bufferization::ToBufferOp>(loc, denseTp, tensor);
+          bufferization::ToBufferOp::create(builder, loc, denseTp, tensor);
       // Dense outputs need special handling.
       if (isOutput && updater)
         denseVal = updater(builder, loc, denseVal, tensor);
@@ -273,7 +271,7 @@ void LoopEmitter::initializeLoopEmit(
       // Annotated sparse tensors.
       // We also need the value buffer for all-dense annotated "sparse"
       // tensors.
-      valBuffer[t] = builder.create<ToValuesOp>(loc, tensor);
+      valBuffer[t] = ToValuesOp::create(builder, loc, tensor);
     }
   }
 
@@ -346,7 +344,7 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
       // Reverse queue into a stack.
       std::reverse(remDepStack[t][lvl].begin(), remDepStack[t][lvl].end());
       for (auto [loop, coeff] : dependentLvlMap[t][lvl])
-        depRedOrder.emplace_back(std::make_tuple(loop, t, lvl));
+        depRedOrder.emplace_back(loop, t, lvl);
     }
 
     if (depRedOrder.empty())
@@ -481,7 +479,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
   Value iv;
   if (isParallel) {
     scf::ParallelOp parOp =
-        builder.create<scf::ParallelOp>(loc, lo, hi, step, reduc);
+        scf::ParallelOp::create(builder, loc, lo, hi, step, reduc);
     builder.setInsertionPointToStart(parOp.getBody());
     assert(parOp.getNumReductions() == reduc.size());
     iv = parOp.getInductionVars()[0];
@@ -497,7 +495,7 @@ std::pair<Operation *, Value> LoopEmitter::emitForLoopOverTensorAtLvl(
       reduc[i] = parOp.getInitVals()[i];
     loop = parOp;
   } else {
-    scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, reduc);
+    scf::ForOp forOp = scf::ForOp::create(builder, loc, lo, hi, step, reduc);
     builder.setInsertionPointToStart(forOp.getBody());
     iv = forOp.getInductionVar();
 
@@ -605,12 +603,12 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
 
       // Extract and iterate over the iteration space.
       ExtractIterSpaceOp extractSpaceOp =
-          lvl == 0 ? builder.create<ExtractIterSpaceOp>(loc, t)
-                   : builder.create<ExtractIterSpaceOp>(
-                         loc, t, spIterVals[tid][lvl - 1], lvl);
+          lvl == 0 ? ExtractIterSpaceOp::create(builder, loc, t)
+                   : ExtractIterSpaceOp::create(builder, loc, t,
+                                                spIterVals[tid][lvl - 1], lvl);
 
-      IterateOp iterOp = builder.create<IterateOp>(
-          loc, extractSpaceOp.getExtractedSpace(), reduc);
+      IterateOp iterOp = IterateOp::create(
+          builder, loc, extractSpaceOp.getExtractedSpace(), reduc);
       spIterVals[tid][lvl] = iterOp.getIterator();
 
       // Update the reduction varaibles.
@@ -627,12 +625,12 @@ Operation *LoopEmitter::enterCoIterationOverTensorsAtLvls(
     for (auto [tid, lvl] : unpackTensorLevelRange(tidLvls)) {
       Value t = tensors[tid];
       ExtractIterSpaceOp extractSpaceOp =
-          lvl == 0 ? builder.create<ExtractIterSpaceOp>(loc, t)
-                   : builder.create<ExtractIterSpaceOp>(
-                         loc, t, spIterVals[tid][lvl - 1], lvl);
+          lvl == 0 ? ExtractIterSpaceOp::create(builder, loc, t)
+                   : ExtractIterSpaceOp::create(builder, loc, t,
+                                                spIterVals[tid][lvl - 1], lvl);
       spaces.push_back(extractSpaceOp.getExtractedSpace());
     }
-    auto coIterOp = builder.create<CoIterateOp>(loc, spaces, reduc, numCases);
+    auto coIterOp = CoIterateOp::create(builder, loc, spaces, reduc, numCases);
     // The CoIterationOp does not have insertion block nor induction variable.
     // TODO: the `struct LoopInfo` should be simplied after full migration.
     loopStack.emplace_back(tidLvls, coIterOp, /*insertion block*/ nullptr,
@@ -730,7 +728,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
     auto iterateOp = llvm::cast<IterateOp>(loopInfo.loop);
     assert(reduc.size() == iterateOp.getNumResults());
-    rewriter.create<sparse_tensor::YieldOp>(loc, reduc);
+    sparse_tensor::YieldOp::create(rewriter, loc, reduc);
     // Exit the loop.
     rewriter.setInsertionPointAfter(iterateOp);
     // In-place update reduction variables.
@@ -740,7 +738,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
   if (auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop)) {
     if (!reduc.empty()) {
       assert(reduc.size() == forOp.getNumResults());
-      rewriter.create<scf::YieldOp>(loc, reduc);
+      scf::YieldOp::create(rewriter, loc, reduc);
     }
     // Exit the loop.
     rewriter.setInsertionPointAfter(forOp);
@@ -779,7 +777,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
 #endif // NDEBUG
 
       rewriter.setInsertionPointAfter(redExp);
-      auto redOp = rewriter.create<scf::ReduceOp>(loc, curVal);
+      auto redOp = scf::ReduceOp::create(rewriter, loc, curVal);
       // Attach to the reduction op.
       Block *redBlock = &redOp.getReductions().front().front();
       rewriter.setInsertionPointToEnd(redBlock);
@@ -791,7 +789,7 @@ void LoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
       // Erases the out-dated reduction expression.
       rewriter.eraseOp(redExp);
       rewriter.setInsertionPointToEnd(redBlock);
-      rewriter.create<scf::ReduceReturnOp>(loc, newRed->getResult(0));
+      scf::ReduceReturnOp::create(rewriter, loc, newRed->getResult(0));
     }
     rewriter.setInsertionPointAfter(parOp);
     // In-place update reduction variables.
@@ -865,7 +863,7 @@ void LoopEmitter::exitCurrentLoop(RewriterBase &rewriter, Location loc,
   if (emitStrategy == SparseEmitStrategy::kSparseIterator) {
     Operation *p = loopInfo.loop;
     if (isa<IterateOp>(p))
-      rewriter.create<sparse_tensor::YieldOp>(loc, reduc);
+      sparse_tensor::YieldOp::create(rewriter, loc, reduc);
 
     // Exit the loop.
     rewriter.setInsertionPointAfter(p);
@@ -931,7 +929,7 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
   // Ensures all operands are valid.
   assert(!llvm::is_contained(ivs, nullptr));
   TypeRange types = ValueRange(ivs).getTypes();
-  auto whileOp = builder.create<scf::WhileOp>(loc, types, ivs);
+  auto whileOp = scf::WhileOp::create(builder, loc, types, ivs);
 
   SmallVector<Location> locs(types.size(), loc);
   Block *before = builder.createBlock(&whileOp.getBefore(), {}, types, locs);
@@ -950,7 +948,7 @@ std::pair<Operation *, Value> sparse_tensor::genCoIteration(
   // The remaining block arguments are user-provided reduction values and an
   // optional universal index. Make sure their sizes match.
   assert(bArgs.size() == reduc.size() + (uniIdx ? 1 : 0));
-  builder.create<scf::ConditionOp>(loc, whileCond, before->getArguments());
+  scf::ConditionOp::create(builder, loc, whileCond, before->getArguments());
 
   // Generates loop body.
   builder.setInsertionPointToStart(after);

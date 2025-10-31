@@ -71,7 +71,6 @@ add_clang_library(clangDriver
   ToolChains/MinGW.cpp
   ToolChains/MSP430.cpp
   ToolChains/MSVC.cpp
-  ToolChains/NaCl.cpp
   ToolChains/NetBSD.cpp
   ToolChains/OHOS.cpp
   ToolChains/OpenBSD.cpp
@@ -99,5 +98,6 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
+  clangLex
   ${system_libs}
   )

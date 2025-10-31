@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_ATAN_H__
+#define __CLC_OPENCL_MATH_ATAN_H__
+
 #define __CLC_BODY <clc/math/unary_decl.inc>
 #define __CLC_FUNCTION atan
 
 #include <clc/math/gentype.inc>
 
 #undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_MATH_ATAN_H__

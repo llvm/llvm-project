@@ -37,7 +37,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/GenericLoopInfoImpl.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
@@ -66,7 +65,7 @@ bool Loop::isLoopInvariant(const Value *V) const {
 }
 
 bool Loop::hasLoopInvariantOperands(const Instruction *I) const {
-  return all_of(I->operands(), [this](Value *V) { return isLoopInvariant(V); });
+  return all_of(I->operands(), [&](Value *V) { return isLoopInvariant(V); });
 }
 
 bool Loop::makeLoopInvariant(Value *V, bool &Changed, Instruction *InsertPt,
@@ -987,8 +986,8 @@ PreservedAnalyses LoopPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-void llvm::printLoop(Loop &L, raw_ostream &OS, const std::string &Banner) {
-
+void llvm::printLoop(const Loop &L, raw_ostream &OS,
+                     const std::string &Banner) {
   if (forcePrintModuleIR()) {
     // handling -print-module-scope
     OS << Banner << " (loop: ";

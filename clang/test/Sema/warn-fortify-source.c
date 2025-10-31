@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
 
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
+
 typedef unsigned long size_t;
 
 #ifdef __cplusplus

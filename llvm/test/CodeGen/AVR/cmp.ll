@@ -298,3 +298,18 @@ define i16 @cmp_i16_gt_1023(i16 %0) {
   %3 = zext i1 %2 to i16
   ret i16 %3
 }
+
+define void @cmp_issue152097(i16 %a) addrspace(1) {
+; See: https://github.com/llvm/llvm-project/issues/152097
+; CHECK-LABEL: cmp_issue152097
+; CHECK:      ldi r18, -1
+; CHECK-NEXT: cpi r24, -2
+; CHECK-NEXT: cpc r25, r18
+; CHECK-NEXT: ret
+  %cmp = icmp ugt i16 -2, %a
+  br i1 %cmp, label %if.then, label %if.else
+if.then:
+  ret void
+if.else:
+  ret void
+}

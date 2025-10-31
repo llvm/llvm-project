@@ -86,7 +86,6 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
    :hidden:
 
    GettingInvolved
-   QualGroup
 
 * :doc:`GettingInvolved`
 * :ref:`development-process`
@@ -97,9 +96,6 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
   Reporting a security issue
 
 * :ref:`report-security-issue`
-
-* :doc:`QualGroup`  
-  LLVM Qualification Group
 
 Indices and tables
 ==================

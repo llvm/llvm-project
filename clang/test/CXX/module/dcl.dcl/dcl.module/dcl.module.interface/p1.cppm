@@ -9,7 +9,7 @@
 
 //--- ExportDeclNotInModulePurview.cppm
 // expected-error@* {{missing 'export module' declaration in module interface unit}}
-export int b; // expected-error {{export declaration can only be used within a module purview}}
+export int b; // expected-error {{export declaration can only be used within a module interface}}
 
 //--- A.cppm
 // expected-no-diagnostics
@@ -18,7 +18,7 @@ export int a;
 
 //--- AddExport.cppm
 module A; // #module-decl
-export int b; // expected-error {{export declaration can only be used within a module purview}}
+export int b; // expected-error {{export declaration can only be used within a module interface}}
 // expected-note@#module-decl {{add 'export' here}}
 
 //--- AddExport2.cppm

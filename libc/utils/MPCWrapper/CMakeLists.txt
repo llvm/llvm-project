@@ -10,6 +10,7 @@ if(LIBC_TESTS_CAN_USE_MPC)
   add_dependencies(
     libcMPCWrapper
     libcMPCommon
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.array
     libc.src.__support.CPP.string
     libc.src.__support.CPP.stringstream

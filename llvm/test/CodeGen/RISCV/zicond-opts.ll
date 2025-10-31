@@ -223,19 +223,17 @@ define i64 @test_inv_and_nez(i64 %f, i64 %x, i1 %cond) {
 ; RV32ZICOND-LABEL: test_inv_and_nez:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a4, a4, 1
-; RV32ZICOND-NEXT:    addi a4, a4, -1
-; RV32ZICOND-NEXT:    orn a3, a4, a3
-; RV32ZICOND-NEXT:    orn a2, a4, a2
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a3, a1
+; RV32ZICOND-NEXT:    czero.eqz a3, a3, a4
+; RV32ZICOND-NEXT:    czero.eqz a2, a2, a4
+; RV32ZICOND-NEXT:    andn a0, a0, a2
+; RV32ZICOND-NEXT:    andn a1, a1, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: test_inv_and_nez:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    andn a1, a0, a1
-; RV64ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    czero.eqz a1, a1, a2
+; RV64ZICOND-NEXT:    andn a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %5 = xor i64 %x, -1
   %6 = select i1 %cond, i64 %5, i64 -1
@@ -247,20 +245,18 @@ define i64 @test_inv_and_nez(i64 %f, i64 %x, i1 %cond) {
 define i64 @test_inv_and_eqz(i64 %f, i64 %x, i1 %cond) {
 ; RV32ZICOND-LABEL: test_inv_and_eqz:
 ; RV32ZICOND:       # %bb.0:
-; RV32ZICOND-NEXT:    slli a4, a4, 31
-; RV32ZICOND-NEXT:    srai a4, a4, 31
-; RV32ZICOND-NEXT:    orn a3, a4, a3
-; RV32ZICOND-NEXT:    orn a2, a4, a2
-; RV32ZICOND-NEXT:    and a0, a2, a0
-; RV32ZICOND-NEXT:    and a1, a3, a1
+; RV32ZICOND-NEXT:    andi a4, a4, 1
+; RV32ZICOND-NEXT:    czero.nez a3, a3, a4
+; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
+; RV32ZICOND-NEXT:    andn a0, a0, a2
+; RV32ZICOND-NEXT:    andn a1, a1, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: test_inv_and_eqz:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    andn a1, a0, a1
-; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    czero.nez a1, a1, a2
+; RV64ZICOND-NEXT:    andn a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %5 = xor i64 %x, -1
   %6 = select i1 %cond, i64 -1, i64 %5

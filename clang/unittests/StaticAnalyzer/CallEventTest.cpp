@@ -56,7 +56,7 @@ void addCXXDeallocatorChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.CXXDeallocator", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker<CXXDeallocatorChecker>("test.CXXDeallocator",
-                                               "Description", "");
+                                               "MockDescription");
   });
 }
 
@@ -82,6 +82,47 @@ TEST(CXXDeallocatorCall, SimpleDestructor) {
 #else
   EXPECT_EQ(Diags, "test.CXXDeallocator: NumArgs: 2\n");
 #endif
+}
+
+TEST(PrivateMethodCache, NeverReturnDanglingPointersWithMultipleASTs) {
+  // Each iteration will load and unload an AST multiple times. Since the code
+  // is always the same, we increase the chance of hitting a bug in the private
+  // method cache, returning a dangling pointer and crashing the process. If the
+  // cache is properly cleared between runs, the test should pass.
+  for (int I = 0; I < 100; ++I) {
+    auto const *Code = R"(
+    typedef __typeof(sizeof(int)) size_t;
+
+    extern void *malloc(size_t size);
+    extern void *memcpy(void *dest, const void *src, size_t n);
+
+    @interface SomeMoreData {
+      char const* _buffer;
+      int _size;
+    }
+    @property(nonatomic, readonly) const char* buffer;
+    @property(nonatomic) int size;
+
+    - (void)appendData:(SomeMoreData*)other;
+
+    @end
+
+    @implementation SomeMoreData
+    @synthesize size = _size;
+    @synthesize buffer = _buffer;
+
+    - (void)appendData:(SomeMoreData*)other {
+      int const len = (_size + other.size); // implicit self._length
+      char* d = malloc(sizeof(char) * len);
+      memcpy(d + 20, other.buffer, len);
+    }
+
+    @end
+  )";
+    std::string Diags;
+    EXPECT_TRUE(runCheckerOnCodeWithArgs<addCXXDeallocatorChecker>(
+        Code, {"-x", "objective-c", "-Wno-objc-root-class"}, Diags));
+  }
 }
 
 } // namespace

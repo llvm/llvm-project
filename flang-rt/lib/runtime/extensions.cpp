@@ -18,6 +18,7 @@
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/iostat-consts.h"
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -27,10 +28,7 @@
 #include <thread>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-
+#include "flang/Common/windows-include.h"
 #include <synchapi.h>
 
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
@@ -60,9 +58,75 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 #include <direct.h>
 #endif
 
-extern "C" {
-
 namespace Fortran::runtime {
+
+// Common implementation that could be used for either SECNDS() or DSECNDS(),
+// which are defined for float or double.
+template <typename T> T SecndsImpl(T *refTime) {
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+      "T must be float or double");
+  constexpr T FAIL_SECNDS{T{-1.0}}; // Failure code for this function
+  // Failure code for time functions that return std::time_t
+  constexpr std::time_t FAIL_TIME{std::time_t{-1}};
+  constexpr std::time_t TIME_UNINITIALIZED{std::time_t{0}};
+  if (!refTime) {
+    return FAIL_SECNDS;
+  }
+  std::time_t now{std::time(nullptr)};
+  if (now == FAIL_TIME) {
+    return FAIL_SECNDS;
+  }
+  // In case we are using a float result, we can only precisely store
+  // 2^24 seconds, which comes out to about 194 days. Thus, need to pick
+  // a starting point, which will allow us to keep the time diffs as precise
+  // as possible. Given the description of this function, midnight of the
+  // current day is the best starting point.
+  static std::atomic<std::time_t> startingPoint{TIME_UNINITIALIZED};
+  // "Acquire" will give us writes from other threads.
+  std::time_t localStartingPoint{startingPoint.load(std::memory_order_acquire)};
+  // Initialize startingPoint if we haven't initialized it yet or
+  // if we were passed 0.0, which indicates to compute seconds from
+  // current day's midnight.
+  if (localStartingPoint == TIME_UNINITIALIZED || *refTime == 0.0) {
+    // Compute midnight in the current timezone and try to initialize
+    // startingPoint with it. If there are any errors during computation,
+    // exit with error and hope that the other threads have better luck
+    // (or the user retries the call).
+    struct tm timeInfo;
+#ifdef _WIN32
+    if (localtime_s(&timeInfo, &now)) {
+#else
+    if (!localtime_r(&now, &timeInfo)) {
+#endif
+      return FAIL_SECNDS;
+    }
+    // Back to midnight
+    timeInfo.tm_hour = 0;
+    timeInfo.tm_min = 0;
+    timeInfo.tm_sec = 0;
+    localStartingPoint = std::mktime(&timeInfo);
+    if (localStartingPoint == FAIL_TIME) {
+      return FAIL_SECNDS;
+    }
+    INTERNAL_CHECK(localStartingPoint > TIME_UNINITIALIZED);
+    // Attempt to atomically set startingPoint to localStartingPoint
+    std::time_t expected{TIME_UNINITIALIZED};
+    if (startingPoint.compare_exchange_strong(expected, localStartingPoint,
+            std::memory_order_acq_rel, // "Acquire and release" on success
+            std::memory_order_acquire)) { // "Acquire" on failure
+      // startingPoint was set to localStartingPoint
+    } else {
+      // startingPoint was already initialized and its value was loaded
+      // into `expected`. Discard our precomputed midnight value in favor
+      // of the one from startingPoint.
+      localStartingPoint = expected;
+    }
+  }
+  double diffStartingPoint{std::difftime(now, localStartingPoint)};
+  return static_cast<T>(diffStartingPoint) - *refTime;
+}
+
+extern "C" {
 
 gid_t RTNAME(GetGID)() {
 #ifdef _WIN32
@@ -84,7 +148,7 @@ uid_t RTNAME(GetUID)() {
 
 void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
   Descriptor name{*Descriptor::Create(
-      1, std::strlen(envName) + 1, const_cast<char *>(envName), 0)};
+      1, runtime::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
   RTNAME(GetEnvVariable)
@@ -108,7 +172,7 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *arg, std::int64_t length) {
   char str[26];
   // Insufficient space, fill with spaces and return.
   if (length < 24) {
-    std::memset(arg, ' ', length);
+    runtime::memset(arg, ' ', length);
     return;
   }
 
@@ -140,8 +204,8 @@ void FORTRAN_PROCEDURE_NAME(getarg)(
 void FORTRAN_PROCEDURE_NAME(getlog)(char *arg, std::int64_t length) {
 #if _REENTRANT || _POSIX_C_SOURCE >= 199506L
   if (length >= 1 && getlogin_r(arg, length) == 0) {
-    auto loginLen{std::strlen(arg)};
-    std::memset(
+    auto loginLen{runtime::strlen(arg)};
+    runtime::memset(
         arg + loginLen, ' ', static_cast<std::size_t>(length) - loginLen);
     return;
   }
@@ -195,7 +259,7 @@ std::int64_t FORTRAN_PROCEDURE_NAME(access)(const char *name,
   char *newName{nullptr};
   if (name[nameLength - 1] != '\0') {
     newName = static_cast<char *>(std::malloc(nameLength + 1));
-    std::memcpy(newName, name, nameLength);
+    runtime::memcpy(newName, name, nameLength);
     newName[nameLength] = '\0';
     name = newName;
   }
@@ -306,8 +370,33 @@ void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
 // PERROR(STRING)
 void RTNAME(Perror)(const char *str) { perror(str); }
 
+// GNU extension function SECNDS(refTime)
+float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
+  return SecndsImpl(refTime);
+}
+
+float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
+}
+
+// PGI extension function DSECNDS(refTime)
+double FORTRAN_PROCEDURE_NAME(dsecnds)(double *refTime) {
+  return SecndsImpl(refTime);
+}
+
+double RTNAME(Dsecnds)(double *refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(dsecnds)(refTime);
+}
+
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
+
+// MCLOCK: returns accumulated CPU time in ticks
+std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
 
 // Extension procedures related to I/O
 
@@ -335,7 +424,17 @@ std::int64_t RTNAME(Ftell)(int unitNumber) {
     return -1;
   }
 }
+
+std::int32_t FORTRAN_PROCEDURE_NAME(fnum)(const int &unitNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return unit->fd();
+  } else {
+    return -1;
+  }
+}
+
 } // namespace io
 
-} // namespace Fortran::runtime
 } // extern "C"
+
+} // namespace Fortran::runtime

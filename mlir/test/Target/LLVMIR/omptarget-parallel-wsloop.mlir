@@ -37,7 +37,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 // CHECK-SAME:  #[[ATTRS1:[0-9]+]]
 // CHECK: call void @__kmpc_for_static_loop_4u(ptr addrspacecast (ptr addrspace(1) @[[GLOB]] to ptr),
 // CHECK-SAME:   ptr @[[LOOP_BODY_FUNC:.*]], ptr %[[LOO_BODY_FUNC_ARG:.*]], i32 10,
-// CHECK-SAME:   i32 %[[THREAD_NUM:.*]], i32 0)
+// CHECK-SAME:   i32 %[[THREAD_NUM:.*]], i8 0)
 
 // CHECK:      define internal void @[[LOOP_BODY_FUNC]](i32 %[[CNT:.*]], ptr %[[LOOP_BODY_ARG_PTR:.*]]) #[[ATTRS2:[0-9]+]] {
 

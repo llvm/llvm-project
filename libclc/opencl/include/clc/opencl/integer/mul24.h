@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_INTEGER_MUL24_H__
+#define __CLC_OPENCL_INTEGER_MUL24_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define __CLC_FUNCTION mul24
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/integer/gentype24.inc>
 
 #undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_INTEGER_MUL24_H__

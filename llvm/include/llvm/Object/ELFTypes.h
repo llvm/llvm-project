@@ -18,6 +18,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -831,7 +832,8 @@ struct BBAddrMap {
     bool BrProb : 1;
     bool MultiBBRange : 1;
     bool OmitBBEntries : 1;
-    bool CallsiteOffsets : 1;
+    bool CallsiteEndOffsets : 1;
+    bool BBHash : 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
@@ -844,7 +846,8 @@ struct BBAddrMap {
              (static_cast<uint8_t>(BrProb) << 2) |
              (static_cast<uint8_t>(MultiBBRange) << 3) |
              (static_cast<uint8_t>(OmitBBEntries) << 4) |
-             (static_cast<uint8_t>(CallsiteOffsets) << 5);
+             (static_cast<uint8_t>(CallsiteEndOffsets) << 5) |
+             (static_cast<uint8_t>(BBHash) << 6);
     }
 
     // Decodes from minimum bit width representation and validates no
@@ -853,7 +856,8 @@ struct BBAddrMap {
       Features Feat{
           static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
           static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),
-          static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5))};
+          static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5)),
+          static_cast<bool>(Val & (1 << 6))};
       if (Feat.encode() != Val)
         return createStringError(
             std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
@@ -863,10 +867,10 @@ struct BBAddrMap {
 
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      OmitBBEntries, CallsiteOffsets) ==
+                      OmitBBEntries, CallsiteEndOffsets, BBHash) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
                       Other.MultiBBRange, Other.OmitBBEntries,
-                      Other.CallsiteOffsets);
+                      Other.CallsiteEndOffsets, Other.BBHash);
     }
   };
 
@@ -917,18 +921,21 @@ struct BBAddrMap {
     uint32_t Size = 0;   // Size of the basic block.
     Metadata MD = {false, false, false, false,
                    false}; // Metdata for this basic block.
-    // Offsets of callsites (end of call instructions), relative to the basic
-    // block start.
-    SmallVector<uint32_t, 1> CallsiteOffsets;
+    // Offsets of end of call instructions, relative to the basic block start.
+    SmallVector<uint32_t, 1> CallsiteEndOffsets;
+    uint64_t Hash = 0; // Hash for this basic block.
 
     BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD,
-            SmallVector<uint32_t, 1> CallsiteOffsets)
+            SmallVector<uint32_t, 1> CallsiteEndOffsets, uint64_t Hash)
         : ID(ID), Offset(Offset), Size(Size), MD(MD),
-          CallsiteOffsets(std::move(CallsiteOffsets)) {}
+          CallsiteEndOffsets(std::move(CallsiteEndOffsets)), Hash(Hash) {}
+
+    UniqueBBID getID() const { return {ID, 0}; }
 
     bool operator==(const BBEntry &Other) const {
       return ID == Other.ID && Offset == Other.Offset && Size == Other.Size &&
-             MD == Other.MD && CallsiteOffsets == Other.CallsiteOffsets;
+             MD == Other.MD && CallsiteEndOffsets == Other.CallsiteEndOffsets &&
+             Hash == Other.Hash;
     }
 
     bool hasReturn() const { return MD.HasReturn; }

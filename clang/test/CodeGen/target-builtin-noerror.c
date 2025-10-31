@@ -32,15 +32,15 @@ int qq(void) {
 
 // Test that fma and fma4 are both separately and combined valid for an fma intrinsic.
 __m128 __attribute__((target("fma"))) fma_1(__m128 a, __m128 b, __m128 c) {
-  return __builtin_ia32_vfmaddps(a, b, c);
+  return __builtin_ia32_vfmaddsubps(a, b, c);
 }
 
 __m128 __attribute__((target("fma4"))) fma_2(__m128 a, __m128 b, __m128 c) {
-  return __builtin_ia32_vfmaddps(a, b, c);
+  return __builtin_ia32_vfmaddsubps(a, b, c);
 }
 
 __m128 __attribute__((target("fma,fma4"))) fma_3(__m128 a, __m128 b, __m128 c) {
-  return __builtin_ia32_vfmaddps(a, b, c);
+  return __builtin_ia32_vfmaddsubps(a, b, c);
 }
 
 void verifyfeaturestrings(void) {
@@ -141,10 +141,8 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("sm4");
   (void)__builtin_cpu_supports("apxf");
   (void)__builtin_cpu_supports("usermsr");
-  (void)__builtin_cpu_supports("avx10.1-256");
-  (void)__builtin_cpu_supports("avx10.1-512");
-  (void)__builtin_cpu_supports("avx10.2-256");
-  (void)__builtin_cpu_supports("avx10.2-512");
+  (void)__builtin_cpu_supports("avx10.1");
+  (void)__builtin_cpu_supports("avx10.2");
   (void)__builtin_cpu_supports("movrs");
 }
 
@@ -180,6 +178,8 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("lunarlake");
   (void)__builtin_cpu_is("clearwaterforest");
   (void)__builtin_cpu_is("pantherlake");
+  (void)__builtin_cpu_is("wildcatlake");
+  (void)__builtin_cpu_is("novalake");
   (void)__builtin_cpu_is("haswell");
   (void)__builtin_cpu_is("icelake-client");
   (void)__builtin_cpu_is("icelake-server");

@@ -12,73 +12,142 @@
 
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 
+#include <cmath>
+
 namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-std::optional<const RangeInfo *>
-ResourceRange::getOverlapping(const RangeInfo &Info) const {
-  MapT::const_iterator Interval = Intervals.find(Info.LowerBound);
-  if (!Interval.valid() || Info.UpperBound < Interval.start())
-    return std::nullopt;
-  return Interval.value();
+bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
+
+bool verifyVersion(uint32_t Version) {
+  return (Version == 1 || Version == 2 || Version == 3);
 }
 
-const RangeInfo *ResourceRange::lookup(uint32_t X) const {
-  return Intervals.lookup(X, nullptr);
+bool verifyRegisterValue(uint32_t RegisterValue) {
+  return RegisterValue != ~0U;
 }
 
-void ResourceRange::clear() { return Intervals.clear(); }
+// This Range is reserverved, therefore invalid, according to the spec
+// https://github.com/llvm/wg-hlsl/blob/main/proposals/0002-root-signature-in-clang.md#all-the-values-should-be-legal
+bool verifyRegisterSpace(uint32_t RegisterSpace) {
+  return !(RegisterSpace >= 0xFFFFFFF0);
+}
 
-std::optional<const RangeInfo *> ResourceRange::insert(const RangeInfo &Info) {
-  uint32_t LowerBound = Info.LowerBound;
-  uint32_t UpperBound = Info.UpperBound;
+bool verifyRootDescriptorFlag(uint32_t Version,
+                              dxbc::RootDescriptorFlags FlagsVal) {
+  using FlagT = dxbc::RootDescriptorFlags;
+  FlagT Flags = FlagT(FlagsVal);
+  if (Version == 1)
+    return Flags == FlagT::DataVolatile;
 
-  std::optional<const RangeInfo *> Res = std::nullopt;
-  MapT::iterator Interval = Intervals.begin();
+  // The data-specific flags are mutually exclusive.
+  FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
+                    FlagT::DataStaticWhileSetAtExecute;
 
-  while (true) {
-    if (UpperBound < LowerBound)
-      break;
+  if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
+    return false;
 
-    Interval.advanceTo(LowerBound);
-    if (!Interval.valid()) // No interval found
-      break;
+  // Only a data flag or no flags is valid
+  return (Flags | DataFlags) == DataFlags;
+}
 
-    // Let Interval = [x;y] and [LowerBound;UpperBound] = [a;b] and note that
-    // a <= y implicitly from Intervals.find(LowerBound)
-    if (UpperBound < Interval.start())
-      break; // found interval does not overlap with inserted one
+bool verifyDescriptorRangeFlag(uint32_t Version, dxil::ResourceClass Type,
+                               dxbc::DescriptorRangeFlags Flags) {
+  using FlagT = dxbc::DescriptorRangeFlags;
+  const bool IsSampler = (Type == dxil::ResourceClass::Sampler);
 
-    if (!Res.has_value()) // Update to be the first found intersection
-      Res = Interval.value();
-
-    if (Interval.start() <= LowerBound && UpperBound <= Interval.stop()) {
-      // x <= a <= b <= y implies that [a;b] is covered by [x;y]
-      //  -> so we don't need to insert this, report an overlap
-      return Res;
-    } else if (LowerBound <= Interval.start() &&
-               Interval.stop() <= UpperBound) {
-      // a <= x <= y <= b implies that [x;y] is covered by [a;b]
-      //  -> so remove the existing interval that we will cover with the
-      //  overwrite
-      Interval.erase();
-    } else if (LowerBound < Interval.start() && UpperBound <= Interval.stop()) {
-      // a < x <= b <= y implies that [a; x] is not covered but [x;b] is
-      //  -> so set b = x - 1 such that [a;x-1] is now the interval to insert
-      UpperBound = Interval.start() - 1;
-    } else if (Interval.start() <= LowerBound && Interval.stop() < UpperBound) {
-      // a < x <= b <= y implies that [y; b] is not covered but [a;y] is
-      //  -> so set a = y + 1 such that [y+1;b] is now the interval to insert
-      LowerBound = Interval.stop() + 1;
-    }
+  if (Version == 1) {
+    // Since the metadata is unversioned, we expect to explicitly see the values
+    // that map to the version 1 behaviour here.
+    if (IsSampler)
+      return Flags == FlagT::DescriptorsVolatile;
+    return Flags == (FlagT::DataVolatile | FlagT::DescriptorsVolatile);
   }
 
-  assert(LowerBound <= UpperBound && "Attempting to insert an empty interval");
-  Intervals.insert(LowerBound, UpperBound, &Info);
-  return Res;
+  // The data-specific flags are mutually exclusive.
+  FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
+                    FlagT::DataStaticWhileSetAtExecute;
+
+  if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
+    return false;
+
+  // The descriptor-specific flags are mutually exclusive.
+  FlagT DescriptorFlags = FlagT::DescriptorsStaticKeepingBufferBoundsChecks |
+                          FlagT::DescriptorsVolatile;
+  if (popcount(llvm::to_underlying(Flags & DescriptorFlags)) > 1)
+    return false;
+
+  // For volatile descriptors, DATA_is never valid.
+  if ((Flags & FlagT::DescriptorsVolatile) == FlagT::DescriptorsVolatile) {
+    FlagT Mask = FlagT::DescriptorsVolatile;
+    if (!IsSampler) {
+      Mask |= FlagT::DataVolatile;
+      Mask |= FlagT::DataStaticWhileSetAtExecute;
+    }
+    return (Flags & ~Mask) == FlagT::None;
+  }
+
+  // For "KEEPING_BUFFER_BOUNDS_CHECKS" descriptors,
+  // the other data-specific flags may all be set.
+  if ((Flags & FlagT::DescriptorsStaticKeepingBufferBoundsChecks) ==
+      FlagT::DescriptorsStaticKeepingBufferBoundsChecks) {
+    FlagT Mask = FlagT::DescriptorsStaticKeepingBufferBoundsChecks;
+    if (!IsSampler) {
+      Mask |= FlagT::DataVolatile;
+      Mask |= FlagT::DataStatic;
+      Mask |= FlagT::DataStaticWhileSetAtExecute;
+    }
+    return (Flags & ~Mask) == FlagT::None;
+  }
+
+  // When no descriptor flag is set, any data flag is allowed.
+  FlagT Mask = FlagT::None;
+  if (!IsSampler) {
+    Mask |= FlagT::DataVolatile;
+    Mask |= FlagT::DataStaticWhileSetAtExecute;
+    Mask |= FlagT::DataStatic;
+  }
+  return (Flags & ~Mask) == FlagT::None;
 }
 
+bool verifyStaticSamplerFlags(uint32_t Version,
+                              dxbc::StaticSamplerFlags Flags) {
+  if (Version <= 2)
+    return Flags == dxbc::StaticSamplerFlags::None;
+
+  dxbc::StaticSamplerFlags Mask =
+      dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
+      dxbc::StaticSamplerFlags::UintBorderColor |
+      dxbc::StaticSamplerFlags::None;
+  return (Flags | Mask) == Mask;
+}
+
+bool verifyNumDescriptors(uint32_t NumDescriptors) {
+  return NumDescriptors > 0;
+}
+
+bool verifyMipLODBias(float MipLODBias) {
+  return MipLODBias >= -16.f && MipLODBias <= 15.99f;
+}
+
+bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
+  return MaxAnisotropy <= 16u;
+}
+
+bool verifyLOD(float LOD) { return !std::isnan(LOD); }
+
+bool verifyNoOverflowedOffset(uint64_t Offset) {
+  return Offset <= std::numeric_limits<uint32_t>::max();
+}
+
+uint64_t computeRangeBound(uint64_t Offset, uint32_t Size) {
+  assert(0 < Size && "Must be a non-empty range");
+  if (Size == NumDescriptorsUnbounded)
+    return NumDescriptorsUnbounded;
+
+  return Offset + uint64_t(Size) - 1;
+}
 } // namespace rootsig
 } // namespace hlsl
 } // namespace llvm

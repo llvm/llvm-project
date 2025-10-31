@@ -323,6 +323,11 @@ private:
   llvm::MapVector<const Module *, PrebuiltModuleDep> DirectPrebuiltModularDeps;
   /// Working set of direct modular dependencies.
   llvm::SetVector<const Module *> DirectModularDeps;
+  /// Working set of direct modular dependencies, as they were imported.
+  llvm::SmallPtrSet<const Module *, 32> DirectImports;
+  /// All direct and transitive visible modules.
+  llvm::StringSet<> VisibleModules;
+
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// A Clang invocation that's based on the original TU invocation and that has
@@ -336,6 +341,9 @@ private:
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);
+
+  /// Computes all visible modules resolved from direct imports.
+  void addVisibleModules();
 
   /// Adds \p Path to \c FileDeps, making it absolute if necessary.
   void addFileDep(StringRef Path);

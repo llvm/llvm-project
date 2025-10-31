@@ -2833,7 +2833,8 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
+    if (FD->isNoReturn() || FD->isAnalyzerNoReturn() ||
+        C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
@@ -4515,10 +4516,13 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   //
   // Note: We add a successor to a switch that is considered covered yet has no
   //       case statements if the enumeration has no enumerators.
+  //       We also consider this successor reachable if
+  //       BuildOpts.SwitchReqDefaultCoveredEnum is true.
   bool SwitchAlwaysHasSuccessor = false;
   SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
-  SwitchAlwaysHasSuccessor |= Terminator->isAllEnumCasesCovered() &&
-                              Terminator->getSwitchCaseList();
+  SwitchAlwaysHasSuccessor |=
+      !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
+      Terminator->isAllEnumCasesCovered() && Terminator->getSwitchCaseList();
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
                !SwitchAlwaysHasSuccessor);
 

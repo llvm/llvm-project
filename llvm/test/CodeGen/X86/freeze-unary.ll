@@ -70,6 +70,86 @@ define <2 x i64> @freeze_zext_vec(<2 x i16> %a0) nounwind {
   ret <2 x i64> %z
 }
 
+define i32 @freeze_abs(i32 %a0) nounwind {
+; X86-LABEL: freeze_abs:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.abs.i32(i32 %a0, i1 0)
+  %f = freeze i32 %x
+  %r = call i32 @llvm.abs.i32(i32 %f, i1 0)
+  ret i32 %r
+}
+
+define <4 x i32> @freeze_abs_vec(<4 x i32> %a0) nounwind {
+; X86-LABEL: freeze_abs_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrad $31, %xmm1
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    psubd %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    pabsd %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a0, i1 0)
+  %f = freeze <4 x i32> %x
+  %r = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %f, i1 0)
+  ret <4 x i32> %r
+}
+
+define i32 @freeze_abs_undef(i32 %a0) nounwind {
+; X86-LABEL: freeze_abs_undef:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs_undef:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %edi, %eax
+; X64-NEXT:    retq
+  %x = call i32 @llvm.abs.i32(i32 %a0, i1 -1)
+  %f = freeze i32 %x
+  %r = call i32 @llvm.abs.i32(i32 %f, i1 -1)
+  ret i32 %r
+}
+
+define <4 x i32> @freeze_abs_undef_vec(<4 x i32> %a0) nounwind {
+; X86-LABEL: freeze_abs_undef_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrad $31, %xmm1
+; X86-NEXT:    pxor %xmm1, %xmm0
+; X86-NEXT:    psubd %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_abs_undef_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    pabsd %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %a0, i1 -1)
+  %f = freeze <4 x i32> %x
+  %r = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %f, i1 -1)
+  ret <4 x i32> %r
+}
+
 define i32 @freeze_bswap(i32 %a0) nounwind {
 ; X86-LABEL: freeze_bswap:
 ; X86:       # %bb.0:

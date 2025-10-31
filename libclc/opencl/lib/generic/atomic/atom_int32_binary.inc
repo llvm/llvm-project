@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 #include <clc/utils.h>
 
 #define __CLC_ATOM_IMPL(AS, TYPE)                                              \

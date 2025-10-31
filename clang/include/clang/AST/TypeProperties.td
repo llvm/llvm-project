@@ -379,38 +379,59 @@ let Class = AtomicType in {
 }
 
 let Class = UnresolvedUsingType in {
-  def : Property<"declaration", DeclRef> {
-    let Read = [{ node->getDecl() }];
+  def : Property<"IsCanonical", Bool> {
+    let Read = [{ node->isCanonicalUnqualified() }];
   }
-
+  def : Property<"Keyword", ElaboratedTypeKeyword> {
+    let Conditional = [{ !IsCanonical }];
+    let Read = [{ node->getKeyword() }];
+  }
+  def : Property<"Qualifier", NestedNameSpecifier> {
+    let Conditional = [{ !IsCanonical }];
+    let Read = [{ node->getQualifier() }];
+  }
+  def : Property<"D", DeclRef> { let Read = [{ node->getDecl() }]; }
   def : Creator<[{
-    return ctx.getUnresolvedUsingType(cast<UnresolvedUsingTypenameDecl>(declaration));
+    auto *UD = cast<UnresolvedUsingTypenameDecl>(D);
+    return IsCanonical ? ctx.getCanonicalUnresolvedUsingType(UD) : ctx.getUnresolvedUsingType(*Keyword, *Qualifier, UD);
   }]>;
 }
 
 let Class = UsingType in {
-  def : Property<"foundDeclaration", UsingShadowDeclRef> {
-    let Read = [{ node->getFoundDecl() }];
+  def : Property<"Keyword", ElaboratedTypeKeyword> {
+    let Read = [{ node->getKeyword() }];
   }
-  def : Property<"underlyingType", QualType> {
-    let Read = [{ node->getUnderlyingType() }];
+  def : Property<"Qualifier", NestedNameSpecifier> {
+    let Read = [{ node->getQualifier() }];
   }
-
+  def : Property<"D", UsingShadowDeclRef> { let Read = [{ node->getDecl() }]; }
+  def : Property<"UnderlyingType", QualType> {
+    let Read = [{ node->desugar() }];
+  }
   def : Creator<[{
-    return ctx.getUsingType(foundDeclaration, underlyingType);
+    return ctx.getUsingType(Keyword, Qualifier, D, UnderlyingType);
   }]>;
 }
 
 let Class = TypedefType in {
+  def : Property<"Keyword", ElaboratedTypeKeyword> {
+    let Read = [{ node->getKeyword() }];
+  }
+  def : Property<"Qualifier", NestedNameSpecifier> {
+    let Read = [{ node->getQualifier() }];
+  }
   def : Property<"declaration", DeclRef> {
     let Read = [{ node->getDecl() }];
   }
-  def : Property<"underlyingType", QualType> {
+  def : Property<"UnderlyingType", QualType> {
     let Read = [{ node->desugar() }];
+  }
+  def : Property<"TypeMatchesDecl", Bool> {
+    let Read = [{ node->typeMatchesDecl() }];
   }
 
   def : Creator<[{
-    return ctx.getTypedefType(cast<TypedefNameDecl>(declaration), underlyingType);
+    return ctx.getTypedefType(Keyword, Qualifier, cast<TypedefNameDecl>(declaration), UnderlyingType, TypeMatchesDecl);
   }]>;
 }
 
@@ -495,9 +516,9 @@ let Class = AutoType in {
   def : Property<"keyword", AutoTypeKeyword> {
     let Read = [{ node->getKeyword() }];
   }
-  def : Property<"typeConstraintConcept", Optional<ConceptDeclRef>> {
+  def : Property<"typeConstraintConcept", Optional<TemplateDeclRef>> {
     let Read = [{ makeOptionalFromPointer(
-        const_cast<const ConceptDecl*>(node->getTypeConstraintConcept())) }];
+        node->getTypeConstraintConcept()) }];
   }
   def : Property<"typeConstraintArguments", Array<TemplateArgument>> {
     let Read = [{ node->getTypeConstraintArguments() }];
@@ -520,6 +541,9 @@ let Class = AutoType in {
 }
 
 let Class = DeducedTemplateSpecializationType in {
+  def : Property<"keyword", ElaboratedTypeKeyword> {
+    let Read = [{ node->getKeyword() }];
+  }
   def : Property<"templateName", Optional<TemplateName>> {
     let Read = [{ makeOptionalFromNullable(node->getTemplateName()) }];
   }
@@ -533,97 +557,42 @@ let Class = DeducedTemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getDeducedTemplateSpecializationType(
+    return ctx.getDeducedTemplateSpecializationType(keyword,
                                      makeNullableFromOptional(templateName),
                                      deducedType, dependent);
   }]>;
 }
 
 let Class = TagType in {
-  def : Property<"dependent", Bool> {
-    let Read = [{ node->isDependentType() }];
+  def : Property<"IsCanonical", Bool> {
+    let Read = [{ node->isCanonicalUnqualified() }];
   }
-  def : Property<"declaration", DeclRef> {
-    // We don't know which declaration was originally referenced here, and we
-    // cannot reference a declaration that follows the use (because that can
-    // introduce deserialization cycles), so conservatively generate a
-    // reference to the first declaration.
-    // FIXME: If this is a reference to a class template specialization, that
-    // can still introduce a deserialization cycle.
-    let Read = [{ node->getDecl()->getCanonicalDecl() }];
+  def : Property<"Keyword", ElaboratedTypeKeyword> {
+    let Conditional = [{ !IsCanonical }];
+    let Read = [{ node->getKeyword() }];
   }
+  def : Property<"Qualifier", NestedNameSpecifier> {
+    let Conditional = [{ !IsCanonical }];
+    let Read = [{ node->getQualifier() }];
+  }
+  def : Property<"TD", TagDeclRef> { let Read = [{ node->getDecl() }]; }
 }
 
 let Class = EnumType in {
+  def : Property<"OwnsTag", Bool> { let Read = [{ node->isTagOwned() }]; }
   def : Creator<[{
-    QualType result = ctx.getEnumType(cast<EnumDecl>(declaration));
-    if (dependent)
-      const_cast<Type *>(result.getTypePtr())
-          ->addDependence(TypeDependence::DependentInstantiation);
-    return result;
+    return IsCanonical ? ctx.getCanonicalTagType(TD) : ctx.getTagType(*Keyword, *Qualifier, TD, OwnsTag);
   }]>;
 }
-
 let Class = RecordType in {
+  def : Property<"OwnsTag", Bool> { let Read = [{ node->isTagOwned() }]; }
   def : Creator<[{
-    auto record = cast<RecordDecl>(declaration);
-    QualType result = ctx.getRecordType(record);
-    if (dependent)
-      const_cast<Type *>(result.getTypePtr())
-          ->addDependence(TypeDependence::DependentInstantiation);
-    return result;
+    return IsCanonical ? ctx.getCanonicalTagType(TD) : ctx.getTagType(*Keyword, *Qualifier, TD, OwnsTag);
   }]>;
 }
-
-let Class = ElaboratedType in {
-  def : Property<"keyword", ElaboratedTypeKeyword> {
-    let Read = [{ node->getKeyword() }];
-  }
-  def : Property<"qualifier", NestedNameSpecifier> {
-    let Read = [{ node->getQualifier() }];
-  }
-  def : Property<"namedType", QualType> {
-    let Read = [{ node->getNamedType() }];
-  }
-  def : Property<"ownedTag", Optional<TagDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(
-                    const_cast<const TagDecl *>(node->getOwnedTagDecl())) }];
-  }
-
-  def : Creator<[{
-    return ctx.getElaboratedType(keyword, qualifier, namedType,
-                                 makePointerFromOptional(ownedTag));
-  }]>;
-}
-
 let Class = InjectedClassNameType in {
-  def : Property<"declaration", DeclRef> {
-    // FIXME: drilling down to the canonical declaration is what the
-    // existing serialization code was doing, but it's not clear why.
-    let Read = [{ node->getDecl()->getCanonicalDecl() }];
-  }
-  def : Property<"injectedSpecializationType", QualType> {
-    let Read = [{ node->getInjectedSpecializationType() }];
-  }
-
   def : Creator<[{
-    // FIXME: ASTContext::getInjectedClassNameType is not currently suitable
-    // for AST reading, too much interdependencies.
-    const Type *T = nullptr;
-    auto typeDecl = cast<CXXRecordDecl>(declaration);
-    for (auto *DI = typeDecl; DI; DI = DI->getPreviousDecl()) {
-      if (const Type *existing = DI->getTypeForDecl()) {
-        T = existing;
-        break;
-      }
-    }
-    if (!T) {
-      T = new (ctx, TypeAlignment)
-            InjectedClassNameType(typeDecl, injectedSpecializationType);
-      for (auto *DI = typeDecl; DI; DI = DI->getPreviousDecl())
-        DI->setTypeForDecl(T);
-    }
-    return QualType(T, 0);
+    return IsCanonical ? ctx.getCanonicalTagType(TD) : ctx.getTagType(*Keyword, *Qualifier, TD, /*OwnsTag=*/false);
   }]>;
 }
 
@@ -693,6 +662,9 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"rawBuffer", Bool> {
     let Read = [{ node->getAttrs().RawBuffer }];
   }
+  def : Property<"isCounter", Bool> {
+    let Read = [{ node->getAttrs().IsCounter }];
+  }
   def : Property<"wrappedTy", QualType> {
     let Read = [{ node->getWrappedType() }];
   }
@@ -700,7 +672,7 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer);
+    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer, isCounter);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }
@@ -741,6 +713,9 @@ let Class = DependentAddressSpaceType in {
 }
 
 let Class = TemplateSpecializationType in {
+  def : Property<"keyword", ElaboratedTypeKeyword> {
+    let Read = [{ node->getKeyword() }];
+  }
   def : Property<"templateName", TemplateName> {
     let Read = [{ node->getTemplateName() }];
   }
@@ -753,42 +728,7 @@ let Class = TemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getTemplateSpecializationType(templateName, args, {}, UnderlyingType);
-  }]>;
-}
-
-let Class = DependentTemplateSpecializationType in {
-  def : ReadHelper<[{
-    const auto &dtn = node->getDependentTemplateName();
-    auto name = dtn.getName();
-  }]>;
-
-  def : Property<"qualifier", NestedNameSpecifier> {
-    let Read = [{ dtn.getQualifier() }];
-  }
-  def : Property<"identifier", Optional<Identifier>> {
-    let Read = [{ makeOptionalFromPointer(name.getIdentifier()) }];
-  }
-  def : Property<"operatorKind", OverloadedOperatorKind> {
-    let Conditional = [{ !identifier }];
-    let Read = [{ name.getOperator() }];
-  }
-  def : Property<"HasTemplateKeyword", Bool> {
-    let Read = [{ dtn.hasTemplateKeyword() }];
-  }
-
-  def : Property<"keyword", ElaboratedTypeKeyword> {
-    let Read = [{ node->getKeyword() }];
-  }
-  def : Property<"templateArguments", Array<TemplateArgument>> {
-    let Read = [{ node->template_arguments() }];
-  }
-
-  def : Creator<[{
-    DependentTemplateStorage S(qualifier, identifier ? IdentifierOrOverloadedOperator(*identifier) :
-                                                       IdentifierOrOverloadedOperator(*operatorKind),
-                               HasTemplateKeyword);
-    return ctx.getDependentTemplateSpecializationType(keyword, S, templateArguments);
+    return ctx.getTemplateSpecializationType(keyword, templateName, args, {}, UnderlyingType);
   }]>;
 }
 
@@ -848,6 +788,12 @@ let Class = PackExpansionType in {
   }]>;
 }
 
+let Class = SubstPackType in {
+  def : Property<"replacementPack", TemplateArgument> {
+    let Read = [{ node->getArgumentPack() }];
+  }
+}
+
 let Class = SubstTemplateTypeParmPackType in {
   def : Property<"associatedDecl", DeclRef> {
     let Read = [{ node->getAssociatedDecl() }];
@@ -855,16 +801,17 @@ let Class = SubstTemplateTypeParmPackType in {
   def : Property<"Index", UInt32> {
     let Read = [{ node->getIndex() }];
   }
-  def : Property<"Final", Bool> {
-    let Read = [{ node->getFinal() }];
-  }
-  def : Property<"replacementPack", TemplateArgument> {
-    let Read = [{ node->getArgumentPack() }];
-  }
+  def : Property<"Final", Bool> { let Read = [{ node->getFinal() }]; }
 
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmPackType(
                         associatedDecl, Index, Final, replacementPack);
+  }]>;
+}
+
+let Class = SubstBuiltinTemplatePackType in {
+  def : Creator<[{
+    return ctx.getSubstBuiltinTemplatePack(replacementPack);
   }]>;
 }
 
@@ -1026,5 +973,14 @@ let Class = DependentBitIntType in {
   }
   def : Creator<[{
     return ctx.getDependentBitIntType(isUnsigned, numBitsExpr);
+  }]>;
+}
+
+let Class = PredefinedSugarType in {
+  def : Property<"kind", UInt32> {
+    let Read = [{ static_cast<uint32_t>(node->getKind()) }];
+  }
+  def : Creator<[{
+    return ctx.getPredefinedSugarType(static_cast<PredefinedSugarType::Kind>(kind));
   }]>;
 }

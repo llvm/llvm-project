@@ -410,34 +410,34 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 define <4 x float> @v4f32_estimate2(<4 x float> %x) #5 {
 ; SSE-LABEL: v4f32_estimate2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    rsqrtps %xmm0, %xmm2
-; SSE-NEXT:    mulps %xmm0, %xmm2
-; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
-; SSE-NEXT:    cmpleps %xmm0, %xmm1
-; SSE-NEXT:    andps %xmm2, %xmm1
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; SSE-NEXT:    andps %xmm0, %xmm1
+; SSE-NEXT:    movaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; SSE-NEXT:    cmpleps %xmm1, %xmm2
+; SSE-NEXT:    rsqrtps %xmm0, %xmm1
+; SSE-NEXT:    mulps %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: v4f32_estimate2:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vrsqrtps %xmm0, %xmm1
-; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
-; AVX1-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vcmpleps %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vrsqrtps %xmm0, %xmm2
+; AVX1-NEXT:    vmulps %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: v4f32_estimate2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
-; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm1
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
-; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
-; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
-; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vcmpleps %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vrsqrtps %xmm0, %xmm2
+; AVX512-NEXT:    vmulps %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call fast <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
   ret <4 x float> %sqrt
@@ -1012,15 +1012,15 @@ define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
   ret double %sqrt_fast
 }
 
-attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="!sqrtf,!vec-sqrtf,!divf,!vec-divf" }
-attributes #1 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" }
+attributes #0 = { "reciprocal-estimates"="!sqrtf,!vec-sqrtf,!divf,!vec-divf" }
+attributes #1 = { "reciprocal-estimates"="sqrt,vec-sqrt" }
 attributes #2 = { nounwind readnone }
-attributes #3 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,ieee" }
-attributes #4 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="ieee,preserve-sign" }
-attributes #5 = { "unsafe-fp-math"="true" "reciprocal-estimates"="all:0" }
-attributes #6 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" }
+attributes #3 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,ieee" }
+attributes #4 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="ieee,preserve-sign" }
+attributes #5 = { "reciprocal-estimates"="all:0" }
+attributes #6 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" }
 
-; Attributes without "unsafe-fp-math"="true"
+; Attributes without
 ; TODO: Merge with previous attributes when this attribute can be deleted.
 attributes #7 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,ieee" } ; #3
 attributes #8 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" } ; #6

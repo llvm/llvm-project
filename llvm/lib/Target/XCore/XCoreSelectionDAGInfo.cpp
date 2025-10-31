@@ -33,11 +33,10 @@ SDValue XCoreSelectionDAGInfo::EmitTargetCodeForMemcpy(
       DAG.MaskedValueIsZero(Size, APInt(SizeBitWidth, 3))) {
     const TargetLowering &TLI = *DAG.getSubtarget().getTargetLowering();
     TargetLowering::ArgListTy Args;
-    TargetLowering::ArgListEntry Entry;
-    Entry.Ty = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
-    Entry.Node = Dst; Args.push_back(Entry);
-    Entry.Node = Src; Args.push_back(Entry);
-    Entry.Node = Size; Args.push_back(Entry);
+    Type *ArgTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
+    Args.emplace_back(Dst, ArgTy);
+    Args.emplace_back(Src, ArgTy);
+    Args.emplace_back(Size, ArgTy);
 
     const char *MemcpyAlign4Name = TLI.getLibcallName(RTLIB::MEMCPY_ALIGN_4);
     CallingConv::ID CC = TLI.getLibcallCallingConv(RTLIB::MEMCPY_ALIGN_4);

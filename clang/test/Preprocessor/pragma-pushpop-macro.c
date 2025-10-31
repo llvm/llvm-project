@@ -56,3 +56,6 @@ int P;
 // CHECK: int pmy2 = 4
 // CHECK: int Q;
 // CHECK: int P;
+
+#pragma push_macro("")
+#pragma pop_macro("")

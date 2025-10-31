@@ -77,7 +77,7 @@ void CallingConvEmitter::run(raw_ostream &O) {
       O << CC->getName() << "(unsigned ValNo, MVT ValVT,\n"
         << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
         << std::string(Pad, ' ')
-        << "ISD::ArgFlagsTy ArgFlags, CCState &State);\n";
+        << "ISD::ArgFlagsTy ArgFlags, Type *OrigTy, CCState &State);\n";
     }
   }
 
@@ -115,7 +115,8 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
   }
   O << CurrentAction << "(unsigned ValNo, MVT ValVT,\n"
     << std::string(Pad, ' ') << "MVT LocVT, CCValAssign::LocInfo LocInfo,\n"
-    << std::string(Pad, ' ') << "ISD::ArgFlagsTy ArgFlags, CCState &State) {\n";
+    << std::string(Pad, ' ') << "ISD::ArgFlagsTy ArgFlags, Type *OrigTy, "
+    << "CCState &State) {\n";
   // Emit all of the actions, in order.
   for (unsigned I = 0, E = CCActions->size(); I != E; ++I) {
     const Record *Action = CCActions->getElementAsRecord(I);
@@ -227,7 +228,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
   if (Action->isSubClassOf("CCDelegateTo")) {
     const Record *CC = Action->getValueAsDef("CC");
     O << Indent << "if (!" << CC->getName()
-      << "(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State))\n"
+      << "(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State))\n"
       << Indent + 2 << "return false;\n";
     DelegateToMap[CurrentAction].insert(CC->getName().str());
   } else if (Action->isSubClassOf("CCAssignToReg") ||

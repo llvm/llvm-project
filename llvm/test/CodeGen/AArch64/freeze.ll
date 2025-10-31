@@ -3,6 +3,10 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for freeze_v2i8
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_uhadd
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_urhadd
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_shadd
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for freeze_srhadd
 
 %struct.T = type { i32, i32 }
 
@@ -394,4 +398,136 @@ define i64 @freeze_array() {
   %v2 = extractvalue [2 x i64] %y1, 1
   %t1 = add i64 %v1, %v2
   ret i64 %t1
+}
+
+define <8 x i16> @freeze_abdu(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-SD-LABEL: freeze_abdu:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uaba v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_abdu:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    uabd v1.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
+  %d = call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %f = freeze <8 x i16> %d
+  %r = add <8 x i16> %a, %f
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-SD-LABEL: freeze_abds:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    saba v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_abds:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sabd v1.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
+  %d = call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %a, <8 x i16> %b)
+  %f = freeze <8 x i16> %d
+  %r = add <8 x i16> %a, %f
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @freeze_uhadd(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_uhadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #15
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %m0 = and <8 x i16> %a0, splat (i16 15)
+  %m1 = and <8 x i16> %a1, splat (i16 15)
+  %avg = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %m0, <8 x i16> %m1)
+  %frozen = freeze <8 x i16> %avg
+  %masked = and <8 x i16> %frozen, splat (i16 31)
+  ret <8 x i16> %masked
+}
+
+define <8 x i16> @freeze_urhadd(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_urhadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.8h, #15
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %m0 = and <8 x i16> %a0, splat (i16 15)
+  %m1 = and <8 x i16> %a1, splat (i16 15)
+  %avg = call <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16> %m0, <8 x i16> %m1)
+  %frozen = freeze <8 x i16> %avg
+  %masked = and <8 x i16> %frozen, splat (i16 31)
+  ret <8 x i16> %masked
+}
+
+define <8 x i16> @freeze_shadd(<8 x i8> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_shadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %x0 = sext <8 x i8> %a0 to <8 x i16>
+  %x1 = ashr <8 x i16> %a1, splat (i16 8)
+  %avg = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
+  %frozen = freeze <8 x i16> %avg
+  %trunc = trunc <8 x i16> %frozen to <8 x i8>
+  %sext = sext <8 x i8> %trunc to <8 x i16>
+  ret <8 x i16> %sext
+}
+
+define <8 x i16> @freeze_srhadd(<8 x i8> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: freeze_srhadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %x0 = sext <8 x i8> %a0 to <8 x i16>
+  %x1 = ashr <8 x i16> %a1, splat (i16 8)
+  %avg = call <8 x i16> @llvm.aarch64.neon.srhadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
+  %frozen = freeze <8 x i16> %avg
+  %trunc = trunc <8 x i16> %frozen to <8 x i8>
+  %sext = sext <8 x i8> %trunc to <8 x i16>
+  ret <8 x i16> %sext
+}
+
+define i32 @freeze_scmp(i32 %a0) nounwind {
+; CHECK-LABEL: freeze_scmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    cmp w8, w0
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-NEXT:    cmp wzr, w8
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    csinv w0, w8, wzr, ge
+; CHECK-NEXT:    ret
+  %x = call i32 @llvm.scmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.scmp.i32(i32 0, i32 %y)
+  ret i32 %z
+}
+
+define i32 @freeze_ucmp(i32 %a0) nounwind {
+; CHECK-LABEL: freeze_ucmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #2 // =0x2
+; CHECK-NEXT:    cmp w8, w0
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    csinv w8, w8, wzr, hs
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    csinv w0, w8, wzr, hs
+; CHECK-NEXT:    ret
+  %x = call i32 @llvm.ucmp.i32(i32 2, i32 %a0)
+  %y = freeze i32 %x
+  %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
+  ret i32 %z
 }

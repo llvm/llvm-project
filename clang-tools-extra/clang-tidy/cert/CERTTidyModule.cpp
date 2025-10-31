@@ -1,4 +1,4 @@
-//===--- CERTTidyModule.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
+#include "../bugprone/CommandProcessorCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -17,6 +18,8 @@
 #include "../bugprone/SizeofExpressionCheck.h"
 #include "../bugprone/SpuriouslyWakeUpFunctionsCheck.h"
 #include "../bugprone/SuspiciousMemoryComparisonCheck.h"
+#include "../bugprone/ThrowingStaticInitializationCheck.h"
+#include "../bugprone/UncheckedStringToNumberConversionCheck.h"
 #include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/UnsafeFunctionsCheck.h"
 #include "../bugprone/UnusedReturnValueCheck.h"
@@ -26,10 +29,11 @@
 #include "../misc/NonCopyableObjects.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
+#include "../modernize/AvoidSetjmpLongjmpCheck.h"
+#include "../modernize/AvoidVariadicFunctionsCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
 #include "../readability/EnumInitialValueCheck.h"
 #include "../readability/UppercaseLiteralSuffixCheck.h"
-#include "CommandProcessorCheck.h"
 #include "DefaultOperatorNewAlignmentCheck.h"
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
@@ -37,17 +41,13 @@
 #include "MutatingCopyCheck.h"
 #include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
-#include "SetLongJmpCheck.h"
-#include "StaticObjectExceptionCheck.h"
-#include "StrToNumCheck.h"
 #include "ThrownExceptionTypeCheck.h"
-#include "VariadicFunctionDefCheck.h"
 
 namespace {
 
 // Checked functions for cert-err33-c.
-// The following functions are deliberately excluded because they can be called
-// with NULL argument and in this case the check is not applicable:
+// The following functions are deliberately excluded because they can be
+// called with NULL argument and in this case the check is not applicable:
 // `mblen, mbrlen, mbrtowc, mbtowc, wctomb, wctomb_s`.
 // FIXME: The check can be improved to handle such cases.
 const llvm::StringRef CertErr33CCheckedFunctions = "^::aligned_alloc$;"
@@ -245,7 +245,8 @@ public:
         .registerCheck<bugprone::PointerArithmeticOnPolymorphicObjectCheck>(
             "cert-ctr56-cpp");
     // DCL
-    CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
+    CheckFactories.registerCheck<modernize::AvoidVariadicFunctionsCheck>(
+        "cert-dcl50-cpp");
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl51-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
@@ -256,8 +257,10 @@ public:
     // ERR
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err09-cpp");
-    CheckFactories.registerCheck<SetLongJmpCheck>("cert-err52-cpp");
-    CheckFactories.registerCheck<StaticObjectExceptionCheck>("cert-err58-cpp");
+    CheckFactories.registerCheck<modernize::AvoidSetjmpLongjmpCheck>(
+        "cert-err52-cpp");
+    CheckFactories.registerCheck<bugprone::ThrowingStaticInitializationCheck>(
+        "cert-err58-cpp");
     CheckFactories.registerCheck<ThrownExceptionTypeCheck>("cert-err60-cpp");
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
@@ -293,11 +296,14 @@ public:
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
         "cert-dcl37-c");
     // ENV
-    CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
+    CheckFactories.registerCheck<bugprone::CommandProcessorCheck>(
+        "cert-env33-c");
     // ERR
     CheckFactories.registerCheck<bugprone::UnusedReturnValueCheck>(
         "cert-err33-c");
-    CheckFactories.registerCheck<StrToNumCheck>("cert-err34-c");
+    CheckFactories
+        .registerCheck<bugprone::UncheckedStringToNumberConversionCheck>(
+            "cert-err34-c");
     // EXP
     CheckFactories.registerCheck<bugprone::SuspiciousMemoryComparisonCheck>(
         "cert-exp42-c");

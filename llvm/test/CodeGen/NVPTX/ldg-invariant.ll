@@ -134,13 +134,13 @@ define i8 @ld_global_v8i8(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v8i8_param_0];
 ; CHECK-NEXT:    ld.global.nc.v2.b32 {%r1, %r2}, [%rd1];
-; CHECK-NEXT:    bfe.u32 %r3, %r2, 16, 8;
+; CHECK-NEXT:    prmt.b32 %r3, %r2, 0, 0x7772U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r3;
-; CHECK-NEXT:    bfe.u32 %r4, %r2, 0, 8;
+; CHECK-NEXT:    prmt.b32 %r4, %r2, 0, 0x7770U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs2, %r4;
-; CHECK-NEXT:    bfe.u32 %r5, %r1, 16, 8;
+; CHECK-NEXT:    prmt.b32 %r5, %r1, 0, 0x7772U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r5;
-; CHECK-NEXT:    bfe.u32 %r6, %r1, 0, 8;
+; CHECK-NEXT:    prmt.b32 %r6, %r1, 0, 0x7770U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs4, %r6;
 ; CHECK-NEXT:    add.s16 %rs5, %rs4, %rs3;
 ; CHECK-NEXT:    add.s16 %rs6, %rs2, %rs1;
@@ -169,21 +169,21 @@ define i8 @ld_global_v16i8(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v16i8_param_0];
 ; CHECK-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; CHECK-NEXT:    bfe.u32 %r5, %r4, 16, 8;
+; CHECK-NEXT:    prmt.b32 %r5, %r4, 0, 0x7772U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r5;
-; CHECK-NEXT:    bfe.u32 %r6, %r4, 0, 8;
+; CHECK-NEXT:    prmt.b32 %r6, %r4, 0, 0x7770U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs2, %r6;
-; CHECK-NEXT:    bfe.u32 %r7, %r3, 16, 8;
+; CHECK-NEXT:    prmt.b32 %r7, %r3, 0, 0x7772U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs3, %r7;
-; CHECK-NEXT:    bfe.u32 %r8, %r3, 0, 8;
+; CHECK-NEXT:    prmt.b32 %r8, %r3, 0, 0x7770U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs4, %r8;
-; CHECK-NEXT:    bfe.u32 %r9, %r2, 16, 8;
+; CHECK-NEXT:    prmt.b32 %r9, %r2, 0, 0x7772U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs5, %r9;
-; CHECK-NEXT:    bfe.u32 %r10, %r2, 0, 8;
+; CHECK-NEXT:    prmt.b32 %r10, %r2, 0, 0x7770U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs6, %r10;
-; CHECK-NEXT:    bfe.u32 %r11, %r1, 16, 8;
+; CHECK-NEXT:    prmt.b32 %r11, %r1, 0, 0x7772U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs7, %r11;
-; CHECK-NEXT:    bfe.u32 %r12, %r1, 0, 8;
+; CHECK-NEXT:    prmt.b32 %r12, %r1, 0, 0x7770U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs8, %r12;
 ; CHECK-NEXT:    add.s16 %rs9, %rs8, %rs7;
 ; CHECK-NEXT:    add.s16 %rs10, %rs6, %rs5;

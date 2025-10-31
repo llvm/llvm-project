@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   spirv.func @bit_cast(%arg0 : f32) "None" {
     // CHECK: {{%.*}} = spirv.Bitcast {{%.*}} : f32 to i32
     %0 = spirv.Bitcast %arg0 : f32 to i32
@@ -14,7 +19,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, BFloat16TypeKHR, Float64, Int64], [SPV_KHR_bfloat16]> {
   spirv.func @convert_f_to_s(%arg0 : f32) -> i32 "None" {
     // CHECK: {{%.*}} = spirv.ConvertFToS {{%.*}} : f32 to i32
     %0 = spirv.ConvertFToS %arg0 : f32 to i32
@@ -104,7 +109,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
 
 // -----
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Kernel], []> {
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Linkage, GenericPointer], []> {
   spirv.func @ptr_cast_to_generic(%arg0 : !spirv.ptr<f32, CrossWorkgroup>) "None" {
     // CHECK: {{%.*}} = spirv.PtrCastToGeneric {{%.*}} : !spirv.ptr<f32, CrossWorkgroup> to !spirv.ptr<f32, Generic>
     %0 = spirv.PtrCastToGeneric %arg0 : !spirv.ptr<f32, CrossWorkgroup> to !spirv.ptr<f32, Generic>
@@ -124,7 +129,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Kernel], []> {
 
 // -----
 
-spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, GenericPointer, Int64], []> {
   spirv.func @covert_ptr_to_u(%arg0 : !spirv.ptr<i32, Generic>) "None" {
     // CHECK: {{%.*}} = spirv.ConvertPtrToU {{%.*}} : !spirv.ptr<i32, Generic> to i32
     %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, Generic> to i32
@@ -144,7 +149,7 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []
 
 // -----
 
-spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses], []> {  
+spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses, Linkage], [SPV_EXT_physical_storage_buffer]> {  
   spirv.func @covert_ptr_to_u_PhysicalStorageBuffer(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Aliased>} ) "None" {
     // CHECK: {{%.*}} = spirv.ConvertPtrToU {{%.*}} : !spirv.ptr<i32, PhysicalStorageBuffer> to i32
     %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, PhysicalStorageBuffer> to i32
@@ -154,7 +159,7 @@ spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, A
 
 // -----
 
-spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, GenericPointer, Int64], []> {
   spirv.func @covert_u_to_ptr(%arg0 : i32) "None" {
     // CHECK: {{%.*}} = spirv.ConvertUToPtr {{%.*}} : i32 to !spirv.ptr<i32, Generic> 
     %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, Generic>
@@ -174,7 +179,7 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []
 
 // -----
 
-spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses], []> {
+spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses, Linkage], [SPV_EXT_physical_storage_buffer]> {
   spirv.func @covert_u_to_ptr_PhysicalStorageBuffer(%arg0 : i32) "None" {
     // CHECK: {{%.*}} = spirv.ConvertUToPtr {{%.*}} : i32 to !spirv.ptr<i32, PhysicalStorageBuffer>
     %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, PhysicalStorageBuffer>

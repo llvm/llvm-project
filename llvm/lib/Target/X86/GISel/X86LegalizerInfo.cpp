@@ -17,9 +17,11 @@
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -87,9 +89,29 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // 32/64-bits needs support for s64/s128 to handle cases:
   // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF
   // s128 = EXTEND (G_IMPLICIT_DEF s32/s64) -> s128 = G_IMPLICIT_DEF
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+  getActionDefinitionsBuilder(
+      {G_IMPLICIT_DEF, G_PHI, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
       .legalFor({p0, s1, s8, s16, s32, s64})
-      .legalFor(Is64Bit, {s128});
+      .legalFor(UseX87, {s80})
+      .legalFor(Is64Bit, {s128})
+      .legalFor(HasSSE2, {v16s8, v8s16, v4s32, v2s64})
+      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
+      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
+      .widenScalarOrEltToNextPow2(0, /*Min=*/8)
+      .clampScalarOrElt(0, s8, sMaxScalar)
+      .moreElementsToNextPow2(0)
+      .clampMinNumElements(0, s8, 16)
+      .clampMinNumElements(0, s16, 8)
+      .clampMinNumElements(0, s32, 4)
+      .clampMinNumElements(0, s64, 2)
+      .clampMaxNumElements(0, s8, HasAVX512 ? 64 : (HasAVX ? 32 : 16))
+      .clampMaxNumElements(0, s16, HasAVX512 ? 32 : (HasAVX ? 16 : 8))
+      .clampMaxNumElements(0, s32, HasAVX512 ? 16 : (HasAVX ? 8 : 4))
+      .clampMaxNumElements(0, s64, HasAVX512 ? 8 : (HasAVX ? 4 : 2))
+      .clampMaxNumElements(0, p0,
+                           Is64Bit ? s64MaxVector.getNumElements()
+                                   : s32MaxVector.getNumElements())
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({p0, s8, s16, s32})
@@ -97,16 +119,20 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder(
-      {G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH, G_FACOS,  G_FSIN,  G_FSINH,
-       G_FASIN,  G_FTAN,    G_FTANH, G_FATAN, G_FATAN2, G_FPOW,  G_FEXP,
-       G_FEXP2,  G_FEXP10,  G_FLOG,  G_FLOG2, G_FLOG10, G_FPOWI, G_FSINCOS})
+  getActionDefinitionsBuilder({G_LROUND,  G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
+                               G_FSIN,    G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
+                               G_FATAN,   G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
+                               G_FEXP10,  G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI,
+                               G_FSINCOS, G_FCEIL,   G_FFLOOR})
       .libcall();
 
   getActionDefinitionsBuilder(G_FSQRT)
       .legalFor(HasSSE1 || UseX87, {s32})
       .legalFor(HasSSE2 || UseX87, {s64})
       .legalFor(UseX87, {s80});
+
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING})
+      .customFor({s32});
 
   // merge/unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -143,6 +169,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
         });
   }
 
+  getActionDefinitionsBuilder({G_UMIN, G_UMAX, G_SMIN, G_SMAX})
+      .widenScalarToNextPow2(0, /*Min=*/32)
+      .lower();
+
   // integer addition/subtraction
   getActionDefinitionsBuilder({G_ADD, G_SUB})
       .legalFor({s8, s16, s32})
@@ -164,11 +194,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_UADDE, G_UADDO, G_USUBE, G_USUBO})
-      .legalFor({{s8, s1}, {s16, s1}, {s32, s1}})
-      .legalFor(Is64Bit, {{s64, s1}})
+      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
+      .legalFor(Is64Bit, {{s64, s8}})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s8, sMaxScalar)
-      .clampScalar(1, s1, s1)
+      .clampScalar(1, s8, s8)
       .scalarize(0);
 
   // integer multiply
@@ -278,26 +308,6 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
-
-  // control flow
-  getActionDefinitionsBuilder(G_PHI)
-      .legalFor({s8, s16, s32, p0})
-      .legalFor(UseX87, {s80})
-      .legalFor(Is64Bit, {s64})
-      .legalFor(HasSSE1, {v16s8, v8s16, v4s32, v2s64})
-      .legalFor(HasAVX, {v32s8, v16s16, v8s32, v4s64})
-      .legalFor(HasAVX512, {v64s8, v32s16, v16s32, v8s64})
-      .clampMinNumElements(0, s8, 16)
-      .clampMinNumElements(0, s16, 8)
-      .clampMinNumElements(0, s32, 4)
-      .clampMinNumElements(0, s64, 2)
-      .clampMaxNumElements(0, s8, HasAVX512 ? 64 : (HasAVX ? 32 : 16))
-      .clampMaxNumElements(0, s16, HasAVX512 ? 32 : (HasAVX ? 16 : 8))
-      .clampMaxNumElements(0, s32, HasAVX512 ? 16 : (HasAVX ? 8 : 4))
-      .clampMaxNumElements(0, s64, HasAVX512 ? 8 : (HasAVX ? 4 : 2))
-      .widenScalarToNextPow2(0, /*Min=*/32)
-      .clampScalar(0, s8, sMaxScalar)
-      .scalarize(0);
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
@@ -565,10 +575,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32}, {p0, s32}})
+      .legalFor({{s16, s32}, {s32, s32}, {p0, s32}})
+      .legalFor(!HasCMOV, {{s8, s32}})
+      .legalFor(Is64Bit, {{s64, s32}})
+      .legalFor(UseX87, {{s80, s32}})
+      .clampScalar(1, s32, s32)
       .widenScalarToNextPow2(0, /*Min=*/8)
-      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar)
-      .clampScalar(1, s32, s32);
+      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar);
 
   // memory intrinsics
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
@@ -577,15 +590,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .lower();
 
   // fp intrinsics
-  getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
+  getActionDefinitionsBuilder({G_INTRINSIC_ROUNDEVEN, G_INTRINSIC_TRUNC})
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
       .libcall();
-
-  getActionDefinitionsBuilder({G_FREEZE, G_CONSTANT_FOLD_BARRIER})
-      .legalFor({s8, s16, s32, s64, p0})
-      .widenScalarToNextPow2(0, /*Min=*/8)
-      .clampScalar(0, s8, sMaxScalar);
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());
@@ -611,6 +619,10 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeSITOFP(MI, MRI, Helper);
   case TargetOpcode::G_FPTOSI:
     return legalizeFPTOSI(MI, MRI, Helper);
+  case TargetOpcode::G_GET_ROUNDING:
+    return legalizeGETROUNDING(MI, MRI, Helper);
+  case TargetOpcode::G_SET_ROUNDING:
+    return legalizeSETROUNDING(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -774,6 +786,210 @@ bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
   Helper.Observer.changingInstr(Store);
   Store.setMemRefs(MF, {NewMMO});
   Helper.Observer.changedInstr(Store);
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeGETROUNDING(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  /*
+   The rounding mode is in bits 11:10 of FPSR, and has the following
+   settings:
+     00 Round to nearest
+     01 Round to -inf
+     10 Round to +inf
+     11 Round to 0
+
+  GET_ROUNDING, on the other hand, expects the following:
+    -1 Undefined
+     0 Round to 0
+     1 Round to nearest
+     2 Round to +inf
+     3 Round to -inf
+
+  To perform the conversion, we use a packed lookup table of the four 2-bit
+  values that we can index by FPSP[11:10]
+    0x2d --> (0b00,10,11,01) --> (0,2,3,1) >> FPSR[11:10]
+
+    (0x2d >> ((FPSR >> 9) & 6)) & 3
+  */
+
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+
+  // Save FP Control Word to stack slot
+  int MemSize = 2;
+  Align Alignment = Align(2);
+  MachinePointerInfo PtrInfo;
+  auto StackTemp = Helper.createStackTemporary(TypeSize::getFixed(MemSize),
+                                               Alignment, PtrInfo);
+  Register StackPtr = StackTemp.getReg(0);
+
+  auto StoreMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore,
+                                          MemSize, Alignment);
+
+  // Store FP Control Word to stack slot using G_FNSTCW16
+  MIRBuilder.buildInstr(X86::G_FNSTCW16)
+      .addUse(StackPtr)
+      .addMemOperand(StoreMMO);
+
+  // Load FP Control Word from stack slot
+  auto LoadMMO = MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad,
+                                         MemSize, Alignment);
+
+  auto CWD32 =
+      MIRBuilder.buildZExt(s32, MIRBuilder.buildLoad(s16, StackPtr, *LoadMMO));
+  auto Shifted8 = MIRBuilder.buildTrunc(
+      s8, MIRBuilder.buildLShr(s32, CWD32, MIRBuilder.buildConstant(s8, 9)));
+  auto Masked32 = MIRBuilder.buildZExt(
+      s32, MIRBuilder.buildAnd(s8, Shifted8, MIRBuilder.buildConstant(s8, 6)));
+
+  // LUT is a packed lookup table (0x2d) used to map the 2-bit x87 FPU rounding
+  // mode (from bits 11:10 of the control word) to the values expected by
+  // GET_ROUNDING. The mapping is performed by shifting LUT right by the
+  // extracted rounding mode and masking the result with 3 to obtain the final
+  auto LUT = MIRBuilder.buildConstant(s32, 0x2d);
+  auto LUTShifted = MIRBuilder.buildLShr(s32, LUT, Masked32);
+  auto RetVal =
+      MIRBuilder.buildAnd(s32, LUTShifted, MIRBuilder.buildConstant(s32, 3));
+  auto RetValTrunc = MIRBuilder.buildZExtOrTrunc(DstTy, RetVal);
+
+  MIRBuilder.buildCopy(Dst, RetValTrunc);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
+                                           MachineRegisterInfo &MRI,
+                                           LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineFunction &MF = MIRBuilder.getMF();
+  Register Src = MI.getOperand(0).getReg();
+  const LLT s8 = LLT::scalar(8);
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+
+  // Allocate stack slot for control word and MXCSR (4 bytes).
+  int MemSize = 4;
+  Align Alignment = Align(4);
+  MachinePointerInfo PtrInfo;
+  auto StackTemp = Helper.createStackTemporary(TypeSize::getFixed(MemSize),
+                                               Alignment, PtrInfo);
+  Register StackPtr = StackTemp.getReg(0);
+
+  auto StoreMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 2, Align(2));
+  MIRBuilder.buildInstr(X86::G_FNSTCW16)
+      .addUse(StackPtr)
+      .addMemOperand(StoreMMO);
+
+  auto LoadMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 2, Align(2));
+  auto CWD16 = MIRBuilder.buildLoad(s16, StackPtr, *LoadMMO);
+
+  // Clear RM field (bits 11:10)
+  auto ClearedCWD =
+      MIRBuilder.buildAnd(s16, CWD16, MIRBuilder.buildConstant(s16, 0xf3ff));
+
+  // Check if Src is a constant
+  auto *SrcDef = MRI.getVRegDef(Src);
+  Register RMBits;
+  Register MXCSRRMBits;
+
+  if (SrcDef && SrcDef->getOpcode() == TargetOpcode::G_CONSTANT) {
+    uint64_t RM = getIConstantFromReg(Src, MRI).getZExtValue();
+    int FieldVal = X86::getRoundingModeX86(RM);
+
+    if (FieldVal == X86::rmInvalid) {
+      FieldVal = X86::rmToNearest;
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(), "rounding mode is not supported by X86 hardware",
+          DiagnosticLocation(MI.getDebugLoc()), DS_Error));
+      return false;
+    }
+
+    FieldVal = FieldVal << 3;
+    RMBits = MIRBuilder.buildConstant(s16, FieldVal).getReg(0);
+    MXCSRRMBits = MIRBuilder.buildConstant(s32, FieldVal).getReg(0);
+  } else {
+    // Convert Src (rounding mode) to bits for control word
+    // (0xc9 << (2 * Src + 4)) & 0xc00
+    auto Src32 = MIRBuilder.buildZExtOrTrunc(s32, Src);
+    auto ShiftAmt = MIRBuilder.buildAdd(
+        s32, MIRBuilder.buildShl(s32, Src32, MIRBuilder.buildConstant(s32, 1)),
+        MIRBuilder.buildConstant(s32, 4));
+    auto ShiftAmt8 = MIRBuilder.buildTrunc(s8, ShiftAmt);
+    auto Shifted = MIRBuilder.buildShl(s16, MIRBuilder.buildConstant(s16, 0xc9),
+                                       ShiftAmt8);
+    RMBits =
+        MIRBuilder.buildAnd(s16, Shifted, MIRBuilder.buildConstant(s16, 0xc00))
+            .getReg(0);
+
+    // For non-constant case, we still need to compute MXCSR bits dynamically
+    auto RMBits32 = MIRBuilder.buildZExt(s32, RMBits);
+    MXCSRRMBits =
+        MIRBuilder.buildShl(s32, RMBits32, MIRBuilder.buildConstant(s32, 3))
+            .getReg(0);
+  }
+  // Update rounding mode bits
+  auto NewCWD =
+      MIRBuilder.buildOr(s16, ClearedCWD, RMBits, MachineInstr::Disjoint);
+
+  // Store new FP Control Word to stack
+  auto StoreNewMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 2, Align(2));
+  MIRBuilder.buildStore(NewCWD, StackPtr, *StoreNewMMO);
+
+  // Load FP control word from the slot using G_FLDCW16
+  auto LoadNewMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOLoad, 2, Align(2));
+  MIRBuilder.buildInstr(X86::G_FLDCW16)
+      .addUse(StackPtr)
+      .addMemOperand(LoadNewMMO);
+
+  if (Subtarget.hasSSE1()) {
+    // Store MXCSR to stack (use STMXCSR)
+    auto StoreMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore, 4, Align(4));
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+        .addIntrinsicID(Intrinsic::x86_sse_stmxcsr)
+        .addUse(StackPtr)
+        .addMemOperand(StoreMXCSRMMO);
+
+    // Load MXCSR from stack
+    auto LoadMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOLoad, 4, Align(4));
+    auto MXCSR = MIRBuilder.buildLoad(s32, StackPtr, *LoadMXCSRMMO);
+
+    // Clear RM field (bits 14:13)
+    auto ClearedMXCSR = MIRBuilder.buildAnd(
+        s32, MXCSR, MIRBuilder.buildConstant(s32, 0xffff9fff));
+
+    // Update rounding mode bits
+    auto NewMXCSR = MIRBuilder.buildOr(s32, ClearedMXCSR, MXCSRRMBits);
+
+    // Store new MXCSR to stack
+    auto StoreNewMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOStore, 4, Align(4));
+    MIRBuilder.buildStore(NewMXCSR, StackPtr, *StoreNewMXCSRMMO);
+
+    // Load MXCSR from stack (use LDMXCSR)
+    auto LoadNewMXCSRMMO = MF.getMachineMemOperand(
+        PtrInfo, MachineMemOperand::MOLoad, 4, Align(4));
+    MIRBuilder.buildInstr(TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+        .addIntrinsicID(Intrinsic::x86_sse_ldmxcsr)
+        .addUse(StackPtr)
+        .addMemOperand(LoadNewMXCSRMMO);
+  }
+
+  MI.eraseFromParent();
   return true;
 }
 

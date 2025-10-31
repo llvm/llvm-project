@@ -9,7 +9,7 @@
 #ifndef __CLC_MATH_CLC_HALF_LOG10_H__
 #define __CLC_MATH_CLC_HALF_LOG10_H__
 
-#define __FLOAT_ONLY
+#define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION __clc_half_log10
 #define __CLC_BODY <clc/shared/unary_decl.inc>
 

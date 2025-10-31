@@ -63,7 +63,8 @@
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_dpbusd_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 {
-  return (__m256i)__builtin_ia32_vpdpbusd256((__v8si)__S, (__v8si)__A, (__v8si)__B);
+  return (__m256i)__builtin_ia32_vpdpbusd256((__v8si)__S, (__v32qu)__A,
+                                             (__v32qi)__B);
 }
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a __A with
@@ -86,7 +87,8 @@ _mm256_dpbusd_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_dpbusds_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 {
-  return (__m256i)__builtin_ia32_vpdpbusds256((__v8si)__S, (__v8si)__A, (__v8si)__B);
+  return (__m256i)__builtin_ia32_vpdpbusds256((__v8si)__S, (__v32qu)__A,
+                                              (__v32qi)__B);
 }
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a __A with
@@ -151,7 +153,8 @@ _mm256_dpwssds_avx_epi32(__m256i __S, __m256i __A, __m256i __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_dpbusd_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 {
-  return (__m128i)__builtin_ia32_vpdpbusd128((__v4si)__S, (__v4si)__A, (__v4si)__B);
+  return (__m128i)__builtin_ia32_vpdpbusd128((__v4si)__S, (__v16qu)__A,
+                                             (__v16qi)__B);
 }
 
 /// Multiply groups of 4 adjacent pairs of unsigned 8-bit integers in \a __A with
@@ -174,7 +177,8 @@ _mm_dpbusd_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_dpbusds_avx_epi32(__m128i __S, __m128i __A, __m128i __B)
 {
-  return (__m128i)__builtin_ia32_vpdpbusds128((__v4si)__S, (__v4si)__A, (__v4si)__B);
+  return (__m128i)__builtin_ia32_vpdpbusds128((__v4si)__S, (__v16qu)__A,
+                                              (__v16qi)__B);
 }
 
 /// Multiply groups of 2 adjacent pairs of signed 16-bit integers in \a __A with

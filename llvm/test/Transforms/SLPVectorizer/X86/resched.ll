@@ -7,7 +7,7 @@
 define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv(i1 %arg) unnamed_addr #0 align 2 {
 ; CHECK-LABEL: @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %arg, label [[IF_END50_I:%.*]], label [[IF_THEN22_I:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_END50_I:%.*]], label [[IF_THEN22_I:%.*]]
 ; CHECK:       if.then22.i:
 ; CHECK-NEXT:    [[SUB_I:%.*]] = add nsw i32 undef, -1
 ; CHECK-NEXT:    [[CONV31_I:%.*]] = and i32 undef, [[SUB_I]]
@@ -24,11 +24,14 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv(i
 ; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[SHR_I_I]] to i8
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <16 x i8> [[TMP8]], i8 [[TMP9]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc <8 x i32> [[TMP6]] to <8 x i8>
-; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v8i8(<16 x i8> [[TMP10]], <8 x i8> [[TMP11]], i64 8)
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i8> [[TMP11]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i8> [[TMP10]], <16 x i8> [[TMP12]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[TMP4]] to <4 x i8>
-; CHECK-NEXT:    [[TMP14:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v4i8(<16 x i8> [[TMP12]], <4 x i8> [[TMP13]], i64 4)
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i8> [[TMP13]], <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <16 x i8> [[TMP14]], <16 x i8> [[TMP19]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP15:%.*]] = trunc <2 x i32> [[TMP2]] to <2 x i8>
-; CHECK-NEXT:    [[TMP16:%.*]] = call <16 x i8> @llvm.vector.insert.v16i8.v2i8(<16 x i8> [[TMP14]], <2 x i8> [[TMP15]], i64 2)
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i8> [[TMP15]], <2 x i8> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x i8> [[TMP20]], <16 x i8> [[TMP18]], <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP17:%.*]] = and <16 x i8> [[TMP16]], splat (i8 1)
 ; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr undef, align 1
 ; CHECK-NEXT:    ret void

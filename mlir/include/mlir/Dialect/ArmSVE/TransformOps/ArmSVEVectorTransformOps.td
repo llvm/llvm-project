@@ -12,15 +12,25 @@ include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
-def ApplyArmSVELowerContractionPatternsOp
+def ApplyArmSVELowerContractionToI8MMPatternsOp
     : Op<Transform_Dialect, "apply_patterns.arm_sve.vector_contract_to_i8mm",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector contraction-like operations should be lowered to
-    finer-grained vector primitives using the ArmSVE dialect.
+    Indicates that vector contract operations should be lowered to
+    to ArmSVE dialect operations mapping to instructions from FEAT_I8MM.
   }];
 
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyArmSVELowerContractionToBFMMLAPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.arm_sve.vector_contract_to_bfmmla",
+         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector contract operations should be lowered to
+    ArmSVE dialect operations mapping to instructions from FEAT_BF16.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
 #endif // ARMSVE_VECTOR_TRANSFORM_OPS

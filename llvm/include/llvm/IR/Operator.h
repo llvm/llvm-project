@@ -595,6 +595,37 @@ struct OperandTraits<PtrToIntOperator>
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToIntOperator, Value)
 
+class PtrToAddrOperator
+    : public ConcreteOperator<Operator, Instruction::PtrToAddr> {
+  friend class PtrToAddr;
+  friend class ConstantExpr;
+
+public:
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  Value *getPointerOperand() { return getOperand(0); }
+  const Value *getPointerOperand() const { return getOperand(0); }
+
+  static unsigned getPointerOperandIndex() {
+    return 0U; // get index for modifying correct operand
+  }
+
+  /// Method to return the pointer operand as a PointerType.
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
+
+  /// Method to return the address space of the pointer operand.
+  unsigned getPointerAddressSpace() const {
+    return cast<PointerType>(getPointerOperandType())->getAddressSpace();
+  }
+};
+
+template <>
+struct OperandTraits<PtrToAddrOperator>
+    : public FixedNumOperandTraits<PtrToAddrOperator, 1> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(PtrToAddrOperator, Value)
+
 class BitCastOperator
     : public ConcreteOperator<Operator, Instruction::BitCast> {
   friend class BitCastInst;

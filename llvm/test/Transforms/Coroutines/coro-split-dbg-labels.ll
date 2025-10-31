@@ -1,19 +1,24 @@
 ; Tests that we add DILabels for the suspend points.
 ;
-; We check both the generated LLVM:
+; Check the generated LLVM:
 ; RUN: opt < %s -passes='cgscc(coro-split)' -S | FileCheck %s
 ;
-; And the debug info:
+; Check the generated DWARF debug info:
 ; REQUIRES: object-emission
 ; RUN: opt < %s -passes='cgscc(coro-split),coro-cleanup' \
 ; RUN:   | %llc_dwarf -O0 -filetype=obj -o - \
 ; RUN:   | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s -check-prefix=DWARF
+;
+; Check that we don't emit any DILabel if in `LineTablesOnly` mode
+; RUN: sed -e 's/emissionKind: FullDebug/emissionKind: LineTablesOnly/' %s \
+; RUN:   | opt -passes='cgscc(coro-split)' -S \
+; RUN:   | FileCheck %s -check-prefix=LINE-TABLE
 
 source_filename = "coro.c"
 
-declare void @bar(...) local_unnamed_addr #2
-declare void @baz(...) local_unnamed_addr #2
+declare void @bar(...) local_unnamed_addr #0
+declare void @baz(...) local_unnamed_addr #0
 
 ; Roughly equivalent to:
 ;
@@ -27,16 +32,16 @@ declare void @baz(...) local_unnamed_addr #2
 ; }
 
 ; Function Attrs: nounwind uwtable
-define ptr @f() #3 !dbg !16 {
+define ptr @f() #2 !dbg !16 {
 entry:
   %0 = tail call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null), !dbg !26
   %1 = tail call i64 @llvm.coro.size.i64(), !dbg !26
   %frame = tail call ptr @malloc(i64 %1), !dbg !26
-  %2 = tail call ptr @llvm.coro.begin(token %0, ptr %frame) #4, !dbg !26
+  %2 = tail call ptr @llvm.coro.begin(token %0, ptr %frame) #3, !dbg !26
   br label %loop1, !dbg !27
 
 loop1:                                         ; preds = %for.cond, %entry
-  tail call void (...) @bar() #7, !dbg !33
+  tail call void (...) @bar() #0, !dbg !33
   %3 = tail call token @llvm.coro.save(ptr null), !dbg !34
   %4 = tail call i8 @llvm.coro.suspend(token %3, i1 false), !dbg !34
   switch i8 %4, label %coro_Suspend [
@@ -45,7 +50,7 @@ loop1:                                         ; preds = %for.cond, %entry
   ], !dbg !34
 
 loop2:                                         ; preds = %for.cond, %entry
-  tail call void (...) @baz() #7, !dbg !35
+  tail call void (...) @baz() #0, !dbg !35
   %5 = tail call token @llvm.coro.save(ptr null), !dbg !36
   %6 = tail call i8 @llvm.coro.suspend(token %5, i1 false), !dbg !36
   switch i8 %6, label %coro_Suspend [
@@ -59,7 +64,7 @@ coro_Cleanup:                                     ; preds = %for.cond
   br label %coro_Suspend, !dbg !37
 
 coro_Suspend:                                     ; preds = %for.cond, %if.then, %coro_Cleanup
-  tail call i1 @llvm.coro.end(ptr null, i1 false, token none) #4, !dbg !40
+  tail call void @llvm.coro.end(ptr null, i1 false, token none) #3, !dbg !40
   ret ptr %2, !dbg !41
 }
 
@@ -83,6 +88,12 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 ; CHECK: ![[DESTROY_0]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_0", file: !{{[0-9]*}}, line: 12, column: 6, isArtificial: true, coroSuspendIdx: 0)
 ; CHECK: ![[DESTROY_1]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_1", file: !{{[0-9]*}}, line: 14, column: 6, isArtificial: true, coroSuspendIdx: 1)
 
+; Check the we do not emit any DILabels in LineTablesOnly mode.
+; The DWARF emitter cannot handle this and would run into an assertion.
+; LINE-TABLE: !DICompileUnit{{.*}}LineTablesOnly
+; LINE-TABLE-NOT: DILabel
+
+
 ; DWARF:        {{.*}}DW_TAG_label
 ; DWARF-NEXT:    DW_AT_name ("__coro_resume_0")
 ; DWARF-NEXT:    DW_AT_decl_file
@@ -94,27 +105,23 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #5
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #4
 
 ; Function Attrs: nounwind
-declare noalias ptr @malloc(i64) local_unnamed_addr #6
+declare noalias ptr @malloc(i64) local_unnamed_addr #0
 declare i64 @llvm.coro.size.i64() #1
-declare ptr @llvm.coro.begin(token, ptr writeonly) #7
-declare token @llvm.coro.save(ptr) #7
-declare i8 @llvm.coro.suspend(token, i1) #7
-declare ptr @llvm.coro.free(token, ptr nocapture readonly) #5
-declare void @free(ptr nocapture) local_unnamed_addr #6
-declare i1 @llvm.coro.end(ptr, i1, token) #7
+declare ptr @llvm.coro.begin(token, ptr writeonly) #0
+declare token @llvm.coro.save(ptr) #0
+declare i8 @llvm.coro.suspend(token, i1) #0
+declare ptr @llvm.coro.free(token, ptr nocapture readonly) #4
+declare void @free(ptr nocapture) local_unnamed_addr #0
+declare void @llvm.coro.end(ptr, i1, token) #0
 
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind uwtable presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { noduplicate }
-attributes #5 = { argmemonly nounwind readonly }
-attributes #6 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #7 = { nounwind }
-attributes #8 = { alwaysinline nounwind }
+attributes #2 = { nounwind uwtable presplitcoroutine }
+attributes #3 = { noduplicate }
+attributes #4 = { argmemonly nounwind readonly }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

@@ -1,4 +1,4 @@
-//===--- MultipleInheritanceCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ bool MultipleInheritanceCheck::getInterfaceStatus(const CXXRecordDecl *Node,
                                                   bool &IsInterface) const {
   assert(Node->getIdentifier());
   StringRef Name = Node->getIdentifier()->getName();
-  llvm::StringMapConstIterator<bool> Pair = InterfaceMap.find(Name);
+  auto Pair = InterfaceMap.find(Name);
   if (Pair == InterfaceMap.end())
     return false;
   IsInterface = Pair->second;
@@ -71,13 +71,10 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
   for (const auto &I : Node->bases()) {
     if (I.isVirtual())
       continue;
-    const auto *Ty = I.getType()->getAs<RecordType>();
-    if (!Ty)
+    const auto *Base = I.getType()->getAsCXXRecordDecl();
+    if (!Base)
       continue;
-    const RecordDecl *D = Ty->getDecl()->getDefinition();
-    if (!D)
-      continue;
-    const auto *Base = cast<CXXRecordDecl>(D);
+    assert(Base->isCompleteDefinition());
     if (!isInterface(Base)) {
       addNodeToInterfaceMap(Node, false);
       return false;
@@ -103,10 +100,10 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     for (const auto &I : D->bases()) {
       if (I.isVirtual())
         continue;
-      const auto *Ty = I.getType()->getAs<RecordType>();
-      if (!Ty)
+      const auto *Base = I.getType()->getAsCXXRecordDecl();
+      if (!Base)
         continue;
-      const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
+      assert(Base->isCompleteDefinition());
       if (!isInterface(Base))
         NumConcrete++;
     }
@@ -114,10 +111,10 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
     // Check virtual bases to see if there is more than one concrete
     // non-virtual base.
     for (const auto &V : D->vbases()) {
-      const auto *Ty = V.getType()->getAs<RecordType>();
-      if (!Ty)
+      const auto *Base = V.getType()->getAsCXXRecordDecl();
+      if (!Base)
         continue;
-      const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
+      assert(Base->isCompleteDefinition());
       if (!isInterface(Base))
         NumConcrete++;
     }

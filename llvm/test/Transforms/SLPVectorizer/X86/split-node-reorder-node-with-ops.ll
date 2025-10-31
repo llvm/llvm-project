@@ -27,7 +27,8 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = sitofp <2 x i32> [[TMP24]] to <2 x float>
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <2 x float> [[TMP25]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x float> [[TMP26]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP28:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP27]], <4 x float> [[TMP16]], i64 4)
+; CHECK-NEXT:    [[TMP51:%.*]] = shufflevector <4 x float> [[TMP16]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <8 x float> [[TMP27]], <8 x float> [[TMP51]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP29:%.*]] = fdiv <8 x float> zeroinitializer, [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = call <8 x float> @llvm.fabs.v8f32(<8 x float> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = bitcast <8 x float> [[TMP30]] to <8 x i32>
@@ -50,19 +51,20 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = select i1 [[TMP47]], i64 0, i64 8388608
 ; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <8 x i1> [[TMP32]], i32 1
 ; CHECK-NEXT:    [[TMP50:%.*]] = select i1 [[TMP49]], i64 0, i64 32768
-; CHECK-NEXT:    br label %[[BB52:.*]]
-; CHECK:       [[BB51:.*]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[BB52]]:
 ; CHECK-NEXT:    br label %[[BB53:.*]]
+; CHECK:       [[BB52:.*]]:
+; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB53]]:
+; CHECK-NEXT:    br label %[[BB54:.*]]
+; CHECK:       [[BB54]]:
 ; CHECK-NEXT:    [[TMP54:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[TMP17]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 0, ptr null)
 ; CHECK-NEXT:    [[TMP55:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[TMP21]])
 ; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <8 x float> poison, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP57:%.*]] = shufflevector <8 x float> [[TMP56]], <8 x float> poison, <8 x i32> <i32 poison, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP58:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP57]], <2 x float> [[TMP55]], i64 0)
-; CHECK-NEXT:    [[TMP59:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v2f32(<8 x float> [[TMP58]], <2 x float> [[TMP54]], i64 6)
+; CHECK-NEXT:    [[TMP87:%.*]] = shufflevector <2 x float> [[TMP55]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP88:%.*]] = shufflevector <8 x float> [[TMP57]], <8 x float> [[TMP87]], <8 x i32> <i32 8, i32 9, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP89:%.*]] = shufflevector <2 x float> [[TMP54]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP59:%.*]] = shufflevector <8 x float> [[TMP88]], <8 x float> [[TMP89]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; CHECK-NEXT:    [[TMP60:%.*]] = bitcast <8 x float> [[TMP59]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP61:%.*]] = icmp ult <8 x i32> [[TMP60]], splat (i32 1325400064)
 ; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <8 x i1> [[TMP61]], i32 5
@@ -94,7 +96,7 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
 ; CHECK-NEXT:    [[TMP85:%.*]] = or i64 [[TMP84]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP86:%.*]] = or i64 [[TMP85]], [[TMP81]]
 ; CHECK-NEXT:    store i64 [[TMP86]], ptr null, align 1
-; CHECK-NEXT:    br label %[[BB51]]
+; CHECK-NEXT:    br label %[[BB52]]
 ;
   %5 = and i64 %2, 255
   %6 = and i64 %2, -65536
@@ -195,7 +197,6 @@ define void @test(i32 %0, i8 %1, i64 %2, float %3) {
   %95 = or i64 %94, %91
   %96 = or i64 %95, %37
   store i64 %96, ptr null, align 1
-  call void @llvm.lifetime.start.p0(i64 0, ptr null)
   store i64 %42, ptr null, align 1
   %97 = bitcast float %3 to i32
   %98 = icmp ult i32 %97, 1325400064

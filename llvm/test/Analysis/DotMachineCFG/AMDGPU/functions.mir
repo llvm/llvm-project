@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-- -run-pass=dot-machine-cfg  -mcfg-dot-filename-prefix=%t -mcfg-func-name=func2 -o -  %s 2>&1 > /dev/null
+# RUN: llc -mtriple=amdgcn-- -run-pass=dot-machine-cfg  -mcfg-dot-filename-prefix=%t -mcfg-func-name=func2 -o -  %s -filetype=null 2>&1
 # RUN: FileCheck %s -input-file=%t.func2.dot --check-prefix=MCFG
 
 # MCFG-NOT: digraph "Machine CFG for 'func1' function"

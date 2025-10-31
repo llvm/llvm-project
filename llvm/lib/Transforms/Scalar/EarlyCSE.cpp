@@ -108,7 +108,7 @@ struct SimpleValue {
     // of instruction handled below (UnaryOperator, etc.).
     if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
       if (Function *F = CI->getCalledFunction()) {
-        switch ((Intrinsic::ID)F->getIntrinsicID()) {
+        switch (F->getIntrinsicID()) {
         case Intrinsic::experimental_constrained_fadd:
         case Intrinsic::experimental_constrained_fsub:
         case Intrinsic::experimental_constrained_fmul:
@@ -154,9 +154,7 @@ struct SimpleValue {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<SimpleValue> {
+template <> struct llvm::DenseMapInfo<SimpleValue> {
   static inline SimpleValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
@@ -168,8 +166,6 @@ template <> struct DenseMapInfo<SimpleValue> {
   static unsigned getHashValue(SimpleValue Val);
   static bool isEqual(SimpleValue LHS, SimpleValue RHS);
 };
-
-} // end namespace llvm
 
 /// Match a 'select' including an optional 'not's of the condition.
 static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
@@ -509,9 +505,7 @@ struct CallValue {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<CallValue> {
+template <> struct llvm::DenseMapInfo<CallValue> {
   static inline CallValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
@@ -523,8 +517,6 @@ template <> struct DenseMapInfo<CallValue> {
   static unsigned getHashValue(CallValue Val);
   static bool isEqual(CallValue LHS, CallValue RHS);
 };
-
-} // end namespace llvm
 
 unsigned DenseMapInfo<CallValue>::getHashValue(CallValue Val) {
   Instruction *Inst = Val.Inst;
@@ -580,9 +572,7 @@ struct GEPValue {
 
 } // namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<GEPValue> {
+template <> struct llvm::DenseMapInfo<GEPValue> {
   static inline GEPValue getEmptyKey() {
     return DenseMapInfo<Instruction *>::getEmptyKey();
   }
@@ -594,8 +584,6 @@ template <> struct DenseMapInfo<GEPValue> {
   static unsigned getHashValue(const GEPValue &Val);
   static bool isEqual(const GEPValue &LHS, const GEPValue &RHS);
 };
-
-} // end namespace llvm
 
 unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
   auto *GEP = cast<GetElementPtrInst>(Val.Inst);
@@ -958,7 +946,8 @@ private:
   bool overridingStores(const ParseMemoryInst &Earlier,
                         const ParseMemoryInst &Later);
 
-  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType) const {
+  Value *getOrCreateResult(Instruction *Inst, Type *ExpectedType,
+                           bool CanCreate) const {
     // TODO: We could insert relevant casts on type mismatch.
     // The load or the store's first operand.
     Value *V;
@@ -971,7 +960,8 @@ private:
         V = II->getOperand(0);
         break;
       default:
-        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType);
+        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType,
+                                                     CanCreate);
       }
     } else {
       V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();
@@ -1027,14 +1017,14 @@ private:
     };
     auto MaskOp = [](const IntrinsicInst *II) {
       if (II->getIntrinsicID() == Intrinsic::masked_load)
-        return II->getOperand(2);
+        return II->getOperand(1);
       if (II->getIntrinsicID() == Intrinsic::masked_store)
-        return II->getOperand(3);
+        return II->getOperand(2);
       llvm_unreachable("Unexpected IntrinsicInst");
     };
     auto ThruOp = [](const IntrinsicInst *II) {
       if (II->getIntrinsicID() == Intrinsic::masked_load)
-        return II->getOperand(3);
+        return II->getOperand(2);
       llvm_unreachable("Unexpected IntrinsicInst");
     };
 
@@ -1255,9 +1245,10 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
 
   // For stores check the result values before checking memory generation
   // (otherwise isSameMemGeneration may crash).
-  Value *Result = MemInst.isStore()
-                      ? getOrCreateResult(Matching, Other->getType())
-                      : nullptr;
+  Value *Result =
+      MemInst.isStore()
+          ? getOrCreateResult(Matching, Other->getType(), /*CanCreate=*/false)
+          : nullptr;
   if (MemInst.isStore() && InVal.DefInst != Result)
     return nullptr;
 
@@ -1278,7 +1269,7 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
     return nullptr;
 
   if (!Result)
-    Result = getOrCreateResult(Matching, Other->getType());
+    Result = getOrCreateResult(Matching, Other->getType(), /*CanCreate=*/true);
   return Result;
 }
 

@@ -63,7 +63,6 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCBoolRetToInt.cpp",
     "PPCBranchCoalescing.cpp",
     "PPCBranchSelector.cpp",
-    "PPCCCState.cpp",
     "PPCCTRLoops.cpp",
     "PPCCTRLoopsVerify.cpp",
     "PPCCallingConv.cpp",
@@ -93,9 +92,9 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCTargetMachine.cpp",
     "PPCTargetObjectFile.cpp",
     "PPCTargetTransformInfo.cpp",
-    "PPCVSXCopy.cpp",
     "PPCVSXFMAMutate.cpp",
     "PPCVSXSwapRemoval.cpp",
+    "PPCVSXWACCCopy.cpp",
   ]
 }
 

@@ -40,7 +40,7 @@ static_assert(!CanInsert<Map, int, int>);
 static_assert(!CanInsert<Map, cpp20_input_iterator<Pair*>, cpp20_input_iterator<Pair*>>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using P = std::pair<int, double>;
   using M = std::flat_multimap<int, double, std::less<int>, KeyContainer, ValueContainer>;
 
@@ -71,7 +71,8 @@ void test() {
   m.insert(cpp17_input_iterator<P*>(ar1), cpp17_input_iterator<P*>(ar1 + sizeof(ar1) / sizeof(ar1[0])));
   assert(m.size() == 9);
   std::vector<P> expected{{1, 1}, {1, 1.5}, {1, 2}, {2, 1}, {2, 1.5}, {2, 2}, {3, 1}, {3, 1.5}, {3, 2}};
-  assert(std::ranges::equal(m, expected));
+  assert(std::ranges::is_permutation(m, expected));
+  check_invariant(m);
 
   m.insert(cpp17_input_iterator<P*>(ar2), cpp17_input_iterator<P*>(ar2 + sizeof(ar2) / sizeof(ar2[0])));
   assert(m.size() == 18);
@@ -94,15 +95,20 @@ void test() {
       {4, 1},
       {4, 1.5},
       {4, 2}};
-  assert(std::ranges::equal(m, expected2));
+  assert(std::ranges::is_permutation(m, expected2));
+  check_invariant(m);
 }
-int main(int, char**) {
+
+constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
-  test<std::deque<int>, std::vector<double>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<double>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
 
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto insert_func = [](auto& m, const auto& newValues) { m.insert(newValues.begin(), newValues.end()); };
     test_insert_range_exception_guarantee(insert_func);
   }
@@ -112,5 +118,14 @@ int main(int, char**) {
     m.insert(v.begin(), v.end());
     assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{1, 1}, {2, 2}, {3, 3}, {4, 4}}));
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -23,7 +24,6 @@
 #include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -380,6 +380,19 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   unsigned EHSectionType = T.getArch() == Triple::x86_64
                                ? ELF::SHT_X86_64_UNWIND
                                : ELF::SHT_PROGBITS;
+  switch (T.getArch()) {
+  case Triple::x86_64:
+    SFrameABIArch = sframe::ABI::AMD64EndianLittle;
+    break;
+  case Triple::aarch64:
+    SFrameABIArch = sframe::ABI::AArch64EndianLittle;
+    break;
+  case Triple::aarch64_be:
+    SFrameABIArch = sframe::ABI::AArch64EndianBig;
+    break;
+  default:
+    break;
+  }
 
   // Solaris requires different flags for .eh_frame to seemingly every other
   // platform.
@@ -536,6 +549,12 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 
   EHFrameSection =
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
+
+  SFrameSection =
+      Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
+
+  CallGraphSection =
+      Ctx->getELFSection(".llvm.callgraph", ELF::SHT_LLVM_CALL_GRAPH, 0);
 
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
 
@@ -758,10 +777,18 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       ".debug_loc.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                             COFF::IMAGE_SCN_MEM_READ);
+  DwarfLoclistsDWOSection = Ctx->getCOFFSection(
+      ".debug_loclists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfStrOffDWOSection = Ctx->getCOFFSection(
       ".debug_str_offsets.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                                     COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                     COFF::IMAGE_SCN_MEM_READ);
+  DwarfRnglistsDWOSection = Ctx->getCOFFSection(
+      ".debug_rnglists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfAddrSection = Ctx->getCOFFSection(
       ".debug_addr", COFF::IMAGE_SCN_MEM_DISCARDABLE |
                          COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
@@ -831,6 +858,16 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
   StackMapSection = Ctx->getCOFFSection(".llvm_stackmaps",
                                         COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                             COFF::IMAGE_SCN_MEM_READ);
+
+  // Set IMAGE_SCN_MEM_DISCARDABLE so that lld will not truncate section name.
+  PseudoProbeSection = Ctx->getCOFFSection(
+      ".pseudo_probe", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                           COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                           COFF::IMAGE_SCN_MEM_READ);
+  PseudoProbeDescSection = Ctx->getCOFFSection(
+      ".pseudo_probe_desc", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                COFF::IMAGE_SCN_MEM_READ);
 }
 
 void MCObjectFileInfo::initSPIRVMCObjectFileInfo(const Triple &T) {
@@ -1062,6 +1099,7 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   CompactUnwindDwarfEHFrameOnly = 0;
 
   EHFrameSection = nullptr;             // Created on demand.
+  SFrameSection = nullptr;              // Created on demand.
   CompactUnwindSection = nullptr;       // Used only by selected targets.
   DwarfAccelNamesSection = nullptr;     // Used only by selected targets.
   DwarfAccelObjCSection = nullptr;      // Used only by selected targets.
@@ -1121,6 +1159,25 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 }
 
 MCSection *
+MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return CallGraphSection;
+
+  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+  unsigned Flags = ELF::SHF_LINK_ORDER;
+  StringRef GroupName;
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
+  }
+
+  return Ctx->getELFSection(
+      ".llvm.callgraph", ELF::SHT_LLVM_CALL_GRAPH, Flags, 0, GroupName,
+      /*IsComdat=*/true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+}
+
+MCSection *
 MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
   if ((Ctx->getObjectFileType() != MCContext::IsELF) ||
       Ctx->getTargetTriple().isPS4())
@@ -1134,9 +1191,10 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".stack_sizes", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1154,9 +1212,10 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 
   // Use the text section's begin symbol and unique ID to create a separate
   // .llvm_bb_addr_map section associated with every unique text section.
-  return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1172,51 +1231,76 @@ MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName,
-                            /*IsComdat=*/true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      /*IsComdat=*/true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
 MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
-  if (Ctx->getObjectFileType() != MCContext::IsELF)
-    return PseudoProbeSection;
-
-  const auto &ElfSec = static_cast<const MCSectionELF &>(TextSec);
-  unsigned Flags = ELF::SHF_LINK_ORDER;
-  StringRef GroupName;
-  if (const MCSymbol *Group = ElfSec.getGroup()) {
-    GroupName = Group->getName();
-    Flags |= ELF::SHF_GROUP;
+  auto ObjFileType = Ctx->getObjectFileType();
+  if (ObjFileType == MCContext::IsELF) {
+    const auto &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+    unsigned Flags = ELF::SHF_LINK_ORDER;
+    StringRef GroupName;
+    if (const MCSymbol *Group = ElfSec.getGroup()) {
+      GroupName = Group->getName();
+      Flags |= ELF::SHF_GROUP;
+    }
+    return Ctx->getELFSection(
+        PseudoProbeSection->getName(), ELF::SHT_PROGBITS, Flags, 0, GroupName,
+        true, ElfSec.getUniqueID(),
+        static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+  } else if (ObjFileType == MCContext::IsCOFF) {
+    StringRef COMDATSymName = "";
+    int Selection = 0;
+    unsigned Characteristics =
+        static_cast<MCSectionCOFF *>(PseudoProbeSection)->getCharacteristics();
+    const auto &COFFSec = static_cast<const MCSectionCOFF &>(TextSec);
+    if (const MCSymbol *COMDATSym = COFFSec.getCOMDATSymbol()) {
+      // Associate .pseudo_probe to its function section.
+      COMDATSymName = COMDATSym->getName();
+      Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
+      Selection = COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+    }
+    return Ctx->getCOFFSection(PseudoProbeSection->getName(), Characteristics,
+                               COMDATSymName, Selection, COFFSec.getUniqueID());
   }
 
-  return Ctx->getELFSection(PseudoProbeSection->getName(), ELF::SHT_PROGBITS,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return PseudoProbeSection;
 }
 
 MCSection *
 MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
-  if (Ctx->getObjectFileType() == MCContext::IsELF) {
-    // Create a separate comdat group for each function's descriptor in order
-    // for the linker to deduplicate. The duplication, must be from different
-    // tranlation unit, can come from:
-    //  1. Inline functions defined in header files;
-    //  2. ThinLTO imported funcions;
-    //  3. Weak-linkage definitions.
-    // Use a concatenation of the section name and the function name as the
-    // group name so that descriptor-only groups won't be folded with groups of
-    // code.
-    if (Ctx->getTargetTriple().supportsCOMDAT() && !FuncName.empty()) {
-      auto *S = static_cast<MCSectionELF *>(PseudoProbeDescSection);
-      auto Flags = S->getFlags() | ELF::SHF_GROUP;
-      return Ctx->getELFSection(S->getName(), S->getType(), Flags,
-                                S->getEntrySize(),
-                                S->getName() + "_" + FuncName,
-                                /*IsComdat=*/true);
-    }
+  if (!Ctx->getTargetTriple().supportsCOMDAT() || FuncName.empty())
+    return PseudoProbeDescSection;
+
+  // Create a separate comdat group for each function's descriptor in order
+  // for the linker to deduplicate. The duplication, must be from different
+  // tranlation unit, can come from:
+  //  1. Inline functions defined in header files;
+  //  2. ThinLTO imported funcions;
+  //  3. Weak-linkage definitions.
+  // Use a concatenation of the section name and the function name as the
+  // group name so that descriptor-only groups won't be folded with groups of
+  // code.
+  auto ObjFileType = Ctx->getObjectFileType();
+  if (ObjFileType == MCContext::IsELF) {
+    auto *S = static_cast<MCSectionELF *>(PseudoProbeDescSection);
+    auto Flags = S->getFlags() | ELF::SHF_GROUP;
+    return Ctx->getELFSection(S->getName(), S->getType(), Flags,
+                              S->getEntrySize(), S->getName() + "_" + FuncName,
+                              /*IsComdat=*/true);
+  } else if (ObjFileType == MCContext::IsCOFF) {
+    auto *S = static_cast<MCSectionCOFF *>(PseudoProbeDescSection);
+    unsigned Characteristics =
+        S->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT;
+    std::string COMDATSymName = (S->getName() + "_" + FuncName).str();
+    return Ctx->getCOFFSection(S->getName(), Characteristics, COMDATSymName,
+                               COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH);
   }
+
   return PseudoProbeDescSection;
 }
 
@@ -1241,7 +1325,7 @@ MCSection *MCObjectFileInfo::getPCSection(StringRef Name,
     GroupName = Group->getName();
     Flags |= ELF::SHF_GROUP;
   }
-  return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
-                            ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec->getBeginSymbol()));
+  return Ctx->getELFSection(
+      Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec->getBeginSymbol()));
 }

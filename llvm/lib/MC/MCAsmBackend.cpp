@@ -8,9 +8,9 @@
 
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -106,7 +106,8 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Builtins[Kind - FK_NONE];
 }
 
-bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
+bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
   if (!Resolved)
@@ -122,13 +123,11 @@ void MCAsmBackend::maybeAddReloc(const MCFragment &F, const MCFixup &Fixup,
 }
 
 bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
+  assert(getContext().isMachO());
   // Consider a NULL personality (ie., no personality encoding) to be canonical
   // because it's always at 0.
   if (!Sym)
     return true;
-
-  if (!Sym->isMachO())
-    llvm_unreachable("Expected MachO symbols only");
 
   StringRef name = Sym->getName();
   // XXX: We intentionally leave out "___gcc_personality_v0" because, despite
@@ -139,21 +138,7 @@ bool MCAsmBackend::isDarwinCanonicalPersonality(const MCSymbol *Sym) const {
 
 const MCSubtargetInfo *MCAsmBackend::getSubtargetInfo(const MCFragment &F) {
   const MCSubtargetInfo *STI = nullptr;
-  switch (F.getKind()) {
-  case MCFragment::FT_Data: {
-    auto &DF = cast<MCDataFragment>(F);
-    STI = DF.getSubtargetInfo();
-    assert(!DF.hasInstructions() || STI != nullptr);
-    break;
-  }
-  case MCFragment::FT_Relaxable: {
-    auto &RF = cast<MCRelaxableFragment>(F);
-    STI = RF.getSubtargetInfo();
-    assert(!RF.hasInstructions() || STI != nullptr);
-    break;
-  }
-  default:
-    break;
-  }
+  STI = F.getSubtargetInfo();
+  assert(!F.hasInstructions() || STI != nullptr);
   return STI;
 }

@@ -22,23 +22,23 @@ using ValueTuple = std::tuple<Value, Value, Value>;
 // File local helper functions/macros.
 //===----------------------------------------------------------------------===//
 #define CMPI(p, lhs, rhs)                                                      \
-  (b.create<arith::CmpIOp>(l, arith::CmpIPredicate::p, (lhs), (rhs))           \
+  (arith::CmpIOp::create(b, l, arith::CmpIPredicate::p, (lhs), (rhs))          \
        .getResult())
 
 #define C_FALSE (constantI1(b, l, false))
 #define C_TRUE (constantI1(b, l, true))
 #define C_IDX(v) (constantIndex(b, l, (v)))
-#define YIELD(vs) (b.create<scf::YieldOp>(l, (vs)))
-#define ADDI(lhs, rhs) (b.create<arith::AddIOp>(l, (lhs), (rhs)).getResult())
-#define ORI(lhs, rhs) (b.create<arith::OrIOp>(l, (lhs), (rhs)).getResult())
-#define ANDI(lhs, rhs) (b.create<arith::AndIOp>(l, (lhs), (rhs)).getResult())
-#define SUBI(lhs, rhs) (b.create<arith::SubIOp>(l, (lhs), (rhs)).getResult())
-#define MULI(lhs, rhs) (b.create<arith::MulIOp>(l, (lhs), (rhs)).getResult())
-#define MINUI(lhs, rhs) (b.create<arith::MinUIOp>(l, (lhs), (rhs)).getResult())
-#define REMUI(lhs, rhs) (b.create<arith::RemUIOp>(l, (lhs), (rhs)).getResult())
-#define DIVUI(lhs, rhs) (b.create<arith::DivUIOp>(l, (lhs), (rhs)).getResult())
+#define YIELD(vs) (scf::YieldOp::create(b, l, (vs)))
+#define ADDI(lhs, rhs) (arith::AddIOp::create(b, l, (lhs), (rhs)).getResult())
+#define ORI(lhs, rhs) (arith::OrIOp::create(b, l, (lhs), (rhs)).getResult())
+#define ANDI(lhs, rhs) (arith::AndIOp::create(b, l, (lhs), (rhs)).getResult())
+#define SUBI(lhs, rhs) (arith::SubIOp::create(b, l, (lhs), (rhs)).getResult())
+#define MULI(lhs, rhs) (arith::MulIOp::create(b, l, (lhs), (rhs)).getResult())
+#define MINUI(lhs, rhs) (arith::MinUIOp::create(b, l, (lhs), (rhs)).getResult())
+#define REMUI(lhs, rhs) (arith::RemUIOp::create(b, l, (lhs), (rhs)).getResult())
+#define DIVUI(lhs, rhs) (arith::DivUIOp::create(b, l, (lhs), (rhs)).getResult())
 #define SELECT(c, lhs, rhs)                                                    \
-  (b.create<arith::SelectOp>(l, (c), (lhs), (rhs)).getResult())
+  (arith::SelectOp::create(b, l, (c), (lhs), (rhs)).getResult())
 
 //===----------------------------------------------------------------------===//
 // SparseTensorLevel derived classes.
@@ -150,19 +150,19 @@ public:
       return loadRange();
 
     SmallVector<Type, 2> types{b.getIndexType(), b.getIndexType()};
-    scf::IfOp posRangeIf = b.create<scf::IfOp>(l, types, inPadZone, true);
+    scf::IfOp posRangeIf = scf::IfOp::create(b, l, types, inPadZone, true);
     // True branch, returns a "fake" empty range [0, 0) if parent
     // iterator is in pad zone.
     b.setInsertionPointToStart(posRangeIf.thenBlock());
 
     SmallVector<Value, 2> emptyRange{C_IDX(0), C_IDX(0)};
-    b.create<scf::YieldOp>(l, emptyRange);
+    scf::YieldOp::create(b, l, emptyRange);
 
     // False branch, returns the actual range.
     b.setInsertionPointToStart(posRangeIf.elseBlock());
     auto [pLo, pHi] = loadRange();
     SmallVector<Value, 2> loadedRange{pLo, pHi};
-    b.create<scf::YieldOp>(l, loadedRange);
+    scf::YieldOp::create(b, l, loadedRange);
 
     b.setInsertionPointAfter(posRangeIf);
     ValueRange posRange = posRangeIf.getResults();
@@ -248,7 +248,7 @@ static scf::ValueVector genWhenInBound(
     llvm::function_ref<scf::ValueVector(OpBuilder &, Location, Value)>
         builder) {
   TypeRange ifRetTypes = elseRet.getTypes();
-  auto ifOp = b.create<scf::IfOp>(l, ifRetTypes, it.genNotEnd(b, l), true);
+  auto ifOp = scf::IfOp::create(b, l, ifRetTypes, it.genNotEnd(b, l), true);
 
   b.setInsertionPointToStart(ifOp.thenBlock());
   Value crd = it.deref(b, l);
@@ -504,6 +504,14 @@ public:
                      unsigned extraCursorVal = 0)
       : SparseIterator(kind, *wrap, extraCursorVal), wrap(std::move(wrap)) {}
 
+  void setSparseEmitStrategy(SparseEmitStrategy strategy) override {
+    wrap->setSparseEmitStrategy(strategy);
+  }
+
+  SparseEmitStrategy getSparseEmitStrategy() const override {
+    return wrap->getSparseEmitStrategy();
+  }
+
   SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
     return wrap->getCursorValTypes(b);
   }
@@ -732,29 +740,29 @@ public:
   //      [itVal0, itVal1, ..., pNx0],
   //      ...]
   Value allocSubSectPosBuf(OpBuilder &b, Location l) {
-    return b.create<memref::AllocaOp>(
-        l,
+    return memref::AllocaOp::create(
+        b, l,
         MemRefType::get({ShapedType::kDynamic, tupleSz + 1}, b.getIndexType()),
         maxTupleCnt);
   }
 
   void storeNxLvlStart(OpBuilder &b, Location l, Value tupleId,
                        Value start) const {
-    b.create<memref::StoreOp>(l, start, subSectPosBuf,
-                              ValueRange{tupleId, C_IDX(tupleSz)});
+    memref::StoreOp::create(b, l, start, subSectPosBuf,
+                            ValueRange{tupleId, C_IDX(tupleSz)});
   }
 
   Value loadNxLvlStart(OpBuilder &b, Location l, Value tupleId) const {
-    return b.create<memref::LoadOp>(l, subSectPosBuf,
-                                    ValueRange{tupleId, C_IDX(tupleSz)});
+    return memref::LoadOp::create(b, l, subSectPosBuf,
+                                  ValueRange{tupleId, C_IDX(tupleSz)});
   }
 
   void storeCursorVals(OpBuilder &b, Location l, Value tupleId,
                        ValueRange itVals) const {
     assert(itVals.size() == tupleSz);
     for (unsigned i = 0; i < tupleSz; i++) {
-      b.create<memref::StoreOp>(l, itVals[i], subSectPosBuf,
-                                ValueRange{tupleId, C_IDX(i)});
+      memref::StoreOp::create(b, l, itVals[i], subSectPosBuf,
+                              ValueRange{tupleId, C_IDX(i)});
     }
   }
 
@@ -762,8 +770,8 @@ public:
                                     Value tupleId) const {
     SmallVector<Value> ret;
     for (unsigned i = 0; i < tupleSz; i++) {
-      Value v = b.create<memref::LoadOp>(l, subSectPosBuf,
-                                         ValueRange{tupleId, C_IDX(i)});
+      Value v = memref::LoadOp::create(b, l, subSectPosBuf,
+                                       ValueRange{tupleId, C_IDX(i)});
       ret.push_back(v);
     }
     return ret;
@@ -979,7 +987,7 @@ public:
 
 void SparseIterator::genInit(OpBuilder &b, Location l,
                              const SparseIterator *p) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     Operation *begin = b.create(l, b.getStringAttr(prefix + ".begin"), {},
                                 getCursorValTypes(b));
@@ -994,7 +1002,7 @@ void SparseIterator::genInit(OpBuilder &b, Location l,
 }
 
 Value SparseIterator::genNotEnd(OpBuilder &b, Location l) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     Operation *notEnd = b.create(l, b.getStringAttr(prefix + ".not_end"),
                                  getCursor(), b.getI1Type());
@@ -1005,7 +1013,7 @@ Value SparseIterator::genNotEnd(OpBuilder &b, Location l) {
 }
 
 void SparseIterator::locate(OpBuilder &b, Location l, Value crd) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     SmallVector<Value> args = getCursor();
     args.push_back(crd);
@@ -1019,7 +1027,7 @@ void SparseIterator::locate(OpBuilder &b, Location l, Value crd) {
 }
 
 Value SparseIterator::deref(OpBuilder &b, Location l) {
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     SmallVector<Value> args = getCursor();
     Operation *deref = b.create(l, b.getStringAttr(prefix + ".deref"),
@@ -1032,7 +1040,7 @@ Value SparseIterator::deref(OpBuilder &b, Location l) {
 
 ValueRange SparseIterator::forward(OpBuilder &b, Location l) {
   assert(!randomAccessible());
-  if (emitStrategy == SparseEmitStrategy::kDebugInterface) {
+  if (getSparseEmitStrategy() == SparseEmitStrategy::kDebugInterface) {
     std::string prefix = getDebugInterfacePrefix();
     Operation *next = b.create(l, b.getStringAttr(prefix + ".next"),
                                getCursor(), getCursorValTypes(b));
@@ -1043,7 +1051,7 @@ ValueRange SparseIterator::forward(OpBuilder &b, Location l) {
 }
 
 ValueRange SparseIterator::forwardIf(OpBuilder &b, Location l, Value cond) {
-  auto ifOp = b.create<scf::IfOp>(l, getCursor().getTypes(), cond, true);
+  auto ifOp = scf::IfOp::create(b, l, getCursor().getTypes(), cond, true);
   // Generate else branch first, otherwise iterator values will be updated by
   // `forward()`.
   b.setInsertionPointToStart(ifOp.elseBlock());
@@ -1058,12 +1066,12 @@ ValueRange SparseIterator::forwardIf(OpBuilder &b, Location l, Value cond) {
 }
 
 Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
-  auto whileOp = b.create<scf::WhileOp>(
-      l, pos.getType(), pos,
+  auto whileOp = scf::WhileOp::create(
+      b, l, pos.getType(), pos,
       /*beforeBuilder=*/
       [this, pos](OpBuilder &b, Location l, ValueRange ivs) {
         Value inBound = CMPI(ult, ivs.front(), posHi);
-        auto ifInBound = b.create<scf::IfOp>(l, b.getI1Type(), inBound, true);
+        auto ifInBound = scf::IfOp::create(b, l, b.getI1Type(), inBound, true);
         {
           OpBuilder::InsertionGuard guard(b);
           // If in bound, load the next coordinates and check duplication.
@@ -1076,7 +1084,7 @@ Value DedupIterator::genSegmentHigh(OpBuilder &b, Location l, Value pos) {
           b.setInsertionPointToStart(ifInBound.elseBlock());
           YIELD(constantI1(b, l, false));
         }
-        b.create<scf::ConditionOp>(l, ifInBound.getResults()[0], ivs);
+        scf::ConditionOp::create(b, l, ifInBound.getResults()[0], ivs);
       },
       /*afterBuilder=*/
       [](OpBuilder &b, Location l, ValueRange ivs) {
@@ -1137,8 +1145,8 @@ ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
 
   SmallVector<Value> whileArgs(getCursor().begin(), getCursor().end());
   whileArgs.push_back(isFirst);
-  auto whileOp = b.create<scf::WhileOp>(
-      l, ValueRange(whileArgs).getTypes(), whileArgs,
+  auto whileOp = scf::WhileOp::create(
+      b, l, ValueRange(whileArgs).getTypes(), whileArgs,
       /*beforeBuilder=*/
       [this](OpBuilder &b, Location l, ValueRange ivs) {
         ValueRange isFirst = linkNewScope(ivs);
@@ -1154,7 +1162,7 @@ ValueRange FilterIterator::forwardImpl(OpBuilder &b, Location l) {
                              ret = ORI(ret, llvm::getSingleElement(isFirst));
                              return {ret};
                            });
-        b.create<scf::ConditionOp>(l, cont.front(), ivs);
+        scf::ConditionOp::create(b, l, cont.front(), ivs);
       },
       /*afterBuilder=*/
       [this](OpBuilder &b, Location l, ValueRange ivs) {
@@ -1219,8 +1227,8 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
     SmallVector<Value> iterArgs;
     iterArgs.push_back(C_IDX(0));
     iterArgs.append(reduc.begin(), reduc.end());
-    auto forEachLeaf = b.create<scf::ForOp>(
-        l, /*lb=*/C_IDX(0), /*ub=*/tupleCnt, /*step=*/C_IDX(1), iterArgs,
+    auto forEachLeaf = scf::ForOp::create(
+        b, l, /*lb=*/C_IDX(0), /*ub=*/tupleCnt, /*step=*/C_IDX(1), iterArgs,
         [&helper, &builder](OpBuilder &b, Location l, Value tupleId,
                             ValueRange iterArgs) {
           // Deserialize the iterator at the cached position (tupleId).
@@ -1235,12 +1243,12 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
           SmallVector<Value> whileArgs(helper.wrap.getCursor());
           whileArgs.append(iterArgs.begin(), iterArgs.end());
 
-          auto whileOp = b.create<scf::WhileOp>(
-              l, ValueRange(whileArgs).getTypes(), whileArgs,
+          auto whileOp = scf::WhileOp::create(
+              b, l, ValueRange(whileArgs).getTypes(), whileArgs,
               /*beforeBuilder=*/
               [&helper](OpBuilder &b, Location l, ValueRange ivs) {
                 helper.wrap.linkNewScope(ivs);
-                b.create<scf::ConditionOp>(l, helper.genNotEnd(b, l), ivs);
+                scf::ConditionOp::create(b, l, helper.genNotEnd(b, l), ivs);
               },
               /*afterBuilder=*/
               [&helper, &builder](OpBuilder &b, Location l, ValueRange ivs) {
@@ -1267,8 +1275,8 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
                                      ValueRange reduc) {
     assert(!parent || parent->lvl + 1 == lvl);
     delegate->genInit(b, l, parent);
-    auto forOp = b.create<scf::ForOp>(
-        l, /*lb=*/C_IDX(0), /*ub=*/subSectSz, /*step=*/C_IDX(1), reduc,
+    auto forOp = scf::ForOp::create(
+        b, l, /*lb=*/C_IDX(0), /*ub=*/subSectSz, /*step=*/C_IDX(1), reduc,
         [&](OpBuilder &b, Location l, Value crd, ValueRange iterArgs) {
           helper.locate(b, l, crd);
           scf::ValueVector nx = builder(b, l, &helper.wrap, iterArgs);
@@ -1411,7 +1419,7 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
   // if (offset + size > parents.size)
   //   isNonEmpty = false;
   Value fastPathP = CMPI(ugt, getMinCrd(), getAbsOff());
-  auto ifOp = b.create<scf::IfOp>(l, getCursor().getTypes(), fastPathP, true);
+  auto ifOp = scf::IfOp::create(b, l, getCursor().getTypes(), fastPathP, true);
   {
     OpBuilder::InsertionGuard guard(b);
     // Take the fast path
@@ -1448,7 +1456,7 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
                 Value isMin = CMPI(eq, crd, getMinCrd());
                 delegate->forwardIf(b, l, isMin);
                 // Update the forwarded iterator values if needed.
-                auto ifIsMin = b.create<scf::IfOp>(l, isMin, false);
+                auto ifIsMin = scf::IfOp::create(b, l, isMin, false);
                 b.setInsertionPointToStart(&ifIsMin.getThenRegion().front());
                 storeCursorVals(b, l, tupleId, delegate->serialize());
                 b.setInsertionPointAfter(ifIsMin);
@@ -1458,8 +1466,8 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
                 return genWhenInBound(b, l, *delegate, /*elseRet=*/iterArgs,
                                       [nxMin](OpBuilder &b, Location l,
                                               Value crd) -> scf::ValueVector {
-                                        Value nx = b.create<arith::MinUIOp>(
-                                            l, crd, nxMin);
+                                        Value nx = arith::MinUIOp::create(
+                                            b, l, crd, nxMin);
                                         return {nx, C_TRUE};
                                       });
               });
@@ -1480,7 +1488,7 @@ ValueRange NonEmptySubSectIterator::forwardImpl(OpBuilder &b, Location l) {
 
   // We should at least forward the offset by one.
   Value minAbsOff = ADDI(getAbsOff(), c1);
-  nxAbsOff = b.create<arith::MaxUIOp>(l, minAbsOff, nxAbsOff);
+  nxAbsOff = arith::MaxUIOp::create(b, l, minAbsOff, nxAbsOff);
 
   seek(ValueRange{nxMinCrd, nxAbsOff, nxNotEnd});
   // The coordinate should not exceeds the space upper bound.
@@ -1581,16 +1589,17 @@ sparse_tensor::makeSparseTensorLevel(OpBuilder &b, Location l, Value t,
   auto stt = getSparseTensorType(t);
 
   LevelType lt = stt.getLvlType(lvl);
-  Value sz = stt.hasEncoding() ? b.create<LvlOp>(l, t, lvl).getResult()
-                               : b.create<tensor::DimOp>(l, t, lvl).getResult();
+  Value sz = stt.hasEncoding()
+                 ? LvlOp::create(b, l, t, lvl).getResult()
+                 : tensor::DimOp::create(b, l, t, lvl).getResult();
 
   SmallVector<Value, 2> buffers;
   if (lt.isWithPosLT()) {
-    Value pos = b.create<ToPositionsOp>(l, t, lvl);
+    Value pos = ToPositionsOp::create(b, l, t, lvl);
     buffers.push_back(pos);
   }
   if (lt.isWithCrdLT()) {
-    Value pos = b.create<ToCoordinatesOp>(l, t, lvl);
+    Value pos = ToCoordinatesOp::create(b, l, t, lvl);
     buffers.push_back(pos);
   }
   return makeSparseTensorLevel(lt, sz, buffers, tid, lvl);

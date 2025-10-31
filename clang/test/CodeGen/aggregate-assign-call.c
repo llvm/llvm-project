@@ -24,23 +24,23 @@ struct S bar(void) {
   // O1: %[[TMP2_ALLOCA:[^ ]+]] = alloca %struct.S
   // O1: %[[TMP3_ALLOCA:[^ ]+]] = alloca %struct.S
 
-  // O1: call void @llvm.lifetime.start.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
+  // O1: call void @llvm.lifetime.start.p0(ptr %[[TMP1_ALLOCA]])
   // O1: call void @foo
   r = foo();
   // O1: memcpy
-  // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
+  // O1: call void @llvm.lifetime.end.p0(ptr %[[TMP1_ALLOCA]])
 
-  // O1: call void @llvm.lifetime.start.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
+  // O1: call void @llvm.lifetime.start.p0(ptr %[[TMP2_ALLOCA]])
   // O1: call void @foo
   r = foo();
   // O1: memcpy
-  // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
+  // O1: call void @llvm.lifetime.end.p0(ptr %[[TMP2_ALLOCA]])
 
-  // O1: call void @llvm.lifetime.start.p0({{[^,]*}}, ptr %[[TMP3_ALLOCA]])
+  // O1: call void @llvm.lifetime.start.p0(ptr %[[TMP3_ALLOCA]])
   // O1: call void @foo
   r = foo();
   // O1: memcpy
-  // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP3_ALLOCA]])
+  // O1: call void @llvm.lifetime.end.p0(ptr %[[TMP3_ALLOCA]])
 
   return r;
 }
@@ -59,17 +59,17 @@ struct S baz(int i, volatile int *j) {
   // O1: %[[TMP2_ALLOCA:[^ ]+]] = alloca %struct.S
 
   do {
-    // O1: call void @llvm.lifetime.start.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
+    // O1: call void @llvm.lifetime.start.p0(ptr %[[TMP1_ALLOCA]])
     //
-    // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
+    // O1: call void @llvm.lifetime.end.p0(ptr %[[TMP1_ALLOCA]])
     //
     // O1: call void @foo_int(ptr dead_on_unwind writable sret(%struct.S) align 4 %[[TMP1_ALLOCA]],
     // O1: call void @llvm.memcpy
-    // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP1_ALLOCA]])
-    // O1: call void @llvm.lifetime.start.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
+    // O1: call void @llvm.lifetime.end.p0(ptr %[[TMP1_ALLOCA]])
+    // O1: call void @llvm.lifetime.start.p0(ptr %[[TMP2_ALLOCA]])
     // O1: call void @foo_int(ptr dead_on_unwind writable sret(%struct.S) align 4 %[[TMP2_ALLOCA]],
     // O1: call void @llvm.memcpy
-    // O1: call void @llvm.lifetime.end.p0({{[^,]*}}, ptr %[[TMP2_ALLOCA]])
+    // O1: call void @llvm.lifetime.end.p0(ptr %[[TMP2_ALLOCA]])
     r = foo_int(({
       if (*j)
         break;
