@@ -651,7 +651,7 @@ public:
 
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
                            bool &is_complex) override;
 
   unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;

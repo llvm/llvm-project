@@ -1120,7 +1120,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
           constructMemberDIE(Buffer, DDTy);
         }
       } else if (auto *Property = dyn_cast<DIObjCProperty>(Element)) {
-        DIE &ElemDie = createAndAddDIE(Property->getTag(), Buffer);
+        DIE &ElemDie = createAndAddDIE(Property->getTag(), Buffer, Property);
         StringRef PropertyName = Property->getName();
         addString(ElemDie, dwarf::DW_AT_APPLE_property_name, PropertyName);
         if (Property->getType())

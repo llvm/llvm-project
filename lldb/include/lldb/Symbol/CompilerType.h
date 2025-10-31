@@ -144,7 +144,7 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsFloatingPointType(bool &is_complex) const;
 
   bool IsFunctionType() const;
 
