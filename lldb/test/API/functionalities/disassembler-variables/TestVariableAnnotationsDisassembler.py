@@ -142,7 +142,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
         found_annotations = False
         found_variables = set()
 
-        # Track variable locations to detect changes (for selective printing)
+        # Track variable locations to detect changes (for selective printing).
         prev_locations = {}
 
         # Test each instruction
@@ -158,11 +158,11 @@ class TestVariableAnnotationsDisassembler(TestBase):
             if annotations.GetSize() > 0:
                 found_annotations = True
 
-                # Track current locations and detect changes
+                # Track current locations and detect changes.
                 current_locations = {}
                 should_print = False
 
-                # Validate each annotation
+                # Validate each annotation.
                 for j in range(annotations.GetSize()):
                     ann = annotations.GetItemAtIndex(j)
                     self.assertTrue(ann.IsValid(),
@@ -195,7 +195,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
                     self.assertTrue(register_kind_obj.IsValid(),
                                   "Missing 'register_kind' field")
 
-                    # Extract and validate values
+                    # Extract and validate values.
                     var_name = var_name_obj.GetStringValue(1024)
                     location = location_obj.GetStringValue(1024)
                     is_live = is_live_obj.GetBooleanValue()
@@ -203,7 +203,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
                     end_addr = end_addr_obj.GetUnsignedIntegerValue()
                     register_kind = register_kind_obj.GetUnsignedIntegerValue()
 
-                    # Validate types and values
+                    # Validate types and values.
                     self.assertIsInstance(var_name, str, "variable_name should be string")
                     self.assertGreater(len(var_name), 0, "variable_name should not be empty")
 
@@ -219,20 +219,20 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
                     self.assertIsInstance(register_kind, int, "register_kind should be integer")
 
-                    # Check for expected variables in this function
+                    # Check for expected variables in this function.
                     self.assertIn(var_name, ["argc", "argv", "i"],
                                 f"Unexpected variable name: {var_name}")
 
                     found_variables.add(var_name)
 
-                    # Track current location
+                    # Track current location.
                     current_locations[var_name] = location
 
-                    # Detect if this is a new variable or location changed
+                    # Detect if this is a new variable or location changed.
                     if var_name not in prev_locations or prev_locations[var_name] != location:
                         should_print = True
 
-                    # Check optional fields (may or may not be present)
+                    # Check optional fields (may or may not be present).
                     decl_file_obj = ann.GetValueForKey("decl_file")
                     if decl_file_obj.IsValid():
                         decl_file = decl_file_obj.GetStringValue(1024)
@@ -245,7 +245,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
                         decl_line = decl_line_obj.GetUnsignedIntegerValue()
                         self.assertIsInstance(decl_line, int)
 
-                        # Validate declaration line matches the source code (according to d_original_example.c)
+                        # Validate declaration line matches the source code (according to d_original_example.c).
                         if var_name == "argc":
                             self.assertEqual(decl_line, 3, "argc should be declared on line 3")
                         elif var_name == "argv":
@@ -258,7 +258,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
                         type_name = type_name_obj.GetStringValue(1024)
                         self.assertIsInstance(type_name, str)
 
-                        # Validate declaration line matches the source code (according to d_original_example.c)
+                        # Validate declaration line matches the source code (according to d_original_example.c).
                         if var_name == "argc":
                             self.assertEqual(type_name, "int", "argc should be type 'int'")
                         elif var_name == "argv":
@@ -267,19 +267,19 @@ class TestVariableAnnotationsDisassembler(TestBase):
                             self.assertEqual(type_name, "int", "i should be type 'int'")
 
                 if self.TraceOn():
-                    # Only print if something happened (location changed or variable appeared/disappeared)
+                    # Only print if something happened (location changed or variable appeared/disappeared).
                     if should_print or len(current_locations) != len(prev_locations):
                         print(f"\nInstruction {i} at {inst.GetAddress()}: {annotations.GetSize()} annotations")
                         for var_name, location in current_locations.items():
                             change_marker = " <- CHANGED" if var_name in prev_locations and prev_locations[var_name] != location else ""
                             new_marker = " <- NEW" if var_name not in prev_locations else ""
                             print(f"  {var_name} = {location}{change_marker}{new_marker}")
-                        # Check for disappeared variables
+                        # Check for disappeared variables.
                         for var_name in prev_locations:
                             if var_name not in current_locations:
                                 print(f"  {var_name} <- GONE")
 
-                # Update tracking
+                # Update tracking.
                 prev_locations = current_locations.copy()
 
         self.assertTrue(found_annotations,
