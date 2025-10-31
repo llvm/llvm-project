@@ -408,8 +408,9 @@ int *nothingIsCertain(int x, int y) {
   //   {{Access of 'int' element in the heap area at an overflowing index}}
   // but apparently the analyzer isn't smart enough to deduce this.
 
-  // Keep constraints alive. (Without this, the overeager garbage collection of
-  // constraints would _also_ prevent the intended behavior in this testcase.)
+  // Keep constraints alive. (Without this, it is possible that the overeager
+  // garbage collection of constraints _also_ prevents the intended behavior in
+  // this testcase.)
   (void)x;
 
   return mem;
