@@ -170,6 +170,7 @@ def add_mir_checks_for_function(
         for prefix in run[0]:
             if prefix in printed_prefixes:
                 break
+            # func_info can be empty if there was a prefix conflict.
             if not func_dict[prefix].get(func_name):
                 continue
             if printed_prefixes:
@@ -223,7 +224,6 @@ def add_mir_check_lines(
     first_line = func_body[0]
     indent = len(first_line) - len(first_line.lstrip(" "))
     # A check comment, indented the appropriate amount
-    # If check_indent is provided, use it; otherwise, auto-detect from MIR body
     if check_indent is not None:
         check = "{}; {}".format(check_indent, prefix)
     else:
