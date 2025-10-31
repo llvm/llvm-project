@@ -2280,9 +2280,12 @@ def add_checks(
             # For IR output, change all defs to FileCheck variables, so we're immune
             # to variable naming fashions.
             else:
-                blank_line_indices = {
-                    i for i, line in enumerate(func_body) if line.strip() == ""
-                } if ginfo.get_version() >= 7 else set()
+                if ginfo.get_version() >= 7:
+                    # Record the indices of blank lines in the function body preemptively.
+                    blank_line_indices = { i for i, line in enumerate(func_body) if line.strip() == "" }
+                else:
+                    blank_line_indices = set()
+
                 func_body = generalize_check_lines(
                     func_body,
                     ginfo,
