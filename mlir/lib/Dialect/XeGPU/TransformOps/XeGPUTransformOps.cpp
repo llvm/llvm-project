@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/TransformOps/XeGPUTransformOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
@@ -338,6 +339,69 @@ void transform::SetOpLayoutAttrOp::getEffects(
   onlyReadsHandle(getSgLayoutMutable(), effects);
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
+  modifiesPayload(effects);
+}
+
+void transform::SetGPULaunchThreadsOp::build(
+    OpBuilder &builder, OperationState &ostate, Value target,
+    ArrayRef<OpFoldResult> mixedThreads) {
+  SmallVector<int64_t> staticThreads;
+  SmallVector<Value> dynamicThreads;
+  dispatchIndexOpFoldResults(mixedThreads, dynamicThreads, staticThreads);
+  build(builder, ostate, target.getType(),
+        /*target=*/target,
+        /*threads=*/dynamicThreads,
+        /*static_threads=*/staticThreads);
+}
+
+DiagnosedSilenceableFailure
+transform::SetGPULaunchThreadsOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+
+  auto targetOps = state.getPayloadOps(getTarget());
+  if (!llvm::hasSingleElement(targetOps)) {
+    return emitDefiniteFailure() << "Requires exactly one targetOp handle (got "
+                                 << llvm::range_size(targetOps) << ")";
+  }
+  Operation *target = *targetOps.begin();
+
+  auto launchOp = dyn_cast<gpu::LaunchOp>(target);
+  if (!launchOp) {
+    auto diag = emitSilenceableFailure(getLoc())
+                << "Expected a gpu.launch op, but got: " << target->getName();
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+
+  SmallVector<int32_t> threads;
+  DiagnosedSilenceableFailure status =
+      convertMixedValuesToInt(state, (*this), threads, getMixedThreads());
+  if (!status.succeeded())
+    return status;
+
+  if (threads.size() != 3) {
+    return emitSilenceableFailure(getLoc())
+           << "Expected threads to be a 3D vector";
+  }
+
+  rewriter.setInsertionPoint(launchOp);
+  auto createConstValue = [&](int value) {
+    return arith::ConstantIndexOp::create(rewriter, launchOp.getLoc(), value);
+  };
+
+  // Replace threads in-place.
+  launchOp.getBlockSizeXMutable().assign(createConstValue(threads[0]));
+  launchOp.getBlockSizeYMutable().assign(createConstValue(threads[1]));
+  launchOp.getBlockSizeZMutable().assign(createConstValue(threads[2]));
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::SetGPULaunchThreadsOp::getEffects(
+    ::llvm::SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsHandle(getThreadsMutable(), effects);
   modifiesPayload(effects);
 }
 
