@@ -436,6 +436,8 @@ public:
 
   static bool LanguageIsC(lldb::LanguageType language);
 
+  static bool LanguageIsRust(lldb::LanguageType language);
+
   /// Equivalent to \c LanguageIsC||LanguageIsObjC||LanguageIsCPlusPlus.
   static bool LanguageIsCFamily(lldb::LanguageType language);
 
