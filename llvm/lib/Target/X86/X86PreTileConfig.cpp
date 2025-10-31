@@ -141,10 +141,7 @@ class X86PreTileConfig : public MachineFunctionPass {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       return false;
 
-    unsigned Shapes = 0;
-    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID)
-      Shapes = 1;
-    if (!Shapes)
+    if (MRI->getRegClass(MO.getReg())->getID() != X86::TILERegClassID)
       return false;
 
     collectShapeInfo(MI);
