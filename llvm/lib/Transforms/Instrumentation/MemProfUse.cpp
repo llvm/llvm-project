@@ -127,15 +127,19 @@ static uint64_t computeStackId(const memprof::Frame &Frame) {
   return computeStackId(Frame.Function, Frame.LineOffset, Frame.Column);
 }
 
+static AllocationType getAllocType(const AllocationInfo *AllocInfo) {
+  return getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
+                      AllocInfo->Info.getAllocCount(),
+                      AllocInfo->Info.getTotalLifetime());
+}
+
 static AllocationType addCallStack(CallStackTrie &AllocTrie,
                                    const AllocationInfo *AllocInfo,
                                    uint64_t FullStackId) {
   SmallVector<uint64_t> StackIds;
   for (const auto &StackFrame : AllocInfo->CallStack)
     StackIds.push_back(computeStackId(StackFrame));
-  auto AllocType = getAllocType(AllocInfo->Info.getTotalLifetimeAccessDensity(),
-                                AllocInfo->Info.getAllocCount(),
-                                AllocInfo->Info.getTotalLifetime());
+  auto AllocType = getAllocType(AllocInfo);
   std::vector<ContextTotalSize> ContextSizeInfo;
   if (recordContextSizeInfoForAnalysis()) {
     auto TotalSize = AllocInfo->Info.getTotalSize();
@@ -405,22 +409,39 @@ handleAllocSite(Instruction &I, CallBase *CI,
                 const std::set<const AllocationInfo *> &AllocInfoSet,
                 std::map<std::pair<uint64_t, unsigned>, AllocMatchInfo>
                     &FullStackIdToAllocMatchInfo) {
+  // TODO: Remove this once the profile creation logic deduplicates contexts
+  // that are the same other than the IsInlineFrame bool. Until then, keep the
+  // largest.
+  DenseMap<uint64_t, const AllocationInfo *> UniqueFullContextIdAllocInfo;
+  for (auto *AllocInfo : AllocInfoSet) {
+    auto FullStackId = computeFullStackId(AllocInfo->CallStack);
+    auto [It, Inserted] =
+        UniqueFullContextIdAllocInfo.insert({FullStackId, AllocInfo});
+    // If inserted entry, done.
+    if (Inserted)
+      continue;
+    // Keep the larger one, or the noncold one if they are the same size.
+    auto CurSize = It->second->Info.getTotalSize();
+    auto NewSize = AllocInfo->Info.getTotalSize();
+    if ((CurSize > NewSize) ||
+        (CurSize == NewSize &&
+         getAllocType(AllocInfo) != AllocationType::NotCold))
+      continue;
+    It->second = AllocInfo;
+  }
   // We may match this instruction's location list to multiple MIB
   // contexts. Add them to a Trie specialized for trimming the contexts to
   // the minimal needed to disambiguate contexts with unique behavior.
   CallStackTrie AllocTrie(&ORE, MaxColdSize);
   uint64_t TotalSize = 0;
   uint64_t TotalColdSize = 0;
-  for (auto *AllocInfo : AllocInfoSet) {
+  for (auto &[FullStackId, AllocInfo] : UniqueFullContextIdAllocInfo) {
     // Check the full inlined call stack against this one.
     // If we found and thus matched all frames on the call, include
     // this MIB.
     if (stackFrameIncludesInlinedCallStack(AllocInfo->CallStack,
                                            InlinedCallStack)) {
       NumOfMemProfMatchedAllocContexts++;
-      uint64_t FullStackId = 0;
-      if (ClPrintMemProfMatchInfo || recordContextSizeInfoForAnalysis())
-        FullStackId = computeFullStackId(AllocInfo->CallStack);
       auto AllocType = addCallStack(AllocTrie, AllocInfo, FullStackId);
       TotalSize += AllocInfo->Info.getTotalSize();
       if (AllocType == AllocationType::Cold)

@@ -166,18 +166,15 @@ public:
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
 
-  // TMA G2S copy with cta_group::1/2 support
-  bool hasCpAsyncBulkTensorCTAGroupSupport() const {
-    // TODO: Update/tidy-up after the family-conditional support arrives
-    switch (FullSmVersion) {
-    case 1003:
-    case 1013:
-      return PTXVersion >= 86;
-    case 1033:
-      return PTXVersion >= 88;
-    default:
-      return false;
-    }
+  // Checks support for following in TMA:
+  //  - cta_group::1/2 support
+  //  - im2col_w/w_128 mode support
+  //  - tile_gather4 mode support
+  //  - tile_scatter4 mode support
+  bool hasTMABlackwellSupport() const {
+    return hasPTXWithFamilySMs(90, {100, 110}) ||
+           hasPTXWithFamilySMs(88, {100, 101}) ||
+           hasPTXWithAccelSMs(86, {100, 101});
   }
 
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
