@@ -15627,13 +15627,15 @@ static bool canConvertToVcmpequb(SDValue &LHS, SDValue RHS) {
 }
 
 SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
-                                        const SDLoc &DL, SDValue &LHS,
-                                        SDValue RHS) {
+                                        const SDLoc &DL) {
+
+  assert(N->getOpcode() == ISD::SETCC && "Should be called with a SETCC node");
+
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
   assert(CC == ISD::SETNE ||
          CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
-  auto *LA = dyn_cast<LoadSDNode>(LHS);
-  auto *LB = dyn_cast<LoadSDNode>(RHS);
+  auto *LA = dyn_cast<LoadSDNode>(N->getOperand(0));
+  auto *LB = dyn_cast<LoadSDNode>(N->getOperand(1));
 
   // Following code transforms the DAG
   // t0: ch,glue = EntryToken
@@ -15717,7 +15719,7 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
     //   and one vector compare instruction.
 
     if (Subtarget.hasAltivec() && canConvertToVcmpequb(LHS, RHS))
-      return convertTwoLoadsAndCmpToVCMPEQUB(DCI.DAG, N, SDLoc(N), LHS, RHS);
+      return convertTwoLoadsAndCmpToVCMPEQUB(DCI.DAG, N, SDLoc(N));
   }
 
   return DAGCombineTruncBoolExt(N, DCI);
