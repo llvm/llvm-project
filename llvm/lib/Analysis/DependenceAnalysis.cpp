@@ -1587,15 +1587,6 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
-/// Returns \p A * \p B if it guaranteed not to signed wrap. Otherwise returns
-/// nullptr. \p A and \p B must have the same integer type.
-static const SCEV *mulSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
-                                           ScalarEvolution &SE) {
-  if (SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, A, B))
-    return SE.getMulExpr(A, B);
-  return nullptr;
-}
-
 /// Returns the absolute value of \p A. In the context of dependence analysis,
 /// we need an absolute value in a mathematical sense. If \p A is the signed
 /// minimum value, we cannot represent it unless extending the original type.
@@ -1695,11 +1686,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
-  const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
-  if (!Delta) {
-    Result.Consistent = false;
-    return false;
-  }
+  const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta);
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
 
@@ -1715,9 +1702,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     const SCEV *AbsCoeff = absSCEVNoSignedOverflow(Coeff, *SE);
     if (!AbsDelta || !AbsCoeff)
       return false;
-    const SCEV *Product = mulSCEVNoSignedOverflow(UpperBound, AbsCoeff, *SE);
-    if (!Product)
-      return false;
+    const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
     return isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
   }();
   if (IsDeltaLarge) {
