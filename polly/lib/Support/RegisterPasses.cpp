@@ -479,8 +479,6 @@ static llvm::Expected<bool>
 parseCGPipeline(StringRef Name, llvm::CGSCCPassManager &CGPM,
                 PassInstrumentationCallbacks *PIC,
                 ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  assert(Pipeline.empty());
-
 #define CGSCC_PASS(NAME, CREATE_PASS, PARSER)                                  \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
     auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
