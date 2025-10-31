@@ -215,13 +215,13 @@ bool UnrollLoopsCheck::hasLargeNumIterations(const Stmt *Statement,
       break;
     case (BO_MulAssign):
       Iterations =
-          1 + (std::log((double)EndValue) - std::log((double)InitValue)) /
-                  std::log((double)ConstantValue);
+          1 + ((std::log((double)EndValue) - std::log((double)InitValue)) /
+               std::log((double)ConstantValue));
       break;
     case (BO_DivAssign):
       Iterations =
-          1 + (std::log((double)InitValue) - std::log((double)EndValue)) /
-                  std::log((double)ConstantValue);
+          1 + ((std::log((double)InitValue) - std::log((double)EndValue)) /
+               std::log((double)ConstantValue));
       break;
     default:
       // All other operators are not handled; assume large bounds.

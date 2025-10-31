@@ -262,8 +262,8 @@ define void @pr43371() optsize {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -288,8 +288,8 @@ define void @pr43371() optsize {
 ; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
 ; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; PGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; PGSO-NEXT:    store i16 0, ptr [[TMP3]], align 1
 ; PGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -314,8 +314,8 @@ define void @pr43371() optsize {
 ; NPGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
 ; NPGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; NPGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; NPGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; NPGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; NPGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; NPGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; NPGSO-NEXT:    store i16 0, ptr [[TMP3]], align 1
 ; NPGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -363,8 +363,8 @@ define void @pr43371_pgso() !prof !14 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; CHECK-NEXT:    store i16 0, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 1
@@ -389,8 +389,8 @@ define void @pr43371_pgso() !prof !14 {
 ; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
 ; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
 ; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; PGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
 ; PGSO-NEXT:    store i16 0, ptr [[TMP3]], align 1
 ; PGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1

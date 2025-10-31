@@ -2499,7 +2499,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
       [&PIC, this](StringRef PassID, Any IR) {
         SavedIR.clear();
         raw_string_ostream OS(SavedIR);
-        OS << formatv("*** Dump of {0}IR Before Last Pass {1}",
+        OS << formatv("; *** Dump of {0}IR Before Last Pass {1}",
                       llvm::forcePrintModuleIR() ? "Module " : "", PassID);
         if (!isInteresting(IR, PassID, PIC.getPassNameForClassName(PassID))) {
           OS << " Filtered Out ***\n";

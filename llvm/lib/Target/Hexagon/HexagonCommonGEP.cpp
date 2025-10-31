@@ -272,15 +272,14 @@ namespace {
       OS << *I << ' ' << **I << '\n';
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeVect &S) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const NodeVect &S);
   raw_ostream &operator<< (raw_ostream &OS, const NodeVect &S) {
     dump_node_container(OS, S);
     return OS;
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeToUsesMap &M) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const NodeToUsesMap &M);
   raw_ostream &operator<< (raw_ostream &OS, const NodeToUsesMap &M){
     for (const auto &I : M) {
       const UseSet &Us = I.second;
@@ -914,9 +913,8 @@ namespace {
     const NodeToValueMap &Map;
   };
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const LocationAsBlock &Loc) LLVM_ATTRIBUTE_UNUSED ;
-  raw_ostream &operator<< (raw_ostream &OS, const LocationAsBlock &Loc) {
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const LocationAsBlock &Loc) {
     for (const auto &I : Loc.Map) {
       OS << I.first << " -> ";
       if (BasicBlock *B = cast_or_null<BasicBlock>(I.second))

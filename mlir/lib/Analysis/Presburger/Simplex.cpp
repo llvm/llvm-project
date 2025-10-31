@@ -34,7 +34,7 @@ using Direction = Simplex::Direction;
 const int nullIndex = std::numeric_limits<int>::max();
 
 // Return a + scale*b;
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static SmallVector<DynamicAPInt, 8>
 scaleAndAddForAssert(ArrayRef<DynamicAPInt> a, const DynamicAPInt &scale,
                      ArrayRef<DynamicAPInt> b) {

@@ -950,7 +950,8 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
-  const auto &loopSym = *control.name.thing.thing.symbol;
+  const auto &loopSym =
+      *Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.name).symbol;
   mlir::Value loopVar = fir::getBase(converter.genExprAddr(
       Fortran::evaluate::AsGenericExpr(loopSym).value(), stmtCtx));
   auto genControlValue = [&](const Fortran::parser::ScalarIntExpr &expr) {

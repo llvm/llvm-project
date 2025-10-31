@@ -298,11 +298,16 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
     }
-    if (const auto *EVL = dyn_cast<VPInstruction>(&R)) {
-      if (EVL->getOpcode() == VPInstruction::ExplicitVectorLength &&
-          !verifyEVLRecipe(*EVL)) {
-        errs() << "EVL VPValue is not used correctly\n";
-        return false;
+    if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
+      switch (VPI->getOpcode()) {
+      case VPInstruction::ExplicitVectorLength:
+        if (!verifyEVLRecipe(*VPI)) {
+          errs() << "EVL VPValue is not used correctly\n";
+          return false;
+        }
+        break;
+      default:
+        break;
       }
     }
   }

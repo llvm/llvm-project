@@ -183,17 +183,17 @@ T get_T();
 
 void use() {
   UnaryC auto [a, b] = get_S();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
   BinaryC<int> auto [c, d] = get_S();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
 }
 
 template<typename T>
 void TemplUse() {
   UnaryC auto [a, b] = get_T<T>();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
   BinaryC<T> auto [c, d] = get_T<T>();
-  // since-cxx20-error@-1 {{decomposition declaration cannot be declared with constrained 'auto'}}
+  // since-cxx20-error@-1 {{structured binding declaration cannot be declared with constrained 'auto'}}
 }
 #endif
 } // namespace cwg2635
