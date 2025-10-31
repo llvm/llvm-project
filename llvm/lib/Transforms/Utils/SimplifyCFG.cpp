@@ -305,7 +305,8 @@ class SimplifyCFGOpt {
   bool hoistCommonCodeFromSuccessors(Instruction *TI, bool AllInstsEqOnly);
   bool hoistSuccIdenticalTerminatorToSwitchOrIf(
       Instruction *TI, Instruction *I1,
-      SmallVectorImpl<Instruction *> &OtherSuccTIs);
+      SmallVectorImpl<Instruction *> &OtherSuccTIs,
+      ArrayRef<BasicBlock *> UniqueSuccessors);
   bool speculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB);
   bool simplifyTerminatorOnSelect(Instruction *OldTerm, Value *Cond,
                                   BasicBlock *TrueBB, BasicBlock *FalseBB,
@@ -1973,7 +1974,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
         return Changed;
       }
 
-      return hoistSuccIdenticalTerminatorToSwitchOrIf(TI, I1, OtherInsts) ||
+      return hoistSuccIdenticalTerminatorToSwitchOrIf(
+                 TI, I1, OtherInsts, UniqueSuccessors.getArrayRef()) ||
              Changed;
     }
 
@@ -2046,7 +2048,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
 
 bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
     Instruction *TI, Instruction *I1,
-    SmallVectorImpl<Instruction *> &OtherSuccTIs) {
+    SmallVectorImpl<Instruction *> &OtherSuccTIs,
+    ArrayRef<BasicBlock *> UniqueSuccessors) {
 
   auto *BI = dyn_cast<BranchInst>(TI);
 
@@ -2163,8 +2166,7 @@ bool SimplifyCFGOpt::hoistSuccIdenticalTerminatorToSwitchOrIf(
   if (DTU) {
     // TI might be a switch with multi-cases destination, so we need to care for
     // the duplication of successors.
-    SmallPtrSet<BasicBlock *, 4> UniqSuccs(llvm::from_range, successors(TI));
-    for (BasicBlock *Succ : UniqSuccs)
+    for (BasicBlock *Succ : UniqueSuccessors)
       Updates.push_back({DominatorTree::Delete, TIParent, Succ});
   }
 
