@@ -3151,6 +3151,14 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectInsertElt(ResVReg, ResType, I);
   case Intrinsic::spv_gep:
     return selectGEP(ResVReg, ResType, I);
+  case Intrinsic::spv_bitcast: {
+    Register OpReg = I.getOperand(2).getReg();
+    SPIRVType *OpType =
+        OpReg.isValid() ? GR.getSPIRVTypeForVReg(OpReg) : nullptr;
+    if (!GR.isBitcastCompatible(ResType, OpType))
+      report_fatal_error("incompatible result and operand types in a bitcast");
+    return selectOpWithSrcs(ResVReg, ResType, I, {OpReg}, SPIRV::OpBitcast);
+  }
   case Intrinsic::spv_unref_global:
   case Intrinsic::spv_init_global: {
     MachineInstr *MI = MRI->getVRegDef(I.getOperand(1).getReg());
