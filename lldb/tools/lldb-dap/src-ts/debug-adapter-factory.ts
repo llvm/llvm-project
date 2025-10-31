@@ -1,4 +1,3 @@
-import * as os from "os";
 import * as path from "path";
 import * as util from "util";
 import * as vscode from "vscode";
@@ -7,18 +6,9 @@ import * as fs from "node:fs/promises";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { LogFilePathProvider, LogType } from "./logging";
+import { expandUser } from "./utils";
 
 const exec = util.promisify(child_process.execFile);
-
-/**
- * Expands the character `~` to the user's home directory
- */
-function expandUser(file_path: string): string {
-  if (file_path.startsWith("~")) {
-    return os.homedir() + file_path.slice(1);
-  }
-  return file_path;
-}
 
 async function isExecutable(path: string): Promise<Boolean> {
   try {
