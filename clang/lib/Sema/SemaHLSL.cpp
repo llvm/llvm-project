@@ -801,9 +801,10 @@ HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
   return nullptr;
 }
 
-bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
-                                               DeclaratorDecl *D,
-                                               SemanticInfo &ActiveSemantic) {
+bool SemaHLSL::determineActiveSemanticOnScalar(
+    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+    llvm::StringSet<> &ActiveInputSemantics) {
+
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
     if (ActiveSemantic.Semantic &&
@@ -833,15 +834,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
   for (unsigned I = 0; I < ElementCount; ++I) {
     Twine VariableName = BaseName.concat(Twine(Location + I));
 
-    auto It = ActiveInputSemantics.find(FD);
-    if (It == ActiveInputSemantics.end()) {
-      llvm::StringSet<> Set({VariableName.str()});
-      auto Item = std::make_pair(FD, std::move(Set));
-      ActiveInputSemantics.insert(std::move(Item));
-      continue;
-    }
-
-    auto [_, Inserted] = ActiveInputSemantics[FD].insert(VariableName.str());
+    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
     if (!Inserted) {
       Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
           << VariableName.str();
@@ -852,8 +845,9 @@ bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
   return true;
 }
 
-bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
-                                       SemanticInfo &ActiveSemantic) {
+bool SemaHLSL::determineActiveSemantic(
+    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
+    llvm::StringSet<> &ActiveInputSemantics) {
   if (ActiveSemantic.Semantic == nullptr) {
     ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
     if (ActiveSemantic.Semantic &&
@@ -864,12 +858,13 @@ bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
   const Type *T = D->getType()->getUnqualifiedDesugaredType();
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
-    return determineActiveSemanticOnScalar(FD, D, ActiveSemantic);
+    return determineActiveSemanticOnScalar(FD, D, ActiveSemantic,
+                                           ActiveInputSemantics);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, Field, Info)) {
+    if (!determineActiveSemantic(FD, Field, Info, ActiveInputSemantics)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -942,12 +937,14 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     llvm_unreachable("Unhandled environment in triple");
   }
 
+  llvm::StringSet<> ActiveInputSemantics;
   for (ParmVarDecl *Param : FD->parameters()) {
     SemanticInfo ActiveSemantic;
     ActiveSemantic.Semantic = nullptr;
     ActiveSemantic.Index = std::nullopt;
 
-    if (!determineActiveSemantic(FD, Param, ActiveSemantic)) {
+    if (!determineActiveSemantic(FD, Param, ActiveSemantic,
+                                 ActiveInputSemantics)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }

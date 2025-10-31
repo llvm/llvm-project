@@ -246,8 +246,6 @@ private:
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
 
-  llvm::DenseMap<FunctionDecl *, llvm::StringSet<>> ActiveInputSemantics;
-
   struct SemanticInfo {
     HLSLSemanticAttr *Semantic;
     std::optional<uint32_t> Index;
@@ -263,9 +261,11 @@ private:
   HLSLSemanticAttr *createSemantic(const SemanticInfo &Semantic,
                                    DeclaratorDecl *TargetDecl);
   bool determineActiveSemanticOnScalar(FunctionDecl *FD, DeclaratorDecl *D,
-                                       SemanticInfo &ActiveSemantic);
+                                       SemanticInfo &ActiveSemantic,
+                                       llvm::StringSet<> &ActiveInputSemantics);
   bool determineActiveSemantic(FunctionDecl *FD, DeclaratorDecl *D,
-                               SemanticInfo &ActiveSemantic);
+                               SemanticInfo &ActiveSemantic,
+                               llvm::StringSet<> &ActiveInputSemantics);
 
   void processExplicitBindingsOnDecl(VarDecl *D);
 
