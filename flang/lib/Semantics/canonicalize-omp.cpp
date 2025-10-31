@@ -280,7 +280,7 @@ private:
       // show up in the tuple in specification part:
       // (1) in std::list<OpenMPDeclarativeConstruct>, or
       // (2) in std::list<DeclarationConstruct>.
-      // The case (1) is only possible is the list (2) is empty.
+      // The case (1) is only possible if the list (2) is empty.
 
       auto &omps =
           std::get<std::list<parser::OpenMPDeclarativeConstruct>>(spec.t);

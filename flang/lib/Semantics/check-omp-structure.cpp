@@ -1841,7 +1841,7 @@ void OmpStructureChecker::CheckExecutableAllocateDirective(
     for (const parser::OmpArgument &arg : spec.Arguments().v) {
       if (auto *sym{GetArgumentSymbol(arg)}) {
         // Ignore these checks for structure members. They are not allowed
-        // in the first place, so don't tell the users that they nened to
+        // in the first place, so don't tell the users that they need to
         // be specified somewhere,
         if (IsStructureComponent(*sym)) {
           continue;
@@ -2225,7 +2225,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::At &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
-
   const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
   const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
   PushContextAndClauseSets(
