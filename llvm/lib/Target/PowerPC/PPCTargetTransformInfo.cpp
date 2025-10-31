@@ -1044,14 +1044,16 @@ PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
       (!Pwr9EVL || Directive != PPC::DIR_PWR9))
     return DefaultLegalization;
 
+  if (!ST->isPPC64())
+    return DefaultLegalization;
+
   unsigned IID = PI.getIntrinsicID();
   if (IID != Intrinsic::vp_load && IID != Intrinsic::vp_store)
     return DefaultLegalization;
 
   bool IsLoad = IID == Intrinsic::vp_load;
-  Type* VecTy = IsLoad ? PI.getType() : PI.getOperand(0)->getType();
+  Type *VecTy = IsLoad ? PI.getType() : PI.getOperand(0)->getType();
   EVT VT = TLI->getValueType(DL, VecTy, true);
-  // dbgs() << "&&& Typecheck " << VT << "\n";
   if (VT != MVT::v2i64 && VT != MVT::v4i32 && VT != MVT::v8i16 &&
       VT != MVT::v16i8)
     return DefaultLegalization;
@@ -1068,4 +1070,3 @@ PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
 
   return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
 }
-
