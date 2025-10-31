@@ -4,6 +4,7 @@ macros:
   - macro_name: NULL
     macro_header: null-macro.h
 types:
+  - type_name: FILE
   - type_name: size_t
   - type_name: wint_t
   - type_name: wchar_t
@@ -104,9 +105,9 @@ functions:
   - name: wmemset
     standards:
       - stdc
-    return_type: wchar_t*
+    return_type: wchar_t *
     arguments:
-      - type: wchar_t*
+      - type: wchar_t *
       - type: wchar_t
       - type: size_t
   - name: wcschr
@@ -246,7 +247,7 @@ functions:
       - type: const wchar_t **__restrict
       - type: size_t
       - type: size_t
-      - type: mbstate_t
+      - type: mbstate_t *__restrict
   - name: wcsrtombs
     standards:
       - stdc
@@ -255,7 +256,7 @@ functions:
       - type: char *__restrict
       - type: const wchar_t **__restrict
       - type: size_t
-      - type: mbstate_t
+      - type: mbstate_t *__restrict
   - name: wcrtomb
     standards:
       - stdc
@@ -299,7 +300,7 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
-      - type: wchar_t** __restrict
+      - type: wchar_t **__restrict
   - name: wcpcpy
     standards:
       - stdc

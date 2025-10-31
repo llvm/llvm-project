@@ -369,6 +369,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
+        .Case("0xd25", "star-mc3")
         .Default("generic");
   }
 
@@ -1178,7 +1179,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  const char *CPU = 0;
+  const char *CPU = nullptr;
 
   switch (Family) {
   case 4:

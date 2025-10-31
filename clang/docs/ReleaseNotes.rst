@@ -281,6 +281,9 @@ Non-comprehensive list of changes in this release
   allocator-level heap organization strategies. A feature to instrument all
   allocation functions with a token ID can be enabled via the
   ``-fsanitize=alloc-token`` flag.
+- A builtin ``__builtin_infer_alloc_token(<args>, ...)`` is provided to allow
+  compile-time querying of allocation token IDs, where the builtin arguments
+  mirror those normally passed to an allocation function.
 
 - Clang now rejects the invalid use of ``constexpr`` with ``auto`` and an explicit type in C. (#GH163090)
 
@@ -447,6 +450,7 @@ Bug Fixes to Attribute Support
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
+- Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -657,6 +661,7 @@ OpenMP Support
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
 - Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
+- Added support for threadset clause in task and taskloop directives.
 - Properly handle array section/assumed-size array privatization in C/C++.
 - Added support to handle new syntax of the ``uses_allocators`` clause.
 - Added support for ``variable-category`` modifier in ``default clause``.

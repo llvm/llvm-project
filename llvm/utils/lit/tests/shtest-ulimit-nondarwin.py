@@ -10,4 +10,6 @@
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_okay.txt ({{[^)]*}})
 # CHECK: ulimit -v 1048576
+# CHECK: ulimit -s 256
 # CHECK: RLIMIT_AS=1073741824
+# CHECK: RLIMIT_STACK=262144

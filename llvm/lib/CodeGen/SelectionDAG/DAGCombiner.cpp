@@ -16481,10 +16481,34 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
-  case ISD::AVGFLOORS:
-  case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+    // trunc (avgceilu (sext (x), sext (y))) -> avgceils(x, y)
+    // trunc (avgceils (zext (x), zext (y))) -> avgceilu(x, y)
+    if (N0.hasOneUse()) {
+      SDValue Op0 = N0.getOperand(0);
+      SDValue Op1 = N0.getOperand(1);
+      if (N0.getOpcode() == ISD::AVGCEILU) {
+        if (TLI.isOperationLegalOrCustom(ISD::AVGCEILS, VT) &&
+            Op0.getOpcode() == ISD::SIGN_EXTEND &&
+            Op1.getOpcode() == ISD::SIGN_EXTEND &&
+            Op0.getOperand(0).getValueType() == VT &&
+            Op1.getOperand(0).getValueType() == VT)
+          return DAG.getNode(ISD::AVGCEILS, DL, VT, Op0.getOperand(0),
+                             Op1.getOperand(0));
+      } else {
+        if (TLI.isOperationLegalOrCustom(ISD::AVGCEILU, VT) &&
+            Op0.getOpcode() == ISD::ZERO_EXTEND &&
+            Op1.getOpcode() == ISD::ZERO_EXTEND &&
+            Op0.getOperand(0).getValueType() == VT &&
+            Op1.getOperand(0).getValueType() == VT)
+          return DAG.getNode(ISD::AVGCEILU, DL, VT, Op0.getOperand(0),
+                             Op1.getOperand(0));
+      }
+    }
+    [[fallthrough]];
+  case ISD::AVGFLOORS:
+  case ISD::AVGFLOORU:
   case ISD::ABDS:
   case ISD::ABDU:
     // (trunc (avg a, b)) -> (avg (trunc a), (trunc b))
@@ -19993,8 +20017,12 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  for (SDNode *Op : Ptr->users()) {
+  for (SDUse &U : Ptr->uses()) {
+    if (U.getResNo() != Ptr.getResNo())
+      continue;
+
     // Check for #1.
+    SDNode *Op = U.getUser();
     if (!shouldCombineToPostInc(N, Ptr, Op, BasePtr, Offset, AM, DAG, TLI))
       continue;
 
@@ -23478,6 +23506,93 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >
     if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT))
       return DAG.getSplat(VT, DL, InVal);
+
+    // Extend this type to be byte-addressable
+    EVT OldVT = VT;
+    EVT EltVT = VT.getVectorElementType();
+    bool IsByteSized = EltVT.isByteSized();
+    if (!IsByteSized) {
+      EltVT =
+          EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
+      VT = VT.changeElementType(EltVT);
+    }
+
+    // Check if this operation will be handled the default way for its type.
+    auto IsTypeDefaultHandled = [this](EVT VT) {
+      return TLI.getTypeAction(*DAG.getContext(), VT) ==
+                 TargetLowering::TypeSplitVector ||
+             TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT);
+    };
+
+    // Check if this operation is illegal and will be handled the default way,
+    // even after extending the type to be byte-addressable.
+    if (IsTypeDefaultHandled(OldVT) && IsTypeDefaultHandled(VT)) {
+      // For each dynamic insertelt, the default way will save the vector to
+      // the stack, store at an offset, and load the modified vector. This can
+      // dramatically increase code size if we have a chain of insertelts on a
+      // large vector: requiring O(V*C) stores/loads where V = length of
+      // vector and C is length of chain. If each insertelt is only fed into the
+      // next, the vector is write-only across this chain, and we can just
+      // save once before the chain and load after in O(V + C) operations.
+      SmallVector<SDNode *> Seq{N};
+      unsigned NumDynamic = 1;
+      while (true) {
+        SDValue InVec = Seq.back()->getOperand(0);
+        if (InVec.getOpcode() != ISD::INSERT_VECTOR_ELT)
+          break;
+        Seq.push_back(InVec.getNode());
+        NumDynamic += !isa<ConstantSDNode>(InVec.getOperand(2));
+      }
+
+      // It always and only makes sense to lower this sequence when we have more
+      // than one dynamic insertelt, since we will not have more than V constant
+      // insertelts, so we will be reducing the total number of stores+loads.
+      if (NumDynamic > 1) {
+        // In cases where the vector is illegal it will be broken down into
+        // parts and stored in parts - we should use the alignment for the
+        // smallest part.
+        Align SmallestAlign = DAG.getReducedAlign(VT, /*UseABI=*/false);
+        SDValue StackPtr =
+            DAG.CreateStackTemporary(VT.getStoreSize(), SmallestAlign);
+        auto &MF = DAG.getMachineFunction();
+        int FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+        auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+        // Save the vector to the stack
+        SDValue InVec = Seq.back()->getOperand(0);
+        if (!IsByteSized)
+          InVec = DAG.getNode(ISD::ANY_EXTEND, DL, VT, InVec);
+        SDValue Store = DAG.getStore(DAG.getEntryNode(), DL, InVec, StackPtr,
+                                     PtrInfo, SmallestAlign);
+
+        // Lower each dynamic insertelt to a store
+        for (SDNode *N : reverse(Seq)) {
+          SDValue Elmnt = N->getOperand(1);
+          SDValue Index = N->getOperand(2);
+
+          // Check if we have to extend the element type
+          if (!IsByteSized && Elmnt.getValueType().bitsLT(EltVT))
+            Elmnt = DAG.getNode(ISD::ANY_EXTEND, DL, EltVT, Elmnt);
+
+          // Store the new element. This may be larger than the vector element
+          // type, so use a truncating store.
+          SDValue EltPtr =
+              TLI.getVectorElementPointer(DAG, StackPtr, VT, Index);
+          EVT EltVT = Elmnt.getValueType();
+          Store = DAG.getTruncStore(
+              Store, DL, Elmnt, EltPtr, MachinePointerInfo::getUnknownStack(MF),
+              EltVT,
+              commonAlignment(SmallestAlign, EltVT.getFixedSizeInBits() / 8));
+        }
+
+        // Load the saved vector from the stack
+        SDValue Load =
+            DAG.getLoad(VT, DL, Store, StackPtr, PtrInfo, SmallestAlign);
+        SDValue LoadV = Load.getValue(0);
+        return IsByteSized ? LoadV : DAG.getAnyExtOrTrunc(LoadV, DL, OldVT);
+      }
+    }
+
     return SDValue();
   }
 

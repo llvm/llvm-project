@@ -795,7 +795,7 @@ public:
   void printFileSummary(StringRef FileStr, ObjectFile &Obj,
                         ArrayRef<std::string> InputFilenames,
                         const Archive *A) override;
-  virtual void printZeroSymbolOtherField(const Elf_Sym &Symbol) const override;
+  void printZeroSymbolOtherField(const Elf_Sym &Symbol) const override;
 
   void printDefaultRelRelaReloc(const Relocation<ELFT> &R,
                                 StringRef SymbolName,

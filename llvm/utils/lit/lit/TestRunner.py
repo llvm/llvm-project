@@ -612,6 +612,10 @@ def executeBuiltinUlimit(cmd, shenv):
         shenv.ulimit["RLIMIT_AS"] = new_limit * 1024
     elif cmd.args[1] == "-n":
         shenv.ulimit["RLIMIT_NOFILE"] = new_limit
+    elif cmd.args[1] == "-s":
+        shenv.ulimit["RLIMIT_STACK"] = new_limit * 1024
+    elif cmd.args[1] == "-f":
+        shenv.ulimit["RLIMIT_FSIZE"] = new_limit
     else:
         raise InternalShellError(
             cmd, "'ulimit' does not support option: %s" % cmd.args[1]
@@ -945,7 +949,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             path = (
                 cmd_shenv.env["PATH"] if "PATH" in cmd_shenv.env else shenv.env["PATH"]
             )
-            executable = lit.util.which(args[0], shenv.env["PATH"])
+            executable = lit.util.which(args[0], path)
         if not executable:
             raise InternalShellError(j, "%r: command not found" % args[0])
 

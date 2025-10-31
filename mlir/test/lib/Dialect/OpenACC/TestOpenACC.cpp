@@ -16,11 +16,13 @@ namespace test {
 // Forward declarations of individual test pass registration functions
 void registerTestPointerLikeTypeInterfacePass();
 void registerTestRecipePopulatePass();
+void registerTestOpenACCSupportPass();
 
 // Unified registration function for all OpenACC tests
 void registerTestOpenACC() {
   registerTestPointerLikeTypeInterfacePass();
   registerTestRecipePopulatePass();
+  registerTestOpenACCSupportPass();
 }
 
 } // namespace test

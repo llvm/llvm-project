@@ -410,3 +410,163 @@ TEST_F(OpenACCUtilsTest, getTypeCategoryArray) {
   VariableTypeCategory category = getTypeCategory(varPtr);
   EXPECT_EQ(category, VariableTypeCategory::array);
 }
+
+//===----------------------------------------------------------------------===//
+// getVariableName Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsTest, getVariableNameDirect) {
+  // Create a memref with acc.var_name attribute
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  // Set the acc.var_name attribute
+  auto varNameAttr = VarNameAttr::get(&context, "my_variable");
+  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+
+  Value varPtr = allocOp->getResult();
+
+  // Test that getVariableName returns the variable name
+  std::string varName = getVariableName(varPtr);
+  EXPECT_EQ(varName, "my_variable");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameThroughCast) {
+  // Create a 5x2 memref with acc.var_name attribute
+  auto memrefTy = MemRefType::get({5, 2}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  // Set the acc.var_name attribute on the alloca
+  auto varNameAttr = VarNameAttr::get(&context, "casted_variable");
+  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+
+  Value allocResult = allocOp->getResult();
+
+  // Create a memref.cast operation to a flattened 10-element array
+  auto castedMemrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::CastOp> castOp =
+      memref::CastOp::create(b, loc, castedMemrefTy, allocResult);
+
+  Value castedPtr = castOp->getResult();
+
+  // Test that getVariableName walks through the cast to find the variable name
+  std::string varName = getVariableName(castedPtr);
+  EXPECT_EQ(varName, "casted_variable");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameNotFound) {
+  // Create a memref without acc.var_name attribute
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  Value varPtr = allocOp->getResult();
+
+  // Test that getVariableName returns empty string when no name is found
+  std::string varName = getVariableName(varPtr);
+  EXPECT_EQ(varName, "");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameFromCopyin) {
+  // Create a memref
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  Value varPtr = allocOp->getResult();
+  StringRef name = "data_array";
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/true, /*implicit=*/true,
+                       /*name=*/name);
+
+  // Test that getVariableName extracts the name from the copyin operation
+  std::string varName = getVariableName(copyinOp->getAccVar());
+  EXPECT_EQ(varName, name);
+}
+
+//===----------------------------------------------------------------------===//
+// getRecipeName Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivateScalarMemref) {
+  // Create a scalar memref type
+  auto scalarMemrefTy = MemRefType::get({}, b.getI32Type());
+
+  // Test private recipe with scalar memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, scalarMemrefTy);
+  EXPECT_EQ(recipeName, "privatization_memref_i32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameFirstprivateScalarMemref) {
+  // Create a scalar memref type
+  auto scalarMemrefTy = MemRefType::get({}, b.getF32Type());
+
+  // Test firstprivate recipe with scalar memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::firstprivate_recipe, scalarMemrefTy);
+  EXPECT_EQ(recipeName, "firstprivatization_memref_f32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameReductionScalarMemref) {
+  // Create a scalar memref type
+  auto scalarMemrefTy = MemRefType::get({}, b.getI64Type());
+
+  // Test reduction recipe with scalar memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::reduction_recipe, scalarMemrefTy);
+  EXPECT_EQ(recipeName, "reduction_memref_i64_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivate2DMemref) {
+  // Create a 2D memref type
+  auto memref2DTy = MemRefType::get({5, 10}, b.getF32Type());
+
+  // Test private recipe with 2D memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, memref2DTy);
+  EXPECT_EQ(recipeName, "privatization_memref_5x10xf32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameFirstprivate2DMemref) {
+  // Create a 2D memref type
+  auto memref2DTy = MemRefType::get({8, 16}, b.getF64Type());
+
+  // Test firstprivate recipe with 2D memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::firstprivate_recipe, memref2DTy);
+  EXPECT_EQ(recipeName, "firstprivatization_memref_8x16xf64_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNameReduction2DMemref) {
+  // Create a 2D memref type
+  auto memref2DTy = MemRefType::get({4, 8}, b.getI32Type());
+
+  // Test reduction recipe with 2D memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::reduction_recipe, memref2DTy);
+  EXPECT_EQ(recipeName, "reduction_memref_4x8xi32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivateDynamicMemref) {
+  // Create a memref with dynamic dimensions
+  auto dynamicMemrefTy =
+      MemRefType::get({ShapedType::kDynamic, 10}, b.getI32Type());
+
+  // Test private recipe with dynamic memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, dynamicMemrefTy);
+  EXPECT_EQ(recipeName, "privatization_memref_Ux10xi32_");
+}
+
+TEST_F(OpenACCUtilsTest, getRecipeNamePrivateUnrankedMemref) {
+  // Create an unranked memref type
+  auto unrankedMemrefTy = UnrankedMemRefType::get(b.getI32Type(), 0);
+
+  // Test private recipe with unranked memref
+  std::string recipeName =
+      getRecipeName(RecipeKind::private_recipe, unrankedMemrefTy);
+  EXPECT_EQ(recipeName, "privatization_memref_Zxi32_");
+}
