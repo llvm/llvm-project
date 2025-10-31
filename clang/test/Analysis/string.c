@@ -82,16 +82,21 @@ size_t strlen(const char *s);
 
 void strlen_constant0(void) {
   clang_analyzer_eval(strlen("123") == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(&("123"[1])) == 2); // expected-warning{{TRUE}}
 }
 
 void strlen_constant1(void) {
   const char *a = "123";
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 1) == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 3) == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 4)); // expected-warning{{UNKNOWN}}
 }
 
 void strlen_constant2(char x) {
   char a[] = "123";
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(a + 1) == 2); // expected-warning{{UNKNOWN}}
 
   a[0] = x;
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{UNKNOWN}}
@@ -105,10 +110,12 @@ char global_non_const_arr[] = "op";
 
 void strlen_global_constant_ptr(void) {
   clang_analyzer_eval(strlen(global_str_ptr) == 4); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(global_str_ptr + 1) == 3); // expected-warning{{TRUE}}
 }
 
 void strlen_global_constant_arr(void) {
   clang_analyzer_eval(strlen(global_str_arr) == 4); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strlen(global_str_arr + 1) == 3); // expected-warning{{TRUE}}
 }
 
 void strlen_global_non_const_ptr(void) {
@@ -235,6 +242,17 @@ void testStrlenCallee(void) {
   clang_analyzer_eval(lenBefore == lenAfter); // expected-warning{{UNKNOWN}}
 }
 
+void strlen_symbolic_offset(unsigned x) {
+  const char *str = "abcd";
+  if (x < 1 || x > 3)
+    return;
+  // FIXME: these should be TRUE
+  clang_analyzer_eval(strlen(str + x) >= 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(strlen(str + x) <= 3); // expected-warning{{UNKNOWN}}
+  if (x != 1)
+    return;
+  clang_analyzer_eval(strlen(str + x) == 3); // expected-warning{{TRUE}}
+}
 
 //===----------------------------------------------------------------------===
 // strnlen()
@@ -244,32 +262,38 @@ size_t strnlen(const char *s, size_t maxlen);
 
 void strnlen_constant0(void) {
   clang_analyzer_eval(strnlen("123", 10) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(&("123"[1]), 10) == 2); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant1(void) {
   const char *a = "123";
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 10) == 2); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant2(char x) {
   char a[] = "123";
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 10) == 2); // expected-warning{{UNKNOWN}}
   a[0] = x;
   clang_analyzer_eval(strnlen(a, 10) == 3); // expected-warning{{UNKNOWN}}
 }
 
 void strnlen_constant4(void) {
   clang_analyzer_eval(strnlen("123456", 3) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(&("123456"[1]), 3) == 3); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant5(void) {
   const char *a = "123456";
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 3) == 3); // expected-warning{{TRUE}}
 }
 
 void strnlen_constant6(char x) {
   char a[] = "123456";
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(strnlen(a + 1, 3) == 3); // expected-warning{{UNKNOWN}}
   a[0] = x;
   clang_analyzer_eval(strnlen(a, 3) == 3); // expected-warning{{UNKNOWN}}
 }
@@ -323,6 +347,19 @@ void strnlen_at_actual(size_t limit) {
   } else {
     clang_analyzer_eval(len == 3); // expected-warning{{UNKNOWN}}
     clang_analyzer_eval(len < 3); // expected-warning{{UNKNOWN}}
+  }
+}
+
+void strnlen_at_actual_1(size_t limit) {
+  const char *str = "abc";
+  size_t len = strnlen(str + 1, limit);
+  clang_analyzer_eval(len <= 2); // expected-warning{{TRUE}}
+  // This is due to eager assertion in strnlen.
+  if (limit == 0) {
+    clang_analyzer_eval(len == 0); // expected-warning{{TRUE}}
+  } else {
+    clang_analyzer_eval(len == 2); // expected-warning{{UNKNOWN}}
+    clang_analyzer_eval(len < 2); // expected-warning{{UNKNOWN}}
   }
 }
 
@@ -1789,3 +1826,107 @@ void CWE124_Buffer_Underwrite__malloc_char_memcpy() {
   free(dataBuffer);
 }
 #endif
+
+//===----------------------------------------------------------------------===
+// strxfrm()
+// It is not a built-in.
+//===----------------------------------------------------------------------===
+
+size_t strxfrm(char *dest, const char *src, size_t n);
+
+void strxfrm_null_dest(const char *src) {
+  strxfrm(NULL, src, 0); // no warning
+  strxfrm(NULL, src, 10); // expected-warning {{Null pointer passed as 1st argument}}
+}
+
+void strxfrm_null_source(char *dest) {
+  strxfrm(dest, NULL, 0); // expected-warning {{Null pointer passed as 2nd argument}}
+}
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void strxfrm_overflow(const char *src) {
+  char dest[10];
+  strxfrm(dest, src, 55); // expected-warning {{Locale transformation function overflows the destination buffer}}
+}
+#endif
+
+void strxfrm_source_smaller() {
+  char dest[10];
+  char source[5];
+  strxfrm(dest, source, 10);
+}
+
+void strxfrm_overlap(char *dest) {
+  strxfrm(dest, dest, 10); // expected-warning {{Arguments must not be overlapping buffers}}
+}
+
+void strxfrm_regular(const char *src) {
+  size_t n = strxfrm(NULL, src, 0);
+  char *dest = (char*)malloc(n + 1);
+  strxfrm(dest, src, n);
+  free(dest);
+}
+
+void clang_analyzer_warnIfReached();
+
+int strxfrm_dest_undef(const char *src, int oracle) {
+  char dest[5] = {0};
+  clang_analyzer_eval(dest[0] == 0); // expected-warning {{TRUE}}
+
+  size_t n = strxfrm(dest, src, sizeof(dest));
+
+  if (oracle >= sizeof(dest) || oracle < 0) {
+    return 0;
+  }
+
+  int c = 0;
+  if (n >= sizeof(dest)) {
+    // Since accessing uninitialized sinks the execution, use this trick to check all positions
+	switch (oracle) {
+	  case 0:
+		c = dest[0]; // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 1:
+		c = dest[1]; // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 2:
+		c = dest[2]; // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 3:
+		c = dest[3];  // expected-warning {{Assigned value is uninitialized}}
+		break;
+      case 4:
+		c = dest[4];  // expected-warning {{Assigned value is uninitialized}}
+		break;
+	  default:
+		clang_analyzer_warnIfReached();
+	}
+  } else {
+	clang_analyzer_eval(n >= 0); // expected-warning {{TRUE}}
+	clang_analyzer_eval(dest[0] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[1] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[2] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[3] == 0); // expected-warning {{UNKNOWN}}
+	clang_analyzer_eval(dest[4] == 0); // expected-warning {{UNKNOWN}}
+  }
+  return c;
+}
+
+int strxfrm_unknown_dest_undef(const char *src, int oracle) {
+  size_t n = strlen(src);
+
+  char *dest = (char*)malloc(n * 2);
+
+  size_t n2 = strxfrm(dest, src, n);
+
+  int c = 0;
+
+  if (n2 < n) {
+  	c += dest[50];
+  } else {
+	c += dest[50]; // expected-warning {{Assigned value is uninitialized}}
+  }
+
+  free(dest);
+  return c;
+}

@@ -3,9 +3,7 @@
 ; Test that epilogue is tagged with the same debug information as original loop body rather than original loop exit.
 
 ; CHECK: for.body.i:
-; CHECK:   br i1 {{.*}}, label %lee1.exit.loopexit.unr-lcssa.loopexit, label %for.body.i, !dbg ![[LOOP_LOC:[0-9]+]]
-; CHECK: lee1.exit.loopexit.unr-lcssa.loopexit:
-; CHECK:   br label %lee1.exit.loopexit.unr-lcssa, !dbg ![[LOOP_LOC]]
+; CHECK:   br i1 {{.*}}, label %lee1.exit.loopexit.unr-lcssa, label %for.body.i, !dbg ![[LOOP_LOC:[0-9]+]]
 ; CHECK: lee1.exit.loopexit.unr-lcssa:
 ; CHECK:   %lcmp.mod = icmp ne i32 %xtraiter, 0, !dbg ![[LOOP_LOC]]
 ; CHECK:   br i1 %lcmp.mod, label %for.body.i.epil.preheader, label %lee1.exit.loopexit, !dbg ![[LOOP_LOC]]

@@ -15,12 +15,21 @@
 #define __AVXIFMAINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS128                                                  \
+  constexpr __attribute__((__always_inline__, __nodebug__,                     \
+                           __target__("avxifma"), __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS256                                                  \
+  constexpr __attribute__((__always_inline__, __nodebug__,                     \
+                           __target__("avxifma"), __min_vector_width__(256)))
+#else
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avxifma"),        \
                  __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avxifma"),        \
                  __min_vector_width__(256)))
+#endif
 
 // must vex-encoding
 

@@ -700,6 +700,36 @@ func.func @complex_pow_with_fmf(%lhs: complex<f32>,
 
 // -----
 
+// CHECK-LABEL: func.func @complex_powi
+// CHECK-SAME: %[[LHS:.*]]: complex<f32>, %[[EXP:.*]]: i32
+func.func @complex_powi(%lhs: complex<f32>, %rhs: i32) -> complex<f32> {
+  %pow = complex.powi %lhs, %rhs : complex<f32>, i32
+  return %pow : complex<f32>
+}
+
+// CHECK: %[[FLOAT_EXP:.*]] = arith.sitofp %[[EXP]] : i32 to f32
+// CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK: %[[CPLX_EXP:.*]] = complex.create %[[FLOAT_EXP]], %[[ZERO]] : complex<f32>
+// CHECK: math.atan2
+// CHECK-NOT: complex.powi
+
+// -----
+
+// CHECK-LABEL: func.func @complex_powi_with_fmf
+// CHECK-SAME: %[[LHS:.*]]: complex<f32>, %[[EXP:.*]]: i32
+func.func @complex_powi_with_fmf(%lhs: complex<f32>, %rhs: i32) -> complex<f32> {
+  %pow = complex.powi %lhs, %rhs fastmath<nnan,contract> : complex<f32>, i32
+  return %pow : complex<f32>
+}
+
+// CHECK: %[[FLOAT_EXP:.*]] = arith.sitofp %[[EXP]] : i32 to f32
+// CHECK: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK: %[[CPLX_EXP:.*]] = complex.create %[[FLOAT_EXP]], %[[ZERO]] : complex<f32>
+// CHECK: math.atan2 {{.*}} fastmath<nnan,contract> : f32
+// CHECK-NOT: complex.powi
+
+// -----
+
 // CHECK-LABEL:   func.func @complex_rsqrt
 func.func @complex_rsqrt(%arg: complex<f32>) -> complex<f32> {
   %rsqrt = complex.rsqrt %arg : complex<f32>

@@ -201,18 +201,27 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
 /// unroll count is non-zero.
 ///
 /// This function performs the following:
-/// - Update PHI nodes at the unrolling loop exit and epilog loop exit
-/// - Create PHI nodes at the unrolling loop exit to combine
-///   values that exit the unrolling loop code and jump around it.
+/// - Update PHI nodes at the epilog loop exit
+/// - Create PHI nodes at the unrolling loop exit and epilog preheader to
+///   combine values that exit the unrolling loop code and jump around it.
 /// - Update PHI operands in the epilog loop by the new PHI nodes
-/// - Branch around the epilog loop if extra iters (ModVal) is zero.
+/// - At the unrolling loop exit, branch around the epilog loop if extra iters
+//    (ModVal) is zero.
+/// - At the epilog preheader, add an llvm.assume call that extra iters is
+///   non-zero.  If the unrolling loop exit is the predecessor, the above new
+///   branch guarantees that assumption.  If the unrolling loop preheader is the
+///   predecessor, then the required first iteration from the original loop has
+///   yet to be executed, so it must be executed in the epilog loop.  If we
+///   later unroll the epilog loop, that llvm.assume call somehow enables
+///   ScalarEvolution to compute a epilog loop maximum trip count, which enables
+///   eliminating the branch at the end of the final unrolled epilog iteration.
 ///
 static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                           BasicBlock *Exit, BasicBlock *PreHeader,
                           BasicBlock *EpilogPreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
                           LoopInfo *LI, bool PreserveLCSSA, ScalarEvolution &SE,
-                          unsigned Count) {
+                          unsigned Count, AssumptionCache &AC) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *EpilogLatch = cast<BasicBlock>(VMap[Latch]);
@@ -231,7 +240,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   //   EpilogLatch
   // Exit (EpilogPN)
 
-  // Update PHI nodes at NewExit and Exit.
+  // Update PHI nodes at Exit.
   for (PHINode &PN : NewExit->phis()) {
     // PN should be used in another PHI located in Exit block as
     // Exit was split by SplitBlockPredecessors into Exit and NewExit
@@ -246,14 +255,10 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     // epilogue edges have already been added.
     //
     // There is EpilogPreHeader incoming block instead of NewExit as
-    // NewExit was spilt 1 more time to get EpilogPreHeader.
+    // NewExit was split 1 more time to get EpilogPreHeader.
     assert(PN.hasOneUse() && "The phi should have 1 use");
     PHINode *EpilogPN = cast<PHINode>(PN.use_begin()->getUser());
     assert(EpilogPN->getParent() == Exit && "EpilogPN should be in Exit block");
-
-    // Add incoming PreHeader from branch around the Loop
-    PN.addIncoming(PoisonValue::get(PN.getType()), PreHeader);
-    SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
     Instruction *I = dyn_cast<Instruction>(V);
@@ -271,35 +276,52 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                                NewExit);
     // Now PHIs should look like:
     // NewExit:
-    //   PN = PHI [I, Latch], [poison, PreHeader]
+    //   PN = PHI [I, Latch]
     // ...
     // Exit:
     //   EpilogPN = PHI [PN, NewExit], [VMap[I], EpilogLatch]
   }
 
-  // Create PHI nodes at NewExit (from the unrolling loop Latch and PreHeader).
-  // Update corresponding PHI nodes in epilog loop.
+  // Create PHI nodes at NewExit (from the unrolling loop Latch) and at
+  // EpilogPreHeader (from PreHeader and NewExit).  Update corresponding PHI
+  // nodes in epilog loop.
   for (BasicBlock *Succ : successors(Latch)) {
     // Skip this as we already updated phis in exit blocks.
     if (!L->contains(Succ))
       continue;
+
+    // Succ here appears to always be just L->getHeader().  Otherwise, how do we
+    // know its corresponding epilog block (from VMap) is EpilogHeader and thus
+    // EpilogPreHeader is the right incoming block for VPN, as set below?
+    // TODO: Can we thus avoid the enclosing loop over successors?
+    assert(Succ == L->getHeader() &&
+           "Expect the only in-loop successor of latch to be the loop header");
+
     for (PHINode &PN : Succ->phis()) {
-      // Add new PHI nodes to the loop exit block and update epilog
-      // PHIs with the new PHI values.
-      PHINode *NewPN = PHINode::Create(PN.getType(), 2, PN.getName() + ".unr");
-      NewPN->insertBefore(NewExit->getFirstNonPHIIt());
-      // Adding a value to the new PHI node from the unrolling loop preheader.
-      NewPN->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
-      // Adding a value to the new PHI node from the unrolling loop latch.
-      NewPN->addIncoming(PN.getIncomingValueForBlock(Latch), Latch);
+      // Add new PHI nodes to the loop exit block.
+      PHINode *NewPN0 = PHINode::Create(PN.getType(), /*NumReservedValues=*/1,
+                                        PN.getName() + ".unr");
+      NewPN0->insertBefore(NewExit->getFirstNonPHIIt());
+      // Add value to the new PHI node from the unrolling loop latch.
+      NewPN0->addIncoming(PN.getIncomingValueForBlock(Latch), Latch);
+
+      // Add new PHI nodes to EpilogPreHeader.
+      PHINode *NewPN1 = PHINode::Create(PN.getType(), /*NumReservedValues=*/2,
+                                        PN.getName() + ".epil.init");
+      NewPN1->insertBefore(EpilogPreHeader->getFirstNonPHIIt());
+      // Add value to the new PHI node from the unrolling loop preheader.
+      NewPN1->addIncoming(PN.getIncomingValueForBlock(NewPreHeader), PreHeader);
+      // Add value to the new PHI node from the epilog loop guard.
+      NewPN1->addIncoming(NewPN0, NewExit);
 
       // Update the existing PHI node operand with the value from the new PHI
       // node.  Corresponding instruction in epilog loop should be PHI.
       PHINode *VPN = cast<PHINode>(VMap[&PN]);
-      VPN->setIncomingValueForBlock(EpilogPreHeader, NewPN);
+      VPN->setIncomingValueForBlock(EpilogPreHeader, NewPN1);
     }
   }
 
+  // In NewExit, branch around the epilog loop if no extra iters.
   Instruction *InsertPt = NewExit->getTerminator();
   IRBuilder<> B(InsertPt);
   Value *BrLoopExit = B.CreateIsNotNull(ModVal, "lcmp.mod");
@@ -308,7 +330,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   SmallVector<BasicBlock*, 4> Preds(predecessors(Exit));
   SplitBlockPredecessors(Exit, Preds, ".epilog-lcssa", DT, LI, nullptr,
                          PreserveLCSSA);
-  // Add the branch to the exit block (around the unrolling loop)
+  // Add the branch to the exit block (around the epilog loop)
   MDNode *BranchWeights = nullptr;
   if (hasBranchWeightMD(*Latch->getTerminator())) {
     // Assume equal distribution in interval [0, Count).
@@ -322,10 +344,11 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
     DT->changeImmediateDominator(Exit, NewDom);
   }
 
-  // Split the main loop exit to maintain canonicalization guarantees.
-  SmallVector<BasicBlock*, 4> NewExitPreds{Latch};
-  SplitBlockPredecessors(NewExit, NewExitPreds, ".loopexit", DT, LI, nullptr,
-                         PreserveLCSSA);
+  // In EpilogPreHeader, assume extra iters is non-zero.
+  IRBuilder<> B2(EpilogPreHeader, EpilogPreHeader->getFirstNonPHIIt());
+  Value *ModIsNotNull = B2.CreateIsNotNull(ModVal, "lcmp.mod");
+  AssumeInst *AI = cast<AssumeInst>(B2.CreateAssumption(ModIsNotNull));
+  AC.registerAssumption(AI);
 }
 
 /// Create a clone of the blocks in a loop and connect them together. A new
@@ -795,7 +818,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
                                            ConstantInt::get(BECount->getType(),
                                                             Count - 1)) :
                            B.CreateIsNotNull(ModVal, "lcmp.mod");
-  BasicBlock *RemainderLoop = UseEpilogRemainder ? NewExit : PrologPreHeader;
+  BasicBlock *RemainderLoop =
+      UseEpilogRemainder ? EpilogPreHeader : PrologPreHeader;
   BasicBlock *UnrollingLoop = UseEpilogRemainder ? NewPreHeader : PrologExit;
   // Branch to either remainder (extra iterations) loop or unrolling loop.
   MDNode *BranchWeights = nullptr;
@@ -808,7 +832,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
   PreHeaderBR->eraseFromParent();
   if (DT) {
     if (UseEpilogRemainder)
-      DT->changeImmediateDominator(NewExit, PreHeader);
+      DT->changeImmediateDominator(EpilogPreHeader, PreHeader);
     else
       DT->changeImmediateDominator(PrologExit, PreHeader);
   }
@@ -880,7 +904,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   // from both the original loop and the remainder code reaching the exit
   // blocks. While the IDom of these exit blocks were from the original loop,
   // now the IDom is the preheader (which decides whether the original loop or
-  // remainder code should run).
+  // remainder code should run) unless the block still has just the original
+  // predecessor (such as NewExit in the case of an epilog remainder).
   if (DT && !L->getExitingBlock()) {
     SmallVector<BasicBlock *, 16> ChildrenToUpdate;
     // NB! We have to examine the dom children of all loop blocks, not just
@@ -891,7 +916,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
       auto *DomNodeBB = DT->getNode(BB);
       for (auto *DomChild : DomNodeBB->children()) {
         auto *DomChildBB = DomChild->getBlock();
-        if (!L->contains(LI->getLoopFor(DomChildBB)))
+        if (!L->contains(LI->getLoopFor(DomChildBB)) &&
+            DomChildBB->getUniquePredecessor() != BB)
           ChildrenToUpdate.push_back(DomChildBB);
       }
     }
@@ -930,7 +956,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Connect the epilog code to the original loop and update the
     // PHI functions.
     ConnectEpilog(L, ModVal, NewExit, LatchExit, PreHeader, EpilogPreHeader,
-                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE, Count);
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE, Count, *AC);
 
     // Update counter in loop for unrolling.
     // Use an incrementing IV.  Pre-incr/post-incr is backedge/trip count.

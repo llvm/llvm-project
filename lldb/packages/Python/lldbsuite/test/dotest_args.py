@@ -58,6 +58,14 @@ def create_parser():
             """Specify the path to sysroot. This overrides apple_sdk sysroot."""
         ),
     )
+    group.add_argument(
+        "--triple",
+        metavar="triple",
+        dest="triple",
+        help=textwrap.dedent(
+            """Specify the target triple. Used for cross compilation."""
+        ),
+    )
     if sys.platform == "darwin":
         group.add_argument(
             "--apple-sdk",
@@ -299,6 +307,12 @@ def create_parser():
         type=int,
         metavar="platform-available-ports",
         help="Ports available for connection to a lldb server on the remote platform",
+    )
+    group.add_argument(
+        "--cmake-build-type",
+        dest="cmake_build_type",
+        metavar="cmake-build-type",
+        help="Specifies the build type on single-configuration",
     )
 
     # Test-suite behaviour

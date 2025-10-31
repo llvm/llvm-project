@@ -10,265 +10,197 @@
 # RUN: llvm-mc --disassemble -triple=riscv32  -mattr=+c -mattr=+Zcmop \
 # RUN:     -M no-aliases --show-encoding < %s | \
 # RUN:   FileCheck --check-prefixes=GOOD,MOP %s
-#
-# RUN: llvm-mc --disassemble -triple=riscv32  -mattr=+c -mattr=+no-rvc-hints \
-# RUN:     -M no-aliases --show-encoding < %s 2>&1 | \
-# RUN:   FileCheck --check-prefix=NOHINTS %s
 
 # BAD: invalid instruction encoding
-# NOHINTS: invalid instruction encoding
 0x01 0x60
 
 # GOOD: c.lui zero, 1
-# NOHINTS: invalid instruction encoding
 0x05 0x60
 
 # GOOD: c.lui zero, 2
-# NOHINTS: invalid instruction encoding
 0x09 0x60
 
 # GOOD: c.lui zero, 3
-# NOHINTS: invalid instruction encoding
 0x0D 0x60
 
 # GOOD: c.lui zero, 4
-# NOHINTS: invalid instruction encoding
 0x11 0x060
 
 # GOOD: c.lui zero, 5
-# NOHINTS: invalid instruction encoding
 0x15 0x60
 
 # GOOD: c.lui zero, 6
-# NOHINTS: invalid instruction encoding
 0x19 0x60
 
 # GOOD: c.lui zero, 7
-# NOHINTS: invalid instruction encoding
 0x1D 0x60
 
 # GOOD: c.lui zero, 8
-# NOHINTS: invalid instruction encoding
 0x21 0x60
 
 # GOOD: c.lui zero, 9
-# NOHINTS: invalid instruction encoding
 0x25 0x60
 
 # GOOD: c.lui zero, 10
-# NOHINTS: invalid instruction encoding
 0x29 0x60
 
 # GOOD: c.lui zero, 11
-# NOHINTS: invalid instruction encoding
 0x2D 0x60
 
 # GOOD: c.lui zero, 12
-# NOHINTS: invalid instruction encoding
 0x31 0x60
 
 # GOOD: c.lui zero, 13
-# NOHINTS: invalid instruction encoding
 0x35 0x60
 
 # GOOD: c.lui zero, 14
-# NOHINTS: invalid instruction encoding
 0x39 0x60
 
 # GOOD: c.lui zero, 15
-# NOHINTS: invalid instruction encoding
 0x3D 0x60
 
 # GOOD: c.lui zero, 16
-# NOHINTS: invalid instruction encoding
 0x41 0x60
 
 # GOOD: c.lui zero, 17
-# NOHINTS: invalid instruction encoding
 0x45 0x60
 
 # GOOD: c.lui zero, 18
-# NOHINTS: invalid instruction encoding
 0x49 0x60
 
 # GOOD: c.lui zero, 19
-# NOHINTS: invalid instruction encoding
 0x4D 0x60
 
 # GOOD: c.lui zero, 20
-# NOHINTS: invalid instruction encoding
 0x51 0x60
 
 # GOOD: c.lui zero, 21
-# NOHINTS: invalid instruction encoding
 0x55 0x60
 
 # GOOD: c.lui zero, 22
-# NOHINTS: invalid instruction encoding
 0x59 0x60
 
 # GOOD: c.lui zero, 23
-# NOHINTS: invalid instruction encoding
 0x5D 0x60
 
 # GOOD: c.lui zero, 24
-# NOHINTS: invalid instruction encoding
 0x61 0x60
 
 # GOOD: c.lui zero, 25
-# NOHINTS: invalid instruction encoding
 0x65 0x60
 
 # GOOD: c.lui zero, 26
-# NOHINTS: invalid instruction encoding
 0x69 0x60
 
 # GOOD: c.lui zero, 27
-# NOHINTS: invalid instruction encoding
 0x6D 0x60
 
 # GOOD: c.lui zero, 28
-# NOHINTS: invalid instruction encoding
 0x71 0x60
 
 # GOOD: c.lui zero, 29
-# NOHINTS: invalid instruction encoding
 0x75 0x60
 
 # GOOD: c.lui zero, 30
-# NOHINTS: invalid instruction encoding
 0x79 0x60
 
 # GOOD: c.lui zero, 31
-# NOHINTS: invalid instruction encoding
 0x7D 0x60
 
 # GOOD: c.lui zero, 1048544
-# NOHINTS: invalid instruction encoding
 0x01 0x70
 
 # GOOD: c.lui zero, 1048545
-# NOHINTS: invalid instruction encoding
 0x05 0x70
 
 # GOOD: c.lui zero, 1048546
-# NOHINTS: invalid instruction encoding
 0x09 0x70
 
 # GOOD: c.lui zero, 1048547
-# NOHINTS: invalid instruction encoding
 0x0D 0x70
 
 # GOOD: c.lui zero, 1048548
-# NOHINTS: invalid instruction encoding
 0x11 0x70
 
 # GOOD: c.lui zero, 1048549
-# NOHINTS: invalid instruction encoding
 0x15 0x70
 
 # GOOD: c.lui zero, 1048550
-# NOHINTS: invalid instruction encoding
 0x19 0x70
 
 # GOOD: c.lui zero, 1048551
-# NOHINTS: invalid instruction encoding
 0x1D 0x70
 
 # GOOD: c.lui zero, 1048552
-# NOHINTS: invalid instruction encoding
 0x21 0x70
 
 # GOOD: c.lui zero, 1048553
-# NOHINTS: invalid instruction encoding
 0x25 0x70
 
 # GOOD: c.lui zero, 1048554
-# NOHINTS: invalid instruction encoding
 0x29 0x70
 
 # GOOD: c.lui zero, 1048555
-# NOHINTS: invalid instruction encoding
 0x2D 0x70
 
 # GOOD: c.lui zero, 1048556
-# NOHINTS: invalid instruction encoding
 0x31 0x70
 
 # GOOD: c.lui zero, 1048557
-# NOHINTS: invalid instruction encoding
 0x35 0x70
 
 # GOOD: c.lui zero, 1048558
-# NOHINTS: invalid instruction encoding
 0x39 0x70
 
 # GOOD: c.lui zero, 1048559
-# NOHINTS: invalid instruction encoding
 0x3D 0x70
 
 # GOOD: c.lui zero, 1048560
-# NOHINTS: invalid instruction encoding
 0x41 0x70
 
 # GOOD: c.lui zero, 1048561
-# NOHINTS: invalid instruction encoding
 0x45 0x70
 
 # GOOD: c.lui zero, 1048562
-# NOHINTS: invalid instruction encoding
 0x49 0x70
 
 # GOOD: c.lui zero, 1048563
-# NOHINTS: invalid instruction encoding
 0x4D 0x70
 
 # GOOD: c.lui zero, 1048564
-# NOHINTS: invalid instruction encoding
 0x51 0x70
 
 # GOOD: c.lui zero, 1048565
-# NOHINTS: invalid instruction encoding
 0x55 0x70
 
 # GOOD: c.lui zero, 1048566
-# NOHINTS: invalid instruction encoding
 0x59 0x70
 
 # GOOD: c.lui zero, 1048567
-# NOHINTS: invalid instruction encoding
 0x5D 0x70
 
 # GOOD: c.lui zero, 1048568
-# NOHINTS: invalid instruction encoding
 0x61 0x70
 
 # GOOD: c.lui zero, 1048569
-# NOHINTS: invalid instruction encoding
 0x65 0x70
 
 # GOOD: c.lui zero, 1048570
-# NOHINTS: invalid instruction encoding
 0x69 0x70
 
 # GOOD: c.lui zero, 1048571
-# NOHINTS: invalid instruction encoding
 0x6D 0x70
 
 # GOOD: c.lui zero, 1048572
-# NOHINTS: invalid instruction encoding
 0x71 0x70
 
 # GOOD: c.lui zero, 1048573
-# NOHINTS: invalid instruction encoding
 0x75 0x70
 
 # GOOD: c.lui zero, 1048574
-# NOHINTS: invalid instruction encoding
 0x79 0x70
 
 # GOOD: c.lui zero, 1048575
-# NOHINTS: invalid instruction encoding
 0x7D 0x70
 
 # BAD: invalid instruction encoding

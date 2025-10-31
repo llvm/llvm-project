@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -72,6 +73,9 @@ json::Value ModuleStats::ToJSON() const {
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
+  module.try_emplace("dwoFileCount", dwo_stats.dwo_file_count);
+  module.try_emplace("loadedDwoFileCount", dwo_stats.loaded_dwo_file_count);
+  module.try_emplace("dwoErrorCount", dwo_stats.dwo_error_count);
 
   if (!symbol_locator_time.map.empty()) {
     json::Object obj;
@@ -85,7 +89,7 @@ json::Value ModuleStats::ToJSON() const {
 
   if (!symfile_modules.empty()) {
     json::Array symfile_ids;
-    for (const auto symfile_id: symfile_modules)
+    for (const auto symfile_id : symfile_modules)
       symfile_ids.emplace_back(symfile_id);
     module.try_emplace("symbolFileModuleIdentifiers", std::move(symfile_ids));
   }
@@ -143,6 +147,11 @@ TargetStats::ToJSON(Target &target,
     }
     target_metrics_json.try_emplace("targetCreateTime",
                                     m_create_time.get().count());
+
+    if (m_load_core_time.get().count() > 0) {
+      target_metrics_json.try_emplace("loadCoreTime",
+                                      m_load_core_time.get().count());
+    }
 
     json::Array breakpoints_array;
     double totalBreakpointResolveTime = 0.0;
@@ -294,6 +303,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const bool include_targets = options.GetIncludeTargets();
   const bool include_modules = options.GetIncludeModules();
   const bool include_transcript = options.GetIncludeTranscript();
+  const bool include_plugins = options.GetIncludePlugins();
 
   json::Array json_targets;
   json::Array json_modules;
@@ -309,7 +319,6 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
 
-  std::vector<ModuleStats> modules;
   std::lock_guard<std::recursive_mutex> guard(
       Module::GetAllocationModuleCollectionMutex());
   const uint64_t num_modules = target != nullptr
@@ -321,6 +330,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   uint32_t symtab_symbol_count = 0;
+  DWOStats total_dwo_stats;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -352,6 +362,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
+      DWOStats current_dwo_stats = sym_file->GetDwoStats();
+      module_stat.dwo_stats += current_dwo_stats;
+      total_dwo_stats += current_dwo_stats;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -426,6 +439,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
       {"totalSymbolTableSymbolCount", symtab_symbol_count},
+      {"totalLoadedDwoFileCount", total_dwo_stats.loaded_dwo_file_count},
+      {"totalDwoFileCount", total_dwo_stats.dwo_file_count},
+      {"totalDwoErrorCount", total_dwo_stats.dwo_error_count},
   };
 
   if (include_targets) {
@@ -488,6 +504,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
+  }
+
+  if (include_plugins) {
+    global_stats.try_emplace("plugins", PluginManager::GetJSON());
   }
 
   return std::move(global_stats);

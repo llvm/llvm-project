@@ -18,15 +18,18 @@ namespace mlir {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
+/// Note that these functions don't take a `SymbolTable` because GPU module
+/// lowerings can have name collisions as an intermediate state.
+
 /// Find or create an external function declaration in the given module.
-LLVM::LLVMFuncOp getOrDefineFunction(gpu::GPUModuleOp moduleOp, Location loc,
+LLVM::LLVMFuncOp getOrDefineFunction(Operation *moduleOp, Location loc,
                                      OpBuilder &b, StringRef name,
                                      LLVM::LLVMFunctionType type);
 
 /// Create a global that contains the given string. If a global with the same
 /// string already exists in the module, return that global.
 LLVM::GlobalOp getOrCreateStringConstant(OpBuilder &b, Location loc,
-                                         gpu::GPUModuleOp moduleOp, Type llvmI8,
+                                         Operation *moduleOp, Type llvmI8,
                                          StringRef namePrefix, StringRef str,
                                          uint64_t alignment = 0,
                                          unsigned addrSpace = 0);

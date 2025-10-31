@@ -17,8 +17,8 @@ define i16 @helper(i16 %0, i64 %x) {
 ; CHECK-NEXT:    [[ITER_SROA_0_07_I_I:%.*]] = phi i64 [ [[TMP2:%.*]], [[BB6_I_I]] ], [ 0, [[START:%.*]] ]
 ; CHECK-NEXT:    [[_40_I_I:%.*]] = sub nsw i64 0, [[ITER_SROA_0_07_I_I]]
 ; CHECK-NEXT:    [[TMP2]] = add nuw nsw i64 [[ITER_SROA_0_07_I_I]], 1
-; CHECK-NEXT:    [[_34_I_I:%.*]] = getelementptr inbounds nuw [0 x i8], ptr [[DATA]], i64 0, i64 [[ITER_SROA_0_07_I_I]]
-; CHECK-NEXT:    [[_39_I_I:%.*]] = getelementptr inbounds [0 x i8], ptr [[TMP1]], i64 0, i64 [[_40_I_I]]
+; CHECK-NEXT:    [[_34_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[DATA]], i64 [[ITER_SROA_0_07_I_I]]
+; CHECK-NEXT:    [[_39_I_I:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[_40_I_I]]
 ; CHECK-NEXT:    [[TMP_0_COPYLOAD_I_I_I_I:%.*]] = load i8, ptr [[_34_I_I]], align 1
 ; CHECK-NEXT:    [[TMP2_0_COPYLOAD_I_I_I_I:%.*]] = load i8, ptr [[_39_I_I]], align 1
 ; CHECK-NEXT:    store i8 [[TMP2_0_COPYLOAD_I_I_I_I]], ptr [[_34_I_I]], align 1

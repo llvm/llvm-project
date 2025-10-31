@@ -23,13 +23,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
-#include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/Utils.h"
-#include <algorithm>
 #include <stack>
 
 #define DEBUG_TYPE "normalize"
@@ -433,7 +427,7 @@ void IRNormalizer::reorderInstructions(Function &F) const {
       // Process the remaining instructions.
       //
       // TODO: Do more a intelligent sorting of these instructions. For example,
-      // seperate between dead instructinos and instructions used in another
+      // separate between dead instructinos and instructions used in another
       // block. Use properties of the CFG the order instructions that are used
       // in another block.
       if (Visited.contains(&I))

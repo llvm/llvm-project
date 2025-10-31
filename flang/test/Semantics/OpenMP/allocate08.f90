@@ -27,10 +27,12 @@ use AllocateModule
 
   !$omp allocate(x) allocator(omp_default_mem_alloc)
   !$omp allocate(y) allocator(omp_default_mem_alloc)
+  !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
   !$omp allocate(z) allocator(omp_default_mem_alloc)
 
   !$omp allocate(x)
   !$omp allocate(y)
+  !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
   !$omp allocate(z)
 
   !$omp allocate(w) allocator(custom_allocator)
@@ -40,5 +42,6 @@ use AllocateModule
   !ERROR: If list items within the ALLOCATE directive have the SAVE attribute, are a common block name, or are declared in the scope of a module, then only predefined memory allocator parameters can be used in the allocator clause
   !$omp allocate(y) allocator(custom_allocator)
   !ERROR: If list items within the ALLOCATE directive have the SAVE attribute, are a common block name, or are declared in the scope of a module, then only predefined memory allocator parameters can be used in the allocator clause
+  !ERROR: List items must be declared in the same scoping unit in which the ALLOCATE directive appears
   !$omp allocate(z) allocator(custom_allocator)
 end subroutine allocate

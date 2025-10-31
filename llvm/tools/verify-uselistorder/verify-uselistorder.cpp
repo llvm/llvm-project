@@ -428,7 +428,7 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
                         << ", U = ";
                  U.getUser()->dump());
     }
-  } while (std::is_sorted(V->use_begin(), V->use_end(), compareUses));
+  } while (llvm::is_sorted(V->uses(), compareUses));
 
   LLVM_DEBUG(dbgs() << " => shuffle\n");
   V->sortUseList(compareUses);

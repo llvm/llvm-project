@@ -11,7 +11,7 @@ declare { ptr } @llvm.coro.suspend.async.sl_p0i8s(i32, ptr, ptr, ...)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare token @llvm.coro.id.async(i32, i32, i32, ptr)
 
-declare i1 @llvm.coro.end.async(ptr, i1, ...)
+declare void @llvm.coro.end.async(ptr, i1, ...)
 
 define linkonce_odr hidden ptr @__swift_async_resume_get_context(ptr %0) {
 entry:
@@ -53,7 +53,7 @@ bb2:
   br label %tailblock
 
 tailblock:
-  %t = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %id, i1 false, ptr @repo.0, ptr @return, ptr %0)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %id, i1 false, ptr @repo.0, ptr @return, ptr %0)
   unreachable
 }
 
@@ -115,6 +115,6 @@ bb2:
   br label %tailblock
 
 tailblock:
-  %t = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %id, i1 false, ptr @repo.0, ptr @return, ptr %0)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %id, i1 false, ptr @repo.0, ptr @return, ptr %0)
   unreachable
 }

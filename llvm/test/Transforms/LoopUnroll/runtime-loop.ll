@@ -22,7 +22,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; EPILOG:   br i1 %cmp1, label %for.end, label %for.body.preheader, !prof [[EPILOG_PROF_0:![0-9]+]]
 ; EPILOG: for.body.preheader:
 ; EPILOG:   %xtraiter = and i32 %n
-; EPILOG:   br i1 %1, label %for.end.loopexit.unr-lcssa, label %for.body.preheader.new, !prof [[EPILOG_PROF_1:![0-9]+]]
+; EPILOG:   br i1 %1, label %for.body.epil.preheader, label %for.body.preheader.new, !prof [[EPILOG_PROF_1:![0-9]+]]
 
 ; EPILOG: for.end.loopexit.unr-lcssa:
 ; EPILOG:   %lcmp.mod = icmp ne i32 %xtraiter, 0
@@ -41,7 +41,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; NOPROLOG-NOT: %xtraiter = and i32 %n
 
 ; EPILOG: for.body.epil:
-; EPILOG:   %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ],  [ %indvars.iv.unr, %for.body.epil.preheader ]
+; EPILOG:   %indvars.iv.epil = phi i64 [ %indvars.iv.next.epil, %for.body.epil ],  [ %indvars.iv.epil.init, %for.body.epil.preheader ]
 ; EPILOG:   %epil.iter.next = add i32 %epil.iter, 1
 ; EPILOG:   %epil.iter.cmp = icmp ne i32 %epil.iter.next, %xtraiter
 ; EPILOG:   br i1 %epil.iter.cmp, label %for.body.epil, label %for.end.loopexit.epilog-lcssa, !prof [[EPILOG_PROF_3:![0-9]+]], !llvm.loop [[EPILOG_LOOP:![0-9]+]]

@@ -35,7 +35,7 @@ define i16 @ctz_v4i32(<4 x i32> %a) {
 ; RV64-NEXT:    vredmaxu.vs v8, v8, v8
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    li a1, 4
-; RV64-NEXT:    subw a1, a1, a0
+; RV64-NEXT:    sub a1, a1, a0
 ; RV64-NEXT:    zext.b a0, a1
 ; RV64-NEXT:    ret
   %res = call i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32> %a, i1 0)

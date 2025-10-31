@@ -9,7 +9,6 @@
 #include "ASTUtils.h"
 #include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -21,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -164,7 +162,7 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto R = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtr(R))
+    if (!R || isRefCounted(R) || isCheckedPtr(R) || isRetainPtrOrOSPtr(R))
       return;
 
     for (auto *Member : RD->fields()) {
@@ -265,18 +263,43 @@ public:
   void visitCallArg(const Expr *Arg, const ParmVarDecl *Param,
                     const Decl *DeclWithIssue) const {
     auto *ArgExpr = Arg->IgnoreParenCasts();
-    if (auto *InnerCE = dyn_cast<CallExpr>(Arg)) {
-      auto *InnerCallee = InnerCE->getDirectCallee();
-      if (InnerCallee && InnerCallee->isInStdNamespace() &&
-          safeGetName(InnerCallee) == "move" && InnerCE->getNumArgs() == 1) {
-        ArgExpr = InnerCE->getArg(0);
-        if (ArgExpr)
-          ArgExpr = ArgExpr->IgnoreParenCasts();
+    while (ArgExpr) {
+      ArgExpr = ArgExpr->IgnoreParenCasts();
+      if (auto *InnerCE = dyn_cast<CallExpr>(ArgExpr)) {
+        auto *InnerCallee = InnerCE->getDirectCallee();
+        if (InnerCallee && InnerCallee->isInStdNamespace() &&
+            safeGetName(InnerCallee) == "move" && InnerCE->getNumArgs() == 1) {
+          ArgExpr = InnerCE->getArg(0);
+          continue;
+        }
+      }
+      if (auto *UO = dyn_cast<UnaryOperator>(ArgExpr)) {
+        auto OpCode = UO->getOpcode();
+        if (OpCode == UO_Deref || OpCode == UO_AddrOf) {
+          ArgExpr = UO->getSubExpr();
+          continue;
+        }
+      }
+      break;
+    }
+
+    if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(ArgExpr)) {
+      if (isOwnerPtrType(MemberCallExpr->getObjectType()))
+        return;
+    }
+
+    if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(ArgExpr)) {
+      auto *Method = dyn_cast_or_null<CXXMethodDecl>(OpCE->getDirectCallee());
+      if (Method && isOwnerPtr(safeGetName(Method->getParent()))) {
+        if (OpCE->getOperator() == OO_Star && OpCE->getNumArgs() == 1)
+          return;
       }
     }
-    if (isa<CXXNullPtrLiteralExpr>(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
+
+    if (isNullPtr(ArgExpr) || isa<IntegerLiteral>(ArgExpr) ||
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
+
     if (auto *DRE = dyn_cast<DeclRefExpr>(ArgExpr)) {
       if (auto *ValDecl = DRE->getDecl()) {
         if (isa<ParmVarDecl>(ValDecl))

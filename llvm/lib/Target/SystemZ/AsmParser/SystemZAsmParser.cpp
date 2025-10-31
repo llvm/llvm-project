@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
@@ -22,7 +21,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
@@ -31,6 +30,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -294,7 +294,7 @@ public:
   // Override MCParsedAsmOperand.
   SMLoc getStartLoc() const override { return StartLoc; }
   SMLoc getEndLoc() const override { return EndLoc; }
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
@@ -729,22 +729,7 @@ static struct InsnMatchEntry InsnMatchTable[] = {
     { MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm } }
 };
 
-static void printMCExpr(const MCExpr *E, raw_ostream &OS) {
-  if (!E)
-    return;
-  if (auto *CE = dyn_cast<MCConstantExpr>(E))
-    OS << *CE;
-  else if (auto *UE = dyn_cast<MCUnaryExpr>(E))
-    OS << *UE;
-  else if (auto *BE = dyn_cast<MCBinaryExpr>(E))
-    OS << *BE;
-  else if (auto *SRE = dyn_cast<MCSymbolRefExpr>(E))
-    OS << *SRE;
-  else
-    OS << *E;
-}
-
-void SystemZOperand::print(raw_ostream &OS) const {
+void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case KindToken:
     OS << "Token:" << getToken();
@@ -754,24 +739,26 @@ void SystemZOperand::print(raw_ostream &OS) const {
     break;
   case KindImm:
     OS << "Imm:";
-    printMCExpr(getImm(), OS);
+    MAI.printExpr(OS, *getImm());
     break;
   case KindImmTLS:
     OS << "ImmTLS:";
-    printMCExpr(getImmTLS().Imm, OS);
+    MAI.printExpr(OS, *getImmTLS().Imm);
     if (getImmTLS().Sym) {
       OS << ", ";
-      printMCExpr(getImmTLS().Sym, OS);
+      MAI.printExpr(OS, *getImmTLS().Sym);
     }
     break;
   case KindMem: {
     const MemOp &Op = getMem();
-    OS << "Mem:" << *cast<MCConstantExpr>(Op.Disp);
+    OS << "Mem:";
+    MAI.printExpr(OS, *cast<MCConstantExpr>(Op.Disp));
     if (Op.Base) {
       OS << "(";
-      if (Op.MemKind == BDLMem)
-        OS << *cast<MCConstantExpr>(Op.Length.Imm) << ",";
-      else if (Op.MemKind == BDRMem)
+      if (Op.MemKind == BDLMem) {
+        MAI.printExpr(OS, *cast<MCConstantExpr>(Op.Length.Imm));
+        OS << ',';
+      } else if (Op.MemKind == BDRMem)
         OS << SystemZGNUInstPrinter::getRegisterName(Op.Length.Reg) << ",";
       if (Op.Index)
         OS << SystemZGNUInstPrinter::getRegisterName(Op.Index) << ",";
@@ -1352,7 +1339,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
     MatchClassKind Kind = Entry->OperandKinds[I];
 
     // Verify operand.
-    unsigned Res = validateOperandClass(Operand, Kind);
+    unsigned Res = validateOperandClass(Operand, Kind, *STI);
     if (Res != Match_Success)
       return Error(Operand.getStartLoc(), "unexpected operand type");
 
@@ -1707,12 +1694,12 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     if (Parser.getTok().isNot(AsmToken::Identifier))
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
-    SystemZMCExpr::Specifier Kind = SystemZMCExpr::VK_None;
+    auto Kind = SystemZ::S_None;
     StringRef Name = Parser.getTok().getString();
     if (Name == "tls_gdcall")
-      Kind = SystemZMCExpr::VK_TLSGD;
+      Kind = SystemZ::S_TLSGD;
     else if (Name == "tls_ldcall")
-      Kind = SystemZMCExpr::VK_TLSLDM;
+      Kind = SystemZ::S_TLSLDM;
     else
       return Error(Parser.getTok().getLoc(), "unknown TLS tag");
     Parser.Lex();
@@ -1785,6 +1772,7 @@ bool SystemZAsmParser::isLabel(AsmToken &Token) {
 
 // Force static initialization.
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZAsmParser() {
   RegisterMCAsmParser<SystemZAsmParser> X(getTheSystemZTarget());
 }

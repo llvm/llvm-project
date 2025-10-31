@@ -83,6 +83,8 @@ mark_as_advanced(COMPILER_RT_BUILD_ORC)
 option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
 mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
 option(COMPILER_RT_ENABLE_CET "Build Compiler RT with CET enabled" OFF)
+option(COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME "Build asan unit tests without depending upon a just-built asan runtime" OFF)
+mark_as_advanced(COMPILER_RT_ASAN_UNIT_TESTS_USE_HOST_RUNTIME)
 
 option(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH "Set custom sysroot for building SCUDO standalone" OFF)
 mark_as_advanced(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH)

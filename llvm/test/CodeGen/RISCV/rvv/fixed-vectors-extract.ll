@@ -1368,7 +1368,7 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV64M-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64M-NEXT:    lui a0, 322639
 ; RV64M-NEXT:    vmv.x.s a1, v8
-; RV64M-NEXT:    addiw a0, a0, -945
+; RV64M-NEXT:    addi a0, a0, -945
 ; RV64M-NEXT:    mul a0, a1, a0
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srai a0, a0, 34
@@ -1381,7 +1381,7 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; VISNI-NEXT:    ri.vextract.x.v a0, v8, 2
 ; VISNI-NEXT:    lui a1, 322639
 ; VISNI-NEXT:    sext.w a0, a0
-; VISNI-NEXT:    addiw a1, a1, -945
+; VISNI-NEXT:    addi a1, a1, -945
 ; VISNI-NEXT:    mul a0, a0, a1
 ; VISNI-NEXT:    srli a1, a0, 63
 ; VISNI-NEXT:    srai a0, a0, 34

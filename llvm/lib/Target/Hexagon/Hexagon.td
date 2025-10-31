@@ -110,8 +110,6 @@ def FeatureSmallData: SubtargetFeature<"small-data", "UseSmallData", "true",
       "Allow GP-relative addressing of global variables">;
 def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
-def FeatureUnsafeFP: SubtargetFeature<"unsafe-fp", "UseUnsafeMath", "true",
-      "Use unsafe FP math">;
 def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
       "true", "Reserve register R19">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
@@ -167,7 +165,6 @@ def UseHVXQFloat       : Predicate<"HST->useHVXQFloatOps()">,
 def UseHVXFloatingPoint: Predicate<"HST->useHVXFloatingPoint()">;
 def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
                          AssemblerPredicate<(all_of FeatureMemNoShuf)>;
-def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
 def NotOptTinyCore     : Predicate<"!HST->isTinyCore() ||"
                                    "MF->getFunction().hasOptSize()"> {
   let RecomputePerFunction = 1;
@@ -176,8 +173,11 @@ def UseSmallData       : Predicate<"HST->useSmallData()">;
 def UseCabac           : Predicate<"HST->useCabac()">,
                          AssemblerPredicate<(any_of FeatureCabac)>;
 
-def Hvx64:  HwMode<"+hvx-length64b", [UseHVX64B]>;
-def Hvx128: HwMode<"+hvx-length128b", [UseHVX128B]>;
+def : HwModePredicateProlog<[{
+  const auto *HST = static_cast<const HexagonSubtarget *>(this);
+}]>;
+def Hvx64:  HwMode<[UseHVX64B]>;
+def Hvx128: HwMode<[UseHVX128B]>;
 
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.

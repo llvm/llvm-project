@@ -98,7 +98,7 @@ std::pair<uint32_t, uint32_t> getNumCountersAndCallsites(const Function &F) {
                "same total nr of callsites parameter");
         NumCallsites = V;
       }
-#if NDEBUG
+#ifdef NDEBUG
       if (NumCounters && NumCallsites)
         return std::make_pair(NumCounters, NumCallsites);
 #endif

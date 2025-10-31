@@ -38,7 +38,7 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
   cantFail(Parser.parse(Bytes, llvm::endianness::little));
 
   std::optional<unsigned> Attr = Parser.getAttributeValue("", ExpectedTag);
-  return Attr && *Attr == ExpectedValue;
+  return Attr == ExpectedValue;
 }
 
 void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {

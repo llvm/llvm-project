@@ -61,7 +61,7 @@
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-target-device"
 ! OPENMP-OFFLOAD-ARGS-SAME:  {{.*}}.f90"
-! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}clang-offload-packager{{.*}}" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
+! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}llvm-offload-binary{{.*}}" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
 ! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
@@ -225,8 +225,8 @@
 ! RUN: | FileCheck %s --check-prefix=OFFLOAD-TARGETS
 
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"
 ! OFFLOAD-TARGETS-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "amdgcn-amd-amdhsa"
-! OFFLOAD-TARGETS-NOT: -fopenmp-targets
+! OFFLOAD-TARGETS-NOT: --offload-targets
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "-fopenmp-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"

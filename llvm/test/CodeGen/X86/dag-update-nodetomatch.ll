@@ -136,8 +136,6 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    movl (%r8), %edx
 ; CHECK-NEXT:    leal 8(,%rbx,8), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    leaq 8(%rsi), %rax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    leaq 32(%rsi), %r11
 ; CHECK-NEXT:    leaq 8(,%rbx,8), %rbx
 ; CHECK-NEXT:    xorl %r14d, %r14d
@@ -189,7 +187,8 @@ define void @_Z2x6v() local_unnamed_addr {
 ; CHECK-NEXT:    jae .LBB1_7
 ; CHECK-NEXT:  # %bb.6: # %vector.memcheck
 ; CHECK-NEXT:    # in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
+; CHECK-NEXT:    leaq 8(%rsi), %r9
+; CHECK-NEXT:    addq %r9, %rax
 ; CHECK-NEXT:    leaq (%rax,%r10,8), %rax
 ; CHECK-NEXT:    cmpq %r15, %rax
 ; CHECK-NEXT:    ja .LBB1_14

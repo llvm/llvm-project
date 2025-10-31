@@ -2743,7 +2743,7 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 
 @gv = constant i32 0
 
-define amdgpu_kernel void @readfirstlane_constant(i32 %arg, ptr %ptr) {
+define amdgpu_cs void @readfirstlane_constant(i32 %arg, ptr %ptr) {
 ; CHECK-LABEL: @readfirstlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[ARG:%.*]])
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
@@ -2829,7 +2829,7 @@ bb1:
 
 declare i32 @llvm.amdgcn.readlane(i32, i32)
 
-define amdgpu_kernel void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
+define amdgpu_cs void @readlane_constant(i32 %arg, i32 %lane, ptr %ptr) {
 ; CHECK-LABEL: @readlane_constant(
 ; CHECK-NEXT:    [[VAR:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[ARG:%.*]], i32 7)
 ; CHECK-NEXT:    store volatile i32 [[VAR]], ptr [[PTR:%.*]], align 4
@@ -3041,14 +3041,12 @@ define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(ptr addrspace(1)
 ; llvm.amdgcn.permlane64
 ; --------------------------------------------------------------------
 
-define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src0) {
+define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
 ; CHECK-LABEL: @permlane64_uniform(
-; CHECK-NEXT:    [[SRC1:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[SRC0:%.*]])
-; CHECK-NEXT:    store i32 [[SRC1]], ptr addrspace(1) [[OUT:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %src1 = call i32 @llvm.amdgcn.readfirstlane(i32 %src0)
-  %res = call i32 @llvm.amdgcn.permlane64(i32 %src1)
+  %res = call i32 @llvm.amdgcn.permlane64(i32 %src)
   store i32 %res, ptr addrspace(1) %out
   ret void
 }
@@ -6486,7 +6484,7 @@ define i32 @prng_poison_i32() {
 ; llvm.amdgcn.ds.bpermute
 ; --------------------------------------------------------------------
 
-define amdgpu_kernel void @ds_bpermute_uniform_src(ptr addrspace(1) %out, i32 %lane) {
+define void @ds_bpermute_uniform_src(ptr addrspace(1) %out, i32 %lane) {
 ; CHECK-LABEL: @ds_bpermute_uniform_src(
 ; CHECK-NEXT:    store i32 7, ptr addrspace(1) [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -6496,7 +6494,7 @@ define amdgpu_kernel void @ds_bpermute_uniform_src(ptr addrspace(1) %out, i32 %l
   ret void
 }
 
-define amdgpu_kernel void @ds_bpermute_constant_lane(ptr addrspace(1) %out, i32 %src) {
+define void @ds_bpermute_constant_lane(ptr addrspace(1) %out, i32 %src) {
 ; CHECK-LABEL: @ds_bpermute_constant_lane(
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[SRC:%.*]], i32 7)
 ; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT:%.*]], align 4
@@ -6507,7 +6505,7 @@ define amdgpu_kernel void @ds_bpermute_constant_lane(ptr addrspace(1) %out, i32 
   ret void
 }
 
-define amdgpu_kernel void @ds_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %lanearg, i32 %src) {
+define void @ds_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %lanearg, i32 %src) {
 ; CHECK-LABEL: @ds_bpermute_uniform_lane(
 ; CHECK-NEXT:    [[LANE:%.*]] = call i32 @llvm.amdgcn.readfirstlane.i32(i32 [[LANEARG:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[LANE]], 2
@@ -6519,4 +6517,25 @@ define amdgpu_kernel void @ds_bpermute_uniform_lane(ptr addrspace(1) %out, i32 %
   %v = call i32 @llvm.amdgcn.ds.bpermute(i32 %lane, i32 %src)
   store i32 %v, ptr addrspace(1) %out
   ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.make.buffer.rsrc.p8
+; --------------------------------------------------------------------
+
+define ptr addrspace(8) @make_buffer_rsrc_poison() {
+; CHECK-LABEL: @make_buffer_rsrc_poison(
+; CHECK-NEXT:    ret ptr addrspace(8) poison
+;
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) poison, i16 0, i64 1234, i32 5678)
+  ret ptr addrspace(8) %rsrc
+}
+
+define ptr addrspace(8) @make_buffer_rsrc_undef() {
+; CHECK-LABEL: @make_buffer_rsrc_undef(
+; CHECK-NEXT:    [[RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i64 1234, i32 5678)
+; CHECK-NEXT:    ret ptr addrspace(8) [[RSRC]]
+;
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) undef, i16 0, i64 1234, i32 5678)
+  ret ptr addrspace(8) %rsrc
 }

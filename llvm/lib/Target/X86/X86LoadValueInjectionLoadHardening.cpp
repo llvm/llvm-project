@@ -491,7 +491,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
   NumGadgets += GadgetCount;
 
   // Traverse CFG to build the rest of the graph
-  SmallSet<MachineBasicBlock *, 8> BlocksVisited;
+  SmallPtrSet<MachineBasicBlock *, 8> BlocksVisited;
   std::function<void(MachineBasicBlock *, GraphIter, unsigned)> TraverseCFG =
       [&](MachineBasicBlock *MBB, GraphIter GI, unsigned ParentDepth) {
         unsigned LoopDepth = MLI.getLoopDepth(MBB);

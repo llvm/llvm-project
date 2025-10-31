@@ -240,7 +240,7 @@ bool InlineAsmLowering::lowerInlineAsm(
 
     // Compute the value type for each operand.
     if (OpInfo.hasArg()) {
-      OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo));
+      OpInfo.CallOperandVal = Call.getArgOperand(ArgNo);
 
       if (isa<BasicBlock>(OpInfo.CallOperandVal)) {
         LLVM_DEBUG(dbgs() << "Basic block input operands not supported yet\n");

@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -244,7 +245,7 @@ public:
   RecordRecTy &operator=(const RecordRecTy &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const RecTy *RT) {
     return RT->getRecTyKind() == RecordRecTyKind;
@@ -598,7 +599,7 @@ public:
   BitsInit &operator=(const BitsInit &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const Init *I) {
     return I->getKind() == IK_BitsInit;
@@ -615,18 +616,11 @@ public:
   convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
   std::optional<int64_t> convertInitializerToInt() const;
 
-  bool isComplete() const override {
-    for (unsigned i = 0; i != getNumBits(); ++i)
-      if (!getBit(i)->isComplete()) return false;
-    return true;
-  }
+  // Returns the set of known bits as a 64-bit integer.
+  uint64_t convertKnownBitsToInt() const;
 
-  bool allInComplete() const {
-    for (unsigned i = 0; i != getNumBits(); ++i)
-      if (getBit(i)->isComplete()) return false;
-    return true;
-  }
-
+  bool isComplete() const override;
+  bool allInComplete() const;
   bool isConcrete() const override;
   std::string getAsString() const override;
 
@@ -756,7 +750,7 @@ class ListInit final : public TypedInit,
                        public FoldingSetNode,
                        private TrailingObjects<ListInit, const Init *> {
   friend TrailingObjects;
-  unsigned NumValues;
+  unsigned NumElements;
 
 public:
   using const_iterator = const Init *const *;
@@ -769,7 +763,7 @@ public:
   ListInit &operator=(const ListInit &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const Init *I) {
     return I->getKind() == IK_ListInit;
@@ -778,17 +772,20 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  ArrayRef<const Init *> getValues() const {
-    return ArrayRef(getTrailingObjects(), NumValues);
+  ArrayRef<const Init *> getElements() const {
+    return ArrayRef(getTrailingObjects(), NumElements);
   }
 
-  const Init *getElement(unsigned Index) const { return getValues()[Index]; }
+  LLVM_DEPRECATED("Use getElements instead", "getElements")
+  ArrayRef<const Init *> getValues() const { return getElements(); }
+
+  const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
 
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
   }
 
-  const Record *getElementAsRecord(unsigned i) const;
+  const Record *getElementAsRecord(unsigned Idx) const;
 
   const Init *convertInitializerTo(const RecTy *Ty) const override;
 
@@ -803,11 +800,11 @@ public:
   bool isConcrete() const override;
   std::string getAsString() const override;
 
-  const_iterator begin() const { return getValues().begin(); }
-  const_iterator end() const { return getValues().end(); }
+  const_iterator begin() const { return getElements().begin(); }
+  const_iterator end() const { return getElements().end(); }
 
-  size_t         size () const { return NumValues;  }
-  bool           empty() const { return NumValues == 0; }
+  size_t size() const { return NumElements; }
+  bool empty() const { return NumElements == 0; }
 
   const Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off list");
@@ -847,6 +844,7 @@ public:
     SIZE,
     EMPTY,
     GETDAGOP,
+    GETDAGOPNAME,
     LOG2,
     REPR,
     LISTFLATTEN,
@@ -874,7 +872,7 @@ public:
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -916,6 +914,7 @@ public:
     GETDAGARG,
     GETDAGNAME,
     SETDAGOP,
+    SETDAGOPNAME
   };
 
 private:
@@ -946,7 +945,7 @@ public:
   std::optional<bool> CompareInit(unsigned Opc, const Init *LHS,
                                   const Init *RHS) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec) const;
 
@@ -996,7 +995,7 @@ public:
   const Init *getMHS() const { return MHS; }
   const Init *getRHS() const { return RHS; }
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec) const;
 
@@ -1052,6 +1051,8 @@ public:
     return ArrayRef(getTrailingObjects() + NumConds, NumConds);
   }
 
+  auto getCondAndVals() const { return zip_equal(getConds(), getVals()); }
+
   const Init *Fold(const Record *CurRec) const;
 
   const Init *resolveReferences(Resolver &R) const override;
@@ -1100,7 +1101,7 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec) const;
 
@@ -1133,7 +1134,7 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold() const;
 
@@ -1167,7 +1168,7 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -1341,7 +1342,7 @@ public:
   VarDefInit &operator=(const VarDefInit &) = delete;
 
   // Do not use sized deallocation due to trailing objects.
-  void operator delete(void *p) { ::operator delete(p); }
+  void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
@@ -1416,8 +1417,8 @@ public:
   }
 };
 
-/// (v a, b) - Represent a DAG tree value.  DAG inits are required
-/// to have at least one value then a (possibly empty) list of arguments.  Each
+/// (v a, b) - Represent a DAG tree value. DAG inits are required
+/// to have at least one value then a (possibly empty) list of arguments. Each
 /// argument can have a name associated with it.
 class DagInit final
     : public TypedInit,
@@ -1445,11 +1446,23 @@ public:
   }
 
   static const DagInit *get(const Init *V, const StringInit *VN,
-                            ArrayRef<const Init *> ArgRange,
-                            ArrayRef<const StringInit *> NameRange);
+                            ArrayRef<const Init *> Args,
+                            ArrayRef<const StringInit *> ArgNames);
+
+  static const DagInit *get(const Init *V, ArrayRef<const Init *> Args,
+                            ArrayRef<const StringInit *> ArgNames) {
+    return DagInit::get(V, nullptr, Args, ArgNames);
+  }
+
   static const DagInit *
   get(const Init *V, const StringInit *VN,
-      ArrayRef<std::pair<const Init *, const StringInit *>> Args);
+      ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames);
+
+  static const DagInit *
+  get(const Init *V,
+      ArrayRef<std::pair<const Init *, const StringInit *>> ArgAndNames) {
+    return DagInit::get(V, nullptr, ArgAndNames);
+  }
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1485,6 +1498,15 @@ public:
 
   ArrayRef<const StringInit *> getArgNames() const {
     return getTrailingObjects<const StringInit *>(NumArgs);
+  }
+
+  // Return a range of std::pair.
+  auto getArgAndNames() const {
+    auto Zip = llvm::zip_equal(getArgs(), getArgNames());
+    using EltTy = decltype(*adl_begin(Zip));
+    return llvm::map_range(Zip, [](const EltTy &E) {
+      return std::make_pair(std::get<0>(E), std::get<1>(E));
+    });
   }
 
   const Init *resolveReferences(Resolver &R) const override;
@@ -1555,7 +1577,7 @@ public:
   }
 
   /// Get the source location of the point where the field was defined.
-  const SMLoc &getLoc() const { return Loc; }
+  SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
   bool isNonconcreteOK() const {
@@ -1790,12 +1812,11 @@ public:
   }
 
   void removeValue(const Init *Name) {
-    for (unsigned i = 0, e = Values.size(); i != e; ++i)
-      if (Values[i].getNameInit() == Name) {
-        Values.erase(Values.begin()+i);
-        return;
-      }
-    llvm_unreachable("Cannot remove an entry that does not exist!");
+    auto It = llvm::find_if(
+        Values, [Name](const RecordVal &V) { return V.getNameInit() == Name; });
+    if (It == Values.end())
+      llvm_unreachable("Cannot remove an entry that does not exist!");
+    Values.erase(It);
   }
 
   void removeValue(StringRef Name) {
@@ -1965,7 +1986,7 @@ public:
   detail::RecordKeeperImpl &getImpl() { return *Impl; }
 
   /// Get the main TableGen input file's name.
-  const std::string getInputFilename() const { return InputFilename; }
+  StringRef getInputFilename() const { return InputFilename; }
 
   /// Get the map of classes.
   const RecordMap &getClasses() const { return Classes; }
@@ -2115,10 +2136,7 @@ struct LessRecordRegister {
 
     size_t size() { return Parts.size(); }
 
-    std::pair<bool, StringRef> getPart(size_t i) {
-      assert (i < Parts.size() && "Invalid idx!");
-      return Parts[i];
-    }
+    std::pair<bool, StringRef> getPart(size_t Idx) { return Parts[Idx]; }
   };
 
   bool operator()(const Record *Rec1, const Record *Rec2) const {

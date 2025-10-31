@@ -55,7 +55,14 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     const char *Type = nullptr;
     const char *Implicit =
         (ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT) ? "(implicit)" : "";
-    if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO && ArgTypes[I] & OMP_TGT_MAPTYPE_FROM)
+
+    if (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH &&
+        ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS)
+      Type = "attach:always";
+    else if (ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH)
+      Type = "attach";
+    else if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO &&
+             ArgTypes[I] & OMP_TGT_MAPTYPE_FROM)
       Type = "tofrom";
     else if (ArgTypes[I] & OMP_TGT_MAPTYPE_TO)
       Type = "to";

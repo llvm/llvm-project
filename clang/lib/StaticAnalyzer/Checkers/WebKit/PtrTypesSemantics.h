@@ -21,6 +21,7 @@ class CXXMethodDecl;
 class CXXRecordDecl;
 class Decl;
 class FunctionDecl;
+class NamedDecl;
 class QualType;
 class RecordType;
 class Stmt;
@@ -56,7 +57,7 @@ bool isRefCounted(const clang::CXXRecordDecl *Class);
 bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is a RetainPtr, false if not.
-bool isRetainPtr(const clang::CXXRecordDecl *Class);
+bool isRetainPtrOrOSPtr(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is a smart pointer (RefPtr, WeakPtr, etc...),
 /// false if not.
@@ -76,12 +77,14 @@ class RetainTypeChecker {
   llvm::DenseSet<const RecordType *> CFPointees;
   llvm::DenseSet<const Type *> RecordlessTypes;
   bool IsARCEnabled{false};
+  bool DefaultSynthProperties{true};
 
 public:
   void visitTranslationUnitDecl(const TranslationUnitDecl *);
   void visitTypedef(const TypedefDecl *);
   bool isUnretained(const QualType, bool ignoreARC = false);
   bool isARCEnabled() const { return IsARCEnabled; }
+  bool defaultSynthProperties() const { return DefaultSynthProperties; }
 };
 
 /// \returns true if \p Class is NS or CF objects AND not retained, false if
@@ -113,7 +116,7 @@ std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled);
 bool isRefOrCheckedPtrType(const clang::QualType T);
 
 /// \returns true if \p T is a RetainPtr, false if not.
-bool isRetainPtrType(const clang::QualType T);
+bool isRetainPtrOrOSPtrType(const clang::QualType T);
 
 /// \returns true if \p T is a RefPtr, Ref, CheckedPtr, CheckedRef, or
 /// unique_ptr, false if not.
@@ -138,7 +141,11 @@ bool isRefType(const std::string &Name);
 bool isCheckedPtr(const std::string &Name);
 
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
-bool isRetainPtr(const std::string &Name);
+bool isRetainPtrOrOSPtr(const std::string &Name);
+
+/// \returns true if \p Name is an owning smar pointer such as Ref, CheckedPtr,
+/// and unique_ptr.
+bool isOwnerPtr(const std::string &Name);
 
 /// \returns true if \p Name is a smart pointer type name, false if not.
 bool isSmartPtrClass(const std::string &Name);
@@ -154,7 +161,7 @@ bool isPtrConversion(const FunctionDecl *F);
 bool isTrivialBuiltinFunction(const FunctionDecl *F);
 
 /// \returns true if \p F is a static singleton function.
-bool isSingleton(const FunctionDecl *F);
+bool isSingleton(const NamedDecl *F);
 
 /// An inter-procedural analysis facility that detects functions with "trivial"
 /// behavior with respect to reference counting, such as simple field getters.

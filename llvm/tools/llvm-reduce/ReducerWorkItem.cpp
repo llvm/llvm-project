@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -63,6 +62,15 @@ static cl::opt<bool> TmpFilesAsBitcode(
     cl::desc("Always write temporary files as bitcode instead of textual IR"),
     cl::init(false), cl::cat(LLVMReduceOptions));
 
+static SaveRestorePoints constructSaveRestorePoints(
+    const SaveRestorePoints &SRPoints,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
+  SaveRestorePoints Pts{};
+  for (auto &Src : SRPoints)
+    Pts.insert({BBMap.find(Src.first)->second, Src.second});
+  return Pts;
+}
+
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
@@ -93,11 +101,17 @@ static void cloneFrameInfo(
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
-  if (MachineBasicBlock *SavePt = SrcMFI.getSavePoint())
-    DstMFI.setSavePoint(Src2DstMBB.find(SavePt)->second);
-  if (MachineBasicBlock *RestorePt = SrcMFI.getRestorePoint())
-    DstMFI.setRestorePoint(Src2DstMBB.find(RestorePt)->second);
+  assert(SrcMFI.getSavePoints().size() < 2 &&
+         "Multiple restore points not yet supported!");
 
+  DstMFI.setSavePoints(
+      constructSaveRestorePoints(SrcMFI.getSavePoints(), Src2DstMBB));
+
+  assert(SrcMFI.getRestorePoints().size() < 2 &&
+         "Multiple restore points not yet supported!");
+
+  DstMFI.setRestorePoints(
+      constructSaveRestorePoints(SrcMFI.getRestorePoints(), Src2DstMBB));
 
   auto CopyObjectProperties = [](MachineFrameInfo &DstMFI,
                                  const MachineFrameInfo &SrcMFI, int FI) {

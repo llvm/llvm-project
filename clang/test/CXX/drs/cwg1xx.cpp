@@ -702,8 +702,7 @@ namespace cwg141 { // cwg141: 3.1
     // cxx98-error@#cwg141-a {{lookup of 'S' in member access expression is ambiguous; using member of 'struct A'}}
     //   cxx98-note@#cwg141-A-S {{lookup in the object type 'struct A' refers here}}
     //   cxx98-note@#cwg141-S {{lookup from the current scope refers here}}
-    // expected-error@#cwg141-a {{no member named 'n' in 'cwg141::A::S<int>'; did you mean '::cwg141::S<int>::n'?}}
-    //   expected-note@#cwg141-S {{'::cwg141::S<int>::n' declared here}}
+    // expected-error@#cwg141-a {{no member named 'n' in 'cwg141::A::S<int>'}}
     // FIXME: we issue a useful diagnostic first, then some bogus ones.
     b.f<int>();
     // expected-error@-1 {{no member named 'f' in 'cwg141::B'}}

@@ -6,8 +6,8 @@ target triple = "x86_64-unknown-linux"
 ; CHECK: @0 = private constant { i32, [0 x i8], i32 } { i32 1, [0 x i8] zeroinitializer, i32 2 }
 ; CHECK: @g1 = alias i32, ptr @0
 ; CHECK: @g2 = alias i32, getelementptr inbounds ({ i32, [0 x i8], i32 }, ptr @0, i32 0, i32 2)
-; CHECK: @f1 = alias void (), ptr @.cfi.jumptable
-; CHECK: @f2 = alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
+; CHECK: @f1 = alias [8 x i8], ptr @.cfi.jumptable
+; CHECK: @f2 = alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @.cfi.jumptable, i64 0, i64 1)
 
 @g1 = constant i32 1
 @g2 = constant i32 2

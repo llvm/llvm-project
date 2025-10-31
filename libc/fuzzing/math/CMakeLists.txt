@@ -63,12 +63,66 @@ add_libc_fuzzer(
 )
 
 add_libc_fuzzer(
+  exp_fuzz
+  NEED_MPFR
+  SRCS
+    exp_fuzz.cpp
+  DEPENDS
+    libc.src.math.exp
+)
+
+add_libc_fuzzer(
+  exp10_fuzz
+  NEED_MPFR
+  SRCS
+    exp10_fuzz.cpp
+  DEPENDS
+    libc.src.math.exp10
+)
+
+add_libc_fuzzer(
+  exp2_fuzz
+  NEED_MPFR
+  SRCS
+    exp2_fuzz.cpp
+  DEPENDS
+    libc.src.math.exp2
+)
+
+add_libc_fuzzer(
+  expm1_fuzz
+  NEED_MPFR
+  SRCS
+    expm1_fuzz.cpp
+  DEPENDS
+    libc.src.math.expm1
+)
+
+add_libc_fuzzer(
+  asin_fuzz
+  NEED_MPFR
+  SRCS
+    asin_fuzz.cpp
+  DEPENDS
+    libc.src.math.asin
+)
+
+add_libc_fuzzer(
   sin_fuzz
   NEED_MPFR
   SRCS
     sin_fuzz.cpp
   DEPENDS
     libc.src.math.sin
+)
+
+add_libc_fuzzer(
+  acos_fuzz
+  NEED_MPFR
+  SRCS
+    acos_fuzz.cpp
+  DEPENDS
+    libc.src.math.acos
 )
 
 add_libc_fuzzer(
@@ -87,4 +141,94 @@ add_libc_fuzzer(
     tan_fuzz.cpp
   DEPENDS
     libc.src.math.tan
+)
+
+add_libc_fuzzer(
+  sincos_fuzz
+  NEED_MPFR
+  SRCS
+    sincos_fuzz.cpp
+  DEPENDS
+    libc.src.math.sincos
+)
+
+add_libc_fuzzer(
+  log_fuzz
+  NEED_MPFR
+  SRCS
+    log_fuzz.cpp
+  DEPENDS
+    libc.src.math.log
+)
+
+add_libc_fuzzer(
+  log10_fuzz
+  NEED_MPFR
+  SRCS
+    log10_fuzz.cpp
+  DEPENDS
+    libc.src.math.log10
+)
+
+add_libc_fuzzer(
+  log1p_fuzz
+  NEED_MPFR
+  SRCS
+    log1p_fuzz.cpp
+  DEPENDS
+    libc.src.math.log1p
+)
+
+add_libc_fuzzer(
+  log2_fuzz
+  NEED_MPFR
+  SRCS
+    log2_fuzz.cpp
+  DEPENDS
+    libc.src.math.log2
+)
+
+add_libc_fuzzer(
+  sqrt_fuzz
+  NEED_MPFR
+  SRCS
+    sqrt_fuzz.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_libc_fuzzer(
+  cbrt_fuzz
+  NEED_MPFR
+  SRCS
+    cbrt_fuzz.cpp
+  DEPENDS
+    libc.src.math.cbrt
+)
+
+add_libc_fuzzer(
+  fsqrt_fuzz
+  NEED_MPFR
+  SRCS
+    fsqrt_fuzz.cpp
+  DEPENDS
+    libc.src.math.fsqrt
+)
+
+add_libc_fuzzer(
+  f16sqrt_fuzz
+  NEED_MPFR
+  SRCS
+    f16sqrt_fuzz.cpp
+  DEPENDS
+    libc.src.math.f16sqrt
+)
+
+add_libc_fuzzer(
+  hypot_fuzz
+  NEED_MPFR
+  SRCS
+    hypot_fuzz.cpp
+  DEPENDS
+    libc.src.math.hypot
 )

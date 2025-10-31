@@ -36,6 +36,15 @@ namespace cwg400 { // cwg400: 2.7
   // expected-error@-1 {{member 'a' found in multiple base classes of different types}}
   //   expected-note@#cwg400-A {{member type 'cwg400::A::a' found by ambiguous name lookup}}
   //   expected-note@#cwg400-B {{member type 'cwg400::B::a' found by ambiguous name lookup}}
+  struct F : A {};
+  struct G : A {
+    using G::A;
+    // expected-error@-1 {{using declaration refers to its own class}}
+    using G::a;
+    // expected-error@-1 {{using declaration refers to its own class}}
+    using F::a;
+    // expected-error@-1 {{using declaration refers into 'F', which is not a base class of 'G'}}
+  };
 } // namespace cwg400
 
 namespace cwg401 { // cwg401: 2.8
@@ -1176,7 +1185,7 @@ namespace cwg480 { // cwg480: 2.7
 
   extern int D::*c;
   int A::*d = static_cast<int A::*>(c);
-  // expected-error@-1 {{conversion from pointer to member of class 'D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
+  // expected-error@-1 {{conversion from pointer to member of class 'cwg480::D' to pointer to member of class 'A' via virtual base 'cwg480::B' is not allowed}}
 
   D *e;
   A *f = e;

@@ -96,9 +96,11 @@ end program
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
+! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+! ALL-NEXT: MIFOpConversion 
 ! ALL-NEXT: BoxedProcedurePass
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']

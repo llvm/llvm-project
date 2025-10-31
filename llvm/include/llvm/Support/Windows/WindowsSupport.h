@@ -245,6 +245,10 @@ LLVM_ABI std::error_code widenPath(const Twine &Path8,
                                    SmallVectorImpl<wchar_t> &Path16,
                                    size_t MaxPathLen = MAX_PATH);
 
+/// Retrieves the handle to a in-memory system module such as ntdll.dll, while
+/// ensuring we're not retrieving a malicious injected module but a module
+/// loaded from the system path.
+LLVM_ABI HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName);
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm.

@@ -154,7 +154,7 @@ name:            load_used_by_phi_gpr_copy_gpr
 legalized:       true
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: load_used_by_phi_gpr
+  ; CHECK-LABEL: name: load_used_by_phi_gpr_copy_gpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $x0, $s0, $s1, $w0, $w1
@@ -198,7 +198,7 @@ name:            load_used_by_phi_gpr_copy_fpr
 legalized:       true
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: load_used_by_phi_gpr
+  ; CHECK-LABEL: name: load_used_by_phi_gpr_copy_fpr
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $x0, $s0, $s1, $w0, $w1
@@ -265,7 +265,6 @@ body:             |
   ; CHECK-NEXT:   $w0 = COPY %phi(s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   ; The G_SELECT and G_PHI should end up with the same register bank.
-  ;
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $s0, $s1, $w0, $w1
@@ -312,7 +311,6 @@ body:             |
   ; CHECK-NEXT:   $s0 = COPY %phi(s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   ; The G_SELECT and G_PHI should end up with the same register bank.
-  ;
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $s0, $s1, $w0, $w1

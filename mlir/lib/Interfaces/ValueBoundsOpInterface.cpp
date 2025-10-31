@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -146,12 +148,12 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
 }
 
 ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
-                                             ArrayRef<Value> mapOperands)
+                                             ValueRange mapOperands)
     : Variable(map, llvm::map_to_vector(mapOperands,
                                         [](Value v) { return Variable(v); })) {}
 
 ValueBoundsConstraintSet::ValueBoundsConstraintSet(
-    MLIRContext *ctx, StopConditionFn stopCondition,
+    MLIRContext *ctx, const StopConditionFn &stopCondition,
     bool addConservativeSemiAffineBounds)
     : builder(ctx), stopCondition(stopCondition),
       addConservativeSemiAffineBounds(addConservativeSemiAffineBounds) {
@@ -302,7 +304,8 @@ int64_t ValueBoundsConstraintSet::insert(bool isSymbol) {
   return pos;
 }
 
-int64_t ValueBoundsConstraintSet::insert(AffineMap map, ValueDimList operands,
+int64_t ValueBoundsConstraintSet::insert(AffineMap map,
+                                         const ValueDimList &operands,
                                          bool isSymbol) {
   assert(map.getNumResults() == 1 && "expected affine map with one result");
   int64_t pos = insert(isSymbol);
@@ -629,7 +632,7 @@ LogicalResult ValueBoundsConstraintSet::computeIndependentBound(
 
 FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
     presburger::BoundType type, const Variable &var,
-    StopConditionFn stopCondition, bool closedUB) {
+    const StopConditionFn &stopCondition, bool closedUB) {
   // Default stop condition if none was specified: Keep adding constraints until
   // a bound could be computed.
   int64_t pos = 0;
@@ -666,7 +669,7 @@ void ValueBoundsConstraintSet::populateConstraints(Value value,
 
 int64_t ValueBoundsConstraintSet::populateConstraints(AffineMap map,
                                                       ValueDimList operands) {
-  int64_t pos = insert(map, operands, /*isSymbol=*/false);
+  int64_t pos = insert(map, std::move(operands), /*isSymbol=*/false);
   // Process the backward slice of `operands` (i.e., reverse use-def chain)
   // until `stopCondition` is met.
   processWorklist();
@@ -736,6 +739,44 @@ bool ValueBoundsConstraintSet::comparePos(int64_t lhsPos,
   return isEmpty;
 }
 
+FailureOr<bool> ValueBoundsConstraintSet::strongComparePos(
+    int64_t lhsPos, ComparisonOperator cmp, int64_t rhsPos) {
+  auto strongCmp = [&](ComparisonOperator cmp,
+                       ComparisonOperator negCmp) -> FailureOr<bool> {
+    if (comparePos(lhsPos, cmp, rhsPos))
+      return true;
+    if (comparePos(lhsPos, negCmp, rhsPos))
+      return false;
+    return failure();
+  };
+  switch (cmp) {
+  case ComparisonOperator::LT:
+    return strongCmp(ComparisonOperator::LT, ComparisonOperator::GE);
+  case ComparisonOperator::LE:
+    return strongCmp(ComparisonOperator::LE, ComparisonOperator::GT);
+  case ComparisonOperator::GT:
+    return strongCmp(ComparisonOperator::GT, ComparisonOperator::LE);
+  case ComparisonOperator::GE:
+    return strongCmp(ComparisonOperator::GE, ComparisonOperator::LT);
+  case ComparisonOperator::EQ: {
+    std::optional<bool> le =
+        strongComparePos(lhsPos, ComparisonOperator::LE, rhsPos);
+    if (!le)
+      return failure();
+    if (!*le)
+      return false;
+    std::optional<bool> ge =
+        strongComparePos(lhsPos, ComparisonOperator::GE, rhsPos);
+    if (!ge)
+      return failure();
+    if (!*ge)
+      return false;
+    return true;
+  }
+  }
+  llvm_unreachable("invalid comparison operator");
+}
+
 bool ValueBoundsConstraintSet::populateAndCompare(const Variable &lhs,
                                                   ComparisonOperator cmp,
                                                   const Variable &rhs) {
@@ -763,20 +804,34 @@ bool ValueBoundsConstraintSet::compare(const Variable &lhs,
   return cstr.comparePos(lhsPos, cmp, rhsPos);
 }
 
-FailureOr<bool> ValueBoundsConstraintSet::areEqual(const Variable &var1,
-                                                   const Variable &var2) {
-  if (ValueBoundsConstraintSet::compare(var1, ComparisonOperator::EQ, var2))
-    return true;
-  if (ValueBoundsConstraintSet::compare(var1, ComparisonOperator::LT, var2) ||
-      ValueBoundsConstraintSet::compare(var1, ComparisonOperator::GT, var2))
-    return false;
-  return failure();
+FailureOr<bool> ValueBoundsConstraintSet::strongCompare(const Variable &lhs,
+                                                        ComparisonOperator cmp,
+                                                        const Variable &rhs) {
+  int64_t lhsPos = -1, rhsPos = -1;
+  auto stopCondition = [&](Value v, std::optional<int64_t> dim,
+                           ValueBoundsConstraintSet &cstr) {
+    // Keep processing as long as lhs/rhs were not processed.
+    if (size_t(lhsPos) >= cstr.positionToValueDim.size() ||
+        size_t(rhsPos) >= cstr.positionToValueDim.size())
+      return false;
+    // Keep processing as long as the strong relation cannot be proven.
+    FailureOr<bool> ordered = cstr.strongComparePos(lhsPos, cmp, rhsPos);
+    return failed(ordered);
+  };
+  ValueBoundsConstraintSet cstr(lhs.getContext(), stopCondition);
+  lhsPos = cstr.populateConstraints(lhs.map, lhs.mapOperands);
+  rhsPos = cstr.populateConstraints(rhs.map, rhs.mapOperands);
+  return cstr.strongComparePos(lhsPos, cmp, rhsPos);
 }
 
-FailureOr<bool>
-ValueBoundsConstraintSet::areOverlappingSlices(MLIRContext *ctx,
-                                               HyperrectangularSlice slice1,
-                                               HyperrectangularSlice slice2) {
+FailureOr<bool> ValueBoundsConstraintSet::areEqual(const Variable &var1,
+                                                   const Variable &var2) {
+  return strongCompare(var1, ComparisonOperator::EQ, var2);
+}
+
+FailureOr<bool> ValueBoundsConstraintSet::areOverlappingSlices(
+    MLIRContext *ctx, const HyperrectangularSlice &slice1,
+    const HyperrectangularSlice &slice2) {
   assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
   assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&
@@ -838,10 +893,9 @@ ValueBoundsConstraintSet::areOverlappingSlices(MLIRContext *ctx,
   return true;
 }
 
-FailureOr<bool>
-ValueBoundsConstraintSet::areEquivalentSlices(MLIRContext *ctx,
-                                              HyperrectangularSlice slice1,
-                                              HyperrectangularSlice slice2) {
+FailureOr<bool> ValueBoundsConstraintSet::areEquivalentSlices(
+    MLIRContext *ctx, const HyperrectangularSlice &slice1,
+    const HyperrectangularSlice &slice2) {
   assert(slice1.getMixedOffsets().size() == slice2.getMixedOffsets().size() &&
          "expected slices of same rank");
   assert(slice1.getMixedSizes().size() == slice2.getMixedSizes().size() &&

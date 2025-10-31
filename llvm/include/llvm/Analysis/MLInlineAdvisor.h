@@ -28,7 +28,9 @@ class ProfileSummaryInfo;
 class MLInlineAdvisor : public InlineAdvisor {
 public:
   MLInlineAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                  std::unique_ptr<MLModelRunner> ModelRunner,
+                  std::function<std::unique_ptr<MLModelRunner>(
+                      const std::vector<TensorSpec> &)>
+                      GetModelRunner,
                   std::function<bool(CallBase &)> GetDefaultAdvice);
 
   virtual ~MLInlineAdvisor() = default;
@@ -46,6 +48,8 @@ public:
   int64_t getLocalCalls(Function &F);
   const MLModelRunner &getModelRunner() const { return *ModelRunner; }
   FunctionPropertiesInfo &getCachedFPI(Function &) const;
+  const std::vector<TensorSpec> &getFeatureMap() const { return FeatureMap; };
+  static const std::vector<TensorSpec> &getInitialFeatureMap();
 
 protected:
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
@@ -65,6 +69,7 @@ protected:
 
   std::unique_ptr<MLModelRunner> ModelRunner;
   std::function<bool(CallBase &)> GetDefaultAdvice;
+  std::vector<TensorSpec> FeatureMap;
 
 private:
   int64_t getModuleIRSize() const;
@@ -82,6 +87,7 @@ private:
   int64_t NodeCount = 0;
   int64_t EdgeCount = 0;
   int64_t EdgesOfLastSeenNodes = 0;
+  const bool UseIR2Vec;
 
   std::map<const LazyCallGraph::Node *, unsigned> FunctionLevels;
   const int32_t InitialIRSize = 0;

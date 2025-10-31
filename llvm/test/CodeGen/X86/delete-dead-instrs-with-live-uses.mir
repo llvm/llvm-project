@@ -7,8 +7,8 @@
 # CHECK: jne
 # CHECK: andl    $-16, %edx
 # CHECK: xorl    %ebx, %ebx
-# CHECK: movl    -16(%ebp), %esi
-# CHECK: xorl    %eax, %eax
+# CHECK: xorl    %esi, %esi
+# CHECK: movl    %eax, %ecx
 
 name:            test
 tracksRegLiveness: true

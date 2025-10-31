@@ -23,13 +23,13 @@ struct PQ : std::priority_queue<T, Cont, Comp> {
   typedef std::priority_queue<T, Cont, Comp> base;
 
   template <class It, class Alloc>
-  explicit PQ(It first, It last, const Comp& compare, const Cont& v, const Alloc& a)
+  TEST_CONSTEXPR_CXX26 explicit PQ(It first, It last, const Comp& compare, const Cont& v, const Alloc& a)
       : base(first, last, compare, v, a) {}
 
   using base::c;
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   typedef test_allocator<int> Alloc;
   int a[] = {3, 5, 2, 0, 6, 8, 1};
   std::vector<int, Alloc> v(a, a + 3);
@@ -37,6 +37,15 @@ int main(int, char**) {
   assert(q.size() == 7);
   assert(q.top() == 8);
   assert(q.c.get_allocator() == Alloc(2));
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

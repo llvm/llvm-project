@@ -1,10 +1,8 @@
 header: setjmp.h
-header_template: setjmp.h.def
-macros: []
+standards:
+  - stdc
 types:
   - type_name: jmp_buf
-enums: []
-objects: []
 functions:
   - name: longjmp
     standards:
@@ -23,7 +21,7 @@ functions:
       - type: jmp_buf
   - name: sigsetjmp
     standards:
-      - POSIX
+      - posix
     return_type: int
     attributes:
       - _Returns_twice
@@ -32,7 +30,7 @@ functions:
       - type: int
   - name: siglongjmp
     standards:
-      - POSIX
+      - posix
     return_type: _Noreturn void
     arguments:
       - type: sigjmp_buf

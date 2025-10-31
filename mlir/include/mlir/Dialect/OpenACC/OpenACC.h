@@ -29,6 +29,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include <variant>
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.h.inc"
@@ -174,6 +175,10 @@ static constexpr StringLiteral getDeclareActionAttrName() {
 
 static constexpr StringLiteral getRoutineInfoAttrName() {
   return StringLiteral("acc.routine_info");
+}
+
+static constexpr StringLiteral getVarNameAttrName() {
+  return VarNameAttr::name;
 }
 
 static constexpr StringLiteral getCombinedConstructsAttrName() {

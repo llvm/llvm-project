@@ -747,16 +747,14 @@ TEST_F(FormatTestComments, DontSplitLineCommentsWithEscapedNewlines) {
                    "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
                    "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
                    getLLVMStyleWithColumns(50)));
-  // FIXME: One day we might want to implement adjustment of leading whitespace
-  // of the consecutive lines in this kind of comment:
-  EXPECT_EQ("double\n"
-            "    a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-            "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-            "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-            format("double a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-                   "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-                   "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-                   getLLVMStyleWithColumns(49)));
+  verifyFormat("double\n"
+               "    a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+               "double a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+               "          // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+               getLLVMStyleWithColumns(49));
 }
 
 TEST_F(FormatTestComments, DontIntroduceMultilineComments) {
@@ -839,6 +837,25 @@ TEST_F(FormatTestComments, MultiLineCommentsInDefines) {
                    "  inside */     \\\n"
                    "  f();",
                    getLLVMStyleWithColumns(17)));
+}
+
+TEST_F(FormatTestComments, LineCommentsInMacrosDoNotGetEscapedNewlines) {
+  FormatStyle Style = getLLVMStyleWithColumns(0);
+  Style.ReflowComments = FormatStyle::RCS_Never;
+  verifyFormat("#define FOO (1U) // comment\n"
+               "                 // comment",
+               Style);
+
+  Style.ColumnLimit = 32;
+  verifyFormat("#define SOME_MACRO(x) x\n"
+               "#define FOO                    \\\n"
+               "  SOME_MACRO(1) +              \\\n"
+               "      SOME_MACRO(2) // comment\n"
+               "                    // comment",
+               "#define SOME_MACRO(x) x\n"
+               "#define FOO SOME_MACRO(1) + SOME_MACRO(2) // comment\n"
+               "                                          // comment",
+               Style);
 }
 
 TEST_F(FormatTestComments, ParsesCommentsAdjacentToPPDirectives) {
@@ -1122,11 +1139,11 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                    "  }\n"
                    "}"));
 
-  const StringRef Code("void func() {\n"
-                       "  // clang-format off\n"
-                       "  #define KV(value) #value, value\n"
-                       "  // clang-format on\n"
-                       "}");
+  constexpr StringRef Code("void func() {\n"
+                           "  // clang-format off\n"
+                           "  #define KV(value) #value, value\n"
+                           "  // clang-format on\n"
+                           "}");
   verifyNoChange(Code);
 
   auto Style = getLLVMStyle();
@@ -2486,7 +2503,7 @@ TEST_F(FormatTestComments, BlockComments) {
   EXPECT_EQ("/*\n"
             "**\n"
             "* aaaaaa\n"
-            "*aaaaaa\n"
+            "* aaaaaa\n"
             "*/",
             format("/*\n"
                    "**\n"
@@ -4699,6 +4716,58 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
 / 
   )",
                    getLLVMStyleWithColumns(10)));
+}
+
+TEST_F(FormatTestComments, LineCommentsOnStartOfFunctionCall) {
+  auto Style = getLLVMStyle();
+
+  EXPECT_EQ(Style.Cpp11BracedListStyle, FormatStyle::BLS_AlignFirstComment);
+  verifyFormat("Type name{// Comment\n"
+               "          value};",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  verifyFormat("Type name{ // Comment\n"
+               "           value\n"
+               "};",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_FunctionCall;
+  verifyFormat("Type name{ // Comment\n"
+               "    value};",
+               Style);
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{ // Comment\n"
+               "    arg};",
+               Style);
+
+  verifyFormat("T baz({ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("T baz{{ // Comment\n"
+               "    arg}};",
+               Style);
+
+  verifyFormat("T b0z(f( // Comment\n"
+               "    arg));",
+               Style);
+
+  verifyFormat("T b0z(F{ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({ // Comment\n"
+               "    arg});",
+               Style);
 }
 
 } // end namespace

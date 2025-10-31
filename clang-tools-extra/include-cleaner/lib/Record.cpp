@@ -14,6 +14,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
@@ -179,8 +180,10 @@ public:
   RecordPragma(const CompilerInstance &CI, PragmaIncludes *Out)
       : RecordPragma(CI.getPreprocessor(), Out) {}
   RecordPragma(const Preprocessor &P, PragmaIncludes *Out)
-      : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()), Out(Out),
-        Arena(std::make_shared<llvm::BumpPtrAllocator>()),
+      : SM(P.getSourceManager()), HeaderInfo(P.getHeaderSearchInfo()),
+        L(P.getLangOpts().CPlusPlus ? tooling::stdlib::Lang::CXX
+                                    : tooling::stdlib::Lang::C),
+        Out(Out), Arena(std::make_shared<llvm::BumpPtrAllocator>()),
         UniqueStrings(*Arena),
         MainFileStem(llvm::sys::path::stem(
             SM.getNonBuiltinFilenameForID(SM.getMainFileID()).value_or(""))) {}
@@ -224,7 +227,7 @@ public:
     std::optional<Header> IncludedHeader;
     if (IsAngled)
       if (auto StandardHeader =
-              tooling::stdlib::Header::named("<" + FileName.str() + ">")) {
+              tooling::stdlib::Header::named("<" + FileName.str() + ">", L)) {
         IncludedHeader = *StandardHeader;
       }
     if (!IncludedHeader && File)
@@ -363,6 +366,7 @@ private:
   bool InMainFile = false;
   const SourceManager &SM;
   const HeaderSearch &HeaderInfo;
+  const tooling::stdlib::Lang L;
   PragmaIncludes *Out;
   std::shared_ptr<llvm::BumpPtrAllocator> Arena;
   /// Intern table for strings. Contents are on the arena.

@@ -15,19 +15,18 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 #include "AVR.h"
 #include "AVRMachineFunctionInfo.h"
 #include "AVRTargetObjectFile.h"
+#include "AVRTargetTransformInfo.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
 #include <optional>
 
 namespace llvm {
-
-static const char *AVRDataLayout =
-    "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8";
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
@@ -48,8 +47,8 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, AVRDataLayout, TT, getCPU(CPU), FS, Options,
-                               getEffectiveRelocModel(RM),
+    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, getCPU(CPU), FS,
+                               Options, getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       SubTarget(TT, std::string(getCPU(CPU)), std::string(FS), *this) {
   this->TLOF = std::make_unique<AVRTargetObjectFile>();
@@ -61,7 +60,9 @@ namespace {
 class AVRPassConfig : public TargetPassConfig {
 public:
   AVRPassConfig(AVRTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    EnableLoopTermFold = true;
+  }
 
   AVRTargetMachine &getAVRTargetMachine() const {
     return getTM<AVRTargetMachine>();
@@ -87,7 +88,7 @@ void AVRPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   // Register the target.
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
 
@@ -104,6 +105,11 @@ const AVRSubtarget *AVRTargetMachine::getSubtargetImpl() const {
 
 const AVRSubtarget *AVRTargetMachine::getSubtargetImpl(const Function &) const {
   return &SubTarget;
+}
+
+TargetTransformInfo
+AVRTargetMachine::getTargetTransformInfo(const Function &F) const {
+  return TargetTransformInfo(std::make_unique<AVRTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *AVRTargetMachine::createMachineFunctionInfo(

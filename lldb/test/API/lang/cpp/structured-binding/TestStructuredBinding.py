@@ -5,7 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestStructuredBinding(TestBase):
-    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipIf(oslist=["linux"], archs=["arm$"])
     @skipIf(compiler="clang", compiler_version=["<", "14.0"])
     def test(self):
         self.build()
@@ -98,3 +98,22 @@ class TestStructuredBinding(TestBase):
         self.expect_expr("tx2", result_value="4")
         self.expect_expr("ty2", result_value="'z'")
         self.expect_expr("tz2", result_value="10")
+
+        # Older versions of Clang marked structured binding variables
+        # as artificial, and thus LLDB wouldn't display them.
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">=", "22.0"]
+        ):
+            self.expect(
+                "frame variable",
+                substrs=[
+                    "tx1 =",
+                    "ty1 =",
+                    "tz1 =",
+                    "tx2 =",
+                    "ty2 =",
+                    "tz2 =",
+                    "mp1 =",
+                    "mp2 =",
+                ],
+            )

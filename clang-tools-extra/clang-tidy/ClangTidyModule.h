@@ -1,4 +1,4 @@
-//===--- ClangTidyModule.h - clang-tidy -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -61,6 +61,8 @@ public:
                            return std::make_unique<CheckType>(Name, Context);
                          });
   }
+
+  void eraseCheck(llvm::StringRef CheckName) { Factories.erase(CheckName); }
 
   /// Create instances of checks that are enabled.
   std::vector<std::unique_ptr<ClangTidyCheck>>

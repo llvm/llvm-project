@@ -192,8 +192,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_muldiv");
   }
 
-  if (ISAInfo->hasExtension("a")) {
+  // The "a" extension is composed of "zalrsc" and "zaamo"
+  if (ISAInfo->hasExtension("a"))
     Builder.defineMacro("__riscv_atomic");
+
+  if (ISAInfo->hasExtension("zalrsc")) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
@@ -222,7 +225,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   // Currently we support the v1.0 RISC-V V intrinsics.
   Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
 
-  auto VScale = getVScaleRange(Opts, false);
+  auto VScale = getVScaleRange(Opts, ArmStreamingKind::NotStreaming);
   if (VScale && VScale->first && VScale->first == VScale->second)
     Builder.defineMacro("__riscv_v_fixed_vlen",
                         Twine(VScale->first * llvm::RISCV::RVVBitsPerBlock));
@@ -241,18 +244,39 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (Opts.CFProtectionReturn && ISAInfo->hasExtension("zicfiss"))
     Builder.defineMacro("__riscv_shadow_stack");
+
+  if (Opts.CFProtectionBranch) {
+    auto Scheme = Opts.getCFBranchLabelScheme();
+    if (Scheme == CFBranchLabelSchemeKind::Default)
+      Scheme = getDefaultCFBranchLabelScheme();
+
+    Builder.defineMacro("__riscv_landing_pad");
+    switch (Scheme) {
+    case CFBranchLabelSchemeKind::Unlabeled:
+      Builder.defineMacro("__riscv_landing_pad_unlabeled");
+      break;
+    case CFBranchLabelSchemeKind::FuncSig:
+      // TODO: Define macros after the func-sig scheme is implemented
+      break;
+    case CFBranchLabelSchemeKind::Default:
+      llvm_unreachable("default cf-branch-label scheme should already be "
+                       "transformed to other scheme");
+    }
+  }
 }
 
 static constexpr int NumRVVBuiltins =
     RISCVVector::FirstSiFiveBuiltin - Builtin::FirstTSBuiltin;
 static constexpr int NumRVVSiFiveBuiltins =
-    RISCVVector::FirstTSBuiltin - RISCVVector::FirstSiFiveBuiltin;
+    RISCVVector::FirstAndesBuiltin - RISCVVector::FirstSiFiveBuiltin;
+static constexpr int NumRVVAndesBuiltins =
+    RISCVVector::FirstTSBuiltin - RISCVVector::FirstAndesBuiltin;
 static constexpr int NumRISCVBuiltins =
     RISCV::LastTSBuiltin - RISCVVector::FirstTSBuiltin;
 static constexpr int NumBuiltins =
     RISCV::LastTSBuiltin - Builtin::FirstTSBuiltin;
-static_assert(NumBuiltins ==
-              (NumRVVBuiltins + NumRVVSiFiveBuiltins + NumRISCVBuiltins));
+static_assert(NumBuiltins == (NumRVVBuiltins + NumRVVSiFiveBuiltins +
+                              NumRVVAndesBuiltins + NumRISCVBuiltins));
 
 namespace RVV {
 #define GET_RISCVV_BUILTIN_STR_TABLE
@@ -280,6 +304,19 @@ static constexpr std::array<Builtin::Info, NumRVVSiFiveBuiltins> BuiltinInfos =
 };
 } // namespace RVVSiFive
 
+namespace RVVAndes {
+#define GET_RISCVV_BUILTIN_STR_TABLE
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumRVVAndesBuiltins> BuiltinInfos =
+    {
+#define GET_RISCVV_BUILTIN_INFOS
+#include "clang/Basic/riscv_andes_vector_builtins.inc"
+#undef GET_RISCVV_BUILTIN_INFOS
+};
+} // namespace RVVAndes
+
 #define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsRISCV.inc"
 #undef GET_BUILTIN_STR_TABLE
@@ -296,6 +333,7 @@ RISCVTargetInfo::getTargetBuiltins() const {
   return {
       {&RVV::BuiltinStrings, RVV::BuiltinInfos, "__builtin_rvv_"},
       {&RVVSiFive::BuiltinStrings, RVVSiFive::BuiltinInfos, "__builtin_rvv_"},
+      {&RVVAndes::BuiltinStrings, RVVAndes::BuiltinInfos, "__builtin_rvv_"},
       {&BuiltinStrings, BuiltinInfos},
   };
 }
@@ -332,7 +370,8 @@ bool RISCVTargetInfo::initFeatureMap(
 
 std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                bool IsArmStreamingFunction) const {
+                                ArmStreamingKind IsArmStreamingFunction,
+                                llvm::StringMap<bool> *FeatureMap) const {
   // RISCV::RVVBitsPerBlock is 64.
   unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
 
@@ -391,7 +430,7 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     ABI = ISAInfo->computeDefaultABI().str();
 
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
 
   FastScalarUnalignedAccess =
       llvm::is_contained(Features, "+unaligned-scalar-mem");
@@ -532,7 +571,8 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
-uint64_t RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+llvm::APInt
+RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   // Priority is explicitly specified on RISC-V unlike on other targets, where
   // it is derived by all the features of a specific version. Therefore if a
   // feature contains the priority string, then return it immediately.
@@ -544,12 +584,12 @@ uint64_t RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
       Feature = RHS;
     else
       continue;
-    uint64_t Priority;
+    unsigned Priority;
     if (!Feature.getAsInteger(0, Priority))
-      return Priority;
+      return llvm::APInt(32, Priority);
   }
   // Default Priority is zero.
-  return 0;
+  return llvm::APInt::getZero(32);
 }
 
 TargetInfo::CallingConvCheckResult

@@ -62,9 +62,24 @@ add_macro_header(
 )
 
 add_macro_header(
+  cfloat128_macros
+  HDR
+    cfloat128-macros.h
+)
+
+add_macro_header(
+  cfloat16_macros
+  HDR
+    cfloat16-macros.h
+)
+
+add_macro_header(
   complex_macros
   HDR
     complex-macros.h
+  DEPENDS
+    .cfloat128_macros
+    .cfloat16_macros
 )
 
 add_macro_header(
@@ -135,6 +150,12 @@ add_macro_header(
     math-function-macros.h
   DEPENDS
     .math_macros
+)
+
+add_macro_header(
+  netinet_in_macros
+  HDR
+    netinet-in-macros.h
 )
 
 add_macro_header(

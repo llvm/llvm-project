@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# ===- rename_check.py - clang-tidy check renamer ------------*- python -*--===#
+# ===-----------------------------------------------------------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -49,30 +49,6 @@ def replaceInFile(fileName: str, sFrom: str, sTo: str) -> None:
     print("Replacing '%s' -> '%s' in '%s'..." % (sFrom, sTo, fileName))
     with io.open(fileName, "w", encoding="utf8") as f:
         f.write(txt)
-
-
-def generateCommentLineHeader(filename: str) -> str:
-    return "".join(
-        [
-            "//===--- ",
-            os.path.basename(filename),
-            " - clang-tidy ",
-            "-" * max(0, 42 - len(os.path.basename(filename))),
-            "*- C++ -*-===//",
-        ]
-    )
-
-
-def generateCommentLineSource(filename: str) -> str:
-    return "".join(
-        [
-            "//===--- ",
-            os.path.basename(filename),
-            " - clang-tidy",
-            "-" * max(0, 52 - len(os.path.basename(filename))),
-            "-===//",
-        ]
-    )
 
 
 def fileRename(fileName: str, sFrom: str, sTo: str) -> str:
@@ -337,16 +313,6 @@ def main() -> None:
         )
         filename = fileRename(filename, args.old_check_name, args.new_check_name)
         filename = fileRename(filename, check_name_camel, new_check_name_camel)
-        replaceInFile(
-            filename,
-            generateCommentLineHeader(originalName),
-            generateCommentLineHeader(filename),
-        )
-        replaceInFile(
-            filename,
-            generateCommentLineSource(originalName),
-            generateCommentLineSource(filename),
-        )
         for header_guard in header_guard_variants:
             replaceInFile(filename, header_guard, header_guard_new)
 

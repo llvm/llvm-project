@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-intrinsics -fptrauth-calls -std=c++2c -verify %s
 
 class Trivial {};
 static_assert(__builtin_is_cpp_trivially_relocatable(Trivial));
@@ -333,6 +334,31 @@ struct CopyAssign1 {
    CopyAssign1 & operator=(CopyAssign1 const &) = default;
 };
 
+struct UserDeleted1 {
+    UserDeleted1(const UserDeleted1&) = delete;
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted1));
+static_assert(!__builtin_is_replaceable(UserDeleted1));
+
+struct UserDeleted2 {
+    UserDeleted2(UserDeleted2&&) = delete;
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted2));
+static_assert(!__builtin_is_replaceable(UserDeleted2));
+
+
+struct UserDeleted3 {
+    UserDeleted3 operator=(UserDeleted3);
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted3));
+static_assert(!__builtin_is_replaceable(UserDeleted3));
+
+struct UserDeleted4 {
+    UserDeleted4 operator=(UserDeleted4&&);
+};
+static_assert(!__builtin_is_cpp_trivially_relocatable(UserDeleted4));
+static_assert(!__builtin_is_replaceable(UserDeleted4));
+
 }
 
 
@@ -346,7 +372,7 @@ void test__builtin_trivially_relocate() {
     __builtin_trivially_relocate((S*)0, 0, 0); //expected-error {{argument to '__builtin_trivially_relocate' must be relocatable}}
     __builtin_trivially_relocate((int*)0, 0, 0); //expected-error {{first and second arguments to '__builtin_trivially_relocate' must be of the same type}}
 
-    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '{{.*}}' with an rvalue of type 'int *'}}
+    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '__size_t' (aka '{{.*}}') with an rvalue of type 'int *'}}
     __builtin_trivially_relocate((int*)0, (int*)0, 0);
     __builtin_trivially_relocate((R*)0, (R*)0, 0);
 }
@@ -362,4 +388,61 @@ void do_test__builtin_trivially_relocate() {
     test__builtin_trivially_relocate((S*)0, (S*)0, 0);
     // expected-note@-1 {{'test__builtin_trivially_relocate<S *, S *, int>' requested here}}
     // expected-error@#reloc1 {{first argument to '__builtin_trivially_relocate' must be relocatable}}
+}
+
+
+namespace GH143599 {
+struct A { ~A (); };
+A::~A () = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(A));
+static_assert (!__builtin_is_replaceable(A));
+
+struct B { B(const B&); };
+B::B (const B&) = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(B));
+static_assert (!__builtin_is_replaceable(B));
+
+struct C { C& operator=(const C&); };
+C& C::operator=(const C&) = default;
+
+static_assert (!__builtin_is_cpp_trivially_relocatable(C));
+static_assert (!__builtin_is_replaceable(C));
+}
+
+namespace GH144232 {
+
+struct E trivially_relocatable_if_eligible replaceable_if_eligible {
+  E (E &&);
+  E &operator= (E &&) = default;
+};
+
+struct F trivially_relocatable_if_eligible replaceable_if_eligible {
+  F (F &&) = default;
+  F &operator= (F &&);
+};
+
+struct G trivially_relocatable_if_eligible replaceable_if_eligible { G (G const &) = default; };
+
+struct I trivially_relocatable_if_eligible replaceable_if_eligible { I &operator= (const I &) = default; };
+
+struct J trivially_relocatable_if_eligible replaceable_if_eligible { J (J const &); };
+struct K trivially_relocatable_if_eligible replaceable_if_eligible { K (K const &); };
+
+
+
+static_assert (__builtin_is_replaceable (E));
+static_assert (__builtin_is_cpp_trivially_relocatable(E));
+static_assert (__builtin_is_replaceable (F));
+static_assert (__builtin_is_cpp_trivially_relocatable(F));
+static_assert (__builtin_is_replaceable (G));
+static_assert (__builtin_is_cpp_trivially_relocatable(G));
+static_assert (__builtin_is_replaceable (I));
+static_assert (__builtin_is_cpp_trivially_relocatable(I));
+static_assert (__builtin_is_replaceable (J));
+static_assert (__builtin_is_cpp_trivially_relocatable(J));
+static_assert (__builtin_is_replaceable (K));
+static_assert (__builtin_is_cpp_trivially_relocatable(K));
+
 }

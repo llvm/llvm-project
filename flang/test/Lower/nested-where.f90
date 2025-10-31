@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
-! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "nested_where"} {
+! CHECK-LABEL: func @_QQmain() attributes {fir.bindc_name = "NESTED_WHERE"} {
 program nested_where
 
   ! CHECK:  %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}

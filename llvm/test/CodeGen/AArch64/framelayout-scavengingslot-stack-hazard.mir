@@ -1,0 +1,99 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-stack-hazard-size=1024 -run-pass=prologepilog %s -o - | FileCheck %s
+--- |
+
+  define void @stack_hazard_streaming_compat() "aarch64_pstate_sm_compatible" { entry: unreachable }
+  define void @stack_hazard_streaming_compat_emergency_spill_slot() "aarch64_pstate_sm_compatible" { entry: unreachable }
+
+...
+
+# +------------------+
+# | GPR callee-saves |
+# +------------------+ <- FP
+# | <hazard padding> |
+# +------------------+
+# | FPR locals       |
+# | %stack.1         |
+# +------------------+
+# | <hazard padding> |
+# +------------------+
+# | GPR locals       |
+# | %stack.2         |
+# | <emergency spill>|
+# +------------------+ <- BP
+# | <VLA>            |
+# +------------------+ <- SP (can't be used due to VLA)
+
+# In this case without the base pointer we'd need the emergency spill slot to
+# access both %stack.1 and %stack.2. With the base pointer we can reach both
+# without spilling.
+
+name: stack_hazard_streaming_compat
+# CHECK-LABEL: name: stack_hazard_streaming_compat
+# CHECK: bb.0:
+# CHECK:      STRDui $d0, $x19, 131
+# CHECK-NEXT: STRXui $x0, $x19, 1
+# CHECK: bb.1:
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: true
+stack:
+  - { id: 0, type: variable-sized,  alignment: 1 }
+  - { id: 1, size: 8, alignment: 8 }
+  - { id: 2, size: 8, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $x0, $x8, $d0
+    $x9 = LDRXui $x0, 0 :: (load (s64))
+    STRDui $d0, %stack.1, 0 :: (store (s64) into %stack.1)
+    STRXui $x0, %stack.2, 0 :: (store (s64) into %stack.2)
+    B %bb.1
+  bb.1:
+    liveins: $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $lr
+    RET_ReallyLR implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $x28, implicit $lr
+...
+---
+# +------------------+
+# | GPR callee-saves |
+# +------------------+ <- FP
+# | <hazard padding> |
+# +------------------+
+# | FPR locals       |
+# | %stack.1         |
+# +------------------+
+# | <hazard padding> |
+# +------------------+
+# | GPR locals       |
+# | %stack.2         | (very large)
+# | <emergency spill>|
+# +------------------+ <- BP
+# | <VLA>            |
+# +------------------+ <- SP (can't be used due to VLA)
+
+# In this case we need to use the emergency spill slot to access %stack.1 as it
+# is too far from the frame pointer and the base pointer to directly address.
+# Note: This also tests that the <emergency spill> located near the SP/BP.
+
+name: stack_hazard_streaming_compat_emergency_spill_slot
+# CHECK-LABEL: name: stack_hazard_streaming_compat_emergency_spill_slot
+# CHECK: bb.0:
+# CHECK:      STRXui killed $[[SCRATCH:x[0-9]+]], $x19, 0
+# CHECK-NEXT: $[[SCRATCH]] = ADDXri $x19, 1056, 0
+# CHECK-NEXT: STRDui $d0, killed $[[SCRATCH]], 4095
+# CHECK-NEXT: $[[SCRATCH]] = LDRXui $x19, 0
+# CHECK: bb.1:
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: true
+stack:
+  - { id: 0, type: variable-sized,  alignment: 1 }
+  - { id: 1, size: 8, alignment: 8 }
+  - { id: 2, size: 32761, alignment: 8 }
+body: |
+  bb.0:
+    liveins: $x0, $x8, $d0
+    $x9 = LDRXui $x0, 0 :: (load (s64))
+    STRDui $d0, %stack.1, 0 :: (store (s64) into %stack.1)
+    B %bb.1
+  bb.1:
+    liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $lr
+    RET_ReallyLR implicit $x19, implicit $x20, implicit $x21, implicit $x22, implicit $x23, implicit $x24, implicit $x25, implicit $x26, implicit $x27, implicit $x28, implicit $lr

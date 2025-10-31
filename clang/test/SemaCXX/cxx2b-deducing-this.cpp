@@ -96,12 +96,12 @@ struct Test {
 void test() {
 
     [i = 0](this Test) { }();
-    // expected-error@-1 {{invalid explicit object parameter type 'ThisInLambdaWithCaptures::Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
+    // expected-error@-1 {{invalid explicit object parameter type 'Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
 
     struct Derived;
     auto ok = [i = 0](this const Derived&) {};
     auto ko = [i = 0](this const Test&) {};
-    // expected-error@-1 {{invalid explicit object parameter type 'ThisInLambdaWithCaptures::Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
+    // expected-error@-1 {{invalid explicit object parameter type 'Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
 
     struct Derived : decltype(ok){};
     Derived dok{ok};
@@ -926,6 +926,33 @@ struct C {
     (&fref)();
   }
 };
+
+struct CTpl {
+  template <typename T>
+  constexpr int c(this const CTpl&, T) {  // #P2797-ctpl-1
+      return 42;
+  }
+
+  template <typename T>
+  void c(T)&; // #P2797-ctpl-2
+
+  template <typename T>
+  static void c(T = 0, T = 0);  // #P2797-ctpl-3
+
+  void d() {
+    c(0);               // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#P2797-ctpl-1{{candidate}}
+                        // expected-note@#P2797-ctpl-2{{candidate}}
+                        // expected-note@#P2797-ctpl-3{{candidate}}
+    (CTpl::c)(0);       // expected-error {{call to member function 'c' is ambiguous}}
+                        // expected-note@#P2797-ctpl-1{{candidate}}
+                        // expected-note@#P2797-ctpl-2{{candidate}}
+                        // expected-note@#P2797-ctpl-3{{candidate}}
+
+    static_assert((&CTpl::c)(CTpl{}, 0) == 42); // selects #1
+  }
+};
+
 }
 
 namespace GH85992 {
@@ -1140,4 +1167,225 @@ struct S {
   auto f(this auto) -> S;
   bool g() { return f(); } // expected-error {{no viable conversion from returned value of type 'S' to function return type 'bool'}}
 };
+}
+
+namespace tpl_address {
+
+struct A {
+    template <typename T>
+    void a(this T self); // #tpl-address-a
+
+    template <typename T>
+    void b(this T&& self); // #tpl-address-b
+
+    template <typename T>
+    void c(this T self, int); // #tpl-address-c
+
+    template <typename T, typename U>
+    void d(this T self, U); // #tpl-address-d
+
+    template <typename T, typename U>
+    requires __is_same_as(U, int)  void e(this T self, U); // #tpl-address-e
+
+    template <typename T>
+    requires __is_same_as(T, int)  void f(this T self); // #tpl-address-f
+
+    template <typename T>
+    void g(this T self); // #tpl-address-g1
+
+    template <typename T>
+    void g(this T self, int); // #tpl-address-g2
+
+};
+
+void f() {
+    A a{};
+
+    (&A::a<A>)(a);
+
+    (&A::a)(a);
+
+    (&A::a<A>)();
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate function [with T = tpl_address::A] not viable: requires 1 argument, but 0 were provided}}
+
+    (&A::a)();
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate template ignored: couldn't infer template argument 'T'}}
+
+    (&A::a<A>)(0);
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate function template not viable: no known conversion from 'int' to 'A' for 1st argument}}
+
+    (&A::a<A>)(a, 1);
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate function template not viable: requires 1 argument, but 2 were provided}}
+
+
+    (&A::b<A>)(a);
+    // expected-error@-1 {{no matching function for call to 'b'}} \
+    // expected-note@#tpl-address-b{{candidate function template not viable: expects an rvalue for 1st argument}}
+
+    (&A::b)(a);
+
+    (&A::c<A>)(a, 0);
+
+    (&A::c<A>)(a);
+    // expected-error@-1 {{no matching function for call to 'c'}} \
+    // expected-note@#tpl-address-c{{candidate function [with T = tpl_address::A] not viable: requires 2 arguments, but 1 was provided}}
+
+    (&A::c<A>)(a, 0, 0);
+    // expected-error@-1 {{no matching function for call to 'c'}} \
+    // expected-note@#tpl-address-c{{candidate function template not viable: requires 2 arguments, but 3 were provided}}
+
+    (&A::c<A>)(a, a);
+    // expected-error@-1 {{no matching function for call to 'c'}} \
+    // expected-note@#tpl-address-c{{candidate function template not viable: no known conversion from 'A' to 'int' for 2nd argument}}
+
+    (&A::d)(a, 0);
+    (&A::d)(a, a);
+    (&A::d<A>)(a, 0);
+    (&A::d<A>)(a, a);
+    (&A::d<A, int>)(a, 0);
+
+    (&A::d<A, int>)(a, a);
+    // expected-error@-1 {{no matching function for call to 'd'}} \
+    // expected-note@#tpl-address-d{{no known conversion from 'A' to 'int' for 2nd argument}}
+
+
+    (&A::e)(a, 0);
+    (&A::e)(a, a);
+    // expected-error@-1 {{no matching function for call to 'e'}} \
+    // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
+    // expected-note@#tpl-address-e{{because '__is_same(A, int)' evaluated to false}}
+
+    (&A::e<A>)(a, 0);
+    (&A::e<A>)(a, a);
+    // expected-error@-1 {{no matching function for call to 'e'}} \
+    // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
+    // expected-note@#tpl-address-e{{because '__is_same(A, int)' evaluated to false}}
+
+    (&A::e<A, int>)(a, 0);
+
+    (&A::f<int>)(0);
+    (&A::f)(0);
+
+    (&A::f<A>)(a);
+    // expected-error@-1 {{no matching function for call to 'f'}} \
+    // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
+    // expected-note@#tpl-address-f{{because '__is_same(A, int)' evaluated to false}}
+
+    (&A::f)(a);
+    // expected-error@-1 {{no matching function for call to 'f'}} \
+    // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
+    // expected-note@#tpl-address-f{{because '__is_same(A, int)' evaluated to false}}
+
+    (&A::g)(a);
+    (&A::g)(a, 0);
+    (&A::g)(a, 0, 0);
+    // expected-error@-1 {{no matching function for call to 'g'}} \
+    // expected-note@#tpl-address-g2 {{candidate function template not viable: requires 2 arguments, but 3 were provided}}\
+    // expected-note@#tpl-address-g1 {{candidate function template not viable: requires 1 argument, but 3 were provided}}
+}
+
+
+}
+
+namespace GH147121 {
+struct X {};
+struct S1 {
+    bool operator==(this auto &&, const X &); // #S1-cand
+};
+struct S2 {
+    bool operator==(this X, const auto &&); // #S2-cand
+};
+
+struct S3 {
+    S3& operator++(this X); // #S3-inc-cand
+    S3& operator++(this int); // #S3-inc-cand
+    int operator[](this X); // #S3-sub-cand
+    int operator[](this int); // #S3-sub-cand2
+    void f(this X); // #S3-f-cand
+    void f(this int); // #S3-f-cand2
+};
+
+int main() {
+    S1{} == S1{};
+    // expected-error@-1 {{invalid operands to binary expression ('S1' and 'S1')}}
+    // expected-note@#S1-cand {{candidate function template not viable}}
+    // expected-note@#S1-cand {{candidate function (with reversed parameter order) template not viable}}
+
+
+    S1{} != S1{};
+    // expected-error@-1 {{invalid operands to binary expression ('S1' and 'S1')}}
+    // expected-note@#S1-cand {{candidate function template not viable}}
+    // expected-note@#S1-cand {{candidate function (with reversed parameter order) template not viable}}
+
+
+    S2{} == S2{};
+    // expected-error@-1 {{invalid operands to binary expression ('S2' and 'S2')}}
+    // expected-note@#S2-cand {{candidate function template not viable}}
+    // expected-note@#S2-cand {{candidate function (with reversed parameter order) template not viable}}
+
+
+    S2{} != S2{};
+    // expected-error@-1 {{invalid operands to binary expression ('S2' and 'S2')}}
+    // expected-note@#S2-cand {{candidate function template not viable}}
+    // expected-note@#S2-cand {{candidate function (with reversed parameter order) template not viable}}
+
+    S3 s3;
+    ++s3;
+    // expected-error@-1{{cannot increment value of type 'S3'}}
+    s3[];
+    // expected-error@-1{{no viable overloaded operator[] for type 'S3'}}
+    // expected-note@#S3-sub-cand {{candidate function not viable: no known conversion from 'S3' to 'X' for object argument}}
+    // expected-note@#S3-sub-cand2 {{candidate function not viable: no known conversion from 'S3' to 'int' for object argument}}
+
+    s3.f();
+    // expected-error@-1{{no matching member function for call to 'f'}}
+    // expected-note@#S3-f-cand {{candidate function not viable: no known conversion from 'S3' to 'X' for object argument}}
+    // expected-note@#S3-f-cand2 {{candidate function not viable: no known conversion from 'S3' to 'int' for object argument}}
+}
+}
+
+namespace GH113185 {
+
+void Bar(this int) { // expected-note {{candidate function}}
+    // expected-error@-1 {{an explicit object parameter cannot appear in a non-member function}}
+    Bar(0);
+    Bar(); // expected-error {{no matching function for call to 'Bar'}}
+}
+
+}
+
+namespace GH147046_regression {
+
+template <typename z> struct ai {
+    ai(z::ah);
+};
+
+template <typename z> struct ak {
+    template <typename am> void an(am, z);
+    template <typename am> static void an(am, ai<z>);
+};
+template <typename> struct ao {};
+
+template <typename ap>
+auto ar(ao<ap> at) -> decltype(ak<ap>::an(at, 0));
+// expected-note@-1 {{candidate template ignored: substitution failure [with ap = GH147046_regression::ay]: no matching function for call to 'an'}}
+
+class aw;
+struct ax {
+    typedef int ah;
+};
+struct ay {
+    typedef aw ah;
+};
+
+ao<ay> az ;
+ai<ax> bd(0);
+void f() {
+    ar(az); // expected-error {{no matching function for call to 'ar'}}
+}
+
 }

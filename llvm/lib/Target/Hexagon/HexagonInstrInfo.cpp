@@ -117,9 +117,10 @@ const int Hexagon_ADDI_OFFSET_MIN = -32768;
 // Pin the vtable to this file.
 void HexagonInstrInfo::anchor() {}
 
-HexagonInstrInfo::HexagonInstrInfo(HexagonSubtarget &ST)
-  : HexagonGenInstrInfo(Hexagon::ADJCALLSTACKDOWN, Hexagon::ADJCALLSTACKUP),
-    Subtarget(ST) {}
+HexagonInstrInfo::HexagonInstrInfo(const HexagonSubtarget &ST)
+    : HexagonGenInstrInfo(ST, Hexagon::ADJCALLSTACKDOWN,
+                          Hexagon::ADJCALLSTACKUP),
+      Subtarget(ST) {}
 
 namespace llvm {
 namespace HexagonFUnits {
@@ -2803,6 +2804,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_cur_npred_ai:
   case Hexagon::V6_vL32b_nt_tmp_pred_ai:
   case Hexagon::V6_vL32b_nt_tmp_npred_ai:
+  case Hexagon::V6_vS32Ub_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
   case Hexagon::V6_vgathermw_pseudo:
   case Hexagon::V6_vgathermhw_pseudo:
