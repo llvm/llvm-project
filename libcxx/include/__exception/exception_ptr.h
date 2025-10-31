@@ -17,6 +17,7 @@
 #include <__type_traits/decay.h>
 #include <__type_traits/is_pointer.h>
 #include <__utility/move.h>
+#include <__utility/swap.h>
 #include <cstdlib>
 #include <typeinfo>
 
@@ -107,7 +108,7 @@ public:
 };
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
-  swap(__x.__ptr_, __y.__ptr_);
+  std::swap(__x.__ptr_, __y.__ptr_);
 }
 
 #  if _LIBCPP_HAS_EXCEPTIONS
