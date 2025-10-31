@@ -70,14 +70,6 @@ namespace llvm {
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
-// TODO: Remove -debug-info-correlate in next LLVM release, in favor of
-// -profile-correlate=debug-info.
-cl::opt<bool> DebugInfoCorrelate(
-    "debug-info-correlate",
-    cl::desc("Use debug info to correlate profiles. (Deprecated, use "
-             "-profile-correlate=debug-info)"),
-    cl::init(false));
-
 LLVM_ABI cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate(
     "profile-correlate",
     cl::desc("Use debug info or binary file to correlate profiles."),
@@ -1048,7 +1040,7 @@ void InstrLowerer::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // in lightweight mode. We need to move the value profile pointer to the
   // Counter struct to get this working.
   assert(
-      !DebugInfoCorrelate && ProfileCorrelate == InstrProfCorrelator::NONE &&
+      ProfileCorrelate == InstrProfCorrelator::NONE &&
       "Value profiling is not yet supported with lightweight instrumentation");
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
@@ -1505,7 +1497,7 @@ static inline Constant *getVTableAddrForProfData(GlobalVariable *GV) {
 }
 
 void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
-  assert(!DebugInfoCorrelate &&
+  assert(ProfileCorrelate != InstrProfCorrelator::DEBUG_INFO &&
          "Value profiling is not supported with lightweight instrumentation");
   if (GV->isDeclaration() || GV->hasAvailableExternallyLinkage())
     return;
@@ -1585,8 +1577,7 @@ GlobalVariable *InstrLowerer::setupProfileSection(InstrProfInstBase *Inc,
 
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if ((DebugInfoCorrelate ||
-       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) &&
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO &&
       TT.isOSBinFormatMachO() && Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
@@ -1692,8 +1683,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
 
-  if (DebugInfoCorrelate ||
-      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
     if (auto *SP = Fn->getSubprogram()) {
@@ -1738,7 +1728,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
-  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
+  if (ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     return;
 
   GlobalVariable *NamePtr = Inc->getName();
