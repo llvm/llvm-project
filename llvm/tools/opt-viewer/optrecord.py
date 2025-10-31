@@ -25,6 +25,10 @@ import re
 import optpmap
 
 
+def itervalues(d):
+    return iter(d.values())
+
+
 def iteritems(d):
     return iter(d.items())
 
