@@ -4467,7 +4467,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x1;
-          unsigned SrcIdx = (ShuffleMask >> 1) & 0x1 ? 1 : 0;
+          unsigned SrcIdx = (ShuffleMask >> 1) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
   case X86::BI__builtin_ia32_vpermi2vard128:
@@ -4477,7 +4477,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x3;
-          unsigned SrcIdx = (ShuffleMask >> 2) & 0x1 ? 1 : 0;
+          unsigned SrcIdx = (ShuffleMask >> 2) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
   case X86::BI__builtin_ia32_vpermi2varhi128:
@@ -4488,7 +4488,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x7;
-          unsigned SrcIdx = (ShuffleMask >> 3) & 0x1 ? 1 : 0;
+          unsigned SrcIdx = (ShuffleMask >> 3) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
   case X86::BI__builtin_ia32_vpermi2varqi128:
@@ -4498,7 +4498,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0xF;
-          unsigned SrcIdx = (ShuffleMask >> 4) & 0x1 ? 1 : 0;
+          unsigned SrcIdx = (ShuffleMask >> 4) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
   case X86::BI__builtin_ia32_vpermi2varqi256:
@@ -4506,14 +4506,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x1F;
-          unsigned SrcIdx = (ShuffleMask >> 5) & 0x1 ? 1 : 0;
+          unsigned SrcIdx = (ShuffleMask >> 5) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
   case X86::BI__builtin_ia32_vpermi2varqi512:
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
           int Offset = ShuffleMask & 0x3F;
-          unsigned SrcIdx = (ShuffleMask >> 6) & 0x1 ? 1 : 0;
+          unsigned SrcIdx = (ShuffleMask >> 6) & 0x1;
           return std::pair<unsigned, int>{SrcIdx, Offset};
         });
   case X86::BI__builtin_ia32_pshufb128:
