@@ -71,7 +71,7 @@ void SPIRVCombinerHelper::applySPIRVDistance(MachineInstr &MI) const {
 ///   (vXf32 (g_intrinsic faceforward
 ///             (vXf32 N) (vXf32 I) (vXf32 Ng)))
 ///
-/// This only works for Vulkan targets.
+/// This only works for Vulkan shader targets.
 ///
 bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
   if (!STI.isShader())
@@ -88,8 +88,11 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
   CmpInst::Predicate Pred;
   if (!mi_match(CondReg, MRI,
                 m_GFCmp(m_Pred(Pred), m_Reg(DotReg), m_Reg(CondZeroReg))) ||
-      Pred != CmpInst::FCMP_OLT)
-    return false;
+      !(Pred == CmpInst::FCMP_OLT || Pred == CmpInst::FCMP_ULT)) {
+    if (!(Pred == CmpInst::FCMP_OGT || Pred == CmpInst::FCMP_UGT))
+      return false;
+    std::swap(DotReg, CondZeroReg);
+  }
 
   // Check if FCMP is a comparison between a dot product and 0.
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
@@ -109,29 +112,43 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
     return false;
 
   // Check if select's false operand is the negation of the true operand.
-  auto AreNegatedConstants = [&](Register TrueReg, Register FalseReg) {
-    const ConstantFP *TrueVal, *FalseVal;
-    if (!mi_match(TrueReg, MRI, m_GFCst(TrueVal)) ||
-        !mi_match(FalseReg, MRI, m_GFCst(FalseVal)))
+  auto AreNegatedConstantsOrSplats = [&](Register TrueReg, Register FalseReg) {
+    std::optional<FPValueAndVReg> TrueVal, FalseVal;
+    if (!mi_match(TrueReg, MRI, m_GFCstOrSplat(TrueVal)) ||
+        !mi_match(FalseReg, MRI, m_GFCstOrSplat(FalseVal)))
       return false;
-    APFloat TrueValNegated = TrueVal->getValue();
+    APFloat TrueValNegated = TrueVal->Value;
     TrueValNegated.changeSign();
-    return FalseVal->getValue().compare(TrueValNegated) == APFloat::cmpEqual;
+    return FalseVal->Value.compare(TrueValNegated) == APFloat::cmpEqual;
   };
 
-  if (!mi_match(FalseReg, MRI, m_GFNeg(m_SpecificReg(TrueReg))) &&
-      !mi_match(TrueReg, MRI, m_GFNeg(m_SpecificReg(FalseReg)))) {
-    // Check if they're constant opposites.
+  if (!mi_match(TrueReg, MRI, m_GFNeg(m_SpecificReg(FalseReg))) &&
+      !mi_match(FalseReg, MRI, m_GFNeg(m_SpecificReg(TrueReg)))) {
+    std::optional<FPValueAndVReg> MulConstant;
     MachineInstr *TrueInstr = MRI.getVRegDef(TrueReg);
     MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
     if (TrueInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
         FalseInstr->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
         TrueInstr->getNumOperands() == FalseInstr->getNumOperands()) {
       for (unsigned I = 1; I < TrueInstr->getNumOperands(); ++I)
-        if (!AreNegatedConstants(TrueInstr->getOperand(I).getReg(),
-                                 FalseInstr->getOperand(I).getReg()))
+        if (!AreNegatedConstantsOrSplats(TrueInstr->getOperand(I).getReg(),
+                                         FalseInstr->getOperand(I).getReg()))
           return false;
-    } else if (!AreNegatedConstants(TrueReg, FalseReg))
+    } else if (mi_match(TrueReg, MRI,
+                        m_GFMul(m_SpecificReg(FalseReg),
+                                m_GFCstOrSplat(MulConstant))) ||
+               mi_match(FalseReg, MRI,
+                        m_GFMul(m_SpecificReg(TrueReg),
+                                m_GFCstOrSplat(MulConstant))) ||
+               mi_match(TrueReg, MRI,
+                        m_GFMul(m_GFCstOrSplat(MulConstant),
+                                m_SpecificReg(FalseReg))) ||
+               mi_match(FalseReg, MRI,
+                        m_GFMul(m_GFCstOrSplat(MulConstant),
+                                m_SpecificReg(TrueReg)))) {
+      if (!MulConstant || !MulConstant->Value.isExactlyValue(-1.0))
+        return false;
+    } else if (!AreNegatedConstantsOrSplats(TrueReg, FalseReg))
       return false;
   }
 
@@ -140,17 +157,28 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
 
 void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
   // Extract the operands for N, I, and Ng from the match criteria.
-  Register CondReg, TrueReg, DotReg, DotOperand1, DotOperand2;
-  if (!mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GISelect(m_Reg(CondReg), m_Reg(TrueReg), m_Reg())))
-    return;
-  if (!mi_match(CondReg, MRI, m_GFCmp(m_Pred(), m_Reg(DotReg), m_Reg())))
-    return;
+  Register CondReg = MI.getOperand(1).getReg();
+  MachineInstr *CondInstr = MRI.getVRegDef(CondReg);
+  Register DotReg = CondInstr->getOperand(2).getReg();
+  CmpInst::Predicate Pred = cast<GFCmp>(CondInstr)->getCond();
+  if (Pred == CmpInst::FCMP_OGT || Pred == CmpInst::FCMP_UGT)
+    DotReg = CondInstr->getOperand(3).getReg();
   MachineInstr *DotInstr = MRI.getVRegDef(DotReg);
-  if (!mi_match(DotReg, MRI, m_GFMul(m_Reg(DotOperand1), m_Reg(DotOperand2)))) {
+  Register DotOperand1, DotOperand2;
+  if (DotInstr->getOpcode() == TargetOpcode::G_FMUL) {
+    DotOperand1 = DotInstr->getOperand(1).getReg();
+    DotOperand2 = DotInstr->getOperand(2).getReg();
+  } else {
     DotOperand1 = DotInstr->getOperand(2).getReg();
     DotOperand2 = DotInstr->getOperand(3).getReg();
   }
+  Register TrueReg = MI.getOperand(2).getReg();
+  Register FalseReg = MI.getOperand(3).getReg();
+  MachineInstr *TrueInstr = MRI.getVRegDef(TrueReg);
+  if (TrueInstr->getOpcode() == TargetOpcode::G_FNEG ||
+      TrueInstr->getOpcode() == TargetOpcode::G_FMUL)
+    std::swap(TrueReg, FalseReg);
+  MachineInstr *FalseInstr = MRI.getVRegDef(FalseReg);
 
   Register ResultReg = MI.getOperand(0).getReg();
   Builder.setInstrAndDebugLoc(MI);
@@ -159,5 +187,25 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
       .addUse(DotOperand1)  // I
       .addUse(DotOperand2); // Ng
 
-  MI.eraseFromParent();
+  SPIRVGlobalRegistry *GR =
+      MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
+  auto RemoveAllUses = [&](Register Reg) {
+    SmallVector<MachineInstr *, 4> UsesToErase;
+    for (auto &UseMI : MRI.use_instructions(Reg))
+      UsesToErase.push_back(&UseMI);
+
+    // calling eraseFromParent to early invalidates the iterator.
+    for (auto *MIToErase : UsesToErase)
+      MIToErase->eraseFromParent();
+  };
+
+  RemoveAllUses(CondReg); // remove all uses of FCMP Result
+  GR->invalidateMachineInstr(CondInstr);
+  CondInstr->eraseFromParent(); // remove FCMP instruction
+  RemoveAllUses(DotReg);        // remove all uses of spv_fdot/G_FMUL Result
+  GR->invalidateMachineInstr(DotInstr);
+  DotInstr->eraseFromParent(); // remove spv_fdot/G_FMUL instruction
+  RemoveAllUses(FalseReg);
+  GR->invalidateMachineInstr(FalseInstr);
+  FalseInstr->eraseFromParent();
 }
