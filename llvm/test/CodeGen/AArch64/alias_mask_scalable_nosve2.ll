@@ -6,10 +6,10 @@ define <vscale x 16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    index z0.d, #0, #1
@@ -35,17 +35,17 @@ define <vscale x 16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    cmphi p4.d, p0/z, z2.d, z4.d
 ; CHECK-NEXT:    incd z4.d, all, mul #4
 ; CHECK-NEXT:    uzp1 p2.s, p5.s, p6.s
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z2.d, z4.d
 ; CHECK-NEXT:    uzp1 p3.s, p3.s, p4.s
 ; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    cset w8, lt
 ; CHECK-NEXT:    uzp1 p1.h, p1.h, p3.h
 ; CHECK-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-NEXT:    uzp1 p0.s, p7.s, p0.s
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p0.h, p2.h, p0.h
 ; CHECK-NEXT:    uzp1 p0.b, p1.b, p0.b
 ; CHECK-NEXT:    whilelo p1.b, xzr, x8
