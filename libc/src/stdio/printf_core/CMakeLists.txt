@@ -38,9 +38,9 @@ else()
   add_subdirectory(generic)
 endif()
 
-set(target_error_converter libc.src.stdio.printf_core.${LIBC_TARGET_OS}.${LIBC_TARGET_OS}_error_converter)
+set(target_error_mapper libc.src.stdio.printf_core.${LIBC_TARGET_OS}.error_mapper)
 if(NOT TARGET ${target_error_converter})
-    set(target_error_converter libc.src.stdio.printf_core.generic.generic_error_converter)
+    set(target_error_mapper libc.src.stdio.printf_core.generic.error_mapper)
 endif()
 
 add_header_library(
@@ -155,11 +155,11 @@ add_header_library(
 )
 
 add_header_library(
-  error_converter
+  error_mapper
   HDRS
-    error_converter.h
+    error_mapper.h
   DEPENDS
-    ${target_error_converter}
+    ${target_error_mapper}
     libc.src.__support.macros.properties.architectures
 )
 

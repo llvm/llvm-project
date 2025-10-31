@@ -126,8 +126,9 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
     libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_converter
+    libc.src.stdio.printf_core.error_mapper
     libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -140,8 +141,9 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
     libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_converter
+    libc.src.stdio.printf_core.error_mapper
     libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -153,8 +155,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.vasprintf_internal
     libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_converter
+    libc.src.stdio.printf_core.error_mapper
     libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -167,7 +170,9 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
     libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_converter
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -180,8 +185,9 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
     libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_converter
+    libc.src.stdio.printf_core.error_mapper
     libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -193,8 +199,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.vasprintf_internal
     libc.src.stdio.printf_core.core_structs
-    libc.src.stdio.printf_core.error_converter
+    libc.src.stdio.printf_core.error_mapper
     libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_subdirectory(printf_core)

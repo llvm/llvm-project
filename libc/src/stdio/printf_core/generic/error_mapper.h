@@ -1,4 +1,4 @@
-//===-- Darwin implementation of error converter ----------------*- C++ -*-===//
+//===-- Generic implementation of error mapper ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_DARWIN_ERROR_CONVERTER_H
-#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_DARWIN_ERROR_CONVERTER_H
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_GENERIC_ERROR_MAPPER_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_GENERIC_ERROR_MAPPER_H
 
 #include "hdr/errno_macros.h"
 #include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_converter.h"
+#include "src/stdio/printf_core/error_mapper.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
@@ -22,33 +22,28 @@ LIBC_INLINE static int internal_error_to_errno(int internal_error) {
     return internal_error;
   }
 
-  // Map internal error to POSIX errnos.
+  // Map internal error to the available C standard errnos.
   switch (-internal_error) {
   case WRITE_OK:
     return 0;
   case FILE_WRITE_ERROR:
-    return EIO;
   case FILE_STATUS_ERROR:
-    return EIO;
   case NULLPTR_WRITE_ERROR:
-    return EINVAL;
-  case INT_CONVERSION_ERROR:
-    return ERANGE;
-  case FIXED_POINT_CONVERSION_ERROR:
-    return EINVAL;
   case ALLOCATION_ERROR:
-    return ENOMEM;
+    return EDOM;
+  case INT_CONVERSION_ERROR:
+  case FIXED_POINT_CONVERSION_ERROR:
   case OVERFLOW_ERROR:
-    return EOVERFLOW;
+    return ERANGE;
   default:
     LIBC_ASSERT(
         false &&
         "Invalid internal printf error code passed to internal_error_to_errno");
-    return EINVAL;
+    return EDOM;
   }
 }
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_DARWIN_ERROR_CONVERTER_H
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_GENERIC_ERROR_MAPPER_H

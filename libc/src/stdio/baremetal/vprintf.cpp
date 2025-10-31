@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/vprintf.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_converter.h"
+#include "src/stdio/printf_core/error_mapper.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 

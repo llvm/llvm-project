@@ -96,7 +96,8 @@ TEST(LlvmLibcFPrintfTest, NullPtrCheck) {
   ::FILE *file = printf_test::fopen(FILE_PATH, "w");
   ASSERT_FALSE(file == nullptr);
 
-  int ret = LIBC_NAMESPACE::fprintf(file, "hello %n", (int *)nullptr);
+  int ret =
+      LIBC_NAMESPACE::fprintf(file, "hello %s", static_cast<int *>(nullptr));
   EXPECT_LT(ret, 0);
   ASSERT_ERRNO_EQ(EINVAL);
 
