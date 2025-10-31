@@ -349,9 +349,11 @@ TEST_F(FormatTestComments, InsertsSpaceAfterOpeningBlockComment) {
                "/*\n"
                "comment */",
                Style);
-  verifyFormat("/* \ncomment */\n"
+  verifyFormat("/* \n"
+               "comment */\n"
                "int x;",
-               "/*\ncomment */\n"
+               "/*\n"
+               "comment */\n"
                "int x;",
                Style);
   verifyFormat("/* \n"
@@ -374,8 +376,18 @@ TEST_F(FormatTestComments, InsertsSpaceAfterOpeningBlockComment) {
                "next */",
                Style);
   verifyFormat("/* */", "/* */", Style);
-  verifyFormat("/*\n*/", "/*\n*/", Style);
-  verifyFormat("/*\n\n*/", "/*\n \n*/", Style);
+  verifyFormat("/*\n"
+               "*/",
+               "/*\n"
+               "*/",
+               Style);
+  verifyFormat("/*\n"
+               "\n"
+               "*/",
+               "/*\n"
+               " \n"
+               "*/",
+               Style);
   verifyFormat("/* This is a multi line comment\n"
                "this is the next line\n"
                "and this is the 3th line. */",
@@ -509,8 +521,18 @@ TEST_F(FormatTestComments, InsertsSpaceBeforeClosingBlockComment) {
                "next*/",
                Style);
   verifyFormat("/* */", "/* */", Style);
-  verifyFormat("/*\n*/", "/*\n*/", Style);
-  verifyFormat("/*\n\n*/", "/*\n \n*/", Style);
+  verifyFormat("/*\n"
+               "*/",
+               "/*\n"
+               "*/",
+               Style);
+  verifyFormat("/*\n"
+               "\n"
+               "*/",
+               "/*\n"
+               " \n"
+               "*/",
+               Style);
   verifyFormat("/*This is a multi line comment\n"
                "this is the next line\n"
                "and this is the 3th line. */",
