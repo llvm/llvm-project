@@ -70,6 +70,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
     SPIRVVersion = VersionTuple(1, 3);
     break;
   case Triple::SPIRVSubArch_v14:
+    SPIRVVersion = VersionTuple(1, 4);
+    break;
   default:
     if (TT.getVendor() == Triple::AMD)
       SPIRVVersion = VersionTuple(1, 6);
