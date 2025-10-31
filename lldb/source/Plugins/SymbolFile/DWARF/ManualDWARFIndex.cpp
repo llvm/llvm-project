@@ -22,7 +22,6 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/lldb-private-enumerations.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 #include <atomic>
 #include <optional>
@@ -33,11 +32,6 @@ using namespace lldb_private::plugin::dwarf;
 using namespace llvm::dwarf;
 
 void ManualDWARFIndex::Index() {
-  // TODO(toyang): wrapping it in the call_once isn't really thread-safe either.
-  // Though, if index callers always call index() before any read/write
-  // operation (and would therefore wait here), maybe it's ok?
-  // TODO(toyang): we wrap this logic in the call_once, but maybe it's better if
-  // it's a separate function that we call instead?
   std::call_once(m_indexed_flag, [this]() {
     ElapsedTime elapsed(m_index_time);
     LLDB_SCOPED_TIMERF("%p", static_cast<void *>(m_dwarf));
