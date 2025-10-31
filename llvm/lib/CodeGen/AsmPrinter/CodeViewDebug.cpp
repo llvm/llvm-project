@@ -903,18 +903,18 @@ void CodeViewDebug::emitCompilerInformation() {
   OS.AddComment("CPUType");
   OS.emitInt16(static_cast<uint64_t>(TheCPU));
 
+  StringRef CompilerVersion = "0";
   auto CUs = MMI->getModule()->debug_compile_units();
-  if (CUs.empty())
-    return;
+  if (!CUs.empty()) {
+    const MDNode *Node = *CUs.begin();
+    const auto *CU = cast<DICompileUnit>(Node);
 
-  const MDNode *Node = *CUs.begin();
-  const auto *CU = cast<DICompileUnit>(Node);
-
-  StringRef CompilerVersion = CU->getProducer();
-  Version FrontVer = parseVersion(CompilerVersion);
-  OS.AddComment("Frontend version");
-  for (int N : FrontVer.Part) {
-    OS.emitInt16(N);
+    CompilerVersion = CU->getProducer();
+    Version FrontVer = parseVersion(CompilerVersion);
+    OS.AddComment("Frontend version");
+    for (int N : FrontVer.Part) {
+      OS.emitInt16(N);
+    }
   }
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at

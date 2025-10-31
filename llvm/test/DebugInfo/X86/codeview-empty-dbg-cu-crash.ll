@@ -19,6 +19,13 @@
 ; CHECK-NEXT: .short	4412                            # Record kind: S_COMPILE3
 ; CHECK-NEXT: .long	3                               # Flags and language
 ; CHECK-NEXT: .short	208                             # CPUType
+; CHECK-NEXT: .short	22000                           # Backend version
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .asciz	"0"                             # Null-terminated compiler version string
+; CHECK-NEXT: .p2align	2, 0x0
+; CHECK-NEXT: .Ltmp5:
 ; CHECK-NEXT: .Ltmp1:
 ; CHECK-NEXT: .p2align	2, 0x0
 ; CHECK-NEXT: .cv_filechecksums                       # File index to string table offset subsection
