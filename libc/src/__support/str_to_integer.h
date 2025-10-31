@@ -39,9 +39,11 @@ first_non_whitespace(const CharType *__restrict src,
   size_t src_cur = 0;
   while (src_cur < src_len) {
     if constexpr (cpp::is_same_v<CharType, char>) {
-      if (!internal::isspace(src[src_cur])) break;
+      if (!internal::isspace(src[src_cur]))
+        break;
     } else {
-      if (!internal::iswspace(src[src_cur])) break;
+      if (!internal::iswspace(src[src_cur]))
+        break;
     }
     ++src_cur;
   }
@@ -51,8 +53,8 @@ first_non_whitespace(const CharType *__restrict src,
 // Returns 1 if 'src' starts with + or - sign, and returns 0 otherwise.
 // Writes the sign value to |is_positive|.
 template <typename CharType>
-LIBC_INLINE static size_t
-consume_sign(const CharType *__restrict src, bool *is_positive) {
+LIBC_INLINE static size_t consume_sign(const CharType *__restrict src,
+                                       bool *is_positive) {
   *is_positive = true;
   if constexpr (cpp::is_same_v<CharType, char>) {
     if (*src == '+' || *src == '-') {
@@ -70,9 +72,9 @@ consume_sign(const CharType *__restrict src, bool *is_positive) {
 
 // checks if the next 3 characters of the string pointer are the start of a
 // hexadecimal number. Does not advance the string pointer.
-template<typename CharType>
-LIBC_INLINE static bool
-is_hex_start(const CharType *__restrict src, size_t src_len) {
+template <typename CharType>
+LIBC_INLINE static bool is_hex_start(const CharType *__restrict src,
+                                     size_t src_len) {
   if (src_len < 3)
     return false;
   if constexpr (cpp::is_same_v<CharType, char>) {
@@ -86,7 +88,7 @@ is_hex_start(const CharType *__restrict src, size_t src_len) {
 
 // Takes the address of the string pointer and parses the base from the start of
 // it.
-template<typename CharType>
+template <typename CharType>
 LIBC_INLINE static int infer_base(const CharType *__restrict src,
                                   size_t src_len) {
   // A hexadecimal number is defined as "the prefix 0x or 0X followed by a
@@ -99,9 +101,11 @@ LIBC_INLINE static int infer_base(const CharType *__restrict src,
   // number that starts with 0, including just 0, is an octal number.
   if (src_len > 0) {
     if constexpr (cpp::is_same_v<CharType, char>) {
-      if (src[0] == '0') return 8;
+      if (src[0] == '0')
+        return 8;
     } else {
-      if (src[0] == L'0') return 8;
+      if (src[0] == L'0')
+        return 8;
     }
   }
   // A decimal number is defined as beginning "with a nonzero digit and
@@ -153,14 +157,16 @@ strtointeger(const CharType *__restrict src, int base,
 
   bool is_number = false;
   int error_val = 0;
-  ResultType result = 0;  
+  ResultType result = 0;
   while (src_cur < src_len) {
     int cur_digit;
     if constexpr (cpp::is_same_v<CharType, char>) {
-      if (!isalnum(src[src_cur])) break;
+      if (!isalnum(src[src_cur]))
+        break;
       cur_digit = b36_char_to_int(src[src_cur]);
     } else {
-      if (!iswalnum(src[src_cur])) break;
+      if (!iswalnum(src[src_cur]))
+        break;
       cur_digit = b36_wchar_to_int(src[src_cur]);
     }
 
