@@ -311,7 +311,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
                         const llvm::MachineFunction &MF);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~SIMachineFunctionInfo() = default;
+  ~SIMachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<SIMachineFunctionInfo> {

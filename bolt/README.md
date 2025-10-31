@@ -164,7 +164,7 @@ $ perf2bolt -p perf.data -o perf.fdata <executable>
 This command will aggregate branch data from `perf.data` and store it in a
 format that is both more compact and more resilient to binary modifications.
 
-If the profile was collected without brstacks, you will need to add `-nl` flag to
+If the profile was collected without brstacks, you will need to add `-ba` flag to
 the command line above.
 
 ### Step 3: Optimize with BOLT

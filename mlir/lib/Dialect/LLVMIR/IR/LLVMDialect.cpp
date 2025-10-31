@@ -698,7 +698,7 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
                        return structType.getBody()[memberIndex];
                      return nullptr;
                    })
-                   .Default(Type(nullptr));
+                   .Default(nullptr);
   }
 }
 

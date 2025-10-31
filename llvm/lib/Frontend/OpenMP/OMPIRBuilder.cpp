@@ -5473,7 +5473,8 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
     }
 
     // TODO: Enable UndefinedSanitizer to diagnose an overflow here.
-    CollapsedTripCount = Builder.CreateNUWMul(CollapsedTripCount, OrigTripCount);
+    CollapsedTripCount =
+        Builder.CreateNUWMul(CollapsedTripCount, OrigTripCount);
   }
 
   // Create the collapsed loop control flow.
@@ -9338,9 +9339,8 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     // target does not support `atomicrmw` of the size of the struct
     LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
     OldVal->setAtomic(AO);
-    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
-    unsigned LoadSize =
-        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    const DataLayout &DL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize = DL.getTypeStoreSize(XElemTy);
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
         OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X.Var);
@@ -9384,9 +9384,8 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
     XSt->setAtomic(AO);
   } else if (XElemTy->isStructTy()) {
     LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
-    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
-    unsigned LoadSize =
-        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
+    const DataLayout &DL = OldVal->getModule()->getDataLayout();
+    unsigned LoadSize = DL.getTypeStoreSize(XElemTy);
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
         OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X.Var);
@@ -9581,7 +9580,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     OldVal->setAtomic(AO);
     // CurBB
     // |     /---\
-		// ContBB    |
+    // ContBB    |
     // |     \---/
     // ExitBB
     BasicBlock *CurBB = Builder.GetInsertBlock();

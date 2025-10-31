@@ -448,7 +448,7 @@ public:
 
   FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
                       std::shared_ptr<SymbolDependenceMap> Symbols);
-  ~FailedToMaterialize();
+  ~FailedToMaterialize() override;
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const SymbolDependenceMap &getSymbols() const { return *Symbols; }
@@ -1768,7 +1768,7 @@ private:
   // FIXME: We should be able to derive FailedSymsForQuery from each query once
   //        we fix how the detach operation works.
   struct EmitQueries {
-    JITDylib::AsynchronousSymbolQuerySet Updated;
+    JITDylib::AsynchronousSymbolQuerySet Completed;
     JITDylib::AsynchronousSymbolQuerySet Failed;
     DenseMap<AsynchronousSymbolQuery *, std::shared_ptr<SymbolDependenceMap>>
         FailedSymsForQuery;

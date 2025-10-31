@@ -1187,3 +1187,15 @@ def testOpWalk():
         module.operation.walk(callback)
     except RuntimeError:
         print("Exception raised")
+
+
+# CHECK-LABEL: TEST: testGetOwnerConcreteOpview
+@run
+def testGetOwnerConcreteOpview():
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            a = arith.ConstantOp(value=42, result=IntegerType.get_signless(32))
+            r = arith.AddIOp(a, a, overflowFlags=arith.IntegerOverflowFlags.nsw)
+            for u in a.result.uses:
+                assert isinstance(u.owner, arith.AddIOp)

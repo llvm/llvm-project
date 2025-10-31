@@ -11,6 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+class XForm_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                list<dag> pattern> : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> RS;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = RS;
+  let Inst{11...20} = 0;
+  let Inst{21...30} = xo;
+  let Inst{31} = 0;
+}
+
 class XOForm_RTAB5_L1<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
                       string asmstr, list<dag> pattern>
     : I<opcode, OOL, IOL, asmstr, NoItinerary> {
@@ -182,6 +194,22 @@ class XX3Form_XTAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31} = XT{5};
 }
 
+class XForm_RBS5<bits<6> opCode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                 InstrItinClass itin, list<dag> pattern>
+    : I<opCode, OOL, IOL, asmstr, itin> {
+
+  bits<5> RB;
+  bits<5> RS;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = RS;
+  let Inst{11...15} = 0;
+  let Inst{16...20} = RB;
+  let Inst{21...30} = xo;
+  let Inst{31} = 0;
+}
+
 class XX3Form_XTAB6_S<bits<5> xo, dag OOL, dag IOL, string asmstr,
                        list<dag> pattern>
     : I<59, OOL, IOL, asmstr, NoItinerary> {
@@ -294,6 +322,28 @@ let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L), "subfus",
                                  "$RT, $L, $RA, $RB", []>;
+  def TLBSYNCIO
+      : XForm_RS5<31, 564, (outs), (ins g8rc:$RS), "tlbsyncio $RS", []>;
+  def PTESYNCIO
+      : XForm_RS5<31, 596, (outs), (ins g8rc:$RS), "ptesyncio $RS", []>;
+  def TLBIEP : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
+                                       (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
+                                           u1imm:$PRS, u1imm:$R),
+                                       "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+  def TLBIEIO
+      : XForm_RSB5_UIMM2<31, 18, (outs), (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC),
+                         "tlbieio $RB, $RS, $RIC", []>;
+  def MTLPL : XForm_RBS5<31, 275, (outs), (ins gprc:$RB, gprc:$RS),
+                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def TLBIEP8
+        : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),
+                                  (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC,
+                                      u1imm:$PRS, u1imm:$R),
+                                  "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+    def MTLPL8 : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
+                            "mtlpl $RB, $RS", IIC_SprMTSPR, []>, isPPC64;
+  }
 }
 
 let Predicates = [HasVSX, IsISAFuture] in {

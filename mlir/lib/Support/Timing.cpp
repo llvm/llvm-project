@@ -319,7 +319,6 @@ public:
   void mergeChildren(AsyncChildrenMap &&other) {
     for (auto &thread : other) {
       mergeChildren(std::move(thread.second));
-      assert(thread.second.empty());
     }
     other.clear();
   }

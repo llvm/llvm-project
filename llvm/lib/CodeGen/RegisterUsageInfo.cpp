@@ -44,7 +44,7 @@ void PhysicalRegisterUsageInfo::setTargetMachine(const TargetMachine &TM) {
 }
 
 bool PhysicalRegisterUsageInfo::doInitialization(Module &M) {
-  RegMasks.grow(M.size());
+  RegMasks.reserve(M.size());
   return false;
 }
 

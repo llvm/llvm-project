@@ -68,7 +68,7 @@ private:
 /// The algorithm computing them respects comment before and after the statement
 /// and adds line breaks before the braces accordingly.
 BraceInsertionHints
-getBraceInsertionsHints(const Stmt *const S, const LangOptions &LangOpts,
+getBraceInsertionsHints(const Stmt *S, const LangOptions &LangOpts,
                         const SourceManager &SM, SourceLocation StartLoc,
                         SourceLocation EndLocHint = SourceLocation());
 

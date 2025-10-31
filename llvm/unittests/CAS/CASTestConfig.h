@@ -42,8 +42,8 @@ protected:
     auto TD = GetParam()(++(*NextCASIndex));
     return std::move(TD.Cache);
   }
-  void SetUp() { NextCASIndex = 0; }
-  void TearDown() { NextCASIndex = std::nullopt; }
+  void SetUp() override { NextCASIndex = 0; }
+  void TearDown() override { NextCASIndex = std::nullopt; }
 };
 
 #endif

@@ -4697,5 +4697,31 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
                 cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
                 CondVal, FalseVal));
 
+  // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
+  // bitwidth-1, 1 -> scmp(X, 0)
+  // Also handles: select (icmp sgt X, 0), 1, ashr X, bitwidth-1 -> scmp(X, 0)
+  unsigned BitWidth = SI.getType()->getScalarSizeInBits();
+  CmpPredicate Pred;
+  Value *CmpLHS, *CmpRHS;
+
+  // Canonicalize sign function ashr patterns:
+  // select (icmp slt X, 1), ashr X, bitwidth-1, 1 -> scmp(X, 0)
+  // select (icmp sgt X, 0), 1, ashr X, bitwidth-1 -> scmp(X, 0)
+  if (match(&SI, m_Select(m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)),
+                          m_Value(TrueVal), m_Value(FalseVal))) &&
+      ((Pred == ICmpInst::ICMP_SLT && match(CmpRHS, m_One()) &&
+        match(TrueVal,
+              m_AShr(m_Specific(CmpLHS), m_SpecificInt(BitWidth - 1))) &&
+        match(FalseVal, m_One())) ||
+       (Pred == ICmpInst::ICMP_SGT && match(CmpRHS, m_Zero()) &&
+        match(TrueVal, m_One()) &&
+        match(FalseVal,
+              m_AShr(m_Specific(CmpLHS), m_SpecificInt(BitWidth - 1)))))) {
+
+    Function *Scmp = Intrinsic::getOrInsertDeclaration(
+        SI.getModule(), Intrinsic::scmp, {SI.getType(), SI.getType()});
+    return CallInst::Create(Scmp, {CmpLHS, ConstantInt::get(SI.getType(), 0)});
+  }
+
   return nullptr;
 }

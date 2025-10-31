@@ -7246,7 +7246,9 @@ void SemaOpenMP::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
     FunctionDecl *UDecl = nullptr;
     if (IsTemplated && isa<FunctionTemplateDecl>(CandidateDecl)) {
       auto *FTD = cast<FunctionTemplateDecl>(CandidateDecl);
-      if (FTD->getTemplateParameters()->size() == TemplateParamLists.size())
+      // FIXME: Should this compare the template parameter lists on all levels?
+      if (SemaRef.Context.isSameTemplateParameterList(
+              FTD->getTemplateParameters(), TemplateParamLists.back()))
         UDecl = FTD->getTemplatedDecl();
     } else if (!IsTemplated)
       UDecl = dyn_cast<FunctionDecl>(CandidateDecl);
@@ -17214,6 +17216,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
         static_cast<OpenMPSeverityClauseKind>(Argument), ArgumentLoc, StartLoc,
         LParenLoc, EndLoc);
     break;
+  case OMPC_threadset:
+    Res = ActOnOpenMPThreadsetClause(static_cast<OpenMPThreadsetKind>(Argument),
+                                     ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -17351,6 +17357,23 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(
 
   return new (getASTContext())
       OMPDefaultClause(M, MLoc, VCKind, VCKindLoc, StartLoc, LParenLoc, EndLoc);
+}
+
+OMPClause *SemaOpenMP::ActOnOpenMPThreadsetClause(OpenMPThreadsetKind Kind,
+                                                  SourceLocation KindLoc,
+                                                  SourceLocation StartLoc,
+                                                  SourceLocation LParenLoc,
+                                                  SourceLocation EndLoc) {
+  if (Kind == OMPC_THREADSET_unknown) {
+    Diag(KindLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_threadset, /*First=*/0,
+                                   /*Last=*/unsigned(OMPC_THREADSET_unknown))
+        << getOpenMPClauseName(OMPC_threadset);
+    return nullptr;
+  }
+
+  return new (getASTContext())
+      OMPThreadsetClause(Kind, KindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,

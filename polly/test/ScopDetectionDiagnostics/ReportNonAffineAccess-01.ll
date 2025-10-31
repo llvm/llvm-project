@@ -5,7 +5,6 @@
 ;     A[i*i] = 0;
 ; }
 
-
 ; CHECK: remark: ReportNonAffineAccess-01.c:2:7: The following errors keep this region from being a Scop.
 ; CHECK: remark: ReportNonAffineAccess-01.c:3:5: The array subscript of "A" is not affine
 ; CHECK: remark: ReportNonAffineAccess-01.c:3:5: Invalid Scop candidate ends here.
@@ -39,9 +38,6 @@ for.end:                                          ; preds = %for.body
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}

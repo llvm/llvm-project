@@ -6741,8 +6741,12 @@ __m512 test_mm512_maskz_shuffle_ps(__mmask16 __U, __m512 __M, __m512 __V) {
   // CHECK-LABEL: test_mm512_maskz_shuffle_ps
   // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 4, i32 5, i32 20, i32 20, i32 8, i32 9, i32 24, i32 24, i32 12, i32 13, i32 28, i32 28>
   // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
-  return _mm512_maskz_shuffle_ps(__U, __M, __V, 4); 
+  return _mm512_maskz_shuffle_ps(__U, __M, __V, 4);
 }
+
+TEST_CONSTEXPR((match_m512(_mm512_shuffle_ps(((__m512)(__v16sf){1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f}), ((__m512)(__v16sf){17.0f, 18.0f, 19.0f, 20.0f, 21.0f, 22.0f, 23.0f, 24.0f, 25.0f, 26.0f, 27.0f, 28.0f, 29.0f, 30.0f, 31.0f, 32.0f}), 4), 1.0f, 2.0f, 17.0f, 17.0f, 5.0f, 6.0f, 21.0f, 21.0f, 9.0f, 10.0f, 25.0f, 25.0f, 13.0f, 14.0f, 29.0f, 29.0f)));
+TEST_CONSTEXPR((match_m512d(_mm512_shuffle_pd(((__m512d)(__v8df){1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}), ((__m512d)(__v8df){9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0}), 48), 1.0, 9.0, 3.0, 11.0, 6.0, 14.0, 7.0, 15.0)));
+TEST_CONSTEXPR((match_m512d(_mm512_maskz_shuffle_pd(0xFF, ((__m512d)(__v8df){1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}), ((__m512d)(__v8df){9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0}), 48), 1.0, 9.0, 3.0, 11.0, 6.0, 14.0, 7.0, 15.0)));
 
 __m128d test_mm_sqrt_round_sd(__m128d __A, __m128d __B) {
   // CHECK-LABEL: test_mm_sqrt_round_sd

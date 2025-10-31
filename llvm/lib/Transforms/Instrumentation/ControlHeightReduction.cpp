@@ -359,7 +359,7 @@ class CHR {
     unsigned Count = 0;
     // Find out how many times region R is cloned. Note that if the parent
     // of R is cloned, R is also cloned, but R's clone count is not updated
-    // from the clone of the parent. We need to accumlate all the counts
+    // from the clone of the parent. We need to accumulate all the counts
     // from the ancestors to get the clone count.
     while (R) {
       Count += DuplicationCount[R];
@@ -1513,7 +1513,7 @@ static bool negateICmpIfUsedByBranchOrSelectOnly(ICmpInst *ICmp,
       BI->swapSuccessors();
       // Don't need to swap this in terms of
       // TrueBiasedRegions/FalseBiasedRegions because true-based/false-based
-      // mean whehter the branch is likely go into the if-then rather than
+      // mean whether the branch is likely go into the if-then rather than
       // successor0/successor1 and because we can tell which edge is the then or
       // the else one by comparing the destination to the region exit block.
       continue;

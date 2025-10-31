@@ -2999,11 +2999,11 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
     BinOp = BinaryOperatorKind::BO_LT;
     break;
   case OpenACCReductionOperator::And:
+    BinOp = BinaryOperatorKind::BO_LAnd;
+    break;
   case OpenACCReductionOperator::Or:
-    // We just want a 'NYI' error in the backend, so leave an empty combiner
-    // recipe, and claim success.
-    CombinerRecipes.push_back({nullptr, nullptr, nullptr});
-    return false;
+    BinOp = BinaryOperatorKind::BO_LOr;
+    break;
   }
 
   // If VarTy is an array type, at the top level only, we want to do our
@@ -3068,11 +3068,25 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
                               : CombinerFailureKind::Assignment};
     }
     case OpenACCReductionOperator::And:
-    case OpenACCReductionOperator::Or:
-      llvm_unreachable("And/Or not implemented, but should fail earlier");
+    case OpenACCReductionOperator::Or: {
+      // These are done as LHS = LHS && RHS (or LHS = LHS || RHS). So after the
+      // binop, all we have to do is the assignment.
+      if (!BinOpRes.isUsable())
+        return {BinOpRes, CombinerFailureKind::BinOp};
+
+      // Build assignment.
+      ExprResult Assignment = SemaRef.BuildBinOp(SemaRef.getCurScope(), Loc,
+                                                 BinaryOperatorKind::BO_Assign,
+                                                 LHSDRE, BinOpRes.get(),
+                                                 /*ForFoldExpr=*/false);
+      return {Assignment, Assignment.isUsable()
+                              ? CombinerFailureKind::None
+                              : CombinerFailureKind::Assignment};
+    }
     case OpenACCReductionOperator::Invalid:
       llvm_unreachable("Invalid should have been caught above");
     }
+    llvm_unreachable("Unhandled case");
   };
 
   auto tryCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE,

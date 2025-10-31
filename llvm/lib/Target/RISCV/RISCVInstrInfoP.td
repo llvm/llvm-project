@@ -1455,3 +1455,16 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PMAXU_DW     : RVPPairBinaryExchanged_rr<0b1111, 0b01, "pmaxu.dw">;
   def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db">;
 } // Predicates = [HasStdExtP, IsRV32]
+
+
+//===----------------------------------------------------------------------===//
+// Codegen patterns
+//===----------------------------------------------------------------------===//
+
+def riscv_absw : RVSDNode<"ABSW", SDTIntUnaryOp>;
+
+let Predicates = [HasStdExtP] in
+def : PatGpr<abs, ABS>;
+
+let Predicates = [HasStdExtP, IsRV64] in
+def : PatGpr<riscv_absw, ABSW>;

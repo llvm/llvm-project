@@ -8905,4 +8905,4 @@ declare half @llvm.minnum.f16(half, half) #0
 declare half @llvm.maxnum.f16(half, half) #0
 
 attributes #0 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
+attributes #2 = { nounwind "no-nans-fp-math"="true" }

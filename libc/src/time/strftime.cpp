@@ -26,7 +26,7 @@ LLVM_LIBC_FUNCTION(size_t, strftime,
   int ret = strftime_core::strftime_main(&writer, format, timeptr);
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
     wb.buff[wb.buff_cur] = '\0';
-  return (ret < 0 || static_cast<size_t>(ret) > buffsz) ? 0 : ret;
+  return (ret < 0 || static_cast<size_t>(ret) >= buffsz) ? 0 : ret;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

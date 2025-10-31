@@ -41,10 +41,10 @@ class VPRecipeBase;
 class VPInterleaveBase;
 class VPPhiAccessors;
 
-// This is the base class of the VPlan Def/Use graph, used for modeling the data
-// flow into, within and out of the VPlan. VPValues can stand for live-ins
-// coming from the input IR and instructions which VPlan will generate if
-// executed.
+/// This is the base class of the VPlan Def/Use graph, used for modeling the
+/// data flow into, within and out of the VPlan. VPValues can stand for live-ins
+/// coming from the input IR and instructions which VPlan will generate if
+/// executed.
 class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
@@ -57,7 +57,7 @@ class LLVM_ABI_FOR_TEST VPValue {
   SmallVector<VPUser *, 1> Users;
 
 protected:
-  // Hold the underlying Value, if any, attached to this VPValue.
+  /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the

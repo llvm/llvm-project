@@ -493,7 +493,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
             // predicate ("@").
             return !AsmInst.empty() &&
                    (AsmInst[0] == '@' || isAlpha(AsmInst[0]) ||
-                    AsmInst.find(".pragma") != StringRef::npos);
+                    AsmInst.contains(".pragma"));
           });
       return InstCount * TargetTransformInfo::TCC_Basic;
     }

@@ -241,9 +241,13 @@ static MDNode *createMIBNode(LLVMContext &Ctx, ArrayRef<uint64_t> MIBCallStack,
       ColdBytes += TotalSize;
       // If we have the max cold context size from summary information and have
       // requested identification of contexts above a percentage of the max, see
-      // if this context qualifies.
-      if (MaxColdSize > 0 && MinPercentMaxColdSize < 100 &&
-          TotalSize * 100 >= MaxColdSize * MinPercentMaxColdSize)
+      // if this context qualifies. We should assume this is large if we rebuilt
+      // the trie from existing metadata (i.e. to update after inlining), in
+      // which case we don't have a MaxSize from the profile - we assume any
+      // context size info in existence on the metadata should be propagated.
+      if (BuiltFromExistingMetadata ||
+          (MaxColdSize > 0 && MinPercentMaxColdSize < 100 &&
+           TotalSize * 100 >= MaxColdSize * MinPercentMaxColdSize))
         LargeColdContext = true;
     }
     // Only add the context size info as metadata if we need it in the thin

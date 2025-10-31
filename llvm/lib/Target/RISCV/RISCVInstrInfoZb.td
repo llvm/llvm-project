@@ -51,7 +51,7 @@ def riscv_zip     : RVSDNode<"ZIP",     SDTIntUnaryOp>;
 def riscv_unzip   : RVSDNode<"UNZIP",   SDTIntUnaryOp>;
 
 // RV64IZbb absolute value for i32. Expanded to (max (negw X), X) during isel.
-def riscv_absw    : RVSDNode<"ABSW",    SDTIntUnaryOp>;
+def riscv_negw_max : RVSDNode<"NEGW_MAX",    SDTIntUnaryOp>;
 
 // Scalar cryptography
 def riscv_clmul   : RVSDNode<"CLMUL",   SDTIntBinOp>;
@@ -599,37 +599,43 @@ def : PatGpr<riscv_zip, ZIP_RV32, i32>;
 def : PatGpr<riscv_unzip, UNZIP_RV32, i32>;
 } // Predicates = [HasStdExtZbkb, IsRV32]
 
-let Predicates = [HasStdExtZbb] in {
+let Predicates = [HasStdExtZbbOrP] in {
 def : PatGpr<ctlz, CLZ>;
+}
+
+let Predicates = [HasStdExtZbb] in {
 def : PatGpr<cttz, CTZ>;
 def : PatGpr<ctpop, CPOP>;
 } // Predicates = [HasStdExtZbb]
 
-let Predicates = [HasStdExtZbb, IsRV64] in {
+let Predicates = [HasStdExtZbbOrP, IsRV64] in {
 def : PatGpr<riscv_clzw, CLZW>;
+}
+
+let Predicates = [HasStdExtZbb, IsRV64] in {
 def : PatGpr<riscv_ctzw, CTZW>;
 def : Pat<(i64 (ctpop (i64 (zexti32 (i64 GPR:$rs1))))), (CPOPW GPR:$rs1)>;
 
-def : Pat<(i64 (riscv_absw GPR:$rs1)),
+def : Pat<(i64 (riscv_negw_max GPR:$rs1)),
           (MAX GPR:$rs1, (XLenVT (SUBW (XLenVT X0), GPR:$rs1)))>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
-let Predicates = [HasStdExtZbb] in {
+let Predicates = [HasStdExtZbbOrP] in {
 def : Pat<(XLenVT (sext_inreg GPR:$rs1, i8)), (SEXT_B GPR:$rs1)>;
 def : Pat<(XLenVT (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb]
 
-let Predicates = [HasStdExtZbb] in {
+let Predicates = [HasStdExtZbbOrP] in {
 def : PatGprGpr<smin, MIN>;
 def : PatGprGpr<smax, MAX>;
 def : PatGprGpr<umin, MINU>;
 def : PatGprGpr<umax, MAXU>;
 } // Predicates = [HasStdExtZbb]
 
-let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in
+let Predicates = [HasStdExtZbbOrZbkbOrP, IsRV32] in
 def : PatGpr<bswap, REV8_RV32, i32>;
 
-let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in
+let Predicates = [HasStdExtZbbOrZbkbOrP, IsRV64] in
 def : PatGpr<bswap, REV8_RV64, i64>;
 
 let Predicates = [HasStdExtZbkb] in {

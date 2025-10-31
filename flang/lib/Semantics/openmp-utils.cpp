@@ -26,7 +26,9 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -218,7 +220,7 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()
@@ -505,5 +507,4 @@ bool IsStrictlyStructuredBlock(const parser::Block &block) {
     return false;
   }
 }
-
 } // namespace Fortran::semantics::omp

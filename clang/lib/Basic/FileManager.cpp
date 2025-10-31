@@ -474,8 +474,9 @@ OptionalFileEntryRef FileManager::getBypassFile(FileEntryRef VF) {
   return FileEntryRef(*Insertion.first);
 }
 
-bool FileManager::FixupRelativePath(SmallVectorImpl<char> &path) const {
-  StringRef pathRef(path.data(), path.size());
+bool FileManager::fixupRelativePath(const FileSystemOptions &FileSystemOpts,
+                                    SmallVectorImpl<char> &Path) {
+  StringRef pathRef(Path.data(), Path.size());
 
   if (FileSystemOpts.WorkingDir.empty()
       || llvm::sys::path::is_absolute(pathRef))
@@ -483,7 +484,7 @@ bool FileManager::FixupRelativePath(SmallVectorImpl<char> &path) const {
 
   SmallString<128> NewPath(FileSystemOpts.WorkingDir);
   llvm::sys::path::append(NewPath, pathRef);
-  path = NewPath;
+  Path = NewPath;
   return true;
 }
 

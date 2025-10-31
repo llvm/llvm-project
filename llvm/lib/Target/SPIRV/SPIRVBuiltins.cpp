@@ -1499,18 +1499,25 @@ static bool generateKernelClockInst(const SPIRV::IncomingCall *Call,
 
   Register ResultReg = Call->ReturnRegister;
 
-  // Deduce the `Scope` operand from the builtin function name.
-  SPIRV::Scope::Scope ScopeArg =
-      StringSwitch<SPIRV::Scope::Scope>(Builtin->Name)
-          .EndsWith("device", SPIRV::Scope::Scope::Device)
-          .EndsWith("work_group", SPIRV::Scope::Scope::Workgroup)
-          .EndsWith("sub_group", SPIRV::Scope::Scope::Subgroup);
-  Register ScopeReg = buildConstantIntReg32(ScopeArg, MIRBuilder, GR);
+  if (Builtin->Name == "__spirv_ReadClockKHR") {
+    MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
+        .addDef(ResultReg)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(Call->Arguments[0]);
+  } else {
+    // Deduce the `Scope` operand from the builtin function name.
+    SPIRV::Scope::Scope ScopeArg =
+        StringSwitch<SPIRV::Scope::Scope>(Builtin->Name)
+            .EndsWith("device", SPIRV::Scope::Scope::Device)
+            .EndsWith("work_group", SPIRV::Scope::Scope::Workgroup)
+            .EndsWith("sub_group", SPIRV::Scope::Scope::Subgroup);
+    Register ScopeReg = buildConstantIntReg32(ScopeArg, MIRBuilder, GR);
 
-  MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
-      .addDef(ResultReg)
-      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
-      .addUse(ScopeReg);
+    MIRBuilder.buildInstr(SPIRV::OpReadClockKHR)
+        .addDef(ResultReg)
+        .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+        .addUse(ScopeReg);
+  }
 
   return true;
 }

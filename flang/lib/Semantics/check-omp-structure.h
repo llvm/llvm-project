@@ -56,20 +56,31 @@ using SymbolSourceMap = std::multimap<const Symbol *, parser::CharBlock>;
 using DirectivesClauseTriple = std::multimap<llvm::omp::Directive,
     std::pair<llvm::omp::Directive, const OmpClauseSet>>;
 
-class OmpStructureChecker
-    : public DirectiveStructureChecker<llvm::omp::Directive, llvm::omp::Clause,
-          parser::OmpClause, llvm::omp::Clause_enumSize> {
-public:
-  using Base = DirectiveStructureChecker<llvm::omp::Directive,
-      llvm::omp::Clause, parser::OmpClause, llvm::omp::Clause_enumSize>;
+using OmpStructureCheckerBase = DirectiveStructureChecker<llvm::omp::Directive,
+    llvm::omp::Clause, parser::OmpClause, llvm::omp::Clause_enumSize>;
 
-  OmpStructureChecker(SemanticsContext &context)
-      : DirectiveStructureChecker(context,
-#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-#include "llvm/Frontend/OpenMP/OMP.inc"
-        ) {
-  }
+class OmpStructureChecker : public OmpStructureCheckerBase {
+public:
+  using Base = OmpStructureCheckerBase;
+
+  OmpStructureChecker(SemanticsContext &context);
+
   using llvmOmpClause = const llvm::omp::Clause;
+
+  bool Enter(const parser::MainProgram &);
+  void Leave(const parser::MainProgram &);
+  bool Enter(const parser::BlockData &);
+  void Leave(const parser::BlockData &);
+  bool Enter(const parser::Module &);
+  void Leave(const parser::Module &);
+  bool Enter(const parser::Submodule &);
+  void Leave(const parser::Submodule &);
+  bool Enter(const parser::SubroutineStmt &);
+  bool Enter(const parser::EndSubroutineStmt &);
+  bool Enter(const parser::FunctionStmt &);
+  bool Enter(const parser::EndFunctionStmt &);
+  bool Enter(const parser::BlockConstruct &);
+  void Leave(const parser::BlockConstruct &);
 
   void Enter(const parser::OpenMPConstruct &);
   void Leave(const parser::OpenMPConstruct &);
@@ -177,10 +188,12 @@ private:
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
+  bool InTargetRegion();
   void HasInvalidTeamsNesting(
       const llvm::omp::Directive &dir, const parser::CharBlock &source);
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
+  bool HasRequires(llvm::omp::Clause req);
   // specific clause related
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
@@ -250,6 +263,9 @@ private:
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
   void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
+  void CheckAllocateDirective(parser::CharBlock source,
+      const parser::OmpObjectList &objects,
+      const parser::OmpClauseList &clauses);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
@@ -367,12 +383,15 @@ private:
   };
   int directiveNest_[LastType + 1] = {0};
 
+  bool inExecutableAllocate_{false};
   parser::CharBlock visitedAtomicSource_;
   SymbolSourceMap deferredNonVariables_;
 
   using LoopConstruct = std::variant<const parser::DoConstruct *,
       const parser::OpenMPLoopConstruct *>;
   std::vector<LoopConstruct> loopStack_;
+  // Scopes for scoping units.
+  std::vector<const Scope *> scopeStack_;
 };
 
 /// Find a duplicate entry in the range, and return an iterator to it.

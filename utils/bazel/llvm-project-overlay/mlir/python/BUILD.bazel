@@ -1029,6 +1029,7 @@ gentbl_filegroup(
     td_file = "mlir/dialects/ShardOps.td",
     deps = [
         "//mlir:OpBaseTdFiles",
+        "//mlir:ShapeOpsTdFiles",
         "//mlir:ShardTdFiles",
     ],
 )

@@ -1468,3 +1468,30 @@ void calling_function_with_default_arg() {
 // OGCG: store float 0x40019999A0000000, ptr %[[DEFAULT_ARG_IMAG_PTR]], align 4
 // OGCG: %[[TMP_DEFAULT_ARG:.*]] = load <2 x float>, ptr %[[DEFAULT_ARG_ADDR]], align 4
 // OGCG: call void @_Z33function_with_complex_default_argCf(<2 x float> {{.*}} %[[TMP_DEFAULT_ARG]])
+
+void calling_function_that_return_complex() {
+  float _Complex a = complex_type_return_type();
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[RESULT:.*]] = cir.call @_Z24complex_type_return_typev() : () -> !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: %[[RESULT:.*]] = call { float, float } @_Z24complex_type_return_typev()
+// LLVM: store { float, float } %[[RESULT]], ptr %[[A_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RESULT_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RESULT:.*]] = call noundef <2 x float> @_Z24complex_type_return_typev()
+// OGCG: store <2 x float> %[[RESULT]], ptr %[[RESULT_ADDR]], align 4
+// OGCG: %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT_ADDR]], i32 0, i32 0
+// OGCG: %[[RESULT_REAL:.*]] = load float, ptr %[[RESULT_REAL_PTR]], align 4
+// OGCG: %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RESULT_ADDR]], i32 0, i32 1
+// OGCG: %[[RESULT_IMAG:.*]] = load float, ptr %[[RESULT_IMAG_PTR]], align 4
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 0
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[A_ADDR]], i32 0, i32 1
+// OGCG: store float %[[RESULT_REAL]], ptr %[[A_REAL_PTR]], align 4
+// OGCG: store float %[[RESULT_IMAG]], ptr %[[A_IMAG_PTR]], align 4

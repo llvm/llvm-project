@@ -138,6 +138,11 @@ static cl::opt<unsigned> PPCMinimumJumpTableEntries(
     "ppc-min-jump-table-entries", cl::init(64), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on PPC"));
 
+static cl::opt<unsigned> PPCMinimumBitTestCmps(
+    "ppc-min-bit-test-cmps", cl::init(3), cl::Hidden,
+    cl::desc("Set minimum of largest number of comparisons to use bit test for "
+             "switch on PPC."));
+
 static cl::opt<unsigned> PPCGatherAllAliasesMaxDepth(
     "ppc-gather-alias-max-depth", cl::init(18), cl::Hidden,
     cl::desc("max depth when checking alias info in GatherAllAliases()"));
@@ -1435,6 +1440,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // branch instruction mtctr to the jump table may lead to bad branch predict.
   // Re-evaluate this value on future HWs that can do better with mtctr.
   setMinimumJumpTableEntries(PPCMinimumJumpTableEntries);
+
+  // The default minimum of largest number in a BitTest cluster is 3.
+  setMinimumBitTestCmps(PPCMinimumBitTestCmps);
 
   setMinFunctionAlignment(Align(4));
   setMinCmpXchgSizeInBits(Subtarget.hasPartwordAtomics() ? 8 : 32);
@@ -14736,8 +14744,8 @@ SDValue PPCTargetLowering::getRecipEstimate(SDValue Operand, SelectionDAG &DAG,
 }
 
 unsigned PPCTargetLowering::combineRepeatedFPDivisors() const {
-  // Note: This functionality is used only when unsafe-fp-math is enabled, and
-  // on cores with reciprocal estimates (which are used when unsafe-fp-math is
+  // Note: This functionality is used only when arcp is enabled, and
+  // on cores with reciprocal estimates (which are used when arcp is
   // enabled for division), this functionality is redundant with the default
   // combiner logic (once the division -> reciprocal/multiply transformation
   // has taken place). As a result, this matters more for older cores than for

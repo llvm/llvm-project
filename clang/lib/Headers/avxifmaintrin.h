@@ -31,6 +31,13 @@
                  __min_vector_width__(256)))
 #endif
 
+#if !defined(__AVX512IFMA__) && defined(__AVXIFMA__)
+#define _mm_madd52hi_epu64(X, Y, Z) _mm_madd52hi_avx_epu64(X, Y, Z)
+#define _mm_madd52lo_epu64(X, Y, Z) _mm_madd52lo_avx_epu64(X, Y, Z)
+#define _mm256_madd52hi_epu64(X, Y, Z) _mm256_madd52hi_avx_epu64(X, Y, Z)
+#define _mm256_madd52lo_epu64(X, Y, Z) _mm256_madd52lo_avx_epu64(X, Y, Z)
+#endif
+
 // must vex-encoding
 
 /// Multiply packed unsigned 52-bit integers in each 64-bit element of \a __Y
