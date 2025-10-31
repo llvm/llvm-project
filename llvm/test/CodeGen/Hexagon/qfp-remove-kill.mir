@@ -1,0 +1,95 @@
+# RUN: llc -march=hexagon -mcpu=hexagonv68 -mattr=+hvxv68,+hvx-length128b \
+# RUN: -run-pass hexagon-qfp-optimizer -run-pass machineverifier %s -o - | FileCheck %s
+
+# Test that the killed RegState from DefMI operands are removed
+# killed RegState should be set for MI operands
+# CHECK-LABEL: name: qfpAdd
+# CHECK: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG1:([0-9]+)]]
+# CHECK-NEXT: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG2:([0-9]+)]]
+# CHECK-NEXT: V6_vadd_qf32 killed %[[REG1]], killed %[[REG2]]
+# CHECK-NEXT: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG3:([0-9]+)]]
+# CHECK-NEXT: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG4:([0-9]+)]]
+# CHECK-NEXT: V6_vadd_qf32 killed %[[REG3]], killed %[[REG4]]
+
+---
+name: qfpAdd
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:intregs = COPY $r3
+    %4:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %6:hvxvr = V6_vL32Ub_ai %2:intregs, 0
+    %7:hvxvr = V6_vL32Ub_ai %3:intregs, 0
+    %8:hvxvr = V6_vconv_sf_qf32 killed %4:hvxvr
+    %9:hvxvr = V6_vconv_sf_qf32 killed %5:hvxvr
+    %10:hvxvr = V6_vadd_sf %8:hvxvr, %9:hvxvr
+    %11:hvxvr = V6_vconv_sf_qf32 killed %6:hvxvr
+    %12:hvxvr = V6_vconv_sf_qf32 killed %7:hvxvr
+    %13:hvxvr = V6_vadd_sf killed %11:hvxvr, killed %12:hvxvr
+...
+
+
+# Test that the killed RegState from DefMI operands are removed
+# CHECK-LABEL: name: qfpAddMix
+# CHECK: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG1:([0-9]+)]]
+# CHECK-NEXT: V6_vadd_qf32_mix killed %[[REG1]], %{{[0-9]+}}
+# CHECK: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG2:([0-9]+)]]
+# CHECK-NEXT: V6_vadd_qf32_mix killed %[[REG2]], %{{[0-9]+}}
+
+---
+name: qfpAddMix
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %4:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %2:intregs, 0
+    %6:hvxvr = V6_vmpy_qf32_sf %4, %5
+    %7:hvxvr = V6_vconv_sf_qf32 killed %6:hvxvr
+    %8:hvxvr = V6_vadd_sf %3:hvxvr, %7:hvxvr
+    %9:hvxvr = V6_vmpy_qf32_sf %4, %5
+    %10:hvxvr = V6_vconv_sf_qf32 killed %9:hvxvr
+    %11:hvxvr = V6_vadd_sf %3:hvxvr, killed %10:hvxvr
+...
+
+
+# Test that we do generate V6_vsub_qf32_mix for the below test.
+# V6_vsub_qf32_mix only allowes qf32 as first operand. In the test qf32
+# is passed as first operand. So, V6_vsub_qf32_mix must be generated.
+# CHECK-LABEL: name: qfpAddSwapMix
+# CHECK: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG1:([0-9]+)]]
+# CHECK-NEXT: V6_vadd_qf32_mix killed %[[REG1]], %{{[0-9]+}}
+# CHECK: %{{[0-9]+}}:hvxvr = V6_vconv_sf_qf32 %[[REG2:([0-9]+)]]
+# CHECK-NEXT: V6_vadd_qf32_mix killed %[[REG2]], %{{[0-9]+}}
+
+---
+name: qfpAddSwapMix
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r1, $r2
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r2
+    %3:hvxvr = V6_vL32Ub_ai %0:intregs, 0
+    %4:hvxvr = V6_vL32Ub_ai %1:intregs, 0
+    %5:hvxvr = V6_vL32Ub_ai %2:intregs, 0
+    %6:hvxvr = V6_vmpy_qf32_sf %4, %5
+    %7:hvxvr = V6_vconv_sf_qf32 killed %6:hvxvr
+    %8:hvxvr = V6_vadd_sf %7:hvxvr, %3:hvxvr
+    %9:hvxvr = V6_vmpy_qf32_sf %4, %5
+    %10:hvxvr = V6_vconv_sf_qf32 killed %9:hvxvr
+    %11:hvxvr = V6_vadd_sf killed %10:hvxvr, %3:hvxvr
+...

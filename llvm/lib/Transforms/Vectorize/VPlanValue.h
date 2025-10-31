@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -37,25 +38,26 @@ struct VPDoubleValueDef;
 class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
-class VPInterleaveRecipe;
+class VPInterleaveBase;
 class VPPhiAccessors;
 
-// This is the base class of the VPlan Def/Use graph, used for modeling the data
-// flow into, within and out of the VPlan. VPValues can stand for live-ins
-// coming from the input IR and instructions which VPlan will generate if
-// executed.
-class VPValue {
+/// This is the base class of the VPlan Def/Use graph, used for modeling the
+/// data flow into, within and out of the VPlan. VPValues can stand for live-ins
+/// coming from the input IR and instructions which VPlan will generate if
+/// executed.
+class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInterleaveRecipe;
+  friend class VPInterleaveBase;
   friend class VPlan;
+  friend class VPExpressionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
   SmallVector<VPUser *, 1> Users;
 
 protected:
-  // Hold the underlying Value, if any, attached to this VPValue.
+  /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
@@ -145,6 +147,8 @@ public:
       Current++;
     return Current != user_end();
   }
+
+  bool hasOneUse() const { return getNumUsers() == 1; }
 
   void replaceAllUsesWith(VPValue *New);
 
@@ -330,13 +334,13 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
+    VPInterleaveEVLSC,
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
-    VPMulAccumulateReductionSC,
-    VPExtendedReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,

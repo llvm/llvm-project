@@ -475,33 +475,13 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     // environment if we need to.
     const SPIRVSubtarget *ST =
         static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
-    SPIRV::ExecutionModel::ExecutionModel ExecutionModel =
-        getExecutionModel(*ST, F);
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
-                   .addImm(static_cast<uint32_t>(ExecutionModel))
+                   .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-
-    if (ExecutionModel == SPIRV::ExecutionModel::Fragment) {
-      // SPIR-V common validation: Fragment requires OriginUpperLeft or
-      // OriginLowerLeft VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment
-      // must declare OriginUpperLeft.
-      MIRBuilder.buildInstr(SPIRV::OpExecutionMode)
-          .addUse(FuncVReg)
-          .addImm(static_cast<uint32_t>(SPIRV::ExecutionMode::OriginUpperLeft));
-    }
-  } else if (F.getLinkage() != GlobalValue::InternalLinkage &&
-             F.getLinkage() != GlobalValue::PrivateLinkage) {
-    SPIRV::LinkageType::LinkageType LnkTy =
-        F.isDeclaration()
-            ? SPIRV::LinkageType::Import
-            : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
-                       ST->canUseExtension(
-                           SPIRV::Extension::SPV_KHR_linkonce_odr)
-                   ? SPIRV::LinkageType::LinkOnceODR
-                   : SPIRV::LinkageType::Export);
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getName());
+                    {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
 
   // Handle function pointers decoration
@@ -651,9 +631,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    GR->getPointerSize()));
       }
     }
-    if (auto Res =
-            SPIRV::lowerBuiltin(DemangledName, ST->getPreferredInstructionSet(),
-                                MIRBuilder, ResVReg, OrigRetTy, ArgVRegs, GR))
+    if (auto Res = SPIRV::lowerBuiltin(
+            DemangledName, ST->getPreferredInstructionSet(), MIRBuilder,
+            ResVReg, OrigRetTy, ArgVRegs, GR, *Info.CB))
       return *Res;
   }
 

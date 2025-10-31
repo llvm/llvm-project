@@ -3,7 +3,7 @@
 
 [[vk::ext_builtin_input(/* WorkgroupId */ 26)]]
 static const uint3 groupid;
-// CHECK: @_ZL7groupid = external local_unnamed_addr addrspace(7) externally_initialized constant <3 x i32>, align 16, !spirv.Decorations [[META0:![0-9]+]]
+// CHECK: @_ZL7groupid = external hidden local_unnamed_addr addrspace(7) externally_initialized constant <3 x i32>, align 16, !spirv.Decorations [[META0:![0-9]+]]
 
 RWStructuredBuffer<int> output : register(u1, space0);
 

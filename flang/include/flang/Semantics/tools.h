@@ -199,6 +199,8 @@ bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 
+bool IsDeviceAllocatable(const Symbol &symbol);
+
 inline bool IsCUDADeviceContext(const Scope *scope) {
   if (scope) {
     if (const Symbol * symbol{scope->symbol()}) {
@@ -221,12 +223,20 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+bool HasCUDAComponent(const Symbol &sym);
+
+inline bool IsCUDADevice(const Symbol &sym) {
+  if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Device;
+  }
+  return false;
+}
+
 inline bool IsCUDAShared(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() == common::CUDADataAttr::Shared) {
-      return true;
-    }
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() == common::CUDADataAttr::Shared;
   }
   return false;
 }
@@ -248,6 +258,8 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
   return false;
 }
 
+bool CanCUDASymbolBeGlobal(const Symbol &sym);
+
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
@@ -255,7 +267,7 @@ bool IsAccessible(const Symbol &, const Scope &);
 
 // Return an error if a symbol is not accessible from a scope
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const Scope &, const Symbol &);
+    const Scope &, const Symbol &, bool inStructureConstructor = false);
 
 // Analysis of image control statements
 bool IsImageControlStmt(const parser::ExecutableConstruct &);
@@ -654,6 +666,8 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
     const DerivedTypeSpec &);
 PotentialComponentIterator::const_iterator
 FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &);
+UltimateComponentIterator::const_iterator
+FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &);
 
 // The LabelEnforce class (given a set of labels) provides an error message if
 // there is a branch to a label which is not in the given set.
@@ -725,12 +739,6 @@ const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &);
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
     parser::CharBlock at, const char *what);
 
-inline const parser::Name *getDesignatorNameIfDataRef(
-    const parser::Designator &designator) {
-  const auto *dataRef{std::get_if<parser::DataRef>(&designator.u)};
-  return dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
-}
-
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
 template <typename R, typename T>
@@ -756,7 +764,7 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
-// Checks whether the symbol on the LHS is present in the RHS expression.
-bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs);
+bool AreSameModuleSymbol(const Symbol &, const Symbol &);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

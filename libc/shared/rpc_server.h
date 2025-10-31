@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SHARED_RPC_SERVER_H
 #define LLVM_LIBC_SHARED_RPC_SERVER_H
 
+#include "libc_common.h"
 #include "src/__support/RPC/rpc_server.h"
 
 namespace LIBC_NAMESPACE_DECL {

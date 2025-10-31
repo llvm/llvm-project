@@ -69,21 +69,16 @@ define bfloat @v_test_fmed3_r_i_i_bf16_minimumnum_maximumnum(bfloat %a) #1 {
 ; GFX11-SDAG-TRUE16-LABEL: v_test_fmed3_r_i_i_bf16_minimumnum_maximumnum:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4000, v0.l, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x4000, v0.l, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4000, v0.l, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.h, 0x4000, v1.h, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 4.0, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4080, v0.l, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4080, v1.h, vcc_lo
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %max = call bfloat @llvm.maximumnum.bf16(bfloat %a, bfloat 2.0)
   %med = call bfloat @llvm.minimumnum.bf16(bfloat %max, bfloat 4.0)
@@ -196,35 +191,26 @@ define <2 x bfloat> @v_test_fmed3_r_i_i_v2bf16_minimumnum_maximumnum(<2 x bfloat
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f32_e32 vcc_lo, v1, v1
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f32_e64 s0, v2, v2
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x4000, v0.h, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4000, v0.l, s0
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v2.h, 0x4000, v0.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_o_f32_e64 s0, v1, v1
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v2
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_lt_f32_e64 s0, 2.0, v3
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x4000, v1.l, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4000, v0.l, s0
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v1.l
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v1.l, 0x4000, v2.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v2.h, 0x4000, v0.l, s0
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 2.0, v2
+; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4000, v2.h, vcc_lo
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v1.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 4.0, v2
-; GFX11-SDAG-TRUE16-NEXT:    v_cmp_gt_f32_e64 s0, 4.0, v3
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v0.l
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x4080, v1.l, vcc_lo
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-TRUE16-NEXT:    v_cmp_gt_f32_e64 s0, 4.0, v2
 ; GFX11-SDAG-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4080, v0.l, s0
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %max = call <2 x bfloat> @llvm.maximumnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> splat (bfloat 2.0))
@@ -233,8 +219,8 @@ define <2 x bfloat> @v_test_fmed3_r_i_i_v2bf16_minimumnum_maximumnum(<2 x bfloat
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="false" }
-attributes #2 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
+attributes #1 = { nounwind "no-nans-fp-math"="false" }
+attributes #2 = { nounwind "no-nans-fp-math"="true" }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX11: {{.*}}
 ; GFX11-SDAG: {{.*}}

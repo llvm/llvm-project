@@ -27,38 +27,14 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 
+#include "flang/Optimizer/CodeGen/TypeConverter.h"
+
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
   return mlir::cast<mlir::IntegerAttr>(cop.getValue())
       .getValue()
       .getSExtValue();
-}
-
-// Reconstruct binding tables for dynamic dispatch.
-using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
-using BindingTables = llvm::DenseMap<llvm::StringRef, BindingTable>;
-
-inline void buildBindingTables(BindingTables &bindingTables,
-                               mlir::ModuleOp mod) {
-
-  // The binding tables are defined in FIR after lowering inside fir.type_info
-  // operations. Go through each binding tables and store the procedure name and
-  // binding index for later use by the fir.dispatch conversion pattern.
-  for (auto typeInfo : mod.getOps<fir::TypeInfoOp>()) {
-    unsigned bindingIdx = 0;
-    BindingTable bindings;
-    if (typeInfo.getDispatchTable().empty()) {
-      bindingTables[typeInfo.getSymName()] = bindings;
-      continue;
-    }
-    for (auto dtEntry :
-         typeInfo.getDispatchTable().front().getOps<fir::DTEntryOp>()) {
-      bindings[dtEntry.getMethod()] = bindingIdx;
-      ++bindingIdx;
-    }
-    bindingTables[typeInfo.getSymName()] = bindings;
-  }
 }
 
 // Translate front-end KINDs for use in the IR and code gen.
@@ -224,6 +200,43 @@ std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
     fir::RecordType recordType, llvm::StringRef component,
     mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
 
+/// Indicate if a derived type has final routine. Returns std::nullopt if that
+/// information is not in the IR;
+std::optional<bool>
+isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
+                         const mlir::SymbolTable *symbolTable = nullptr);
+
+/// Generate a LLVM constant value of type `ity`, using the provided offset.
+mlir::LLVM::ConstantOp
+genConstantIndex(mlir::Location loc, mlir::Type ity,
+                 mlir::ConversionPatternRewriter &rewriter,
+                 std::int64_t offset);
+
+/// Helper function for generating the LLVM IR that computes the distance
+/// in bytes between adjacent elements pointed to by a pointer
+/// of type \p ptrTy. The result is returned as a value of \p idxTy integer
+/// type.
+mlir::Value computeElementDistance(mlir::Location loc,
+                                   mlir::Type llvmObjectType, mlir::Type idxTy,
+                                   mlir::ConversionPatternRewriter &rewriter,
+                                   const mlir::DataLayout &dataLayout);
+
+// Compute the alloc scale size (constant factors encoded in the array type).
+// We do this for arrays without a constant interior or arrays of character with
+// dynamic length arrays, since those are the only ones that get decayed to a
+// pointer to the element type.
+mlir::Value genAllocationScaleSize(mlir::Location loc, mlir::Type dataTy,
+                                   mlir::Type ity,
+                                   mlir::ConversionPatternRewriter &rewriter);
+
+/// Perform an extension or truncation as needed on an integer value. Lowering
+/// to the specific target may involve some sign-extending or truncation of
+/// values, particularly to fit them from abstract box types to the
+/// appropriate reified structures.
+mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
+                        mlir::Location loc,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        mlir::Type ty, mlir::Value val, bool fold = false);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

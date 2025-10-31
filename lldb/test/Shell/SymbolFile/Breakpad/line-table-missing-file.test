@@ -3,8 +3,9 @@
 # Right now, "something reasonable" means creating a line entry with an empty
 # file.
 
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/line-table-missing-file.out
-# RUN: %lldb %T/line-table-missing-file.out \
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %t.dir/line-table-missing-file.out
+# RUN: %lldb %t.dir/line-table-missing-file.out \
 # RUN:   -o "target symbols add -s line-table-missing-file.out %S/Inputs/line-table-missing-file.syms" \
 # RUN:   -s %s -o exit | FileCheck %s
 

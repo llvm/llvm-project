@@ -83,7 +83,7 @@ OPTIONS
 .. option:: -n <name>, --name=<name>
 
             Find and print all debug info entries whose name
-            (`DW_AT_name` attribute) is <name>.
+            (`DW_AT_name`/`DW_AT_linkage_name` attribute) is <name>.
 
 .. option:: --lookup=<address>
 

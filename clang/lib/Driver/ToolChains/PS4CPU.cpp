@@ -343,6 +343,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // whether or not that will be the case at this point. So, unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
+
+  tools::addDTLTOOptions(TC, Args, CmdArgs);
+
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
@@ -379,8 +382,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !Relocatable &&
       !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib);
 
-  auto AddCRTObject = [&](const char *Name) {
-    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(Name)));
+  auto AddCRTObject = [&](StringRef Name) {
+    // CRT objects can be found on user supplied library paths. This is
+    // an entrenched expectation on PlayStation.
+    CmdArgs.push_back(Args.MakeArgString("-l:" + Name));
   };
 
   if (AddStartFiles) {

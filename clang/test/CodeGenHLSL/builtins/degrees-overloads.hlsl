@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK \
-// RUN:   -DFNATTRS="noundef nofpclass(nan inf)" -DTARGET=dx
+// RUN:   -DFNATTRS="hidden noundef nofpclass(nan inf)" -DTARGET=dx
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK \
-// RUN:   -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTARGET=spv
+// RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTARGET=spv
 
 // CHECK: define [[FNATTRS]] float @
 // CHECK: %hlsl.degrees = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].degrees.f32(

@@ -1,4 +1,4 @@
-﻿//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
+//===- GenericUniformityImpl.h -----------------------*- C++ -*------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -310,7 +310,7 @@ public:
   const DivergenceDescriptor &getJoinBlocks(const BlockT *DivTermBlock);
 
 private:
-  static DivergenceDescriptor EmptyDivergenceDesc;
+  static inline DivergenceDescriptor EmptyDivergenceDesc;
 
   ModifiedPO CyclePO;
 
@@ -408,15 +408,6 @@ public:
                                 const CycleT *);
 
 protected:
-  /// \brief Value/block pair representing a single phi input.
-  struct PhiInput {
-    ConstValueRefT value;
-    BlockT *predBlock;
-
-    PhiInput(ConstValueRefT value, BlockT *predBlock)
-        : value(value), predBlock(predBlock) {}
-  };
-
   const ContextT &Context;
   const FunctionT &F;
   const CycleInfoT &CI;
@@ -740,10 +731,6 @@ public:
     return std::move(DivDesc);
   }
 };
-
-template <typename ContextT>
-typename llvm::GenericSyncDependenceAnalysis<ContextT>::DivergenceDescriptor
-    llvm::GenericSyncDependenceAnalysis<ContextT>::EmptyDivergenceDesc;
 
 template <typename ContextT>
 llvm::GenericSyncDependenceAnalysis<ContextT>::GenericSyncDependenceAnalysis(
@@ -1196,7 +1183,7 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   }
 
   if (!AssumedDivergent.empty()) {
-    OS << "CYCLES ASSSUMED DIVERGENT:\n";
+    OS << "CYCLES ASSUMED DIVERGENT:\n";
     for (const CycleT *cycle : AssumedDivergent) {
       OS << "  " << cycle->print(Context) << '\n';
     }

@@ -12,3 +12,7 @@ l:
 
 .equiv a, undef
 # CHECK: [[#@LINE-1]]:11: error: redefinition of 'a'
+
+.equiv b, undef
+b:
+# CHECK: [[#@LINE-1]]:1: error: symbol 'b' is already defined

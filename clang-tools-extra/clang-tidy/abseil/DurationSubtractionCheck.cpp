@@ -1,4 +1,4 @@
-//===--- DurationSubtractionCheck.cpp - clang-tidy ------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +21,7 @@ void DurationSubtractionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       binaryOperator(
           hasOperatorName("-"),
-          hasLHS(callExpr(callee(functionDecl(DurationConversionFunction())
+          hasLHS(callExpr(callee(functionDecl(durationConversionFunction())
                                      .bind("function_decl")),
                           hasArgument(0, expr().bind("lhs_arg")))))
           .bind("binop"),

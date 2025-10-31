@@ -2,15 +2,15 @@
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+neon -aarch64-enable-collect-loh=false -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-apple-darwin -mattr=+neon -aarch64-enable-collect-loh=false -global-isel -global-isel-abort=2 -verify-machineinstrs < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; Basic tests from input vector to bitmask
-; IR generated from clang for:
-; __builtin_convertvector + reinterpret_cast<uint16&>
-
 ; CHECK-GI:       warning: Instruction selection used fallback path for convert_to_bitmask2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for clang_builtins_undef_concat_convert_to_bitmask4
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_2xi32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for convert_to_bitmask_8xi2
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for no_direct_convert_for_bad_concat
+
+; Basic tests from input vector to bitmask
+; IR generated from clang for:
+; __builtin_convertvector + reinterpret_cast<uint16&>
 
 define i16 @convert_to_bitmask16(<16 x i8> %vec) {
 ; Bits used in mask
@@ -596,23 +596,15 @@ define i4 @convert_to_bitmask_4xi8(<4 x i8> %vec) {
 ; CHECK-GI-NEXT:    mov.b v1[3], w8
 ; CHECK-GI-NEXT:    cmeq.8b v0, v0, v1
 ; CHECK-GI-NEXT:    mvn.8b v0, v0
-; CHECK-GI-NEXT:    umov.b w8, v0[0]
-; CHECK-GI-NEXT:    umov.b w9, v0[1]
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    umov.b w8, v0[2]
-; CHECK-GI-NEXT:    mov.s v1[1], w9
-; CHECK-GI-NEXT:    umov.b w9, v0[3]
-; CHECK-GI-NEXT:    mov.s v1[2], w8
-; CHECK-GI-NEXT:    mov.s v1[3], w9
-; CHECK-GI-NEXT:    mov.s w8, v1[1]
-; CHECK-GI-NEXT:    mov.s w9, v1[2]
-; CHECK-GI-NEXT:    fmov w11, s1
-; CHECK-GI-NEXT:    mov.s w10, v1[3]
+; CHECK-GI-NEXT:    umov.b w8, v0[1]
+; CHECK-GI-NEXT:    umov.b w9, v0[0]
+; CHECK-GI-NEXT:    umov.b w10, v0[2]
+; CHECK-GI-NEXT:    umov.b w11, v0[3]
 ; CHECK-GI-NEXT:    and w8, w8, #0x1
-; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
-; CHECK-GI-NEXT:    and w8, w9, #0x1
-; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
+; CHECK-GI-NEXT:    bfi w9, w8, #1, #31
+; CHECK-GI-NEXT:    and w8, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w9, w8, lsl #2
+; CHECK-GI-NEXT:    and w9, w11, #0x1
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
 ; CHECK-GI-NEXT:    and w0, w8, #0xff
@@ -859,40 +851,31 @@ define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-GI-NEXT:    fmov s1, w0
-; CHECK-GI-NEXT:    fmov s0, wzr
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    fmov s2, w4
 ; CHECK-GI-NEXT:    mov.s v1[1], w1
 ; CHECK-GI-NEXT:    mov.s v2[1], w5
 ; CHECK-GI-NEXT:    mov.s v0[1], wzr
 ; CHECK-GI-NEXT:    mov.s v1[2], w2
 ; CHECK-GI-NEXT:    cmeq.4s v0, v2, v0
-; CHECK-GI-NEXT:    mvn.16b v0, v0
 ; CHECK-GI-NEXT:    mov.s v1[3], w3
+; CHECK-GI-NEXT:    mvn.16b v0, v0
 ; CHECK-GI-NEXT:    cmtst.4s v1, v1, v1
 ; CHECK-GI-NEXT:    mov.s w8, v1[1]
 ; CHECK-GI-NEXT:    mov.s w9, v1[2]
+; CHECK-GI-NEXT:    fmov w11, s1
 ; CHECK-GI-NEXT:    mov.s w10, v1[3]
-; CHECK-GI-NEXT:    mov.h v1[1], w8
-; CHECK-GI-NEXT:    mov.s w8, v0[1]
-; CHECK-GI-NEXT:    mov.h v1[2], w9
-; CHECK-GI-NEXT:    mov.h v1[3], w10
-; CHECK-GI-NEXT:    mov.h v1[4], v0[0]
-; CHECK-GI-NEXT:    mov.h v1[5], w8
-; CHECK-GI-NEXT:    umov.h w8, v1[1]
-; CHECK-GI-NEXT:    umov.h w9, v1[0]
-; CHECK-GI-NEXT:    umov.h w10, v1[2]
-; CHECK-GI-NEXT:    umov.h w11, v1[3]
 ; CHECK-GI-NEXT:    and w8, w8, #0x1
-; CHECK-GI-NEXT:    bfi w9, w8, #1, #31
-; CHECK-GI-NEXT:    and w8, w10, #0x1
-; CHECK-GI-NEXT:    umov.h w10, v1[4]
-; CHECK-GI-NEXT:    orr w8, w9, w8, lsl #2
-; CHECK-GI-NEXT:    and w9, w11, #0x1
-; CHECK-GI-NEXT:    umov.h w11, v1[5]
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
+; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
+; CHECK-GI-NEXT:    and w8, w9, #0x1
 ; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    mov.s w10, v0[1]
+; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
+; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    and w9, w9, #0x1
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
-; CHECK-GI-NEXT:    and w9, w11, #0x1
+; CHECK-GI-NEXT:    and w9, w10, #0x1
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
 ; CHECK-GI-NEXT:    and w8, w8, #0x3f
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]

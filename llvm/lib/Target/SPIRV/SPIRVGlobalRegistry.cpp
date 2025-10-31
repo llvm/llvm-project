@@ -87,7 +87,7 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
 }
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
-    : PointerSize(PointerSize), Bound(0) {}
+    : PointerSize(PointerSize), Bound(0), CurMF(nullptr) {}
 
 SPIRVType *SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth,
                                                     Register VReg,
@@ -200,6 +200,18 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
     return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
         .addDef(createTypeVReg(MIRBuilder))
         .addImm(Width);
+  });
+}
+
+SPIRVType *
+SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRV::FPEncoding::FPEncoding FPEncode) {
+  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+        .addDef(createTypeVReg(MIRBuilder))
+        .addImm(Width)
+        .addImm(FPEncode);
   });
 }
 
@@ -474,8 +486,8 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   if (Type->getOpcode() == SPIRV::OpTypeFloat) {
     SPIRVType *SpvBaseType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
-    return getOrCreateConstFP(dyn_cast<ConstantFP>(Val)->getValue(), I,
-                              SpvBaseType, TII, ZeroAsNull);
+    return getOrCreateConstFP(cast<ConstantFP>(Val)->getValue(), I, SpvBaseType,
+                              TII, ZeroAsNull);
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
@@ -700,9 +712,9 @@ SPIRVGlobalRegistry::buildConstantSampler(Register ResReg, unsigned AddrMode,
 Register SPIRVGlobalRegistry::buildGlobalVariable(
     Register ResVReg, SPIRVType *BaseType, StringRef Name,
     const GlobalValue *GV, SPIRV::StorageClass::StorageClass Storage,
-    const MachineInstr *Init, bool IsConst, bool HasLinkageTy,
-    SPIRV::LinkageType::LinkageType LinkageType, MachineIRBuilder &MIRBuilder,
-    bool IsInstSelector) {
+    const MachineInstr *Init, bool IsConst,
+    const std::optional<SPIRV::LinkageType::LinkageType> &LinkageType,
+    MachineIRBuilder &MIRBuilder, bool IsInstSelector) {
   const GlobalVariable *GVar = nullptr;
   if (GV) {
     GVar = cast<const GlobalVariable>(GV);
@@ -733,7 +745,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
                  .addDef(ResVReg)
                  .addUse(getSPIRVTypeID(BaseType))
                  .addImm(static_cast<uint32_t>(Storage));
-  if (Init != 0)
+  if (Init)
     MIB.addUse(Init->getOperand(0).getReg());
   // ISel may introduce a new register on this step, so we need to add it to
   // DT and correct its type avoiding fails on the next stage.
@@ -780,9 +792,9 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::Alignment, {Alignment});
   }
 
-  if (HasLinkageTy)
+  if (LinkageType)
     buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LinkageType)}, Name);
+                    {static_cast<uint32_t>(*LinkageType)}, Name);
 
   SPIRV::BuiltIn::BuiltIn BuiltInId;
   if (getSpirvBuiltInIdByName(Name, BuiltInId))
@@ -794,115 +806,23 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   // arguments.
   MDNode *GVarMD = nullptr;
   if (GVar && (GVarMD = GVar->getMetadata("spirv.Decorations")) != nullptr)
-    buildOpSpirvDecorations(Reg, MIRBuilder, GVarMD);
+    buildOpSpirvDecorations(Reg, MIRBuilder, GVarMD, ST);
 
   return Reg;
 }
 
-static std::string GetSpirvImageTypeName(const SPIRVType *Type,
-                                         MachineIRBuilder &MIRBuilder,
-                                         const std::string &Prefix,
-                                         SPIRVGlobalRegistry &GR);
-
 // Returns a name based on the Type. Notes that this does not look at
 // decorations, and will return the same string for two types that are the same
 // except for decorations.
-static std::string buildSpirvTypeName(const SPIRVType *Type,
-                                      MachineIRBuilder &MIRBuilder,
-                                      SPIRVGlobalRegistry &GR) {
-  switch (Type->getOpcode()) {
-  case SPIRV::OpTypeSampledImage: {
-    return GetSpirvImageTypeName(Type, MIRBuilder, "sampled_image_", GR);
-  }
-  case SPIRV::OpTypeImage: {
-    return GetSpirvImageTypeName(Type, MIRBuilder, "image_", GR);
-  }
-  case SPIRV::OpTypeArray: {
-    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-    Register ElementTypeReg = Type->getOperand(1).getReg();
-    auto *ElementType = MRI->getUniqueVRegDef(ElementTypeReg);
-    uint32_t ArraySize = getArrayComponentCount(MRI, Type);
-    return (buildSpirvTypeName(ElementType, MIRBuilder, GR) + Twine("[") +
-            Twine(ArraySize) + Twine("]"))
-        .str();
-  }
-  case SPIRV::OpTypeFloat:
-    return ("f" + Twine(Type->getOperand(1).getImm())).str();
-  case SPIRV::OpTypeSampler:
-    return ("sampler");
-  case SPIRV::OpTypeInt:
-    if (Type->getOperand(2).getImm())
-      return ("i" + Twine(Type->getOperand(1).getImm())).str();
-    return ("u" + Twine(Type->getOperand(1).getImm())).str();
-  case SPIRV::OpTypePointer: {
-    uint32_t StorageClass = GR.getPointerStorageClass(Type);
-    SPIRVType *PointeeType = GR.getPointeeType(Type);
-    return ("p_" + Twine(StorageClass) + Twine("_") +
-            buildSpirvTypeName(PointeeType, MIRBuilder, GR))
-        .str();
-  }
-  case SPIRV::OpTypeStruct: {
-    std::string TypeName = "{";
-    for (uint32_t I = 1; I < Type->getNumOperands(); ++I) {
-      SPIRVType *MemberType =
-          GR.getSPIRVTypeForVReg(Type->getOperand(I).getReg());
-      TypeName += '_' + buildSpirvTypeName(MemberType, MIRBuilder, GR);
-    }
-    return TypeName + "}";
-  }
-  case SPIRV::OpTypeVector: {
-    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-    Register ElementTypeReg = Type->getOperand(1).getReg();
-    auto *ElementType = MRI->getUniqueVRegDef(ElementTypeReg);
-    uint32_t VectorSize = GR.getScalarOrVectorComponentCount(Type);
-    return (buildSpirvTypeName(ElementType, MIRBuilder, GR) + Twine("[") +
-            Twine(VectorSize) + Twine("]"))
-        .str();
-  }
-  case SPIRV::OpTypeRuntimeArray: {
-    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-    Register ElementTypeReg = Type->getOperand(1).getReg();
-    auto *ElementType = MRI->getUniqueVRegDef(ElementTypeReg);
-    uint32_t ArraySize = 0;
-    return (buildSpirvTypeName(ElementType, MIRBuilder, GR) + Twine("[") +
-            Twine(ArraySize) + Twine("]"))
-        .str();
-  }
-  default:
-    llvm_unreachable("Trying to the the name of an unknown type.");
-  }
-}
-
-static std::string GetSpirvImageTypeName(const SPIRVType *Type,
-                                         MachineIRBuilder &MIRBuilder,
-                                         const std::string &Prefix,
-                                         SPIRVGlobalRegistry &GR) {
-  Register SampledTypeReg = Type->getOperand(1).getReg();
-  auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
-  std::string TypeName =
-      Prefix + buildSpirvTypeName(SampledType, MIRBuilder, GR);
-  for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
-    TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
-  }
-  return TypeName;
-}
-
 Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
-    const SPIRVType *VarType, uint32_t Set, uint32_t Binding,
+    const SPIRVType *VarType, uint32_t Set, uint32_t Binding, StringRef Name,
     MachineIRBuilder &MIRBuilder) {
   Register VarReg =
       MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
 
-  // TODO(138533): The name should come from the llvm-ir, but how that name will
-  // be passed from the HLSL to the backend has not been decided. Using this
-  // place holder for now.
-  std::string Name =
-      ("__resource_" + buildSpirvTypeName(VarType, MIRBuilder, *this) + "_" +
-       Twine(Set) + "_" + Twine(Binding))
-          .str();
   buildGlobalVariable(VarReg, VarType, Name, nullptr,
-                      getPointerStorageClass(VarType), nullptr, false, false,
-                      SPIRV::LinkageType::Import, MIRBuilder, false);
+                      getPointerStorageClass(VarType), nullptr, false,
+                      std::nullopt, MIRBuilder, false);
 
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::DescriptorSet, {Set});
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Binding, {Binding});
@@ -920,6 +840,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
          "Invalid array element type");
   SPIRVType *SpvTypeInt32 = getOrCreateSPIRVIntegerType(32, MIRBuilder);
   SPIRVType *ArrayType = nullptr;
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (NumElems != 0) {
     Register NumElementsVReg =
         buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
@@ -930,6 +852,10 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(NumElementsVReg);
     });
   } else {
+    assert(ST.isShader() && "Runtime arrays are not allowed in non-shader "
+                            "SPIR-V modules.");
+    if (!ST.isShader())
+      return nullptr;
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
           .addDef(createTypeVReg(MIRBuilder))
@@ -1127,8 +1053,14 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
     return Width == 1 ? getOpTypeBool(MIRBuilder)
                       : getOpTypeInt(Width, MIRBuilder, false);
   }
-  if (Ty->isFloatingPointTy())
-    return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
+  if (Ty->isFloatingPointTy()) {
+    if (Ty->isBFloatTy()) {
+      return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder,
+                            SPIRV::FPEncoding::BFloat16KHR);
+    } else {
+      return getOpTypeFloat(Ty->getPrimitiveSizeInBits(), MIRBuilder);
+    }
+  }
   if (Ty->isVoidTy())
     return getOpTypeVoid(MIRBuilder);
   if (Ty->isVectorTy()) {
@@ -1155,7 +1087,8 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
                                    MIRBuilder);
       };
     }
-    return getOpTypeStruct(SType, MIRBuilder, AccQual, Decorator, EmitIR);
+    return getOpTypeStruct(SType, MIRBuilder, AccQual, std::move(Decorator),
+                           EmitIR);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
     SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder,
@@ -1492,10 +1425,45 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateLayoutType(
   // We need a new OpTypeStruct instruction because decorations will be
   // different from a struct with an explicit layout created from a different
   // entry point.
-  SPIRVType *SPIRVStructType = getOpTypeStruct(
-      ST, MIRBuilder, SPIRV::AccessQualifier::None, Decorator, EmitIr);
+  SPIRVType *SPIRVStructType =
+      getOpTypeStruct(ST, MIRBuilder, SPIRV::AccessQualifier::None,
+                      std::move(Decorator), EmitIr);
   add(Key, SPIRVStructType);
   return SPIRVStructType;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getImageType(
+    const TargetExtType *ExtensionType,
+    const SPIRV::AccessQualifier::AccessQualifier Qualifier,
+    MachineIRBuilder &MIRBuilder) {
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "SPIR-V image builtin type must have sampled type parameter!");
+  const SPIRVType *SampledType =
+      getOrCreateSPIRVType(ExtensionType->getTypeParameter(0), MIRBuilder,
+                           SPIRV::AccessQualifier::ReadWrite, true);
+  assert((ExtensionType->getNumIntParameters() == 7 ||
+          ExtensionType->getNumIntParameters() == 6) &&
+         "Invalid number of parameters for SPIR-V image builtin!");
+
+  SPIRV::AccessQualifier::AccessQualifier accessQualifier =
+      SPIRV::AccessQualifier::None;
+  if (ExtensionType->getNumIntParameters() == 7) {
+    accessQualifier = Qualifier == SPIRV::AccessQualifier::WriteOnly
+                          ? SPIRV::AccessQualifier::WriteOnly
+                          : SPIRV::AccessQualifier::AccessQualifier(
+                                ExtensionType->getIntParameter(6));
+  }
+
+  // Create or get an existing type from GlobalRegistry.
+  SPIRVType *R = getOrCreateOpTypeImage(
+      MIRBuilder, SampledType,
+      SPIRV::Dim::Dim(ExtensionType->getIntParameter(0)),
+      ExtensionType->getIntParameter(1), ExtensionType->getIntParameter(2),
+      ExtensionType->getIntParameter(3), ExtensionType->getIntParameter(4),
+      SPIRV::ImageFormat::ImageFormat(ExtensionType->getIntParameter(5)),
+      accessQualifier);
+  SPIRVToLLVMType[R] = ExtensionType;
+  return R;
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(

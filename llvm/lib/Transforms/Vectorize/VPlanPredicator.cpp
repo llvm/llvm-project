@@ -14,11 +14,13 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 class VPPredicator {
@@ -166,7 +168,8 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   // non-phi instructions.
 
   auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
+  auto *IV =
+      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
   Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   Builder.insert(IV);
 
@@ -184,8 +187,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
   VPValue *Cond = SI->getOperand(0);
   VPBasicBlock *DefaultDst = cast<VPBasicBlock>(Src->getSuccessors()[0]);
   MapVector<VPBasicBlock *, SmallVector<VPValue *>> Dst2Compares;
-  for (const auto &[Idx, Succ] :
-       enumerate(ArrayRef(Src->getSuccessors()).drop_front())) {
+  for (const auto &[Idx, Succ] : enumerate(drop_begin(Src->getSuccessors()))) {
     VPBasicBlock *Dst = cast<VPBasicBlock>(Succ);
     assert(!getEdgeMask(Src, Dst) && "Edge masks already created");
     //  Cases whose destination is the same as default are redundant and can
@@ -206,7 +208,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
     // cases with destination == Dst are taken. Join the conditions for each
     // case whose destination == Dst using an OR.
     VPValue *Mask = Conds[0];
-    for (VPValue *V : ArrayRef<VPValue *>(Conds).drop_front())
+    for (VPValue *V : drop_begin(Conds))
       Mask = Builder.createOr(Mask, V);
     if (SrcMask)
       Mask = Builder.createLogicalAnd(SrcMask, Mask);
@@ -228,10 +230,10 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  SmallVector<VPWidenPHIRecipe *> Phis;
+  SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
-    Phis.push_back(cast<VPWidenPHIRecipe>(&R));
-  for (VPWidenPHIRecipe *PhiR : Phis) {
+    Phis.push_back(cast<VPPhi>(&R));
+  for (VPPhi *PhiR : Phis) {
     // The non-header Phi is converted into a Blend recipe below,
     // so we don't have to worry about the insertion order and we can just use
     // the builder. At this point we generate the predication tree. There may
@@ -239,21 +241,20 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // optimizations will clean it up.
 
     SmallVector<VPValue *, 2> OperandsWithMask;
-    unsigned NumIncoming = PhiR->getNumIncoming();
-    for (unsigned In = 0; In < NumIncoming; In++) {
-      const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
-      OperandsWithMask.push_back(PhiR->getIncomingValue(In));
-      VPValue *EdgeMask = getEdgeMask(Pred, VPBB);
+    for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
+      OperandsWithMask.push_back(InVPV);
+      VPValue *EdgeMask = getEdgeMask(InVPBB, VPBB);
       if (!EdgeMask) {
-        assert(In == 0 && "Both null and non-null edge masks found");
-        assert(all_equal(PhiR->operands()) &&
+        assert(all_equal(PhiR->incoming_values()) &&
                "Distinct incoming values with one having a full mask");
         break;
       }
+
       OperandsWithMask.push_back(EdgeMask);
     }
-    PHINode *IRPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    auto *Blend = new VPBlendRecipe(IRPhi, OperandsWithMask);
+    PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
+    auto *Blend =
+        new VPBlendRecipe(IRPhi, OperandsWithMask, PhiR->getDebugLoc());
     Builder.insert(Blend);
     PhiR->replaceAllUsesWith(Blend);
     PhiR->eraseFromParent();

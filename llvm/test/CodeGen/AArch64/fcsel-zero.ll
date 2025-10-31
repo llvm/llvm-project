@@ -2,8 +2,8 @@
 
 ; RUN: llc -mtriple=aarch64-linux-gnu -o - < %s | FileCheck %s
 
-define float @foeq(float %a, float %b) #0 {
-  %t = fcmp oeq float %a, 0.0
+define float @foeq(float %a, float %b) {
+  %t = fcmp nsz oeq float %a, 0.0
   %v = select i1 %t, float 0.0, float %b
   ret float %v
 ; CHECK-LABEL: foeq
@@ -11,8 +11,8 @@ define float @foeq(float %a, float %b) #0 {
 ; CHECK-NEXT: fcsel {{s[0-9]+}}, [[R]], {{s[0-9]+}}, eq
 }
 
-define float @fueq(float %a, float %b) #0 {
-  %t = fcmp ueq float %a, 0.0
+define float @fueq(float %a, float %b) {
+  %t = fcmp nsz ueq float %a, 0.0
   %v = select i1 %t, float 0.0, float %b
   ret float %v
 ; CHECK-LABEL: fueq
@@ -21,8 +21,8 @@ define float @fueq(float %a, float %b) #0 {
 ; CHECK-NEXT: fcsel {{s[0-9]+}}, [[R]], {{s[0-9]+}}, vs
 }
 
-define float @fone(float %a, float %b) #0 {
-  %t = fcmp one float %a, 0.0
+define float @fone(float %a, float %b) {
+  %t = fcmp nsz one float %a, 0.0
   %v = select i1 %t, float %b, float 0.0
   ret float %v
 ; CHECK-LABEL: fone
@@ -31,8 +31,8 @@ define float @fone(float %a, float %b) #0 {
 ; CHECK-NEXT: fcsel {{s[0-9]+}}, {{s[0-9]+}}, [[R]], gt
 }
 
-define float @fune(float %a, float %b) #0 {
-  %t = fcmp une float %a, 0.0
+define float @fune(float %a, float %b) {
+  %t = fcmp nsz une float %a, 0.0
   %v = select i1 %t, float %b, float 0.0
   ret float %v
 ; CHECK-LABEL: fune
@@ -40,8 +40,8 @@ define float @fune(float %a, float %b) #0 {
 ; CHECK-NEXT: fcsel {{s[0-9]+}}, {{s[0-9]+}}, [[R]], ne
 }
 
-define double @doeq(double %a, double %b) #0 {
-  %t = fcmp oeq double %a, 0.0
+define double @doeq(double %a, double %b) {
+  %t = fcmp nsz oeq double %a, 0.0
   %v = select i1 %t, double 0.0, double %b
   ret double %v
 ; CHECK-LABEL: doeq
@@ -49,8 +49,8 @@ define double @doeq(double %a, double %b) #0 {
 ; CHECK-NEXT: fcsel {{d[0-9]+}}, [[R]], {{d[0-9]+}}, eq
 }
 
-define double @dueq(double %a, double %b) #0 {
-  %t = fcmp ueq double %a, 0.0
+define double @dueq(double %a, double %b) {
+  %t = fcmp nsz ueq double %a, 0.0
   %v = select i1 %t, double 0.0, double %b
   ret double %v
 ; CHECK-LABEL: dueq
@@ -59,8 +59,8 @@ define double @dueq(double %a, double %b) #0 {
 ; CHECK-NEXT: fcsel {{d[0-9]+}}, [[R]], {{d[0-9]+}}, vs
 }
 
-define double @done(double %a, double %b) #0 {
-  %t = fcmp one double %a, 0.0
+define double @done(double %a, double %b) {
+  %t = fcmp nsz one double %a, 0.0
   %v = select i1 %t, double %b, double 0.0
   ret double %v
 ; CHECK-LABEL: done
@@ -69,14 +69,11 @@ define double @done(double %a, double %b) #0 {
 ; CHECK-NEXT: fcsel {{d[0-9]+}}, {{d[0-9]+}}, [[R]], gt
 }
 
-define double @dune(double %a, double %b) #0 {
-  %t = fcmp une double %a, 0.0
+define double @dune(double %a, double %b) {
+  %t = fcmp nsz une double %a, 0.0
   %v = select i1 %t, double %b, double 0.0
   ret double %v
 ; CHECK-LABEL: dune
 ; CHECK: fcmp [[R:d[0-9]+]], #0.0
 ; CHECK-NEXT: fcsel {{d[0-9]+}}, {{d[0-9]+}}, [[R]], ne
 }
-
-attributes #0 = { nounwind "unsafe-fp-math"="true" }
-

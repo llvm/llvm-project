@@ -157,8 +157,8 @@ void Sema::inferGslPointerAttribute(TypedefNameDecl *TD) {
     if (auto *TST =
             dyn_cast<TemplateSpecializationType>(Canonical.getTypePtr())) {
 
-      RD = dyn_cast_or_null<CXXRecordDecl>(
-          TST->getTemplateName().getAsTemplateDecl()->getTemplatedDecl());
+      if (const auto *TD = TST->getTemplateName().getAsTemplateDecl())
+        RD = dyn_cast_or_null<CXXRecordDecl>(TD->getTemplatedDecl());
     }
   }
 
@@ -436,7 +436,7 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
 }
 
 void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
-                           StringRef SlotLabel, Expr *alignment) {
+                           StringRef SlotLabel, Expr *Alignment) {
   bool IsXLPragma = getLangOpts().XLPragmaPack;
   // XL pragma pack does not support identifier syntax.
   if (IsXLPragma && !SlotLabel.empty()) {
@@ -445,7 +445,6 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   }
 
   const AlignPackInfo CurVal = AlignPackStack.CurrentValue;
-  Expr *Alignment = static_cast<Expr *>(alignment);
 
   // If specified then alignment must be a "small" power of two.
   unsigned AlignmentVal = 0;

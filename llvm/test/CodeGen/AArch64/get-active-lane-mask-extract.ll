@@ -86,6 +86,65 @@ define void @test_boring_case_2x2bit_mask(i64 %i, i64 %n) #0 {
     ret void
 }
 
+define void @test_legal_4x2bit_mask(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_legal_4x2bit_mask:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    punpkhi p1.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p4.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p2.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p4.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p4.b
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-SME2-LABEL: test_legal_4x2bit_mask:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    cntw x8
+; CHECK-SVE2p1-SME2-NEXT:    adds x8, x0, x8
+; CHECK-SVE2p1-SME2-NEXT:    csinv x8, x8, xzr, lo
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.d, p1.d }, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.d, p3.d }, x8, x1
+; CHECK-SVE2p1-SME2-NEXT:    b use
+  %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+  %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 6)
+  %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+  %v2 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+  %v3 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+  tail call void @use(<vscale x 2 x i1> %v3, <vscale x 2 x i1> %v2, <vscale x 2 x i1> %v1, <vscale x 2 x i1> %v0)
+  ret void
+}
+
+; Negative test where the extract types are correct but we are not extracting all parts of the mask
+; Note: We could still create a whilelo_x2 for the first two extracts, but we don't expect this case often yet.
+define void @test_partial_extract_correct_types(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_partial_extract_correct_types:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p2.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p2.h, p2.b
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-SME2-LABEL: test_partial_extract_correct_types:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p2.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p2.h, p2.b
+; CHECK-SVE2p1-SME2-NEXT:    b use
+  %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+  %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+  %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+  %v2 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 6)
+  tail call void @use(<vscale x 2 x i1> %v0, <vscale x 2 x i1> %v1, <vscale x 2 x i1> %v2)
+  ret void
+}
+
 ; Negative test for when not extracting exactly two halves of the source vector
 define void @test_partial_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_partial_extract:
@@ -116,55 +175,78 @@ define void @test_partial_extract(i64 %i, i64 %n) #0 {
 define void @test_fixed_extract(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_fixed_extract:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    whilelo p0.s, x0, x1
 ; CHECK-SVE-NEXT:    cset w8, mi
-; CHECK-SVE-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-SVE-NEXT:    umov w9, v0.h[4]
-; CHECK-SVE-NEXT:    umov w10, v0.h[1]
-; CHECK-SVE-NEXT:    umov w11, v0.h[5]
+; CHECK-SVE-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-SVE-NEXT:    fmov s0, w8
-; CHECK-SVE-NEXT:    fmov s1, w9
-; CHECK-SVE-NEXT:    mov v0.s[1], w10
+; CHECK-SVE-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-SVE-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SVE-NEXT:    mov v1.s[1], w11
-; CHECK-SVE-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SVE-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-SVE-NEXT:    b use
 ;
 ; CHECK-SVE2p1-LABEL: test_fixed_extract:
 ; CHECK-SVE2p1:       // %bb.0:
-; CHECK-SVE2p1-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-NEXT:    whilelo p0.s, x0, x1
 ; CHECK-SVE2p1-NEXT:    cset w8, mi
-; CHECK-SVE2p1-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-SVE2p1-NEXT:    umov w9, v0.h[4]
-; CHECK-SVE2p1-NEXT:    umov w10, v0.h[1]
-; CHECK-SVE2p1-NEXT:    umov w11, v0.h[5]
+; CHECK-SVE2p1-NEXT:    mov z1.s, p0/z, #1 // =0x1
 ; CHECK-SVE2p1-NEXT:    fmov s0, w8
-; CHECK-SVE2p1-NEXT:    fmov s1, w9
-; CHECK-SVE2p1-NEXT:    mov v0.s[1], w10
+; CHECK-SVE2p1-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-SVE2p1-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-SVE2p1-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SVE2p1-NEXT:    mov v1.s[1], w11
-; CHECK-SVE2p1-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SVE2p1-NEXT:    // kill: def $d1 killed $d1 killed $z1
 ; CHECK-SVE2p1-NEXT:    b use
 ;
 ; CHECK-SME2-LABEL: test_fixed_extract:
 ; CHECK-SME2:       // %bb.0:
-; CHECK-SME2-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SME2-NEXT:    whilelo p0.s, x0, x1
 ; CHECK-SME2-NEXT:    cset w8, mi
-; CHECK-SME2-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-SME2-NEXT:    mov z1.h, z0.h[1]
-; CHECK-SME2-NEXT:    mov z2.h, z0.h[5]
-; CHECK-SME2-NEXT:    mov z3.h, z0.h[4]
-; CHECK-SME2-NEXT:    fmov s0, w8
-; CHECK-SME2-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-SME2-NEXT:    zip1 z1.s, z3.s, z2.s
-; CHECK-SME2-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SME2-NEXT:    mov z1.s, p0/z, #1 // =0x1
+; CHECK-SME2-NEXT:    fmov s2, w8
+; CHECK-SME2-NEXT:    mov z0.s, z1.s[1]
+; CHECK-SME2-NEXT:    ext z1.b, z1.b, z1.b, #8
 ; CHECK-SME2-NEXT:    // kill: def $d1 killed $d1 killed $z1
+; CHECK-SME2-NEXT:    zip1 z0.s, z2.s, z0.s
+; CHECK-SME2-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SME2-NEXT:    b use
-    %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
-    %v0 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
-    %v1 = call <2 x i1> @llvm.vector.extract.v2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+    %r = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %i, i64 %n)
+    %v0 = call <2 x i1> @llvm.vector.extract.v2i1.nxv4i1.i64(<vscale x 4 x i1> %r, i64 0)
+    %v1 = call <2 x i1> @llvm.vector.extract.v2i1.nxv4i1.i64(<vscale x 4 x i1> %r, i64 2)
     tail call void @use(<2 x i1> %v0, <2 x i1> %v1)
     ret void
+}
+
+; Negative test where the number of extracts is right, but they cannot be combined because
+; there is not an extract for each part
+define void @test_4x2bit_duplicate_mask(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_4x2bit_duplicate_mask:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p0.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p2.h, p3.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p3.b
+; CHECK-SVE-NEXT:    mov p1.b, p0.b
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-SME2-LABEL: test_4x2bit_duplicate_mask:
+; CHECK-SVE2p1-SME2:       // %bb.0:
+; CHECK-SVE2p1-SME2-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p3.h, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p0.h, p1.b
+; CHECK-SVE2p1-SME2-NEXT:    punpklo p2.h, p3.b
+; CHECK-SVE2p1-SME2-NEXT:    punpkhi p3.h, p3.b
+; CHECK-SVE2p1-SME2-NEXT:    mov p1.b, p0.b
+; CHECK-SVE2p1-SME2-NEXT:    b use
+  %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+  %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+  %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+  %v2 = call <vscale x 2 x i1> @llvm.vector.extract.nxv4i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+  %v3 = call <vscale x 2 x i1> @llvm.vector.extract.nxv4i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 6)
+  tail call void @use(<vscale x 2 x i1> %v0, <vscale x 2 x i1> %v1, <vscale x 2 x i1> %v2, <vscale x 2 x i1> %v3)
+  ret void
 }
 
 ; Illegal Types
@@ -226,6 +308,171 @@ define void @test_2x32bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #
   %v3 = call <vscale x 16 x i1> @llvm.vector.extract.nxv16i1.nxv64i1.i64(<vscale x 64 x i1> %r, i64 48)
   tail call void @use(<vscale x 16 x i1> %v0, <vscale x 16 x i1> %v1, <vscale x 16 x i1> %v2, <vscale x 16 x i1> %v3)
   ret void
+}
+
+; Extra use of the get_active_lane_mask from an extractelement, which is replaced with ptest_first.
+
+define void @test_2x8bit_mask_with_extracts_and_ptest(i64 %i, i64 %n) {
+; CHECK-SVE-LABEL: test_2x8bit_mask_with_extracts_and_ptest:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    whilelo p1.b, x0, x1
+; CHECK-SVE-NEXT:    b.pl .LBB11_2
+; CHECK-SVE-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE-NEXT:    b use
+; CHECK-SVE-NEXT:  .LBB11_2: // %if.end
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_2x8bit_mask_with_extracts_and_ptest:
+; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.h, p1.h }, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB11_2
+; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE2p1-SME2-NEXT:    b use
+; CHECK-SVE2p1-SME2-NEXT:  .LBB11_2: // %if.end
+; CHECK-SVE2p1-SME2-NEXT:    ret
+entry:
+    %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i64 %i, i64 %n)
+    %v0 = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 0)
+    %v1 = call <vscale x 8 x i1> @llvm.vector.extract.nxv8i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 8)
+    %elt0 = extractelement <vscale x 16 x i1> %r, i32 0
+    br i1 %elt0, label %if.then, label %if.end
+
+if.then:
+    tail call void @use(<vscale x 8 x i1> %v0, <vscale x 8 x i1> %v1)
+    br label %if.end
+
+if.end:
+    ret void
+}
+
+; Extra use of the get_active_lane_mask from an extractelement, which is
+; replaced with ptest_first and reinterpret_casts because the extract is not nxv16i1.
+
+define void @test_2x8bit_mask_with_extracts_and_reinterpret_casts(i64 %i, i64 %n) {
+; CHECK-SVE-LABEL: test_2x8bit_mask_with_extracts_and_reinterpret_casts:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    whilelo p1.h, x0, x1
+; CHECK-SVE-NEXT:    b.pl .LBB12_2
+; CHECK-SVE-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE-NEXT:    b use
+; CHECK-SVE-NEXT:  .LBB12_2: // %if.end
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_2x8bit_mask_with_extracts_and_reinterpret_casts:
+; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.s, p1.s }, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB12_2
+; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE2p1-SME2-NEXT:    b use
+; CHECK-SVE2p1-SME2-NEXT:  .LBB12_2: // %if.end
+; CHECK-SVE2p1-SME2-NEXT:    ret
+entry:
+    %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+    %v0 = tail call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv8i1(<vscale x 8 x i1> %r, i64 0)
+    %v1 = tail call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv8i1(<vscale x 8 x i1> %r, i64 4)
+    %elt0 = extractelement <vscale x 8 x i1> %r, i64 0
+    br i1 %elt0, label %if.then, label %if.end
+
+if.then:
+    tail call void @use(<vscale x 4 x i1> %v0, <vscale x 4 x i1> %v1)
+    br label %if.end
+
+if.end:
+    ret void
+}
+
+define void @test_4x4bit_mask_with_extracts_and_ptest(i64 %i, i64 %n) {
+; CHECK-SVE-LABEL: test_4x4bit_mask_with_extracts_and_ptest:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    whilelo p0.b, x0, x1
+; CHECK-SVE-NEXT:    b.pl .LBB13_2
+; CHECK-SVE-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p2.h, p3.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p3.b
+; CHECK-SVE-NEXT:    b use
+; CHECK-SVE-NEXT:  .LBB13_2: // %if.end
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_4x4bit_mask_with_extracts_and_ptest:
+; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
+; CHECK-SVE2p1-SME2-NEXT:    cnth x8
+; CHECK-SVE2p1-SME2-NEXT:    adds x8, x0, x8
+; CHECK-SVE2p1-SME2-NEXT:    csinv x8, x8, xzr, lo
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.s, p1.s }, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB13_2
+; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.s, p3.s }, x8, x1
+; CHECK-SVE2p1-SME2-NEXT:    b use
+; CHECK-SVE2p1-SME2-NEXT:  .LBB13_2: // %if.end
+; CHECK-SVE2p1-SME2-NEXT:    ret
+entry:
+    %r = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i64 %i, i64 %n)
+    %v0 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 0)
+    %v1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 4)
+    %v2 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 8)
+    %v3 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1.i64(<vscale x 16 x i1> %r, i64 12)
+    %elt0 = extractelement <vscale x 16 x i1> %r, i32 0
+    br i1 %elt0, label %if.then, label %if.end
+
+if.then:
+    tail call void @use(<vscale x 4 x i1> %v0, <vscale x 4 x i1> %v1, <vscale x 4 x i1> %v2, <vscale x 4 x i1> %v3)
+    br label %if.end
+
+if.end:
+    ret void
+}
+
+define void @test_4x2bit_mask_with_extracts_and_reinterpret_casts(i64 %i, i64 %n) {
+; CHECK-SVE-LABEL: test_4x2bit_mask_with_extracts_and_reinterpret_casts:
+; CHECK-SVE:       // %bb.0: // %entry
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    b.pl .LBB14_2
+; CHECK-SVE-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    punpkhi p1.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p2.h, p3.b
+; CHECK-SVE-NEXT:    punpkhi p3.h, p3.b
+; CHECK-SVE-NEXT:    b use
+; CHECK-SVE-NEXT:  .LBB14_2: // %if.end
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-SVE2p1-SME2-LABEL: test_4x2bit_mask_with_extracts_and_reinterpret_casts:
+; CHECK-SVE2p1-SME2:       // %bb.0: // %entry
+; CHECK-SVE2p1-SME2-NEXT:    cntw x8
+; CHECK-SVE2p1-SME2-NEXT:    adds x8, x0, x8
+; CHECK-SVE2p1-SME2-NEXT:    csinv x8, x8, xzr, lo
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p0.d, p1.d }, x0, x1
+; CHECK-SVE2p1-SME2-NEXT:    b.pl .LBB14_2
+; CHECK-SVE2p1-SME2-NEXT:  // %bb.1: // %if.then
+; CHECK-SVE2p1-SME2-NEXT:    whilelo { p2.d, p3.d }, x8, x1
+; CHECK-SVE2p1-SME2-NEXT:    b use
+; CHECK-SVE2p1-SME2-NEXT:  .LBB14_2: // %if.end
+; CHECK-SVE2p1-SME2-NEXT:    ret
+entry:
+    %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i64 %i, i64 %n)
+    %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+    %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 2)
+    %v2 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+    %v3 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 6)
+    %elt0 = extractelement <vscale x 8 x i1> %r, i32 0
+    br i1 %elt0, label %if.then, label %if.end
+
+if.then:
+    tail call void @use(<vscale x 2 x i1> %v0, <vscale x 2 x i1> %v1, <vscale x 2 x i1> %v2, <vscale x 2 x i1> %v3)
+    br label %if.end
+
+if.end:
+    ret void
 }
 
 declare void @use(...)

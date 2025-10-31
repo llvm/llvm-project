@@ -182,11 +182,12 @@
 // LA32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // LA32: #define __LONG_MAX__ 2147483647L
 // LA32: #define __LONG_WIDTH__ 32
-// LA32: #define __MEMORY_SCOPE_DEVICE 1 
-// LA32: #define __MEMORY_SCOPE_SINGLE 4 
-// LA32: #define __MEMORY_SCOPE_SYSTEM 0 
-// LA32: #define __MEMORY_SCOPE_WRKGRP 2 
-// LA32: #define __MEMORY_SCOPE_WVFRNT 3 
+// LA32: #define __MEMORY_SCOPE_CLUSTR 5
+// LA32: #define __MEMORY_SCOPE_DEVICE 1
+// LA32: #define __MEMORY_SCOPE_SINGLE 4
+// LA32: #define __MEMORY_SCOPE_SYSTEM 0
+// LA32: #define __MEMORY_SCOPE_WRKGRP 2
+// LA32: #define __MEMORY_SCOPE_WVFRNT 3
 // LA32: #define __NO_INLINE__ 1
 // LA32: #define __NO_MATH_ERRNO__ 1
 // LA32: #define __OBJC_BOOL_IS_BOOL 0
@@ -514,11 +515,12 @@
 // LA64: #define __LONG_MAX__ 9223372036854775807L
 // LA64: #define __LONG_WIDTH__ 64
 // LA64: #define __LP64__ 1
-// LA64: #define __MEMORY_SCOPE_DEVICE 1 
-// LA64: #define __MEMORY_SCOPE_SINGLE 4 
-// LA64: #define __MEMORY_SCOPE_SYSTEM 0 
-// LA64: #define __MEMORY_SCOPE_WRKGRP 2 
-// LA64: #define __MEMORY_SCOPE_WVFRNT 3 
+// LA64: #define __MEMORY_SCOPE_CLUSTR 5
+// LA64: #define __MEMORY_SCOPE_DEVICE 1
+// LA64: #define __MEMORY_SCOPE_SINGLE 4
+// LA64: #define __MEMORY_SCOPE_SYSTEM 0
+// LA64: #define __MEMORY_SCOPE_WRKGRP 2
+// LA64: #define __MEMORY_SCOPE_WVFRNT 3
 // LA64: #define __NO_INLINE__ 1
 // LA64: #define __NO_MATH_ERRNO__ 1
 // LA64: #define __OBJC_BOOL_IS_BOOL 0
@@ -945,6 +947,10 @@
 // RUN: %clang --target=loongarch64 -mno-lsx -mno-lasx -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
 // RUN: %clang --target=loongarch64 -mno-lasx -mno-lsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// RUN: %clang --target=loongarch64 -march=la464 -mno-lsx -x c -E -dM %s -o - \
+// RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
+// RUN: %clang --target=loongarch64 -mno-lsx -march=la464 -x c -E -dM %s -o - \
 // RUN:   | FileCheck --match-full-lines --check-prefix=MNO-LSX %s
 // MNO-LSX-NOT: #define __loongarch_asx
 // MNO-LSX-NOT: #define __loongarch_simd_width

@@ -16,7 +16,6 @@ static_library("cert") {
   ]
   sources = [
     "CERTTidyModule.cpp",
-    "CommandProcessorCheck.cpp",
     "DefaultOperatorNewAlignmentCheck.cpp",
     "DontModifyStdNamespaceCheck.cpp",
     "FloatLoopCounter.cpp",
@@ -24,10 +23,6 @@ static_library("cert") {
     "MutatingCopyCheck.cpp",
     "NonTrivialTypesLibcMemoryCallsCheck.cpp",
     "ProperlySeededRandomGeneratorCheck.cpp",
-    "SetLongJmpCheck.cpp",
-    "StaticObjectExceptionCheck.cpp",
-    "StrToNumCheck.cpp",
     "ThrownExceptionTypeCheck.cpp",
-    "VariadicFunctionDefCheck.cpp",
   ]
 }

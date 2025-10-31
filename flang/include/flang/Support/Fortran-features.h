@@ -55,7 +55,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
     IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
     ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
-    InaccessibleDeferredOverride, CudaWarpMatchFunction)
+    InaccessibleDeferredOverride, CudaWarpMatchFunction, DoConcurrentOffload,
+    TransferBOZ, Coarray)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -75,12 +76,16 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     IndexVarRedefinition, IncompatibleImplicitInterfaces,
     VectorSubscriptFinalization, UndefinedFunctionResult, UselessIomsg,
     MismatchingDummyProcedure, SubscriptedEmptyArray, UnsignedLiteralTruncation,
-    CompatibleDeclarationsFromDistinctModules,
+    CompatibleDeclarationsFromDistinctModules, ConstantIsContiguous,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
-    HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile)
+    HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
+    RealConstantWidening, VolatileOrAsynchronousTemporary)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;
+using LanguageFeatureOrWarning = std::variant<LanguageFeature, UsageWarning>;
+using LanguageControlFlag =
+    std::pair<LanguageFeatureOrWarning, /*shouldEnable=*/bool>;
 
 class LanguageFeatureControl {
 public:
@@ -93,6 +98,13 @@ public:
   }
   void EnableWarning(UsageWarning w, bool yes = true) {
     warnUsage_.set(w, yes);
+  }
+  void EnableWarning(LanguageFeatureOrWarning flag, bool yes = true) {
+    if (std::holds_alternative<LanguageFeature>(flag)) {
+      EnableWarning(std::get<LanguageFeature>(flag), yes);
+    } else {
+      EnableWarning(std::get<UsageWarning>(flag), yes);
+    }
   }
   void WarnOnAllNonstandard(bool yes = true);
   bool IsWarnOnAllNonstandard() const { return warnAllLanguage_; }
@@ -116,9 +128,11 @@ public:
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
   // Cli options
+  // Find a warning by its Cli spelling, i.e. '[no-]warning-name'.
+  std::optional<LanguageControlFlag> FindWarning(std::string_view input);
   // Take a string from the Cli and apply it to the LanguageFeatureControl.
   // Return true if the option was recognized (and hence applied).
-  bool ApplyCliOption(std::string input);
+  bool EnableWarning(std::string_view input);
   // The add and replace functions are not currently used but are provided
   // to allow a flexible many-to-one mapping from Cli spellings to enum values.
   // Taking a string by value because the functions own this string after the
@@ -144,14 +158,13 @@ public:
 private:
   // Map from Cli syntax of language features and usage warnings to their enum
   // values.
-  std::unordered_map<std::string, std::variant<LanguageFeature, UsageWarning>>
-      cliOptions_;
+  std::unordered_map<std::string, LanguageFeatureOrWarning> cliOptions_;
   // These two arrays map the enum values to their cannonical Cli spellings.
   // Since each of the CanonicalSpelling is a string in the domain of the map
   // above we just use a view of the string instead of another copy.
-  std::array<std::string_view, LanguageFeature_enumSize>
+  std::array<std::string, LanguageFeature_enumSize>
       languageFeatureCliCanonicalSpelling_;
-  std::array<std::string_view, UsageWarning_enumSize>
+  std::array<std::string, UsageWarning_enumSize>
       usageWarningCliCanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;

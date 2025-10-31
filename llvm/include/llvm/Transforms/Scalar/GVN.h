@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -46,7 +47,9 @@ class ImplicitControlFlowTracking;
 class LoadInst;
 class LoopInfo;
 class MemDepResult;
+class MemoryAccess;
 class MemoryDependenceResults;
+class MemoryLocation;
 class MemorySSA;
 class MemorySSAUpdater;
 class NonLocalDepResult;
@@ -54,6 +57,7 @@ class OptimizationRemarkEmitter;
 class PHINode;
 class TargetLibraryInfo;
 class Value;
+class IntrinsicInst;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
 namespace LLVM_LIBRARY_VISIBILITY_NAMESPACE gvn {
@@ -170,6 +174,10 @@ public:
     // Value number to PHINode mapping. Used for phi-translate in scalarpre.
     DenseMap<uint32_t, PHINode *> NumberingPhi;
 
+    // Value number to BasicBlock mapping. Used for phi-translate across
+    // MemoryPhis.
+    DenseMap<uint32_t, BasicBlock *> NumberingBB;
+
     // Cache for phi-translate in scalarpre.
     using PhiTranslateMap =
         DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
@@ -177,6 +185,9 @@ public:
 
     AAResults *AA = nullptr;
     MemoryDependenceResults *MD = nullptr;
+    bool IsMDEnabled = false;
+    MemorySSA *MSSA = nullptr;
+    bool IsMSSAEnabled = false;
     DominatorTree *DT = nullptr;
 
     uint32_t NextValueNumber = 1;
@@ -187,12 +198,14 @@ public:
     Expression createExtractvalueExpr(ExtractValueInst *EI);
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
+    uint32_t computeLoadStoreVN(Instruction *I);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
                               uint32_t Num, GVNPass &GVN);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
                           const BasicBlock *PhiBlock, GVNPass &GVN);
     std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
     bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
+    void addMemoryStateToExp(Instruction *I, Expression &Exp);
 
   public:
     LLVM_ABI ValueTable();
@@ -201,6 +214,7 @@ public:
     LLVM_ABI ~ValueTable();
     LLVM_ABI ValueTable &operator=(const ValueTable &Arg);
 
+    LLVM_ABI uint32_t lookupOrAdd(MemoryAccess *MA);
     LLVM_ABI uint32_t lookupOrAdd(Value *V);
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
@@ -216,7 +230,14 @@ public:
     LLVM_ABI void erase(Value *V);
     void setAliasAnalysis(AAResults *A) { AA = A; }
     AAResults *getAliasAnalysis() const { return AA; }
-    void setMemDep(MemoryDependenceResults *M) { MD = M; }
+    void setMemDep(MemoryDependenceResults *M, bool MDEnabled = true) {
+      MD = M;
+      IsMDEnabled = MDEnabled;
+    }
+    void setMemorySSA(MemorySSA *M, bool MSSAEnabled = false) {
+      MSSA = M;
+      IsMSSAEnabled = MSSAEnabled;
+    }
     void setDomTree(DominatorTree *D) { DT = D; }
     uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
     LLVM_ABI void verifyRemoved(const Value *) const;
@@ -302,11 +323,6 @@ private:
   };
   LeaderMap LeaderTable;
 
-  // Block-local map of equivalent values to their leader, does not
-  // propagate to any successors. Entries added mid-block are applied
-  // to the remaining instructions in the block.
-  SmallMapVector<Value *, Value *, 4> ReplaceOperandsWithMap;
-
   // Map the block to reversed postorder traversal number. It is used to
   // find back edge easily.
   DenseMap<AssertingVH<BasicBlock>, uint32_t> BlockRPONumber;
@@ -330,6 +346,7 @@ private:
 
   // Helper functions of redundant load elimination.
   bool processLoad(LoadInst *L);
+  bool processMaskedLoad(IntrinsicInst *I);
   bool processNonLocalLoad(LoadInst *L);
   bool processAssumeIntrinsic(AssumeInst *II);
 
@@ -381,9 +398,9 @@ private:
   void verifyRemoved(const Instruction *I) const;
   bool splitCriticalEdges();
   BasicBlock *splitCriticalEdges(BasicBlock *Pred, BasicBlock *Succ);
-  bool replaceOperandsForInBlockEquality(Instruction *I) const;
-  bool propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
-                         bool DominatesByEdge);
+  bool
+  propagateEquality(Value *LHS, Value *RHS,
+                    const std::variant<BasicBlockEdge, Instruction *> &Root);
   bool processFoldableCondBr(BranchInst *BI);
   void addDeadBlock(BasicBlock *BB);
   void assignValNumForDeadCode();

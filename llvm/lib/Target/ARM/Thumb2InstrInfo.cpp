@@ -46,7 +46,7 @@ PreferNoCSEL("prefer-no-csel", cl::Hidden,
              cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI) {}
+    : ARMBaseInstrInfo(STI), RI(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst Thumb2InstrInfo::getNop() const {
@@ -263,11 +263,14 @@ void Thumb2InstrInfo::expandLoadStackGuard(
 
   const auto *GV = cast<GlobalValue>((*MI->memoperands_begin())->getValue());
   const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  bool IsPIC = MF.getTarget().isPositionIndependent();
   if (Subtarget.isTargetELF() && !GV->isDSOLocal())
     expandLoadStackGuardBase(MI, ARM::t2LDRLIT_ga_pcrel, ARM::t2LDRi12);
   else if (!Subtarget.useMovt())
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::t2LDRi12);
-  else if (MF.getTarget().isPositionIndependent())
+    expandLoadStackGuardBase(
+        MI, IsPIC ? ARM::t2LDRLIT_ga_pcrel : ARM::tLDRLIT_ga_abs,
+        ARM::t2LDRi12);
+  else if (IsPIC)
     expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else
     expandLoadStackGuardBase(MI, ARM::t2MOVi32imm, ARM::t2LDRi12);
@@ -561,8 +564,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetRegisterClass *RegClass =
-      TII.getRegClass(Desc, FrameRegIdx, TRI, MF);
+  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx, TRI);
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
@@ -799,6 +801,16 @@ int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
     if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
+
+  return -1;
+}
+
+int llvm::findVPTInactiveOperandIdx(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+
+  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
+    if (MCID.operands()[i].OperandType == ARM::OPERAND_VPRED_R)
+      return i + ARM::SUBOP_vpred_r_inactive;
 
   return -1;
 }

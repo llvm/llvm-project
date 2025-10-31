@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_ceil.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/ceil.h>
 
-#define FUNCTION ceil
+#define __CLC_FUNCTION ceil
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

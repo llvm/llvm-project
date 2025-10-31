@@ -1,4 +1,4 @@
-// RUN: cir-opt %s | FileCheck %s
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
@@ -10,7 +10,15 @@ module {
 cir.func @empty() {
   cir.return
 }
-// CHECK: cir.func @empty() {
+// CHECK: cir.func{{.*}} @empty() {
+// CHECK:   cir.return
+// CHECK: }
+
+// void empty() { }
+cir.func no_proto @noProto() {
+  cir.return
+}
+// CHECK: cir.func no_proto @noProto() {
 // CHECK:   cir.return
 // CHECK: }
 
@@ -18,7 +26,7 @@ cir.func @empty() {
 cir.func @voidret() {
   cir.return
 }
-// CHECK: cir.func @voidret() {
+// CHECK: cir.func{{.*}} @voidret() {
 // CHECK:   cir.return
 // CHECK: }
 
@@ -27,10 +35,14 @@ cir.func @intfunc() -> !s32i {
   %0 = cir.const #cir.int<42> : !s32i
   cir.return %0 : !s32i
 }
-// CHECK: cir.func @intfunc() -> !s32i {
+// CHECK: cir.func{{.*}} @intfunc() -> !s32i {
 // CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
 // CHECK:   cir.return %[[VAL]] : !s32i
 // CHECK: }
+
+// Should print/parse function aliases.
+cir.func @a_empty() alias(@empty)
+// CHECK: cir.func @a_empty() alias(@empty)
 
 // int scopes() {
 //  {
@@ -48,7 +60,7 @@ cir.func @scopes() -> !s32i {
   }
   cir.trap
 }
-// CHECK: cir.func @scopes() -> !s32i {
+// CHECK: cir.func{{.*}} @scopes() -> !s32i {
 // CHECK:   cir.scope {
 // CHECK:     cir.scope {
 // CHECK:       %[[VAL:.*]] = cir.const #cir.int<99> : !s32i
@@ -63,7 +75,7 @@ cir.func @longfunc() -> !s64i {
   %0 = cir.const #cir.int<42> : !s64i
   cir.return %0 : !s64i
 }
-// CHECK: cir.func @longfunc() -> !s64i
+// CHECK: cir.func{{.*}} @longfunc() -> !s64i
 // CHECK:   %0 = cir.const #cir.int<42> : !s64i
 // CHECK:   cir.return %0 : !s64i
 // CHECK: }
@@ -73,7 +85,7 @@ cir.func @unsignedfunc() -> !u32i {
   %0 = cir.const #cir.int<42> : !u32i
   cir.return %0 : !u32i
 }
-// CHECK: cir.func @unsignedfunc() -> !u32i
+// CHECK: cir.func{{.*}} @unsignedfunc() -> !u32i
 // CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !u32i
 // CHECK:   cir.return %[[VAL]] : !u32i
 // CHECK: }
@@ -83,8 +95,51 @@ cir.func @ullfunc() -> !u64i {
   %0 = cir.const #cir.int<42> : !u64i
   cir.return %0 : !u64i
 }
-// CHECK: cir.func @ullfunc() -> !u64i
+// CHECK: cir.func{{.*}} @ullfunc() -> !u64i
 // CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !u64i
 // CHECK:   cir.return %[[VAL:.*]] : !u64i
 // CHECK: }
+
+cir.func coroutine @coro() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} coroutine @coro()
+
+cir.func builtin @builtin() {
+  cir.return
+}
+// CHECK: cir.func{{.*}} builtin @builtin()
+
+cir.func @global_ctor_func() global_ctor {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_func() global_ctor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_ctor_with_priority() global_ctor(200) {
+  cir.return
+}
+
+// CHECK: cir.func @global_ctor_with_priority() global_ctor(200) {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_func() global_dtor {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_func() global_dtor {
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @global_dtor_with_priority() global_dtor(201) {
+  cir.return
+}
+
+// CHECK: cir.func @global_dtor_with_priority() global_dtor(201) {
+// CHECK:   cir.return
+// CHECK: }
+
 }

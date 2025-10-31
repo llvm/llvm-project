@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -177,6 +178,9 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoParseTime",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         if self.getPlatform() != "windows":
@@ -287,6 +291,9 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoParseTime",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -325,6 +332,9 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
 
@@ -377,6 +387,9 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         stats = debug_stats["targets"][0]
@@ -397,6 +410,9 @@ class TestCase(TestBase):
             "symbolTableLoadedFromCache",
             "symbolTableParseTime",
             "symbolTableSavedToCache",
+            "dwoFileCount",
+            "loadedDwoFileCount",
+            "dwoErrorCount",
             "triple",
             "uuid",
         ]
@@ -485,6 +501,9 @@ class TestCase(TestBase):
             "totalDebugInfoIndexLoadedFromCache",
             "totalDebugInfoIndexSavedToCache",
             "totalDebugInfoByteSize",
+            "totalDwoFileCount",
+            "totalLoadedDwoFileCount",
+            "totalDwoErrorCount",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
         target_stats = debug_stats["targets"][0]
@@ -512,6 +531,229 @@ class TestCase(TestBase):
             self.verify_keys(
                 breakpoint, 'target_stats["breakpoints"]', bp_keys_exist, None
             )
+
+    @add_test_categories(["dwo"])
+    def test_non_split_dwarf_has_no_dwo_files(self):
+        """
+        Test "statistics dump" and the dwo file count.
+        Builds a binary without split-dwarf mode, and then
+        verifies the dwo file count is zero after running "statistics dump"
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["debug_names"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+
+        # Verify that the dwo file count is zero
+        self.assertEqual(debug_stats["totalDwoFileCount"], 0)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+
+    @add_test_categories(["dwo"])
+    def test_no_debug_names_eager_loads_dwo_files(self):
+        """
+        Test the eager loading behavior of DWO files when debug_names is absent by
+        building a split-dwarf binary without debug_names and then running "statistics dump".
+        DWO file loading behavior:
+        - With debug_names: DebugNamesDWARFIndex allows for lazy loading.
+          DWO files are loaded on-demand when symbols are actually looked up
+        - Without debug_names: ManualDWARFIndex uses eager loading.
+          All DWO files are loaded upfront during the first symbol lookup to build a manual index.
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["dwo"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+
+        # Verify that all DWO files are loaded
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
+
+    @add_test_categories(["dwo"])
+    def test_split_dwarf_dwo_file_count(self):
+        """
+        Test "statistics dump" and the dwo file count.
+        Builds a binary w/ separate .dwo files and debug_names, and then
+        verifies the loaded dwo file count is the expected count after running
+        various commands
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        # -gsplit-dwarf creates separate .dwo files,
+        # -gpubnames enables the debug_names accelerator tables for faster symbol lookup
+        #  and lazy loading of DWO files
+        # Expected output: third.dwo (contains main) and baz.dwo (contains Baz struct/function)
+        self.build(dictionary=da, debug_info=["dwo", "debug_names"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # 1) 2 DWO files available but none loaded yet
+        self.assertEqual(len(debug_stats["modules"]), 1)
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        # Since there's only one module, module stats should have the same counts as total counts
+        self.assertIn("dwoFileCount", debug_stats["modules"][0])
+        self.assertIn("loadedDwoFileCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 0)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
+
+        # 2) Setting breakpoint in main triggers loading of third.dwo (contains main function)
+        self.runCmd("b main")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 1)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 1)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
+
+        # 3) Type lookup forces loading of baz.dwo (contains struct Baz definition)
+        self.runCmd("type lookup Baz")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        self.assertEqual(debug_stats["modules"][0]["loadedDwoFileCount"], 2)
+        self.assertEqual(debug_stats["modules"][0]["dwoFileCount"], 2)
+
+    @add_test_categories(["dwo"])
+    def test_dwp_dwo_file_count(self):
+        """
+        Test "statistics dump" and the loaded dwo file count.
+        Builds a binary w/ a separate .dwp file and debug_names, and then
+        verifies the loaded dwo file count is the expected count after running
+        various commands.
+
+        We expect the DWO file counters to reflect the number of compile units
+        loaded from the DWP file (each representing what was originally a separate DWO file)
+        """
+        da = {"CXX_SOURCES": "third.cpp baz.cpp", "EXE": self.getBuildArtifact("a.out")}
+        self.build(dictionary=da, debug_info=["dwp", "debug_names"])
+        self.addTearDownCleanup(dictionary=da)
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # Initially: 2 DWO files available but none loaded yet
+        self.assertIn("totalLoadedDwoFileCount", debug_stats)
+        self.assertIn("totalDwoFileCount", debug_stats)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 0)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        # Setting breakpoint in main triggers parsing of the CU within a.dwp corresponding to third.dwo (contains main function)
+        self.runCmd("b main")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 1)
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+
+        # Type lookup forces parsing of the CU within a.dwp corresponding to baz.dwo (contains struct Baz definition)
+        self.runCmd("type lookup Baz")
+        debug_stats = self.get_stats()
+        self.assertEqual(debug_stats["totalDwoFileCount"], 2)
+        self.assertEqual(debug_stats["totalLoadedDwoFileCount"], 2)
+
+    @add_test_categories(["dwo"])
+    def test_dwo_missing_error_stats(self):
+        """
+        Test that DWO missing errors are reported correctly in statistics.
+        This test:
+        1) Builds a program with split DWARF (.dwo files)
+        2) Delete one of the two .dwo files
+        3) Verify that 1 DWO error is reported in statistics
+        """
+        da = {
+            "CXX_SOURCES": "dwo_error_main.cpp dwo_error_foo.cpp",
+            "EXE": self.getBuildArtifact("a.out"),
+        }
+        # -gsplit-dwarf creates separate .dwo files,
+        # Expected output: dwo_error_main.dwo (contains main) and dwo_error_foo.dwo (contains foo struct/function)
+        self.build(dictionary=da, debug_info="dwo")
+        exe = self.getBuildArtifact("a.out")
+
+        expected_dwo_files = [
+            self.getBuildArtifact("dwo_error_main.dwo"),
+            self.getBuildArtifact("dwo_error_foo.dwo"),
+        ]
+
+        # Verify expected files exist
+        for dwo_file in expected_dwo_files:
+            self.assertTrue(
+                os.path.exists(dwo_file),
+                f"Expected .dwo file does not exist: {dwo_file}",
+            )
+
+        # Remove one of .dwo files to trigger DWO load error
+        dwo_main_file = self.getBuildArtifact("dwo_error_main.dwo")
+        os.remove(dwo_main_file)
+
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # Check DWO load error statistics are reported
+        self.assertIn("totalDwoErrorCount", debug_stats)
+        self.assertEqual(debug_stats["totalDwoErrorCount"], 1)
+
+        # Since there's only one module, module stats should have the same count as total count
+        self.assertIn("dwoErrorCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
+
+    @add_test_categories(["dwo"])
+    def test_dwo_id_mismatch_error_stats(self):
+        """
+        Test that DWO ID mismatch errors are reported correctly in statistics.
+        This test:
+        1) Builds a program with split DWARF (.dwo files)
+        2) Replace one of the .dwo files with a mismatched one to cause a DWO ID mismatch error
+        3) Verifies that a DWO error is reported in statistics
+        """
+        da = {
+            "CXX_SOURCES": "dwo_error_main.cpp dwo_error_foo.cpp",
+            "EXE": self.getBuildArtifact("a.out"),
+        }
+        # -gsplit-dwarf creates separate .dwo files,
+        # Expected output: dwo_error_main.dwo (contains main) and dwo_error_foo.dwo (contains foo struct/function)
+        self.build(dictionary=da, debug_info="dwo")
+        exe = self.getBuildArtifact("a.out")
+
+        expected_dwo_files = [
+            self.getBuildArtifact("dwo_error_main.dwo"),
+            self.getBuildArtifact("dwo_error_foo.dwo"),
+        ]
+
+        # Verify expected files exist
+        for dwo_file in expected_dwo_files:
+            self.assertTrue(
+                os.path.exists(dwo_file),
+                f"Expected .dwo file does not exist: {dwo_file}",
+            )
+
+        # Replace one of the original .dwo file content with another one to trigger DWO ID mismatch error
+        dwo_foo_file = self.getBuildArtifact("dwo_error_foo.dwo")
+        dwo_main_file = self.getBuildArtifact("dwo_error_main.dwo")
+
+        shutil.copy(dwo_main_file, dwo_foo_file)
+
+        # Create a new target and get stats
+        target = self.createTestTarget(file_path=exe)
+        debug_stats = self.get_stats()
+
+        # Check that DWO load error statistics are reported
+        self.assertIn("totalDwoErrorCount", debug_stats)
+        self.assertEqual(debug_stats["totalDwoErrorCount"], 1)
+
+        # Since there's only one module, module stats should have the same count as total count
+        self.assertIn("dwoErrorCount", debug_stats["modules"][0])
+        self.assertEqual(debug_stats["modules"][0]["dwoErrorCount"], 1)
 
     @skipUnlessDarwin
     @no_debug_info_test
@@ -707,6 +949,30 @@ class TestCase(TestBase):
         # The second "statistics dump" in the transcript should have no output
         self.assertNotIn("output", transcript[2])
 
+    def test_transcript_warning_when_disabled(self):
+        """
+        Test that "statistics dump --transcript=true" shows a warning when
+        transcript saving is disabled.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        target = self.createTestTarget(file_path=exe)
+
+        # Ensure transcript saving is disabled (this is the default)
+        self.runCmd("settings set interpreter.save-transcript false")
+
+        # Request transcript in statistics dump and check for warning
+        interpreter = self.dbg.GetCommandInterpreter()
+        res = lldb.SBCommandReturnObject()
+        interpreter.HandleCommand("statistics dump --transcript=true", res)
+        self.assertTrue(res.Succeeded())
+        # We should warn about transcript being requested but not saved
+        self.assertIn(
+            "transcript requested but none was saved. Enable with "
+            "'settings set interpreter.save-transcript true'",
+            res.GetError(),
+        )
+
     def verify_stats(self, stats, expectation, options):
         for field_name in expectation:
             idx = field_name.find(".")
@@ -754,7 +1020,7 @@ class TestCase(TestBase):
                     "targets.frameVariable": True,
                     "targets.totalSharedLibraryEventHitCount": True,
                     "modules": True,
-                    "transcript": True,
+                    "transcript": False,
                 },
             },
             {  # Summary mode
@@ -841,6 +1107,24 @@ class TestCase(TestBase):
                     "transcript": False,
                 },
             },
+            {  # Default mode without modules and with transcript
+                "command_options": " --modules=false --transcript=true",
+                "api_options": {
+                    "SetIncludeModules": False,
+                    "SetIncludeTranscript": True,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": False,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": True,
+                },
+            },
             {  # Default mode without modules
                 "command_options": " --modules=false",
                 "api_options": {
@@ -855,6 +1139,23 @@ class TestCase(TestBase):
                     "targets.frameVariable": True,
                     "targets.totalSharedLibraryEventHitCount": True,
                     "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Default mode with transcript
+                "command_options": " --transcript=true",
+                "api_options": {
+                    "SetIncludeTranscript": True,
+                },
+                "expect": {
+                    "commands": True,
+                    "targets": True,
+                    "targets.moduleIdentifiers": True,
+                    "targets.breakpoints": True,
+                    "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": True,
                     "transcript": True,
                 },
             },

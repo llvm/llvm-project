@@ -57,9 +57,6 @@ void ARMTargetInfo::setABIAAPCS() {
                     "-a:0:32"
                     "-n32"
                     "-S64");
-  } else if (T.isOSNaCl()) {
-    assert(!BigEndian && "NaCl on ARM does not support big endian");
-    resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S128");
   } else {
     resetDataLayout(BigEndian
                         ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -136,19 +133,24 @@ void ARMTargetInfo::setArchInfo(llvm::ARM::ArchKind Kind) {
 }
 
 void ARMTargetInfo::setAtomic() {
-  // when triple does not specify a sub arch,
-  // then we are not using inline atomics
-  bool ShouldUseInlineAtomic =
-      (ArchISA == llvm::ARM::ISAKind::ARM && ArchVersion >= 6) ||
-      (ArchISA == llvm::ARM::ISAKind::THUMB && ArchVersion >= 7);
-  // Cortex M does not support 8 byte atomics, while general Thumb2 does.
   if (ArchProfile == llvm::ARM::ProfileKind::M) {
+    // M-class only ever supports 32-bit atomics. Cortex-M0 doesn't have
+    // any atomics.
     MaxAtomicPromoteWidth = 32;
-    if (ShouldUseInlineAtomic)
+    if (ArchVersion >= 7)
       MaxAtomicInlineWidth = 32;
   } else {
+    // A-class targets have up to 64-bit atomics.
+    //
+    // On Linux, 64-bit atomics are always available through kernel helpers
+    // (which are lock-free). Otherwise, atomics are available on v6 or later.
+    //
+    // (Thumb doesn't matter; for Thumbv6, we just use a library call which
+    // switches out of Thumb mode.)
+    //
+    // This should match setMaxAtomicSizeInBitsSupported() in the backend.
     MaxAtomicPromoteWidth = 64;
-    if (ShouldUseInlineAtomic)
+    if (getTriple().getOS() == llvm::Triple::Linux || ArchVersion >= 6)
       MaxAtomicInlineWidth = 64;
   }
 }
@@ -229,6 +231,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_5A";
   case llvm::ARM::ArchKind::ARMV9_6A:
     return "9_6A";
+  case llvm::ARM::ArchKind::ARMV9_7A:
+    return "9_7A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -258,6 +262,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
   bool IsFreeBSD = Triple.isOSFreeBSD();
+  bool IsFuchsia = Triple.isOSFuchsia();
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
   bool IsHaiku = Triple.isOSHaiku();
@@ -330,7 +335,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsFreeBSD || IsOpenBSD || IsHaiku || IsOHOS)
+      else if (IsFreeBSD || IsFuchsia || IsOpenBSD || IsHaiku || IsOHOS)
         setABI("aapcs-linux");
       else
         setABI("aapcs");
@@ -583,13 +588,13 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
     } else if (Feature == "+dotprod") {
       DotProd = true;
     } else if (Feature == "+mve") {
       MVE |= MVE_INT;
     } else if (Feature == "+mve.fp") {
-      HasLegalHalfType = true;
+      HasFastHalfType = true;
       FPU |= FPARMV8;
       MVE |= MVE_INT | MVE_FP;
       HW_FP |= HW_FP_SP | HW_FP_HP;
@@ -621,19 +626,21 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       LDREX = 0;
     else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
              ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     else
-      LDREX = LDREX_W;
+      LDREX = ARM_LDREX_W;
     break;
   case 7:
-    if (ArchProfile == llvm::ARM::ProfileKind::M)
-      LDREX = LDREX_W | LDREX_H | LDREX_B;
-    else
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
-    break;
   case 8:
+    if (ArchProfile == llvm::ARM::ProfileKind::M)
+      LDREX = ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
+    else
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
+    break;
   case 9:
-    LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+    assert(ArchProfile != llvm::ARM::ProfileKind::M &&
+           "No Armv9-M architectures defined");
+    LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
   }
 
   if (!(FPU & NeonFPU) && FPMath == FP_Neon) {
@@ -899,6 +906,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1010,11 +1018,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
   // Armv8.2-A FP16 vector intrinsic
-  if ((FPU & NeonFPU) && HasLegalHalfType)
+  if ((FPU & NeonFPU) && HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_VECTOR_ARITHMETIC", "1");
 
   // Armv8.2-A FP16 scalar intrinsics
-  if (HasLegalHalfType)
+  if (HasFastHalfType)
     Builder.defineMacro("__ARM_FEATURE_FP16_SCALAR_ARITHMETIC", "1");
 
   // Armv8.2-A dot product intrinsics
@@ -1069,6 +1077,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_4A:
   case llvm::ARM::ArchKind::ARMV9_5A:
   case llvm::ARM::ArchKind::ARMV9_6A:
+  case llvm::ARM::ArchKind::ARMV9_7A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }

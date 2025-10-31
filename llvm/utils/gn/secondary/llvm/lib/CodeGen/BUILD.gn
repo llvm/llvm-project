@@ -109,6 +109,7 @@ static_library("CodeGen") {
     "LowLevelTypeUtils.cpp",
     "LowerEmuTLS.cpp",
     "MBFIWrapper.cpp",
+    "MIR2Vec.cpp",
     "MIRCanonicalizerPass.cpp",
     "MIRFSDiscriminator.cpp",
     "MIRNamerPass.cpp",
@@ -121,6 +122,7 @@ static_library("CodeGen") {
     "MLRegAllocPriorityAdvisor.cpp",
     "MachineBasicBlock.cpp",
     "MachineBlockFrequencyInfo.cpp",
+    "MachineBlockHashInfo.cpp",
     "MachineBlockPlacement.cpp",
     "MachineBranchProbabilityInfo.cpp",
     "MachineCFGPrinter.cpp",
@@ -253,6 +255,7 @@ static_library("CodeGen") {
     "WasmEHPrepare.cpp",
     "WinEHPrepare.cpp",
     "WindowScheduler.cpp",
+    "WindowsSecureHotPatching.cpp",
     "XRayInstrumentation.cpp",
   ]
 }

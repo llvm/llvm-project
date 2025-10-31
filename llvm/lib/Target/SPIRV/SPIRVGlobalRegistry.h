@@ -438,6 +438,9 @@ private:
 
   SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
 
+  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
+                            SPIRV::FPEncoding::FPEncoding FPEncode);
+
   SPIRVType *getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeVector(uint32_t NumElems, SPIRVType *ElemType,
@@ -501,6 +504,13 @@ private:
                                  MachineIRBuilder &MIRBuilder);
   bool hasBlockDecoration(SPIRVType *Type) const;
 
+  SPIRVType *
+  getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
+                         SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,
+                         uint32_t Multisampled, uint32_t Sampled,
+                         SPIRV::ImageFormat::ImageFormat ImageFormat,
+                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
                             SPIRVType *SpvType, bool EmitIR,
@@ -538,16 +548,15 @@ public:
                                 MachineIRBuilder &MIRBuilder);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
-  Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,
-                               StringRef Name, const GlobalValue *GV,
-                               SPIRV::StorageClass::StorageClass Storage,
-                               const MachineInstr *Init, bool IsConst,
-                               bool HasLinkageTy,
-                               SPIRV::LinkageType::LinkageType LinkageType,
-                               MachineIRBuilder &MIRBuilder,
-                               bool IsInstSelector);
+  Register buildGlobalVariable(
+      Register Reg, SPIRVType *BaseType, StringRef Name, const GlobalValue *GV,
+      SPIRV::StorageClass::StorageClass Storage, const MachineInstr *Init,
+      bool IsConst,
+      const std::optional<SPIRV::LinkageType::LinkageType> &LinkageType,
+      MachineIRBuilder &MIRBuilder, bool IsInstSelector);
   Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
                                                 uint32_t Set, uint32_t Binding,
+                                                StringRef Name,
                                                 MachineIRBuilder &MIRBuilder);
 
   // Convenient helpers for getting types with check for duplicates.
@@ -606,11 +615,9 @@ public:
                                    const TargetExtType *T, bool EmitIr = false);
 
   SPIRVType *
-  getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
-                         SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,
-                         uint32_t Multisampled, uint32_t Sampled,
-                         SPIRV::ImageFormat::ImageFormat ImageFormat,
-                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+  getImageType(const TargetExtType *ExtensionType,
+               const SPIRV::AccessQualifier::AccessQualifier Qualifier,
+               MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder);
 

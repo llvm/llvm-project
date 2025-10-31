@@ -1136,7 +1136,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
     if (!AreStatisticsEnabled())
       return;
     for (auto &GVS : Index)
-      for (auto &GV : GVS.second.SummaryList)
+      for (auto &GV : GVS.second.getSummaryList())
         if (FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get()))
           Stat += FS->paramAccesses().size();
   };
@@ -1147,7 +1147,7 @@ void llvm::generateParamAccessSummary(ModuleSummaryIndex &Index) {
 
   // Convert the ModuleSummaryIndex to a FunctionMap
   for (auto &GVS : Index) {
-    for (auto &GV : GVS.second.SummaryList) {
+    for (auto &GV : GVS.second.getSummaryList()) {
       FunctionSummary *FS = dyn_cast<FunctionSummary>(GV.get());
       if (!FS || FS->paramAccesses().empty())
         continue;

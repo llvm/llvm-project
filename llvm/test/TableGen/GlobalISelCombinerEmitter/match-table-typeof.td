@@ -20,18 +20,18 @@ def Test0 : GICombineRule<
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // CHECK-NEXT:       // MIs[0] dst
-// CHECK-NEXT:       GIM_RecordRegType, /*MI*/0, /*Op*/0, /*TempTypeIdx*/uint8_t(-1),
+// CHECK-NEXT:       GIM_RecordRegType, /*MI*/0, /*Op*/0, /*TempTypeIdx*/255,
 // CHECK-NEXT:       // MIs[0] src
-// CHECK-NEXT:       GIM_RecordRegType, /*MI*/0, /*Op*/1, /*TempTypeIdx*/uint8_t(-2),
+// CHECK-NEXT:       GIM_RecordRegType, /*MI*/0, /*Op*/1, /*TempTypeIdx*/254,
 // CHECK-NEXT:       // MIs[0] Operand 2
-// CHECK-NEXT:       GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, uint8_t(-1),
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/uint8_t(-2),
+// CHECK-NEXT:       GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 255,
+// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/254,
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/1, /*Val*/GIMT_Encode8(0),
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/uint8_t(-1),
+// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/255,
 // CHECK-NEXT:       // Combiner Rule #0: Test0
 // CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
-// CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/uint8_t(-2), /*Imm*/GIMT_Encode8(42),
+// CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/254, /*Imm*/GIMT_Encode8(42),
 // CHECK-NEXT:       GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // dst
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,

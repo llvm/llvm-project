@@ -14,7 +14,10 @@
 #ifndef LLVM_LIB_TARGET_X86_X86_H
 #define LLVM_LIB_TARGET_X86_X86_H
 
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 
@@ -72,9 +75,6 @@ FunctionPass *createX86OptimizeLEAs();
 
 /// Return a pass that transforms setcc + movzx pairs into xor + setcc.
 FunctionPass *createX86FixupSetCC();
-
-/// Return a pass that transform inline buffer security check into seperate bb
-FunctionPass *createX86WinFixupBufferSecurityCheckPass();
 
 /// Return a pass that avoids creating store forward block issues in the hardware.
 FunctionPass *createX86AvoidStoreForwardingBlocks();
@@ -163,6 +163,24 @@ FunctionPass *createX86PartialReductionPass();
 /// // Analyzes and emits pseudos to support Win x64 Unwind V2.
 FunctionPass *createX86WinEHUnwindV2Pass();
 
+/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
+/// or split the data to two <128 x i32>.
+class X86LowerAMXTypePass : public PassInfoMixin<X86LowerAMXTypePass> {
+private:
+  const TargetMachine *TM;
+
+public:
+  X86LowerAMXTypePass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerAMXTypeLegacyPass();
+
+/// The pass transforms amx intrinsics to scalar operation if the function has
+/// optnone attribute or it is O0.
+FunctionPass *createX86LowerAMXIntrinsicsPass();
+
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
@@ -195,7 +213,6 @@ void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);
 void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
-void initializeX86WinFixupBufferSecurityCheckPassPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);

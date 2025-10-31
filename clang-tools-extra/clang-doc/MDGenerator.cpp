@@ -372,6 +372,15 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
       case InfoType::IT_typedef:
         Type = "Typedef";
         break;
+      case InfoType::IT_concept:
+        Type = "Concept";
+        break;
+      case InfoType::IT_variable:
+        Type = "Variable";
+        break;
+      case InfoType::IT_friend:
+        Type = "Friend";
+        break;
       case InfoType::IT_default:
         Type = "Other";
       }
@@ -463,6 +472,10 @@ llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_typedef:
     genMarkdown(CDCtx, *static_cast<clang::doc::TypedefInfo *>(I), OS);
+    break;
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return createStringError(llvm::inconvertibleErrorCode(),

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix PTX
 ; RUN: opt -mtriple=nvptx-- < %s -S -passes=infer-address-spaces | FileCheck %s --check-prefix IR
 ; RUN: opt -mtriple=nvptx64-- < %s -S -passes=infer-address-spaces | FileCheck %s --check-prefix IR
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 @array = internal addrspace(3) global [10 x float] zeroinitializer, align 4
@@ -107,8 +107,7 @@ define void @nested_const_expr() {
 ; PTX-LABEL: nested_const_expr(
   ; store 1 to bitcast(gep(addrspacecast(array), 0, 1))
   store i32 1, ptr getelementptr ([10 x float], ptr addrspacecast (ptr addrspace(3) @array to ptr), i64 0, i64 1), align 4
-; PTX: mov.b32 %r1, 1;
-; PTX-NEXT: st.shared.b32 [array+4], %r1;
+; PTX: st.shared.b32 [array+4], 1;
   ret void
 }
 

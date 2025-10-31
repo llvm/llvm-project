@@ -339,8 +339,8 @@ static std::string findInputFile(const CommandLineArguments &CLArgs) {
   llvm::opt::Visibility VisibilityMask(options::CC1Option);
   unsigned MissingArgIndex, MissingArgCount;
   SmallVector<const char *, 256> Argv;
-  for (auto I = CLArgs.begin(), E = CLArgs.end(); I != E; ++I)
-    Argv.push_back(I->c_str());
+  for (const std::string &CLArg : CLArgs)
+    Argv.push_back(CLArg.c_str());
   InputArgList Args = getDriverOptTable().ParseArgs(
       Argv, MissingArgIndex, MissingArgCount, VisibilityMask);
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
@@ -395,7 +395,7 @@ struct Location {
     Column = SM.getColumnNumber(Decomposed.first, Decomposed.second);
   }
 
-  operator bool() const { return File != nullptr; }
+  explicit operator bool() const { return File != nullptr; }
 
   friend bool operator==(const Location &X, const Location &Y) {
     return X.File == Y.File && X.Line == Y.Line && X.Column == Y.Column;
@@ -459,7 +459,7 @@ struct HeaderEntry {
     return !(X == Y);
   }
   friend bool operator<(const HeaderEntry &X, const HeaderEntry &Y) {
-    return X.Loc < Y.Loc || (X.Loc == Y.Loc && X.Name < Y.Name);
+    return std::tie(X.Loc, X.Name) < std::tie(Y.Loc, Y.Name);
   }
   friend bool operator>(const HeaderEntry &X, const HeaderEntry &Y) {
     return Y < X;

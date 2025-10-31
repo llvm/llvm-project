@@ -19,6 +19,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 
+#include "CIRGenRecordLayout.h"
 #include "mlir/IR/Value.h"
 
 #include "clang/CIR/MissingFeatures.h"
@@ -33,11 +34,7 @@ class RValue {
   enum Flavor { Scalar, Complex, Aggregate };
 
   union {
-    // Stores first and second value.
-    struct {
-      mlir::Value first;
-      mlir::Value second;
-    } vals;
+    mlir::Value value;
 
     // Stores aggregate address.
     Address aggregateAddr;
@@ -47,7 +44,7 @@ class RValue {
   unsigned flavor : 2;
 
 public:
-  RValue() : vals{nullptr, nullptr}, flavor(Scalar) {}
+  RValue() : value(nullptr), flavor(Scalar) {}
 
   bool isScalar() const { return flavor == Scalar; }
   bool isComplex() const { return flavor == Complex; }
@@ -56,14 +53,15 @@ public:
   bool isVolatileQualified() const { return isVolatile; }
 
   /// Return the value of this scalar value.
-  mlir::Value getScalarVal() const {
+  mlir::Value getValue() const {
     assert(isScalar() && "Not a scalar!");
-    return vals.first;
+    return value;
   }
 
-  /// Return the real/imag components of this complex value.
-  std::pair<mlir::Value, mlir::Value> getComplexVal() const {
-    return std::make_pair(vals.first, vals.second);
+  /// Return the value of this complex value.
+  mlir::Value getComplexValue() const {
+    assert(isComplex() && "Not a complex!");
+    return value;
   }
 
   /// Return the value of the address of the aggregate.
@@ -83,23 +81,20 @@ public:
 
   static RValue get(mlir::Value v) {
     RValue er;
-    er.vals.first = v;
+    er.value = v;
     er.flavor = Scalar;
     er.isVolatile = false;
     return er;
   }
 
-  static RValue getComplex(mlir::Value v1, mlir::Value v2) {
+  static RValue getComplex(mlir::Value v) {
     RValue er;
-    er.vals = {v1, v2};
+    er.value = v;
     er.flavor = Complex;
     er.isVolatile = false;
     return er;
   }
-  static RValue getComplex(const std::pair<mlir::Value, mlir::Value> &c) {
-    return getComplex(c.first, c.second);
-  }
-  // FIXME: Aggregate rvalues need to retain information about whether they are
+
   // volatile or not.  Remove default to find all places that probably get this
   // wrong.
 
@@ -174,6 +169,7 @@ class LValue {
   mlir::Value vectorIdx; // Index for vector subscript
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
+  const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
 
   void initialize(clang::QualType type, clang::Qualifiers quals,
                   clang::CharUnits alignment, LValueBaseInfo baseInfo) {
@@ -194,9 +190,10 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isGlobalReg() const { return lvType == GlobalReg; }
+  bool isVolatile() const { return quals.hasVolatile(); }
 
-  // TODO: Add support for volatile
-  bool isVolatile() const { return false; }
+  bool isVolatileQualified() const { return quals.hasVolatile(); }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
@@ -213,6 +210,14 @@ public:
 
   Address getAddress() const {
     return Address(getPointer(), elementType, getAlignment());
+  }
+
+  void setAddress(Address address) {
+    assert(isSimple());
+    v = address.getPointer();
+    elementType = address.getElementType();
+    alignment = address.getAlignment().getQuantity();
+    assert(!cir::MissingFeatures::addressIsKnownNonNull());
   }
 
   const clang::Qualifiers &getQuals() const { return quals; }
@@ -259,6 +264,38 @@ public:
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
     return r;
   }
+
+  // bitfield lvalue
+  Address getBitFieldAddress() const {
+    return Address(getBitFieldPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getBitFieldPointer() const {
+    assert(isBitField());
+    return v;
+  }
+
+  const CIRGenBitFieldInfo &getBitFieldInfo() const {
+    assert(isBitField());
+    return *bitFieldInfo;
+  }
+
+  /// Create a new object to represent a bit-field access.
+  ///
+  /// \param Addr - The base address of the bit-field sequence this
+  /// bit-field refers to.
+  /// \param Info - The information describing how to perform the bit-field
+  /// access.
+  static LValue makeBitfield(Address addr, const CIRGenBitFieldInfo &info,
+                             clang::QualType type, LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = BitField;
+    r.v = addr.getPointer();
+    r.elementType = addr.getElementType();
+    r.bitFieldInfo = &info;
+    r.initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo);
+    return r;
+  }
 };
 
 /// An aggregate value slot.
@@ -267,32 +304,109 @@ class AggValueSlot {
   Address addr;
   clang::Qualifiers quals;
 
+  /// This is set to true if some external code is responsible for setting up a
+  /// destructor for the slot.  Otherwise the code which constructs it should
+  /// push the appropriate cleanup.
+  [[maybe_unused]]
+  LLVM_PREFERRED_TYPE(bool) unsigned destructedFlag : 1;
+
   /// This is set to true if the memory in the slot is known to be zero before
   /// the assignment into it.  This means that zero fields don't need to be set.
-  bool zeroedFlag : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned zeroedFlag : 1;
+
+  /// This is set to true if the slot might be aliased and it's not undefined
+  /// behavior to access it through such an alias.  Note that it's always
+  /// undefined behavior to access a C++ object that's under construction
+  /// through an alias derived from outside the construction process.
+  ///
+  /// This flag controls whether calls that produce the aggregate
+  /// value may be evaluated directly into the slot, or whether they
+  /// must be evaluated into an unaliased temporary and then memcpy'ed
+  /// over.  Since it's invalid in general to memcpy a non-POD C++
+  /// object, it's important that this flag never be set when
+  /// evaluating an expression which constructs such an object.
+  [[maybe_unused]]
+  LLVM_PREFERRED_TYPE(bool) unsigned aliasedFlag : 1;
+
+  /// This is set to true if the tail padding of this slot might overlap
+  /// another object that may have already been initialized (and whose
+  /// value must be preserved by this initialization). If so, we may only
+  /// store up to the dsize of the type. Otherwise we can widen stores to
+  /// the size of the type.
+  [[maybe_unused]]
+  LLVM_PREFERRED_TYPE(bool) unsigned overlapFlag : 1;
 
 public:
+  enum IsDestructed_t { IsNotDestructed, IsDestructed };
   enum IsZeroed_t { IsNotZeroed, IsZeroed };
+  enum IsAliased_t { IsNotAliased, IsAliased };
+  enum Overlap_t { MayOverlap, DoesNotOverlap };
 
-  AggValueSlot(Address addr, clang::Qualifiers quals, bool zeroedFlag)
-      : addr(addr), quals(quals), zeroedFlag(zeroedFlag) {}
-
-  static AggValueSlot forAddr(Address addr, clang::Qualifiers quals,
-                              IsZeroed_t isZeroed = IsNotZeroed) {
-    return AggValueSlot(addr, quals, isZeroed);
+  /// Returns an aggregate value slot indicating that the aggregate
+  /// value is being ignored.
+  static AggValueSlot ignored() {
+    return forAddr(Address::invalid(), clang::Qualifiers(), IsNotDestructed,
+                   IsNotAliased, DoesNotOverlap);
   }
 
-  static AggValueSlot forLValue(const LValue &lv) {
-    return forAddr(lv.getAddress(), lv.getQuals());
+  AggValueSlot(Address addr, clang::Qualifiers quals, bool destructedFlag,
+               bool zeroedFlag, bool aliasedFlag, bool overlapFlag)
+      : addr(addr), quals(quals), destructedFlag(destructedFlag),
+        zeroedFlag(zeroedFlag), aliasedFlag(aliasedFlag),
+        overlapFlag(overlapFlag) {}
+
+  static AggValueSlot forAddr(Address addr, clang::Qualifiers quals,
+                              IsDestructed_t isDestructed,
+                              IsAliased_t isAliased, Overlap_t mayOverlap,
+                              IsZeroed_t isZeroed = IsNotZeroed) {
+    return AggValueSlot(addr, quals, isDestructed, isZeroed, isAliased,
+                        mayOverlap);
+  }
+
+  static AggValueSlot forLValue(const LValue &LV, IsDestructed_t isDestructed,
+                                IsAliased_t isAliased, Overlap_t mayOverlap,
+                                IsZeroed_t isZeroed = IsNotZeroed) {
+    return forAddr(LV.getAddress(), LV.getQuals(), isDestructed, isAliased,
+                   mayOverlap, isZeroed);
+  }
+
+  IsDestructed_t isExternallyDestructed() const {
+    return IsDestructed_t(destructedFlag);
+  }
+  void setExternallyDestructed(bool destructed = true) {
+    destructedFlag = destructed;
   }
 
   clang::Qualifiers getQualifiers() const { return quals; }
+
+  bool isVolatile() const { return quals.hasVolatile(); }
+
+  void setVolatile(bool flag) {
+    if (flag)
+      quals.addVolatile();
+    else
+      quals.removeVolatile();
+  }
 
   Address getAddress() const { return addr; }
 
   bool isIgnored() const { return !addr.isValid(); }
 
+  mlir::Value getPointer() const { return addr.getPointer(); }
+
+  Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
+
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
+
+  IsAliased_t isPotentiallyAliased() const { return IsAliased_t(aliasedFlag); }
+
+  RValue asRValue() const {
+    if (isIgnored())
+      return RValue::getIgnored();
+    assert(!cir::MissingFeatures::aggValueSlot());
+    return RValue::getAggregate(getAddress());
+  }
 };
 
 } // namespace clang::CIRGen

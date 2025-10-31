@@ -106,4 +106,31 @@ invoker g() {
   // CHECK: call void @_ZN7invoker15invoker_promise17get_return_objectEv({{.*}} %[[AggRes]]
   co_return;
 }
+
+namespace gh148953 {
+
+struct Task {
+  struct promise_type {
+    Task get_return_object();
+    std::suspend_always initial_suspend() { return {}; }
+    std::suspend_always final_suspend() noexcept { return {}; }
+    void return_void() {}
+    void unhandled_exception() {}
+  };
+  Task() {}
+  // Different from `invoker`, this Task is copy constructible.
+  Task(const Task&) {};
+};
+
+// NRVO on const qualified return type should work.
+// CHECK: define{{.*}} void @_ZN8gh1489537exampleEv({{.*}} sret(%"struct.gh148953::Task") align 1 %[[NrvoRes:.+]])
+const Task example() {
+  // CHECK: %[[ResultPtr:.+]] = alloca ptr
+  // CHECK: store ptr %[[NrvoRes]], ptr %[[ResultPtr]]
+  // CHECK: coro.init:
+  // CHECK: call void @_ZN8gh1489534Task12promise_type17get_return_objectEv({{.*}} %[[NrvoRes:.+]], {{.*}})
+  co_return;
+}
+
+} // namespace gh148953
 // CHECK: ![[OutFrameMetadata]] = !{}

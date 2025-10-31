@@ -16,8 +16,6 @@ def DoStmt : StmtNode<Stmt>;
 def ForStmt : StmtNode<Stmt>;
 def GotoStmt : StmtNode<Stmt>;
 def IndirectGotoStmt : StmtNode<Stmt>;
-def ContinueStmt : StmtNode<Stmt>;
-def BreakStmt : StmtNode<Stmt>;
 def ReturnStmt : StmtNode<Stmt>;
 def DeclStmt  : StmtNode<Stmt>;
 def SwitchCase : StmtNode<Stmt, 1>;
@@ -25,6 +23,11 @@ def CaseStmt : StmtNode<SwitchCase>;
 def DefaultStmt : StmtNode<SwitchCase>;
 def CapturedStmt : StmtNode<Stmt>;
 def SYCLKernelCallStmt : StmtNode<Stmt>;
+
+// Break/continue.
+def LoopControlStmt : StmtNode<Stmt, 1>;
+def ContinueStmt : StmtNode<LoopControlStmt>;
+def BreakStmt : StmtNode<LoopControlStmt>;
 
 // Statements that might produce a value (for example, as the last non-null
 // statement in a GNU statement-expression).
@@ -202,7 +205,6 @@ def ShuffleVectorExpr : StmtNode<Expr>;
 def ConvertVectorExpr : StmtNode<Expr>;
 def BlockExpr : StmtNode<Expr>;
 def OpaqueValueExpr : StmtNode<Expr>;
-def TypoExpr : StmtNode<Expr>;
 def RecoveryExpr : StmtNode<Expr>;
 def BuiltinBitCastExpr : StmtNode<ExplicitCastExpr>;
 def EmbedExpr : StmtNode<Expr>;
@@ -228,12 +230,18 @@ def OMPLoopBasedDirective : StmtNode<OMPExecutableDirective, 1>;
 def OMPLoopDirective : StmtNode<OMPLoopBasedDirective, 1>;
 def OMPParallelDirective : StmtNode<OMPExecutableDirective>;
 def OMPSimdDirective : StmtNode<OMPLoopDirective>;
-def OMPLoopTransformationDirective : StmtNode<OMPLoopBasedDirective, 1>;
-def OMPTileDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPStripeDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPUnrollDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPReverseDirective : StmtNode<OMPLoopTransformationDirective>;
-def OMPInterchangeDirective : StmtNode<OMPLoopTransformationDirective>;
+def OMPCanonicalLoopNestTransformationDirective
+    : StmtNode<OMPLoopBasedDirective, 1>;
+def OMPTileDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPStripeDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPUnrollDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPReverseDirective : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPInterchangeDirective
+    : StmtNode<OMPCanonicalLoopNestTransformationDirective>;
+def OMPCanonicalLoopSequenceTransformationDirective
+    : StmtNode<OMPExecutableDirective, 1>;
+def OMPFuseDirective
+    : StmtNode<OMPCanonicalLoopSequenceTransformationDirective>;
 def OMPForDirective : StmtNode<OMPLoopDirective>;
 def OMPForSimdDirective : StmtNode<OMPLoopDirective>;
 def OMPSectionsDirective : StmtNode<OMPExecutableDirective>;

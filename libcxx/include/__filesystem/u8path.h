@@ -13,13 +13,8 @@
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__filesystem/path.h>
+#include <__locale>
 #include <string>
-
-// Only required on Windows for __widen_from_utf8, and included conservatively
-// because it requires support for localization.
-#if defined(_LIBCPP_WIN32API)
-#  include <locale>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,8 +23,6 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
 
 template <class _InputIt, __enable_if_t<__is_pathable<_InputIt>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(_InputIt __f, _InputIt __l) {
@@ -90,8 +83,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_WITH_CHAR8_T path u8path(const _Source&
   return path(__s);
 #  endif
 }
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 

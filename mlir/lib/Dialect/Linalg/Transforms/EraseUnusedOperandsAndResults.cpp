@@ -259,8 +259,8 @@ mlir::linalg::deduplicateOperandsAndRemoveDeadResults(
   for (Value v : newOutputOperands)
     if (isa<TensorType>(v.getType()))
       newResultTypes.push_back(v.getType());
-  auto newOp = rewriter.create<GenericOp>(
-      loc, newResultTypes, newInputOperands, newOutputOperands,
+  auto newOp = GenericOp::create(
+      rewriter, loc, newResultTypes, newInputOperands, newOutputOperands,
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
       genericOp.getIteratorTypes(), genericOp.getDocAttr(),
       genericOp.getLibraryCallAttr(),

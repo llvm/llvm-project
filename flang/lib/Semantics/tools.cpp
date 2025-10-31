@@ -348,9 +348,9 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
 
 const Symbol &GetCrayPointer(const Symbol &crayPointee) {
   const Symbol *found{nullptr};
-  for (const auto &[pointee, pointer] :
-      crayPointee.GetUltimate().owner().crayPointers()) {
-    if (pointee == crayPointee.name()) {
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
       found = &pointer.get();
       break;
     }
@@ -705,7 +705,7 @@ SymbolVector FinalsForDerivedTypeInstantiation(const DerivedTypeSpec &spec) {
 
 const Symbol *IsFinalizable(const Symbol &symbol,
     std::set<const DerivedTypeSpec *> *inProgress, bool withImpureFinalizer) {
-  if (IsPointer(symbol) || evaluate::IsAssumedRank(symbol)) {
+  if (IsPointer(symbol) || IsAssumedRank(symbol)) {
     return nullptr;
   }
   if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
@@ -741,7 +741,7 @@ const Symbol *IsFinalizable(const DerivedTypeSpec &derived,
         if (const SubprogramDetails *
             subp{symbol->detailsIf<SubprogramDetails>()}) {
           if (const auto &args{subp->dummyArgs()}; !args.empty() &&
-              args.at(0) && !evaluate::IsAssumedRank(*args.at(0)) &&
+              args.at(0) && !IsAssumedRank(*args.at(0)) &&
               args.at(0)->Rank() != *rank) {
             continue; // not a finalizer for this rank
           }
@@ -790,7 +790,7 @@ const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
   if (symbol.has<ObjectEntityDetails>()) {
     if (const DeclTypeSpec * symType{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
-        if (evaluate::IsAssumedRank(symbol)) {
+        if (IsAssumedRank(symbol)) {
           // finalizable assumed-rank not allowed (C839)
           return nullptr;
         } else {
@@ -1081,10 +1081,82 @@ const Scope *FindCUDADeviceContext(const Scope *scope) {
   });
 }
 
+bool IsDeviceAllocatable(const Symbol &symbol) {
+  if (IsAllocatable(symbol)) {
+    if (const auto *details{
+            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool HasCUDAComponent(const Symbol &symbol) {
+  if (const auto *details{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+UltimateComponentIterator::const_iterator
+FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
+  UltimateComponentIterator ultimates{derived};
+  return std::find_if(ultimates.begin(), ultimates.end(), IsDeviceAllocatable);
+}
+
+bool CanCUDASymbolBeGlobal(const Symbol &sym) {
+  const Symbol &symbol{GetAssociationRoot(sym)};
+  const Scope &scope{symbol.owner()};
+  auto scopeKind{scope.kind()};
+  const common::LanguageFeatureControl &features{
+      scope.context().languageFeatures()};
+  if (features.IsEnabled(common::LanguageFeature::CUDA) &&
+      scopeKind == Scope::Kind::MainProgram) {
+    if (const auto *details{
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+      const Fortran::semantics::DeclTypeSpec *type{details->type()};
+      const Fortran::semantics::DerivedTypeSpec *derived{
+          type ? type->AsDerived() : nullptr};
+      if (derived) {
+        if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+          return false;
+        }
+      }
+      if (details->cudaDataAttr() &&
+          *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
-  const auto *object{
+  const auto *details{
       symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
-  return object ? object->cudaDataAttr() : std::nullopt;
+  if (details) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return common::CUDADataAttr::Managed;
+      }
+    }
+    return details->cudaDataAttr();
+  }
+  return std::nullopt;
 }
 
 bool IsAccessible(const Symbol &original, const Scope &scope) {
@@ -1098,7 +1170,7 @@ bool IsAccessible(const Symbol &original, const Scope &scope) {
 }
 
 std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
-    const Scope &scope, const Symbol &symbol) {
+    const Scope &scope, const Symbol &symbol, bool inStructureConstructor) {
   if (IsAccessible(symbol, scope)) {
     return std::nullopt;
   } else if (FindModuleFileContaining(scope)) {
@@ -1107,10 +1179,20 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     // whose structure constructors reference private components.
     return std::nullopt;
   } else {
+    const Scope &module{DEREF(FindModuleContaining(symbol.owner()))};
+    // Subtlety: Sometimes we want to be able to convert a generated
+    // module file back into Fortran, perhaps to convert it into a
+    // hermetic module file.  Don't emit a fatal error for things like
+    // "__builtin_c_ptr(__address=0)" that came from expansions of
+    // "cptr_null()"; specifically, just warn about structure constructor
+    // component names from intrinsic modules when in a module.
+    parser::MessageFixedText text{FindModuleContaining(scope) &&
+                module.parent().IsIntrinsicModules() &&
+                inStructureConstructor && symbol.owner().IsDerivedType()
+            ? "PRIVATE name '%s' is accessible only within module '%s'"_warn_en_US
+            : "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US};
     return parser::MessageFormattedText{
-        "PRIVATE name '%s' is accessible only within module '%s'"_err_en_US,
-        symbol.name(),
-        DEREF(FindModuleContaining(symbol.owner())).GetName().value()};
+        std::move(text), symbol.name(), module.GetName().value()};
   }
 }
 
@@ -1683,7 +1765,7 @@ std::forward_list<std::string> GetOperatorNames(
 std::forward_list<std::string> GetAllNames(
     const SemanticsContext &context, const SourceName &name) {
   std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
+  if (!name.empty() && name.back() == ')' &&
       name.ToString().rfind("operator(", 0) == 0) {
     for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
       auto names{GetOperatorNames(context, common::LogicalOperator{i})};
@@ -1788,18 +1870,9 @@ bool HadUseError(
   }
 }
 
-bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs) {
-  if (lhs && rhs) {
-    if (SymbolVector lhsSymbols{evaluate::GetSymbolVector(*lhs)};
-        !lhsSymbols.empty()) {
-      const Symbol &first{*lhsSymbols.front()};
-      for (const Symbol &symbol : evaluate::GetSymbolVector(*rhs)) {
-        if (first == symbol) {
-          return true;
-        }
-      }
-    }
-  }
-  return false;
+bool AreSameModuleSymbol(const Symbol &symbol, const Symbol &other) {
+  return symbol.name() == other.name() && symbol.owner().IsModule() &&
+      other.owner().IsModule() && symbol.owner().GetName() &&
+      symbol.owner().GetName() == other.owner().GetName();
 }
 } // namespace Fortran::semantics

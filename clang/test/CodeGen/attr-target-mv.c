@@ -30,6 +30,8 @@ int __attribute__((target("arch=gracemont"))) foo(void) {return 24;}
 int __attribute__((target("arch=pantherlake"))) foo(void) {return 25;}
 int __attribute__((target("arch=clearwaterforest"))) foo(void) {return 26;}
 int __attribute__((target("arch=diamondrapids"))) foo(void) {return 27;}
+int __attribute__((target("arch=wildcatlake"))) foo(void) {return 28;}
+int __attribute__((target("arch=novalake"))) foo(void) {return 29;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
@@ -201,6 +203,12 @@ void calls_pr50025c(void) { pr50025c(); }
 // ITANIUM: ret i32 25
 // ITANIUM: define{{.*}} i32 @foo.arch_clearwaterforest()
 // ITANIUM: ret i32 26
+// ITANIUM: define{{.*}} i32 @foo.arch_diamondrapids()
+// ITANIUM: ret i32 27
+// ITANIUM: define{{.*}} i32 @foo.arch_wildcatlake()
+// ITANIUM: ret i32 28
+// ITANIUM: define{{.*}} i32 @foo.arch_novalake()
+// ITANIUM: ret i32 29
 // ITANIUM: define{{.*}} i32 @foo()
 // ITANIUM: ret i32 2
 // ITANIUM: define{{.*}} i32 @bar()
@@ -258,6 +266,12 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 25
 // WINDOWS: define dso_local i32 @foo.arch_clearwaterforest()
 // WINDOWS: ret i32 26
+// WINDOWS: define dso_local i32 @foo.arch_diamondrapids()
+// WINDOWS: ret i32 27
+// WINDOWS: define dso_local i32 @foo.arch_wildcatlake()
+// WINDOWS: ret i32 28
+// WINDOWS: define dso_local i32 @foo.arch_novalake()
+// WINDOWS: ret i32 29
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()

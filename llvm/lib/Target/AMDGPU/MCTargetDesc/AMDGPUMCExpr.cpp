@@ -75,9 +75,15 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   case AGVK_Occupancy:
     OS << "occupancy(";
     break;
+  case AGVK_Lit:
+    OS << "lit(";
+    break;
+  case AGVK_Lit64:
+    OS << "lit64(";
+    break;
   }
   for (const auto *It = Args.begin(); It != Args.end(); ++It) {
-    (*It)->print(OS, MAI);
+    MAI->printExpr(OS, **It);
     if ((It + 1) != Args.end())
       OS << ", ";
   }
@@ -259,6 +265,9 @@ bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
     return evaluateTotalNumVGPR(Res, Asm);
   case AGVK_Occupancy:
     return evaluateOccupancy(Res, Asm);
+  case AGVK_Lit:
+  case AGVK_Lit64:
+    return Args[0]->evaluateAsRelocatable(Res, Asm);
   }
 
   for (const MCExpr *Arg : Args) {
@@ -313,13 +322,11 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createTotalNumVGPR(const MCExpr *NumAGPR,
 /// Remove dependency on GCNSubtarget and depend only only the necessary values
 /// for said occupancy computation. Should match computeOccupancy implementation
 /// without passing \p STM on.
-const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
-                                                  const MCExpr *NumSGPRs,
-                                                  const MCExpr *NumVGPRs,
-                                                  const GCNSubtarget &STM,
-                                                  MCContext &Ctx) {
+const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(
+    unsigned InitOcc, const MCExpr *NumSGPRs, const MCExpr *NumVGPRs,
+    unsigned DynamicVGPRBlockSize, const GCNSubtarget &STM, MCContext &Ctx) {
   unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(&STM);
-  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM);
+  unsigned Granule = IsaInfo::getVGPRAllocGranule(&STM, DynamicVGPRBlockSize);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(&STM);
   unsigned Generation = STM.getGeneration();
 
@@ -332,6 +339,14 @@ const AMDGPUMCExpr *AMDGPUMCExpr::createOccupancy(unsigned InitOcc,
                  CreateExpr(TargetTotalNumVGPRs), CreateExpr(Generation),
                  CreateExpr(InitOcc), NumSGPRs, NumVGPRs},
                 Ctx);
+}
+
+const AMDGPUMCExpr *AMDGPUMCExpr::createLit(LitModifier Lit, int64_t Value,
+                                            MCContext &Ctx) {
+  assert(Lit == LitModifier::Lit || Lit == LitModifier::Lit64);
+  return create(Lit == LitModifier::Lit ? VariantKind::AGVK_Lit
+                                        : VariantKind::AGVK_Lit64,
+                {MCConstantExpr::create(Value, Ctx, /*PrintInHex=*/true)}, Ctx);
 }
 
 static KnownBits fromOptionalToKnownBits(std::optional<bool> CompareResult) {
@@ -515,7 +530,9 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   case AMDGPUMCExpr::VariantKind::AGVK_ExtraSGPRs:
   case AMDGPUMCExpr::VariantKind::AGVK_TotalNumVGPRs:
   case AMDGPUMCExpr::VariantKind::AGVK_AlignTo:
-  case AMDGPUMCExpr::VariantKind::AGVK_Occupancy: {
+  case AMDGPUMCExpr::VariantKind::AGVK_Occupancy:
+  case AMDGPUMCExpr::VariantKind::AGVK_Lit:
+  case AMDGPUMCExpr::VariantKind::AGVK_Lit64: {
     int64_t Val;
     if (AGVK->evaluateAsAbsolute(Val)) {
       APInt APValue(BitWidth, Val);
@@ -709,5 +726,17 @@ void llvm::AMDGPU::printAMDGPUMCExpr(const MCExpr *Expr, raw_ostream &OS,
     return;
   }
 
-  Expr->print(OS, MAI);
+  MAI->printExpr(OS, *Expr);
+}
+
+bool AMDGPU::isLitExpr(const MCExpr *Expr) {
+  const auto *E = dyn_cast<AMDGPUMCExpr>(Expr);
+  return E && (E->getKind() == AMDGPUMCExpr::AGVK_Lit ||
+               E->getKind() == AMDGPUMCExpr::AGVK_Lit64);
+}
+
+int64_t AMDGPU::getLitValue(const MCExpr *Expr) {
+  assert(isLitExpr(Expr));
+  return cast<MCConstantExpr>(cast<AMDGPUMCExpr>(Expr)->getArgs()[0])
+      ->getValue();
 }

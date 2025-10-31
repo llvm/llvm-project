@@ -3,6 +3,9 @@ add_clang_library(MLIRCIRTransforms
   CIRSimplify.cpp
   FlattenCFG.cpp
   HoistAllocas.cpp
+  LoweringPrepare.cpp
+  LoweringPrepareItaniumCXXABI.cpp
+  GotoSolver.cpp
 
   DEPENDS
   MLIRCIRPassIncGen

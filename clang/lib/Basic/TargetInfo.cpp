@@ -18,6 +18,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <cstdlib>
@@ -62,7 +63,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   TLSSupported = true;
   VLASupported = true;
   NoAsmVariants = false;
-  HasLegalHalfType = false;
+  HasFastHalfType = false;
   HalfArgsAndReturns = false;
   HasFloat128 = false;
   HasIbm128 = false;
@@ -172,9 +173,11 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   ComplexLongDoubleUsesFP2Ret = false;
 
   // Set the C++ ABI based on the triple.
-  TheCXXABI.set(Triple.isKnownWindowsMSVCEnvironment()
+  TheCXXABI.set(Triple.isKnownWindowsMSVCEnvironment() || Triple.isUEFI()
                     ? TargetCXXABI::Microsoft
                     : TargetCXXABI::GenericItanium);
+
+  HasMicrosoftRecordLayout = TheCXXABI.isMicrosoft();
 
   // Default to an empty address space map.
   AddrSpaceMap = &DefaultAddrSpaceMap;
@@ -410,7 +413,8 @@ bool TargetInfo::isTypeSigned(IntType T) {
 /// Apply changes to the target information with respect to certain
 /// language options which change the target configuration and adjust
 /// the language based on the target options where applicable.
-void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                        const TargetInfo *Aux) {
   if (Opts.NoBitFieldTypeAlign)
     UseBitFieldTypeAlignment = false;
 
@@ -550,13 +554,16 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 
   if (Opts.FakeAddressSpaceMap)
     AddrSpaceMap = &FakeAddrSpaceMap;
+
+  // Check if it's CUDA device compilation; ensure layout consistency with host.
+  if (Opts.CUDA && Opts.CUDAIsDevice && Aux && !HasMicrosoftRecordLayout)
+    HasMicrosoftRecordLayout = Aux->getCXXABI().isMicrosoft();
 }
 
 bool TargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeatureVec) const {
-  for (const auto &F : FeatureVec) {
-    StringRef Name = F;
+  for (StringRef Name : FeatureVec) {
     if (Name.empty())
       continue;
     // Apply the feature via the target.
@@ -618,6 +625,14 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
       (ClangABICompat4 || getTriple().isPS4()))
     return CCK_ClangABI4OrPS4;
   return CCK_Default;
+}
+
+bool TargetInfo::callGlobalDeleteInDeletingDtor(
+    const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
 }
 
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
@@ -1027,4 +1042,52 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
   auto *Target = static_cast<TransferrableTargetInfo*>(this);
   auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
   *Target = *Src;
+}
+
+std::string
+TargetInfo::simplifyConstraint(StringRef Constraint,
+                               SmallVectorImpl<ConstraintInfo> *OutCons) const {
+  std::string Result;
+
+  for (const char *I = Constraint.begin(), *E = Constraint.end(); I < E; I++) {
+    switch (*I) {
+    default:
+      Result += convertConstraint(I);
+      break;
+    // Ignore these
+    case '*':
+    case '?':
+    case '!':
+    case '=': // Will see this and the following in mult-alt constraints.
+    case '+':
+      break;
+    case '#': // Ignore the rest of the constraint alternative.
+      while (I + 1 != E && I[1] != ',')
+        I++;
+      break;
+    case '&':
+    case '%':
+      Result += *I;
+      while (I + 1 != E && I[1] == *I)
+        I++;
+      break;
+    case ',':
+      Result += "|";
+      break;
+    case 'g':
+      Result += "imr";
+      break;
+    case '[': {
+      assert(OutCons &&
+             "Must pass output names to constraints with a symbolic name");
+      unsigned Index;
+      bool ResolveResult = resolveSymbolicName(I, *OutCons, Index);
+      assert(ResolveResult && "Could not resolve symbolic name");
+      (void)ResolveResult;
+      Result += llvm::utostr(Index);
+      break;
+    }
+    }
+  }
+  return Result;
 }
