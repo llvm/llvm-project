@@ -1898,13 +1898,14 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // so does not add any new instructions.
 
     // Check if sizes and terminators of all successors match.
-    bool AllSame = none_of(UniqueSuccessors, [&UniqueSuccessors](BasicBlock *Succ) {
-      Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
-      Instruction *Term = Succ->getTerminator();
-      return !Term->isSameOperationAs(Term0) ||
-             !equal(Term->operands(), Term0->operands()) ||
-             UniqueSuccessors[0]->size() != Succ->size();
-    });
+    bool AllSame =
+        none_of(UniqueSuccessors, [&UniqueSuccessors](BasicBlock *Succ) {
+          Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
+          Instruction *Term = Succ->getTerminator();
+          return !Term->isSameOperationAs(Term0) ||
+                 !equal(Term->operands(), Term0->operands()) ||
+                 UniqueSuccessors[0]->size() != Succ->size();
+        });
     if (!AllSame)
       return false;
     if (AllSame) {
