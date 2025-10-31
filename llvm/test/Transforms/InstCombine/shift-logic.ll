@@ -550,8 +550,7 @@ define <2 x i64> @lshr_sub_poison(<2 x i64> %x, <2 x i64> %py) {
 
 define i32 @ashr_xor_operand_match(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_xor_operand_match(
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %r = xor i32 %x, %y
@@ -572,8 +571,7 @@ define i32 @ashr_xor_operand_mismtach(i32 %x, i32 %y) {
 
 define i32 @lshr_xor_operand_match(i32 %x, i32 %y) {
 ; CHECK-LABEL: @lshr_xor_operand_match(
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %r = xor i32 %x, %y
@@ -594,8 +592,7 @@ define i32 @lshr_xor_operand_mismtach(i32 %x, i32 %y) {
 
 define i32 @ashr_or_operand_match(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_or_operand_match(
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %r = or i32 %x, %y
@@ -616,8 +613,7 @@ define i32 @ashr_or_operand_mismtach(i32 %x, i32 %y) {
 
 define i32 @lshr_or_operand_match(i32 %x, i32 %y) {
 ; CHECK-LABEL: @lshr_or_operand_match(
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %r = or i32 %x, %y
@@ -638,10 +634,10 @@ define i32 @lshr_or_operand_mismtach(i32 %x, i32 %y) {
 
 define i32 @ashr_xor_operand_match_multiuse(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_xor_operand_match_multiuse(
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = ashr i32 [[R]], [[X]]
+; CHECK-NEXT:    [[Q:%.*]] = ashr i32 [[R:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = xor i32 [[R]], [[Q]]
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    [[RET1:%.*]] = xor i32 [[RET]], [[X]]
+; CHECK-NEXT:    ret i32 [[RET1]]
 ;
   %r = xor i32 %x, %y
   %q = ashr i32 %r, %x
