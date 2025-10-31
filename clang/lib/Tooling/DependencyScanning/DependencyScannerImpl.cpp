@@ -12,6 +12,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace clang;
@@ -704,9 +705,6 @@ bool DependencyScanningAction::runInvocation(
   return Result;
 }
 
-const std::string CompilerInstanceWithContext::FakeFileBuffer =
-    std::string(MAX_NUM_NAMES, ' ');
-
 llvm::Error CompilerInstanceWithContext::initialize() {
   std::tie(OverlayFS, CommandLine) = initVFSForByNameScanning(
       Worker.BaseFS, CommandLine, CWD, "ScanningByName");
@@ -792,6 +790,17 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
     DependencyActionController &Controller) {
   auto &CI = *CIPtr;
 
+  // We create this cleanup object because computeDependencies may exit
+  // early with errors.
+  auto CleanUp = llvm::make_scope_exit([&]() {
+    CI.clearDependencyCollectors();
+    // The preprocessor may not be created at the entry of this method,
+    // but it must have been created when this method returns, whether
+    // there are errors during scanning or not.
+    CI.getPreprocessor().removePPCallbacks();
+  });
+
+  CI.clearDependencyCollectors();
   auto MDC = initializeScanInstanceDependencyCollector(
       CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
       Worker.Service,
@@ -806,7 +815,9 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
     std::unique_ptr<FrontendAction> Action =
         std::make_unique<PreprocessOnlyAction>();
     auto InputFile = CI.getFrontendOpts().Inputs.begin();
-    Action->BeginSourceFile(CI, *InputFile);
+    bool ActionBeginSucceeded = Action->BeginSourceFile(CI, *InputFile);
+    assert(ActionBeginSucceeded && "Action BeginSourceFile must succeed");
+    (void)ActionBeginSucceeded;
   }
 
   Preprocessor &PP = CI.getPreprocessor();
@@ -818,7 +829,9 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   if (!SrcLocOffset) {
     // We need to call EnterSourceFile when SrcLocOffset is zero to initialize
     // the preprocessor.
-    PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
+    bool PPFailed = PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
+    assert(!PPFailed && "Preprocess must be able to enter the main file.");
+    (void)PPFailed;
     CB = MDC->getPPCallbacks();
   } else {
     // When SrcLocOffset is non-zero, the preprocessor has already been
@@ -847,15 +860,15 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   // It does not indicate the end of processing the fake file.
   CB->EndOfMainFile();
 
+  if (!ModResult)
+    return llvm::make_error<llvm::StringError>(
+        DiagPrinterWithOS->DiagnosticsOS.str(), llvm::inconvertibleErrorCode());
+
   CompilerInvocation ModuleInvocation(*OriginalInvocation);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
   Consumer.handleBuildCommand(
       {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
 
-  // Remove the DependencyCollecgtors and PPCallbacks since they are going out
-  // of scope.
-  CI.clearDependencyCollectors();
-  CI.getPreprocessor().removePPCallbacks();
   return llvm::Error::success();
 }
 

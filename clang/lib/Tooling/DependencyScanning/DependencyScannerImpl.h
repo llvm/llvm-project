@@ -157,8 +157,6 @@ class CompilerInstanceWithContext {
   DependencyScanningWorker &Worker;
   llvm::StringRef CWD;
   std::vector<std::string> CommandLine;
-  static const uint64_t MAX_NUM_NAMES = (1 << 12);
-  static const std::string FakeFileBuffer;
 
   // Context - file systems
   llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
