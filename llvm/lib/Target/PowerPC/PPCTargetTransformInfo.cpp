@@ -24,6 +24,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
 
+static cl::opt<bool> Pwr9EVL("ppc-pwr9-evl",
+cl::desc("Allow vp.load and vp.store for pwr9"), cl::init(false), cl::Hidden);
+
 static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
 cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
 
@@ -1037,7 +1040,8 @@ PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
   using VPLegalization = TargetTransformInfo::VPLegalization;
   unsigned Directive = ST->getCPUDirective();
   VPLegalization DefaultLegalization = BaseT::getVPLegalizationStrategy(PI);
-  if (Directive != PPC::DIR_PWR10 && Directive != PPC::DIR_PWR_FUTURE)
+  if (Directive != PPC::DIR_PWR10 && Directive != PPC::DIR_PWR_FUTURE &&
+      (!Pwr9EVL || Directive != PPC::DIR_PWR9))
     return DefaultLegalization;
 
   unsigned IID = PI.getIntrinsicID();
@@ -1047,7 +1051,7 @@ PPCTTIImpl::getVPLegalizationStrategy(const VPIntrinsic &PI) const {
   bool IsLoad = IID == Intrinsic::vp_load;
   Type* VecTy = IsLoad ? PI.getType() : PI.getOperand(0)->getType();
   EVT VT = TLI->getValueType(DL, VecTy, true);
-  dbgs() << "&&& Typecheck " << VT << "\n";
+  // dbgs() << "&&& Typecheck " << VT << "\n";
   if (VT != MVT::v2i64 && VT != MVT::v4i32 && VT != MVT::v8i16 &&
       VT != MVT::v16i8)
     return DefaultLegalization;
