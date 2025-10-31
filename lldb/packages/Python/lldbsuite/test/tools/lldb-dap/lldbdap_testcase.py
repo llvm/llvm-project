@@ -15,6 +15,8 @@ import base64
 # DAP tests as a whole have been flakey on the Windows on Arm bot. See:
 # https://github.com/llvm/llvm-project/issues/137660
 @skipIf(oslist=["windows"], archs=["aarch64"])
+# The Arm Linux bot needs stable resources before it can run these tests reliably.
+@skipIf(oslist=["linux"], archs=["arm$"])
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
