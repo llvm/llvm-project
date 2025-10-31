@@ -320,7 +320,6 @@ jobs:
         cat "/c/Program Files/CMake/share/cmake-3.31/Modules/FindLibXml2.cmake"
 
     - name: Install python dependencies
-      shell: bash
       run: |
         pip --python ${{ steps.setup-python.outputs.python-path }} install packaging psutil
         
