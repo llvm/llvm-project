@@ -41,19 +41,19 @@
 ;
 ; CHECK:   DW_TAG_member
 ; CHECK:     DW_AT_name ("someBackingIvar")
-; CHECK:     DW_AT_APPLE_property (0x[[SYNTH]])
+; CHECK:     DW_AT_APPLE_property (0x[[SYNTH]] "synthProp")
 ;
 ; CHECK:   DW_TAG_member
 ; CHECK:     DW_AT_name ("_autoSynthProp")
-; CHECK:     DW_AT_APPLE_property (0x[[AUTO_SYNTH]])
+; CHECK:     DW_AT_APPLE_property (0x[[AUTO_SYNTH]] "autoSynthProp")
 ;
 ; CHECK:   DW_TAG_member
 ; CHECK:     DW_AT_name ("_customGetterProp")
-; CHECK:     DW_AT_APPLE_property (0x[[GET]])
+; CHECK:     DW_AT_APPLE_property (0x[[GET]] "customGetterProp")
 ;
 ; CHECK:   DW_TAG_member
 ; CHECK:     DW_AT_name ("_customSetterProp")
-; CHECK:     DW_AT_APPLE_property (0x[[SET]])
+; CHECK:     DW_AT_APPLE_property (0x[[SET]] "customSetterProp")
 
 !llvm.module.flags = !{!0, !1}
 !llvm.dbg.cu = !{!2}
