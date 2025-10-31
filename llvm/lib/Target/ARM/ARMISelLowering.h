@@ -615,6 +615,8 @@ class VectorType;
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
+    bool hasAndNot(SDValue Y) const override;
+
     bool hasAndNotCompare(SDValue V) const override {
       // We can use bics for any scalar.
       return V.getValueType().isScalarInteger();
