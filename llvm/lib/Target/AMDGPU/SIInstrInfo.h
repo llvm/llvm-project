@@ -321,8 +321,7 @@ public:
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+                     const MachineInstr &Orig) const override;
 
   // Splits a V_MOV_B64_DPP_PSEUDO opcode into a pair of v_mov_b32_dpp
   // instructions. Returns a pair of generated instructions.
