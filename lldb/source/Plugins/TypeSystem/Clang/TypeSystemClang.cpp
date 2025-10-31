@@ -5508,6 +5508,17 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType TypeSystemClang::GetBuiltinTypeByName(ConstString name) {
+  StringRef name_ref = name.GetStringRef();
+  llvm::Regex re("^(unsigned )?_BitInt\\((.*)\\)$");
+  llvm::SmallVector<llvm::StringRef, 4> matches;
+  bool is_bitint = re.match(name_ref, &matches);
+  if (is_bitint && matches.size() == 3) {
+    bool is_unsigned = matches[1] == "unsigned ";
+    llvm::APInt ap_bit_size;
+    if (!matches[2].getAsInteger(10, ap_bit_size))
+      return GetType(getASTContext().getBitIntType(is_unsigned,
+                                                   ap_bit_size.getZExtValue()));
+  }
   return GetBasicType(GetBasicTypeEnumeration(name));
 }
 
