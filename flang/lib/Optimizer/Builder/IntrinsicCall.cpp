@@ -91,6 +91,11 @@ static bool isStaticallyAbsent(llvm::ArrayRef<mlir::Value> args,
                                size_t argIndex) {
   return args.size() <= argIndex || !args[argIndex];
 }
+static bool isOptional(mlir::Value value) {
+  auto varIface = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
+      value.getDefiningOp());
+  return varIface && varIface.isOptional();
+}
 
 /// Test if an ExtendedValue is present. This is used to test if an intrinsic
 /// argument is present at compile time. This does not imply that the related
@@ -303,6 +308,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"floor", &I::genFloor},
+    {"flush",
+     &I::genFlush,
+     {{{"unit", asAddr}}},
+     /*isElemental=*/false},
     {"fraction", &I::genFraction},
     {"free", &I::genFree},
     {"fseek",
@@ -3934,6 +3943,40 @@ mlir::Value IntrinsicLibrary::genFloor(mlir::Type resultType,
   return builder.createConvert(loc, resultType, floor);
 }
 
+// FLUSH
+void IntrinsicLibrary::genFlush(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  mlir::Value unit;
+  if (isStaticallyAbsent(args[0]))
+    // Give a sentinal value of `-1` on the `()` case.
+    unit = builder.createIntegerConstant(loc, builder.getI32Type(), -1);
+  else {
+    unit = fir::getBase(args[0]);
+    if (isOptional(unit)) {
+      mlir::Value isPresent =
+          fir::IsPresentOp::create(builder, loc, builder.getI1Type(), unit);
+      unit = builder
+                 .genIfOp(loc, builder.getI32Type(), isPresent,
+                          /*withElseRegion=*/true)
+                 .genThen([&]() {
+                   mlir::Value loaded = fir::LoadOp::create(builder, loc, unit);
+                   fir::ResultOp::create(builder, loc, loaded);
+                 })
+                 .genElse([&]() {
+                   mlir::Value negOne = builder.createIntegerConstant(
+                       loc, builder.getI32Type(), -1);
+                   fir::ResultOp::create(builder, loc, negOne);
+                 })
+                 .getResults()[0];
+    } else {
+      unit = fir::LoadOp::create(builder, loc, unit);
+    }
+  }
+
+  fir::runtime::genFlush(builder, loc, unit);
+}
+
 // FRACTION
 mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
@@ -6279,12 +6322,6 @@ IntrinsicLibrary::genCharacterCompare(mlir::Type resultType,
   return fir::runtime::genCharCompare(
       builder, loc, pred, fir::getBase(args[0]), fir::getLen(args[0]),
       fir::getBase(args[1]), fir::getLen(args[1]));
-}
-
-static bool isOptional(mlir::Value value) {
-  auto varIface = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(
-      value.getDefiningOp());
-  return varIface && varIface.isOptional();
 }
 
 // LOC
