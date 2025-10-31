@@ -32,116 +32,118 @@ using namespace lldb_private::plugin::dwarf;
 using namespace llvm::dwarf;
 
 void ManualDWARFIndex::Index() {
-  std::call_once(m_indexed_flag, [this]() {
-    ElapsedTime elapsed(m_index_time);
-    LLDB_SCOPED_TIMERF("%p", static_cast<void *>(m_dwarf));
-    if (LoadFromCache()) {
-      m_dwarf->SetDebugInfoIndexWasLoadedFromCache();
-      return;
-    }
+  std::call_once(m_indexed_flag, [this]() { IndexImpl(); });
+}
 
-    DWARFDebugInfo &main_info = m_dwarf->DebugInfo();
-    SymbolFileDWARFDwo *dwp_dwarf = m_dwarf->GetDwpSymbolFile().get();
-    DWARFDebugInfo *dwp_info = dwp_dwarf ? &dwp_dwarf->DebugInfo() : nullptr;
+void ManualDWARFIndex::IndexImpl() {
+  ElapsedTime elapsed(m_index_time);
+  LLDB_SCOPED_TIMERF("%p", static_cast<void *>(m_dwarf));
+  if (LoadFromCache()) {
+    m_dwarf->SetDebugInfoIndexWasLoadedFromCache();
+    return;
+  }
 
-    std::vector<DWARFUnit *> units_to_index;
-    units_to_index.reserve(main_info.GetNumUnits() +
-                           (dwp_info ? dwp_info->GetNumUnits() : 0));
+  DWARFDebugInfo &main_info = m_dwarf->DebugInfo();
+  SymbolFileDWARFDwo *dwp_dwarf = m_dwarf->GetDwpSymbolFile().get();
+  DWARFDebugInfo *dwp_info = dwp_dwarf ? &dwp_dwarf->DebugInfo() : nullptr;
 
-    // Process all units in the main file, as well as any type units in the dwp
-    // file. Type units in dwo files are handled when we reach the dwo file in
-    // IndexUnit.
-    for (size_t U = 0; U < main_info.GetNumUnits(); ++U) {
-      DWARFUnit *unit = main_info.GetUnitAtIndex(U);
-      if (unit && m_units_to_avoid.count(unit->GetOffset()) == 0)
-        units_to_index.push_back(unit);
-    }
-    if (dwp_info && dwp_info->ContainsTypeUnits()) {
-      for (size_t U = 0; U < dwp_info->GetNumUnits(); ++U) {
-        if (auto *tu =
-                llvm::dyn_cast<DWARFTypeUnit>(dwp_info->GetUnitAtIndex(U))) {
-          if (!m_type_sigs_to_avoid.contains(tu->GetTypeHash()))
-            units_to_index.push_back(tu);
-        }
+  std::vector<DWARFUnit *> units_to_index;
+  units_to_index.reserve(main_info.GetNumUnits() +
+                         (dwp_info ? dwp_info->GetNumUnits() : 0));
+
+  // Process all units in the main file, as well as any type units in the dwp
+  // file. Type units in dwo files are handled when we reach the dwo file in
+  // IndexUnit.
+  for (size_t U = 0; U < main_info.GetNumUnits(); ++U) {
+    DWARFUnit *unit = main_info.GetUnitAtIndex(U);
+    if (unit && m_units_to_avoid.count(unit->GetOffset()) == 0)
+      units_to_index.push_back(unit);
+  }
+  if (dwp_info && dwp_info->ContainsTypeUnits()) {
+    for (size_t U = 0; U < dwp_info->GetNumUnits(); ++U) {
+      if (auto *tu =
+              llvm::dyn_cast<DWARFTypeUnit>(dwp_info->GetUnitAtIndex(U))) {
+        if (!m_type_sigs_to_avoid.contains(tu->GetTypeHash()))
+          units_to_index.push_back(tu);
       }
     }
+  }
 
-    if (units_to_index.empty())
-      return;
+  if (units_to_index.empty())
+    return;
 
-    StreamString module_desc;
-    m_module.GetDescription(module_desc.AsRawOstream(),
-                            lldb::eDescriptionLevelBrief);
+  StreamString module_desc;
+  m_module.GetDescription(module_desc.AsRawOstream(),
+                          lldb::eDescriptionLevelBrief);
 
-    // Include 2 passes per unit to index for extracting DIEs from the unit and
-    // indexing the unit, and then extra entries for finalizing each index in
-    // the set.
-    const auto indices = IndexSet<NameToDIE>::Indices();
-    const uint64_t total_progress = units_to_index.size() * 2 + indices.size();
-    Progress progress("Manually indexing DWARF", module_desc.GetData(),
-                      total_progress, /*debugger=*/nullptr,
-                      Progress::kDefaultHighFrequencyReportTime);
+  // Include 2 passes per unit to index for extracting DIEs from the unit and
+  // indexing the unit, and then extra entries for finalizing each index in
+  // the set.
+  const auto indices = IndexSet<NameToDIE>::Indices();
+  const uint64_t total_progress = units_to_index.size() * 2 + indices.size();
+  Progress progress("Manually indexing DWARF", module_desc.GetData(),
+                    total_progress, /*debugger=*/nullptr,
+                    Progress::kDefaultHighFrequencyReportTime);
 
-    // Share one thread pool across operations to avoid the overhead of
-    // recreating the threads.
-    llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
-    const size_t num_threads = Debugger::GetThreadPool().getMaxConcurrency();
+  // Share one thread pool across operations to avoid the overhead of
+  // recreating the threads.
+  llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
+  const size_t num_threads = Debugger::GetThreadPool().getMaxConcurrency();
 
-    // Run a function for each compile unit in parallel using as many threads as
-    // are available. This is significantly faster than submiting a new task for
-    // each unit.
-    auto for_each_unit = [&](auto &&fn) {
-      std::atomic<size_t> next_cu_idx = 0;
-      auto wrapper = [&fn, &next_cu_idx, &units_to_index,
-                      &progress](size_t worker_id) {
-        size_t cu_idx;
-        while ((cu_idx = next_cu_idx.fetch_add(1, std::memory_order_relaxed)) <
-               units_to_index.size()) {
-          fn(worker_id, cu_idx, units_to_index[cu_idx]);
-          progress.Increment();
-        }
-      };
-
-      for (size_t i = 0; i < num_threads; ++i)
-        task_group.async(wrapper, i);
-
-      task_group.wait();
+  // Run a function for each compile unit in parallel using as many threads as
+  // are available. This is significantly faster than submiting a new task for
+  // each unit.
+  auto for_each_unit = [&](auto &&fn) {
+    std::atomic<size_t> next_cu_idx = 0;
+    auto wrapper = [&fn, &next_cu_idx, &units_to_index,
+                    &progress](size_t worker_id) {
+      size_t cu_idx;
+      while ((cu_idx = next_cu_idx.fetch_add(1, std::memory_order_relaxed)) <
+             units_to_index.size()) {
+        fn(worker_id, cu_idx, units_to_index[cu_idx]);
+        progress.Increment();
+      }
     };
 
-    // Extract dies for all DWARFs unit in parallel.  Figure out which units
-    // didn't have their DIEs already parsed and remember this.  If no DIEs were
-    // parsed prior to this index function call, we are going to want to clear
-    // the CU dies after we are done indexing to make sure we don't pull in all
-    // DWARF dies, but we need to wait until all units have been indexed in case
-    // a DIE in one unit refers to another and the indexes accesses those DIEs.
-    std::vector<std::optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
-        units_to_index.size());
-    for_each_unit([&clear_cu_dies](size_t, size_t idx, DWARFUnit *unit) {
-      clear_cu_dies[idx] = unit->ExtractDIEsScoped();
-    });
+    for (size_t i = 0; i < num_threads; ++i)
+      task_group.async(wrapper, i);
 
-    // Now index all DWARF unit in parallel.
-    std::vector<IndexSet<NameToDIE>> sets(num_threads);
-    for_each_unit(
-        [this, dwp_dwarf, &sets](size_t worker_id, size_t, DWARFUnit *unit) {
-          IndexUnit(*unit, dwp_dwarf, sets[worker_id]);
-        });
-
-    // Merge partial indexes into a single index. Process each index in a set in
-    // parallel.
-    for (NameToDIE IndexSet<NameToDIE>::*index : indices) {
-      task_group.async([this, &sets, index, &progress]() {
-        NameToDIE &result = m_set.*index;
-        for (auto &set : sets)
-          result.Append(set.*index);
-        result.Finalize();
-        progress.Increment();
-      });
-    }
     task_group.wait();
+  };
 
-    SaveToCache();
+  // Extract dies for all DWARFs unit in parallel.  Figure out which units
+  // didn't have their DIEs already parsed and remember this.  If no DIEs were
+  // parsed prior to this index function call, we are going to want to clear
+  // the CU dies after we are done indexing to make sure we don't pull in all
+  // DWARF dies, but we need to wait until all units have been indexed in case
+  // a DIE in one unit refers to another and the indexes accesses those DIEs.
+  std::vector<std::optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
+      units_to_index.size());
+  for_each_unit([&clear_cu_dies](size_t, size_t idx, DWARFUnit *unit) {
+    clear_cu_dies[idx] = unit->ExtractDIEsScoped();
   });
+
+  // Now index all DWARF unit in parallel.
+  std::vector<IndexSet<NameToDIE>> sets(num_threads);
+  for_each_unit(
+      [this, dwp_dwarf, &sets](size_t worker_id, size_t, DWARFUnit *unit) {
+        IndexUnit(*unit, dwp_dwarf, sets[worker_id]);
+      });
+
+  // Merge partial indexes into a single index. Process each index in a set in
+  // parallel.
+  for (NameToDIE IndexSet<NameToDIE>::*index : indices) {
+    task_group.async([this, &sets, index, &progress]() {
+      NameToDIE &result = m_set.*index;
+      for (auto &set : sets)
+        result.Append(set.*index);
+      result.Finalize();
+      progress.Increment();
+    });
+  }
+  task_group.wait();
+
+  SaveToCache();
 }
 
 void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,

@@ -66,7 +66,13 @@ public:
   void Dump(Stream &s) override;
 
 private:
+  /// Reads the DWARF debug info to build the index once.
+  ///
+  /// Should be called before attempting to retrieve symbols.
   void Index();
+
+  /// Call `ManualDWARFIndex::Index()` instead.
+  void IndexImpl();
 
   /// Decode a serialized version of this object from data.
   ///
