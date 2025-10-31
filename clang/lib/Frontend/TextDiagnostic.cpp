@@ -353,7 +353,7 @@ static void selectInterestingSourceRegion(
     std::string &SourceLine, std::string &CaretLine,
     std::string &FixItInsertionLine, Columns NonGutterColumns,
     const SourceColumnMap &Map,
-    SmallVector<clang::TextDiagnostic::StyleRange> &Styles) {
+    SmallVectorImpl<clang::TextDiagnostic::StyleRange> &Styles) {
   Columns CaretColumns = CaretLine.size();
   Columns FixItColumns = llvm::sys::locale::columnWidth(FixItInsertionLine);
   Columns MaxColumns =
@@ -522,7 +522,7 @@ static void selectInterestingSourceRegion(
           ? (Map.columnToByte(FrontColumnsRemoved) - Bytes(FrontEllipse.size()))
           : 0;
   Bytes CodeEnd = Map.columnToByte(CaretEnd);
-  for (auto &R : Styles) {
+  for (TextDiagnostic::StyleRange &R : Styles) {
     if (R.End < static_cast<unsigned>(BytesRemoved.V)) {
       R.Start = R.End = std::numeric_limits<int>::max();
       continue;
