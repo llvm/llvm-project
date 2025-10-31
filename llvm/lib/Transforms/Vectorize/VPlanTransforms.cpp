@@ -1283,15 +1283,19 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 
   if (match(Def, m_BuildVector()) && all_equal(R.operands())) {
-    Def->replaceAllUsesWith(Builder.createNaryOp(VPInstruction::Broadcast, R.getOperand(0)));
+    Def->replaceAllUsesWith(
+        Builder.createNaryOp(VPInstruction::Broadcast, Def->getOperand(0)));
     return;
   }
 
-  if (match(Def, m_Select(m_Broadcast(m_VPValue(C)), m_VPValue(), m_VPValue())) && vputils::isSingleScalar(C)) {
+  // Look through broadcast of single-scalar when used as select conditions; in
+  // that case the scalar condition can be used directly.
+  if (match(Def,
+            m_Select(m_Broadcast(m_VPValue(C)), m_VPValue(), m_VPValue())) &&
+      vputils::isSingleScalar(C)) {
     Def->setOperand(0, C);
     return;
   }
-
 
   if (auto *Phi = dyn_cast<VPPhi>(Def)) {
     if (Phi->getNumOperands() == 1)
@@ -1430,7 +1434,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
                                           true /*IsSingleScalar*/);
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
-      RepOrWidenR->eraseFromParent();
+      if (isDeadRecipe(*RepOrWidenR))
+        RepOrWidenR->eraseFromParent();
     }
   }
 }

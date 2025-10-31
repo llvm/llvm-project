@@ -108,7 +108,8 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       .Case<VPScalarIVStepsRecipe>([&SE, L](const VPScalarIVStepsRecipe *R) {
         const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), SE, L);
         const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), SE, L);
-        if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step))
+        if (isa<SCEVCouldNotCompute>(IV) || isa<SCEVCouldNotCompute>(Step) ||
+            !Step->isOne())
           return SE.getCouldNotCompute();
         return SE.getMulExpr(SE.getTruncateOrSignExtend(IV, Step->getType()),
                              Step);
