@@ -450,6 +450,10 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
       byte_size = form_value.Unsigned();
       break;
 
+    case DW_AT_bit_size:
+      data_bit_size = form_value.Unsigned();
+      break;
+
     case DW_AT_alignment:
       alignment = form_value.Unsigned();
       break;
@@ -2043,11 +2047,10 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
   if (is_integral)
     return clang::APValue(apint);
 
-  uint32_t count;
   bool is_complex;
   // FIXME: we currently support a limited set of floating point types.
   // E.g., 16-bit floats are not supported.
-  if (!clang_type.IsFloatingPointType(count, is_complex))
+  if (!clang_type.IsFloatingPointType(is_complex))
     return std::nullopt;
 
   return clang::APValue(llvm::APFloat(
