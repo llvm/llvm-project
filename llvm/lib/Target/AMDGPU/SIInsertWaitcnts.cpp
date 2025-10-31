@@ -527,9 +527,10 @@ public:
 #endif // NDEBUG
   }
 
-  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
-  // instruction.
-  WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
+  // Return an optional WaitEventType value if Inst is a cache
+  // invalidate or WB instruction.
+  std::optional<WaitEventType>
+  getInvOrWBWaitEventType(const MachineInstr &Inst) const {
     switch (Inst.getOpcode()) {
     case AMDGPU::GLOBAL_INV:
       return VMEM_READ_ACCESS; // tracked using loadcnt
@@ -537,9 +538,13 @@ public:
     case AMDGPU::GLOBAL_WBINV:
       return VMEM_WRITE_ACCESS; // tracked using storecnt
     default:
-      break;
+      return {};
     }
+  }
 
+  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
+  // instruction.
+  WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
         VMEM_READ_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
@@ -2265,8 +2270,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
-      ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
+    if (std::optional<WaitEventType> ET = getInvOrWBWaitEventType(Inst)) {
+      ScoreBrackets->updateByEvent(*ET, Inst);
       return;
     }
 
