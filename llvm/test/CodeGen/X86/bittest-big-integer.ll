@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=i686--                   | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64    | FileCheck %s --check-prefixes=X64,SSE
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v2 | FileCheck %s --check-prefixes=X64,SSE
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=X64,AVX
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64,AVX
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=X64,AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64,AVX,AVX512
 
 ; bt/btc/btr/bts patterns + 'init' to set single bit value in large integers
 

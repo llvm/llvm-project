@@ -501,6 +501,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
   std::optional<unsigned> OriginalTripCount =
       llvm::getLoopEstimatedTripCount(L);
+  BranchProbability OriginalLoopProb = llvm::getLoopProbability(L);
 
   // Effectively "DCE" unrolled iterations that are beyond the max tripcount
   // and will never be executed.
@@ -591,11 +592,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                               : isEpilogProfitable(L);
 
   if (ULO.Runtime &&
-      !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
-                                  EpilogProfitability, ULO.UnrollRemainder,
-                                  ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
-                                  PreserveLCSSA, ULO.SCEVExpansionBudget,
-                                  ULO.RuntimeUnrollMultiExit, RemainderLoop)) {
+      !UnrollRuntimeLoopRemainder(
+          L, ULO.Count, ULO.AllowExpensiveTripCount, EpilogProfitability,
+          ULO.UnrollRemainder, ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
+          PreserveLCSSA, ULO.SCEVExpansionBudget, ULO.RuntimeUnrollMultiExit,
+          RemainderLoop, OriginalTripCount, OriginalLoopProb)) {
     if (ULO.Force)
       ULO.Runtime = false;
     else {
@@ -1129,13 +1130,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     LI->erase(L);
     // We shouldn't try to use `L` anymore.
     L = nullptr;
-  } else if (OriginalTripCount) {
+  } else {
     // Update metadata for the loop's branch weights and estimated trip count:
     // - If ULO.Runtime, UnrollRuntimeLoopRemainder sets the guard branch
     //   weights, latch branch weights, and estimated trip count of the
     //   remainder loop it creates.  It also sets the branch weights for the
     //   unrolled loop guard it creates.  The branch weights for the unrolled
-    //   loop latch are adjusted below.  FIXME: Actually handle ULO.Runtime.
+    //   loop latch are adjusted below.  FIXME: Handle prologue loops.
     // - Otherwise, if unrolled loop iteration latches become unconditional,
     //   branch weights are adjusted above.  FIXME: Actually handle such
     //   unconditional latches.
@@ -1158,10 +1159,17 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // the unrolled loop as a whole without considering the branch weights for
     // each unrolled iteration's latch within it, we store the new trip count as
     // separate metadata.
-    unsigned NewTripCount = *OriginalTripCount / ULO.Count;
-    if (!ULO.Runtime && *OriginalTripCount % ULO.Count)
-      NewTripCount += 1;
-    setLoopEstimatedTripCount(L, NewTripCount);
+    if (!OriginalLoopProb.isUnknown() && ULO.Runtime && EpilogProfitability) {
+      // Where p is always the probability of executing at least 1 more
+      // iteration, the probability for at least n more iterations is p^n.
+      setLoopProbability(L, OriginalLoopProb.pow(ULO.Count));
+    }
+    if (OriginalTripCount) {
+      unsigned NewTripCount = *OriginalTripCount / ULO.Count;
+      if (!ULO.Runtime && *OriginalTripCount % ULO.Count)
+        ++NewTripCount;
+      setLoopEstimatedTripCount(L, NewTripCount);
+    }
   }
 
   // LoopInfo should not be valid, confirm that.
