@@ -416,18 +416,19 @@ handleAllocSite(Instruction &I, CallBase *CI,
   DenseMap<uint64_t, const AllocationInfo *> UniqueFullContextIdAllocInfo;
   for (auto *AllocInfo : AllocInfoSet) {
     auto FullStackId = computeFullStackId(AllocInfo->CallStack);
-    auto Insert = UniqueFullContextIdAllocInfo.insert({FullStackId, AllocInfo});
+    auto [It, Inserted] =
+        UniqueFullContextIdAllocInfo.insert({FullStackId, AllocInfo});
     // If inserted entry, done.
-    if (Insert.second)
+    if (Inserted)
       continue;
     // Keep the larger one, or the noncold one if they are the same size.
-    auto CurSize = Insert.first->second->Info.getTotalSize();
+    auto CurSize = It->second->Info.getTotalSize();
     auto NewSize = AllocInfo->Info.getTotalSize();
     if ((CurSize > NewSize) ||
         (CurSize == NewSize &&
          getAllocType(AllocInfo) != AllocationType::NotCold))
       continue;
-    Insert.first->second = AllocInfo;
+    It->second = AllocInfo;
   }
   // We may match this instruction's location list to multiple MIB
   // contexts. Add them to a Trie specialized for trimming the contexts to
