@@ -377,6 +377,8 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   IRBuilder<> IRB(&BB);
   IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
   Value *Cond = VMap[ToDuplicate[0]];
+  // The expectation is that ToDuplicate[0] is the condition used by the
+  // OriginalBranch, case in which we can clone the profile metadata from there.
   auto *ProfData =
       !ProfcheckDisableMetadataFixes &&
               ToDuplicate[0] == skipTrivialSelect(OriginalBranch.getCondition())
@@ -386,8 +388,8 @@ static void buildPartialInvariantUnswitchConditionalBranch(
       IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                        Direction ? &NormalSucc : &UnswitchedSucc, ProfData);
   if (!ProfData)
-    setExplicitlyUnknownBranchWeightsIfProfiled(
-        *BR, *BR->getParent()->getParent(), DEBUG_TYPE);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*BR, *BR->getFunction(),
+                                                DEBUG_TYPE);
 }
 
 /// Rewrite the PHI nodes in an unswitched loop exit basic block.
