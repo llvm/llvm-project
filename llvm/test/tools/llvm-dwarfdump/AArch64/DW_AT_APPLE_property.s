@@ -21,7 +21,7 @@
 # CHECK:   DW_AT_APPLE_property  (0x{{.*}})
 # CHECK:   DW_AT_APPLE_property  (0x[[INVALID_STRP]])
 
-# ERRORS: error: decoding DW_AT_APPLE_property_name: referencing not a DW_TAG_APPLE_property
+# ERRORS: error: decoding DW_AT_APPLE_property_name: not referencing a DW_TAG_APPLE_property
 # ERRORS: error: decoding DW_AT_APPLE_property_name: invalid DIE
 # ERRORS: error: decoding DW_AT_APPLE_property_name: DW_FORM_strp offset 102 is beyond .debug_str bounds
 

@@ -135,7 +135,7 @@ getApplePropertyName(const DWARFDie &PropDIE) {
     return llvm::createStringError("invalid DIE");
 
   if (PropDIE.getTag() != DW_TAG_APPLE_property)
-    return llvm::createStringError("referencing not a DW_TAG_APPLE_property");
+    return llvm::createStringError("not referencing a DW_TAG_APPLE_property");
 
   auto PropNameForm = PropDIE.find(DW_AT_APPLE_property_name);
   if (!PropNameForm)
