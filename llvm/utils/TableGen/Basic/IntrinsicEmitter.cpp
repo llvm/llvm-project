@@ -873,7 +873,8 @@ void Intrinsic::printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS, const Cons
     OS << "    }\n";
     OS << "    break;\n";
   }
-  OS << R"(
+  OS << R"(    default:
+     break;
   }
 }
 #endif // GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
