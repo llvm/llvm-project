@@ -250,6 +250,26 @@ bb2:
   store i32 0, ptr addrspace(5) %extractelement
   ret void
 }
+
+define amdgpu_kernel void @scalar_alloca_vector_gep_i8(ptr %buffer, float %data, i32 %index) {
+; CHECK-LABEL: define amdgpu_kernel void @scalar_alloca_vector_gep_i8(
+; CHECK-SAME: ptr [[BUFFER:%.*]], float [[DATA:%.*]], i32 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <3 x float> poison
+; CHECK-NEXT:    [[VEC:%.*]] = load <3 x float>, ptr [[BUFFER]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <3 x float> [[VEC]], float [[DATA]], i32 [[TMP1]]
+; CHECK-NEXT:    store <3 x float> [[TMP2]], ptr [[BUFFER]], align 16
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <3 x float>, align 16, addrspace(5)
+  %vec = load <3 x float>, ptr %buffer
+  store <3 x float> %vec, ptr addrspace(5) %alloca
+  %elt = getelementptr inbounds nuw i8, ptr addrspace(5) %alloca, i32 %index
+  store float %data, ptr addrspace(5) %elt, align 4
+  %updated = load <3 x float>, ptr addrspace(5) %alloca, align 16
+  store <3 x float> %updated, ptr %buffer, align 16
+  ret void
+}
 ;.
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[RNG1]] = !{i32 0, i32 1025}
