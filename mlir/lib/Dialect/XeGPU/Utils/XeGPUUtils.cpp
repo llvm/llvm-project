@@ -105,22 +105,12 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
 std::string xegpu::getLayoutName(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
-  auto owner = operand.getOwner();
-  auto tempLayout = llvm::formatv("{0}{1}", prefix, idx).str();
-  if (isa<StoreScatterOp>(operand.getOwner()) && idx == 0 &&
-      !owner->hasAttr(tempLayout))
-    return "layout";
-  return tempLayout;
+  return llvm::formatv("{0}{1}", prefix, idx).str();
 }
 
 std::string xegpu::getLayoutName(const OpResult result) {
   const StringRef prefix = "layout_result_";
-  auto owner = result.getOwner();
-  auto tempLayout =
-      llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
-  if (isa<LoadGatherOp>(owner) && !owner->hasAttr(tempLayout))
-    return "layout";
-  return tempLayout;
+  return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
