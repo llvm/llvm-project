@@ -37,3 +37,6 @@ target_include_directories(MLIRTestAnalysis
   ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
   ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
   )
+
+
+set_target_properties(MLIRTestAnalysis PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

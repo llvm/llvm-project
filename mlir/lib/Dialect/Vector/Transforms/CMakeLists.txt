@@ -55,3 +55,4 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRVectorInterfaces
   MLIRVectorUtils
   )
+set_target_properties(obj.MLIRVectorTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

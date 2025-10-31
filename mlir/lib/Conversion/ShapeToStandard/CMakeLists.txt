@@ -25,3 +25,4 @@ add_mlir_conversion_library(MLIRShapeToStandard
   MLIRSCFDialect
   MLIRTransforms
   )
+set_target_properties(obj.MLIRShapeToStandard PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

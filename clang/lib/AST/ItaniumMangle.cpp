@@ -24,6 +24,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprConcepts.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/TypeLoc.h"
@@ -1559,8 +1560,23 @@ void CXXNameMangler::mangleUnqualifiedName(
 
     if (const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(ND)) {
       if (NS->isAnonymousNamespace()) {
+#if 0
         // This is how gcc mangles these names.
         Out << "12_GLOBAL__N_1";
+#endif
+
+#if 1
+        // Add a per-file unique key for the source file containing
+        // the declaration.
+        // FIXME: This should be controlled by a flag.
+        SourceManager &SM = Context.getASTContext().getSourceManager();
+        SourceLocation Loc = SM.getSpellingLoc(NS->getBeginLoc());
+
+        std::string Name("__anonymous_");
+        Name.append(std::to_string(SM.getFileID(Loc).getHashValue()));
+
+        Out << Name.size() << Name;
+#endif
         break;
       }
     }
