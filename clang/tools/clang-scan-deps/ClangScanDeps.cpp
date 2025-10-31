@@ -106,6 +106,7 @@ static constexpr bool DoRoundTripDefault = false;
 #endif
 
 static bool RoundTripArgs = DoRoundTripDefault;
+static bool VerbatimArgs = false;
 
 static void ParseArgs(int argc, char **argv) {
   ScanDepsOptTable Tbl;
@@ -238,6 +239,8 @@ static void ParseArgs(int argc, char **argv) {
   Verbose = Args.hasArg(OPT_verbose);
 
   RoundTripArgs = Args.hasArg(OPT_round_trip_args);
+
+  VerbatimArgs = Args.hasArg(OPT_verbatim_args);
 
   if (const llvm::opt::Arg *A = Args.getLastArgNoClaim(OPT_DASH_DASH))
     CommandLine.assign(A->getValues().begin(), A->getValues().end());
@@ -420,7 +423,7 @@ public:
     std::vector<ModuleDeps *> NewMDs;
     {
       std::unique_lock<std::mutex> ul(Lock);
-      for (const ModuleDeps &MD : Graph) {
+      for (ModuleDeps &MD : Graph) {
         auto I = Modules.find({MD.ID, 0});
         if (I != Modules.end()) {
           I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
@@ -883,14 +886,16 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   llvm::cl::PrintOptionValues();
 
-  // Expand response files in advance, so that we can "see" all the arguments
-  // when adjusting below.
-  Compilations = expandResponseFiles(std::move(Compilations),
-                                     llvm::vfs::getRealFileSystem());
+  if (!VerbatimArgs) {
+    // Expand response files in advance, so that we can "see" all the arguments
+    // when adjusting below.
+    Compilations = expandResponseFiles(std::move(Compilations),
+                                       llvm::vfs::getRealFileSystem());
 
-  Compilations = inferTargetAndDriverMode(std::move(Compilations));
+    Compilations = inferTargetAndDriverMode(std::move(Compilations));
 
-  Compilations = inferToolLocation(std::move(Compilations));
+    Compilations = inferToolLocation(std::move(Compilations));
+  }
 
   // The command options are rewritten to run Clang in preprocessor only mode.
   auto AdjustingCompilations =
@@ -898,7 +903,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           std::move(Compilations));
   ResourceDirectoryCache ResourceDirCache;
 
-  AdjustingCompilations->appendArgumentsAdjuster(
+  auto ArgsAdjuster =
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
         std::string LastO;
@@ -960,7 +965,10 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         }
         AdjustedArgs.insert(AdjustedArgs.end(), FlagsEnd, Args.end());
         return AdjustedArgs;
-      });
+      };
+
+  if (!VerbatimArgs)
+    AdjustingCompilations->appendArgumentsAdjuster(ArgsAdjuster);
 
   SharedStream Errs(llvm::errs());
 

@@ -48,33 +48,33 @@ template <typename... Ts> LIBC_INLINE constexpr auto tie(Ts &...args) {
   return tuple<Ts &...>(args...);
 }
 
-template <size_t I, typename Head, typename... Tail>
+template <size_t Idx, typename Head, typename... Tail>
 LIBC_INLINE constexpr auto &get(tuple<Head, Tail...> &t) {
-  if constexpr (I == 0)
+  if constexpr (Idx == 0)
     return t.get_head();
   else
-    return get<I - 1>(t.get_tail());
+    return get<Idx - 1>(t.get_tail());
 }
-template <size_t I, typename Head, typename... Tail>
+template <size_t Idx, typename Head, typename... Tail>
 LIBC_INLINE constexpr const auto &get(const tuple<Head, Tail...> &t) {
-  if constexpr (I == 0)
+  if constexpr (Idx == 0)
     return t.get_head();
   else
-    return get<I - 1>(t.get_tail());
+    return get<Idx - 1>(t.get_tail());
 }
-template <size_t I, typename Head, typename... Tail>
+template <size_t Idx, typename Head, typename... Tail>
 LIBC_INLINE constexpr auto &&get(tuple<Head, Tail...> &&t) {
-  if constexpr (I == 0)
+  if constexpr (Idx == 0)
     return static_cast<Head &&>(t.get_head());
   else
-    return get<I - 1>(static_cast<tuple<Tail...> &&>(t.get_tail()));
+    return get<Idx - 1>(static_cast<tuple<Tail...> &&>(t.get_tail()));
 }
-template <size_t I, typename Head, typename... Tail>
+template <size_t Idx, typename Head, typename... Tail>
 LIBC_INLINE constexpr const auto &&get(const tuple<Head, Tail...> &&t) {
-  if constexpr (I == 0)
+  if constexpr (Idx == 0)
     return static_cast<const Head &&>(t.get_head());
   else
-    return get<I - 1>(static_cast<const tuple<Tail...> &&>(t.get_tail()));
+    return get<Idx - 1>(static_cast<const tuple<Tail...> &&>(t.get_tail()));
 }
 
 template <typename T> struct tuple_size;
@@ -82,21 +82,21 @@ template <typename... Ts> struct tuple_size<tuple<Ts...>> {
   static constexpr size_t value = sizeof...(Ts);
 };
 
-template <size_t I, typename T> struct tuple_element;
-template <size_t I, typename Head, typename... Tail>
-struct tuple_element<I, tuple<Head, Tail...>>
-    : tuple_element<I - 1, tuple<Tail...>> {};
+template <size_t Idx, typename T> struct tuple_element;
+template <size_t Idx, typename Head, typename... Tail>
+struct tuple_element<Idx, tuple<Head, Tail...>>
+    : tuple_element<Idx - 1, tuple<Tail...>> {};
 template <typename Head, typename... Tail>
 struct tuple_element<0, tuple<Head, Tail...>> {
   using type = cpp::remove_cv_t<cpp::remove_reference_t<Head>>;
 };
 
 namespace internal {
-template <typename... As, typename... Bs, size_t... I, size_t... J>
+template <typename... As, typename... Bs, size_t... Idx, size_t... J>
 LIBC_INLINE constexpr auto
 tuple_cat(const tuple<As...> &a, const tuple<Bs...> &b,
-          cpp::index_sequence<I...>, cpp::index_sequence<J...>) {
-  return tuple<As..., Bs...>(get<I>(a)..., get<J>(b)...);
+          cpp::index_sequence<Idx...>, cpp::index_sequence<J...>) {
+  return tuple<As..., Bs...>(get<Idx>(a)..., get<J>(b)...);
 }
 
 template <typename First, typename Second, typename... Rest>
@@ -128,16 +128,16 @@ LIBC_INLINE constexpr auto tuple_cat(const Tuples &...tuples) {
 namespace std {
 
 template <class T> struct tuple_size;
-template <size_t I, class T> struct tuple_element;
+template <size_t Idx, class T> struct tuple_element;
 
 template <typename... Ts>
 struct tuple_size<LIBC_NAMESPACE::cpp::tuple<Ts...>>
     : LIBC_NAMESPACE::cpp::tuple_size<LIBC_NAMESPACE::cpp::tuple<Ts...>> {};
 
-template <size_t I, typename... Ts>
-struct tuple_element<I, LIBC_NAMESPACE::cpp::tuple<Ts...>>
-    : LIBC_NAMESPACE::cpp::tuple_element<I, LIBC_NAMESPACE::cpp::tuple<Ts...>> {
-};
+template <size_t Idx, typename... Ts>
+struct tuple_element<Idx, LIBC_NAMESPACE::cpp::tuple<Ts...>>
+    : LIBC_NAMESPACE::cpp::tuple_element<Idx,
+                                         LIBC_NAMESPACE::cpp::tuple<Ts...>> {};
 
 } // namespace std
 

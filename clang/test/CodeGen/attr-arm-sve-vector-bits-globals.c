@@ -24,14 +24,14 @@ fixed_bool_t global_bool;
 // CHECK-128-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <2 x i64> @llvm.vector.extract.v2i64.nxv2i64(<vscale x 2 x i64> [[V]], i64 0)
-// CHECK-128-NEXT:    store <2 x i64> [[CAST_FIXED]], ptr @global_i64, align 16, !tbaa [[CHAR_TBAA2:![0-9]+]]
+// CHECK-128-NEXT:    store <2 x i64> [[CAST_FIXED]], ptr @global_i64, align 16, !tbaa [[CHAR_TBAA6:![0-9]+]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-512-LABEL: define void @write_global_i64(
 // CHECK-512-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-512-NEXT:  [[ENTRY:.*:]]
 // CHECK-512-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x i64> @llvm.vector.extract.v8i64.nxv2i64(<vscale x 2 x i64> [[V]], i64 0)
-// CHECK-512-NEXT:    store <8 x i64> [[CAST_FIXED]], ptr @global_i64, align 16, !tbaa [[CHAR_TBAA2:![0-9]+]]
+// CHECK-512-NEXT:    store <8 x i64> [[CAST_FIXED]], ptr @global_i64, align 16, !tbaa [[CHAR_TBAA6:![0-9]+]]
 // CHECK-512-NEXT:    ret void
 //
 void write_global_i64(svint64_t v) { global_i64 = v; }
@@ -40,14 +40,14 @@ void write_global_i64(svint64_t v) { global_i64 = v; }
 // CHECK-128-SAME: <vscale x 8 x bfloat> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x bfloat> @llvm.vector.extract.v8bf16.nxv8bf16(<vscale x 8 x bfloat> [[V]], i64 0)
-// CHECK-128-NEXT:    store <8 x bfloat> [[CAST_FIXED]], ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-128-NEXT:    store <8 x bfloat> [[CAST_FIXED]], ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-512-LABEL: define void @write_global_bf16(
 // CHECK-512-SAME: <vscale x 8 x bfloat> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-512-NEXT:  [[ENTRY:.*:]]
 // CHECK-512-NEXT:    [[CAST_FIXED:%.*]] = tail call <32 x bfloat> @llvm.vector.extract.v32bf16.nxv8bf16(<vscale x 8 x bfloat> [[V]], i64 0)
-// CHECK-512-NEXT:    store <32 x bfloat> [[CAST_FIXED]], ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-512-NEXT:    store <32 x bfloat> [[CAST_FIXED]], ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_global_bf16(svbfloat16_t v) { global_bf16 = v; }
@@ -57,7 +57,7 @@ void write_global_bf16(svbfloat16_t v) { global_bf16 = v; }
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
 // CHECK-128-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1> [[V]] to <vscale x 2 x i8>
 // CHECK-128-NEXT:    [[CAST_FIXED:%.*]] = tail call <2 x i8> @llvm.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> [[TMP0]], i64 0)
-// CHECK-128-NEXT:    store <2 x i8> [[CAST_FIXED]], ptr @global_bool, align 2, !tbaa [[CHAR_TBAA2]]
+// CHECK-128-NEXT:    store <2 x i8> [[CAST_FIXED]], ptr @global_bool, align 2, !tbaa [[CHAR_TBAA6]]
 // CHECK-128-NEXT:    ret void
 //
 // CHECK-512-LABEL: define void @write_global_bool(
@@ -65,7 +65,7 @@ void write_global_bf16(svbfloat16_t v) { global_bf16 = v; }
 // CHECK-512-NEXT:  [[ENTRY:.*:]]
 // CHECK-512-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1> [[V]] to <vscale x 2 x i8>
 // CHECK-512-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x i8> @llvm.vector.extract.v8i8.nxv2i8(<vscale x 2 x i8> [[TMP0]], i64 0)
-// CHECK-512-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr @global_bool, align 2, !tbaa [[CHAR_TBAA2]]
+// CHECK-512-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr @global_bool, align 2, !tbaa [[CHAR_TBAA6]]
 // CHECK-512-NEXT:    ret void
 //
 void write_global_bool(svbool_t v) { global_bool = v; }
@@ -77,14 +77,14 @@ void write_global_bool(svbool_t v) { global_bool = v; }
 // CHECK-128-LABEL: define <vscale x 2 x i64> @read_global_i64(
 // CHECK-128-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @global_i64, align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr @global_i64, align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    ret <vscale x 2 x i64> [[CAST_SCALABLE]]
 //
 // CHECK-512-LABEL: define <vscale x 2 x i64> @read_global_i64(
 // CHECK-512-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-512-NEXT:  [[ENTRY:.*:]]
-// CHECK-512-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr @global_i64, align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-512-NEXT:    [[TMP0:%.*]] = load <8 x i64>, ptr @global_i64, align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-512-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v8i64(<vscale x 2 x i64> poison, <8 x i64> [[TMP0]], i64 0)
 // CHECK-512-NEXT:    ret <vscale x 2 x i64> [[CAST_SCALABLE]]
 //
@@ -93,14 +93,14 @@ svint64_t read_global_i64() { return global_i64; }
 // CHECK-128-LABEL: define <vscale x 8 x bfloat> @read_global_bf16(
 // CHECK-128-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> poison, <8 x bfloat> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    ret <vscale x 8 x bfloat> [[CAST_SCALABLE]]
 //
 // CHECK-512-LABEL: define <vscale x 8 x bfloat> @read_global_bf16(
 // CHECK-512-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-512-NEXT:  [[ENTRY:.*:]]
-// CHECK-512-NEXT:    [[TMP0:%.*]] = load <32 x bfloat>, ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA2]]
+// CHECK-512-NEXT:    [[TMP0:%.*]] = load <32 x bfloat>, ptr @global_bf16, align 16, !tbaa [[CHAR_TBAA6]]
 // CHECK-512-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v32bf16(<vscale x 8 x bfloat> poison, <32 x bfloat> [[TMP0]], i64 0)
 // CHECK-512-NEXT:    ret <vscale x 8 x bfloat> [[CAST_SCALABLE]]
 //
@@ -109,7 +109,7 @@ svbfloat16_t read_global_bf16() { return global_bf16; }
 // CHECK-128-LABEL: define <vscale x 16 x i1> @read_global_bool(
 // CHECK-128-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-128-NEXT:  [[ENTRY:.*:]]
-// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr @global_bool, align 2, !tbaa [[CHAR_TBAA2]]
+// CHECK-128-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr @global_bool, align 2, !tbaa [[CHAR_TBAA6]]
 // CHECK-128-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> [[TMP0]], i64 0)
 // CHECK-128-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CAST_SCALABLE]] to <vscale x 16 x i1>
 // CHECK-128-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
@@ -117,18 +117,18 @@ svbfloat16_t read_global_bf16() { return global_bf16; }
 // CHECK-512-LABEL: define <vscale x 16 x i1> @read_global_bool(
 // CHECK-512-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-512-NEXT:  [[ENTRY:.*:]]
-// CHECK-512-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool, align 2, !tbaa [[CHAR_TBAA2]]
+// CHECK-512-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool, align 2, !tbaa [[CHAR_TBAA6]]
 // CHECK-512-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> poison, <8 x i8> [[TMP0]], i64 0)
 // CHECK-512-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CAST_SCALABLE]] to <vscale x 16 x i1>
 // CHECK-512-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
 //
 svbool_t read_global_bool() { return global_bool; }
 //.
-// CHECK-128: [[CHAR_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-128: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK-128: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK-128: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-128: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK-128: [[CHAR_TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.
-// CHECK-512: [[CHAR_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-512: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK-512: [[META4]] = !{!"Simple C/C++ TBAA"}
+// CHECK-512: [[META4:![0-9]+]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK-512: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK-512: [[CHAR_TBAA6]] = !{[[META4]], [[META4]], i64 0}
 //.

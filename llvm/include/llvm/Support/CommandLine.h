@@ -549,7 +549,7 @@ template <class DataType> struct OptionValue;
 // The default value safely does nothing. Option value printing is only
 // best-effort.
 template <class DataType, bool isClass>
-struct OptionValueBase : public GenericOptionValue {
+struct OptionValueBase : GenericOptionValue {
   // Temporary storage for argument passing.
   using WrapperType = OptionValue<DataType>;
 
@@ -1186,6 +1186,31 @@ public:
 
   void printOptionDiff(const Option &O, StringRef V, const OptVal &Default,
                        size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
+
+template <>
+class LLVM_ABI parser<std::optional<std::string>>
+    : public basic_parser<std::optional<std::string>> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &, StringRef, StringRef Arg,
+             std::optional<std::string> &Value) {
+    Value = Arg.str();
+    return false;
+  }
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "optional string"; }
+
+  void printOptionDiff(const Option &O, std::optional<StringRef> V,
+                       const OptVal &Default, size_t GlobalWidth) const;
 
   // An out-of-line virtual method to provide a 'home' for this class.
   void anchor() override;

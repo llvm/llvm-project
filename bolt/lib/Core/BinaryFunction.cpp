@@ -284,6 +284,33 @@ BinaryFunction::getBasicBlockContainingOffset(uint64_t Offset) {
   return (Offset < BB->getOffset() + BB->getOriginalSize()) ? BB : nullptr;
 }
 
+uint16_t BinaryFunction::getConstantIslandAlignment() const {
+  if (Islands == nullptr)
+    return 1;
+
+  // For constant island inside a function, the default 8-byte alignment is
+  // probably good enough.
+  const uint16_t DefaultAlignment = sizeof(uint64_t);
+  if (!isDataObject())
+    return DefaultAlignment;
+
+  // If the constant island itself is a binary function, get its alignment
+  // based on its size, original address, and its owning section's alignment.
+  const uint64_t MaxAlignment =
+      std::min(uint64_t(1) << llvm::countr_zero(getAddress()),
+               OriginSection->getAlignment());
+  const uint64_t MinAlignment =
+      std::max((uint64_t)DefaultAlignment,
+               uint64_t(1) << (63 - llvm::countl_zero(getSize())));
+  uint64_t Alignment = std::min(MinAlignment, MaxAlignment);
+  if (Alignment >> 16) {
+    BC.errs() << "BOLT-ERROR: the constant island's alignment is too big: 0x"
+              << Twine::utohexstr(Alignment) << "\n";
+    exit(1);
+  }
+  return (uint16_t)Alignment;
+}
+
 void BinaryFunction::markUnreachableBlocks() {
   std::stack<BinaryBasicBlock *> Stack;
 
@@ -1008,12 +1035,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   return BranchType;
 }
 
-MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
-                                                bool CreatePastEnd) {
+MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address) {
   const uint64_t Offset = Address - getAddress();
-
-  if ((Offset == getSize()) && CreatePastEnd)
-    return getFunctionEndLabel();
 
   auto LI = Labels.find(Offset);
   if (LI != Labels.end())
@@ -1024,6 +1047,9 @@ MCSymbol *BinaryFunction::getOrCreateLocalLabel(uint64_t Address,
     if (MCSymbol *IslandSym = getOrCreateIslandAccess(Address))
       return IslandSym;
   }
+
+  if (Offset == getSize())
+    return getFunctionEndLabel();
 
   MCSymbol *Label = BC.Ctx->createNamedTempSymbol();
   Labels[Offset] = Label;
@@ -1400,10 +1426,9 @@ Error BinaryFunction::disassemble() {
                 !(BC.isAArch64() &&
                   BC.handleAArch64Veneer(TargetAddress, /*MatchOnly*/ true))) {
               // Result of __builtin_unreachable().
-              LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump past end detected at 0x"
-                                << Twine::utohexstr(AbsoluteInstrAddr)
-                                << " in function " << *this
-                                << " : replacing with nop.\n");
+              errs() << "BOLT-WARNING: jump past end detected at 0x"
+                     << Twine::utohexstr(AbsoluteInstrAddr) << " in function "
+                     << *this << " : replacing with nop.\n";
               BC.MIB->createNoop(Instruction);
               if (IsCondBranch) {
                 // Register branch offset for profile validation.
@@ -1672,11 +1697,12 @@ bool BinaryFunction::scanExternalRefs() {
       if (!TargetFunction || ignoreFunctionRef(*TargetFunction))
         continue;
 
-      const uint64_t FunctionOffset =
-          TargetAddress - TargetFunction->getAddress();
+      // Get a reference symbol for the function when address is a valid code
+      // reference.
       BranchTargetSymbol =
-          FunctionOffset ? TargetFunction->addEntryPointAtOffset(FunctionOffset)
-                         : TargetFunction->getSymbol();
+          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+      if (!BranchTargetSymbol)
+        continue;
     }
 
     // Can't find more references. Not creating relocations since we are not
@@ -1968,7 +1994,7 @@ void BinaryFunction::postProcessJumpTables() {
       if (IsBuiltinUnreachable) {
         BinaryFunction *TargetBF = BC.getBinaryFunctionAtAddress(EntryAddress);
         MCSymbol *Label = TargetBF ? TargetBF->getSymbol()
-                                   : getOrCreateLocalLabel(EntryAddress, true);
+                                   : getOrCreateLocalLabel(EntryAddress);
         JT.Entries.push_back(Label);
         continue;
       }
@@ -1979,7 +2005,7 @@ void BinaryFunction::postProcessJumpTables() {
           BC.getBinaryFunctionContainingAddress(EntryAddress);
       MCSymbol *Label;
       if (HasOneParent && TargetBF == this) {
-        Label = getOrCreateLocalLabel(EntryAddress, true);
+        Label = getOrCreateLocalLabel(EntryAddress);
       } else {
         const uint64_t Offset = EntryAddress - TargetBF->getAddress();
         Label = Offset ? TargetBF->addEntryPointAtOffset(Offset)
@@ -2787,14 +2813,8 @@ private:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
@@ -2809,6 +2829,7 @@ public:
   void advanceTo(int32_t State) {
     for (int32_t I = CurState, E = State; I != E; ++I) {
       const MCCFIInstruction &Instr = FDE[I];
+      assert(Instr.getOperation() != MCCFIInstruction::OpNegateRAState);
       if (Instr.getOperation() != MCCFIInstruction::OpRestoreState) {
         update(Instr, I);
         continue;
@@ -2933,15 +2954,9 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
+    case MCCFIInstruction::OpNegateRAState:
       llvm_unreachable("unsupported CFI opcode");
       return false;
-    case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
-      break;
     case MCCFIInstruction::OpRememberState:
     case MCCFIInstruction::OpRestoreState:
     case MCCFIInstruction::OpGnuArgsSize:
@@ -3090,14 +3105,8 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
     case MCCFIInstruction::OpLabel:
     case MCCFIInstruction::OpValOffset:
-      llvm_unreachable("unsupported CFI opcode");
-      break;
     case MCCFIInstruction::OpNegateRAState:
-      if (!(opts::BinaryAnalysisMode || opts::HeatmapMode)) {
-        llvm_unreachable("BOLT-ERROR: binaries using pac-ret hardening (e.g. "
-                         "as produced by '-mbranch-protection=pac-ret') are "
-                         "currently not supported by BOLT.");
-      }
+      llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:
       // do not affect CFI state
@@ -3598,7 +3607,9 @@ void BinaryFunction::fixBranches() {
   auto &MIB = BC.MIB;
   MCContext *Ctx = BC.Ctx.get();
 
-  for (BinaryBasicBlock *BB : BasicBlocks) {
+  for (auto BBI = Layout.block_begin(), BBE = Layout.block_end(); BBI != BBE;
+       ++BBI) {
+    BinaryBasicBlock *BB = *BBI;
     const MCSymbol *TBB = nullptr;
     const MCSymbol *FBB = nullptr;
     MCInst *CondBranch = nullptr;
@@ -3612,7 +3623,7 @@ void BinaryFunction::fixBranches() {
 
     // Basic block that follows the current one in the final layout.
     const BinaryBasicBlock *const NextBB =
-        Layout.getBasicBlockAfter(BB, /*IgnoreSplits=*/false);
+        Layout.getBasicBlockAfter(BBI, /*IgnoreSplits*/ false);
 
     if (BB->succ_size() == 1) {
       // __builtin_unreachable() could create a conditional branch that
@@ -3863,7 +3874,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
     if (FunctionSymbol == Symbol)
       return 0;
 
-  // Check all secondary entries available as either basic blocks or lables.
+  // Check all secondary entries available as either basic blocks or labels.
   uint64_t NumEntries = 1;
   for (const BinaryBasicBlock *BB : BasicBlocks) {
     MCSymbol *EntrySymbol = getSecondaryEntryPointSymbol(*BB);

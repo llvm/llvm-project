@@ -15,15 +15,6 @@ define i32 @foo(ptr %p) {
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]], !dbg [[DBG3]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ], !dbg [[DBG7:![0-9]+]]
-; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 0 to i8, !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    store i8 [[CONV]], ptr [[P]], align 1, !dbg [[DBG3]]
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1, !dbg [[DBG9:![0-9]+]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1, !dbg [[DBG10:![0-9]+]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT]], label %[[LOOP]], !dbg [[DBG11:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -64,9 +55,4 @@ exit:                              ; preds = %loop
 ; CHECK: [[META4]] = distinct !DISubprogram(name: "foo", scope: [[META1]], file: [[META1]], line: 11, type: [[META5:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META6:![0-9]+]])
 ; CHECK: [[META5]] = distinct !DISubroutineType(types: [[META6]])
 ; CHECK: [[META6]] = !{}
-; CHECK: [[DBG7]] = !DILocation(line: 4, scope: [[META4]])
-; CHECK: [[DBG8]] = !DILocation(line: 5, scope: [[META4]])
-; CHECK: [[DBG9]] = !DILocation(line: 7, scope: [[META4]])
-; CHECK: [[DBG10]] = !DILocation(line: 8, scope: [[META4]])
-; CHECK: [[DBG11]] = !DILocation(line: 9, scope: [[META4]])
 ;.

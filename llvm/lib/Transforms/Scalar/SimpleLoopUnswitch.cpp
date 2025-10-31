@@ -27,7 +27,6 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -82,6 +81,7 @@ STATISTIC(
 STATISTIC(NumInvariantConditionsInjected,
           "Number of invariant conditions injected and unswitched");
 
+namespace llvm {
 static cl::opt<bool> EnableNonTrivialUnswitch(
     "enable-nontrivial-unswitch", cl::init(false), cl::Hidden,
     cl::desc("Forcibly enables non-trivial loop unswitching rather than "
@@ -132,10 +132,16 @@ static cl::opt<bool> InjectInvariantConditions(
 
 static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
     "simple-loop-unswitch-inject-invariant-condition-hotness-threshold",
-    cl::Hidden, cl::desc("Only try to inject loop invariant conditions and "
-                         "unswitch on them to eliminate branches that are "
-                         "not-taken 1/<this option> times or less."),
+    cl::Hidden,
+    cl::desc("Only try to inject loop invariant conditions and "
+             "unswitch on them to eliminate branches that are "
+             "not-taken 1/<this option> times or less."),
     cl::init(16));
+
+static cl::opt<bool> EstimateProfile("simple-loop-unswitch-estimate-profile",
+                                     cl::Hidden, cl::init(true));
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 AnalysisKey ShouldRunExtraSimpleLoopUnswitch::Key;
 namespace {
@@ -269,13 +275,42 @@ static bool areLoopExitPHIsLoopInvariant(const Loop &L,
   llvm_unreachable("Basic blocks should never be empty!");
 }
 
-/// Copy a set of loop invariant values \p ToDuplicate and insert them at the
+/// Copy a set of loop invariant values \p Invariants and insert them at the
 /// end of \p BB and conditionally branch on the copied condition. We only
 /// branch on a single value.
+/// We attempt to estimate the profile of the resulting conditional branch from
+/// \p ComputeProfFrom, which is the original conditional branch we're
+/// unswitching.
+/// When \p Direction is true, the \p Invariants form a disjunction, and the
+/// branch conditioned on it exits the loop on the "true" case. When \p
+/// Direction is false, the \p Invariants form a conjunction and the branch
+/// exits on the "false" case.
 static void buildPartialUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
-    const Instruction *I, AssumptionCache *AC, const DominatorTree &DT) {
+    const Instruction *I, AssumptionCache *AC, const DominatorTree &DT,
+    const BranchInst &ComputeProfFrom) {
+
+  SmallVector<uint32_t> BranchWeights;
+  bool HasBranchWeights = EstimateProfile && !ProfcheckDisableMetadataFixes &&
+                          extractBranchWeights(ComputeProfFrom, BranchWeights);
+  // If Direction is true, that means we had a disjunction and that the "true"
+  // case exits. The probability of the disjunction of the subset of terms is at
+  // most as high as the original one. So, if the probability is higher than the
+  // one we'd assign in absence of a profile (i.e. 0.5), we will use 0.5,
+  // but if it's lower, we will use the original probability.
+  // Conversely, if Direction is false, that means we had a conjunction, and the
+  // probability of exiting is captured in the second branch weight. That
+  // probability is a disjunction (of the negation of the original terms). The
+  // same reasoning applies as above.
+  // Issue #165649: should we expect BFI to conserve, and use that to calculate
+  // the branch weights?
+  if (HasBranchWeights &&
+      static_cast<double>(BranchWeights[Direction ? 0 : 1]) /
+              static_cast<double>(sum_of(BranchWeights)) >
+          0.5)
+    HasBranchWeights = false;
+
   IRBuilder<> IRB(&BB);
   IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
 
@@ -288,8 +323,14 @@ static void buildPartialUnswitchConditionalBranch(
 
   Value *Cond = Direction ? IRB.CreateOr(FrozenInvariants)
                           : IRB.CreateAnd(FrozenInvariants);
-  IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
-                   Direction ? &NormalSucc : &UnswitchedSucc);
+  auto *BR = IRB.CreateCondBr(
+      Cond, Direction ? &UnswitchedSucc : &NormalSucc,
+      Direction ? &NormalSucc : &UnswitchedSucc,
+      HasBranchWeights ? ComputeProfFrom.getMetadata(LLVMContext::MD_prof)
+                       : nullptr);
+  if (!HasBranchWeights)
+    setExplicitlyUnknownBranchWeightsIfProfiled(
+        *BR, *BR->getParent()->getParent(), DEBUG_TYPE);
 }
 
 /// Copy a set of loop invariant values, and conditionally branch on them.
@@ -659,7 +700,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
              " condition!");
     buildPartialUnswitchConditionalBranch(
         *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
-        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT);
+        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT, BI);
   }
 
   // Update the dominator tree with the added edge.
@@ -2478,7 +2519,7 @@ static void unswitchNontrivialInvariants(
     else {
       buildPartialUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
-          FreezeLoopUnswitchCond, BI, &AC, DT);
+          FreezeLoopUnswitchCond, BI, &AC, DT, *BI);
     }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
@@ -3611,8 +3652,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
                          AssumptionCache &AC, AAResults &AA,
                          TargetTransformInfo &TTI, bool Trivial,
                          bool NonTrivial, ScalarEvolution *SE,
-                         MemorySSAUpdater *MSSAU, ProfileSummaryInfo *PSI,
-                         BlockFrequencyInfo *BFI, LPMUpdater &LoopUpdater) {
+                         MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater) {
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
 
@@ -3652,35 +3692,6 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
   if (F->hasOptSize())
     return false;
 
-  // Returns true if Loop L's loop nest is cold, i.e. if the headers of L,
-  // of the loops L is nested in, and of the loops nested in L are all cold.
-  auto IsLoopNestCold = [&](const Loop *L) {
-    // Check L and all of its parent loops.
-    auto *Parent = L;
-    while (Parent) {
-      if (!PSI->isColdBlock(Parent->getHeader(), BFI))
-        return false;
-      Parent = Parent->getParentLoop();
-    }
-    // Next check all loops nested within L.
-    SmallVector<const Loop *, 4> Worklist;
-    llvm::append_range(Worklist, L->getSubLoops());
-    while (!Worklist.empty()) {
-      auto *CurLoop = Worklist.pop_back_val();
-      if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
-        return false;
-      llvm::append_range(Worklist, CurLoop->getSubLoops());
-    }
-    return true;
-  };
-
-  // Skip cold loops in cold loop nests, as unswitching them brings little
-  // benefit but increases the code size
-  if (PSI && PSI->hasProfileSummary() && BFI && IsLoopNestCold(&L)) {
-    LLVM_DEBUG(dbgs() << " Skip cold loop: " << L << "\n");
-    return false;
-  }
-
   // Perform legality checks.
   if (!isSafeForNoNTrivialUnswitching(L, LI))
     return false;
@@ -3705,11 +3716,6 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LPMUpdater &U) {
   Function &F = *L.getHeader()->getParent();
   (void)F;
-  ProfileSummaryInfo *PSI = nullptr;
-  if (auto OuterProxy =
-          AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR)
-              .getCachedResult<ModuleAnalysisManagerFunctionProxy>(F))
-    PSI = OuterProxy->getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << L
                     << "\n");
 
@@ -3720,7 +3726,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
       AR.MSSA->verifyMemorySSA();
   }
   if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.AA, AR.TTI, Trivial, NonTrivial,
-                    &AR.SE, MSSAU ? &*MSSAU : nullptr, PSI, AR.BFI, U))
+                    &AR.SE, MSSAU ? &*MSSAU : nullptr, U))
     return PreservedAnalyses::all();
 
   if (AR.MSSA && VerifyMemorySSA)

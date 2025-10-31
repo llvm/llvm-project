@@ -2,9 +2,13 @@
 ; RUN: llc < %s -o - -mcpu=sm_100a -march=nvptx64 -mattr=+ptx86 | FileCheck %s
 ; RUN: llc < %s -o - -mcpu=sm_101a -march=nvptx64 -mattr=+ptx86 | FileCheck %s
 ; RUN: llc < %s -o - -mcpu=sm_103a -march=nvptx64 -mattr=+ptx88 | FileCheck %s
+; RUN: llc < %s -o - -mcpu=sm_100f -march=nvptx64 -mattr=+ptx88 | FileCheck %s
+; RUN: llc < %s -o - -mcpu=sm_110f -march=nvptx64 -mattr=+ptx90 | FileCheck %s
 ; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mattr=+ptx86 -mcpu=sm_100a | %ptxas-verify -arch=sm_100a %}
 ; RUN: %if ptxas-sm_101a && ptxas-isa-8.6 %{ llc < %s -march=nvptx64 -mattr=+ptx86 -mcpu=sm_101a | %ptxas-verify -arch=sm_101a %}
 ; RUN: %if ptxas-sm_103a && ptxas-isa-8.8 %{ llc < %s -march=nvptx64 -mattr=+ptx88 -mcpu=sm_103a | %ptxas-verify -arch=sm_103a %}
+; RUN: %if ptxas-sm_100f && ptxas-isa-8.8 %{ llc < %s -march=nvptx64 -mattr=+ptx88 -mcpu=sm_100f | %ptxas-verify -arch=sm_100f %}
+; RUN: %if ptxas-sm_110f && ptxas-isa-9.0 %{ llc < %s -march=nvptx64 -mattr=+ptx90 -mcpu=sm_110f | %ptxas-verify -arch=sm_110f %}
 
 ; CHECK-LABEL: nvvm_tcgen05_ld_16x64b
 define void @nvvm_tcgen05_ld_16x64b(ptr addrspace(6) %taddr) {

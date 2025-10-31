@@ -27,23 +27,6 @@ define void @gep_for_first_member_does_not_dominate_insert_point(ptr %str, ptr n
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV2_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[OR_1:%.*]] = or disjoint i64 [[IV2]], 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[STR]], i64 [[OR_1]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[GEP1]], align 1
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr i8, ptr [[STR]], i64 [[IV2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[GEP0]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i8 [[ADD]], ptr [[GEP_DST]], align 1
-; CHECK-NEXT:    [[IV2_NEXT]] = add i64 [[IV2]], 2
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

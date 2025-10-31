@@ -92,7 +92,7 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
       RawAssertList(Options.get("AssertMacros", "assert,NSAssert,NSCAssert")),
       IgnoredFunctions(utils::options::parseListPair(
           "__builtin_expect;", Options.get("IgnoredFunctions", ""))) {
-  StringRef(RawAssertList).split(AssertMacros, ",", -1, false);
+  RawAssertList.split(AssertMacros, ",", -1, false);
 }
 
 // The options are explained in AssertSideEffectCheck.h.

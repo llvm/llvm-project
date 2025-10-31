@@ -775,21 +775,7 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_END:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    br i1 poison, label [[IF_THEN:%.*]], label [[FOR_INC:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    br i1 poison, label [[IF_THEN8:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then8:
-; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       if.else:
-; CHECK-NEXT:    br i1 poison, label [[IF_THEN16:%.*]], label [[FOR_INC]]
-; CHECK:       if.then16:
-; CHECK-NEXT:    br label [[FOR_INC]]
-; CHECK:       for.inc:
-; CHECK-NEXT:    br i1 poison, label [[FOR_BODY]], label [[FOR_END]]
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[PREDPHI3]])
 ; CHECK-NEXT:    ret float [[SUM_1_LCSSA]]

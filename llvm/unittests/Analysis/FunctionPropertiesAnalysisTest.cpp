@@ -43,8 +43,11 @@ class FunctionPropertiesAnalysisTest : public testing::Test {
 public:
   FunctionPropertiesAnalysisTest() {
     auto VocabVector = ir2vec::Vocabulary::createDummyVocabForTest(1);
-    MAM.registerPass([&] { return IR2VecVocabAnalysis(VocabVector); });
-    IR2VecVocab = ir2vec::Vocabulary(std::move(VocabVector));
+    MAM.registerPass([VocabVector = std::move(VocabVector)]() mutable {
+      return IR2VecVocabAnalysis(std::move(VocabVector));
+    });
+    IR2VecVocab = std::make_unique<ir2vec::Vocabulary>(
+        ir2vec::Vocabulary::createDummyVocabForTest(1));
     MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
@@ -66,7 +69,7 @@ protected:
   std::unique_ptr<LoopInfo> LI;
   FunctionAnalysisManager FAM;
   ModuleAnalysisManager MAM;
-  ir2vec::Vocabulary IR2VecVocab;
+  std::unique_ptr<ir2vec::Vocabulary> IR2VecVocab;
 
   void TearDown() override {
     // Restore original IR2Vec weights
@@ -78,7 +81,7 @@ protected:
   FunctionPropertiesInfo buildFPI(Function &F) {
     // FunctionPropertiesInfo assumes IR2VecVocabAnalysis has been run to
     // use IR2Vec.
-    auto VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
+    auto &VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
     (void)VocabResult;
     return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, FAM);
   }
@@ -106,7 +109,7 @@ protected:
   }
 
   std::unique_ptr<ir2vec::Embedder> createEmbedder(const Function &F) {
-    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, IR2VecVocab);
+    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, *IR2VecVocab);
     EXPECT_TRUE(static_cast<bool>(Emb));
     return Emb;
   }

@@ -2747,3 +2747,18 @@ bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
     return F.getRegMayBeFolded();
   return false;
 }
+
+unsigned MachineInstr::removePHIIncomingValueFor(const MachineBasicBlock &MBB) {
+  assert(isPHI());
+
+  // Phi might have multiple entries for MBB. Need to remove them all.
+  unsigned RemovedCount = 0;
+  for (unsigned N = getNumOperands(); N > 2; N -= 2) {
+    if (getOperand(N - 1).getMBB() == &MBB) {
+      removeOperand(N - 1);
+      removeOperand(N - 2);
+      RemovedCount += 2;
+    }
+  }
+  return RemovedCount;
+}

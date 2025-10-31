@@ -105,6 +105,14 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # Skip X86GenMnemonicTables functions, they are not exposed from llvm/include/.
     elif re.match(r"\?is[A-Z0-9]*@X86@llvm", symbol):
         return None
+    # Keep Registry<T>::Head and Registry<T>::Tail static members for plugin support.
+    # Pattern matches: ?Head@?$Registry@<template_args>@llvm@@ or ?Tail@?$Registry@...
+    elif (
+        "?$Registry@" in symbol
+        and "@llvm@@" in symbol
+        and (symbol.startswith("?Head@") or symbol.startswith("?Tail@"))
+    ):
+        return symbol
     # Keep mangled llvm:: and clang:: function symbols. How we detect these is a
     # bit of a mess and imprecise, but that avoids having to completely demangle
     # the symbol name. The outermost namespace is at the end of the identifier

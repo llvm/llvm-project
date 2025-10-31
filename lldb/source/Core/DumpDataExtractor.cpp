@@ -157,7 +157,8 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
         exe_scope->CalculateExecutionContext(exe_ctx);
         disassembler_sp->GetInstructionList().Dump(
             s, show_address, show_bytes, show_control_flow_kind, &exe_ctx);
-      }
+      } else if (number_of_instructions)
+        s->Printf("failed to decode instructions at 0x%" PRIx64 ".", addr);
     }
   } else
     s->Printf("invalid target");

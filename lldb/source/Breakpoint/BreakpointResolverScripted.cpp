@@ -50,7 +50,9 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
   if (!script_interp)
     return;
 
-  m_interface_sp = script_interp->CreateScriptedBreakpointInterface();
+  if (!m_interface_sp)
+    m_interface_sp = script_interp->CreateScriptedBreakpointInterface();
+
   if (!m_interface_sp) {
     m_error = Status::FromErrorStringWithFormat(
         "BreakpointResolverScripted::%s () - ERROR: %s", __FUNCTION__,
@@ -61,6 +63,7 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
   auto obj_or_err =
       m_interface_sp->CreatePluginObject(m_class_name, breakpoint_sp, m_args);
   if (!obj_or_err) {
+    m_interface_sp.reset();
     m_error = Status::FromError(obj_or_err.takeError());
     return;
   }
@@ -146,6 +149,8 @@ void BreakpointResolverScripted::GetDescription(Stream *s) {
   StructuredData::GenericSP generic_sp;
   std::optional<std::string> short_help;
 
+  CreateImplementationIfNeeded(GetBreakpoint());
+
   if (m_interface_sp) {
     short_help = m_interface_sp->GetShortHelp();
   }
@@ -153,6 +158,22 @@ void BreakpointResolverScripted::GetDescription(Stream *s) {
     s->PutCString(short_help->c_str());
   else
     s->Printf("python class = %s", m_class_name.c_str());
+}
+
+std::optional<std::string> BreakpointResolverScripted::GetLocationDescription(
+    lldb::BreakpointLocationSP bp_loc_sp, lldb::DescriptionLevel level) {
+  CreateImplementationIfNeeded(GetBreakpoint());
+  if (m_interface_sp)
+    return m_interface_sp->GetLocationDescription(bp_loc_sp, level);
+  return {};
+}
+
+lldb::BreakpointLocationSP
+BreakpointResolverScripted::WasHit(lldb::StackFrameSP frame_sp,
+                                   lldb::BreakpointLocationSP bp_loc_sp) {
+  if (m_interface_sp)
+    return m_interface_sp->WasHit(frame_sp, bp_loc_sp);
+  return {};
 }
 
 void BreakpointResolverScripted::Dump(Stream *s) const {}

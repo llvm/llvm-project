@@ -84,7 +84,7 @@ body:             |
   ; CHECK-NEXT:   [[VLDRS2:%[0-9]+]]:spr = VLDRS [[COPY4]], 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
   ; CHECK-NEXT:   [[t2ADDri1:%[0-9]+]]:rgpr = t2ADDri [[COPY3]], 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT:   [[VLDRS3:%[0-9]+]]:spr = VLDRS [[COPY3]], 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep3)
-  ; CHECK-NEXT:   [[VMULS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VMULS [[VLDRS3]], [[VLDRS2]], 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[VMULS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VMULS [[VLDRS3]], [[VLDRS2]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gprlr = COPY [[t2DoLoopStart]]
   ; CHECK-NEXT:   [[t2LoopDec:%[0-9]+]]:gprlr = t2LoopDec [[COPY5]], 1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gpr = COPY [[t2LoopDec]]
@@ -110,8 +110,8 @@ body:             |
   ; CHECK-NEXT:   [[t2ADDri3:%[0-9]+]]:rgpr = t2ADDri [[PHI1]], 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gpr = COPY [[t2ADDri2]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:gpr = COPY [[t2ADDri3]]
-  ; CHECK-NEXT:   [[VMULS1:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VMULS [[VLDRS4]], [[VLDRS5]], 14 /* CC::al */, $noreg
-  ; CHECK-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VADDS [[PHI4]], [[PHI3]], 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[VMULS1:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VMULS [[VLDRS4]], [[VLDRS5]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
+  ; CHECK-NEXT:   [[VADDS:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VADDS [[PHI4]], [[PHI3]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:gpr = COPY [[t2LoopDec1]]
   ; CHECK-NEXT:   t2LoopEnd [[t2LoopDec1]], %bb.6, implicit-def $cpsr
   ; CHECK-NEXT:   t2B %bb.7, 14 /* CC::al */, $noreg
@@ -121,7 +121,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:spr = PHI [[VLDRS1]], %bb.5, [[VADDS]], %bb.6
   ; CHECK-NEXT:   [[PHI6:%[0-9]+]]:spr = PHI [[VMULS]], %bb.5, [[VMULS1]], %bb.6
-  ; CHECK-NEXT:   [[VADDS1:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VADDS [[PHI6]], [[PHI5]], 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[VADDS1:%[0-9]+]]:spr = nnan ninf nsz arcp contract afn reassoc VADDS [[PHI6]], [[PHI5]], 14 /* CC::al */, $noreg, implicit $fpscr_rm
   ; CHECK-NEXT:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.for.end:
@@ -166,8 +166,8 @@ body:             |
     %19:spr = VLDRS %2, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
     %20:rgpr = t2ADDri %3, 4, 14 /* CC::al */, $noreg, $noreg
     %21:spr = VLDRS %3, 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep3)
-    %22:spr = nnan ninf nsz arcp contract afn reassoc VMULS killed %21, killed %19, 14 /* CC::al */, $noreg
-    %6:spr = nnan ninf nsz arcp contract afn reassoc VADDS killed %22, %5, 14 /* CC::al */, $noreg
+    %22:spr = nnan ninf nsz arcp contract afn reassoc VMULS killed %21, killed %19, 14 /* CC::al */, $noreg, implicit $fpscr_rm
+    %6:spr = nnan ninf nsz arcp contract afn reassoc VADDS killed %22, %5, 14 /* CC::al */, $noreg, implicit $fpscr_rm
     %42:gprlr = COPY %4
     %23:gprlr = t2LoopDec %42:gprlr, 1
     %7:gpr = COPY %23

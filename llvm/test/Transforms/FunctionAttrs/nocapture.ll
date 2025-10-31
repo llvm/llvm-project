@@ -1398,5 +1398,73 @@ define void @assume_nonnull(ptr %p) {
   ret void
 }
 
+define void @captures_metadata_address_is_null(ptr %x, ptr %y) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; FNATTRS-LABEL: define void @captures_metadata_address_is_null
+; FNATTRS-SAME: (ptr captures(address_is_null) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
+; FNATTRS-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META0:![0-9]+]]
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; ATTRIBUTOR-LABEL: define void @captures_metadata_address_is_null
+; ATTRIBUTOR-SAME: (ptr nofree writeonly [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR13]] {
+; ATTRIBUTOR-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META0:![0-9]+]]
+; ATTRIBUTOR-NEXT:    ret void
+;
+  store ptr %x, ptr %y, !captures !{!"address_is_null"}
+  ret void
+}
+
+define void @captures_metadata_address(ptr %x, ptr %y) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; FNATTRS-LABEL: define void @captures_metadata_address
+; FNATTRS-SAME: (ptr captures(address) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
+; FNATTRS-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META1:![0-9]+]]
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; ATTRIBUTOR-LABEL: define void @captures_metadata_address
+; ATTRIBUTOR-SAME: (ptr nofree writeonly [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR13]] {
+; ATTRIBUTOR-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META1:![0-9]+]]
+; ATTRIBUTOR-NEXT:    ret void
+;
+  store ptr %x, ptr %y, !captures !{!"address"}
+  ret void
+}
+
+define void @captures_metadata_address_read_provenance(ptr %x, ptr %y) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; FNATTRS-LABEL: define void @captures_metadata_address_read_provenance
+; FNATTRS-SAME: (ptr captures(address, read_provenance) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
+; FNATTRS-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META2:![0-9]+]]
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; ATTRIBUTOR-LABEL: define void @captures_metadata_address_read_provenance
+; ATTRIBUTOR-SAME: (ptr nofree writeonly [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR13]] {
+; ATTRIBUTOR-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META2:![0-9]+]]
+; ATTRIBUTOR-NEXT:    ret void
+;
+  store ptr %x, ptr %y, !captures !{!"address", !"read_provenance"}
+  ret void
+}
+
+define void @captures_metadata_provenance(ptr %x, ptr %y) {
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; FNATTRS-LABEL: define void @captures_metadata_provenance
+; FNATTRS-SAME: (ptr captures(provenance) [[X:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[Y:%.*]]) #[[ATTR17]] {
+; FNATTRS-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META3:![0-9]+]]
+; FNATTRS-NEXT:    ret void
+;
+; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
+; ATTRIBUTOR-LABEL: define void @captures_metadata_provenance
+; ATTRIBUTOR-SAME: (ptr nofree writeonly [[X:%.*]], ptr nofree nonnull writeonly captures(none) [[Y:%.*]]) #[[ATTR13]] {
+; ATTRIBUTOR-NEXT:    store ptr [[X]], ptr [[Y]], align 8, !captures [[META3:![0-9]+]]
+; ATTRIBUTOR-NEXT:    ret void
+;
+  store ptr %x, ptr %y, !captures !{!"provenance"}
+  ret void
+}
+
 declare ptr @llvm.launder.invariant.group.p0(ptr)
 declare ptr @llvm.strip.invariant.group.p0(ptr)

@@ -156,11 +156,10 @@ _mm_cvtm64_si64(__m64 __m)
 ///    written to the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the converted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_packs_pi16(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_packsswb128(
-        (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_packs_pi16(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_packsswb128(
+      (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
 }
 
 /// Converts, with saturation, 32-bit signed integers from both 64-bit integer
@@ -182,11 +181,10 @@ _mm_packs_pi16(__m64 __m1, __m64 __m2)
 ///    written to the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [4 x i16] containing the converted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_packs_pi32(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_packssdw128(
-        (__v4si)__builtin_shufflevector(__m1, __m2, 0, 1), (__v4si){}));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_packs_pi32(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_packssdw128(
+      (__v4si)__builtin_shufflevector(__m1, __m2, 0, 1), (__v4si){}));
 }
 
 /// Converts, with saturation, 16-bit signed integers from both 64-bit integer
@@ -208,11 +206,10 @@ _mm_packs_pi32(__m64 __m1, __m64 __m2)
 ///    written to the upper 32 bits of the result.
 /// \returns A 64-bit integer vector of [8 x i8] containing the converted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_packs_pu16(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_packuswb128(
-        (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_packs_pu16(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_packuswb128(
+      (__v8hi)__builtin_shufflevector(__m1, __m2, 0, 1), (__v8hi){}));
 }
 
 /// Unpacks the upper 32 bits from two 64-bit integer vectors of [8 x i8]
@@ -682,11 +679,10 @@ _mm_subs_pu16(__m64 __m1, __m64 __m2) {
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [2 x i32] containing the sums of
 ///    products of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_madd_pi16(__m64 __m1, __m64 __m2)
-{
-    return __trunc64(__builtin_ia32_pmaddwd128((__v8hi)__anyext128(__m1),
-                                               (__v8hi)__anyext128(__m2)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_madd_pi16(__m64 __m1, __m64 __m2) {
+  return __trunc64(__builtin_ia32_pmaddwd128((__v8hi)__zext128(__m1),
+                                             (__v8hi)__zext128(__m2)));
 }
 
 /// Multiplies each 16-bit signed integer element of the first 64-bit

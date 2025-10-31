@@ -2591,7 +2591,7 @@ void CommandInterpreter::SourceInitFileCwd(CommandReturnObject &result) {
         llvm::sys::path::parent_path(home_init_file.GetPath())) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      result.AppendError(InitFileWarning);
+      result.AppendWarning(InitFileWarning);
     }
   }
   }

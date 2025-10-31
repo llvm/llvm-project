@@ -61,6 +61,11 @@ public:
       QualType SampledType, CodeGenModule &CGM) const;
   void
   setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
+  llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                 llvm::PointerType *T,
+                                 QualType QT) const override;
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override;
 };
 class SPIRVTargetCodeGenInfo : public CommonSPIRTargetCodeGenInfo {
 public:
@@ -90,6 +95,8 @@ inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
   case SyncScope::OpenCLSubGroup:
   case SyncScope::WavefrontScope:
     return "subgroup";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:
@@ -240,6 +247,46 @@ void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
       FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
 }
 
+// LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
+// targets use a non-zero encoding for null in certain address spaces.
+// Because SPIR(-V) is a generic target and the bit pattern of null in
+// non-generic AS is unspecified, materialize null in non-generic AS via an
+// addrspacecast from null in generic AS. This allows later lowering to
+// substitute the target's real sentinel value.
+llvm::Constant *
+CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                            llvm::PointerType *PT,
+                                            QualType QT) const {
+  LangAS AS = QT->getUnqualifiedDesugaredType()->isNullPtrType()
+                  ? LangAS::Default
+                  : QT->getPointeeType().getAddressSpace();
+  if (AS == LangAS::Default || AS == LangAS::opencl_generic ||
+      AS == LangAS::opencl_constant)
+    return llvm::ConstantPointerNull::get(PT);
+
+  auto &Ctx = CGM.getContext();
+  auto NPT = llvm::PointerType::get(
+      PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  return llvm::ConstantExpr::getAddrSpaceCast(
+      llvm::ConstantPointerNull::get(NPT), PT);
+}
+
+void CommonSPIRTargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (M.getLangOpts().OpenCL || GV->isDeclaration())
+    return;
+
+  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
+    return;
+
+  llvm::Function *F = dyn_cast<llvm::Function>(GV);
+  assert(F && "Expected GlobalValue to be a Function");
+
+  if (FD->hasAttr<DeviceKernelAttr>())
+    F->setCallingConv(getDeviceKernelCallingConv());
+}
+
 LangAS
 SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                  const VarDecl *D) const {
@@ -264,19 +311,23 @@ SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
 
 void SPIRVTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (!M.getLangOpts().HIP ||
-      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
-    return;
   if (GV->isDeclaration())
     return;
 
-  auto F = dyn_cast<llvm::Function>(GV);
-  if (!F)
-    return;
-
-  auto FD = dyn_cast_or_null<FunctionDecl>(D);
+  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)
     return;
+
+  llvm::Function *F = dyn_cast<llvm::Function>(GV);
+  assert(F && "Expected GlobalValue to be a Function");
+
+  if (FD->hasAttr<DeviceKernelAttr>())
+    F->setCallingConv(getDeviceKernelCallingConv());
+
+  if (!M.getLangOpts().HIP ||
+      M.getTarget().getTriple().getVendor() != llvm::Triple::AMD)
+    return;
+
   if (!FD->hasAttr<CUDAGlobalAttr>())
     return;
 
@@ -486,6 +537,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
+    if (ResAttrs.IsCounter) {
+      llvm::Type *ElemType = llvm::Type::getInt32Ty(Ctx);
+      uint32_t StorageClass = /* StorageBuffer storage class */ 12;
+      return llvm::TargetExtType::get(Ctx, "spirv.VulkanBuffer", {ElemType},
+                                      {StorageClass, true});
+    }
     llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;

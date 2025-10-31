@@ -1,0 +1,34 @@
+# There's no real issue with windows here, it's just that some CMake generated paths for targets end up being longer
+# than 255 chars when combined with the fact that pip wants to install into a tmp directory buried under
+# C/Users/ContainerAdministrator/AppData/Local/Temp.
+# UNSUPPORTED: target={{.*(windows).*}}
+# REQUIRES: expensive_checks
+# REQUIRES: non-shared-libs-build
+# REQUIRES: bindings-python
+
+# RUN: export CMAKE_BUILD_TYPE=%cmake_build_type
+# RUN: export CMAKE_CXX_COMPILER=%host_cxx
+# RUN: export CMAKE_CXX_COMPILER_LAUNCHER=%hostcxx_compiler_launcher
+# RUN: export CMAKE_C_COMPILER=%host_cc
+# RUN: export CMAKE_C_COMPILER_LAUNCHER=%hostc_compiler_launcher
+# RUN: export CMAKE_GENERATOR=%cmake_generator
+# RUN: export LLVM_USE_LINKER=%llvm_use_linker
+# RUN: export MLIR_DIR="%mlir_cmake_dir"
+
+# RUN: %python -m pip wheel "%mlir_src_root/examples/standalone" -w "%mlir_obj_root/wheelhouse" -v | tee %t
+
+# RUN: rm -rf "%mlir_obj_root/standalone-python-bindings-install"
+# RUN: %python -m pip install standalone_python_bindings -f "%mlir_obj_root/wheelhouse" --target "%mlir_obj_root/standalone-python-bindings-install" -v | tee -a %t
+
+# RUN: export PYTHONPATH="%mlir_obj_root/standalone-python-bindings-install"
+# RUN: %python "%mlir_src_root/examples/standalone/test/python/smoketest.py" nanobind | tee -a %t
+
+# RUN: FileCheck --input-file=%t %s
+
+# CHECK: Successfully built standalone-python-bindings
+
+# CHECK: module {
+# CHECK:   %[[C2:.*]] = arith.constant 2 : i32
+# CHECK:   %[[V0:.*]] = standalone.foo %[[C2]] : i32
+# CHECK: }
+

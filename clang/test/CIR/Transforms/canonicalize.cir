@@ -50,39 +50,39 @@ module {
   // CHECK-NEXT: }
 
   cir.func @cast1(%arg0: !cir.bool) -> !cir.bool {
-    %0 = cir.cast(bool_to_int, %arg0 : !cir.bool), !s32i
-    %1 = cir.cast(int_to_bool, %0 : !s32i), !cir.bool
+    %0 = cir.cast bool_to_int %arg0 : !cir.bool -> !s32i
+    %1 = cir.cast int_to_bool %0 : !s32i -> !cir.bool
     cir.return %1 : !cir.bool
   }
   // CHECK:      cir.func{{.*}} @cast1(%[[ARG0:.*]]: !cir.bool) -> !cir.bool
   // CHECK-NEXT:   cir.return %[[ARG0]] : !cir.bool
 
   cir.func @cast2(%arg0: !s32i) -> !cir.bool {
-    %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
-    %1 = cir.cast(bool_to_int, %0 : !cir.bool), !s32i
-    %2 = cir.cast(integral, %1 : !s32i), !s64i
-    %3 = cir.cast(int_to_bool, %2 : !s64i), !cir.bool
+    %0 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
+    %1 = cir.cast bool_to_int %0 : !cir.bool -> !s32i
+    %2 = cir.cast integral %1 : !s32i -> !s64i
+    %3 = cir.cast int_to_bool %2 : !s64i -> !cir.bool
     cir.return %3 : !cir.bool
   }
   // CHECK:      cir.func{{.*}} @cast2(%[[ARG0:.*]]: !s32i) -> !cir.bool
-  // CHECK-NEXT:   %[[CAST:.*]] = cir.cast(int_to_bool, %[[ARG0]] : !s32i), !cir.bool
+  // CHECK-NEXT:   %[[CAST:.*]] = cir.cast int_to_bool %[[ARG0]] : !s32i -> !cir.bool
   // CHECK-NEXT:   cir.return %[[CAST]] : !cir.bool
 
   cir.func @no_fold_cast(%arg0: !s32i) -> !s64i {
-    %0 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
-    %1 = cir.cast(bool_to_int, %0 : !cir.bool), !s32i
-    %2 = cir.cast(integral, %1 : !s32i), !s64i
+    %0 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
+    %1 = cir.cast bool_to_int %0 : !cir.bool -> !s32i
+    %2 = cir.cast integral %1 : !s32i -> !s64i
     cir.return %2 : !s64i
   }
   // CHECK:      cir.func{{.*}} @no_fold_cast(%[[ARG0:.*]]: !s32i) -> !s64i
-  // CHECK-NEXT:   %[[CAST:.*]] = cir.cast(int_to_bool, %[[ARG0]] : !s32i), !cir.bool
-  // CHECK-NEXT:   %[[CAST2:.*]] = cir.cast(bool_to_int, %[[CAST]] : !cir.bool), !s32i
-  // CHECK-NEXT:   %[[CAST3:.*]] = cir.cast(integral, %[[CAST2]] : !s32i), !s64i
+  // CHECK-NEXT:   %[[CAST:.*]] = cir.cast int_to_bool %[[ARG0]] : !s32i -> !cir.bool
+  // CHECK-NEXT:   %[[CAST2:.*]] = cir.cast bool_to_int %[[CAST]] : !cir.bool -> !s32i
+  // CHECK-NEXT:   %[[CAST3:.*]] = cir.cast integral %[[CAST2]] : !s32i -> !s64i
   // CHECK-NEXT:   cir.return %[[CAST3]] : !s64i
 
   cir.func @cast_poison() -> !s64i {
     %0 = cir.const #cir.poison : !s32i
-    %1 = cir.cast(integral, %0 : !s32i), !s64i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
     cir.return %1 : !s64i
   }
   // CHECK:      @cast_poison

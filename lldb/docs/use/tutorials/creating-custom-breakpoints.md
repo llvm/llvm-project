@@ -126,3 +126,47 @@ SBStructuredData object. This API also allows you to directly provide the list
 of Modules and the list of CompileUnits that will make up the SearchFilter. If
 you pass in empty lists, the breakpoint will use the default "search
 everywhere,accept everything" filter.
+
+### Providing Facade Locations:
+
+The breakpoint resolver interface also allows you to present a separate set
+of locations for the breakpoint than the ones that actually implement the
+breakpoint in the target.
+
+An example use case for this is if you are providing a debugging interface for a
+library that implements an interpreter for a language lldb can't debug.  But
+while debugging that library at the level of the implementation language (e.g. C/C++, etc)
+you would like to offer the ability to "stop when a line in a source language
+file is executed".
+
+You can do this if you know where new lines of code are dispatched in the
+interpreter.  You would set a breakpoint there, and then look at the state
+when that breakpoint is hit to see if it is dispatching the source file and
+line that were requested, and stop appropriately.
+
+Facade breakpoint locations are intended to make a more natural presentation
+of that sort of feature.  The idea is that you would make a custom breakpoint
+resolver that sets actual locations in the places of interest in the interpreter.
+
+Then your resolver would add "facade locations" that represent the places in the
+interpreted code that you want the breakpoint to stop at, using SBBreakpoint::AddFacadeLocation.
+When lldb describes the breakpoint, it will only show the Facade locations.
+Since facade breakpoint location's description is customizable, you can make these
+locations more descriptive.  And when the "real" location is hit, lldb will call the
+"was_hit" method of your resolver.  That will return the facade location you
+consider to have been hit this time around, or if you return None, the breakpoint
+will be considered not to have been hit.
+
+Note, this feature is also useful if you don't intend to present facade
+locations since it essentially provides a scripted breakpoint condition.  Every
+time one of the locations in your breakpoint is hit, you can run the code in
+your "was_hit" to determine whether to consider the breakpoint hit or not, and
+return the location you were passed in if you want it to be a hit, and None if not.
+
+The Facade location adds these optional affordances to the Resolver class:
+
+| Name  | Arguments | Description|
+|-------|-----------|------------|
+|`was_hit`| `frame`:`lldb.SBFrame` `bp_loc`:`lldb.SBBreakpointLocation` | This will get called when one of the "real" locations set by your resolver is hit.  `frame` is the stack frame that hit this location.  `bp_loc` is the real location that was hit.  Return either the facade location that you want to consider hit on this stop, or None if you don't consider any of your facade locations to have been hit. |
+| `get_location_description` | `bp_loc`:`lldb.SBBreakpointLocation` `desc_level`:`lldb.DescriptionLevel` `bp_loc` is the facade location to describe.| Use this to provide a helpful description of each facade location.  ``desc_level`` is the level of description requested.  The Brief description is printed when the location is hit.  Full is printed for `break list` and Verbose for `break list -v`.|
+
