@@ -1140,6 +1140,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   DeclarationName Load(&II);
   // TODO: We also need versions with status for CheckAccessFullyMapped.
   addHandleAccessFunction(Load, /*IsConst=*/false, /*IsRef=*/false);
+  addHandleAccessFunctionWithStatus(Load, /*IsConst=*/false, /*IsRef=*/false);
 
   return *this;
 }
@@ -1229,6 +1230,41 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
                    PH::CounterHandle, getConstantIntExpr(-1))
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addHandleAccessFunctionWithStatus(DeclarationName &Name,
+                                                          bool IsConst,
+                                                          bool IsRef) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  QualType ElemTy = getHandleElementType();
+  QualType AddrSpaceElemTy =
+      AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
+  QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
+  QualType ReturnTy;
+
+  if (IsRef) {
+    ReturnTy = AddrSpaceElemTy;
+    if (IsConst)
+      ReturnTy.addConst();
+    ReturnTy = AST.getLValueReferenceType(ReturnTy);
+  } else {
+    ReturnTy = ElemTy;
+    if (IsConst)
+      ReturnTy.addConst();
+  }
+
+  QualType StatusRefTy = AST.getLValueReferenceType(AST.UnsignedIntTy);
+  return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
+      .addParam("Index", AST.UnsignedIntTy)
+      .addParam("Status", StatusRefTy)
+      .callBuiltin("__builtin_hlsl_resource_getpointer_with_status", ElemPtrTy,
+                   PH::Handle, PH::_0, PH::_1)
+      .dereference(PH::LastStmt)
       .finalize();
 }
 

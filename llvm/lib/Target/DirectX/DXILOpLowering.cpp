@@ -657,6 +657,14 @@ public:
     return false;
   }
 
+  [[nodiscard]] bool lowerGetPointerWithStatus(Function &F) {
+    // These should have already been handled in DXILResourceAccess, so we can
+    // just clean up the dead prototype.
+    assert(F.user_empty() && "getpointer operations should have been removed");
+    F.eraseFromParent();
+    return false;
+  }
+
   [[nodiscard]] bool lowerBufferStore(Function &F, bool IsRaw) {
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -932,6 +940,9 @@ public:
         break;
       case Intrinsic::dx_resource_getpointer:
         HasErrors |= lowerGetPointer(F);
+        break;
+      case Intrinsic::dx_resource_getpointer_with_status:
+        HasErrors |= lowerGetPointerWithStatus(F);
         break;
       case Intrinsic::dx_resource_nonuniformindex:
         assert(!CleanupNURI &&

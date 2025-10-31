@@ -91,6 +91,9 @@ public:
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
                                                   bool IsConst, bool IsRef);
+  BuiltinTypeDeclBuilder &
+  addHandleAccessFunctionWithStatus(DeclarationName &Name, bool IsConst,
+                                    bool IsRef);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 

@@ -3010,6 +3010,27 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_getpointer_with_status: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+    QualType ContainedTy = ResourceTy->getContainedType();
+    auto ReturnType =
+        SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
+    TheCall->setValueKind(VK_LValue);
+
+    break;
+  }
+
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     if (SemaRef.checkArgCount(TheCall, 1) ||
         CheckResourceHandle(&SemaRef, TheCall, 0))

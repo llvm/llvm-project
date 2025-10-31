@@ -104,6 +104,36 @@ export float TestLoad() {
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
+export float TestLoadWithStatus() {
+    uint s1;
+    uint s2;
+    float ret = RWSB1.Load(1, s) + SB1.Load(2, s2);
+    ret += float(s1 + s2);
+    return ret;
+}
+
+// CHECK: define noundef nofpclass(nan inf) float @TestLoad()()
+// CHECK: call {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @RWSB1, i32 noundef 1)
+// CHECK: call {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @SB1, i32 noundef 2)
+// CHECK: add
+// CHECK: ret float
+
+// CHECK: define {{.*}} float @hlsl::RWStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWStructuredBuffer", ptr %{{.*}}, i32 0, i32 0
+// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 0), ptr %__handle
+// CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %[[HANDLE]], i32 %[[INDEX]])
+// CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
+// CHECK-NEXT: ret float %[[VAL]]
+
+// CHECK: define {{.*}} float @hlsl::StructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %{{.*}}, i32 0, i32 0
+// DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 0, 0), ptr %__handle
+// CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_f32_0_0t(target("dx.RawBuffer", float, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
+// CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
+// CHECK-NEXT: ret float %[[VAL]]
+
 export uint TestGetDimensions() {
     uint dim1, dim2, dim3, stride1, stride2, stride3;
     SB1.GetDimensions(dim1, stride1);
