@@ -1565,12 +1565,12 @@ LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
 
 LogicalResult NVVM::ReduxOp::verify() {
   mlir::Type reduxType = getType();
-  if (!reduxType.isF32()) {
-    if (getAbs())
-      return emitOpError("abs attribute is supported only for f32 type");
-    if (getNan())
-      return emitOpError("nan attribute is supported only for f32 type");
-  }
+
+  if (!reduxType.isF32() && getAbs())
+    return emitOpError("abs attribute is supported only for f32 type");
+
+  if (!reduxType.isF32() && getNan())
+    return emitOpError("nan attribute is supported only for f32 type");
 
   NVVM::ReduxKind kind = getKind();
   switch (kind) {
