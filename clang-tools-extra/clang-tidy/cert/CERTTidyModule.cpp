@@ -11,7 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
-#include "../bugprone/DefaultOperatorNewAlignmentCheck.h"
+#include "../bugprone/DefaultOperatorNewOnOveralignedTypeCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -265,8 +265,9 @@ public:
     CheckFactories.registerCheck<misc::ThrowByValueCatchByReferenceCheck>(
         "cert-err61-cpp");
     // MEM
-    CheckFactories.registerCheck<bugprone::DefaultOperatorNewAlignmentCheck>(
-        "cert-mem57-cpp");
+    CheckFactories
+        .registerCheck<bugprone::DefaultOperatorNewOnOveralignedTypeCheck>(
+            "cert-mem57-cpp");
     // MSC
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(

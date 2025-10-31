@@ -255,8 +255,8 @@ New check aliases
   keeping initial check as an alias to the new one.
 
 - Renamed :doc:`cert-mem57-cpp <clang-tidy/checks/cert/mem57-cpp>` to
-  :doc:`bugprone-default-operator-new-alignment
-  <clang-tidy/checks/bugprone/default-operator-new-alignment>`
+  :doc:`bugprone-default-operator-new-on-overaligned-type
+  <clang-tidy/checks/bugprone/default-operator-new-on-overaligned-type>`
   keeping initial check as an alias to the new one.
 
 Changes in existing checks

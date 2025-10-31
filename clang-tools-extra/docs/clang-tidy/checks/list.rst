@@ -93,7 +93,7 @@ Clang-Tidy Checks
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
    :doc:`bugprone-dangling-handle <bugprone/dangling-handle>`,
    :doc:`bugprone-derived-method-shadowing-base-method <bugprone/derived-method-shadowing-base-method>`,
-   :doc:`bugprone-default-operator-new-alignment <bugprone/default-operator-new-alignment>`,
+   :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
@@ -452,7 +452,7 @@ Check aliases
    :doc:`cert-fio38-c <cert/fio38-c>`, :doc:`misc-non-copyable-objects <misc/non-copyable-objects>`,
    :doc:`cert-flp37-c <cert/flp37-c>`, :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`cert-int09-c <cert/int09-c>`, :doc:`readability-enum-initial-value <readability/enum-initial-value>`, "Yes"
-   :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-alignment <bugprone/default-operator-new-alignment>`,
+   :doc:`cert-mem57-cpp <cert/mem57-cpp>`, :doc:`bugprone-default-operator-new-on-overaligned-type <bugprone/default-operator-new-on-overaligned-type>`,
    :doc:`cert-msc24-c <cert/msc24-c>`, :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`cert-msc30-c <cert/msc30-c>`, :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc32-c <cert/msc32-c>`, :doc:`cert-msc51-cpp <cert/msc51-cpp>`,

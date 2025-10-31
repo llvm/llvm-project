@@ -1,7 +1,7 @@
-.. title:: clang-tidy - bugprone-default-operator-new-alignment
+.. title:: clang-tidy - bugprone-default-operator-new-on-overaligned-type
 
-bugprone-default-operator-new-alignment
-=======================================
+bugprone-default-operator-new-on-overaligned-type
+=================================================
 
 This check flags uses of default ``operator new`` where the type has extended
 alignment (an alignment greater than the fundamental alignment). (The default

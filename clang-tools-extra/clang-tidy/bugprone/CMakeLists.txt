@@ -20,7 +20,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   CopyConstructorInitCheck.cpp
   CrtpConstructorAccessibilityCheck.cpp
   DanglingHandleCheck.cpp
-  DefaultOperatorNewAlignmentCheck.cpp
+  DefaultOperatorNewOnOveralignedTypeCheck.cpp
   DerivedMethodShadowingBaseMethodCheck.cpp
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
