@@ -451,13 +451,8 @@ protected:
   // information.
   SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
 
-  // // Callgraph - 64 bit type id mapped to entry PC addresses of functions
-  // which
-  // // are of the given type id.
-  // MapVector<uint64_t, SmallVector<typename ELFT::uint>> TypeIdToIndirTargets;
-
-  // Callgraph - Read callgraph section and process its contents to populate
-  // Callgraph related data structures which will be used to dump callgraph
+  // Read the .llvm.callgraph section and process its contents to populate
+  // call graph related data structures which will be used to dump call graph
   // info. Returns false if there is no .llvm.callgraph section in the input
   // file.
   bool processCallGraphSection();
@@ -469,7 +464,7 @@ private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 
 protected:
-  std::string getFunctionNames(uint64_t FuncAddr) {
+  std::string getFunctionNamesString(uint64_t FuncAddr) {
     SmallVector<uint32_t> FuncSymIndexes =
         this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
     if (FuncSymIndexes.empty())
@@ -5542,7 +5537,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
 
   auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
     if (this->Obj.getHeader().e_type != ELF::ET_REL) {
-      std::string FuncSymName = this->getFunctionNames(FuncEntryPC);
+      std::string FuncSymName = this->getFunctionNamesString(FuncEntryPC);
       PrintFunc(FuncEntryPC, FuncSymName, OS);
       return;
     }
@@ -8453,7 +8448,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
 
   auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
     if (this->Obj.getHeader().e_type != ELF::ET_REL) {
-      std::string FuncSymName = this->getFunctionNames(FuncEntryPC);
+      std::string FuncSymName = this->getFunctionNamesString(FuncEntryPC);
       PrintFunc(FuncEntryPC, FuncSymName, W);
       return;
     }
