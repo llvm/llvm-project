@@ -288,3 +288,16 @@ jobs:
       - name: Build and test
         run: |
           bash libcxx/utils/ci/run-buildbot ${{ matrix.config }}
+
+  buildkite_platforms:
+    # needs: [ stage2 ] # TODO: temporarily always trigger
+    runs-on: llvm-premerge-libcxx-next-runners
+    steps:
+      - name: Trigger Buildkite pipeline
+        uses: buildkite/trigger-pipeline-action@v2.4.0
+        with:
+          buildkite_api_access_token: ${{ secrets.BUILDKITE_API_ACCESS_TOKEN }}
+          pipeline: llvm-project/libcxx-ci
+          branch: ${{ github.ref_name }}
+          commit: ${{ github.sha }}
+          message: "Triggered by GitHub Actions PR against ${{ github.ref_name }}"
