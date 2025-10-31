@@ -819,8 +819,9 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     // If a builtin type's size isn't a multiple of a byte, DWARF producers may
     // add a precise bit-size to the type. Use the most precise bit-size
     // possible.
-    uint64_t bit_size = attrs.data_bit_size ? *attrs.data_bit_size
-                                            : attrs.byte_size.value_or(0) * 8;
+    const uint64_t bit_size = attrs.data_bit_size
+                                  ? *attrs.data_bit_size
+                                  : attrs.byte_size.value_or(0) * 8;
     clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
         attrs.name.GetStringRef(), attrs.encoding, bit_size);
     break;
