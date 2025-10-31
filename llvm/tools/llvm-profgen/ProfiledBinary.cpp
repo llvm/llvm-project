@@ -834,14 +834,12 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
   // Load binary functions from symbol table when Debug info is incomplete.
   // Strip the internal suffixes which are not reflected in the DWARF info.
   const SmallVector<StringRef, 6> Suffixes(
-      {
-        // Internal suffixes from CoroSplit pass
-        ".cleanup", ".destroy", ".resume",
-        // Internal suffixes from Bolt
-        ".cold", ".warm",
-        // Compiler internal
-        ".llvm."
-      });
+      {// Internal suffixes from CoroSplit pass
+       ".cleanup", ".destroy", ".resume",
+       // Internal suffixes from Bolt
+       ".cold", ".warm",
+       // Compiler internal
+       ".llvm."});
   StringRef FileName = Obj->getFileName();
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
@@ -871,8 +869,10 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
       if (Ret.second && Range->getFuncName() != SymName && ShowDetailedWarning)
         WithColor::warning()
             << "Conflicting symbol " << Name << " already exists in DWARF as "
-            << Range->getFuncName() << " at address " << format("%8" PRIx64, StartAddr)
-            << ". The DWARF indicates a range from " << format("%8" PRIx64, Range->StartAddress) << " to "
+            << Range->getFuncName() << " at address "
+            << format("%8" PRIx64, StartAddr)
+            << ". The DWARF indicates a range from "
+            << format("%8" PRIx64, Range->StartAddress) << " to "
             << format("%8" PRIx64, Range->EndAddress) << "\n";
     } else {
       // Store/Update Function Range from SymTab

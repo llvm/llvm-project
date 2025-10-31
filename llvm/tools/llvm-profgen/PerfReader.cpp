@@ -1332,9 +1332,9 @@ void PerfScriptReader::warnInvalidRange() {
   emitWarningSummary(
       UnmatchedRange, TotalRangeNum,
       "of samples are from ranges that do not belong to any functions.");
-  emitWarningSummary(
-      RecoveredRange, TotalRangeNum,
-      "of samples are from ranges that belong to functions recovered from symbol table.");
+  emitWarningSummary(RecoveredRange, TotalRangeNum,
+                     "of samples are from ranges that belong to functions "
+                     "recovered from symbol table.");
   emitWarningSummary(
       RangeCrossFunc, TotalRangeNum,
       "of samples are from ranges that do cross function boundaries.");
