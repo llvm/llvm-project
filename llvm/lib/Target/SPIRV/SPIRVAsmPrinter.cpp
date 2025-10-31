@@ -577,6 +577,11 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     if (MDNode *Node = F.getMetadata("intel_reqd_sub_group_size"))
       outputExecutionModeFromMDNode(FReg, Node,
                                     SPIRV::ExecutionMode::SubgroupSize, 0, 0);
+    if (MDNode *Node = F.getMetadata("max_work_group_size")) {
+      if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_kernel_attributes))
+        outputExecutionModeFromMDNode(
+            FReg, Node, SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, 3, 1);
+    }
     if (MDNode *Node = F.getMetadata("vec_type_hint")) {
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -628,7 +633,8 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
             // Check if the constant is int32, if not skip it.
             const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
             MachineInstr *TypeMI = MRI.getVRegDef(MI->getOperand(1).getReg());
-            if (!TypeMI || TypeMI->getOperand(1).getImm() != 32)
+            if (!TypeMI || !TypeMI->getOperand(1).isImm() ||
+                TypeMI->getOperand(1).getImm() != 32)
               continue;
 
             ConstZero = MI;
