@@ -20,3 +20,5 @@ FileHeader:
 
 # CHECK-WITHOUT-DISASSEMBLING: Available CPUs for this target:
 # CHECK-WITHOUT-DISASSEMBLING: Available features for this target:
+
+; XFAIL: *

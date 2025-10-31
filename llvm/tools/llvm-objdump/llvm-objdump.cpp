@@ -3533,16 +3533,17 @@ commaSeparatedValues(const llvm::opt::InputArgList &InputArgs, int ID) {
   return Values;
 }
 
-static int MCPUHelp() {
+static int mcpuHelp() {
   if (!TripleName.empty()) {
     std::string Error;
     Triple DummyTriple(TripleName);
     const Target *DummyTarget =
         TargetRegistry::lookupTarget(DummyTriple, Error);
     if (!DummyTarget) {
-      outs() << Error << '\n';
+      reportCmdLineError(Error);
       return 2;
     }
+    // We need to access the Help() through the corresponding MCSubtargetInfo
     DummyTarget->createMCSubtargetInfo(DummyTriple, MCPU, "");
   }
   return 0;
@@ -3841,14 +3842,11 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DisassembleSymbols.empty())
     Disassemble = true;
 
-  if (!Disassemble && MCPU == "help") {
-    return MCPUHelp();
-  }
-
   if (!ArchiveHeaders && !Disassemble && DwarfDumpType == DIDT_Null &&
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
       !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
+      MCPU != "help" &&
       !(MachOOpt &&
         (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
          DylibsUsed || ExportsTrie || FirstPrivateHeader ||
@@ -3858,6 +3856,9 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
     T->printHelp(ToolName);
     return 2;
   }
+
+  if (!Disassemble && MCPU == "help")
+    mcpuHelp();
 
   DisasmSymbolSet.insert_range(DisassembleSymbols);
 
