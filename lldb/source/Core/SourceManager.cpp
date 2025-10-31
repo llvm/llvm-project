@@ -483,8 +483,8 @@ void SourceManager::File::CommonInitializer(SupportFileSP support_file_sp,
   // the user know what's going on.
   static constexpr auto g_progress_delay = std::chrono::milliseconds(500);
 
-  std::future<void> future = std::async(std::launch::async, [&]() {
-    CommonInitializer(support_file_sp, target_sp);
+  std::future<void> future = std::async(std::launch::async, [=]() {
+    CommonInitializerImpl(support_file_sp, target_sp);
   });
 
   std::optional<Progress> progress;
