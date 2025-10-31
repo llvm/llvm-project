@@ -53345,7 +53345,8 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 }
 
 // Look for a RMW operation that only touches one bit of a larger than legal
-// type and fold it to a BTC/BTR/BTS pattern acting on a single i32 sub value.
+// type and fold it to a BTC/BTR/BTS or bit insertion pattern acting on a single
+// i32 sub value.
 static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                               SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
@@ -53371,20 +53372,33 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   // BTR: X & ~(1 << ShAmt)
   // BTS: X | (1 << ShAmt)
   // BTC: X ^ (1 << ShAmt)
-  SDValue ShAmt;
+  //
+  // BitInsert: (X & ~(1 << ShAmt)) | (InsertBit << ShAmt)
+  SDValue InsertBit, ShAmt;
   if (!StoredVal.hasOneUse() ||
       !(sd_match(StoredVal, m_And(m_Specific(LoadVal),
                                   m_Not(m_Shl(m_One(), m_Value(ShAmt))))) ||
         sd_match(StoredVal,
                  m_Or(m_Specific(LoadVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
         sd_match(StoredVal,
-                 m_Xor(m_Specific(LoadVal), m_Shl(m_One(), m_Value(ShAmt))))))
+                 m_Xor(m_Specific(LoadVal), m_Shl(m_One(), m_Value(ShAmt)))) ||
+        sd_match(StoredVal,
+                 m_Or(m_And(m_Specific(LoadVal),
+                            m_Not(m_Shl(m_One(), m_Value(ShAmt)))),
+                      m_Shl(m_Value(InsertBit), m_Deferred(ShAmt))))))
     return SDValue();
 
   // Ensure the shift amount is in bounds.
   KnownBits KnownAmt = DAG.computeKnownBits(ShAmt);
   if (KnownAmt.getMaxValue().uge(VT.getSizeInBits()))
     return SDValue();
+
+  // If we're inserting a bit then it must be the LSB.
+  if (InsertBit) {
+    KnownBits KnownInsert = DAG.computeKnownBits(InsertBit);
+    if (KnownInsert.countMinLeadingZeros() < (VT.getSizeInBits() - 1))
+      return SDValue();
+  }
 
   // Split the shift into an alignment shift that moves the active i32 block to
   // the bottom bits for truncation and a modulo shift that can act on the i32.
@@ -53393,6 +53407,7 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
                                  DAG.getSignedConstant(-32LL, DL, AmtVT));
   SDValue ModuloAmt =
       DAG.getNode(ISD::AND, DL, AmtVT, ShAmt, DAG.getConstant(31, DL, AmtVT));
+  ModuloAmt = DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8);
 
   // Compute the byte offset for the i32 block that is changed by the RMW.
   // combineTruncate will adjust the load for us in a similar way.
@@ -53407,13 +53422,23 @@ static SDValue narrowBitOpRMW(StoreSDNode *St, const SDLoc &DL,
   SDValue X = DAG.getNode(ISD::SRL, DL, VT, LoadVal, AlignAmt);
   X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, X);
 
-  SDValue Mask =
-      DAG.getNode(ISD::SHL, DL, MVT::i32, DAG.getConstant(1, DL, MVT::i32),
-                  DAG.getZExtOrTrunc(ModuloAmt, DL, MVT::i8));
-  if (StoredVal.getOpcode() == ISD::AND)
-    Mask = DAG.getNOT(DL, Mask, MVT::i32);
+  SDValue Mask = DAG.getNode(ISD::SHL, DL, MVT::i32,
+                             DAG.getConstant(1, DL, MVT::i32), ModuloAmt);
 
-  SDValue Res = DAG.getNode(StoredVal.getOpcode(), DL, MVT::i32, X, Mask);
+  SDValue Res;
+  if (InsertBit) {
+    SDValue BitMask =
+        DAG.getNode(ISD::SHL, DL, MVT::i32,
+                    DAG.getZExtOrTrunc(InsertBit, DL, MVT::i32), ModuloAmt);
+    Res =
+        DAG.getNode(ISD::AND, DL, MVT::i32, X, DAG.getNOT(DL, Mask, MVT::i32));
+    Res = DAG.getNode(ISD::OR, DL, MVT::i32, Res, BitMask);
+  } else {
+    if (StoredVal.getOpcode() == ISD::AND)
+      Mask = DAG.getNOT(DL, Mask, MVT::i32);
+    Res = DAG.getNode(StoredVal.getOpcode(), DL, MVT::i32, X, Mask);
+  }
+
   return DAG.getStore(St->getChain(), DL, Res, NewPtr, St->getPointerInfo(),
                       Align(), St->getMemOperand()->getFlags());
 }
