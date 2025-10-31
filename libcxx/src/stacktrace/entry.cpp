@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
+#include <__functional/hash.h>
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
 #include <string>
@@ -54,6 +55,8 @@ _LIBCPP_HIDE_FROM_ABI uintptr_t _Entry::adjusted_addr() const {
   auto sub = __image_ ? __image_->slide_ : 0;
   return __addr_ - sub;
 }
+
+_LIBCPP_EXPORTED_FROM_ABI size_t _Entry::hash() const { return std::__hash_memory(&__addr_, sizeof(uintptr_t)); }
 
 } // namespace __stacktrace
 
