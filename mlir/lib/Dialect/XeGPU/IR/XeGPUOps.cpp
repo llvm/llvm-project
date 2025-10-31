@@ -191,18 +191,31 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
 
   ArrayRef<int64_t> dataShape = dataTy.getShape();
   ArrayRef<int64_t> mdescShape = mdescTy.getShape();
+
+  SmallVector<int64_t> blockShape = mdescTy.getBlockShape();
+  ArrayAttr strideAttr = mdescTy.getStrideAttr();
+  SmallVector<int64_t> strides;
+  for (Attribute attr : strideAttr.getValue()) {
+    strides.push_back(cast<IntegerAttr>(attr).getInt());
+  }
   if (subgroup_block_io && layout) {
     auto laneData = layout.getEffectiveLaneDataAsInt();
+    auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
     if (!laneData.empty()) {
-      bool isLaneDataLinear =
+      bool isLaneDataContiguous =
           std::all_of(laneData.begin(), std::prev(laneData.end()),
                       [](int x) { return x == 1; });
-      if (!isLaneDataLinear)
-        return emitError()
-               << "With subgroup_block_io, lane data must be linear.";
-      if (isLaneDataLinear && laneData.back() != 1)
-        return emitError()
-               << "With subgroup_block_io, lane data must be coalesced.";
+      if (!isLaneDataContiguous)
+        return emitError() << "With subgroup_block_io, accessed data must be "
+                              "contiguous and coalesced.";
+      for (size_t i = 0; i < laneData.size(); ++i) {
+        if (laneLayout[i] != blockShape[i])
+          return emitError() << "With subgroup_block_io, the block shape must "
+                                "match the lane layout.";
+        if (laneLayout[i] != 1 && strides[i] != 1)
+          return emitError() << "With subgroup_block_io, the distributed "
+                                "dimensions must be contiguous.";
+      }
     }
   }
   if (dataShape.size() == 2) {
@@ -210,7 +223,6 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
                      [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
       return emitError() << "data shape must not exceed mem_desc shape.";
   } else {
-    SmallVector<int64_t> blockShape = mdescTy.getBlockShape();
     // if the subgroup_block_io attribute is set,  mdescTy must have block
     // attribute
     if (subgroup_block_io && !blockShape.size())
