@@ -179,6 +179,22 @@ void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::SpecificationPart &) {
+  partStack_.push_back(PartKind::SpecificationPart);
+}
+
+void OmpStructureChecker::Leave(const parser::SpecificationPart &) {
+  partStack_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::ExecutionPart &) {
+  partStack_.push_back(PartKind::ExecutionPart);
+}
+
+void OmpStructureChecker::Leave(const parser::ExecutionPart &) {
+  partStack_.pop_back();
+}
+
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void OmpStructureChecker::Enter(const parser::OmpClause::X &) { \
@@ -720,16 +736,8 @@ template <typename Checker> struct DirectiveSpellingVisitor {
     return std::get<parser::OmpBeginDirective>(t).DirName();
   }
 
-  bool Pre(const parser::OpenMPDeclarativeAllocate &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
-    return false;
-  }
   bool Pre(const parser::OpenMPDispatchConstruct &x) {
     checker_(GetDirName(x.t).source, Directive::OMPD_dispatch);
-    return false;
-  }
-  bool Pre(const parser::OpenMPExecutableAllocate &x) {
-    checker_(std::get<parser::Verbatim>(x.t).source, Directive::OMPD_allocate);
     return false;
   }
   bool Pre(const parser::OpenMPAllocatorsConstruct &x) {
@@ -1668,11 +1676,6 @@ void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
 }
 
 static std::pair<const parser::AllocateStmt *, parser::CharBlock>
-getAllocateStmtAndSource(const parser::Statement<parser::AllocateStmt> &stmt) {
-  return {&stmt.statement, stmt.source};
-}
-
-static std::pair<const parser::AllocateStmt *, parser::CharBlock>
 getAllocateStmtAndSource(const parser::ExecutionPartConstruct *epc) {
   if (SourcedActionStmt as{GetActionStmt(epc)}) {
     using IndirectionAllocateStmt = common::Indirection<parser::AllocateStmt>;
@@ -1699,19 +1702,12 @@ static UnorderedSymbolSet GetNonComponentSymbols(
   return symbols;
 }
 
-static const parser::OmpObjectList &GetObjectsOrEmpty(
-    const std::optional<parser::OmpObjectList> &maybeObjects) {
-  static parser::OmpObjectList empty{std::list<parser::OmpObject>{}};
-  if (maybeObjects) {
-    return *maybeObjects;
-  }
-  return empty;
-}
+void OmpStructureChecker::CheckIndividualAllocateDirective(
+    const parser::OmpAllocateDirective &x, bool isExecutable) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
 
-void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
-    const parser::OmpObjectList &objects,
-    const parser::OmpClauseList &clauses) {
-  const Scope &thisScope{context_.FindScope(source)};
+  const Scope &thisScope{context_.FindScope(dirName.source)};
 
   auto maybeHasPredefinedAllocator{[&](const parser::OmpClause *calloc) {
     // Return "true" if the ALLOCATOR clause was provided with an argument
@@ -1740,7 +1736,7 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
   const auto *allocator{[&]() {
     // Can't use FindClause in Enter (because clauses haven't been visited
     // yet).
-    for (const parser::OmpClause &c : clauses.v) {
+    for (const parser::OmpClause &c : beginSpec.Clauses().v) {
       if (c.Id() == llvm::omp::Clause::OMPC_allocator) {
         return &c;
       }
@@ -1752,7 +1748,7 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
     bool hasDynAllocators{
         HasRequires(llvm::omp::Clause::OMPC_dynamic_allocators)};
     if (!allocator && !hasDynAllocators) {
-      context_.Say(source,
+      context_.Say(dirName.source,
           "An ALLOCATE directive in a TARGET region must specify an ALLOCATOR clause or REQUIRES(DYNAMIC_ALLOCATORS) must be specified"_err_en_US);
     }
   }
@@ -1766,7 +1762,7 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
           : "a named common block or has SAVE attribute"};
 
   auto checkSymbol{[&](const Symbol &symbol, parser::CharBlock source) {
-    if (!inExecutableAllocate_) {
+    if (!isExecutable) {
       // For structure members, the scope is the derived type, which is
       // never "this" scope. Ignore this check for members, they will be
       // flagged anyway.
@@ -1802,37 +1798,130 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
     }
   }};
 
-  for (const parser::OmpObject &object : objects.v) {
-    parser::CharBlock objSource{[&]() {
-      if (auto &&maybeSource{GetObjectSource(object)}) {
-        return *maybeSource;
-      }
-      return source;
-    }()};
-    if (const Symbol *symbol{GetObjectSymbol(object)}) {
+  for (const parser::OmpArgument &arg : beginSpec.Arguments().v) {
+    const parser::OmpObject *object{GetArgumentObject(arg)};
+    if (!object) {
+      context_.Say(arg.source,
+          "An argument to ALLOCATE directive must be a variable list item"_err_en_US);
+      continue;
+    }
+
+    if (const Symbol *symbol{GetObjectSymbol(*object)}) {
       if (!IsTypeParamInquiry(*symbol)) {
-        checkSymbol(*symbol, objSource);
+        checkSymbol(*symbol, arg.source);
       }
-      CheckVarIsNotPartOfAnotherVar(source, object);
+      CheckVarIsNotPartOfAnotherVar(dirName.source, *object);
     }
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
+void OmpStructureChecker::CheckExecutableAllocateDirective(
+    const parser::OmpAllocateDirective &x) {
+  parser::omp::OmpAllocateInfo info{SplitOmpAllocate(x)};
 
-  if (!inExecutableAllocate_) {
-    const auto &dir{std::get<parser::Verbatim>(x.t)};
-    const auto &clauses{std::get<parser::OmpClauseList>(x.t)};
-    const auto &objects{
-        GetObjectsOrEmpty(std::get<std::optional<parser::OmpObjectList>>(x.t))};
+  auto [allocStmt, allocSource]{getAllocateStmtAndSource(info.body)};
+  if (!allocStmt) {
+    // This has been diagnosed already.
+    return;
+  }
 
-    CheckAllocateDirective(dir.source, objects, clauses);
+  UnorderedSymbolSet allocateSyms{GetNonComponentSymbols(*allocStmt)};
+  SymbolSourceMap directiveSyms;
+  bool hasEmptyList{false};
+
+  for (const parser::OmpAllocateDirective *ompAlloc : info.dirs) {
+    const parser::OmpDirectiveSpecification &spec{DEREF(ompAlloc).BeginDir()};
+    if (spec.Arguments().v.empty()) {
+      if (hasEmptyList && info.dirs.size() > 1) {
+        context_.Say(spec.DirName().source,
+            "If multiple directives are present in an executable ALLOCATE directive, at most one of them may specify no list items"_err_en_US);
+      }
+      hasEmptyList = true;
+    }
+    for (const parser::OmpArgument &arg : spec.Arguments().v) {
+      if (auto *sym{GetArgumentSymbol(arg)}) {
+        // Ignore these checks for structure members. They are not allowed
+        // in the first place, so don't tell the users that they need to
+        // be specified somewhere,
+        if (IsStructureComponent(*sym)) {
+          continue;
+        }
+        if (auto f{directiveSyms.find(sym)}; f != directiveSyms.end()) {
+          parser::MessageFormattedText txt(
+              "A list item on an executable ALLOCATE may only be specified once"_err_en_US);
+          parser::Message message(arg.source, txt);
+          message.Attach(f->second, "The list item was specified here"_en_US);
+          context_.Say(std::move(message));
+        } else {
+          directiveSyms.insert(std::make_pair(sym, arg.source));
+        }
+
+        if (auto f{allocateSyms.find(*sym)}; f == allocateSyms.end()) {
+          context_
+              .Say(arg.source,
+                  "A list item on an executable ALLOCATE must be specified on the associated ALLOCATE statement"_err_en_US)
+              .Attach(allocSource, "The ALLOCATE statement"_en_US);
+        }
+      }
+    }
   }
 }
 
-void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAllocate &x) {
+void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
+  const parser::OmpDirectiveSpecification &beginSpec{x.BeginDir()};
+  const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
+  PushContextAndClauseSets(dirName.source, dirName.v);
+  ++allocateDirectiveLevel;
+
+  bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  if (isExecutable && allocateDirectiveLevel == 1 && version >= 52) {
+    context_.Warn(common::UsageWarning::OpenMPUsage, dirName.source,
+        "The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead"_warn_en_US);
+  }
+
+  CheckIndividualAllocateDirective(x, isExecutable);
+
+  if (isExecutable) {
+    auto isOmpAllocate{[](const parser::ExecutionPartConstruct &epc) {
+      if (auto *omp{GetOmp(epc)}) {
+        auto odn{GetOmpDirectiveName(*omp)};
+        return odn.v == llvm::omp::Directive::OMPD_allocate;
+      }
+      return false;
+    }};
+
+    auto &body{std::get<parser::Block>(x.t)};
+    // The parser should put at most one statement in the body.
+    assert(body.size() <= 1 && "Multiple statements in allocate");
+    if (body.empty()) {
+      context_.Say(dirName.source,
+          "An executable ALLOCATE directive must be associated with an ALLOCATE statement"_err_en_US);
+    } else {
+      const parser::ExecutionPartConstruct &first{body.front()};
+      auto [allocStmt, _]{getAllocateStmtAndSource(&body.front())};
+      if (!isOmpAllocate(first) && !allocStmt) {
+        parser::CharBlock source{[&]() {
+          if (auto &&maybeSource{parser::GetSource(first)}) {
+            return *maybeSource;
+          }
+          return dirName.source;
+        }()};
+        context_.Say(source,
+            "The statement associated with executable ALLOCATE directive must be an ALLOCATE statement"_err_en_US);
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OmpAllocateDirective &x) {
+  bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
+  if (isExecutable && allocateDirectiveLevel == 1) {
+    CheckExecutableAllocateDirective(x);
+  }
+
+  --allocateDirectiveLevel;
   dirContext_.pop_back();
 }
 
@@ -2133,112 +2222,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::At &x) {
           "The ERROR directive with AT(EXECUTION) cannot appear in the specification part"_err_en_US);
     }
   }
-}
-
-void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
-  inExecutableAllocate_ = true;
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
-
-  unsigned version{context_.langOptions().OpenMPVersion};
-  if (version >= 52) {
-    context_.Warn(common::UsageWarning::OpenMPUsage, x.source,
-        "The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead"_warn_en_US);
-  }
-
-  auto &objects{
-      GetObjectsOrEmpty(std::get<std::optional<parser::OmpObjectList>>(x.t))};
-  auto &clauses{std::get<parser::OmpClauseList>(x.t)};
-
-  CheckAllocateDirective(
-      std::get<parser::Verbatim>(x.t).source, objects, clauses);
-
-  if (const auto &subDirs{
-          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
-              x.t)}) {
-    for (const auto &dalloc : *subDirs) {
-      const auto &dir{std::get<parser::Verbatim>(x.t)};
-      const auto &clauses{std::get<parser::OmpClauseList>(dalloc.t)};
-      const auto &objects{GetObjectsOrEmpty(
-          std::get<std::optional<parser::OmpObjectList>>(dalloc.t))};
-      CheckAllocateDirective(dir.source, objects, clauses);
-    }
-  }
-}
-
-void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {
-  auto [allocStmt, allocSource]{getAllocateStmtAndSource(
-      std::get<parser::Statement<parser::AllocateStmt>>(x.t))};
-
-  UnorderedSymbolSet allocateSyms{GetNonComponentSymbols(*allocStmt)};
-  SymbolSourceMap directiveSyms;
-  auto &objects{
-      GetObjectsOrEmpty(std::get<std::optional<parser::OmpObjectList>>(x.t))};
-  auto emptyListCount{static_cast<size_t>(objects.v.empty())};
-  auto checkObjects{[&](const parser::OmpObjectList &objects,
-                        parser::CharBlock dirSource,
-                        parser::CharBlock allocSource) {
-    for (const parser::OmpObject &object : objects.v) {
-      parser::CharBlock objSource{[&]() {
-        if (auto &&maybeSource{GetObjectSource(object)}) {
-          return *maybeSource;
-        }
-        return dirSource;
-      }()};
-      if (auto *sym{GetObjectSymbol(object)}) {
-        // Ignore these checks for structure members. They are not allowed
-        // in the first place, so don't tell the users that they nened to
-        // be specified somewhere,
-        if (IsStructureComponent(*sym)) {
-          continue;
-        }
-        if (auto f{directiveSyms.find(sym)}; f != directiveSyms.end()) {
-          parser::MessageFormattedText txt(
-              "A list item on an executable ALLOCATE may only be specified once"_err_en_US);
-          parser::Message message(objSource, txt);
-          message.Attach(f->second, "The list item was specified here"_en_US);
-          context_.Say(std::move(message));
-        } else {
-          directiveSyms.insert(std::make_pair(sym, objSource));
-        }
-
-        if (auto f{allocateSyms.find(*sym)}; f == allocateSyms.end()) {
-          context_
-              .Say(objSource,
-                  "A list item on an executable ALLOCATE must be specified on the associated ALLOCATE statement"_err_en_US)
-              .Attach(allocSource, "The ALLOCATE statement"_en_US);
-        }
-      }
-    }
-  }};
-
-  checkObjects(objects, std::get<parser::Verbatim>(x.t).source, allocSource);
-
-  const auto &subDirs{
-      std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
-          x.t)};
-  if (!subDirs) {
-    inExecutableAllocate_ = false;
-    dirContext_.pop_back();
-    return;
-  }
-
-  for (const parser::OpenMPDeclarativeAllocate &ompAlloc : *subDirs) {
-    parser::CharBlock dirSource{std::get<parser::Verbatim>(ompAlloc.t).source};
-    auto &objects{GetObjectsOrEmpty(
-        std::get<std::optional<parser::OmpObjectList>>(ompAlloc.t))};
-    if (objects.v.empty()) {
-      // Only show the message once per construct.
-      if (++emptyListCount == 2 && subDirs->size() >= 1) {
-        context_.Say(dirSource,
-            "If multiple directives are present in an executable ALLOCATE directive, at most one of them may specify no list items"_err_en_US);
-      }
-    }
-    checkObjects(objects, dirSource, allocSource);
-  }
-
-  inExecutableAllocate_ = false;
-  dirContext_.pop_back();
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
