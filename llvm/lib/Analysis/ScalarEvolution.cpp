@@ -15670,31 +15670,31 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // predicate.
     const SCEV *One = SE.getOne(RHS->getType());
     switch (Predicate) {
-      case CmpInst::ICMP_ULT:
-        if (RHS->getType()->isPointerTy())
-          return;
-        RHS = SE.getUMaxExpr(RHS, One);
-        [[fallthrough]];
-      case CmpInst::ICMP_SLT: {
-        RHS = SE.getMinusSCEV(RHS, One);
-        RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      }
-      case CmpInst::ICMP_UGT:
-      case CmpInst::ICMP_SGT:
-        RHS = SE.getAddExpr(RHS, One);
-        RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      case CmpInst::ICMP_ULE:
-      case CmpInst::ICMP_SLE:
-        RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      case CmpInst::ICMP_UGE:
-      case CmpInst::ICMP_SGE:
-        RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
-        break;
-      default:
-        break;
+    case CmpInst::ICMP_ULT:
+      if (RHS->getType()->isPointerTy())
+        return;
+      RHS = SE.getUMaxExpr(RHS, One);
+      [[fallthrough]];
+    case CmpInst::ICMP_SLT: {
+      RHS = SE.getMinusSCEV(RHS, One);
+      RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    }
+    case CmpInst::ICMP_UGT:
+    case CmpInst::ICMP_SGT:
+      RHS = SE.getAddExpr(RHS, One);
+      RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    case CmpInst::ICMP_ULE:
+    case CmpInst::ICMP_SLE:
+      RHS = getPreviousSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    case CmpInst::ICMP_UGE:
+    case CmpInst::ICMP_SGE:
+      RHS = getNextSCEVDivisibleByDivisor(RHS, DividesBy, SE);
+      break;
+    default:
+      break;
     }
 
     SmallVector<const SCEV *, 16> Worklist(1, LHS);
