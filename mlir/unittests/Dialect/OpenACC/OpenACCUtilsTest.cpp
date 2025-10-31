@@ -614,8 +614,8 @@ TEST_F(OpenACCUtilsTest, getBaseEntityFromSubview) {
   SmallVector<OpFoldResult> sizes = {b.getIndexAttr(5), b.getIndexAttr(10)};
   SmallVector<OpFoldResult> strides = {b.getIndexAttr(1), b.getIndexAttr(1)};
 
-  OwningOpRef<memref::SubViewOp> subviewOp = memref::SubViewOp::create(
-      b, loc, baseMemref, offsets, sizes, strides);
+  OwningOpRef<memref::SubViewOp> subviewOp =
+      memref::SubViewOp::create(b, loc, baseMemref, offsets, sizes, strides);
   Value subview = subviewOp->getResult();
 
   // Test that getBaseEntity returns the base memref, not the subview
@@ -651,8 +651,8 @@ TEST_F(OpenACCUtilsTest, getBaseEntityChainedSubviews) {
   SmallVector<OpFoldResult> sizes1 = {b.getIndexAttr(50), b.getIndexAttr(80)};
   SmallVector<OpFoldResult> strides1 = {b.getIndexAttr(1), b.getIndexAttr(1)};
 
-  OwningOpRef<memref::SubViewOp> subview1Op = memref::SubViewOp::create(
-      b, loc, baseMemref, offsets1, sizes1, strides1);
+  OwningOpRef<memref::SubViewOp> subview1Op =
+      memref::SubViewOp::create(b, loc, baseMemref, offsets1, sizes1, strides1);
   Value subview1 = subview1Op->getResult();
 
   // Create second subview (subview of subview)
@@ -660,12 +660,13 @@ TEST_F(OpenACCUtilsTest, getBaseEntityChainedSubviews) {
   SmallVector<OpFoldResult> sizes2 = {b.getIndexAttr(20), b.getIndexAttr(30)};
   SmallVector<OpFoldResult> strides2 = {b.getIndexAttr(1), b.getIndexAttr(1)};
 
-  OwningOpRef<memref::SubViewOp> subview2Op = memref::SubViewOp::create(
-      b, loc, subview1, offsets2, sizes2, strides2);
+  OwningOpRef<memref::SubViewOp> subview2Op =
+      memref::SubViewOp::create(b, loc, subview1, offsets2, sizes2, strides2);
   Value subview2 = subview2Op->getResult();
 
   // Test that getBaseEntity on the nested subview returns the first subview
-  // (since our implementation returns the immediate source, not the ultimate base)
+  // (since our implementation returns the immediate source, not the ultimate
+  // base)
   Value baseEntity = getBaseEntity(subview2);
   EXPECT_EQ(baseEntity, subview1);
 

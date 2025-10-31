@@ -47,18 +47,18 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
         PartialEntityAccessModel<fir::ArrayCoorOp>>(*ctx);
     fir::CoordinateOp::attachInterface<
         PartialEntityAccessModel<fir::CoordinateOp>>(*ctx);
-    fir::DeclareOp::attachInterface<
-        PartialEntityAccessModel<fir::DeclareOp>>(*ctx);
+    fir::DeclareOp::attachInterface<PartialEntityAccessModel<fir::DeclareOp>>(
+        *ctx);
   });
 
   // Register HLFIR operation interfaces
-  registry.addExtension(+[](mlir::MLIRContext *ctx,
-                            hlfir::hlfirDialect *dialect) {
-    hlfir::DesignateOp::attachInterface<
-        PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
-    hlfir::DeclareOp::attachInterface<
-        PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
-  });
+  registry.addExtension(
+      +[](mlir::MLIRContext *ctx, hlfir::hlfirDialect *dialect) {
+        hlfir::DesignateOp::attachInterface<
+            PartialEntityAccessModel<hlfir::DesignateOp>>(*ctx);
+        hlfir::DeclareOp::attachInterface<
+            PartialEntityAccessModel<hlfir::DeclareOp>>(*ctx);
+      });
 
   registerAttrsExtensions(registry);
 }
