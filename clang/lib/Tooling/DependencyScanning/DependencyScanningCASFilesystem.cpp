@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/CAS/ActionCache.h"
@@ -35,10 +36,10 @@ static void reportAsFatalIfError(llvm::Error E) {
 using llvm::Error;
 
 DependencyScanningCASFilesystem::DependencyScanningCASFilesystem(
-    IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS,
-    llvm::cas::ActionCache &Cache)
-    : FS(WorkerFS), Entries(EntryAlloc), CAS(WorkerFS->getCAS()), Cache(Cache) {
-}
+    DependencyScanningService &Service,
+    IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS)
+    : FS(WorkerFS), Entries(EntryAlloc), CAS(WorkerFS->getCAS()),
+      Cache(*Service.getCache()), Service(Service) {}
 
 const char DependencyScanningCASFilesystem::ID = 0;
 DependencyScanningCASFilesystem::~DependencyScanningCASFilesystem() = default;
@@ -201,13 +202,6 @@ DependencyScanningCASFilesystem::getOriginal(cas::CASID InputDataID) {
   return Blob.takeError();
 }
 
-static bool shouldCacheStatFailures(StringRef Filename) {
-  StringRef Ext = llvm::sys::path::extension(Filename);
-  if (Ext.empty())
-    return false; // This may be the module cache directory.
-  return true;
-}
-
 llvm::cas::CachingOnDiskFileSystem &
 DependencyScanningCASFilesystem::getCachingFS() {
   return static_cast<llvm::cas::CachingOnDiskFileSystem &>(*FS);
@@ -233,7 +227,8 @@ DependencyScanningCASFilesystem::lookupPath(const Twine &Path) {
   llvm::ErrorOr<llvm::vfs::Status> MaybeStatus =
       getCachingFS().statusAndFileID(PathRef, FileID);
   if (!MaybeStatus) {
-    if (shouldCacheStatFailures(PathRef))
+    if (Service.shouldCacheNegativeStats() &&
+        shouldCacheNegativeStatsForPath(PathRef))
       Entries[PathRef].EC = MaybeStatus.getError();
     return LookupPathResult{nullptr, MaybeStatus.getError()};
   }

@@ -162,6 +162,17 @@ clang_experimental_DependencyScannerServiceOptions_setActionCache(
     CXDependencyScannerServiceOptions Opts, CXCASActionCache Cache);
 
 /**
+ * Set if negative stat caching is enabled or disabled. If this is not called
+ * the default value is used.
+ *
+ * The default is false unless the environment variable
+ * `CLANG_SCAN_CACHE_NEGATIVE_STATS` is set to empty or "1".
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerServiceOptions_setCacheNegativeStats(
+    CXDependencyScannerServiceOptions Opts, bool CacheNegativeStats);
+
+/**
  * Create a \c CXDependencyScannerService object.
  * Must be disposed with \c
  * clang_experimental_DependencyScannerService_dispose_v0().

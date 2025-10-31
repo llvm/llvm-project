@@ -263,8 +263,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
                                     ScanningOutputFormat::Make, CASOptions(),
                                     nullptr, nullptr, nullptr);
   {
-    DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
-                                             std::move(CASFS));
+    DependencyScanningWorkerFilesystem DepFS(Service, std::move(CASFS));
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
         DepFS.openFileForRead(Path);
     ASSERT_TRUE(File);
@@ -286,7 +285,7 @@ TEST(DependencyScanner, DepScanFSWithCASProvider) {
     // Check that even though we pass a new InMemoryFileSystem instance here the
     // DependencyScanningService's SharedCache cached the file's buffer and
     // cas::ObjectRef and will be able to provide it.
-    DependencyScanningWorkerFilesystem DepFS(Service.getSharedCache(),
+    DependencyScanningWorkerFilesystem DepFS(Service,
                                              new llvm::vfs::InMemoryFileSystem);
     DepFS.setCurrentWorkingDirectory("/root");
     llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> File =
@@ -445,4 +444,117 @@ TEST(DependencyScanner, ScanDepsWithDiagConsumer) {
     EXPECT_EQ(DiagConsumer.getNumErrors(), 1u);
     EXPECT_TRUE(DiagConsumer.Finished);
   }
+}
+
+TEST(DependencyScanner, NoNegativeCache) {
+  StringRef CWD = "/root";
+
+  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  VFS->setCurrentWorkingDirectory(CWD);
+  auto Sept = llvm::sys::path::get_separator();
+  std::string HeaderPath =
+      std::string(llvm::formatv("{0}root{0}header.h", Sept));
+  std::string Test0Path =
+      std::string(llvm::formatv("{0}root{0}test0.cpp", Sept));
+  std::string Test1Path =
+      std::string(llvm::formatv("{0}root{0}test1.cpp", Sept));
+
+  VFS->addFile(Test0Path, 0,
+               llvm::MemoryBuffer::getMemBuffer(
+                   "#if __has_include(\"header.h\")\n#endif"));
+  VFS->addFile(Test1Path, 0,
+               llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
+
+  DependencyScanningService Service(
+      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::Make,
+      CASOptions(), nullptr, nullptr, nullptr, ScanningOptimizations::All,
+      /*EagerLoadModules=*/false,
+      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*CacheNegativeStats=*/false);
+  DependencyScanningTool ScanTool(Service, VFS);
+
+  std::vector<std::string> CommandLine0 = {"clang",
+                                           "-target",
+                                           "x86_64-apple-macosx10.7",
+                                           "-c",
+                                           "test0.cpp",
+                                           "-o"
+                                           "test0.cpp.o"};
+  std::vector<std::string> CommandLine1 = {"clang",
+                                           "-target",
+                                           "x86_64-apple-macosx10.7",
+                                           "-c",
+                                           "test1.cpp",
+                                           "-o"
+                                           "test1.cpp.o"};
+
+  std::string Result;
+  ASSERT_THAT_ERROR(
+      ScanTool.getDependencyFile(CommandLine0, CWD).moveInto(Result),
+      llvm::Succeeded());
+
+  VFS->addFile(HeaderPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  ASSERT_THAT_ERROR(
+      ScanTool.getDependencyFile(CommandLine1, CWD).moveInto(Result),
+      llvm::Succeeded());
+}
+
+TEST(DependencyScanner, NoNegativeCacheCAS) {
+  StringRef CWD = "/root";
+
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
+  std::shared_ptr<ActionCache> Cache = llvm::cas::createInMemoryActionCache();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->setCurrentWorkingDirectory(CWD);
+  std::unique_ptr<llvm::vfs::FileSystem> CASFS =
+      llvm::cas::createCASProvidingFileSystem(DB, VFS);
+
+  auto Sept = llvm::sys::path::get_separator();
+  std::string HeaderPath =
+      std::string(llvm::formatv("{0}root{0}header.h", Sept));
+  std::string Test0Path =
+      std::string(llvm::formatv("{0}root{0}test0.cpp", Sept));
+  std::string Test1Path =
+      std::string(llvm::formatv("{0}root{0}test1.cpp", Sept));
+
+  VFS->addFile(Test0Path, 0,
+               llvm::MemoryBuffer::getMemBuffer(
+                   "#if __has_include(\"header.h\")\n#endif"));
+  VFS->addFile(Test1Path, 0,
+               llvm::MemoryBuffer::getMemBuffer("#include \"header.h\""));
+
+  DependencyScanningService Service(
+      ScanningMode::DependencyDirectivesScan, ScanningOutputFormat::FullIncludeTree,
+      CASOptions(), DB, Cache, nullptr, ScanningOptimizations::Default,
+      /*EagerLoadModules=*/false,
+      /*TraceVFS=*/false, llvm::sys::toTimeT(std::chrono::system_clock::now()),
+      /*CacheNegativeStats=*/false);
+  DependencyScanningTool ScanTool(Service, VFS);
+
+  std::vector<std::string> CommandLine0 = {"clang",
+                                           "-target",
+                                           "x86_64-apple-macosx10.7",
+                                           "-c",
+                                           "test0.cpp",
+                                           "-o"
+                                           "test0.cpp.o"};
+  std::vector<std::string> CommandLine1 = {"clang",
+                                           "-target",
+                                           "x86_64-apple-macosx10.7",
+                                           "-c",
+                                           "test1.cpp",
+                                           "-o"
+                                           "test1.cpp.o"};
+
+  std::string Result;
+  ASSERT_THAT_ERROR(
+      ScanTool.getDependencyFile(CommandLine0, CWD).moveInto(Result),
+      llvm::Succeeded());
+
+  VFS->addFile(HeaderPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  ASSERT_THAT_ERROR(
+      ScanTool.getDependencyFile(CommandLine1, CWD).moveInto(Result),
+      llvm::Succeeded());
 }

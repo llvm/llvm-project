@@ -22,6 +22,8 @@ TEST(DependencyScanningCAPITests, DependencyScanningFSCacheOutOfDate) {
 
   CXDependencyScannerServiceOptions ServiceOptions =
       clang_experimental_DependencyScannerServiceOptions_create();
+  clang_experimental_DependencyScannerServiceOptions_setCacheNegativeStats(
+      ServiceOptions, true);
   CXDependencyScannerService Service =
       clang_experimental_DependencyScannerService_create_v1(ServiceOptions);
   CXDependencyScannerWorker Worker =

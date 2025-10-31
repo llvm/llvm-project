@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
@@ -32,10 +33,13 @@ TEST(DependencyScanningCASFilesystem, FilenameSpelling) {
   TempLink TestLink(TestDir.path("File.h"), TestDir.path("SymFile.h"));
 #endif
 
-  std::unique_ptr<ObjectStore> CAS = llvm::cas::createInMemoryCAS();
-  std::unique_ptr<ActionCache> Cache = llvm::cas::createInMemoryActionCache();
+  std::shared_ptr<ObjectStore> CAS = llvm::cas::createInMemoryCAS();
+  std::shared_ptr<ActionCache> Cache = llvm::cas::createInMemoryActionCache();
   auto CacheFS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
-  DependencyScanningCASFilesystem FS(CacheFS, *Cache);
+  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
+                                    ScanningOutputFormat::Make,
+                                    clang::CASOptions(), CAS, Cache, nullptr);
+  DependencyScanningCASFilesystem FS(Service, CacheFS);
 
   EXPECT_EQ(FS.status(TestFile.path()).getError(), std::error_code());
   auto Directives = FS.getDirectiveTokens(TestFile.path());
@@ -53,10 +57,13 @@ TEST(DependencyScanningCASFilesystem, DirectiveScanFailure) {
   TempDir TestDir("DependencyScanningCASFilesystemTest", /*Unique=*/true);
   TempFile TestFile(TestDir.path("python"), "", "import sys\n");
 
-  std::unique_ptr<ObjectStore> CAS = llvm::cas::createInMemoryCAS();
-  std::unique_ptr<ActionCache> Cache = llvm::cas::createInMemoryActionCache();
+  std::shared_ptr<ObjectStore> CAS = llvm::cas::createInMemoryCAS();
+  std::shared_ptr<ActionCache> Cache = llvm::cas::createInMemoryActionCache();
   auto CacheFS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
-  DependencyScanningCASFilesystem FS(CacheFS, *Cache);
+  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
+                                    ScanningOutputFormat::Make,
+                                    clang::CASOptions(), CAS, Cache, nullptr);
+  DependencyScanningCASFilesystem FS(Service, CacheFS);
 
   EXPECT_EQ(FS.status(TestFile.path()).getError(), std::error_code());
   auto Directives = FS.getDirectiveTokens(TestFile.path());
@@ -64,7 +71,7 @@ TEST(DependencyScanningCASFilesystem, DirectiveScanFailure) {
 
   // Check the cached failure in the action cache.
   {
-    DependencyScanningCASFilesystem NewFS(CacheFS, *Cache);
+    DependencyScanningCASFilesystem NewFS(Service, CacheFS);
     EXPECT_EQ(NewFS.status(TestFile.path()).getError(), std::error_code());
     auto Directives = NewFS.getDirectiveTokens(TestFile.path());
     ASSERT_FALSE(Directives);

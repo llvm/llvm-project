@@ -38,9 +38,8 @@ class DependencyScanningCASFilesystem
 public:
   static const char ID;
 
-  DependencyScanningCASFilesystem(
-      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS,
-      llvm::cas::ActionCache &Cache);
+  DependencyScanningCASFilesystem(DependencyScanningService &Service,
+      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS);
 
   ~DependencyScanningCASFilesystem();
 
@@ -109,6 +108,8 @@ private:
 
   llvm::cas::ObjectStore &CAS;
   llvm::cas::ActionCache &Cache;
+  /// The service associated with this VFS.
+  DependencyScanningService &Service;
   std::optional<llvm::cas::ObjectRef> ClangFullVersionID;
   std::optional<llvm::cas::ObjectRef> DepDirectivesID;
   std::optional<llvm::cas::ObjectRef> EmptyBlobID;

@@ -34,15 +34,14 @@ DependencyScanningWorker::DependencyScanningWorker(
 
   if (Service.useCASFS()) {
     CacheFS = Service.getSharedFS().createProxyFS();
-    DepCASFS = new DependencyScanningCASFilesystem(CacheFS, *Service.getCache());
+    DepCASFS = new DependencyScanningCASFilesystem(Service, CacheFS);
     BaseFS = DepCASFS;
     return;
   }
 
   switch (Service.getMode()) {
   case ScanningMode::DependencyDirectivesScan:
-    DepFS =
-        new DependencyScanningWorkerFilesystem(Service.getSharedCache(), FS);
+    DepFS = new DependencyScanningWorkerFilesystem(Service, FS);
     BaseFS = DepFS;
     break;
   case ScanningMode::CanonicalPreprocessing:
