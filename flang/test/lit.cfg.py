@@ -169,10 +169,10 @@ if openmp_mod_path and openmp_mod_path != intrinsics_mod_path:
 
 # If intrinsic modules are not available, disable tests unless they are marked as 'module-independent'.
 config.available_features.add("module-independent")
-if config.flang_test_enable_intrinsics or intrinsics_mod_path:
+if config.flang_test_enable_modules or intrinsics_mod_path:
     config.available_features.add("flangrt-modules")
 else:
-    lit_config.warning(f"Intrinsic modules not in driver default paths: disabling most tests; Use FLANG_TEST_ENABLE_INTRINSICS=ON to force-enable")
+    lit_config.warning(f"Intrinsic modules not in driver default paths: disabling most tests; Use FLANG_TEST_ENABLE_MODULES=ON to force-enable")
     config.limit_to_features.add("module-independent")
 
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
@@ -181,7 +181,7 @@ if config.flang_test_enable_openmp or openmp_mod_path:
 
     # Search path for omp_lib.h with LLVM_ENABLE_RUNTIMES=openmp
     # FIXME: openmp should write this file into the resource directory
-    extra_intrinsics_search_args += ["-I", f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src"] 
+    extra_intrinsics_search_args += ["-I", f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src"]
 else:
     lit_config.warning(f"OpenMP modules found not in driver default paths: OpenMP tests disabled; Use FLANG_TEST_ENABLE_OPENMP=ON to force-enable")
 
