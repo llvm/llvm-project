@@ -1443,6 +1443,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
 
   printFlags(O);
   printOperands(O, SlotTracker);
+  if (!VPIRMetadata::empty())
+    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 
   if (auto DL = getDebugLoc()) {
     O << ", !dbg ";
@@ -1669,6 +1671,25 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
   Metadata = std::move(MetadataIntersection);
 }
 
+void VPIRMetadata::print(raw_ostream &O, const Module &M) const {
+  if (Metadata.empty())
+    return;
+
+  SmallVector<StringRef, 8> MDNames;
+  M.getContext().getMDKindNames(MDNames);
+
+  O << " (";
+  interleaveComma(Metadata, O, [&](const auto &KindNodePair) {
+    auto [Kind, Node] = KindNodePair;
+    assert(Kind != 0 && "Debug metadata should not be managed by VPIRMetadata");
+    assert(Kind < MDNames.size() && !MDNames[Kind].empty() &&
+           "Unexpected unnamed metadata kind");
+    O << "!" << MDNames[Kind] << " ";
+    Node->printAsOperand(O, &M);
+  });
+  O << ")";
+}
+
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   assert(Variant != nullptr && "Can't create vector function.");
@@ -1729,6 +1750,8 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
     Op->printAsOperand(O, SlotTracker);
   });
   O << ")";
+  if (!VPIRMetadata::empty())
+    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 
   O << " (using library function";
   if (Variant->hasName())
@@ -1863,6 +1886,8 @@ void VPWidenIntrinsicRecipe::print(raw_ostream &O, const Twine &Indent,
     Op->printAsOperand(O, SlotTracker);
   });
   O << ")";
+  if (!VPIRMetadata::empty())
+    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -2255,6 +2280,8 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = " << Instruction::getOpcodeName(Opcode);
   printFlags(O);
   printOperands(O, SlotTracker);
+  if (!VPIRMetadata::empty())
+    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -2336,6 +2363,8 @@ void VPWidenCastRecipe::print(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
+  if (!VPIRMetadata::empty())
+    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -3617,6 +3646,8 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = load ";
   printOperands(O, SlotTracker);
+  if (!VPIRMetadata::empty())
+    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 
@@ -3738,6 +3769,8 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
+  if (!VPIRMetadata::empty())
+    VPIRMetadata::print(O, getParent()->getPlan()->getModule());
 }
 #endif
 

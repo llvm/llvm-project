@@ -731,18 +731,18 @@ TEST_F(VPBasicBlockTest, print) {
   VPBB2->setName("bb2");
 
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
+  VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
+  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
 
-  // Check printing an instruction without associated VPlan.
+  // Check printing an instruction with associated VPlan.
   {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
-    VPSlotTracker SlotTracker;
+    VPSlotTracker SlotTracker(&Plan);
     I3->print(OS, "", SlotTracker);
-    EXPECT_EQ("EMIT br <badref>, <badref>", I3Dump);
+    EXPECT_EQ("EMIT br vp<%2>, vp<%3>", I3Dump);
   }
 
-  VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
-  VPBlockUtils::connectBlocks(VPBB0, VPBB1);
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan.printDOT(OS);
@@ -1509,11 +1509,17 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
                                        PoisonValue::get(Int32));
   AI->setName("a");
-  VPValue *ExtVPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *ExtVPV2 = getPlan().getOrAddLiveIn(AI);
+  VPlan &Plan = getPlan();
+  VPValue *ExtVPV1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
+  VPValue *ExtVPV2 = Plan.getOrAddLiveIn(AI);
 
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
   VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+
+  // Add instructions to a block in the plan so they have access to Module
+  VPBasicBlock *VPBB = Plan.getEntry();
+  VPBB->appendRecipe(I1);
+  VPBB->appendRecipe(I2);
 
   // Check printing I1.
   {
@@ -1526,7 +1532,7 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           VPV->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
+        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
 
     // Test VPRecipeBase::dump().
     VPRecipeBase *R = I1;
@@ -1535,7 +1541,7 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           R->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
+        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
 
     // Test VPDef::dump().
     VPDef *D = I1;
@@ -1544,7 +1550,7 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           D->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
+        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
   }
   // Check printing I2.
   {
@@ -1557,7 +1563,7 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           VPV->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
+        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
 
     // Test VPRecipeBase::dump().
     VPRecipeBase *R = I2;
@@ -1566,7 +1572,7 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           R->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
+        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
 
     // Test VPDef::dump().
     VPDef *D = I2;
@@ -1575,11 +1581,9 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           D->dump();
           exit(0);
         },
-        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
+        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
   }
 
-  delete I2;
-  delete I1;
   delete AI;
 }
 
