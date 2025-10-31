@@ -22,7 +22,7 @@ typedef short  v16s  __attribute__((ext_vector_type(16)));
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <16 x half> noundef [[A:%.*]], <16 x half> noundef [[B:%.*]], <4 x float> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16.v4f32.v16f16(<16 x half> [[A]], <16 x half> [[B]], <4 x float> [[C]])
-// CHECK-GFX1100-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4:![0-9]+]]
+// CHECK-GFX1100-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8:![0-9]+]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_f32_16x16x16_f16_w64(global v4f* out, v16h a, v16h b, v4f c)
@@ -38,7 +38,7 @@ void test_amdgcn_wmma_f32_16x16x16_f16_w64(global v4f* out, v16h a, v16h b, v4f 
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <16 x i16> noundef [[A:%.*]], <16 x i16> noundef [[B:%.*]], <4 x float> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.bf16.v4f32.v16i16(<16 x i16> [[A]], <16 x i16> [[B]], <4 x float> [[C]])
-// CHECK-GFX1100-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4]]
+// CHECK-GFX1100-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_f32_16x16x16_bf16_w64(global v4f* out, v16s a, v16s b, v4f c)
@@ -54,7 +54,7 @@ void test_amdgcn_wmma_f32_16x16x16_bf16_w64(global v4f* out, v16s a, v16s b, v4f
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <16 x half> noundef [[A:%.*]], <16 x half> noundef [[B:%.*]], <8 x half> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v8f16.v16f16(<16 x half> [[A]], <16 x half> [[B]], <8 x half> [[C]], i1 true)
-// CHECK-GFX1100-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4]]
+// CHECK-GFX1100-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_f16_16x16x16_f16_w64(global v8h* out, v16h a, v16h b, v8h c)
@@ -70,7 +70,7 @@ void test_amdgcn_wmma_f16_16x16x16_f16_w64(global v8h* out, v16h a, v16h b, v8h 
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <16 x i16> noundef [[A:%.*]], <16 x i16> noundef [[B:%.*]], <8 x i16> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.v8i16.v16i16(<16 x i16> [[A]], <16 x i16> [[B]], <8 x i16> [[C]], i1 true)
-// CHECK-GFX1100-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4]]
+// CHECK-GFX1100-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_bf16_16x16x16_bf16_w64(global v8s* out, v16s a, v16s b, v8s c)
@@ -86,7 +86,7 @@ void test_amdgcn_wmma_bf16_16x16x16_bf16_w64(global v8s* out, v16s a, v16s b, v8
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <16 x half> noundef [[A:%.*]], <16 x half> noundef [[B:%.*]], <8 x half> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.tied.v8f16.v16f16(<16 x half> [[A]], <16 x half> [[B]], <8 x half> [[C]], i1 true)
-// CHECK-GFX1100-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4]]
+// CHECK-GFX1100-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_f16_16x16x16_f16_tied_w64(global v8h* out, v16h a, v16h b, v8h c)
@@ -102,7 +102,7 @@ void test_amdgcn_wmma_f16_16x16x16_f16_tied_w64(global v8h* out, v16h a, v16h b,
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <16 x i16> noundef [[A:%.*]], <16 x i16> noundef [[B:%.*]], <8 x i16> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.amdgcn.wmma.bf16.16x16x16.bf16.tied.v8i16.v16i16(<16 x i16> [[A]], <16 x i16> [[B]], <8 x i16> [[C]], i1 true)
-// CHECK-GFX1100-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4]]
+// CHECK-GFX1100-NEXT:    store <8 x i16> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(global v8s* out, v16s a, v16s b, v8s c)
@@ -118,7 +118,7 @@ void test_amdgcn_wmma_bf16_16x16x16_bf16_tied_w64(global v8s* out, v16s a, v16s 
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]], <4 x i32> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu8.v4i32.v4i32(i1 true, <4 x i32> [[A]], i1 true, <4 x i32> [[B]], <4 x i32> [[C]], i1 false)
-// CHECK-GFX1100-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4]]
+// CHECK-GFX1100-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_i32_16x16x16_iu8_w64(global v4i* out, v4i a, v4i b, v4i c)
@@ -134,7 +134,7 @@ void test_amdgcn_wmma_i32_16x16x16_iu8_w64(global v4i* out, v4i a, v4i b, v4i c)
 // CHECK-GFX1100-SAME: ptr addrspace(1) noundef writeonly captures(none) initializes((0, 16)) [[OUT:%.*]], <2 x i32> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]], <4 x i32> noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-GFX1100-NEXT:  [[ENTRY:.*:]]
 // CHECK-GFX1100-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4.v4i32.v2i32(i1 true, <2 x i32> [[A]], i1 true, <2 x i32> [[B]], <4 x i32> [[C]], i1 false)
-// CHECK-GFX1100-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA4]]
+// CHECK-GFX1100-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT]], align 16, !tbaa [[CHAR_TBAA8]]
 // CHECK-GFX1100-NEXT:    ret void
 //
 void test_amdgcn_wmma_i32_16x16x16_iu4_w64(global v4i* out, v2i a, v2i b, v4i c)
@@ -144,7 +144,7 @@ void test_amdgcn_wmma_i32_16x16x16_iu4_w64(global v4i* out, v2i a, v2i b, v4i c)
 
 #endif
 //.
-// CHECK-GFX1100: [[CHAR_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// CHECK-GFX1100: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// CHECK-GFX1100: [[META6]] = !{!"Simple C/C++ TBAA"}
+// CHECK-GFX1100: [[META6:![0-9]+]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
+// CHECK-GFX1100: [[META7]] = !{!"Simple C/C++ TBAA"}
+// CHECK-GFX1100: [[CHAR_TBAA8]] = !{[[META6]], [[META6]], i64 0}
 //.

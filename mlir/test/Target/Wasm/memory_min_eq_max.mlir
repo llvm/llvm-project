@@ -4,4 +4,4 @@
 (module (memory 0 0))
 */
 
-// CHECK-LABEL:   wasmssa.memory @mem_0 nested !wasmssa<limit[0: 0]>
+// CHECK-LABEL:   wasmssa.memory @mem_0 !wasmssa<limit[0: 0]>

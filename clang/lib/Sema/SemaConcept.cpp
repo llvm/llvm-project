@@ -385,6 +385,28 @@ public:
     return inherited::TraverseStmt(E->getReplacement());
   }
 
+  bool TraverseTemplateName(TemplateName Template) {
+    if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
+            Template.getAsTemplateDecl());
+        TTP && TTP->getDepth() < TemplateArgs.getNumLevels()) {
+      if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(),
+                                            TTP->getPosition()))
+        return true;
+
+      TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
+      if (TTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+        assert(Arg.getKind() == TemplateArgument::Pack &&
+               "Missing argument pack");
+        Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
+      }
+      assert(!Arg.getAsTemplate().isNull() &&
+             "Null template template argument");
+      UsedTemplateArgs.push_back(
+          SemaRef.Context.getCanonicalTemplateArgument(Arg));
+    }
+    return inherited::TraverseTemplateName(Template);
+  }
+
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
     if (!Constraint.hasParameterMapping()) {
       for (const auto &List : TemplateArgs)
@@ -417,8 +439,8 @@ class ConstraintSatisfactionChecker {
   const NamedDecl *Template;
   SourceLocation TemplateNameLoc;
   UnsignedOrNone PackSubstitutionIndex;
-
   ConstraintSatisfaction &Satisfaction;
+  bool BuildExpression;
 
 private:
   ExprResult
@@ -432,7 +454,7 @@ private:
   // XXX: It is SLOW! Use it very carefully.
   std::optional<MultiLevelTemplateArgumentList> SubstitutionInTemplateArguments(
       const NormalizedConstraintWithParamMapping &Constraint,
-      MultiLevelTemplateArgumentList MLTAL,
+      const MultiLevelTemplateArgumentList &MLTAL,
       llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost);
 
   ExprResult EvaluateSlow(const AtomicConstraint &Constraint,
@@ -461,10 +483,11 @@ public:
   ConstraintSatisfactionChecker(Sema &SemaRef, const NamedDecl *Template,
                                 SourceLocation TemplateNameLoc,
                                 UnsignedOrNone PackSubstitutionIndex,
-                                ConstraintSatisfaction &Satisfaction)
+                                ConstraintSatisfaction &Satisfaction,
+                                bool BuildExpression)
       : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
-        Satisfaction(Satisfaction) {}
+        Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
 
   ExprResult Evaluate(const NormalizedConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
@@ -564,11 +587,16 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
 std::optional<MultiLevelTemplateArgumentList>
 ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const NormalizedConstraintWithParamMapping &Constraint,
-    MultiLevelTemplateArgumentList MLTAL,
-    llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
+    const MultiLevelTemplateArgumentList &MLTAL,
+    llvm::SmallVector<TemplateArgument> &SubstitutedOutermost) {
 
   if (!Constraint.hasParameterMapping())
     return std::move(MLTAL);
+
+  // The mapping is empty, meaning no template arguments are needed for
+  // evaluation.
+  if (Constraint.getParameterMapping().empty())
+    return MultiLevelTemplateArgumentList();
 
   TemplateDeductionInfo Info(Constraint.getBeginLoc());
   Sema::InstantiatingTemplate Inst(
@@ -607,7 +635,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   // The empty MLTAL situation should only occur when evaluating non-dependent
   // constraints.
   if (MLTAL.getNumSubstitutedLevels())
-    SubstitutedOuterMost =
+    SubstitutedOutermost =
         llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
@@ -615,19 +643,19 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     if (Used[I])
       Arg = S.Context.getCanonicalTemplateArgument(
           CTAI.SugaredConverted[MappedIndex++]);
-    if (I < SubstitutedOuterMost.size()) {
-      SubstitutedOuterMost[I] = Arg;
+    if (I < SubstitutedOutermost.size()) {
+      SubstitutedOutermost[I] = Arg;
       Offset = I + 1;
     } else {
-      SubstitutedOuterMost.push_back(Arg);
-      Offset = SubstitutedOuterMost.size();
+      SubstitutedOutermost.push_back(Arg);
+      Offset = SubstitutedOutermost.size();
     }
   }
-  if (Offset < SubstitutedOuterMost.size())
-    SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
+  if (Offset < SubstitutedOutermost.size())
+    SubstitutedOutermost.erase(SubstitutedOutermost.begin() + Offset);
 
   MultiLevelTemplateArgumentList SubstitutedTemplateArgs;
-  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOuterMost,
+  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOutermost,
                                                     /*Final=*/false);
   return std::move(SubstitutedTemplateArgs);
 }
@@ -636,9 +664,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
@@ -736,8 +764,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = E;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
 
@@ -786,13 +815,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                      FoldExpandedConstraint::FoldOperatorKind::And;
   unsigned EffectiveDetailEndIndex = Satisfaction.Details.size();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   // FIXME: Is PackSubstitutionIndex correct?
   llvm::SaveAndRestore _(PackSubstitutionIndex, S.ArgPackSubstIndex);
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
           static_cast<const NormalizedConstraintWithParamMapping &>(Constraint),
-          MLTAL, SubstitutedOuterMost);
+          MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprError();
@@ -815,9 +844,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.ContainsErrors = false;
     ExprResult Expr =
         ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
-                                      UnsignedOrNone(I), Satisfaction)
+                                      UnsignedOrNone(I), Satisfaction,
+                                      /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
-    if (Expr.isUsable()) {
+    if (BuildExpression && Expr.isUsable()) {
       if (Out.isUnset())
         Out = Expr;
       else
@@ -828,7 +858,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                      Constraint.getBeginLoc(),
                                      FPOptionsOverride{});
     } else {
-      assert(!Satisfaction.IsSatisfied);
+      assert(!BuildExpression || !Satisfaction.IsSatisfied);
     }
     if (!Conjunction && Satisfaction.IsSatisfied) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() +
@@ -868,8 +898,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = E;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
   return E;
@@ -880,9 +911,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const MultiLevelTemplateArgumentList &MLTAL, unsigned Size) {
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
 
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
@@ -978,7 +1009,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
-  if (!E.isUsable()) {
+  if (E.isInvalid()) {
     Satisfaction.Details.insert(Satisfaction.Details.begin() + Size, ConceptId);
     return E;
   }
@@ -1012,8 +1043,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = CE;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
   return CE;
@@ -1033,7 +1065,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (Conjunction && (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
     return LHS;
 
-  if (!Conjunction && LHS.isUsable() && Satisfaction.IsSatisfied &&
+  if (!Conjunction && !LHS.isInvalid() && Satisfaction.IsSatisfied &&
       !Satisfaction.ContainsErrors)
     return LHS;
 
@@ -1042,11 +1074,14 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ExprResult RHS = Evaluate(Constraint.getRHS(), MLTAL);
 
-  if (RHS.isUsable() && Satisfaction.IsSatisfied &&
+  if (!Conjunction && !RHS.isInvalid() && Satisfaction.IsSatisfied &&
       !Satisfaction.ContainsErrors)
     Satisfaction.Details.erase(Satisfaction.Details.begin() +
                                    EffectiveDetailEndIndex,
                                Satisfaction.Details.end());
+
+  if (!BuildExpression)
+    return Satisfaction.ContainsErrors ? ExprError() : ExprEmpty();
 
   if (!LHS.isUsable())
     return RHS;
@@ -1128,10 +1163,11 @@ static bool CheckConstraintSatisfaction(
                                     Template, /*CSE=*/nullptr,
                                     S.ArgPackSubstIndex);
 
-  ExprResult Res =
-      ConstraintSatisfactionChecker(S, Template, TemplateIDRange.getBegin(),
-                                    S.ArgPackSubstIndex, Satisfaction)
-          .Evaluate(*C, TemplateArgsLists);
+  ExprResult Res = ConstraintSatisfactionChecker(
+                       S, Template, TemplateIDRange.getBegin(),
+                       S.ArgPackSubstIndex, Satisfaction,
+                       /*BuildExpression=*/ConvertedExpr != nullptr)
+                       .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
     return true;
@@ -1217,13 +1253,51 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
+static ExprResult
+SubstituteConceptsInConstraintExpression(Sema &S, const NamedDecl *D,
+                                         const ConceptSpecializationExpr *CSE,
+                                         UnsignedOrNone SubstIndex) {
+
+  // [C++2c] [temp.constr.normal]
+  // Otherwise, to form CE, any non-dependent concept template argument Ai
+  // is substituted into the constraint-expression of C.
+  // If any such substitution results in an invalid concept-id,
+  // the program is ill-formed; no diagnostic is required.
+
+  ConceptDecl *Concept = CSE->getNamedConcept()->getCanonicalDecl();
+  Sema::ArgPackSubstIndexRAII _(S, SubstIndex);
+
+  const ASTTemplateArgumentListInfo *ArgsAsWritten =
+      CSE->getTemplateArgsAsWritten();
+  if (llvm::none_of(
+          ArgsAsWritten->arguments(), [&](const TemplateArgumentLoc &ArgLoc) {
+            return !ArgLoc.getArgument().isDependent() &&
+                   ArgLoc.getArgument().isConceptOrConceptTemplateParameter();
+          })) {
+    return Concept->getConstraintExpr();
+  }
+
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      Concept, Concept->getLexicalDeclContext(),
+      /*Final=*/false, CSE->getTemplateArguments(),
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true);
+  return S.SubstConceptTemplateArguments(CSE, Concept->getConstraintExpr(),
+                                         MLTAL);
+}
+
 bool Sema::CheckConstraintSatisfaction(
     const ConceptSpecializationExpr *ConstraintExpr,
     ConstraintSatisfaction &Satisfaction) {
 
+  ExprResult Res = SubstituteConceptsInConstraintExpression(
+      *this, nullptr, ConstraintExpr, ArgPackSubstIndex);
+  if (!Res.isUsable())
+    return true;
+
   llvm::SmallVector<AssociatedConstraint, 1> Constraints;
-  Constraints.emplace_back(
-      ConstraintExpr->getNamedConcept()->getConstraintExpr());
+  Constraints.emplace_back(Res.get());
 
   MultiLevelTemplateArgumentList MLTAL(ConstraintExpr->getNamedConcept(),
                                        ConstraintExpr->getTemplateArguments(),
@@ -1979,8 +2053,13 @@ void SubstituteParameterMappings::buildParameterMapping(
       SemaRef.MarkUsedTemplateParameters(Args->arguments(),
                                          /*Depth=*/0, OccurringIndices);
   }
+  unsigned Size = OccurringIndices.count();
+  // When the constraint is independent of any template parameters,
+  // we build an empty mapping so that we can distinguish these cases
+  // from cases where no mapping exists at all, e.g. when there are only atomic
+  // constraints.
   TemplateArgumentLoc *TempArgs =
-      new (SemaRef.Context) TemplateArgumentLoc[OccurringIndices.count()];
+      new (SemaRef.Context) TemplateArgumentLoc[Size];
   llvm::SmallVector<NamedDecl *> UsedParams;
   for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I) {
     SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
@@ -2001,7 +2080,6 @@ void SubstituteParameterMappings::buildParameterMapping(
       TemplateParams->getLAngleLoc(), UsedParams,
       /*RAngleLoc=*/SourceLocation(),
       /*RequiresClause=*/nullptr);
-  unsigned Size = OccurringIndices.count();
   N.updateParameterMapping(
       std::move(OccurringIndices), std::move(OccurringIndicesForSubsumption),
       MutableArrayRef<TemplateArgumentLoc>{TempArgs, Size}, UsedList);
@@ -2011,6 +2089,10 @@ bool SubstituteParameterMappings::substitute(
     NormalizedConstraintWithParamMapping &N) {
   if (!N.hasParameterMapping())
     buildParameterMapping(N);
+
+  // If the parameter mapping is empty, there is nothing to substitute.
+  if (N.getParameterMapping().empty())
+    return false;
 
   SourceLocation InstLocBegin, InstLocEnd;
   llvm::ArrayRef Arguments = ArgsAsWritten->arguments();
@@ -2249,8 +2331,14 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       // Use canonical declarations to merge ConceptDecls across
       // different modules.
       ConceptDecl *CD = CSE->getNamedConcept()->getCanonicalDecl();
+
+      ExprResult Res =
+          SubstituteConceptsInConstraintExpression(S, D, CSE, SubstIndex);
+      if (!Res.isUsable())
+        return nullptr;
+
       SubNF = NormalizedConstraint::fromAssociatedConstraints(
-          S, CD, AssociatedConstraint(CD->getConstraintExpr(), SubstIndex));
+          S, CD, AssociatedConstraint(Res.get(), SubstIndex));
 
       if (!SubNF)
         return nullptr;
@@ -2320,11 +2408,16 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
   if (CacheEntry == NormalizationCache.end()) {
     auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
         *this, ND, AssociatedConstraints);
+    if (!Normalized) {
+      NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, nullptr);
+      return nullptr;
+    }
+    // substitute() can invalidate iterators of NormalizationCache.
+    bool Failed = SubstituteParameterMappings(*this).substitute(*Normalized);
     CacheEntry =
         NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
             .first;
-    if (!Normalized ||
-        SubstituteParameterMappings(*this).substitute(*Normalized))
+    if (Failed)
       return nullptr;
   }
   return CacheEntry->second;
@@ -2612,8 +2705,9 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     });
 
     if (Compound.getCompoundKind() == FormulaType::Kind) {
+      unsigned SizeLeft = Left.size();
       Res = std::move(Left);
-      Res.reserve(Left.size() + Right.size());
+      Res.reserve(SizeLeft + Right.size());
       std::for_each(std::make_move_iterator(Right.begin()),
                     std::make_move_iterator(Right.end()), Add);
       return Res;

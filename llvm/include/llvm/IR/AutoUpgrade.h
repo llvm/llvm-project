@@ -96,6 +96,16 @@ namespace llvm {
   /// info. Return true if module is modified.
   LLVM_ABI bool UpgradeDebugInfo(Module &M);
 
+  /// Copies module attributes to the functions in the module.
+  /// Currently only effects ARM, Thumb and AArch64 targets.
+  /// Supported attributes:
+  ///  - branch-target-enforcement
+  ///  - branch-protection-pauth-lr
+  ///  - guarded-control-stack
+  ///  - sign-return-address
+  ///  - sign-return-address-with-bkey
+  void copyModuleAttrToFunctions(Module &M);
+
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
     return Name.starts_with("llvm.vectorizer.");

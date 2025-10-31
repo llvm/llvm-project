@@ -164,11 +164,21 @@ bool tryToFindPtrOrigin(
 
         auto Name = safeGetName(callee);
         if (Name == "__builtin___CFStringMakeConstantString" ||
-            Name == "NSClassFromString")
+            Name == "NSStringFromSelector" || Name == "NSSelectorFromString" ||
+            Name == "NSStringFromClass" || Name == "NSClassFromString" ||
+            Name == "NSStringFromProtocol" || Name == "NSProtocolFromString")
           return callback(E, true);
       } else if (auto *CalleeE = call->getCallee()) {
         if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
           if (isSingleton(E->getFoundDecl()))
+            return callback(E, true);
+        }
+
+        if (auto *MemberExpr = dyn_cast<CXXDependentScopeMemberExpr>(CalleeE)) {
+          auto *Base = MemberExpr->getBase();
+          auto MemberName = MemberExpr->getMember().getAsString();
+          bool IsGetter = MemberName == "get" || MemberName == "ptr";
+          if (Base && isSafePtrType(Base->getType()) && IsGetter)
             return callback(E, true);
         }
       }
@@ -182,7 +192,7 @@ bool tryToFindPtrOrigin(
           if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(RetType)) {
             if (auto *SubstType = Subst->desugar().getTypePtr()) {
               if (auto *RD = dyn_cast<RecordType>(SubstType)) {
-                if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getOriginalDecl()))
+                if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getDecl()))
                   if (isSafePtr(CXX))
                     return callback(E, true);
               }
@@ -202,6 +212,8 @@ bool tryToFindPtrOrigin(
           !Selector.getNumArgs())
         return callback(E, true);
     }
+    if (auto *ObjCProtocol = dyn_cast<ObjCProtocolExpr>(E))
+      return callback(ObjCProtocol, true);
     if (auto *ObjCDict = dyn_cast<ObjCDictionaryLiteral>(E))
       return callback(ObjCDict, true);
     if (auto *ObjCArray = dyn_cast<ObjCArrayLiteral>(E))
