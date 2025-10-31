@@ -2638,14 +2638,6 @@ LSRInstance::OptimizeLoopTermCond() {
     if (!Cond)
       continue;
 
-    // If the condition instruction isn't immediately before TermBr then it has
-    // to either be a CmpInst, or be immediately before an extract that's
-    // immediately before TermBr, as currently we can only move or clone a
-    // CmpInst.
-    // FIXME: We should be able to do this when it's safe to do so.
-    if ((!isa<CmpInst>(Cond) || Extract) && !CondImmediatelyBeforeTerm)
-      continue;
-
     // Search IVUsesByStride to find Cond's IVUse if there is one.
     IVStrideUse *CondUse = nullptr;
     if (!FindIVUserForCond(Cond, CondUse))
@@ -2723,7 +2715,7 @@ LSRInstance::OptimizeLoopTermCond() {
     // It's possible for the setcc instruction to be anywhere in the loop, and
     // possible for it to have multiple users.  If it is not immediately before
     // the exiting block branch, move it.
-    if (!CondImmediatelyBeforeTerm) {
+    if (!CondImmediatelyBeforeTerm && isa<CmpInst>(Cond) && !Extract) {
       if (Cond->hasOneUse()) {
         Cond->moveBefore(TermBr->getIterator());
       } else {
