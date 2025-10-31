@@ -85,7 +85,9 @@ struct _Entry {
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-  _LIBCPP_HIDE_FROM_ABI size_t hash() const { return std::__hash_memory(&__addr_, sizeof(uintptr_t)); }
+  _LIBCPP_EXPORTED_FROM_ABI size_t hash() const;
+  _LIBCPP_HIDE_FROM_ABI static _Entry& base(stacktrace_entry& __entry);
+  _LIBCPP_HIDE_FROM_ABI static _Entry const& base(stacktrace_entry const& __entry);
 
   _LIBCPP_HIDE_FROM_ABI uintptr_t adjusted_addr() const;
 
@@ -97,13 +99,12 @@ struct _Entry {
   _LIBCPP_HIDE_FROM_ABI constexpr _Entry& operator=(_Entry&&)      = default;
 };
 
+struct _Trace;
+
 } // namespace __stacktrace
 
 class stacktrace_entry {
-  friend _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, std::stacktrace_entry const& __entry);
-  friend _LIBCPP_HIDE_FROM_ABI inline string to_string(std::stacktrace_entry const& __entry);
-  friend _LIBCPP_HIDE_FROM_ABI struct hash<stacktrace_entry>;
-
+  _LIBCPP_HIDE_FROM_ABI friend struct __stacktrace::_Entry;
   __stacktrace::_Entry __base_{};
 
 public:
@@ -143,11 +144,11 @@ public:
 #  if _LIBCPP_HAS_LOCALIZATION
 
 _LIBCPP_HIDE_FROM_ABI inline string to_string(const std::stacktrace_entry& __entry) {
-  return __entry.__base_.to_string();
+  return __stacktrace::_Entry::base(__entry).to_string();
 }
 
-_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const std::stacktrace_entry& __entry) {
-  return __entry.__base_.write_to(__os);
+_LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const stacktrace_entry& __entry) {
+  return __stacktrace::_Entry::base(__entry).write_to(__os);
 }
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
@@ -161,10 +162,17 @@ _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const std::stack
 
 template <>
 struct hash<stacktrace_entry> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(stacktrace_entry const& __entry) const noexcept {
-    return __entry.__base_.hash();
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(const stacktrace_entry& __entry) const noexcept {
+    return __stacktrace::_Entry::base(__entry).hash();
   }
 };
+
+namespace __stacktrace {
+
+_LIBCPP_HIDE_FROM_ABI inline _Entry& _Entry::base(stacktrace_entry& __entry) { return __entry.__base_; }
+_LIBCPP_HIDE_FROM_ABI inline _Entry const& _Entry::base(stacktrace_entry const& __entry) { return __entry.__base_; }
+
+} // namespace __stacktrace
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -76,6 +76,10 @@ struct _Trace {
   _LIBCPP_EXPORTED_FROM_ABI ostream& write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
 
+  _LIBCPP_EXPORTED_FROM_ABI size_t hash() const;
+  _LIBCPP_HIDE_FROM_ABI static _Trace& base(auto& __trace);
+  _LIBCPP_HIDE_FROM_ABI static _Trace const& base(auto const& __trace);
+
 #  ifdef _WIN32
   // Windows impl uses dbghelp and psapi DLLs to do the full stacktrace operation.
   _LIBCPP_EXPORTED_FROM_ABI void windows_impl(size_t skip, size_t max_depth);
@@ -95,7 +99,6 @@ class stacktrace_entry;
 
 template <class _Allocator>
 class basic_stacktrace : private __stacktrace::_Trace {
-  friend struct hash<basic_stacktrace<_Allocator>>;
   friend struct __stacktrace::_Trace;
 
   vector<stacktrace_entry, _Allocator> __entries_;
@@ -285,11 +288,7 @@ _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stac
 template <class _Allocator>
 struct hash<basic_stacktrace<_Allocator>> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
-    size_t __ret = 0xc3a5c85c97cb3127ull; // just a big prime number; taken from __functional/hash.h
-    for (stacktrace_entry const& __e : __trace.__entries_) {
-      __ret = (__ret << 1) ^ __e.__base_.hash();
-    }
-    return __ret;
+    return __stacktrace::_Trace::base(__trace).hash();
   }
 };
 
@@ -336,6 +335,9 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::populate_addrs(s
 }
 
 #  endif // _WIN32
+
+_Trace& _Trace::base(auto& __trace) { return *static_cast<_Trace*>(&__trace); }
+_Trace const& _Trace::base(auto const& __trace) { return *static_cast<_Trace const*>(&__trace); }
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
