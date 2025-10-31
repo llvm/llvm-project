@@ -476,13 +476,12 @@ struct __optional_storage_base<_Tp, true> {
   }
 
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from_val(_Up&& __val) noexcept {
     __value_ = std::addressof(__val);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) {
-    using std::swap;
-    swap(__value_, __rhs.__value_);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__optional_storage_base& __rhs) noexcept {
+    std::swap(__value_, __rhs.__value_);
   }
 };
 
