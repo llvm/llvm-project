@@ -1,6 +1,6 @@
-# Tests the --child-tags (-t) option.
+# Tests the --filter-child-tag (-t) option.
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-dwarfdump %t.o --child-tags=DW_TAG_structure_type | FileCheck %s --check-prefix=ONLY_STRUCT
+# RUN: llvm-dwarfdump %t.o --filter-child-tag=DW_TAG_structure_type | FileCheck %s --check-prefix=ONLY_STRUCT
 # RUN: llvm-dwarfdump %t.o -t DW_TAG_structure_type -t DW_TAG_namespace | FileCheck %s --check-prefix=STRUCT_AND_NS --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_member
 # RUN: llvm-dwarfdump %t.o -c --name=Foo -t DW_TAG_member | FileCheck %s --check-prefix=FOO_MEM --implicit-check-not=DW_TAG_compile_unit --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_namespace
 # RUN: llvm-dwarfdump %t.o -c --name=Foo -t not_a_tag -t DW_TAG_member | FileCheck %s --check-prefix=SINGLE_INVALID_TAG --implicit-check-not=DW_TAG_compile_unit --implicit-check-not=DW_TAG_subprogram --implicit-check-not=DW_TAG_namespace
@@ -43,7 +43,7 @@
 # FOO_MEM_WITH_PARENT-NOT: DW_TAG_structure_type
 # FOO_MEM_WITH_PARENT-NOT: DW_TAG_member
 
-# ERROR_NO_SHOW_CHILDREN: incompatible arguments: --child-tags requires --show-children
+# ERROR_NO_SHOW_CHILDREN: incompatible arguments: --filter-child-tag requires --show-children
 
 --- !ELF
 FileHeader:

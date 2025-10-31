@@ -244,13 +244,13 @@ static opt<bool>
 static alias ShowParentsAlias("p", desc("Alias for --show-parents."),
                               aliasopt(ShowParents), cl::NotHidden);
 
-static list<std::string>
-    ChildTags("child-tags",
-              desc("When --show-children is specified, show only DIEs with the "
-                   "specified DWARF tags."),
-              value_desc("list of DWARF tags"), cat(DwarfDumpCategory));
-static alias TagsAlias("t", desc("Alias for --child-tags."),
-                       aliasopt(ChildTags), cl::NotHidden);
+static list<std::string> FilterChildTag(
+    "filter-child-tag",
+    desc("When --show-children is specified, show only DIEs with the "
+         "specified DWARF tags."),
+    value_desc("list of DWARF tags"), cat(DwarfDumpCategory));
+static alias FilterChildTagAlias("t", desc("Alias for --filter-child-tag."),
+                                 aliasopt(FilterChildTag), cl::NotHidden);
 
 static opt<bool>
     ShowForm("show-form",
@@ -373,7 +373,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
-  DumpOpts.ChildTagsFilter = makeTagVector(ChildTags);
+  DumpOpts.FilterChildTag = makeTagVector(FilterChildTag);
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
@@ -917,9 +917,9 @@ int main(int argc, char **argv) {
       Find.empty() && !FindAllApple)
     ShowChildren = true;
 
-  if (!ShowChildren && !ChildTags.empty()) {
-    WithColor::error()
-        << "incompatible arguments: --child-tags requires --show-children";
+  if (!ShowChildren && !FilterChildTag.empty()) {
+    WithColor::error() << "incompatible arguments: --filter-child-tag requires "
+                          "--show-children";
     return 1;
   }
 
