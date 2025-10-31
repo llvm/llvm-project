@@ -20,9 +20,13 @@ code is build with ``-fno-strict-aliasing``, sacrificing performance.
 TypeSanitizer is built to catch when these strict aliasing rules have been violated, helping 
 users find where such bugs originate in their code despite the code looking valid at first glance.
 
-As TypeSanitizer is still experimental, it can currently have a large impact on runtime speed, 
-memory use, and code size. It also has a large compile-time overhead. Work is being done to 
-reduce these impacts.
+Typical memory overhead introduced by TypeSanitizer is about **8x**. Runtime slowdown varies greatly 
+depending on how often the instrumented code relies on type aliasing. In the best case slowdown is 
+**2x-3x**.
+
+The compiler instrumentation also has an impact on code size and compilation overhead. There is an 
+experimental instrumentation outlining option which can greatly reduce this (see sanitizer options) 
+but this may decrease runtime performance.
 
 The TypeSanitizer Algorithm
 ===========================
@@ -127,6 +131,18 @@ references to LLVM IR specific terms.
 
 Sanitizer features
 ==================
+
+Instrumentation code outlining
+------------------------------
+
+By default TypeSanitizer inlines the instrumentation code. This leads to increased
+binary size and compilation time. 
+
+By default AddressSanitizer inlines the instrumentation code to improve the
+run-time performance, which leads to increased binary size. Using the
+(clang flag ``-fsanitize-address-outline-instrumentation`` default: ``false``)
+flag forces all code instrumentation to be outlined, which reduces the size
+of the generated code, but also reduces the run-time performance.
 
 ``__has_feature(type_sanitizer)``
 ------------------------------------
