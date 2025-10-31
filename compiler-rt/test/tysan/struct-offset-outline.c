@@ -16,11 +16,11 @@ int foo(struct X *p, struct X *q) {
   p->i = 0;
   // CHECK: ERROR: TypeSanitizer: type-aliasing-violation
   // CHECK-NEXT: WRITE of size 4 at {{.*}} with type int (in X at offset 0) accesses an existing object of type int (in X at offset 4)
-  // CHECK-NEXT: {{#0 0x.* in foo .*struct-offset.c:}}[[@LINE-3]]
+  // CHECK-NEXT: {{#0 0x.* in foo .*struct-offset-outline.c:}}[[@LINE-3]]
   // CHECK-VERIFY-EMPTY:
   // CHECK-VERIFY-NEXT: ERROR: TypeSanitizer: type-aliasing-violation
   // CHECK-VERIFY-NEXT: WRITE of size 4 at {{.*}} with type int (in X at offset 0) accesses an existing object of type int (in X at offset 4)
-  // CHECK-VERIFY-NEXT: {{#0 0x.* in foo .*struct-offset.c:}}[[@LINE-7]]
+  // CHECK-VERIFY-NEXT: {{#0 0x.* in foo .*struct-offset-outline.c:}}[[@LINE-7]]
   return q->j;
 }
 
