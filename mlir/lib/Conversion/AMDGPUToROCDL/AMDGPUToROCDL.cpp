@@ -935,7 +935,7 @@ static std::optional<uint32_t> mfmaTypeSelectCode(Type mlirElemType) {
       .Case([](Float6E2M3FNType) { return 2u; })
       .Case([](Float6E3M2FNType) { return 3u; })
       .Case([](Float4E2M1FNType) { return 4u; })
-      .Default([](Type) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 /// If there is a scaled MFMA instruction for the input element types `aType`

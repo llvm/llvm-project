@@ -3729,6 +3729,7 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
+        ":XeGPUUtils",
         ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
@@ -3781,6 +3782,7 @@ cc_library(
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
         ":XeGPUUtils",
+        ":XeGPUuArch",
         "//llvm:Support",
     ],
 )

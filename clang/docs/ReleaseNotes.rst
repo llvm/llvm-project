@@ -451,6 +451,7 @@ Bug Fixes to Attribute Support
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
 - Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
+- Fix handling of parameter indexes when an attribute is applied to a C++23 explicit object member function.
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -613,6 +614,14 @@ clang-format
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
 - Add ``AllowBreakBeforeQtProperty`` option.
+- Add ``BreakAfterOpenBracketBracedList'', ``BreakAfterOpenBracketFunction'',
+  ``BreakAfterOpenBracketIf``, ``BreakAfterOpenBracketLoop``,
+  ``BreakAfterOpenBracketSwitch``, ``BreakBeforeCloseBracketBracedList'',
+  ``BreakBeforeCloseBracketFunction``, ``BreakBeforeCloseBracketIf``,
+  ``BreakBeforeCloseBracketLoop``, ``BreakBeforeCloseBracketSwitch`` options.
+- Deprecate ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
+  ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
+  ``bool`` type.
 
 libclang
 --------
@@ -651,6 +660,7 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Exposed ``clang_Cursor_isFunctionInlined``.
 - Exposed ``clang_getCursorLanguage`` via ``Cursor.language``.
 - Add all missing ``CursorKind``s, ``TypeKind``s and
   ``ExceptionSpecificationKind``s from ``Index.h``

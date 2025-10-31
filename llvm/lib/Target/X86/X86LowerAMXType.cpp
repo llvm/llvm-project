@@ -74,22 +74,6 @@ static bool isAMXCast(Instruction *II) {
          match(II, m_Intrinsic<Intrinsic::x86_cast_tile_to_vector>(m_Value()));
 }
 
-// Some instructions may return more than one tiles.
-// e.g: call { x86_amx, x86_amx } @llvm.x86.t2rpntlvwz0.internal
-static unsigned getNumDefTiles(IntrinsicInst *II) {
-  Type *Ty = II->getType();
-  if (Ty->isX86_AMXTy())
-    return 1;
-
-  unsigned Num = 0;
-  for (unsigned i = 0; i < Ty->getNumContainedTypes(); i++) {
-    Type *STy = Ty->getContainedType(i);
-    if (STy->isX86_AMXTy())
-      Num++;
-  }
-  return Num;
-}
-
 static bool isAMXIntrinsic(Value *I) {
   auto *II = dyn_cast<IntrinsicInst>(I);
   if (!II)
@@ -98,7 +82,7 @@ static bool isAMXIntrinsic(Value *I) {
     return false;
   // Check if return type or parameter is x86_amx. If it is x86_amx
   // the intrinsic must be x86 amx intrinsics.
-  if (getNumDefTiles(II) > 0)
+  if (II->getType()->isX86_AMXTy())
     return true;
   for (Value *V : II->args()) {
     if (V->getType()->isX86_AMXTy())
@@ -137,27 +121,7 @@ static Instruction *getFirstNonAllocaInTheEntryBlock(Function &F) {
   llvm_unreachable("No terminator in the entry block!");
 }
 
-class ShapeCalculator {
-private:
-  const TargetMachine *TM = nullptr;
-
-  // In AMX intrinsics we let Shape = {Row, Col}, but the
-  // RealCol = Col / ElementSize. We may use the RealCol
-  // as a new Row for other new created AMX intrinsics.
-  std::map<Value *, Value *> Col2Row, Row2Col;
-
-public:
-  ShapeCalculator(const TargetMachine *TargetM) : TM(TargetM) {}
-  std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo);
-  std::pair<Value *, Value *> getShape(PHINode *Phi);
-  Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity);
-  Value *getColFromRow(Instruction *II, Value *V, unsigned Granularity);
-};
-
-Value *ShapeCalculator::getRowFromCol(Instruction *II, Value *V,
-                                      unsigned Granularity) {
-  if (auto It = Col2Row.find(V); It != Col2Row.end())
-    return It->second;
+static Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity) {
   IRBuilder<> Builder(II);
   Value *RealRow = nullptr;
   if (isa<ConstantInt>(V))
@@ -186,47 +150,16 @@ Value *ShapeCalculator::getRowFromCol(Instruction *II, Value *V,
         getFirstNonAllocaInTheEntryBlock(*II->getFunction()));
     RealRow = NewBuilder.CreateUDiv(V, NewBuilder.getInt16(Granularity));
   }
-  Col2Row[V] = RealRow;
   return RealRow;
 }
 
-Value *ShapeCalculator::getColFromRow(Instruction *II, Value *V,
-                                      unsigned Granularity) {
-  if (auto It = Row2Col.find(V); It != Row2Col.end())
-    return It->second;
-  IRBuilder<> Builder(II);
-  Value *RealCol = nullptr;
-  if (isa<ConstantInt>(V))
-    RealCol =
-        Builder.getInt16((cast<ConstantInt>(V)->getSExtValue()) * Granularity);
-  else if (isa<Instruction>(V)) {
-    Builder.SetInsertPoint(cast<Instruction>(V));
-    RealCol = Builder.CreateNUWMul(V, Builder.getInt16(Granularity));
-    cast<Instruction>(RealCol)->moveAfter(cast<Instruction>(V));
-  } else {
-    // When it is not a const value and it is a function argument, we create
-    // Row at the entry bb.
-    IRBuilder<> NewBuilder(
-        getFirstNonAllocaInTheEntryBlock(*II->getFunction()));
-    RealCol = NewBuilder.CreateNUWMul(V, NewBuilder.getInt16(Granularity));
-  }
-  Row2Col[V] = RealCol;
-  return RealCol;
-}
-
 // TODO: Refine the row and col-in-bytes of tile to row and col of matrix.
-std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
-                                                      unsigned OpNo) {
-  (void)TM;
+std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   IRBuilder<> Builder(II);
   Value *Row = nullptr, *Col = nullptr;
   switch (II->getIntrinsicID()) {
   default:
     llvm_unreachable("Expect amx intrinsics");
-  case Intrinsic::x86_t2rpntlvwz0_internal:
-  case Intrinsic::x86_t2rpntlvwz0t1_internal:
-  case Intrinsic::x86_t2rpntlvwz1_internal:
-  case Intrinsic::x86_t2rpntlvwz1t1_internal:
   case Intrinsic::x86_tileloadd64_internal:
   case Intrinsic::x86_tileloaddt164_internal:
   case Intrinsic::x86_tilestored64_internal:
@@ -271,13 +204,6 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     }
     break;
   }
-  case Intrinsic::x86_ttransposed_internal:
-  case Intrinsic::x86_tconjtfp16_internal: {
-    assert((OpNo == 2) && "Illegal Operand Number.");
-    Row = getRowFromCol(II, II->getArgOperand(1), 4);
-    Col = getColFromRow(II, II->getArgOperand(0), 4);
-    break;
-  }
   case Intrinsic::x86_tcvtrowd2ps_internal:
   case Intrinsic::x86_tcvtrowps2bf16h_internal:
   case Intrinsic::x86_tcvtrowps2bf16l_internal:
@@ -289,34 +215,12 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     Col = II->getArgOperand(1);
     break;
   }
-  case Intrinsic::x86_ttdpbf16ps_internal:
-  case Intrinsic::x86_ttdpfp16ps_internal:
-  case Intrinsic::x86_ttcmmimfp16ps_internal:
-  case Intrinsic::x86_ttcmmrlfp16ps_internal:
-  case Intrinsic::x86_tconjtcmmimfp16ps_internal:
-  case Intrinsic::x86_ttmmultf32ps_internal: {
-    switch (OpNo) {
-    case 3:
-      Row = II->getArgOperand(0);
-      Col = II->getArgOperand(1);
-      break;
-    case 4:
-      Row = getRowFromCol(II, II->getArgOperand(2), 4);
-      Col = getColFromRow(II, II->getArgOperand(0), 4);
-      break;
-    case 5:
-      Row = getRowFromCol(II, II->getArgOperand(2), 4);
-      Col = II->getArgOperand(1);
-      break;
-    }
-    break;
-  }
   }
 
   return std::make_pair(Row, Col);
 }
 
-std::pair<Value *, Value *> ShapeCalculator::getShape(PHINode *Phi) {
+static std::pair<Value *, Value *> getShape(PHINode *Phi) {
   Use &U = *(Phi->use_begin());
   unsigned OpNo = U.getOperandNo();
   User *V = U.getUser();
@@ -349,15 +253,14 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(PHINode *Phi) {
 namespace {
 class X86LowerAMXType {
   Function &Func;
-  ShapeCalculator *SC;
 
   // In AMX intrinsics we let Shape = {Row, Col}, but the
   // RealCol = Col / ElementSize. We may use the RealCol
   // as a new Row for other new created AMX intrinsics.
-  std::map<Value *, Value *> Col2Row, Row2Col;
+  std::map<Value *, Value *> Col2Row;
 
 public:
-  X86LowerAMXType(Function &F, ShapeCalculator *ShapeC) : Func(F), SC(ShapeC) {}
+  X86LowerAMXType(Function &F) : Func(F) {}
   bool visit();
   void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast);
   void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST);
@@ -374,7 +277,7 @@ void X86LowerAMXType::combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
   Use &U = *(Bitcast->use_begin());
   unsigned OpNo = U.getOperandNo();
   auto *II = cast<IntrinsicInst>(U.getUser());
-  std::tie(Row, Col) = SC->getShape(II, OpNo);
+  std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(Bitcast);
   // Use the maximun column as stride.
   Value *Stride = Builder.getInt64(64);
@@ -454,7 +357,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     Builder.CreateStore(Src, AllocaAddr);
     // TODO we can pick an constant operand for the shape.
     Value *Row = nullptr, *Col = nullptr;
-    std::tie(Row, Col) = SC->getShape(II, OpNo);
+    std::tie(Row, Col) = getShape(II, OpNo);
     std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
     Value *NewInst =
         Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
@@ -594,18 +497,11 @@ static Value *getAllocaPos(BasicBlock *BB) {
 
 static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   assert(TileDef->getType()->isX86_AMXTy() && "Not define tile!");
-  auto *II = dyn_cast<IntrinsicInst>(TileDef);
-  unsigned Idx = 0;
-  // Extract tile from multiple tiles' def.
-  if (auto *Extr = dyn_cast<ExtractValueInst>(TileDef)) {
-    assert(Extr->hasIndices() && "Tile extract miss index!");
-    Idx = Extr->getIndices()[0];
-    II = cast<IntrinsicInst>(Extr->getOperand(0));
-  }
+  auto *II = cast<IntrinsicInst>(TileDef);
 
   assert(II && "Not tile intrinsic!");
-  Value *Row = II->getOperand(Idx);
-  Value *Col = II->getOperand(Idx + 1);
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
 
   BasicBlock *BB = TileDef->getParent();
   BasicBlock::iterator Iter = TileDef->getIterator();
@@ -624,20 +520,14 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
 
   // Get tile shape.
   IntrinsicInst *II = nullptr;
-  unsigned Idx = 0;
   if (IsPHI) {
     Value *PhiOp = cast<PHINode>(V)->getIncomingValue(0);
     II = cast<IntrinsicInst>(PhiOp);
-  } else if (auto *Extr = dyn_cast<ExtractValueInst>(V)) {
-    // Extract tile from multiple tiles' def.
-    assert(Extr->hasIndices() && "Tile extract miss index!");
-    Idx = Extr->getIndices()[0];
-    II = cast<IntrinsicInst>(Extr->getOperand(0));
   } else {
     II = cast<IntrinsicInst>(V);
   }
-  Value *Row = II->getOperand(Idx);
-  Value *Col = II->getOperand(Idx + 1);
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
 
   Instruction *UserI = cast<Instruction>(U.getUser());
   IRBuilder<> Builder(UserI);
@@ -848,12 +738,10 @@ namespace {
 
 class X86LowerAMXCast {
   Function &Func;
-  ShapeCalculator *SC;
   std::unique_ptr<DominatorTree> DT;
 
 public:
-  X86LowerAMXCast(Function &F, ShapeCalculator *ShapeC)
-      : Func(F), SC(ShapeC), DT(nullptr) {}
+  X86LowerAMXCast(Function &F) : Func(F), DT(nullptr) {}
   bool combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
   bool combineLoadCast(IntrinsicInst *Cast, LoadInst *LD);
   bool combineTilezero(IntrinsicInst *Cast);
@@ -932,7 +820,7 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         if (!isa<UndefValue>(IncValue) && !IncConst->isZeroValue())
           return false;
         Value *Row = nullptr, *Col = nullptr;
-        std::tie(Row, Col) = SC->getShape(OldPN);
+        std::tie(Row, Col) = getShape(OldPN);
         // TODO: If it is not constant the Row and Col must domoniate tilezero
         // that we are going to create.
         if (!Row || !Col || !isa<Constant>(Row) || !isa<Constant>(Col))
@@ -1063,19 +951,6 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
   return true;
 }
 
-static Value *getShapeFromAMXIntrinsic(Value *Inst, unsigned ShapeIdx,
-                                       bool IsRow) {
-  if (!isAMXIntrinsic(Inst))
-    return nullptr;
-
-  auto *II = cast<IntrinsicInst>(Inst);
-  if (IsRow)
-    return II->getOperand(0);
-
-  assert(ShapeIdx < 2 && "Currently 2 shapes in 1 instruction at most!");
-  return II->getOperand(ShapeIdx + 1);
-}
-
 // %43 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %42)
 // store <256 x i32> %43, <256 x i32>* %p, align 64
 // -->
@@ -1090,38 +965,13 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   if (!Tile->hasOneUse())
     return false;
 
-  // We don't fetch shape from tilestore, we only get shape from tiledef,
-  // so we can set the max tile shape to tilestore for special cases.
-  IRBuilder<> Builder(ST);
-  Value *Row = nullptr;
-  Value *Col = nullptr;
+  auto *II = cast<IntrinsicInst>(Tile);
+  // Tile is output from AMX intrinsic. The first operand of the
+  // intrinsic is row, the second operand of the intrinsic is column.
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
 
-  if (isAMXIntrinsic(Tile)) {
-    auto *II = cast<IntrinsicInst>(Tile);
-    // Tile is output from AMX intrinsic. The first operand of the
-    // intrinsic is row, the second operand of the intrinsic is column.
-    Row = II->getOperand(0);
-    Col = II->getOperand(1);
-  } else {
-    // Now we supported multi-tiles value in structure, so we may get tile
-    // from extracting multi-tiles structure.
-    // For example:
-    // %6 = call { x86_amx, x86_amx } @llvm.x86.t2rpntlvwz0.internal(i16 %1,
-    //      i16 %2, i16 %3, i8* %4, i64 %5)
-    // %7 = extractvalue { x86_amx, x86_amx } %6, 0
-    // %8 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %7)
-    // store <256 x i32> %8, <256 x i32>* %0, align 1024
-    //
-    // TODO: Currently we only handle extractvalue case, enhance me for other
-    // cases if possible.
-    auto *II = cast<ExtractValueInst>(Tile);
-    assert(II && "We meet unhandle source in fetching tile value!");
-    unsigned ShapeIdx = II->getIndices()[0];
-    Value *Tiles = II->getOperand(0);
-    Row = getShapeFromAMXIntrinsic(Tiles, ShapeIdx, true);
-    Col = getShapeFromAMXIntrinsic(Tiles, ShapeIdx, false);
-  }
-  assert(Row && Col && "Shape got failed!");
+  IRBuilder<> Builder(ST);
 
   // Stride should be equal to col(measured by bytes)
   Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
@@ -1146,7 +996,7 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   // shape information through def-use chain.
   if (!isAMXIntrinsic(II))
     return false;
-  std::tie(Row, Col) = SC->getShape(II, OpNo);
+  std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(LD);
   // Stride should be equal to col(measured by bytes)
   Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
@@ -1189,7 +1039,7 @@ bool X86LowerAMXCast::combineTilezero(IntrinsicInst *Cast) {
   if (!isAMXIntrinsic(II))
     return false;
 
-  std::tie(Row, Col) = SC->getShape(II, OpNo);
+  std::tie(Row, Col) = getShape(II, OpNo);
 
   IRBuilder<> Builder(Cast);
   Value *NewInst =
@@ -1384,7 +1234,7 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     Builder.CreateStore(Src, AllocaAddr);
     // TODO we can pick an constant operand for the shape.
     Value *Row = nullptr, *Col = nullptr;
-    std::tie(Row, Col) = SC->getShape(II, OpNo);
+    std::tie(Row, Col) = getShape(II, OpNo);
     std::array<Value *, 4> Args = {
         Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty())};
     Value *NewInst =
@@ -1445,14 +1295,13 @@ bool lowerAmxType(Function &F, const TargetMachine *TM,
     return false;
 
   bool C = false;
-  ShapeCalculator SC(TM);
-  X86LowerAMXCast LAC(F, &SC);
+  X86LowerAMXCast LAC(F);
   C |= LAC.combineAMXcast(TLI);
   // There might be remaining AMXcast after combineAMXcast and they should be
   // handled elegantly.
   C |= LAC.transformAllAMXCast();
 
-  X86LowerAMXType LAT(F, &SC);
+  X86LowerAMXType LAT(F);
   C |= LAT.visit();
 
   // Prepare for fast register allocation at O0.

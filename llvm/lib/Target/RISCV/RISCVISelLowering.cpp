@@ -19794,7 +19794,9 @@ legalizeScatterGatherIndexType(SDLoc DL, SDValue &Index,
     // LLVM's legalization take care of the splitting.
     // FIXME: LLVM can't split VP_GATHER or VP_SCATTER yet.
     Index = DAG.getNode(ISD::SIGN_EXTEND, DL,
-                        IndexVT.changeVectorElementType(XLenVT), Index);
+                        EVT::getVectorVT(*DAG.getContext(), XLenVT,
+                                         IndexVT.getVectorElementCount()),
+                        Index);
   }
   IndexType = ISD::UNSIGNED_SCALED;
   return true;

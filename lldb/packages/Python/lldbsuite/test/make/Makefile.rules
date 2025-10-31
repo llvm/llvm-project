@@ -322,6 +322,17 @@ ifeq (,$(filter $(OS), Windows_NT Android Darwin))
 		LDFLAGS += -pthread
 	endif
 endif
+
+# macOS forbids injecting the ASAN runtime into system processes when
+# SIP is enabled. That includes the just-built libLTO that the
+# just-built clang injects into the system linker.  Since we don't
+# test the compiler here, just use the system (non-asanified) LTO
+# library to make ASAN tests work for most users, including the bots.
+ifeq "$(OS)" "Darwin"
+ifneq "$(ASAN_OPTIONS)" ""
+LD_FLAGS += -Wl,-lto_library -Wl,$(shell dirname $(shell xcrun -find clang))/../lib/libLTO.dylib
+endif
+endif
 OBJECTS =
 EXE ?= a.out
 

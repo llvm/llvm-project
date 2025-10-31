@@ -1841,7 +1841,6 @@
 // CHECK_DMR_M32: #define __AMX_MOVRS__ 1
 // CHECK_DMR_M32: #define __AMX_TF32__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
-// CHECK_DMR_M32: #define __AMX_TRANSPOSE__ 1
 // CHECK_DMR_M32: #define __AVX10_2_512__ 1
 // CHECK_DMR_M32: #define __AVX10_2__ 1
 // CHECK_GNR_M32: #define __AVX2__ 1
@@ -1947,7 +1946,6 @@
 // CHECK_DMR_M64: #define __AMX_MOVRS__ 1
 // CHECK_DMR_M64: #define __AMX_TF32__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
-// CHECK_DMR_M64: #define __AMX_TRANSPOSE__ 1
 // CHECK_DMR_M64: #define __AVX10_2_512__ 1
 // CHECK_DMR_M64: #define __AVX10_2__ 1
 // CHECK_GNR_M64: #define __AVX2__ 1

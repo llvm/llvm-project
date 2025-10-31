@@ -6,6 +6,10 @@ macros:
 types:
   - type_name: FILE
   - type_name: size_t
+  # TODO: Remove this once we have a function declaration using "struct tm"
+  # (wcsftime). We're declaring it here now, since libc++ expects
+  # forward-declaration of "struct tm" in the <wchar.h> header.
+  - type_name: struct_tm
   - type_name: wint_t
   - type_name: wchar_t
   - type_name: mbstate_t
