@@ -156,8 +156,8 @@ end subroutine forallPolymorphic3
 ! CHECK: %[[V_4:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = ".result"}
 ! CHECK: %[[V_25:[0-9]+]] = fir.convert %c1_i32 : (i32) -> index
 ! CHECK: %[[V_26:[0-9]+]] = fir.convert %c10_i32 : (i32) -> index
-! CHECK: %[[V_27:[0-9]+]] = fir.address_of(
-! CHECK: %[[V_28:[0-9]+]] = fir.convert %[[V_27]] : (!fir.ref<!fir.char<1,82>>) -> !fir.ref<i8>
+! CHECK: %[[V_27:[0-9]+]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+! CHECK: %[[V_28:[0-9]+]] = fir.convert %[[V_27]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 ! CHECK: %[[V_29:[0-9]+]] = fir.call @_FortranACreateDescriptorStack(%[[V_28]], %c{{.*}}) : (!fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
 ! CHECK: fir.do_loop %arg0 = %[[V_25]] to %[[V_26]] step %c1
 ! CHECK: {
