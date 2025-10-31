@@ -2480,11 +2480,16 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
 
 /// Matches top level asm declarations.
 ///
+/// Given
 /// \code
-///  __asm__("nop");
+///    __asm("nop");
+///    void f() {
+///      __asm("mov al, 2");
+///    }
 /// \endcode
 /// fileScopeAsmDecl()
-///   matches '__asm__("nop")'
+///   matches '__asm("nop")',
+///   but not '__asm("mov al, 2")'.
 extern const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
     fileScopeAsmDecl;
 
