@@ -5423,14 +5423,11 @@ SDValue SelectionDAGBuilder::handleTargetIntrinsicRet(const CallBase &I,
   if (I.getType()->isVoidTy())
     return Result;
 
-  if (!isa<VectorType>(I.getType()))
-    Result = lowerRangeToAssertZExt(DAG, I, Result);
-
-  MaybeAlign Alignment = I.getRetAlign();
-
-  // Insert `assertalign` node if there's an alignment.
-  if (InsertAssertAlign && Alignment) {
+  if (MaybeAlign Alignment = I.getRetAlign(); InsertAssertAlign && Alignment) {
+    // Insert `assertalign` node if there's an alignment.
     Result = DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
+  } else if (!isa<VectorType>(I.getType())) {
+    Result = lowerRangeToAssertZExt(DAG, I, Result);
   }
 
   return Result;
