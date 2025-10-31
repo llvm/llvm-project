@@ -6,6 +6,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from RustEnumValue import RustEnumValue
 
+
 class TestRustEnumStructs(TestBase):
     def setUp(self):
         TestBase.setUp(self)
@@ -27,6 +28,9 @@ class TestRustEnumStructs(TestBase):
 
         value_b = RustEnumValue(value.GetChildAtIndex(0))
         self.assertEqual(
-            value_b.getCurrentValue().GetChildAtIndex(0).GetData().GetUnsignedInt8(lldb.SBError(), 0),
-            10
+            value_b.getCurrentValue()
+            .GetChildAtIndex(0)
+            .GetData()
+            .GetUnsignedInt8(lldb.SBError(), 0),
+            10,
         )
