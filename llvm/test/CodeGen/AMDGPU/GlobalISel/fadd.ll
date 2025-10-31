@@ -74,45 +74,38 @@ define amdgpu_ps float @fadd_s32_div(float %a, float %b) {
   ret float %fadd
 }
 
-define amdgpu_ps double @fadd_s64_uniform(double inreg %a, double inreg %b) {
+define amdgpu_ps void @fadd_s64_uniform(double inreg %a, double inreg %b, ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: fadd_s64_uniform:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_f64 v[0:1], s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-NEXT:    v_add_f64 v[2:3], s[0:1], s[2:3]
+; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: fadd_s64_uniform:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_add_f64_e64 v[0:1], s[0:1], s[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-NEXT:    s_wait_alu 0xf1ff
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-NEXT:    v_add_f64_e64 v[2:3], s[0:1], s[2:3]
+; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off
+; GFX12-NEXT:    s_endpgm
   %fadd = fadd double %a, %b
-  ret double %fadd
+  store double %fadd, ptr addrspace(1) %ptr
+  ret void
 }
 
-define amdgpu_ps double @fadd_s64_div(double %a, double %b) {
+define amdgpu_ps void @fadd_s64_div(double %a, double %b, ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: fadd_s64_div:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    ; return to shader part epilog
+; GFX11-NEXT:    global_store_b64 v[4:5], v[0:1], off
+; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: fadd_s64_div:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_add_f64_e32 v[0:1], v[0:1], v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-NEXT:    global_store_b64 v[4:5], v[0:1], off
+; GFX12-NEXT:    s_endpgm
   %fadd = fadd double %a, %b
-  ret double %fadd
+  store double %fadd, ptr addrspace(1) %ptr
+  ret void
 }
 
 define amdgpu_ps <2 x half> @fadd_v2s16_uniform(<2 x half> inreg %a, <2 x half> inreg %b) {
