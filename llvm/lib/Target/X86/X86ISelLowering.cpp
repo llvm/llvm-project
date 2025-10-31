@@ -54474,11 +54474,12 @@ static SDValue detectPMADDUBSW(SDValue In, EVT VT, SelectionDAG &DAG,
 
   // See if this is a signed saturation of an ADD, adding pairs of multiplies
   // from even/odd elements, from zero_extend/sign_extend operands.
-  // 
+  //
   // TODO: Handle constant vectors and use knownbits/computenumsignbits?
   SDValue N00, N01, N10, N11;
-  if (!sd_match(SSatVal, m_Add(m_Mul(m_ZExt(m_Value(N00)), m_SExt(m_Value(N01))),
-                               m_Mul(m_ZExt(m_Value(N10)), m_SExt(m_Value(N11))))))
+  if (!sd_match(SSatVal,
+                m_Add(m_Mul(m_ZExt(m_Value(N00)), m_SExt(m_Value(N01))),
+                      m_Mul(m_ZExt(m_Value(N10)), m_SExt(m_Value(N11))))))
     return SDValue();
 
   // Ensure the extend is from vXi8.
