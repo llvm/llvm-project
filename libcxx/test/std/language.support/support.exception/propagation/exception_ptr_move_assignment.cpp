@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-exceptions
+// UNSUPPORTED: no-exceptions std-at-least-c++11
 
 // <exception>
 
