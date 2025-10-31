@@ -244,6 +244,10 @@ void CIRGenFunction::LexicalScope::cleanup() {
 
   // Cleanup are done right before codegen resumes a scope. This is where
   // objects are destroyed. Process all return blocks.
+  // TODO(cir): Handle returning from a switch statement through a cleanup
+  // block. We can't simply jump to the cleanup block, because the cleanup block
+  // is not part of the case region. Either reemit all cleanups in the return
+  // block or wait for MLIR structured control flow to support early exits.
   llvm::SmallVector<mlir::Block *> retBlocks;
   for (mlir::Block *retBlock : localScope->getRetBlocks()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
