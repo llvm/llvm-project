@@ -15626,6 +15626,56 @@ static bool canConvertToVcmpequb(SDValue &LHS, SDValue RHS) {
   return true;
 }
 
+SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
+                                        const SDLoc &DL, SDValue &LHS,
+                                        SDValue RHS) {
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  assert(CC == ISD::SETNE ||
+         CC == ISD::SETEQ && "CC mus be ISD::SETNE or ISD::SETEQ");
+  auto *LA = dyn_cast<LoadSDNode>(LHS);
+  auto *LB = dyn_cast<LoadSDNode>(RHS);
+
+  // Following code transforms the DAG
+  // t0: ch,glue = EntryToken
+  // t2: i64,ch = CopyFromReg t0, Register:i64 %0
+  // t3: i128,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
+  //    undef:i64
+  // t4: i64,ch = CopyFromReg t0, Register:i64 %1
+  // t5: i128,ch =
+  //    load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64 t6: i1 =
+  // setcc t3, t5, setne:ch
+  //
+  //  ---->
+  //
+  // t0: ch,glue = EntryToken
+  // t2: i64,ch = CopyFromReg t0, Register:i64 %0
+  // t3: v16i8,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
+  //    undef:i64
+  // t4: i64,ch = CopyFromReg t0, Register:i64 %1
+  // t5: v16i8,ch =
+  //    load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64
+  // t6: i32 =
+  //    llvm.ppc.altivec.vcmpequb.p TargetConstant:i32<10505>,
+  //    Constant:i32<2>, t3, t5
+  // t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
+
+  SDValue LHSVec = DAG.getLoad(MVT::v16i8, DL, LA->getChain(), LA->getBasePtr(),
+                               LA->getMemOperand());
+  SDValue RHSVec = DAG.getLoad(MVT::v16i8, DL, LB->getChain(), LB->getBasePtr(),
+                               LB->getMemOperand());
+
+  SDValue IntrID =
+      DAG.getConstant(Intrinsic::ppc_altivec_vcmpequb_p, DL, MVT::i32);
+  SDValue CRSel = DAG.getConstant(2, DL, MVT::i32); // which CR6 predicate field
+  SDValue PredResult = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                                   IntrID, CRSel, LHSVec, RHSVec);
+  // ppc_altivec_vcmpequb_p returns 1 when two vectors are the same,
+  // so we need to invert the CC opcode.
+  return DAG.getSetCC(DL, N->getValueType(0), PredResult,
+                      DAG.getConstant(0, DL, MVT::i32),
+                      CC == ISD::SETNE ? ISD::SETEQ : ISD::SETNE);
+}
+
 SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                         DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SETCC &&
@@ -15666,56 +15716,8 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
     //   This transformation replaces memcmp(a, b, 16) with two vector loads
     //   and one vector compare instruction.
 
-    if (Subtarget.hasAltivec() && canConvertToVcmpequb(LHS, RHS)) {
-      SDLoc DL(N);
-      SelectionDAG &DAG = DCI.DAG;
-      auto *LA = dyn_cast<LoadSDNode>(LHS);
-      auto *LB = dyn_cast<LoadSDNode>(RHS);
-
-      assert((LA && LB) && "LA and LB must be LoadSDNode");
-
-      // Following code transforms the DAG
-      // t0: ch,glue = EntryToken
-      // t2: i64,ch = CopyFromReg t0, Register:i64 %0
-      // t3: i128,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
-      //     undef:i64
-      // t4: i64,ch = CopyFromReg t0, Register:i64 %1
-      // t5: i128,ch =
-      //     load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64 t6: i1 =
-      // setcc t3, t5, setne:ch
-      //
-      //  ---->
-      //
-      // t0: ch,glue = EntryToken
-      // t2: i64,ch = CopyFromReg t0, Register:i64 %0
-      // t3: v16i8,ch = load<(load (s128) from %ir.a, align 1)> t0, t2,
-      //     undef:i64
-      // t4: i64,ch = CopyFromReg t0, Register:i64 %1
-      // t5: v16i8,ch =
-      //     load<(load (s128) from %ir.b, align 1)> t0, t4, undef:i64
-      // t6: i32 =
-      //     llvm.ppc.altivec.vcmpequb.p TargetConstant:i32<10505>,
-      //     Constant:i32<2>, t3, t5
-      // t7: i1 = setcc t6, Constant:i32<0>, seteq:ch
-
-      SDValue LHSVec = DAG.getLoad(MVT::v16i8, DL, LA->getChain(),
-                                   LA->getBasePtr(), LA->getMemOperand());
-      SDValue RHSVec = DAG.getLoad(MVT::v16i8, DL, LB->getChain(),
-                                   LB->getBasePtr(), LB->getMemOperand());
-
-      SDValue IntrID =
-          DAG.getConstant(Intrinsic::ppc_altivec_vcmpequb_p, DL, MVT::i32);
-      SDValue CRSel =
-          DAG.getConstant(2, DL, MVT::i32); // which CR6 predicate field
-      SDValue PredResult = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-                                       IntrID, CRSel, LHSVec, RHSVec);
-
-      // ppc_altivec_vcmpequb_p returns 1 when two vectors are the same,
-      // so we need to invert the CC opcode.
-      return DAG.getSetCC(DL, N->getValueType(0), PredResult,
-                          DAG.getConstant(0, DL, MVT::i32),
-                          CC == ISD::SETNE ? ISD::SETEQ : ISD::SETNE);
-    }
+    if (Subtarget.hasAltivec() && canConvertToVcmpequb(LHS, RHS))
+      return convertTwoLoadsAndCmpToVCMPEQUB(DCI.DAG, N, SDLoc(N), LHS, RHS);
   }
 
   return DAGCombineTruncBoolExt(N, DCI);
