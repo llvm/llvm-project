@@ -10209,19 +10209,19 @@ void SemaCodeCompletion::CodeCompletePreprocessorDirective(bool InConditional) {
   Results.AddResult(Builder.TakeString());
 
   if (getLangOpts().C23) {
-    // #embed "header"
+    // #embed "file"
     Builder.AddTypedTextChunk("embed");
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
     Builder.AddTextChunk("\"");
-    Builder.AddPlaceholderChunk("header");
+    Builder.AddPlaceholderChunk("file");
     Builder.AddTextChunk("\"");
     Results.AddResult(Builder.TakeString());
 
-    // #embed <header>
+    // #embed <file>
     Builder.AddTypedTextChunk("embed");
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
     Builder.AddTextChunk("<");
-    Builder.AddPlaceholderChunk("header");
+    Builder.AddPlaceholderChunk("file");
     Builder.AddTextChunk(">");
     Results.AddResult(Builder.TakeString());
   }
