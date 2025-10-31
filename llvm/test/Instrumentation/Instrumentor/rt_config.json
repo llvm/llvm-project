@@ -2,10 +2,8 @@
   "configuration": {
     "runtime_prefix": "__instrumentor_",
     "runtime_prefix.description": "The runtime API prefix.",
-    "runtime_stubs_file": "",
-    "runtime_stubs_file.description": "The file into which runtime stubs should be written.",
-    "demangle_function_names": true,
-    "demangle_function_names.description": "Demangle functions names passed to the runtime."
+    "runtime_stubs_file": "rt.c",
+    "runtime_stubs_file.description": "The file into which runtime stubs should be written."
   },
   "instruction_pre": {
     "load": {
@@ -15,8 +13,6 @@
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
-      "base_pointer_info": false,
-      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value_size": true,
       "value_size.description": "The size of the loaded value.",
       "alignment": true,
@@ -28,7 +24,9 @@
       "sync_scope_id": true,
       "sync_scope_id.description": "The sync scope id of the load.",
       "is_volatile": true,
-      "is_volatile.description": "Flag indicating a volatile load."
+      "is_volatile.description": "Flag indicating a volatile load.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
     },
     "store": {
       "enabled": true,
@@ -37,8 +35,6 @@
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
-      "base_pointer_info": false,
-      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value": true,
       "value.description": "The stored value.",
       "value_size": true,
@@ -52,7 +48,9 @@
       "sync_scope_id": true,
       "sync_scope_id.description": "The sync scope id of the store.",
       "is_volatile": true,
-      "is_volatile.description": "Flag indicating a volatile store."
+      "is_volatile.description": "Flag indicating a volatile store.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
     }
   },
   "instruction_post": {
@@ -62,8 +60,6 @@
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
-      "base_pointer_info": false,
-      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value": true,
       "value.replace": true,
       "value.description": "The loaded value.",
@@ -78,7 +74,9 @@
       "sync_scope_id": true,
       "sync_scope_id.description": "The sync scope id of the load.",
       "is_volatile": true,
-      "is_volatile.description": "Flag indicating a volatile load."
+      "is_volatile.description": "Flag indicating a volatile load.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
     },
     "store": {
       "enabled": true,
@@ -86,8 +84,6 @@
       "pointer.description": "The accessed pointer.",
       "pointer_as": true,
       "pointer_as.description": "The address space of the accessed pointer.",
-      "base_pointer_info": false,
-      "base_pointer_info.description": "The runtime provided base pointer info.",
       "value": true,
       "value.description": "The stored value.",
       "value_size": true,
@@ -101,7 +97,9 @@
       "sync_scope_id": true,
       "sync_scope_id.description": "The sync scope id of the store.",
       "is_volatile": true,
-      "is_volatile.description": "Flag indicating a volatile store."
+      "is_volatile.description": "Flag indicating a volatile store.",
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
     }
   }
 }
