@@ -240,6 +240,13 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  /// Whether this function only (at most) accesses target  memory.
+  bool onlyAccessesTargetMem() const {
+    return getWithoutLoc(Location::TargetMem0)
+        .getWithoutLoc(Location::TargetMem1)
+        .doesNotAccessMemory();
+  }
+
   /// Whether this function only (at most) accesses errno memory.
   bool onlyAccessesErrnoMem() const {
     return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
