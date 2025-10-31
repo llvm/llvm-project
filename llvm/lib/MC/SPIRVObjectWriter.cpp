@@ -20,8 +20,8 @@ void SPIRVObjectWriter::writeHeader(const MCAssembler &Asm) {
   constexpr uint32_t GeneratorID = 43;
   const uint32_t GeneratorMagicNumber =
       Asm.getContext().getTargetTriple().getVendor() == Triple::AMD
-        ? UINT16_MAX
-        : ((GeneratorID << 16) | (LLVM_VERSION_MAJOR));
+          ? UINT16_MAX
+          : ((GeneratorID << 16) | (LLVM_VERSION_MAJOR));
   constexpr uint32_t Schema = 0;
 
   W.write<uint32_t>(MagicNumber);
