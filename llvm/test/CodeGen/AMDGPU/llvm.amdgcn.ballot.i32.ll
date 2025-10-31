@@ -591,3 +591,24 @@ exit:
   store i32 %ballot, ptr addrspace(1) %out
   ret void
 }
+
+define amdgpu_cs i32 @compare_bfloats(bfloat %x, bfloat %y) {
+; GFX10-LABEL: compare_bfloats:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s0, v0, v1
+; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: compare_bfloats:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_mov_b16_e32 v2.l, 0
+; GFX11-NEXT:    v_mov_b16_e32 v2.h, v1.l
+; GFX11-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; GFX11-NEXT:    v_mov_b16_e32 v1.l, v2.l
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s0, v1, v2
+; GFX11-NEXT:    ; return to shader part epilog
+  %cmp = fcmp ogt bfloat %x, %y
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %cmp)
+  ret i32 %ballot
+}
