@@ -40,8 +40,9 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -91,11 +92,13 @@ public:
     return *this;
   }
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
   /// Add either a loop pass or a loop-nest pass to the pass manager. Append \p
   /// Pass to the list of loop passes if it has a dedicated \fn run() method for
   /// loops and to the list of loop-nest passes if the \fn run() method is for
@@ -154,12 +157,12 @@ protected:
                 LoopStandardAnalysisResults &AR, LPMUpdater &U,
                 PassInstrumentation &PI);
 
-  PreservedAnalyses runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
-                                          LoopStandardAnalysisResults &AR,
-                                          LPMUpdater &U);
-  PreservedAnalyses runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
-                                             LoopStandardAnalysisResults &AR,
-                                             LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses
+  runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
+                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses
+  runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
+                           LoopStandardAnalysisResults &AR, LPMUpdater &U);
 
 private:
   static const Loop &getLoopFromIR(Loop &L) { return L; }
@@ -401,21 +404,18 @@ public:
 
   explicit FunctionToLoopPassAdaptor(std::unique_ptr<PassConceptT> Pass,
                                      bool UseMemorySSA = false,
-                                     bool UseBlockFrequencyInfo = false,
-                                     bool UseBranchProbabilityInfo = false,
                                      bool LoopNestMode = false)
       : Pass(std::move(Pass)), UseMemorySSA(UseMemorySSA),
-        UseBlockFrequencyInfo(UseBlockFrequencyInfo),
-        UseBranchProbabilityInfo(UseBranchProbabilityInfo),
         LoopNestMode(LoopNestMode) {
     LoopCanonicalizationFPM.addPass(LoopSimplifyPass());
     LoopCanonicalizationFPM.addPass(LCSSAPass());
   }
 
   /// Runs the loop passes across every loop in the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   static bool isRequired() { return true; }
 
@@ -427,8 +427,6 @@ private:
   FunctionPassManager LoopCanonicalizationFPM;
 
   bool UseMemorySSA = false;
-  bool UseBlockFrequencyInfo = false;
-  bool UseBranchProbabilityInfo = false;
   const bool LoopNestMode;
 };
 
@@ -441,9 +439,7 @@ private:
 /// \c LoopPassManager and the returned adaptor will be in loop-nest mode.
 template <typename LoopPassT>
 inline FunctionToLoopPassAdaptor
-createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
-                                bool UseBlockFrequencyInfo = false,
-                                bool UseBranchProbabilityInfo = false) {
+createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false) {
   if constexpr (is_detected<HasRunOnLoopT, LoopPassT>::value) {
     using PassModelT =
         detail::PassModel<Loop, LoopPassT, LoopAnalysisManager,
@@ -453,7 +449,7 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
     return FunctionToLoopPassAdaptor(
         std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
             new PassModelT(std::forward<LoopPassT>(Pass))),
-        UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo, false);
+        UseMemorySSA, false);
   } else {
     LoopPassManager LPM;
     LPM.addPass(std::forward<LoopPassT>(Pass));
@@ -465,7 +461,7 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
     return FunctionToLoopPassAdaptor(
         std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
             new PassModelT(std::move(LPM))),
-        UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo, true);
+        UseMemorySSA, true);
   }
 }
 
@@ -473,9 +469,8 @@ createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false,
 /// be in loop-nest mode if the pass manager contains only loop-nest passes.
 template <>
 inline FunctionToLoopPassAdaptor
-createFunctionToLoopPassAdaptor<LoopPassManager>(
-    LoopPassManager &&LPM, bool UseMemorySSA, bool UseBlockFrequencyInfo,
-    bool UseBranchProbabilityInfo) {
+createFunctionToLoopPassAdaptor<LoopPassManager>(LoopPassManager &&LPM,
+                                                 bool UseMemorySSA) {
   // Check if LPM contains any loop pass and if it does not, returns an adaptor
   // in loop-nest mode.
   using PassModelT =
@@ -487,8 +482,7 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(
   return FunctionToLoopPassAdaptor(
       std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
           new PassModelT(std::move(LPM))),
-      UseMemorySSA, UseBlockFrequencyInfo, UseBranchProbabilityInfo,
-      LoopNestMode);
+      UseMemorySSA, LoopNestMode);
 }
 
 /// Pass for printing a loop's contents as textual IR.
@@ -497,11 +491,11 @@ class PrintLoopPass : public PassInfoMixin<PrintLoopPass> {
   std::string Banner;
 
 public:
-  PrintLoopPass();
-  PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
+  LLVM_ABI PrintLoopPass();
+  LLVM_ABI PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
-                        LoopStandardAnalysisResults &, LPMUpdater &);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &,
+                                 LoopStandardAnalysisResults &, LPMUpdater &);
 };
 }
 

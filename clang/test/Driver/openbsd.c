@@ -127,9 +127,12 @@
 // UNWIND-TABLES: "-funwind-tables=2"
 // NO-UNWIND-TABLES-NOT: "-funwind-tables=2"
 
-// Check that the -X and --no-relax flags are passed to the linker on riscv64
+// Check that the -X and --no-relax flags are passed to the linker
+// RUN: %clang --target=loongarch64-unknown-openbsd -mno-relax -### %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=LA64-FLAGS %s
 // RUN: %clang --target=riscv64-unknown-openbsd -mno-relax -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV64-FLAGS %s
+// LA64-FLAGS: "-X" "--no-relax"
 // RISCV64-FLAGS: "-X" "--no-relax"
 
 // Check passing LTO flags to the linker

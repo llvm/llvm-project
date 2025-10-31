@@ -7,5 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_tan(__CLC_GENTYPE val) {
+  _Pragma("clang fp reciprocal(on)");
   return __clc_native_sin(val) / __clc_native_cos(val);
 }

@@ -106,7 +106,7 @@ func.func @matvec_i32() {
   //    val = (123 * 314) * 4 * vscale
   // so ...
   %vscale = vector.vscale
-  %vscale_v = vector.splat %vscale : vector<3xindex>
+  %vscale_v = vector.broadcast %vscale : index to vector<3xindex>
   %vscale_i32 = arith.index_cast %vscale_v : vector<3xindex> to vector<3xi32>
   %mv1_div = arith.divui %mv1, %vscale_i32 : vector<3xi32>
   // ... val / vscale = 123 * 314 * 4 = 154488

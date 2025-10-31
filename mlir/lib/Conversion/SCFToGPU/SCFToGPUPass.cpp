@@ -10,14 +10,8 @@
 
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/Support/CommandLine.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTAFFINEFORTOGPUPASS

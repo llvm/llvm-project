@@ -20,8 +20,9 @@ class V<string version, VFeatures newer> : VFeatures {
   let Features = !strconcat("v", version, "|", newer.Features);
 }
 
-let Features = "v79" in def V79 : VFeatures;
+let Features = "v81" in def V81 : VFeatures;
 
+def V79 : V<"79", V81>;
 def V75 : V<"75", V79>;
 def V73 : V<"73", V75>;
 def V71 : V<"71", V73>;
@@ -43,8 +44,9 @@ class HVXV<string version, HVXVFeatures newer> : HVXVFeatures {
   let Features = !strconcat("hvxv", version, "|", newer.Features);
 }
 
-let Features = "hvxv79" in def HVXV79 : HVXVFeatures;
+let Features = "hvxv81" in def HVXV81 : HVXVFeatures;
 
+def HVXV79 : HVXV<"79", HVXV81>;
 def HVXV75 : HVXV<"75", HVXV79>;
 def HVXV73 : HVXV<"73", HVXV75>;
 def HVXV71 : HVXV<"71", HVXV73>;

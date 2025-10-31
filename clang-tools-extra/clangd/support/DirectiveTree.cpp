@@ -356,5 +356,62 @@ TokenStream DirectiveTree::stripDirectives(const TokenStream &In) const {
   return Out;
 }
 
+namespace {
+class RangePairer {
+  std::vector<Token::Range> &Ranges;
+
+public:
+  RangePairer(std::vector<Token::Range> &Ranges) : Ranges(Ranges) {}
+
+  void walk(const DirectiveTree &T) {
+    for (const auto &C : T.Chunks)
+      std::visit(*this, C);
+  }
+
+  void operator()(const DirectiveTree::Code &C) {}
+
+  void operator()(const DirectiveTree::Directive &) {}
+
+  void operator()(const DirectiveTree::Conditional &C) {
+    Token::Range Range;
+    Token::Index Last;
+    auto First = true;
+    for (const auto &[Directive, _] : C.Branches) {
+      if (First) {
+        First = false;
+      } else {
+        Range = {Last, Directive.Tokens.Begin};
+        Ranges.push_back(Range);
+      }
+      Last = Directive.Tokens.Begin;
+    }
+
+    if (C.End.Kind != tok::pp_not_keyword) {
+      Range = {Last, C.End.Tokens.Begin};
+      Ranges.push_back(Range);
+    }
+
+    for (const auto &[_, SubTree] : C.Branches)
+      walk(SubTree);
+  }
+};
+} // namespace
+
+std::vector<Token::Range> pairDirectiveRanges(const DirectiveTree &Tree,
+                                              const TokenStream &Code) {
+  std::vector<Token::Range> Ranges;
+  RangePairer(Ranges).walk(Tree);
+
+  // Transform paired ranges to start with last token in its logical line
+  for (auto &R : Ranges) {
+    const Token *Tok = &Code.tokens()[R.Begin + 1];
+    while (Tok->Kind != tok::eof && !Tok->flag(LexFlags::StartsPPLine))
+      ++Tok;
+    Tok = Tok - 1;
+    R.Begin = Tok->OriginalIndex;
+  }
+  return Ranges;
+}
+
 } // namespace clangd
 } // namespace clang

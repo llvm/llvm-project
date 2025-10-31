@@ -153,8 +153,8 @@ define <2 x i64> @shl_constant_op0_not_undef_lane(i64 %x) {
 define <2 x i64> @shl_constant_op0_load(ptr %p) {
 ; CHECK-LABEL: @shl_constant_op0_load(
 ; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[LD]], i32 1
-; CHECK-NEXT:    [[BO:%.*]] = shl <2 x i64> <i64 undef, i64 2>, [[INS]]
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = shl i64 2, [[LD]]
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> poison, i64 [[BO_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ld = load i64, ptr %p
@@ -204,8 +204,8 @@ define <2 x i64> @shl_constant_op1_not_undef_lane(i64 %x) {
 define <2 x i64> @shl_constant_op1_load(ptr %p) {
 ; CHECK-LABEL: @shl_constant_op1_load(
 ; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[LD]], i32 0
-; CHECK-NEXT:    [[BO:%.*]] = shl nuw <2 x i64> [[INS]], <i64 5, i64 2>
+; CHECK-NEXT:    [[BO_SCALAR:%.*]] = shl nuw i64 [[LD]], 5
+; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ld = load i64, ptr %p
@@ -479,10 +479,15 @@ define <2 x i64> @sdiv_constant_op1_not_undef_lane(i64 %x) {
 }
 
 define <2 x i64> @and_constant(i64 %x) {
-; CHECK-LABEL: @and_constant(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 0, i64 undef>, i64 [[BO_SCALAR]], i64 0
-; CHECK-NEXT:    ret <2 x i64> [[BO]]
+; SSE-LABEL: @and_constant(
+; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
+; SSE-NEXT:    [[BO:%.*]] = and <2 x i64> [[INS]], <i64 42, i64 undef>
+; SSE-NEXT:    ret <2 x i64> [[BO]]
+;
+; AVX-LABEL: @and_constant(
+; AVX-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
+; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 0, i64 undef>, i64 [[BO_SCALAR]], i64 0
+; AVX-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bo = and <2 x i64> %ins, <i64 42, i64 undef>
@@ -490,10 +495,15 @@ define <2 x i64> @and_constant(i64 %x) {
 }
 
 define <2 x i64> @and_constant_not_undef_lane(i64 %x) {
-; CHECK-LABEL: @and_constant_not_undef_lane(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 0
-; CHECK-NEXT:    ret <2 x i64> [[BO]]
+; SSE-LABEL: @and_constant_not_undef_lane(
+; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
+; SSE-NEXT:    [[BO:%.*]] = and <2 x i64> [[INS]], <i64 42, i64 -42>
+; SSE-NEXT:    ret <2 x i64> [[BO]]
+;
+; AVX-LABEL: @and_constant_not_undef_lane(
+; AVX-NEXT:    [[BO_SCALAR:%.*]] = and i64 [[X:%.*]], 42
+; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BO_SCALAR]], i64 0
+; AVX-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bo = and <2 x i64> %ins, <i64 42, i64 -42>
@@ -523,10 +533,15 @@ define <2 x i64> @or_constant_not_undef_lane(i64 %x) {
 }
 
 define <2 x i64> @xor_constant(i64 %x) {
-; CHECK-LABEL: @xor_constant(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = xor i64 [[X:%.*]], 42
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 undef, i64 0>, i64 [[BO_SCALAR]], i64 0
-; CHECK-NEXT:    ret <2 x i64> [[BO]]
+; SSE-LABEL: @xor_constant(
+; SSE-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[X:%.*]], i32 0
+; SSE-NEXT:    [[BO:%.*]] = xor <2 x i64> [[INS]], <i64 42, i64 undef>
+; SSE-NEXT:    ret <2 x i64> [[BO]]
+;
+; AVX-LABEL: @xor_constant(
+; AVX-NEXT:    [[BO_SCALAR:%.*]] = xor i64 [[X:%.*]], 42
+; AVX-NEXT:    [[BO:%.*]] = insertelement <2 x i64> <i64 undef, i64 0>, i64 [[BO_SCALAR]], i64 0
+; AVX-NEXT:    ret <2 x i64> [[BO]]
 ;
   %ins = insertelement <2 x i64> undef, i64 %x, i32 0
   %bo = xor <2 x i64> %ins, <i64 42, i64 undef>
@@ -546,8 +561,8 @@ define <2 x i64> @xor_constant_not_undef_lane(i64 %x) {
 
 define <2 x double> @fadd_constant(double %x) {
 ; CHECK-LABEL: @fadd_constant(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = fadd double [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x double> <double 0x7FF8000000000000, double undef>, double [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; CHECK-NEXT:    [[BO:%.*]] = fadd <2 x double> [[INS]], <double 4.200000e+01, double undef>
 ; CHECK-NEXT:    ret <2 x double> [[BO]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
@@ -568,8 +583,8 @@ define <2 x double> @fadd_constant_not_undef_lane(double %x) {
 
 define <2 x double> @fsub_constant_op0(double %x) {
 ; CHECK-LABEL: @fsub_constant_op0(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = fsub fast double 4.200000e+01, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x double> <double 0x7FF8000000000000, double undef>, double [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; CHECK-NEXT:    [[BO:%.*]] = fsub fast <2 x double> <double 4.200000e+01, double undef>, [[INS]]
 ; CHECK-NEXT:    ret <2 x double> [[BO]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
@@ -601,8 +616,8 @@ define <2 x double> @fsub_constant_op1(double %x) {
 
 define <2 x double> @fsub_constant_op1_not_undef_lane(double %x) {
 ; CHECK-LABEL: @fsub_constant_op1_not_undef_lane(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = fsub double [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x double> splat (double 0x7FF8000000000000), double [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; CHECK-NEXT:    [[BO:%.*]] = fsub <2 x double> [[INS]], <double 4.200000e+01, double -4.200000e+01>
 ; CHECK-NEXT:    ret <2 x double> [[BO]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
@@ -612,8 +627,8 @@ define <2 x double> @fsub_constant_op1_not_undef_lane(double %x) {
 
 define <2 x double> @fmul_constant(double %x) {
 ; CHECK-LABEL: @fmul_constant(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = fmul reassoc double [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x double> <double 0x7FF8000000000000, double undef>, double [[BO_SCALAR]], i64 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <2 x double> [[INS]], <double 4.200000e+01, double undef>
 ; CHECK-NEXT:    ret <2 x double> [[BO]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
@@ -644,10 +659,15 @@ define <2 x double> @fdiv_constant_op0(double %x) {
 }
 
 define <2 x double> @fdiv_constant_op0_not_undef_lane(double %x) {
-; CHECK-LABEL: @fdiv_constant_op0_not_undef_lane(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = fdiv ninf double 4.200000e+01, [[X:%.*]]
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x double> splat (double 0x7FF8000000000000), double [[BO_SCALAR]], i64 0
-; CHECK-NEXT:    ret <2 x double> [[BO]]
+; SSE-LABEL: @fdiv_constant_op0_not_undef_lane(
+; SSE-NEXT:    [[BO_SCALAR:%.*]] = fdiv ninf double 4.200000e+01, [[X:%.*]]
+; SSE-NEXT:    [[BO:%.*]] = insertelement <2 x double> splat (double 0x7FF8000000000000), double [[BO_SCALAR]], i64 0
+; SSE-NEXT:    ret <2 x double> [[BO]]
+;
+; AVX-LABEL: @fdiv_constant_op0_not_undef_lane(
+; AVX-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; AVX-NEXT:    [[BO:%.*]] = fdiv ninf <2 x double> <double 4.200000e+01, double -4.200000e+01>, [[INS]]
+; AVX-NEXT:    ret <2 x double> [[BO]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
   %bo = fdiv ninf <2 x double> <double 42.0, double -42.0>, %ins
@@ -655,10 +675,15 @@ define <2 x double> @fdiv_constant_op0_not_undef_lane(double %x) {
 }
 
 define <2 x double> @fdiv_constant_op1(double %x) {
-; CHECK-LABEL: @fdiv_constant_op1(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = fdiv double [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x double> <double 0x7FF8000000000000, double undef>, double [[BO_SCALAR]], i64 0
-; CHECK-NEXT:    ret <2 x double> [[BO]]
+; SSE-LABEL: @fdiv_constant_op1(
+; SSE-NEXT:    [[BO_SCALAR:%.*]] = fdiv double [[X:%.*]], 4.200000e+01
+; SSE-NEXT:    [[BO:%.*]] = insertelement <2 x double> <double 0x7FF8000000000000, double undef>, double [[BO_SCALAR]], i64 0
+; SSE-NEXT:    ret <2 x double> [[BO]]
+;
+; AVX-LABEL: @fdiv_constant_op1(
+; AVX-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; AVX-NEXT:    [[BO:%.*]] = fdiv <2 x double> [[INS]], <double 4.200000e+01, double undef>
+; AVX-NEXT:    ret <2 x double> [[BO]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
   %bo = fdiv <2 x double> %ins, <double 42.0, double undef>
@@ -666,10 +691,15 @@ define <2 x double> @fdiv_constant_op1(double %x) {
 }
 
 define <2 x double> @fdiv_constant_op1_not_undef_lane(double %x) {
-; CHECK-LABEL: @fdiv_constant_op1_not_undef_lane(
-; CHECK-NEXT:    [[BO_SCALAR:%.*]] = fdiv double [[X:%.*]], 4.200000e+01
-; CHECK-NEXT:    [[BO:%.*]] = insertelement <2 x double> splat (double 0x7FF8000000000000), double [[BO_SCALAR]], i64 0
-; CHECK-NEXT:    ret <2 x double> [[BO]]
+; SSE-LABEL: @fdiv_constant_op1_not_undef_lane(
+; SSE-NEXT:    [[BO_SCALAR:%.*]] = fdiv double [[X:%.*]], 4.200000e+01
+; SSE-NEXT:    [[BO:%.*]] = insertelement <2 x double> splat (double 0x7FF8000000000000), double [[BO_SCALAR]], i64 0
+; SSE-NEXT:    ret <2 x double> [[BO]]
+;
+; AVX-LABEL: @fdiv_constant_op1_not_undef_lane(
+; AVX-NEXT:    [[INS:%.*]] = insertelement <2 x double> undef, double [[X:%.*]], i32 0
+; AVX-NEXT:    [[BO:%.*]] = fdiv <2 x double> [[INS]], <double 4.200000e+01, double -4.200000e+01>
+; AVX-NEXT:    ret <2 x double> [[BO]]
 ;
   %ins = insertelement <2 x double> undef, double %x, i32 0
   %bo = fdiv <2 x double> %ins, <double 42.0, double -42.0>

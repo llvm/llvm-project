@@ -85,8 +85,7 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
     LoopPassManager LPM;
     LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
     FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
-        std::move(LPM), /*UseMemorySSA=*/false,
-        /*UseBlockFrequencyInfo=*/false));
+        std::move(LPM), /*UseMemorySSA=*/false));
   }
   if (PollyInliner) {
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
@@ -102,8 +101,7 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
     LoopPassManager LPM;
     LPM.addPass(IndVarSimplifyPass());
     FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
-        std::move(LPM), /*UseMemorySSA=*/false,
-        /*UseBlockFrequencyInfo=*/true));
+        std::move(LPM), /*UseMemorySSA=*/false));
   }
 
   return FPM;

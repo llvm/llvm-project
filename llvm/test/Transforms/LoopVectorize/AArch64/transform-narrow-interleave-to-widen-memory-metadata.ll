@@ -10,7 +10,7 @@ define void @load_store_interleave_group_with_metadata(ptr noalias %data) {
 ; VF2-LABEL: define void @load_store_interleave_group_with_metadata(
 ; VF2-SAME: ptr noalias [[DATA:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -23,8 +23,8 @@ define void @load_store_interleave_group_with_metadata(ptr noalias %data) {
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
-; VF2:       [[SCALAR_PH]]:
+; VF2-NEXT:    br [[EXIT:label %.*]]
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -54,15 +54,14 @@ exit:
 !4 = !{ i64 0, i64 2 }
 !5 = !{ i64 0, i64 2 }
 
-;.
-; VF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; VF2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; VF2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-;.
 ; VF4: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; VF4: [[META1]] = !{!"omnipotent char", [[META2:![0-9]+]], i64 0}
 ; VF4: [[META2]] = !{!"Simple C/C++ TBAA"}
 ; VF4: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; VF4: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VF4: [[META5]] = !{!"llvm.loop.unroll.runtime.disable"}
+;.
+; VF2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; VF2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; VF2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ;.

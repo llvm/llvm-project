@@ -468,7 +468,8 @@ private:
       // Floating-point constants.
       Type *Ty = Config.getExtendedFPType(CFP->getType());
       return ConstantFP::get(
-          Ty, extendConstantFP(CFP->getValueAPF(), Ty->getFltSemantics()));
+          Ty, extendConstantFP(CFP->getValueAPF(),
+                               Ty->getScalarType()->getFltSemantics()));
     }
     // Vector, array, or aggregate constants.
     if (C->getType()->isVectorTy()) {
@@ -642,11 +643,11 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
 }
 
 static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
-  return dyn_cast<GlobalValue>(M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
+  return M.getOrInsertGlobal(Name, Ty, [&M, Ty, Name] {
     return new GlobalVariable(M, Ty, false, GlobalVariable::ExternalLinkage,
                               nullptr, Name, nullptr,
                               GlobalVariable::InitialExecTLSModel);
-  }));
+  });
 }
 
 NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
@@ -2019,7 +2020,6 @@ static void moveFastMathFlags(Function &F,
     F.removeFnAttr(attr);                                                      \
     FMF.set##setter();                                                         \
   }
-  MOVE_FLAG("unsafe-fp-math", Fast)
   MOVE_FLAG("no-infs-fp-math", NoInfs)
   MOVE_FLAG("no-nans-fp-math", NoNaNs)
   MOVE_FLAG("no-signed-zeros-fp-math", NoSignedZeros)

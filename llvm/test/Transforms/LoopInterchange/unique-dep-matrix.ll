@@ -2,14 +2,13 @@
 ; RUN: opt < %s -passes=loop-interchange -S -debug 2>&1 | FileCheck %s
 
 ; CHECK:       Dependency matrix before interchange:
-; CHECK-NEXT:  I I
 ; CHECK-NEXT:  = *
 ; CHECK-NEXT:  < *
 ; CHECK-NEXT:  Processing InnerLoopId
 
 ; This example is taken from github issue #54176
 ;
-define void @foo(i32 noundef %n, i32 noundef %m, ptr nocapture noundef %aa, ptr nocapture noundef readonly %bb, ptr nocapture noundef writeonly %cc) {
+define void @foo(i32 noundef %n, i32 noundef %m, ptr nocapture noundef noalias %aa, ptr nocapture noundef readonly noalias %bb, ptr nocapture noundef writeonly noalias %cc) {
 entry:
   %arrayidx7 = getelementptr inbounds i8, ptr %aa, i64 512
   br label %for.cond1.preheader

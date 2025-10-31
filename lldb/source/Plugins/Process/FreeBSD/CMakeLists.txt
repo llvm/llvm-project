@@ -8,6 +8,8 @@ add_lldb_library(lldbPluginProcessFreeBSD
   NativeRegisterContextFreeBSD_x86_64.cpp
   NativeThreadFreeBSD.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbHost
     lldbSymbol
@@ -15,6 +17,4 @@ add_lldb_library(lldbPluginProcessFreeBSD
     lldbUtility
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
-  LINK_COMPONENTS
-    Support
   )

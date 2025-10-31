@@ -1,7 +1,7 @@
 ! Test the behaviors of -f{no-}color-diagnostics and -f{no}-diagnostic-colors
 ! when emitting scanning diagnostics.
 ! Windows command prompt doesn't support ANSI escape sequences.
-! REQUIRES: shell
+! REQUIRES: system-linux
 
 ! RUN: not %flang %s -E -Werror -fcolor-diagnostics 2>&1 \
 ! RUN:     | FileCheck %s --check-prefix=CHECK_CD

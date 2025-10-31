@@ -36,7 +36,7 @@ but this one doesn't.
 The disadvantage of using the same name as other compilers is that it is not
 clear which compiler created a `.mod` file and files from multiple compilers
 cannot be in the same directory. This can be solved by adding something
-between the module name and extension, e.g. `<modulename>-f18.mod`.  When
+between the module name and extension, e.g. `<modulename>-flang.mod`.  When
 this is needed, Flang accepts the option `-module-suffix` to alter the suffix.
 
 ## Format
@@ -171,3 +171,14 @@ modules of dependent libraries need not also be packaged with the library.
 When the compiler reads a hermetic module file, the copies of the dependent
 modules are read into their own scope, and will not conflict with other modules
 of the same name that client code might `USE`.
+
+One can use the `-fhermetic-module-files` option when building the top-level
+module files of a library for which not all of the implementation modules
+will (or can) be shipped.
+
+It is also possible to convert a default module file to a hermetic one after
+the fact.
+Since module files are Fortran source, simply copy the module file to a new
+temporary free form Fortran source file and recompile it (`-fsyntax-only`)
+with the `-fhermetic-module-files` flag, and that will regenerate the module
+file in place with all of its dependent modules included.

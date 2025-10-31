@@ -477,8 +477,9 @@ TEST(SubElementTest, Nested) {
                 {strAttr, trueAttr, falseAttr, boolArrayAttr, dictAttr}));
 }
 
-// Test how many times we call copy-ctor when building an attribute.
-TEST(CopyCountAttr, CopyCount) {
+// Test how many times we call copy-ctor when building an attribute with the
+// 'get' method.
+TEST(CopyCountAttr, CopyCountGet) {
   MLIRContext context;
   context.loadDialect<test::TestDialect>();
 
@@ -489,13 +490,33 @@ TEST(CopyCountAttr, CopyCount) {
   test::CopyCount::counter = 0;
   test::TestCopyCountAttr::get(&context, std::move(copyCount));
 #ifndef NDEBUG
-  // One verification enabled only in assert-mode requires a copy.
-  EXPECT_EQ(counter1, 1);
-  EXPECT_EQ(test::CopyCount::counter, 1);
+  // One verification enabled only in assert-mode requires two copies: one for
+  // calling 'verifyInvariants' and one for calling 'verify' inside
+  // 'verifyInvariants'.
+  EXPECT_EQ(counter1, 2);
+  EXPECT_EQ(test::CopyCount::counter, 2);
 #else
   EXPECT_EQ(counter1, 0);
   EXPECT_EQ(test::CopyCount::counter, 0);
 #endif
+}
+
+// Test how many times we call copy-ctor when building an attribute with the
+// 'getChecked' method.
+TEST(CopyCountAttr, CopyCountGetChecked) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  test::CopyCount::counter = 0;
+  test::CopyCount copyCount("hello");
+  auto loc = UnknownLoc::get(&context);
+  test::TestCopyCountAttr::getChecked(loc, &context, std::move(copyCount));
+  int counter1 = test::CopyCount::counter;
+  test::CopyCount::counter = 0;
+  test::TestCopyCountAttr::getChecked(loc, &context, std::move(copyCount));
+  // The verifiers require two copies: one for calling 'verifyInvariants' and
+  // one for calling 'verify' inside 'verifyInvariants'.
+  EXPECT_EQ(counter1, 2);
+  EXPECT_EQ(test::CopyCount::counter, 2);
 }
 
 // Test stripped printing using test dialect attribute.

@@ -1,8 +1,16 @@
 // RUN: mlir-opt %s -generate-runtime-verification \
-// RUN:     -test-cf-assert \
 // RUN:     -expand-strided-metadata \
-// RUN:     -lower-affine \
+// RUN:     -test-cf-assert \
 // RUN:     -convert-to-llvm | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
+// RUN: FileCheck %s
+
+// RUN: mlir-opt %s -generate-runtime-verification \
+// RUN:     -expand-strided-metadata \
+// RUN:     -test-cf-assert \
+// RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
+// RUN:     -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
@@ -32,19 +40,19 @@ func.func @main() {
   %alloc_2x2x2 = memref.alloc(%2, %2, %2) : memref<?x?x?xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.load"(%{{.*}}, %{{.*}}) : (memref<1xf32>, index) -> f32
+  // CHECK-NEXT: memref.load %{{.*}}[%{{.*}}] : memref<1xf32>
   // CHECK-NEXT: ^ out-of-bounds access
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @load(%alloca_1, %1) : (memref<1xf32>, index) -> ()
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.load"(%{{.*}}, %{{.*}}) : (memref<?xf32>, index) -> f32
+  // CHECK-NEXT: memref.load %{{.*}}[%{{.*}}] : memref<?xf32>
   // CHECK-NEXT: ^ out-of-bounds access
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @load_dynamic(%alloc_1, %1) : (memref<?xf32>, index) -> ()
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.load"(%{{.*}}, %{{.*}}) : (memref<?x?x?xf32>, index, index, index) -> f32
+  // CHECK-NEXT: memref.load %{{.*}}[%{{.*}}] : memref<?x?x?xf32>
   // CHECK-NEXT: ^ out-of-bounds access
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @load_nd_dynamic(%alloc_2x2x2, %1, %n1, %0) : (memref<?x?x?xf32>, index, index, index) -> ()

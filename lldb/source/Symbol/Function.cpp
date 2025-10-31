@@ -275,7 +275,7 @@ Function::~Function() = default;
 void Function::GetStartLineSourceInfo(SupportFileSP &source_file_sp,
                                       uint32_t &line_no) {
   line_no = 0;
-  source_file_sp.reset();
+  source_file_sp = std::make_shared<SupportFile>();
 
   if (m_comp_unit == nullptr)
     return;
@@ -343,7 +343,7 @@ llvm::ArrayRef<std::unique_ptr<CallEdge>> Function::GetCallEdges() {
   Block &block = GetBlock(/*can_create*/true);
   SymbolFile *sym_file = block.GetSymbolFile();
   if (!sym_file)
-    return std::nullopt;
+    return {};
 
   // Lazily read call site information from the SymbolFile.
   m_call_edges = sym_file->ParseCallEdgesInFunction(GetID());

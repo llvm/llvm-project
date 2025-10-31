@@ -18,6 +18,45 @@ class SBModuleAPICase(TestBase):
         if self.background_pid:
             os.kill(self.background_pid, signal.SIGKILL)
 
+    @skipIfRemote
+    def test_GetObjectName(self):
+        """Test the SBModule::GetObjectName() method"""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        libfoo_path = self.getBuildArtifact("libfoo.a")
+        target_exe = self.dbg.CreateTarget(exe)
+        self.assertTrue(target_exe.IsValid(), "Target for a.out is valid")
+
+        # Test that the executable module has no object name (usually the first module in the target)
+        exe_module = target_exe.GetModuleAtIndex(0)
+        self.assertTrue(exe_module.IsValid(), "Executable module is valid")
+        self.assertIsNone(
+            exe_module.GetObjectName(), "a.out should have no object name"
+        )
+
+        # check archive member names
+        module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoo_path)
+        self.assertGreater(
+            module_specs.GetSize(), 0, "Archive should have at least one module spec"
+        )
+        found = set()
+        expected = {"a.o", "b.o"}
+        for i in range(module_specs.GetSize()):
+            spec = module_specs.GetSpecAtIndex(i)
+            obj_name = spec.GetObjectName()
+            self.assertIsInstance(obj_name, str)
+            self.assertIn(obj_name, expected, f"Unexpected object name: {obj_name}")
+            # create a module from the arhive using the sepc
+            module = lldb.SBModule(spec)
+            self.assertTrue(module.IsValid(), "Module is valid")
+            self.assertTrue(module.IsValid(), f"Module for {obj_name} is valid")
+            self.assertEqual(
+                module.GetObjectName(), obj_name, f"Object name for {obj_name} matches"
+            )
+            found.add(obj_name)
+
+        self.assertEqual(found, expected, "Did not find all expected archive members")
+
     @skipUnlessDarwin
     @skipIfRemote
     def test_module_is_file_backed(self):

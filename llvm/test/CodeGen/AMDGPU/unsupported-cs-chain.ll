@@ -1,5 +1,5 @@
-; RUN: not --crash llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -global-isel=1 -mattr=+wavefrontsize64 -verify-machineinstrs=0 < %s 2>&1 | FileCheck %s
-; RUN: not llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -global-isel=0 -mattr=+wavefrontsize64 -verify-machineinstrs=0 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -global-isel=1 -mattr=+wavefrontsize64 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -global-isel=0 -mattr=+wavefrontsize64 < %s 2>&1 | FileCheck %s
 
 declare amdgpu_cs_chain void @callee() nounwind
 

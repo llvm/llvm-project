@@ -27,12 +27,12 @@ TEST(InterfaceTest, OpInterfaceDenseMapKey) {
 
   OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&context));
   OpBuilder builder(module->getBody(), module->getBody()->begin());
-  auto op1 = builder.create<test::SideEffectOp>(builder.getUnknownLoc(),
-                                                builder.getI32Type());
-  auto op2 = builder.create<test::SideEffectOp>(builder.getUnknownLoc(),
-                                                builder.getI32Type());
-  auto op3 = builder.create<test::SideEffectOp>(builder.getUnknownLoc(),
-                                                builder.getI32Type());
+  auto op1 = test::SideEffectOp::create(builder, builder.getUnknownLoc(),
+                                        builder.getI32Type());
+  auto op2 = test::SideEffectOp::create(builder, builder.getUnknownLoc(),
+                                        builder.getI32Type());
+  auto op3 = test::SideEffectOp::create(builder, builder.getUnknownLoc(),
+                                        builder.getI32Type());
   DenseSet<MemoryEffectOpInterface> opSet;
   opSet.insert(op1);
   opSet.insert(op2);
@@ -64,8 +64,8 @@ TEST(InterfaceTest, TestCustomClassOf) {
   context.loadDialect<test::TestDialect>();
 
   OpBuilder builder(&context);
-  auto op = builder.create<TestOpOptionallyImplementingInterface>(
-      builder.getUnknownLoc(), /*implementsInterface=*/true);
+  auto op = TestOpOptionallyImplementingInterface::create(
+      builder, builder.getUnknownLoc(), /*implementsInterface=*/true);
   EXPECT_TRUE(isa<TestOptionallyImplementedOpInterface>(*op));
   op.setImplementsInterface(false);
   EXPECT_FALSE(isa<TestOptionallyImplementedOpInterface>(*op));

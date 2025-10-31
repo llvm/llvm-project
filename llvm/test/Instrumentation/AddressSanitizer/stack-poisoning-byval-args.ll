@@ -19,8 +19,7 @@ entry:
 ; CHECK-LABEL: foo
 ; CHECK: call i64 @__asan_stack_malloc
 ; CHECK: alloca i8, i64 {{.*}} align 64
-; CHECK: [[copyPtr:%[^ \t]+]] = inttoptr i64 %{{[^ \t]+}} to ptr
-; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyPtr]]{{[^%]+}} align 64 %a,{{[^,]+}},
+; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyPtr:%[0-9]+]]{{[^%]+}} align 64 %a,{{[^,]+}},
 ; CHECK: call i32 @bar(ptr [[copyPtr]])
 ; CHECK: ret void
 
@@ -38,8 +37,7 @@ entry:
 ; CHECK-LABEL: baz
 ; CHECK: call i64 @__asan_stack_malloc
 ; CHECK: alloca i8, i64 {{.*}} align 32
-; CHECK: [[copyPtr:%[^ \t]+]] = inttoptr i64 %{{[^ \t]+}} to ptr
-; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyPtr]]{{[^%]+}} align 4 %0,{{[^,]+}}
+; CHECK: call void @llvm.memcpy{{[^%]+}}[[copyPtr:%[0-9]+]]{{[^%]+}} align 4 %0,{{[^,]+}}
 ; CHECK: call i32 @bar(ptr [[copyPtr]])
 ; CHECK: ret void
 

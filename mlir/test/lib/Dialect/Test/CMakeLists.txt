@@ -71,6 +71,7 @@ add_mlir_library(MLIRTestDialect
   )
 mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRControlFlowInterfaces
+  MLIRControlFlowTransforms
   MLIRDataLayoutInterfaces
   MLIRDerivedAttributeOpInterface
   MLIRDestinationStyleOpInterface
@@ -86,6 +87,7 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRLinalgTransforms
   MLIRPtrDialect
   MLIRLLVMDialect
+  MLIRNVVMDialect
   MLIRPass
   MLIRReduce
   MLIRTensorDialect

@@ -56,6 +56,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  faccessat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.faccessat
+)
+
+add_entrypoint_object(
   fchdir
   ALIAS
   DEPENDS
@@ -109,6 +116,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.getcwd
+)
+
+add_entrypoint_object(
+  gethostname
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.gethostname
 )
 
 add_entrypoint_object(

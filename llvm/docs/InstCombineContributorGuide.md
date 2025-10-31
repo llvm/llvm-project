@@ -96,22 +96,9 @@ may be omitted.
 If the transform involves commutative operations, add tests with commuted
 (swapped) operands.
 
-Make sure that the operand order stays intact in the CHECK lines of your
-pre-commited tests. You should not see something like this:
-
-```llvm
-; CHECK-NEXT: [[OR:%.*]] = or i8 [[X]], [[Y]]
-; ...
-%or = or i8 %y, %x
-```
-
-If this happens, you may need to change one of the operands to have higher
-complexity (include the "thwart" comment in that case):
-
-```llvm
-%y2 = mul i8 %y, %y ; thwart complexity-based canonicalization
-%or = or i8 %y, %x
-```
+As an exception, it is not necessary to test commutation if one of the operands
+is a constant: In this case, the constant operand is always canonicalized to
+the right.
 
 ### Add vector tests
 
@@ -404,10 +391,31 @@ The use of TargetTransformInfo is only allowed for hooks for target-specific
 intrinsics, such as `TargetTransformInfo::instCombineIntrinsic()`. These are
 already inherently target-dependent anyway.
 
+If some canonicalization narrow/widen the integer width of expressions, please
+check `shouldChangeType()` first. Otherwise, we may evaluate the expression 
+in illegal/inefficient types.
+
 For vector-specific transforms that require cost-modelling, the VectorCombine
 pass can be used instead. In very rare circumstances, if there are no other
 alternatives, target-dependent transforms may be accepted into
 AggressiveInstCombine.
+
+Generally, we prefer unsigned operations over signed operations in the middle-end, even
+if signed operations are more efficient on some targets. The following is an incomplete
+list of canonicalizations that are implemented in InstCombine:
+
+| Original Pattern             | Canonical Form             | Condition                     |
+|------------------------------|----------------------------|-------------------------------|
+| `icmp spred X, Y`            | `icmp samesign upred X, Y` | `sign(X) == sign(Y)`          |
+| `smin/smax X, Y`             | `umin/umax X, Y`           | `sign(X) == sign(Y)`          |
+| `sext X`                     | `zext nneg X`              | `X >=s 0`                     |
+| `sitofp X`                   | `uitofp nneg X`            | `X >=s 0`                     |
+| `ashr X, Y`                  | `lshr X, Y`                | `X >=s 0`                     |
+| `sdiv/srem X, Y`             | `udiv/urem X, Y`           | `X >=s 0 && Y >=s 0`          |
+| `add X, Y`                   | `or disjoint X, Y`         | `(X & Y) != 0`                |
+| `mul X, C`                   | `shl X, Log2(C)`           | `isPowerOf2(C)`               |
+| `select Cond1, Cond2, false` | `and Cond1, Cond2`         | `impliesPoison(Cond2, Cond1)` |
+| `select Cond1, true, Cond2`  | `or Cond1, Cond2`          | `impliesPoison(Cond2, Cond1)` |
 
 ### PatternMatch
 
@@ -531,6 +539,19 @@ need to add a one-use check for the inner instruction.
 One-use checks can be performed using the `m_OneUse()` matcher, or the
 `V->hasOneUse()` method.
 
+### Flag handling
+
+When possible, favour propagation of poison-generating flags like `nuw` and `nsw` since they may be
+hard to salvage later. Avoid doing so if it introduces additional complexity (e.g. requires querying `willNotOverflow`
+or KnownBits).
+
+Be careful with in-place operand/predicate changes, as poison-generating flags may not be valid for new
+operands. It is recommended to create a new instruction with careful handling of flags. If not
+applicable, call `Instruction::dropPoisonGeneratingFlags()` to clear flags in a conservative manner.
+
+Do not rely on fcmp's `nsz` flag to perform optimizations. It is meaningless for fcmp so it should not affect
+the optimization.
+
 ### Generalization
 
 Transforms can both be too specific (only handling some odd subset of patterns,
@@ -558,6 +579,11 @@ guidelines.
    use of ValueTracking queries. Whether this makes sense depends on the case,
    but it's usually a good idea to only handle the constant pattern first, and
    then generalize later if it seems useful.
+ * When possible, handle more canonical patterns as well. It is encouraged to avoid
+   potential phase-ordering issues. For example, if the motivating transform holds for
+   `add`, it also holds for `or disjoint`. See the canonicalization list above for details.
+   In most cases, it can be easily implemented with matchers like
+   `m_AddLike/m_SExtLike/m_LogicalAnd/m_LogicalOr`.
 
 ## Guidelines for reviewers
 

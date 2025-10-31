@@ -17,7 +17,6 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
@@ -26,7 +25,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -45,10 +43,13 @@ using namespace ento;
 namespace {
 class BindingKey {
 public:
-  enum Kind { Default = 0x0, Direct = 0x1 };
-private:
-  enum { Symbolic = 0x2 };
+  enum Kind {
+    Default = 0x0,
+    Direct = 0x1,
+    Symbolic = 0x2,
+  };
 
+private:
   llvm::PointerIntPair<const MemRegion *, 2> P;
   uint64_t Data;
 
@@ -2455,7 +2456,8 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
 
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
-  const RecordDecl *RD = R->getValueType()->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD =
+      R->getValueType()->castAsCanonical<RecordType>()->getDecl();
   if (!RD->getDefinition())
     return UnknownVal();
 
@@ -2656,13 +2658,19 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, V);
   }
 
-  // Handle lazy compound values.
+  // FIXME Single value constant should have been handled before this call to
+  // bindArray. This is only a hotfix to not crash.
+  if (Init.isConstant())
+    return bindAggregate(B, R, Init);
+
   if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
-
     return bindAggregate(B, R, Init);
   }
+
+  if (isa<nonloc::SymbolVal>(Init))
+    return bindAggregate(B, R, Init);
 
   if (Init.isUnknown())
     return bindAggregate(B, R, UnknownVal());
@@ -2845,9 +2853,7 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
   QualType T = R->getValueType();
   assert(T->isStructureOrClassType());
 
-  const RecordType* RT = T->castAs<RecordType>();
-  const RecordDecl *RD = RT->getDecl();
-
+  const auto *RD = T->castAsRecordDecl();
   if (!RD->isCompleteDefinition())
     return B;
 

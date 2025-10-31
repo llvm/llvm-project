@@ -1,4 +1,4 @@
-//===--- DefaultOperatorNewCheck.h - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::cert {
 /// the default operator new.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert/mem57-cpp.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cert/mem57-cpp.html
 class DefaultOperatorNewAlignmentCheck : public ClangTidyCheck {
 public:
   DefaultOperatorNewAlignmentCheck(StringRef Name, ClangTidyContext *Context)

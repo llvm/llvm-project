@@ -83,7 +83,7 @@ public:
             for (Value res : callOp->getResults()) {
               opBuilder.setInsertionPoint(callOp);
               undefResults.emplace_back(
-                  opBuilder.create<fir::UndefOp>(res.getLoc(), res.getType()));
+                  fir::UndefOp::create(opBuilder, res.getLoc(), res.getType()));
             }
             callOp->replaceAllUsesWith(undefResults);
           }
@@ -95,8 +95,9 @@ public:
           return WalkResult::skip();
         }
         if (declareTargetOp)
-          declareTargetOp.setDeclareTarget(declareType,
-                                           omp::DeclareTargetCaptureClause::to);
+          declareTargetOp.setDeclareTarget(
+              declareType, omp::DeclareTargetCaptureClause::to,
+              declareTargetOp.getDeclareTargetAutomap());
       }
       return WalkResult::advance();
     });

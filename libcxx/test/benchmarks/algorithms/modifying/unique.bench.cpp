@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
             }
           })
           ->Arg(32)
-          ->Arg(50) // non power-of-two
+          ->Arg(52) // non power-of-two
           ->Arg(1024)
           ->Arg(8192);
     };
@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
             }
           })
           ->Arg(32)
-          ->Arg(50) // non power-of-two
+          ->Arg(52) // non power-of-two
           ->Arg(1024)
           ->Arg(8192);
     };

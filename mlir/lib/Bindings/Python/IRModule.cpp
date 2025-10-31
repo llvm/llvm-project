@@ -13,9 +13,9 @@
 
 #include "Globals.h"
 #include "NanobindUtils.h"
+#include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -196,4 +196,72 @@ PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   }
   // Not found and loading did not yield a registration.
   return std::nullopt;
+}
+
+bool PyGlobals::TracebackLoc::locTracebacksEnabled() {
+  nanobind::ft_lock_guard lock(mutex);
+  return locTracebackEnabled_;
+}
+
+void PyGlobals::TracebackLoc::setLocTracebacksEnabled(bool value) {
+  nanobind::ft_lock_guard lock(mutex);
+  locTracebackEnabled_ = value;
+}
+
+size_t PyGlobals::TracebackLoc::locTracebackFramesLimit() {
+  nanobind::ft_lock_guard lock(mutex);
+  return locTracebackFramesLimit_;
+}
+
+void PyGlobals::TracebackLoc::setLocTracebackFramesLimit(size_t value) {
+  nanobind::ft_lock_guard lock(mutex);
+  locTracebackFramesLimit_ = std::min(value, kMaxFrames);
+}
+
+void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
+    const std::string &file) {
+  nanobind::ft_lock_guard lock(mutex);
+  auto reg = "^" + llvm::Regex::escape(file);
+  if (userTracebackIncludeFiles.insert(reg).second)
+    rebuildUserTracebackIncludeRegex = true;
+  if (userTracebackExcludeFiles.count(reg)) {
+    if (userTracebackExcludeFiles.erase(reg))
+      rebuildUserTracebackExcludeRegex = true;
+  }
+}
+
+void PyGlobals::TracebackLoc::registerTracebackFileExclusion(
+    const std::string &file) {
+  nanobind::ft_lock_guard lock(mutex);
+  auto reg = "^" + llvm::Regex::escape(file);
+  if (userTracebackExcludeFiles.insert(reg).second)
+    rebuildUserTracebackExcludeRegex = true;
+  if (userTracebackIncludeFiles.count(reg)) {
+    if (userTracebackIncludeFiles.erase(reg))
+      rebuildUserTracebackIncludeRegex = true;
+  }
+}
+
+bool PyGlobals::TracebackLoc::isUserTracebackFilename(
+    const llvm::StringRef file) {
+  nanobind::ft_lock_guard lock(mutex);
+  if (rebuildUserTracebackIncludeRegex) {
+    userTracebackIncludeRegex.assign(
+        llvm::join(userTracebackIncludeFiles, "|"));
+    rebuildUserTracebackIncludeRegex = false;
+    isUserTracebackFilenameCache.clear();
+  }
+  if (rebuildUserTracebackExcludeRegex) {
+    userTracebackExcludeRegex.assign(
+        llvm::join(userTracebackExcludeFiles, "|"));
+    rebuildUserTracebackExcludeRegex = false;
+    isUserTracebackFilenameCache.clear();
+  }
+  if (!isUserTracebackFilenameCache.contains(file)) {
+    std::string fileStr = file.str();
+    bool include = std::regex_search(fileStr, userTracebackIncludeRegex);
+    bool exclude = std::regex_search(fileStr, userTracebackExcludeRegex);
+    isUserTracebackFilenameCache[file] = include || !exclude;
+  }
+  return isUserTracebackFilenameCache[file];
 }

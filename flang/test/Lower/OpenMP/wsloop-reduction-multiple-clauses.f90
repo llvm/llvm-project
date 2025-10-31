@@ -35,7 +35,6 @@ endprogram
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<3x3xf64> {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:           %[[VAL_8:.*]] = arith.constant true
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<3x3xf64>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x3xf64>>, !fir.heap<!fir.array<3x3xf64>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_10]] : (!fir.box<!fir.array<3x3xf64>>, index) -> (index, index, index)
@@ -93,7 +92,7 @@ endprogram
 ! CHECK:           omp.yield(%[[VAL_2]] : f64)
 ! CHECK:         }
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFEarray) : !fir.ref<!fir.array<3x3xf64>>
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index

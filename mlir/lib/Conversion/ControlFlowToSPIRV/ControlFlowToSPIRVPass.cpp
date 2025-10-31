@@ -43,6 +43,7 @@ void ConvertControlFlowToSPIRVPass::runOnOperation() {
 
   SPIRVConversionOptions options;
   options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
+  options.emulateUnsupportedFloatTypes = this->emulateUnsupportedFloatTypes;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 
   // TODO: We should also take care of block argument type conversion.

@@ -60,7 +60,7 @@ public:
     int64_t Begin;
     int64_t End;
     LLVM_ABI void print(llvm::raw_ostream &OS);
-    bool contains(int64_t Idx) { return Idx >= Begin && Idx <= End; }
+    bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
   };
 
   LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);
@@ -119,8 +119,10 @@ public:
     Counter.CurrChunkIdx = State.ChunkIdx;
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Dump or print the current counter set into llvm::dbgs().
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
@@ -134,7 +136,7 @@ public:
 
   // Return the name and description of the counter with the given ID.
   std::pair<std::string, std::string> getCounterInfo(unsigned ID) const {
-    return std::make_pair(RegisteredCounters[ID], Counters.lookup(ID).Desc);
+    return {RegisteredCounters[ID], Counters.lookup(ID).Desc};
   }
 
   // Iterate through the registered counters
@@ -176,6 +178,7 @@ protected:
     std::string Desc;
     SmallVector<Chunk> Chunks;
   };
+  bool handleCounterIncrement(CounterInfo &Info);
 
   DenseMap<unsigned, CounterInfo> Counters;
   CounterVector RegisteredCounters;
@@ -185,6 +188,8 @@ protected:
   bool Enabled = false;
 
   bool ShouldPrintCounter = false;
+
+  bool ShouldPrintCounterQueries = false;
 
   bool BreakOnLast = false;
 };

@@ -86,7 +86,8 @@ struct ModuleFunctionSearchOptions {
 ///
 /// The module will parse more detailed information as more queries are made.
 class Module : public std::enable_shared_from_this<Module>,
-               public SymbolContextScope {
+               public SymbolContextScope,
+               public UserID {
 public:
   class LookupInfo;
   // Static functions that can track the lifetime of module objects. This is

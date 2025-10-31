@@ -570,8 +570,6 @@ static llvm::Expected<bool>
 parseCGPipeline(StringRef Name, llvm::CGSCCPassManager &CGPM,
                 PassInstrumentationCallbacks *PIC,
                 ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  assert(Pipeline.empty());
-
 #define CGSCC_PASS(NAME, CREATE_PASS, PARSER)                                  \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
     auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
@@ -668,7 +666,6 @@ static bool
 parseTopLevelPipeline(llvm::ModulePassManager &MPM,
                       PassInstrumentationCallbacks *PIC,
                       ArrayRef<PassBuilder::PipelineElement> Pipeline) {
-  std::vector<PassBuilder::PipelineElement> FullPipeline;
   StringRef FirstName = Pipeline.front().Name;
 
   if (!isScopPassName(FirstName))

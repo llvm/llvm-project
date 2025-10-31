@@ -1,4 +1,4 @@
-//===--- UseStdFormatCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -24,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 
 UseStdFormatCheck::UseStdFormatCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
       StrFormatLikeFunctions(utils::options::parseStringList(
           Options.get("StrFormatLikeFunctions", ""))),
       ReplacementFormatFunction(
@@ -34,7 +33,7 @@ UseStdFormatCheck::UseStdFormatCheck(StringRef Name, ClangTidyContext *Context)
                       areDiagsSelfContained()),
       MaybeHeaderToInclude(Options.get("FormatHeader")) {
   if (StrFormatLikeFunctions.empty())
-    StrFormatLikeFunctions.push_back("absl::StrFormat");
+    StrFormatLikeFunctions.emplace_back("absl::StrFormat");
 
   if (!MaybeHeaderToInclude && ReplacementFormatFunction == "std::format")
     MaybeHeaderToInclude = "<format>";

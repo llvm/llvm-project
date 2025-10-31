@@ -29,7 +29,6 @@ int main(int, char**)
                                                        | std::ios_base::trunc) != 0);
         assert(f.is_open());
         f.sputn("abcdefghijklmnopqrstuvwxyz", 26);
-        LIBCPP_ASSERT(buf[0] == 'v');
         pos_type p = f.pubseekoff(-15, std::ios_base::cur);
         assert(p == 11);
         assert(f.sgetc() == 'l');

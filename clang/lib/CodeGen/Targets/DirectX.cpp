@@ -77,7 +77,8 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
 
     llvm::Type *BufferLayoutTy =
         HLSLBufferLayoutBuilder(CGM, "dx.Layout")
-            .createLayoutType(ContainedTy->getAsStructureType(), Packoffsets);
+            .createLayoutType(ContainedTy->castAsCanonical<RecordType>(),
+                              Packoffsets);
     if (!BufferLayoutTy)
       return nullptr;
 

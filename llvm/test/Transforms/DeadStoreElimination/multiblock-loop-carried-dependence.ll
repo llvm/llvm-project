@@ -103,7 +103,7 @@ define void @test.2() {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp slt i64 [[IV_2_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_2]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 400, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -136,11 +136,11 @@ loop.2:
   br i1 %c.2, label %loop.2, label %exit
 
 exit:
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %A) #5
+  call void @llvm.lifetime.end.p0(ptr nonnull %A) #5
   ret void
 }
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 ; Make sure `store i32 10, ptr %ptr.2` in %cond.store is not removed. The
 ; stored value may be read by `%use = load i32, ptr %ptr.1` in a future
@@ -171,7 +171,7 @@ define void@test.3() {
 ; CHECK-NEXT:    [[DEPTH_1_BE]] = phi i32 [ [[SUB]], [[COND_READ]] ], [ [[INC]], [[COND_STORE]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 48, ptr nonnull [[NODESTACK]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[NODESTACK]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -203,7 +203,7 @@ loop.latch:
   br label %loop.header
 
 cleanup:                                          ; preds = %while.body, %while.end, %entry
-  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %nodeStack) #3
+  call void @llvm.lifetime.end.p0(ptr nonnull %nodeStack) #3
   ret void
 }
 

@@ -128,6 +128,8 @@ private:
   // from any other block. So this variable set to true means that loop's latch
   // has become unreachable from loop header.
   bool DeleteCurrentLoop = false;
+  // Whether or not we enter the loop through an indirectbr.
+  bool HasIndirectEntry = false;
 
   // The blocks of the original loop that will still be reachable from entry
   // after the constant folding.
@@ -213,6 +215,19 @@ private:
     // algorithms, but so far we just give up analyzing them.
     if (hasIrreducibleCFG(DFS)) {
       HasIrreducibleCFG = true;
+      return;
+    }
+
+    // We need a loop preheader to split in handleDeadExits(). If LoopSimplify
+    // wasn't able to form one because the loop can be entered through an
+    // indirectbr we cannot continue.
+    if (!L.getLoopPreheader()) {
+      assert(any_of(predecessors(L.getHeader()),
+                    [&](BasicBlock *Pred) {
+                      return isa<IndirectBrInst>(Pred->getTerminator());
+                    }) &&
+             "Loop should have preheader if it is not entered indirectly");
+      HasIndirectEntry = true;
       return;
     }
 
@@ -543,6 +558,12 @@ public:
 
     if (HasIrreducibleCFG) {
       LLVM_DEBUG(dbgs() << "Loops with irreducible CFG are not supported!\n");
+      return false;
+    }
+
+    if (HasIndirectEntry) {
+      LLVM_DEBUG(dbgs() << "Loops which can be entered indirectly are not"
+                           " supported!\n");
       return false;
     }
 
