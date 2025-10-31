@@ -437,8 +437,7 @@ void PPCInstPrinter::printS32ImmOperand(const MCInst *MI, unsigned OpNo,
     long long Value = MI->getOperand(OpNo).getImm();
     assert(isInt<32>(Value) && "Invalid s32imm argument!");
     O << (long long)Value;
-  }
-  else
+  } else
     printOperand(MI, OpNo, STI, O);
 }
 
