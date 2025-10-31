@@ -1851,6 +1851,11 @@ def TuneShortForwardBranchOpt
 def HasShortForwardBranchOpt : Predicate<"Subtarget->hasShortForwardBranchOpt()">;
 def NoShortForwardBranchOpt : Predicate<"!Subtarget->hasShortForwardBranchOpt()">;
 
+def TuneShortForwardBranchIMinMax
+    : SubtargetFeature<"short-forward-branch-i-minmax", "HasShortForwardBranchIMinMax",
+                       "true", "Enable short forward branch optimization for min,max instructions in Zbb",
+                       [TuneShortForwardBranchOpt]>;
+
 // Some subtargets require a S2V transfer buffer to move scalars into vectors.
 // FIXME: Forming .vx/.vf/.wx/.wf can reduce register pressure.
 def TuneNoSinkSplatOperands
@@ -1905,6 +1910,25 @@ def FeatureForcedAtomics : SubtargetFeature<
     "Assume that lock-free native-width atomics are available">;
 def HasAtomicLdSt
     : Predicate<"Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
+
+// The RISC-V Unprivileged Architecture - ISA Volume 1 (Version: 20250508)
+// [https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf]
+// in section 13.3. Eventual Success of Store-Conditional Instructions, defines
+// _constrained_ LR/SC loops:
+//   The dynamic code executed between the LR and SC instructions can only
+//   contain instructions from the base ''I'' instruction set, excluding loads,
+//   stores, backward jumps, taken backward branches, JALR, FENCE, and SYSTEM
+//   instructions. Compressed forms of the aforementioned ''I'' instructions in
+//   the Zca and Zcb extensions are also permitted.
+// LR/SC loops that do not adhere to the above are _unconstrained_ LR/SC loops,
+// and success is implementation specific. For implementations which know that
+// non-base instructions (such as the ''B'' extension) will not violate any
+// forward progress guarantees, using these instructions to reduce the LR/SC
+// sequence length is desirable.
+def FeaturePermissiveZalrsc
+    : SubtargetFeature<
+          "permissive-zalrsc", "HasPermissiveZalrsc", "true",
+          "Implementation permits non-base instructions between LR/SC pairs">;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",

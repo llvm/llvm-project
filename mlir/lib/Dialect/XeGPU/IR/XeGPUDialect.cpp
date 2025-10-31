@@ -113,9 +113,12 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
       if (layout.size() != shape.size())
         return std::nullopt;
       auto ratio = computeShapeRatio(shape, layout);
-      if (!ratio.has_value())
+      if (ratio.has_value()) {
+        newShape = ratio.value();
+      } else if (!rr || !computeShapeRatio(layout, shape).has_value()) {
         return std::nullopt;
-      newShape = ratio.value();
+      }
+      // Round-robin case: continue with original newShape
     }
 
     if (data.size()) {

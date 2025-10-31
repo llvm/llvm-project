@@ -70,6 +70,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
+  case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
   case VPScalarIVStepsSC:
@@ -86,6 +87,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
   case VPWidenPHISC:
+  case VPWidenPointerInductionSC:
   case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
@@ -119,6 +121,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayReadFromMemory();
   case VPBranchOnMaskSC:
+  case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
@@ -134,6 +137,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenGEPSC:
   case VPWidenIntOrFpInductionSC:
   case VPWidenPHISC:
+  case VPWidenPointerInductionSC:
   case VPWidenSC:
   case VPWidenSelectSC: {
     const Instruction *I =
@@ -3163,26 +3167,30 @@ bool VPReplicateRecipe::shouldPack() const {
   });
 }
 
-/// Returns true if \p Ptr is a pointer computation for which the legacy cost
-/// model computes a SCEV expression when computing the address cost.
-static bool shouldUseAddressAccessSCEV(const VPValue *Ptr) {
+/// Returns a SCEV expression for \p Ptr if it is a pointer computation for
+/// which the legacy cost model computes a SCEV expression when computing the
+/// address cost. Computing SCEVs for VPValues is incomplete and returns
+/// SCEVCouldNotCompute in cases the legacy cost model can compute SCEVs. In
+/// those cases we fall back to the legacy cost model. Otherwise return nullptr.
+static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
+                                        const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
   if (!PtrR || !((isa<VPReplicateRecipe>(PtrR) &&
                   cast<VPReplicateRecipe>(PtrR)->getOpcode() ==
                       Instruction::GetElementPtr) ||
                  isa<VPWidenGEPRecipe>(PtrR) ||
                  match(Ptr, m_GetElementPtr(m_VPValue(), m_VPValue()))))
-    return false;
+    return nullptr;
 
   // We are looking for a GEP where all indices are either loop invariant or
   // inductions.
   for (VPValue *Opd : drop_begin(PtrR->operands())) {
     if (!Opd->isDefinedOutsideLoopRegions() &&
         !isa<VPScalarIVStepsRecipe, VPWidenIntOrFpInductionRecipe>(Opd))
-      return false;
+      return nullptr;
   }
 
-  return true;
+  return vputils::getSCEVExprForVPValue(Ptr, SE, L);
 }
 
 /// Returns true if \p V is used as part of the address of another load or
@@ -3350,15 +3358,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
-    // TODO: Handle cases where we need to pass a SCEV to
-    // getAddressComputationCost.
-    if (shouldUseAddressAccessSCEV(PtrOp))
+    const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.SE, Ctx.L);
+    if (isa_and_nonnull<SCEVCouldNotCompute>(PtrSCEV))
       break;
 
     Type *ValTy = Ctx.Types.inferScalarType(IsLoad ? this : getOperand(0));
     Type *ScalarPtrTy = Ctx.Types.inferScalarType(PtrOp);
     const Align Alignment = getLoadStoreAlignment(UI);
-    unsigned AS = getLoadStoreAddressSpace(UI);
+    unsigned AS = cast<PointerType>(ScalarPtrTy)->getAddressSpace();
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
     InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
@@ -3370,7 +3377,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     InstructionCost ScalarCost =
         ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(
                               PtrTy, UsedByLoadStoreAddress ? nullptr : &Ctx.SE,
-                              nullptr, Ctx.CostKind);
+                              PtrSCEV, Ctx.CostKind);
     if (isSingleScalar())
       return ScalarCost;
 
@@ -3525,7 +3532,6 @@ void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
                     ->getAddressSpace();
   unsigned Opcode = isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(this)
@@ -3575,7 +3581,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
@@ -3630,7 +3635,6 @@ static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;
@@ -3674,8 +3678,8 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Load, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -3699,7 +3703,6 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
   VPValue *StoredVPValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
 
@@ -3742,7 +3745,6 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
 
   auto &Builder = State.Builder;
 
@@ -3785,8 +3787,8 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
   // TODO: Using getMemoryOpCost() instead of getMaskedMemoryOpCost when we
   // don't need to compare to the legacy cost model.
   Type *Ty = toVectorTy(getLoadStoreType(&Ingredient), VF);
-  const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  unsigned AS = getLoadStoreAddressSpace(&Ingredient);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
   InstructionCost Cost = Ctx.TTI.getMaskedMemoryOpCost(
       Instruction::Store, Ty, Alignment, AS, Ctx.CostKind);
   if (!Reverse)
@@ -4252,7 +4254,8 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
       getNumDefinedValues() > 0 ? getVPValue(InsertPosIdx)
                                 : getStoredValues()[InsertPosIdx]);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  unsigned AS = getLoadStoreAddressSpace(InsertPos);
+  unsigned AS = cast<PointerType>(Ctx.Types.inferScalarType(getAddr()))
+                    ->getAddressSpace();
 
   unsigned InterleaveFactor = IG->getFactor();
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
