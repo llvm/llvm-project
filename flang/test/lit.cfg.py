@@ -145,26 +145,30 @@ if not flang_exe:
     lit_config.fatal(f"Could not identify flang executable")
 
 # Intrinsic paths that are added implicitly by the `flang` driver, but have to be added manually when invoking the frontend `flang -fc1`.
-intrinsics_search_args = []
+flang_driver_search_args = []
 
 # Intrinsic paths that are added to `flang` as well as `flang -fc1`.
-extra_intrinsics_search_args = list(config.flang_test_fortran_flags) 
+flang_extra_search_args = list(config.flang_test_fortran_flags)
 
 
 def get_resource_module_intrinsic_dir(modfile):
     # Determine the intrinsic module search path that is added by the driver. If
     # skipping the driver using -fc1, we need to append the path manually.
-    flang_intrinsics_dir = subprocess.check_output([flang_exe, *config.flang_test_fortran_flags, f"-print-file-name={modfile}"], text=True).strip()
+    flang_intrinsics_dir = subprocess.check_output(
+        [flang_exe, *config.flang_test_fortran_flags, f"-print-file-name={modfile}"],
+        text=True,
+    ).strip()
     flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
     return flang_intrinsics_dir or None
 
+
 intrinsics_mod_path = get_resource_module_intrinsic_dir("__fortran_builtins.mod")
 if intrinsics_mod_path:
-    intrinsics_search_args += [f"-fintrinsic-modules-path={intrinsics_mod_path}"]
+    flang_driver_search_args += [f"-fintrinsic-modules-path={intrinsics_mod_path}"]
 
 openmp_mod_path = get_resource_module_intrinsic_dir("omp_lib.mod")
 if openmp_mod_path and openmp_mod_path != intrinsics_mod_path:
-    intrinsics_search_args += [f"-fintrinsic-modules-path={openmp_mod_path}"]
+    flang_driver_search_args += [f"-fintrinsic-modules-path={openmp_mod_path}"]
 
 
 # If intrinsic modules are not available, disable tests unless they are marked as 'module-independent'.
@@ -172,7 +176,9 @@ config.available_features.add("module-independent")
 if config.flang_test_enable_modules or intrinsics_mod_path:
     config.available_features.add("flangrt-modules")
 else:
-    lit_config.warning(f"Intrinsic modules not in driver default paths: disabling most tests; Use FLANG_TEST_ENABLE_MODULES=ON to force-enable")
+    lit_config.warning(
+        f"Intrinsic modules not in driver default paths: disabling most tests; Use FLANG_TEST_ENABLE_MODULES=ON to force-enable"
+    )
     config.limit_to_features.add("module-independent")
 
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
@@ -181,14 +187,21 @@ if config.flang_test_enable_openmp or openmp_mod_path:
 
     # Search path for omp_lib.h with LLVM_ENABLE_RUNTIMES=openmp
     # FIXME: openmp should write this file into the resource directory
-    extra_intrinsics_search_args += ["-I", f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src"]
+    flang_extra_search_args += [
+        "-I",
+        f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src",
+    ]
 else:
-    lit_config.warning(f"OpenMP modules found not in driver default paths: OpenMP tests disabled; Use FLANG_TEST_ENABLE_OPENMP=ON to force-enable")
+    lit_config.warning(
+        f"OpenMP modules found not in driver default paths: OpenMP tests disabled; Use FLANG_TEST_ENABLE_OPENMP=ON to force-enable"
+    )
 
 
 lit_config.note(f"using flang: {flang_exe}")
-lit_config.note(f"using flang implicit search paths: {' '.join(intrinsics_search_args)}")
-lit_config.note(f"using flang extra search paths: {' '.join(extra_intrinsics_search_args)}")
+lit_config.note(
+    f"using flang implicit search paths: {' '.join(flang_driver_search_args)}"
+)
+lit_config.note(f"using flang extra search paths: {' '.join(flang_extra_search_args)}")
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
@@ -196,19 +209,19 @@ tools = [
     ToolSubst(
         "bbc",
         command=FindTool("bbc"),
-        extra_args=intrinsics_search_args + extra_intrinsics_search_args,
+        extra_args=flang_driver_search_args + flang_extra_search_args,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang",
         command=flang_exe,
-        extra_args=extra_intrinsics_search_args,
+        extra_args=flang_extra_search_args,
         unresolved="fatal",
     ),
     ToolSubst(
         "%flang_fc1",
         command=flang_exe,
-        extra_args=["-fc1"] + intrinsics_search_args + extra_intrinsics_search_args,
+        extra_args=["-fc1"] + flang_driver_search_args + flang_extra_search_args,
         unresolved="fatal",
     ),
     # Variant that does not implicitly add intrinsic search paths
