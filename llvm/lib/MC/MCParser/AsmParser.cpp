@@ -3089,8 +3089,14 @@ bool AsmParser::parseDirectiveBase64() {
 
   std::vector<char> Decoded;
   std::string const str = getTok().getStringContents().str();
-  if (str.empty() || decodeBase64(str, Decoded)) {
+  if (check(str.empty(), "expected nonempty string")) {
     return true;
+  }
+
+  llvm::Error e = decodeBase64(str, Decoded);
+  if (e) {
+    consumeError(std::move(e));
+    return Error(Lexer.getLoc(), "failed to base64 decode string data");
   }
 
   getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
