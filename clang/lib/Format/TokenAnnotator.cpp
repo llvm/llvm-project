@@ -2674,8 +2674,11 @@ private:
     }
 
     // *a or &a or &&a.
-    if (PreviousNotConst->is(TT_PointerOrReference))
+    if (PreviousNotConst->is(TT_PointerOrReference) ||
+        PreviousNotConst->endsSequence(tok::coloncolon,
+                                       TT_PointerOrReference)) {
       return true;
+    }
 
     // MyClass a;
     if (PreviousNotConst->isTypeName(LangOpts))
@@ -3791,17 +3794,11 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
-  if (!Current.Tok.getIdentifierInfo())
+  if (Current.isNoneOf(tok::identifier, tok::kw_operator))
     return false;
 
   const auto *Prev = Current.getPreviousNonComment();
   assert(Prev);
-
-  if (Prev->is(tok::coloncolon))
-    Prev = Prev->Previous;
-
-  if (!Prev)
-    return false;
 
   const auto &Previous = *Prev;
 
@@ -3851,6 +3848,8 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
+    if (Line.startsWith(tok::kw_friend))
+      return true;
     if (Previous.Tok.getIdentifierInfo() &&
         Previous.isNoneOf(tok::kw_return, tok::kw_co_return)) {
       return true;
@@ -4411,8 +4410,12 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   // breaking after it.
   if (Right.is(TT_SelectorName))
     return 0;
-  if (Left.is(tok::colon) && Left.is(TT_ObjCMethodExpr))
-    return Line.MightBeFunctionDecl ? 50 : 500;
+  if (Left.is(tok::colon)) {
+    if (Left.is(TT_ObjCMethodExpr))
+      return Line.MightBeFunctionDecl ? 50 : 500;
+    if (Left.is(TT_ObjCSelector))
+      return 500;
+  }
 
   // In Objective-C type declarations, avoid breaking after the category's
   // open paren (we'll prefer breaking after the protocol list's opening
@@ -4424,10 +4427,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
 
   if (Left.is(tok::l_paren) && Style.PenaltyBreakOpenParenthesis != 0)
     return Style.PenaltyBreakOpenParenthesis;
-  if (Left.is(tok::l_paren) && InFunctionDecl &&
-      Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign) {
+  if (Left.is(tok::l_paren) && InFunctionDecl && Style.AlignAfterOpenBracket)
     return 100;
-  }
   if (Left.is(tok::l_paren) && Left.Previous &&
       (Left.Previous->isOneOf(tok::kw_for, tok::kw__Generic) ||
        Left.Previous->isIf())) {
@@ -4443,7 +4444,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     // If we aren't aligning after opening parens/braces we can always break
     // here unless the style does not want us to place all arguments on the
     // next line.
-    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_DontAlign &&
+    if (!Style.AlignAfterOpenBracket &&
         (Left.ParameterCount <= 1 || Style.AllowAllArgumentsOnNextLine)) {
       return 0;
     }
@@ -6223,24 +6224,31 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                                    (Right.isBlockIndentedInitRBrace(Style)));
   }
 
-  // We only break before r_paren if we're in a block indented context.
+  // We can break before r_paren if we're in a block indented context or
+  // a control statement with an explicit style option.
   if (Right.is(tok::r_paren)) {
-    if (Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent ||
-        !Right.MatchingParen) {
+    if (!Right.MatchingParen)
       return false;
-    }
     auto Next = Right.Next;
     if (Next && Next->is(tok::r_paren))
       Next = Next->Next;
     if (Next && Next->is(tok::l_paren))
       return false;
     const FormatToken *Previous = Right.MatchingParen->Previous;
-    return !(Previous && (Previous->is(tok::kw_for) || Previous->isIf()));
+    if (!Previous)
+      return false;
+    if (Previous->isIf())
+      return Style.BreakBeforeCloseBracketIf;
+    if (Previous->isLoop(Style))
+      return Style.BreakBeforeCloseBracketLoop;
+    if (Previous->is(tok::kw_switch))
+      return Style.BreakBeforeCloseBracketSwitch;
+    return Style.BreakBeforeCloseBracketFunction;
   }
 
   if (Left.isOneOf(tok::r_paren, TT_TrailingAnnotation) &&
       Right.is(TT_TrailingAnnotation) &&
-      Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+      Style.BreakBeforeCloseBracketFunction) {
     return false;
   }
 
@@ -6295,7 +6303,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                      TT_BitFieldColon)) {
     return false;
   }
-  if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
+  if (Left.is(tok::colon) && Left.isOneOf(TT_ObjCSelector, TT_ObjCMethodExpr))
+    return true;
+  if (Left.is(tok::colon) && Left.is(TT_DictLiteral)) {
     if (Style.isProto()) {
       if (!Style.AlwaysBreakBeforeMultilineStrings && Right.isStringLiteral())
         return false;
