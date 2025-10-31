@@ -35,7 +35,6 @@ class MachineIDFSSAUpdater {
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
   MachineRegisterInfo::VRegAttrs RegAttrs;
-  const bool RunOnGenericRegs;
 
   SmallVector<std::pair<MachineBasicBlock *, Register>, 4> Defines;
   SmallVector<MachineBasicBlock *, 4> UseBlocks;
@@ -50,15 +49,13 @@ class MachineIDFSSAUpdater {
 
 public:
   MachineIDFSSAUpdater(MachineDominatorTree &DT, MachineFunction &MF,
-                       const MachineRegisterInfo::VRegAttrs &RegAttr,
-                       bool RunOnGenericRegs = false)
+                       const MachineRegisterInfo::VRegAttrs &RegAttr)
       : DT(DT), MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
-        RegAttrs(RegAttr), RunOnGenericRegs(RunOnGenericRegs) {}
+        RegAttrs(RegAttr) {}
 
   MachineIDFSSAUpdater(MachineDominatorTree &DT, MachineFunction &MF,
-                       Register Reg, bool RunOnGenericRegs = false)
-      : MachineIDFSSAUpdater(DT, MF, MF.getRegInfo().getVRegAttrs(Reg),
-                             RunOnGenericRegs) {}
+                       Register Reg)
+      : MachineIDFSSAUpdater(DT, MF, MF.getRegInfo().getVRegAttrs(Reg)) {}
 
   /// Indicate that a rewritten value is available in the specified block
   /// with the specified value. Must be called before invoking Calculate().
