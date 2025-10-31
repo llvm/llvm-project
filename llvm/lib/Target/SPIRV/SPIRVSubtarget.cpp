@@ -72,18 +72,17 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   case Triple::SPIRVSubArch_v14:
     SPIRVVersion = VersionTuple(1, 4);
     break;
-  default:
-    if (TT.getVendor() == Triple::AMD)
-      SPIRVVersion = VersionTuple(1, 6);
-    else
-      SPIRVVersion = VersionTuple(1, 4);
-    break;
   case Triple::SPIRVSubArch_v15:
     SPIRVVersion = VersionTuple(1, 5);
     break;
   case Triple::SPIRVSubArch_v16:
     SPIRVVersion = VersionTuple(1, 6);
     break;
+  default:
+    if (TT.getVendor() == Triple::AMD)
+      SPIRVVersion = VersionTuple(1, 6);
+    else
+      SPIRVVersion = VersionTuple(1, 4);
   }
   OpenCLVersion = VersionTuple(2, 2);
 
