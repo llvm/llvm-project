@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -1092,6 +1093,8 @@ public:
     auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     auto *TLI = TM->getSubtargetImpl(F)->getTargetLowering();
     AssumptionCache *AC = nullptr;
+    const RTLIB::RuntimeLibcallsInfo *Libcalls =
+        &getAnalysis<RuntimeLibraryInfoWrapper>().getRTLCI(*F.getParent());
 
     if (OptLevel != CodeGenOptLevel::None && !F.hasOptNone())
       AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
@@ -1104,6 +1107,7 @@ public:
       AU.addRequired<AssumptionCacheTracker>();
     AU.addPreserved<AAResultsWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<RuntimeLibraryInfoWrapper>();
   }
 };
 } // namespace
@@ -1126,6 +1130,15 @@ PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
   AssumptionCache *AC = nullptr;
   if (OptLevel != CodeGenOptLevel::None)
     AC = &FAM.getResult<AssumptionAnalysis>(F);
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  const RTLIB::RuntimeLibcallsInfo *Libcalls =
+      MAMProxy.getCachedResult<RuntimeLibraryAnalysis>(*F.getParent());
+  if (!Libcalls) {
+    F.getContext().emitError("'runtime-libcall-info' analysis required");
+    return PreservedAnalyses::all();
+  }
+
   return runImpl(F, TLI, AC) ? PreservedAnalyses::none()
                              : PreservedAnalyses::all();
 }
@@ -1133,6 +1146,7 @@ PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
 char ExpandFpLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandFpLegacyPass, "expand-fp",
                       "Expand certain fp instructions", false, false)
+INITIALIZE_PASS_DEPENDENCY(RuntimeLibraryInfoWrapper)
 INITIALIZE_PASS_END(ExpandFpLegacyPass, "expand-fp", "Expand fp", false, false)
 
 FunctionPass *llvm::createExpandFpPass(CodeGenOptLevel OptLevel) {
