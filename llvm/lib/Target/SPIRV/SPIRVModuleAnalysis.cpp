@@ -635,7 +635,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if ((*F).isDeclaration())
+    if (F->isDeclaration())
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);

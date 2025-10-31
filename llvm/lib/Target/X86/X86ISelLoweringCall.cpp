@@ -640,15 +640,6 @@ void X86TargetLowering::insertSSPDeclarations(Module &M) const {
   TargetLowering::insertSSPDeclarations(M);
 }
 
-Function *X86TargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  if (Subtarget.getTargetTriple().isWindowsMSVCEnvironment() ||
-      Subtarget.getTargetTriple().isWindowsItaniumEnvironment()) {
-    return M.getFunction("__security_check_cookie");
-  }
-  return TargetLowering::getSSPStackGuardCheck(M);
-}
-
 Value *
 X86TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the

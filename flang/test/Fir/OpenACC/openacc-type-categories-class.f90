@@ -43,4 +43,4 @@ end module
 
 ! TODO: After using select type - the appropriate type category should be
 ! possible. Add the rest of the test once OpenACC lowering correctly handles
-! unlimited polymorhic.
+! unlimited polymorphic.

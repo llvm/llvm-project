@@ -113,9 +113,12 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
       if (layout.size() != shape.size())
         return std::nullopt;
       auto ratio = computeShapeRatio(shape, layout);
-      if (!ratio.has_value())
+      if (ratio.has_value()) {
+        newShape = ratio.value();
+      } else if (!rr || !computeShapeRatio(layout, shape).has_value()) {
         return std::nullopt;
-      newShape = ratio.value();
+      }
+      // Round-robin case: continue with original newShape
     }
 
     if (data.size()) {
@@ -736,7 +739,7 @@ OpFoldResult genBinOp(OpFoldResult a, OpFoldResult b, Location loc,
                       OpBuilder &builder) {
   auto aVal = getValueOrCreateConstantIndexOp(builder, loc, a);
   auto bVal = getValueOrCreateConstantIndexOp(builder, loc, b);
-  return builder.create<ArithOp>(loc, aVal, bVal).getResult();
+  return ArithOp::create(builder, loc, aVal, bVal).getResult();
 }
 
 // a helper utility to perform division operation on OpFoldResult and int64_t.

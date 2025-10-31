@@ -32,6 +32,12 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_macro_header(
+  annex_k_macros
+  HDR
+    annex-k-macros.h
+)
+
+add_macro_header(
   assert_macros
   HDR
     assert-macros.h
@@ -343,6 +349,12 @@ add_macro_header(
   locale_macros
   HDR
     locale-macros.h
+)
+
+add_macro_header(
+  nl_types_macros
+  HDR
+    nl-types-macros.h
 )
 
 add_macro_header(

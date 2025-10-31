@@ -1321,15 +1321,11 @@ public:
 
   /// Callback to the parser to parse templated functions when needed.
   typedef void LateTemplateParserCB(void *P, LateParsedTemplate &LPT);
-  typedef void LateTemplateParserCleanupCB(void *P);
   LateTemplateParserCB *LateTemplateParser;
-  LateTemplateParserCleanupCB *LateTemplateParserCleanup;
   void *OpaqueParser;
 
-  void SetLateTemplateParser(LateTemplateParserCB *LTP,
-                             LateTemplateParserCleanupCB *LTPCleanup, void *P) {
+  void SetLateTemplateParser(LateTemplateParserCB *LTP, void *P) {
     LateTemplateParser = LTP;
-    LateTemplateParserCleanup = LTPCleanup;
     OpaqueParser = P;
   }
 
@@ -2684,11 +2680,6 @@ public:
   /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
   /// function without this attribute.
   bool DiscardingCFIUncheckedCallee(QualType From, QualType To) const;
-
-  /// Returns true if `From` is a function or pointer to a function without the
-  /// `cfi_unchecked_callee` attribute but `To` is a function or pointer to
-  /// function with this attribute.
-  bool AddingCFIUncheckedCallee(QualType From, QualType To) const;
 
   /// This function calls Action when it determines that E designates a
   /// misaligned member due to the packed attribute. This is used to emit
@@ -10021,7 +10012,7 @@ public:
   public:
     DeferDiagsRAII(Sema &S, bool DeferDiags)
         : S(S), SavedDeferDiags(S.DeferDiags) {
-      S.DeferDiags = DeferDiags;
+      S.DeferDiags = SavedDeferDiags || DeferDiags;
     }
     ~DeferDiagsRAII() { S.DeferDiags = SavedDeferDiags; }
   };

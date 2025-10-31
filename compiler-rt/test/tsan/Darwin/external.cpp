@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   // TEST2-NOT: WARNING: ThreadSanitizer
   
   // TEST3: WARNING: ThreadSanitizer: race on MyLibrary::MyObject
-  // TEST3: {{Modifying|read-only}} access of MyLibrary::MyObject at
+  // TEST3: {{Modifying|Read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}
   // TEST3: Previous {{modifying|read-only}} access of MyLibrary::MyObject at
   // TEST3: {{ObjectWrite|ObjectRead}}

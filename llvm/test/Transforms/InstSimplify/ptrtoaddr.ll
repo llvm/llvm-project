@@ -207,3 +207,112 @@ define i32 @ptrtoaddr_of_ptradd_of_sub_addrsize(i32 %x, ptr addrspace(1) %p) {
   %ptradd.addr = ptrtoaddr ptr addrspace(1) %ptradd to i32
   ret i32 %ptradd.addr
 }
+
+define ptr @gep_of_sub_ptrtoaddr_unrelated_pointers(ptr %p, ptr %p2, i64 %x) {
+; CHECK-LABEL: define ptr @gep_of_sub_ptrtoaddr_unrelated_pointers(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[P2_ADDR:%.*]] = ptrtoaddr ptr [[P2]] to i64
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[P2_ADDR]], [[P_ADDR]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[P]], i64 [[SUB]]
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %p2.addr = ptrtoaddr ptr %p2 to i64
+  %p.addr = ptrtoaddr ptr %p to i64
+  %sub = sub i64 %p2.addr, %p.addr
+  %gep2 = getelementptr i8, ptr %p, i64 %sub
+  ret ptr %gep2
+}
+
+define ptr @gep_of_sub_ptrtoaddr(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_of_sub_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  %gep1 = getelementptr i8, ptr %p, i64 %x
+  %gep1.addr = ptrtoaddr ptr %gep1 to i64
+  %p.addr = ptrtoaddr ptr %p to i64
+  %sub = sub i64 %gep1.addr, %p.addr
+  %gep2 = getelementptr i8, ptr %p, i64 %sub
+  ret ptr %gep2
+}
+
+define ptr addrspace(1) @gep_of_sub_ptrtoaddr_addrsize(ptr addrspace(1) %p, i32 %x) {
+; CHECK-LABEL: define ptr addrspace(1) @gep_of_sub_ptrtoaddr_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[P]], i32 [[X]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP1]]
+;
+  %gep1 = getelementptr i8, ptr addrspace(1) %p, i32 %x
+  %gep1.addr = ptrtoaddr ptr addrspace(1) %gep1 to i32
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %sub = sub i32 %gep1.addr, %p.addr
+  %gep2 = getelementptr i8, ptr addrspace(1) %p, i32 %sub
+  ret ptr addrspace(1) %gep2
+}
+
+define ptr @gep_of_sub_ptrtoaddr_ashr(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @gep_of_sub_ptrtoaddr_ashr(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P]], i64 [[X]]
+; CHECK-NEXT:    ret ptr [[GEP1]]
+;
+  %gep1 = getelementptr i8, ptr %p, i64 %x
+  %gep1.addr = ptrtoaddr ptr %gep1 to i64
+  %p.addr = ptrtoaddr ptr %p to i64
+  %sub = sub i64 %gep1.addr, %p.addr
+  %ashr = ashr i64 %sub, 1
+  %gep2 = getelementptr i16, ptr %p, i64 %ashr
+  ret ptr %gep2
+}
+
+define ptr addrspace(1) @gep_of_sub_ptrtoaddr_ashr_addrsize(ptr addrspace(1) %p, i32 %x) {
+; CHECK-LABEL: define ptr addrspace(1) @gep_of_sub_ptrtoaddr_ashr_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[P]], i32 [[X]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[GEP1]]
+;
+  %gep1 = getelementptr i8, ptr addrspace(1) %p, i32 %x
+  %gep1.addr = ptrtoaddr ptr addrspace(1) %gep1 to i32
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %sub = sub i32 %gep1.addr, %p.addr
+  %sdiv = sdiv i32 %sub, 3
+  %gep2 = getelementptr [3 x i8], ptr addrspace(1) %p, i32 %sdiv
+  ret ptr addrspace(1) %gep2
+}
+
+; Not folding this to inttoptr(123), as this may have different provenance from
+; %p, and the use of ptrtoaddr implies that the provenance of %p may not be
+; exposed, such that inttoptr cannot recover it.
+define ptr @gep_gep_neg_ptrtoaddr(ptr %p) {
+; CHECK-LABEL: define ptr @gep_gep_neg_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 123
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[P_ADDR_NEG:%.*]] = sub i64 0, [[P_ADDR]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 [[P_ADDR_NEG]]
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %gep1 = getelementptr inbounds i8, ptr %p, i64 123
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p.addr.neg = sub i64 0, %p.addr
+  %gep2 = getelementptr i8, ptr %gep1, i64 %p.addr.neg
+  ret ptr %gep2
+}
+
+define ptr @gep_gep_inv_ptrtoaddr(ptr %p) {
+; CHECK-LABEL: define ptr @gep_gep_inv_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 123
+; CHECK-NEXT:    [[P_ADDR:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[P_ADDR_INV:%.*]] = xor i64 [[P_ADDR]], -1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 [[P_ADDR_INV]]
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %gep1 = getelementptr inbounds i8, ptr %p, i64 123
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p.addr.inv = xor i64 %p.addr, -1
+  %gep2 = getelementptr i8, ptr %gep1, i64 %p.addr.inv
+  ret ptr %gep2
+}

@@ -608,8 +608,7 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
-  llvm::ErrorOr<bool> NeedConversion =
-      llvm::needConversion(Filename.str().c_str());
+  llvm::ErrorOr<bool> NeedConversion = llvm::needConversion(Filename);
   if (NeedConversion && *NeedConversion) {
     // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
     // conversion.
