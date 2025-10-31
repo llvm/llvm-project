@@ -82,11 +82,11 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
 
+  // Current basic block.
+  MachineBasicBlock *MBB;
+
   /// Most recent s_set_* instruction.
   MachineInstr *MostRecentModeSet;
-
-  /// Whether the current mode is known.
-  bool CurrentModeKnown;
 
   /// Current mode bits.
   ModeTy CurrentMode;
@@ -108,10 +108,13 @@ private:
   MachineInstr *Clause;
 
   /// Insert mode change before \p I. \returns true if mode was changed.
-  bool setMode(ModeTy NewMode, ModeTy Mask, MachineInstr *I);
+  bool setMode(ModeTy NewMode, ModeTy Mask,
+               MachineBasicBlock::instr_iterator I);
 
   /// Reset mode to default.
-  void resetMode(MachineInstr *I) { setMode(ModeTy(), ModeTy::fullMask(), I); }
+  void resetMode(MachineBasicBlock::instr_iterator I) {
+    setMode(ModeTy(), ModeTy::fullMask(), I);
+  }
 
   /// If \p MO references VGPRs, return the MSBs. Otherwise, return nullopt.
   std::optional<unsigned> getMSBs(const MachineOperand &MO) const;
@@ -130,38 +133,35 @@ private:
   /// Check if an instruction \p I is within a clause and returns a suitable
   /// iterator to insert mode change. It may also modify the S_CLAUSE
   /// instruction to extend it or drop the clause if it cannot be adjusted.
-  MachineInstr *handleClause(MachineInstr *I);
+  MachineBasicBlock::instr_iterator
+  handleClause(MachineBasicBlock::instr_iterator I);
 };
 
 bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
-                                      MachineInstr *I) {
+                                      MachineBasicBlock::instr_iterator I) {
   assert((NewMode.raw_bits() & ~Mask.raw_bits()).none());
 
-  if (CurrentModeKnown) {
-    auto Delta = NewMode.raw_bits() ^ CurrentMode.raw_bits();
+  auto Delta = NewMode.raw_bits() ^ CurrentMode.raw_bits();
 
-    if ((Delta & Mask.raw_bits()).none()) {
-      CurrentMask |= Mask;
-      return false;
-    }
+  if ((Delta & Mask.raw_bits()).none()) {
+    CurrentMask |= Mask;
+    return false;
+  }
 
-    if (MostRecentModeSet && (Delta & CurrentMask.raw_bits()).none()) {
-      CurrentMode |= NewMode;
-      CurrentMask |= Mask;
+  if (MostRecentModeSet && (Delta & CurrentMask.raw_bits()).none()) {
+    CurrentMode |= NewMode;
+    CurrentMask |= Mask;
 
-      MostRecentModeSet->getOperand(0).setImm(CurrentMode);
-      return true;
-    }
+    MostRecentModeSet->getOperand(0).setImm(CurrentMode);
+    return true;
   }
 
   I = handleClause(I);
   MostRecentModeSet =
-      BuildMI(*I->getParent(), I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
-          .addImm(NewMode);
+      BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB)).addImm(NewMode);
 
   CurrentMode = NewMode;
   CurrentMask = Mask;
-  CurrentModeKnown = true;
   return true;
 }
 
@@ -233,21 +233,22 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   if (Ops.first) {
     ModeTy NewMode, Mask;
     computeMode(NewMode, Mask, MI, Ops.first, Ops.second);
-    return setMode(NewMode, Mask, &MI);
+    return setMode(NewMode, Mask, MI.getIterator());
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
 
   return false;
 }
 
-MachineInstr *AMDGPULowerVGPREncoding::handleClause(MachineInstr *I) {
+MachineBasicBlock::instr_iterator
+AMDGPULowerVGPREncoding::handleClause(MachineBasicBlock::instr_iterator I) {
   if (!ClauseRemaining)
     return I;
 
   // A clause cannot start with a special instruction, place it right before
   // the clause.
   if (ClauseRemaining == ClauseLen) {
-    I = Clause->getPrevNode();
+    I = Clause->getPrevNode()->getIterator();
     assert(I->isBundle());
     return I;
   }
@@ -284,9 +285,9 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
   ClauseLen = ClauseRemaining = 0;
   CurrentMode.reset();
   CurrentMask.reset();
-  CurrentModeKnown = true;
   for (auto &MBB : MF) {
     MostRecentModeSet = nullptr;
+    this->MBB = &MBB;
 
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
       if (MI.isMetaInstruction())
@@ -294,17 +295,16 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
 
       if (MI.isTerminator() || MI.isCall()) {
         if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
-            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED) {
+            MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED)
           CurrentMode.reset();
-          CurrentModeKnown = true;
-        } else
-          resetMode(&MI);
+        else
+          resetMode(MI.getIterator());
         continue;
       }
 
       if (MI.isInlineAsm()) {
         if (TII->hasVGPRUses(MI))
-          resetMode(&MI);
+          resetMode(MI.getIterator());
         continue;
       }
 
@@ -323,14 +323,8 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         --ClauseRemaining;
     }
 
-    // If we're falling through to a block that has at least one other
-    // predecessor, we no longer know the mode.
-    MachineBasicBlock *Next = MBB.getNextNode();
-    if (Next && Next->pred_size() >= 2 &&
-        llvm::is_contained(Next->predecessors(), &MBB)) {
-      if (CurrentMode.raw_bits().any())
-        CurrentModeKnown = false;
-    }
+    // Reset the mode if we are falling through.
+    resetMode(MBB.instr_end());
   }
 
   return Changed;
