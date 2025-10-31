@@ -967,6 +967,49 @@ def CIR_TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
     `<` custom<RecordMembers>($data) `>`
   }];
 }
+//===----------------------------------------------------------------------===//
+// InlineAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
+  I32EnumAttrCase<"NoInline", 1, "never">,
+  I32EnumAttrCase<"AlwaysInline", 2, "always">,
+  I32EnumAttrCase<"InlineHint", 3, "hint">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_InlineAttr : CIR_EnumAttr<CIR_InlineKind, "inline"> {
+  let summary = "Inline attribute";
+  let description = [{
+    Inline attribute represents user directives for inlining behavior.
+    This attribute is only used by `cir.func` operations.
+
+    Values:
+    - `never`: Prevents the function from being inlined (__attribute__((noinline)))
+    - `always`: Forces the function to be inlined (__attribute__((always_inline)))
+    - `hint`: Suggests the function should be inlined (inline keyword)
+
+    Example:
+    ```
+    cir.func @noinline_func(%arg0: !s32i) -> !s32i inline(never) {
+      cir.return %arg0 : !s32i
+    }
+    cir.func @always_inline_func() -> !s32i inline(always) {
+      %0 = cir.const #cir.int<42> : !s32i
+      cir.return %0 : !s32i
+    }
+    ```
+  }];
+
+  let cppClassName = "InlineAttr";
+
+  let extraClassDeclaration = [{
+    bool isNoInline() const { return getValue() == InlineKind::NoInline; };
+    bool isAlwaysInline() const { return getValue() == InlineKind::AlwaysInline; };
+    bool isInlineHint() const { return getValue() == InlineKind::InlineHint; };
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // CatchAllAttr & UnwindAttr

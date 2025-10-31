@@ -242,10 +242,11 @@ struct TargetAllocMemOpConversion
         loc, llvmObjectTy, ity, rewriter, lowerTy().getDataLayout());
     if (auto scaleSize = fir::genAllocationScaleSize(
             loc, allocmemOp.getInType(), ity, rewriter))
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands().drop_front())
-      size = rewriter.create<mlir::LLVM::MulOp>(
-          loc, ity, size, integerCast(lowerTy(), loc, rewriter, ity, opnd));
+      size = mlir::LLVM::MulOp::create(
+          rewriter, loc, ity, size,
+          integerCast(lowerTy(), loc, rewriter, ity, opnd));
     auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
     auto mallocTy =
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);

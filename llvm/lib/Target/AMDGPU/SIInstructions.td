@@ -2223,8 +2223,8 @@ def : GCNPat <
 
 def : GCNPat <
   (DivergentUnaryFrag<fneg> (v2f32 VReg_64:$src)),
-  (V_PK_ADD_F32 11 /* OP_SEL_1 | NEG_LO | HEG_HI */, VReg_64:$src,
-                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, (i64 0),
+  (V_PK_ADD_F32 !or(SRCMODS.OP_SEL_1, SRCMODS.NEG, SRCMODS.NEG_HI), VReg_64:$src,
+                !or(SRCMODS.OP_SEL_1, SRCMODS.NEG, SRCMODS.NEG_HI), (i64 0),
                 0, 0, 0, 0, 0)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
@@ -3478,30 +3478,6 @@ def : GCNPat<
 def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
   (V_MUL_F16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
->;
-} // End True16Predicate
-
-let True16Predicate = UseRealTrue16Insts in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
->;
-
-def : GCNPat<
-  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_NEG_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
->;
-} // End True16Predicate
-
-let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
->;
-
-def : GCNPat<
-  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
 } // End True16Predicate
 

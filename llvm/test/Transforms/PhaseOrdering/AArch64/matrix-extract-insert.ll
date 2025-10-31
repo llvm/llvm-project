@@ -114,14 +114,14 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <2 x i64> [[TMP8]], splat (i64 225)
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult <2 x i64> [[TMP10]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i1> [[TMP11]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP14]])
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult <2 x i64> [[TMP10]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP12]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP15]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[TMP12]], i64 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP14]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP15]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP16]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP17]], i64 16
@@ -190,14 +190,14 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x i64> poison, i64 [[TMP37]], i64 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <2 x i64> [[TMP39]], i64 [[TMP38]], i64 1
 ; CHECK-NEXT:    [[TMP41:%.*]] = icmp ult <2 x i64> [[TMP36]], splat (i64 225)
-; CHECK-NEXT:    [[TMP42:%.*]] = icmp ult <2 x i64> [[TMP40]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x i1> [[TMP41]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP43]])
 ; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <2 x i1> [[TMP41]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP44]])
+; CHECK-NEXT:    [[TMP42:%.*]] = icmp ult <2 x i64> [[TMP40]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <2 x i1> [[TMP42]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP45]])
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <2 x i1> [[TMP42]], i64 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP43]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP44]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP45]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP46]])
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[TMP33]]
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP47]], i64 16
@@ -267,14 +267,14 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <2 x i64> poison, i64 [[TMP68]], i64 0
 ; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <2 x i64> [[TMP70]], i64 [[TMP69]], i64 1
 ; CHECK-NEXT:    [[TMP72:%.*]] = icmp ult <2 x i64> [[TMP67]], splat (i64 225)
-; CHECK-NEXT:    [[TMP73:%.*]] = icmp ult <2 x i64> [[TMP71]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP74:%.*]] = extractelement <2 x i1> [[TMP72]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP74]])
 ; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <2 x i1> [[TMP72]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP75]])
+; CHECK-NEXT:    [[TMP73:%.*]] = icmp ult <2 x i64> [[TMP71]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP76:%.*]] = extractelement <2 x i1> [[TMP73]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP76]])
 ; CHECK-NEXT:    [[TMP77:%.*]] = extractelement <2 x i1> [[TMP73]], i64 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP74]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP75]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP76]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP77]])
 ; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[TMP64]]
 ; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP78]], i64 16
@@ -344,14 +344,14 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK-NEXT:    [[TMP101:%.*]] = insertelement <2 x i64> poison, i64 [[TMP99]], i64 0
 ; CHECK-NEXT:    [[TMP102:%.*]] = insertelement <2 x i64> [[TMP101]], i64 [[TMP100]], i64 1
 ; CHECK-NEXT:    [[TMP103:%.*]] = icmp ult <2 x i64> [[TMP98]], splat (i64 225)
-; CHECK-NEXT:    [[TMP104:%.*]] = icmp ult <2 x i64> [[TMP102]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP105:%.*]] = extractelement <2 x i1> [[TMP103]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP105]])
 ; CHECK-NEXT:    [[TMP106:%.*]] = extractelement <2 x i1> [[TMP103]], i64 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP106]])
+; CHECK-NEXT:    [[TMP104:%.*]] = icmp ult <2 x i64> [[TMP102]], splat (i64 225)
 ; CHECK-NEXT:    [[TMP107:%.*]] = extractelement <2 x i1> [[TMP104]], i64 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP107]])
 ; CHECK-NEXT:    [[TMP108:%.*]] = extractelement <2 x i1> [[TMP104]], i64 1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP105]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP106]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP107]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP108]])
 ; CHECK-NEXT:    [[TMP109:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[TMP95]]
 ; CHECK-NEXT:    [[TMP110:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP109]], i64 16

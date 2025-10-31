@@ -21,7 +21,9 @@ namespace {
 
 AST_MATCHER(VarDecl, isLocalVariable) { return Node.isLocalVarDecl(); }
 
-FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
+} // namespace
+
+static FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
   if (IsConst && (Decl->getStorageClass() != SC_Static)) {
     // No fix available if it is not a static constant, since it is difficult
     // to determine the proper fix in this case.
@@ -52,7 +54,6 @@ FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
       CharSourceRange::getTokenRange(SourceRange(Decl->getLocation())),
       llvm::StringRef(NewName));
 }
-} // namespace
 
 void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // need to add two matchers since we need to bind different ids to distinguish

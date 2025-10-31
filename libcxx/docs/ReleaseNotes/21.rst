@@ -53,8 +53,7 @@ Implemented Papers
 - P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
 - P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
 - P2655R3: ``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type (`Github <https://github.com/llvm/llvm-project/issues/105260>`__)
-- P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://github.com/llvm/llvm-project/issues/105424>`__)
-- P3379R0: Constrain ``std::expected equality`` operators (`Github <https://github.com/llvm/llvm-project/issues/118135>`__)
+- P3379R0: Constrain ``std::expected`` equality operators (`Github <https://github.com/llvm/llvm-project/issues/118135>`__)
 
 Improvements and New Features
 -----------------------------
