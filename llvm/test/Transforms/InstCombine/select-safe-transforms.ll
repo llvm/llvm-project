@@ -800,7 +800,7 @@ define <2 x i1> @not_logical_and2(i1 %b, <2 x i32> %a) {
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 2, i32 3}
 !2 = !{!"branch_weights", i32 5, i32 7}
-!3 = !{!"branch_weights", i32 11, i32 17}
+!3 = !{!"branch_weights", i32 11, i32 13}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}
