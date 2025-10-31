@@ -10,28 +10,33 @@
 
 // typedef unspecified exception_ptr;
 
-// exception_ptr shall satisfy the requirements of NullablePointer.
+// Test the move constructor of exception_ptr
 
 #include <exception>
+#include <utility>
 #include <cassert>
 
 #include "test_macros.h"
 
 int main(int, char**)
 {
-    std::exception_ptr p;
-    assert(p == nullptr);
-    std::exception_ptr p2 = p;
-    assert(nullptr == p);
-    assert(!p);
+    std::exception_ptr p = std::make_exception_ptr(42);
+    std::exception_ptr p2{p};
     assert(p2 == p);
-    p2 = p;
-    assert(p2 == p);
+    // Move constructor
+    std::exception_ptr p3{std::move(p2)};
+    assert(p3 == p);
+    // `p2` was moved from. In libc++ it will be nullptr, but
+    // this is not guaranteed by the standard.
+    #if defined(_LIBCPP_VERSION) && !defined(_LIBCPP_ABI_MICROSOFT)
     assert(p2 == nullptr);
-    std::exception_ptr p3 = nullptr;
-    assert(p3 == nullptr);
-    p3 = nullptr;
-    assert(p3 == nullptr);
+    #endif
+
+    try {
+        std::rethrow_exception(p3);
+    } catch (int e) {
+        assert(e == 42);
+    }
 
     return 0;
 }
