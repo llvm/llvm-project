@@ -2277,6 +2277,15 @@ are listed below.
 
    See :doc: `AddressSanitizer` for more details.
 
+.. option:: -f[no-]sanitize-type-outline-instrumentation
+
+   Controls how type sanitizer code is generated. If enabled will always use
+   a function call instead of inlining the code. Turning this option on may
+   reduce the binary size and compilation overhead, but might result in a worse
+   run-time performance.
+
+   See :doc: `TypeSanitizer` for more details.
+
 .. option:: -f[no-]sanitize-stats
 
    Enable simple statistics gathering for the enabled sanitizers.

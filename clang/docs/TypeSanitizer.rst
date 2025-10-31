@@ -20,9 +20,13 @@ code is build with ``-fno-strict-aliasing``, sacrificing performance.
 TypeSanitizer is built to catch when these strict aliasing rules have been violated, helping 
 users find where such bugs originate in their code despite the code looking valid at first glance.
 
-As TypeSanitizer is still experimental, it can currently have a large impact on runtime speed, 
-memory use, and code size. It also has a large compile-time overhead. Work is being done to 
-reduce these impacts.
+Typical memory overhead introduced by TypeSanitizer is about **8x**. Runtime slowdown varies greatly
+depending on how often the instrumented code relies on type aliasing. In the best case slowdown is
+**2x-3x**.
+
+The compiler instrumentation also has an impact on code size and compilation overhead. There is an
+experimental :ref:`instrumentation outlining option<outlining_flag>` which can greatly reduce this
+but this may decrease runtime performance.
 
 The TypeSanitizer Algorithm
 ===========================
@@ -127,6 +131,23 @@ references to LLVM IR specific terms.
 
 Sanitizer features
 ==================
+
+.. _outlining_flag:
+
+Instrumentation code outlining
+------------------------------
+
+By default TypeSanitizer inlines the instrumentation code. This leads to increased
+binary size and compilation time. Using the clang flag
+``-fsanitize-type-outline-instrumentation`` (default: ``false``)
+forces all code instrumentation to be outlined. This reduces the size of the
+generated code and reduces compile-time overhead, but it also reduces runtime
+performance.
+
+This outlined instrumentation is new. If you wish to verify that the outlined instrumentation
+is behaving in the same way as the inline instrumentation, you can force TypeSanitizer
+to use both types of instrumentation. You can use the clang flag
+``-fsanitize-type-verify-outlined-instrumentation`` (default: ``false``) to do this.
 
 ``__has_feature(type_sanitizer)``
 ------------------------------------
