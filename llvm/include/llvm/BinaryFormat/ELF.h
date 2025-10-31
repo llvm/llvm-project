@@ -1125,6 +1125,8 @@ struct Elf64_Shdr {
   Elf64_Xword sh_entsize;
 };
 
+enum { PN_XNUM = 0xffff };
+
 // Special section indices.
 enum {
   SHN_UNDEF = 0,          // Undefined, missing, irrelevant, or meaningless

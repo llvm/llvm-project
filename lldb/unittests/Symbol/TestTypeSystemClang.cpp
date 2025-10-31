@@ -1123,6 +1123,30 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
 }
 
+TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
+  // Tests TypeSystemClang::GetTypeInfo
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  CompilerType complex_int = m_ast->GetType(ast.getComplexType(ast.IntTy));
+  EXPECT_EQ(complex_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType complex_float = m_ast->GetType(ast.getComplexType(ast.FloatTy));
+  EXPECT_EQ(complex_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType vector_of_int =
+      m_ast->GetType(ast.getVectorType(ast.IntTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsVector | eTypeHasChildren));
+
+  CompilerType vector_of_float =
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
+}
+
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   // Tests TypeSystemClang::DeclGetMangledName for constructors/destructors
   // with and without AsmLabels.

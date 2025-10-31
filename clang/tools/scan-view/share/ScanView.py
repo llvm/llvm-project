@@ -29,11 +29,7 @@ import socket
 import itertools
 
 import Reporter
-
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+import configparser
 
 ###
 # Various patterns matched or replaced by server.

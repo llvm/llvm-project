@@ -400,7 +400,7 @@ public:
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
