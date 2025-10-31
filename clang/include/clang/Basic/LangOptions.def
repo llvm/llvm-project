@@ -217,6 +217,7 @@ LANGOPT(OpenCLPipes              , 1, 0, NotCompatible, "OpenCL pipes language c
 LANGOPT(NativeHalfType    , 1, 0, NotCompatible, "Native half type support")
 LANGOPT(NativeHalfArgsAndReturns, 1, 0, NotCompatible, "Native half args and returns")
 LANGOPT(HalfArgsAndReturns, 1, 0, NotCompatible, "half args and returns")
+LANGOPT(NativeInt16Type   , 1, 1, NotCompatible, "Native int 16 type support")
 LANGOPT(CUDA              , 1, 0, NotCompatible, "CUDA")
 LANGOPT(HIP               , 1, 0, NotCompatible, "HIP")
 LANGOPT(OpenMP            , 32, 0, NotCompatible, "OpenMP support and version of OpenMP (31, 40 or 45)")
