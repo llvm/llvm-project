@@ -220,6 +220,11 @@ class DebugCommunication(object):
         followed by the JSON bytes from self.recv. Returns None on EOF.
         """
 
+        # NOTE: We open the socket or pipe to the subprocess in an unbuffered
+        # mode to ensure we do not end up with a partial message in the buffer
+        # when we perform our select. Otherwise, we may run into a case where we
+        # attempt a read and the buffer is partially full but a new message is
+        # not sent to fill in the requested buffer size.
         ready = self.selector.select(timeout)
         if not ready:
             warnings.warn(
@@ -243,10 +248,16 @@ class DebugCommunication(object):
             if separator != "":
                 Exception("malformed DAP content header, unexpected line: " + separator)
             # Read JSON bytes
-            json_str = self.recv.read(length).decode()
+            # NOTE: Because the read channel is unbuffered we may receive less
+            # than the requested number of bytes. In, which case we need to
+            # perform a new read.
+            json_str = b""
+            while len(json_str) < length:
+                json_str += self.recv.read(length - len(json_str))
+
             if self.trace_file:
                 self.trace_file.write(
-                    "%s from adapter:\n%s\n" % (time.time(), json_str)
+                    "%s from adapter:\n%s\n" % (time.time(), json_str.decode())
                 )
             # Decode the JSON bytes into a python dictionary
             return json.loads(json_str)
