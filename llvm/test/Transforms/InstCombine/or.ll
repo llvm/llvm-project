@@ -2143,7 +2143,7 @@ define i8 @or_select_smax_neg_to_abs(i8 %a){
   ret i8 %sel
 }
 
-; TODO Fold to abs https://alive2.llvm.org/ce/z/DybfHG
+; TODO: Fold to abs https://alive2.llvm.org/ce/z/DybfHG
 define i8 @or_select_smax_smax_to_abs(i8 %a){
 ; CHECK-LABEL: @or_select_smax_smax_to_abs(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i8 0, [[A:%.*]]

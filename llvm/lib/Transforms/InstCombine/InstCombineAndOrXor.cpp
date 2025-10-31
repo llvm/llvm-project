@@ -4003,8 +4003,8 @@ static Value *FoldOrOfSelectSmaxToAbs(BinaryOperator &I,
                                       InstCombiner::BuilderTy &Builder) {
   Value *X;
   Value *Sel;
-  if (match(&I, m_c_Or(m_Value(Sel), m_OneUse(m_Intrinsic<Intrinsic::smax>(
-                                         m_Value(X), m_ZeroInt()))))) {
+  if (match(&I,
+            m_c_Or(m_Value(Sel), m_OneUse(m_SMax(m_Value(X), m_ZeroInt()))))) {
     auto NegX = m_Neg(m_Specific(X));
     if (match(Sel, m_Select(m_SpecificICmp(ICmpInst::ICMP_SGT, m_Specific(X),
                                            m_ZeroInt()),
