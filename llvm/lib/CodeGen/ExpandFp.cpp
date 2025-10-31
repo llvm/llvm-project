@@ -75,7 +75,7 @@ class FRemExpander {
   Value *One;
 
   /// The frem argument/return types that can be expanded by this class.
-  // TODO The expansion could work for other floating point types
+  // TODO: The expansion could work for other floating point types
   // as well, but this would require additional testing.
   static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
                                                       MVT::f64};
@@ -106,8 +106,8 @@ public:
 
   static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
     assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
-    return (TLI.getOperationAction(ISD::FREM, VT) ==
-            TargetLowering::LegalizeAction::Expand);
+    return TLI.getOperationAction(ISD::FREM, VT) ==
+            TargetLowering::LegalizeAction::Expand;
   }
 
   static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
