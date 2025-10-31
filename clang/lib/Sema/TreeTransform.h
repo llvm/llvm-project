@@ -694,6 +694,12 @@ public:
                                   TemplateArgumentListInfo &Outputs,
                                   bool Uneval = false);
 
+  template <typename InputIterator>
+  bool TransformConceptTemplateArguments(InputIterator First,
+                                         InputIterator Last,
+                                         TemplateArgumentListInfo &Outputs,
+                                         bool Uneval = false);
+
   /// Checks if the argument pack from \p In will need to be expanded and does
   /// the necessary prework.
   /// Whether the expansion is needed is captured in Info.Expand.
@@ -5183,6 +5189,49 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     }
 
     // The simple case:
+    if (getDerived().TransformTemplateArgument(In, Out, Uneval))
+      return true;
+
+    Outputs.addArgument(Out);
+  }
+
+  return false;
+}
+
+template <typename Derived>
+template <typename InputIterator>
+bool TreeTransform<Derived>::TransformConceptTemplateArguments(
+    InputIterator First, InputIterator Last, TemplateArgumentListInfo &Outputs,
+    bool Uneval) {
+
+  // [C++26][temp.constr.normal]
+  // any non-dependent concept template argument
+  // is substituted into the constraint-expression of C.
+  auto isNonDependentConceptArgument = [](const TemplateArgument &Arg) {
+    return !Arg.isDependent() && Arg.isConceptOrConceptTemplateParameter();
+  };
+
+  for (; First != Last; ++First) {
+    TemplateArgumentLoc Out;
+    TemplateArgumentLoc In = *First;
+
+    if (In.getArgument().getKind() == TemplateArgument::Pack) {
+      typedef TemplateArgumentLocInventIterator<Derived,
+                                                TemplateArgument::pack_iterator>
+          PackLocIterator;
+      if (TransformConceptTemplateArguments(
+              PackLocIterator(*this, In.getArgument().pack_begin()),
+              PackLocIterator(*this, In.getArgument().pack_end()), Outputs,
+              Uneval))
+        return true;
+      continue;
+    }
+
+    if (!isNonDependentConceptArgument(In.getArgument())) {
+      Outputs.addArgument(In);
+      continue;
+    }
+
     if (getDerived().TransformTemplateArgument(In, Out, Uneval))
       return true;
 
@@ -10571,6 +10620,13 @@ TreeTransform<Derived>::TransformOMPDefaultClause(OMPDefaultClause *C) {
       C->getDefaultKind(), C->getDefaultKindKwLoc(), C->getDefaultVC(),
       C->getDefaultVCLoc(), C->getBeginLoc(), C->getLParenLoc(),
       C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPThreadsetClause(OMPThreadsetClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
 }
 
 template <typename Derived>
@@ -16381,12 +16437,16 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
       AssociatedDecl == E->getAssociatedDecl())
     return E;
 
-  auto getParamAndType = [Index = E->getIndex()](Decl *AssociatedDecl)
+  auto getParamAndType = [E](Decl *AssociatedDecl)
       -> std::tuple<NonTypeTemplateParmDecl *, QualType> {
-    auto [PDecl, Arg] = getReplacedTemplateParameter(AssociatedDecl, Index);
+    auto [PDecl, Arg] =
+        getReplacedTemplateParameter(AssociatedDecl, E->getIndex());
     auto *Param = cast<NonTypeTemplateParmDecl>(PDecl);
-    return {Param, Arg.isNull() ? Param->getType()
-                                : Arg.getNonTypeTemplateArgumentType()};
+    if (Arg.isNull())
+      return {Param, Param->getType()};
+    if (UnsignedOrNone PackIndex = E->getPackIndex())
+      Arg = Arg.getPackAsArray()[*PackIndex];
+    return {Param, Arg.getNonTypeTemplateArgumentType()};
   };
 
   // If the replacement expression did not change, and the parameter type

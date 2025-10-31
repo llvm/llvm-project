@@ -119,8 +119,6 @@ for.end:
 ; We can't use postindex addressing on the conditional load of qval and can't
 ; convert the loop condition to a compare with zero, so we should instead use
 ; offset addressing.
-; FIXME: Currently we don't notice the load of qval is conditional, and attempt
-; postindex addressing anyway.
 define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-LABEL: define i32 @conditional_load(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[N:%.*]]) {
@@ -128,7 +126,6 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], %[[FOR_INC:.*]] ], [ [[P]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_INC]] ], [ [[Q]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[RET_NEXT:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[LSR_IV1]], align 4
@@ -136,6 +133,8 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[FOR_INC]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IDX]], 2
+; CHECK-NEXT:    [[LSR_IV:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[QVAL:%.*]] = load i32, ptr [[LSR_IV]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RET]], [[QVAL]]
 ; CHECK-NEXT:    br label %[[FOR_INC]]
@@ -143,7 +142,6 @@ define i32 @conditional_load(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[RET_NEXT]] = phi i32 [ [[ADD]], %[[IF_THEN]] ], [ [[RET]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
 ; CHECK-NEXT:    [[NVAL:%.*]] = load volatile i64, ptr [[N]], align 8
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IDX_NEXT]], [[NVAL]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -176,3 +174,141 @@ for.inc:
 exit:
   ret i32 %ret.next
 }
+
+; We can use postindex addressing for both loads here, even though the second
+; may not be executed on every loop iteration.
+define i32 @early_exit_load(ptr %p, ptr %q, ptr %n) {
+; CHECK-LABEL: define i32 @early_exit_load(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], %[[FOR_INC:.*]] ], [ [[P]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_INC]] ], [ [[Q]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[RET_PHI:%.*]] = phi i32 [ [[ADD:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = phi i64 [ [[IDX_NEXT:%.*]], %[[FOR_INC]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[PVAL]], 0
+; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    br i1 [[CMP1]], label %[[FOR_INC]], label %[[EXIT:.*]]
+; CHECK:       [[FOR_INC]]:
+; CHECK-NEXT:    [[QVAL:%.*]] = load i32, ptr [[LSR_IV]], align 4
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[QVAL]], [[RET_PHI]]
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i64 [[IDX]], 1
+; CHECK-NEXT:    [[NVAL:%.*]] = load volatile i64, ptr [[N]], align 8
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 [[IDX_NEXT]], [[NVAL]]
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[FOR_BODY]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RET:%.*]] = phi i32 [ [[RET_PHI]], %[[FOR_BODY]] ], [ [[ADD]], %[[FOR_INC]] ]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %ret.phi = phi i32 [ %add, %for.inc ], [ 0, %entry ]
+  %idx = phi i64 [ %idx.next, %for.inc ], [ 0, %entry ]
+  %paddr = getelementptr inbounds nuw i32, ptr %p, i64 %idx
+  %pval = load i32, ptr %paddr, align 4
+  %cmp1 = icmp eq i32 %pval, 0
+  br i1 %cmp1, label %for.inc, label %exit
+
+for.inc:
+  %qaddr = getelementptr inbounds nuw i32, ptr %q, i64 %idx
+  %qval = load i32, ptr %qaddr, align 4
+  %add = add nsw i32 %qval, %ret.phi
+  %idx.next = add nuw nsw i64 %idx, 1
+  %nval = load volatile i64, ptr %n, align 8
+  %cmp2 = icmp slt i64 %idx.next, %nval
+  br i1 %cmp2, label %for.body, label %exit
+
+exit:
+  %ret = phi i32 [ %ret.phi, %for.body ], [ %add, %for.inc ]
+  ret i32 %ret
+}
+
+; The control-flow before and after the load of qval shouldn't prevent postindex
+; addressing from happening.
+; FIXME: We choose postindex addressing, but the scevgep is placed in for.inc so
+; during codegen we will fail to actually generate a postindex load.
+define void @middle_block_load(ptr %p, ptr %q, i64 %n) {
+; CHECK-LABEL: define void @middle_block_load(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[SCEVGEP3:%.*]], %[[FOR_INC:.*]] ], [ [[P]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[FOR_INC]] ], [ [[Q]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[FOR_INC]] ], [ [[N]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[LSR_IV2]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[PVAL]], 0
+; CHECK-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i64 4
+; CHECK-NEXT:    br i1 [[CMP1]], label %[[IF_THEN1:.*]], label %[[IF_ELSE1:.*]]
+; CHECK:       [[IF_THEN1]]:
+; CHECK-NEXT:    tail call void @otherfn1()
+; CHECK-NEXT:    br label %[[IF_END:.*]]
+; CHECK:       [[IF_ELSE1]]:
+; CHECK-NEXT:    tail call void @otherfn2()
+; CHECK-NEXT:    br label %[[IF_END]]
+; CHECK:       [[IF_END]]:
+; CHECK-NEXT:    [[QVAL:%.*]] = load i32, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[QVAL]], 0
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[IF_THEN2:.*]], label %[[IF_ELSE2:.*]]
+; CHECK:       [[IF_THEN2]]:
+; CHECK-NEXT:    tail call void @otherfn1()
+; CHECK-NEXT:    br label %[[FOR_INC]]
+; CHECK:       [[IF_ELSE2]]:
+; CHECK-NEXT:    tail call void @otherfn2()
+; CHECK-NEXT:    br label %[[FOR_INC]]
+; CHECK:       [[FOR_INC]]:
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[CMP3]], label %[[EXIT:.*]], label %[[FOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:
+  %idx = phi i64 [ %idx.next, %for.inc ], [ 0, %entry ]
+  %paddr = getelementptr inbounds nuw i32, ptr %p, i64 %idx
+  %pval = load i32, ptr %paddr, align 4
+  %cmp1 = icmp sgt i32 %pval, 0
+  br i1 %cmp1, label %if.then1, label %if.else1
+
+if.then1:
+  tail call void @otherfn1()
+  br label %if.end
+
+if.else1:
+  tail call void @otherfn2()
+  br label %if.end
+
+if.end:
+  %qaddr = getelementptr inbounds nuw i32, ptr %q, i64 %idx
+  %qval = load i32, ptr %qaddr, align 4
+  %cmp2 = icmp sgt i32 %qval, 0
+  br i1 %cmp2, label %if.then2, label %if.else2
+
+if.then2:
+  tail call void @otherfn1()
+  br label %for.inc
+
+if.else2:
+  tail call void @otherfn2()
+  br label %for.inc
+
+for.inc:
+  %idx.next = add nuw nsw i64 %idx, 1
+  %cmp3 = icmp eq i64 %idx.next, %n
+  br i1 %cmp3, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+declare dso_local void @otherfn1()
+declare dso_local void @otherfn2()

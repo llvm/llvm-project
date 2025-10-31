@@ -14,10 +14,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-
 // Determine if the given QualType is a nullary function or pointer to same.
-bool protoTypeHasNoParms(QualType QT) {
+static bool protoTypeHasNoParms(QualType QT) {
   if (const auto *PT = QT->getAs<PointerType>())
     QT = PT->getPointeeType();
   if (auto *MPT = QT->getAs<MemberPointerType>())
@@ -27,16 +25,14 @@ bool protoTypeHasNoParms(QualType QT) {
   return false;
 }
 
-const char FunctionId[] = "function";
-const char TypedefId[] = "typedef";
-const char FieldId[] = "field";
-const char VarId[] = "var";
-const char NamedCastId[] = "named-cast";
-const char CStyleCastId[] = "c-style-cast";
-const char ExplicitCastId[] = "explicit-cast";
-const char LambdaId[] = "lambda";
-
-} // namespace
+static const char FunctionId[] = "function";
+static const char TypedefId[] = "typedef";
+static const char FieldId[] = "field";
+static const char VarId[] = "var";
+static const char NamedCastId[] = "named-cast";
+static const char CStyleCastId[] = "c-style-cast";
+static const char ExplicitCastId[] = "explicit-cast";
+static const char LambdaId[] = "lambda";
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(parameterCountIs(0), unless(isImplicit()),

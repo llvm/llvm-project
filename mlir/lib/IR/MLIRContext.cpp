@@ -709,7 +709,7 @@ ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
 /// Return information for registered operations by dialect.
 ArrayRef<RegisteredOperationName>
 MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
-  auto lowerBound = llvm::lower_bound(
+  auto *lowerBound = llvm::lower_bound(
       impl->sortedRegisteredOperations, dialectName, [](auto &lhs, auto &rhs) {
         return lhs.getDialect().getNamespace().compare(rhs);
       });
@@ -718,7 +718,7 @@ MLIRContext::getRegisteredOperationsByDialect(StringRef dialectName) {
       lowerBound->getDialect().getNamespace() != dialectName)
     return ArrayRef<RegisteredOperationName>();
 
-  auto upperBound =
+  auto *upperBound =
       std::upper_bound(lowerBound, impl->sortedRegisteredOperations.end(),
                        dialectName, [](auto &lhs, auto &rhs) {
                          return lhs.compare(rhs.getDialect().getNamespace());
@@ -1204,7 +1204,7 @@ AffineMap AffineMap::getImpl(unsigned dimCount, unsigned symbolCount,
 /// present in result expressions is less than `dimCount` and the highest index
 /// of symbolic identifier present in result expressions is less than
 /// `symbolCount`.
-LLVM_ATTRIBUTE_UNUSED static bool
+[[maybe_unused]] static bool
 willBeValidAffineMap(unsigned dimCount, unsigned symbolCount,
                      ArrayRef<AffineExpr> results) {
   int64_t maxDimPosition = -1;

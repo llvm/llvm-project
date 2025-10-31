@@ -369,6 +369,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
   if (Implementer == "0x63") { // Arm China.
     return StringSwitch<const char *>(Part)
         .Case("0x132", "star-mc1")
+        .Case("0xd25", "star-mc3")
         .Default("generic");
   }
 
@@ -1152,6 +1153,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    // Novalake:
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1164,7 +1179,7 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  const char *CPU = 0;
+  const char *CPU = nullptr;
 
   switch (Family) {
   case 4:

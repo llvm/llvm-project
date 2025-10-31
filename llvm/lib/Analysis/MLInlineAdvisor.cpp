@@ -324,32 +324,44 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
     FAM.invalidate(*Caller, PA);
   }
   Advice.updateCachedCallerFPI(FAM);
-  int64_t IRSizeAfter =
-      getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
-  CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
+  if (Caller == Callee) {
+    assert(!CalleeWasDeleted);
+    // We double-counted CallerAndCalleeEdges - since the caller and callee
+    // would be the same
+    assert(Advice.CallerAndCalleeEdges % 2 == 0);
+    CurrentIRSize += getIRSize(*Caller) - Advice.CallerIRSize;
+    EdgeCount += getCachedFPI(*Caller).DirectCallsToDefinedFunctions -
+                 Advice.CallerAndCalleeEdges / 2;
+    // The NodeCount would stay the same.
+  } else {
+    int64_t IRSizeAfter =
+        getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
+    CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
+
+    // We can delta-update module-wide features. We know the inlining only
+    // changed the caller, and maybe the callee (by deleting the latter). Nodes
+    // are simple to update. For edges, we 'forget' the edges that the caller
+    // and callee used to have before inlining, and add back what they currently
+    // have together.
+    int64_t NewCallerAndCalleeEdges =
+        getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
+
+    // A dead function's node is not actually removed from the call graph until
+    // the end of the call graph walk, but the node no longer belongs to any
+    // valid SCC.
+    if (CalleeWasDeleted) {
+      --NodeCount;
+      NodesInLastSCC.erase(CG.lookup(*Callee));
+      DeadFunctions.insert(Callee);
+    } else {
+      NewCallerAndCalleeEdges +=
+          getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
+    }
+    EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
+  }
   if (CurrentIRSize > SizeIncreaseThreshold * InitialIRSize)
     ForceStop = true;
 
-  // We can delta-update module-wide features. We know the inlining only changed
-  // the caller, and maybe the callee (by deleting the latter).
-  // Nodes are simple to update.
-  // For edges, we 'forget' the edges that the caller and callee used to have
-  // before inlining, and add back what they currently have together.
-  int64_t NewCallerAndCalleeEdges =
-      getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
-
-  // A dead function's node is not actually removed from the call graph until
-  // the end of the call graph walk, but the node no longer belongs to any valid
-  // SCC.
-  if (CalleeWasDeleted) {
-    --NodeCount;
-    NodesInLastSCC.erase(CG.lookup(*Callee));
-    DeadFunctions.insert(Callee);
-  } else {
-    NewCallerAndCalleeEdges +=
-        getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
-  }
-  EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
   assert(CurrentIRSize >= 0 && EdgeCount >= 0 && NodeCount >= 0);
 }
 

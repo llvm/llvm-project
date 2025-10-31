@@ -272,7 +272,7 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *KillingI,
     if (KillingII->getIntrinsicID() == Intrinsic::masked_store) {
       // Masks.
       // TODO: check that KillingII's mask is a superset of the DeadII's mask.
-      if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
+      if (KillingII->getArgOperand(2) != DeadII->getArgOperand(2))
         return OW_Unknown;
     } else if (KillingII->getIntrinsicID() == Intrinsic::vp_store) {
       // Masks.

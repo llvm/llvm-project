@@ -14,7 +14,6 @@ import configparser
 
 import Reporter
 
-
 ###
 # Various patterns matched or replaced by server.
 

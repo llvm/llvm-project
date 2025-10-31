@@ -1079,14 +1079,17 @@ TEST(ProtocolTypesTest, InvalidatedEventBody) {
   body.areas = {InvalidatedEventBody::eAreaStacks,
                 InvalidatedEventBody::eAreaThreads};
   body.stackFrameId = 1;
-  StringRef json = R"({
-  "areas": [
-    "stacks",
-    "threads"
-  ],
-  "stackFrameId": 1
-})";
-  EXPECT_EQ(json, pp(body));
+  body.threadId = 20;
+  Expected<json::Value> expected = json::parse(R"({
+    "areas": [
+      "stacks",
+      "threads"
+    ],
+    "stackFrameId": 1,
+    "threadId": 20
+    })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(pp(*expected), pp(body));
 }
 
 TEST(ProtocolTypesTest, MemoryEventBody) {

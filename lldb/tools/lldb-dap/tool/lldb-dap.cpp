@@ -21,6 +21,7 @@
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
 #include "lldb/lldb-forward.h"
@@ -74,6 +75,7 @@ typedef int socklen_t;
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <termios.h>
 #include <unistd.h>
 #endif
 
@@ -261,6 +263,15 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
       files.push_back(files.back());
     if (llvm::Error err = SetupIORedirection(files))
       return err;
+  } else if ((isatty(STDIN_FILENO) != 0) &&
+             llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
+    // Clear the screen.
+    llvm::outs() << ANSI_CSI_RESET_CURSOR ANSI_CSI_ERASE_VIEWPORT
+            ANSI_CSI_ERASE_SCROLLBACK;
+    // VS Code will reuse the same terminal for the same debug configuration
+    // between runs. Clear the input buffer prior to starting the new process so
+    // prior input is not carried forward to the new debug session.
+    tcflush(STDIN_FILENO, TCIFLUSH);
   }
 
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
