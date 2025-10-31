@@ -6202,13 +6202,13 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // (umin (sub a, b) a) -> (usubo a, b); (select usubo.1, a, usubo.0)
   {
     SDValue A, B;
-    if (sd_match(N, m_UMin(m_Sub(m_Value(A), m_Value(B)), m_Deferred(A)))) {
-      if (TLI.isOperationLegalOrCustom(ISD::USUBO, VT)) {
-        EVT SETCCT = getSetCCResultType(VT);
-        SDVTList VTs = DAG.getVTList(VT, SETCCT);
-        SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, A, B);
-        return DAG.getSelect(DL, VT, USO.getValue(1), A, USO.getValue(0));
-      }
+    if (sd_match(N0, m_Sub(m_Value(A), m_Value(B))) &&
+        sd_match(N1, m_Specific(A)) &&
+        TLI.isOperationLegalOrCustom(ISD::USUBO, VT)) {
+      EVT SETCCT = getSetCCResultType(VT);
+      SDVTList VTs = DAG.getVTList(VT, SETCCT);
+      SDValue USO = DAG.getNode(ISD::USUBO, DL, VTs, A, B);
+      return DAG.getSelect(DL, VT, USO.getValue(1), A, USO.getValue(0));
     }
   }
 
