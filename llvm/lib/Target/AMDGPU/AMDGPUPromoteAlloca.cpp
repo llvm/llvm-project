@@ -457,10 +457,22 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   const auto &VarOffset = VarOffsets.front();
   APInt OffsetQuot;
   APInt::sdivrem(VarOffset.second, VecElemSize, OffsetQuot, Rem);
-  if (Rem != 0 || OffsetQuot.isZero())
-    return nullptr;
+
+  Value *Scaled = nullptr;
+  if (Rem != 0 || OffsetQuot.isZero()) {
+    unsigned ElemSizeShift = Log2_64(VecElemSize);
+    Scaled = Builder.CreateLShr(VarOffset.first, ElemSizeShift);
+    if (Instruction *NewInst = dyn_cast<Instruction>(Scaled))
+      NewInsts.push_back(NewInst);
+    OffsetQuot = APInt(BW, 1);
+    Rem = 0;
+  }
 
   Value *Offset = VarOffset.first;
+
+  if (Scaled)
+    Offset = Scaled;
+
   if (!isa<IntegerType>(Offset->getType()))
     return nullptr;
 
