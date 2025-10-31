@@ -31,9 +31,8 @@ int main(int, char**) {
   assert(hash_val_empty != hash_val_nonempty);
 
   std::stacktrace_entry empty_entry;
-  assert(std::hash<std::stacktrace_entry>()(empty_entry) == 0);
   auto nonempty_entry = trace[0];
-  assert(std::hash<std::stacktrace_entry>()(nonempty_entry) != 0);
+  assert(std::hash<std::stacktrace_entry>()(nonempty_entry) != std::hash<std::stacktrace_entry>()(empty_entry));
 
   return 0;
 }

@@ -46,13 +46,13 @@ struct _StringWrapper {
   // XXX FIXME TODO:
   // Figure out a solution for creating strings while respecting
   // the caller's allocator they provided:
-  //   1. properly type-erase basic_strings' allocator types
+  //   1. properly typeerase basic_strings' allocator types
   //   2. move all code into headers (seems like a bad idea)
   //   3. leave these as oversized char arrays, seems suboptimal
   //   4. just use std::string, which is just plain wrong
   //   5. ...?
 
-  char __chars_[1024];
+  char __chars_[1024]{0};
 
   _LIBCPP_HIDE_FROM_ABI std::string_view view() const { return __chars_; }
 
@@ -62,10 +62,16 @@ struct _StringWrapper {
     __chars_[__size] = 0;
     return *this;
   }
+
+  _LIBCPP_HIDE_FROM_ABI ~_StringWrapper()                                = default;
+  _LIBCPP_HIDE_FROM_ABI _StringWrapper()                                 = default;
+  _LIBCPP_HIDE_FROM_ABI _StringWrapper(_StringWrapper const&)            = default;
+  _LIBCPP_HIDE_FROM_ABI _StringWrapper(_StringWrapper&&)                 = default;
+  _LIBCPP_HIDE_FROM_ABI _StringWrapper& operator=(_StringWrapper const&) = default;
+  _LIBCPP_HIDE_FROM_ABI _StringWrapper& operator=(_StringWrapper&&)      = default;
 };
 
 struct _Entry {
-  constexpr static size_t __max_sym_len = 512;
 #  if defined(PATH_MAX)
   constexpr static size_t __max_file_len = PATH_MAX;
 #  elif defined(MAX_PATH)
