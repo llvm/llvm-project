@@ -10623,13 +10623,13 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 // SCCValid. If there are no intervening SCC conflicts delete SCCRedefine and
 // update kill/dead flags if necessary.
 static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
-                        const SIRegisterInfo *RI) {
+                        const SIRegisterInfo &RI) {
   MachineInstr *KillsSCC = nullptr;
   for (MachineInstr &MI : make_range(std::next(SCCValid->getIterator()),
                                      SCCRedefine->getIterator())) {
-    if (MI.modifiesRegister(AMDGPU::SCC, RI))
+    if (MI.modifiesRegister(AMDGPU::SCC, &RI))
       return false;
-    if (MI.killsRegister(AMDGPU::SCC, RI))
+    if (MI.killsRegister(AMDGPU::SCC, &RI))
       KillsSCC = &MI;
   }
   if (MachineOperand *SccDef =
@@ -10641,17 +10641,17 @@ static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
   return true;
 }
 
-static bool foldableSelect(MachineInstr *Def) {
-  if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-      Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
-    bool Op1IsNonZeroImm =
-        Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
-    bool Op2IsZeroImm =
-        Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
-    if (Op1IsNonZeroImm && Op2IsZeroImm)
-      return true;
-  }
-  return false;
+static bool foldableSelect(const MachineInstr &Def) {
+  if (Def.getOpcode() != AMDGPU::S_CSELECT_B32 &&
+      Def.getOpcode() != AMDGPU::S_CSELECT_B64)
+    return false;
+  bool Op1IsNonZeroImm =
+      Def.getOperand(1).isImm() && Def.getOperand(1).getImm() != 0;
+  bool Op2IsZeroImm =
+      Def.getOperand(2).isImm() && Def.getOperand(2).getImm() == 0;
+  if (!Op1IsNonZeroImm || !Op2IsZeroImm)
+    return false;
+  return true;
 }
 
 bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
@@ -10683,10 +10683,10 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     //
     //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
     //   imm), 0)
-    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(Def))
+    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(*Def))
       return false;
 
-    if (!optimizeSCC(Def, &CmpInstr, &RI))
+    if (!optimizeSCC(Def, &CmpInstr, RI))
       return false;
 
     return true;
@@ -10766,7 +10766,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    if (!optimizeSCC(Def, &CmpInstr, &RI))
+    if (!optimizeSCC(Def, &CmpInstr, RI))
       return false;
 
     if (!MRI->use_nodbg_empty(DefReg)) {
