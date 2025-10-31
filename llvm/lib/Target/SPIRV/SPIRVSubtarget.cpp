@@ -71,7 +71,10 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
     break;
   case Triple::SPIRVSubArch_v14:
   default:
-    SPIRVVersion = VersionTuple(1, 4);
+    if (TT.getVendor() == Triple::AMD)
+      SPIRVVersion = VersionTuple(1, 6);
+    else
+      SPIRVVersion = VersionTuple(1, 4);
     break;
   case Triple::SPIRVSubArch_v15:
     SPIRVVersion = VersionTuple(1, 5);
@@ -85,7 +88,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   // Set the environment based on the target triple.
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
-  else if (TargetTriple.getEnvironment() == Triple::OpenCL)
+  else if (TargetTriple.getEnvironment() == Triple::OpenCL ||
+           TargetTriple.getVendor() == Triple::AMD)
     Env = Kernel;
   else
     Env = Unknown;
@@ -93,6 +97,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   // Set the default extensions based on the target triple.
   if (TargetTriple.getVendor() == Triple::Intel)
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
+  if (TargetTriple.getVendor() == Triple::AMD)
+    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
