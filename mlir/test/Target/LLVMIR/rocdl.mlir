@@ -1028,11 +1028,12 @@ llvm.func @rocdl.ds.read.tr(%ptr : !llvm.ptr<3>) -> vector<4xf16> {
   llvm.return %r3 : vector<4xf16>
 }
 
-llvm.func @rocdl.wmma.scale.f32.16x16x128.f8f6f4(%arg0 : i32,
-                   %arg1 : vector<4 x f32>, %arg2 : vector<8xi32>,
-                   %arg3 : vector<12xi32>, %arg4 : vector<4xi32>, 
-                   %arg5 : vector<16xi32>, %arg6 : vector<12xi32>,
-                   %arg7 : vector<8xi64>, %arg8 : i64) -> vector<4 x f32> {
+llvm.func @rocdl.wmma.scale.f32.16x16x128.f8f6f4(
+                   %arg0 : i32, %arg1 : vector<4xf32>,
+                   %arg2 : vector<8xi32>, %arg3 : vector<12xi32>,
+                   %arg4 : vector<4xi32>, %arg5 : vector<16xi32>,
+                   %arg6 : vector<12xi32>,%arg7 : vector<8xi64>,
+                   %arg8 : i64, %arg9 : vector<8xf32>) -> vector<4xf32> {
   %cst0 = llvm.mlir.constant(0 : i32) : i32
   %cst1 = llvm.mlir.constant(1 : i32) : i32
   %cst2 = llvm.mlir.constant(2 : i32) : i32
@@ -1041,7 +1042,6 @@ llvm.func @rocdl.wmma.scale.f32.16x16x128.f8f6f4(%arg0 : i32,
   %cst0_i16 = llvm.mlir.constant(0 : i16) : i16
   %zero = llvm.mlir.constant(false) : i1
   // CHECK-LABEL: rocdl.wmma.scale.f32.16x16x128.f8f6f4
-  
   
   // fp8 * fp8
   // CHECK: call <4 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v4f32.v16i32.v16i32(i32 {{.*}}, <16 x i32> %{{.*}}, i32 {{.*}}, <16 x i32> %{{.*}}, i16 0, <4 x float> %{{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}%{{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}%{{.*}}, i1 {{.*}}, i1 {{.*}})
@@ -1242,6 +1242,13 @@ llvm.func @rocdl.wmma.scale.f32.16x16x128.f8f6f4(%arg0 : i32,
                               (i32, vector<8xi32>, i32, vector<8xi32>, i16, vector<4xf32>, i32, i32, i32, i32, i32, i32, i1, i1) -> vector<4xf32>
   %r44_scale16 = rocdl.wmma.scale16.f32.16x16x128.f8f6f4 %cst4, %arg2, %cst4, %arg2, %cst0_i16, %arg1, %cst0, %cst0, %arg8, %cst0, %cst0, %arg8, %zero, %zero :
                               (i32, vector<8xi32>, i32, vector<8xi32>, i16, vector<4xf32>, i32, i32, i64, i32, i32, i64, i1, i1) -> vector<4xf32>                            
+
+  // CHECK: call <8 x float> @llvm.amdgcn.wmma.scale.f32.32x16x128.f4.v8f32.v16i32.v8i32(<16 x i32> %{{.*}}, <8 x i32> %{{.*}}, i16 {{.*}}, <8 x float> %{{.*}}, i32 {{.*}}, i32 {{.*}}, i32 %{{.*}}, i32 {{.*}}, i32 {{.*}}, i32 %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  // CHECK: call <8 x float> @llvm.amdgcn.wmma.scale16.f32.32x16x128.f4.v8f32.v16i32.v8i32(<16 x i32> %{{.*}}, <8 x i32> %{{.*}}, i16 {{.*}}, <8 x float> %{{.*}}, i32 {{.*}}, i32 {{.*}}, i64 %{{.*}}, i32 {{.*}}, i32 {{.*}}, i64 %{{.*}}, i1 {{.*}}, i1 {{.*}})
+  %r45 = rocdl.wmma.scale.f32.32x16x128.f4 %arg5, %arg2, %cst0_i16, %arg9, %cst0, %cst0, %arg0, %cst0, %cst0, %arg0, %zero, %zero :
+                              (vector<16xi32>, vector<8xi32>, i16, vector<8xf32>, i32, i32, i32, i32, i32, i32, i1, i1) -> vector<8xf32>
+  %r45_scale16 = rocdl.wmma.scale16.f32.32x16x128.f4 %arg5, %arg2, %cst0_i16, %arg9, %cst0, %cst0, %arg8, %cst0, %cst0, %arg8, %zero, %zero :
+                              (vector<16xi32>, vector<8xi32>, i16, vector<8xf32>, i32, i32, i64, i32, i32, i64, i1, i1) -> vector<8xf32>                            
 
   llvm.return %r00 : vector<4 x f32>
 }
