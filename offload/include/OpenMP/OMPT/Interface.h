@@ -30,6 +30,7 @@
                                       : (&(OmptTaskInfoPtr->task_data)))
 #define TargetData (OmptTaskInfoPtr->target_data)
 
+/// Prefix of ompt_task_info_t struct from libomp
 typedef struct ompt_task_info_t {
   ompt_data_t task_data;
   ompt_data_t target_data;
