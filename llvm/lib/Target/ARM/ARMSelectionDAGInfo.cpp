@@ -35,19 +35,6 @@ bool ARMSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
          Opcode <= ARMISD::LAST_MEMORY_OPCODE;
 }
 
-static bool isAEABIFunctionImpl(const TargetLowering &TLI, RTLIB::Libcall LC) {
-  switch (LC) {
-  case RTLIB::MEMCPY:
-    return TLI.getLibcallImpl(LC) == RTLIB::impl___aeabi_memcpy;
-  case RTLIB::MEMMOVE:
-    return TLI.getLibcallImpl(LC) == RTLIB::impl___aeabi_memmove;
-  case RTLIB::MEMSET:
-    return TLI.getLibcallImpl(LC) == RTLIB::impl___aeabi_memset;
-  default:
-    return false;
-  }
-}
-
 // Emit, if possible, a specialized version of the given Libcall. Typically this
 // means selecting the appropriately aligned version, but we also convert memset
 // of 0 into memclr.
@@ -60,9 +47,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
 
   // Only use a specialized AEABI function if the default version of this
   // Libcall is an AEABI function.
-  if (!isAEABIFunctionImpl(*TLI, LC))
-    return SDValue();
-
+  //
   // Translate RTLIB::Libcall to AEABILibcall. We only do this in order to be
   // able to translate memset to memclr and use the value to index the function
   // name array.
@@ -74,12 +59,21 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   } AEABILibcall;
   switch (LC) {
   case RTLIB::MEMCPY:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memcpy)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMCPY;
     break;
   case RTLIB::MEMMOVE:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memmove)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMMOVE;
     break;
   case RTLIB::MEMSET:
+    if (TLI->getLibcallImpl(LC) != RTLIB::impl___aeabi_memset)
+      return SDValue();
+
     AEABILibcall = AEABI_MEMSET;
     if (isNullConstant(Src))
       AEABILibcall = AEABI_MEMCLR;
