@@ -929,15 +929,15 @@ ARMBaseInstrInfo::describeLoadedValue(const MachineInstr &MI,
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
 }
 
-const MachineInstrBuilder &
-ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
-                          unsigned SubIdx, unsigned State,
-                          const TargetRegisterInfo *TRI) const {
+const MachineInstrBuilder &ARMBaseInstrInfo::AddDReg(MachineInstrBuilder &MIB,
+                                                     unsigned Reg,
+                                                     unsigned SubIdx,
+                                                     unsigned State) const {
   if (!SubIdx)
     return MIB.addReg(Reg, State);
 
   if (Register::isPhysicalRegister(Reg))
-    return MIB.addReg(TRI->getSubReg(Reg, SubIdx), State);
+    return MIB.addReg(getRegisterInfo().getSubReg(Reg, SubIdx), State);
   return MIB.addReg(Reg, State, SubIdx);
 }
 
@@ -1011,8 +1011,8 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       } else if (ARM::GPRPairRegClass.hasSubClassEq(RC)) {
         if (Subtarget.hasV5TEOps()) {
           MachineInstrBuilder MIB = BuildMI(MBB, I, DebugLoc(), get(ARM::STRD));
-          AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill), TRI);
-          AddDReg(MIB, SrcReg, ARM::gsub_1, 0, TRI);
+          AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
+          AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
           MIB.addFrameIndex(FI).addReg(0).addImm(0).addMemOperand(MMO)
              .add(predOps(ARMCC::AL));
         } else {
@@ -1022,8 +1022,8 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .addFrameIndex(FI)
                                         .addMemOperand(MMO)
                                         .add(predOps(ARMCC::AL));
-          AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill), TRI);
-          AddDReg(MIB, SrcReg, ARM::gsub_1, 0, TRI);
+          AddDReg(MIB, SrcReg, ARM::gsub_0, getKillRegState(isKill));
+          AddDReg(MIB, SrcReg, ARM::gsub_1, 0);
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1073,9 +1073,9 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .addFrameIndex(FI)
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill), TRI);
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0, TRI);
-          AddDReg(MIB, SrcReg, ARM::dsub_2, 0, TRI);
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
+          AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1105,10 +1105,10 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         .addFrameIndex(FI)
                                         .add(predOps(ARMCC::AL))
                                         .addMemOperand(MMO);
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill), TRI);
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0, TRI);
-          MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0, TRI);
-                AddDReg(MIB, SrcReg, ARM::dsub_3, 0, TRI);
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
+          MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
+                AddDReg(MIB, SrcReg, ARM::dsub_3, 0);
         }
       } else
         llvm_unreachable("Unknown reg class!");
@@ -1125,14 +1125,14 @@ void ARMBaseInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                       .addFrameIndex(FI)
                                       .add(predOps(ARMCC::AL))
                                       .addMemOperand(MMO);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill), TRI);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0, TRI);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0, TRI);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_3, 0, TRI);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_4, 0, TRI);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_5, 0, TRI);
-        MIB = AddDReg(MIB, SrcReg, ARM::dsub_6, 0, TRI);
-              AddDReg(MIB, SrcReg, ARM::dsub_7, 0, TRI);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_0, getKillRegState(isKill));
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_1, 0);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_2, 0);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_3, 0);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_4, 0);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_5, 0);
+        MIB = AddDReg(MIB, SrcReg, ARM::dsub_6, 0);
+              AddDReg(MIB, SrcReg, ARM::dsub_7, 0);
       } else
         llvm_unreachable("Unknown reg class!");
       break;
@@ -1272,8 +1272,8 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(
 
       if (Subtarget.hasV5TEOps()) {
         MIB = BuildMI(MBB, I, DL, get(ARM::LDRD));
-        AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead, TRI);
-        AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
+        AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead);
+        AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead);
         MIB.addFrameIndex(FI).addReg(0).addImm(0).addMemOperand(MMO)
            .add(predOps(ARMCC::AL));
       } else {
@@ -1283,8 +1283,8 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(
                   .addFrameIndex(FI)
                   .addMemOperand(MMO)
                   .add(predOps(ARMCC::AL));
-        MIB = AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead, TRI);
-        MIB = AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead, TRI);
+        MIB = AddDReg(MIB, DestReg, ARM::gsub_0, RegState::DefineNoRead);
+        MIB = AddDReg(MIB, DestReg, ARM::gsub_1, RegState::DefineNoRead);
       }
 
       if (DestReg.isPhysical())
@@ -1330,9 +1330,9 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(
                                       .addFrameIndex(FI)
                                       .addMemOperand(MMO)
                                       .add(predOps(ARMCC::AL));
-        MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead, TRI);
-        MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead, TRI);
-        MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead, TRI);
+        MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead);
+        MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead);
+        MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead);
         if (DestReg.isPhysical())
           MIB.addReg(DestReg, RegState::ImplicitDefine);
       }
@@ -1359,10 +1359,10 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(
                                        .addFrameIndex(FI)
                                        .add(predOps(ARMCC::AL))
                                        .addMemOperand(MMO);
-         MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead, TRI);
-         MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead, TRI);
-         MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead, TRI);
-         MIB = AddDReg(MIB, DestReg, ARM::dsub_3, RegState::DefineNoRead, TRI);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead);
+         MIB = AddDReg(MIB, DestReg, ARM::dsub_3, RegState::DefineNoRead);
          if (DestReg.isPhysical())
            MIB.addReg(DestReg, RegState::ImplicitDefine);
        }
@@ -1380,14 +1380,14 @@ void ARMBaseInstrInfo::loadRegFromStackSlot(
                                     .addFrameIndex(FI)
                                     .add(predOps(ARMCC::AL))
                                     .addMemOperand(MMO);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead, TRI);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead, TRI);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead, TRI);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_3, RegState::DefineNoRead, TRI);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_4, RegState::DefineNoRead, TRI);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_5, RegState::DefineNoRead, TRI);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_6, RegState::DefineNoRead, TRI);
-      MIB = AddDReg(MIB, DestReg, ARM::dsub_7, RegState::DefineNoRead, TRI);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_0, RegState::DefineNoRead);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_1, RegState::DefineNoRead);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_2, RegState::DefineNoRead);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_3, RegState::DefineNoRead);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_4, RegState::DefineNoRead);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_5, RegState::DefineNoRead);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_6, RegState::DefineNoRead);
+      MIB = AddDReg(MIB, DestReg, ARM::dsub_7, RegState::DefineNoRead);
       if (DestReg.isPhysical())
         MIB.addReg(DestReg, RegState::ImplicitDefine);
     } else
