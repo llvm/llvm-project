@@ -5595,6 +5595,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_ANYEXT:
   case G_FPEXT:
   case G_FPTRUNC:
+  case G_FPTRUNC_ODD:
   case G_SITOFP:
   case G_UITOFP:
   case G_FPTOSI:
@@ -8476,7 +8477,8 @@ LegalizerHelper::lowerFPTOINT_SAT(MachineInstr &MI) {
   return Legalized;
 }
 
-// f64 -> f16 conversion using round-to-nearest-even rounding mode.
+// f64 -> f16 conversion using round-to-nearest-even rounding mode for scalars
+// and round-to-odd for vectors.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   const LLT S1 = LLT::scalar(1);
@@ -8486,8 +8488,28 @@ LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
   assert(MRI.getType(Dst).getScalarType() == LLT::scalar(16) &&
          MRI.getType(Src).getScalarType() == LLT::scalar(64));
 
-  if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
-    return UnableToLegalize;
+  if (MRI.getType(Src).isVector()) {
+    LLT SrcTy = MRI.getType(Src);
+
+    LLT MidTy = LLT::fixed_vector(SrcTy.getNumElements(), LLT::scalar(32));
+
+    // Check if G_FPTRUNC_ODD has been added to the legalizer and the resultant
+    // types can be legalized.
+    auto LegalizeAction =
+        LI.getAction({TargetOpcode::G_FPTRUNC_ODD, {MidTy, SrcTy}}).Action;
+
+    if (LegalizeAction == LegalizeActions::Unsupported ||
+        LegalizeAction == LegalizeActions::NotFound)
+      return UnableToLegalize;
+
+    MIRBuilder.setInstrAndDebugLoc(MI);
+
+    MachineInstrBuilder Mid = MIRBuilder.buildFPTruncOdd(MidTy, Src);
+    MIRBuilder.buildFPTrunc(Dst, Mid.getReg(0));
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   if (MI.getFlag(MachineInstr::FmAfn)) {
     unsigned Flags = MI.getFlags();

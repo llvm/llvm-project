@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -817,9 +818,23 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s16, s32}, {s16, s64}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
       .libcallFor({{s16, s128}, {s32, s128}, {s64, s128}})
-      .clampNumElements(0, v4s16, v4s16)
-      .clampNumElements(0, v2s32, v2s32)
+      .moreElementsToNextPow2(1)
+      .lowerIf([](const LegalityQuery &Q) {
+        LLT DstTy = Q.Types[0];
+        LLT SrcTy = Q.Types[1];
+        return SrcTy.isFixedVector() && DstTy.isFixedVector() &&
+               SrcTy.getScalarSizeInBits() == 64 &&
+               DstTy.getScalarSizeInBits() == 16;
+      })
+      // Clamp based on input
+      .clampNumElements(1, v4s32, v4s32)
+      .clampNumElements(1, v2s64, v2s64)
       .scalarize(0);
+
+  getActionDefinitionsBuilder(G_FPTRUNC_ODD)
+      .legalFor({{s16, s32}, {s32, s64}, {v4s16, v4s32}, {v2s32, v2s64}})
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s64, 2);
 
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(
