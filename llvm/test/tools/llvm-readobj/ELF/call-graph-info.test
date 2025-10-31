@@ -78,7 +78,7 @@
 
 # LLVM: callgraph_info [
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Name: foo
+# LLVM-NEXT:       Functions: [foo]
 # LLVM-NEXT:       Address: 0x1790
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
@@ -91,7 +91,7 @@
 # LLVM-NEXT:       ]
 # LLVM-NEXT:     }
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Name: bar
+# LLVM-NEXT:       Functions: [bar]
 # LLVM-NEXT:       Address: 0x17A0
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
@@ -104,7 +104,7 @@
 # LLVM-NEXT:       ]
 # LLVM-NEXT:     }
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Name: baz
+# LLVM-NEXT:       Functions: [baz]
 # LLVM-NEXT:       Address: 0x17B0
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
@@ -117,7 +117,7 @@
 # LLVM-NEXT:       ]
 # LLVM-NEXT:     }
 # LLVM-NEXT:     Function {
-# LLVM-NEXT:       Name: main
+# LLVM-NEXT:       Functions: [main]
 # LLVM-NEXT:       Address: 0x17C0
 # LLVM-NEXT:       Version: 0
 # LLVM-NEXT:       IsIndirectTarget: Yes
@@ -125,15 +125,15 @@
 # LLVM-NEXT:       NumDirectCallees: 3
 # LLVM-NEXT:       DirectCallees [
 # LLVM-NEXT:         Entry {
-# LLVM-NEXT:           Name: foo
+# LLVM-NEXT:           Functions: [foo]
 # LLVM-NEXT:           Address: 0x1790
 # LLVM-NEXT:         }
 # LLVM-NEXT:         Entry {
-# LLVM-NEXT:           Name: bar
+# LLVM-NEXT:           Functions: [bar]
 # LLVM-NEXT:           Address: 0x17A0
 # LLVM-NEXT:         }
 # LLVM-NEXT:         Entry {
-# LLVM-NEXT:           Name: baz
+# LLVM-NEXT:           Functions: [baz]
 # LLVM-NEXT:           Address: 0x17B0
 # LLVM-NEXT:         }
 # LLVM-NEXT:       ]
@@ -153,7 +153,9 @@
 # JSON:     "callgraph_info": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "foo",
+# JSON-NEXT:          "Functions": [
+# JSON-NEXT:            "foo"
+# JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6032,
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
@@ -166,7 +168,9 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "bar",
+# JSON-NEXT:          "Functions": [
+# JSON-NEXT:            "bar"
+# JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6048,
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
@@ -179,7 +183,9 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "baz",
+# JSON-NEXT:          "Functions": [
+# JSON-NEXT:            "baz"
+# JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6064,
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
@@ -192,7 +198,9 @@
 # JSON-NEXT:      },
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
-# JSON-NEXT:          "Name": "main",
+# JSON-NEXT:          "Functions": [
+# JSON-NEXT:            "main"
+# JSON-NEXT:          ],
 # JSON-NEXT:          "Address": 6080,
 # JSON-NEXT:          "Version": 0,
 # JSON-NEXT:          "IsIndirectTarget": true,
@@ -201,19 +209,25 @@
 # JSON-NEXT:          "DirectCallees": [
 # JSON-NEXT:            {
 # JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "Name": "foo",
+# JSON-NEXT:                "Functions": [
+# JSON-NEXT:                  "foo"
+# JSON-NEXT:                ],
 # JSON-NEXT:                "Address": 6032
 # JSON-NEXT:              }
 # JSON-NEXT:            },
 # JSON-NEXT:            {
 # JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "Name": "bar",
+# JSON-NEXT:                "Functions": [
+# JSON-NEXT:                  "bar"
+# JSON-NEXT:                ],
 # JSON-NEXT:                "Address": 6048
 # JSON-NEXT:              }
 # JSON-NEXT:            },
 # JSON-NEXT:            {
 # JSON-NEXT:              "Entry": {
-# JSON-NEXT:                "Name": "baz",
+# JSON-NEXT:                "Functions": [
+# JSON-NEXT:                  "baz"
+# JSON-NEXT:                ],
 # JSON-NEXT:                "Address": 6064
 # JSON-NEXT:              }
 # JSON-NEXT:            }

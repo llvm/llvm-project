@@ -464,16 +464,13 @@ private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 
 protected:
-  std::string getFunctionNamesString(uint64_t FuncAddr) {
+  SmallVector<std::string> getFunctionNames(uint64_t FuncAddr) {
     SmallVector<uint32_t> FuncSymIndexes =
         this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
-    if (FuncSymIndexes.empty())
-      return "";
-
     SmallVector<std::string> FuncSymNames;
     for (uint32_t Index : FuncSymIndexes)
       FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    return join(FuncSymNames, ", ");
+    return FuncSymNames;
   }
 };
 
@@ -5490,14 +5487,14 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   const Elf_Shdr *RelocSymTab = nullptr;
   this->getCallGraphRelocations(Relocations, RelocSymTab);
 
-  auto PrintFunc = [](uint64_t FuncEntryPC, std::string FuncSymName,
+  auto PrintFunc = [](uint64_t FuncEntryPC, ArrayRef<std::string> FuncNames,
                       formatted_raw_ostream &OS) {
     OS.PadToColumn(4);
     OS << "Address:";
     OS.PadToColumn(21);
     OS << to_string(format_hex(FuncEntryPC, 1));
-    if (!FuncSymName.empty())
-      OS << " <" << FuncSymName << ">";
+    if (!FuncNames.empty())
+      OS << " <" << join(FuncNames.begin(), FuncNames.end(), ", ") << ">";
     OS << "\n";
   };
 
@@ -5537,8 +5534,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
 
   auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
     if (this->Obj.getHeader().e_type != ELF::ET_REL) {
-      std::string FuncSymName = this->getFunctionNamesString(FuncEntryPC);
-      PrintFunc(FuncEntryPC, FuncSymName, OS);
+      PrintFunc(FuncEntryPC, this->getFunctionNames(FuncEntryPC), OS);
       return;
     }
     auto Reloc = llvm::lower_bound(
@@ -8416,10 +8412,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   const Elf_Shdr *RelocSymTab = nullptr;
   this->getCallGraphRelocations(Relocations, RelocSymTab);
 
-  auto PrintFunc = [](uint64_t FuncEntryPC, std::string FuncSymName,
+  auto PrintFunc = [](uint64_t FuncEntryPC, ArrayRef<std::string> FuncNames,
                       ScopedPrinter &W) {
-    if (!FuncSymName.empty())
-      W.printString("Name", FuncSymName);
+    if (!FuncNames.empty())
+      W.printList("Functions", FuncNames);
     W.printHex("Address", FuncEntryPC);
   };
 
@@ -8448,8 +8444,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
 
   auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
     if (this->Obj.getHeader().e_type != ELF::ET_REL) {
-      std::string FuncSymName = this->getFunctionNamesString(FuncEntryPC);
-      PrintFunc(FuncEntryPC, FuncSymName, W);
+      PrintFunc(FuncEntryPC, this->getFunctionNames(FuncEntryPC), W);
       return;
     }
     auto Reloc = llvm::lower_bound(
