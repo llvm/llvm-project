@@ -16,6 +16,16 @@ New entries should be added directly below the "Version" header.
 Version 22.0
 ------------
 
+* [libc++] Add a thread-safe version of std::lgamma in the dylib
+
+  This patch adds a new function __lgamma_thread_safe in the dylib to avoid having to redeclare
+  ::lgamma_r within libc++'s own headers. This merely introduces a new symbol so it's not an ABI
+  break.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__16__math25__lgamma_thread_safe_implEd
+
 * [libc++] Remove __time_get_storage::{__analyze,init} from the ABI
 
   These functions have never been used outside the dylib, so there is no point in exporting them.

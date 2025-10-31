@@ -1341,6 +1341,7 @@
 {'is_defined': True, 'name': '_ZNSt3__16__clocEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__itoa8__u32toaEjPc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__itoa8__u64toaEmPc', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__16__math25__lgamma_thread_safe_implEd', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIaaEEPaEEvT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIccEEPcEEvT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__sortIRNS_6__lessIddEEPdEEvT0_S5_T_', 'type': 'FUNC'}
