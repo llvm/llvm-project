@@ -19,6 +19,32 @@
 #include "flang/Optimizer/Dialect/MIF/MIFOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// StopOp && ErrorStop
+//===----------------------------------------------------------------------===//
+
+template <typename OP>
+llvm::LogicalResult StopErrorStopVerify(OP &op) {
+  if (op.getStopCode()) {
+    mlir::Type codeType = op.getStopCode().getType();
+    if (!fir::isa_integer(codeType) &&
+        !fir::isa_char(fir::unwrapPassByRefType(codeType)))
+      return op.emitOpError(
+          "`stop_code` shall be of type integer or character.");
+    if (fir::isa_char(fir::unwrapPassByRefType(codeType)) &&
+        !mlir::isa<fir::BoxCharType>(codeType))
+      return op.emitOpError(
+          "`stop_code` base type is character and shall be a !fir.boxchar.");
+  }
+  return mlir::success();
+}
+
+llvm::LogicalResult mif::StopOp::verify() { return StopErrorStopVerify(*this); }
+
+llvm::LogicalResult mif::ErrorStopOp::verify() {
+  return StopErrorStopVerify(*this);
+}
+
+//===----------------------------------------------------------------------===//
 // NumImagesOp
 //===----------------------------------------------------------------------===//
 
