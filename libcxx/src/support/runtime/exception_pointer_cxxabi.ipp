@@ -13,19 +13,12 @@
 
 namespace std {
 
-exception_ptr::~exception_ptr() noexcept { __cxa_decrement_exception_refcount(__ptr_); }
-
-exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
-  __cxa_increment_exception_refcount(__ptr_);
+void exception_ptr::__do_increment_refcount(void* __ptr) noexcept {
+  __cxa_increment_exception_refcount(__ptr);
 }
 
-exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
-  if (__ptr_ != other.__ptr_) {
-    __cxa_increment_exception_refcount(other.__ptr_);
-    __cxa_decrement_exception_refcount(__ptr_);
-    __ptr_ = other.__ptr_;
-  }
-  return *this;
+void exception_ptr::__do_decrement_refcount(void* __ptr) noexcept {
+  __cxa_decrement_exception_refcount(__ptr);
 }
 
 exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {

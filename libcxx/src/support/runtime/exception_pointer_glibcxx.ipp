@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 // libsupc++ does not implement the dependent EH ABI and the functionality
 // it uses to implement std::exception_ptr (which it declares as an alias of
 // std::__exception_ptr::exception_ptr) is not directly exported to clients. So
 // we have little choice but to hijack std::__exception_ptr::exception_ptr's
-// (which fortunately has the same layout as our std::exception_ptr) copy
-// constructor, assignment operator and destructor (which are part of its
-// stable ABI), and its rethrow_exception(std::__exception_ptr::exception_ptr)
-// function.
+// _M_addref and _M_release and its rethrow_exception function. Fortunately,
+// glibcxx's exception_ptr has the same layout as our exception_ptr and we can
+// reinterpret_cast between the two.
 
 namespace std {
 
@@ -23,27 +23,20 @@ namespace __exception_ptr {
 struct exception_ptr {
   void* __ptr_;
 
-  explicit exception_ptr(void*) noexcept;
-  exception_ptr(const exception_ptr&) noexcept;
-  exception_ptr& operator=(const exception_ptr&) noexcept;
-  ~exception_ptr() noexcept;
+  void _M_addref() noexcept;
+  void _M_release() noexcept;
 };
 
 } // namespace __exception_ptr
 
 [[noreturn]] void rethrow_exception(__exception_ptr::exception_ptr);
 
-exception_ptr::~exception_ptr() noexcept { reinterpret_cast<__exception_ptr::exception_ptr*>(this)->~exception_ptr(); }
-
-exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
-  new (reinterpret_cast<void*>(this))
-      __exception_ptr::exception_ptr(reinterpret_cast<const __exception_ptr::exception_ptr&>(other));
+void exception_ptr::__do_increment_refcount(void* __ptr) noexcept {
+  reinterpret_cast<__exception_ptr::exception_ptr*>(this)->_M_addref();
 }
 
-exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
-  *reinterpret_cast<__exception_ptr::exception_ptr*>(this) =
-      reinterpret_cast<const __exception_ptr::exception_ptr&>(other);
-  return *this;
+void exception_ptr::__do_decrement_refcount(void* __ptr) noexcept {
+  reinterpret_cast<__exception_ptr::exception_ptr*>(this)->_M_release();
 }
 
 exception_ptr exception_ptr::__from_native_exception_pointer(void* __e) noexcept {

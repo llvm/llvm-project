@@ -11,17 +11,12 @@
 
 namespace std {
 
-exception_ptr::~exception_ptr() noexcept {
+void exception_ptr::__do_increment_refcount(void* __ptr) noexcept {
 #warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
 
-exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {
-#warning exception_ptr not yet implemented
-  __libcpp_verbose_abort("exception_ptr not yet implemented\n");
-}
-
-exception_ptr& exception_ptr::operator=(const exception_ptr& other) noexcept {
+void exception_ptr::__do_decrement_refcount(void* __ptr) noexcept {
 #warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
 }
