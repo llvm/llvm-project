@@ -18,7 +18,7 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (57):
+CHECK: Warnings without flags (56):
 
 CHECK-NEXT:   ext_expected_semi_decl_list
 CHECK-NEXT:   ext_missing_whitespace_after_macro_name
@@ -43,7 +43,6 @@ CHECK-NEXT:   warn_double_const_requires_fp64
 CHECK-NEXT:   warn_drv_assuming_mfloat_abi_is
 CHECK-NEXT:   warn_drv_clang_unsupported
 CHECK-NEXT:   warn_drv_pch_not_first_include
-CHECK-NEXT:   warn_drv_riscv_be_experimental
 CHECK-NEXT:   warn_expected_qualified_after_typename
 CHECK-NEXT:   warn_fe_backend_unsupported
 CHECK-NEXT:   warn_fe_cc_log_diagnostics_failure

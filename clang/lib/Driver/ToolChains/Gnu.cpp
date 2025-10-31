@@ -1735,7 +1735,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
             .flag(Twine("-mabi=", Element.mabi).str()));
   }
 
-  std::string EndiannessSuffix = TargetTriple.isLittleEndian() ? "" : "be";
+  StringRef EndiannessSuffix = TargetTriple.isLittleEndian() ? "" : "be";
   MultilibSet RISCVMultilibs =
       MultilibSetBuilder()
           .Either(Ms)
@@ -1744,9 +1744,9 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
           .setFilePathsCallback([EndiannessSuffix](const Multilib &M) {
             return std::vector<std::string>(
                 {M.gccSuffix(),
-                 "/../../../../riscv64" + EndiannessSuffix +
+                 "/../../../../riscv64" + EndiannessSuffix.str() +
                      "-unknown-elf/lib" + M.gccSuffix(),
-                 "/../../../../riscv32" + EndiannessSuffix +
+                 "/../../../../riscv32" + EndiannessSuffix.str() +
                      "-unknown-elf/lib" + M.gccSuffix()});
           });
 
@@ -1795,8 +1795,7 @@ static void findRISCVMultilibs(const Driver &D,
           .FilterOut(NonExistent);
 
   Multilib::flags_list Flags;
-  bool IsRV64 = (TargetTriple.getArch() == llvm::Triple::riscv64 ||
-                 TargetTriple.getArch() == llvm::Triple::riscv64be);
+  bool IsRV64 = TargetTriple.isRISCV64();
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   addMultilibFlag(!IsRV64, "-m32", Flags);
