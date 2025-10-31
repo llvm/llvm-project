@@ -1883,8 +1883,7 @@ DWARF:
     EXPECT_EQ(
         llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
         1U);
-    uint64_t count;
-    EXPECT_EQ(type_sp->GetEncoding(count), lldb::eEncodingSint);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingSint);
     EXPECT_EQ(type_sp->GetName(), "_BitInt(2)");
     EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(), "_BitInt(2)");
   }
@@ -1899,8 +1898,7 @@ DWARF:
     EXPECT_EQ(
         llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
         8U);
-    uint64_t count;
-    EXPECT_EQ(type_sp->GetEncoding(count), lldb::eEncodingSint);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingSint);
     EXPECT_EQ(type_sp->GetName(), "_BitInt");
     EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(), "_BitInt(52)");
   }
@@ -1915,8 +1913,7 @@ DWARF:
     EXPECT_EQ(
         llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
         1U);
-    uint64_t count;
-    EXPECT_EQ(type_sp->GetEncoding(count), lldb::eEncodingUint);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingUint);
     EXPECT_EQ(type_sp->GetName(), "unsigned _BitInt(2)");
     EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(),
               "unsigned _BitInt(2)");
@@ -1932,8 +1929,7 @@ DWARF:
     EXPECT_EQ(
         llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
         8U);
-    uint64_t count;
-    EXPECT_EQ(type_sp->GetEncoding(count), lldb::eEncodingUint);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingUint);
     EXPECT_EQ(type_sp->GetName(), "unsigned _BitInt");
     EXPECT_EQ(type_sp->GetForwardCompilerType().GetTypeName(),
               "unsigned _BitInt(52)");
@@ -1949,8 +1945,7 @@ DWARF:
     EXPECT_EQ(
         llvm::expectedToOptional(type_sp->GetByteSize(nullptr)).value_or(0),
         8U);
-    uint64_t count;
-    EXPECT_EQ(type_sp->GetEncoding(count), lldb::eEncodingSint);
+    EXPECT_EQ(type_sp->GetEncoding(), lldb::eEncodingSint);
     EXPECT_EQ(type_sp->GetName(), "_BitInt");
 
     // Older versions of Clang didn't emit a DW_AT_bit_size for _BitInt. In
