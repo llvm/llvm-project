@@ -2186,6 +2186,10 @@ defm : VAvgrPat<srl, "VAVGR_BU", v16i8>;
 defm : VAvgrPat<srl, "VAVGR_HU", v8i16>;
 defm : VAvgrPat<srl, "VAVGR_WU", v4i32>;
 defm : VAvgrPat<srl, "VAVGR_DU", v2i64>;
+defm : PatVrVr<avgfloors, "VAVG">;
+defm : PatVrVr<avgceils, "VAVGR">;
+defm : PatVrVrU<avgflooru, "VAVG">;
+defm : PatVrVrU<avgceilu, "VAVGR">;
 
 // abs
 def : Pat<(abs v16i8:$vj), (VSIGNCOV_B v16i8:$vj, v16i8:$vj)>;
