@@ -3026,7 +3026,7 @@ def warn_cxx17_compat_constexpr_virtual : Warning<
   "virtual constexpr functions are incompatible with "
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_constexpr_virtual_base : Error<
-  "constexpr %select{member function|constructor}0 not allowed in "
+  "constexpr %select{destructor|constructor}0 not allowed in "
   "%select{struct|interface|class}1 with virtual base "
   "%plural{1:class|:classes}2">;
 def note_non_literal_incomplete : Note<
