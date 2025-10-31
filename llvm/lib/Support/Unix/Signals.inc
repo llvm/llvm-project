@@ -78,6 +78,10 @@
 #include <__le_cwi.h>
 #endif
 
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
+
 using namespace llvm;
 
 static void SignalHandler(int Sig, siginfo_t *Info, void *);
@@ -413,10 +417,21 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
     raise(Sig);
 #endif
 
-  // Signal sent from another process, do not assume that continuing the
-  // execution would re-raise it.
-  if (Info->si_pid != getpid())
+#if defined(__linux__)
+  // Re-raising a signal via `raise` loses the original siginfo. Recent
+  // versions of linux (>= 3.9) support processes sending a signal to itself
+  // with arbitrary signal information using a syscall. If this syscall is
+  // unsupported, errno will be set to EPERM and `raise` will be used instead.
+  int retval =
+      syscall(SYS_rt_tgsigqueueinfo, getpid(), syscall(SYS_gettid), Sig, Info);
+  if (retval != 0 && errno == EPERM)
     raise(Sig);
+#else
+  // Signal sent from another userspace process, do not assume that continuing
+  // the execution would re-raise it.
+  if (Info->si_pid != getpid() && Info->si_pid != 0)
+    raise(Sig);
+#endif
 }
 
 static void InfoSignalHandler(int Sig) {
@@ -506,6 +521,21 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   }
   return 0;
 }
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#if !defined(HAVE_BACKTRACE)
+#error DebugLoc origin-tracking currently requires `backtrace()`.
+#endif
+namespace llvm {
+namespace sys {
+template <unsigned long MaxDepth>
+int getStackTrace(std::array<void *, MaxDepth> &StackTrace) {
+  return backtrace(StackTrace.data(), MaxDepth);
+}
+template int getStackTrace<16ul>(std::array<void *, 16ul> &);
+} // namespace sys
+} // namespace llvm
+#endif
 
 /// If this is an ELF platform, we can find all loaded modules and their virtual
 /// addresses with dl_iterate_phdr.
@@ -826,30 +856,36 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   int width = 0;
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-
     int nwidth;
-    if (!name)
-      nwidth = strlen(dlinfo.dli_fname);
-    else
-      nwidth = strlen(name) - 1;
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      nwidth = 7; // "(error)"
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
 
-    if (nwidth > width)
-      width = nwidth;
+      if (!name)
+        nwidth = strlen(dlinfo.dli_fname);
+      else
+        nwidth = strlen(name) - 1;
+    }
+
+    width = std::max(nwidth, width);
   }
 
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
 
     OS << format("%-2d", i);
 
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-    if (!name)
-      OS << format(" %-*s", width, dlinfo.dli_fname);
-    else
-      OS << format(" %-*s", width, name + 1);
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      OS << format(" %-*s", width, static_cast<const char *>("(error)"));
+      dlinfo.dli_sname = nullptr;
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
+      if (!name)
+        OS << format(" %-*s", width, dlinfo.dli_fname);
+      else
+        OS << format(" %-*s", width, name + 1);
+    }
 
     OS << format(" %#0*lx", (int)(sizeof(void *) * 2) + 2,
                  (unsigned long)StackTrace[i]);

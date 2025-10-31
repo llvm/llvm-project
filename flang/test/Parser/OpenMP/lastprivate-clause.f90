@@ -21,7 +21,7 @@ end
 
 !PARSE-TREE: SubroutineStmt
 !PARSE-TREE:   Name = 'foo1'
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = parallel do
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: OmpClauseList -> OmpClause -> Lastprivate -> OmpLastprivateClause
 !PARSE-TREE:   OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: EndSubroutineStmt
@@ -47,7 +47,7 @@ end
 
 !PARSE-TREE: SubroutineStmt
 !PARSE-TREE:   Name = 'foo2'
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = parallel do
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: OmpClauseList -> OmpClause -> Lastprivate -> OmpLastprivateClause
 !PARSE-TREE:   Modifier -> OmpLastprivateModifier -> Value = Conditional
 !PARSE-TREE:   OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'

@@ -25,19 +25,7 @@
 namespace clang {
 namespace format {
 
-static constexpr StringRef Blanks = " \t\v\f\r";
-static bool IsBlank(char C) {
-  switch (C) {
-  case ' ':
-  case '\t':
-  case '\v':
-  case '\f':
-  case '\r':
-    return true;
-  default:
-    return false;
-  }
-}
+static constexpr StringRef Blanks(" \t\v\f\r");
 
 static StringRef getLineCommentIndentPrefix(StringRef Comment,
                                             const FormatStyle &Style) {
@@ -46,7 +34,7 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   static constexpr StringRef KnownTextProtoPrefixes[] = {"####", "###", "##",
                                                          "//", "#"};
   ArrayRef<StringRef> KnownPrefixes(KnownCStylePrefixes);
-  if (Style.Language == FormatStyle::LK_TextProto)
+  if (Style.isTextProto())
     KnownPrefixes = KnownTextProtoPrefixes;
 
   assert(
@@ -158,8 +146,7 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
       return BreakableToken::Split(StringRef::npos, 0);
     StringRef BeforeCut = Text.substr(0, SpaceOffset).rtrim(Blanks);
     StringRef AfterCut = Text.substr(SpaceOffset);
-    // Don't trim the leading blanks if it would create a */ after the break.
-    if (!DecorationEndsWithStar || AfterCut.size() <= 1 || AfterCut[1] != '/')
+    if (!DecorationEndsWithStar)
       AfterCut = AfterCut.ltrim(Blanks);
     return BreakableToken::Split(BeforeCut.size(),
                                  AfterCut.begin() - BeforeCut.end());
@@ -194,7 +181,7 @@ getStringSplit(StringRef Text, unsigned UsedColumns, unsigned ColumnLimit,
     if (Chars > MaxSplit || Text.size() <= Advance)
       break;
 
-    if (IsBlank(Text[0]))
+    if (Blanks.contains(Text[0]))
       SpaceOffset = SplitPoint;
     if (Text[0] == '/')
       SlashOffset = SplitPoint;
@@ -319,8 +306,10 @@ BreakableStringLiteralUsingOperators::BreakableStringLiteralUsingOperators(
     // In Verilog, all strings are quoted by double quotes, joined by commas,
     // and wrapped in braces.  The comma is always before the newline.
     assert(QuoteStyle == DoubleQuotes);
-    LeftBraceQuote = Style.Cpp11BracedListStyle ? "{\"" : "{ \"";
-    RightBraceQuote = Style.Cpp11BracedListStyle ? "\"}" : "\" }";
+    LeftBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "{\"" : "{ \"";
+    RightBraceQuote =
+        Style.Cpp11BracedListStyle != FormatStyle::BLS_Block ? "\"}" : "\" }";
     Postfix = "\",";
     Prefix = "\"";
   } else {
@@ -526,7 +515,7 @@ BreakableBlockComment::BreakableBlockComment(
     Decoration = "";
   }
   for (size_t i = 1, e = Content.size(); i < e && !Decoration.empty(); ++i) {
-    const StringRef &Text = Content[i];
+    const StringRef Text(Content[i]);
     if (i + 1 == e) {
       // If the last line is empty, the closing "*/" will have a star.
       if (Text.empty())
@@ -576,7 +565,7 @@ BreakableBlockComment::BreakableBlockComment(
   IndentAtLineBreak = std::max<unsigned>(IndentAtLineBreak, Decoration.size());
 
   // Detect a multiline jsdoc comment and set DelimitersOnNewline in that case.
-  if (Style.isJavaScript() || Style.Language == FormatStyle::LK_Java) {
+  if (Style.isJavaScript() || Style.isJava()) {
     if ((Lines[0] == "*" || Lines[0].starts_with("* ")) && Lines.size() > 1) {
       // This is a multiline jsdoc comment.
       DelimitersOnNewline = true;
@@ -694,7 +683,7 @@ const llvm::StringSet<>
 };
 
 unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
-  if (Style.Language != FormatStyle::LK_Java && !Style.isJavaScript())
+  if (!Style.isJava() && !Style.isJavaScript())
     return 0;
   // The content at LineIndex 0 of a comment like:
   // /** line 0 */
@@ -940,14 +929,12 @@ BreakableLineCommentSection::BreakableLineCommentSection(
       }
 
       if (Lines[i].size() != IndentPrefix.size()) {
-        PrefixSpaceChange[i] = FirstLineSpaceChange;
-
-        if (SpacesInPrefix + PrefixSpaceChange[i] < Minimum) {
-          PrefixSpaceChange[i] +=
-              Minimum - (SpacesInPrefix + PrefixSpaceChange[i]);
-        }
-
         assert(Lines[i].size() > IndentPrefix.size());
+
+        PrefixSpaceChange[i] = SpacesInPrefix + FirstLineSpaceChange < Minimum
+                                   ? Minimum - SpacesInPrefix
+                                   : FirstLineSpaceChange;
+
         const auto FirstNonSpace = Lines[i][IndentPrefix.size()];
         const bool IsFormatComment = LineTok && switchesFormatting(*LineTok);
         const bool LineRequiresLeadingSpace =

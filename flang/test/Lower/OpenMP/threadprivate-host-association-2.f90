@@ -3,7 +3,7 @@
 
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-!CHECK: func.func @_QQmain() attributes {fir.bindc_name = "main"} {
+!CHECK: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"} {
 !CHECK:   %[[A:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK:   %[[A_DECL:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[A_ADDR:.*]] = fir.address_of(@_QFEa) : !fir.ref<i32>
@@ -27,7 +27,7 @@
 !CHECK:   return
 !CHECK: }
 !CHECK: fir.global internal @_QFEa : i32 {
-!CHECK:   %[[A:.*]] = fir.undefined i32
+!CHECK:   %[[A:.*]] = fir.zero_bits i32
 !CHECK:   fir.has_value %[[A]] : i32
 !CHECK: }
 

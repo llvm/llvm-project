@@ -1,0 +1,15 @@
+# Disabling until the lldb-rpc-gen tool lands.
+XFAIL: *
+RUN: mkdir -p %t/server
+RUN: mkdir -p %t/lib
+RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/CheckBasicIncludesEmit.h
+
+RUN: cat %t/lib/CheckBasicIncludesEmit.cpp | FileCheck %s
+
+# All server-side source files must have these includes at the top of their files.
+CHECK: #include "RPCUserServer.h"
+CHECK: #include "SBAPI.h"
+CHECK: #include <lldb-rpc/common/RPCArgument.h>
+CHECK: #include <lldb-rpc/common/RPCCommon.h>
+CHECK: #include <lldb-rpc/common/RPCFunction.h>
+CHECK: #include <lldb/API/LLDB.h>

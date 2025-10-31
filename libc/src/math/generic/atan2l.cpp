@@ -9,7 +9,7 @@
 #include "src/math/atan2l.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/math/atan2.h"
+#include "src/__support/math/atan2.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(long double, atan2l, (long double y, long double x)) {
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64)
   return static_cast<long double>(
-      atan2(static_cast<double>(y), static_cast<double>(x)));
+      math::atan2(static_cast<double>(y), static_cast<double>(x)));
 #else
 #error "Extended precision is not yet supported"
 #endif

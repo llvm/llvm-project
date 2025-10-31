@@ -13326,13 +13326,63 @@ define <16 x i8> @test_v16i8_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <16 
 ;
 ; CHECK-GI-LABEL: test_v16i8_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr b1, [x0]
+; CHECK-GI-NEXT:    ld1.b { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    add x8, x0, x2
 ; CHECK-GI-NEXT:    str x8, [x1]
-; CHECK-GI-NEXT:    mov.b v0[1], v1[0]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i8, ptr %bar
   %tmp2 = insertelement <16 x i8> %A, i8 %tmp1, i32 1
+  %tmp3 = getelementptr i8, ptr %bar, i64 %inc
+  store ptr %tmp3, ptr %ptr
+  ret <16 x i8> %tmp2
+}
+
+define <16 x i8> @test_v16i8_post_reg_ld1lane_zero(ptr %bar, ptr %ptr, i64 %inc) {
+; CHECK-SD-LABEL: test_v16i8_post_reg_ld1lane_zero:
+; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    add x8, x0, x2
+; CHECK-SD-NEXT:    str x8, [x1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_v16i8_post_reg_ld1lane_zero:
+; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    mov w8, #0 ; =0x0
+; CHECK-GI-NEXT:    mov.b v0[1], w8
+; CHECK-GI-NEXT:    mov.b v0[2], w8
+; CHECK-GI-NEXT:    mov.b v0[3], w8
+; CHECK-GI-NEXT:    mov.b v0[4], w8
+; CHECK-GI-NEXT:    mov.b v0[5], w8
+; CHECK-GI-NEXT:    mov.b v0[6], w8
+; CHECK-GI-NEXT:    mov.b v0[7], w8
+; CHECK-GI-NEXT:    mov.b v0[8], w8
+; CHECK-GI-NEXT:    mov.b v0[9], w8
+; CHECK-GI-NEXT:    mov.b v0[10], w8
+; CHECK-GI-NEXT:    mov.b v0[11], w8
+; CHECK-GI-NEXT:    mov.b v0[12], w8
+; CHECK-GI-NEXT:    mov.b v0[13], w8
+; CHECK-GI-NEXT:    mov.b v0[14], w8
+; CHECK-GI-NEXT:    mov.b v0[15], w8
+; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    str x8, [x1]
+; CHECK-GI-NEXT:    ret
+  %tmp1 = load i8, ptr %bar
+  %tmp2 = insertelement <16 x i8> zeroinitializer, i8 %tmp1, i32 0
+  %tmp3 = getelementptr i8, ptr %bar, i64 %inc
+  store ptr %tmp3, ptr %ptr
+  ret <16 x i8> %tmp2
+}
+
+define <16 x i8> @test_v16i8_post_reg_ld1lane_undef(ptr %bar, ptr %ptr, i64 %inc) {
+; CHECK-LABEL: test_v16i8_post_reg_ld1lane_undef:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr b0, [x0]
+; CHECK-NEXT:    add x8, x0, x2
+; CHECK-NEXT:    str x8, [x1]
+; CHECK-NEXT:    ret
+  %tmp1 = load i8, ptr %bar
+  %tmp2 = insertelement <16 x i8> poison, i8 %tmp1, i32 0
   %tmp3 = getelementptr i8, ptr %bar, i64 %inc
   store ptr %tmp3, ptr %ptr
   ret <16 x i8> %tmp2
@@ -13373,11 +13423,10 @@ define <8 x i8> @test_v8i8_post_reg_ld1lane(ptr %bar, ptr %ptr, i64 %inc, <8 x i
 ;
 ; CHECK-GI-LABEL: test_v8i8_post_reg_ld1lane:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr b1, [x0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    add x8, x0, x2
+; CHECK-GI-NEXT:    ld1.b { v0 }[1], [x0]
 ; CHECK-GI-NEXT:    str x8, [x1]
-; CHECK-GI-NEXT:    mov.b v0[1], v1[0]
 ; CHECK-GI-NEXT:    ; kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load i8, ptr %bar
@@ -13891,43 +13940,20 @@ define void  @test_ld1lane_build_half(ptr %a, ptr %b, ptr %c, ptr %d, <4 x half>
 }
 
 define void  @test_ld1lane_build_i8(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, ptr %g, ptr %h, <8 x i8> %v, ptr %p) {
-; CHECK-SD-LABEL: test_ld1lane_build_i8:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:    ldr b1, [x0]
-; CHECK-SD-NEXT:    ldr x8, [sp]
-; CHECK-SD-NEXT:    ld1.b { v1 }[1], [x1]
-; CHECK-SD-NEXT:    ld1.b { v1 }[2], [x2]
-; CHECK-SD-NEXT:    ld1.b { v1 }[3], [x3]
-; CHECK-SD-NEXT:    ld1.b { v1 }[4], [x4]
-; CHECK-SD-NEXT:    ld1.b { v1 }[5], [x5]
-; CHECK-SD-NEXT:    ld1.b { v1 }[6], [x6]
-; CHECK-SD-NEXT:    ld1.b { v1 }[7], [x7]
-; CHECK-SD-NEXT:    sub.8b v0, v1, v0
-; CHECK-SD-NEXT:    str d0, [x8]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_ld1lane_build_i8:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    ldr b1, [x0]
-; CHECK-GI-NEXT:    ldr b2, [x1]
-; CHECK-GI-NEXT:    ldr x8, [sp]
-; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    mov.b v1[1], v2[0]
-; CHECK-GI-NEXT:    ldr b2, [x2]
-; CHECK-GI-NEXT:    mov.b v1[2], v2[0]
-; CHECK-GI-NEXT:    ldr b2, [x3]
-; CHECK-GI-NEXT:    mov.b v1[3], v2[0]
-; CHECK-GI-NEXT:    ldr b2, [x4]
-; CHECK-GI-NEXT:    mov.b v1[4], v2[0]
-; CHECK-GI-NEXT:    ldr b2, [x5]
-; CHECK-GI-NEXT:    mov.b v1[5], v2[0]
-; CHECK-GI-NEXT:    ldr b2, [x6]
-; CHECK-GI-NEXT:    mov.b v1[6], v2[0]
-; CHECK-GI-NEXT:    ldr b2, [x7]
-; CHECK-GI-NEXT:    mov.b v1[7], v2[0]
-; CHECK-GI-NEXT:    sub.8b v0, v1, v0
-; CHECK-GI-NEXT:    str d0, [x8]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_ld1lane_build_i8:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr b1, [x0]
+; CHECK-NEXT:    ldr x8, [sp]
+; CHECK-NEXT:    ld1.b { v1 }[1], [x1]
+; CHECK-NEXT:    ld1.b { v1 }[2], [x2]
+; CHECK-NEXT:    ld1.b { v1 }[3], [x3]
+; CHECK-NEXT:    ld1.b { v1 }[4], [x4]
+; CHECK-NEXT:    ld1.b { v1 }[5], [x5]
+; CHECK-NEXT:    ld1.b { v1 }[6], [x6]
+; CHECK-NEXT:    ld1.b { v1 }[7], [x7]
+; CHECK-NEXT:    sub.8b v0, v1, v0
+; CHECK-NEXT:    str d0, [x8]
+; CHECK-NEXT:    ret
   %ld.a = load i8, ptr %a
   %ld.b = load i8, ptr %b
   %ld.c = load i8, ptr %c
@@ -14102,4 +14128,68 @@ define i32 @load_single_extract_variable_index_masked2_i32(ptr %A, i32 %idx) {
   %lv = load <4 x i32>, ptr %A
   %e = extractelement <4 x i32> %lv, i32 %idx.x
   ret i32 %e
+}
+
+define void @chained_insert_zero(ptr noundef %fenc, ptr noundef %pred, ptr noundef %residual, i32 noundef %stride) {
+; CHECK-SD-LABEL: chained_insert_zero:
+; CHECK-SD:       ; %bb.0: ; %entry
+; CHECK-SD-NEXT:    ldr s0, [x1]
+; CHECK-SD-NEXT:    ldr s1, [x0]
+; CHECK-SD-NEXT:    ; kill: def $w3 killed $w3 def $x3
+; CHECK-SD-NEXT:    sxtw x8, w3
+; CHECK-SD-NEXT:    usubl.8h v0, v1, v0
+; CHECK-SD-NEXT:    str d0, [x2]
+; CHECK-SD-NEXT:    ldr s0, [x0, x8]
+; CHECK-SD-NEXT:    ldr s1, [x1, x8]
+; CHECK-SD-NEXT:    sbfiz x8, x3, #1, #32
+; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
+; CHECK-SD-NEXT:    str d0, [x2, x8]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: chained_insert_zero:
+; CHECK-GI:       ; %bb.0: ; %entry
+; CHECK-GI-NEXT:    ldr s0, [x0]
+; CHECK-GI-NEXT:    ldr s1, [x1]
+; CHECK-GI-NEXT:    ; kill: def $w3 killed $w3 def $x3
+; CHECK-GI-NEXT:    sxtw x8, w3
+; CHECK-GI-NEXT:    mov.s v0[1], wzr
+; CHECK-GI-NEXT:    mov.s v1[1], wzr
+; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str d0, [x2]
+; CHECK-GI-NEXT:    ldr s0, [x0, x8]
+; CHECK-GI-NEXT:    ldr s1, [x1, x8]
+; CHECK-GI-NEXT:    lsl x8, x8, #1
+; CHECK-GI-NEXT:    mov.s v0[1], wzr
+; CHECK-GI-NEXT:    mov.s v1[1], wzr
+; CHECK-GI-NEXT:    usubl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str d0, [x2, x8]
+; CHECK-GI-NEXT:    ret
+entry:
+  %idx.ext = sext i32 %stride to i64
+  %0 = load i32, ptr %fenc, align 4
+  %vld1_lane.i = insertelement <2 x i32> <i32 poison, i32 0>, i32 %0, i64 0
+  %1 = bitcast <2 x i32> %vld1_lane.i to <8 x i8>
+  %2 = load i32, ptr %pred, align 4
+  %vld1_lane.i16 = insertelement <2 x i32> <i32 poison, i32 0>, i32 %2, i64 0
+  %3 = bitcast <2 x i32> %vld1_lane.i16 to <8 x i8>
+  %vmovl.i15 = zext <8 x i8> %1 to <8 x i16>
+  %vmovl.i = zext <8 x i8> %3 to <8 x i16>
+  %sub.i = sub nsw <8 x i16> %vmovl.i15, %vmovl.i
+  %shuffle.i = shufflevector <8 x i16> %sub.i, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i16> %shuffle.i, ptr %residual, align 2
+  %add.ptr = getelementptr inbounds i8, ptr %fenc, i64 %idx.ext
+  %add.ptr6 = getelementptr inbounds i8, ptr %pred, i64 %idx.ext
+  %add.ptr8 = getelementptr inbounds i16, ptr %residual, i64 %idx.ext
+  %4 = load i32, ptr %add.ptr, align 4
+  %vld1_lane.i.1 = insertelement <2 x i32> <i32 poison, i32 0>, i32 %4, i64 0
+  %5 = bitcast <2 x i32> %vld1_lane.i.1 to <8 x i8>
+  %6 = load i32, ptr %add.ptr6, align 4
+  %vld1_lane.i16.1 = insertelement <2 x i32> <i32 poison, i32 0>, i32 %6, i64 0
+  %7 = bitcast <2 x i32> %vld1_lane.i16.1 to <8 x i8>
+  %vmovl.i15.1 = zext <8 x i8> %5 to <8 x i16>
+  %vmovl.i.1 = zext <8 x i8> %7 to <8 x i16>
+  %sub.i.1 = sub nsw <8 x i16> %vmovl.i15.1, %vmovl.i.1
+  %shuffle.i.1 = shufflevector <8 x i16> %sub.i.1, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i16> %shuffle.i.1, ptr %add.ptr8, align 2
+  ret void
 }

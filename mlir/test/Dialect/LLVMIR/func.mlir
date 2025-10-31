@@ -258,12 +258,6 @@ module {
     llvm.return
   }
 
-  llvm.func @unsafe_fp_math_roundtrip() attributes {unsafe_fp_math = true} {
-    // CHECK: @unsafe_fp_math_roundtrip
-    // CHECK-SAME: attributes {unsafe_fp_math = true}
-    llvm.return
-  }
-
   llvm.func @no_infs_fp_math_roundtrip() attributes {no_infs_fp_math = true} {
     // CHECK: @no_infs_fp_math_roundtrip
     // CHECK-SAME: attributes {no_infs_fp_math = true}
@@ -273,12 +267,6 @@ module {
   llvm.func @no_nans_fp_math_roundtrip() attributes {no_nans_fp_math = true} {
     // CHECK: @no_nans_fp_math_roundtrip
     // CHECK-SAME: attributes {no_nans_fp_math = true}
-    llvm.return
-  }
-
-  llvm.func @approx_func_fp_math_roundtrip() attributes {approx_func_fp_math = true} {
-    // CHECK: @approx_func_fp_math_roundtrip
-    // CHECK-SAME: attributes {approx_func_fp_math = true}
     llvm.return
   }
 
@@ -309,6 +297,18 @@ module {
   llvm.func @fp_contract_roundtrip() attributes {fp_contract = "fast"} {
     // CHECK: @fp_contract_roundtrip
     // CHECK-SAME: attributes {fp_contract = "fast"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_entry_function() attributes {instrument_function_entry = "__cyg_profile_func_enter"} {
+    // CHECK: @instrument_function_entry_function
+    // CHECK-SAME: attributes {instrument_function_entry = "__cyg_profile_func_enter"}
+    llvm.return
+  }
+
+  llvm.func @instrument_function_exit_function() attributes {instrument_function_exit = "__cyg_profile_func_exit"} {
+    // CHECK: @instrument_function_exit_function
+    // CHECK-SAME: attributes {instrument_function_exit = "__cyg_profile_func_exit"}
     llvm.return
   }
 

@@ -5,4 +5,12 @@ macros: []
 types: []
 enums: []
 objects: []
-functions: []
+functions:
+  - name: ioctl
+    standards:
+      - Linux
+    return_type: int
+    arguments:
+      - type: int
+      - type: unsigned long
+      - type: '...'

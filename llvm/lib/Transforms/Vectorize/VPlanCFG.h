@@ -16,6 +16,7 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
@@ -219,6 +220,21 @@ inline iterator_range<
     df_iterator<VPBlockShallowTraversalWrapper<const VPBlockBase *>>>
 vp_depth_first_shallow(const VPBlockBase *G) {
   return depth_first(VPBlockShallowTraversalWrapper<const VPBlockBase *>(G));
+}
+
+/// Returns an iterator range to traverse the graph starting at \p G in
+/// post order. The iterator won't traverse through region blocks.
+inline iterator_range<
+    po_iterator<VPBlockShallowTraversalWrapper<VPBlockBase *>>>
+vp_post_order_shallow(VPBlockBase *G) {
+  return post_order(VPBlockShallowTraversalWrapper<VPBlockBase *>(G));
+}
+
+/// Returns an iterator range to traverse the graph starting at \p G in
+/// post order while traversing through region blocks.
+inline iterator_range<po_iterator<VPBlockDeepTraversalWrapper<VPBlockBase *>>>
+vp_post_order_deep(VPBlockBase *G) {
+  return post_order(VPBlockDeepTraversalWrapper<VPBlockBase *>(G));
 }
 
 /// Returns an iterator range to traverse the graph starting at \p G in

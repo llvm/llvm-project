@@ -12,7 +12,7 @@ using NS::x [[deprecated]];                                    // expected-warni
 using NS::x __attribute__((deprecated));                       // expected-warning {{'deprecated' currently has no effect on a using declaration}}
 using NS::x __attribute__((availability(macos,introduced=1))); // expected-warning {{'availability' currently has no effect on a using declaration}}
 
-[[clang::availability(macos,introduced=1)]] using NS::x; // expected-warning {{'availability' currently has no effect on a using declaration}} expected-warning{{ISO C++ does not allow}}
+[[clang::availability(macos,introduced=1)]] using NS::x; // expected-warning {{'clang::availability' currently has no effect on a using declaration}} expected-warning{{ISO C++ does not allow}}
 
 // expected-warning@+1 3 {{ISO C++ does not allow an attribute list to appear here}}
 [[clang::annotate("A")]] using NS::x [[clang::annotate("Y")]], NS::x [[clang::annotate("Z")]];

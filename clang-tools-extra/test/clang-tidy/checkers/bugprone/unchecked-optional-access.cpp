@@ -141,6 +141,31 @@ void nullable_value_after_swap(BloombergLP::bdlb::NullableValue<int> &opt1, Bloo
   }
 }
 
+void nullable_value_make_value(BloombergLP::bdlb::NullableValue<int> &opt1, BloombergLP::bdlb::NullableValue<int> &opt2) {
+  if (opt1.isNull()) {
+    opt1.makeValue(42);
+  }
+
+  opt1.value();
+
+  if (opt2.isNull()) {
+    opt2.makeValueInplace(42);
+  }
+
+  opt2.value();
+}
+
+void assertion_handler() __attribute__((analyzer_noreturn));
+
+void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      assertion_handler();
+  }
+
+  *opt; // no-warning: The previous condition guards this dereference.
+}
+
 template <typename T>
 void function_template_without_user(const absl::optional<T> &opt) {
   opt.value(); // no-warning

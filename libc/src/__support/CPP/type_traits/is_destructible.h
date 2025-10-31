@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 // is_destructible
-#if __has_builtin(__is_destructible)
+#if __has_builtin(__is_destructible) || defined(LIBC_COMPILER_IS_MSVC)
 template <typename T>
 struct is_destructible : bool_constant<__is_destructible(T)> {};
 #else

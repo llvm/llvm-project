@@ -70,7 +70,7 @@ func.func @block_labels1() {
   // CPP-DECLTOP-NEXT: }
 
 emitc.func @expression_inlining(%0 : i32, %1 : i32) {
-  %2 = expression : i1 {
+  %2 = expression %0, %1 : (i32, i32) -> i1 {
     %3 = cmp lt, %0, %1 : (i32, i32) -> i1
     yield %3 : i1
   }

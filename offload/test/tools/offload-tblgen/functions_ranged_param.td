@@ -8,13 +8,11 @@
 
 include "APIDefs.td"
 
-def : Handle {
-    let name = "some_handle_t";
+def some_handle_t : Handle {
     let desc = "An example handle type";
 }
 
-def : Function {
-    let name = "FunctionA";
+def FunctionA : Function {
     let desc = "Function A description";
     let details = [ "Function A detailed information" ];
   let params = [
@@ -25,7 +23,7 @@ def : Function {
   let returns = [];
 }
 
-// CHECK: inline std::ostream &operator<<(std::ostream &os, const struct function_a_params_t *params) {
+// CHECK: inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct function_a_params_t *params) {
 // CHECK:   os << ".OutPtr = ";
 // CHECK:   for (size_t i = 0; i < *params->pOutCount; i++) {
 // CHECK:     if (i > 0) {

@@ -6,124 +6,128 @@
 %struct3 = type { i32, %struct4, %struct4 }
 %struct4 = type { %struct2, %struct2 }
 
-define i32 @test1(ptr %dm, i1 %tmp4, i64 %tmp9, i64 %tmp19) {
+define i32 @test1(ptr %dm, i1 %c, i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DM:%.*]], align 8
-; CHECK-NEXT:    br i1 [[TMP4:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    [[INST1:%.*]] = load ptr, ptr [[DM:%.*]], align 8
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[TMP1]], i64 [[TMP9:%.*]]
-; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[INST10:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[INST1]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[INST10]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[TMP1]], i64 [[TMP19:%.*]]
-; CHECK-NEXT:    store i32 0, ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[INST20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[INST1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[INST20]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP9]], [[BB1]] ], [ [[TMP19]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[TMP1]], i64 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-; CHECK-NEXT:    ret i32 [[TMP25]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[IDX1]], [[BB1]] ], [ [[IDX2]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[INST1]], i64 [[TMP0]]
+; CHECK-NEXT:    [[INST24:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 4
+; CHECK-NEXT:    [[INST25:%.*]] = load i32, ptr [[INST24]], align 4
+; CHECK-NEXT:    ret i32 [[INST25]]
 ;
 bb:
-  %tmp1 = load ptr, ptr %dm, align 8
-  br i1 %tmp4, label %bb1, label %bb2
+  %inst1 = load ptr, ptr %dm, align 8
+  br i1 %c, label %bb1, label %bb2
 
 bb1:
-  %tmp10 = getelementptr inbounds %struct2, ptr %tmp1, i64 %tmp9
-  store i32 0, ptr %tmp10, align 4
+  %inst10 = getelementptr inbounds %struct2, ptr %inst1, i64 %idx1
+  store i32 0, ptr %inst10, align 4
   br label %bb3
 
 bb2:
-  %tmp20 = getelementptr inbounds %struct2, ptr %tmp1, i64 %tmp19
-  store i32 0, ptr %tmp20, align 4
+  %inst20 = getelementptr inbounds %struct2, ptr %inst1, i64 %idx2
+  store i32 0, ptr %inst20, align 4
   br label %bb3
 
 bb3:
-  %phi = phi ptr [ %tmp10, %bb1 ], [ %tmp20, %bb2 ]
-  %tmp24 = getelementptr inbounds %struct2, ptr %phi, i64 0, i32 1
-  %tmp25 = load i32, ptr %tmp24, align 4
-  ret i32 %tmp25
+  %phi = phi ptr [ %inst10, %bb1 ], [ %inst20, %bb2 ]
+  %inst24 = getelementptr inbounds %struct2, ptr %phi, i64 0, i32 1
+  %inst25 = load i32, ptr %inst24, align 4
+  ret i32 %inst25
 }
 
-define i32 @test2(ptr %dm, i1 %tmp4, i64 %tmp9, i64 %tmp19) {
+define i32 @test2(ptr %dm, i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DM:%.*]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[TMP1]], i64 [[TMP9:%.*]]
-; CHECK-NEXT:    store i32 0, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[TMP1]], i64 [[TMP19:%.*]]
-; CHECK-NEXT:    store i32 0, ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP10]], i64 4
-; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP24]], align 4
-; CHECK-NEXT:    ret i32 [[TMP25]]
+; CHECK-NEXT:    [[INST1:%.*]] = load ptr, ptr [[DM:%.*]], align 8
+; CHECK-NEXT:    [[INST10:%.*]] = getelementptr inbounds [[STRUCT2:%.*]], ptr [[INST1]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[INST10]], align 4
+; CHECK-NEXT:    [[INST20:%.*]] = getelementptr inbounds [[STRUCT2]], ptr [[INST1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[INST20]], align 4
+; CHECK-NEXT:    [[INST24:%.*]] = getelementptr inbounds nuw i8, ptr [[INST10]], i64 4
+; CHECK-NEXT:    [[INST25:%.*]] = load i32, ptr [[INST24]], align 4
+; CHECK-NEXT:    ret i32 [[INST25]]
 ;
 bb:
-  %tmp1 = load ptr, ptr %dm, align 8
-  %tmp10 = getelementptr inbounds %struct2, ptr %tmp1, i64 %tmp9
-  store i32 0, ptr %tmp10, align 4
-  %tmp20 = getelementptr inbounds %struct2, ptr %tmp1, i64 %tmp19
-  store i32 0, ptr %tmp20, align 4
-  %tmp24 = getelementptr inbounds %struct2, ptr %tmp10, i64 0, i32 1
-  %tmp25 = load i32, ptr %tmp24, align 4
-  ret i32 %tmp25
+  %inst1 = load ptr, ptr %dm, align 8
+  %inst10 = getelementptr inbounds %struct2, ptr %inst1, i64 %idx1
+  store i32 0, ptr %inst10, align 4
+  %inst20 = getelementptr inbounds %struct2, ptr %inst1, i64 %idx2
+  store i32 0, ptr %inst20, align 4
+  %inst24 = getelementptr inbounds %struct2, ptr %inst10, i64 0, i32 1
+  %inst25 = load i32, ptr %inst24, align 4
+  ret i32 %inst25
 }
 
 ; Check that instcombine doesn't insert GEPs before landingpad.
 
-define i32 @test3(ptr %dm, i1 %tmp4, i64 %tmp9, i64 %tmp19, i64 %tmp20, i64 %tmp21) personality ptr @__gxx_personality_v0 {
+define i32 @test3(ptr %dm, i1 %c, i64 %idx1, i64 %idx2, i64 %idx3) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 [[TMP4:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT3:%.*]], ptr [[DM:%.*]], i64 [[TMP19:%.*]], i32 1
-; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[INST1_SPLIT:%.*]] = getelementptr inbounds [[STRUCT3:%.*]], ptr [[DM:%.*]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[INST1:%.*]] = getelementptr inbounds nuw i8, ptr [[INST1_SPLIT]], i64 4
+; CHECK-NEXT:    store i32 0, ptr [[INST1]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[TMP20:%.*]], i32 1, i32 0, i32 1
-; CHECK-NEXT:    store i32 0, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[INST2_SPLIT:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[INST12:%.*]] = getelementptr inbounds nuw i8, ptr [[INST2_SPLIT]], i64 8
+; CHECK-NEXT:    store i32 0, ptr [[INST12]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[TMP19]], [[BB1]] ], [ [[TMP20]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = invoke i32 @foo1(i32 11)
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ [[IDX1]], [[BB1]] ], [ [[IDX2]], [[BB2]] ]
+; CHECK-NEXT:    [[INST22:%.*]] = invoke i32 @foo1(i32 11)
 ; CHECK-NEXT:            to label [[BB4:%.*]] unwind label [[BB5:%.*]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP27:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    [[INST27:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            catch ptr @_ZTIi
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT4:%.*]], ptr [[TMP1]], i64 [[TMP21:%.*]], i32 1, i32 1
-; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP35]], align 4
-; CHECK-NEXT:    ret i32 [[TMP25]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT3]], ptr [[DM]], i64 [[TMP0]]
+; CHECK-NEXT:    [[INST34_SPLIT:%.*]] = getelementptr [[STRUCT4:%.*]], ptr [[TMP1]], i64 [[IDX3:%.*]]
+; CHECK-NEXT:    [[INST35:%.*]] = getelementptr i8, ptr [[INST34_SPLIT]], i64 16
+; CHECK-NEXT:    [[INST25:%.*]] = load i32, ptr [[INST35]], align 4
+; CHECK-NEXT:    ret i32 [[INST25]]
 ;
 bb:
-  br i1 %tmp4, label %bb1, label %bb2
+  br i1 %c, label %bb1, label %bb2
 
 bb1:
-  %tmp1 = getelementptr inbounds %struct3, ptr %dm, i64 %tmp19, i32 1
-  store i32 0, ptr %tmp1, align 4
+  %inst1 = getelementptr inbounds %struct3, ptr %dm, i64 %idx1, i32 1
+  store i32 0, ptr %inst1, align 4
   br label %bb3
 
 bb2:
-  %tmp2 = getelementptr inbounds %struct3, ptr %dm, i64 %tmp20, i32 1
-  %tmp12 = getelementptr inbounds %struct4, ptr %tmp2, i64 0, i32 0, i32 1
-  store i32 0, ptr %tmp12, align 4
+  %inst2 = getelementptr inbounds %struct3, ptr %dm, i64 %idx2, i32 1
+  %inst12 = getelementptr inbounds %struct4, ptr %inst2, i64 0, i32 0, i32 1
+  store i32 0, ptr %inst12, align 4
   br label %bb3
 
 bb3:
-  %phi = phi ptr [ %tmp1, %bb1 ], [ %tmp2, %bb2 ]
-  %tmp22 = invoke i32 @foo1(i32 11) to label %bb4 unwind label %bb5
+  %phi = phi ptr [ %inst1, %bb1 ], [ %inst2, %bb2 ]
+  %inst22 = invoke i32 @foo1(i32 11) to label %bb4 unwind label %bb5
 
 bb4:
   ret i32 0
 
 bb5:
-  %tmp27 = landingpad { ptr, i32 } catch ptr @_ZTIi
-  %tmp34 = getelementptr inbounds %struct4, ptr %phi, i64 %tmp21, i32 1
-  %tmp35 = getelementptr inbounds %struct2, ptr %tmp34, i64 0, i32 1
-  %tmp25 = load i32, ptr %tmp35, align 4
-  ret i32 %tmp25
+  %inst27 = landingpad { ptr, i32 } catch ptr @_ZTIi
+  %inst34 = getelementptr inbounds %struct4, ptr %phi, i64 %idx3, i32 1
+  %inst35 = getelementptr inbounds %struct2, ptr %inst34, i64 0, i32 1
+  %inst25 = load i32, ptr %inst35, align 4
+  ret i32 %inst25
 }
 
 @_ZTIi = external constant ptr

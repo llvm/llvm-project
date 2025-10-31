@@ -14,7 +14,7 @@
 #include "ReduceInstructions.h"
 #include "Utils.h"
 #include "llvm/IR/Constants.h"
-#include <set>
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
@@ -29,7 +29,7 @@ static bool shouldAlwaysKeep(const Instruction &I) {
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceInstructionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   for (auto &F : Program) {
@@ -39,14 +39,12 @@ static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
       for (auto &Inst :
            make_early_inc_range(make_range(BB.begin(), std::prev(BB.end())))) {
         if (!shouldAlwaysKeep(Inst) && !O.shouldKeep()) {
-          Inst.replaceAllUsesWith(getDefaultValue(Inst.getType()));
+          Inst.replaceAllUsesWith(isa<AllocaInst>(Inst)
+                                      ? PoisonValue::get(Inst.getType())
+                                      : getDefaultValue(Inst.getType()));
           Inst.eraseFromParent();
         }
       }
     }
   }
-}
-
-void llvm::reduceInstructionsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractInstrFromModule, "Reducing Instructions");
 }

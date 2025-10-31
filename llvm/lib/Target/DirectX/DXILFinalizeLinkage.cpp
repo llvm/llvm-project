@@ -18,33 +18,43 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
+  bool MadeChange = false;
+
+  // Convert private globals and external globals with no usage to internal
+  // linkage.
+  for (GlobalVariable &GV : M.globals()) {
+    GV.removeDeadConstantUsers();
+    if (GV.hasPrivateLinkage() || (GV.hasExternalLinkage() && GV.use_empty())) {
+      GV.setLinkage(GlobalValue::InternalLinkage);
+      MadeChange = true;
+    }
+  }
+
   SmallVector<Function *> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
     if (EF.isIntrinsic())
       continue;
-    if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
+    if (EF.hasExternalLinkage() && EF.hasDefaultVisibility())
+      continue;
+    if (EF.hasFnAttribute("hlsl.shader"))
       continue;
     Funcs.push_back(&EF);
   }
 
   for (Function *F : Funcs) {
-    if (F->getLinkage() == GlobalValue::ExternalLinkage)
+    if (F->getLinkage() == GlobalValue::ExternalLinkage) {
       F->setLinkage(GlobalValue::InternalLinkage);
-    if (F->isDefTriviallyDead())
+      MadeChange = true;
+    }
+    if (F->isDefTriviallyDead()) {
       M.getFunctionList().erase(F);
+      MadeChange = true;
+    }
   }
 
-  // Do a pass over intrinsics that are no longer used and remove them.
-  Funcs.clear();
-  for (Function &F : M.functions())
-    if (F.isIntrinsic() && F.use_empty())
-      Funcs.push_back(&F);
-  for (Function *F : Funcs)
-    F->eraseFromParent();
-
-  return false;
+  return MadeChange;
 }
 
 PreservedAnalyses DXILFinalizeLinkage::run(Module &M,

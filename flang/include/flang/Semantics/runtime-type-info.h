@@ -38,6 +38,10 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(SemanticsContext &);
 /// to describe other derived types at runtime in flang descriptor.
 constexpr char typeInfoBuiltinModule[]{"__fortran_type_info"};
 
+/// Name of the builtin derived type in __fortran_type_inf that is used for
+/// derived type descriptors.
+constexpr char typeDescriptorTypeName[]{"derivedtype"};
+
 /// Name of the bindings descriptor component in the DerivedType type of the
 /// __Fortran_type_info module
 constexpr char bindingDescCompName[]{"binding"};
@@ -48,10 +52,15 @@ constexpr char procCompName[]{"proc"};
 
 SymbolVector CollectBindings(const Scope &dtScope);
 
+enum NonTbpDefinedIoFlags {
+  IsDtvArgPolymorphic = 1 << 0,
+  DefinedIoInteger8 = 1 << 1,
+};
+
 struct NonTbpDefinedIo {
   const Symbol *subroutine;
   common::DefinedIo definedIo;
-  bool isDtvArgPolymorphic;
+  std::uint8_t flags;
 };
 
 std::multimap<const Symbol *, NonTbpDefinedIo>

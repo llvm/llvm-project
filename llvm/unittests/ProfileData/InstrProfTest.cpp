@@ -12,10 +12,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
+#include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
@@ -133,7 +135,7 @@ TEST_P(MaybeSparseInstrProfTest, get_instr_prof_record) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("foo", 0x1234);
+  auto R = Reader->getInstrProfRecord("foo", 0x1234);
   EXPECT_THAT_ERROR(R.takeError(), Succeeded());
   ASSERT_EQ(2U, R->Counts.size());
   ASSERT_EQ(1U, R->Counts[0]);
@@ -249,7 +251,7 @@ TEST_F(InstrProfTest, test_writer_merge) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("func1", 0x1234);
+  auto R = Reader->getInstrProfRecord("func1", 0x1234);
   EXPECT_THAT_ERROR(R.takeError(), Succeeded());
   ASSERT_EQ(1U, R->Counts.size());
   ASSERT_EQ(42U, R->Counts[0]);
@@ -390,9 +392,9 @@ MemInfoBlock makePartialMIB() {
 }
 
 IndexedMemProfRecord
-makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
-             std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
-             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
+makeRecord(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
+           std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
+           const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
   IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
@@ -434,16 +436,16 @@ MATCHER_P(EqualsRecord, Want, "") {
   return true;
 }
 
-TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
+TEST_F(InstrProfTest, test_memprof_v4_full_schema) {
   const MemInfoBlock MIB = makeFullMIB();
 
-  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfVersionRequested(memprof::Version4);
   Writer.setMemProfFullSchema(true);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
   IndexedMemProfData MemProfData = getMemProfDataForTest();
@@ -457,7 +459,7 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
+  memprof::IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
@@ -468,16 +470,16 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
-TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
+TEST_F(InstrProfTest, test_memprof_v4_partial_schema) {
   const MemInfoBlock MIB = makePartialMIB();
 
-  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfVersionRequested(memprof::Version4);
   Writer.setMemProfFullSchema(false);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
   IndexedMemProfData MemProfData = getMemProfDataForTest();
@@ -491,7 +493,7 @@ TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
+  memprof::IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
@@ -523,7 +525,7 @@ TEST_F(InstrProfTest, test_caller_callee_pairs) {
   //       Line: 7, Column: 8
   //         new(...)
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
 
@@ -582,7 +584,7 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, makePartialMIB(), memprof::getHotColdSchema());
 
@@ -598,7 +600,7 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("func1", 0x1234);
+  auto R = Reader->getInstrProfRecord("func1", 0x1234);
   EXPECT_THAT_ERROR(R.takeError(), Succeeded());
   ASSERT_EQ(1U, R->Counts.size());
   ASSERT_EQ(42U, R->Counts[0]);
@@ -609,7 +611,7 @@ TEST_F(InstrProfTest, test_memprof_merge) {
 
   std::optional<memprof::FrameId> LastUnmappedFrameId;
 
-  memprof::IndexedCallstackIdConveter CSIdConv(MemProfData);
+  memprof::IndexedCallstackIdConverter CSIdConv(MemProfData);
 
   const ::llvm::memprof::MemProfRecord WantRecord =
       IndexedMR.toMemProfRecord(CSIdConv);
@@ -798,7 +800,7 @@ TEST_P(InstrProfReaderWriterTest, icall_and_vtable_data_read_write) {
   // Set reader value prof data endianness.
   Reader->setValueProfDataEndianness(getEndianness());
 
-  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  auto R = Reader->getInstrProfRecord("caller", 0x1234);
   ASSERT_THAT_ERROR(R.takeError(), Succeeded());
 
   // Test the number of instrumented indirect call sites and the number of
@@ -872,7 +874,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   Writer.addRecord(std::move(Record), Err);
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
-  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  auto R = Reader->getInstrProfRecord("caller", 0x1234);
   EXPECT_THAT_ERROR(R.takeError(), Succeeded());
 
   LLVMContext Ctx;
@@ -912,7 +914,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_THAT(ValueData, SizeIs(0));
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
   ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
@@ -930,7 +932,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(2U, ValueData[4].Count);
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate with 4 records.
   InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
                               {5000, 2}, {6000, 1}};
@@ -1049,7 +1051,7 @@ TEST_P(MaybeSparseInstrProfTest, icall_and_vtable_data_merge) {
 
   // Test the number of instrumented value sites and the number of profiled
   // values for each site.
-  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  auto R = Reader->getInstrProfRecord("caller", 0x1234);
   EXPECT_THAT_ERROR(R.takeError(), Succeeded());
   // For indirect calls.
   ASSERT_EQ(5U, R->getNumValueSites(IPVK_IndirectCallTarget));
@@ -1188,13 +1190,11 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_saturation) {
   readProfile(std::move(Profile));
 
   // Verify saturation of counts.
-  Expected<InstrProfRecord> ReadRecord1 =
-      Reader->getInstrProfRecord("foo", 0x1234);
+  auto ReadRecord1 = Reader->getInstrProfRecord("foo", 0x1234);
   ASSERT_THAT_ERROR(ReadRecord1.takeError(), Succeeded());
   EXPECT_EQ(MaxEdgeCount, ReadRecord1->Counts[0]);
 
-  Expected<InstrProfRecord> ReadRecord2 =
-      Reader->getInstrProfRecord("baz", 0x5678);
+  auto ReadRecord2 = Reader->getInstrProfRecord("baz", 0x5678);
   ASSERT_TRUE(bool(ReadRecord2));
   ASSERT_EQ(1U, ReadRecord2->getNumValueSites(ValueKind));
   auto VD = ReadRecord2->getValueArrayForSite(ValueKind, 0);
@@ -1239,7 +1239,7 @@ TEST_P(ValueProfileMergeEdgeCaseTest, value_profile_data_merge_site_trunc) {
   auto Profile = Writer.writeBuffer();
   readProfile(std::move(Profile));
 
-  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("caller", 0x1234);
+  auto R = Reader->getInstrProfRecord("caller", 0x1234);
   ASSERT_THAT_ERROR(R.takeError(), Succeeded());
   ASSERT_EQ(2U, R->getNumValueSites(ValueKind));
   auto VD = R->getValueArrayForSite(ValueKind, 0);

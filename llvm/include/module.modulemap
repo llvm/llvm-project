@@ -78,6 +78,7 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/DynamicTags.def"
     textual header "llvm/BinaryFormat/MachO.def"
     textual header "llvm/BinaryFormat/MinidumpConstants.def"
+    textual header "llvm/BinaryFormat/SFrameConstants.def"
     textual header "llvm/BinaryFormat/Swift.def"
     textual header "llvm/BinaryFormat/ELFRelocs/AArch64.def"
     textual header "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
@@ -106,6 +107,12 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/MsgPack.def"
 }
 
+module LLVM_CAS {
+  requires cplusplus
+  umbrella "llvm/CAS"
+  module * { export * }
+}
+
 module LLVM_Config {
   requires cplusplus
   umbrella "llvm/Config"
@@ -122,6 +129,13 @@ module LLVM_DebugInfo_DWARF {
   requires cplusplus
 
   umbrella "llvm/DebugInfo/DWARF"
+  module * { export * }
+}
+
+module LLVM_DebugInfo_DWARF_LowLevel {
+  requires cplusplus
+
+  umbrella "llvm/DebugInfo/DWARF/LowLevel"
   module * { export * }
 }
 
@@ -178,9 +192,10 @@ module LLVM_DebugInfo_CodeView {
   module * { export * }
 
   // These are intended for (repeated) textual inclusion.
+  textual header "llvm/DebugInfo/CodeView/CodeViewLanguages.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
-  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
   textual header "llvm/DebugInfo/CodeView/CodeViewSymbols.def"
+  textual header "llvm/DebugInfo/CodeView/CodeViewTypes.def"
 }
 
 module LLVM_DWARFLinker {
@@ -267,7 +282,6 @@ module LLVM_IR {
   textual header "llvm/IR/FixedMetadataKinds.def"
   textual header "llvm/IR/Value.def"
   textual header "llvm/IR/VPIntrinsics.def"
-  textual header "llvm/IR/RuntimeLibcalls.def"
 }
 
 module LLVM_IRReader {
@@ -392,7 +406,7 @@ module LLVM_Utils {
     exclude header "llvm/Support/PluginLoader.h"
     exclude header "llvm/Support/Solaris/sys/regset.h"
     textual header "llvm/Support/TargetOpcodes.def"
-
+    textual header "llvm/Support/VirtualOutputConfig.def"
   }
 
   module TargetParser {
@@ -407,6 +421,7 @@ module LLVM_Utils {
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
     textual header "llvm/TargetParser/PPCTargetParser.def"
+    textual header "llvm/TargetParser/XtensaTargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.

@@ -11,7 +11,7 @@ cbuffer g_cbuffer1 {
 
 
 struct Eg12{
-  RWBuffer<int> a;  
+  RWBuffer<int> a;
 };
 
 Eg12 e12 : register(c9);

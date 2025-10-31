@@ -193,10 +193,11 @@ uint32_t SBProcess::GetNumThreads() {
   if (process_sp) {
     Process::StopLocker stop_locker;
 
-    const bool can_update = stop_locker.TryLock(&process_sp->GetRunLock());
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
-    num_threads = process_sp->GetThreadList().GetSize(can_update);
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      std::lock_guard<std::recursive_mutex> guard(
+          process_sp->GetTarget().GetAPIMutex());
+      num_threads = process_sp->GetThreadList().GetSize();
+    }
   }
 
   return num_threads;
@@ -393,11 +394,12 @@ SBThread SBProcess::GetThreadAtIndex(size_t index) {
   ProcessSP process_sp(GetSP());
   if (process_sp) {
     Process::StopLocker stop_locker;
-    const bool can_update = stop_locker.TryLock(&process_sp->GetRunLock());
-    std::lock_guard<std::recursive_mutex> guard(
-        process_sp->GetTarget().GetAPIMutex());
-    thread_sp = process_sp->GetThreadList().GetThreadAtIndex(index, can_update);
-    sb_thread.SetThread(thread_sp);
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      std::lock_guard<std::recursive_mutex> guard(
+          process_sp->GetTarget().GetAPIMutex());
+      thread_sp = process_sp->GetThreadList().GetThreadAtIndex(index, false);
+      sb_thread.SetThread(thread_sp);
+    }
   }
 
   return sb_thread;
@@ -588,7 +590,7 @@ SBError SBProcess::ContinueInDirection(RunDirection direction) {
     if (direction == RunDirection::eRunReverse &&
         !process_sp->SupportsReverseDirection())
       return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support reverse execution of processes",
+          "{0} does not support reverse execution of processes",
           GetPluginName());
     process_sp->SetBaseDirection(direction);
   }
@@ -1261,6 +1263,15 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
+  if (!options.GetProcess())
+    options.SetProcess(process_sp);
+
+  if (options.GetProcess().GetSP() != process_sp) {
+    error = Status::FromErrorString(
+        "Save Core Options configured for a different process.");
+    return error;
+  }
+
   std::lock_guard<std::recursive_mutex> guard(
       process_sp->GetTarget().GetAPIMutex());
 
@@ -1269,7 +1280,7 @@ lldb::SBError SBProcess::SaveCore(SBSaveCoreOptions &options) {
     return error;
   }
 
-  error.ref() = PluginManager::SaveCore(process_sp, options.ref());
+  error.ref() = PluginManager::SaveCore(options.ref());
 
   return error;
 }

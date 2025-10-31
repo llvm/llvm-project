@@ -12,14 +12,12 @@
 
 #include "mlir/Dialect/IRDL/IRDLVerifiers.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::irdl;

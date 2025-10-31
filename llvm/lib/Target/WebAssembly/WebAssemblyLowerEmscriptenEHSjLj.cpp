@@ -261,7 +261,6 @@
 ///
 ///===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/StringExtras.h"
@@ -436,7 +435,7 @@ static std::string getSignature(FunctionType *FTy) {
   erase_if(Sig, isSpace);
   // When s2wasm parses .s file, a comma means the end of an argument. So a
   // mangled function name can contain any character but a comma.
-  std::replace(Sig.begin(), Sig.end(), ',', '.');
+  llvm::replace(Sig, ',', '.');
   return Sig;
 }
 
@@ -783,6 +782,24 @@ void WebAssemblyLowerEmscriptenEHSjLj::rebuildSSA(Function &F) {
     for (Instruction &I : BB) {
       if (I.getType()->isVoidTy())
         continue;
+
+      if (isa<AllocaInst>(&I)) {
+        // If the alloca has any lifetime marker that is no longer dominated
+        // by the alloca, remove all lifetime markers. Lifetime markers must
+        // always work directly on the alloca, and this is no longer possible.
+        bool HasNonDominatedLifetimeMarker = any_of(I.users(), [&](User *U) {
+          auto *UserI = cast<Instruction>(U);
+          return UserI->isLifetimeStartOrEnd() && !DT.dominates(&I, UserI);
+        });
+        if (HasNonDominatedLifetimeMarker) {
+          for (User *U : make_early_inc_range(I.users())) {
+            auto *UserI = cast<Instruction>(U);
+            if (UserI->isLifetimeStartOrEnd())
+              UserI->eraseFromParent();
+          }
+        }
+      }
+
       unsigned VarID = SSA.AddVariable(I.getName(), I.getType());
       // If a value is defined by an invoke instruction, it is only available in
       // its normal destination and not in its unwind destination.
@@ -1270,9 +1287,19 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
 
   // Setjmp preparation
 
+  SmallVector<AllocaInst *> StaticAllocas;
+  for (Instruction &I : F.getEntryBlock())
+    if (auto *AI = dyn_cast<AllocaInst>(&I))
+      if (AI->isStaticAlloca())
+        StaticAllocas.push_back(AI);
+
   BasicBlock *Entry = &F.getEntryBlock();
   DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
   SplitBlock(Entry, &*Entry->getFirstInsertionPt());
+
+  // Move static allocas back into the entry block, so they stay static.
+  for (AllocaInst *AI : StaticAllocas)
+    AI->moveBefore(Entry->getTerminator()->getIterator());
 
   IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
   // This alloca'ed pointer is used by the runtime to identify function
@@ -1707,7 +1734,6 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
     // BB. If the call is enclosed in another catchpad/cleanuppad scope, unwind
     // to its parent pad's unwind destination instead to preserve the scope
     // structure. It will eventually unwind to the catch.dispatch.longjmp.
-    SmallVector<OperandBundleDef, 1> Bundles;
     BasicBlock *UnwindDest = nullptr;
     if (auto Bundle = CI->getOperandBundle(LLVMContext::OB_funclet)) {
       Instruction *FromPad = cast<Instruction>(Bundle->Inputs[0]);

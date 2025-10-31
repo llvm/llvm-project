@@ -369,6 +369,131 @@ define i64 @smax_nxv2i64(<vscale x 2 x i64> %a) {
   ret i64 %res
 }
 
+; No MULV instruction so use knowledge about the architectural maximum size of
+; an SVE register to "scalarise" the reduction.
+
+define i8 @mulv_nxv16i8(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: mulv_nxv16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.b, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    uzp2 z2.b, z0.b, z1.b
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
+; CHECK-NEXT:    mul z0.b, p0/m, z0.b, z2.b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %res = call i8 @llvm.vector.reduce.mul.nxv16i8(<vscale x 16 x i8> %a)
+  ret i8 %res
+}
+
+define i16 @mulv_nxv8i16(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: mulv_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    uzp2 z2.h, z0.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    mul z0.h, p0/m, z0.h, z2.h
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %res = call i16 @llvm.vector.reduce.mul.nxv8i16(<vscale x 8 x i16> %a)
+  ret i16 %res
+}
+
+define i32 @mulv_nxv4i32(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: mulv_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    uzp2 z2.s, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    mul z0.s, p0/m, z0.s, z2.s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %res = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %a)
+  ret i32 %res
+}
+
+define i64 @mulv_nxv2i64(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: mulv_nxv2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, #1 // =0x1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uzp2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    uzp2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    uzp2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    uzp2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    uzp2 z2.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    mul z0.d, p0/m, z0.d, z2.d
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    ret
+  %res = call i64 @llvm.vector.reduce.mul.nxv2i64(<vscale x 2 x i64> %a)
+  ret i64 %res
+}
+
 ; Test widen vector reduce type
 declare i8 @llvm.vector.reduce.smin.nxv10i8(<vscale x 10 x i8>)
 
@@ -411,12 +536,12 @@ declare i8 @llvm.vector.reduce.add.nxv12i8(<vscale x 12 x i8>)
 define i8 @uaddv_nxv12i8(<vscale x 12 x i8> %a) {
 ; CHECK-LABEL: uaddv_nxv12i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.h, z0.b
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    uunpkhi z2.h, z0.b
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    uaddv d0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -430,15 +555,15 @@ declare i8 @llvm.vector.reduce.umax.nxv14i8(<vscale x 14 x i8>)
 define i8 @umax_nxv14i8(<vscale x 14 x i8> %a) {
 ; CHECK-LABEL: umax_nxv14i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpkhi z1.h, z0.b
-; CHECK-NEXT:    mov z3.d, #0 // =0x0
+; CHECK-NEXT:    uunpkhi z2.h, z0.b
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    uunpkhi z2.s, z1.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEXT:    uzp1 z2.s, z2.s, z3.s
-; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
+; CHECK-NEXT:    uunpkhi z3.s, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEXT:    uzp1 z1.s, z3.s, z1.s
+; CHECK-NEXT:    uzp1 z1.h, z2.h, z1.h
 ; CHECK-NEXT:    uzp1 z0.b, z0.b, z1.b
 ; CHECK-NEXT:    umaxv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0

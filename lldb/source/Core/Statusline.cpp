@@ -12,6 +12,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
@@ -23,41 +24,42 @@
 #define ANSI_SAVE_CURSOR ESCAPE "7"
 #define ANSI_RESTORE_CURSOR ESCAPE "8"
 #define ANSI_CLEAR_BELOW ESCAPE "[J"
-#define ANSI_CLEAR_LINE "\r\x1B[2K"
-#define ANSI_SET_SCROLL_ROWS ESCAPE "[0;%ur"
-#define ANSI_TO_START_OF_ROW ESCAPE "[%u;0f"
+#define ANSI_CLEAR_SCREEN ESCAPE "[2J"
+#define ANSI_SET_SCROLL_ROWS ESCAPE "[1;%ur"
+#define ANSI_TO_START_OF_ROW ESCAPE "[%u;1f"
+#define ANSI_REVERSE_VIDEO ESCAPE "[7m"
 #define ANSI_UP_ROWS ESCAPE "[%dA"
 
 using namespace lldb;
 using namespace lldb_private;
 
-Statusline::Statusline(Debugger &debugger) : m_debugger(debugger) { Enable(); }
+Statusline::Statusline(Debugger &debugger)
+    : m_debugger(debugger), m_terminal_width(m_debugger.GetTerminalWidth()),
+      m_terminal_height(m_debugger.GetTerminalHeight()) {}
 
 Statusline::~Statusline() { Disable(); }
 
 void Statusline::TerminalSizeChanged() {
-  m_terminal_size_has_changed = 1;
+  m_terminal_width = m_debugger.GetTerminalWidth();
+  m_terminal_height = m_debugger.GetTerminalHeight();
 
-  // This definitely isn't signal safe, but the best we can do, until we
-  // have proper signal-catching thread.
-  Redraw(/*update=*/false);
+  UpdateScrollWindow(ResizeStatusline);
+
+  // Redraw the old statusline.
+  Redraw(std::nullopt);
 }
 
-void Statusline::Enable() {
-  UpdateTerminalProperties();
-
+void Statusline::Enable(std::optional<ExecutionContextRef> exe_ctx_ref) {
   // Reduce the scroll window to make space for the status bar below.
-  UpdateScrollWindow(ScrollWindowShrink);
+  UpdateScrollWindow(EnableStatusline);
 
   // Draw the statusline.
-  Redraw();
+  Redraw(exe_ctx_ref);
 }
 
 void Statusline::Disable() {
-  UpdateTerminalProperties();
-
   // Extend the scroll window to cover the status bar.
-  UpdateScrollWindow(ScrollWindowExtend);
+  UpdateScrollWindow(DisableStatusline);
 }
 
 void Statusline::Draw(std::string str) {
@@ -65,98 +67,89 @@ void Statusline::Draw(std::string str) {
   if (!stream_sp)
     return;
 
-  UpdateTerminalProperties();
-
-  m_last_str = str;
-
   str = ansi::TrimAndPad(str, m_terminal_width);
 
   LockedStreamFile locked_stream = stream_sp->Lock();
   locked_stream << ANSI_SAVE_CURSOR;
   locked_stream.Printf(ANSI_TO_START_OF_ROW,
                        static_cast<unsigned>(m_terminal_height));
+
+  // Use "reverse video" to make sure the statusline has a background. Only do
+  // this when colors are disabled, and rely on the statusline format otherwise.
+  if (!m_debugger.GetUseColor())
+    locked_stream << ANSI_REVERSE_VIDEO;
+
   locked_stream << str;
   locked_stream << ANSI_NORMAL;
   locked_stream << ANSI_RESTORE_CURSOR;
 }
 
-void Statusline::Reset() {
-  lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
-  if (!stream_sp)
-    return;
-
-  LockedStreamFile locked_stream = stream_sp->Lock();
-  locked_stream << ANSI_SAVE_CURSOR;
-  locked_stream.Printf(ANSI_TO_START_OF_ROW,
-                       static_cast<unsigned>(m_terminal_height));
-  locked_stream << ANSI_CLEAR_LINE;
-  locked_stream << ANSI_RESTORE_CURSOR;
-}
-
-void Statusline::UpdateTerminalProperties() {
-  if (m_terminal_size_has_changed == 0)
-    return;
-
-  // Clear the previous statusline using the previous dimensions.
-  Reset();
-
-  m_terminal_width = m_debugger.GetTerminalWidth();
-  m_terminal_height = m_debugger.GetTerminalHeight();
-
-  // Set the scroll window based on the new terminal height.
-  UpdateScrollWindow(ScrollWindowShrink);
-
-  // Clear the flag.
-  m_terminal_size_has_changed = 0;
-}
-
 void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
+  assert(m_terminal_width != 0 && m_terminal_height != 0);
+
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
   if (!stream_sp)
     return;
 
-  const unsigned scroll_height =
-      (mode == ScrollWindowExtend) ? m_terminal_height : m_terminal_height - 1;
-
+  const unsigned reduced_scroll_window = m_terminal_height - 1;
   LockedStreamFile locked_stream = stream_sp->Lock();
-  locked_stream << ANSI_SAVE_CURSOR;
-  locked_stream.Printf(ANSI_SET_SCROLL_ROWS, scroll_height);
-  locked_stream << ANSI_RESTORE_CURSOR;
+
   switch (mode) {
-  case ScrollWindowExtend:
+  case EnableStatusline:
+    // Move everything on the screen up.
+    locked_stream << '\n';
+    locked_stream.Printf(ANSI_UP_ROWS, 1);
+    // Reduce the scroll window.
+    locked_stream << ANSI_SAVE_CURSOR;
+    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_window);
+    locked_stream << ANSI_RESTORE_CURSOR;
+    break;
+  case DisableStatusline:
+    // Reset the scroll window.
+    locked_stream << ANSI_SAVE_CURSOR;
+    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, 0);
+    locked_stream << ANSI_RESTORE_CURSOR;
     // Clear the screen below to hide the old statusline.
     locked_stream << ANSI_CLEAR_BELOW;
     break;
-  case ScrollWindowShrink:
-    // Move everything on the screen up.
-    locked_stream.Printf(ANSI_UP_ROWS, 1);
-    locked_stream << '\n';
+  case ResizeStatusline:
+    // Clear the screen and update the scroll window.
+    // FIXME: Find a better solution (#146919).
+    locked_stream << ANSI_CLEAR_SCREEN;
+    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_window);
     break;
   }
+
+  m_debugger.RefreshIOHandler();
 }
 
-void Statusline::Redraw(bool update) {
-  if (!update) {
-    Draw(m_last_str);
-    return;
+void Statusline::Redraw(std::optional<ExecutionContextRef> exe_ctx_ref) {
+  // Update the cached execution context.
+  if (exe_ctx_ref)
+    m_exe_ctx_ref = *exe_ctx_ref;
+
+  // Lock the execution context.
+  ExecutionContext exe_ctx =
+      m_exe_ctx_ref.Lock(/*thread_and_frame_only_if_stopped=*/false);
+
+  // Compute the symbol context if we're stopped.
+  SymbolContext sym_ctx;
+  llvm::Expected<StoppedExecutionContext> stopped_exe_ctx =
+      GetStoppedExecutionContext(&m_exe_ctx_ref);
+  if (stopped_exe_ctx) {
+    // The StoppedExecutionContext only ensures that we hold the run lock.
+    // The process could be in an exited or unloaded state and have no frame.
+    if (auto frame_sp = stopped_exe_ctx->GetFrameSP())
+      sym_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
+  } else {
+    // We can draw the statusline without being stopped.
+    llvm::consumeError(stopped_exe_ctx.takeError());
   }
 
   StreamString stream;
-  ExecutionContext exe_ctx =
-      m_debugger.GetCommandInterpreter().GetExecutionContext();
+  FormatEntity::Entry format = m_debugger.GetStatuslineFormat();
+  FormatEntity::Format(format, stream, &sym_ctx, &exe_ctx, nullptr, nullptr,
+                       false, false);
 
-  // For colors and progress events, the format entity needs access to the
-  // debugger, which requires a target in the execution context.
-  if (!exe_ctx.HasTargetScope())
-    exe_ctx.SetTargetPtr(&m_debugger.GetSelectedOrDummyTarget());
-
-  SymbolContext symbol_ctx;
-  if (auto frame_sp = exe_ctx.GetFrameSP())
-    symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
-
-  if (auto *format = m_debugger.GetStatuslineFormat())
-    FormatEntity::Format(*format, stream, &symbol_ctx, &exe_ctx, nullptr,
-                         nullptr, false, false);
-
-  Draw(std::string(stream.GetString()));
+  Draw(stream.GetString().str());
 }

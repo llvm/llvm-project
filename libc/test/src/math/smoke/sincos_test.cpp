@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/math/sincos.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -14,6 +15,11 @@ using LlvmLibcSincosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcSincosTest, SpecialNumbers) {
   double sin_x, cos_x;
+
+  LIBC_NAMESPACE::sincos(sNaN, &sin_x, &cos_x);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, cos_x);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, sin_x);
+  EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::sincos(aNaN, &sin_x, &cos_x);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, cos_x);
@@ -30,10 +36,12 @@ TEST_F(LlvmLibcSincosTest, SpecialNumbers) {
   LIBC_NAMESPACE::sincos(inf, &sin_x, &cos_x);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, cos_x);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, sin_x);
+  EXPECT_MATH_ERRNO(EDOM);
 
   LIBC_NAMESPACE::sincos(neg_inf, &sin_x, &cos_x);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, cos_x);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, sin_x);
+  EXPECT_MATH_ERRNO(EDOM);
 
   LIBC_NAMESPACE::sincos(0x1.0p-28, &sin_x, &cos_x);
   EXPECT_FP_EQ(1.0, cos_x);

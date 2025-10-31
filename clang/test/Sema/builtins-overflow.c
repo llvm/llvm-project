@@ -9,7 +9,7 @@ void test(void) {
   unsigned r;
   const char * c;
   float f;
-  const unsigned q;
+  const unsigned q = 0;
 
   __builtin_add_overflow();  // expected-error {{too few arguments to function call, expected 3, have 0}}
   __builtin_add_overflow(1, 1, 1, 1);  // expected-error {{too many arguments to function call, expected 3, have 4}}

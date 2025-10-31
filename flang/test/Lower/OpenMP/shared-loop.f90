@@ -9,14 +9,14 @@
 ! CHECK:    omp.parallel {
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]]:2 = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
+! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
 ! CHECK:            fir.store %[[ARG1]] to %[[DECL_I]]#0
-! CHECK:            %[[UPDATE_ITER:.*]] = arith.addi %[[ARG0]], %{{.*}}
+! CHECK:            hlfir.assign
 ! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_I]]#0
 ! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[UPDATE_ITER]], %[[RES_I]]
+! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]]#1 to %[[DECL_I]]#0
+! CHECK:          fir.store %[[RES]] to %[[DECL_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator
@@ -47,15 +47,15 @@ end subroutine
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]]:2 = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
+! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
 ! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
 ! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
-! CHECK:            %[[UPDATE_ITER:.*]] = arith.addi %[[ARG0]], %{{.*}}
+! CHECK:            hlfir.assign
 ! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_PRIV_I]]#0
 ! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[UPDATE_ITER]], %[[RES_I]]
+! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]]#1 to %[[DECL_PRIV_I]]#0
+! CHECK:          fir.store %[[RES]] to %[[DECL_PRIV_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator
@@ -87,15 +87,15 @@ end subroutine
 ! CHECK:      %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[ALLOC_PRIV_I]]
 ! CHECK:      omp.sections {
 ! CHECK:        omp.section {
-! CHECK:          %[[RES:.*]]:2 = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
+! CHECK:          %[[RES:.*]] = fir.do_loop %[[ARG0:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ARG1:.*]] = 
 ! CHECK-NOT:            fir.store %[[ARG1]] to %[[DECL_I]]#1
 ! CHECK:            fir.store %[[ARG1]] to %[[DECL_PRIV_I]]#0
-! CHECK:            %[[UPDATE_ITER:.*]] = arith.addi %[[ARG0]], %{{.*}}
+! CHECK:            hlfir.assign
 ! CHECK:            %[[LOAD_I:.*]] = fir.load %[[DECL_PRIV_I]]#0
 ! CHECK:            %[[RES_I:.*]] = arith.addi %[[LOAD_I]], %{{.*}}
-! CHECK:            fir.result %[[UPDATE_ITER]], %[[RES_I]]
+! CHECK:            fir.result %[[RES_I]]
 ! CHECK:          }
-! CHECK:          fir.store %[[RES]]#1 to %[[DECL_PRIV_I]]#0
+! CHECK:          fir.store %[[RES]] to %[[DECL_PRIV_I]]#0
 ! CHECK:          omp.terminator
 ! CHECK:        }
 ! CHECK:        omp.terminator

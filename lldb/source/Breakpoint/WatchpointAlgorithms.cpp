@@ -58,16 +58,6 @@ WatchpointAlgorithms::AtomizeWatchpointRequest(
   return resources;
 }
 
-// This should be `std::bit_ceil(aligned_size)` but
-// that requires C++20.
-// Calculates the smallest integral power of two that is not smaller than x.
-static uint64_t bit_ceil(uint64_t input) {
-  if (input <= 1 || llvm::popcount(input) == 1)
-    return input;
-
-  return 1ULL << (64 - llvm::countl_zero(input));
-}
-
 /// Convert a user's watchpoint request (\a user_addr and \a user_size)
 /// into hardware watchpoints, for a target that can watch a power-of-2
 /// region of memory (1, 2, 4, 8, etc), aligned to that same power-of-2
@@ -102,7 +92,7 @@ WatchpointAlgorithms::PowerOf2Watchpoints(addr_t user_addr, size_t user_size,
   /// Round up \a user_size to the next power-of-2 size
   /// user_size == 8   -> aligned_size == 8
   /// user_size == 9   -> aligned_size == 16
-  aligned_size = bit_ceil(aligned_size);
+  aligned_size = llvm::bit_ceil(aligned_size);
 
   addr_t aligned_start = user_addr & ~(aligned_size - 1);
 

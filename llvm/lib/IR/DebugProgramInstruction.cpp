@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -24,9 +25,9 @@ template <typename T> T *DbgRecordParamRef<T>::get() const {
   return cast<T>(Ref);
 }
 
-template class DbgRecordParamRef<DIExpression>;
-template class DbgRecordParamRef<DILabel>;
-template class DbgRecordParamRef<DILocalVariable>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DIExpression>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILabel>;
+template class LLVM_EXPORT_TEMPLATE DbgRecordParamRef<DILocalVariable>;
 
 DbgVariableRecord::DbgVariableRecord(const DbgVariableIntrinsic *DVI)
     : DbgRecord(ValueKind, DVI->getDebugLoc()),
@@ -664,11 +665,11 @@ void DbgMarker::eraseFromParent() {
 }
 
 iterator_range<DbgRecord::self_iterator> DbgMarker::getDbgRecordRange() {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 iterator_range<DbgRecord::const_self_iterator>
 DbgMarker::getDbgRecordRange() const {
-  return make_range(StoredDbgRecords.begin(), StoredDbgRecords.end());
+  return StoredDbgRecords;
 }
 
 void DbgRecord::removeFromParent() {

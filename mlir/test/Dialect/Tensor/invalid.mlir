@@ -81,7 +81,7 @@ func.func @insert_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
 // -----
 
 func.func @tensor.from_elements_wrong_result_type() {
-  // expected-error@+2 {{'tensor.from_elements' invalid kind of type specified}}
+  // expected-error@+2 {{'tensor.from_elements' invalid kind of type specified: expected builtin.tensor, but found 'tensor<*xi32>'}}
   %c0 = arith.constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<*xi32>
   return
@@ -459,16 +459,17 @@ func.func @pad_yield_type(%arg0: tensor<?x4xi32>, %arg1: i8) -> tensor<?x9xi32> 
 // -----
 
 func.func @invalid_splat(%v : f32) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.tensor, but found 'memref<8xf32>'}}
   tensor.splat %v : memref<8xf32>
   return
 }
 
 // -----
 
-func.func @invalid_splat(%v : vector<8xf32>) {
-  // expected-error@+1 {{must be integer/index/float type}}
-  %w = tensor.splat %v : tensor<8xvector<8xf32>>
+// expected-note@+1 {{prior use here}}
+func.func @invalid_splat(%v : f32) {
+  // expected-error@+1 {{expects different type than prior uses: 'i32' vs 'f32'}}
+  %w = tensor.splat %v : tensor<1xi32>
   return
 }
 

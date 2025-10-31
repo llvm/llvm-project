@@ -309,8 +309,8 @@ define void @masked_gather_v2i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    cmeq v0.2s, v0.2s, #0
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [z0.d]
@@ -438,8 +438,7 @@ define void @masked_gather_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define void @masked_gather_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    ldr x8, [x0]
 ; CHECK-NEXT:    // implicit-def: $d0
 ; CHECK-NEXT:    cbnz x8, .LBB15_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
@@ -460,10 +459,9 @@ define void @masked_gather_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    str q0, [x0]
@@ -1199,11 +1197,15 @@ define void @masked_gather_passthru(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ptrue p2.d, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x2]
 ; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    ld1d { z0.d }, p2/z, [x1]
 ; CHECK-NEXT:    punpklo p2.h, p1.b
+; CHECK-NEXT:    mov z1.s, p1/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    ld1w { z0.d }, p2/z, [z0.d]
+; CHECK-NEXT:    and z1.s, z1.s, #0x1
+; CHECK-NEXT:    cmpne p1.s, p1/z, z1.s, #0
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x2]
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]

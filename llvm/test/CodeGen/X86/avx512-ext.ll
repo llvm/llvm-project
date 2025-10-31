@@ -6,7 +6,8 @@
 define <8 x i16> @zext_8x8mem_to_8x16(ptr%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: zext_8x8mem_to_8x16:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; KNL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; KNL-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; KNL-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -21,7 +22,8 @@ define <8 x i16> @zext_8x8mem_to_8x16(ptr%i , <8 x i1> %mask) nounwind readnone 
 ;
 ; AVX512DQNOBW-LABEL: zext_8x8mem_to_8x16:
 ; AVX512DQNOBW:       # %bb.0:
-; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX512DQNOBW-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX512DQNOBW-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX512DQNOBW-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX512DQNOBW-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -35,7 +37,8 @@ define <8 x i16> @zext_8x8mem_to_8x16(ptr%i , <8 x i1> %mask) nounwind readnone 
 define <8 x i16> @sext_8x8mem_to_8x16(ptr%i , <8 x i1> %mask) nounwind readnone {
 ; KNL-LABEL: sext_8x8mem_to_8x16:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpmovsxbw (%rdi), %xmm1
+; KNL-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; KNL-NEXT:    vpmovsxbw %xmm1, %xmm1
 ; KNL-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; KNL-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; KNL-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -50,7 +53,8 @@ define <8 x i16> @sext_8x8mem_to_8x16(ptr%i , <8 x i1> %mask) nounwind readnone 
 ;
 ; AVX512DQNOBW-LABEL: sext_8x8mem_to_8x16:
 ; AVX512DQNOBW:       # %bb.0:
-; AVX512DQNOBW-NEXT:    vpmovsxbw (%rdi), %xmm1
+; AVX512DQNOBW-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512DQNOBW-NEXT:    vpmovsxbw %xmm1, %xmm1
 ; AVX512DQNOBW-NEXT:    vpsllw $15, %xmm0, %xmm0
 ; AVX512DQNOBW-NEXT:    vpsraw $15, %xmm0, %xmm0
 ; AVX512DQNOBW-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -208,8 +212,10 @@ define <32 x i16> @zext_32x8mem_to_32x16(ptr%i , <32 x i1> %mask) nounwind readn
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
-; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; KNL-NEXT:    vmovdqu (%rdi), %ymm2
+; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
+; KNL-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
 ; KNL-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; KNL-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpsraw $15, %ymm0, %ymm0
@@ -231,8 +237,10 @@ define <32 x i16> @zext_32x8mem_to_32x16(ptr%i , <32 x i1> %mask) nounwind readn
 ; AVX512DQNOBW-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
-; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; AVX512DQNOBW-NEXT:    vmovdqu (%rdi), %ymm2
+; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
+; AVX512DQNOBW-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
 ; AVX512DQNOBW-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; AVX512DQNOBW-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; AVX512DQNOBW-NEXT:    vpsraw $15, %ymm0, %ymm0
@@ -253,8 +261,10 @@ define <32 x i16> @sext_32x8mem_to_32x16(ptr%i , <32 x i1> %mask) nounwind readn
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; KNL-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; KNL-NEXT:    vpmovsxbw 16(%rdi), %ymm2
-; KNL-NEXT:    vpmovsxbw (%rdi), %ymm3
+; KNL-NEXT:    vmovdqu (%rdi), %ymm2
+; KNL-NEXT:    vpmovsxbw %xmm2, %ymm3
+; KNL-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; KNL-NEXT:    vpmovsxbw %xmm2, %ymm2
 ; KNL-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; KNL-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; KNL-NEXT:    vpsraw $15, %ymm0, %ymm0
@@ -276,8 +286,10 @@ define <32 x i16> @sext_32x8mem_to_32x16(ptr%i , <32 x i1> %mask) nounwind readn
 ; AVX512DQNOBW-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; AVX512DQNOBW-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX512DQNOBW-NEXT:    vpmovsxbw 16(%rdi), %ymm2
-; AVX512DQNOBW-NEXT:    vpmovsxbw (%rdi), %ymm3
+; AVX512DQNOBW-NEXT:    vmovdqu (%rdi), %ymm2
+; AVX512DQNOBW-NEXT:    vpmovsxbw %xmm2, %ymm3
+; AVX512DQNOBW-NEXT:    vextracti128 $1, %ymm2, %xmm2
+; AVX512DQNOBW-NEXT:    vpmovsxbw %xmm2, %ymm2
 ; AVX512DQNOBW-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm2
 ; AVX512DQNOBW-NEXT:    vpsllw $15, %ymm0, %ymm0
 ; AVX512DQNOBW-NEXT:    vpsraw $15, %ymm0, %ymm0

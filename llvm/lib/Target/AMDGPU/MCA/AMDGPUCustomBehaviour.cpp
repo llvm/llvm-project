@@ -16,12 +16,13 @@
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/WithColor.h"
 
 namespace llvm::mca {
 
-void AMDGPUInstrPostProcess::postProcessInstruction(
-    std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
+void AMDGPUInstrPostProcess::postProcessInstruction(Instruction &Inst,
+                                                    const MCInst &MCI) {
   switch (MCI.getOpcode()) {
   case AMDGPU::S_WAITCNT:
   case AMDGPU::S_WAITCNT_soft:
@@ -43,7 +44,7 @@ void AMDGPUInstrPostProcess::postProcessInstruction(
 
 // s_waitcnt instructions encode important information as immediate operands
 // which are lost during the MCInst -> mca::Instruction lowering.
-void AMDGPUInstrPostProcess::processWaitCnt(std::unique_ptr<Instruction> &Inst,
+void AMDGPUInstrPostProcess::processWaitCnt(Instruction &Inst,
                                             const MCInst &MCI) {
   for (int Idx = 0, N = MCI.size(); Idx < N; Idx++) {
     MCAOperand Op;
@@ -54,7 +55,7 @@ void AMDGPUInstrPostProcess::processWaitCnt(std::unique_ptr<Instruction> &Inst,
       Op = MCAOperand::createImm(MCOp.getImm());
     }
     Op.setIndex(Idx);
-    Inst->addOperand(Op);
+    Inst.addOperand(Op);
   }
 }
 
@@ -303,7 +304,7 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
 bool AMDGPUCustomBehaviour::isVMEM(const MCInstrDesc &MCID) {
   return MCID.TSFlags & SIInstrFlags::MUBUF ||
          MCID.TSFlags & SIInstrFlags::MTBUF ||
-         MCID.TSFlags & SIInstrFlags::MIMG;
+         MCID.TSFlags & SIInstrFlags::MIMG || MCID.TSFlags & SIInstrFlags::FLAT;
 }
 
 // taken from SIInstrInfo::hasModifiersSet()
@@ -353,7 +354,8 @@ createAMDGPUInstrPostProcess(const MCSubtargetInfo &STI,
 
 /// Extern function to initialize the targets for the AMDGPU backend
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMCA() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUTargetMCA() {
   TargetRegistry::RegisterCustomBehaviour(getTheR600Target(),
                                           createAMDGPUCustomBehaviour);
   TargetRegistry::RegisterInstrPostProcess(getTheR600Target(),

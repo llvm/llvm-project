@@ -189,15 +189,13 @@ public:
   /// `unpack`.
   static unsigned getNumUnpackedValues() { return 2; }
 
-  /// Builds IR computing the sizes in bytes (suitable for opaque allocation)
-  /// and appends the corresponding values into `sizes`. `addressSpaces`
-  /// which must have the same length as `values`, is needed to handle layouts
-  /// where sizeof(ptr addrspace(N)) != sizeof(ptr addrspace(0)).
-  static void computeSizes(OpBuilder &builder, Location loc,
+  /// Builds and returns IR computing the size in bytes (suitable for opaque
+  /// allocation). `addressSpace` is needed to handle layouts where
+  /// sizeof(ptr addrspace(N)) != sizeof(ptr addrspace(0)).
+  static Value computeSize(OpBuilder &builder, Location loc,
                            const LLVMTypeConverter &typeConverter,
-                           ArrayRef<UnrankedMemRefDescriptor> values,
-                           ArrayRef<unsigned> addressSpaces,
-                           SmallVectorImpl<Value> &sizes);
+                           UnrankedMemRefDescriptor desc,
+                           unsigned addressSpace);
 
   /// TODO: The following accessors don't take alignment rules between elements
   /// of the descriptor struct into account. For some architectures, it might be

@@ -17,7 +17,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -58,10 +57,7 @@
 #include "llvm/Transforms/IPO/FunctionImport.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
-#include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
-
-#include <numeric>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -105,8 +101,8 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
-static const GlobalValueSummary *
-getFirstDefinitionForLinker(const GlobalValueSummaryList &GVSummaryList) {
+static const GlobalValueSummary *getFirstDefinitionForLinker(
+    ArrayRef<std::unique_ptr<GlobalValueSummary>> GVSummaryList) {
   // If there is any strong definition anywhere, get it.
   auto StrongDefForLinker = llvm::find_if(
       GVSummaryList, [](const std::unique_ptr<GlobalValueSummary> &Summary) {
@@ -135,14 +131,15 @@ getFirstDefinitionForLinker(const GlobalValueSummaryList &GVSummaryList) {
 static void computePrevailingCopies(
     const ModuleSummaryIndex &Index,
     DenseMap<GlobalValue::GUID, const GlobalValueSummary *> &PrevailingCopy) {
-  auto HasMultipleCopies = [&](const GlobalValueSummaryList &GVSummaryList) {
-    return GVSummaryList.size() > 1;
-  };
+  auto HasMultipleCopies =
+      [&](ArrayRef<std::unique_ptr<GlobalValueSummary>> GVSummaryList) {
+        return GVSummaryList.size() > 1;
+      };
 
   for (auto &I : Index) {
-    if (HasMultipleCopies(I.second.SummaryList))
+    if (HasMultipleCopies(I.second.getSummaryList()))
       PrevailingCopy[I.first] =
-          getFirstDefinitionForLinker(I.second.SummaryList);
+          getFirstDefinitionForLinker(I.second.getSummaryList());
   }
 }
 
@@ -167,7 +164,7 @@ namespace {
 class ThinLTODiagnosticInfo : public DiagnosticInfo {
   const Twine &Msg;
 public:
-  ThinLTODiagnosticInfo(const Twine &DiagMsg,
+  ThinLTODiagnosticInfo(const Twine &DiagMsg LLVM_LIFETIME_BOUND,
                         DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Linker, Severity), Msg(DiagMsg) {}
   void print(DiagnosticPrinter &DP) const override { DP << Msg; }
@@ -295,7 +292,8 @@ addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
   for (const auto &Sym : File.symbols()) {
     if (Sym.isUsed())
-      PreservedGUID.insert(GlobalValue::getGUID(Sym.getIRName()));
+      PreservedGUID.insert(
+          GlobalValue::getGUIDAssumingExternalLinkage(Sym.getIRName()));
   }
 }
 
@@ -308,8 +306,9 @@ static void computeGUIDPreservedSymbols(const lto::InputFile &File,
   // compute the GUID for the symbol.
   for (const auto &Sym : File.symbols()) {
     if (PreservedSymbols.count(Sym.getName()) && !Sym.getIRName().empty())
-      GUIDs.insert(GlobalValue::getGUID(GlobalValue::getGlobalIdentifier(
-          Sym.getIRName(), GlobalValue::ExternalLinkage, "")));
+      GUIDs.insert(GlobalValue::getGUIDAssumingExternalLinkage(
+          GlobalValue::getGlobalIdentifier(Sym.getIRName(),
+                                           GlobalValue::ExternalLinkage, "")));
   }
 }
 
@@ -827,7 +826,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
 
   // 'EmitImportsFiles' emits the list of modules from which to import from, and
   // the set of keys in `ModuleToSummariesForIndex` should be a superset of keys
-  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportFiles`.
+  // in `DecSummaries`, so no need to use `DecSummaries` in `EmitImportsFiles`.
   GVSummaryPtrSet DecSummaries;
   ModuleToSummariesForIndexTy ModuleToSummariesForIndex;
   llvm::gatherImportedSummariesForModule(

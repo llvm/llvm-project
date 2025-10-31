@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -21,7 +20,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -80,32 +78,16 @@ enum LocalNum {
   LN_Last
 };
 
-// Associate global and local DFS info with defs and uses, so we can sort them
-// into a global domination ordering.
+// Associate global and local DFS info with defs (PInfo set) and uses (U set),
+// so we can sort them into a global domination ordering.
 struct ValueDFS {
   int DFSIn = 0;
   int DFSOut = 0;
   unsigned int LocalNum = LN_Middle;
-  // Only one of Def or Use will be set.
-  Value *Def = nullptr;
+  // Only one of U or PInfo will be set.
   Use *U = nullptr;
-  // Neither PInfo nor EdgeOnly participate in the ordering
   PredicateBase *PInfo = nullptr;
-  bool EdgeOnly = false;
 };
-
-// Perform a strict weak ordering on instructions and arguments.
-static bool valueComesBefore(const Value *A, const Value *B) {
-  auto *ArgA = dyn_cast_or_null<Argument>(A);
-  auto *ArgB = dyn_cast_or_null<Argument>(B);
-  if (ArgA && !ArgB)
-    return true;
-  if (ArgB && !ArgA)
-    return false;
-  if (ArgA && ArgB)
-    return ArgA->getArgNo() < ArgB->getArgNo();
-  return cast<Instruction>(A)->comesBefore(cast<Instruction>(B));
-}
 
 // This compares ValueDFS structures. Doing so allows us to walk the minimum
 // number of instructions necessary to compute our def/use ordering.
@@ -116,33 +98,38 @@ struct ValueDFS_Compare {
   bool operator()(const ValueDFS &A, const ValueDFS &B) const {
     if (&A == &B)
       return false;
-    // The only case we can't directly compare them is when they in the same
-    // block, and both have localnum == middle.  In that case, we have to use
-    // comesbefore to see what the real ordering is, because they are in the
-    // same basic block.
 
-    assert((A.DFSIn != B.DFSIn || A.DFSOut == B.DFSOut) &&
+    // Order by block first.
+    if (A.DFSIn != B.DFSIn)
+      return A.DFSIn < B.DFSIn;
+    assert(A.DFSOut == B.DFSOut &&
            "Equal DFS-in numbers imply equal out numbers");
-    bool SameBlock = A.DFSIn == B.DFSIn;
+
+    // Then order by first/middle/last.
+    if (A.LocalNum != B.LocalNum)
+      return A.LocalNum < B.LocalNum;
 
     // We want to put the def that will get used for a given set of phi uses,
     // before those phi uses.
     // So we sort by edge, then by def.
     // Note that only phi nodes uses and defs can come last.
-    if (SameBlock && A.LocalNum == LN_Last && B.LocalNum == LN_Last)
+    if (A.LocalNum == LN_Last)
       return comparePHIRelated(A, B);
 
-    bool isADef = A.Def;
-    bool isBDef = B.Def;
-    if (!SameBlock || A.LocalNum != LN_Middle || B.LocalNum != LN_Middle)
-      return std::tie(A.DFSIn, A.LocalNum, isADef) <
-             std::tie(B.DFSIn, B.LocalNum, isBDef);
-    return localComesBefore(A, B);
+    // Use block-local ordering for instructions in the middle.
+    if (A.LocalNum == LN_Middle)
+      return localComesBefore(A, B);
+
+    // The order of PredicateInfo definitions at the start of the block does not
+    // matter.
+    assert(A.LocalNum == LN_First);
+    assert(A.PInfo && B.PInfo && "Must be predicate info def");
+    return false;
   }
 
   // For a phi use, or a non-materialized def, return the edge it represents.
   std::pair<BasicBlock *, BasicBlock *> getBlockEdge(const ValueDFS &VD) const {
-    if (!VD.Def && VD.U) {
+    if (VD.U) {
       auto *PHI = cast<PHINode>(VD.U->getUser());
       return std::make_pair(PHI->getIncomingBlock(*VD.U), PHI->getParent());
     }
@@ -175,60 +162,32 @@ struct ValueDFS_Compare {
     DomTreeNode *DomBDest = DT.getNode(BDest);
     unsigned AIn = DomADest->getDFSNumIn();
     unsigned BIn = DomBDest->getDFSNumIn();
-    bool isADef = A.Def;
-    bool isBDef = B.Def;
-    assert((!A.Def || !A.U) && (!B.Def || !B.U) &&
+    bool isAUse = A.U;
+    bool isBUse = B.U;
+    assert((!A.PInfo || !A.U) && (!B.PInfo || !B.U) &&
            "Def and U cannot be set at the same time");
     // Now sort by edge destination and then defs before uses.
-    return std::tie(AIn, isADef) < std::tie(BIn, isBDef);
+    return std::tie(AIn, isAUse) < std::tie(BIn, isBUse);
   }
 
-  // Get the definition of an instruction that occurs in the middle of a block.
-  Value *getMiddleDef(const ValueDFS &VD) const {
-    if (VD.Def)
-      return VD.Def;
-    // It's possible for the defs and uses to be null.  For branches, the local
-    // numbering will say the placed predicaeinfos should go first (IE
-    // LN_beginning), so we won't be in this function. For assumes, we will end
-    // up here, beause we need to order the def we will place relative to the
-    // assume.  So for the purpose of ordering, we pretend the def is right
-    // after the assume, because that is where we will insert the info.
-    if (!VD.U) {
-      assert(VD.PInfo &&
-             "No def, no use, and no predicateinfo should not occur");
-      assert(isa<PredicateAssume>(VD.PInfo) &&
-             "Middle of block should only occur for assumes");
-      return cast<PredicateAssume>(VD.PInfo)->AssumeInst->getNextNode();
-    }
-    return nullptr;
-  }
+  const Instruction *getDefOrUser(const ValueDFS &VD) const {
+    if (VD.U)
+      return cast<Instruction>(VD.U->getUser());
 
-  // Return either the Def, if it's not null, or the user of the Use, if the def
-  // is null.
-  const Instruction *getDefOrUser(const Value *Def, const Use *U) const {
-    if (Def)
-      return cast<Instruction>(Def);
-    return cast<Instruction>(U->getUser());
+    // For the purpose of ordering, we pretend the def is right after the
+    // assume, because that is where we will insert the info.
+    assert(VD.PInfo && "No use, and no predicateinfo should not occur");
+    assert(isa<PredicateAssume>(VD.PInfo) &&
+           "Middle of block should only occur for assumes");
+    return cast<PredicateAssume>(VD.PInfo)->AssumeInst->getNextNode();
   }
 
   // This performs the necessary local basic block ordering checks to tell
   // whether A comes before B, where both are in the same basic block.
   bool localComesBefore(const ValueDFS &A, const ValueDFS &B) const {
-    auto *ADef = getMiddleDef(A);
-    auto *BDef = getMiddleDef(B);
-
-    // See if we have real values or uses. If we have real values, we are
-    // guaranteed they are instructions or arguments. No matter what, we are
-    // guaranteed they are in the same block if they are instructions.
-    auto *ArgA = dyn_cast_or_null<Argument>(ADef);
-    auto *ArgB = dyn_cast_or_null<Argument>(BDef);
-
-    if (ArgA || ArgB)
-      return valueComesBefore(ArgA, ArgB);
-
-    auto *AInst = getDefOrUser(ADef, A.U);
-    auto *BInst = getDefOrUser(BDef, B.U);
-    return valueComesBefore(AInst, BInst);
+    const Instruction *AInst = getDefOrUser(A);
+    const Instruction *BInst = getDefOrUser(B);
+    return AInst->comesBefore(BInst);
   }
 };
 
@@ -253,9 +212,7 @@ class PredicateInfoBuilder {
   // whether it returned a valid result.
   DenseMap<Value *, unsigned int> ValueInfoNums;
 
-  // The set of edges along which we can only handle phi uses, due to critical
-  // edges.
-  DenseSet<std::pair<BasicBlock *, BasicBlock *>> EdgeUsesOnly;
+  BumpPtrAllocator &Allocator;
 
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
@@ -270,7 +227,14 @@ class PredicateInfoBuilder {
   void addInfoFor(SmallVectorImpl<Value *> &OpsToRename, Value *Op,
                   PredicateBase *PB);
 
-  typedef SmallVectorImpl<ValueDFS> ValueDFSStack;
+  struct StackEntry {
+    const ValueDFS *V;
+    Value *Def = nullptr;
+
+    StackEntry(const ValueDFS *V) : V(V) {}
+  };
+
+  using ValueDFSStack = SmallVectorImpl<StackEntry>;
   void convertUsesToDFSOrdered(Value *, SmallVectorImpl<ValueDFS> &);
   Value *materializeStack(unsigned int &, ValueDFSStack &, Value *);
   bool stackIsInScope(const ValueDFSStack &, const ValueDFS &) const;
@@ -278,8 +242,8 @@ class PredicateInfoBuilder {
 
 public:
   PredicateInfoBuilder(PredicateInfo &PI, Function &F, DominatorTree &DT,
-                       AssumptionCache &AC)
-      : PI(PI), F(F), DT(DT), AC(AC) {
+                       AssumptionCache &AC, BumpPtrAllocator &Allocator)
+      : PI(PI), F(F), DT(DT), AC(AC), Allocator(Allocator) {
     // Push an empty operand info so that we can detect 0 as not finding one
     ValueInfos.resize(1);
   }
@@ -289,30 +253,36 @@ public:
 
 bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
                                           const ValueDFS &VDUse) const {
-  if (Stack.empty())
-    return false;
+  assert(!Stack.empty() && "Should not be called with empty stack");
   // If it's a phi only use, make sure it's for this phi node edge, and that the
   // use is in a phi node.  If it's anything else, and the top of the stack is
-  // EdgeOnly, we need to pop the stack.  We deliberately sort phi uses next to
-  // the defs they must go with so that we can know it's time to pop the stack
-  // when we hit the end of the phi uses for a given def.
-  if (Stack.back().EdgeOnly) {
-    if (!VDUse.U)
-      return false;
+  // a LN_Last def, we need to pop the stack.  We deliberately sort phi uses
+  // next to the defs they must go with so that we can know it's time to pop
+  // the stack when we hit the end of the phi uses for a given def.
+  const ValueDFS &Top = *Stack.back().V;
+  assert(Top.PInfo && "RenameStack should only contain predicate infos (defs)");
+  if (Top.LocalNum == LN_Last) {
+    if (!VDUse.U) {
+      assert(VDUse.PInfo && "A non-use VDUse should have a predicate info");
+      // We should reserve adjacent LN_Last defs for the same phi use.
+      return VDUse.LocalNum == LN_Last &&
+             // If the two phi defs have the same edge, they must be designated
+             // for the same succ BB.
+             getBlockEdge(Top.PInfo) == getBlockEdge(VDUse.PInfo);
+    }
     auto *PHI = dyn_cast<PHINode>(VDUse.U->getUser());
     if (!PHI)
       return false;
     // Check edge
     BasicBlock *EdgePred = PHI->getIncomingBlock(*VDUse.U);
-    if (EdgePred != getBranchBlock(Stack.back().PInfo))
+    if (EdgePred != getBranchBlock(Top.PInfo))
       return false;
 
     // Use dominates, which knows how to handle edge dominance.
-    return DT.dominates(getBlockEdge(Stack.back().PInfo), *VDUse.U);
+    return DT.dominates(getBlockEdge(Top.PInfo), *VDUse.U);
   }
 
-  return (VDUse.DFSIn >= Stack.back().DFSIn &&
-          VDUse.DFSOut <= Stack.back().DFSOut);
+  return VDUse.DFSIn >= Top.DFSIn && VDUse.DFSOut <= Top.DFSOut;
 }
 
 void PredicateInfoBuilder::popStackUntilDFSScope(ValueDFSStack &Stack,
@@ -327,6 +297,11 @@ void PredicateInfoBuilder::convertUsesToDFSOrdered(
     Value *Op, SmallVectorImpl<ValueDFS> &DFSOrderedSet) {
   for (auto &U : Op->uses()) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
+      // Lifetime intrinsics must work directly on alloca, do not replace them
+      // with a predicated copy.
+      if (I->isLifetimeStartOrEnd())
+        continue;
+
       ValueDFS VD;
       // Put the phi node uses in the incoming block.
       BasicBlock *IBlock;
@@ -378,7 +353,6 @@ void PredicateInfoBuilder::addInfoFor(SmallVectorImpl<Value *> &OpsToRename,
   auto &OperandInfo = getOrCreateValueInfo(Op);
   if (OperandInfo.Infos.empty())
     OpsToRename.push_back(Op);
-  PI.AllInfos.push_back(PB);
   OperandInfo.Infos.push_back(PB);
 }
 
@@ -407,10 +381,12 @@ void PredicateInfoBuilder::processAssume(
     Values.push_back(Cond);
     if (auto *Cmp = dyn_cast<CmpInst>(Cond))
       collectCmpOps(Cmp, Values);
+    else if (match(Cond, m_NUWTrunc(m_Value(Op0))))
+      Values.push_back(Op0);
 
     for (Value *V : Values) {
       if (shouldRename(V)) {
-        auto *PA = new PredicateAssume(V, II, Cond);
+        auto *PA = new (Allocator) PredicateAssume(V, II, Cond);
         addInfoFor(OpsToRename, V, PA);
       }
     }
@@ -453,14 +429,14 @@ void PredicateInfoBuilder::processBranch(
       Values.push_back(Cond);
       if (auto *Cmp = dyn_cast<CmpInst>(Cond))
         collectCmpOps(Cmp, Values);
+      else if (match(Cond, m_NUWTrunc(m_Value(Op0))))
+        Values.push_back(Op0);
 
       for (Value *V : Values) {
         if (shouldRename(V)) {
-          PredicateBase *PB =
-              new PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
+          PredicateBase *PB = new (Allocator)
+              PredicateBranch(V, BranchBB, Succ, Cond, TakenEdge);
           addInfoFor(OpsToRename, V, PB);
-          if (!Succ->getSinglePredecessor())
-            EdgeUsesOnly.insert({BranchBB, Succ});
         }
       }
     }
@@ -484,11 +460,9 @@ void PredicateInfoBuilder::processSwitch(
   for (auto C : SI->cases()) {
     BasicBlock *TargetBlock = C.getCaseSuccessor();
     if (SwitchEdges.lookup(TargetBlock) == 1) {
-      PredicateSwitch *PS = new PredicateSwitch(
+      PredicateSwitch *PS = new (Allocator) PredicateSwitch(
           Op, SI->getParent(), TargetBlock, C.getCaseValue(), SI);
       addInfoFor(OpsToRename, Op, PS);
-      if (!TargetBlock->getSinglePredecessor())
-        EdgeUsesOnly.insert({BranchBB, TargetBlock});
     }
   }
 }
@@ -499,17 +473,19 @@ void PredicateInfoBuilder::buildPredicateInfo() {
   // Collect operands to rename from all conditional branch terminators, as well
   // as assume statements.
   SmallVector<Value *, 8> OpsToRename;
-  for (auto *DTN : depth_first(DT.getRootNode())) {
-    BasicBlock *BranchBB = DTN->getBlock();
-    if (auto *BI = dyn_cast<BranchInst>(BranchBB->getTerminator())) {
+  for (BasicBlock &BB : F) {
+    if (!DT.isReachableFromEntry(&BB))
+      continue;
+
+    if (auto *BI = dyn_cast<BranchInst>(BB.getTerminator())) {
       if (!BI->isConditional())
         continue;
       // Can't insert conditional information if they all go to the same place.
       if (BI->getSuccessor(0) == BI->getSuccessor(1))
         continue;
-      processBranch(BI, BranchBB, OpsToRename);
-    } else if (auto *SI = dyn_cast<SwitchInst>(BranchBB->getTerminator())) {
-      processSwitch(SI, BranchBB, OpsToRename);
+      processBranch(BI, &BB, OpsToRename);
+    } else if (auto *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
+      processSwitch(SI, &BB, OpsToRename);
     }
   }
   for (auto &Assume : AC.assumptions()) {
@@ -540,30 +516,24 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
        RenameIter != RenameStack.end(); ++RenameIter) {
     auto *Op =
         RenameIter == RenameStack.begin() ? OrigOp : (RenameIter - 1)->Def;
-    ValueDFS &Result = *RenameIter;
-    auto *ValInfo = Result.PInfo;
+    StackEntry &Result = *RenameIter;
+    auto *ValInfo = Result.V->PInfo;
     ValInfo->RenamedOp = (RenameStack.end() - Start) == RenameStack.begin()
                              ? OrigOp
                              : (RenameStack.end() - Start - 1)->Def;
+    auto CreateSSACopy = [](Instruction *InsertPt, Value *Op,
+                            const Twine &Name = "") {
+      // Use a no-op bitcast to represent ssa copy.
+      return new BitCastInst(Op, Op->getType(), Name, InsertPt->getIterator());
+    };
     // For edge predicates, we can just place the operand in the block before
-    // the terminator.  For assume, we have to place it right before the assume
-    // to ensure we dominate all of our uses.  Always insert right before the
-    // relevant instruction (terminator, assume), so that we insert in proper
-    // order in the case of multiple predicateinfo in the same block.
-    // The number of named values is used to detect if a new declaration was
-    // added. If so, that declaration is tracked so that it can be removed when
-    // the analysis is done. The corner case were a new declaration results in
-    // a name clash and the old name being renamed is not considered as that
-    // represents an invalid module.
+    // the terminator. For assume, we have to place it right after the assume
+    // to ensure we dominate all uses except assume itself. Always insert
+    // right before the terminator or after the assume, so that we insert in
+    // proper order in the case of multiple predicateinfo in the same block.
     if (isa<PredicateWithEdge>(ValInfo)) {
-      IRBuilder<> B(getBranchTerminator(ValInfo));
-      auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getOrInsertDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
-      if (NumDecls != F.getParent()->getNumNamedValues())
-        PI.CreatedDeclarations.insert(IF);
-      CallInst *PIC =
-          B.CreateCall(IF, Op, Op->getName() + "." + Twine(Counter++));
+      BitCastInst *PIC = CreateSSACopy(getBranchTerminator(ValInfo), Op,
+                                       Op->getName() + "." + Twine(Counter++));
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     } else {
@@ -572,13 +542,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
              "Should not have gotten here without it being an assume");
       // Insert the predicate directly after the assume. While it also holds
       // directly before it, assume(i1 true) is not a useful fact.
-      IRBuilder<> B(PAssume->AssumeInst->getNextNode());
-      auto NumDecls = F.getParent()->getNumNamedValues();
-      Function *IF = Intrinsic::getOrInsertDeclaration(
-          F.getParent(), Intrinsic::ssa_copy, Op->getType());
-      if (NumDecls != F.getParent()->getNumNamedValues())
-        PI.CreatedDeclarations.insert(IF);
-      CallInst *PIC = B.CreateCall(IF, Op);
+      BitCastInst *PIC = CreateSSACopy(PAssume->AssumeInst->getNextNode(), Op);
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     }
@@ -622,7 +586,7 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
       // The predicate info for branches always come first, they will get
       // materialized in the split block at the top of the block.
       // The predicate info for assumes will be somewhere in the middle,
-      // it will get materialized in front of the assume.
+      // it will get materialized right after the assume.
       if (const auto *PAssume = dyn_cast<PredicateAssume>(PossibleCopy)) {
         VD.LocalNum = LN_Middle;
         DomTreeNode *DomNode = DT.getNode(PAssume->AssumeInst->getParent());
@@ -637,14 +601,13 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
         // block, and handle it specially. We know that it goes last, and only
         // dominate phi uses.
         auto BlockEdge = getBlockEdge(PossibleCopy);
-        if (EdgeUsesOnly.count(BlockEdge)) {
+        if (!BlockEdge.second->getSinglePredecessor()) {
           VD.LocalNum = LN_Last;
           auto *DomNode = DT.getNode(BlockEdge.first);
           if (DomNode) {
             VD.DFSIn = DomNode->getDFSNumIn();
             VD.DFSOut = DomNode->getDFSNumOut();
             VD.PInfo = PossibleCopy;
-            VD.EdgeOnly = true;
             OrderedUses.push_back(VD);
           }
         } else {
@@ -670,45 +633,40 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
     // currently and will be considered equal. We could get rid of the
     // stable sort by creating one if we wanted.
     llvm::stable_sort(OrderedUses, Compare);
-    SmallVector<ValueDFS, 8> RenameStack;
+    SmallVector<StackEntry, 8> RenameStack;
     // For each use, sorted into dfs order, push values and replaces uses with
     // top of stack, which will represent the reaching def.
-    for (auto &VD : OrderedUses) {
+    for (const ValueDFS &VD : OrderedUses) {
       // We currently do not materialize copy over copy, but we should decide if
       // we want to.
-      bool PossibleCopy = VD.PInfo != nullptr;
       if (RenameStack.empty()) {
         LLVM_DEBUG(dbgs() << "Rename Stack is empty\n");
       } else {
         LLVM_DEBUG(dbgs() << "Rename Stack Top DFS numbers are ("
-                          << RenameStack.back().DFSIn << ","
-                          << RenameStack.back().DFSOut << ")\n");
+                          << RenameStack.back().V->DFSIn << ","
+                          << RenameStack.back().V->DFSOut << ")\n");
       }
 
       LLVM_DEBUG(dbgs() << "Current DFS numbers are (" << VD.DFSIn << ","
                         << VD.DFSOut << ")\n");
 
-      bool ShouldPush = (VD.Def || PossibleCopy);
-      bool OutOfScope = !stackIsInScope(RenameStack, VD);
-      if (OutOfScope || ShouldPush) {
-        // Sync to our current scope.
-        popStackUntilDFSScope(RenameStack, VD);
-        if (ShouldPush) {
-          RenameStack.push_back(VD);
-        }
+      // Sync to our current scope.
+      popStackUntilDFSScope(RenameStack, VD);
+
+      if (VD.PInfo) {
+        RenameStack.push_back(&VD);
+        continue;
       }
+
       // If we get to this point, and the stack is empty we must have a use
       // with no renaming needed, just skip it.
       if (RenameStack.empty())
-        continue;
-      // Skip values, only want to rename the uses
-      if (VD.Def || PossibleCopy)
         continue;
       if (!DebugCounter::shouldExecute(RenameCounter)) {
         LLVM_DEBUG(dbgs() << "Skipping execution due to debug counter\n");
         continue;
       }
-      ValueDFS &Result = RenameStack.back();
+      StackEntry &Result = RenameStack.back();
 
       // If the possible copy dominates something, materialize our stack up to
       // this point. This ensures every comparison that affects our operation
@@ -728,16 +686,12 @@ void PredicateInfoBuilder::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
 
 PredicateInfoBuilder::ValueInfo &
 PredicateInfoBuilder::getOrCreateValueInfo(Value *Operand) {
-  auto OIN = ValueInfoNums.find(Operand);
-  if (OIN == ValueInfoNums.end()) {
-    // This will grow it
+  auto Res = ValueInfoNums.try_emplace(Operand, ValueInfos.size());
+  if (Res.second) {
+    // Allocate space for new ValueInfo.
     ValueInfos.resize(ValueInfos.size() + 1);
-    // This will use the new size and give us a 0 based number of the info
-    auto InsertResult = ValueInfoNums.insert({Operand, ValueInfos.size() - 1});
-    assert(InsertResult.second && "Value info number already existed?");
-    return ValueInfos[InsertResult.first->second];
   }
-  return ValueInfos[OIN->second];
+  return ValueInfos[Res.first->second];
 }
 
 const PredicateInfoBuilder::ValueInfo &
@@ -750,27 +704,10 @@ PredicateInfoBuilder::getValueInfo(Value *Operand) const {
 }
 
 PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
-                             AssumptionCache &AC)
+                             AssumptionCache &AC, BumpPtrAllocator &Allocator)
     : F(F) {
-  PredicateInfoBuilder Builder(*this, F, DT, AC);
+  PredicateInfoBuilder Builder(*this, F, DT, AC, Allocator);
   Builder.buildPredicateInfo();
-}
-
-// Remove all declarations we created . The PredicateInfo consumers are
-// responsible for remove the ssa_copy calls created.
-PredicateInfo::~PredicateInfo() {
-  // Collect function pointers in set first, as SmallSet uses a SmallVector
-  // internally and we have to remove the asserting value handles first.
-  SmallPtrSet<Function *, 20> FunctionPtrs;
-  for (const auto &F : CreatedDeclarations)
-    FunctionPtrs.insert(&*F);
-  CreatedDeclarations.clear();
-
-  for (Function *F : FunctionPtrs) {
-    assert(F->user_begin() == F->user_end() &&
-           "PredicateInfo consumer did not remove all SSA copies.");
-    F->eraseFromParent();
-  }
 }
 
 std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
@@ -785,6 +722,11 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
       return {{CmpInst::ICMP_EQ,
                TrueEdge ? ConstantInt::getTrue(Condition->getType())
                         : ConstantInt::getFalse(Condition->getType())}};
+    }
+
+    if (match(Condition, m_NUWTrunc(m_Specific(RenamedOp)))) {
+      return {{TrueEdge ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ,
+               ConstantInt::getNullValue(RenamedOp->getType())}};
     }
 
     CmpInst *Cmp = dyn_cast<CmpInst>(Condition);
@@ -825,15 +767,16 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
 
 void PredicateInfo::verifyPredicateInfo() const {}
 
-// Replace ssa_copy calls created by PredicateInfo with their operand.
+// Replace bitcasts created by PredicateInfo with their operand.
 static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
   for (Instruction &Inst : llvm::make_early_inc_range(instructions(F))) {
     const auto *PI = PredInfo.getPredicateInfoFor(&Inst);
-    auto *II = dyn_cast<IntrinsicInst>(&Inst);
-    if (!PI || !II || II->getIntrinsicID() != Intrinsic::ssa_copy)
+    if (!PI)
       continue;
 
-    Inst.replaceAllUsesWith(II->getOperand(0));
+    assert(isa<BitCastInst>(Inst) &&
+           Inst.getType() == Inst.getOperand(0)->getType());
+    Inst.replaceAllUsesWith(Inst.getOperand(0));
     Inst.eraseFromParent();
   }
 }
@@ -843,7 +786,8 @@ PreservedAnalyses PredicateInfoPrinterPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   OS << "PredicateInfo for function: " << F.getName() << "\n";
-  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC);
+  BumpPtrAllocator Allocator;
+  auto PredInfo = std::make_unique<PredicateInfo>(F, DT, AC, Allocator);
   PredInfo->print(OS);
 
   replaceCreatedSSACopys(*PredInfo, F);
@@ -865,7 +809,6 @@ public:
   void emitInstructionAnnot(const Instruction *I,
                             formatted_raw_ostream &OS) override {
     if (const auto *PI = PredInfo->getPredicateInfoFor(I)) {
-      OS << "; Has predicate info\n";
       if (const auto *PB = dyn_cast<PredicateBranch>(PI)) {
         OS << "; branch predicate info { TrueEdge: " << PB->TrueEdge
            << " Comparison:" << *PB->Condition << " Edge: [";
@@ -875,7 +818,7 @@ public:
         OS << "]";
       } else if (const auto *PS = dyn_cast<PredicateSwitch>(PI)) {
         OS << "; switch predicate info { CaseValue: " << *PS->CaseValue
-           << " Switch:" << *PS->Switch << " Edge: [";
+           << " Edge: [";
         PS->From->printAsOperand(OS);
         OS << ",";
         PS->To->printAsOperand(OS);
@@ -905,7 +848,8 @@ PreservedAnalyses PredicateInfoVerifierPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  std::make_unique<PredicateInfo>(F, DT, AC)->verifyPredicateInfo();
+  BumpPtrAllocator Allocator;
+  std::make_unique<PredicateInfo>(F, DT, AC, Allocator)->verifyPredicateInfo();
 
   return PreservedAnalyses::all();
 }

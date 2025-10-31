@@ -79,6 +79,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/UniqueBBID.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 

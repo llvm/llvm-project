@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -1160,7 +1163,7 @@ static void test_pr62082() {
 
 template <class CharT>
 static void test_unsigned_duration() {
-  // Reported in https://github.com/llvm/llvm-project/issues/96820
+  // Reported in https://llvm.org/PR96820
   using namespace std::literals::chrono_literals;
 
   check(SV("1as"), SV("{}"), std::chrono::duration<unsigned short, std::atto>(1));

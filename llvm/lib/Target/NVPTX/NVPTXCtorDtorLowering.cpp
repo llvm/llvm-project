@@ -88,7 +88,7 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
 //     reinterpret_cast<InitCallback *>(*start)();
 // }
 //
-// void call_init_array_callbacks() {
+// void call_fini_array_callbacks() {
 //   size_t fini_array_size = __fini_array_end - __fini_array_start;
 //   for (size_t i = fini_array_size; i > 0; --i)
 //     reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
@@ -153,7 +153,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
         "start");
   }
   IRB.CreateCondBr(
-      IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGT, BeginVal,
+      IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGE, BeginVal,
                     EndVal),
       LoopBB, ExitBB);
   IRB.SetInsertPoint(LoopBB);
@@ -256,7 +256,6 @@ PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
 }
 
 char NVPTXCtorDtorLoweringLegacy::ID = 0;
-char &llvm::NVPTXCtorDtorLoweringLegacyPassID = NVPTXCtorDtorLoweringLegacy::ID;
 INITIALIZE_PASS(NVPTXCtorDtorLoweringLegacy, DEBUG_TYPE,
                 "Lower ctors and dtors for NVPTX", false, false)
 

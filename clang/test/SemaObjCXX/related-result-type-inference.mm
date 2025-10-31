@@ -65,7 +65,7 @@ void test_inference() {
   __typeof__(([NSBlah newUnrelated])) *unrelated2 = (Unrelated**)0;  
 
   NSArray *arr = [[NSMutableArray alloc] init];
-  NSMutableArray *marr = [arr retain]; // expected-warning{{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
-  marr = [arr retain]; // expected-warning{{incompatible pointer types assigning to 'NSMutableArray *' from 'NSArray *'}}
+  NSMutableArray *marr = [arr retain]; // expected-error{{incompatible pointer types initializing 'NSMutableArray *' with an expression of type 'NSArray *'}}
+  marr = [arr retain]; // expected-error{{incompatible pointer types assigning to 'NSMutableArray *' from 'NSArray *'}}
   arr = [marr retain];
 }

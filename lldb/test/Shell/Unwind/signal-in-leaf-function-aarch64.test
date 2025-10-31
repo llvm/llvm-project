@@ -1,6 +1,8 @@
 # REQUIRES: target-aarch64 && native
 # UNSUPPORTED: system-windows
 # llvm.org/pr91610, rdar://128031075
+
+# Darwin _sigtramp doesn't have eh_frame instruction on AArch64
 # XFAIL: system-darwin
 
 

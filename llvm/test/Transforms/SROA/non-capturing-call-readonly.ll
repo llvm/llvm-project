@@ -791,24 +791,23 @@ entry:
   ret i32 0
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
 
 define i64 @do_schedule_instrs_for_dce_after_fixups() {
 ; CHECK-LABEL: @do_schedule_instrs_for_dce_after_fixups(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = alloca i64, align 2
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[C]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[C]])
 ; CHECK-NEXT:    store i64 0, ptr [[C]], align 4
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(ptr [[ADD_PTR]])
-; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[C]], align 4
-; CHECK-NEXT:    ret i64 [[LD]]
+; CHECK-NEXT:    ret i64 0
 ;
 entry:
   %c = alloca i64, align 2
-  call void @llvm.lifetime.start.p0(i64 1, ptr %c)
+  call void @llvm.lifetime.start.p0(ptr %c)
   store i64 0, ptr %c
   br label %if.end
 

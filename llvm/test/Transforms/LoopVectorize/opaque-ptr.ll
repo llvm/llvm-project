@@ -49,12 +49,10 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX10:%.*]] = mul i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[NEXT_GEP11:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[OFFSET_IDX10]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr float, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP17]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr float, ptr [[NEXT_GEP11]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x float>, ptr [[TMP18]], align 4, !alias.scope [[META3]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x float>, ptr [[NEXT_GEP11]], align 4, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd <2 x float> [[WIDE_LOAD]], [[WIDE_LOAD12]]
-; CHECK-NEXT:    store <2 x float> [[TMP19]], ptr [[TMP17]], align 4, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    store <2 x float> [[TMP19]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -137,12 +135,10 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX8:%.*]] = mul i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[OFFSET_IDX8]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[NEXT_GEP]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP13]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr float, ptr [[NEXT_GEP9]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x float>, ptr [[TMP14]], align 4, !alias.scope [[META12]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x float>, ptr [[NEXT_GEP9]], align 4, !alias.scope [[META12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x float> [[WIDE_LOAD]], [[WIDE_LOAD10]]
-; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[TMP13]], align 4, !alias.scope [[META9]], !noalias [[META12]]
+; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META9]], !noalias [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
@@ -208,8 +204,7 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <2 x i64> <i64 0, i64 8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[TMP6]], i32 0
-; CHECK-NEXT:    store <2 x ptr> [[TMP5]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    store <2 x ptr> [[TMP5]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

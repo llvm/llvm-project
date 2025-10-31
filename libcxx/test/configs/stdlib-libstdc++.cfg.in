@@ -9,7 +9,8 @@
 #
 #  $ ./libcxx/utils/libcxx-lit <BUILD> -sv libcxx/test/std --param libstdcxx_install_prefix=/opt/homebrew/Cellar/gcc/14.1.0_1 \
 #                                                          --param libstdcxx_version=14 \
-#                                                          --param libstdcxx_triple=aarch64-apple-darwin22
+#                                                          --param libstdcxx_triple=aarch64-apple-darwin22 \
+#                                                          --param stdlib=libstdc++
 #
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
@@ -50,7 +51,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{libstdcxx-install-prefix}/lib/gcc/%{libstdcxx-version} -Wl,-rpath,%{libstdcxx-install-prefix}/lib/gcc/%{libstdcxx-version} -lstdc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T -- '
+    '%{executor} --execdir %{temp} -- '
 ))
 
 import os, site

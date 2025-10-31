@@ -39,6 +39,7 @@ static_library("Target") {
     "//llvm/include/llvm/Config:write_target_def_files",
   ]
   sources = [
+    "RegisterTargetPassConfigCallback.cpp",
     "Target.cpp",
     "TargetLoweringObjectFile.cpp",
     "TargetMachine.cpp",

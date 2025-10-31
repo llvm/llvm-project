@@ -13,7 +13,7 @@ float &operator ""_x1 (const char8_t *, size_t);
 using char8 = double;
 #endif
 char8 &i2 = u8"foo"_x1;
-double &i3 = L"foo"_x1; // expected-error {{no matching literal operator for call to 'operator""_x1' with arguments of types 'const wchar_t *' and 'unsigned long'}}
+double &i3 = L"foo"_x1; // expected-error {{no matching literal operator for call to 'operator""_x1' with arguments of types 'const wchar_t *' and '__size_t' (aka 'unsigned long')}}
 
 char &operator ""_x1(const wchar_t *, size_t);
 char &i4 = L"foo"_x1; // ok
@@ -46,8 +46,8 @@ template<S> float &operator""_s();
 void no_fallback() {
   "hello"_s;
   // FIXME: It'd be useful to explain what candidates were found and why they didn't work.
-  "xyzzy"_s; // expected-error {{no matching literal operator for call to 'operator""_s' with arguments of types 'const char *' and 'unsigned long', and no matching literal operator template}}
-  "yello"_s; // expected-error {{no matching literal operator for call to 'operator""_s' with arguments of types 'const char *' and 'unsigned long', and no matching literal operator template}}
+  "xyzzy"_s; // expected-error {{no matching literal operator for call to 'operator""_s' with arguments of types 'const char *' and '__size_t' (aka 'unsigned long'), and no matching literal operator template}}
+  "yello"_s; // expected-error {{no matching literal operator for call to 'operator""_s' with arguments of types 'const char *' and '__size_t' (aka 'unsigned long'), and no matching literal operator template}}
 }
 
 double &operator""_s(const char*, size_t);

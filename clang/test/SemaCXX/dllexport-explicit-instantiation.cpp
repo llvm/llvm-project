@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple x86_64-win32   -fsyntax-only -fms-extensions -verify=win32,win32-pedantic -DMS %s -Wdllexport-explicit-instantiation
-// RUN: %clang_cc1 -triple x86_64-win32   -fsyntax-only -fms-extensions -verify=win32                -DMS %s -Wno-dllexport-explicit-instantiation
-// RUN: %clang_cc1 -triple x86_64-mingw32 -fsyntax-only -fms-extensions -verify=mingw,mingw-pedantic -DMS %s -Wdllexport-explicit-instantiation
-// RUN: %clang_cc1 -triple x86_64-mingw32 -fsyntax-only -fms-extensions -verify=mingw                -DMS %s -Wno-dllexport-explicit-instantiation
+// RUN: %clang_cc1 -triple x86_64-win32   -fsyntax-only -fms-extensions -verify=win32,win32-pedantic %s -Wdllexport-explicit-instantiation
+// RUN: %clang_cc1 -triple x86_64-win32   -fsyntax-only -fms-extensions -verify=win32                %s -Wno-dllexport-explicit-instantiation
+// RUN: %clang_cc1 -triple x86_64-mingw32 -fsyntax-only -fms-extensions -verify=mingw,mingw-pedantic %s -Wdllexport-explicit-instantiation
+// RUN: %clang_cc1 -triple x86_64-mingw32 -fsyntax-only -fms-extensions -verify=mingw                %s -Wno-dllexport-explicit-instantiation
 
 template <class>
 class S {};

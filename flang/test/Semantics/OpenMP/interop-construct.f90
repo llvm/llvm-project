@@ -8,7 +8,7 @@
 SUBROUTINE test_interop_01()
   USE omp_lib
   INTEGER(OMP_INTEROP_KIND) :: obj
-  !ERROR: Each interop-var may be speciﬁed for at most one action-clause of each INTEROP construct.
+  !ERROR: Each interop-var may be specified for at most one action-clause of each INTEROP construct.
   !$OMP INTEROP INIT(TARGETSYNC,TARGET: obj) USE(obj)
   PRINT *, 'pass'
 END SUBROUTINE test_interop_01
@@ -16,7 +16,7 @@ END SUBROUTINE test_interop_01
 SUBROUTINE test_interop_02()
   USE omp_lib
   INTEGER(OMP_INTEROP_KIND) :: obj
-  !ERROR: Each interop-type may be speciﬁed at most once.
+  !ERROR: Each interop-type may be specified at most once.
   !$OMP INTEROP INIT(TARGETSYNC,TARGET,TARGETSYNC: obj)
   PRINT *, 'pass'
 END SUBROUTINE test_interop_02

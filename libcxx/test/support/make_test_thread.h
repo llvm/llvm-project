@@ -34,14 +34,8 @@ std::thread make_test_thread(F&& f, Args&&... args) {
 }
 
 #if TEST_STD_VER >= 20
-#  ifdef _LIBCPP_VERSION
-#    define TEST_AVAILABILITY_SYNC _LIBCPP_AVAILABILITY_SYNC
-#  else
-#    define TEST_AVAILABILITY_SYNC
-#  endif
-
 template <class F, class... Args>
-TEST_AVAILABILITY_SYNC std::jthread make_test_jthread(F&& f, Args&&... args) {
+std::jthread make_test_jthread(F&& f, Args&&... args) {
   return std::jthread(std::forward<F>(f), std::forward<Args>(args)...);
 }
 #endif
