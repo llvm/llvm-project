@@ -399,10 +399,10 @@ exit:
 define void @neg_ref(ptr %loc) {
 ; CHECK-LABEL: define void @neg_ref(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
+; CHECK-NEXT:  [[LOOP:.*]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[IV_NEXT:%.*]], %[[BACKEDGE:.*]] ]
 ; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[LOC]], align 4
 ; CHECK-NEXT:    [[EARLYCND:%.*]] = icmp eq i32 [[V]], 198
@@ -410,7 +410,7 @@ define void @neg_ref(ptr %loc) {
 ; CHECK:       [[BACKEDGE]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT2:.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT2:.*]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[EXIT2]]:
@@ -536,14 +536,14 @@ exit:
 define i32 @neg_not_argmemonly(ptr %loc, ptr %loc2) {
 ; CHECK-LABEL: define i32 @neg_not_argmemonly(
 ; CHECK-SAME: ptr [[LOC:%.*]], ptr [[LOC2:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[LOOP:.*]]:
 ; CHECK-NEXT:    call void @not_argmemonly(i32 0, ptr [[LOC]])
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP1]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[VAL_LE:%.*]] = call i32 @load(ptr [[LOC2]])
 ; CHECK-NEXT:    ret i32 [[VAL_LE]]
@@ -619,4 +619,5 @@ loop:
 exit:
   ret void
 }
+
 

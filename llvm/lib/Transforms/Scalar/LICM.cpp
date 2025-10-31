@@ -2315,6 +2315,15 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
   auto *IMD = MSSA->getMemoryAccess(I);
   BatchAAResults BAA(*AA);
   auto *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, IMD);
+  auto *CallI = dyn_cast<CallBase>(I);
+  auto doesItReadILoc = [&](Instruction *UserI) -> bool {
+    // Blocks if call reads the location I.
+    if (auto *OtherCB = dyn_cast_or_null<CallBase>(UserI)) {
+      ModRefInfo MRI = AA->getModRefInfo(CallI, OtherCB);
+      return isRefSet(MRI);
+    }
+    return true;
+  };
   // Make sure there are no clobbers inside the loop.
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))
     return false;
@@ -2328,11 +2337,14 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
     auto *Accesses = MSSA->getBlockAccesses(BB);
     if (!Accesses)
       continue;
+    bool FoundI = false;
     for (const auto &MA : *Accesses)
       if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
         auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
                                              const_cast<MemoryUse *>(MU));
-        if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock()))
+        // Check clobbering only for Uses that happens before I
+        if (!MSSA->isLiveOnEntryDef(MD) && CurLoop->contains(MD->getBlock()) &&
+            !FoundI)
           return false;
       } else if (const auto *MD = dyn_cast<MemoryDef>(&MA)) {
         if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
@@ -2353,8 +2365,10 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
             auto *SCI = cast<CallInst>(I);
             // If the instruction we are wanting to hoist is also a call
             // instruction then we need not check mod/ref info with itself
-            if (SCI == CI)
+            if (SCI == CI) {
+              FoundI = true;
               continue;
+            }
             ModRefInfo MRI = BAA.getModRefInfo(CI, SCI);
             if (isModOrRefSet(MRI))
               return false;
