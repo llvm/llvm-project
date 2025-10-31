@@ -1,4 +1,5 @@
 add_lldb_unittest(DAPTests
+  ClientLauncherTest.cpp
   DAPErrorTest.cpp
   DAPTest.cpp
   DAPTypesTest.cpp
