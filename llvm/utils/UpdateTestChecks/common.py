@@ -2282,7 +2282,9 @@ def add_checks(
             else:
                 if ginfo.get_version() >= 7:
                     # Record the indices of blank lines in the function body preemptively.
-                    blank_line_indices = { i for i, line in enumerate(func_body) if line.strip() == "" }
+                    blank_line_indices = {
+                        i for i, line in enumerate(func_body) if line.strip() == ""
+                    }
                 else:
                     blank_line_indices = set()
 
