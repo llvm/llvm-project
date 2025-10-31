@@ -90,8 +90,7 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
   DebugLoc DL;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
-    DebugLoc MIIDL = MII->getDebugLoc();
-    if (MIIDL) {
+    if (DebugLoc MIIDL = MII->getDebugLoc()) {
       if (MIIDL.getLine() != 0)
         return MIIDL;
       DL = MIIDL.get();
