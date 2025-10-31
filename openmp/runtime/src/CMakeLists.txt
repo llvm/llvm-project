@@ -455,8 +455,6 @@ if(LIBOMP_FORTRAN_MODULES)
   )
   set_target_properties(libomp-mod PROPERTIES FOLDER "OpenMP/Fortran Modules")
 
-  libomp_get_fflags(LIBOMP_CONFIGURED_FFLAGS)
-  target_compile_options(libomp-mod PRIVATE ${LIBOMP_CONFIGURED_FFLAGS})
   if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
    target_compile_options(libomp-mod PRIVATE -fno-range-check)
   endif()

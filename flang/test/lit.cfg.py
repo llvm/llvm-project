@@ -180,10 +180,10 @@ if config.flang_test_enable_openmp or openmp_mod_path:
     config.available_features.add("openmp_runtime")
 
     # Search path for omp_lib.h with LLVM_ENABLE_RUNTIMES=openmp
-    # FIXME: Do not hardcode, openmp should write this into the resource directory
+    # FIXME: openmp should write this file into the resource directory
     extra_intrinsics_search_args += ["-I", f"{config.flang_obj_root}/../../runtimes/runtimes-bins/openmp/runtime/src"] 
 else:
-    lit_config.warning(f"OpenMP modules found not in driver default paths: OpenMP tests disabled: Use FLANG_TEST_ENABLE_OPENMP=ON to force-enable")
+    lit_config.warning(f"OpenMP modules found not in driver default paths: OpenMP tests disabled; Use FLANG_TEST_ENABLE_OPENMP=ON to force-enable")
 
 
 lit_config.note(f"using flang: {flang_exe}")
