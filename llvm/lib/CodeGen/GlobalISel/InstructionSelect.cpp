@@ -238,6 +238,7 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
       continue;
     }
     // Try to find redundant copies b/w vregs of the same register class.
+    // Try to constrain the register class of the copy operand.
     for (auto MII = MBB.rbegin(), End = MBB.rend(); MII != End;) {
       MachineInstr &MI = *MII;
       ++MII;
@@ -253,6 +254,15 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
           MRI.replaceRegWith(DstReg, SrcReg);
           MI.eraseFromParent();
         }
+      }
+      auto CopyOpd = MI.getOperand(1);
+      if (CopyOpd.getSubReg() != 0) {
+        auto VReg = CopyOpd.getReg();
+        const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+        const TargetRegisterClass *RC = TRI.getSubClassWithSubReg(
+            MRI.getRegClass(VReg), CopyOpd.getSubReg());
+        MRI.constrainRegClass(
+            VReg, RC); // 3rd Arg MinRCSize in DAG is 4, we used 0 here.
       }
     }
   }

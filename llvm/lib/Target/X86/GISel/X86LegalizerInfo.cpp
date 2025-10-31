@@ -590,6 +590,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .lower();
 
   // fp intrinsics
+  getActionDefinitionsBuilder(G_IS_FPCLASS).lower();
+
   getActionDefinitionsBuilder({G_INTRINSIC_ROUNDEVEN, G_INTRINSIC_TRUNC})
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
