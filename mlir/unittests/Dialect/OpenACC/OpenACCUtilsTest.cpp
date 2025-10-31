@@ -570,3 +570,107 @@ TEST_F(OpenACCUtilsTest, getRecipeNamePrivateUnrankedMemref) {
       getRecipeName(RecipeKind::private_recipe, unrankedMemrefTy);
   EXPECT_EQ(recipeName, "privatization_memref_Zxi32_");
 }
+
+//===----------------------------------------------------------------------===//
+// getBaseEntity Tests
+//===----------------------------------------------------------------------===//
+
+// Local implementation of PartialEntityAccessOpInterface for memref.subview.
+// This is implemented locally in the test rather than officially because memref
+// operations already have ViewLikeOpInterface, which serves a similar purpose
+// for walking through views to the base entity. This test demonstrates how
+// getBaseEntity() would work if the interface were attached to memref.subview.
+namespace {
+struct SubViewOpPartialEntityAccessOpInterface
+    : public acc::PartialEntityAccessOpInterface::ExternalModel<
+          SubViewOpPartialEntityAccessOpInterface, memref::SubViewOp> {
+  Value getBaseEntity(Operation *op) const {
+    auto subviewOp = cast<memref::SubViewOp>(op);
+    return subviewOp.getSource();
+  }
+
+  bool isCompleteView(Operation *op) const {
+    // For testing purposes, we'll consider it a partial view (return false).
+    // The real implementation would need to look at the offsets.
+    return false;
+  }
+};
+} // namespace
+
+TEST_F(OpenACCUtilsTest, getBaseEntityFromSubview) {
+  // Register the local interface implementation for memref.subview
+  memref::SubViewOp::attachInterface<SubViewOpPartialEntityAccessOpInterface>(
+      context);
+
+  // Create a base memref
+  auto memrefTy = MemRefType::get({10, 20}, b.getF32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value baseMemref = allocOp->getResult();
+
+  // Create a subview of the base memref with non-zero offsets
+  // This creates a 5x10 view starting at [2, 3] in the original 10x20 memref
+  SmallVector<OpFoldResult> offsets = {b.getIndexAttr(2), b.getIndexAttr(3)};
+  SmallVector<OpFoldResult> sizes = {b.getIndexAttr(5), b.getIndexAttr(10)};
+  SmallVector<OpFoldResult> strides = {b.getIndexAttr(1), b.getIndexAttr(1)};
+
+  OwningOpRef<memref::SubViewOp> subviewOp =
+      memref::SubViewOp::create(b, loc, baseMemref, offsets, sizes, strides);
+  Value subview = subviewOp->getResult();
+
+  // Test that getBaseEntity returns the base memref, not the subview
+  Value baseEntity = getBaseEntity(subview);
+  EXPECT_EQ(baseEntity, baseMemref);
+}
+
+TEST_F(OpenACCUtilsTest, getBaseEntityNoInterface) {
+  // Create a memref without the interface
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value varPtr = allocOp->getResult();
+
+  // Test that getBaseEntity returns the value itself when there's no interface
+  Value baseEntity = getBaseEntity(varPtr);
+  EXPECT_EQ(baseEntity, varPtr);
+}
+
+TEST_F(OpenACCUtilsTest, getBaseEntityChainedSubviews) {
+  // Register the local interface implementation for memref.subview
+  memref::SubViewOp::attachInterface<SubViewOpPartialEntityAccessOpInterface>(
+      context);
+
+  // Create a base memref
+  auto memrefTy = MemRefType::get({100, 200}, b.getI64Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+  Value baseMemref = allocOp->getResult();
+
+  // Create first subview
+  SmallVector<OpFoldResult> offsets1 = {b.getIndexAttr(10), b.getIndexAttr(20)};
+  SmallVector<OpFoldResult> sizes1 = {b.getIndexAttr(50), b.getIndexAttr(80)};
+  SmallVector<OpFoldResult> strides1 = {b.getIndexAttr(1), b.getIndexAttr(1)};
+
+  OwningOpRef<memref::SubViewOp> subview1Op =
+      memref::SubViewOp::create(b, loc, baseMemref, offsets1, sizes1, strides1);
+  Value subview1 = subview1Op->getResult();
+
+  // Create second subview (subview of subview)
+  SmallVector<OpFoldResult> offsets2 = {b.getIndexAttr(5), b.getIndexAttr(10)};
+  SmallVector<OpFoldResult> sizes2 = {b.getIndexAttr(20), b.getIndexAttr(30)};
+  SmallVector<OpFoldResult> strides2 = {b.getIndexAttr(1), b.getIndexAttr(1)};
+
+  OwningOpRef<memref::SubViewOp> subview2Op =
+      memref::SubViewOp::create(b, loc, subview1, offsets2, sizes2, strides2);
+  Value subview2 = subview2Op->getResult();
+
+  // Test that getBaseEntity on the nested subview returns the first subview
+  // (since our implementation returns the immediate source, not the ultimate
+  // base)
+  Value baseEntity = getBaseEntity(subview2);
+  EXPECT_EQ(baseEntity, subview1);
+
+  // Test that calling getBaseEntity again returns the original base
+  Value ultimateBase = getBaseEntity(baseEntity);
+  EXPECT_EQ(ultimateBase, baseMemref);
+}

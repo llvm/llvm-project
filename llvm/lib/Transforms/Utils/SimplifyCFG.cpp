@@ -80,6 +80,7 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -7632,7 +7633,33 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     auto *DefaultCaseBB = SI->getDefaultDest();
     BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
     auto It = OrigBB->getTerminator()->getIterator();
+    SmallVector<uint32_t> Weights;
+    auto HasWeights =
+        !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
     auto *BI = BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    if (HasWeights && any_of(Weights, [](const auto &V) { return V != 0; })) {
+      // IsPow2 covers a subset of the cases in which we'd go to the default
+      // label. The other is those powers of 2 that don't appear in the case
+      // statement. We don't know the distribution of the values coming in, so
+      // the safest is to split 50-50 the original probability to `default`.
+      uint64_t OrigDenominator = sum_of(map_range(
+          Weights, [](const auto &V) { return static_cast<uint64_t>(V); }));
+      SmallVector<uint64_t> NewWeights(2);
+      NewWeights[1] = Weights[0] / 2;
+      NewWeights[0] = OrigDenominator - NewWeights[1];
+      setFittedBranchWeights(*BI, NewWeights, /*IsExpected=*/false);
+
+      // For the original switch, we reduce the weight of the default by the
+      // amount by which the previous branch contributes to getting to default,
+      // and then make sure the remaining weights have the same relative ratio
+      // wrt eachother.
+      uint64_t CasesDenominator = OrigDenominator - Weights[0];
+      Weights[0] /= 2;
+      for (auto &W : drop_begin(Weights))
+        W = NewWeights[0] * static_cast<double>(W) / CasesDenominator;
+
+      setBranchWeights(*SI, Weights, /*IsExpected=*/false);
+    }
     // BI is handling the default case for SI, and so should share its DebugLoc.
     BI->setDebugLoc(SI->getDebugLoc());
     It->eraseFromParent();

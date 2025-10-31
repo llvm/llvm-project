@@ -1317,8 +1317,6 @@ Transforms/SimpleLoopUnswitch/pr60736.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-freeze-individual-conditions.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch.ll
 Transforms/SimpleLoopUnswitch/trivial-unswitch-logical-and-or.ll
-Transforms/SimplifyCFG/RISCV/switch-of-powers-of-two.ll
-Transforms/SimplifyCFG/X86/switch-of-powers-of-two.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/StructurizeCFG/AMDGPU/uniform-regions.ll
 Transforms/StructurizeCFG/hoist-zerocost.ll

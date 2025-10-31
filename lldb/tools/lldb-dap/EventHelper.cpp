@@ -176,7 +176,7 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
   llvm::DenseSet<lldb::tid_t> old_thread_ids;
   old_thread_ids.swap(dap.thread_ids);
-  uint32_t stop_id = process.GetStopID();
+  uint32_t stop_id = on_entry ? 0 : process.GetStopID();
   const uint32_t num_threads = process.GetNumThreads();
 
   // First make a pass through the threads to see if the focused thread
