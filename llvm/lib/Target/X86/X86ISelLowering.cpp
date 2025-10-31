@@ -2620,8 +2620,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FTANH,  ISD::STRICT_FTANH,
           // TODO: Add ISD:::STRICT_FMODF too once implemented.
           ISD::FMODF})
-      if (isOperationExpand(Op, MVT::f32)
-	  || isOperationLibCall(Op, MVT::f32))
+     if (isOperationExpandOrLibCall(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
 

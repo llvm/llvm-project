@@ -29,7 +29,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -80,21 +79,6 @@ class FRemExpander {
   static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
                                                       MVT::f64};
 
-  /// Libcalls for frem instructions of the type at the corresponding
-  /// positions of ExpandableTypes.
-  static constexpr std::array<RTLIB::Libcall, 3> FremLibcalls{
-      RTLIB::REM_F32, RTLIB::REM_F32, RTLIB::REM_F64};
-
-  /// Return the Libcall for frem instructions of expandable type \p VT or
-  /// std::nullopt if \p VT is not expandable.
-  static std::optional<RTLIB::Libcall> getFremLibcallForType(EVT VT) {
-    MVT V = VT.getSimpleVT();
-    for (unsigned I = 0; I < ExpandableTypes.size(); I++)
-      if (ExpandableTypes[I] == V)
-        return FremLibcalls[I];
-
-    return {};
-  };
 
 public:
   static bool canExpandType(Type *Ty) {
@@ -117,8 +101,8 @@ public:
     return shouldExpandFremType(TLI, EVT::getEVT(Ty->getScalarType()));
   }
 
-  /// Return true if the pass should expand "frem" instructions of some any for
-  /// the target represented by \p TLI.
+  /// Return true if the pass should expand frem instructions of any type
+  /// for the target represented by \p TLI.
   static bool shouldExpandAnyFremType(const TargetLowering &TLI) {
     return any_of(ExpandableTypes,
                   [&](MVT V) { return shouldExpandFremType(TLI, EVT(V)); });

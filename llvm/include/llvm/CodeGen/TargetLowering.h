@@ -1468,8 +1468,8 @@ public:
            getOperationAction(Op, VT) == Legal;
   }
 
-  bool isOperationLibCall(unsigned Op, EVT VT) const {
-    return getOperationAction(Op, VT) == LibCall;
+  bool isOperationExpandOrLibCall(unsigned Op, EVT VT) const {
+    return isOperationExpand(Op, VT) || getOperationAction(Op, VT) == LibCall;
   }
 
   /// Return how this load with extension should be treated: either it is legal,
