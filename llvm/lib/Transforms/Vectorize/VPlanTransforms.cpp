@@ -2489,9 +2489,8 @@ void VPlanTransforms::addActiveLaneMask(
          "UseActiveLaneMaskForControlFlow");
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *CanonicalIV = LoopRegion->getCanonicalIV();
-  auto *FoundWidenCanonicalIVUser =
-      find_if(CanonicalIV->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  auto *FoundWidenCanonicalIVUser = find_if(
+      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
   assert(FoundWidenCanonicalIVUser &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = findHeaderMask(Plan);
