@@ -294,8 +294,8 @@ private:
     }
   }
 
-  parser::ExecutionPartConstruct EmbedInExec(parser::OmpAllocateDirective *alo,
-      parser::ExecutionPartConstruct &&epc) {
+  parser::ExecutionPartConstruct EmbedInExec(
+      parser::OmpAllocateDirective *alo, parser::ExecutionPartConstruct &&epc) {
     // Nest current epc inside the allocate directive.
     std::get<parser::Block>(alo->t).push_front(std::move(epc));
     // Set the new epc to be the ExecutionPartConstruct made from

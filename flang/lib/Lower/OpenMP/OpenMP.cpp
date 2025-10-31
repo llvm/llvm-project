@@ -3503,10 +3503,10 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPUtilityConstruct &);
 
-static void
-genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
-       semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
-       const parser::OmpAllocateDirective &allocate) {
+static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                   semantics::SemanticsContext &semaCtx,
+                   lower::pft::Evaluation &eval,
+                   const parser::OmpAllocateDirective &allocate) {
   if (!semaCtx.langOptions().OpenMPSimd)
     TODO(converter.getCurrentLocation(), "OmpAllocateDirective");
 }
