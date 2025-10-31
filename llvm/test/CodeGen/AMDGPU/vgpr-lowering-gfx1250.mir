@@ -478,16 +478,18 @@ body:             |
     ; ASM: .LBB{{.*_1}}:
     ; GCN-NEXT: s_set_vgpr_msb 64
     ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
+    ; GCN-NEXT: s_set_vgpr_msb 0
     $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
 
-    ; No mode switch on fall through
+    ; Reset on fallthrough block end
 
   bb.2:
     ; ASM-NEXT: %bb.2:
-    ; GCN-NEXT: s_nop 0
+    ; GCN-NEXT: s_set_vgpr_msb 64
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v1
     ; GCN-NEXT: s_set_vgpr_msb 0
     ; GCN-NEXT: s_branch
-    S_NOP 0
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr1, implicit $exec
     S_BRANCH %bb.3
 
     ; Reset mode on terminator
@@ -574,6 +576,7 @@ body:             |
     ; ASM: %bb.0:
     ; GCN-NEXT: s_set_vgpr_msb 64
     ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v0
+    ; GCN-NEXT: s_set_vgpr_msb 0
     $vgpr256 = V_MOV_B32_e32 undef $vgpr0, implicit $exec
 
   bb.1:
