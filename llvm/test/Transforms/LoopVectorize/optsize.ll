@@ -248,22 +248,29 @@ for.end:                                          ; preds = %for.body
 ;
 @cm_array = external global [2592 x i16], align 1
 
-define void @pr43371() optsize {
+define void @pr43371(i16 %val) optsize {
 ;
 ; CHECK-LABEL: define void @pr43371(
-; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-SAME: i16 [[VAL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[VAL]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
+; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; CHECK-NEXT:    store i16 0, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -272,19 +279,26 @@ define void @pr43371() optsize {
 ; CHECK-NEXT:    unreachable
 ;
 ; PGSO-LABEL: define void @pr43371(
-; PGSO-SAME: ) #[[ATTR0]] {
+; PGSO-SAME: i16 [[VAL:%.*]]) #[[ATTR0]] {
 ; PGSO-NEXT:  [[ENTRY:.*:]]
 ; PGSO-NEXT:    br label %[[VECTOR_PH:.*]]
 ; PGSO:       [[VECTOR_PH]]:
+; PGSO-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[VAL]], i64 0
+; PGSO-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; PGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; PGSO-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
-; PGSO-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
+; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
+; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
+; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; PGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; PGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; PGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
+; PGSO-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
+; PGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; PGSO-NEXT:    store i16 0, ptr [[TMP7]], align 1
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; PGSO-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; PGSO-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; PGSO-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
@@ -293,19 +307,26 @@ define void @pr43371() optsize {
 ; PGSO-NEXT:    unreachable
 ;
 ; NPGSO-LABEL: define void @pr43371(
-; NPGSO-SAME: ) #[[ATTR0]] {
+; NPGSO-SAME: i16 [[VAL:%.*]]) #[[ATTR0]] {
 ; NPGSO-NEXT:  [[ENTRY:.*:]]
 ; NPGSO-NEXT:    br label %[[VECTOR_PH:.*]]
 ; NPGSO:       [[VECTOR_PH]]:
+; NPGSO-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[VAL]], i64 0
+; NPGSO-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; NPGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; NPGSO-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
-; NPGSO-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
+; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; NPGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> [[BROADCAST_SPLAT]], [[VEC_IND]]
+; NPGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
+; NPGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; NPGSO-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; NPGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; NPGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
+; NPGSO-NEXT:    [[TMP7:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP3]]
+; NPGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; NPGSO-NEXT:    store i16 0, ptr [[TMP7]], align 1
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; NPGSO-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; NPGSO-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
@@ -325,7 +346,7 @@ for.cond.cleanup28:
 
 for.body29:
   %i24.0170 = phi i16 [ 0, %entry], [ %inc37, %for.body29]
-  %add33 = add i16 3, %i24.0170
+  %add33 = add i16 %val, %i24.0170
   %idxprom34 = zext i16 %add33 to i32
   %arrayidx35 = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 %idxprom34
   store i16 0, ptr %arrayidx35, align 1
