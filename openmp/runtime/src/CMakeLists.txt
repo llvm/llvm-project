@@ -255,7 +255,7 @@ set(LIBOMP_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 # Add symbolic links to libomp
 if(NOT WIN32)
   if(AIX)
-    # On AIX, libomp.a is for both static and shared
+    # On AIX, libomp.a is the name for both static and shared objects.
     set(LIBOMP_AIX_SUFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
     add_custom_command(TARGET omp POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E create_symlink
