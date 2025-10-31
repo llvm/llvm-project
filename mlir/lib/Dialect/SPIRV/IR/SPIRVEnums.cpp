@@ -15,8 +15,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <iterator>
-
 using namespace mlir;
 
 // Pull in all enum utility function definitions

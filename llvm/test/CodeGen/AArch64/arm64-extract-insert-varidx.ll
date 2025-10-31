@@ -174,7 +174,7 @@ define <2 x i16> @test_varidx_extract_v4s16(<4 x i16> %x, i32 %idx) {
 ; CHECK-GISEL-NEXT:    and x9, x9, #0x3
 ; CHECK-GISEL-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GISEL-NEXT:    str d0, [sp, #8]
-; CHECK-GISEL-NEXT:    madd x8, x9, x8, x10
+; CHECK-GISEL-NEXT:    umaddl x8, w9, w8, x10
 ; CHECK-GISEL-NEXT:    umov w9, v0.h[1]
 ; CHECK-GISEL-NEXT:    ld1 { v0.h }[0], [x8]
 ; CHECK-GISEL-NEXT:    mov v0.s[1], w9

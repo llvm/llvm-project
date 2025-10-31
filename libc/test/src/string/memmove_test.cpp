@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memmove.h"
 
@@ -102,5 +103,14 @@ TEST(LlvmLibcMemmoveTest, SizeSweep) {
         ++Overlap;
     }
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcMemmoveTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memmove(nullptr, nullptr, 2); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // LIBC_ADD_NULL_CHECKS
 
 } // namespace LIBC_NAMESPACE_DECL

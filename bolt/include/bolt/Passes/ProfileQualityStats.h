@@ -49,7 +49,7 @@
 // aggregates the block gaps into 2 values for the function: "weighted" is the
 // weighted average of the block conservation gaps, where the weights depend on
 // each block's execution count and instruction count; "worst" is the worst
-// (biggest) block gap acorss all basic blocks in the function with an execution
+// (biggest) block gap across all basic blocks in the function with an execution
 // count of > 500. The pass then reports the 95th percentile of the weighted and
 // worst values of the 1000 functions in a single BOLT-INFO line. The smaller
 // the reported values are, the better the BOLT profile satisfies the function

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++17-or-later %s performance-unnecessary-copy-initialization %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s performance-unnecessary-copy-initialization %t
 
 template <typename T>
 struct Iterator {
@@ -82,7 +82,7 @@ void useByValue(ExpensiveToCopyType);
 
 void PositiveFunctionCall() {
   const auto AutoAssigned = ExpensiveTypeReference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' of type 'const ExpensiveToCopyType' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const auto& AutoAssigned = ExpensiveTypeReference();
   AutoAssigned.constMethod();
 
@@ -104,7 +104,7 @@ void PositiveFunctionCall() {
 
 void PositiveStaticMethodCall() {
   const auto AutoAssigned = ExpensiveToCopyType::instance();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' of type 'const ExpensiveToCopyType' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const auto& AutoAssigned = ExpensiveToCopyType::instance();
   AutoAssigned.constMethod();
 
@@ -339,7 +339,7 @@ void NegativeStaticLocalVar(const ExpensiveToCopyType &Obj) {
 
 void PositiveFunctionCallExpensiveTypeNonConstVariable() {
   auto AutoAssigned = ExpensiveTypeReference();
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'AutoAssigned' is copy-constructed from a const reference but is only used as const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'AutoAssigned' of type 'ExpensiveToCopyType' is copy-constructed from a const reference but is only used as const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const auto& AutoAssigned = ExpensiveTypeReference();
   AutoAssigned.constMethod();
 
@@ -469,25 +469,25 @@ struct NegativeConstructor {
     auto AssignedInMacro = T.reference();                                      \
   }                                                                            \
 // Ensure fix is not applied.
-// CHECK-FIXES: auto AssignedInMacro = T.reference();
+// CHECK-FIXES: auto AssignedInMacro = T.reference(); {{\\}}
 
 UNNECESSARY_COPY_INIT_IN_MACRO_BODY(ExpensiveToCopyType)
-// CHECK-MESSAGES: [[@LINE-1]]:1: warning: the variable 'AssignedInMacro' is copy-constructed
+// CHECK-MESSAGES: [[@LINE-1]]:1: warning: the variable 'AssignedInMacro' of type 'ExpensiveToCopyType' is copy-constructed
 
 #define UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(ARGUMENT) ARGUMENT
 
 void PositiveMacroArgument(const ExpensiveToCopyType &Obj) {
   UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(auto CopyInMacroArg = Obj.reference());
-  // CHECK-MESSAGES: [[@LINE-1]]:48: warning: the variable 'CopyInMacroArg' is copy-constructed
+  // CHECK-MESSAGES: [[@LINE-1]]:48: warning: the variable 'CopyInMacroArg' of type 'ExpensiveToCopyType' is copy-constructed
   // Ensure fix is not applied.
-  // CHECK-FIXES: auto CopyInMacroArg = Obj.reference()
+  // CHECK-FIXES: UNNECESSARY_COPY_INIT_IN_MACRO_ARGUMENT(auto CopyInMacroArg = Obj.reference());
   CopyInMacroArg.constMethod();
 }
 
 void PositiveLocalCopyConstMethodInvoked() {
   ExpensiveToCopyType orig;
   ExpensiveToCopyType copy_1 = orig;
-  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_1' of the variable 'orig' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy_1' of the variable 'orig' of type 'ExpensiveToCopyType' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const ExpensiveToCopyType& copy_1 = orig;
   copy_1.constMethod();
   orig.constMethod();
@@ -599,7 +599,7 @@ void NegativeLocalCopyWeirdNonCopy() {
 void WarningOnlyMultiDeclStmt() {
   ExpensiveToCopyType orig;
   ExpensiveToCopyType copy = orig, copy2;
-  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy' of the variable 'orig' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:23: warning: local copy 'copy' of the variable 'orig' of type 'ExpensiveToCopyType' is never modified; consider avoiding the copy [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: ExpensiveToCopyType copy = orig, copy2;
   copy.constMethod();
 }
@@ -676,7 +676,7 @@ struct function {
 
 void positiveFakeStdFunction(std::function<void(int)> F) {
   auto Copy = F;
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: local copy 'Copy' of the variable 'F' is never modified;
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: local copy 'Copy' of the variable 'F' of type 'std::function<void (int)>' is never modified;
   // CHECK-FIXES: const auto& Copy = F;
   Copy.constMethod();
 }
@@ -687,7 +687,7 @@ void positiveInvokedOnStdFunction(
     std::function<void(const ExpensiveToCopyType &)> Update,
     const ExpensiveToCopyType Orig) {
   auto Copy = Orig.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'Copy' is copy-constructed from a const reference
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'Copy' of type 'ExpensiveToCopyType' is copy-constructed from a const reference
   // CHECK-FIXES: const auto& Copy = Orig.reference();
   Update(Copy);
 }
@@ -746,7 +746,7 @@ void positiveCopiedFromGetterOfReferenceToConstVar() {
   ExpensiveToCopyType Orig;
   const auto &Ref = Orig.reference();
   auto UnnecessaryCopy = Ref.reference();
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'UnnecessaryCopy' is
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'UnnecessaryCopy' of type 'ExpensiveToCopyType' is
   // CHECK-FIXES: const auto& UnnecessaryCopy = Ref.reference();
   Orig.constMethod();
   UnnecessaryCopy.constMethod();
@@ -755,18 +755,18 @@ void positiveCopiedFromGetterOfReferenceToConstVar() {
 void positiveUnusedReferenceIsRemoved() {
   // clang-format off
   const auto AutoAssigned = ExpensiveTypeReference(); int i = 0; // Foo bar.
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' is copy-constructed from a const reference but is never used; consider removing the statement [performance-unnecessary-copy-initialization]
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned' of type 'const ExpensiveToCopyType' is copy-constructed from a const reference but is never used; consider removing the statement [performance-unnecessary-copy-initialization]
   // CHECK-FIXES-NOT: const auto AutoAssigned = ExpensiveTypeReference();
   // CHECK-FIXES: int i = 0; // Foo bar.
   auto TrailingCommentRemoved = ExpensiveTypeReference(); // Trailing comment.
-  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'TrailingCommentRemoved' is copy-constructed from a const reference but is never used;
+  // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'TrailingCommentRemoved' of type 'ExpensiveToCopyType' is copy-constructed from a const reference but is never used;
   // CHECK-FIXES-NOT: auto TrailingCommentRemoved = ExpensiveTypeReference();
   // CHECK-FIXES-NOT: // Trailing comment.
   // clang-format on
 
   auto UnusedAndUnnecessary = ExpensiveTypeReference();
   // Comments on a new line should not be deleted.
-  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: the variable 'UnusedAndUnnecessary' is copy-constructed
+  // CHECK-MESSAGES: [[@LINE-2]]:8: warning: the variable 'UnusedAndUnnecessary' of type 'ExpensiveToCopyType' is copy-constructed
   // CHECK-FIXES-NOT: auto UnusedAndUnnecessary = ExpensiveTypeReference();
   // CHECK-FIXES: // Comments on a new line should not be deleted.
 }
@@ -865,7 +865,7 @@ void negativeTemplateTypes() {
 
   // Non-dependent types in template still trigger the check.
   const auto UnnecessaryCopy = ExpensiveTypeReference();
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'UnnecessaryCopy' is copy-constructed
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'UnnecessaryCopy' of type 'const ExpensiveToCopyType' is copy-constructed
   // CHECK-FIXES: const auto& UnnecessaryCopy = ExpensiveTypeReference();
   UnnecessaryCopy.constMethod();
 }
@@ -880,17 +880,17 @@ template <typename A>
 void positiveSingleTemplateType() {
   A Orig;
   A SingleTmplParmTypeCopy = Orig;
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: local copy 'SingleTmplParmTypeCopy' of the variable 'Orig' is never modified
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: local copy 'SingleTmplParmTypeCopy' of the variable 'Orig' of type 'ExpensiveToCopyType' is never modified
   // CHECK-FIXES: const A& SingleTmplParmTypeCopy = Orig;
   SingleTmplParmTypeCopy.constMethod();
 
   A UnnecessaryCopy2 = templatedReference<A>();
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the variable 'UnnecessaryCopy2' is copy-constructed from a const reference
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the variable 'UnnecessaryCopy2' of type 'ExpensiveToCopyType' is copy-constructed from a const reference
   // CHECK-FIXES: const A& UnnecessaryCopy2 = templatedReference<A>();
   UnnecessaryCopy2.constMethod();
 
   A UnnecessaryCopy3 = Orig.template templatedAccessor<A>();
-  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the variable 'UnnecessaryCopy3' is copy-constructed from a const reference
+  // CHECK-MESSAGES: [[@LINE-1]]:5: warning: the variable 'UnnecessaryCopy3' of type 'ExpensiveToCopyType' is copy-constructed from a const reference
   // CHECK-FIXES: const A& UnnecessaryCopy3 = Orig.template templatedAccessor<A>();
   UnnecessaryCopy3.constMethod();
 }
@@ -938,4 +938,3 @@ template<typename T> bool OperatorWithNoDirectCallee(T t) {
   ExpensiveToCopyType a2 = a1;
   return a1 == t;
 }
-

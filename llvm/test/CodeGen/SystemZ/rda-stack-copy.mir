@@ -1,4 +1,4 @@
-# RUN: llc %s -mtriple=s390x-linux-gnu -run-pass=reaching-defs-analysis -print-all-reaching-defs -o - 2>&1 | FileCheck %s
+# RUN: llc %s -mtriple=s390x-linux-gnu --passes='print<reaching-def>'  -o - 2>&1 | FileCheck %s
 
 ---
 name:            test0

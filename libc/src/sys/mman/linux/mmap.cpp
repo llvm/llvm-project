@@ -11,8 +11,8 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -56,7 +56,7 @@ LLVM_LIBC_FUNCTION(void *, mmap,
   // However, since a valid return address cannot be within the last page, a
   // return value corresponding to a location in the last page is an error
   // value.
-  if (ret < 0 && ret > -EXEC_PAGESIZE) {
+  if (!linux_utils::is_valid_mmap(ret)) {
     libc_errno = static_cast<int>(-ret);
     return MAP_FAILED;
   }

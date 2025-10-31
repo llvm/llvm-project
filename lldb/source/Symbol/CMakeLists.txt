@@ -33,6 +33,8 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   Variable.cpp
   VariableList.cpp
 
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/Symbol
   LINK_COMPONENTS
     Support
   LINK_LIBS

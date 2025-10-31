@@ -23,6 +23,7 @@ add_lldb_library(lldbCommands NO_PLUGIN_DEPENDENCIES
   CommandObjectPlatform.cpp
   CommandObjectPlugin.cpp
   CommandObjectProcess.cpp
+  CommandObjectProtocolServer.cpp
   CommandObjectQuit.cpp
   CommandObjectRegexCommand.cpp
   CommandObjectRegister.cpp

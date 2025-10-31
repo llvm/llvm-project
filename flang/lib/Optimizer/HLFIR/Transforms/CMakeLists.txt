@@ -3,8 +3,10 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_flang_library(HLFIRTransforms
   BufferizeHLFIR.cpp
   ConvertToFIR.cpp
+  ExpressionSimplification.cpp
   InlineElementals.cpp
   InlineHLFIRAssign.cpp
+  InlineHLFIRCopyIn.cpp
   LowerHLFIRIntrinsics.cpp
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp
@@ -26,6 +28,8 @@ add_flang_library(HLFIRTransforms
   FIRSupport
   FIRTransforms
   FlangOpenMPTransforms
+  FortranEvaluate
+  FortranSupport
   HLFIRDialect
 
   LINK_COMPONENTS

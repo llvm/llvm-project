@@ -57,6 +57,7 @@ body:             |
     %4:vgpr_16 = COPY %3:sgpr_lo16
     %5:vgpr_32 = V_ALIGNBIT_B32_t16_e64 0, %0:sreg_32, 0, killed %1:sreg_32, 0, killed %4:vgpr_16, 0, 0, implicit $exec
     S_ENDPGM 0, implicit %5
+...
 
 ---
 name:            fold_16bit_madmix_clamp
@@ -205,5 +206,29 @@ body:             |
     %3:vgpr_16 = IMPLICIT_DEF
     %4:vgpr_16 = nofpexcept V_MAX_F16_t16_e64 0, %3, 0, %3, -1, 0, 0, implicit $mode, implicit $exec
     $vgpr0 = COPY %4
+    S_ENDPGM 0, implicit $vgpr0
+...
+
+---
+name:            fold_imm16_across_reg_sequence
+tracksRegLiveness: true
+registers:
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-LABEL: name: fold_imm16_across_reg_sequence
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, -1, 0, implicit $exec
+    ; CHECK-NEXT: [[V_MOV_B16_t16_e64_1:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, -1, 0, implicit $exec
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_MOV_B16_t16_e64_]], %subreg.lo16, [[V_MOV_B16_t16_e64_1]], %subreg.hi16
+    ; CHECK-NEXT: [[V_MAX_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MAX_F32_e64 0, -1, 0, -1, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_MAX_F32_e64_]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr0
+    %0:vgpr_16 = V_MOV_B16_t16_e64 0, -1, 0, implicit $exec
+    %1:vgpr_16 = V_MOV_B16_t16_e64 0, -1, 0, implicit $exec
+    %2:vgpr_32 = REG_SEQUENCE %0, %subreg.lo16, %1, %subreg.hi16
+    %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, %2, 0, %2, 0, 0, implicit $mode, implicit $exec
+    $vgpr0 = COPY %3
     S_ENDPGM 0, implicit $vgpr0
 ...

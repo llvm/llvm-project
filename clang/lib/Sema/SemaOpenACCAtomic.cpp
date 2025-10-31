@@ -454,9 +454,7 @@ class AtomicOperandChecker {
     // If nothing matches, error out.
     DiagnoseInvalidAtomic(BinInf->FoundExpr->getExprLoc(),
                           SemaRef.PDiag(diag::note_acc_atomic_mismatch_operand)
-                              << const_cast<Expr *>(AssignInf.LHS)
-                              << const_cast<Expr *>(BinInf->LHS)
-                              << const_cast<Expr *>(BinInf->RHS));
+                              << AssignInf.LHS << BinInf->LHS << BinInf->RHS);
     return IDACInfo::Fail();
   }
 
@@ -576,6 +574,11 @@ class AtomicOperandChecker {
     return AssocStmt;
   }
 
+  const Expr *IgnoreBeforeCompare(const Expr *E) {
+    return E->IgnoreParenImpCasts()->IgnoreParenNoopCasts(
+        SemaRef.getASTContext());
+  }
+
   bool CheckVarRefsSame(IDACInfo::ExprKindTy FirstKind, const Expr *FirstX,
                         IDACInfo::ExprKindTy SecondKind, const Expr *SecondX) {
     llvm::FoldingSetNodeID First_ID, Second_ID;
@@ -587,8 +590,7 @@ class AtomicOperandChecker {
 
     PartialDiagnostic PD =
         SemaRef.PDiag(diag::note_acc_atomic_mismatch_compound_operand)
-        << FirstKind << const_cast<Expr *>(FirstX) << SecondKind
-        << const_cast<Expr *>(SecondX);
+        << FirstKind << FirstX << SecondKind << SecondX;
 
     return DiagnoseInvalidAtomic(SecondX->getExprLoc(), PD);
   }
@@ -648,8 +650,10 @@ class AtomicOperandChecker {
         if (CheckOperandVariable(AssignRes->RHS, PD))
           return getRecoveryExpr();
 
-        if (CheckVarRefsSame(FirstExprResults.ExprKind, FirstExprResults.X_Var,
-                             IDACInfo::SimpleAssign, AssignRes->RHS))
+        if (CheckVarRefsSame(FirstExprResults.ExprKind,
+                             IgnoreBeforeCompare(FirstExprResults.X_Var),
+                             IDACInfo::SimpleAssign,
+                             IgnoreBeforeCompare(AssignRes->RHS)))
           return getRecoveryExpr();
         break;
       }
@@ -660,9 +664,10 @@ class AtomicOperandChecker {
         if (SecondExprResults.Failed)
           return getRecoveryExpr();
 
-        if (CheckVarRefsSame(FirstExprResults.ExprKind, FirstExprResults.X_Var,
+        if (CheckVarRefsSame(FirstExprResults.ExprKind,
+                             IgnoreBeforeCompare(FirstExprResults.X_Var),
                              SecondExprResults.ExprKind,
-                             SecondExprResults.X_Var))
+                             IgnoreBeforeCompare(SecondExprResults.X_Var)))
           return getRecoveryExpr();
         break;
       }

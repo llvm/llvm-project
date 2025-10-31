@@ -132,6 +132,11 @@ constexpr bool isHeuristicInlineCostFeature(InlineCostFeatureIndex Feature) {
     "not "                                                                     \
     "fully inlined by ElimAvailExtern)")
 
+// Not all features listed in FeatureIndex are used by the ML model.
+// Specifically, callee_embedding and caller_embedding are used only when the
+// usage of IR2Vec embeddings is explicitly enabled. Meaning, the size/number of
+// features is not static. So, we cannot determine number of features based on
+// the number of elements in this enum.
 // clang-format off
 enum class FeatureIndex : size_t {
 #define POPULATE_INDICES(DTYPE, SHAPE, NAME, COMMENT) NAME,
@@ -142,7 +147,11 @@ enum class FeatureIndex : size_t {
   INLINE_FEATURE_ITERATOR(POPULATE_INDICES)
 #undef POPULATE_INDICES
 
-  NumberOfFeatures
+// IR2Vec embeddings
+// Dimensions of embeddings are not known in the compile time (until vocab is 
+// read). Hence macros cannot be used here.
+  callee_embedding,
+  caller_embedding
 };
 // clang-format on
 
@@ -150,11 +159,6 @@ constexpr FeatureIndex
 inlineCostFeatureToMlFeature(InlineCostFeatureIndex Feature) {
   return static_cast<FeatureIndex>(static_cast<size_t>(Feature));
 }
-
-constexpr size_t NumberOfFeatures =
-    static_cast<size_t>(FeatureIndex::NumberOfFeatures);
-
-LLVM_ABI extern const std::vector<TensorSpec> FeatureMap;
 
 LLVM_ABI extern const char *const DecisionName;
 LLVM_ABI extern const TensorSpec InlineDecisionSpec;

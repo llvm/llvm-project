@@ -50,3 +50,84 @@ std::optional<llvm::ArrayRef<int64_t>> fir::getComponentLowerBoundsIfNonDefault(
       return componentInfo.getLowerBounds();
   return std::nullopt;
 }
+
+std::optional<bool>
+fir::isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
+                              const mlir::SymbolTable *symbolTable) {
+  fir::TypeInfoOp typeInfo =
+      fir::lookupTypeInfoOp(recordType, module, symbolTable);
+  if (!typeInfo)
+    return std::nullopt;
+  return !typeInfo.getNoFinal();
+}
+
+mlir::LLVM::ConstantOp
+fir::genConstantIndex(mlir::Location loc, mlir::Type ity,
+                      mlir::ConversionPatternRewriter &rewriter,
+                      std::int64_t offset) {
+  auto cattr = rewriter.getI64IntegerAttr(offset);
+  return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
+}
+
+mlir::Value
+fir::computeElementDistance(mlir::Location loc, mlir::Type llvmObjectType,
+                            mlir::Type idxTy,
+                            mlir::ConversionPatternRewriter &rewriter,
+                            const mlir::DataLayout &dataLayout) {
+  llvm::TypeSize size = dataLayout.getTypeSize(llvmObjectType);
+  unsigned short alignment = dataLayout.getTypeABIAlignment(llvmObjectType);
+  std::int64_t distance = llvm::alignTo(size, alignment);
+  return fir::genConstantIndex(loc, idxTy, rewriter, distance);
+}
+
+mlir::Value
+fir::genAllocationScaleSize(mlir::Location loc, mlir::Type dataTy,
+                            mlir::Type ity,
+                            mlir::ConversionPatternRewriter &rewriter) {
+  auto seqTy = mlir::dyn_cast<fir::SequenceType>(dataTy);
+  fir::SequenceType::Extent constSize = 1;
+  if (seqTy) {
+    int constRows = seqTy.getConstantRows();
+    const fir::SequenceType::ShapeRef &shape = seqTy.getShape();
+    if (constRows != static_cast<int>(shape.size())) {
+      for (auto extent : shape) {
+        if (constRows-- > 0)
+          continue;
+        if (extent != fir::SequenceType::getUnknownExtent())
+          constSize *= extent;
+      }
+    }
+  }
+
+  if (constSize != 1) {
+    mlir::Value constVal{
+        fir::genConstantIndex(loc, ity, rewriter, constSize).getResult()};
+    return constVal;
+  }
+  return nullptr;
+}
+
+mlir::Value fir::integerCast(const fir::LLVMTypeConverter &converter,
+                             mlir::Location loc,
+                             mlir::ConversionPatternRewriter &rewriter,
+                             mlir::Type ty, mlir::Value val, bool fold) {
+  auto valTy = val.getType();
+  // If the value was not yet lowered, lower its type so that it can
+  // be used in getPrimitiveTypeSizeInBits.
+  if (!mlir::isa<mlir::IntegerType>(valTy))
+    valTy = converter.convertType(valTy);
+  auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
+  auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
+  if (fold) {
+    if (toSize < fromSize)
+      return rewriter.createOrFold<mlir::LLVM::TruncOp>(loc, ty, val);
+    if (toSize > fromSize)
+      return rewriter.createOrFold<mlir::LLVM::SExtOp>(loc, ty, val);
+  } else {
+    if (toSize < fromSize)
+      return mlir::LLVM::TruncOp::create(rewriter, loc, ty, val);
+    if (toSize > fromSize)
+      return mlir::LLVM::SExtOp::create(rewriter, loc, ty, val);
+  }
+  return val;
+}

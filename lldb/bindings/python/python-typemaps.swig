@@ -224,6 +224,24 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   }
   $1 = (char *)malloc($2);
 }
+
+// Disable default type checking for this method to avoid SWIG dispatch issues.
+// 
+// Problem: SBThread::GetStopDescription has two overloads:
+//   1. GetStopDescription(char* dst_or_null, size_t dst_len) 
+//   2. GetStopDescription(lldb::SBStream& stream)
+//
+// SWIG generates a dispatch function to select the correct overload based on argument types.
+// see https://www.swig.org/Doc4.0/SWIGDocumentation.html#Typemaps_overloading.
+// However, this dispatcher doesn't consider typemaps that transform function signatures.
+//
+// In Python, our typemap converts GetStopDescription(char*, size_t) to GetStopDescription(int).
+// The dispatcher still checks against the original (char*, size_t) signature instead of 
+// the transformed (int) signature, causing type matching to fail.
+// This only affects SBThread::GetStopDescription since the type check also matches 
+// the argument name, which is unique to this function.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) (char *dst_or_null, size_t dst_len) ""
+
 %typemap(argout) (char *dst_or_null, size_t dst_len) {
   Py_XDECREF($result); /* Blow away any previous result */
   llvm::StringRef ref($1);
@@ -231,6 +249,11 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   $result = string.release();
   free($1);
 }
+
+
+// For lldb::SBFileSpec::GetPath
+%typemap(in) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+%typemap(argout) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
 
 
 // typemap for an outgoing buffer

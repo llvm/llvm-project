@@ -27,9 +27,6 @@ namespace {
 struct ImplicitTypeIDRegistry {
   /// Lookup or insert a TypeID for the given type name.
   TypeID lookupOrInsert(StringRef typeName) {
-    LLVM_DEBUG(llvm::dbgs() << "ImplicitTypeIDRegistry::lookupOrInsert("
-                            << typeName << ")\n");
-
     // Perform a heuristic check to see if this type is in an anonymous
     // namespace. String equality is not valid for anonymous types, so we try to
     // abort whenever we see them.

@@ -35,7 +35,7 @@ struct InputInfo {
   size_t Tmp = 0; // Used by ValidateFeatureSet.
   // Stats.
   size_t NumExecutedMutations = 0;
-  size_t NumSuccessfullMutations = 0;
+  size_t NumSuccessfulMutations = 0;
   bool NeverReduce = false;
   bool MayDeleteFile = false;
   bool Reduced = false;
@@ -328,7 +328,7 @@ public:
       const auto &II = *Inputs[i];
       Printf("  [% 3zd %s] sz: % 5zd runs: % 5zd succ: % 5zd focus: %d\n", i,
              Sha1ToString(II.Sha1).c_str(), II.U.size(),
-             II.NumExecutedMutations, II.NumSuccessfullMutations,
+             II.NumExecutedMutations, II.NumSuccessfulMutations,
              II.HasFocusFunction);
     }
   }
@@ -336,7 +336,8 @@ public:
   void PrintFeatureSet() {
     for (size_t i = 0; i < kFeatureSetSize; i++) {
       if(size_t Sz = GetFeature(i))
-        Printf("[%zd: id %zd sz%zd] ", i, SmallestElementPerFeature[i], Sz);
+        Printf("[%zd: id %zd sz%zd] ", i, (size_t)SmallestElementPerFeature[i],
+               Sz);
     }
     Printf("\n\t");
     for (size_t i = 0; i < Inputs.size(); i++)

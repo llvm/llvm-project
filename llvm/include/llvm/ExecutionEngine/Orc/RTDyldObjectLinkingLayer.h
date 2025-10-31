@@ -50,14 +50,15 @@ public:
       MaterializationResponsibility &R, std::unique_ptr<MemoryBuffer>)>;
 
   using GetMemoryManagerFunction =
-      unique_function<std::unique_ptr<RuntimeDyld::MemoryManager>()>;
+      unique_function<std::unique_ptr<RuntimeDyld::MemoryManager>(
+          const MemoryBuffer &)>;
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyEmitted functors.
   RTDyldObjectLinkingLayer(ExecutionSession &ES,
                            GetMemoryManagerFunction GetMemoryManager);
 
-  ~RTDyldObjectLinkingLayer();
+  ~RTDyldObjectLinkingLayer() override;
 
   /// Emit the object.
   void emit(std::unique_ptr<MaterializationResponsibility> R,

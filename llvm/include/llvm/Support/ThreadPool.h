@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Jobserver.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/thread.h"
@@ -149,10 +150,6 @@ public:
   /// number of threads!
   unsigned getMaxConcurrency() const override { return MaxThreadCount; }
 
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return MaxThreadCount; }
-
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;
 
@@ -184,6 +181,7 @@ private:
   void grow(int requested);
 
   void processTasks(ThreadPoolTaskGroup *WaitingForGroup);
+  void processTasksWithJobserver();
 
   /// Threads in flight
   std::vector<llvm::thread> Threads;
@@ -212,6 +210,8 @@ private:
 
   /// Maximum number of threads to potentially grow this pool to.
   const unsigned MaxThreadCount;
+
+  JobserverClient *TheJobserver = nullptr;
 };
 #endif // LLVM_ENABLE_THREADS
 
@@ -232,10 +232,6 @@ public:
 
   /// Returns always 1: there is no concurrency.
   unsigned getMaxConcurrency() const override { return 1; }
-
-  // TODO: Remove, misleading legacy name warning!
-  LLVM_DEPRECATED("Use getMaxConcurrency instead", "getMaxConcurrency")
-  unsigned getThreadCount() const { return 1; }
 
   /// Returns true if the current thread is a worker thread of this thread pool.
   bool isWorkerThread() const;

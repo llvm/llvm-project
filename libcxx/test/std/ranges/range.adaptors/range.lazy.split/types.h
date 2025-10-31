@@ -60,7 +60,7 @@ struct ForwardDiffView : std::ranges::view_base {
   constexpr explicit ForwardDiffView() = default;
   constexpr ForwardDiffView(const char* ptr) : ForwardDiffView(std::string_view(ptr)) {}
   constexpr ForwardDiffView(std::string_view v) {
-    // Workaround https://github.com/llvm/llvm-project/issues/55867
+    // Workaround https://llvm.org/PR55867
     buffer_ = v;
   }
   constexpr ForwardDiffView(ForwardDiffView&&) = default;
@@ -144,7 +144,7 @@ struct InputView : std::ranges::view_base {
   constexpr InputView() = default;
   constexpr InputView(const char* s) : InputView(std::string_view(s)) {}
   constexpr InputView(std::string_view v) {
-    // Workaround https://github.com/llvm/llvm-project/issues/55867
+    // Workaround https://llvm.org/PR55867
     buffer_ = v;
   }
 

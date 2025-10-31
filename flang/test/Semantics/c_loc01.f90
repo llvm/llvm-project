@@ -14,7 +14,7 @@ module m
     type(c_ptr) cp
     type(c_funptr) cfp
     real notATarget
-    !PORTABILITY: Procedure pointer 'pptr' should not have an ELEMENTAL intrinsic as its interface
+    !PORTABILITY: Procedure pointer 'pptr' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
     procedure(sin), pointer :: pptr
     real, target :: arr(3)
     type(hasLen(1)), target :: clen
@@ -41,9 +41,9 @@ module m
     cp = c_loc(nclen)
     !ERROR: C_LOC() argument may not be zero-length character
     cp = c_loc(ch(2:1))
-    !WARNING: C_LOC() argument has non-interoperable character length
+    !WARNING: C_LOC() argument has non-interoperable character length [-Wcharacter-interoperability]
     cp = c_loc(ch)
-    !WARNING: C_LOC() argument has non-interoperable intrinsic type or kind
+    !WARNING: C_LOC() argument has non-interoperable intrinsic type or kind [-Winteroperability]
     cp = c_loc(unicode)
     cp = c_loc(ch(1:1)) ! ok
     cp = c_loc(deferred) ! ok
@@ -66,3 +66,12 @@ module m
     purefun2 = 1
   end
 end module
+
+module m2
+  use iso_c_binding
+  ! In this context (structure constructor from intrinsic module being used directly
+  ! in another module), emit only a warning, since this module might have originally
+  ! been a module file that was converted back into Fortran.
+  !WARNING: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
+  type(c_ptr) :: p = c_ptr(0)
+end

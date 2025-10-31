@@ -13,8 +13,8 @@
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/OSUtil/syscall.h" // syscall_impl
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 
 #include <sys/syscall.h> // SYS_poll, SYS_ppoll
 

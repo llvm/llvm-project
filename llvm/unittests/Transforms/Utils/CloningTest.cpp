@@ -18,6 +18,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -482,10 +483,10 @@ protected:
     DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
-    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
-                                          DBuilder.createFile("filename.c",
-                                                              "/file/dir"),
-                                          "CloneFunc", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C99),
+        DBuilder.createFile("filename.c", "/file/dir"), "CloneFunc", false, "",
+        0);
 
     auto *Subprogram = DBuilder.createFunction(
         CU, "f", "f", File, 4, FuncType, 3, DINode::FlagZero,
@@ -540,7 +541,7 @@ protected:
 
     // Create another, empty, compile unit.
     DIBuilder DBuilder2(*M);
-    DBuilder2.createCompileUnit(dwarf::DW_LANG_C99,
+    DBuilder2.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C99),
                                 DBuilder.createFile("extra.c", "/file/dir"),
                                 "CloneFunc", false, "", 0);
     DBuilder2.finalize();
@@ -953,8 +954,9 @@ protected:
       // confirm that compile units get cloned in the correct order.
       DIBuilder EmptyBuilder(*OldM);
       auto *File = EmptyBuilder.createFile("empty.c", "/file/dir/");
-      (void)EmptyBuilder.createCompileUnit(dwarf::DW_LANG_C99, File,
-                                           "EmptyUnit", false, "", 0);
+      (void)EmptyBuilder.createCompileUnit(
+          DISourceLanguageName(dwarf::DW_LANG_C99), File, "EmptyUnit", false,
+          "", 0);
       EmptyBuilder.finalize();
     }
 
@@ -973,10 +975,10 @@ protected:
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
     DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
-    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
-                                          DBuilder.createFile("filename.c",
-                                                              "/file/dir"),
-                                          "CloneModule", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C99),
+        DBuilder.createFile("filename.c", "/file/dir"), "CloneModule", false,
+        "", 0);
     // Function DI
     auto *Subprogram = DBuilder.createFunction(
         CU, "f", "f", File, 4, DFuncType, 3, DINode::FlagZero,
@@ -1192,8 +1194,8 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0, keyInstructions: true)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
     !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
@@ -1203,13 +1205,9 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
 
   ASSERT_FALSE(verifyModule(*M, &errs()));
 
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
 #define EXPECT_ATOM(Inst, G)                                                   \
   EXPECT_TRUE(Inst->getDebugLoc());                                            \
   EXPECT_EQ(Inst->getDebugLoc()->getAtomGroup(), uint64_t(G));
-#else
-#define EXPECT_ATOM(Inst, G) (void)Inst;
-#endif
 
   Function *F = M->getFunction("test");
   BasicBlock *BB = &*F->begin();

@@ -12,6 +12,7 @@ l:
 # CHECK-NEXT:   0x8 R_AARCH64_PLT32 extern 0x4
 # CHECK-NEXT:   0xC R_AARCH64_PLT32 g 0x8
 # CHECK-NEXT:   0x10 R_AARCH64_PLT32 g 0x18
+# CHECK-NEXT:   0x14 R_AARCH64_FUNCINIT64 .text 0x0
 # CHECK-NEXT: }
 .data
 .word l@plt - .
@@ -20,6 +21,8 @@ l:
 .word extern@plt - . + 4
 .word g@plt - . + 8
 .word g@plt - .data + 8
+
+.quad l@funcinit
 
 # CHECK:      Section ({{.*}}) .rela.data1 {
 # CHECK-NEXT:   0x0 R_AARCH64_GOTPCREL32 data1 0x0

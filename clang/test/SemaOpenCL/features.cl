@@ -26,6 +26,12 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=clc++1.0 \
 // RUN:   | FileCheck -match-full-lines %s  --check-prefix=NO-FEATURES
 
+// For OpenCL C 2.0, header-only features can be disabled using macros.
+// RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header \
+// RUN:    -D__undef___opencl_c_integer_dot_product_input_4x8bit \
+// RUN:    -D__undef___opencl_c_integer_dot_product_input_4x8bit_packed \
+// RUN:   | FileCheck %s --check-prefix=NO-HEADERONLY-FEATURES-CL20
+
 // For OpenCL C 3.0, header-only features can be disabled using macros.
 // RUN: %clang_cc1 -triple spir-unknown-unknown %s -E -dM -o - -x cl -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header \
 // RUN:    -D__undef___opencl_c_work_group_collective_functions=1 \
@@ -63,6 +69,9 @@
 // NO-FEATURES-NOT: #define __opencl_c_program_scope_global_variables
 // NO-FEATURES-NOT: #define __opencl_c_read_write_images
 // NO-FEATURES-NOT: #define __opencl_c_subgroups
+
+// NO-HEADERONLY-FEATURES-CL20-NOT: #define __opencl_c_integer_dot_product_input_4x8bit
+// NO-HEADERONLY-FEATURES-CL20-NOT: #define __opencl_c_integer_dot_product_input_4x8bit_packed
 
 // NO-HEADERONLY-FEATURES-NOT: #define __opencl_c_work_group_collective_functions
 // NO-HEADERONLY-FEATURES-NOT: #define __opencl_c_atomic_order_seq_cst

@@ -36,7 +36,7 @@
 
 using namespace llvm;
 
-cl::opt<bool> UseDerefAtPointSemantics(
+static cl::opt<bool> UseDerefAtPointSemantics(
     "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
@@ -582,16 +582,11 @@ void Value::replaceUsesWithIf(Value *New,
   }
 }
 
-/// Replace llvm.dbg.* uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
+/// Replace debug record uses of MetadataAsValue(ValueAsMetadata(V)) outside BB
 /// with New.
 static void replaceDbgUsesOutsideBlock(Value *V, Value *New, BasicBlock *BB) {
-  SmallVector<DbgVariableIntrinsic *> DbgUsers;
   SmallVector<DbgVariableRecord *> DPUsers;
-  findDbgUsers(DbgUsers, V, &DPUsers);
-  for (auto *DVI : DbgUsers) {
-    if (DVI->getParent() != BB)
-      DVI->replaceVariableLocationOp(V, New);
-  }
+  findDbgUsers(V, DPUsers);
   for (auto *DVR : DPUsers) {
     DbgMarker *Marker = DVR->getMarker();
     if (Marker->getParent() != BB)
@@ -627,6 +622,7 @@ enum PointerStripKind {
   PSK_InBoundsConstantIndices,
   PSK_InBounds
 };
+} // end anonymous namespace
 
 template <PointerStripKind StripKind> static void NoopCallback(const Value *) {}
 
@@ -701,7 +697,6 @@ static const Value *stripPointerCastsAndOffsets(
 
   return V;
 }
-} // end anonymous namespace
 
 const Value *Value::stripPointerCasts() const {
   return stripPointerCastsAndOffsets<PSK_ZeroIndices>(this);
@@ -841,6 +836,9 @@ bool Value::canBeFreed() const {
       return false;
   }
 
+  if (isa<IntToPtrInst>(this) && getMetadata(LLVMContext::MD_nofree))
+    return false;
+
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))
     F = I->getFunction();
@@ -957,30 +955,27 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
 
 Align Value::getPointerAlignment(const DataLayout &DL) const {
   assert(getType()->isPointerTy() && "must be pointer");
-  if (auto *GO = dyn_cast<GlobalObject>(this)) {
-    if (isa<Function>(GO)) {
-      Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
-      switch (DL.getFunctionPtrAlignType()) {
-      case DataLayout::FunctionPtrAlignType::Independent:
-        return FunctionPtrAlign;
-      case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
-        return std::max(FunctionPtrAlign, GO->getAlign().valueOrOne());
-      }
-      llvm_unreachable("Unhandled FunctionPtrAlignType");
+  if (const Function *F = dyn_cast<Function>(this)) {
+    Align FunctionPtrAlign = DL.getFunctionPtrAlign().valueOrOne();
+    switch (DL.getFunctionPtrAlignType()) {
+    case DataLayout::FunctionPtrAlignType::Independent:
+      return FunctionPtrAlign;
+    case DataLayout::FunctionPtrAlignType::MultipleOfFunctionAlign:
+      return std::max(FunctionPtrAlign, F->getAlign().valueOrOne());
     }
-    const MaybeAlign Alignment(GO->getAlign());
+    llvm_unreachable("Unhandled FunctionPtrAlignType");
+  } else if (auto *GVar = dyn_cast<GlobalVariable>(this)) {
+    const MaybeAlign Alignment(GVar->getAlign());
     if (!Alignment) {
-      if (auto *GVar = dyn_cast<GlobalVariable>(GO)) {
-        Type *ObjectType = GVar->getValueType();
-        if (ObjectType->isSized()) {
-          // If the object is defined in the current Module, we'll be giving
-          // it the preferred alignment. Otherwise, we have to assume that it
-          // may only have the minimum ABI alignment.
-          if (GVar->isStrongDefinitionForLinker())
-            return DL.getPreferredAlign(GVar);
-          else
-            return DL.getABITypeAlign(ObjectType);
-        }
+      Type *ObjectType = GVar->getValueType();
+      if (ObjectType->isSized()) {
+        // If the object is defined in the current Module, we'll be giving
+        // it the preferred alignment. Otherwise, we have to assume that it
+        // may only have the minimum ABI alignment.
+        if (GVar->isStrongDefinitionForLinker())
+          return DL.getPreferredAlign(GVar);
+        else
+          return DL.getABITypeAlign(ObjectType);
       }
     }
     return Alignment.valueOrOne();
@@ -1005,14 +1000,12 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
       return Align(CI->getLimitedValue());
     }
-  } else if (auto *CstPtr = dyn_cast<Constant>(this)) {
-    // Strip pointer casts to avoid creating unnecessary ptrtoint expression
-    // if the only "reduction" is combining a bitcast + ptrtoint.
-    CstPtr = CstPtr->stripPointerCasts();
-    if (auto *CstInt = dyn_cast_or_null<ConstantInt>(ConstantExpr::getPtrToInt(
-            const_cast<Constant *>(CstPtr), DL.getIntPtrType(getType()),
-            /*OnlyIfReduced=*/true))) {
-      size_t TrailingZeros = CstInt->getValue().countr_zero();
+  } else if (auto *CE = dyn_cast<ConstantExpr>(this)) {
+    // Determine the alignment of inttoptr(C).
+    if (CE->getOpcode() == Instruction::IntToPtr &&
+        isa<ConstantInt>(CE->getOperand(0))) {
+      ConstantInt *IntPtr = cast<ConstantInt>(CE->getOperand(0));
+      size_t TrailingZeros = IntPtr->getValue().countr_zero();
       // While the actual alignment may be large, elsewhere we have
       // an arbitrary upper alignmet limit, so let's clamp to it.
       return Align(TrailingZeros < Value::MaxAlignmentExponent

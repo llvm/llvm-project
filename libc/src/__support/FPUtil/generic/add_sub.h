@@ -87,8 +87,12 @@ add_or_sub(InType x, InType y) {
       return OutFPBits::inf(x_bits.sign()).get_val();
     }
 
-    if (y_bits.is_inf())
-      return OutFPBits::inf(y_bits.sign()).get_val();
+    if (y_bits.is_inf()) {
+      if constexpr (IsSub)
+        return OutFPBits::inf(y_bits.sign().negate()).get_val();
+      else
+        return OutFPBits::inf(y_bits.sign()).get_val();
+    }
 
     if (x_bits.is_zero()) {
       if (y_bits.is_zero()) {
@@ -100,13 +104,22 @@ add_or_sub(InType x, InType y) {
         }
       }
 
-      // volatile prevents Clang from converting tmp to OutType and then
-      // immediately back to InType before negating it, resulting in double
-      // rounding.
-      volatile InType tmp = y;
-      if constexpr (IsSub)
-        tmp = -tmp;
-      return cast<OutType>(tmp);
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>) {
+        OutFPBits y_bits(y);
+        if constexpr (IsSub)
+          y_bits.set_sign(y_bits.sign().negate());
+        return y_bits.get_val();
+      } else {
+
+        // volatile prevents Clang from converting tmp to OutType and then
+        // immediately back to InType before negating it, resulting in double
+        // rounding.
+        volatile InType tmp = y;
+        if constexpr (IsSub)
+          tmp = -tmp;
+        return cast<OutType>(tmp);
+      }
     }
 
     if (y_bits.is_zero())
@@ -153,14 +166,16 @@ add_or_sub(InType x, InType y) {
 
     result_mant <<= GUARD_BITS_LEN;
   } else {
-    InStorageType max_mant = max_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
-    InStorageType min_mant = min_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
+    InStorageType max_mant = static_cast<InStorageType>(
+        max_bits.get_explicit_mantissa() << GUARD_BITS_LEN);
+    InStorageType min_mant = static_cast<InStorageType>(
+        min_bits.get_explicit_mantissa() << GUARD_BITS_LEN);
 
     int alignment = (max_bits.get_biased_exponent() - max_bits.is_normal()) -
                     (min_bits.get_biased_exponent() - min_bits.is_normal());
 
-    InStorageType aligned_min_mant =
-        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN);
+    InStorageType aligned_min_mant = static_cast<InStorageType>(
+        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN));
     bool aligned_min_mant_sticky;
 
     if (alignment <= GUARD_BITS_LEN)
@@ -172,7 +187,8 @@ add_or_sub(InType x, InType y) {
           (static_cast<InStorageType>(
               min_mant << (InFPBits::STORAGE_LEN - alignment))) != 0;
 
-    InStorageType min_mant_sticky(static_cast<int>(aligned_min_mant_sticky));
+    InStorageType min_mant_sticky =
+        static_cast<InStorageType>(static_cast<int>(aligned_min_mant_sticky));
 
     if (is_effectively_add)
       result_mant = max_mant + (aligned_min_mant | min_mant_sticky);

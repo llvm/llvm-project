@@ -22,9 +22,9 @@ def Myi32 : Operand<i32> {
 def HasA : Predicate<"Subtarget->hasA()">;
 def HasB : Predicate<"Subtarget->hasB()">;
 
-def ModeA : HwMode<"+a", [HasA]>; // Mode 1
-def ModeB : HwMode<"+b", [HasB]>; // Mode 2
-def ModeC : HwMode<"+c", []>;     // Mode 3
+def ModeA : HwMode<[HasA]>; // Mode 1
+def ModeB : HwMode<[HasB]>; // Mode 2
+def ModeC : HwMode<[]>;     // Mode 3
 
 
 def fooTypeEncDefault : InstructionEncoding {
@@ -116,47 +116,47 @@ def unrelated: Instruction {
 // significant duplication of DecoderTables. The four tables ‘DecoderTableAlt32’,
 // ‘DecoderTableAlt_ModeA32’, ‘DecoderTableAlt_ModeB32’ and 'DecoderTable_ModeC32' are
 // exact duplicates and could effectively be merged into one.
-// DECODER-LABEL: DecoderTable32[] =
-// DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable64[] =
-// DECODER-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-LABEL: DecoderTableAlt32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeA32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeB32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTableAlt_ModeC32[] =
-// DECODER-DAG: Opcode: unrelated
-// DECODER-LABEL: DecoderTable_ModeA32[] =
-// DECODER-DAG: Opcode: fooTypeEncA:foo
-// DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_ModeB32[] =
-// DECODER-DAG: Opcode: fooTypeEncB:foo
-// DECODER-DAG: Opcode: fooTypeEncA:baz
-// DECODER-DAG: Opcode: bar
-// DECODER-LABEL: DecoderTable_ModeC32[] =
-// DECODER-DAG: Opcode: fooTypeEncC:foo
-// DECODER-DAG: Opcode: bar
+// DECODER-LABEL: DecoderTable32
+// DECODER-DAG: decode to bar
+// DECODER-LABEL: DecoderTable_ModeA32
+// DECODER-DAG: decode to fooTypeEncA:foo
+// DECODER-DAG: decode to bar
+// DECODER-LABEL: DecoderTable_ModeB32
+// DECODER-DAG: decode to fooTypeEncB:foo
+// DECODER-DAG: decode to fooTypeEncA:baz
+// DECODER-DAG: decode to bar
+// DECODER-LABEL: DecoderTable_ModeC32
+// DECODER-DAG: decode to fooTypeEncC:foo
+// DECODER-DAG: decode to bar
+// DECODER-LABEL: DecoderTableAlt32
+// DECODER-DAG: decode to unrelated
+// DECODER-LABEL: DecoderTableAlt_ModeA32
+// DECODER-DAG: decode to unrelated
+// DECODER-LABEL: DecoderTableAlt_ModeB32
+// DECODER-DAG: decode to unrelated
+// DECODER-LABEL: DecoderTableAlt_ModeC32
+// DECODER-DAG: decode to unrelated
+// DECODER-LABEL: DecoderTable64
+// DECODER-DAG: decode to fooTypeEncDefault:foo
 
 // Under the 'O1' optimization level, unnecessary duplicate tables will be eliminated,
 // reducing the four ‘Alt’ tables down to just one.
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable32[] =
-// DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable64[] =
-// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-SUPPRESS-O1-LABEL: DecoderTableAlt32[] =
-// DECODER-SUPPRESS-O1-DAG: Opcode: unrelated
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeA32[] =
-// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncA:foo
-// DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeB32[] =
-// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncB:foo
-// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncA:baz
-// DECODER-SUPPRESS-O1-DAG: Opcode: bar
-// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeC32[] =
-// DECODER-SUPPRESS-O1-DAG: Opcode: fooTypeEncC:foo
-// DECODER-SUPPRESS-O1-DAG: Opcode: bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable32
+// DECODER-SUPPRESS-O1-DAG: decode to bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeA32
+// DECODER-SUPPRESS-O1-DAG: decode to fooTypeEncA:foo
+// DECODER-SUPPRESS-O1-DAG: decode to bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeB32
+// DECODER-SUPPRESS-O1-DAG: decode to fooTypeEncB:foo
+// DECODER-SUPPRESS-O1-DAG: decode to fooTypeEncA:baz
+// DECODER-SUPPRESS-O1-DAG: decode to bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable_ModeC32
+// DECODER-SUPPRESS-O1-DAG: decode to fooTypeEncC:foo
+// DECODER-SUPPRESS-O1-DAG: decode to bar
+// DECODER-SUPPRESS-O1-LABEL: DecoderTableAlt32
+// DECODER-SUPPRESS-O1-DAG: decode to unrelated
+// DECODER-SUPPRESS-O1-LABEL: DecoderTable64
+// DECODER-SUPPRESS-O1-DAG: decode to fooTypeEncDefault:foo
 
 // Under the 'O2' optimization condition, instructions possessing the 'EncodingByHwMode'
 // attribute will be extracted from their original DecoderNamespace and placed into their
@@ -164,23 +164,23 @@ def unrelated: Instruction {
 // attribute but are within the same DecoderNamespace will be stored in the 'Default' table. This
 // approach will significantly reduce instruction redundancy, but it necessitates users to thoroughly
 // consider the interplay between HwMode and DecoderNamespace for their instructions.
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable32[] =
-// DECODER-SUPPRESS-O2-DAG: Opcode: bar
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable64[] =
-// DECODER-SUPPRESS-O2-NOT: Opcode: bar
-// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncDefault:foo
-// DECODER-SUPPRESS-O2-LABEL: DecoderTableAlt32[] =
-// DECODER-SUPPRESS-O2-DAG: Opcode: unrelated
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeA32[] =
-// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:foo
-// DECODER-SUPPRESS-O2-NOT: Opcode: bar
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeB32[] =
-// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncB:foo
-// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncA:baz
-// DECODER-SUPPRESS-O2-NOT: Opcode: bar
-// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeC32[] =
-// DECODER-SUPPRESS-O2-DAG: Opcode: fooTypeEncC:foo
-// DECODER-SUPPRESS-O2-NOT: Opcode: bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable32
+// DECODER-SUPPRESS-O2-DAG: decode to bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeA32
+// DECODER-SUPPRESS-O2-DAG: decode to fooTypeEncA:foo
+// DECODER-SUPPRESS-O2-NOT: decode to bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeB32
+// DECODER-SUPPRESS-O2-DAG: decode to fooTypeEncB:foo
+// DECODER-SUPPRESS-O2-DAG: decode to fooTypeEncA:baz
+// DECODER-SUPPRESS-O2-NOT: decode to bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable_ModeC32
+// DECODER-SUPPRESS-O2-DAG: decode to fooTypeEncC:foo
+// DECODER-SUPPRESS-O2-NOT: decode to bar
+// DECODER-SUPPRESS-O2-LABEL: DecoderTableAlt32
+// DECODER-SUPPRESS-O2-DAG: decode to unrelated
+// DECODER-SUPPRESS-O2-LABEL: DecoderTable64
+// DECODER-SUPPRESS-O2-NOT: decode to bar
+// DECODER-SUPPRESS-O2-DAG: decode to fooTypeEncDefault:foo
 
 // For 'bar' and 'unrelated', we didn't assign any HwModes for them,
 // they should keep the same in the following four tables.
@@ -189,25 +189,29 @@ def unrelated: Instruction {
 // For 'baz' we only assigned ModeB for it, so it will be presented
 // as '0' in the tables of ModeA, ModeC and Default Mode.
 // ENCODER-LABEL:   static const uint64_t InstBits[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
-// ENCODER:         UINT64_C(8),        // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(0),        // baz
+// ENCODER-NEXT:    UINT64_C(8),        // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeA[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
-// ENCODER:         UINT64_C(12),       // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(0),        // baz
+// ENCODER-NEXT:    UINT64_C(12),       // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeB[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(12),       // baz
-// ENCODER:         UINT64_C(3),        // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(12),       // baz
+// ENCODER-NEXT:    UINT64_C(3),        // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 // ENCODER-LABEL:   static const uint64_t InstBits_ModeC[] = {
-// ENCODER:         UINT64_C(2),        // bar
-// ENCODER:         UINT64_C(0),        // baz
-// ENCODER:         UINT64_C(12582915), // foo
-// ENCODER:         UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    UINT64_C(2),        // bar
+// ENCODER-NEXT:    UINT64_C(0),        // baz
+// ENCODER-NEXT:    UINT64_C(12582915), // foo
+// ENCODER-NEXT:    UINT64_C(2),        // unrelated
+// ENCODER-NEXT:    };
 
 // ENCODER-LABEL: case ::bar:
 // ENCODER-LABEL: case ::unrelated:
@@ -221,33 +225,27 @@ def unrelated: Instruction {
 // ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
 // ENCODER: case 3: InstBitsByHw = InstBits_ModeC; break;
 // ENCODER: };
-// ENCODER: Value = InstBitsByHw[opcode];
+// ENCODER: Value = InstBitsByHw[TableIndex];
 // ENCODER: switch (HwMode) {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
 // ENCODER: case 0: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 1: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 2: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(255);
-// ENCODER: op <<= 8;
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xff) << 8;
 // ENCODER: break;
 // ENCODER: }
 // ENCODER: case 3: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(255);
-// ENCODER: op <<= 24;
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xff) << 24;
 // ENCODER: break;
 // ENCODER: }
 // ENCODER-LABEL: case ::baz: {
@@ -256,12 +254,11 @@ def unrelated: Instruction {
 // ENCODER: default: llvm_unreachable("Unknown hardware mode!"); break;
 // ENCODER: case 2: InstBitsByHw = InstBits_ModeB; break;
 // ENCODER: };
-// ENCODER: Value = InstBitsByHw[opcode];
+// ENCODER: Value = InstBitsByHw[TableIndex];
 // ENCODER: switch (HwMode) {
 // ENCODER: default: llvm_unreachable("Unhandled HwMode");
 // ENCODER: case 2: {
 // ENCODER: op = getMachineOpValue(MI, MI.getOperand(0), Fixups, STI);
-// ENCODER: op &= UINT64_C(240);
-// ENCODER: Value |= op;
+// ENCODER: Value |= (op & 0xf0);
 // ENCODER: break;
 // ENCODER: }

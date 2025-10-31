@@ -21,6 +21,15 @@
 #include "private_constructor.h"
 #include "is_transparent.h"
 
+template <class Iter>
+bool iter_in_range(Iter first, Iter last, Iter to_find) {
+  for (; first != last; ++first) {
+    if (first == to_find)
+      return true;
+  }
+  return false;
+}
+
 int main(int, char**) {
   typedef std::pair<const int, double> V;
   {
@@ -30,15 +39,15 @@ int main(int, char**) {
       V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
       M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      assert(r == m.begin());
+      assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), r));
       r = m.find(6);
       assert(r == m.end());
       r = m.find(7);
-      assert(r == std::next(m.begin(), 3));
+      assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), r));
       r = m.find(8);
       assert(r == m.end());
       r = m.find(9);
-      assert(r == std::next(m.begin(), 6));
+      assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), r));
       r = m.find(10);
       assert(r == m.end());
     }
@@ -47,18 +56,31 @@ int main(int, char**) {
       V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
       const M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      assert(r == m.begin());
+      assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), r));
       r = m.find(6);
       assert(r == m.end());
       r = m.find(7);
-      assert(r == std::next(m.begin(), 3));
+      assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), r));
       r = m.find(8);
       assert(r == m.end());
       r = m.find(9);
-      assert(r == std::next(m.begin(), 6));
+      assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), r));
       r = m.find(10);
       assert(r == m.end());
     }
+  }
+  {
+    using Pair = std::pair<const int, int>;
+    using Map  = std::multimap<int, int, std::greater<int> >;
+    Pair arr[] = {
+        Pair(5, 1), Pair(5, 2), Pair(5, 3), Pair(7, 1), Pair(7, 2), Pair(7, 3), Pair(9, 1), Pair(9, 2), Pair(9, 3)};
+    const Map m(arr, arr + sizeof(arr) / sizeof(arr[0]));
+    assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), m.find(5)));
+    assert(m.find(6) == m.end());
+    assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), m.find(7)));
+    assert(m.find(8) == m.end());
+    assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), m.find(9)));
+    assert(m.find(10) == m.end());
   }
 #if TEST_STD_VER >= 11
   {
@@ -68,15 +90,15 @@ int main(int, char**) {
       V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
       M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      assert(r == m.begin());
+      assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), r));
       r = m.find(6);
       assert(r == m.end());
       r = m.find(7);
-      assert(r == std::next(m.begin(), 3));
+      assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), r));
       r = m.find(8);
       assert(r == m.end());
       r = m.find(9);
-      assert(r == std::next(m.begin(), 6));
+      assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), r));
       r = m.find(10);
       assert(r == m.end());
     }
@@ -85,15 +107,15 @@ int main(int, char**) {
       V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
       const M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
-      assert(r == m.begin());
+      assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), r));
       r = m.find(6);
       assert(r == m.end());
       r = m.find(7);
-      assert(r == std::next(m.begin(), 3));
+      assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), r));
       r = m.find(8);
       assert(r == m.end());
       r = m.find(9);
-      assert(r == std::next(m.begin(), 6));
+      assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), r));
       r = m.find(10);
       assert(r == m.end());
     }
@@ -107,28 +129,28 @@ int main(int, char**) {
     V ar[] = {V(5, 1), V(5, 2), V(5, 3), V(7, 1), V(7, 2), V(7, 3), V(9, 1), V(9, 2), V(9, 3)};
     M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
     R r = m.find(5);
-    assert(r == m.begin());
+    assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), r));
     r = m.find(6);
     assert(r == m.end());
     r = m.find(7);
-    assert(r == std::next(m.begin(), 3));
+    assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), r));
     r = m.find(8);
     assert(r == m.end());
     r = m.find(9);
-    assert(r == std::next(m.begin(), 6));
+    assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), r));
     r = m.find(10);
     assert(r == m.end());
 
     r = m.find(C2Int(5));
-    assert(r == m.begin());
+    assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), r));
     r = m.find(C2Int(6));
     assert(r == m.end());
     r = m.find(C2Int(7));
-    assert(r == std::next(m.begin(), 3));
+    assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), r));
     r = m.find(C2Int(8));
     assert(r == m.end());
     r = m.find(C2Int(9));
-    assert(r == std::next(m.begin(), 6));
+    assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), r));
     r = m.find(C2Int(10));
     assert(r == m.end());
   }
@@ -150,15 +172,15 @@ int main(int, char**) {
     m.insert(std::make_pair<PC, double>(PC::make(9), 3));
 
     R r = m.find(5);
-    assert(r == m.begin());
+    assert(iter_in_range(std::next(m.begin(), 0), std::next(m.begin(), 3), r));
     r = m.find(6);
     assert(r == m.end());
     r = m.find(7);
-    assert(r == std::next(m.begin(), 3));
+    assert(iter_in_range(std::next(m.begin(), 3), std::next(m.begin(), 6), r));
     r = m.find(8);
     assert(r == m.end());
     r = m.find(9);
-    assert(r == std::next(m.begin(), 6));
+    assert(iter_in_range(std::next(m.begin(), 6), std::next(m.begin(), 9), r));
     r = m.find(10);
     assert(r == m.end());
   }

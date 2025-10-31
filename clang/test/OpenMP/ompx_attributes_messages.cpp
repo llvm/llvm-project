@@ -20,9 +20,9 @@ void bad() {
   {}
   #pragma omp target ompx_attribute(__attribute__((amdgpu_flat_work_group_size(1, 2, 3,)))) //  expected-error {{expected expression}}
   {}
-  #pragma omp target ompx_attribute([[clang::amdgpu_waves_per_eu(1, 2, 3)]]) //  expected-error {{'amdgpu_waves_per_eu' attribute takes no more than 2 arguments}}
+  #pragma omp target ompx_attribute([[clang::amdgpu_waves_per_eu(1, 2, 3)]]) //  expected-error {{'clang::amdgpu_waves_per_eu' attribute takes no more than 2 arguments}}
   {}
-  #pragma omp target ompx_attribute([[clang::unknown]]) //  expected-warning {{'ompx_attribute' clause only allows 'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; 'unknown' is ignored}}
+  #pragma omp target ompx_attribute([[clang::unknown]]) //  expected-warning {{'ompx_attribute' clause only allows 'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; 'clang::unknown' is ignored}}
   {}
   #pragma omp target ompx_attribute(baz) //  expected-error {{expected ')'}} expected-note {{to match this '('}}
   {}

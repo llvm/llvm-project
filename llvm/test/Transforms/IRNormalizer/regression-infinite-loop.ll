@@ -8,18 +8,18 @@ define void @test(ptr, i32) {
 ; CHECK-NEXT:    %"vl72693([[A1]], 1)" = add i32 [[A1]], 1
 ; CHECK-NEXT:    br label %[[BB16110:.*]]
 ; CHECK:       [[BB16110]]:
-; CHECK-NEXT:    %"op10912(op18080, vl72693)" = phi i32 [ %"op18080(op10412, op17645)", %[[BB16110]] ], [ %"vl72693([[A1]], 1)", %[[BB76951]] ]
-; CHECK-NEXT:    %"op10912(op17645, vl72693)" = phi i32 [ %"op17645(op10912)70", %[[BB16110]] ], [ %"vl72693([[A1]], 1)", %[[BB76951]] ]
-; CHECK-NEXT:    %"op15084(op10912)" = mul i32 %"op10912(op18080, vl72693)", undef
-; CHECK-NEXT:    %"op16562(op15084)" = xor i32 -1, %"op15084(op10912)"
-; CHECK-NEXT:    %"op44627(op10912, op16562)" = add i32 %"op10912(op18080, vl72693)", %"op16562(op15084)"
-; CHECK-NEXT:    %"op17645(op10912)" = add i32 -1, %"op10912(op17645, vl72693)"
-; CHECK-NEXT:    %"op18080(op17645, op44627)" = add i32 %"op17645(op10912)", %"op44627(op10912, op16562)"
-; CHECK-NEXT:    %"op17720(op15084, op18080)" = mul i32 %"op15084(op10912)", %"op18080(op17645, op44627)"
-; CHECK-NEXT:    %"op16562(op17720)" = xor i32 -1, %"op17720(op15084, op18080)"
-; CHECK-NEXT:    %"op17430(op16562, op18080)" = add i32 %"op16562(op17720)", %"op18080(op17645, op44627)"
+; CHECK-NEXT:    %"op81283(op18080, vl72693)" = phi i32 [ %"op18080(op10412, op18131)", %[[BB16110]] ], [ %"vl72693([[A1]], 1)", %[[BB76951]] ]
+; CHECK-NEXT:    %"op81283(op18131, vl72693)" = phi i32 [ %"op18131(op81283)70", %[[BB16110]] ], [ %"vl72693([[A1]], 1)", %[[BB76951]] ]
+; CHECK-NEXT:    %"op13219(op81283)" = mul i32 %"op81283(op18080, vl72693)", undef
+; CHECK-NEXT:    %"op16562(op13219)" = xor i32 -1, %"op13219(op81283)"
+; CHECK-NEXT:    %"op12556(op16562, op81283)" = add i32 %"op16562(op13219)", %"op81283(op18080, vl72693)"
+; CHECK-NEXT:    %"op18131(op81283)" = add i32 -1, %"op81283(op18131, vl72693)"
+; CHECK-NEXT:    %"op18080(op12556, op18131)" = add i32 %"op12556(op16562, op81283)", %"op18131(op81283)"
+; CHECK-NEXT:    %"op17720(op13219, op18080)" = mul i32 %"op13219(op81283)", %"op18080(op12556, op18131)"
+; CHECK-NEXT:    %"op16562(op17720)" = xor i32 -1, %"op17720(op13219, op18080)"
+; CHECK-NEXT:    %"op17430(op16562, op18080)" = add i32 %"op16562(op17720)", %"op18080(op12556, op18131)"
 ; CHECK-NEXT:    %"op10412(op17430)" = add i32 %"op17430(op16562, op18080)", undef
-; CHECK-NEXT:    %"op17720(op10412, op17720)" = mul i32 %"op10412(op17430)", %"op17720(op15084, op18080)"
+; CHECK-NEXT:    %"op17720(op10412, op17720)" = mul i32 %"op10412(op17430)", %"op17720(op13219, op18080)"
 ; CHECK-NEXT:    %"op16562(op17720)1" = xor i32 -1, %"op17720(op10412, op17720)"
 ; CHECK-NEXT:    %"op17430(op10412, op16562)" = add i32 %"op10412(op17430)", %"op16562(op17720)1"
 ; CHECK-NEXT:    %"op10412(op17430)2" = add i32 %"op17430(op10412, op16562)", undef
@@ -45,11 +45,11 @@ define void @test(ptr, i32) {
 ; CHECK-NEXT:    %"op17720(op10412, op17720)21" = mul i32 %"op10412(op17430)20", %"op17720(op10412, op17720)17"
 ; CHECK-NEXT:    %"op16562(op17720)22" = xor i32 -1, %"op17720(op10412, op17720)21"
 ; CHECK-NEXT:    %"op17430(op10412, op16562)23" = add i32 %"op10412(op17430)20", %"op16562(op17720)22"
-; CHECK-NEXT:    %"op17645(op10912)24" = add i32 -9, %"op10912(op17645, vl72693)"
-; CHECK-NEXT:    %"op18080(op17430, op17645)" = add i32 %"op17430(op10412, op16562)23", %"op17645(op10912)24"
-; CHECK-NEXT:    %"op17720(op17720, op18080)" = mul i32 %"op17720(op10412, op17720)21", %"op18080(op17430, op17645)"
+; CHECK-NEXT:    %"op18131(op81283)24" = add i32 -9, %"op81283(op18131, vl72693)"
+; CHECK-NEXT:    %"op18080(op17430, op18131)" = add i32 %"op17430(op10412, op16562)23", %"op18131(op81283)24"
+; CHECK-NEXT:    %"op17720(op17720, op18080)" = mul i32 %"op17720(op10412, op17720)21", %"op18080(op17430, op18131)"
 ; CHECK-NEXT:    %"op16562(op17720)25" = xor i32 -1, %"op17720(op17720, op18080)"
-; CHECK-NEXT:    %"op17430(op16562, op18080)26" = add i32 %"op16562(op17720)25", %"op18080(op17430, op17645)"
+; CHECK-NEXT:    %"op17430(op16562, op18080)26" = add i32 %"op16562(op17720)25", %"op18080(op17430, op18131)"
 ; CHECK-NEXT:    %"op10412(op17430)27" = add i32 %"op17430(op16562, op18080)26", undef
 ; CHECK-NEXT:    %"op17720(op10412, op17720)28" = mul i32 %"op10412(op17430)27", %"op17720(op17720, op18080)"
 ; CHECK-NEXT:    %"op16562(op17720)29" = xor i32 -1, %"op17720(op10412, op17720)28"
@@ -66,11 +66,11 @@ define void @test(ptr, i32) {
 ; CHECK-NEXT:    %"op17720(op10412, op17720)40" = mul i32 %"op10412(op17430)39", %"op17720(op10412, op17720)36"
 ; CHECK-NEXT:    %"op16562(op17720)41" = xor i32 -1, %"op17720(op10412, op17720)40"
 ; CHECK-NEXT:    %"op17430(op10412, op16562)42" = add i32 %"op10412(op17430)39", %"op16562(op17720)41"
-; CHECK-NEXT:    %"op17645(op10912)43" = add i32 -14, %"op10912(op17645, vl72693)"
-; CHECK-NEXT:    %"op18080(op17430, op17645)44" = add i32 %"op17430(op10412, op16562)42", %"op17645(op10912)43"
-; CHECK-NEXT:    %"op17720(op17720, op18080)45" = mul i32 %"op17720(op10412, op17720)40", %"op18080(op17430, op17645)44"
+; CHECK-NEXT:    %"op18131(op81283)43" = add i32 -14, %"op81283(op18131, vl72693)"
+; CHECK-NEXT:    %"op18080(op17430, op18131)44" = add i32 %"op17430(op10412, op16562)42", %"op18131(op81283)43"
+; CHECK-NEXT:    %"op17720(op17720, op18080)45" = mul i32 %"op17720(op10412, op17720)40", %"op18080(op17430, op18131)44"
 ; CHECK-NEXT:    %"op16562(op17720)46" = xor i32 -1, %"op17720(op17720, op18080)45"
-; CHECK-NEXT:    %"op17430(op16562, op18080)47" = add i32 %"op16562(op17720)46", %"op18080(op17430, op17645)44"
+; CHECK-NEXT:    %"op17430(op16562, op18080)47" = add i32 %"op16562(op17720)46", %"op18080(op17430, op18131)44"
 ; CHECK-NEXT:    %"op10412(op17430)48" = add i32 %"op17430(op16562, op18080)47", undef
 ; CHECK-NEXT:    %"op17720(op10412, op17720)49" = mul i32 %"op10412(op17430)48", %"op17720(op17720, op18080)45"
 ; CHECK-NEXT:    %"op16562(op17720)50" = xor i32 -1, %"op17720(op10412, op17720)49"
@@ -93,9 +93,9 @@ define void @test(ptr, i32) {
 ; CHECK-NEXT:    %"op17430(op10412, op16562)67" = add i32 %"op10412(op17430)64", %"op16562(op17720)66"
 ; CHECK-NEXT:    %"op10412(op17430)68" = add i32 %"op17430(op10412, op16562)67", undef
 ; CHECK-NEXT:    %"op10412(op10412)69" = add i32 %"op10412(op17430)68", undef
-; CHECK-NEXT:    %"op17645(op10912)70" = add i32 -21, %"op10912(op17645, vl72693)"
-; CHECK-NEXT:    %"op18080(op10412, op17645)" = add i32 %"op10412(op10412)69", %"op17645(op10912)70"
-; CHECK-NEXT:    store i32 %"op18080(op10412, op17645)", ptr [[A0]], align 4
+; CHECK-NEXT:    %"op18131(op81283)70" = add i32 -21, %"op81283(op18131, vl72693)"
+; CHECK-NEXT:    %"op18080(op10412, op18131)" = add i32 %"op10412(op10412)69", %"op18131(op81283)70"
+; CHECK-NEXT:    store i32 %"op18080(op10412, op18131)", ptr [[A0]], align 4
 ; CHECK-NEXT:    br label %[[BB16110]]
 ;
 bb:

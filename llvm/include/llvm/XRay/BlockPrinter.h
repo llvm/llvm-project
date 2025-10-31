@@ -13,14 +13,14 @@
 #ifndef LLVM_XRAY_BLOCKPRINTER_H
 #define LLVM_XRAY_BLOCKPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/FDRRecords.h"
 #include "llvm/XRay/RecordPrinter.h"
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
-class BlockPrinter : public RecordVisitor {
+class LLVM_ABI BlockPrinter : public RecordVisitor {
   enum class State {
     Start,
     Preamble,
@@ -54,7 +54,6 @@ public:
   void reset() { CurrentState = State::Start; }
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_BLOCKPRINTER_H

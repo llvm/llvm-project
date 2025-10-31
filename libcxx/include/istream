@@ -70,6 +70,7 @@ public:
     basic_istream& getline(char_type* s, streamsize n, char_type delim);
 
     basic_istream& ignore(streamsize n = 1, int_type delim = traits_type::eof());
+    basic_istream& ignore(streamsize n, char_type delim);                         // Since C++26, implemented as a DR
     int_type peek();
     basic_istream& read (char_type* s, streamsize n);
     streamsize readsome(char_type* s, streamsize n);
@@ -167,16 +168,18 @@ template <class Stream, class T>
 
 #    include <__fwd/istream.h>
 #    include <__iterator/istreambuf_iterator.h>
+#    include <__locale_dir/num.h>
 #    include <__ostream/basic_ostream.h>
 #    include <__type_traits/conjunction.h>
 #    include <__type_traits/enable_if.h>
 #    include <__type_traits/is_base_of.h>
+#    include <__type_traits/is_same.h>
 #    include <__type_traits/make_unsigned.h>
 #    include <__utility/declval.h>
 #    include <__utility/forward.h>
 #    include <bitset>
 #    include <ios>
-#    include <locale>
+#    include <streambuf>
 #    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -291,6 +294,10 @@ public:
   basic_istream& getline(char_type* __s, streamsize __n, char_type __dlm);
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
+  template <class _Tp = char_type, __enable_if_t<is_same<_Tp, char>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim) {
+    return ignore(__n, traits_type::to_int_type(__delim));
+  }
   int_type peek();
   basic_istream& read(char_type* __s, streamsize __n);
   streamsize readsome(char_type* __s, streamsize __n);
@@ -1409,6 +1416,10 @@ _LIBCPP_POP_MACROS
 #    include <iosfwd>
 #    include <ostream>
 #    include <type_traits>
+#  endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#    include <locale>
 #  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

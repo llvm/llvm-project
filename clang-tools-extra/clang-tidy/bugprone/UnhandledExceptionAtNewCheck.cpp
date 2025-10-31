@@ -1,4 +1,4 @@
-//===--- UnhandledExceptionAtNewCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
+namespace {
 
 AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
@@ -35,6 +36,8 @@ AST_MATCHER(CXXNewExpr, mayThrow) {
     return false;
   return !OperatorNew->getType()->castAs<FunctionProtoType>()->isNothrow();
 }
+
+} // namespace
 
 UnhandledExceptionAtNewCheck::UnhandledExceptionAtNewCheck(
     StringRef Name, ClangTidyContext *Context)

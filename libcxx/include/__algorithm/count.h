@@ -72,7 +72,7 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_t
 }
 
 template <class, class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_diff_t<__bit_iterator<_Cp, _IsConst> >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iterator_difference_type<__bit_iterator<_Cp, _IsConst> >
 __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
   if (__value)
     return std::__count_bool<true>(
@@ -82,7 +82,7 @@ __count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __l
 }
 
 template <class _InputIterator, class _Tp>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iter_diff_t<_InputIterator>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __iterator_difference_type<_InputIterator>
 count(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
   return std::__count<_ClassicAlgPolicy>(__first, __last, __value, __proj);

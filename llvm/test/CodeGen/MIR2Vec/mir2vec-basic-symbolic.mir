@@ -1,0 +1,76 @@
+# REQUIRES: x86-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  
+  define dso_local noundef i32 @add_function(i32 noundef %a, i32 noundef %b) {
+  entry:
+    %sum = add nsw i32 %a, %b
+    %result = mul nsw i32 %sum, 2
+    ret i32 %result
+  }
+  
+  define dso_local void @simple_function() {
+  entry:
+    ret void
+  }
+...
+---
+name:            add_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %2:gr32 = nsw ADD32rr %0, %1, implicit-def dead $eflags
+    %3:gr32 = ADD32rr %2, %2, implicit-def dead $eflags
+    $eax = COPY %3
+    RET 0, $eax
+
+---
+name:            simple_function
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    RET 0
+
+# CHECK: MIR2Vec embeddings for machine function add_function:
+# CHECK: Function vector:  [ 26.50  27.10  27.70 ]
+# CHECK-NEXT: Machine basic block vectors:
+# CHECK-NEXT: Machine basic block: add_function:entry:
+# CHECK-NEXT:  [ 26.50  27.10  27.70 ]
+# CHECK-NEXT: Machine instruction vectors:
+# CHECK-NEXT: Machine instruction: %1:gr32 = COPY $esi
+# CHECK-NEXT:  [ 6.00  6.10  6.20 ]
+# CHECK-NEXT: Machine instruction: %0:gr32 = COPY $edi
+# CHECK-NEXT:  [ 6.00  6.10  6.20 ]
+# CHECK-NEXT: Machine instruction: %2:gr32 = nsw ADD32rr %0:gr32(tied-def 0), %1:gr32, implicit-def dead $eflags
+# CHECK-NEXT:  [ 3.70  3.80  3.90 ]
+# CHECK-NEXT: Machine instruction: %3:gr32 = ADD32rr %2:gr32(tied-def 0), %2:gr32, implicit-def dead $eflags
+# CHECK-NEXT:  [ 3.70  3.80  3.90 ]
+# CHECK-NEXT: Machine instruction: $eax = COPY %3:gr32
+# CHECK-NEXT:  [ 6.00  6.10  6.20 ]
+# CHECK-NEXT: Machine instruction: RET 0, $eax
+# CHECK-NEXT:  [ 1.10  1.20  1.30 ]
+
+# CHECK: MIR2Vec embeddings for machine function simple_function:
+# CHECK-NEXT:Function vector:  [ 1.10  1.20  1.30 ]
+# CHECK-NEXT: Machine basic block vectors:
+# CHECK-NEXT: Machine basic block: simple_function:entry:
+# CHECK-NEXT:  [ 1.10  1.20  1.30 ]
+# CHECK-NEXT: Machine instruction vectors:
+# CHECK-NEXT: Machine instruction: RET 0
+# CHECK-NEXT:  [ 1.10  1.20  1.30 ]

@@ -10,6 +10,7 @@ See also:
    :maxdepth: 1
 
    List of Clang-Tidy Checks <checks/list>
+   Query Based Custom Clang-Tidy Checks <QueryBasedCustomChecks>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
    External Clang-Tidy Examples <ExternalClang-TidyExamples>
@@ -111,6 +112,13 @@ Diagnostics which have a corresponding warning option, are named
 ``-Wliteral-conversion`` will be reported with check name
 ``clang-diagnostic-literal-conversion``.
 
+Clang compiler errors (such as syntax errors, semantic errors, or other failures
+that prevent Clang from compiling the code) are reported with the check name
+``clang-diagnostic-error``. These represent fundamental compilation failures that
+must be fixed before :program:`clang-tidy` can perform its analysis. Unlike other
+diagnostics, ``clang-diagnostic-error`` cannot be disabled, as :program:`clang-tidy`
+requires valid code to function.
+
 The ``-fix`` flag instructs :program:`clang-tidy` to fix found errors if
 supported by corresponding checks.
 
@@ -207,20 +215,27 @@ An overview of all the command-line options:
                                        This option overrides the 'FormatStyle` option in
                                        .clang-tidy file, if any.
     --header-filter=<string>         - Regular expression matching the names of the
-                                       headers to output diagnostics from. Diagnostics
+                                       headers to output diagnostics from. The default
+                                       value is '.*', i.e. diagnostics from all non-system
+                                       headers are displayed by default. Diagnostics
                                        from the main file of each translation unit are
                                        always displayed.
                                        Can be used together with -line-filter.
                                        This option overrides the 'HeaderFilterRegex'
                                        option in .clang-tidy file, if any.
-    --line-filter=<string>           - List of files with line ranges to filter the
-                                       warnings. Can be used together with
-                                       -header-filter. The format of the list is a
-                                       JSON array of objects:
+    --line-filter=<string>           - List of files and line ranges to output diagnostics from.
+                                       The range is inclusive on both ends. Can be used together
+                                       with -header-filter. The format of the list is a JSON
+                                       array of objects. For example:
+
                                          [
                                            {"name":"file1.cpp","lines":[[1,3],[5,7]]},
                                            {"name":"file2.h"}
                                          ]
+
+                                       This will output diagnostics from 'file1.cpp' only for
+                                       the line ranges [1,3] and [5,7], as well as all from the
+                                       entire 'file2.h'.
     --list-checks                    - List all enabled checks and exit. Use with
                                        -checks=* to list all available checks.
     --load=<pluginfilename>          - Load the specified plugin
@@ -292,6 +307,8 @@ An overview of all the command-line options:
     Checks                       - Same as '--checks'. Additionally, the list of
                                    globs can be specified as a list instead of a
                                    string.
+    CustomChecks                 - List of user defined checks based on
+                                   Clang-Query syntax.
     ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
     ExtraArgs                    - Same as '--extra-arg'.
     ExtraArgsBefore              - Same as '--extra-arg-before'.
@@ -323,13 +340,114 @@ An overview of all the command-line options:
       WarningsAsErrors:    ''
       HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
       ImplementationFileExtensions: ['c','cc','cpp','cxx']
-      HeaderFilterRegex:   ''
+      HeaderFilterRegex:   '.*'
       FormatStyle:         none
       InheritParentConfig: true
       User:                user
       CheckOptions:
         some-check.SomeOption: 'some value'
       ...
+
+Clang-Tidy Automation
+=====================
+
+:program:`clang-tidy` can analyze multiple source files by specifying them on
+the command line. For larger projects, automation scripts provide additional
+functionality like parallel execution and integration with version control
+systems.
+
+Running Clang-Tidy in Parallel
+-------------------------------
+
+:program:`clang-tidy` can process multiple files sequentially, but for projects
+with many source files, the :program:`run-clang-tidy.py` script provides
+parallel execution to significantly reduce analysis time. This script is
+included with clang-tidy and runs :program:`clang-tidy` over all files in a
+compilation database or a specified path concurrently.
+
+The script requires a compilation database (``compile_commands.json``) which
+can be generated by build systems like CMake (using
+``-DCMAKE_EXPORT_COMPILE_COMMANDS=ON``) or by tools like `Bear`_.
+
+The script supports most of the same options as :program:`clang-tidy` itself,
+including ``-checks=``, ``-fix``, ``-header-filter=``, and configuration
+options. Run ``run-clang-tidy.py --help`` for a complete list of available
+options.
+
+Example invocations:
+
+.. code-block:: console
+
+  # Run clang-tidy on all files in the compilation database in parallel
+  $ run-clang-tidy.py -p=build/
+
+  # Run with specific checks and apply fixes
+  $ run-clang-tidy.py -p=build/ -fix -checks=-*,readability-*
+
+  # Run on specific files/directories with header filtering
+  $ run-clang-tidy.py -p=build/ -header-filter=src/ src/
+
+  # Run with parallel execution (uses all CPU cores by default)
+  $ run-clang-tidy.py -p=build/ -j 4
+
+Running Clang-Tidy on Diff
+---------------------------
+
+The :program:`clang-tidy-diff.py` script allows you to run
+:program:`clang-tidy` on the lines that have been modified in your working
+directory or in a specific diff. Importantly, :program:`clang-tidy-diff.py` only reports
+diagnostics for changed lines; :program:`clang-tidy` still analyzes the entire
+file and filters out unchanged lines after analysis, so this does not improve
+performance. This is particularly useful for code reviews and continuous
+integration, as it focuses analysis on the changed code rather than the entire
+codebase.
+
+The script can work with various diff sources:
+
+* Git working directory changes
+* Output from ``git diff``
+* Output from ``svn diff``
+* Patch files
+
+Example invocations:
+
+.. code-block:: console
+
+  # Run clang-tidy on all changes in the working directory
+  $ git diff -U0 --no-color HEAD^ | clang-tidy-diff.py -p1
+
+  # Run with specific checks and apply fixes
+  $ git diff -U0 --no-color HEAD^ | clang-tidy-diff.py -p1 -fix \
+    -checks=-*,readability-*
+
+  # Run on staged changes
+  $ git diff -U0 --no-color --cached | clang-tidy-diff.py -p1
+
+  # Run on changes between two commits
+  $ git diff -U0 --no-color HEAD~2 HEAD | clang-tidy-diff.py -p1
+
+  # Run on a patch file
+  $ clang-tidy-diff.py -p1 < changes.patch
+
+The ``-p1`` option tells the script to strip one level of path prefix from
+the diff, which is typically needed for Git diffs. The script supports most of
+the same options as :program:`clang-tidy` itself, including ``-checks=``,
+``-fix``, ``-header-filter=``, and configuration options.
+
+While :program:`clang-tidy-diff.py` is useful for focusing on recent changes,
+relying solely on it may lead to incomplete analysis. Since the script only
+reports warnings from the modified lines, it may miss issues that are caused
+by the changes but manifest elsewhere in the code. For example, changes that
+only add lines to a function may cause it to violate size limits (e.g.,
+`readability-function-size <checks/readability/function-size.html>`_), but the
+diagnostic will be reported at the function declaration, which may not be in
+the diff and thus filtered out. Modifications to header files may also affect
+many implementation files, but only warnings in the modified header lines will
+be reported.
+
+For comprehensive analysis, especially before merging significant changes,
+consider running :program:`clang-tidy` on the entire affected files or the
+whole project using :program:`run-clang-tidy.py`.
 
 .. _clang-tidy-nolint:
 
@@ -453,5 +571,6 @@ example, ``NOLINTBEGIN(check-name)`` can be paired with
 :program:`clang-tidy` will generate a ``clang-tidy-nolint`` error diagnostic if
 any ``NOLINTBEGIN``/``NOLINTEND`` comment violates these requirements.
 
+.. _Bear: https://github.com/rizsotto/Bear
 .. _LibTooling: https://clang.llvm.org/docs/LibTooling.html
 .. _How To Setup Tooling For LLVM: https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html

@@ -528,8 +528,9 @@ struct ClientCapabilities {
   /// textDocument.semanticHighlightingCapabilities.semanticHighlighting
   bool TheiaSemanticHighlighting = false;
 
-  /// Supported encodings for LSP character offsets. (clangd extension).
-  std::optional<std::vector<OffsetEncoding>> offsetEncoding;
+  /// Supported encodings for LSP character offsets.
+  /// general.positionEncodings
+  std::optional<std::vector<OffsetEncoding>> PositionEncodings;
 
   /// The content format that should be used for Hover requests.
   /// textDocument.hover.contentEncoding
@@ -1626,6 +1627,12 @@ struct CallHierarchyIncomingCall {
   /// The range at which the calls appear.
   /// This is relative to the caller denoted by `From`.
   std::vector<Range> fromRanges;
+
+  /// For the case of being a virtual function we also return calls
+  /// to the base function. This caller might be a false positive.
+  /// We currently have no way of discerning this.
+  /// This is a clangd extension.
+  bool mightNeverCall = false;
 };
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &);
 

@@ -545,10 +545,6 @@ struct IRInstructionMapper {
     // dependent.
     InstrType visitLandingPadInst(LandingPadInst &LPI) { return Illegal; }
     InstrType visitFuncletPadInst(FuncletPadInst &FPI) { return Illegal; }
-    // DebugInfo should be included in the regions, but should not be
-    // analyzed for similarity as it has no bearing on the outcome of the
-    // program.
-    InstrType visitDbgInfoIntrinsic(DbgInfoIntrinsic &DII) { return Invisible; }
     InstrType visitIntrinsicInst(IntrinsicInst &II) {
       // These are disabled due to complications in the CodeExtractor when
       // outlining these instructions.  For instance, It is unclear what we

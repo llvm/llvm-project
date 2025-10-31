@@ -403,7 +403,7 @@ def Builtin_Float128 : Builtin_CachedFloatType<"Float128", "f128"> {
 // FunctionType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Function : Builtin_Type<"Function", "function"> {
+class Builtin_FunctionLike<string Name, string typeMnemonic> : Builtin_Type<Name, typeMnemonic> {
   let summary = "Map from a list of inputs to a list of results";
   let description = [{
     Syntax:
@@ -434,6 +434,7 @@ def Builtin_Function : Builtin_Type<"Function", "function"> {
     }]>
   ];
   let skipDefaultBuilders = 1;
+  let storageClass = "FunctionTypeStorage";
   let genStorageClass = 0;
   let extraClassDeclaration = [{
     /// Input types.
@@ -444,22 +445,25 @@ def Builtin_Function : Builtin_Type<"Function", "function"> {
     unsigned getNumResults() const;
     Type getResult(unsigned i) const { return getResults()[i]; }
 
-    /// Returns a clone of this function type with the given argument
+    /// Returns a clone of this function-like type with the given argument
     /// and result types.
-    FunctionType clone(TypeRange inputs, TypeRange results) const;
+    }] # Name # "Type" # [{ clone(TypeRange inputs, TypeRange results) const;
 
-    /// Returns a new function type with the specified arguments and results
+    /// Returns a new function-like type with the specified arguments and results
     /// inserted.
-    FunctionType getWithArgsAndResults(ArrayRef<unsigned> argIndices,
+    }] # Name # "Type" # [{ getWithArgsAndResults(ArrayRef<unsigned> argIndices,
                                        TypeRange argTypes,
                                        ArrayRef<unsigned> resultIndices,
                                        TypeRange resultTypes);
 
-    /// Returns a new function type without the specified arguments and results.
-    FunctionType getWithoutArgsAndResults(const BitVector &argIndices,
+    /// Returns a new function-like type without the specified arguments and results.
+    }] # Name # "Type" # [{ getWithoutArgsAndResults(const BitVector &argIndices,
                                           const BitVector &resultIndices);
   }];
 }
+
+def Builtin_Function : Builtin_FunctionLike<"Function", "function">;
+def Builtin_Graph : Builtin_FunctionLike<"Graph", "graph">;
 
 //===----------------------------------------------------------------------===//
 // IndexType
@@ -562,6 +566,7 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
 //===----------------------------------------------------------------------===//
 
 def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
+    PtrLikeTypeInterface,
     ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference to a region of memory";
@@ -838,6 +843,25 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     ///
     bool areTrailingDimsContiguous(int64_t n);
 
+    /// Return the number of trailing dimensions that are contiguous.
+    ///
+    /// Examples:
+    ///   - memref<5x3x2xi8, strided<[6,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 3
+    ///   - memref<5x3x2xi8, strided<[12,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 2 (dimension 0 is non-contiguous)
+    ///   - memref<5x3x2xi8, strided<[12,4,1]>>, the number of collapsable
+    ///     trailing dimensions is 1 (dimension 1 is non-contiguous)
+    ///   - memref<5x3x2xi8, strided<[12,4,2]>>, the number of collapsable
+    ///     trailing dimensions is 0 (dimension 2 is non-contiguous)
+    ///   - memref<?x3x2xi8, strided<[6,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 3
+    ///   - memref<?x3x2xi8, strided<[12,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 2 (dimension 0 is non-contiguous)
+    ///   - memref<5x?x2xi8, strided<[?,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 2 (stride 0 is dynamic)
+    int64_t getNumContiguousTrailingDims();
+
     /// Return a version of this type with identity layout if it can be
     /// determined statically that the layout is the canonical contiguous
     /// strided layout. Otherwise pass the layout into `simplifyAffineMap`
@@ -862,11 +886,11 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     /// the distance in the number of elements between successive entries along
     /// a particular dimension.
     LogicalResult getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                      int64_t &offset);
+                                      int64_t &offset) const;
 
     /// Wrapper around getStridesAndOffset(SmallVectorImpl<int64_t>, int64_t)
     /// that will assert if the logical result is not succeeded.
-    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset();
+    std::pair<SmallVector<int64_t>, int64_t> getStridesAndOffset() const;
 
     /// Return "true" if the layout is compatible with strided semantics.
     bool isStrided();
@@ -1143,6 +1167,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", "tuple"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
+    PtrLikeTypeInterface,
     ShapedTypeInterface
   ], "BaseMemRefType"> {
   let summary = "Shaped reference, with unknown rank, to a region of memory";
@@ -1200,7 +1225,7 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "unranked_memref", [
     using ShapedType::Trait<UnrankedMemRefType>::getDimSize;
     using ShapedType::Trait<UnrankedMemRefType>::getDynamicDimIndex;
 
-    ArrayRef<int64_t> getShape() const { return std::nullopt; }
+    ArrayRef<int64_t> getShape() const { return {}; }
 
     /// [deprecated] Returns the memory space in old raw integer representation.
     /// New `Attribute getMemorySpace()` method should be used instead.
@@ -1259,7 +1284,7 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "unranked_tensor", [
     using ShapedType::Trait<UnrankedTensorType>::getDimSize;
     using ShapedType::Trait<UnrankedTensorType>::getDynamicDimIndex;
 
-    ArrayRef<int64_t> getShape() const { return std::nullopt; }
+    ArrayRef<int64_t> getShape() const { return {}; }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

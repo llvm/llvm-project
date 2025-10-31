@@ -3,13 +3,15 @@
 # Test that stack probe results in Nop unwind codes in the prologue.  Test
 # save_fplr, save_reg_x and stack_alloc with multiple updates.
 
-# CHECK:      early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2
-# CHECK-NEXT: frame-setup SEH_SaveFPLR_X -16
+# CHECK:      early-clobber $sp = frame-setup STRXpre killed $x28, $sp, -32
+# CHECK-NEXT: frame-setup SEH_SaveReg_X 28, -32
+# CHECK-NEXT: frame-setup STPXi killed $fp, killed $lr, $sp, 1
+# CHECK-NEXT: frame-setup SEH_SaveFPLR 8
 # CHECK-NEXT: $x15 = frame-setup MOVZXi 56009, 0
 # CHECK-NEXT: frame-setup SEH_Nop
 # CHECK-NEXT: $x15 = frame-setup MOVKXi $x15, 2, 16
 # CHECK-NEXT: frame-setup SEH_Nop
-# CHECK-NEXT: frame-setup BL &__chkstk, implicit-def $lr, implicit $sp, implicit $x15
+# CHECK-NEXT: frame-setup BL &__chkstk, implicit-def $lr, implicit $sp, implicit $x15, implicit-def dead $x16, implicit-def dead $x17, implicit-def dead $nzcv
 # CHECK-NEXT: frame-setup SEH_Nop
 # CHECK-NEXT: $sp = frame-setup SUBXrx64 killed $sp, killed $x15, 28
 # CHECK-NEXT: frame-setup SEH_StackAlloc 2993296
@@ -19,8 +21,10 @@
 # CHECK-NEXT: frame-destroy SEH_StackAlloc 2990080
 # CHECK-NEXT: $sp = frame-destroy ADDXri $sp, 3216, 0
 # CHECK-NEXT: frame-destroy SEH_StackAlloc 3216
-# CHECK-NEXT: early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2
-# CHECK-NEXT: frame-destroy SEH_SaveFPLR_X -16
+# CHECK-NEXT: $fp, $lr = frame-destroy LDPXi $sp, 1
+# CHECK-NEXT: frame-destroy SEH_SaveFPLR 8
+# CHECK-NEXT: early-clobber $sp, $x28 = frame-destroy LDRXpost $sp, 32
+# CHECK-NEXT: frame-destroy SEH_SaveReg_X 28, -32
 # CHECK-NEXT: frame-destroy SEH_EpilogEnd
 # CHECK-NEXT: RET_ReallyLR implicit killed $w0
 --- |
@@ -67,8 +71,8 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(ptr, ptr) #2
 
-  attributes #0 = { noinline optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { noinline optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "use-soft-float"="false" }
+  attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "use-soft-float"="false" }
   attributes #2 = { nounwind }
 
 ...
@@ -101,8 +105,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  2993276
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
   - { id: 0, name: retval, type: default, offset: 0, size: 4, alignment: 4,

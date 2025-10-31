@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !defined(__wasm__)
+
 #include "assembly.h"
 
 #define FROM_0_TO_15 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
@@ -20,9 +22,10 @@
     .text
 #endif
 
-#if !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__)
+#if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -107,6 +110,7 @@ DEFINE_LIBUNWIND_FUNCTION("#__unw_getcontext")
   .text
 
 #elif defined(__x86_64__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -759,6 +763,10 @@ LnoR2Fix:
 
 #elif defined(__aarch64__)
 
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
+
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)
 //
@@ -767,6 +775,11 @@ LnoR2Fix:
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+#if __has_feature(ptrauth_calls)
+  pacibsp
+#endif
+
   stp    x0, x1,  [x0, #0x000]
   stp    x2, x3,  [x0, #0x010]
   stp    x4, x5,  [x0, #0x020]
@@ -807,7 +820,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    d31,     [x0, #0x208]
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
+
+#if __has_feature(ptrauth_calls)
+  retab
+#else
   ret
+#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
@@ -1232,6 +1250,8 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   WEAK_ALIAS(__unw_getcontext, unw_getcontext)
 #endif
 
-#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) && !defined(__wasm__) */
+#endif /* !defined(__USING_SJLJ_EXCEPTIONS__) */
 
 NO_EXEC_STACK_DIRECTIVE
+
+#endif /* !defined(__wasm__) */

@@ -29,10 +29,13 @@ class MultipleSlidesTestCase(TestBase):
             first_sym.GetEndAddress().GetOffset()
             - first_sym.GetStartAddress().GetOffset()
         )
+        int_size = target.FindFirstType("int").GetByteSize()
+        self.assertGreaterEqual(first_size, 2048 * int_size)
         second_size = (
             second_sym.GetEndAddress().GetOffset()
             - second_sym.GetStartAddress().GetOffset()
         )
+        self.assertGreaterEqual(second_size, 2048 * int_size)
 
         # View the first element of `first` and `second` while
         # they have no load address set.

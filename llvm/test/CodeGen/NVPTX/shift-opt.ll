@@ -70,19 +70,18 @@ define i64 @test_and(i64 %x, i32 %y) {
 define <2 x i16> @test_vec(<2 x i16> %x, <2 x i8> %y) {
 ; CHECK-LABEL: test_vec(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<5>;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [test_vec_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_vec_param_1];
-; CHECK-NEXT:    and.b32 %r3, %r2, 16711935;
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    shr.u16 %rs3, %rs2, 5;
-; CHECK-NEXT:    shr.u16 %rs4, %rs1, 5;
-; CHECK-NEXT:    mov.b32 %r4, {%rs4, %rs3};
-; CHECK-NEXT:    or.b32 %r5, %r4, %r3;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_vec_param_0];
+; CHECK-NEXT:    ld.param.v2.b8 {%rs3, %rs4}, [test_vec_param_1];
+; CHECK-NEXT:    mov.b32 %r1, {%rs3, %rs4};
+; CHECK-NEXT:    shr.u16 %rs5, %rs2, 5;
+; CHECK-NEXT:    shr.u16 %rs6, %rs1, 5;
+; CHECK-NEXT:    mov.b32 %r2, {%rs6, %rs5};
+; CHECK-NEXT:    or.b32 %r3, %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %ext = zext <2 x i8> %y to <2 x i16>
   %shl = shl <2 x i16> %ext, splat(i16 5)
@@ -132,11 +131,7 @@ define i64 @test_negative_use_lop(i64 %x, i32 %y) {
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd3;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    use,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni use, (param0);
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
@@ -165,11 +160,7 @@ define i64 @test_negative_use_shl(i64 %x, i32 %y) {
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd2;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    use,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni use, (param0);
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;

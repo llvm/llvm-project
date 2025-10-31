@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <map>
 #include <memory>
@@ -101,7 +102,7 @@ struct EntryKind {
 /// For example, The LLDB debugger can define a DebugCommandInfo subclass
 /// which has additional fields about the debug-command being instrumented,
 /// such as `CommandArguments` or `CommandName`.
-struct TelemetryInfo {
+struct LLVM_ABI TelemetryInfo {
   // This represents a unique-id, conventionally corresponding to
   // a tool's session - i.e., every time the tool starts until it exits.
   //
@@ -141,9 +142,14 @@ public:
 /// and this framework.
 /// It is responsible for collecting telemetry data from the tool being
 /// monitored and transmitting the data elsewhere.
-class Manager {
+class LLVM_ABI Manager {
 public:
+  Manager() = default;
   virtual ~Manager() = default;
+
+  // Explicitly non-copyable.
+  Manager(Manager const &) = delete;
+  Manager &operator=(Manager const &) = delete;
 
   // Dispatch Telemetry data to the Destination(s).
   // The argument is non-const because the Manager may add or remove

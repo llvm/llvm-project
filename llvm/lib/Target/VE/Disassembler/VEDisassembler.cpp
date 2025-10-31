@@ -15,12 +15,15 @@
 #include "VE.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "ve-disassembler"
 
@@ -33,7 +36,7 @@ class VEDisassembler : public MCDisassembler {
 public:
   VEDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
-  virtual ~VEDisassembler() = default;
+  ~VEDisassembler() override = default;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -47,12 +50,14 @@ static MCDisassembler *createVEDisassembler(const Target &T,
   return new VEDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeVEDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheVETarget(),
                                          createVEDisassembler);
 }
 
+// clang-format off
 static const unsigned I32RegDecoderTable[] = {
     VE::SW0,  VE::SW1,  VE::SW2,  VE::SW3,  VE::SW4,  VE::SW5,  VE::SW6,
     VE::SW7,  VE::SW8,  VE::SW9,  VE::SW10, VE::SW11, VE::SW12, VE::SW13,
@@ -123,6 +128,7 @@ static const unsigned MiscRegDecoderTable[] = {
     VE::PMC4,       VE::PMC5,       VE::PMC6,       VE::PMC7,
     VE::PMC8,       VE::PMC9,       VE::PMC10,      VE::PMC11,
     VE::PMC12,      VE::PMC13,      VE::PMC14};
+// clang-format on
 
 static DecodeStatus DecodeI32RegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t Address,
@@ -208,106 +214,6 @@ static DecodeStatus DecodeMISCRegisterClass(MCInst &Inst, unsigned RegNo,
     return MCDisassembler::Fail;
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
-}
-
-static DecodeStatus DecodeASX(MCInst &Inst, uint64_t insn, uint64_t Address,
-                              const MCDisassembler *Decoder);
-static DecodeStatus DecodeLoadI32(MCInst &Inst, uint64_t insn, uint64_t Address,
-                                  const MCDisassembler *Decoder);
-static DecodeStatus DecodeStoreI32(MCInst &Inst, uint64_t insn,
-                                   uint64_t Address,
-                                   const MCDisassembler *Decoder);
-static DecodeStatus DecodeLoadI64(MCInst &Inst, uint64_t insn, uint64_t Address,
-                                  const MCDisassembler *Decoder);
-static DecodeStatus DecodeStoreI64(MCInst &Inst, uint64_t insn,
-                                   uint64_t Address,
-                                   const MCDisassembler *Decoder);
-static DecodeStatus DecodeLoadF32(MCInst &Inst, uint64_t insn, uint64_t Address,
-                                  const MCDisassembler *Decoder);
-static DecodeStatus DecodeStoreF32(MCInst &Inst, uint64_t insn,
-                                   uint64_t Address,
-                                   const MCDisassembler *Decoder);
-static DecodeStatus DecodeLoadASI64(MCInst &Inst, uint64_t insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder);
-static DecodeStatus DecodeStoreASI64(MCInst &Inst, uint64_t insn,
-                                     uint64_t Address,
-                                     const MCDisassembler *Decoder);
-static DecodeStatus DecodeTS1AMI64(MCInst &Inst, uint64_t insn,
-                                   uint64_t Address,
-                                   const MCDisassembler *Decoder);
-static DecodeStatus DecodeTS1AMI32(MCInst &Inst, uint64_t insn,
-                                   uint64_t Address,
-                                   const MCDisassembler *Decoder);
-static DecodeStatus DecodeCASI64(MCInst &Inst, uint64_t insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-static DecodeStatus DecodeCASI32(MCInst &Inst, uint64_t insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-static DecodeStatus DecodeCall(MCInst &Inst, uint64_t insn, uint64_t Address,
-                               const MCDisassembler *Decoder);
-static DecodeStatus DecodeSIMM7(MCInst &Inst, uint64_t insn, uint64_t Address,
-                                const MCDisassembler *Decoder);
-static DecodeStatus DecodeSIMM32(MCInst &Inst, uint64_t insn, uint64_t Address,
-                                 const MCDisassembler *Decoder);
-static DecodeStatus DecodeCCOperand(MCInst &Inst, uint64_t insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder);
-static DecodeStatus DecodeRDOperand(MCInst &Inst, uint64_t insn,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder);
-static DecodeStatus DecodeBranchCondition(MCInst &Inst, uint64_t insn,
-                                          uint64_t Address,
-                                          const MCDisassembler *Decoder);
-static DecodeStatus DecodeBranchConditionAlways(MCInst &Inst, uint64_t insn,
-                                                uint64_t Address,
-                                                const MCDisassembler *Decoder);
-
-#include "VEGenDisassemblerTables.inc"
-
-/// Read four bytes from the ArrayRef and return 32 bit word.
-static DecodeStatus readInstruction64(ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                      uint64_t &Size, uint64_t &Insn,
-                                      bool IsLittleEndian) {
-  // We want to read exactly 8 Bytes of data.
-  if (Bytes.size() < 8) {
-    Size = 0;
-    return MCDisassembler::Fail;
-  }
-
-  Insn = IsLittleEndian
-             ? ((uint64_t)Bytes[0] << 0) | ((uint64_t)Bytes[1] << 8) |
-                   ((uint64_t)Bytes[2] << 16) | ((uint64_t)Bytes[3] << 24) |
-                   ((uint64_t)Bytes[4] << 32) | ((uint64_t)Bytes[5] << 40) |
-                   ((uint64_t)Bytes[6] << 48) | ((uint64_t)Bytes[7] << 56)
-             : ((uint64_t)Bytes[7] << 0) | ((uint64_t)Bytes[6] << 8) |
-                   ((uint64_t)Bytes[5] << 16) | ((uint64_t)Bytes[4] << 24) |
-                   ((uint64_t)Bytes[3] << 32) | ((uint64_t)Bytes[2] << 40) |
-                   ((uint64_t)Bytes[1] << 48) | ((uint64_t)Bytes[0] << 56);
-
-  return MCDisassembler::Success;
-}
-
-DecodeStatus VEDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
-                                            ArrayRef<uint8_t> Bytes,
-                                            uint64_t Address,
-                                            raw_ostream &CStream) const {
-  uint64_t Insn;
-  bool isLittleEndian = getContext().getAsmInfo()->isLittleEndian();
-  DecodeStatus Result =
-      readInstruction64(Bytes, Address, Size, Insn, isLittleEndian);
-  if (Result == MCDisassembler::Fail)
-    return MCDisassembler::Fail;
-
-  // Calling the auto-generated decoder function.
-
-  Result = decodeInstruction(DecoderTableVE64, Instr, Insn, Address, this, STI);
-
-  if (Result != MCDisassembler::Fail) {
-    Size = 8;
-    return Result;
-  }
-
-  return MCDisassembler::Fail;
 }
 
 typedef DecodeStatus (*DecodeFunc)(MCInst &MI, unsigned RegNo, uint64_t Address,
@@ -624,4 +530,52 @@ static DecodeStatus DecodeBranchConditionAlways(MCInst &MI, uint64_t insn,
                                                 const MCDisassembler *Decoder) {
   // Decode MEMri.
   return DecodeAS(MI, insn, Address, Decoder);
+}
+
+#include "VEGenDisassemblerTables.inc"
+
+/// Read four bytes from the ArrayRef and return 32 bit word.
+static DecodeStatus readInstruction64(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                      uint64_t &Size, uint64_t &Insn,
+                                      bool IsLittleEndian) {
+  // We want to read exactly 8 Bytes of data.
+  if (Bytes.size() < 8) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  Insn = IsLittleEndian
+             ? ((uint64_t)Bytes[0] << 0) | ((uint64_t)Bytes[1] << 8) |
+                   ((uint64_t)Bytes[2] << 16) | ((uint64_t)Bytes[3] << 24) |
+                   ((uint64_t)Bytes[4] << 32) | ((uint64_t)Bytes[5] << 40) |
+                   ((uint64_t)Bytes[6] << 48) | ((uint64_t)Bytes[7] << 56)
+             : ((uint64_t)Bytes[7] << 0) | ((uint64_t)Bytes[6] << 8) |
+                   ((uint64_t)Bytes[5] << 16) | ((uint64_t)Bytes[4] << 24) |
+                   ((uint64_t)Bytes[3] << 32) | ((uint64_t)Bytes[2] << 40) |
+                   ((uint64_t)Bytes[1] << 48) | ((uint64_t)Bytes[0] << 56);
+
+  return MCDisassembler::Success;
+}
+
+DecodeStatus VEDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
+                                            ArrayRef<uint8_t> Bytes,
+                                            uint64_t Address,
+                                            raw_ostream &CStream) const {
+  uint64_t Insn;
+  bool isLittleEndian = getContext().getAsmInfo()->isLittleEndian();
+  DecodeStatus Result =
+      readInstruction64(Bytes, Address, Size, Insn, isLittleEndian);
+  if (Result == MCDisassembler::Fail)
+    return MCDisassembler::Fail;
+
+  // Calling the auto-generated decoder function.
+
+  Result = decodeInstruction(DecoderTableVE64, Instr, Insn, Address, this, STI);
+
+  if (Result != MCDisassembler::Fail) {
+    Size = 8;
+    return Result;
+  }
+
+  return MCDisassembler::Fail;
 }

@@ -132,6 +132,11 @@ public:
 
     // arithmetic
 
+    constexpr time_point& operator++();    // C++20
+    constexpr time_point  operator++(int); // C++20
+    constexpr time_point& operator--();    // C++20
+    constexpr time_point  operator--(int); // C++20
+
     time_point& operator+=(const duration& d); // constexpr in C++17
     time_point& operator-=(const duration& d); // constexpr in C++17
 

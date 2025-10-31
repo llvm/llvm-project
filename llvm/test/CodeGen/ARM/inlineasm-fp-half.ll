@@ -495,3 +495,80 @@ entry:
   %0 = tail call bfloat asm "vmov $0, $1", "=x,x"(bfloat %x)
   ret bfloat %0
 }
+
+define half @half_s(half %x) nounwind {
+; NO-FP16-SOFTFP-LABEL: half_s:
+; NO-FP16-SOFTFP:       @ %bb.0: @ %entry
+; NO-FP16-SOFTFP-NEXT:    vmov s2, r0
+; NO-FP16-SOFTFP-NEXT:    @APP
+; NO-FP16-SOFTFP-NEXT:    vmov.f32 s1, s2
+; NO-FP16-SOFTFP-NEXT:    @NO_APP
+; NO-FP16-SOFTFP-NEXT:    vmov r0, s1
+; NO-FP16-SOFTFP-NEXT:    bx lr
+;
+; NO-FP16-HARD-LABEL: half_s:
+; NO-FP16-HARD:       @ %bb.0: @ %entry
+; NO-FP16-HARD-NEXT:    vmov.f32 s2, s0
+; NO-FP16-HARD-NEXT:    @APP
+; NO-FP16-HARD-NEXT:    vmov.f32 s1, s2
+; NO-FP16-HARD-NEXT:    @NO_APP
+; NO-FP16-HARD-NEXT:    vmov.f32 s0, s1
+; NO-FP16-HARD-NEXT:    bx lr
+;
+; FP16-SOFTFP-LABEL: half_s:
+; FP16-SOFTFP:       @ %bb.0: @ %entry
+; FP16-SOFTFP-NEXT:    vmov.f16 s2, r0
+; FP16-SOFTFP-NEXT:    @APP
+; FP16-SOFTFP-NEXT:    vmov.f32 s1, s2
+; FP16-SOFTFP-NEXT:    @NO_APP
+; FP16-SOFTFP-NEXT:    vmov r0, s1
+; FP16-SOFTFP-NEXT:    bx lr
+;
+; FP16-HARD-LABEL: half_s:
+; FP16-HARD:       @ %bb.0: @ %entry
+; FP16-HARD-NEXT:    vmov.f32 s2, s0
+; FP16-HARD-NEXT:    @APP
+; FP16-HARD-NEXT:    vmov.f32 s1, s2
+; FP16-HARD-NEXT:    @NO_APP
+; FP16-HARD-NEXT:    vmov.f32 s0, s1
+; FP16-HARD-NEXT:    bx lr
+;
+; BF16-SOFTFP-LABEL: half_s:
+; BF16-SOFTFP:       @ %bb.0: @ %entry
+; BF16-SOFTFP-NEXT:    vmov.f16 s2, r0
+; BF16-SOFTFP-NEXT:    @APP
+; BF16-SOFTFP-NEXT:    vmov.f32 s1, s2
+; BF16-SOFTFP-NEXT:    @NO_APP
+; BF16-SOFTFP-NEXT:    vmov r0, s1
+; BF16-SOFTFP-NEXT:    bx lr
+;
+; SIMD-BF16-SOFTFP-LABEL: half_s:
+; SIMD-BF16-SOFTFP:       @ %bb.0: @ %entry
+; SIMD-BF16-SOFTFP-NEXT:    vmov.f16 s2, r0
+; SIMD-BF16-SOFTFP-NEXT:    @APP
+; SIMD-BF16-SOFTFP-NEXT:    vmov.f32 s1, s2
+; SIMD-BF16-SOFTFP-NEXT:    @NO_APP
+; SIMD-BF16-SOFTFP-NEXT:    vmov r0, s1
+; SIMD-BF16-SOFTFP-NEXT:    bx lr
+;
+; BF16-HARD-LABEL: half_s:
+; BF16-HARD:       @ %bb.0: @ %entry
+; BF16-HARD-NEXT:    vmov.f32 s2, s0
+; BF16-HARD-NEXT:    @APP
+; BF16-HARD-NEXT:    vmov.f32 s1, s2
+; BF16-HARD-NEXT:    @NO_APP
+; BF16-HARD-NEXT:    vmov.f32 s0, s1
+; BF16-HARD-NEXT:    bx lr
+;
+; SIMD-BF16-HARD-LABEL: half_s:
+; SIMD-BF16-HARD:       @ %bb.0: @ %entry
+; SIMD-BF16-HARD-NEXT:    vmov.f32 s2, s0
+; SIMD-BF16-HARD-NEXT:    @APP
+; SIMD-BF16-HARD-NEXT:    vmov.f32 s1, s2
+; SIMD-BF16-HARD-NEXT:    @NO_APP
+; SIMD-BF16-HARD-NEXT:    vmov.f32 s0, s1
+; SIMD-BF16-HARD-NEXT:    bx lr
+entry:
+  %0 = tail call half asm "vmov $0, $1", "={s1},{s2}"(half %x)
+  ret half %0
+}

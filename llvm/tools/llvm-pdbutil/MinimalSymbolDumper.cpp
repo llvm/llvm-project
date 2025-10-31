@@ -773,7 +773,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, InlineSiteSym &IS) {
         else
           return MaybeFile.takeError();
       }
-      P.format(" setfile {0} 0x{1}", utohexstr(FileOffset));
+      P.format(" setfile {0} 0x{1}", Filename, utohexstr(FileOffset));
       break;
     }
 
@@ -953,5 +953,13 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
       formatSegmentOffset(JumpTable.BranchSegment, JumpTable.BranchOffset),
       formatSegmentOffset(JumpTable.TableSegment, JumpTable.TableOffset),
       JumpTable.EntriesCount);
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            HotPatchFuncSym &JumpTable) {
+  AutoIndent Indent(P, 7);
+  P.formatLine("function = {0}, name = {1}", typeIndex(JumpTable.Function),
+               JumpTable.Name);
   return Error::success();
 }

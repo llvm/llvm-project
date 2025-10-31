@@ -70,7 +70,7 @@ contains
 end program
 
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "p"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "P"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index

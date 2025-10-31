@@ -17,8 +17,8 @@ DisassemblerHelper::DisassemblerHelper(const LLVMState &State) : State_(State) {
   MCTargetOptions MCOptions;
   const auto &TM = State.getTargetMachine();
   const auto &Triple = TM.getTargetTriple();
-  AsmInfo_.reset(TM.getTarget().createMCAsmInfo(State_.getRegInfo(),
-                                                Triple.str(), MCOptions));
+  AsmInfo_.reset(
+      TM.getTarget().createMCAsmInfo(State_.getRegInfo(), Triple, MCOptions));
   InstPrinter_.reset(TM.getTarget().createMCInstPrinter(
       Triple, 0 /*default variant*/, *AsmInfo_, State_.getInstrInfo(),
       State_.getRegInfo()));

@@ -90,6 +90,23 @@
   } while (0)
 #endif
 
+// We need this helper function as the semantics of casting between integers and
+// function pointers mean that we end up with a function pointer without the
+// correct signature. Instead we assign to an integer with a matching schema,
+// and then memmove the result into a variable of the correct type. This memmove
+// is possible as `_Unwind_Personality_Fn` is a standard function pointer, and
+// as such is not address diversified.
+static _Unwind_Personality_Fn get_handler_function(unw_proc_info_t *frameInfo) {
+  uintptr_t __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer,
+                                               0,
+                                               ptrauth_function_pointer_type_discriminator(_Unwind_Personality_Fn))
+    reauthenticatedIntegerHandler = frameInfo->handler;
+  _Unwind_Personality_Fn handler;
+  memmove(&handler, (void *)&reauthenticatedIntegerHandler,
+          sizeof(_Unwind_Personality_Fn));
+  return handler;
+}
+
 static _Unwind_Reason_Code
 unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *exception_object) {
   __unw_init_local(cursor, uc);
@@ -147,8 +164,7 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
     // If there is a personality routine, ask it if it will want to stop at
     // this frame.
     if (frameInfo.handler != 0) {
-      _Unwind_Personality_Fn p =
-          (_Unwind_Personality_Fn)(uintptr_t)(frameInfo.handler);
+      _Unwind_Personality_Fn p = get_handler_function(&frameInfo);
       _LIBUNWIND_TRACE_UNWINDING(
           "unwind_phase1(ex_obj=%p): calling personality function %p",
           (void *)exception_object, (void *)(uintptr_t)p);
@@ -188,10 +204,11 @@ extern int __unw_step_stage2(unw_cursor_t *);
 
 #if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit gcspop instructions to be used.
-__attribute__((target("gcs")))
+__attribute__((target("+gcs")))
 #endif
 static _Unwind_Reason_Code
-unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *exception_object) {
+unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor,
+              _Unwind_Exception *exception_object) {
   __unw_init_local(cursor, uc);
 
   _LIBUNWIND_TRACE_UNWINDING("unwind_phase2(ex_obj=%p)",
@@ -275,8 +292,7 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
     ++framesWalked;
     // If there is a personality routine, tell it we are unwinding.
     if (frameInfo.handler != 0) {
-      _Unwind_Personality_Fn p =
-          (_Unwind_Personality_Fn)(uintptr_t)(frameInfo.handler);
+      _Unwind_Personality_Fn p = get_handler_function(&frameInfo);
       _Unwind_Action action = _UA_CLEANUP_PHASE;
       if (sp == exception_object->private_2) {
         // Tell personality this was the frame it marked in phase 1.
@@ -332,12 +348,12 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
 
 #if defined(_LIBUNWIND_USE_GCS)
 // Enable the GCS target feature to permit gcspop instructions to be used.
-__attribute__((target("gcs")))
+__attribute__((target("+gcs")))
 #endif
 static _Unwind_Reason_Code
 unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
-                     _Unwind_Exception *exception_object,
-                     _Unwind_Stop_Fn stop, void *stop_parameter) {
+                     _Unwind_Exception *exception_object, _Unwind_Stop_Fn stop,
+                     void *stop_parameter) {
   __unw_init_local(cursor, uc);
 
   // uc is initialized by __unw_getcontext in the parent frame. The first stack
@@ -393,8 +409,7 @@ unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
     ++framesWalked;
     // If there is a personality routine, tell it we are unwinding.
     if (frameInfo.handler != 0) {
-      _Unwind_Personality_Fn p =
-          (_Unwind_Personality_Fn)(intptr_t)(frameInfo.handler);
+      _Unwind_Personality_Fn p = get_handler_function(&frameInfo);
       _LIBUNWIND_TRACE_UNWINDING(
           "unwind_phase2_forced(ex_obj=%p): calling personality function %p",
           (void *)exception_object, (void *)(uintptr_t)p);
@@ -442,7 +457,6 @@ unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
   // would.
   return _URC_FATAL_PHASE2_ERROR;
 }
-
 
 /// Called by __cxa_throw.  Only returns if there is a fatal error.
 _LIBUNWIND_EXPORT _Unwind_Reason_Code
@@ -597,6 +611,18 @@ _LIBUNWIND_EXPORT uintptr_t _Unwind_GetIP(struct _Unwind_Context *context) {
   unw_cursor_t *cursor = (unw_cursor_t *)context;
   unw_word_t result;
   __unw_get_reg(cursor, UNW_REG_IP, &result);
+
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  // If we are in an arm64e frame, then the PC should have been signed with the
+  // sp
+  {
+    unw_word_t sp;
+    __unw_get_reg(cursor, UNW_REG_SP, &sp);
+    result = (unw_word_t)ptrauth_auth_data((void *)result,
+                                           ptrauth_key_return_address, sp);
+  }
+#endif
+
   _LIBUNWIND_TRACE_API("_Unwind_GetIP(context=%p) => 0x%" PRIxPTR,
                        (void *)context, result);
   return (uintptr_t)result;

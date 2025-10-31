@@ -8,10 +8,14 @@
 
 #include "Breakpoint.h"
 #include "DAP.h"
+#include "LLDBUtils.h"
+#include "Protocol/DAPTypes.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBBreakpointLocation.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBModule.h"
 #include "lldb/API/SBMutex.h"
 #include "llvm/ADT/StringExtras.h"
 #include <cstddef>
@@ -20,6 +24,22 @@
 #include <string>
 
 using namespace lldb_dap;
+
+static std::optional<protocol::PersistenceData>
+GetPersistenceDataForSymbol(lldb::SBSymbol &symbol) {
+  protocol::PersistenceData persistence_data;
+  lldb::SBModule module = symbol.GetStartAddress().GetModule();
+  if (!module.IsValid())
+    return std::nullopt;
+
+  lldb::SBFileSpec file_spec = module.GetFileSpec();
+  if (!file_spec.IsValid())
+    return std::nullopt;
+
+  persistence_data.module_path = GetSBFileSpecPath(file_spec);
+  persistence_data.symbol_name = symbol.GetName();
+  return persistence_data;
+}
 
 void Breakpoint::SetCondition() { m_bp.SetCondition(m_condition.c_str()); }
 
@@ -64,8 +84,8 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
         "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(m_bp.GetTarget()));
     breakpoint.instructionReference = formatted_addr;
 
-    auto source = CreateSource(bp_addr, m_dap.target);
-    if (!IsAssemblySource(source)) {
+    std::optional<protocol::Source> source = m_dap.ResolveSource(bp_addr);
+    if (source && !IsAssemblySource(*source)) {
       auto line_entry = bp_addr.GetLineEntry();
       const auto line = line_entry.GetLine();
       if (line != LLDB_INVALID_LINE_NUMBER)
@@ -73,7 +93,7 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
       const auto column = line_entry.GetColumn();
       if (column != LLDB_INVALID_COLUMN_NUMBER)
         breakpoint.column = column;
-    } else {
+    } else if (source) {
       // Assembly breakpoint.
       auto symbol = bp_addr.GetSymbol();
       if (symbol.IsValid()) {
@@ -82,6 +102,15 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
                 .ReadInstructions(symbol.GetStartAddress(), bp_addr, nullptr)
                 .GetSize() +
             1;
+
+        // Add persistent data so that the breakpoint can be resolved
+        // in future sessions.
+        std::optional<protocol::PersistenceData> persistence_data =
+            GetPersistenceDataForSymbol(symbol);
+        if (persistence_data) {
+          source->adapterData =
+              protocol::SourceLLDBData{std::move(persistence_data)};
+        }
       }
     }
 

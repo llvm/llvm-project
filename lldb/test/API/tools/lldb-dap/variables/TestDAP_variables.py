@@ -1,12 +1,10 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap variables request
 """
 
 import os
 
-import dap_server
 import lldbdap_testcase
-from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
@@ -67,6 +65,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 self.assertNotIn(
                     key, actual, 'key "%s" is not expected in %s' % (key, actual)
                 )
+        isReadOnly = verify_dict.get("readOnly", False)
+        attributes = actual.get("presentationHint", {}).get("attributes", [])
+        self.assertEqual(
+            isReadOnly, "readOnly" in attributes, "%s %s" % (verify_dict, actual)
+        )
         hasVariablesReference = "variablesReference" in actual
         varRef = None
         if hasVariablesReference:
@@ -143,8 +146,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self, enableAutoVariableSummaries: bool
     ):
         """
-        Tests the "scopes", "variables", "setVariable", and "evaluate"
-        packets.
+        Tests the "scopes", "variables", "setVariable", and "evaluate" packets.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
@@ -168,15 +170,6 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     "type": "int",
                     "value": "1",
                 },
-                "$__lldb_extensions": {
-                    "equals": {
-                        "value": "1",
-                    },
-                    "declaration": {
-                        "equals": {"line": 12, "column": 14},
-                        "contains": {"path": ["lldb-dap", "variables", "main.cpp"]},
-                    },
-                },
             },
             "argv": {
                 "equals": {"type": "const char **"},
@@ -191,15 +184,12 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 "children": {
                     "x": {"equals": {"type": "int", "value": "11"}},
                     "y": {"equals": {"type": "int", "value": "22"}},
-                    "buffer": {"children": buffer_children},
+                    "buffer": {"children": buffer_children, "readOnly": True},
                 },
+                "readOnly": True,
             },
             "x": {"equals": {"type": "int"}},
         }
-        if enableAutoVariableSummaries:
-            verify_locals["pt"]["$__lldb_extensions"] = {
-                "equals": {"autoSummary": "{x:11, y:22}"}
-            }
 
         verify_globals = {
             "s_local": {"equals": {"type": "float", "value": "2.25"}},
@@ -314,12 +304,11 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is synthetic, like a variable index
         # and verify the value by reading it
         variable_value = 100
-        response = self.dap_server.request_setVariable(varRef, "[0]", variable_value)
+        response = self.set_variable(varRef, "[0]", variable_value)
         # Verify dap sent the correct response
         verify_response = {
             "type": "int",
             "value": str(variable_value),
-            "variablesReference": 0,
         }
         for key, value in verify_response.items():
             self.assertEqual(value, response["body"][key])
@@ -332,7 +321,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # Set a variable value whose name is a real child value, like "pt.x"
         # and verify the value by reading it
         varRef = varref_dict["pt"]
-        self.dap_server.request_setVariable(varRef, "x", 111)
+        self.set_variable(varRef, "x", 111)
         response = self.dap_server.request_variables(varRef, start=0, count=1)
         value = response["body"]["variables"][0]["value"]
         self.assertEqual(
@@ -358,27 +347,15 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # Now we verify that we correctly change the name of a variable with and without differentiator suffix
-        self.assertFalse(self.dap_server.request_setVariable(1, "x2", 9)["success"])
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:0", 9)["success"]
-        )
+        self.assertFalse(self.set_local("x2", 9)["success"])
+        self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
 
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:19", 19)["success"]
-        )
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:21", 21)["success"]
-        )
-        self.assertTrue(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", 23)["success"]
-        )
+        self.assertTrue(self.set_local("x @ main.cpp:19", 19)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:21", 21)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:23", 23)["success"])
 
         # The following should have no effect
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "x @ main.cpp:23", "invalid")[
-                "success"
-            ]
-        )
+        self.assertFalse(self.set_local("x @ main.cpp:23", "invalid")["success"])
 
         verify_locals["x @ main.cpp:19"]["equals"]["value"] = "19"
         verify_locals["x @ main.cpp:21"]["equals"]["value"] = "21"
@@ -387,7 +364,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
-        self.assertTrue(self.dap_server.request_setVariable(1, "x", 22)["success"])
+        self.assertTrue(self.set_local("x", 22)["success"])
         verify_locals["x @ main.cpp:23"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
@@ -473,8 +450,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                     "buffer": {
                         "children": buffer_children,
                         "equals": {"indexedVariables": 16},
+                        "readOnly": True,
                     },
                 },
+                "readOnly": True,
             },
             "x": {
                 "equals": {"type": "int"},
@@ -557,7 +536,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "children": {
                 "x": {"equals": {"type": "int", "value": "11"}},
                 "y": {"equals": {"type": "int", "value": "22"}},
-                "buffer": {"children": buffer_children},
+                "buffer": {"children": buffer_children, "readOnly": True},
             },
         }
 
@@ -651,11 +630,17 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         # "[raw]" child.
         raw_child_count = 1 if enableSyntheticChildDebugging else 0
         verify_locals = {
-            "small_array": {"equals": {"indexedVariables": 5}},
-            "large_array": {"equals": {"indexedVariables": 200}},
-            "small_vector": {"equals": {"indexedVariables": 5 + raw_child_count}},
-            "large_vector": {"equals": {"indexedVariables": 200 + raw_child_count}},
-            "pt": {"missing": ["indexedVariables"]},
+            "small_array": {"equals": {"indexedVariables": 5}, "readOnly": True},
+            "large_array": {"equals": {"indexedVariables": 200}, "readOnly": True},
+            "small_vector": {
+                "equals": {"indexedVariables": 5 + raw_child_count},
+                "readOnly": True,
+            },
+            "large_vector": {
+                "equals": {"indexedVariables": 200 + raw_child_count},
+                "readOnly": True,
+            },
+            "pt": {"missing": ["indexedVariables"], "readOnly": True},
         }
         self.verify_variables(verify_locals, locals)
 
@@ -669,7 +654,10 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "[4]": {"equals": {"type": "int", "value": "0"}},
         }
         if enableSyntheticChildDebugging:
-            verify_children["[raw]"] = ({"contains": {"type": ["vector"]}},)
+            verify_children["[raw]"] = {
+                "contains": {"type": ["vector"]},
+                "readOnly": True,
+            }
 
         children = self.dap_server.request_variables(locals[2]["variablesReference"])[
             "body"
@@ -689,7 +677,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             return_name: {"equals": {"type": "int", "value": "300"}},
             "argc": {},
             "argv": {},
-            "pt": {},
+            "pt": {"readOnly": True},
             "x": {},
             "return_result": {"equals": {"type": "int"}},
         }
@@ -725,9 +713,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 self.verify_variables(verify_locals, local_variables, varref_dict)
                 break
 
-        self.assertFalse(
-            self.dap_server.request_setVariable(1, "(Return Value)", 20)["success"]
-        )
+        self.assertFalse(self.set_local("(Return Value)", 20)["success"])
 
     @skipIfWindows
     def test_indexedVariables(self):
@@ -738,7 +724,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.do_test_indexedVariables(enableSyntheticChildDebugging=True)
 
     @skipIfWindows
-    @skipIfAsan # FIXME this fails with a non-asan issue on green dragon.
+    @skipIfAsan  # FIXME this fails with a non-asan issue on green dragon.
     def test_registers(self):
         """
         Test that registers whose byte size is the size of a pointer on

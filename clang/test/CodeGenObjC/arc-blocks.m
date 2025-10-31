@@ -73,7 +73,7 @@ void test3(void (^sink)(id*)) {
   // CHECK-NEXT: [[TEMP:%.*]] = alloca ptr
   // CHECK-NEXT: call ptr @llvm.objc.retain(
   // CHECK-NEXT: store ptr {{%.*}}, ptr [[SINK]]
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[STRONG]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[STRONG]])
   // CHECK-NEXT: store ptr null, ptr [[STRONG]]
 
   // CHECK-NEXT: [[BLOCK:%.*]] = load ptr, ptr [[SINK]]
@@ -91,7 +91,7 @@ void test3(void (^sink)(id*)) {
 
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[STRONG]]
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[STRONG]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[STRONG]])
 
   // CHECK-NEXT: load ptr, ptr [[SINK]]
   // CHECK-NEXT: call void @llvm.objc.release
@@ -161,7 +161,7 @@ void test5(void) {
   // CHECK-LABEL:    define{{.*}} void @test5()
   // CHECK:      [[VAR:%.*]] = alloca ptr
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[VAR]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[VAR]])
   // CHECK: [[T1:%.*]] = call ptr @test5_source() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
   // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.noop.use(ptr [[T1]])
   // CHECK-NEXT: store ptr [[T1]], ptr [[VAR]],
@@ -172,7 +172,7 @@ void test5(void) {
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[VAR]]
   // CHECK-NEXT: store ptr [[T0]], ptr [[CAPTURE]]
   // CHECK: call void @test5_helper
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr [[VAR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[VAR]])
   // CHECK-NEXT: ret void
 }
 
@@ -185,7 +185,7 @@ void test6(void) {
   // CHECK-LABEL:    define{{.*}} void @test6()
   // CHECK:      [[VAR:%.*]] = alloca [[BYREF_T:%.*]],
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 48, ptr [[VAR]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[VAR]])
   // CHECK:      [[T0:%.*]] = getelementptr inbounds nuw [[BYREF_T]], ptr [[VAR]], i32 0, i32 2
   // 0x02000000 - has copy/dispose helpers weak
   // CHECK-NEXT: store i32 1107296256, ptr [[T0]]
@@ -203,7 +203,7 @@ void test6(void) {
   // CHECK:      call void @test6_helper(
   // CHECK: call void @_Block_object_dispose(ptr [[VAR]], i32 8)
   // CHECK-NEXT: call void @llvm.objc.destroyWeak(ptr [[SLOT]])
-  // CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 48, ptr [[VAR]])
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr [[VAR]])
   // CHECK-NEXT: ret void
 
   // CHECK-LABEL:    define internal void @__Block_byref_object_copy_.{{[0-9]+}}(ptr noundef %0, ptr noundef %1) #{{[0-9]+}} {
@@ -449,7 +449,7 @@ void test13(id x) {
   // CHECK-NEXT: [[CLEANUP_ACTIVE:%.*]] = alloca i1
   // CHECK-NEXT: [[T0:%.*]] = call ptr @llvm.objc.retain(ptr {{%.*}})
   // CHECK-NEXT: store ptr [[T0]], ptr [[X]], align 8
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr [[B]])
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr [[B]])
   // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[X]], align 8
   // CHECK-NEXT: [[T1:%.*]] = icmp ne ptr [[T0]], null
   // CHECK-NEXT: store i1 false, ptr [[CLEANUP_ACTIVE]]
@@ -479,7 +479,7 @@ void test13(id x) {
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]])
   // CHECK-NEXT: br label
 
-  // CHECK: call void @llvm.lifetime.end.p0(i64 8, ptr [[B]])
+  // CHECK: call void @llvm.lifetime.end.p0(ptr [[B]])
   // CHECK-NEXT:      [[T0:%.*]] = load ptr, ptr [[X]]
   // CHECK-NEXT: call void @llvm.objc.release(ptr [[T0]])
   // CHECK-NEXT: ret void
@@ -501,7 +501,7 @@ void test16(void) {
   // CHECK-LABEL: define{{.*}} void @test16(
   // CHECK: [[BLKVAR:%.*]]  = alloca ptr, align 8
   // CHECK-NEXT:  [[BLOCK:%.*]] = alloca [[BLOCK_T:<{.*}>]],
-  // CHECK-NEXT:  call void @llvm.lifetime.start.p0(i64 8, ptr [[BLKVAR]])
+  // CHECK-NEXT:  call void @llvm.lifetime.start.p0(ptr [[BLKVAR]])
   // CHECK-NEXT:  store ptr null, ptr [[BLKVAR]], align 8
 }
 

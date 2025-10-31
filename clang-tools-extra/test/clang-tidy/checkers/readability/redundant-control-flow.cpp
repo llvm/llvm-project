@@ -7,7 +7,7 @@ void f() {
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement at the end of a function with a void return type [readability-redundant-control-flow]
-// CHECK-FIXES: {{^}}void f() {{{$}}
+// CHECK-FIXES: void f() {
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 void g() {
@@ -15,7 +15,7 @@ void g() {
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
-// CHECK-FIXES: {{^  }}f();{{$}}
+// CHECK-FIXES: f();
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 void g(int i) {
@@ -40,7 +40,7 @@ void k() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement at the end of loop statement
-// CHECK-FIXES: {{^}}  for (int i = 0; i < 10; ++i) {{{$}}
+// CHECK-FIXES: for (int i = 0; i < 10; ++i) {
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 void k2() {
@@ -50,7 +50,7 @@ void k2() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: {{^}}  for (auto i : v) {{{$}}
+// CHECK-FIXES: for (auto i : v) {
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 void m() {
@@ -62,8 +62,8 @@ void m() {
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
 // CHECK-FIXES: {{^  do {$}}
-// CHECK-FIXES-NEXT: {{^}}    ++i;{{$}}
-// CHECK-FIXES-NEXT: {{^ *}}} while (i < 10);{{$}}
+// CHECK-FIXES-NEXT: ++i;
+// CHECK-FIXES-NEXT: } while (i < 10);
 
 void p() {
   int i = 0;
@@ -73,8 +73,8 @@ void p() {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: {{^}}  while (i < 10) {{{$}}
-// CHECK-FIXES-NEXT: {{^}}    ++i;{{$}}
+// CHECK-FIXES: while (i < 10) {
+// CHECK-FIXES-NEXT: ++i;
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 void im_not_dead(int i) {
@@ -176,7 +176,7 @@ void template_return(T check) {
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
-// CHECK-FIXES: {{^}}  if (check < T(0)) {{{$}}
+// CHECK-FIXES: if (check < T(0)) {
 // CHECK-FIXES-NEXT: {{^    return;$}}
 // CHECK-FIXES-NEXT: {{^ *}$}}
 // CHECK-FIXES-NEXT: {{^ *}$}}
@@ -189,7 +189,7 @@ void template_return(int check) {
   return;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: redundant return statement
-// CHECK-FIXES: {{^}}  if (check < 0) {{{$}}
+// CHECK-FIXES: if (check < 0) {
 // CHECK-FIXES-NEXT: {{^    return;$}}
 // CHECK-FIXES-NEXT: {{^ *}$}}
 // CHECK-FIXES-NEXT: {{^ *}$}}
@@ -201,7 +201,7 @@ void template_loop(T end) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: {{^}}  for (T i = 0; i < end; ++i) {{{$}}
+// CHECK-FIXES: for (T i = 0; i < end; ++i) {
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 template <>
@@ -211,7 +211,7 @@ void template_loop(int end) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: redundant continue statement
-// CHECK-FIXES: {{^}}  for (int i = 0; i < end; ++i) {{{$}}
+// CHECK-FIXES: for (int i = 0; i < end; ++i) {
 // CHECK-FIXES-NEXT: {{^ *}$}}
 
 void call_templates() {

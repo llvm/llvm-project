@@ -11,8 +11,8 @@
 ; allow scheduling of other instructions which reduce RP
 
 ; CHECK-LABEL: {{^}}return_72xi32:
-; GFX11-PAL:    NumSgprs: 0
-; GFX11-PAL-GCNTRACKERS:    NumSgprs: 0
+; GFX11-PAL:    NumSgprs: 33
+; GFX11-PAL-GCNTRACKERS:    NumSgprs: 33
 ; GFX11-PAL:    NumVgprs: 64
 ; GFX11-PAL-GCNTRACKERS:    NumVgprs: 64
 ; GFX11-PAL:    ScratchSize: 220
@@ -73,10 +73,10 @@ define amdgpu_kernel void @constant_zextload_v64i16_to_v64i32(ptr addrspace(1) %
 }
 
 ; CHECK-LABEL: {{^}}excess_soft_clause_reg_pressure:
-; GFX908:    NumSgprs: 64
-; GFX908-GCNTRACKERS:    NumSgprs: 64
+; GFX908:    NumSgprs: 56
+; GFX908-GCNTRACKERS:    NumSgprs: 56
 ; GFX908:    NumVgprs: 43
-; GFX908-GCNTRACKERS:    NumVgprs: 39
+; GFX908-GCNTRACKERS:    NumVgprs: 40
 ; GFX908:    Occupancy: 5
 ; GFX908-GCNTRACKERS:    Occupancy: 6
 

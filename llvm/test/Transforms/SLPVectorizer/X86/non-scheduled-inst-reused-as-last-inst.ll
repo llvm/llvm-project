@@ -6,11 +6,10 @@
 define void @foo() {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 0, i32 0
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, [[BB:%.*]] ], [ [[TMP6:%.*]], [[BB4:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP6]] = or <2 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
@@ -24,11 +23,10 @@ define void @foo() {
 ;
 ; FORCED-LABEL: define void @foo() {
 ; FORCED-NEXT:  bb:
-; FORCED-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 0, i32 0
 ; FORCED-NEXT:    br label [[BB1:%.*]]
 ; FORCED:       bb1:
 ; FORCED-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, [[BB:%.*]] ], [ [[TMP6:%.*]], [[BB4:%.*]] ]
-; FORCED-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], [[TMP0]]
+; FORCED-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], zeroinitializer
 ; FORCED-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; FORCED-NEXT:    [[TMP6]] = or <2 x i32> [[TMP5]], zeroinitializer
 ; FORCED-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0

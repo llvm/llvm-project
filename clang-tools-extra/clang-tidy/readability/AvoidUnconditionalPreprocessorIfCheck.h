@@ -1,4 +1,4 @@
-//===--- AvoidUnconditionalPreprocessorIfCheck.h - clang-tidy ---*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// directives by analyzing `#if` conditions, such as `#if 0` and `#if 1`, etc.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-unconditional-preprocessor-if.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/avoid-unconditional-preprocessor-if.html
 class AvoidUnconditionalPreprocessorIfCheck : public ClangTidyCheck {
 public:
   AvoidUnconditionalPreprocessorIfCheck(StringRef Name,

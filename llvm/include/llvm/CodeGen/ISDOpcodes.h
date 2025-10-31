@@ -514,6 +514,12 @@ enum NodeType {
   /// separately rounded operations.
   FMAD,
 
+  /// FMULADD - Performs a * b + c, with, or without, intermediate rounding.
+  /// It is expected that this will be illegal for most targets, as it usually
+  /// makes sense to split this or use an FMA. But some targets, such as
+  /// WebAssembly, can directly support these semantics.
+  FMULADD,
+
   /// FCOPYSIGN(X, Y) - Return the value of X with the sign of Y.  NOTE: This
   /// DAG node does not require that X and Y have the same type, just that
   /// they are both floating point.  X and the result must have the same type.
@@ -1493,8 +1499,9 @@ enum NodeType {
   VECREDUCE_UMIN,
 
   // PARTIAL_REDUCE_[U|S]MLA(Accumulator, Input1, Input2)
-  // The partial reduction nodes sign or zero extend Input1 and Input2 to the
-  // element type of Accumulator before multiplying their results.
+  // The partial reduction nodes sign or zero extend Input1 and Input2
+  // (with the extension kind noted below) to the element type of
+  // Accumulator before multiplying their results.
   // This result is concatenated to the Accumulator, and this is then reduced,
   // using addition, to the result type.
   // The output is only expected to either be given to another partial reduction
@@ -1506,8 +1513,9 @@ enum NodeType {
   // multiple of the number of elements in the Accumulator / output type.
   // Input1 and Input2 must have an element type which is the same as or smaller
   // than the element type of the Accumulator and output.
-  PARTIAL_REDUCE_SMLA,
-  PARTIAL_REDUCE_UMLA,
+  PARTIAL_REDUCE_SMLA,  // sext, sext
+  PARTIAL_REDUCE_UMLA,  // zext, zext
+  PARTIAL_REDUCE_SUMLA, // sext, zext
 
   // The `llvm.experimental.stackmap` intrinsic.
   // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
@@ -1555,6 +1563,12 @@ enum NodeType {
   // node supports result types which are wider than i1, where the high
   // bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
+
+  // The `llvm.loop.dependence.{war, raw}.mask` intrinsics
+  // Operands: Load pointer, Store pointer, Element size
+  // Output: Mask
+  LOOP_DEPENDENCE_WAR_MASK,
+  LOOP_DEPENDENCE_RAW_MASK,
 
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address

@@ -24,3 +24,12 @@ void check_ReadWriteStatusReg(int v) {
   _ReadStatusReg(x); // expected-error {{argument to '_ReadStatusReg' must be a constant integer}}
   _WriteStatusReg(x, v); // expected-error {{argument to '_WriteStatusReg' must be a constant integer}}
 }
+
+void check__sys(int v) {
+  int x;
+  __sys(x, v); // expected-error {{argument to '__sys' must be a constant integer}}
+}
+
+unsigned int check__sys_retval() {
+  return __sys(0, 1); // builtin has superfluous return value for MSVC compatibility
+}

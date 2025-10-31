@@ -159,6 +159,17 @@ public:
 
   lldb::TargetSP FindTargetWithProcess(lldb_private::Process *process) const;
 
+  /// Find the target that has a globally unique ID that matches ID \a id.
+  ///
+  /// \param[in] id
+  ///     The globally unique target ID to search our target list for.
+  ///
+  /// \return
+  ///     A shared pointer to a target object. The returned shared
+  ///     pointer will contain nullptr if no target objects has a
+  ///     matching target ID.
+  lldb::TargetSP FindTargetByGloballyUniqueID(lldb::user_id_t id) const;
+
   lldb::TargetSP GetTargetSP(Target *target) const;
 
   /// Send an async interrupt to one or all processes.
