@@ -76,7 +76,7 @@ stages:
           displayName: 'Run python helloworld'
 
         - bash: |
-            ./build.sh --ci --restore --build --pack $(archflag) --configuration $(_BuildConfig) $(_InternalBuildArgs) $(ClangBinDirArg) $(ClangTargetArg) $(ExtraArgs)
+            ./build.sh --ci --restore --build --pack $(archflag) --configuration $(_BuildConfig) $(_InternalBuildArgs) $(ClangBinDirArg) $(ClangTargetArg) $(ExtraArgs) /p:BuildJitToolsOnly=true
           displayName: 'Build and package'
           env:
             ROOTFS_DIR: $(rootfs)
