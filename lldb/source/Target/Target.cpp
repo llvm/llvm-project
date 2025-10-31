@@ -3992,6 +3992,7 @@ void Target::StopHook::GetDescription(Stream &s,
     s.SetIndentLevel(indent_level + 2);
   }
   GetSubclassDescription(s, level);
+  s.SetIndentLevel(indent_level);
 }
 
 void Target::StopHookCommandLine::GetSubclassDescription(
@@ -4002,7 +4003,7 @@ void Target::StopHookCommandLine::GetSubclassDescription(
       s.PutCString(m_commands.GetStringAtIndex(0));
     return;
   }
-  s.Indent("Commands: \n");
+  s.Indent("Commands:\n");
   s.SetIndentLevel(s.GetIndentLevel() + 4);
   uint32_t num_commands = m_commands.GetSize();
   for (uint32_t i = 0; i < num_commands; i++) {
