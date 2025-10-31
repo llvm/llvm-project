@@ -1866,15 +1866,10 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // If either of the blocks has it's address taken, then we can't do this fold,
   // because the code we'd hoist would no longer run when we jump into the block
   // by it's address.
-  SmallVector<BasicBlock *, 4> UniqSuccessors;
-  UniqSuccessors.reserve(BB->getTerminator()->getNumSuccessors());
-  for (auto *Succ : successors(BB)) {
+  SmallSetVector<BasicBlock *, 4> UniqueSuccessors(from_range, successors(BB));
+  for (auto *Succ : UniqueSuccessors) {
     if (Succ->hasAddressTaken())
       return false;
-    // Collect all unique successors, using vec instead of set to preserve
-    // order.
-    if (find(UniqSuccessors, Succ) == UniqSuccessors.end())
-      UniqSuccessors.push_back(Succ);
     // Use getUniquePredecessor instead of getSinglePredecessor to support
     // multi-cases successors in switch.
     if (Succ->getUniquePredecessor())
@@ -1890,7 +1885,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
-  for (auto *Succ : UniqSuccessors) {
+  for (auto *Succ : UniqueSuccessors) {
     BasicBlock::iterator SuccItr = Succ->begin();
     if (isa<PHINode>(*SuccItr))
       return false;
@@ -1903,17 +1898,17 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // so does not add any new instructions.
 
     // Check if sizes and terminators of all successors match.
-    bool AllSame = none_of(UniqSuccessors, [&UniqSuccessors](BasicBlock *Succ) {
-      Instruction *Term0 = UniqSuccessors[0]->getTerminator();
+    bool AllSame = none_of(UniqueSuccessors, [&UniqueSuccessors](BasicBlock *Succ) {
+      Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
       Instruction *Term = Succ->getTerminator();
       return !Term->isSameOperationAs(Term0) ||
              !equal(Term->operands(), Term0->operands()) ||
-             UniqSuccessors[0]->size() != Succ->size();
+             UniqueSuccessors[0]->size() != Succ->size();
     });
     if (!AllSame)
       return false;
     if (AllSame) {
-      LockstepReverseIterator<true> LRI(UniqSuccessors);
+      LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
       while (LRI.isValid()) {
         Instruction *I0 = (*LRI)[0];
         if (any_of(*LRI, [I0](Instruction *I) {
