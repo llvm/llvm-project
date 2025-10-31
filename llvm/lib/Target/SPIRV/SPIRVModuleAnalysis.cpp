@@ -2183,8 +2183,7 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
     if (F.getMetadata("max_work_group_size"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
-          SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL,
-          ST);
+          SPIRV::ExecutionMode::MaxWorkgroupSizeINTEL, ST);
     if (F.getMetadata("vec_type_hint"))
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
