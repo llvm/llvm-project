@@ -85,7 +85,7 @@ public:
   exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
   _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(exception_ptr&& __other) _NOEXCEPT {
     exception_ptr __tmp(std::move(__other));
-    swap(__tmp, *this);
+    std::swap(__tmp, *this);
     return *this;
   }
   ~exception_ptr() _NOEXCEPT;

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: no-exceptions
+
 // <exception>
 
 // typedef unspecified exception_ptr;
@@ -18,22 +20,21 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::exception_ptr p21 = std::make_exception_ptr(42);
-    std::exception_ptr p42 = std::make_exception_ptr(21);
-    std::swap(p42, p21);
+int main(int, char**) {
+  std::exception_ptr p21 = std::make_exception_ptr(42);
+  std::exception_ptr p42 = std::make_exception_ptr(21);
+  std::swap(p42, p21);
 
-    try {
-        std::rethrow_exception(p21);
-    } catch (int e) {
-        assert(e == 21);
-    }
-    try {
-        std::rethrow_exception(p42);
-    } catch (int e) {
-        assert(e == 42);
-    }
+  try {
+    std::rethrow_exception(p21);
+  } catch (int e) {
+    assert(e == 21);
+  }
+  try {
+    std::rethrow_exception(p42);
+  } catch (int e) {
+    assert(e == 42);
+  }
 
-    return 0;
+  return 0;
 }
