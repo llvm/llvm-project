@@ -5,32 +5,44 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
-#include "Dataflow.h"
-#include "llvm/ADT/BitVector.h"
-#include "llvm/Support/TimeProfiler.h"
+#include <cassert>
 #include <memory>
+
+#include "Dataflow.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/CFG.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::lifetimes::internal {
 
-// Pre-pass to find persistent origins. An origin is persistent if it is
+// Prepass to find persistent origins. An origin is persistent if it is
 // referenced in more than one basic block.
-static llvm::BitVector computePersistentOrigins(FactManager &FactMgr,
+static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
                                                 const CFG &C) {
   llvm::TimeTraceScope("ComputePersistentOrigins");
-  llvm::BitVector PersistentOrigins(FactMgr.getOriginMgr().getOrigins().size() +
-                                    1);
+  unsigned NumOrigins = FactMgr.getOriginMgr().getNumOrigins();
+  llvm::BitVector PersistentOrigins(NumOrigins);
 
-  llvm::DenseMap<OriginID, const CFGBlock *> OriginToBlock;
+  llvm::SmallVector<const CFGBlock *> OriginToFirstSeenBlock(NumOrigins,
+                                                             nullptr);
   for (const CFGBlock *B : C) {
     for (const Fact *F : FactMgr.getFacts(B)) {
       auto CheckOrigin = [&](OriginID OID) {
         if (PersistentOrigins.test(OID.Value))
           return;
-        auto It = OriginToBlock.find(OID);
-        if (It == OriginToBlock.end())
-          OriginToBlock[OID] = B;
-        else if (It->second != B) {
+        auto &FirstSeenBlock = OriginToFirstSeenBlock[OID.Value];
+        if (FirstSeenBlock == nullptr)
+          FirstSeenBlock = B;
+        if (FirstSeenBlock != B) {
           // We saw this origin in more than one block.
           PersistentOrigins.set(OID.Value);
         }
@@ -50,7 +62,7 @@ static llvm::BitVector computePersistentOrigins(FactManager &FactMgr,
         CheckOrigin(F->getAs<ReturnOfOriginFact>()->getReturnedOriginID());
         break;
       case Fact::Kind::Use:
-        CheckOrigin(F->getAs<UseFact>()->getUsedOrigin(FactMgr.getOriginMgr()));
+        CheckOrigin(F->getAs<UseFact>()->getUsedOrigin());
         break;
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
@@ -195,9 +207,9 @@ private:
 
   OriginLoanMap::Factory &OriginLoanMapFactory;
   LoanSet::Factory &LoanSetFactory;
-  /// Origins that appear in multiple basic blocks and must participate in join
-  /// operations. Origins not in this set are block-local and can be discarded
-  /// at block boundaries.
+  /// Boolean vector indexed by origin ID. If true, the origin appears in
+  /// multiple basic blocks and must participate in join operations. If false,
+  /// the origin is block-local and can be discarded at block boundaries.
   llvm::BitVector PersistentOrigins;
 };
 } // namespace
