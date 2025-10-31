@@ -653,8 +653,18 @@ TEST_F(FormatTestComments, CommentSpacesAlwaysAtBothEnds) {
                "next*/",
                Style);
   verifyFormat("/* */", "/* */", Style);
-  verifyFormat("/*\n*/", "/*\n*/", Style);
-  verifyFormat("/*\n\n*/", "/*\n \n*/", Style);
+  verifyFormat("/*\n"
+               "*/",
+               "/*\n"
+               "*/",
+               Style);
+  verifyFormat("/*\n"
+               "\n"
+               "*/",
+               "/*\n"
+               " \n"
+               "*/",
+               Style);
   verifyFormat("/* This is a multi line comment\n"
                "this is the next line\n"
                "and this is the 3th line. */",
