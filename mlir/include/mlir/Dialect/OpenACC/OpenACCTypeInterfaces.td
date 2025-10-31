@@ -261,6 +261,18 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+        Returns true if the dimensions of this type are not known. This occurs
+        when the MLIR type does not encode dimensional information and there is
+        no associated descriptor or metadata in the current entity that would
+        make this information extractable. For example, an opaque pointer type
+        pointing to an array without dimension information would have unknown
+        dimensions.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasUnknownDimensions"
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Returns explicit `acc.bounds` operations that envelop the whole
         data structure. These operations are inserted using the provided builder
         at the location set before calling this API.

@@ -26,6 +26,7 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/JSONTransport.h"
@@ -1103,9 +1104,11 @@ llvm::Error DAP::Loop() {
                                      "unhandled packet");
   }
 
-  m_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); });
-  thread.join();
+  // Don't wait to join the mainloop thread if our callback wasn't added
+  // successfully, or we'll wait forever.
+  if (m_loop.AddPendingCallback(
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+    thread.join();
 
   if (m_error_occurred)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -1452,7 +1455,11 @@ void DAP::EventThread() {
           const bool remove_module =
               event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded;
 
-          std::lock_guard<std::mutex> guard(modules_mutex);
+          // NOTE: Both mutexes must be acquired to prevent deadlock when
+          // handling `modules_request`, which also requires both locks.
+          lldb::SBMutex api_mutex = GetAPIMutex();
+          const std::scoped_lock<lldb::SBMutex, std::mutex> guard(
+              api_mutex, modules_mutex);
           for (uint32_t i = 0; i < num_modules; ++i) {
             lldb::SBModule module =
                 lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
