@@ -46,6 +46,7 @@
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -530,6 +531,7 @@ private:
     DK_LTO_SET_CONDITIONAL,
     DK_CFI_MTE_TAGGED_FRAME,
     DK_MEMTAG,
+    DK_BASE64,
     DK_END
   };
 
@@ -552,6 +554,7 @@ private:
 
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
+  bool parseDirectiveBase64();                  // ".base64"
   bool parseDirectiveReloc(SMLoc DirectiveLoc); // ".reloc"
   bool parseDirectiveValue(StringRef IDVal,
                            unsigned Size);       // ".byte", ".long", ...
@@ -1953,6 +1956,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_ASCIZ:
     case DK_STRING:
       return parseDirectiveAscii(IDVal, true);
+    case DK_BASE64:
+      return parseDirectiveBase64();
     case DK_BYTE:
     case DK_DC_B:
       return parseDirectiveValue(IDVal, 1);
@@ -3074,6 +3079,25 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
   };
 
   return parseMany(parseOp);
+}
+
+/// parseDirectiveBase64:
+//    ::= .base64 "string"
+bool AsmParser::parseDirectiveBase64() {
+  if (checkForValidSection() ||
+      check(getTok().isNot(AsmToken::String), "expected string")) {
+    return true;
+  }
+
+  std::vector<char> Decoded;
+  std::string const str = getTok().getStringContents().str();
+  if (str.empty() || decodeBase64(str, Decoded)) {
+    return true;
+  }
+
+  getStreamer().emitBytes(std::string(Decoded.begin(), Decoded.end()));
+  Lex();
+  return false;
 }
 
 /// parseDirectiveReloc
@@ -5345,6 +5369,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".asciz"] = DK_ASCIZ;
   DirectiveKindMap[".string"] = DK_STRING;
   DirectiveKindMap[".byte"] = DK_BYTE;
+  DirectiveKindMap[".base64"] = DK_BASE64;
   DirectiveKindMap[".short"] = DK_SHORT;
   DirectiveKindMap[".value"] = DK_VALUE;
   DirectiveKindMap[".2byte"] = DK_2BYTE;
