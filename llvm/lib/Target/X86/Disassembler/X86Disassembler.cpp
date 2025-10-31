@@ -810,10 +810,6 @@ static int readModRM(struct InternalInstruction *insn) {
       if (index > 7)                                                           \
         *valid = 0;                                                            \
       return prefix##_TMM0 + index;                                            \
-    case TYPE_TMM_PAIR:                                                        \
-      if (index > 7)                                                           \
-        *valid = 0;                                                            \
-      return prefix##_TMM0_TMM1 + (index / 2);                                 \
     case TYPE_VK:                                                              \
       index &= 0xf;                                                            \
       if (index > 7)                                                           \
@@ -2323,7 +2319,6 @@ static bool translateRM(MCInst &mcInst, const OperandSpecifier &operand,
   case TYPE_YMM:
   case TYPE_ZMM:
   case TYPE_TMM:
-  case TYPE_TMM_PAIR:
   case TYPE_VK_PAIR:
   case TYPE_VK:
   case TYPE_DEBUGREG:

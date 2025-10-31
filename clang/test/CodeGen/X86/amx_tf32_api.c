@@ -18,10 +18,3 @@ void test_tile_mmultf32ps(__tile1024i a, __tile1024i b, __tile1024i c) {
   __tile_mmultf32ps(&c, a, b);
 }
 
-void test_tile_tmmultf32ps(__tile1024i a, __tile1024i b, __tile1024i c) {
-  //CHECK-LABEL: @test_tile_tmmultf32ps
-  //CHECK-DAG: call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> {{%.*}})
-  //CHECK-DAG: call x86_amx @llvm.x86.ttmmultf32ps.internal
-  //CHECK-DAG: call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx {{%.*}})
-  __tile_tmmultf32ps(&c, a, b);
-}

@@ -77,14 +77,14 @@ INITIALIZE_PASS_BEGIN(X86FastTileConfig, DEBUG_TYPE,
 INITIALIZE_PASS_END(X86FastTileConfig, DEBUG_TYPE,
                     "Fast Tile Register Configure", false, false)
 
-static unsigned getNumDefTiles(MachineRegisterInfo *MRI, MachineInstr &MI) {
+static bool isTileDef(MachineRegisterInfo *MRI, MachineInstr &MI) {
   // There is no phi instruction after register allocation.
   assert(MI.isPHI() == false);
   // The instruction must have 3 operands: tile def, row, col.
   // It should be AMX pseudo instruction that have shape operand.
   if (MI.isDebugInstr() || MI.isCopy() || MI.getNumOperands() < 3 ||
       !MI.isPseudo())
-    return 0;
+    return false;
   MachineOperand &MO = MI.getOperand(0);
 
   if (MO.isReg()) {
@@ -93,24 +93,18 @@ static unsigned getNumDefTiles(MachineRegisterInfo *MRI, MachineInstr &MI) {
     // register is not rewritten yet.
     if (Reg.isVirtual()) {
       if (MRI->getRegClass(Reg)->getID() == X86::TILERegClassID)
-        return 1;
-      if (MRI->getRegClass(Reg)->getID() == X86::TILEPAIRRegClassID)
-        return 2;
+        return true;
     }
     if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
-      return 1;
-    if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-      return 2;
+      return true;
   }
 
-  return 0;
+  return false;
 }
 
 static unsigned getTMMIndex(Register Reg) {
   if (Reg >= X86::TMM0 && Reg <= X86::TMM7)
     return Reg - X86::TMM0;
-  if (Reg >= X86::TMM0_TMM1 && Reg <= X86::TMM6_TMM7)
-    return (Reg - X86::TMM0_TMM1) * 2;
   llvm_unreachable("Invalid Tmm Reg!");
 }
 
@@ -120,17 +114,14 @@ bool X86FastTileConfig::configBasicBlock(MachineBasicBlock &MBB) {
   bool Change = false;
   SmallVector<std::pair<unsigned, ShapeT>, 6> ShapeInfos;
   for (MachineInstr &MI : reverse(MBB)) {
-    unsigned DefNum = getNumDefTiles(MRI, MI);
-    if (DefNum == 0 && MI.getOpcode() != X86::PLDTILECFGV)
+    if (!isTileDef(MRI, MI) && MI.getOpcode() != X86::PLDTILECFGV)
       continue;
     // AMX instructions that define tile register.
     if (MI.getOpcode() != X86::PLDTILECFGV) {
       MachineOperand &Row = MI.getOperand(1);
       unsigned TMMIdx = getTMMIndex(MI.getOperand(0).getReg());
-      for (unsigned I = 0; I < DefNum; I++) {
-        MachineOperand &Col = MI.getOperand(2 + I);
-        ShapeInfos.push_back({TMMIdx + I, ShapeT(&Row, &Col)});
-      }
+      MachineOperand &Col = MI.getOperand(2);
+      ShapeInfos.push_back({TMMIdx, ShapeT(&Row, &Col)});
     } else { // PLDTILECFGV
       // Rewrite the shape information to memory. Stack slot should have
       // been initialized to zero in pre config.
