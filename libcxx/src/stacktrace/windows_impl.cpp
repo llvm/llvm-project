@@ -10,12 +10,14 @@
 
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
-
-#  include <cstring>
+//
 #  include <dbghelp.h>
-#  include <mutex>
 #  include <psapi.h>
-#  include <stacktrace>
+//
+#  include <__stacktrace/basic_stacktrace.h>
+#  include <__stacktrace/stacktrace_entry.h>
+#  include <cstring>
+#  include <mutex>
 
 #  if defined(_MSC_VER)
 #    pragma comment(lib, "dbghelp")
@@ -50,7 +52,7 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
   std::lock_guard<std::mutex> api_guard(api_mutex);
 
   HANDLE proc = GetCurrentProcess();
-  HMODULE exe = GetModuleHandle(nullptr);
+  HMODULE exe = GetModuleHandleA(nullptr);
   if (!exe) {
     return;
   }
@@ -160,12 +162,19 @@ _LIBCPP_EXPORTED_FROM_ABI void _Trace::windows_impl(size_t skip, size_t max_dept
     return;
   }
 
+  // https://learn.microsoft.com/en-us/cpp/build/reference/h-restrict-length-of-external-names
+  constexpr static size_t __max_sym_len = 2047;
+
   for (_Entry& entry : __entry_iters_()) {
-    char space[sizeof(IMAGEHLP_SYMBOL) + _Entry::__max_sym_len + 1];
+    char space[sizeof(IMAGEHLP_SYMBOL) + __max_sym_len + 1];
     IMAGEHLP_SYMBOL* sym = reinterpret_cast<IMAGEHLP_SYMBOL*>(space);
     sym->SizeOfStruct    = sizeof(IMAGEHLP_SYMBOL);
-    sym->MaxNameLength   = _Entry::__max_sym_len;
-    DWORD symdisp{0};
+    sym->MaxNameLength   = __max_sym_len;
+#  if defined(_WIN64)
+    DWORD64 symdisp;
+#  else
+    DWORD32 symdisp;
+#  endif
     DWORD linedisp{0};
     IMAGEHLP_LINE line;
     if (SymGetSymFromAddr(proc, entry.__addr_, &symdisp, sym)) {

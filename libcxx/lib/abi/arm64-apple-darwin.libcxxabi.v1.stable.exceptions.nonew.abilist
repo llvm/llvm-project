@@ -413,8 +413,10 @@
 {'is_defined': True, 'name': '__ZNKSt3__110moneypunctIwLb1EE16do_negative_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__110moneypunctIwLb1EE16do_positive_signEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__110moneypunctIwLb1EE16do_thousands_sepEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__112__stacktrace6_Entry4hashEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112__stacktrace6_Entry8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112__stacktrace6_Entry9to_stringEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__112__stacktrace6_Trace4hashEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112__stacktrace6_Trace8write_toERNS_13basic_ostreamIcNS_11char_traitsIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112__stacktrace6_Trace9to_stringEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__112bad_weak_ptr4whatEv', 'type': 'FUNC'}
