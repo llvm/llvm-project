@@ -285,7 +285,15 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
 
     // Fill remaining bytes with 0. This will only get hit in partially
     // specified test cases.
-    auto BytesRemaining = LC.Data.load_command_data.cmdsize - BytesWritten;
+    // Prevent integer underflow if BytesWritten exceeds cmdsize.
+    if (BytesWritten > LC.Data.load_command_data.cmdsize) {
+      errs() << "warning: load command " << LC.Data.load_command_data.cmd
+             << " cmdsize too small (" << LC.Data.load_command_data.cmdsize
+             << " bytes) for actual size (" << BytesWritten << " bytes)\n";
+    }
+    auto BytesRemaining = (BytesWritten < LC.Data.load_command_data.cmdsize)
+                              ? LC.Data.load_command_data.cmdsize - BytesWritten
+                              : 0;
     if (BytesRemaining > 0) {
       ZeroFillBytes(OS, BytesRemaining);
     }
