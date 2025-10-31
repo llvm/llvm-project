@@ -3729,7 +3729,6 @@ cc_library(
         ":XeGPUAttrInterfaceIncGen",
         ":XeGPUEnumsIncGen",
         ":XeGPUIncGen",
-        ":XeGPUUtils",
         ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",

@@ -517,8 +517,11 @@ Instrumentation/TypeSanitizer/alloca-only.ll
 Instrumentation/TypeSanitizer/anon.ll
 Instrumentation/TypeSanitizer/basic.ll
 Instrumentation/TypeSanitizer/basic-nosan.ll
+Instrumentation/TypeSanitizer/basic_outlined.ll
+Instrumentation/TypeSanitizer/basic_verify_outlined.ll
 Instrumentation/TypeSanitizer/byval.ll
 Instrumentation/TypeSanitizer/globals.ll
+Instrumentation/TypeSanitizer/globals_outlined.ll
 Instrumentation/TypeSanitizer/invalid-metadata.ll
 Instrumentation/TypeSanitizer/memintrinsics.ll
 Instrumentation/TypeSanitizer/nosanitize.ll
@@ -729,6 +732,7 @@ Transforms/ExpandVariadics/expand-va-intrinsic-split-simple.ll
 Transforms/ExpandVariadics/intrinsics.ll
 Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
+Transforms/FixIrreducible/callbr.ll
 Transforms/FixIrreducible/nested.ll
 Transforms/FixIrreducible/switch.ll
 Transforms/GCOVProfiling/atomic-counter.ll
@@ -1106,6 +1110,7 @@ Transforms/LoopSimplifyCFG/update_parents.ll
 Transforms/LoopUnroll/peel-last-iteration-expansion-cost.ll
 Transforms/LoopUnroll/peel-last-iteration-with-guards.ll
 Transforms/LoopUnroll/peel-last-iteration-with-variable-trip-count.ll
+Transforms/LoopUnroll/runtime-loop-multiple-exits.ll
 Transforms/LoopVersioning/add-phi-update-users.ll
 Transforms/LoopVersioning/basic.ll
 Transforms/LoopVersioning/bound-check-partially-known.ll
