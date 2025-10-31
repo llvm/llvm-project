@@ -1029,144 +1029,46 @@ define i1 @complement_cmpz_i128(ptr %word, i32 %position) nounwind {
 define i32 @reset_multiload_i128(ptr %word, i32 %position, ptr %p) nounwind {
 ; X86-LABEL: reset_multiload_i128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    movl 12(%ebp), %ecx
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $1, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrb $3, %al
-; X86-NEXT:    andb $12, %al
-; X86-NEXT:    negb %al
-; X86-NEXT:    movsbl %al, %eax
-; X86-NEXT:    movl 40(%esp,%eax), %edx
-; X86-NEXT:    movl 44(%esp,%eax), %esi
-; X86-NEXT:    shldl %cl, %edx, %esi
-; X86-NEXT:    movl 32(%esp,%eax), %edi
-; X86-NEXT:    movl 36(%esp,%eax), %ebx
-; X86-NEXT:    shldl %cl, %ebx, %edx
-; X86-NEXT:    shldl %cl, %edi, %ebx
-; X86-NEXT:    notl %ebx
-; X86-NEXT:    movl 16(%ebp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl (%eax), %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    andl %ebx, 4(%eax)
-; X86-NEXT:    shll %cl, %edi
-; X86-NEXT:    notl %edi
-; X86-NEXT:    movl %ecx, %ebx
-; X86-NEXT:    andl $96, %ebx
-; X86-NEXT:    shrl $3, %ebx
-; X86-NEXT:    movl (%eax,%ebx), %ebx
-; X86-NEXT:    andl %edi, (%eax)
-; X86-NEXT:    notl %esi
-; X86-NEXT:    andl %esi, 12(%eax)
-; X86-NEXT:    notl %edx
-; X86-NEXT:    andl %edx, 8(%eax)
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    btl %ecx, %ebx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    andl $96, %esi
+; X86-NEXT:    shrl $3, %esi
+; X86-NEXT:    movl (%ecx,%esi), %edi
+; X86-NEXT:    movl %edi, %ebx
+; X86-NEXT:    btrl %edx, %ebx
+; X86-NEXT:    btl %edx, %edi
+; X86-NEXT:    movl %ebx, (%ecx,%esi)
 ; X86-NEXT:    jae .LBB22_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB22_2:
-; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl
 ;
-; SSE-LABEL: reset_multiload_i128:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movl %esi, %ecx
-; SSE-NEXT:    movl $1, %esi
-; SSE-NEXT:    xorl %r8d, %r8d
-; SSE-NEXT:    shldq %cl, %rsi, %r8
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    shlq %cl, %rsi
-; SSE-NEXT:    testb $64, %cl
-; SSE-NEXT:    cmovneq %rsi, %r8
-; SSE-NEXT:    cmovneq %rax, %rsi
-; SSE-NEXT:    notq %r8
-; SSE-NEXT:    notq %rsi
-; SSE-NEXT:    movl %ecx, %r9d
-; SSE-NEXT:    andl $96, %r9d
-; SSE-NEXT:    shrl $3, %r9d
-; SSE-NEXT:    movl (%rdi,%r9), %r9d
-; SSE-NEXT:    btl %ecx, %r9d
-; SSE-NEXT:    jb .LBB22_2
-; SSE-NEXT:  # %bb.1:
-; SSE-NEXT:    movl (%rdx), %eax
-; SSE-NEXT:  .LBB22_2:
-; SSE-NEXT:    andq %rsi, (%rdi)
-; SSE-NEXT:    andq %r8, 8(%rdi)
-; SSE-NEXT:    # kill: def $eax killed $eax killed $rax
-; SSE-NEXT:    retq
-;
-; AVX2-LABEL: reset_multiload_i128:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    movl %esi, %ecx
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    movl $1, %r8d
-; AVX2-NEXT:    xorl %esi, %esi
-; AVX2-NEXT:    shldq %cl, %r8, %rsi
-; AVX2-NEXT:    shlxq %rcx, %r8, %r8
-; AVX2-NEXT:    testb $64, %cl
-; AVX2-NEXT:    cmovneq %r8, %rsi
-; AVX2-NEXT:    cmovneq %rax, %r8
-; AVX2-NEXT:    notq %rsi
-; AVX2-NEXT:    notq %r8
-; AVX2-NEXT:    movl %ecx, %r9d
-; AVX2-NEXT:    andl $96, %r9d
-; AVX2-NEXT:    shrl $3, %r9d
-; AVX2-NEXT:    movl (%rdi,%r9), %r9d
-; AVX2-NEXT:    btl %ecx, %r9d
-; AVX2-NEXT:    jb .LBB22_2
-; AVX2-NEXT:  # %bb.1:
-; AVX2-NEXT:    movl (%rdx), %eax
-; AVX2-NEXT:  .LBB22_2:
-; AVX2-NEXT:    andq %r8, (%rdi)
-; AVX2-NEXT:    andq %rsi, 8(%rdi)
-; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: reset_multiload_i128:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    movl %esi, %ecx
-; AVX512-NEXT:    movl $1, %r8d
-; AVX512-NEXT:    xorl %esi, %esi
-; AVX512-NEXT:    shldq %cl, %r8, %rsi
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    shlxq %rcx, %r8, %r8
-; AVX512-NEXT:    testb $64, %cl
-; AVX512-NEXT:    cmovneq %r8, %rsi
-; AVX512-NEXT:    cmovneq %rax, %r8
-; AVX512-NEXT:    notq %rsi
-; AVX512-NEXT:    notq %r8
-; AVX512-NEXT:    movl %ecx, %r9d
-; AVX512-NEXT:    andl $96, %r9d
-; AVX512-NEXT:    shrl $3, %r9d
-; AVX512-NEXT:    movl (%rdi,%r9), %r9d
-; AVX512-NEXT:    btl %ecx, %r9d
-; AVX512-NEXT:    jb .LBB22_2
-; AVX512-NEXT:  # %bb.1:
-; AVX512-NEXT:    movl (%rdx), %eax
-; AVX512-NEXT:  .LBB22_2:
-; AVX512-NEXT:    andq %r8, (%rdi)
-; AVX512-NEXT:    andq %rsi, 8(%rdi)
-; AVX512-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX512-NEXT:    retq
+; X64-LABEL: reset_multiload_i128:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    andl $96, %ecx
+; X64-NEXT:    shrl $3, %ecx
+; X64-NEXT:    movl (%rdi,%rcx), %r9d
+; X64-NEXT:    movl %r9d, %r8d
+; X64-NEXT:    btrl %esi, %r8d
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    btl %esi, %r9d
+; X64-NEXT:    jb .LBB22_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    movl (%rdx), %eax
+; X64-NEXT:  .LBB22_2:
+; X64-NEXT:    movl %r8d, (%rdi,%rcx)
+; X64-NEXT:    retq
   %rem = and i32 %position, 127
   %ofs = zext nneg i32 %rem to i128
   %bit = shl nuw i128 1, %ofs
