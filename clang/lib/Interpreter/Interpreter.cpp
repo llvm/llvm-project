@@ -421,9 +421,6 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
-  llvm::Error Err = llvm::Error::success();
-
-  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
   if (Config.IsOutOfProcess) {
     const TargetInfo &TI = CI->getTarget();
@@ -452,6 +449,9 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
       Config.OrcRuntimePath = *OrcRuntimePathOrErr;
     }
   }
+
+  llvm::Error Err = llvm::Error::success();
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
   auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
       std::move(CI), Err, std::move(JB), /*Consumer=*/nullptr, Config));
