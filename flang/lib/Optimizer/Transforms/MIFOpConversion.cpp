@@ -100,6 +100,102 @@ struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
   }
 };
 
+static fir::CallOp genPRIFStopErrorStop(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value quiet,
+                                        mlir::Value stopCode,
+                                        bool isError = false) {
+  mlir::Type stopCharTy = fir::BoxCharType::get(builder.getContext(), 1);
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type i32Ty = builder.getI32Type();
+
+  mlir::FunctionType ftype = mlir::FunctionType::get(
+      builder.getContext(),
+      /*inputs*/
+      {builder.getRefType(i1Ty), builder.getRefType(i32Ty), stopCharTy},
+      /*results*/ {});
+  mlir::func::FuncOp funcOp =
+      isError
+          ? builder.createFunction(loc, getPRIFProcName("error_stop"), ftype)
+          : builder.createFunction(loc, getPRIFProcName("stop"), ftype);
+
+  // Default value of QUIET to false
+  mlir::Value q;
+  if (!quiet) {
+    q = builder.createBool(loc, false);
+    quiet = builder.createTemporary(loc, i1Ty);
+  } else {
+    q = quiet;
+    if (q.getType() != i1Ty)
+      q = fir::ConvertOp::create(builder, loc, i1Ty, q);
+    quiet = builder.createTemporary(loc, i1Ty);
+  }
+  fir::StoreOp::create(builder, loc, q, quiet);
+
+  mlir::Value stopCodeInt, stopCodeChar;
+  if (!stopCode) {
+    stopCodeChar = fir::AbsentOp::create(builder, loc, stopCharTy);
+    stopCodeInt =
+        fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
+  } else if (fir::isa_integer(stopCode.getType())) {
+    stopCodeChar = fir::AbsentOp::create(builder, loc, stopCharTy);
+    stopCodeInt = builder.createTemporary(loc, i32Ty);
+    if (stopCode.getType() != i32Ty)
+      stopCode = fir::ConvertOp::create(builder, loc, i32Ty, stopCode);
+    fir::StoreOp::create(builder, loc, stopCode, stopCodeInt);
+  } else {
+    stopCodeChar = stopCode;
+    if (!mlir::isa<fir::BoxCharType>(stopCodeChar.getType())) {
+      auto len =
+          fir::UndefOp::create(builder, loc, builder.getCharacterLengthType());
+      stopCodeChar =
+          fir::EmboxCharOp::create(builder, loc, stopCharTy, stopCodeChar, len);
+    }
+    stopCodeInt =
+        fir::AbsentOp::create(builder, loc, builder.getRefType(i32Ty));
+  }
+
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, ftype, quiet, stopCodeInt, stopCodeChar);
+  return fir::CallOp::create(builder, loc, funcOp, args);
+}
+
+/// Convert mif.stop operation to runtime call of 'prif_stop'
+struct MIFStopOpConversion : public mlir::OpRewritePattern<mif::StopOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::StopOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+
+    fir::CallOp callOp =
+        genPRIFStopErrorStop(builder, loc, op.getQuiet(), op.getStopCode());
+    rewriter.replaceOp(op, callOp);
+    return mlir::success();
+  }
+};
+
+/// Convert mif.error_stop operation to runtime call of 'prif_error_stop'
+struct MIFErrorStopOpConversion
+    : public mlir::OpRewritePattern<mif::ErrorStopOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::ErrorStopOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+
+    fir::CallOp callOp = genPRIFStopErrorStop(
+        builder, loc, op.getQuiet(), op.getStopCode(), /*isError*/ true);
+    rewriter.replaceOp(op, callOp);
+    return mlir::success();
+  }
+};
+
 /// Convert mif.this_image operation to PRIF runtime call
 struct MIFThisImageOpConversion
     : public mlir::OpRewritePattern<mif::ThisImageOp> {
@@ -689,7 +785,8 @@ public:
 } // namespace
 
 void mif::populateMIFOpConversionPatterns(mlir::RewritePatternSet &patterns) {
-  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
+  patterns.insert<MIFInitOpConversion, MIFStopOpConversion,
+                  MIFErrorStopOpConversion, MIFThisImageOpConversion,
                   MIFNumImagesOpConversion, MIFSyncAllOpConversion,
                   MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
                   MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,
