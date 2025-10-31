@@ -1958,7 +1958,7 @@ enum class OuterOrInnerPerm { Outer = 0, Inner = 1 };
 /// Return true if either `op` or `permutation` are empty to allow a simpler
 /// polymorphic implementation.
 template <typename RelayoutOpTy>
-bool isValidPackingPermutation(
+static bool isValidPackingPermutation(
     RelayoutOpTy op, ArrayRef<int64_t> permutation,
     OuterOrInnerPerm outerOrInnerPerm = OuterOrInnerPerm::Outer) {
   static_assert(
@@ -4322,9 +4322,10 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 template <typename OpTy>
-DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
-                                 transform::ApplyToEachResultList &results,
-                                 transform::TransformState &state) {
+static DiagnosedSilenceableFailure
+doit(RewriterBase &rewriter, OpTy target,
+     transform::ApplyToEachResultList &results,
+     transform::TransformState &state) {
   static_assert(llvm::is_one_of<OpTy, tensor::InsertSliceOp,
                                 tensor::ParallelInsertSliceOp>() &&
                 "wrong op type");
