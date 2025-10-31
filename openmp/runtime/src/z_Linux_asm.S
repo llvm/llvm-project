@@ -121,8 +121,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS || KMP_OS_OPENBSD) &&     \
-    (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
+#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -237,8 +236,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 #  define PACBTI_RET
 #  define GNU_PROPERTY_BTI_PAC
 # endif
-#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS || KMP_OS_OPENBSD) && \
-          (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
+#endif // KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM
 
 .macro COMMON name, size, align_power
 #if KMP_OS_DARWIN
@@ -1302,7 +1300,7 @@ KMP_LABEL(kmp_no_args):
 #endif /* KMP_ARCH_X86_64 */
 
 // '
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
+#if KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32
 
 //------------------------------------------------------------------------
 // int
@@ -1428,9 +1426,9 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32) */
+#endif /* KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 */
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM
+#if KMP_ARCH_ARM
 
 //------------------------------------------------------------------------
 // int
@@ -1573,7 +1571,7 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_ARM */
+#endif /* KMP_ARCH_ARM */
 
 #if KMP_ARCH_PPC64
 
