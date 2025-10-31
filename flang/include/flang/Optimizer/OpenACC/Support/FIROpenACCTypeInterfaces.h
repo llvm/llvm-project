@@ -60,6 +60,8 @@ struct OpenACCMappableModel
   getOffsetInBytes(mlir::Type type, mlir::Value var, mlir::ValueRange accBounds,
                    const mlir::DataLayout &dataLayout) const;
 
+  bool hasUnknownDimensions(mlir::Type type) const;
+
   llvm::SmallVector<mlir::Value>
   generateAccBounds(mlir::Type type, mlir::Value var,
                     mlir::OpBuilder &builder) const;

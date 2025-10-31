@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TYPES__BARRIER_TYPE_H
 #define LLVM_LIBC_TYPES__BARRIER_TYPE_H
 
+#include <stdbool.h>
+
 typedef struct __attribute__((aligned(8 /* alignof (Barrier) */))) {
   unsigned expected;
   unsigned waiting;

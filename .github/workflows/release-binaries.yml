@@ -21,7 +21,6 @@ on:
         options:
           - ubuntu-22.04
           - ubuntu-22.04-arm
-          - macos-13
           - macos-14
 
   workflow_call:
@@ -130,8 +129,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
-          else
-            arches=x86_64
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
@@ -146,14 +143,6 @@ jobs:
           ubuntu-22.04*)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
-            ;;
-          macos-13)
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
-            else
-              build_runs_on="macos-13-large"
-            fi
-            test_runs_on="${{ inputs.runs-on }}"
             ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then

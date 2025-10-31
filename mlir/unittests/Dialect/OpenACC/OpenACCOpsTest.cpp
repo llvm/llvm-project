@@ -766,7 +766,9 @@ void testShortDataEntryOpBuildersMappableVar(OpBuilder &b, MLIRContext &context,
 
 struct IntegerOpenACCMappableModel
     : public mlir::acc::MappableType::ExternalModel<IntegerOpenACCMappableModel,
-                                                    IntegerType> {};
+                                                    IntegerType> {
+  bool hasUnknownDimensions(mlir::Type type) const { return false; }
+};
 
 TEST_F(OpenACCOpsTest, mappableTypeBuilderDataEntry) {
   // First, set up the test by attaching MappableInterface to IntegerType.
