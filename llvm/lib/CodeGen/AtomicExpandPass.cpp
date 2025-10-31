@@ -38,6 +38,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -1680,7 +1681,12 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
 
   Loaded->addIncoming(NewLoaded, LoopBB);
 
-  Builder.CreateCondBr(Success, ExitBB, LoopBB);
+  Instruction *CondBr = Builder.CreateCondBr(Success, ExitBB, LoopBB);
+
+  // Atomic RMW expands to a cmpxchg loop, Since precise branch weights
+  // cannot be easily determined here, we mark the branch as "unknown" (50/50)
+  // to prevent misleading optimizations.
+  setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, *F, DEBUG_TYPE);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return NewLoaded;
