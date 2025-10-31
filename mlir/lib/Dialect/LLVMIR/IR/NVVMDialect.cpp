@@ -870,10 +870,10 @@ LogicalResult ShflOp::verify() {
   auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
 
   if ((*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid")) {
-    auto elementType = (type && type.getBody().size() == 2)
+    auto predicateType = (type && type.getBody().size() == 2)
                            ? llvm::dyn_cast<IntegerType>(type.getBody()[1])
                            : nullptr;
-    if (!elementType || elementType.getWidth() != 1)
+    if (!predicateType || predicateType.getWidth() != 1)
       return emitOpError("expected return type to be a two-element struct with "
                          "i1 as the second element");
   } else {
