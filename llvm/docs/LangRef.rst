@@ -2742,9 +2742,10 @@ For example:
     This attribute indicates that outlining passes should not modify the
     function.
 ``nocreateundeforpoison``
-    This attribute indicates that the result of the function will not be undef
-    or poison if all arguments are not undef and not poison. Otherwise, it is
-    undefined behavior.
+    This attribute indicates that the result of the function (prior to
+    application of return attributes/metadata) will not be undef or poison if
+    all arguments are not undef and not poison. Otherwise, it is undefined
+    behavior.
 
 Call Site Attributes
 ----------------------
