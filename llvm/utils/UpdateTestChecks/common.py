@@ -28,16 +28,20 @@ Version changelog:
 4: --check-globals now has a third option ('smart'). The others are now called
    'none' and 'all'. 'smart' is the default.
 5: Basic block labels are matched by FileCheck expressions
+6: The semantics of TBAA checks has been incorporated in the check lines.
+7: Indent switch-cases correctly.
 """
-DEFAULT_VERSION = 5
+DEFAULT_VERSION = 6
 
 
 SUPPORTED_ANALYSES = {
     "Branch Probability Analysis",
     "Cost Model Analysis",
     "Dependence Analysis",
+    "Delinearization",
     "Loop Access Analysis",
     "Scalar Evolution Analysis",
+    "Scalar Evolution Division",
 }
 
 
@@ -602,6 +606,9 @@ TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 
+IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
+IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\w+")
+
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r"^(\s+)")
 SCRUB_WHITESPACE_RE = re.compile(r"(?!^(|  \w))[ \t]+", flags=re.M)
 SCRUB_PRESERVE_LEADING_WHITESPACE_RE = re.compile(r"((?!^)[ \t]*(\S))[ \t]+")
@@ -617,6 +624,9 @@ SCRUB_LOOP_COMMENT_RE = re.compile(
 SCRUB_TAILING_COMMENT_TOKEN_RE = re.compile(r"(?<=\S)+[ \t]*#$", flags=re.M)
 
 SEPARATOR = "."
+
+METADATA_NODES_RE = re.compile(r"^\s*!(\d+)\s*=\s*!\{(.*)\}", re.M)
+TBAA_TAGS_RE = re.compile(r"!tbaa\s*!([0-9]+)")
 
 
 def error(msg, test_file=None):
@@ -681,6 +691,63 @@ def get_globals_name_prefix(raw_tool_output):
         return None
     ch = data_layout[idx + 2]
     return "_" if ch == "o" or ch == "x" else None
+
+
+def get_tbaa_records(version, raw_output_tools):
+    if version < 6:
+        return {}
+
+    # Retrieve all unique tbaa tags for the given IR.
+    unique_tbaa_tags = {f"!{n}" for n in TBAA_TAGS_RE.findall(raw_output_tools)}
+    if not unique_tbaa_tags:
+        return {}
+
+    # Small dict of metadata ID and its node content as value.
+    md_nodes = {
+        f"!{m.group(1)}": m.group(2)
+        for m in METADATA_NODES_RE.finditer(raw_output_tools)
+    }
+    assert md_nodes, "Shouldn't have TBAA tags without their type descriptors."
+
+    result = {}
+    for tag in unique_tbaa_tags:
+        type_desc = md_nodes.get(tag)
+        assert type_desc, f"Expected type descriptor for node {tag}."
+
+        # We deal with a tag of kind `(BaseTy, AccessTy, Offset)`.
+        access_ty = type_desc.split(",")[1].strip()
+
+        parent_ty = md_nodes.get(access_ty)
+        assert parent_ty, f"Couldn't find metadata for access type {access_ty}."
+
+        # First operand should be a MDString. If not, likely dealing with
+        # `new-struct-path-tbaa`.
+        # TODO: Support `new-struct-path-tbaa` TBAA format.
+        ty_name_field = parent_ty.split(",")[0]
+        if not (ty_name_field.startswith('!"') and ty_name_field.endswith('"')):
+            return {}
+        ty_name = ty_name_field[2:-1]
+
+        if ty_name.startswith("p"):
+            # Dealing with a pointer here.
+            pointee_ty_name = ty_name.split(maxsplit=1)[1]
+            if pointee_ty_name.startswith("omnipotent"):
+                pointee_ty_name = "char"
+            # TODO: If pointee_ty_name is a C++ name, should it be demangled?
+            pointee_ty_name = pointee_ty_name.replace(" ", "_")
+            tbaa_prefix = f"{pointee_ty_name}ptr"
+        elif ty_name.startswith("any"):
+            tbaa_prefix = "anyptr"
+        elif ty_name.startswith("omnipotent"):
+            tbaa_prefix = "char"
+        else:
+            tbaa_prefix = ty_name.replace(" ", "_")
+
+        # Record tag node and its semantics (e.g., INT_TBAA, INTPTR_TBAA).
+        tbaa_sema = f"{tbaa_prefix.upper()}_TBAA"
+        result[tag] = tbaa_sema
+
+    return result
 
 
 def apply_filters(line, filters):
@@ -817,6 +884,7 @@ class function_body(object):
 
 class FunctionTestBuilder:
     def __init__(self, run_list, flags, scrubber_args, path, ginfo):
+        self._run_list = run_list
         self._verbose = flags.verbose
         self._record_args = flags.function_signature
         self._check_attributes = flags.check_attributes
@@ -852,15 +920,53 @@ class FunctionTestBuilder:
                 self._func_order.update({prefix: []})
                 self._global_var_dict.update({prefix: dict()})
 
+    # Return true if there is conflicting output for different runs for the
+    # given prefix and function name.
+    def has_conflicting_output(self, prefix, func):
+        # There was conflicting output if the func_dict is None for this
+        # prefix and function.
+        return self._func_dict[prefix].get(func) is None
+
     def finish_and_get_func_dict(self):
-        for prefix in self.get_failed_prefixes():
-            warn(
-                "Prefix %s had conflicting output from different RUN lines for all functions in test %s"
-                % (
-                    prefix,
-                    self._path,
+        all_funcs = set()
+        for prefix in self._func_dict:
+            all_funcs.update(self._func_dict[prefix].keys())
+
+        warnings_to_print = collections.defaultdict(list)
+        for func in sorted(list(all_funcs)):
+            for i, run_info in enumerate(self._run_list):
+                prefixes = run_info[0]
+                if not prefixes:
+                    continue
+
+                # Check if this RUN line produces this function at all. If
+                # not, we can skip analysing this function for this RUN.
+                run_contains_func = all(
+                    func in self._func_dict.get(p, {}) for p in prefixes
                 )
+                if not run_contains_func:
+                    continue
+
+                # Check if this RUN line can print any checks for this
+                # function. It can't if all of its prefixes have conflicting
+                # (None) output.
+                cannot_print_for_this_run = all(
+                    self.has_conflicting_output(p, func) for p in prefixes
+                )
+                if cannot_print_for_this_run:
+                    warnings_to_print[func].append((i, prefixes))
+
+        for func, warning_info in warnings_to_print.items():
+            conflict_strs = []
+            for run_index, prefixes in warning_info:
+                conflict_strs.append(
+                    f"RUN #{run_index + 1} (prefixes: {', '.join(prefixes)})"
+                )
+            warn(
+                f"For function '{func}', the following RUN lines will not generate checks due to conflicting output: {', '.join(conflict_strs)}",
+                test_file=self._path,
             )
+
         return self._func_dict
 
     def func_order(self):
@@ -876,12 +982,17 @@ class FunctionTestBuilder:
         return False
 
     def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
+        """
+        Returns the number of functions processed from the output by the regex.
+        """
         build_global_values_dictionary(
             self._global_var_dict, raw_tool_output, prefixes, self._ginfo
         )
+        processed_func_count = 0
         for m in function_re.finditer(raw_tool_output):
             if not m:
                 continue
+            processed_func_count += 1
             func = m.group("func")
             body = m.group("body")
             # func_name_separator is the string that is placed right after function name at the
@@ -998,6 +1109,7 @@ class FunctionTestBuilder:
                         # preprocesser directives to exclude individual functions from some
                         # RUN lines.
                         self._func_dict[prefix][func] = None
+        return processed_func_count
 
     def processed_prefixes(self, prefixes):
         """
@@ -1006,20 +1118,6 @@ class FunctionTestBuilder:
         outputs for all RUN lines.
         """
         self._processed_prefixes.update(prefixes)
-
-    def get_failed_prefixes(self):
-        # This returns the list of those prefixes that failed to match any function,
-        # because there were conflicting bodies produced by different RUN lines, in
-        # all instances of the prefix.
-        for prefix in self._func_dict:
-            if self._func_dict[prefix] and (
-                not [
-                    fct
-                    for fct in self._func_dict[prefix]
-                    if self._func_dict[prefix][fct] is not None
-                ]
-            ):
-                yield prefix
 
 
 ##### Generator of LLVM IR CHECK lines
@@ -1305,6 +1403,7 @@ def make_asm_generalizer(version):
     return GeneralizerInfo(version, GeneralizerInfo.MODE_ASM, values, prefix, suffix)
 
 
+# TODO: This is no longer required. Generalize UTC over an empty GeneralizerInfo.
 def make_analyze_generalizer(version):
     values = [
         NamelessValue(
@@ -1772,6 +1871,7 @@ def generalize_check_lines(
     ginfo: GeneralizerInfo,
     vars_seen,
     global_vars_seen,
+    global_tbaa_records={},
     preserve_names=False,
     original_check_lines=None,
     *,
@@ -1932,14 +2032,29 @@ def generalize_check_lines(
                 else:
                     vars_dict = global_vars_seen
 
+                mapped_name = mapping[value.name]
+
+                # We have computed the name mapping. Now, if possible,
+                # substitute the TBAA value name with its semantics.
+                if ginfo.get_version() >= 6:
+                    if (
+                        value.key == "!"
+                        and global_tbaa_records
+                        and mapped_name.startswith("TBAA")
+                        and mapped_name[4:].isdigit()
+                    ):
+                        tbaa_sema = global_tbaa_records.get(value.text)
+                        assert tbaa_sema, f"Shouldn't miss TBAA name for {value.text}?"
+                        mapped_name = f"{tbaa_sema}{mapped_name[4:]}"
+
                 if key in defs:
                     line += vars_dict[key].get_def(
-                        mapping[value.name], value.prefix, value.suffix
+                        mapped_name, value.prefix, value.suffix
                     )
                     defs.remove(key)
                 else:
                     line += vars_dict[key].get_use(
-                        mapping[value.name], value.prefix, value.suffix
+                        mapped_name, value.prefix, value.suffix
                     )
 
             line += line_template
@@ -1965,6 +2080,7 @@ def add_checks(
     ginfo,
     global_vars_seen_dict,
     is_filtered,
+    global_tbaa_records_for_prefixes={},
     preserve_names=False,
     original_check_lines: Mapping[str, List[str]] = {},
 ):
@@ -2015,6 +2131,14 @@ def add_checks(
                 global_vars_seen_dict[checkprefix] = {}
 
             global_vars_seen_before = [key for key in global_vars_seen.keys()]
+            global_tbaa_records = next(
+                (
+                    val
+                    for key, val in global_tbaa_records_for_prefixes.items()
+                    if checkprefix in key
+                ),
+                None,
+            )
 
             vars_seen = {}
             printed_prefixes.append(checkprefix)
@@ -2038,6 +2162,7 @@ def add_checks(
                     ginfo,
                     vars_seen,
                     global_vars_seen,
+                    global_tbaa_records,
                     preserve_names,
                     original_check_lines=[],
                     no_meta_details=ginfo.no_meta_details(),
@@ -2152,6 +2277,7 @@ def add_checks(
                     ginfo,
                     vars_seen,
                     global_vars_seen,
+                    global_tbaa_records,
                     preserve_names,
                     original_check_lines=original_check_lines.get(checkprefix),
                 )
@@ -2214,6 +2340,7 @@ def add_ir_checks(
     function_sig,
     ginfo: GeneralizerInfo,
     global_vars_seen_dict,
+    global_tbaa_records_for_prefixes,
     is_filtered,
     original_check_lines={},
 ):
@@ -2238,6 +2365,7 @@ def add_ir_checks(
         ginfo,
         global_vars_seen_dict,
         is_filtered,
+        global_tbaa_records_for_prefixes,
         preserve_names,
         original_check_lines=original_check_lines,
     )
@@ -2358,7 +2486,7 @@ METADATA_FILTERS = [
         r"(?<=\")(.+ )?(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
         r"{{.*}}\2{{.*}}",
     ),  # preface with glob also, to capture optional CLANG_VENDOR
-    (r'(!DIFile\(filename: ".+", directory: )".+"', r"\1{{.*}}"),
+    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )".+"', r"\1{{.*}}\3{{.*}}"),
 ]
 METADATA_FILTERS_RE = [(re.compile(f), r) for (f, r) in METADATA_FILTERS]
 
@@ -2386,6 +2514,7 @@ def add_global_checks(
     output_lines,
     ginfo: GeneralizerInfo,
     global_vars_seen_dict,
+    global_tbaa_records_for_prefixes,
     preserve_names,
     is_before_functions,
     global_check_setting,
@@ -2418,6 +2547,15 @@ def add_global_checks(
 
                 check_lines = []
                 global_vars_seen_before = [key for key in global_vars_seen.keys()]
+                global_tbaa_records = next(
+                    (
+                        val
+                        for key, val in global_tbaa_records_for_prefixes.items()
+                        if checkprefix in key
+                    ),
+                    None,
+                )
+
                 lines_w_index = glob_val_dict[checkprefix][nameless_value.check_prefix]
                 lines_w_index = filter_globals_according_to_preference(
                     lines_w_index,
@@ -2441,6 +2579,7 @@ def add_global_checks(
                         ginfo,
                         {},
                         global_vars_seen,
+                        global_tbaa_records,
                         preserve_names,
                         unstable_globals_only=True,
                     )

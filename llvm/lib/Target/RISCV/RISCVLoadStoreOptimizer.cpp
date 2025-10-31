@@ -48,8 +48,7 @@ struct RISCVLoadStoreOpt : public MachineFunctionPass {
   RISCVLoadStoreOpt() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -93,7 +92,7 @@ bool RISCVLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (skipFunction(Fn.getFunction()))
     return false;
   const RISCVSubtarget &Subtarget = Fn.getSubtarget<RISCVSubtarget>();
-  if (!Subtarget.useLoadStorePairs())
+  if (!Subtarget.useMIPSLoadStorePairs())
     return false;
 
   bool MadeChange = false;
@@ -185,8 +184,7 @@ bool RISCVLoadStoreOpt::tryConvertToLdStPair(
     return false;
 
   MachineInstrBuilder MIB = BuildMI(
-      *MF,
-      First->getDebugLoc().get() ? First->getDebugLoc() : Second->getDebugLoc(),
+      *MF, First->getDebugLoc() ? First->getDebugLoc() : Second->getDebugLoc(),
       TII->get(PairOpc));
   MIB.add(First->getOperand(0))
       .add(Second->getOperand(0))

@@ -36,10 +36,7 @@ entry:
 define dso_local <2 x i64> @x2d(<2 x i64> noundef %x) {
 ; CHECK-LABEL: x2d:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addis r3, r2, .LCPI3_0@toc@ha
-; CHECK-NEXT:    addi r3, r3, .LCPI3_0@toc@l
-; CHECK-NEXT:    lxvd2x v3, 0, r3
-; CHECK-NEXT:    vsld v2, v2, v3
+; CHECK-NEXT:    vaddudm v2, v2, v2
 ; CHECK-NEXT:    blr
 entry:
   %add = shl <2 x i64> %x, <i64 1, i64 1>

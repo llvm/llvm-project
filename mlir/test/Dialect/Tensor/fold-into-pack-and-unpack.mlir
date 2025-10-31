@@ -1,21 +1,92 @@
 // RUN: mlir-opt -split-input-file -test-linalg-transform-patterns=test-fold-into-pack-and-unpack  %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -test-linalg-transform-patterns=test-fold-into-pack-and-unpack-control  %s | FileCheck %s --check-prefix=CONTROL
 
-func.func @fold_unpack_slice(%arg0 : tensor<?x?x8x4xf32>, %arg1 : tensor<?x?xf32>,
+func.func @fold_extract_slice_into_unpack_slicing_trailing_dim(%arg0 : tensor<28x2x1x16x16xf32>) -> tensor<28x28x10xf32> {
+  %empty = tensor.empty() : tensor<28x28x15xf32>
+  %unpack = linalg.unpack %arg0
+      inner_dims_pos = [1, 2]
+      inner_tiles = [16, 16]
+      into %empty : tensor<28x2x1x16x16xf32> -> tensor<28x28x15xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0, 0] [28, 28, 10] [1, 1, 1] : tensor<28x28x15xf32> to tensor<28x28x10xf32>
+  return %extracted_slice : tensor<28x28x10xf32>
+}
+// CHECK-LABEL: func @fold_extract_slice_into_unpack_slicing_trailing_dim
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9]+]]
+//       CHECK:   %[[DEST_SLICE:.+]] = tensor.empty() : tensor<28x28x10xf32>
+//       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+//  CHECK-SAME:       into %[[DEST_SLICE]]
+//       CHECK:   return %[[UNPACK]]
+
+// -----
+
+// The available dimension size is [17, 32], because CeilDiv(%d1, 16) == 2.
+
+func.func @fold_extract_slice_into_unpack_slicing_dim_1(%arg0 : tensor<28x2x1x16x16xf32>) -> tensor<28x17x15xf32> {
+  %empty = tensor.empty() : tensor<28x28x15xf32>
+  %unpack = linalg.unpack %arg0
+      inner_dims_pos = [1, 2]
+      inner_tiles = [16, 16]
+      into %empty : tensor<28x2x1x16x16xf32> -> tensor<28x28x15xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0, 0] [28, 17, 15] [1, 1, 1] : tensor<28x28x15xf32> to tensor<28x17x15xf32>
+  return %extracted_slice : tensor<28x17x15xf32>
+}
+// CHECK-LABEL: func @fold_extract_slice_into_unpack_slicing_dim_1(
+//  CHECK-SAME:     %[[SRC:[a-zA-Z0-9]+]]
+//       CHECK:   %[[DEST_SLICE:.+]] = tensor.empty() : tensor<28x17x15xf32>
+//       CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[SRC]]
+//  CHECK-SAME:       into %[[DEST_SLICE]]
+//       CHECK:   return %[[UNPACK]]
+
+// -----
+
+// The available dimension size is [17, 32], because CeilDiv(%d1, 16) == 2.
+
+func.func @no_fold_extract_slice_into_unpack_artificial_padding(%arg0 : tensor<28x2x1x16x16xf32>) -> tensor<28x16x15xf32> {
+  %empty = tensor.empty() : tensor<28x28x15xf32>
+  %unpack = linalg.unpack %arg0
+      inner_dims_pos = [1, 2]
+      inner_tiles = [16, 16]
+      into %empty : tensor<28x2x1x16x16xf32> -> tensor<28x28x15xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0, 0] [28, 16, 15] [1, 1, 1] : tensor<28x28x15xf32> to tensor<28x16x15xf32>
+  return %extracted_slice : tensor<28x16x15xf32>
+}
+// CHECK-LABEL: func @no_fold_extract_slice_into_unpack_artificial_padding
+//       CHECK:   linalg.unpack
+//       CHECK:   tensor.extract_slice
+
+// -----
+
+func.func @no_fold_extract_slice_into_unpack_dynamic(
+    %src : tensor<28x2x?x16x16xf32>, %dest : tensor<28x32x?xf32>, %size : index
+) -> tensor<28x28x?xf32> {
+  %unpack = linalg.unpack %src
+      outer_dims_perm = [0, 1, 2]
+      inner_dims_pos = [1, 2]
+      inner_tiles = [16, 16]
+      into %dest : tensor<28x2x?x16x16xf32> -> tensor<28x32x?xf32>
+  %extracted_slice = tensor.extract_slice %unpack
+      [0, 0, 0] [28, 28, %size] [1, 1, 1] : tensor<28x32x?xf32> to tensor<28x28x?xf32>
+  return %extracted_slice : tensor<28x28x?xf32>
+}
+// CHECK-LABEL: func @no_fold_extract_slice_into_unpack_dynamic
+//       CHECK:   linalg.unpack
+//       CHECK:   tensor.extract_slice
+
+// -----
+
+func.func @nofold_dynamic_unpack_slice(%arg0 : tensor<?x?x8x4xf32>, %arg1 : tensor<?x?xf32>,
     %arg2 : index, %arg3 : index) -> tensor<?x?xf32> {
   %0 = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 4] into %arg1
       : tensor<?x?x8x4xf32> -> tensor<?x?xf32>
   %1 = tensor.extract_slice %0[0, 0] [%arg2, %arg3] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
-//      CHECK: func @fold_unpack_slice(
-// CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?x8x4xf32>
-// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>
-// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: index
-// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: index
-//      CHECK:   %[[INIT:.+]] = tensor.empty(%[[ARG2]], %[[ARG3]]) : tensor<?x?xf32>
-//      CHECK:   %[[UNPACK:.+]] = linalg.unpack %[[ARG0]] inner_dims_pos = [0, 1] inner_tiles = [8, 4]
-// CHECK-SAME:       into %[[INIT]]
-//      CHECK:   return %[[UNPACK]]
+// CHECK-LABEL: func @nofold_dynamic_unpack_slice(
+//       CHECK:   linalg.unpack
+//       CHECK:   tensor.extract_slice
 
 // -----
 
@@ -58,48 +129,62 @@ func.func @nofold_unpack_slice_rank_reduced(%arg0 : tensor<?x?x8x4xf32>, %arg1 :
 
 // -----
 
-func.func @pad_pack(%src: tensor<16641x16xf32>) -> tensor<2082x1x8x32xf32> {
-  %c0 = arith.constant 0 : index
+func.func @fold_pad_pack(%src: tensor<9x16xf32>) -> tensor<2x1x8x32xf32> {
   %cst = arith.constant 0.000000e+00 : f32
-  %padded = tensor.pad %src low[0, 0] high[15, 0] {
+  %padded = tensor.pad %src low[0, 0] high[7, 0] {
   ^bb0(%arg0: index, %arg1: index):
     tensor.yield %cst : f32
-  } : tensor<16641x16xf32> to tensor<16656x16xf32>
-  %empty = tensor.empty() : tensor<2082x1x8x32xf32>
+  } : tensor<9x16xf32> to tensor<16x16xf32>
+  %empty = tensor.empty() : tensor<2x1x8x32xf32>
   %pack = linalg.pack %padded padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %empty
-      : tensor<16656x16xf32> -> tensor<2082x1x8x32xf32>
-  return %pack : tensor<2082x1x8x32xf32>
+      : tensor<16x16xf32> -> tensor<2x1x8x32xf32>
+  return %pack : tensor<2x1x8x32xf32>
 }
-// CHECK-LABEL: func.func @pad_pack
+// CHECK-LABEL: func.func @fold_pad_pack
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
 // CHECK:         %[[PAD_VAL:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK:         %[[DEST:.+]] = tensor.empty() : tensor<2082x1x8x32xf32>
+// CHECK:         %[[DEST:.+]] = tensor.empty() : tensor<2x1x8x32xf32>
 // CHECK:         %[[PACK:.+]] = linalg.pack %[[SRC]]
 // CHECK-SAME:      padding_value(%[[PAD_VAL]] : f32)
 // CHECK-SAME:      inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[DEST]]
 
 // -----
 
-func.func @nofold_pad_pack(%src: tensor<16641x16xf32>) -> tensor<2082x1x8x32xf32> {
-  %c0 = arith.constant 0 : index
+func.func @nofold_pad_pack_artificial_padding(%src: tensor<9x16xf32>) -> tensor<3x1x8x32xf32> {
   %cst = arith.constant 0.000000e+00 : f32
-  %padded = tensor.pad %src nofold low[0, 0] high[15, 0] {
+  %padded = tensor.pad %src low[0, 0] high[8, 0] {
   ^bb0(%arg0: index, %arg1: index):
     tensor.yield %cst : f32
-  } : tensor<16641x16xf32> to tensor<16656x16xf32>
+  } : tensor<9x16xf32> to tensor<17x16xf32>
+  %empty = tensor.empty() : tensor<3x1x8x32xf32>
+  %pack = linalg.pack %padded padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %empty
+      : tensor<17x16xf32> -> tensor<3x1x8x32xf32>
+  return %pack : tensor<3x1x8x32xf32>
+}
+// CHECK-LABLE: func.func @nofold_pad_pack_artificial_padding(
+// CHECK:         tensor.pad
+// CHECK:         linalg.pack
+
+// -----
+
+func.func @nofold_pad_pack_with_nofold_attribute(%src: tensor<16649x16xf32>) -> tensor<2082x1x8x32xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %src nofold low[0, 0] high[7, 0] {
+  ^bb0(%arg0: index, %arg1: index):
+    tensor.yield %cst : f32
+  } : tensor<16649x16xf32> to tensor<16656x16xf32>
   %empty = tensor.empty() : tensor<2082x1x8x32xf32>
   %pack = linalg.pack %padded padding_value(%cst : f32) inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %empty
       : tensor<16656x16xf32> -> tensor<2082x1x8x32xf32>
   return %pack : tensor<2082x1x8x32xf32>
 }
-// CHECK-LABEL: func.func @nofold_pad_pack
+// CHECK-LABEL: func.func @nofold_pad_pack_with_nofold_attribute(
 // CHECK:         tensor.pad
 // CHECK:         linalg.pack
 
 // -----
 
 func.func @pad_pack_different_padding_value(%src: tensor<16641x16xf32>) -> tensor<2082x1x8x32xf32> {
-  %c0 = arith.constant 0 : index
   %cst0 = arith.constant 0.000000e+00 : f32
   %cst1 = arith.constant 1.000000e+00 : f32
   %padded = tensor.pad %src low[0, 0] high[15, 0] {
@@ -373,6 +458,36 @@ func.func @linalg_transpose_linalg.pack_fold(%arg0: tensor<56x57x1x64xf32>) -> t
 
 // -----
 
+func.func @linalg_transpose_linalg.pack_fold_multi_result(%arg0: tensor<56x57x1x64xf32>) -> (tensor<1x56x57x64xf32>, tensor<1x57x56x2x32xf32>) {
+  %0 = tensor.empty() : tensor<1x56x57x64xf32>
+  %transposed = linalg.transpose
+    ins(%arg0 : tensor<56x57x1x64xf32>)
+    outs(%0 : tensor<1x56x57x64xf32>)
+    permutation = [2, 0, 1, 3]
+
+  %1 = tensor.empty() : tensor<1x57x56x2x32xf32>
+  %pack = linalg.pack %transposed
+    outer_dims_perm = [0, 2, 1, 3]
+    inner_dims_pos = [3]
+    inner_tiles = [32]
+    into %1 : tensor<1x56x57x64xf32> -> tensor<1x57x56x2x32xf32>
+  return %transposed, %pack : tensor<1x56x57x64xf32>, tensor<1x57x56x2x32xf32>
+}
+// CHECK-LABEL: func @linalg_transpose_linalg.pack_fold_multi_result(
+//  CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>)
+//       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose
+//       CHECK:   %[[PACK:.+]] = linalg.pack %[[ARG0]]
+//  CHECK-SAME:      outer_dims_perm = [2, 1, 0, 3]
+//       CHECK:   return %[[TRANSPOSE]], %[[PACK]]
+
+// CONTROL-LABEL: func @linalg_transpose_linalg.pack_fold_multi_result(
+//       CONTROL:   %[[TRANSPOSE:.+]] = linalg.transpose
+//       CONTROL:   %[[PACK:.+]] = linalg.pack %[[TRANSPOSE]]
+//  CONTROL-SAME:      outer_dims_perm = [0, 2, 1, 3]
+//       CONTROL:   return %[[TRANSPOSE]], %[[PACK]]
+
+// -----
+
 func.func @linalg_transpose_linalg.pack_fold_with_padding(%arg0: tensor<56x57x1x55xf32>, %padding: f32) -> tensor<1x57x56x2x32xf32> {
   %0 = tensor.empty() : tensor<1x56x57x55xf32>
   %transpose = linalg.transpose
@@ -547,6 +662,36 @@ func.func @linalg_transpose_linalg.unpack_fold(%arg0: tensor<1x1x4x16xi32>) -> t
 // CHECK-SAME:        into %[[OUT]] : tensor<1x1x4x16xi32> -> tensor<16x4xi32>
 //      CHECK:     return %[[UNPACK]] : tensor<16x4xi32>
 //      CHECK:   }
+
+// -----
+
+func.func @linalg_transpose_linalg.unpack_fold_multi_result(%arg0: tensor<1x1x4x16xi32>) -> (tensor<1x1x16x4xi32>, tensor<16x4xi32>) {
+  %0 = tensor.empty() : tensor<1x1x16x4xi32>
+  %transposed = linalg.transpose ins(%arg0 : tensor<1x1x4x16xi32>)
+                outs(%0 : tensor<1x1x16x4xi32>)
+                permutation = [1, 0, 3, 2]
+  %1 = tensor.empty() : tensor<16x4xi32>
+  %unpack = linalg.unpack %transposed
+            outer_dims_perm = [0, 1]
+            inner_dims_pos = [0, 1]
+            inner_tiles = [16, 4] into
+            %1 : tensor<1x1x16x4xi32> -> tensor<16x4xi32>
+  return %transposed, %unpack : tensor<1x1x16x4xi32>, tensor<16x4xi32>
+}
+//CHECK-LABEL:  func.func @linalg_transpose_linalg.unpack_fold_multi_result(
+// CHECK-SAME:   %[[ARG0:.+]]: tensor<1x1x4x16xi32>) 
+//      CHECK:     %[[TRANSPOSE:.+]] = linalg.transpose
+//      CHECK:     %[[UNPACK:.+]] = linalg.unpack %[[ARG0]]
+// CHECK-SAME:        outer_dims_perm = [1, 0]
+//      CHECK:     return %[[TRANSPOSE]], %[[UNPACK]]
+//      CHECK:   }
+
+//CONTROL-LABEL:  func.func @linalg_transpose_linalg.unpack_fold_multi_result(
+//      CONTROL:     %[[TRANSPOSE:.+]] = linalg.transpose
+//      CONTROL:     %[[UNPACK:.+]] = linalg.unpack %[[TRANSPOSE]]
+// CONTROL-SAME:        outer_dims_perm = [0, 1]
+//      CONTROL:     return %[[TRANSPOSE]], %[[UNPACK]]
+//      CONTROL:   }
 
 // -----
 

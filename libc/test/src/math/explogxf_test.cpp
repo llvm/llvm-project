@@ -9,11 +9,11 @@
 #include "hdr/math_macros.h"
 #include "in_float_range_test_helper.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/math/acoshf_utils.h"
+#include "src/__support/math/exp10f_utils.h"
 #include "src/math/fabs.h"
 #include "src/math/fabsf.h"
-#include "src/math/generic/explogxf.h"
 #include "test/UnitTest/FPMatcher.h"
-#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 using LlvmLibcExplogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
@@ -43,12 +43,8 @@ TEST_F(LlvmLibcExplogfTest, ExpInFloatRange) {
              def_prec);
 }
 
-TEST_F(LlvmLibcExplogfTest, Log2InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Log2, LIBC_NAMESPACE::log2_eval,
-             f_normal, def_count, def_prec);
-}
-
 TEST_F(LlvmLibcExplogfTest, LogInFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Log, LIBC_NAMESPACE::log_eval,
-             f_normal, def_count, def_prec);
+  CHECK_DATA(0.0f, inf, mpfr::Operation::Log,
+             LIBC_NAMESPACE::acoshf_internal::log_eval, f_normal, def_count,
+             def_prec);
 }

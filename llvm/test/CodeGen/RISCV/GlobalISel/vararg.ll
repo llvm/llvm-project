@@ -437,8 +437,8 @@ define void @va1_caller() nounwind {
 ; LP64:       # %bb.0:
 ; LP64-NEXT:    addi sp, sp, -16
 ; LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; LP64-NEXT:    lui a0, %hi(.LCPI3_0)
-; LP64-NEXT:    ld a1, %lo(.LCPI3_0)(a0)
+; LP64-NEXT:    li a1, 1023
+; LP64-NEXT:    slli a1, a1, 52
 ; LP64-NEXT:    li a2, 2
 ; LP64-NEXT:    call va1
 ; LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -494,15 +494,15 @@ define void @va1_caller() nounwind {
 ; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
-; RV64-WITHFP-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV64-WITHFP-NEXT:    ld a1, %lo(.LCPI3_0)(a0)
+; RV64-WITHFP-NEXT:    li a1, 1023
+; RV64-WITHFP-NEXT:    slli a1, a1, 52
 ; RV64-WITHFP-NEXT:    li a2, 2
 ; RV64-WITHFP-NEXT:    call va1
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    ret
-  %1 = call i32 (ptr, ...) @va1(ptr undef, double 1.0, i32 2)
+  %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
   ret void
 }
 
@@ -843,7 +843,7 @@ define void @va2_caller() nounwind {
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    ret
- %1 = call i64 (ptr, ...) @va2(ptr undef, i32 1)
+ %1 = call i64 (ptr, ...) @va2(ptr poison, i32 1)
  ret void
 }
 
@@ -1155,8 +1155,8 @@ define void @va3_caller() nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    lui a0, 5
-; RV32-NEXT:    addi a3, a0, -480
+; RV32-NEXT:    lui a3, 5
+; RV32-NEXT:    addi a3, a3, -480
 ; RV32-NEXT:    li a0, 2
 ; RV32-NEXT:    li a1, 1111
 ; RV32-NEXT:    li a2, 0
@@ -1171,7 +1171,7 @@ define void @va3_caller() nounwind {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    lui a1, 5
 ; RV64-NEXT:    li a0, 2
-; RV64-NEXT:    addiw a2, a1, -480
+; RV64-NEXT:    addi a2, a1, -480
 ; RV64-NEXT:    li a1, 1111
 ; RV64-NEXT:    call va3
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -1184,8 +1184,8 @@ define void @va3_caller() nounwind {
 ; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-NEXT:    lui a0, 5
-; RV32-WITHFP-NEXT:    addi a3, a0, -480
+; RV32-WITHFP-NEXT:    lui a3, 5
+; RV32-WITHFP-NEXT:    addi a3, a3, -480
 ; RV32-WITHFP-NEXT:    li a0, 2
 ; RV32-WITHFP-NEXT:    li a1, 1111
 ; RV32-WITHFP-NEXT:    li a2, 0
@@ -1203,7 +1203,7 @@ define void @va3_caller() nounwind {
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64-WITHFP-NEXT:    lui a1, 5
 ; RV64-WITHFP-NEXT:    li a0, 2
-; RV64-WITHFP-NEXT:    addiw a2, a1, -480
+; RV64-WITHFP-NEXT:    addi a2, a1, -480
 ; RV64-WITHFP-NEXT:    li a1, 1111
 ; RV64-WITHFP-NEXT:    call va3
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -1618,7 +1618,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-LABEL: va_large_stack:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 24414
-; RV64-NEXT:    addiw a0, a0, 336
+; RV64-NEXT:    addi a0, a0, 336
 ; RV64-NEXT:    sub sp, sp, a0
 ; RV64-NEXT:    .cfi_def_cfa_offset 100000080
 ; RV64-NEXT:    lui a0, 24414
@@ -1635,7 +1635,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-NEXT:    sd a4, 304(a0)
 ; RV64-NEXT:    addi a0, sp, 8
 ; RV64-NEXT:    lui a1, 24414
-; RV64-NEXT:    addiw a1, a1, 280
+; RV64-NEXT:    addi a1, a1, 280
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    sd a1, 8(sp)
 ; RV64-NEXT:    lw a0, 4(a0)
@@ -1657,7 +1657,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-NEXT:    sw a2, 12(sp)
 ; RV64-NEXT:    lw a0, 0(a0)
 ; RV64-NEXT:    lui a1, 24414
-; RV64-NEXT:    addiw a1, a1, 336
+; RV64-NEXT:    addi a1, a1, 336
 ; RV64-NEXT:    add sp, sp, a1
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
@@ -1714,10 +1714,10 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    addi s0, sp, 1968
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa s0, 64
 ; RV64-WITHFP-NEXT:    lui a0, 24414
-; RV64-WITHFP-NEXT:    addiw a0, a0, -1680
+; RV64-WITHFP-NEXT:    addi a0, a0, -1680
 ; RV64-WITHFP-NEXT:    sub sp, sp, a0
 ; RV64-WITHFP-NEXT:    lui a0, 24414
-; RV64-WITHFP-NEXT:    addiw a0, a0, 288
+; RV64-WITHFP-NEXT:    addi a0, a0, 288
 ; RV64-WITHFP-NEXT:    sub a0, s0, a0
 ; RV64-WITHFP-NEXT:    sd a1, 8(s0)
 ; RV64-WITHFP-NEXT:    sd a2, 16(s0)
@@ -1738,7 +1738,7 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-WITHFP-NEXT:    sw a3, 4(a0)
 ; RV64-WITHFP-NEXT:    lw a0, 0(a1)
 ; RV64-WITHFP-NEXT:    lui a1, 24414
-; RV64-WITHFP-NEXT:    addiw a1, a1, -1680
+; RV64-WITHFP-NEXT:    addi a1, a1, -1680
 ; RV64-WITHFP-NEXT:    add sp, sp, a1
 ; RV64-WITHFP-NEXT:    .cfi_def_cfa sp, 2032
 ; RV64-WITHFP-NEXT:    ld ra, 1960(sp) # 8-byte Folded Reload

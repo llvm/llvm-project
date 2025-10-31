@@ -94,6 +94,23 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  faccessat_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    faccessat_test.cpp
+  DEPENDS
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.unistd.faccessat
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   fchdir_test
   SUITE
     libc_unistd_unittests
@@ -406,6 +423,18 @@ add_libc_unittest(
     libc.src.unistd.unlinkat
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  gethostname_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    gethostname_test.cpp
+  DEPENDS
+    libc.src.unistd.gethostname
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(

@@ -361,6 +361,74 @@ func.func @vector_maskedload_i2_constant_mask_unaligned(%passthru: vector<5xi2>)
 /// vector.store
 ///----------------------------------------------------------------------------------------
 
+// -----
+
+// Most basic example to demonstrate where partial stores are not needed.
+
+func.func @vector_store_i2_const_index_no_partial_store(%arg0: vector<4xi2>) {
+    %0 = memref.alloc() : memref<13xi2>
+    %c4 = arith.constant 4 : index
+    vector.store %arg0, %0[%c4] : memref<13xi2>, vector<4xi2>
+    return
+}
+// CHECK-LABEL:   func.func @vector_store_i2_const_index_no_partial_store(
+// CHECK-SAME:      %[[ARG_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: vector<4xi2>) {
+// CHECK-NOT:       memref.generic_atomic_rmw
+// CHECK:           %[[ALLOC:.*]] = memref.alloc() : memref<4xi8>
+// CHECK:           %[[UPCAST:.*]] = vector.bitcast %[[ARG_0]] : vector<4xi2> to vector<1xi8>
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           vector.store %[[UPCAST]], %[[ALLOC]]{{\[}}%[[C1]]] : memref<4xi8>, vector<1xi8>
+
+// -----
+
+// Small modification of the example above to demonstrate where partial stores
+// are needed.
+
+func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<4xi2>) {
+    %0 = memref.alloc() : memref<13xi2>
+    %c3 = arith.constant 3 : index
+    vector.store %arg0, %0[%c3] : memref<13xi2>, vector<4xi2>
+    return
+}
+
+// CHECK-LABEL:   func.func @vector_store_i2_const_index_two_partial_stores(
+// CHECK-SAME:      %[[ARG_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: vector<4xi2>) {
+// CHECK:           %[[VAL_1:.*]] = memref.alloc() : memref<4xi8>
+
+// First atomic RMW:
+// CHECK:           %[[IDX_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[MASK_1:.*]] = arith.constant dense<[false, false, false, true]> : vector<4xi1>
+// CHECK:           %[[INIT:.*]] = arith.constant dense<0> : vector<4xi2>
+// CHECK:           %[[SLICE_1:.*]] = vector.extract_strided_slice %[[ARG_0]] {offsets = [0], sizes = [1], strides = [1]} : vector<4xi2> to vector<1xi2>
+// CHECK:           %[[V1:.*]] = vector.insert_strided_slice %[[SLICE_1]], %[[INIT]] {offsets = [3], strides = [1]} : vector<1xi2> into vector<4xi2>
+// CHECK:           memref.generic_atomic_rmw %[[VAL_1]]{{\[}}%[[IDX_1]]] : memref<4xi8> {
+// CHECK:           ^bb0(%[[VAL_8:.*]]: i8):
+// CHECK:             %[[VAL_9:.*]] = vector.from_elements %[[VAL_8]] : vector<1xi8>
+// CHECK:             %[[DOWNCAST_1:.*]] = vector.bitcast %[[VAL_9]] : vector<1xi8> to vector<4xi2>
+// CHECK:             %[[SELECT_1:.*]] = arith.select %[[MASK_1]], %[[V1]], %[[DOWNCAST_1]] : vector<4xi1>, vector<4xi2>
+// CHECK:             %[[UPCAST_1:.*]] = vector.bitcast %[[SELECT_1]] : vector<4xi2> to vector<1xi8>
+// CHECK:             %[[RES_1:.*]] = vector.extract %[[UPCAST_1]][0] : i8 from vector<1xi8>
+// CHECK:             memref.atomic_yield %[[RES_1]] : i8
+// CHECK:           }
+
+// Second atomic RMW:
+// CHECK:           %[[VAL_14:.*]] = arith.constant 1 : index
+// CHECK:           %[[IDX_2:.*]] = arith.addi %[[IDX_1]], %[[VAL_14]] : index
+// CHECK:           %[[VAL_16:.*]] = vector.extract_strided_slice %[[ARG_0]] {offsets = [1], sizes = [3], strides = [1]} : vector<4xi2> to vector<3xi2>
+// CHECK:           %[[V2:.*]] = vector.insert_strided_slice %[[VAL_16]], %[[INIT]] {offsets = [0], strides = [1]} : vector<3xi2> into vector<4xi2>
+// CHECK:           %[[MASK_2:.*]] = arith.constant dense<[true, true, true, false]> : vector<4xi1>
+// CHECK:            memref.generic_atomic_rmw %[[VAL_1]]{{\[}}%[[IDX_2]]] : memref<4xi8> {
+// CHECK:           ^bb0(%[[VAL_20:.*]]: i8):
+// CHECK:             %[[VAL_21:.*]] = vector.from_elements %[[VAL_20]] : vector<1xi8>
+// CHECK:             %[[DONWCAST_2:.*]] = vector.bitcast %[[VAL_21]] : vector<1xi8> to vector<4xi2>
+// CHECK:             %[[SELECT_2:.*]] = arith.select %[[MASK_2]], %[[V2]], %[[DONWCAST_2]] : vector<4xi1>, vector<4xi2>
+// CHECK:             %[[UPCAST_2:.*]] = vector.bitcast %[[SELECT_2]] : vector<4xi2> to vector<1xi8>
+// CHECK:             %[[RES_2:.*]] = vector.extract %[[UPCAST_2]][0] : i8 from vector<1xi8>
+// CHECK:             memref.atomic_yield %[[RES_2]] : i8
+// CHECK:           }
+
+// -----
+
 func.func @vector_store_i2_const_index_two_partial_stores(%arg0: vector<3xi2>) {
     %src = memref.alloc() : memref<3x3xi2>
     %c0 = arith.constant 0 : index

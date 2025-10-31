@@ -36,6 +36,8 @@ set(LLVM_TARGETS_WITH_JIT @LLVM_TARGETS_WITH_JIT@)
 
 set(LLVM_TARGET_TRIPLE "@LLVM_TARGET_TRIPLE@")
 
+set(LLVM_TARGET_TRIPLE_ENV "@LLVM_TARGET_TRIPLE_ENV@")
+
 set(LLVM_HOST_TRIPLE "@LLVM_HOST_TRIPLE@")
 
 set(LLVM_ABI_BREAKING_CHECKS @LLVM_ABI_BREAKING_CHECKS@)
@@ -162,14 +164,8 @@ endif()
 if(NOT TARGET acc_gen)
   add_custom_target(acc_gen)
 endif()
-if(NOT TARGET ARMTargetParserTableGen)
-  add_custom_target(ARMTargetParserTableGen)
-endif()
-if(NOT TARGET AArch64TargetParserTableGen)
-  add_custom_target(AArch64TargetParserTableGen)
-endif()
-if(NOT TARGET RISCVTargetParserTableGen)
-  add_custom_target(RISCVTargetParserTableGen)
+if(NOT TARGET target_parser_gen)
+  add_custom_target(target_parser_gen)
 endif()
 
 set_property(GLOBAL PROPERTY LLVM_TARGETS_CONFIGURED On)

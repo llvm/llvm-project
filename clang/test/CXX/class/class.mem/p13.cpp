@@ -114,3 +114,12 @@ template<typename B> struct CtorDtorName : B {
   CtorDtorName();
   ~CtorDtorName(); // expected-error {{identifier 'CtorDtorName' after '~' in destructor name does not name a type}}
 };
+
+struct S { // expected-note {{'S' declared here}}
+  enum E {
+    R = 11,
+    S = 12  // expected-error {{member 'S' has the same name as its class}}
+  };
+  static_assert(E::R == 11, "E::R is not 11");
+  static_assert(E::S == 12, "E::S is not 12");  // expected-error {{no member named 'S' in 'S::E'}}
+};

@@ -59,3 +59,22 @@ Options
    types that don't own the underlying data. Like for `AllowedTypes` above,
    regular expressions are accepted and the inclusion of `::` determines whether
    the qualified typename is matched or not.
+
+
+Limitations
+-----------
+
+This check does not perform lifetime analysis and may suggest replacing copies
+with const references that could become dangling. Be cautious when the
+referenced object might be invalidated by subsequent operations.
+
+.. code-block:: c++
+
+  void consume(const S&);
+
+  void func(std::vector<S> &Vec) {
+    const auto It = Vec.begin();
+    const S Value(*It); // The warning will suggest making this a const reference.
+    Vec.erase(It); // Container modifications could invalidate references.
+    consume(Value); // Safe with copy, dangling reference otherwise.
+  }

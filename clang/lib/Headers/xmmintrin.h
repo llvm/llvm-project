@@ -16,7 +16,6 @@
 
 #include <mmintrin.h>
 
-typedef int __v4si __attribute__((__vector_size__(16)));
 typedef float __v4sf __attribute__((__vector_size__(16)));
 typedef float __m128 __attribute__((__vector_size__(16), __aligned__(16)));
 
@@ -24,6 +23,8 @@ typedef float __m128_u __attribute__((__vector_size__(16), __aligned__(1)));
 
 /* Unsigned types */
 typedef unsigned int __v4su __attribute__((__vector_size__(16)));
+typedef unsigned short __v8hu __attribute__((__vector_size__(16)));
+typedef unsigned char __v16qu __attribute__((__vector_size__(16)));
 
 /* This header should only be included in a hosted environment as it depends on
  * a standard library to provide allocation routines. */
@@ -32,21 +33,12 @@ typedef unsigned int __v4su __attribute__((__vector_size__(16)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
-#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
-#define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__, __target__("sse,no-evex512"), \
-                 __min_vector_width__(128)))
-#define __DEFAULT_FN_ATTRS_SSE2                                                \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("sse2,no-evex512"), __min_vector_width__(128)))
-#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("sse"),            \
                  __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS_SSE2                                                \
   __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
                  __min_vector_width__(128)))
-#endif
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
@@ -1688,7 +1680,7 @@ _mm_cvtsi64_ss(__m128 __a, long long __b) {
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted value of the second operand. The upper 64 bits are copied from
 ///    the upper 64 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi32_ps(__m128 __a, __m64 __b)
 {
   return (__m128)__builtin_shufflevector(
@@ -1714,7 +1706,7 @@ _mm_cvtpi32_ps(__m128 __a, __m64 __b)
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted value from the second operand. The upper 64 bits are copied
 ///    from the upper 64 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvt_pi2ps(__m128 __a, __m64 __b)
 {
   return _mm_cvtpi32_ps(__a, __b);
@@ -2198,8 +2190,9 @@ _mm_storer_ps(float *__p, __m128 __a)
 #define _MM_HINT_NTA 0
 
 #ifndef _MSC_VER
-/* FIXME: We have to #define this because "sel" must be a constant integer, and
-   Sema doesn't do any form of constant propagation yet. */
+// If _MSC_VER is defined, we use the builtin variant of _mm_prefetch.
+// Otherwise, we provide this macro, which includes a cast, allowing the user
+// to pass a pointer of any time. The _mm_prefetch accepts char to match MSVC.
 
 /// Loads one cache line of data from the specified address to a location
 ///    closer to the processor.
@@ -2352,9 +2345,8 @@ void _mm_sfence(void);
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_max_pi16(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_max_pi16(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_max((__v4hi)__a, (__v4hi)__b);
 }
 
@@ -2371,9 +2363,8 @@ _mm_max_pi16(__m64 __a, __m64 __b)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_max_pu8(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_max_pu8(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_max((__v8qu)__a, (__v8qu)__b);
 }
 
@@ -2390,9 +2381,8 @@ _mm_max_pu8(__m64 __a, __m64 __b)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_min_pi16(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_min_pi16(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_min((__v4hi)__a, (__v4hi)__b);
 }
 
@@ -2409,9 +2399,8 @@ _mm_min_pi16(__m64 __a, __m64 __b)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the comparison results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_min_pu8(__m64 __a, __m64 __b)
-{
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_min_pu8(__m64 __a, __m64 __b) {
   return (__m64)__builtin_elementwise_min((__v8qu)__a, (__v8qu)__b);
 }
 
@@ -2427,9 +2416,8 @@ _mm_min_pu8(__m64 __a, __m64 __b)
 ///    A 64-bit integer vector containing the values with bits to be extracted.
 /// \returns The most significant bit from each 8-bit element in \a __a,
 ///    written to bits [7:0].
-static __inline__ int __DEFAULT_FN_ATTRS_SSE2
-_mm_movemask_pi8(__m64 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_movemask_pi8(__m64 __a) {
   return __builtin_ia32_pmovmskb128((__v16qi)__zext128(__a));
 }
 
@@ -2446,11 +2434,11 @@ _mm_movemask_pi8(__m64 __a)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the products of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_mulhi_pu16(__m64 __a, __m64 __b)
 {
-  return __trunc64(__builtin_ia32_pmulhuw128((__v8hi)__anyext128(__a),
-                                             (__v8hi)__anyext128(__b)));
+  return __trunc64(__builtin_ia32_pmulhuw128((__v8hu)__zext128(__a),
+                                             (__v8hu)__zext128(__b)));
 }
 
 /// Shuffles the 4 16-bit integers from a 64-bit integer vector to the
@@ -2529,8 +2517,8 @@ _mm_maskmove_si64(__m64 __d, __m64 __n, char *__p)
     // If there's a risk of spurious trap due to a 128-bit write, back up the
     // pointer by 8 bytes and shift values in registers to match.
     __p -= 8;
-    __d128 = __builtin_ia32_pslldqi128_byteshift((__v2di)__d128, 8);
-    __n128 = __builtin_ia32_pslldqi128_byteshift((__v2di)__n128, 8);
+    __d128 = (__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)__d128, 8);
+    __n128 = (__m128i)__builtin_ia32_pslldqi128_byteshift((__v16qi)__n128, 8);
   }
 
   __builtin_ia32_maskmovdqu((__v16qi)__d128, (__v16qi)__n128, __p);
@@ -2549,11 +2537,10 @@ _mm_maskmove_si64(__m64 __d, __m64 __n, char *__p)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the averages of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_avg_pu8(__m64 __a, __m64 __b)
-{
-  return __trunc64(__builtin_ia32_pavgb128((__v16qi)__anyext128(__a),
-                                           (__v16qi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_avg_pu8(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pavgb128((__v16qu)__zext128(__a),
+                                           (__v16qu)__zext128(__b)));
 }
 
 /// Computes the rounded averages of the packed unsigned 16-bit integer
@@ -2569,11 +2556,10 @@ _mm_avg_pu8(__m64 __a, __m64 __b)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the averages of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_avg_pu16(__m64 __a, __m64 __b)
-{
-  return __trunc64(__builtin_ia32_pavgw128((__v8hi)__anyext128(__a),
-                                           (__v8hi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_avg_pu16(__m64 __a, __m64 __b) {
+  return __trunc64(
+      __builtin_ia32_pavgw128((__v8hu)__zext128(__a), (__v8hu)__zext128(__b)));
 }
 
 /// Subtracts the corresponding 8-bit unsigned integer values of the two
@@ -2872,7 +2858,7 @@ _mm_movelh_ps(__m128 __a, __m128 __b) {
 ///    from the corresponding elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi16_ps(__m64 __a)
 {
   return __builtin_convertvector((__v4hi)__a, __v4sf);
@@ -2890,7 +2876,7 @@ _mm_cvtpi16_ps(__m64 __a)
 ///    destination are copied from the corresponding elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpu16_ps(__m64 __a)
 {
   return __builtin_convertvector((__v4hu)__a, __v4sf);
@@ -2908,7 +2894,7 @@ _mm_cvtpu16_ps(__m64 __a)
 ///    from the corresponding lower 4 elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi8_ps(__m64 __a)
 {
   return __builtin_convertvector(
@@ -2929,7 +2915,7 @@ _mm_cvtpi8_ps(__m64 __a)
 ///    operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the source operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpu8_ps(__m64 __a)
 {
   return __builtin_convertvector(
@@ -2953,7 +2939,7 @@ _mm_cvtpu8_ps(__m64 __a)
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    copied and converted values from the first operand. The upper 64 bits
 ///    contain the copied and converted values from the second operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi32x2_ps(__m64 __a, __m64 __b)
 {
   return __builtin_convertvector(
@@ -3028,9 +3014,7 @@ _mm_cvtps_pi8(__m128 __a)
 /// \returns A 32-bit integer value. Bits [3:0] contain the sign bits from each
 ///    single-precision floating-point element of the parameter. Bits [31:4] are
 ///    set to zero.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_movemask_ps(__m128 __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR _mm_movemask_ps(__m128 __a) {
   return __builtin_ia32_movmskps((__v4sf)__a);
 }
 

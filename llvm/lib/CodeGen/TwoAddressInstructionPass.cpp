@@ -854,8 +854,7 @@ void TwoAddressInstructionImpl::scanUses(Register DstReg) {
   }
 
   if (!VirtRegPairs.empty()) {
-    Register ToReg = VirtRegPairs.back();
-    VirtRegPairs.pop_back();
+    Register ToReg = VirtRegPairs.pop_back_val();
     while (!VirtRegPairs.empty()) {
       Register FromReg = VirtRegPairs.pop_back_val();
       bool isNew = DstRegMap.insert(std::make_pair(FromReg, ToReg)).second;
@@ -1402,9 +1401,8 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
       if (UnfoldMCID.getNumDefs() == 1) {
         // Unfold the load.
         LLVM_DEBUG(dbgs() << "2addr:   UNFOLDING: " << MI);
-        const TargetRegisterClass *RC =
-          TRI->getAllocatableClass(
-            TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI, *MF));
+        const TargetRegisterClass *RC = TRI->getAllocatableClass(
+            TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI));
         Register Reg = MRI->createVirtualRegister(RC);
         SmallVector<MachineInstr *, 2> NewMIs;
         if (!TII->unfoldMemoryOperand(*MF, MI, Reg,
@@ -1838,8 +1836,7 @@ bool TwoAddressInstructionImpl::run() {
   MRI->leaveSSA();
 
   // This pass will rewrite the tied-def to meet the RegConstraint.
-  MF->getProperties()
-      .set(MachineFunctionProperties::Property::TiedOpsRewritten);
+  MF->getProperties().setTiedOpsRewritten();
 
   TiedOperandMap TiedOperands;
   for (MachineBasicBlock &MBBI : *MF) {

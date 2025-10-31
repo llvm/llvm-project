@@ -49,3 +49,14 @@ module {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: @gpu_shuffle_unsupported
+func.func @gpu_shuffle_unsupported(%arg0 : vector<4xf16>) -> vector<4xf16> {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 64 : i32
+  // CHECK: gpu.shuffle xor %{{.*}}, %{{.*}}, %{{.*}} : vector<4xf16>
+  %shfl, %pred = gpu.shuffle xor %arg0, %offset, %width : vector<4xf16>
+  return %shfl : vector<4xf16>
+}

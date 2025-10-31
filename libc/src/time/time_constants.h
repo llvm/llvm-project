@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_CONSTANTS_H
 #define LLVM_LIBC_SRC_TIME_TIME_CONSTANTS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/time_t.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string_view.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_constants {

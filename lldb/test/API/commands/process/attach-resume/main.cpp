@@ -1,7 +1,7 @@
-#include <stdio.h>
-#include <fcntl.h>
-
+#include "attach.h"
 #include <chrono>
+#include <cstdio>
+#include <fcntl.h>
 #include <thread>
 
 volatile bool debugger_flag = true; // The debugger will flip this to false

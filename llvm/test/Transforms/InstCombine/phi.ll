@@ -2998,3 +2998,108 @@ join:
   %cmp = icmp eq i32 %phi, 0
   ret i1 %cmp
 }
+
+declare void @may_exit()
+
+define i32 @intrinsic_over_phi_noundef(i1 %c, i1 %c2, i32 %a) {
+; CHECK-LABEL: @intrinsic_over_phi_noundef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.umax.i32(i32 [[A:%.*]], i32 1)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @may_exit()
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i32 [ %a, %if ], [ 0, %entry ]
+  call void @may_exit()
+  %umax = call noundef i32 @llvm.umax(i32 noundef %phi, i32 1)
+  ret i32 %umax
+}
+
+define i32 @cross_lane_intrinsic_over_phi(i1 %c, i1 %c2, <4 x i32> %a) {
+; CHECK-LABEL: @cross_lane_intrinsic_over_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[A:%.*]])
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @may_exit()
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi <4 x i32> [ %a, %if ], [ zeroinitializer, %entry ]
+  call void @may_exit()
+  %sum = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %phi)
+  ret i32 %sum
+}
+
+define { i64, i1 } @overflow_intrinsic_over_phi(i1 %c, i64 %a) {
+; CHECK-LABEL: @overflow_intrinsic_over_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 1)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { i64, i1 } [ [[TMP0]], [[IF]] ], [ { i64 1, i1 false }, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @may_exit()
+; CHECK-NEXT:    ret { i64, i1 } [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i64 [ %a, %if ], [ 0, %entry ]
+  call void @may_exit()
+  %add_overflow = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %phi, i64 1)
+  ret { i64, i1 } %add_overflow
+}
+
+define i32 @multiple_intrinsics_with_multiple_phi_uses(i1 %c, i32 %arg) {
+; CHECK-LABEL: @multiple_intrinsics_with_multiple_phi_uses(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[IF_END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], -8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[ADD]], i32 [[ADD]], i32 29)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP1]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %if.end
+
+if:
+  %add = add i32 %arg, -8
+  br label %if.end
+
+if.end:
+  %phi = phi i32 [ %add, %if ], [ 0, %entry ]
+  %fshl1 = call i32 @llvm.fshl.i32(i32 %phi, i32 %phi, i32 29)
+  %fshl2 = call i32 @llvm.fshl.i32(i32 %phi, i32 %phi, i32 29)
+  %add2 = add i32 %fshl1, %fshl2
+  ret i32 %add2
+}

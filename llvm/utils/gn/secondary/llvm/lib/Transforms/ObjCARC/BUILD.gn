@@ -9,7 +9,6 @@ static_library("ObjCARC") {
   sources = [
     "DependencyAnalysis.cpp",
     "ObjCARC.cpp",
-    "ObjCARCAPElim.cpp",
     "ObjCARCContract.cpp",
     "ObjCARCExpand.cpp",
     "ObjCARCOpts.cpp",

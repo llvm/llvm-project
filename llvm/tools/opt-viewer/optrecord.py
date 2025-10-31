@@ -64,17 +64,19 @@ class Remark(yaml.YAMLObject):
 
     default_demangler = "c++filt -n"
     demangler_proc = None
+    demangler_lock = Lock()
 
     @classmethod
     def set_demangler(cls, demangler):
         cls.demangler_proc = subprocess.Popen(
             demangler.split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE
         )
-        cls.demangler_lock = Lock()
 
     @classmethod
     def demangle(cls, name):
         with cls.demangler_lock:
+            if not cls.demangler_proc:
+                cls.set_demangler(cls.default_demangler)
             cls.demangler_proc.stdin.write((name + "\n").encode("utf-8"))
             cls.demangler_proc.stdin.flush()
             return cls.demangler_proc.stdout.readline().rstrip().decode("utf-8")
@@ -323,8 +325,6 @@ def get_remarks(input_file, filter_=None):
 def gather_results(filenames, num_jobs, should_print_progress, filter_=None):
     if should_print_progress:
         print("Reading YAML files...")
-    if not Remark.demangler_proc:
-        Remark.set_demangler(Remark.default_demangler)
     remarks = optpmap.pmap(
         get_remarks, filenames, num_jobs, should_print_progress, filter_
     )

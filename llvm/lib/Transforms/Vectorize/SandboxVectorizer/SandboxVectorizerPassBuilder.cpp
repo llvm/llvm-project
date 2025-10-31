@@ -2,12 +2,15 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/NullPass.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PackReuse.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PrintInstructionCount.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PrintRegion.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromBBs.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromMetadata.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAcceptOrRevert.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAlwaysAccept.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionAlwaysRevert.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/TransactionSave.h"
 
 namespace llvm::sandboxir {

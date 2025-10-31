@@ -18,23 +18,24 @@ void foo(int **t1d) {
 
   for (j = 0; j < 3; j++)
     (*t1d)[j] = 0;
-#pragma omp target map(tofrom : (*t1d)[0 : 3])
+#pragma omp target map(tofrom : (*t1d)[0 : 3]) map(alloc : *t1d)
   { (*t1d)[1] = 1; }
   // CHECK: 1
   printf("%d\n", (*t1d)[1]);
-#pragma omp target map(tofrom : (**t2d)[0 : 3])
+#pragma omp target map(tofrom : (**t2d)[0 : 3]) map(alloc : **t2d, *t2d)
   { (**t2d)[1] = 2; }
   // CHECK: 2
   printf("%d\n", (**t2d)[1]);
-#pragma omp target map(tofrom : (***t3d)[0 : 3])
+#pragma omp target map(tofrom : (***t3d)[0 : 3])                               \
+    map(alloc : ***t3d, **t3d, *t3d)
   { (***t3d)[1] = 3; }
   // CHECK: 3
   printf("%d\n", (***t3d)[1]);
-#pragma omp target map(tofrom : (**t1d))
+#pragma omp target map(tofrom : (**t1d)) map(alloc : *t1d)
   { (*t1d)[0] = 4; }
   // CHECK: 4
   printf("%d\n", (*t1d)[0]);
-#pragma omp target map(tofrom : (*(*(t1d + a) + b)))
+#pragma omp target map(tofrom : (*(*(t1d + a) + b))) map(to : *(t1d + a))
   { *(*(t1d + a) + b) = 5; }
   // CHECK: 5
   printf("%d\n", *(*(t1d + a) + b));
@@ -49,7 +50,7 @@ void bar() {
   for (int i = 0; i < 3; i++) {
     (**a)[1] = i;
   }
-#pragma omp target map((**a)[ : 3])
+#pragma omp target map((**a)[ : 3]) map(alloc : **a, *a)
   {
     (**a)[1] = 6;
     // CHECK: 6
@@ -73,7 +74,8 @@ void zoo(int **f, SSA *sa) {
   *(f + sa->i + 1) = t;
   *(sa->sa->i + *(f + sa->i + 1)) = 4;
   printf("%d\n", *(sa->sa->i + *(1 + sa->i + f)));
-#pragma omp target map(sa, *(sa->sa->i + *(1 + sa->i + f)))
+#pragma omp target map(*(sa->sa->i + *(1 + sa->i + f))) map(alloc : sa->sa)    \
+    map(to : sa->i) map(to : sa->sa->i) map(to : *(1 + sa->i + f))
   { *(sa->sa->i + *(1 + sa->i + f)) = 7; }
   // CHECK: 7
   printf("%d\n", *(sa->sa->i + *(1 + sa->i + f)));
@@ -87,13 +89,13 @@ void xoo() {
 
 void yoo(int **x) {
   *x = (int *)malloc(2 * sizeof(int));
-#pragma omp target map(**x)
+#pragma omp target map(**x) map(alloc : *x)
   {
     **x = 8;
     // CHECK: 8
     printf("%d\n", **x);
   }
-#pragma omp target map(*(*x + 1))
+#pragma omp target map(*(*x + 1)) map(alloc : *x)
   {
     *(*x + 1) = 9;
     // CHECK: 9

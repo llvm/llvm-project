@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s --check-prefix CHECK-DEFAULT-32
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-short-ptr | FileCheck %s --check-prefixes CHECK-SHORT-SHARED,CHECK-SHORT-CONST,CHECK-SHORT-LOCAL
 
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -nvptx-short-ptr | %ptxas-verify %}
 
@@ -22,9 +22,9 @@ declare void @use(i8 %arg);
 ; CHECK-DEFAULT-32: .param .b32 test1_param_0
 ; CHECK-SHORT-LOCAL: .param .b32 test1_param_0
 define void @test1(ptr addrspace(5) %local) {
-  ; CHECK-DEFAULT: ld.param.u64 %rd{{.*}}, [test1_param_0];
-  ; CHECK-DEFAULT-32:  ld.param.u32 %r{{.*}}, [test1_param_0];
-  ; CHECK-SHORT-LOCAL: ld.param.u32 %r{{.*}}, [test1_param_0];
+  ; CHECK-DEFAULT: ld.param.b64 %rd{{.*}}, [test1_param_0];
+  ; CHECK-DEFAULT-32:  ld.param.b32 %r{{.*}}, [test1_param_0];
+  ; CHECK-SHORT-LOCAL: ld.param.b32 %r{{.*}}, [test1_param_0];
   %v = load i8, ptr addrspace(5) %local
   call void @use(i8 %v)
   ret void

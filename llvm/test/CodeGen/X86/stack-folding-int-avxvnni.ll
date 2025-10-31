@@ -8,10 +8,10 @@ declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
 declare <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
-declare <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
-declare <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>)
-declare <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32>, <4 x i32>, <4 x i32>)
-declare <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <16 x i8>, <16 x i8>)
+declare <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32>, <32 x i8>, <32 x i8>)
+declare <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32>, <16 x i8>, <16 x i8>)
+declare <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <32 x i8>, <32 x i8>)
 
 define <4 x i32> @stack_fold_vpdpwssd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpwssd:
@@ -125,7 +125,7 @@ define <8 x i32> @stack_fold_vpdpwssds_256_commuted(<8 x i32> %a0, <8 x i32> %a1
   ret <8 x i32> %2
 }
 
-define <4 x i32> @stack_fold_vpdpbusd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2) {
+define <4 x i32> @stack_fold_vpdpbusd(<4 x i32> %a0, <16 x i8> %a1, <16 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -135,11 +135,11 @@ define <4 x i32> @stack_fold_vpdpbusd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a
 ; CHECK-NEXT:    {vex} vpdpbusd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2)
+  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %a0, <16 x i8> %a1, <16 x i8> %a2)
   ret <4 x i32> %2
 }
 
-define <4 x i32> @stack_fold_vpdpbusd_commuted(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2) {
+define <4 x i32> @stack_fold_vpdpbusd_commuted(<4 x i32> %a0, <16 x i8> %a1, <16 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusd_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -150,11 +150,11 @@ define <4 x i32> @stack_fold_vpdpbusd_commuted(<4 x i32> %a0, <4 x i32> %a1, <4 
 ; CHECK-NEXT:    {vex} vpdpbusd %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %a0, <4 x i32> %a2, <4 x i32> %a1)
+  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %a0, <16 x i8> %a2, <16 x i8> %a1)
   ret <4 x i32> %2
 }
 
-define <8 x i32> @stack_fold_vpdpbusd_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
+define <8 x i32> @stack_fold_vpdpbusd_256(<8 x i32> %a0, <32 x i8> %a1, <32 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -164,11 +164,11 @@ define <8 x i32> @stack_fold_vpdpbusd_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32
 ; CHECK-NEXT:    {vex} vpdpbusd {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm0 # 32-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2)
+  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %a0, <32 x i8> %a1, <32 x i8> %a2)
   ret <8 x i32> %2
 }
 
-define <8 x i32> @stack_fold_vpdpbusd_256_commuted(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
+define <8 x i32> @stack_fold_vpdpbusd_256_commuted(<8 x i32> %a0, <32 x i8> %a1, <32 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusd_256_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -179,11 +179,11 @@ define <8 x i32> @stack_fold_vpdpbusd_256_commuted(<8 x i32> %a0, <8 x i32> %a1,
 ; CHECK-NEXT:    {vex} vpdpbusd %ymm1, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %a0, <8 x i32> %a2, <8 x i32> %a1)
+  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32> %a0, <32 x i8> %a2, <32 x i8> %a1)
   ret <8 x i32> %2
 }
 
-define <4 x i32> @stack_fold_vpdpbusds(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2) {
+define <4 x i32> @stack_fold_vpdpbusds(<4 x i32> %a0, <16 x i8> %a1, <16 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusds:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -193,11 +193,11 @@ define <4 x i32> @stack_fold_vpdpbusds(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %
 ; CHECK-NEXT:    {vex} vpdpbusds {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2)
+  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %a0, <16 x i8> %a1, <16 x i8> %a2)
   ret <4 x i32> %2
 }
 
-define <4 x i32> @stack_fold_vpdpbusds_commuted(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2) {
+define <4 x i32> @stack_fold_vpdpbusds_commuted(<4 x i32> %a0, <16 x i8> %a1, <16 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusds_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -208,11 +208,11 @@ define <4 x i32> @stack_fold_vpdpbusds_commuted(<4 x i32> %a0, <4 x i32> %a1, <4
 ; CHECK-NEXT:    {vex} vpdpbusds %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %a0, <4 x i32> %a2, <4 x i32> %a1)
+  %2 = call <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32> %a0, <16 x i8> %a2, <16 x i8> %a1)
   ret <4 x i32> %2
 }
 
-define <8 x i32> @stack_fold_vpdpbusds_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
+define <8 x i32> @stack_fold_vpdpbusds_256(<8 x i32> %a0, <32 x i8> %a1, <32 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusds_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -222,11 +222,11 @@ define <8 x i32> @stack_fold_vpdpbusds_256(<8 x i32> %a0, <8 x i32> %a1, <8 x i3
 ; CHECK-NEXT:    {vex} vpdpbusds {{[-0-9]+}}(%r{{[sb]}}p), %ymm1, %ymm0 # 32-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2)
+  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %a0, <32 x i8> %a1, <32 x i8> %a2)
   ret <8 x i32> %2
 }
 
-define <8 x i32> @stack_fold_vpdpbusds_256_commuted(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
+define <8 x i32> @stack_fold_vpdpbusds_256_commuted(<8 x i32> %a0, <32 x i8> %a1, <32 x i8> %a2) {
 ; CHECK-LABEL: stack_fold_vpdpbusds_256_commuted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -237,6 +237,6 @@ define <8 x i32> @stack_fold_vpdpbusds_256_commuted(<8 x i32> %a0, <8 x i32> %a1
 ; CHECK-NEXT:    {vex} vpdpbusds %ymm1, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %a0, <8 x i32> %a2, <8 x i32> %a1)
+  %2 = call <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32> %a0, <32 x i8> %a2, <32 x i8> %a1)
   ret <8 x i32> %2
 }

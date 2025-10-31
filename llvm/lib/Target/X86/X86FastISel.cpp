@@ -34,6 +34,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -124,6 +125,7 @@ private:
   bool X86SelectSIToFP(const Instruction *I);
   bool X86SelectUIToFP(const Instruction *I);
   bool X86SelectIntToFP(const Instruction *I, bool IsSigned);
+  bool X86SelectBitCast(const Instruction *I);
 
   const X86InstrInfo *getInstrInfo() const {
     return Subtarget->getInstrInfo();
@@ -2546,6 +2548,36 @@ bool X86FastISel::X86SelectTrunc(const Instruction *I) {
   return true;
 }
 
+bool X86FastISel::X86SelectBitCast(const Instruction *I) {
+  // Select SSE2/AVX bitcasts between 128/256/512 bit vector types.
+  MVT SrcVT, DstVT;
+  if (!Subtarget->hasSSE2() ||
+      !isTypeLegal(I->getOperand(0)->getType(), SrcVT) ||
+      !isTypeLegal(I->getType(), DstVT))
+    return false;
+
+  // Only allow vectors that use xmm/ymm/zmm.
+  if (!SrcVT.isVector() || !DstVT.isVector() ||
+      SrcVT.getVectorElementType() == MVT::i1 ||
+      DstVT.getVectorElementType() == MVT::i1)
+    return false;
+
+  Register Reg = getRegForValue(I->getOperand(0));
+  if (!Reg)
+    return false;
+
+  // Emit a reg-reg copy so we don't propagate cached known bits information
+  // with the wrong VT if we fall out of fast isel after selecting this.
+  const TargetRegisterClass *DstClass = TLI.getRegClassFor(DstVT);
+  Register ResultReg = createResultReg(DstClass);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+          ResultReg)
+      .addReg(Reg);
+
+  updateValueMap(I, ResultReg);
+  return true;
+}
+
 bool X86FastISel::IsMemcpySmall(uint64_t Len) {
   return Len <= (Subtarget->is64Bit() ? 32 : 16);
 }
@@ -3285,7 +3317,13 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (Flag.isSwiftError() || Flag.isPreallocated())
       return false;
 
+  // Can't handle import call optimization.
+  if (Is64Bit &&
+      MF->getFunction().getParent()->getModuleFlag("import-call-optimization"))
+    return false;
+
   SmallVector<MVT, 16> OutVTs;
+  SmallVector<Type *, 16> ArgTys;
   SmallVector<Register, 16> ArgRegs;
 
   // If this is a constant i1/i8/i16 argument, promote to i32 to avoid an extra
@@ -3332,6 +3370,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
     ArgRegs.push_back(ResultReg);
     OutVTs.push_back(VT);
+    ArgTys.push_back(Val->getType());
   }
 
   // Analyze operands of the call, assigning locations to each operand.
@@ -3342,7 +3381,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (IsWin64)
     CCInfo.AllocateStack(32, Align(8));
 
-  CCInfo.AnalyzeCallOperands(OutVTs, OutFlags, CC_X86);
+  CCInfo.AnalyzeCallOperands(OutVTs, OutFlags, ArgTys, CC_X86);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getAlignedCallFrameSize();
@@ -3636,6 +3675,12 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   CLI.NumResultRegs = RVLocs.size();
   CLI.Call = MIB;
 
+  // Add call site info for call graph section.
+  if (TM.Options.EmitCallGraphSection && CB && CB->isIndirectCall()) {
+    MachineFunction::CallSiteInfo CSInfo(*CB);
+    MF->addCallSiteInfo(CLI.Call, std::move(CSInfo));
+  }
+
   return true;
 }
 
@@ -3693,36 +3738,8 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
     updateValueMap(I, Reg);
     return true;
   }
-  case Instruction::BitCast: {
-    // Select SSE2/AVX bitcasts between 128/256/512 bit vector types.
-    if (!Subtarget->hasSSE2())
-      return false;
-
-    MVT SrcVT, DstVT;
-    if (!isTypeLegal(I->getOperand(0)->getType(), SrcVT) ||
-        !isTypeLegal(I->getType(), DstVT))
-      return false;
-
-    // Only allow vectors that use xmm/ymm/zmm.
-    if (!SrcVT.isVector() || !DstVT.isVector() ||
-        SrcVT.getVectorElementType() == MVT::i1 ||
-        DstVT.getVectorElementType() == MVT::i1)
-      return false;
-
-    Register Reg = getRegForValue(I->getOperand(0));
-    if (!Reg)
-      return false;
-
-    // Emit a reg-reg copy so we don't propagate cached known bits information
-    // with the wrong VT if we fall out of fast isel after selecting this.
-    const TargetRegisterClass *DstClass = TLI.getRegClassFor(DstVT);
-    Register ResultReg = createResultReg(DstClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(TargetOpcode::COPY), ResultReg).addReg(Reg);
-
-    updateValueMap(I, ResultReg);
-    return true;
-  }
+  case Instruction::BitCast:
+    return X86SelectBitCast(I);
   }
 
   return false;
@@ -4033,6 +4050,8 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
     MO.setReg(IndexReg);
   }
 
+  if (MI->isCall())
+    FuncInfo.MF->moveAdditionalCallInfo(MI, Result);
   Result->addMemOperand(*FuncInfo.MF, createMachineMemOperandFor(LI));
   Result->cloneInstrSymbols(*FuncInfo.MF, *MI);
   MachineBasicBlock::iterator I(MI);

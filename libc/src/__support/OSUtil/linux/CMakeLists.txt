@@ -16,12 +16,36 @@ add_object_library(
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
     libc.src.__support.CPP.string_view
-    libc.src.errno.errno
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_flock
     libc.hdr.types.struct_flock64
     libc.hdr.types.struct_f_owner_ex
     libc.hdr.types.off_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  auxv
+  HDRS
+    auxv.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.threads.callonce
+)
+
+add_header_library(
+  getrandom
+  HDRS
+    getrandom.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.ssize_t
     libc.include.sys_syscall
 )
 
@@ -46,11 +70,10 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.threads.callonce
     libc.src.__support.threads.linux.futex_word_type
+    libc.src.__support.OSUtil.linux.auxv
     libc.hdr.types.struct_timeval
     libc.hdr.types.struct_timespec
     libc.hdr.types.clockid_t
     libc.hdr.types.time_t
     libc.hdr.link_macros
-    libc.src.errno.errno
-    libc.src.sys.auxv.getauxval
 )

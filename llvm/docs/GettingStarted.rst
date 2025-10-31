@@ -12,12 +12,12 @@ Welcome to the LLVM project!
 
 The LLVM project has multiple components. The core of the project is
 itself called "LLVM". This contains all of the tools, libraries, and header
-files needed to process intermediate representations and converts it into
+files needed to process intermediate representations and convert them into
 object files.  Tools include an assembler, disassembler, bitcode analyzer, and
 bitcode optimizer.  It also contains basic regression tests.
 
 C-like languages use the `Clang <https://clang.llvm.org/>`_ front end.  This
-component compiles C, C++, Objective C, and Objective C++ code into LLVM bitcode
+component compiles C, C++, Objective-C, and Objective-C++ code into LLVM bitcode
 -- and from there into object files, using LLVM.
 
 Other components include:
@@ -32,24 +32,24 @@ Getting the Source Code and Building LLVM
 #. Check out LLVM (including subprojects like Clang):
 
    * ``git clone https://github.com/llvm/llvm-project.git``
-   * Or, on windows:
+   * Or, on Windows:
 
      ``git clone --config core.autocrlf=false
      https://github.com/llvm/llvm-project.git``
-   * To save storage and speed-up the checkout time, you may want to do a
+   * To save storage and speed up the checkout time, you may want to do a
      `shallow clone <https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---depthltdepthgt>`_.
      For example, to get the latest revision of the LLVM project, use
 
      ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
 
    * You are likely not interested in the user branches in the repo (used for
-     stacked pull-requests and reverts), you can filter them from your
+     stacked pull requests and reverts), you can filter them from your
      `git fetch` (or `git pull`) with this configuration:
 
-.. code-block:: console
-
-  git config --add remote.origin.fetch '^refs/heads/users/*'
-  git config --add remote.origin.fetch '^refs/heads/revert-*'
+   .. code-block:: console
+   
+     git config --add remote.origin.fetch '^refs/heads/users/*'
+     git config --add remote.origin.fetch '^refs/heads/revert-*'
 
 #. Configure and build LLVM and Clang:
 
@@ -71,7 +71,7 @@ Getting the Source Code and Building LLVM
 
      Some common options:
 
-     * ``-DLLVM_ENABLE_PROJECTS='...'`` --- semicolon-separated list of the LLVM
+     * ``-DLLVM_ENABLE_PROJECTS='...'`` --- A semicolon-separated list of the LLVM
        subprojects you'd like to additionally build. Can include any of: clang,
        clang-tools-extra, lldb, lld, polly, or cross-project-tests.
 
@@ -82,10 +82,10 @@ Getting the Source Code and Building LLVM
        pathname of where you want the LLVM tools and libraries to be installed
        (default ``/usr/local``).
 
-     * ``-DCMAKE_BUILD_TYPE=type`` --- Controls optimization level and debug
+     * ``-DCMAKE_BUILD_TYPE=type`` --- Controls the optimization level and debug
        information of the build. Valid options for *type* are ``Debug``,
        ``Release``, ``RelWithDebInfo``, and ``MinSizeRel``. For more detailed
-       information see :ref:`CMAKE_BUILD_TYPE <cmake_build_type>`.
+       information, see :ref:`CMAKE_BUILD_TYPE <cmake_build_type>`.
 
      * ``-DLLVM_ENABLE_ASSERTIONS=ON`` --- Compile with assertion checks enabled
        (default is ON for Debug builds, OFF for all other build types).
@@ -124,7 +124,7 @@ Getting the Source Code and Building LLVM
 
      ``ninja -C build check-llvm``
 
-     This will setup an LLVM build with debugging info, then compile LLVM and
+     This will set up an LLVM build with debugging info, then compile LLVM and
      run LLVM tests.
 
    * For more detailed information on CMake options, see `CMake <CMake.html>`__
@@ -150,7 +150,7 @@ page.
 
 For stand-alone builds, you must have an llvm install that is configured
 properly to be consumable by stand-alone builds of the other projects.
-This could be a distro provided LLVM install, or you can build it yourself,
+This could be a distro-provided LLVM install, or you can build it yourself,
 like this:
 
 .. code-block:: console
@@ -195,7 +195,7 @@ clang        clang, cmake             CLANG_INCLUDE_TESTS=ON (Required for check
 lld          lld, cmake
 ============ ======================== ======================
 
-Example for building stand-alone `clang`:
+Example of building stand-alone `clang`:
 
 .. code-block:: console
 
@@ -224,7 +224,7 @@ Example for building stand-alone `clang`:
 Requirements
 ============
 
-Before you begin to use the LLVM system, review the requirements given below.
+Before you begin to use the LLVM system, review the requirements below.
 This may save you some trouble by knowing ahead of time what hardware and
 software you will need.
 
@@ -240,8 +240,10 @@ Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
 Linux              AArch64               GCC, Clang
+Linux              LoongArch             GCC, Clang
 Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
+Linux              RISC-V                GCC, Clang
 Linux              SystemZ               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 DragonFlyBSD       amd64                 GCC, Clang
@@ -265,7 +267,7 @@ Windows on Arm     ARM64                 Visual Studio, Clang\ :sup:`4`
 
   #. Code generation supported for Pentium processors and up
   #. Code generation supported for 32-bit ABI only
-  #. To use LLVM modules on Win32-based system, you may configure LLVM
+  #. To use LLVM modules on a Win32-based system, you may configure LLVM
      with ``-DBUILD_SHARED_LIBS=On``.
   #. Visual Studio alone can compile LLVM. When using Clang, you
      must also have Visual Studio installed.
@@ -309,7 +311,7 @@ Package                                                     Version      Notes
    #. Only needed if you want to run the automated test suite in the
       ``llvm/test`` directory, or if you plan to utilize any Python libraries,
       utilities, or bindings.
-   #. Optional, adds compression / uncompression capabilities to selected LLVM
+   #. Optional, adds compression/uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.
    #. Only needed when building libc with New Headergen. Mainly used by libc.
@@ -401,11 +403,11 @@ Studio 2019 (or later), or a recent version of mingw64. FreeBSD 10.0 and newer
 have a modern Clang as the system compiler.
 
 However, some Linux distributions and some other or older BSDs sometimes have
-extremely old versions of GCC. These steps attempt to help you upgrade you
+extremely old versions of GCC. These steps attempt to help you upgrade your
 compiler even on such a system. However, if at all possible, we encourage you
 to use a recent version of a distribution with a modern system compiler that
 meets these requirements. Note that it is tempting to install a prior
-version of Clang and libc++ to be the host compiler, however libc++ was not
+version of Clang and libc++ to be the host compiler; however, libc++ was not
 well tested or set up to build on Linux until relatively recently. As
 a consequence, this guide suggests just using libstdc++ and a modern GCC as the
 initial host in a bootstrap, and then using Clang (and potentially libc++).
@@ -414,7 +416,7 @@ The first step is to get a recent GCC toolchain installed. The most common
 distribution on which users have struggled with the version requirements is
 Ubuntu Precise, 12.04 LTS. For this distribution, one easy option is to install
 the `toolchain testing PPA`_ and use it to install a modern GCC. There is
-a really nice discussions of this on the `ask ubuntu stack exchange`_ and a
+a really nice discussion of this on the `ask ubuntu stack exchange`_ and a
 `github gist`_ with updated commands. However, not all users can use PPAs and
 there are many other distributions, so it may be necessary (or just useful, if
 you're here you *are* doing compiler development after all) to build and install
@@ -469,7 +471,7 @@ binaries:
 
 If you fail to set rpath, most LLVM binaries will fail on startup with a message
 from the loader similar to ``libstdc++.so.6: version `GLIBCXX_3.4.20' not
-found``. This means you need to tweak the -rpath linker flag.
+found``. This means you need to tweak the ``-rpath`` linker flag.
 
 This method will add an absolute path to the rpath of all executables. That's
 fine for local development. If you want to distribute the binaries you build
@@ -477,11 +479,11 @@ so that they can run on older systems, copy ``libstdc++.so.6`` into the
 ``lib/`` directory.  All of LLVM's shipping binaries have an rpath pointing at
 ``$ORIGIN/../lib``, so they will find ``libstdc++.so.6`` there.  Non-distributed
 binaries don't have an rpath set and won't find ``libstdc++.so.6``. Pass
-``-DLLVM_LOCAL_RPATH="$HOME/toolchains/lib64"`` to cmake to add an absolute
+``-DLLVM_LOCAL_RPATH="$HOME/toolchains/lib64"`` to CMake to add an absolute
 path to ``libstdc++.so.6`` as above. Since these binaries are not distributed,
 having an absolute local path is fine for them.
 
-When you build Clang, you will need to give *it* access to modern C++
+When you build Clang, you will need to give *it* access to a modern C++
 standard library in order to use it as your new host in part of a bootstrap.
 There are two easy ways to do this, either build (and install) libc++ along
 with Clang and then use it with the ``-stdlib=libc++`` compile and link flag,
@@ -500,7 +502,7 @@ The remainder of this guide is meant to get you up and running with LLVM and to
 give you some basic information about the LLVM environment.
 
 The later sections of this guide describe the `general layout`_ of the LLVM
-source tree, a `simple example`_ using the LLVM tool chain, and `links`_ to find
+source tree, a `simple example`_ using the LLVM toolchain, and `links`_ to find
 more information about LLVM or to get help via e-mail.
 
 Terminology and Notation
@@ -514,11 +516,11 @@ appropriate pathname on your local system.  All these paths are absolute:
 
 ``SRC_ROOT``
 
-  This is the top level directory of the LLVM source tree.
+  This is the top-level directory of the LLVM source tree.
 
 ``OBJ_ROOT``
 
-  This is the top level directory of the LLVM object tree (i.e. the tree where
+  This is the top-level directory of the LLVM object tree (i.e. the tree where
   object files and compiled programs will be placed.  It can be the same as
   SRC_ROOT).
 
@@ -590,7 +592,7 @@ Compiling the LLVM Suite Source Code
 ------------------------------------
 
 Unlike with autotools, with CMake your build type is defined at configuration.
-If you want to change your build type, you can re-run cmake with the following
+If you want to change your build type, you can re-run CMake with the following
 invocation:
 
    .. code-block:: console
@@ -666,7 +668,7 @@ cross-compiling CMake provides a variable ``CMAKE_TOOLCHAIN_FILE`` which can
 define compiler flags and variables used during the CMake test operations.
 
 The result of such a build is executables that are not runnable on the build
-host but can be executed on the target. As an example the following CMake
+host but can be executed on the target. As an example, the following CMake
 invocation can generate build files targeting iOS. This will work on macOS
 with the latest Xcode:
 
@@ -770,7 +772,7 @@ Generates system build files.
 - Some simple examples showing how to use LLVM as a compiler for a custom
   language - including lowering, optimization, and code generation.
 
-- Kaleidoscope Tutorial: Kaleidoscope language tutorial run through the
+- Kaleidoscope Tutorial: Kaleidoscope language tutorial runs through the
   implementation of a nice little compiler for a non-trivial language
   including a hand-written lexer, parser, AST, as well as code generation
   support using LLVM- both static (ahead of time) and various approaches to
@@ -780,7 +782,7 @@ Generates system build files.
 
 - BuildingAJIT: Examples of the `BuildingAJIT tutorial
   <https://llvm.org/docs/tutorial/BuildingAJIT1.html>`_ that shows how LLVM’s
-  ORC JIT APIs interact with other parts of LLVM. It also, teaches how to
+  ORC JIT APIs interact with other parts of LLVM. It also teaches how to
   recombine them to build a custom JIT that is suited to your use-case.
 
 ``llvm/include``
@@ -858,7 +860,7 @@ share code among the `tools`_.
 
 ``llvm/lib/Support/``
 
-  Source code that corresponding to the header files in ``llvm/include/ADT/``
+  Source code that corresponds to the header files in ``llvm/include/ADT/``
   and ``llvm/include/Support/``.
 
 ``llvm/bindings``
@@ -867,7 +869,7 @@ share code among the `tools`_.
 Contains bindings for the LLVM compiler infrastructure to allow
 programs written in languages other than C or C++ to take advantage of the LLVM
 infrastructure.
-LLVM project provides language bindings for OCaml and Python.
+The LLVM project provides language bindings for OCaml and Python.
 
 ``llvm/projects``
 -----------------
@@ -917,11 +919,11 @@ the `Command Guide <CommandGuide/index.html>`_.
 
 ``llvm-as``
 
-  The assembler transforms the human readable LLVM assembly to LLVM bitcode.
+  The assembler transforms the human-readable LLVM assembly to LLVM bitcode.
 
 ``llvm-dis``
 
-  The disassembler transforms the LLVM bitcode to human readable LLVM assembly.
+  The disassembler transforms the LLVM bitcode to human-readable LLVM assembly.
 
 ``llvm-link``
 
@@ -1026,8 +1028,8 @@ Example with clang
 
    .. note::
 
-     Clang works just like GCC by default.  The standard -S and -c arguments
-     work as usual (producing a native .s or .o file, respectively).
+     Clang works just like GCC by default.  The standard ``-S`` and ``-c`` arguments
+     work as usual (producing a native ``.s`` or ``.o`` file, respectively).
 
 #. Next, compile the C file into an LLVM bitcode file:
 
@@ -1035,7 +1037,7 @@ Example with clang
 
      % clang -O3 -emit-llvm hello.c -c -o hello.bc
 
-   The -emit-llvm option can be used with the -S or -c options to emit an LLVM
+   The ``-emit-llvm`` option can be used with the ``-S`` or ``-c`` options to emit an LLVM
    ``.ll`` or ``.bc`` file (respectively) for the code.  This allows you to use
    the `standard LLVM tools <CommandGuide/index.html>`_ on the bitcode file.
 
@@ -1051,7 +1053,7 @@ Example with clang
 
      % lli hello.bc
 
-   The second examples shows how to invoke the LLVM JIT, :doc:`lli
+   The second example shows how to invoke the LLVM JIT, :doc:`lli
    <CommandGuide/lli>`.
 
 #. Use the ``llvm-dis`` utility to take a look at the LLVM assembly code:
@@ -1092,7 +1094,7 @@ Questions <FAQ.html>`_ page.
 
 If you are having problems with limited memory and build time, please try
 building with ``ninja`` instead of ``make``. Please consider configuring the
-following options with cmake:
+following options with CMake:
 
  * ``-G Ninja``
 
@@ -1163,7 +1165,7 @@ following options with cmake:
 
    Consider setting this to ``ON`` if you require a debug build, as this will ease
    memory pressure on the linker. This will make linking much faster, as the
-   binaries will not contain any of the debug information. Instead the debug
+   binaries will not contain any of the debug information. Instead, the debug
    information is in a separate DWARF object file (with the extension ``.dwo``).
    This only applies to host platforms using ELF, such as Linux.
 

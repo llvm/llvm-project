@@ -145,113 +145,59 @@ ret:
 @gd = external thread_local global i32
 
 define void @test_la_tls_gd(i32 signext %n) nounwind {
-; RV32NOFUSION-LABEL: test_la_tls_gd:
-; RV32NOFUSION:       # %bb.0: # %entry
-; RV32NOFUSION-NEXT:    addi sp, sp, -16
-; RV32NOFUSION-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32NOFUSION-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32NOFUSION-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32NOFUSION-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
-; RV32NOFUSION-NEXT:    mv s0, a0
-; RV32NOFUSION-NEXT:    li s2, 0
-; RV32NOFUSION-NEXT:  .Lpcrel_hi3:
-; RV32NOFUSION-NEXT:    auipc a0, %tls_gd_pcrel_hi(gd)
-; RV32NOFUSION-NEXT:    addi s1, a0, %pcrel_lo(.Lpcrel_hi3)
-; RV32NOFUSION-NEXT:  .LBB3_1: # %loop
-; RV32NOFUSION-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32NOFUSION-NEXT:    mv a0, s1
-; RV32NOFUSION-NEXT:    call __tls_get_addr
-; RV32NOFUSION-NEXT:    lw zero, 0(a0)
-; RV32NOFUSION-NEXT:    addi s2, s2, 1
-; RV32NOFUSION-NEXT:    blt s2, s0, .LBB3_1
-; RV32NOFUSION-NEXT:  # %bb.2: # %ret
-; RV32NOFUSION-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32NOFUSION-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32NOFUSION-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32NOFUSION-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; RV32NOFUSION-NEXT:    addi sp, sp, 16
-; RV32NOFUSION-NEXT:    ret
+; RV32I-LABEL: test_la_tls_gd:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    li s2, 0
+; RV32I-NEXT:  .Lpcrel_hi3:
+; RV32I-NEXT:    auipc s1, %tls_gd_pcrel_hi(gd)
+; RV32I-NEXT:    addi s1, s1, %pcrel_lo(.Lpcrel_hi3)
+; RV32I-NEXT:  .LBB3_1: # %loop
+; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    call __tls_get_addr
+; RV32I-NEXT:    lw zero, 0(a0)
+; RV32I-NEXT:    addi s2, s2, 1
+; RV32I-NEXT:    blt s2, s0, .LBB3_1
+; RV32I-NEXT:  # %bb.2: # %ret
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
 ;
-; RV64NOFUSION-LABEL: test_la_tls_gd:
-; RV64NOFUSION:       # %bb.0: # %entry
-; RV64NOFUSION-NEXT:    addi sp, sp, -32
-; RV64NOFUSION-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64NOFUSION-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64NOFUSION-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64NOFUSION-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64NOFUSION-NEXT:    mv s0, a0
-; RV64NOFUSION-NEXT:    li s2, 0
-; RV64NOFUSION-NEXT:  .Lpcrel_hi3:
-; RV64NOFUSION-NEXT:    auipc a0, %tls_gd_pcrel_hi(gd)
-; RV64NOFUSION-NEXT:    addi s1, a0, %pcrel_lo(.Lpcrel_hi3)
-; RV64NOFUSION-NEXT:  .LBB3_1: # %loop
-; RV64NOFUSION-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64NOFUSION-NEXT:    mv a0, s1
-; RV64NOFUSION-NEXT:    call __tls_get_addr
-; RV64NOFUSION-NEXT:    lw zero, 0(a0)
-; RV64NOFUSION-NEXT:    addiw s2, s2, 1
-; RV64NOFUSION-NEXT:    blt s2, s0, .LBB3_1
-; RV64NOFUSION-NEXT:  # %bb.2: # %ret
-; RV64NOFUSION-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64NOFUSION-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64NOFUSION-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64NOFUSION-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64NOFUSION-NEXT:    addi sp, sp, 32
-; RV64NOFUSION-NEXT:    ret
-;
-; RV32FUSION-LABEL: test_la_tls_gd:
-; RV32FUSION:       # %bb.0: # %entry
-; RV32FUSION-NEXT:    addi sp, sp, -16
-; RV32FUSION-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32FUSION-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32FUSION-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32FUSION-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
-; RV32FUSION-NEXT:    mv s0, a0
-; RV32FUSION-NEXT:    li s2, 0
-; RV32FUSION-NEXT:  .Lpcrel_hi3:
-; RV32FUSION-NEXT:    auipc s1, %tls_gd_pcrel_hi(gd)
-; RV32FUSION-NEXT:    addi s1, s1, %pcrel_lo(.Lpcrel_hi3)
-; RV32FUSION-NEXT:  .LBB3_1: # %loop
-; RV32FUSION-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32FUSION-NEXT:    mv a0, s1
-; RV32FUSION-NEXT:    call __tls_get_addr
-; RV32FUSION-NEXT:    lw zero, 0(a0)
-; RV32FUSION-NEXT:    addi s2, s2, 1
-; RV32FUSION-NEXT:    blt s2, s0, .LBB3_1
-; RV32FUSION-NEXT:  # %bb.2: # %ret
-; RV32FUSION-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32FUSION-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32FUSION-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32FUSION-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; RV32FUSION-NEXT:    addi sp, sp, 16
-; RV32FUSION-NEXT:    ret
-;
-; RV64FUSION-LABEL: test_la_tls_gd:
-; RV64FUSION:       # %bb.0: # %entry
-; RV64FUSION-NEXT:    addi sp, sp, -32
-; RV64FUSION-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64FUSION-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64FUSION-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64FUSION-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64FUSION-NEXT:    mv s0, a0
-; RV64FUSION-NEXT:    li s2, 0
-; RV64FUSION-NEXT:  .Lpcrel_hi3:
-; RV64FUSION-NEXT:    auipc s1, %tls_gd_pcrel_hi(gd)
-; RV64FUSION-NEXT:    addi s1, s1, %pcrel_lo(.Lpcrel_hi3)
-; RV64FUSION-NEXT:  .LBB3_1: # %loop
-; RV64FUSION-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64FUSION-NEXT:    mv a0, s1
-; RV64FUSION-NEXT:    call __tls_get_addr
-; RV64FUSION-NEXT:    lw zero, 0(a0)
-; RV64FUSION-NEXT:    addiw s2, s2, 1
-; RV64FUSION-NEXT:    blt s2, s0, .LBB3_1
-; RV64FUSION-NEXT:  # %bb.2: # %ret
-; RV64FUSION-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64FUSION-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64FUSION-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64FUSION-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64FUSION-NEXT:    addi sp, sp, 32
-; RV64FUSION-NEXT:    ret
+; RV64I-LABEL: test_la_tls_gd:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    li s2, 0
+; RV64I-NEXT:  .Lpcrel_hi3:
+; RV64I-NEXT:    auipc s1, %tls_gd_pcrel_hi(gd)
+; RV64I-NEXT:    addi s1, s1, %pcrel_lo(.Lpcrel_hi3)
+; RV64I-NEXT:  .LBB3_1: # %loop
+; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    call __tls_get_addr
+; RV64I-NEXT:    lw zero, 0(a0)
+; RV64I-NEXT:    addiw s2, s2, 1
+; RV64I-NEXT:    blt s2, s0, .LBB3_1
+; RV64I-NEXT:  # %bb.2: # %ret
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
 entry:
   br label %loop
 
@@ -265,3 +211,8 @@ loop:
 ret:
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; RV32FUSION: {{.*}}
+; RV32NOFUSION: {{.*}}
+; RV64FUSION: {{.*}}
+; RV64NOFUSION: {{.*}}

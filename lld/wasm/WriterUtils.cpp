@@ -75,7 +75,6 @@ static std::string toString(const llvm::wasm::WasmLimits &limits) {
 }
 
 std::string toString(const WasmTableType &type) {
-  SmallString<128> ret("");
   return "type=" + toString(static_cast<ValType>(type.ElemType)) +
          "; limits=[" + toString(type.Limits) + "]";
 }

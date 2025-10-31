@@ -16,6 +16,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
@@ -37,17 +38,27 @@
 
 #define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
 
-// MacOS needs to be excluded because it does not support aliasing.
-#if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
+// At the moment, [[gnu::alias()]] is not supported on MacOS, and it is needed
+// to cleanly export and alias the C++ symbol `LIBC_NAMESPACE::func` with the C
+// symbol `func`.  So for public packaging on MacOS, we will only export the C
+// symbol.  Moreover, a C symbol `func` in macOS is mangled as `_func`.
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && !defined(LIBC_COMPILER_IS_MSVC)
+#ifndef __APPLE__
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
   LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
-      __##name##_impl__ __asm__(#name);                                        \
+      __##name##_impl__ asm(#name);                                            \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];                   \
   type __##name##_impl__ arglist
-#else
+#else // __APPLE__
+#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
+  LLVM_LIBC_ATTR(name)                                                         \
+  LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name) name asm("_" #name);  \
+  type name arglist
+#endif // __APPLE__
+#else  // LIBC_COPT_PUBLIC_PACKAGING
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist) type name arglist
-#endif
+#endif // LIBC_COPT_PUBLIC_PACKAGING
 
 // This extra layer of macro allows `name` to be a macro to rename a function.
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \

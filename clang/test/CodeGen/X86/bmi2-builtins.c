@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi2 -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi2 -emit-llvm -o - | FileCheck %s --check-prefix=B32
 
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi2 -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi2 -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=B32
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +bmi2 -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +bmi2 -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s --check-prefix=B32
+
 
 #include <immintrin.h>
 

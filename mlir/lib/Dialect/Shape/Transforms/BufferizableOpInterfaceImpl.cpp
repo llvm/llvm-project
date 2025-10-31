@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 
@@ -38,7 +37,7 @@ struct AssumingOpInterface
     size_t resultNum = std::distance(op->getOpResults().begin(),
                                      llvm::find(op->getOpResults(), value));
     // TODO: Support multiple blocks.
-    assert(llvm::hasSingleElement(assumingOp.getDoRegion().getBlocks()) &&
+    assert(assumingOp.getDoRegion().hasOneBlock() &&
            "expected exactly 1 block");
     auto yieldOp = dyn_cast<shape::AssumingYieldOp>(
         assumingOp.getDoRegion().front().getTerminator());
@@ -47,17 +46,17 @@ struct AssumingOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto assumingOp = cast<shape::AssumingOp>(op);
-    assert(llvm::hasSingleElement(assumingOp.getDoRegion().getBlocks()) &&
-           "only 1 block supported");
+    assert(assumingOp.getDoRegion().hasOneBlock() && "only 1 block supported");
     auto yieldOp = cast<shape::AssumingYieldOp>(
         assumingOp.getDoRegion().front().getTerminator());
 
     // Create new op and move over region.
     TypeRange newResultTypes(yieldOp.getOperands());
-    auto newOp = rewriter.create<shape::AssumingOp>(
-        op->getLoc(), newResultTypes, assumingOp.getWitness());
+    auto newOp = shape::AssumingOp::create(
+        rewriter, op->getLoc(), newResultTypes, assumingOp.getWitness());
     newOp.getDoRegion().takeBody(assumingOp.getRegion());
 
     // Update all uses of the old op.
@@ -65,8 +64,9 @@ struct AssumingOpInterface
     SmallVector<Value> newResults;
     for (const auto &it : llvm::enumerate(assumingOp->getResultTypes())) {
       if (isa<TensorType>(it.value())) {
-        newResults.push_back(rewriter.create<bufferization::ToTensorOp>(
-            assumingOp.getLoc(), newOp->getResult(it.index())));
+        newResults.push_back(bufferization::ToTensorOp::create(
+            rewriter, assumingOp.getLoc(), it.value(),
+            newOp->getResult(it.index())));
       } else {
         newResults.push_back(newOp->getResult(it.index()));
       }
@@ -112,12 +112,13 @@ struct AssumingYieldOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationOptions &options) const {
+                          const BufferizationOptions &options,
+                          BufferizationState &state) const {
     auto yieldOp = cast<shape::AssumingYieldOp>(op);
     SmallVector<Value> newResults;
     for (Value value : yieldOp.getOperands()) {
       if (isa<TensorType>(value.getType())) {
-        FailureOr<Value> buffer = getBuffer(rewriter, value, options);
+        FailureOr<Value> buffer = getBuffer(rewriter, value, options, state);
         if (failed(buffer))
           return failure();
         newResults.push_back(*buffer);

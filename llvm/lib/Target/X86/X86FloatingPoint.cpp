@@ -76,8 +76,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override { return "X86 FP Stackifier"; }
@@ -603,8 +602,7 @@ namespace {
     friend bool operator<(const TableEntry &TE, unsigned V) {
       return TE.from < V;
     }
-    friend bool LLVM_ATTRIBUTE_UNUSED operator<(unsigned V,
-                                                const TableEntry &TE) {
+    [[maybe_unused]] friend bool operator<(unsigned V, const TableEntry &TE) {
       return V < TE.from;
     }
   };

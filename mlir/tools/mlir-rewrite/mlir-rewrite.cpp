@@ -24,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -34,7 +35,7 @@ namespace mlir {
 using OperationDefinition = AsmParserState::OperationDefinition;
 
 /// Return the source code associated with the OperationDefinition.
-SMRange getOpRange(const OperationDefinition &op) {
+static SMRange getOpRange(const OperationDefinition &op) {
   const char *startOp = op.scopeLoc.Start.getPointer();
   const char *endOp = op.scopeLoc.End.getPointer();
 
@@ -186,15 +187,15 @@ std::unique_ptr<RewritePad> RewritePad::init(StringRef inputFilename,
 }
 
 /// Return the source code associated with the operation name.
-SMRange getOpNameRange(const OperationDefinition &op) { return op.loc; }
+static SMRange getOpNameRange(const OperationDefinition &op) { return op.loc; }
 
 /// Return whether the operation was printed using generic syntax in original
 /// buffer.
-bool isGeneric(const OperationDefinition &op) {
+static bool isGeneric(const OperationDefinition &op) {
   return op.loc.Start.getPointer()[0] == '"';
 }
 
-inline int asMainReturnCode(LogicalResult r) {
+static inline int asMainReturnCode(LogicalResult r) {
   return r.succeeded() ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -292,7 +293,7 @@ static llvm::cl::opt<std::string> simpleRenameReplace{
     llvm::cl::cat(clSimpleRenameCategory)};
 
 // Rewriter that does simple renames.
-LogicalResult simpleRename(RewritePad &rewriteState, raw_ostream &os) {
+static LogicalResult simpleRename(RewritePad &rewriteState, raw_ostream &os) {
   StringRef opName = simpleRenameOpName;
   StringRef match = simpleRenameMatch;
   StringRef replace = simpleRenameReplace;
@@ -316,7 +317,7 @@ static mlir::RewriterRegistration rewriteSimpleRename("simple-rename",
                                                       simpleRename);
 
 // Rewriter that insert range markers.
-LogicalResult markRanges(RewritePad &rewriteState, raw_ostream &os) {
+static LogicalResult markRanges(RewritePad &rewriteState, raw_ostream &os) {
   for (const auto &it : rewriteState.getOpDefs()) {
     auto [startOp, endOp] = getOpRange(it);
 

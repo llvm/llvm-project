@@ -152,6 +152,11 @@ struct Config {
     NeverInsert // Never insert headers as part of code completion
   };
 
+  enum class CodePatternsPolicy {
+    All, // Suggest all code patterns and snippets
+    None // Suggest none of the code patterns and snippets
+  };
+
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
@@ -161,12 +166,17 @@ struct Config {
     ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
     /// Controls if headers should be inserted when completions are accepted
     HeaderInsertionPolicy HeaderInsertion = HeaderInsertionPolicy::IWYU;
+    /// Enables code patterns & snippets suggestions
+    CodePatternsPolicy CodePatterns = CodePatternsPolicy::All;
   } Completion;
 
   /// Configures hover feature.
   struct {
     /// Whether hover show a.k.a type.
     bool ShowAKA = true;
+    /// Limit the number of characters returned when hovering a macro;
+    /// 0 is no limit.
+    uint32_t MacroContentsLimit = 2048;
   } Hover;
 
   struct {
@@ -189,6 +199,19 @@ struct Config {
     /// Controls highlighting modifiers that are disabled.
     std::vector<std::string> DisabledModifiers;
   } SemanticTokens;
+
+  enum class CommentFormatPolicy {
+    /// Treat comments as plain text.
+    PlainText,
+    /// Treat comments as Markdown.
+    Markdown,
+    /// Treat comments as doxygen.
+    Doxygen,
+  };
+
+  struct {
+    CommentFormatPolicy CommentFormat = CommentFormatPolicy::PlainText;
+  } Documentation;
 };
 
 } // namespace clangd

@@ -238,12 +238,13 @@ else:
 }
 
 declare ptr @fn_nonnull_noundef_arg(ptr nonnull noundef %p)
-declare ptr @fn_nonnull_deref_arg(ptr nonnull dereferenceable(4) %p)
+declare ptr @fn_deref_arg(ptr dereferenceable(4) %p)
 declare ptr @fn_nonnull_deref_or_null_arg(ptr nonnull dereferenceable_or_null(4) %p)
 declare ptr @fn_nonnull_arg(ptr nonnull %p)
 declare ptr @fn_noundef_arg(ptr noundef %p)
 declare ptr @fn_ptr_arg(ptr)
 declare ptr @fn_ptr_arg_nounwind_willreturn(ptr) nounwind willreturn
+declare void @fn_arg_vec(<2 x ptr>)
 
 define void @test9(i1 %X, ptr %Y) {
 ; CHECK-LABEL: @test9(
@@ -271,7 +272,7 @@ define void @test9_deref(i1 %X, ptr %Y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_nonnull_deref_arg(ptr [[Y:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_deref_arg(ptr [[Y:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -282,7 +283,7 @@ if:
 
 else:
   %phi = phi ptr [ %Y, %entry ], [ null, %if ]
-  call ptr @fn_nonnull_deref_arg(ptr %phi)
+  call ptr @fn_deref_arg(ptr %phi)
   ret void
 }
 
@@ -290,9 +291,8 @@ else:
 define void @test9_deref_or_null(i1 %X, ptr %Y) {
 ; CHECK-LABEL: @test9_deref_or_null(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_nonnull_deref_or_null_arg(ptr [[Y:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @fn_nonnull_deref_or_null_arg(ptr [[Y]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -916,6 +916,25 @@ bb5:                                              ; preds = %bb3, %bb
   call void @fn_ptr_arg_nounwind_willreturn(i1 %i8)
   %i7 = load i32, ptr %i6, align 4
   ret i32 %i7
+}
+
+define void @test9_gep_splat(i1 %X, ptr %Y) {
+; CHECK-LABEL: @test9_gep_splat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SPEC_SELECT]], <2 x i64> zeroinitializer
+; CHECK-NEXT:    call void @fn_arg_vec(<2 x ptr> [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+if:
+  br label %else
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr i8, ptr %phi, <2 x i64> zeroinitializer
+  call void @fn_arg_vec(<2 x ptr> %gep)
+  ret void
 }
 
 declare void @side.effect()

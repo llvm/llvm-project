@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -p loop-vectorize,'print<loops>' -disable-output -enable-early-exit-vectorization 2>&1 | FileCheck %s
+; RUN: opt -S < %s -passes='loop-vectorize,verify<loops>,print<loops>' -disable-output 2>&1 | FileCheck %s
 
 declare void @init_mem(ptr, i64);
 
@@ -6,7 +6,7 @@ declare void @init_mem(ptr, i64);
 ; uncountable early exits is correctly adding to the outer loop at depth 1.
 define void @early_exit_in_outer_loop1() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop1':
-; CHECK: Loop at depth 1 containing: {{.*}}%scalar.ph,%vector.ph,%vector.body,%middle.split,%middle.block
+; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.inner.found,%loop.inner.end<latch>,%loop.inner.end.loopexit,%vector.ph,%vector.body,%middle.split,%middle.block,%vector.early.exit
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -45,8 +45,8 @@ loop.inner.end:
 ; loops at depths 1 and 2, respectively.
 define void @early_exit_in_outer_loop2() {
 ; CHECK-LABEL: Loop info for function 'early_exit_in_outer_loop2':
-; CHECK: Loop at depth 1 containing: {{.*}}%scalar.ph,%vector.ph,%vector.body,%middle.split,%middle.block
-; CHECK:    Loop at depth 2 containing: {{.*}}%scalar.ph,%vector.ph,%vector.body,%middle.split<exiting>,%middle.block
+; CHECK: Loop at depth 1 containing: %loop.outer<header>,%loop.middle,%loop.inner.found,%loop.inner.end,%loop.middle.end,%loop.outer.latch<latch>,%vector.ph,%vector.body,%middle.split,%middle.block,%vector.early.exit
+; CHECK:    Loop at depth 2 containing: %loop.middle<header>,%loop.inner.end<latch><exiting>,%vector.ph,%vector.body,%middle.split<exiting>,%middle.block
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -88,4 +88,32 @@ loop.outer.latch:
   %t = phi i64 [ 0, %loop.middle.end ], [ 1, %loop.inner.found ]
   %count.outer.next = add i64 %count.outer, %t
   br label %loop.outer
+}
+
+define i32 @early_exit_branch_to_outer_header() {
+; CHECK-LABEL: Loop info for function 'early_exit_branch_to_outer_header':
+; CHECK-NEXT:  Loop at depth 1 containing: %outer.header<header>,%outer.header.loopexit<latch>,%vector.ph,%vector.body,%middle.split<exiting>,%vector.early.exit
+; CHECK-NEXT:    Loop at depth 2 containing: %vector.body<header><latch><exiting>
+entry:
+  %src = alloca [1024 x i8]
+  call void @init_mem(ptr %src, i64 1024)
+  br label %outer.header
+
+outer.header:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %outer.header ], [ %iv.next, %loop.latch ]
+  %gep.src = getelementptr i8, ptr %src, i64 %iv
+  %l = load i8, ptr %gep.src, align 1
+  %c = icmp eq i8 %l, 0
+  br i1 %c, label %outer.header, label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret i32 1
 }
