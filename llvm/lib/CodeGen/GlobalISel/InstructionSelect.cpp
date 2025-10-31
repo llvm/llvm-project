@@ -261,8 +261,7 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
         const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
         const TargetRegisterClass *RC = TRI.getSubClassWithSubReg(
             MRI.getRegClass(VReg), CopyOpd.getSubReg());
-        MRI.constrainRegClass(
-            VReg, RC); // 3rd Arg MinRCSize in DAG is 4, we used 0 here.
+        MRI.constrainRegClass(VReg, RC);
       }
     }
   }
