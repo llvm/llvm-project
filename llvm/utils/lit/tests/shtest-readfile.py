@@ -12,7 +12,7 @@
 # CHECK: # executed command: echo '%{readfile:[[TEMP_PATH]]{{[\\\/]}}absolute-paths.txt.tmp}'
 
 # CHECK-LABEL: FAIL: shtest-readfile :: env.txt ({{[^)]*}})
-# CHECK: env TEST=hello python3 -c "import os; print(os.environ['TEST'])"
+# CHECK: env TEST=hello {{.*}} -c "import os; print(os.environ['TEST'])"
 # CHECK: # | hello
 
 # CHECK-LABEL: FAIL: shtest-readfile :: file-does-not-exist.txt ({{[^)]*}})
