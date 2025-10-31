@@ -71,20 +71,20 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto Zero = integerLiteral(equals(0));
 
-  const auto SubscriptOperator = callee(cxxMethodDecl(hasName("operator[]")));
-
-  Finder->addMatcher(
+  const auto AddressOfMatcher =
       unaryOperator(
           unless(isExpansionInSystemHeader()), hasOperatorName("&"),
-          hasUnaryOperand(expr(
-              anyOf(cxxOperatorCallExpr(SubscriptOperator, argumentCountIs(2),
-                                        hasArgument(0, ContainerExpr),
-                                        hasArgument(1, Zero)),
-                    cxxMemberCallExpr(SubscriptOperator, on(ContainerExpr),
-                                      argumentCountIs(1), hasArgument(0, Zero)),
-                    arraySubscriptExpr(hasLHS(ContainerExpr), hasRHS(Zero))))))
-          .bind(AddressOfName),
-      this);
+          hasUnaryOperand(ignoringParenImpCasts(expr(anyOf(
+              cxxOperatorCallExpr(
+                  hasOverloadedOperatorName("[]"), argumentCountIs(2),
+                  hasArgument(0, ContainerExpr), hasArgument(1, Zero)),
+              cxxMemberCallExpr(callee(cxxMethodDecl(hasName("operator[]"))),
+                                on(ContainerExpr), argumentCountIs(1),
+                                hasArgument(0, Zero)),
+              arraySubscriptExpr(hasLHS(ContainerExpr), hasRHS(Zero)))))))
+          .bind(AddressOfName);
+
+  Finder->addMatcher(AddressOfMatcher, this);
 }
 
 void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
@@ -101,16 +101,19 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
   else if (ACE)
     CE = ACE;
 
-  SourceRange SrcRange = CE->getSourceRange();
+  const Expr *PrintedCE = CE->IgnoreParenImpCasts();
+
+  SourceRange SrcRange = PrintedCE->getSourceRange();
 
   std::string ReplacementText{
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
                            *Result.SourceManager, getLangOpts())};
 
-  const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(CE);
+  const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(PrintedCE);
   const bool NeedsParens =
       OpCall ? (OpCall->getOperator() != OO_Subscript)
-             : !isa<DeclRefExpr, MemberExpr, ArraySubscriptExpr, CallExpr>(CE);
+             : !isa<DeclRefExpr, MemberExpr, ArraySubscriptExpr, CallExpr>(
+                   PrintedCE);
   if (NeedsParens)
     ReplacementText = "(" + ReplacementText + ")";
 
