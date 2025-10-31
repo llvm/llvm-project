@@ -1210,7 +1210,7 @@ public:
   /// Return the number of operands determined by the opcode of the
   /// VPInstruction. Returns -1u if the number of operands cannot be determined
   /// directly by the opcode.
-  static unsigned getNumOperandsForOpcode(unsigned Opcode);
+  unsigned getNumOperandsForOpcode() const;
 
 private:
   typedef unsigned char OpcodeTy;
@@ -1280,6 +1280,48 @@ public:
     default:
       return true;
     }
+  }
+
+  /// Returns true if the VPInstruction has a mask operand.
+  bool isMasked() const {
+    return getNumOperandsForOpcode() + 1 == getNumOperands();
+  }
+
+  /// Returns true if the opcode needs and supports masking.
+  bool needsMask() const {
+    // Don't use masks to synthetic VPInstructions for now, i.e. ones that do
+    // not have underlying values.
+    if (!getUnderlyingValue())
+      return false;
+
+    return Opcode != Instruction::ExtractValue && Opcode != Instruction::PHI &&
+           Opcode != Instruction::ICmp && Opcode != Instruction::FCmp &&
+           Opcode != Instruction::GetElementPtr;
+  }
+
+  /// Add mask \p Mask to an unmasked VPInstruction, if it needs masking.
+  void addMask(VPValue *Mask) {
+    if (!needsMask())
+      return;
+    assert(!isMasked() && "recipe is already masked");
+    addOperand(Mask);
+  }
+
+  /// Returns the mask for the VPInstruction. Returns nullptr for unmasked
+  /// VPInstructions.
+  VPValue *getMask() const {
+    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+
+  /// Returns an iterator range over the operands excluding the mask operand
+  /// if present.
+  iterator_range<operand_iterator> operandsWithoutMask() {
+    unsigned NumOps = getNumOperands() - (isMasked() ? 1 : 0);
+    return make_range(op_begin(), op_begin() + NumOps);
+  }
+  iterator_range<const_operand_iterator> operandsWithoutMask() const {
+    unsigned NumOps = getNumOperands() - (isMasked() ? 1 : 0);
+    return make_range(op_begin(), op_begin() + NumOps);
   }
 
   /// Returns true if the underlying opcode may read from or write to memory.

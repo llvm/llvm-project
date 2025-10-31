@@ -421,13 +421,12 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
-  assert((getNumOperandsForOpcode(Opcode) == -1u ||
-          getNumOperandsForOpcode(Opcode) == getNumOperands()) &&
+  assert((getNumOperandsForOpcode() == -1u ||
+          getNumOperandsForOpcode() == getNumOperands()) &&
          "number of operands does not match opcode");
 }
 
-#ifndef NDEBUG
-unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
+unsigned VPInstruction::getNumOperandsForOpcode() const {
   if (Instruction::isUnaryOp(Opcode) || Instruction::isCast(Opcode))
     return 1;
 
@@ -477,7 +476,12 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ExtractLastActive:
     return 3;
-  case Instruction::Call:
+  case Instruction::Call: {
+    VPValue *LastOp = getOperand(getNumOperands() - 1);
+    if (isa<VPIRValue>(LastOp) && isa<Function>(LastOp->getLiveInIRValue()))
+      return getNumOperands();
+    return getNumOperands() - 1;
+  }
   case Instruction::GetElementPtr:
   case Instruction::PHI:
   case Instruction::Switch:
@@ -492,7 +496,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   }
   llvm_unreachable("all cases should be handled above");
 }
-#endif
 
 bool VPInstruction::doesGeneratePerAllLanes() const {
   return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);

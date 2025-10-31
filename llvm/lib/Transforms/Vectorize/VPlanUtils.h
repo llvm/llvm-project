@@ -103,6 +103,12 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
          "Expected int induction");
   return VPIRFlags::WrapFlagsTy(false, false);
 }
+
+/// Collect the header mask with the pattern:
+/// ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// the header-mask pattern manually.
+VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//

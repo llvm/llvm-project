@@ -279,15 +279,29 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    if (R->getNumOperands() != std::tuple_size_v<Ops_t>) {
+    if (R->getNumOperands() < std::tuple_size<Ops_t>::value) {
       [[maybe_unused]] auto *RepR = dyn_cast<VPReplicateRecipe>(R);
       assert(((isa<VPInstruction>(R) &&
-               VPInstruction::getNumOperandsForOpcode(Opcode) == -1u) ||
+               cast<VPInstruction>(R)->getNumOperandsForOpcode() == -1u) ||
               (RepR && std::tuple_size_v<Ops_t> ==
                            RepR->getNumOperands() - RepR->isPredicated())) &&
              "non-variadic recipe with matched opcode does not have the "
              "expected number of operands");
       return false;
+    }
+
+    // If the recipe has more operands than expected, check if it's valid, i.e.
+    // either a masked VPInstructions or which either the masked or unmasked
+    // form is matched or a variadic opcode like phi nodes.
+    if (R->getNumOperands() > std::tuple_size<Ops_t>::value) {
+      if (auto *VPI = dyn_cast<VPInstruction>(R)) {
+        // Masked VPInstructions have an extra mask operand at the end.
+        if (!VPI->isMasked() ||
+            VPI->getNumOperands() != std::tuple_size<Ops_t>::value + 1)
+          return false;
+      } else if (Opcode != Instruction::PHI) {
+        return false;
+      }
     }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
