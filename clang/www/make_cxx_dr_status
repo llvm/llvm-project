@@ -10,7 +10,7 @@ output = os.path.join(clang_www_dir, 'cxx_dr_status.html')
 dr_test_dir = os.path.join(clang_www_dir, '../test/CXX/drs')
 
 class DR:
-  def __init__(self, section_number, section_name, section_link, number, url, status, liaison, title):
+  def __init__(self, *, section_number, section_name, section_link, number, url, status, liaison, title):
     self.section_number, self.section_name, self.section_link, self.number, self.url, self.status, self.liaison, self.title = \
         section_number, section_name, section_link, number, url, status, liaison, title
   def __repr__(self):
