@@ -43,7 +43,12 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let options = [Option<
     "printOnly", "print-analysis-only", "bool",
     /*default=*/"false",
-    "Print the result of layout propagation analysis and exit.">];
+    "Print the result of layout propagation analysis and exit.">,
+    Option<
+    "layoutKind", "layout-kind", "std::string",
+    /*default=*/"\"lane\"",
+    "Propagate a `sg` / `inst` / `lane` level of xegpu layouts.">
+  ];
 }
 
 def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {
