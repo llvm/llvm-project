@@ -706,8 +706,9 @@ public:
         if (!getChunkFromBlock(Block, &Chunk, &Header) &&
             !getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
           return;
-      } else if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header))
+      } else if (!getChunkFromBlock(addHeaderTag(Block), &Chunk, &Header)) {
         return;
+      }
 
       if (Header.State != Chunk::State::Allocated)
         return;
