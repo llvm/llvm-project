@@ -179,59 +179,6 @@ static void describeUninitializedArgumentInCall(const CallEvent &Call,
   }
 }
 
-bool CallAndMessageChecker::uninitRefOrPointer(
-    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
-    const BugType &BT, const ParmVarDecl *ParamDecl, int ArgumentNumber) const {
-
-  if (!ChecksEnabled[CK_ArgPointeeInitializedness])
-    return false;
-
-  // No parameter declaration available, i.e. variadic function argument.
-  if(!ParamDecl)
-    return false;
-
-  // If parameter is declared as pointer to const in function declaration,
-  // then check if corresponding argument in function call is
-  // pointing to undefined symbol value (uninitialized memory).
-  SmallString<200> Buf;
-  llvm::raw_svector_ostream Os(Buf);
-
-  if (ParamDecl->getType()->isPointerType()) {
-    Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
-       << " function call argument is a pointer to uninitialized value";
-  } else if (ParamDecl->getType()->isReferenceType()) {
-    Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
-       << " function call argument is an uninitialized value";
-  } else
-    return false;
-
-  if(!ParamDecl->getType()->getPointeeType().isConstQualified())
-    return false;
-
-  if (const MemRegion *SValMemRegion = V.getAsRegion()) {
-    const ProgramStateRef State = C.getState();
-    QualType T = ParamDecl->getType()->getPointeeType();
-    if (T->isVoidType())
-      T = C.getASTContext().CharTy;
-    const SVal PSV = State->getSVal(SValMemRegion, T);
-    bool IsUndef = PSV.isUndef();
-    if (auto LCV = PSV.getAs<nonloc::LazyCompoundVal>())
-      IsUndef = LCV->getStore() == nullptr;
-    if (IsUndef) {
-      if (ExplodedNode *N = C.generateErrorNode()) {
-        auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
-        R->addRange(ArgRange);
-        if (ArgEx)
-          bugreporter::trackExpressionValue(N, ArgEx, *R);
-
-        C.emitReport(std::move(R));
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
 namespace {
 class FindUninitializedField {
 public:
@@ -272,8 +219,114 @@ public:
 
     return false;
   }
+
+  void printFieldChain(llvm::raw_ostream &OS) {
+    if (FieldChain.size() == 1)
+      OS << " (e.g., field: '" << *FieldChain[0] << "')";
+    else {
+      OS << " (e.g., via the field chain: '";
+      bool First = true;
+      for (SmallVectorImpl<const FieldDecl *>::iterator DI = FieldChain.begin(),
+                                                        DE = FieldChain.end();
+           DI != DE; ++DI) {
+        if (First)
+          First = false;
+        else
+          OS << '.';
+        OS << **DI;
+      }
+      OS << "')";
+    }
+  }
 };
 } // namespace
+
+bool CallAndMessageChecker::uninitRefOrPointer(
+    CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
+    const BugType &BT, const ParmVarDecl *ParamDecl, int ArgumentNumber) const {
+
+  if (!ChecksEnabled[CK_ArgPointeeInitializedness])
+    return false;
+
+  // No parameter declaration available, i.e. variadic function argument.
+  if (!ParamDecl)
+    return false;
+
+  QualType ParamT = ParamDecl->getType();
+  if (!ParamT->isPointerOrReferenceType())
+    return false;
+
+  QualType PointeeT = ParamT->getPointeeType();
+  if (!PointeeT.isConstQualified())
+    return false;
+
+  const MemRegion *SValMemRegion = V.getAsRegion();
+  if (!SValMemRegion)
+    return false;
+
+  // If parameter is declared as pointer to const in function declaration,
+  // then check if corresponding argument in function call is
+  // pointing to undefined symbol value (uninitialized memory).
+
+  const ProgramStateRef State = C.getState();
+  if (PointeeT->isVoidType())
+    PointeeT = C.getASTContext().CharTy;
+  const SVal PointeeV =
+      State->getSVal(SValMemRegion, PointeeT);
+
+  if (PointeeV.isUndef()) {
+    if (ExplodedNode *N = C.generateErrorNode()) {
+      SmallString<200> Buf;
+      llvm::raw_svector_ostream Os(Buf);
+      Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
+         << " function call argument is ";
+      if (ParamT->isPointerType())
+        Os << "a pointer to uninitialized value";
+      else
+        Os << "an uninitialized value";
+      auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
+      R->addRange(ArgRange);
+      if (ArgEx)
+        bugreporter::trackExpressionValue(N, ArgEx, *R);
+
+      C.emitReport(std::move(R));
+    }
+    return true;
+  }
+
+  if (auto LV = PointeeV.getAs<nonloc::LazyCompoundVal>()) {
+    const LazyCompoundValData *D = LV->getCVData();
+    FindUninitializedField F(C.getState()->getStateManager().getStoreManager(),
+                             C.getSValBuilder().getRegionManager(),
+                             D->getStore());
+
+    if (F.Find(D->getRegion())) {
+      if (ExplodedNode *N = C.generateErrorNode()) {
+        SmallString<512> Buf;
+        llvm::raw_svector_ostream Os(Buf);
+        Os << (ArgumentNumber + 1) << llvm::getOrdinalSuffix(ArgumentNumber + 1)
+           << " function call argument";
+        if (ParamT->isPointerType())
+          Os << " points to";
+        else
+          Os << " references";
+        Os << " an uninitialized value";
+
+        F.printFieldChain(Os);
+
+        auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
+        R->addRange(ArgRange);
+
+        if (ArgEx)
+          bugreporter::trackExpressionValue(N, ArgEx, *R);
+        C.emitReport(std::move(R));
+      }
+      return true;
+    }
+  }
+
+  return false;
+}
 
 bool CallAndMessageChecker::PreVisitProcessArg(
     CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
@@ -320,22 +373,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
         SmallString<512> Str;
         llvm::raw_svector_ostream os(Str);
         os << "Passed-by-value struct argument contains uninitialized data";
-
-        if (F.FieldChain.size() == 1)
-          os << " (e.g., field: '" << *F.FieldChain[0] << "')";
-        else {
-          os << " (e.g., via the field chain: '";
-          bool first = true;
-          for (SmallVectorImpl<const FieldDecl *>::iterator
-               DI = F.FieldChain.begin(), DE = F.FieldChain.end(); DI!=DE;++DI){
-            if (first)
-              first = false;
-            else
-              os << '.';
-            os << **DI;
-          }
-          os << "')";
-        }
+        F.printFieldChain(os);
 
         // Generate a report for this bug.
         auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);

@@ -5,11 +5,11 @@
 void f(const int *end);
 
 void g(const int (&arrr)[10]) {
-  f(arrr);
+  f(arrr); // expected-warning{{1st function call argument is a pointer to uninitialized value}}
 }
 
 void h() {
   int arr[10];
 
-  g(arr); // expected-warning{{1st function call argument is an uninitialized value}}
+  g(arr);
 }
