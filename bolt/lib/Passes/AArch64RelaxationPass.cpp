@@ -46,7 +46,7 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
       MCInst &Inst = *It;
       bool IsADR = BC.MIB->isADR(Inst);
 
-      // TODO: Handlel other types of LDR (literal, PC-relative) instructions.
+      // TODO: Handle other types of LDR (literal, PC-relative) instructions.
       if (!IsADR && !BC.MIB->isLDRXl(Inst) && !BC.MIB->isLDRWl(Inst))
         continue;
 
