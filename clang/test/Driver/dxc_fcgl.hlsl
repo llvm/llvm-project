@@ -3,6 +3,3 @@
 // Make sure fcgl option flag which translated into "-emit-llvm" "-disable-llvm-passes".
 // CHECK: "-emit-llvm"
 // CHECK-SAME: "-disable-llvm-passes"
-
-// Make sure fcgl option not generate any diagnostics.
-// expected-no-diagnostics
