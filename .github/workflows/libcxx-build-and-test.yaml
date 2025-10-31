@@ -291,7 +291,7 @@ jobs:
 
   buildkite_platforms:
     # needs: [ stage2 ] # TODO: temporarily always trigger
-    runs-on: llvm-premerge-libcxx-next-runners
+    runs-on: ubuntu:latest
     steps:
       - name: Trigger Buildkite pipeline
         uses: buildkite/trigger-pipeline-action@v2.4.0
