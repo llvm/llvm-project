@@ -1857,18 +1857,16 @@ NVPTX::Scope NVPTXScopes::operator[](SyncScope::ID ID) const {
       scopeName = name->str();
 
     // Build list of supported syncscopes programmatically
-    std::string supportedScopes;
+    SmallVector<StringRef> supportedScopes;
     for (const auto &Entry : Scopes) {
-      if (!supportedScopes.empty())
-        supportedScopes += ", ";
       if (auto name = Context->getSyncScopeName(Entry.first))
-        supportedScopes += name->empty() ? "<empty string>" : name->str();
+        supportedScopes.push_back(name->empty() ? "<empty string>" : *name);
     }
 
     reportFatalUsageError(
         formatv("NVPTX backend does not support syncscope \"{0}\" (ID={1}).\n"
                 "Supported syncscopes are: {2}.",
-                scopeName, int(ID), supportedScopes));
+                scopeName, int(ID), llvm::join(supportedScopes, ", ")));
   }
   return S->second;
 }
