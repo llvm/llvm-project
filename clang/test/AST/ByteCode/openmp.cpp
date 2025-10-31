@@ -17,12 +17,12 @@ extern int omp_get_thread_num(void);
 
 int test2() {
   int x = 0;
-  int device_result[N] = {0};
+  int result[N] = {0};
 
-  #pragma omp target parallel loop num_threads(strict: N) severity(warning) message("msg")
+  #pragma omp parallel loop num_threads(strict: N) severity(warning) message("msg")
   for (int i = 0; i < N; i++) {
     x = omp_get_thread_num();
-    device_result[i] = i + x;
+    result[i] = i + x;
   }
 }
 

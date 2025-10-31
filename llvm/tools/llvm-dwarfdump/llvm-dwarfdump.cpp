@@ -202,9 +202,10 @@ static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
 static list<std::string> Name(
     "name",
-    desc("Find and print all debug info entries whose name (DW_AT_name "
-         "attribute) matches the exact text in <pattern>.  When used with the "
-         "the -regex option <pattern> is interpreted as a regular expression."),
+    desc("Find and print all debug info entries whose name "
+         "(DW_AT_name/DW_AT_linkage_name attribute) matches the exact text "
+         "in <pattern>.  When used with the the -regex option <pattern> is "
+         "interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for --name"), aliasopt(Name),
                        cl::NotHidden);

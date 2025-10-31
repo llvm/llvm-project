@@ -17,6 +17,18 @@ void for_each(IteratorType first, IteratorType last, CallbackType callback) {
     callback(*it);
 }
 
+struct all_of_impl {
+  template <typename Collection, typename Predicate>
+  constexpr bool operator()(const Collection& collection, Predicate predicate) const {
+    for (auto it = collection.begin(); it != collection.end(); ++it) {
+      if (!predicate(*it))
+        return false;
+    }
+    return true;
+  }
+};
+inline constexpr auto all_of = all_of_impl {};
+
 }
 
 }
@@ -94,6 +106,79 @@ public:
 private:
   ValueType* m_table { nullptr };
 };
+
+class ScopeExit final {
+public:
+  template<typename ExitFunctionParameter>
+  explicit ScopeExit(ExitFunctionParameter&& exitFunction)
+    : m_exitFunction(std::move(exitFunction)) {
+  }
+
+  ScopeExit(ScopeExit&& other)
+    : m_exitFunction(std::move(other.m_exitFunction))
+    , m_execute(std::move(other.m_execute)) {
+  }
+
+  ~ScopeExit() {
+    if (m_execute)
+      m_exitFunction();
+  }
+
+  WTF::Function<void()> take() {
+    m_execute = false;
+    return std::move(m_exitFunction);
+  }
+
+  void release() { m_execute = false; }
+
+  ScopeExit(const ScopeExit&) = delete;
+  ScopeExit& operator=(const ScopeExit&) = delete;
+  ScopeExit& operator=(ScopeExit&&) = delete;
+
+private:
+  WTF::Function<void()> m_exitFunction;
+  bool m_execute { true };
+};
+
+template<typename ExitFunction> ScopeExit makeScopeExit(ExitFunction&&);
+template<typename ExitFunction>
+ScopeExit makeScopeExit(ExitFunction&& exitFunction)
+{
+    return ScopeExit(std::move(exitFunction));
+}
+
+// Visitor adapted from http://stackoverflow.com/questions/25338795/is-there-a-name-for-this-tuple-creation-idiom
+
+template<class A, class... B> struct Visitor : Visitor<A>, Visitor<B...> {
+    Visitor(A a, B... b)
+        : Visitor<A>(a)
+        , Visitor<B...>(b...)
+    {
+    }
+
+    using Visitor<A>::operator ();
+    using Visitor<B...>::operator ();
+};
+  
+template<class A> struct Visitor<A> : A {
+    Visitor(A a)
+        : A(a)
+    {
+    }
+
+    using A::operator();
+};
+ 
+template<class... F> Visitor<F...> makeVisitor(F... f)
+{
+    return Visitor<F...>(f...);
+}
+
+void opaqueFunction();
+template <typename Visitor, typename... Variants> void visit(Visitor&& v, Variants&&... values)
+{
+  opaqueFunction();
+}
 
 } // namespace WTF
 
@@ -435,7 +520,7 @@ public:
   bool operator==(const Iterator&);
 
   Iterator& operator++();
-  void* operator*();
+  int& operator*();
 
 private:
   void* current { nullptr };
@@ -444,21 +529,38 @@ private:
 
 void ranges_for_each(RefCountable* obj) {
   int array[] = { 1, 2, 3, 4, 5 };
-  std::ranges::for_each(Iterator(array, sizeof(*array), 0), Iterator(array, sizeof(*array), 5), [&](void* item) {
+  std::ranges::for_each(Iterator(array, sizeof(*array), 0), Iterator(array, sizeof(*array), 5), [&](int& item) {
     obj->method();
-    ++(*static_cast<unsigned*>(item));
+    ++item;
   });
 }
+
+class IntCollection {
+public:
+  int* begin();
+  int* end();
+  const int* begin() const;
+  const int* end() const;
+};
 
 class RefCountedObj {
 public:
   void ref();
   void deref();
 
+  bool allOf(const IntCollection&);
+  bool isMatch(int);
+
   void call() const;
   void callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const;
   void doSomeWork() const;
 };
+
+bool RefCountedObj::allOf(const IntCollection& collection) {
+  return std::ranges::all_of(collection, [&](auto& number) {
+    return isMatch(number);
+  });
+}
 
 void RefCountedObj::callLambda([[clang::noescape]] const WTF::Function<void ()>& callback) const
 {
@@ -471,4 +573,82 @@ void RefCountedObj::call() const
         doSomeWork();
     };
     callLambda(lambda);
+}
+
+void scope_exit(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+  });
+  someFunction();
+  WTF::ScopeExit scope2([&] {
+    obj->method();
+  });
+  someFunction();
+}
+
+void doWhateverWith(WTF::ScopeExit& obj);
+
+void scope_exit_with_side_effect(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  doWhateverWith(scope);
+}
+
+void scope_exit_static(RefCountable* obj) {
+  static auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+}
+
+WTF::Function<void()> scope_exit_take_lambda(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  return scope.take();
+}
+
+// FIXME: Ideally, we treat release() as a trivial function.
+void scope_exit_release(RefCountable* obj) {
+  auto scope = WTF::makeScopeExit([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  scope.release();
+}
+
+void make_visitor(RefCountable* obj) {
+  auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+  });
+}
+
+void use_visitor(RefCountable* obj) {
+  auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+  });
+  WTF::visit(visitor, obj);
+}
+
+template <typename Visitor, typename ObjectType>
+void bad_visit(Visitor&, ObjectType*) {
+  someFunction();
+}
+
+void static_visitor(RefCountable* obj) {
+  static auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+}
+
+void bad_use_visitor(RefCountable* obj) {
+  auto visitor = WTF::makeVisitor([&] {
+    obj->method();
+    // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to uncounted type is unsafe [webkit.UncountedLambdaCapturesChecker]}}
+  });
+  bad_visit(visitor, obj);
 }

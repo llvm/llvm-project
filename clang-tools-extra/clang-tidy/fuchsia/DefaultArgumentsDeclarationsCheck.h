@@ -1,4 +1,4 @@
-//===--- DefaultArgumentsDeclarationsCheck.h - clang-tidy -------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::fuchsia {
 /// Default parameters are not allowed in declared functions.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/default-arguments-declarations.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/default-arguments-declarations.html
 class DefaultArgumentsDeclarationsCheck : public ClangTidyCheck {
 public:
   DefaultArgumentsDeclarationsCheck(StringRef Name, ClangTidyContext *Context)

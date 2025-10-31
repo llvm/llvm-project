@@ -300,6 +300,10 @@ private:
                                    Type *OpType,
                                    LostDebugLocObserver &LocObserver);
 
+  LegalizeResult emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                                 unsigned Size, Type *OpType,
+                                 LostDebugLocObserver &LocObserver);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -493,6 +497,7 @@ public:
   LLVM_ABI LegalizeResult lowerMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFCopySign(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerFMinimumMaximum(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFMad(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerIntrinsicRound(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFFloor(MachineInstr &MI);
@@ -510,6 +515,8 @@ public:
   LLVM_ABI LegalizeResult lowerExtract(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerInsert(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerSADDE(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerSSUBE(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerShlSat(MachineInstr &MI);

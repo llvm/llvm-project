@@ -1647,7 +1647,6 @@ void MipsConstantIslands::prescanForConstants() {
           MI.removeOperand(1);
           MI.removeOperand(1);
           MI.addOperand(MachineOperand::CreateCPI(index, 0));
-          MI.addOperand(MachineOperand::CreateImm(4));
         }
         break;
       }

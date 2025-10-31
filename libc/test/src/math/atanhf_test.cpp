@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/atanhf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -23,8 +23,6 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 // TODO: This test needs to have its checks for exceptions, errno
 // tightened https://github.com/llvm/llvm-project/issues/88819.
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
-
-  libc_errno = 0;
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(aNaN));
   // TODO: Uncomment these checks later, RoundingMode affects running

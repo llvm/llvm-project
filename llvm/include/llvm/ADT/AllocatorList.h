@@ -155,8 +155,8 @@ public:
     std::swap(getAlloc(), RHS.getAlloc());
   }
 
-  bool empty() { return List.empty(); }
-  size_t size() { return List.size(); }
+  [[nodiscard]] bool empty() const { return List.empty(); }
+  [[nodiscard]] size_t size() const { return List.size(); }
 
   iterator begin() { return iterator(List.begin()); }
   iterator end() { return iterator(List.end()); }

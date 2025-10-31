@@ -840,7 +840,6 @@ define <8 x i32> @shuffle_spread3_singlesrc_e32(<8 x i32> %v) {
   ret <8 x i32> %out
 }
 
-; TODO: This should be a single vslideup.vi
 define <8 x i32> @shuffle_spread4_singlesrc_e32(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_spread4_singlesrc_e32:
 ; CHECK:       # %bb.0:
@@ -937,7 +936,6 @@ define <8 x i32> @shuffle_decompress_singlesrc_e32(<8 x i32> %v) {
   ret <8 x i32> %out
 }
 
-; TODO: This should be a single vslideup.vi
 define <8 x i8> @shuffle_decompress_singlesrc_e8(<8 x i8> %v) {
 ; CHECK-LABEL: shuffle_decompress_singlesrc_e8:
 ; CHECK:       # %bb.0:

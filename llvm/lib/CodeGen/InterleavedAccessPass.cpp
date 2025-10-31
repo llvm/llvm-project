@@ -258,13 +258,11 @@ static Value *getMaskOperand(IntrinsicInst *II) {
   default:
     llvm_unreachable("Unexpected intrinsic");
   case Intrinsic::vp_load:
-    return II->getOperand(1);
   case Intrinsic::masked_load:
-    return II->getOperand(2);
+    return II->getOperand(1);
   case Intrinsic::vp_store:
-    return II->getOperand(2);
   case Intrinsic::masked_store:
-    return II->getOperand(3);
+    return II->getOperand(2);
   }
 }
 
@@ -312,10 +310,9 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       continue;
     }
     if (auto *BI = dyn_cast<BinaryOperator>(User)) {
-      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
-            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
-            return SVI && isa<UndefValue>(SVI->getOperand(1));
-          })) {
+      using namespace PatternMatch;
+      if (!BI->user_empty() &&
+          all_of(BI->users(), match_fn(m_Shuffle(m_Value(), m_Undef())))) {
         for (auto *SVI : BI->users())
           BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
         continue;

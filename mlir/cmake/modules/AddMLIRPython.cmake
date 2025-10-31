@@ -99,60 +99,115 @@ function(declare_mlir_python_sources name)
   endif()
 endfunction()
 
-# Function: generate_type_stubs
-# Turns on automatic type stub generation (via nanobind's stubgen) for extension modules.
+# Function: mlir_generate_type_stubs
+# Turns on automatic type stub generation for extension modules.
+# Specifically, performs add_custom_command to run nanobind's stubgen on an extension module.
+#
 # Arguments:
-#   MODULE_NAME: The name of the extension module as specified in declare_mlir_python_extension.
-#   DEPENDS_TARGET: The dso target corresponding to the extension module
-#     (e.g., something like StandalonePythonModules.extension._standaloneDialectsNanobind.dso)
-#   MLIR_DEPENDS_TARGET: The dso target corresponding to the main/core extension module
-#     (e.g., something like StandalonePythonModules.extension._mlir.dso)
+#   MODULE_NAME: The fully-qualified name of the extension module (used for importing in python).
+#   DEPENDS_TARGETS: List of targets these type stubs depend on being built; usually corresponding to the
+#     specific extension module (e.g., something like StandalonePythonModules.extension._standaloneDialectsNanobind.dso)
+#     and the core bindings extension module (e.g., something like StandalonePythonModules.extension._mlir.dso).
 #   OUTPUT_DIR: The root output directory to emit the type stubs into.
+#   OUTPUTS: List of expected outputs.
+#   DEPENDS_TARGET_SRC_DEPS: List of cpp sources for extension library (for generating a DEPFILE).
+#   IMPORT_PATHS: List of paths to add to PYTHONPATH for stubgen.
+#   PATTERN_FILE: (Optional) Pattern file (see https://nanobind.readthedocs.io/en/latest/typing.html#pattern-files).
+#   VERBOSE: Emit logging/status messages during stub generation (default: OFF).
 # Outputs:
 #   NB_STUBGEN_CUSTOM_TARGET: The target corresponding to generation which other targets can depend on.
-function(generate_type_stubs MODULE_NAME DEPENDS_TARGET MLIR_DEPENDS_TARGET OUTPUT_DIR)
+function(mlir_generate_type_stubs)
   cmake_parse_arguments(ARG
-    ""
-    ""
-    "OUTPUTS"
+    "VERBOSE"
+    "MODULE_NAME;OUTPUT_DIR;PATTERN_FILE"
+    "IMPORT_PATHS;DEPENDS_TARGETS;OUTPUTS;DEPENDS_TARGET_SRC_DEPS"
     ${ARGN})
+
+  # for people doing find_package(nanobind)
   if(EXISTS ${nanobind_DIR}/../src/stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../src/stubgen.py")
   elseif(EXISTS ${nanobind_DIR}/../stubgen.py)
     set(NB_STUBGEN "${nanobind_DIR}/../stubgen.py")
+  # for people using FetchContent_Declare and FetchContent_MakeAvailable
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/src/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/src/stubgen.py")
+  elseif(EXISTS ${nanobind_SOURCE_DIR}/stubgen.py)
+    set(NB_STUBGEN "${nanobind_SOURCE_DIR}/stubgen.py")
   else()
-    message(FATAL_ERROR "generate_type_stubs(): could not locate 'stubgen.py'!")
+    message(FATAL_ERROR "mlir_generate_type_stubs(): could not locate 'stubgen.py'!")
   endif()
+
   file(REAL_PATH "${NB_STUBGEN}" NB_STUBGEN)
-
-  set(_module "${MLIR_PYTHON_PACKAGE_PREFIX}._mlir_libs.${MODULE_NAME}")
-  file(REAL_PATH "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.." _import_path)
-
-  set(NB_STUBGEN_CMD
+  set(_import_paths)
+  foreach(_import_path IN LISTS ARG_IMPORT_PATHS)
+    file(REAL_PATH "${_import_path}" _import_path)
+    list(APPEND _import_paths "-i;${_import_path}")
+  endforeach()
+  set(_nb_stubgen_cmd
       "${Python_EXECUTABLE}"
       "${NB_STUBGEN}"
       --module
-      "${_module}"
-      -i
-      "${_import_path}"
+      "${ARG_MODULE_NAME}"
+      "${_import_paths}"
       --recursive
       --include-private
       --output-dir
-      "${OUTPUT_DIR}"
-      --quiet)
+      "${ARG_OUTPUT_DIR}")
+  if(NOT ARG_VERBOSE)
+    list(APPEND _nb_stubgen_cmd "--quiet")
+  endif()
+  if(ARG_PATTERN_FILE)
+    list(APPEND _nb_stubgen_cmd "-p;${ARG_PATTERN_FILE}")
+    list(APPEND ARG_DEPENDS_TARGETS "${ARG_PATTERN_FILE}")
+  endif()
 
-  list(TRANSFORM ARG_OUTPUTS PREPEND "${OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
+  list(TRANSFORM ARG_OUTPUTS PREPEND "${ARG_OUTPUT_DIR}/" OUTPUT_VARIABLE _generated_type_stubs)
+  set(_depfile "${ARG_OUTPUT_DIR}/${ARG_MODULE_NAME}.d")
+  if ((NOT EXISTS ${_depfile}) AND ARG_DEPENDS_TARGET_SRC_DEPS)
+    list(JOIN ARG_DEPENDS_TARGET_SRC_DEPS " " _depfiles)
+    list(TRANSFORM _generated_type_stubs APPEND ": ${_depfiles}" OUTPUT_VARIABLE _depfiles)
+    list(JOIN _depfiles "\n" _depfiles)
+    file(GENERATE OUTPUT "${_depfile}" CONTENT "${_depfiles}")
+  endif()
+
+  if(ARG_VERBOSE)
+    message(STATUS "Generating type-stubs outputs ${_generated_type_stubs}")
+  endif()
+
+  # If PYTHONPATH is set and points to the build location of the python package then when stubgen runs, _mlir will get
+  # imported twice and bad things will happen (e.g., Assertion `!instance && “PyGlobals already constructed”’).
+  # This happens because mlir is a namespace package and the importer/loader can't distinguish between
+  # mlir._mlir_libs._mlir and _mlir_libs._mlir imported from CWD.
+  # So try to filter out any entries in PYTHONPATH that end in "MLIR_BINDINGS_PYTHON_INSTALL_PREFIX/.."
+  # (e.g., python_packages/mlir_core/).
+  set(_pythonpath "$ENV{PYTHONPATH}")
+  cmake_path(CONVERT "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/.." TO_NATIVE_PATH_LIST _install_prefix NORMALIZE)
+  if(WIN32)
+    set(_path_sep ";")
+    set(_trailing_sep "\\")
+  else()
+    set(_path_sep ":")
+    set(_trailing_sep "/")
+    # `;` is the CMake list delimiter so Windows paths are automatically lists
+    # and Unix paths can be made into lists by replacing `:` with `;`
+    string(REPLACE "${_path_sep}" ";" _pythonpath "${_pythonpath}")
+  endif()
+  string(REGEX REPLACE "${_trailing_sep}$" "" _install_prefix "${_install_prefix}")
+  list(FILTER _pythonpath EXCLUDE REGEX "(${_install_prefix}|${_install_prefix}${_trailing_sep})$")
+  # Note, ${_pythonpath} is a list but "${_pythonpath}" is not a list - it's a string with ";" chars in it.
+  string(JOIN "${_path_sep}" _pythonpath ${_pythonpath})
   add_custom_command(
     OUTPUT ${_generated_type_stubs}
-    COMMAND ${NB_STUBGEN_CMD}
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH="${_pythonpath}" ${_nb_stubgen_cmd}
     WORKING_DIRECTORY "${CMAKE_CURRENT_FUNCTION_LIST_DIR}"
-    DEPENDS
-      "${MLIR_DEPENDS_TARGET}.extension._mlir.dso"
-      "${MLIR_DEPENDS_TARGET}.sources.MLIRPythonSources.Core.Python"
-      "${DEPENDS_TARGET}"
+    DEPENDS "${ARG_DEPENDS_TARGETS}"
+    DEPFILE "${_depfile}"
+    COMMENT "Generating type stubs using: ${_nb_stubgen_cmd}"
   )
-  set(_name "MLIRPythonModuleStubs_${_module}")
-  add_custom_target("${_name}" ALL DEPENDS ${_generated_type_stubs})
+
+  list(JOIN ARG_DEPENDS_TARGETS "." _name)
+  set(_name "${_name}.${ARG_MODULE_NAME}.type_stubs")
+  add_custom_target("${_name}" DEPENDS ${_generated_type_stubs})
   set(NB_STUBGEN_CUSTOM_TARGET "${_name}" PARENT_SCOPE)
 endfunction()
 
@@ -172,12 +227,11 @@ endfunction()
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
 #   PYTHON_BINDINGS_LIBRARY: Either pybind11 or nanobind.
-#   GENERATE_TYPE_STUBS: List of generated type stubs expected from stubgen relative to _mlir_libs.
 function(declare_mlir_python_extension name)
   cmake_parse_arguments(ARG
     ""
     "ROOT_DIR;MODULE_NAME;ADD_TO_PARENT;PYTHON_BINDINGS_LIBRARY"
-    "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS;GENERATE_TYPE_STUBS"
+    "SOURCES;PRIVATE_LINK_LIBS;EMBED_CAPI_LINK_LIBS"
     ${ARGN})
 
   if(NOT ARG_ROOT_DIR)
@@ -193,13 +247,12 @@ function(declare_mlir_python_extension name)
   set_target_properties(${name} PROPERTIES
     # Yes: Leading-lowercase property names are load bearing and the recommended
     # way to do this: https://gitlab.kitware.com/cmake/cmake/-/issues/19261
-    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY;mlir_python_GENERATE_TYPE_STUBS"
+    EXPORT_PROPERTIES "mlir_python_SOURCES_TYPE;mlir_python_EXTENSION_MODULE_NAME;mlir_python_EMBED_CAPI_LINK_LIBS;mlir_python_DEPENDS;mlir_python_BINDINGS_LIBRARY"
     mlir_python_SOURCES_TYPE extension
     mlir_python_EXTENSION_MODULE_NAME "${ARG_MODULE_NAME}"
     mlir_python_EMBED_CAPI_LINK_LIBS "${ARG_EMBED_CAPI_LINK_LIBS}"
     mlir_python_DEPENDS ""
     mlir_python_BINDINGS_LIBRARY "${ARG_PYTHON_BINDINGS_LIBRARY}"
-    mlir_python_GENERATE_TYPE_STUBS "${ARG_GENERATE_TYPE_STUBS}"
   )
 
   # Set the interface source and link_libs properties of the target
@@ -302,32 +355,6 @@ function(add_mlir_python_modules name)
       )
       add_dependencies(${modules_target} ${_extension_target})
       mlir_python_setup_extension_rpath(${_extension_target})
-      get_target_property(_generate_type_stubs ${sources_target} mlir_python_GENERATE_TYPE_STUBS)
-      if(_generate_type_stubs)
-        generate_type_stubs(
-          ${_module_name}
-          ${_extension_target}
-          ${name}
-          "${CMAKE_CURRENT_BINARY_DIR}/_mlir_libs"
-          OUTPUTS "${_generate_type_stubs}"
-        )
-        add_dependencies("${modules_target}" "${NB_STUBGEN_CUSTOM_TARGET}")
-        set(_stubgen_target "${MLIR_PYTHON_PACKAGE_PREFIX}.${_module_name}_type_stub_gen")
-        declare_mlir_python_sources(
-          ${_stubgen_target}
-          ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}/_mlir_libs"
-          ADD_TO_PARENT "${sources_target}"
-          SOURCES "${_generate_type_stubs}"
-        )
-        set(_pure_sources_target "${modules_target}.sources.${sources_target}_type_stub_gen")
-        add_mlir_python_sources_target(${_pure_sources_target}
-          INSTALL_COMPONENT ${modules_target}
-          INSTALL_DIR "${ARG_INSTALL_PREFIX}/_mlir_libs"
-          OUTPUT_DIRECTORY "${ARG_ROOT_PREFIX}/_mlir_libs"
-          SOURCES_TARGETS ${_stubgen_target}
-        )
-        add_dependencies(${modules_target} ${_pure_sources_target})
-      endif()
     else()
       message(SEND_ERROR "Unrecognized source type '${_source_type}' for python source target ${sources_target}")
       return()

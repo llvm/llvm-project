@@ -1,4 +1,4 @@
-//===--- StaticAccessedThroughInstanceCheck.h - clang-tidy-------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// instances and replaces them with uses of the appropriate qualified-id.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/static-accessed-through-instance.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/static-accessed-through-instance.html
 class StaticAccessedThroughInstanceCheck : public ClangTidyCheck {
 public:
   StaticAccessedThroughInstanceCheck(StringRef Name, ClangTidyContext *Context)

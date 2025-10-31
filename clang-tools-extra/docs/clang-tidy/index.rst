@@ -10,6 +10,7 @@ See also:
    :maxdepth: 1
 
    List of Clang-Tidy Checks <checks/list>
+   Query Based Custom Clang-Tidy Checks <QueryBasedCustomChecks>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
    External Clang-Tidy Examples <ExternalClang-TidyExamples>
@@ -214,7 +215,9 @@ An overview of all the command-line options:
                                        This option overrides the 'FormatStyle` option in
                                        .clang-tidy file, if any.
     --header-filter=<string>         - Regular expression matching the names of the
-                                       headers to output diagnostics from. Diagnostics
+                                       headers to output diagnostics from. The default
+                                       value is '.*', i.e. diagnostics from all non-system
+                                       headers are displayed by default. Diagnostics
                                        from the main file of each translation unit are
                                        always displayed.
                                        Can be used together with -line-filter.
@@ -304,6 +307,8 @@ An overview of all the command-line options:
     Checks                       - Same as '--checks'. Additionally, the list of
                                    globs can be specified as a list instead of a
                                    string.
+    CustomChecks                 - List of user defined checks based on
+                                   Clang-Query syntax.
     ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
     ExtraArgs                    - Same as '--extra-arg'.
     ExtraArgsBefore              - Same as '--extra-arg-before'.
@@ -335,7 +340,7 @@ An overview of all the command-line options:
       WarningsAsErrors:    ''
       HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
       ImplementationFileExtensions: ['c','cc','cpp','cxx']
-      HeaderFilterRegex:   ''
+      HeaderFilterRegex:   '.*'
       FormatStyle:         none
       InheritParentConfig: true
       User:                user

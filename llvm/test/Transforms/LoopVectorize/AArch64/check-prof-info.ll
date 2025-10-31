@@ -22,11 +22,11 @@ define void @foo_i32(i64 %n) {
 ; CHECK-V1-IC1:  [[VECTOR_BODY]]:
 ; CHECK-V1-IC1:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK-V1-IC1:  [[MIDDLE_BLOCK]]:
-; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF4:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF5:![0-9]+]]
 ; CHECK-V1-IC1:  [[SCALAR_PH]]:
 ; CHECK-V1-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[FOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-V1-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V1-IC1-FORCE-EPI4-LABEL: define void @foo_i32(
@@ -40,19 +40,19 @@ define void @foo_i32(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VECTOR_BODY]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0]], !llvm.loop [[LOOP1:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[MIDDLE_BLOCK]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF4:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF5:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF7:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF9:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[FOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF8:![0-9]+]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC1-LABEL: define void @foo_i32(
@@ -64,11 +64,11 @@ define void @foo_i32(i64 %n) {
 ; CHECK-V2-IC1:  [[VECTOR_BODY]]:
 ; CHECK-V2-IC1:    br i1 [[TMP2:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-V2-IC1:  [[MIDDLE_BLOCK]]:
-; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF5:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]], !prof [[PROF6:![0-9]+]]
 ; CHECK-V2-IC1:  [[SCALAR_PH]]:
 ; CHECK-V2-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[FOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF7:![0-9]+]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-V2-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC4-LABEL: define void @foo_i32(
@@ -82,19 +82,19 @@ define void @foo_i32(i64 %n) {
 ; CHECK-V2-IC4:  [[VECTOR_BODY]]:
 ; CHECK-V2-IC4:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-V2-IC4:  [[MIDDLE_BLOCK]]:
-; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF5:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF6:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF8:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF10:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V2-IC4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[FOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF11:![0-9]+]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK-V2-IC4:  [[FOR_COND_CLEANUP]]:
 ;
 entry:
@@ -124,21 +124,21 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V1-IC1:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF7:![0-9]+]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF9:![0-9]+]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-V1-IC1:  [[MIDDLE_BLOCK]]:
-; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF7]]
+; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF9]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V1-IC1:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF9:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF12:![0-9]+]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[TMP15:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V1-IC1:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF11:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF14:![0-9]+]]
 ; CHECK-V1-IC1:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V1-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[FOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF5]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF6]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-V1-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V1-IC1-FORCE-EPI4-LABEL: define void @foo_i8(
@@ -150,21 +150,21 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF12:![0-9]+]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[MIDDLE_BLOCK]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF10]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF12]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF12:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF15:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF7]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF9]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[FOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF8]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF10]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC1-LABEL: define void @foo_i8(
@@ -176,21 +176,21 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V2-IC1:  [[VECTOR_PH]]:
 ; CHECK-V2-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VECTOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[TMP4:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF8:![0-9]+]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[TMP4:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF10:![0-9]+]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK-V2-IC1:  [[MIDDLE_BLOCK]]:
-; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF10:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF13:![0-9]+]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V2-IC1:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF11:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF14:![0-9]+]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC1:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V2-IC1:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF5]]
+; CHECK-V2-IC1:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF6]]
 ; CHECK-V2-IC1:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V2-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[FOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF6]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF7]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-V2-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC4-LABEL: define void @foo_i8(
@@ -202,21 +202,21 @@ define void @foo_i8(i64 %n) {
 ; CHECK-V2-IC4:  [[VECTOR_PH]]:
 ; CHECK-V2-IC4:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF5]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF6]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK-V2-IC4:  [[MIDDLE_BLOCK]]:
 ; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]], !prof [[PROF1]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF12:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF15:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF14:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]], !prof [[PROF17:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V2-IC4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[FOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF9]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !prof [[PROF11]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK-V2-IC4:  [[FOR_COND_CLEANUP]]:
 ;
 entry:
@@ -244,13 +244,13 @@ define void @foo_i32_no_bw(i64 %n) {
 ; CHECK-V1-IC1:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK-V1-IC1:  [[MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
 ; CHECK-V1-IC1:  [[SCALAR_PH]]:
 ; CHECK-V1-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V1-IC1:  [[FOR_BODY]]:
-; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-V1-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK-V1-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V1-IC1-FORCE-EPI4-LABEL: define void @foo_i32_no_bw(
@@ -262,21 +262,21 @@ define void @foo_i32_no_bw(i64 %n) {
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VECTOR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP6:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF5]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[TMP9:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[CMP_N7:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V1-IC1-FORCE-EPI4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[FOR_BODY]]:
-; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-V1-IC1-FORCE-EPI4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK-V1-IC1-FORCE-EPI4:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC1-LABEL: define void @foo_i32_no_bw(
@@ -286,13 +286,13 @@ define void @foo_i32_no_bw(i64 %n) {
 ; CHECK-V2-IC1:  [[VECTOR_PH]]:
 ; CHECK-V2-IC1:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[VECTOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[TMP2:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[TMP2:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK-V2-IC1:  [[MIDDLE_BLOCK]]:
 ; CHECK-V2-IC1:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[SCALAR_PH]]
 ; CHECK-V2-IC1:  [[SCALAR_PH]]:
 ; CHECK-V2-IC1:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC1:  [[FOR_BODY]]:
-; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-V2-IC1:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK-V2-IC1:  [[FOR_COND_CLEANUP]]:
 ;
 ; CHECK-V2-IC4-LABEL: define void @foo_i32_no_bw(
@@ -304,21 +304,21 @@ define void @foo_i32_no_bw(i64 %n) {
 ; CHECK-V2-IC4:  [[VECTOR_PH]]:
 ; CHECK-V2-IC4:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP8:%.*]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK-V2-IC4:  [[MIDDLE_BLOCK]]:
 ; CHECK-V2-IC4:    br i1 [[CMP_N:%.*]], label %[[FOR_COND_CLEANUP:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF6]]
+; CHECK-V2-IC4:    br i1 [[MIN_EPILOG_ITERS_CHECK:%.*]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_PH]]:
 ; CHECK-V2-IC4:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[TMP11:%.*]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-V2-IC4:    br i1 [[CMP_N10:%.*]], label %[[FOR_COND_CLEANUP]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-V2-IC4:  [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-V2-IC4:    br label %[[FOR_BODY:.*]]
 ; CHECK-V2-IC4:  [[FOR_BODY]]:
-; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK-V2-IC4:    br i1 [[EXITCOND:%.*]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK-V2-IC4:  [[FOR_COND_CLEANUP]]:
 ;
 entry:
@@ -341,74 +341,86 @@ for.cond.cleanup:                                 ; preds = %for.body
 !0 = !{!"branch_weights", i32 1, i32 1023}
 ;.
 ; CHECK-V1-IC1: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
-; CHECK-V1-IC1: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-V1-IC1: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK-V1-IC1: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V1-IC1: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V1-IC1: [[PROF4]] = !{!"branch_weights", i32 1, i32 7}
-; CHECK-V1-IC1: [[PROF5]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V1-IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META2]]}
-; CHECK-V1-IC1: [[PROF7]] = !{!"branch_weights", i32 1, i32 31}
-; CHECK-V1-IC1: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META3]]}
-; CHECK-V1-IC1: [[PROF9]] = !{!"branch_weights", i32 16, i32 16}
-; CHECK-V1-IC1: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META3]]}
-; CHECK-V1-IC1: [[PROF11]] = !{!"branch_weights", i32 1, i32 15}
-; CHECK-V1-IC1: [[LOOP12]] = distinct !{[[LOOP12]], [[META3]], [[META2]]}
-; CHECK-V1-IC1: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META3]]}
-; CHECK-V1-IC1: [[LOOP14]] = distinct !{[[LOOP14]], [[META3]], [[META2]]}
+; CHECK-V1-IC1: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 128}
+; CHECK-V1-IC1: [[PROF5]] = !{!"branch_weights", i32 1, i32 7}
+; CHECK-V1-IC1: [[PROF6]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V1-IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META2]], [[META8:![0-9]+]]}
+; CHECK-V1-IC1: [[META8]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK-V1-IC1: [[PROF9]] = !{!"branch_weights", i32 1, i32 31}
+; CHECK-V1-IC1: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META3]], [[META11:![0-9]+]]}
+; CHECK-V1-IC1: [[META11]] = !{!"llvm.loop.estimated_trip_count", i32 32}
+; CHECK-V1-IC1: [[PROF12]] = !{!"branch_weights", i32 16, i32 16}
+; CHECK-V1-IC1: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META8]], [[META3]]}
+; CHECK-V1-IC1: [[PROF14]] = !{!"branch_weights", i32 1, i32 15}
+; CHECK-V1-IC1: [[LOOP15]] = distinct !{[[LOOP15]], [[META3]], [[META2]], [[META8]]}
+; CHECK-V1-IC1: [[LOOP16]] = distinct !{[[LOOP16]], [[META2]], [[META3]]}
+; CHECK-V1-IC1: [[LOOP17]] = distinct !{[[LOOP17]], [[META3]], [[META2]]}
 ;.
 ; CHECK-V1-IC1-FORCE-EPI4: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
 ; CHECK-V1-IC1-FORCE-EPI4: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V1-IC1-FORCE-EPI4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF4]] = !{!"branch_weights", i32 1, i32 7}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF5]] = !{!"branch_weights", i32 4, i32 4}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META3]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF7]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF8]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP9]] = distinct !{[[LOOP9]], [[META3]], [[META2]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF10]] = !{!"branch_weights", i32 1, i32 31}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META3]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF12]] = !{!"branch_weights", i32 4, i32 28}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META3]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META3]], [[META2]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP15]] = distinct !{[[LOOP15]], [[META2]], [[META3]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP16]] = distinct !{[[LOOP16]], [[META2]], [[META3]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[LOOP17]] = distinct !{[[LOOP17]], [[META3]], [[META2]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[META4]] = !{!"llvm.loop.estimated_trip_count", i32 128}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF5]] = !{!"branch_weights", i32 1, i32 7}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF6]] = !{!"branch_weights", i32 4, i32 4}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META8:![0-9]+]], [[META3]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[META8]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF9]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF10]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META2]], [[META8]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF12]] = !{!"branch_weights", i32 1, i32 31}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META3]], [[META14:![0-9]+]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[META14]] = !{!"llvm.loop.estimated_trip_count", i32 32}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF15]] = !{!"branch_weights", i32 4, i32 28}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP16]] = distinct !{[[LOOP16]], [[META2]], [[META8]], [[META3]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP17]] = distinct !{[[LOOP17]], [[META3]], [[META2]], [[META8]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP18]] = distinct !{[[LOOP18]], [[META2]], [[META3]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP19]] = distinct !{[[LOOP19]], [[META2]], [[META3]]}
+; CHECK-V1-IC1-FORCE-EPI4: [[LOOP20]] = distinct !{[[LOOP20]], [[META3]], [[META2]]}
 ;.
 ; CHECK-V2-IC1: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; CHECK-V2-IC1: [[PROF1]] = !{!"branch_weights", i32 1, i32 255}
-; CHECK-V2-IC1: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
+; CHECK-V2-IC1: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; CHECK-V2-IC1: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V2-IC1: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V2-IC1: [[PROF5]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V2-IC1: [[PROF6]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V2-IC1: [[LOOP7]] = distinct !{[[LOOP7]], [[META4]], [[META3]]}
-; CHECK-V2-IC1: [[PROF8]] = !{!"branch_weights", i32 1, i32 63}
-; CHECK-V2-IC1: [[LOOP9]] = distinct !{[[LOOP9]], [[META3]], [[META4]]}
-; CHECK-V2-IC1: [[PROF10]] = !{!"branch_weights", i32 1, i32 15}
-; CHECK-V2-IC1: [[PROF11]] = !{!"branch_weights", i32 4, i32 12}
-; CHECK-V2-IC1: [[LOOP12]] = distinct !{[[LOOP12]], [[META3]], [[META4]]}
-; CHECK-V2-IC1: [[LOOP13]] = distinct !{[[LOOP13]], [[META4]], [[META3]]}
-; CHECK-V2-IC1: [[LOOP14]] = distinct !{[[LOOP14]], [[META3]], [[META4]]}
-; CHECK-V2-IC1: [[LOOP15]] = distinct !{[[LOOP15]], [[META4]], [[META3]]}
+; CHECK-V2-IC1: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 256}
+; CHECK-V2-IC1: [[PROF6]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK-V2-IC1: [[PROF7]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V2-IC1: [[LOOP8]] = distinct !{[[LOOP8]], [[META4]], [[META3]], [[META9:![0-9]+]]}
+; CHECK-V2-IC1: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK-V2-IC1: [[PROF10]] = !{!"branch_weights", i32 1, i32 63}
+; CHECK-V2-IC1: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META4]], [[META12:![0-9]+]]}
+; CHECK-V2-IC1: [[META12]] = !{!"llvm.loop.estimated_trip_count", i32 64}
+; CHECK-V2-IC1: [[PROF13]] = !{!"branch_weights", i32 1, i32 15}
+; CHECK-V2-IC1: [[PROF14]] = !{!"branch_weights", i32 4, i32 12}
+; CHECK-V2-IC1: [[LOOP15]] = distinct !{[[LOOP15]], [[META3]], [[META9]], [[META4]]}
+; CHECK-V2-IC1: [[LOOP16]] = distinct !{[[LOOP16]], [[META4]], [[META3]], [[META9]]}
+; CHECK-V2-IC1: [[LOOP17]] = distinct !{[[LOOP17]], [[META3]], [[META4]]}
+; CHECK-V2-IC1: [[LOOP18]] = distinct !{[[LOOP18]], [[META4]], [[META3]]}
 ;.
 ; CHECK-V2-IC4: [[PROF0]] = !{!"branch_weights", i32 1, i32 127}
 ; CHECK-V2-IC4: [[PROF1]] = !{!"branch_weights", i32 1, i32 63}
-; CHECK-V2-IC4: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]]}
+; CHECK-V2-IC4: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
 ; CHECK-V2-IC4: [[META3]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V2-IC4: [[META4]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-V2-IC4: [[PROF5]] = !{!"branch_weights", i32 1, i32 15}
-; CHECK-V2-IC4: [[PROF6]] = !{!"branch_weights", i32 4, i32 12}
-; CHECK-V2-IC4: [[LOOP7]] = distinct !{[[LOOP7]], [[META3]], [[META4]]}
-; CHECK-V2-IC4: [[PROF8]] = !{!"branch_weights", i32 1, i32 3}
-; CHECK-V2-IC4: [[PROF9]] = !{!"branch_weights", i32 0, i32 0}
-; CHECK-V2-IC4: [[LOOP10]] = distinct !{[[LOOP10]], [[META4]], [[META3]]}
-; CHECK-V2-IC4: [[LOOP11]] = distinct !{[[LOOP11]], [[META3]], [[META4]]}
-; CHECK-V2-IC4: [[PROF12]] = !{!"branch_weights", i32 8, i32 56}
-; CHECK-V2-IC4: [[LOOP13]] = distinct !{[[LOOP13]], [[META3]], [[META4]]}
-; CHECK-V2-IC4: [[PROF14]] = !{!"branch_weights", i32 1, i32 7}
-; CHECK-V2-IC4: [[LOOP15]] = distinct !{[[LOOP15]], [[META4]], [[META3]]}
-; CHECK-V2-IC4: [[LOOP16]] = distinct !{[[LOOP16]], [[META3]], [[META4]]}
-; CHECK-V2-IC4: [[LOOP17]] = distinct !{[[LOOP17]], [[META3]], [[META4]]}
-; CHECK-V2-IC4: [[LOOP18]] = distinct !{[[LOOP18]], [[META4]], [[META3]]}
+; CHECK-V2-IC4: [[META5]] = !{!"llvm.loop.estimated_trip_count", i32 64}
+; CHECK-V2-IC4: [[PROF6]] = !{!"branch_weights", i32 1, i32 15}
+; CHECK-V2-IC4: [[PROF7]] = !{!"branch_weights", i32 4, i32 12}
+; CHECK-V2-IC4: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META9:![0-9]+]], [[META4]]}
+; CHECK-V2-IC4: [[META9]] = !{!"llvm.loop.estimated_trip_count", i32 0}
+; CHECK-V2-IC4: [[PROF10]] = !{!"branch_weights", i32 1, i32 3}
+; CHECK-V2-IC4: [[PROF11]] = !{!"branch_weights", i32 0, i32 0}
+; CHECK-V2-IC4: [[LOOP12]] = distinct !{[[LOOP12]], [[META4]], [[META3]], [[META9]]}
+; CHECK-V2-IC4: [[LOOP13]] = distinct !{[[LOOP13]], [[META3]], [[META4]], [[META14:![0-9]+]]}
+; CHECK-V2-IC4: [[META14]] = !{!"llvm.loop.estimated_trip_count", i32 16}
+; CHECK-V2-IC4: [[PROF15]] = !{!"branch_weights", i32 8, i32 56}
+; CHECK-V2-IC4: [[LOOP16]] = distinct !{[[LOOP16]], [[META3]], [[META9]], [[META4]]}
+; CHECK-V2-IC4: [[PROF17]] = !{!"branch_weights", i32 1, i32 7}
+; CHECK-V2-IC4: [[LOOP18]] = distinct !{[[LOOP18]], [[META4]], [[META3]], [[META9]]}
+; CHECK-V2-IC4: [[LOOP19]] = distinct !{[[LOOP19]], [[META3]], [[META4]]}
+; CHECK-V2-IC4: [[LOOP20]] = distinct !{[[LOOP20]], [[META3]], [[META4]]}
+; CHECK-V2-IC4: [[LOOP21]] = distinct !{[[LOOP21]], [[META4]], [[META3]]}
 ;.

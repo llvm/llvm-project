@@ -114,8 +114,9 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
+  CI->setVirtualFileSystem(FM->getVirtualFileSystemPtr());
   CI->setFileManager(FM);
-  CI->createDiagnostics(FM->getVirtualFileSystem());
+  CI->createDiagnostics();
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;
 

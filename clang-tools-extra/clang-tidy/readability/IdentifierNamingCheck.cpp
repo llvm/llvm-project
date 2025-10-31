@@ -1,4 +1,4 @@
-//===--- IdentifierNamingCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -83,14 +83,18 @@ namespace readability {
     m(Member) \
     m(ClassConstant) \
     m(ClassMember) \
+    m(ClassConstexpr) \
+    m(GlobalConstexprVariable) \
     m(GlobalConstant) \
     m(GlobalConstantPointer) \
     m(GlobalPointer) \
     m(GlobalVariable) \
+    m(LocalConstexprVariable) \
     m(LocalConstant) \
     m(LocalConstantPointer) \
     m(LocalPointer) \
     m(LocalVariable) \
+    m(StaticConstexprVariable) \
     m(StaticConstant) \
     m(StaticVariable) \
     m(Constant) \
@@ -337,8 +341,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
 
     // Remove keywords
     for (StringRef Kw : Keywords) {
-      for (size_t Pos = 0;
-           (Pos = Type.find(Kw.data(), Pos)) != std::string::npos;) {
+      for (size_t Pos = 0; (Pos = Type.find(Kw, Pos)) != std::string::npos;) {
         Type.replace(Pos, Kw.size(), "");
       }
     }
@@ -373,7 +376,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
         " int", " char", " double", " long", " short"};
     bool RedundantRemoved = false;
     for (auto Kw : TailsOfMultiWordType) {
-      size_t Pos = Type.rfind(Kw.data());
+      size_t Pos = Type.rfind(Kw);
       if (Pos != std::string::npos) {
         const size_t PtrCount = getAsteriskCount(Type, ND);
         Type = Type.substr(0, Pos + Kw.size() + PtrCount);
@@ -602,9 +605,8 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
   if (PtrCount > 0) {
     ModifiedTypeName = [&](std::string Str, StringRef From, StringRef To) {
       size_t StartPos = 0;
-      while ((StartPos = Str.find(From.data(), StartPos)) !=
-             std::string::npos) {
-        Str.replace(StartPos, From.size(), To.data());
+      while ((StartPos = Str.find(From, StartPos)) != std::string::npos) {
+        Str.replace(StartPos, From.size(), To);
         StartPos += To.size();
       }
       return Str;
@@ -1499,8 +1501,22 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
     ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
-  if (Var->isConstexpr() && NamingStyles[SK_ConstexprVariable])
-    return SK_ConstexprVariable;
+  if (Var->isConstexpr()) {
+    if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstexpr])
+      return SK_ClassConstexpr;
+
+    if (Var->isFileVarDecl() && NamingStyles[SK_GlobalConstexprVariable])
+      return SK_GlobalConstexprVariable;
+
+    if (Var->isStaticLocal() && NamingStyles[SK_StaticConstexprVariable])
+      return SK_StaticConstexprVariable;
+
+    if (Var->isLocalVarDecl() && NamingStyles[SK_LocalConstexprVariable])
+      return SK_LocalConstexprVariable;
+
+    if (NamingStyles[SK_ConstexprVariable])
+      return SK_ConstexprVariable;
+  }
 
   if (!Type.isNull() && Type.isConstQualified()) {
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstant])

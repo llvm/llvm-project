@@ -22,8 +22,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
 
@@ -296,12 +294,38 @@ public:
       if (failed(parseVarInt(alignment)))
         return failure();
 
-      // Check that the requested alignment is less than or equal to the
-      // alignment of the root buffer. If it is not, we cannot safely guarantee
-      // that the specified alignment is globally correct.
+      // Check that the requested alignment must not exceed the alignment of
+      // the root buffer itself. Otherwise we cannot guarantee that pointers
+      // derived from this buffer will actually satisfy the requested alignment
+      // globally.
       //
-      // E.g. if the buffer is 8k aligned and the section is 16k aligned,
-      // we could end up at an offset of 24k, which is not globally 16k aligned.
+      // Consider a bytecode buffer that is guaranteed to be 8k aligned, but not
+      // 16k aligned (e.g. absolute address 40960. If a section inside this
+      // buffer declares a 16k alignment requirement, two problems can arise:
+      //
+      //   (a) If we "align forward" the current pointer to the next
+      //       16k boundary, the amount of padding we skip depends on the
+      //       buffer's starting address. For example:
+      //
+      //         buffer_start = 40960
+      //         next 16k boundary = 49152
+      //         bytes skipped = 49152 - 40960 = 8192
+      //
+      //       This leaves behind variable padding that could be misinterpreted
+      //       as part of the next section.
+      //
+      //   (b) If we align relative to the buffer start, we may
+      //       obtain addresses that are multiples of "buffer_start +
+      //       section_alignment" rather than truly globally aligned
+      //       addresses. For example:
+      //
+      //         buffer_start = 40960 (5×8k, 8k aligned but not 16k)
+      //         offset       = 16384  (first multiple of 16k)
+      //         section_ptr  = 40960 + 16384 = 57344
+      //
+      //       57344 is 8k aligned but not 16k aligned.
+      //       Any consumer expecting true 16k alignment would see this as a
+      //       violation.
       if (failed(alignmentValidator(alignment)))
         return emitError("failed to align section ID: ", unsigned(sectionID));
 

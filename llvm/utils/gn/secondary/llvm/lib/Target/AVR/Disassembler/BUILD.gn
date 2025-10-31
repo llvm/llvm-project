@@ -2,10 +2,7 @@ import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("AVRGenDisassemblerTables") {
   visibility = [ ":Disassembler" ]
-  args = [
-    "-gen-disassembler",
-    "-ignore-non-decodable-operands",
-  ]
+  args = [ "-gen-disassembler" ]
   td_file = "../AVR.td"
 }
 

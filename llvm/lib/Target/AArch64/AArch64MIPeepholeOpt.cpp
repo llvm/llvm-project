@@ -594,19 +594,18 @@ bool AArch64MIPeepholeOpt::splitTwoPartImm(
   // NewDstReg = Opcode.second NewTmpReg Imm1
 
   // Determine register classes for destinations and register operands
-  MachineFunction *MF = MI.getMF();
   const TargetRegisterClass *FirstInstrDstRC =
-      TII->getRegClass(TII->get(Opcode.first), 0, TRI, *MF);
+      TII->getRegClass(TII->get(Opcode.first), 0, TRI);
   const TargetRegisterClass *FirstInstrOperandRC =
-      TII->getRegClass(TII->get(Opcode.first), 1, TRI, *MF);
+      TII->getRegClass(TII->get(Opcode.first), 1, TRI);
   const TargetRegisterClass *SecondInstrDstRC =
       (Opcode.first == Opcode.second)
           ? FirstInstrDstRC
-          : TII->getRegClass(TII->get(Opcode.second), 0, TRI, *MF);
+          : TII->getRegClass(TII->get(Opcode.second), 0, TRI);
   const TargetRegisterClass *SecondInstrOperandRC =
       (Opcode.first == Opcode.second)
           ? FirstInstrOperandRC
-          : TII->getRegClass(TII->get(Opcode.second), 1, TRI, *MF);
+          : TII->getRegClass(TII->get(Opcode.second), 1, TRI);
 
   // Get old registers destinations and new register destinations
   Register DstReg = MI.getOperand(0).getReg();
@@ -785,14 +784,14 @@ bool AArch64MIPeepholeOpt::visitUBFMXri(MachineInstr &MI) {
   }
 
   const TargetRegisterClass *DstRC64 =
-      TII->getRegClass(TII->get(MI.getOpcode()), 0, TRI, *MI.getMF());
+      TII->getRegClass(TII->get(MI.getOpcode()), 0, TRI);
   const TargetRegisterClass *DstRC32 =
       TRI->getSubRegisterClass(DstRC64, AArch64::sub_32);
   assert(DstRC32 && "Destination register class of UBFMXri doesn't have a "
                     "sub_32 subregister class");
 
   const TargetRegisterClass *SrcRC64 =
-      TII->getRegClass(TII->get(MI.getOpcode()), 1, TRI, *MI.getMF());
+      TII->getRegClass(TII->get(MI.getOpcode()), 1, TRI);
   const TargetRegisterClass *SrcRC32 =
       TRI->getSubRegisterClass(SrcRC64, AArch64::sub_32);
   assert(SrcRC32 && "Source register class of UBFMXri doesn't have a sub_32 "

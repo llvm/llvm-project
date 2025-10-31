@@ -49,7 +49,7 @@ public:
     pageZeroSize = LP::pageZeroSize;
     headerSize = sizeof(typename LP::mach_header);
     wordSize = LP::wordSize;
-    p2WordSize = llvm::CTLog2<LP::wordSize>();
+    p2WordSize = llvm::ConstantLog2<LP::wordSize>();
   }
 
   virtual ~TargetInfo() = default;

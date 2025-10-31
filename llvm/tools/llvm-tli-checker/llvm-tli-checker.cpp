@@ -153,8 +153,12 @@ void SDKNameMap::maybeInsertSymbol(const SymbolRef &S, const ObjectFile &O) {
   uint32_t Flags = unwrapIgnoreError(S.getFlags());
   section_iterator Section = unwrapIgnoreError(S.getSection(),
                                                /*Default=*/O.section_end());
-  if (Type == SymbolRef::ST_Function && (Flags & SymbolRef::SF_Global) &&
-      Section != O.section_end()) {
+  bool IsRegularFunction = Type == SymbolRef::ST_Function &&
+                           (Flags & SymbolRef::SF_Global) &&
+                           Section != O.section_end();
+  bool IsIFunc =
+      Type == SymbolRef::ST_Other && (Flags & SymbolRef::SF_Indirect);
+  if (IsRegularFunction || IsIFunc) {
     StringRef Name = unwrapIgnoreError(S.getName());
     insert({ Name, true });
   }

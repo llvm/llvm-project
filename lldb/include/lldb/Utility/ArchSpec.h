@@ -327,6 +327,11 @@ public:
   ///  \return a boolean value.
   bool IsMIPS() const;
 
+  /// If NVPTX architecture return true.
+  ///
+  ///  \return a boolean value.
+  bool IsNVPTX() const;
+
   /// Returns a string representing current architecture as a target CPU for
   /// tools like compiler, disassembler etc.
   ///

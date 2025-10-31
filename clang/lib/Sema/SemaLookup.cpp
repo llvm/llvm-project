@@ -2727,9 +2727,7 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
     IsDependent = !DC && ObjectType->isDependentType();
     assert(((!DC && ObjectType->isDependentType()) ||
             !ObjectType->isIncompleteType() || !ObjectType->getAs<TagType>() ||
-            ObjectType->castAs<TagType>()
-                ->getOriginalDecl()
-                ->isEntityBeingDefined()) &&
+            ObjectType->castAs<TagType>()->getDecl()->isEntityBeingDefined()) &&
            "Caller should have completed object type");
   } else if (SS && SS->isNotEmpty()) {
     // This nested-name-specifier occurs after another nested-name-specifier,
@@ -3191,9 +3189,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        namespaces of its associated classes.
     case Type::Record: {
       // FIXME: This should use the original decl.
-      CXXRecordDecl *Class =
-          cast<CXXRecordDecl>(cast<RecordType>(T)->getOriginalDecl())
-              ->getDefinitionOrSelf();
+      auto *Class = cast<CXXRecordDecl>(cast<RecordType>(T)->getDecl())
+                        ->getDefinitionOrSelf();
       addAssociatedClassesAndNamespaces(Result, Class);
       break;
     }
@@ -4575,6 +4572,13 @@ static void getNestedNameSpecifierIdentifiers(
       case Type::TemplateSpecialization: {
         TemplateName Name =
             cast<TemplateSpecializationType>(T)->getTemplateName();
+        if (const DependentTemplateName *DTN =
+                Name.getAsDependentTemplateName()) {
+          getNestedNameSpecifierIdentifiers(DTN->getQualifier(), Identifiers);
+          if (const auto *II = DTN->getName().getIdentifier())
+            Identifiers.push_back(II);
+          return;
+        }
         if (const QualifiedTemplateName *QTN =
                 Name.getAsQualifiedTemplateName()) {
           getNestedNameSpecifierIdentifiers(QTN->getQualifier(), Identifiers);
@@ -4582,15 +4586,6 @@ static void getNestedNameSpecifierIdentifiers(
         }
         if (const auto *TD = Name.getAsTemplateDecl(/*IgnoreDeduced=*/true))
           Identifiers.push_back(TD->getIdentifier());
-        return;
-      }
-      case Type::DependentTemplateSpecialization: {
-        const DependentTemplateStorage &S =
-            cast<DependentTemplateSpecializationType>(T)
-                ->getDependentTemplateName();
-        getNestedNameSpecifierIdentifiers(S.getQualifier(), Identifiers);
-        // FIXME: Should this dig into the Name as well?
-        // Identifiers.push_back(S.getName().getIdentifier());
         return;
       }
       case Type::SubstTemplateTypeParm:
@@ -4608,7 +4603,7 @@ static void getNestedNameSpecifierIdentifiers(
       case Type::InjectedClassName: {
         auto *TT = cast<TagType>(T);
         getNestedNameSpecifierIdentifiers(TT->getQualifier(), Identifiers);
-        Identifiers.push_back(TT->getOriginalDecl()->getIdentifier());
+        Identifiers.push_back(TT->getDecl()->getIdentifier());
         return;
       }
       case Type::Typedef: {

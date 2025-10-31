@@ -238,3 +238,90 @@ define void @segmented_store_insert_subreg(<vscale x 4 x float> %v0, <vscale x 4
   call void @llvm.riscv.vsseg3(target("riscv.vector.tuple", <vscale x 16 x i8>, 3) %t2, ptr %p, iXLen %vl, iXLen 5)
   ret void
 }
+
+define void @recurrence(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
+; CHECK-LABEL: recurrence:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:  .LBB16_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vadd.vv v10, v10, v8
+; CHECK-NEXT:    bnez a1, .LBB16_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    vse32.v v10, (a0)
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+loop:
+  %iv = phi iXLen [ 0, %entry ], [ %iv.next, %loop ]
+  %phi = phi <vscale x 4 x i32> [ zeroinitializer, %entry ], [ %x, %loop ]
+  %x = add <vscale x 4 x i32> %phi, %v
+  %iv.next = add iXLen %iv, 1
+  %done = icmp eq iXLen %iv.next, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  call void @llvm.riscv.vse(<vscale x 4 x i32> %x, ptr %p, iXLen %vl)
+  ret void
+}
+
+define void @recurrence_vleff(<vscale x 4 x i32> %v, ptr %p, iXLen %n, iXLen %vl) {
+; CHECK-LABEL: recurrence_vleff:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:  .LBB17_1: # %loop
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
+; CHECK-NEXT:    vle32ff.v v10, (a3)
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    addi a3, a3, 4
+; CHECK-NEXT:    bnez a1, .LBB17_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %loop
+loop:
+  %iv = phi iXLen [ 0, %entry ], [ %iv.next, %loop ]
+  %phi = phi <vscale x 4 x i32> [ zeroinitializer, %entry ], [ %y, %loop ]
+  %gep = getelementptr i32, ptr %p, iXLen %iv
+  %vleff = call { <vscale x 4 x i32>, iXLen } @llvm.riscv.vleff(<vscale x 4 x i32> poison, ptr %gep, iXLen %vl)
+  %vleff.x = extractvalue { <vscale x 4 x i32>, iXLen } %vleff, 0
+  %vleff.vl = extractvalue { <vscale x 4 x i32>, iXLen } %vleff, 1
+  %y = add <vscale x 4 x i32> %phi, %vleff.x
+  call void @llvm.riscv.vse(<vscale x 4 x i32> %y, ptr %p, iXLen %vleff.vl)
+  %iv.next = add iXLen %iv, 1
+  %done = icmp eq iXLen %iv.next, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret void
+}
+
+define <vscale x 4 x i32> @join(<vscale x 4 x i32> %v, i1 %cond, iXLen %vl) {
+; CHECK-LABEL: join:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    beqz a0, .LBB18_2
+; CHECK-NEXT:  # %bb.1: # %foo
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, 1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB18_2: # %bar
+; CHECK-NEXT:    vadd.vi v8, v8, 2
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, iXLen 1, iXLen -1)
+  br i1 %cond, label %foo, label %bar
+foo:
+  %b = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 1, iXLen 1)
+  ret <vscale x 4 x i32> %b
+bar:
+  %c = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 2, iXLen 2)
+  ret <vscale x 4 x i32> %c
+}

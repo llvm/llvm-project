@@ -858,6 +858,20 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
+  // For SPIR-V we want to retain the pristine output of Clang CodeGen, since
+  // optimizations might lose structure / information that is necessary for
+  // generating optimal concrete AMDGPU code.
+  // TODO: using the below option is a temporary placeholder until Clang
+  //       provides the required functionality, which essentially boils down to
+  //       -O0 being refactored / reworked to not imply optnone / remove TBAA.
+  //       Once that is added, we should pivot to that functionality, being
+  //       mindful to not corrupt the user provided and subsequently embedded
+  //       command-line (i.e. if the user asks for -O3 this is what the
+  //       finalisation should use).
+  if (getTriple().isSPIRV() &&
+      !DriverArgs.hasArg(options::OPT_disable_llvm_optzns))
+    CC1Args.push_back("-disable-llvm-optzns");
+
   if (DeviceOffloadingKind == Action::OFK_None)
     addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
 }
@@ -866,6 +880,16 @@ void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
   // AMDGPU does not support atomic lib call. Treat atomic alignment
   // warnings as errors.
   CC1Args.push_back("-Werror=atomic-alignment");
+}
+
+void AMDGPUToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                                ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
 }
 
 StringRef

@@ -17,7 +17,9 @@ using namespace llvm::hlsl;
 
 static size_t getMemberOffset(GlobalVariable *Handle, size_t Index) {
   auto *HandleTy = cast<TargetExtType>(Handle->getValueType());
-  assert(HandleTy->getName().ends_with(".CBuffer") && "Not a cbuffer type");
+  assert((HandleTy->getName().ends_with(".CBuffer") ||
+          HandleTy->getName() == "spirv.VulkanBuffer") &&
+         "Not a cbuffer type");
   assert(HandleTy->getNumTypeParameters() == 1 && "Expected layout type");
 
   auto *LayoutTy = cast<TargetExtType>(HandleTy->getTypeParameter(0));
@@ -41,8 +43,13 @@ std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
   for (const MDNode *MD : CBufMD->operands()) {
     assert(MD->getNumOperands() && "Invalid cbuffer metadata");
 
-    auto *Handle = cast<GlobalVariable>(
-        cast<ValueAsMetadata>(MD->getOperand(0))->getValue());
+    // For an unused cbuffer, the handle may have been optimized out
+    Metadata *OpMD = MD->getOperand(0);
+    if (!OpMD)
+      continue;
+
+    auto *Handle =
+        cast<GlobalVariable>(cast<ValueAsMetadata>(OpMD)->getValue());
     CBufferMapping &Mapping = Result->Mappings.emplace_back(Handle);
 
     for (int I = 1, E = MD->getNumOperands(); I < E; ++I) {

@@ -8,13 +8,14 @@
 // expected-no-diagnostics
 
 #ifdef __PTRAUTH__
-
+#define PTRAUTH_ENABLED 1
 #define NonAddressDiscriminatedVTablePtrAttr \
   [[clang::ptrauth_vtable_pointer(process_independent, no_address_discrimination, no_extra_discrimination)]]
 #define AddressDiscriminatedVTablePtrAttr \
   [[clang::ptrauth_vtable_pointer(process_independent, address_discrimination, no_extra_discrimination)]]
 #define ADDR_DISC_ENABLED true
 #else
+#define PTRAUTH_ENABLED 0
 #define NonAddressDiscriminatedVTablePtrAttr
 #define AddressDiscriminatedVTablePtrAttr
 #define ADDR_DISC_ENABLED false
@@ -399,3 +400,38 @@ static_assert(!ASSIGNABLE_WRAPPER(RelocatableAddressDiscriminatedPrimaryBase));
 static_assert(!ASSIGNABLE_WRAPPER(RelocatableAddressDiscriminatedSecondaryBase));
 static_assert(!ASSIGNABLE_WRAPPER(EmbdeddedAddressDiscriminatedPolymorphicClass));
 static_assert(!ASSIGNABLE_WRAPPER(RelocatableEmbdeddedAddressDiscriminatedPolymorphicClass));
+
+namespace GH159505 {
+  class A {
+    virtual void f();
+  };
+
+  template <int N> struct B {
+    class C : A {
+      A a[N];
+    } d;
+  };
+
+  template <int N> struct C {
+    void *__ptrauth(1,1,1) ptr[N];
+    static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(decltype(ptr)));
+  };
+  template <class T, bool isPtrauth> struct D {
+    T ptr;
+    static_assert(isPtrauth != __is_trivially_copyable(decltype(ptr)));
+  };
+
+
+  template <class T> using Ptr = T * __ptrauth(1,1,1);
+  template <class T> void test() {
+    static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(Ptr<T>));
+  }
+
+  auto f = test<int>;
+  static_assert(!__is_trivially_copyable(B<1>));
+  static_assert(PTRAUTH_ENABLED != __is_trivially_copyable(C<1>));
+
+
+  D<void *, false> d_void;
+  D<void * __ptrauth(1,1,1), PTRAUTH_ENABLED> d_void_ptrauth;
+}

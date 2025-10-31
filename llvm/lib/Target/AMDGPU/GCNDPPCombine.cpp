@@ -722,7 +722,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     }
 
     if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal) &&
-        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *ST)) {
+        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *TII, *ST)) {
       LLVM_DEBUG(dbgs() << "  " << OrigMI
                         << "  failed: not valid 64-bit DPP control value\n");
       break;

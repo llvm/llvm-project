@@ -238,6 +238,10 @@ function(add_openmp_testsuite target comment)
       )
     endif()
   endif()
+
+  if (TARGET flang-rt)
+    add_dependencies(${target} flang-rt)
+  endif ()
 endfunction()
 
 function(construct_check_openmp_target)

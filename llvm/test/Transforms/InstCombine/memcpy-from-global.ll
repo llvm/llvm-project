@@ -139,19 +139,34 @@ define void @test2_addrspacecast() {
   ret void
 }
 
-declare void @bar(ptr)
-declare void @bar_as1(ptr addrspace(1))
+declare void @bar(ptr nocapture)
+declare void @bar_may_capture(ptr)
+declare void @bar_as1(ptr addrspace(1) nocapture)
 
 
 ;; Should be able to eliminate the alloca.
-define void @test3() {
-; CHECK-LABEL: @test3(
+define void @test3_nocapture() {
+; CHECK-LABEL: @test3_nocapture(
 ; CHECK-NEXT:    call void @bar(ptr nonnull @G) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @G, i64 124, i1 false)
   call void @bar(ptr %A) readonly
+  ret void
+}
+
+; Can not eliminate the alloca, as the function may capture its address.
+define void @test3_may_capture() {
+; CHECK-LABEL: @test3_may_capture(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(124) [[A]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i1 false)
+; CHECK-NEXT:    call void @bar_may_capture(ptr nonnull [[A]]) #[[ATTR3]]
+; CHECK-NEXT:    ret void
+;
+  %A = alloca %T
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @G, i64 124, i1 false)
+  call void @bar_may_capture(ptr %A) readonly
   ret void
 }
 
@@ -395,12 +410,12 @@ define void @memcpy_to_capturing_readonly() {
 ; CHECK-LABEL: @memcpy_to_capturing_readonly(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
-; CHECK-NEXT:    call void @bar(ptr nonnull readonly [[A]])
+; CHECK-NEXT:    call void @bar_may_capture(ptr nonnull readonly [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @H, i64 20, i1 false)
-  call void @bar(ptr readonly %A)
+  call void @bar_may_capture(ptr readonly %A)
   ret void
 }
 

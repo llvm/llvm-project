@@ -54,20 +54,6 @@ static int NumXFail = 0;
 static int NumSuccess = 0;
 
 static const StringMap<StringSet<>> XFailTestNames = {{
-    {"delimiters.json",
-     {
-         "Pair Behavior",
-         "Special Characters",
-         "Sections",
-         "Inverted Sections",
-         "Partial Inheritence",
-         "Post-Partial Behavior",
-         "Standalone Tag",
-         "Indented Standalone Tag",
-         "Standalone Line Endings",
-         "Standalone Without Previous Line",
-         "Standalone Without Newline",
-     }},
     {"~dynamic-names.json",
      {
          "Basic Behavior - Partial",
@@ -113,7 +99,6 @@ static const StringMap<StringSet<>> XFailTestNames = {{
          "Block reindentation",
          "Intrinsic indentation",
          "Nested block reindentation",
-
      }},
     {"~lambdas.json",
      {
@@ -126,23 +111,7 @@ static const StringMap<StringSet<>> XFailTestNames = {{
          "Section - Expansion",
          "Section - Alternate Delimiters",
          "Section - Multiple Calls",
-
      }},
-    {"interpolation.json",
-     {
-         "Triple Mustache",
-         "Triple Mustache Integer Interpolation",
-         "Triple Mustache Decimal Interpolation",
-         "Triple Mustache Null Interpolation",
-         "Triple Mustache Context Miss Interpolation",
-         "Dotted Names - Triple Mustache Interpolation",
-         "Implicit Iterators - Triple Mustache",
-         "Triple Mustache - Surrounding Whitespace",
-         "Triple Mustache - Standalone",
-         "Triple Mustache With Padding",
-     }},
-    {"partials.json", {"Standalone Indentation"}},
-    {"sections.json", {"Implicit Iterator - Triple mustache"}},
 }};
 
 struct TestData {
@@ -243,7 +212,10 @@ static void runTest(StringRef InputFile) {
   for (Value V : *TestArray) {
     auto TestData =
         ExitOnErr(TestData::createTestData(V.getAsObject(), InputFile));
-    Template T(TestData.TemplateStr);
+    BumpPtrAllocator Allocator;
+    StringSaver Saver(Allocator);
+    MustacheContext Ctx(Allocator, Saver);
+    Template T(TestData.TemplateStr, Ctx);
     registerPartials(TestData.Partials, T);
 
     std::string ActualStr;

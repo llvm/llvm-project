@@ -216,8 +216,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
             RS.ParametersContainer.getDescriptorTable(Info.Location);
         OS << "  NumRanges: " << Table.Ranges.size() << "\n";
 
-        for (const dxbc::RTS0::v2::DescriptorRange Range : Table) {
-          OS << "  - Range Type: " << Range.RangeType << "\n"
+        for (const mcdxbc::DescriptorRange &Range : Table) {
+          OS << "  - Range Type: "
+             << dxil::getResourceClassName(Range.RangeType) << "\n"
              << "    Register Space: " << Range.RegisterSpace << "\n"
              << "    Base Shader Register: " << Range.BaseShaderRegister << "\n"
              << "    Num Descriptors: " << Range.NumDescriptors << "\n"

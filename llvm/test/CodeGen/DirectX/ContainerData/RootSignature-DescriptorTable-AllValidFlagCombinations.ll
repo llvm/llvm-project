@@ -11,8 +11,9 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 !dx.rootsignatures = !{!2} ; list of function/root signature pairs
 !2 = !{ ptr @main, !3, i32 2 } ; function, root signature
-!3 = !{ !5 } ; list of root signature elements
-!5 = !{ !"DescriptorTable", i32 0, !6, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20 }
+!3 = !{ !5, !21 } ; list of root signature elements
+!5 = !{ !"DescriptorTable", i32 0, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20 }
+!21 = !{ !"DescriptorTable", i32 0, !6, !8, !9 }
 
 ; typedef enum D3D12_DESCRIPTOR_RANGE_FLAGS {
 ;   NONE = 0,
@@ -53,105 +54,111 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !20 = !{ !"UAV", i32 5, i32 1, i32 15, i32 5, i32 65540 }
 
 ;DXC:- Name:            RTS0
-;DXC-NEXT:    Size:            380
+;DXC-NEXT:    Size:            400
 ;DXC-NEXT:    RootSignature:
 ;DXC-NEXT:      Version:         2
-;DXC-NEXT:      NumRootParameters: 1
+;DXC-NEXT:      NumRootParameters: 2
 ;DXC-NEXT:      RootParametersOffset: 24
 ;DXC-NEXT:      NumStaticSamplers: 0
-;DXC-NEXT:      StaticSamplersOffset: 380
+;DXC-NEXT:      StaticSamplersOffset: 400
 ;DXC-NEXT:      Parameters:
-;DXC-NEXT:        - ParameterType:   0
-;DXC-NEXT:          ShaderVisibility: 0
+;DXC-NEXT:        - ParameterType:   DescriptorTable
+;DXC-NEXT:          ShaderVisibility: All
 ;DXC-NEXT:          Table:
-;DXC-NEXT:            NumRanges:       14
-;DXC-NEXT:            RangesOffset:    44
+;DXC-NEXT:            NumRanges:       11
+;DXC-NEXT:            RangesOffset:    56
 ;DXC-NEXT:            Ranges:
-;DXC-NEXT:              - RangeType:       3
-;DXC-NEXT:                NumDescriptors:  1
-;DXC-NEXT:                BaseShaderRegister: 0
-;DXC-NEXT:                RegisterSpace:   1
-;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
-;DXC-NEXT:              - RangeType:       3
-;DXC-NEXT:                NumDescriptors:  1
-;DXC-NEXT:                BaseShaderRegister: 0
-;DXC-NEXT:                RegisterSpace:   3
-;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
-;DXC-NEXT:                DESCRIPTORS_VOLATILE: true
-;DXC-NEXT:              - RangeType:       3
-;DXC-NEXT:                NumDescriptors:  1
-;DXC-NEXT:                BaseShaderRegister: 0
-;DXC-NEXT:                RegisterSpace:   4
-;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
-;DXC-NEXT:                DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
-;DXC-NEXT:              - RangeType:       0
+;DXC-NEXT:              - RangeType:       SRV
 ;DXC-NEXT:                NumDescriptors:  1
 ;DXC-NEXT:                BaseShaderRegister: 0
 ;DXC-NEXT:                RegisterSpace:   5
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
 ;DXC-NEXT:                DESCRIPTORS_VOLATILE: true
-;DXC-NEXT:              - RangeType:       1
+;DXC-NEXT:              - RangeType:       UAV
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   6
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DESCRIPTORS_VOLATILE: true
-;DXC-NEXT:              - RangeType:       2
+;DXC-NEXT:              - RangeType:       CBuffer
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   7
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DATA_VOLATILE:   true
-;DXC-NEXT:              - RangeType:       0
+;DXC-NEXT:              - RangeType:       SRV
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   8
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DATA_STATIC:     true
-;DXC-NEXT:              - RangeType:       1
+;DXC-NEXT:              - RangeType:       UAV
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   9
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DATA_STATIC_WHILE_SET_AT_EXECUTE: true
-;DXC-NEXT:              - RangeType:       2
+;DXC-NEXT:              - RangeType:       CBuffer
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   10
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DESCRIPTORS_VOLATILE: true
 ;DXC-NEXT:                DATA_VOLATILE:   true
-;DXC-NEXT:              - RangeType:       0
+;DXC-NEXT:              - RangeType:       SRV
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   11
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DESCRIPTORS_VOLATILE: true
 ;DXC-NEXT:                DATA_STATIC_WHILE_SET_AT_EXECUTE: true
-;DXC-NEXT:              - RangeType:       1
+;DXC-NEXT:              - RangeType:       UAV
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   12
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
-;DXC-NEXT:              - RangeType:       2
+;DXC-NEXT:              - RangeType:       CBuffer
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   13
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DATA_VOLATILE:   true
 ;DXC-NEXT:                DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
-;DXC-NEXT:              - RangeType:       0
+;DXC-NEXT:              - RangeType:       SRV
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   14
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DATA_STATIC:     true
 ;DXC-NEXT:                DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
-;DXC-NEXT:              - RangeType:       1
+;DXC-NEXT:              - RangeType:       UAV
 ;DXC-NEXT:                NumDescriptors:  5
 ;DXC-NEXT:                BaseShaderRegister: 1
 ;DXC-NEXT:                RegisterSpace:   15
 ;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 5
 ;DXC-NEXT:                DATA_STATIC_WHILE_SET_AT_EXECUTE: true
+;DXC-NEXT:                DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true
+;DXC-NEXT:        - ParameterType:   DescriptorTable
+;DXC-NEXT:          ShaderVisibility: All
+;DXC-NEXT:          Table:
+;DXC-NEXT:            NumRanges:       3
+;DXC-NEXT:            RangesOffset:    328
+;DXC-NEXT:            Ranges:
+;DXC-NEXT:              - RangeType:       Sampler
+;DXC-NEXT:                NumDescriptors:  1
+;DXC-NEXT:                BaseShaderRegister: 0
+;DXC-NEXT:                RegisterSpace:   1
+;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
+;DXC-NEXT:              - RangeType:       Sampler
+;DXC-NEXT:                NumDescriptors:  1
+;DXC-NEXT:                BaseShaderRegister: 0
+;DXC-NEXT:                RegisterSpace:   3
+;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
+;DXC-NEXT:                DESCRIPTORS_VOLATILE: true
+;DXC-NEXT:              - RangeType:       Sampler
+;DXC-NEXT:                NumDescriptors:  1
+;DXC-NEXT:                BaseShaderRegister: 0
+;DXC-NEXT:                RegisterSpace:   4
+;DXC-NEXT:                OffsetInDescriptorsFromTableStart: 4294967295
 ;DXC-NEXT:                DESCRIPTORS_STATIC_KEEPING_BUFFER_BOUNDS_CHECKS: true

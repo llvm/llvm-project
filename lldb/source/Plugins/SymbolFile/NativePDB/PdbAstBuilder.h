@@ -87,7 +87,7 @@ public:
   TypeSystemClang &clang() { return m_clang; }
   ClangASTImporter &GetClangASTImporter() { return m_importer; }
 
-  void Dump(Stream &stream, llvm::StringRef filter);
+  void Dump(Stream &stream, llvm::StringRef filter, bool show_color);
 
   clang::NamespaceDecl *FindNamespaceDecl(const clang::DeclContext *parent,
                                           llvm::StringRef name);

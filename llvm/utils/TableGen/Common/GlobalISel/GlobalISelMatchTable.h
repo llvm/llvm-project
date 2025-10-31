@@ -313,6 +313,10 @@ public:
   virtual bool hasFirstCondition() const = 0;
   virtual const PredicateMatcher &getFirstCondition() const = 0;
   virtual std::unique_ptr<PredicateMatcher> popFirstCondition() = 0;
+
+  /// Check recursively if the matcher records named operands for use in C++
+  /// predicates.
+  virtual bool recordsOperand() const = 0;
 };
 
 class GroupMatcher final : public Matcher {
@@ -361,7 +365,7 @@ public:
   /// has been already called. If any of the matchers are moved out, the group
   /// becomes safe to destroy, but not safe to re-use for anything else.
   iterator_range<std::vector<Matcher *>::iterator> matchers() {
-    return make_range(Matchers.begin(), Matchers.end());
+    return Matchers;
   }
   size_t size() const { return Matchers.size(); }
   bool empty() const { return Matchers.empty(); }
@@ -373,6 +377,8 @@ public:
     return *Conditions.front();
   }
   bool hasFirstCondition() const override { return !Conditions.empty(); }
+
+  bool recordsOperand() const override;
 
 private:
   /// See if a candidate matcher could be added to this group solely by
@@ -438,6 +444,8 @@ public:
   }
 
   bool hasFirstCondition() const override { return false; }
+
+  bool recordsOperand() const override;
 
 private:
   /// See if the predicate type has a Switch-implementation for it.
@@ -669,6 +677,8 @@ public:
   void optimize() override;
   void emit(MatchTable &Table) override;
 
+  bool recordsOperand() const override;
+
   /// Compare the priority of this object and B.
   ///
   /// Returns true if this object is more important than B.
@@ -694,9 +704,7 @@ public:
     return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
   }
 
-  iterator_range<MatchersTy::iterator> insnmatchers() {
-    return make_range(Matchers.begin(), Matchers.end());
-  }
+  iterator_range<MatchersTy::iterator> insnmatchers() { return Matchers; }
   bool insnmatchers_empty() const { return Matchers.empty(); }
   void insnmatchers_pop_front();
 };
@@ -858,6 +866,8 @@ public:
     return Kind == IPM_GenericPredicate;
   }
 
+  bool recordsOperand() const { return Kind == OPM_RecordNamedOperand; }
+
   virtual bool isIdentical(const PredicateMatcher &B) const {
     return B.getKind() == getKind() && InsnVarID == B.InsnVarID &&
            OpIdx == B.OpIdx;
@@ -889,7 +899,7 @@ public:
   OperandPredicateMatcher(PredicateKind Kind, unsigned InsnVarID,
                           unsigned OpIdx)
       : PredicateMatcher(Kind, InsnVarID, OpIdx) {}
-  virtual ~OperandPredicateMatcher();
+  ~OperandPredicateMatcher() override;
 
   /// Compare the priority of this object and B.
   ///
@@ -1322,6 +1332,8 @@ public:
   /// already been assigned, simply returns it.
   TempTypeIdx getTempTypeIdx(RuleMatcher &Rule);
 
+  bool recordsOperand() const;
+
   std::string getOperandExpr(unsigned InsnVarID) const;
 
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
@@ -1363,7 +1375,7 @@ class InstructionPredicateMatcher : public PredicateMatcher {
 public:
   InstructionPredicateMatcher(PredicateKind Kind, unsigned InsnVarID)
       : PredicateMatcher(Kind, InsnVarID) {}
-  virtual ~InstructionPredicateMatcher() {}
+  ~InstructionPredicateMatcher() override {}
 
   /// Compare the priority of this object and B.
   ///
@@ -1839,6 +1851,8 @@ public:
   void pop_front() { Operands.erase(Operands.begin()); }
 
   void optimize();
+
+  bool recordsOperand() const;
 
   /// Emit MatchTable opcodes that test whether the instruction named in
   /// InsnVarName matches all the predicates and all the operands.

@@ -54,6 +54,9 @@ jobs:
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
+    secrets:
+      WWW_RELEASES_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
 
   release-doxygen:
     name: Build and Upload Release Doxygen

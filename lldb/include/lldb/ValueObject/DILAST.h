@@ -20,6 +20,7 @@ namespace lldb_private::dil {
 enum class NodeKind {
   eArraySubscriptNode,
   eBitExtractionNode,
+  eBooleanLiteralNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
@@ -226,6 +227,23 @@ private:
   llvm::APFloat m_value;
 };
 
+class BooleanLiteralNode : public ASTNode {
+public:
+  BooleanLiteralNode(uint32_t location, bool value)
+      : ASTNode(location, NodeKind::eBooleanLiteralNode), m_value(value) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  bool GetValue() const & { return m_value; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eBooleanLiteralNode;
+  }
+
+private:
+  bool m_value;
+};
+
 /// This class contains one Visit method for each specialized type of
 /// DIL AST node. The Visit methods are used to dispatch a DIL AST node to
 /// the correct function in the DIL expression evaluator for evaluating that
@@ -247,6 +265,8 @@ public:
   Visit(const IntegerLiteralNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const FloatLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const BooleanLiteralNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

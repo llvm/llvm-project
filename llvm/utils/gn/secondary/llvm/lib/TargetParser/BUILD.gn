@@ -17,6 +17,7 @@ static_library("TargetParser") {
     "RISCVISAInfo.cpp",
     "RISCVTargetParser.cpp",
     "SubtargetFeature.cpp",
+    "TargetDataLayout.cpp",
     "TargetParser.cpp",
     "Triple.cpp",
     "X86TargetParser.cpp",

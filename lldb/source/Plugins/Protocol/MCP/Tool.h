@@ -28,6 +28,15 @@ public:
   std::optional<llvm::json::Value> GetSchema() const override;
 };
 
+class DebuggerListTool : public lldb_protocol::mcp::Tool {
+public:
+  using lldb_protocol::mcp::Tool::Tool;
+  ~DebuggerListTool() = default;
+
+  llvm::Expected<lldb_protocol::mcp::CallToolResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
+};
+
 } // namespace lldb_private::mcp
 
 #endif

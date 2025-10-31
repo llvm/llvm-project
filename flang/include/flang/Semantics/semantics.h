@@ -262,6 +262,7 @@ public:
   const Scope &FindScope(parser::CharBlock) const;
   Scope &FindScope(parser::CharBlock);
   void UpdateScopeIndex(Scope &, parser::CharBlock);
+  void DumpScopeIndex(llvm::raw_ostream &) const;
 
   bool IsInModuleFile(parser::CharBlock) const;
 

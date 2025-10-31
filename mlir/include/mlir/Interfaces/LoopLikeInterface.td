@@ -232,6 +232,17 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*defaultImplementation=*/[{
         return ::mlir::failure();
       }]
+    >,
+    InterfaceMethod<[{
+        Compute the static trip count if possible.
+      }],
+      /*retTy=*/"::std::optional<::llvm::APInt>",
+      /*methodName=*/"getStaticTripCount",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::std::nullopt;
+      }]
     >
   ];
 

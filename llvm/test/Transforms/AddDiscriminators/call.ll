@@ -8,7 +8,7 @@
 ; #5 }
 
 ; Function Attrs: uwtable
-define void @_Z3foov() #0 !dbg !4 {
+define void @_Z3foov() !dbg !4 {
   call void @_Z3barv(), !dbg !10
 ; CHECK:  call void @_Z3barv(), !dbg ![[CALL0:[0-9]+]]
   %a = alloca [100 x i8], align 16
@@ -21,12 +21,9 @@ define void @_Z3foov() #0 !dbg !4 {
   ret void, !dbg !13
 }
 
-declare void @_Z3barv() #1
+declare void @_Z3barv()
 declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind argmemonly
 declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind argmemonly
-
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}

@@ -208,8 +208,8 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT-NEXT:  [[NSPLAT2:%.+]] = shufflevector <8 x i32> [[NINS2]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; ALL-CONVERT-NEXT:  [[EVLM2:%.+]] = icmp ult <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[NSPLAT2]]
 ; ALL-CONVERT-NEXT:  [[NEWM2:%.+]] = and <8 x i1> [[EVLM2]], %m
-; ALL-CONVERT-NEXT:  %r11 = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> [[NEWM2]], <8 x i32> %i0, <8 x i32> %i1, i32 8)
-; ALL-CONVERT-NEXT:  %r12 = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1, i32 8)
+; ALL-CONVERT-NEXT:  %{{.+}} = select <8 x i1> [[NEWM2]], <8 x i32> %i0, <8 x i32> %i1
+; ALL-CONVERT:       %{{.+}} = select <8 x i1> %m, <8 x i32> %i0, <8 x i32> %i1
 ; ALL-CONVERT-NEXT:  ret void
 
 ; ALL-CONVERT: define void @test_vp_int_vscale(<vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, <vscale x 4 x i32> %i2, <vscale x 4 x i32> %f3, <vscale x 4 x i1> %m, i32 %n) {
@@ -244,8 +244,8 @@ define void @test_vp_cmp_v8(<8 x i32> %i0, <8 x i32> %i1, <8 x float> %f0, <8 x 
 ; ALL-CONVERT:       %{{.*}} = shl <vscale x 4 x i32> %i0, %i1
 ; ALL-CONVERT:       [[EVLM5:%.+]] = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 %n)
 ; ALL-CONVERT:       [[NEWM5:%.+]] = and <vscale x 4 x i1> [[EVLM5]], %m
-; ALL-CONVERT:       %r11 = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> [[NEWM5]], <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
-; ALL-CONVERT:       %r12 = call <vscale x 4 x i32> @llvm.vp.select.nxv4i32(<vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1, i32 %scalable_size{{.*}})
+; ALL-CONVERT:       %{{.*}} = select <vscale x 4 x i1> [[NEWM5]], <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1
+; ALL-CONVERT:       %{{.*}} = select <vscale x 4 x i1> %m, <vscale x 4 x i32> %i0, <vscale x 4 x i32> %i1
 ; ALL-CONVERT-NEXT:  ret void
 
 ; Check that reductions use the correct neutral element for masked-off elements

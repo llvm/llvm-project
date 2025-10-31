@@ -24,9 +24,9 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 // CHECK-NEXT: Attribute::get(C, Attribute::NoUnwind),
 // CHECK-NEXT: });
 
-// CHECK: static constexpr uint16_t IntrinsicsToAttributesMap[] = {
-// CHECK: 0 << 8 | 0, // llvm.deref.ptr.ret
-// CHECK: 1 << 8 | 1, // llvm.random.gen
+// CHECK: static constexpr uint8_t IntrinsicsToAttributesMap[] = {
+// CHECK: 0 << 1 | 0, // llvm.deref.ptr.ret
+// CHECK: 1 << 1 | 1, // llvm.random.gen
 // CHECK: }; // IntrinsicsToAttributesMap
 
 // CHECK: static constexpr ArgNoAttrIDPair ArgAttrIdTable[] = {

@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPUTargetInfo.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -112,9 +113,12 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
       if (layout.size() != shape.size())
         return std::nullopt;
       auto ratio = computeShapeRatio(shape, layout);
-      if (!ratio.has_value())
+      if (ratio.has_value()) {
+        newShape = ratio.value();
+      } else if (!rr || !computeShapeRatio(layout, shape).has_value()) {
         return std::nullopt;
-      newShape = ratio.value();
+      }
+      // Round-robin case: continue with original newShape
     }
 
     if (data.size()) {
@@ -133,22 +137,23 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
   };
 
   // check the sgLayout and sgData
-  auto maybeSgShape =
-      tryDistribute(shape, attr.getSgLayoutAsInt(), attr.getSgDataAsInt());
+  auto maybeSgShape = tryDistribute(shape, attr.getEffectiveSgLayoutAsInt(),
+                                    attr.getEffectiveSgDataAsInt());
   if (!maybeSgShape)
     return false;
   auto sgShape = maybeSgShape.value();
 
   // check InstData, it neither have layout nor need round-robin
   auto maybeInstShape =
-      tryDistribute(sgShape, {}, attr.getInstDataAsInt(), false);
+      tryDistribute(sgShape, {}, attr.getEffectiveInstDataAsInt(), false);
   if (!maybeInstShape)
     return false;
   auto instShape = maybeInstShape.value();
 
   // check LaneLayout and LaneData
-  auto maybeLaneShape = tryDistribute(instShape, attr.getLaneLayoutAsInt(),
-                                      attr.getLaneDataAsInt(), false);
+  auto maybeLaneShape =
+      tryDistribute(instShape, attr.getEffectiveLaneLayoutAsInt(),
+                    attr.getEffectiveLaneDataAsInt(), false);
   return maybeLaneShape.has_value();
 }
 
@@ -282,9 +287,10 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   if (!hasDefaultOrder())
     return mlir::emitError(loc, "order attribute is currently not supported.");
 
-  auto dims = llvm::map_to_vector(getSgLayoutAsInt(), [&](int64_t d) -> Value {
-    return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
-  });
+  auto dims =
+      llvm::map_to_vector(getEffectiveSgLayoutAsInt(), [&](int64_t d) -> Value {
+        return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
+      });
 
   return affine::delinearizeIndex(builder, loc, linearId, dims);
 }
@@ -298,8 +304,8 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt();
-  SmallVector<int64_t> sgShape = getSgDataAsInt();
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getEffectiveSgDataAsInt();
   if (sgShape.empty()) {
     if (auto derivedShape = computeShapeRatio(shape, sgLayout))
       sgShape = derivedShape.value();
@@ -385,8 +391,8 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   if (!isForWorkgroup())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getSgLayoutAsInt();
-  SmallVector<int64_t> sgShape = getSgDataAsInt();
+  SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgShape = getEffectiveSgDataAsInt();
   if (sgShape.empty()) {
     if (auto derivedShape = computeShapeRatio(shape, sgLayout))
       sgShape = derivedShape.value();
@@ -407,6 +413,26 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
 
   return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
                                   shape);
+}
+
+bool SliceAttr::isSliceOf(const xegpu::DistributeLayoutAttr &other) {
+  auto flattenedThis = flatten();
+  // If other is a LayoutAttr, just compare directly with parent of
+  // flattenedThis.
+  if (auto otherLayout = dyn_cast<xegpu::LayoutAttr>(other))
+    return flattenedThis.getParent() == otherLayout;
+  // If other is a SliceAttr, flatten it first before comparing.
+  auto flattenedOther = dyn_cast<xegpu::SliceAttr>(other).flatten();
+  // Both must have common parent LayoutAttr.
+  if (flattenedThis.getParent() != flattenedOther.getParent())
+    return false;
+  // otherFlattened's sliced dims must be a subset of flattenedThis's sliced
+  // dims.
+  llvm::SmallDenseSet<int64_t> thisDims(
+      flattenedThis.getDims().asArrayRef().begin(),
+      flattenedThis.getDims().asArrayRef().end());
+  return llvm::all_of(flattenedOther.getDims().asArrayRef(),
+                      [&](int64_t dim) { return thisDims.contains(dim); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -703,6 +729,152 @@ void MemLayoutAttr::print(AsmPrinter &printer) const {
       printer << ", ";
   }
   printer << ">";
+}
+// a helper utility to perform binary operation on OpFoldResult.
+// If both a and b are attributes, it will simply return the result.
+// Otherwise, the corresponding arith op will be generated, and an
+// contant op will be created if one of them is an attribute.
+template <typename ArithOp>
+OpFoldResult genBinOp(OpFoldResult a, OpFoldResult b, Location loc,
+                      OpBuilder &builder) {
+  auto aVal = getValueOrCreateConstantIndexOp(builder, loc, a);
+  auto bVal = getValueOrCreateConstantIndexOp(builder, loc, b);
+  return ArithOp::create(builder, loc, aVal, bVal).getResult();
+}
+
+// a helper utility to perform division operation on OpFoldResult and int64_t.
+#define div(a, b)                                                              \
+  genBinOp<arith::DivSIOp>(a, builder.getIndexAttr(b), loc, builder)
+
+// a helper utility to perform reminder operation on OpFoldResult and int64_t.
+#define rem(a, b)                                                              \
+  genBinOp<arith::RemSIOp>(a, builder.getIndexAttr(b), loc, builder)
+
+// a helper utility to perform multiply operation on OpFoldResult and int64_t.
+#define mul(a, b)                                                              \
+  genBinOp<arith::MulIOp>(a, builder.getIndexAttr(b), loc, builder)
+
+// a helper utility to perform addition operation on two OpFoldResult.
+#define add(a, b) genBinOp<arith::AddIOp>(a, b, loc, builder)
+
+// block the given offsets according to the block shape
+// say the original offset is [y, x], and the block shape is [By, Bx],
+// then the blocked offset is [y/By, x/Bx, y%By, x%Bx]
+SmallVector<OpFoldResult> getBlockedOffsets(OpBuilder &builder, Location loc,
+                                            ArrayRef<OpFoldResult> offsets,
+                                            ArrayRef<int64_t> blockShape) {
+
+  assert(offsets.size() == blockShape.size() &&
+         "offsets and blockShape must have the same size");
+  SmallVector<OpFoldResult> blockedOffsets;
+  SmallVector<OpFoldResult> divs, rems;
+
+  for (auto [offset, block] : llvm::zip(offsets, blockShape)) {
+    divs.push_back(div(offset, block));
+    rems.push_back(rem(offset, block));
+  }
+  blockedOffsets.append(divs.begin(), divs.end());
+  blockedOffsets.append(rems.begin(), rems.end());
+
+  return blockedOffsets;
+}
+
+// Get strides as vector of integer for MemDesc.
+SmallVector<int64_t> MemDescType::getStrideShape() {
+
+  SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
+
+  ArrayAttr strideAttr = getStrideAttr();
+  SmallVector<int64_t> strides;
+  for (Attribute attr : strideAttr.getValue()) {
+    strides.push_back(cast<IntegerAttr>(attr).getInt());
+  }
+
+  SmallVector<int64_t> innerBlkShape = getBlockShape();
+
+  // get perm from FCD to LCD
+  // perm[i] = the dim with i-th smallest stride
+  SmallVector<int, 4> perm =
+      llvm::to_vector<4>(llvm::seq<int>(0, strides.size()));
+  llvm::sort(perm, [&](int a, int b) { return strides[a] < strides[b]; });
+
+  assert(strides[perm[0]] == 1 && "inner most dim must have stride 1");
+
+  SmallVector<int64_t> innerBlkStride(innerBlkShape.size());
+  innerBlkStride[perm[0]] = 1;
+  for (size_t i = 1; i < perm.size(); ++i)
+    innerBlkStride[perm[i]] =
+        innerBlkStride[perm[i - 1]] * innerBlkShape[perm[i - 1]];
+
+  // compute the original matrix shape using the stride info
+  // and compute the number of blocks in each dimension
+  // The shape of highest dim can't be derived from stride info,
+  // but doesn't impact the stride computation for blocked layout.
+  SmallVector<int64_t> matrixShapeOrig(matrixShape.size());
+  SmallVector<int64_t> BlkShapeOrig(matrixShape.size());
+  for (size_t i = 0; i < perm.size() - 1; ++i) {
+    matrixShapeOrig[perm[i]] = strides[perm[i + 1]] / strides[perm[i]];
+    BlkShapeOrig[perm[i]] = matrixShapeOrig[perm[i]] / innerBlkShape[perm[i]];
+  }
+
+  int64_t innerBlkSize = 1;
+  for (auto s : innerBlkShape)
+    innerBlkSize *= s;
+
+  SmallVector<int64_t> outerBlkStride(matrixShape.size());
+  outerBlkStride[perm[0]] = innerBlkSize;
+  for (size_t i = 0; i < perm.size() - 1; ++i) {
+    outerBlkStride[perm[i + 1]] =
+        outerBlkStride[perm[i]] * BlkShapeOrig[perm[i]];
+  }
+
+  // combine the inner and outer strides
+  SmallVector<int64_t> blockedStrides;
+  blockedStrides.append(outerBlkStride.begin(), outerBlkStride.end());
+  blockedStrides.append(innerBlkStride.begin(), innerBlkStride.end());
+
+  return blockedStrides;
+}
+
+// Calculate the linear offset using the blocked offsets and stride
+Value MemDescType::getLinearOffsets(OpBuilder &builder, Location loc,
+                                    ArrayRef<OpFoldResult> offsets) {
+
+  SmallVector<int64_t> matrixShape(getShape().begin(), getShape().end());
+  SmallVector<int64_t> blockShape = getBlockShape();
+  SmallVector<int64_t> strides = getStrideShape();
+  SmallVector<OpFoldResult> blockedOffsets;
+
+  // blockshape equal to matrixshape means no blocking
+  if (llvm::equal(blockShape, matrixShape)) {
+    // remove the outer dims from strides
+    strides.erase(strides.begin(), strides.begin() + matrixShape.size());
+  } else {
+    assert(offsets.size() == blockShape.size() &&
+           "offsets and blockShape must have the same size");
+    // say the original offset is [y, x], and the block shape is [By, Bx],
+    // then the blocked offset is [y/By, x/Bx, y%By, x%Bx]
+
+    SmallVector<OpFoldResult> divs, rems;
+
+    for (auto [offset, block] : llvm::zip(offsets, blockShape)) {
+      divs.push_back(div(offset, block));
+      rems.push_back(rem(offset, block));
+    }
+    blockedOffsets.append(divs.begin(), divs.end());
+    blockedOffsets.append(rems.begin(), rems.end());
+    offsets = blockedOffsets;
+  }
+
+  // Start with initial value as matrix descriptor's base offset.
+  Value linearOffset = arith::ConstantIndexOp::create(builder, loc, 0);
+  for (size_t i = 0; i < offsets.size(); ++i) {
+    OpFoldResult mulResult = mul(offsets[i], strides[i]);
+    Value mulVal = getValueOrCreateConstantIndexOp(builder, loc, mulResult);
+    linearOffset = arith::AddIOp::create(builder, loc, mulVal, linearOffset);
+  }
+
+  return linearOffset;
 }
 
 } // namespace xegpu

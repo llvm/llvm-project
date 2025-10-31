@@ -264,9 +264,10 @@ public:
 
 } // end anonymous namespace
 
-static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
-                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    Type *OrigTy, CCState &State) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                     CCValAssign::LocInfo LocInfo,
+                                     ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                     CCState &State);
 
 static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,

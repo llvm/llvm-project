@@ -147,7 +147,7 @@ public:
 
 private:
   // Only add checks if the module has the cfguard=2 flag.
-  int cfguard_module_flag = 0;
+  int CFGuardModuleFlag = 0;
   StringRef GuardFnName;
   Mechanism GuardMechanism = Mechanism::Check;
   FunctionType *GuardFnType = nullptr;
@@ -162,9 +162,7 @@ public:
   static char ID;
 
   // Default constructor required for the INITIALIZE_PASS macro.
-  CFGuard(CFGuardImpl::Mechanism M) : FunctionPass(ID), Impl(M) {
-    initializeCFGuardPass(*PassRegistry::getPassRegistry());
-  }
+  CFGuard(CFGuardImpl::Mechanism M) : FunctionPass(ID), Impl(M) {}
 
   bool doInitialization(Module &M) override { return Impl.doInitialization(M); }
   bool runOnFunction(Function &F) override { return Impl.runOnFunction(F); }
@@ -173,7 +171,6 @@ public:
 } // end anonymous namespace
 
 void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
-
   assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
@@ -202,7 +199,6 @@ void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
 }
 
 void CFGuardImpl::insertCFGuardDispatch(CallBase *CB) {
-
   assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
@@ -236,14 +232,13 @@ void CFGuardImpl::insertCFGuardDispatch(CallBase *CB) {
 }
 
 bool CFGuardImpl::doInitialization(Module &M) {
-
   // Check if this module has the cfguard flag and read its value.
   if (auto *MD =
           mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
-    cfguard_module_flag = MD->getZExtValue();
+    CFGuardModuleFlag = MD->getZExtValue();
 
   // Skip modules for which CFGuard checks have been disabled.
-  if (cfguard_module_flag != 2)
+  if (CFGuardModuleFlag != 2)
     return false;
 
   // Set up prototypes for the guard check and dispatch functions.
@@ -264,9 +259,8 @@ bool CFGuardImpl::doInitialization(Module &M) {
 }
 
 bool CFGuardImpl::runOnFunction(Function &F) {
-
   // Skip modules for which CFGuard checks have been disabled.
-  if (cfguard_module_flag != 2)
+  if (CFGuardModuleFlag != 2)
     return false;
 
   SmallVector<CallBase *, 8> IndirectCalls;
@@ -286,19 +280,16 @@ bool CFGuardImpl::runOnFunction(Function &F) {
   }
 
   // If no checks are needed, return early.
-  if (IndirectCalls.empty()) {
+  if (IndirectCalls.empty())
     return false;
-  }
 
   // For each indirect call/invoke, add the appropriate dispatch or check.
   if (GuardMechanism == Mechanism::Dispatch) {
-    for (CallBase *CB : IndirectCalls) {
+    for (CallBase *CB : IndirectCalls)
       insertCFGuardDispatch(CB);
-    }
   } else {
-    for (CallBase *CB : IndirectCalls) {
+    for (CallBase *CB : IndirectCalls)
       insertCFGuardCheck(CB);
-    }
   }
 
   return true;

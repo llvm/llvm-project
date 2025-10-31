@@ -67,7 +67,7 @@ createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
       cleanedLengths.append(lengths.begin(), lengths.end());
   } else if (fir::isUnlimitedPolymorphicType(box.getBoxTy())) {
     if (auto charTy = mlir::dyn_cast<fir::CharacterType>(
-            fir::dyn_cast_ptrEleTy(addr.getType()))) {
+            fir::getFortranElementType(addr.getType()))) {
       if (charTy.getLen() == fir::CharacterType::unknownLen())
         cleanedLengths.append(lengths.begin(), lengths.end());
     }

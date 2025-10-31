@@ -134,10 +134,10 @@ static void printExtTypeParams(AsmPrinter &p, ArrayRef<Type> typeParams,
 
 /// These are unused for now.
 /// TODO: Move over to these once more types have been migrated to TypeDef.
-LLVM_ATTRIBUTE_UNUSED static OptionalParseResult
+[[maybe_unused]] static OptionalParseResult
 generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
-LLVM_ATTRIBUTE_UNUSED static LogicalResult
-generatedTypePrinter(Type def, AsmPrinter &printer);
+[[maybe_unused]] static LogicalResult generatedTypePrinter(Type def,
+                                                           AsmPrinter &printer);
 
 #include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.cpp.inc"
 
@@ -703,14 +703,14 @@ const llvm::fltSemantics &LLVMPPCFP128Type::getFloatSemantics() const {
 //===----------------------------------------------------------------------===//
 
 /// Check whether type is a compatible ptr type. These are pointer-like types
-/// with no element type, no metadata, and using the LLVM AddressSpaceAttr
-/// memory space.
+/// with no element type, no metadata, and using the LLVM
+/// LLVMAddrSpaceAttrInterface memory space.
 static bool isCompatiblePtrType(Type type) {
   auto ptrTy = dyn_cast<PtrLikeTypeInterface>(type);
   if (!ptrTy)
     return false;
   return !ptrTy.hasPtrMetadata() && ptrTy.getElementType() == nullptr &&
-         isa<AddressSpaceAttr>(ptrTy.getMemorySpace());
+         isa<LLVMAddrSpaceAttrInterface>(ptrTy.getMemorySpace());
 }
 
 bool mlir::LLVM::isCompatibleOuterType(Type type) {
@@ -798,7 +798,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
           // clang-format on
           .Case<PtrLikeTypeInterface>(
               [](Type type) { return isCompatiblePtrType(type); })
-          .Default([](Type) { return false; });
+          .Default(false);
 
   if (!result)
     compatibleTypes.erase(type);

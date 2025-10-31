@@ -9,6 +9,7 @@
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/iterator.h"
@@ -108,6 +109,12 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   // Enable enqueue to the worklist.
   isRunning = true;
   auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
+
+  bool isInterprocedural = config.isInterprocedural();
+  auto restoreInterprocedural = llvm::make_scope_exit(
+      [&]() { config.setInterprocedural(isInterprocedural); });
+  if (isInterprocedural && !top->hasTrait<OpTrait::SymbolTable>())
+    config.setInterprocedural(false);
 
   // Initialize equivalent lattice anchors.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {

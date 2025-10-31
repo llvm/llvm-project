@@ -1,4 +1,4 @@
-//===--- QualifiedAutoCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -142,12 +142,11 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
     if (this->IgnoreAliasing) {
       return qualType(
           hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))));
-    } else {
-      return qualType(
-          anyOf(qualType(pointerType(pointee(InnerMatchers...))),
-                qualType(substTemplateTypeParmType(hasReplacementType(
-                    pointerType(pointee(InnerMatchers...)))))));
     }
+    return qualType(anyOf(qualType(pointerType(pointee(InnerMatchers...))),
+                          qualType(substTemplateTypeParmType(hasReplacementType(
+                              pointerType(pointee(InnerMatchers...)))))));
+   
   };
 
   auto IsAutoDeducedToPointer =

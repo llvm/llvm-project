@@ -849,9 +849,12 @@ void PromoteMem2Reg::run() {
   for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
     IncomingVals.init(i, UndefValue::get(Allocas[i]->getAllocatedType()));
 
-  // When handling debug info, treat all incoming values as if they have unknown
-  // locations until proven otherwise.
+  // When handling debug info, treat all incoming values as if they have
+  // compiler-generated (empty) locations, representing the uninitialized
+  // alloca, until proven otherwise.
   IncomingLocs.resize(Allocas.size());
+  for (unsigned i = 0, e = Allocas.size(); i != e; ++i)
+    IncomingLocs.init(i, DebugLoc::getCompilerGenerated());
 
   // The renamer uses the Visited set to avoid infinite loops.
   Visited.resize(F.getMaxBlockNumber(), false);

@@ -204,21 +204,20 @@ math_test(
     hdrs = ["FmaTest.h"],
 )
 
-# TODO: Reenable these tests once they pass at Google.
-# math_test(
-#     name = "f16fma",
-#     hdrs = ["FmaTest.h"],
-# )
-#
-# math_test(
-#     name = "f16fmaf",
-#     hdrs = ["FmaTest.h"],
-# )
-#
-# math_test(
-#     name = "f16fmal",
-#     hdrs = ["FmaTest.h"],
-# )
+math_test(
+    name = "f16fma",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "f16fmaf",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "f16fmal",
+    hdrs = ["FmaTest.h"],
+)
 
 math_test(
     name = "dmull",
@@ -475,13 +474,20 @@ math_test(
     hdrs = ["FloorTest.h"],
 )
 
-# TODO: Add fma, fmaf, fmal, fmaf128 tests.
+math_test(
+    name = "fma",
+    hdrs = ["FmaTest.h"],
+)
 
-# TODO: Reenable this test once it passes at Google.
-# math_test(
-#     name = "fmaf16",
-#     hdrs = ["FmaTest.h"],
-# )
+math_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "fmaf16",
+    hdrs = ["FmaTest.h"],
+)
 
 math_test(
     name = "fmax",

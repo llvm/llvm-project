@@ -1,4 +1,4 @@
-//===--- DanglingHandleCheck.h - clang-tidy----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Detect dangling references in value handlers like std::string_view.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/dangling-handle.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/dangling-handle.html
 class DanglingHandleCheck : public ClangTidyCheck {
 public:
   DanglingHandleCheck(StringRef Name, ClangTidyContext *Context);

@@ -310,6 +310,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FMA:                        return "fma";
   case ISD::STRICT_FMA:                 return "strict_fma";
   case ISD::FMAD:                       return "fmad";
+  case ISD::FMULADD:                    return "fmuladd";
   case ISD::FREM:                       return "frem";
   case ISD::STRICT_FREM:                return "strict_frem";
   case ISD::FCOPYSIGN:                  return "fcopysign";
@@ -688,6 +689,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasSameSign())
     OS << " samesign";
 
+  if (getFlags().hasInBounds())
+    OS << " inbounds";
+
   if (getFlags().hasNonNeg())
     OS << " nneg";
 
@@ -1061,13 +1065,24 @@ static void DumpNodes(const SDNode *N, unsigned indent, const SelectionDAG *G) {
   N->dump(G);
 }
 
-LLVM_DUMP_METHOD void SelectionDAG::dump() const {
+LLVM_DUMP_METHOD void SelectionDAG::dump(bool Sorted) const {
   dbgs() << "SelectionDAG has " << AllNodes.size() << " nodes:\n";
 
-  for (const SDNode &N : allnodes()) {
+  auto dumpEachNode = [this](const SDNode &N) {
     if (!N.hasOneUse() && &N != getRoot().getNode() &&
         (!shouldPrintInline(N, this) || N.use_empty()))
       DumpNodes(&N, 2, this);
+  };
+
+  if (Sorted) {
+    SmallVector<const SDNode *> SortedNodes;
+    SortedNodes.reserve(AllNodes.size());
+    getTopologicallyOrderedNodes(SortedNodes);
+    for (const SDNode *N : SortedNodes)
+      dumpEachNode(*N);
+  } else {
+    for (const SDNode &N : allnodes())
+      dumpEachNode(N);
   }
 
   if (getRoot().getNode()) DumpNodes(getRoot().getNode(), 2, this);

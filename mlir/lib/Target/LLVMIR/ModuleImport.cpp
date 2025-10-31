@@ -447,7 +447,7 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     if (verifySelfRef(node))
       return DistinctAttr::create(builder.getUnitAttr());
 
-    auto name = cast<llvm::MDString>(node->getOperand(0));
+    auto *name = cast<llvm::MDString>(node->getOperand(0));
     return builder.getStringAttr(name->getString());
   };
 
@@ -1123,7 +1123,7 @@ void ModuleImport::setExactFlag(llvm::Instruction *inst, Operation *op) const {
 void ModuleImport::setDisjointFlag(llvm::Instruction *inst,
                                    Operation *op) const {
   auto iface = cast<DisjointFlagInterface>(op);
-  auto instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
+  auto *instDisjoint = cast<llvm::PossiblyDisjointInst>(inst);
 
   iface.setIsDisjoint(instDisjoint->isDisjoint());
 }
@@ -1374,7 +1374,7 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
                                     convertLinkageFromLLVM(alias->getLinkage()),
                                     alias->getName(),
-                                    /*dso_local=*/alias->isDSOLocal(),
+                                    /*dsoLocal=*/alias->isDSOLocal(),
                                     /*thread_local=*/alias->isThreadLocal(),
                                     /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
@@ -1507,8 +1507,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   GlobalOp globalOp = GlobalOp::create(
       builder, mlirModule.getLoc(), type, globalVar->isConstant(),
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
-      valueAttr, alignment, /*addr_space=*/globalVar->getAddressSpace(),
-      /*dso_local=*/globalVar->isDSOLocal(),
+      valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
+      /*dsoLocal=*/globalVar->isDSOLocal(),
       /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
@@ -2604,6 +2604,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("inlinehint"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
     StringLiteral("memory"),
@@ -2615,7 +2616,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("optnone"),
     StringLiteral("target-features"),
     StringLiteral("tune-cpu"),
-    StringLiteral("unsafe-fp-math"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
@@ -2643,6 +2643,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setNoInline(true);
   if (func->hasFnAttribute(llvm::Attribute::AlwaysInline))
     funcOp.setAlwaysInline(true);
+  if (func->hasFnAttribute(llvm::Attribute::InlineHint))
+    funcOp.setInlineHint(true);
   if (func->hasFnAttribute(llvm::Attribute::OptimizeNone))
     funcOp.setOptimizeNone(true);
   if (func->hasFnAttribute(llvm::Attribute::Convergent))
@@ -2710,10 +2712,6 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("prefer-vector-width");
       attr.isStringAttribute())
     funcOp.setPreferVectorWidth(attr.getValueAsString());
-
-  if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
-      attr.isStringAttribute())
-    funcOp.setUnsafeFpMath(attr.getValueAsBool());
 
   if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
       attr.isStringAttribute())

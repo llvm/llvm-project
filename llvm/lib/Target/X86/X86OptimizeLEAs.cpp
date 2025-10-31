@@ -339,7 +339,6 @@ int X86OptimizeLEAPass::calcInstrDist(const MachineInstr &First,
 bool X86OptimizeLEAPass::chooseBestLEA(
     const SmallVectorImpl<MachineInstr *> &List, const MachineInstr &MI,
     MachineInstr *&BestLEA, int64_t &AddrDispShift, int &Dist) {
-  const MachineFunction *MF = MI.getParent()->getParent();
   const MCInstrDesc &Desc = MI.getDesc();
   int MemOpNo = X86II::getMemoryOperandNo(Desc.TSFlags) +
                 X86II::getOperandBias(Desc);
@@ -360,7 +359,7 @@ bool X86OptimizeLEAPass::chooseBestLEA(
     // example MOV8mr_NOREX. We could constrain the register class of the LEA
     // def to suit MI, however since this case is very rare and hard to
     // reproduce in a test it's just more reliable to skip the LEA.
-    if (TII->getRegClass(Desc, MemOpNo + X86::AddrBaseReg, TRI, *MF) !=
+    if (TII->getRegClass(Desc, MemOpNo + X86::AddrBaseReg, TRI) !=
         MRI->getRegClass(DefMI->getOperand(0).getReg()))
       continue;
 

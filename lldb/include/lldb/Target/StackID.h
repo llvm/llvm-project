@@ -26,7 +26,11 @@ public:
 
   lldb::addr_t GetPC() const { return m_pc; }
 
-  lldb::addr_t GetCallFrameAddress() const { return m_cfa; }
+  lldb::addr_t GetCallFrameAddressWithMetadata() const {
+    return m_cfa_with_metadata;
+  }
+
+  lldb::addr_t GetCallFrameAddressWithoutMetadata() const { return m_cfa; }
 
   SymbolContextScope *GetSymbolContextScope() const { return m_symbol_scope; }
 
@@ -61,6 +65,9 @@ protected:
   /// function that uniquely identifies this frame (along with m_symbol_scope
   /// below)
   lldb::addr_t m_cfa = LLDB_INVALID_ADDRESS;
+
+  /// The cfa with metadata (i.e. prior to Process::FixAddress).
+  lldb::addr_t m_cfa_with_metadata = LLDB_INVALID_ADDRESS;
 
   /// If nullptr, there is no block or symbol for this frame. If not nullptr,
   /// this will either be the scope for the lexical block for the frame, or the

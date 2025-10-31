@@ -469,6 +469,17 @@ public:
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
 };
 
+class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final
+    : public SPIRV64TargetInfo {
+public:
+  SPIRV64IntelTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : SPIRV64TargetInfo(Triple, Opts) {
+    assert(Triple.getVendor() == llvm::Triple::VendorType::Intel &&
+           "64-bit Intel SPIR-V target must use Intel vendor");
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1-P9-A0");
+  }
+};
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H

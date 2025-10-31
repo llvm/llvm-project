@@ -45,24 +45,7 @@ using namespace ompx;
 
 namespace {
 
-void numThreadsStrictError(int32_t nt_strict, int32_t nt_severity,
-                           const char *nt_message, int32_t requested,
-                           int32_t actual) {
-  if (nt_message)
-    printf("%s\n", nt_message);
-  else
-    printf("The computed number of threads (%u) does not match the requested "
-           "number of threads (%d). Consider that it might not be supported "
-           "to select exactly %d threads on this target device.\n",
-           actual, requested, requested);
-  if (nt_severity == severity_fatal)
-    __builtin_trap();
-}
-
-uint32_t determineNumberOfThreads(int32_t NumThreadsClause,
-                                  int32_t nt_strict = false,
-                                  int32_t nt_severity = severity_fatal,
-                                  const char *nt_message = nullptr) {
+uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
   uint32_t NThreadsICV =
       NumThreadsClause != -1 ? NumThreadsClause : icv::NThreads;
   uint32_t NumThreads = mapping::getMaxTeamThreads();
@@ -72,17 +55,13 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause,
 
   // SPMD mode allows any number of threads, for generic mode we round down to a
   // multiple of WARPSIZE since it is legal to do so in OpenMP.
-  if (!mapping::isSPMDMode()) {
-    if (NumThreads < mapping::getWarpSize())
-      NumThreads = 1;
-    else
-      NumThreads = (NumThreads & ~((uint32_t)mapping::getWarpSize() - 1));
-  }
+  if (mapping::isSPMDMode())
+    return NumThreads;
 
-  if (NumThreadsClause != -1 && nt_strict &&
-      NumThreads != static_cast<uint32_t>(NumThreadsClause))
-    numThreadsStrictError(nt_strict, nt_severity, nt_message, NumThreadsClause,
-                          NumThreads);
+  if (NumThreads < mapping::getWarpSize())
+    NumThreads = 1;
+  else
+    NumThreads = (NumThreads & ~((uint32_t)mapping::getWarpSize() - 1));
 
   return NumThreads;
 }
@@ -103,13 +82,12 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause,
 
 extern "C" {
 
-[[clang::always_inline]] void __kmpc_parallel_spmd_impl(
-    IdentTy *ident, int32_t num_threads, void *fn, void **args,
-    const int64_t nargs, int32_t nt_strict = false,
-    int32_t nt_severity = severity_fatal, const char *nt_message = nullptr) {
+[[clang::always_inline]] void __kmpc_parallel_spmd(IdentTy *ident,
+                                                   int32_t num_threads,
+                                                   void *fn, void **args,
+                                                   const int64_t nargs) {
   uint32_t TId = mapping::getThreadIdInBlock();
-  uint32_t NumThreads =
-      determineNumberOfThreads(num_threads, nt_strict, nt_severity, nt_message);
+  uint32_t NumThreads = determineNumberOfThreads(num_threads);
   uint32_t PTeamSize =
       NumThreads == mapping::getMaxTeamThreads() ? 0 : NumThreads;
   // Avoid the race between the read of the `icv::Level` above and the write
@@ -162,26 +140,10 @@ extern "C" {
   return;
 }
 
-[[clang::always_inline]] void __kmpc_parallel_spmd(IdentTy *ident,
-                                                   int32_t num_threads,
-                                                   void *fn, void **args,
-                                                   const int64_t nargs) {
-  return __kmpc_parallel_spmd_impl(ident, num_threads, fn, args, nargs);
-}
-
-[[clang::always_inline]] void __kmpc_parallel_spmd_60(
-    IdentTy *ident, int32_t num_threads, void *fn, void **args,
-    const int64_t nargs, int32_t nt_strict = false,
-    int32_t nt_severity = severity_fatal, const char *nt_message = nullptr) {
-  return __kmpc_parallel_spmd_impl(ident, num_threads, fn, args, nargs,
-                                   nt_strict, nt_severity, nt_message);
-}
-
-[[clang::always_inline]] void __kmpc_parallel_impl(
-    IdentTy *ident, int32_t, int32_t if_expr, int32_t num_threads,
-    int proc_bind, void *fn, void *wrapper_fn, void **args, int64_t nargs,
-    int32_t nt_strict = false, int32_t nt_severity = severity_fatal,
-    const char *nt_message = nullptr) {
+[[clang::always_inline]] void
+__kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
+                   int32_t num_threads, int proc_bind, void *fn,
+                   void *wrapper_fn, void **args, int64_t nargs) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
   // Assert the parallelism level is zero if disabled by the user.
@@ -194,11 +156,6 @@ extern "C" {
   // 3) nested parallel regions
   if (OMP_UNLIKELY(!if_expr || state::HasThreadState ||
                    (config::mayUseNestedParallelism() && icv::Level))) {
-    // OpenMP 6.0 12.1.2 requires the num_threads 'strict' modifier to also have
-    // effect when parallel execution is disabled by a corresponding if clause
-    // attached to the parallel directive.
-    if (nt_strict && num_threads > 1)
-      numThreadsStrictError(nt_strict, nt_severity, nt_message, num_threads, 1);
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
@@ -212,17 +169,12 @@ extern "C" {
     // This was moved to its own routine so it could be called directly
     // in certain situations to avoid resource consumption of unused
     // logic in parallel_51.
-    if (nt_strict)
-      __kmpc_parallel_spmd(ident, num_threads, fn, args, nargs);
-    else
-      __kmpc_parallel_spmd_60(ident, num_threads, fn, args, nargs, nt_strict,
-                              nt_severity, nt_message);
+    __kmpc_parallel_spmd(ident, num_threads, fn, args, nargs);
 
     return;
   }
 
-  uint32_t NumThreads =
-      determineNumberOfThreads(num_threads, nt_strict, nt_severity, nt_message);
+  uint32_t NumThreads = determineNumberOfThreads(num_threads);
   uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
   uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
 
@@ -323,24 +275,6 @@ extern "C" {
 
   if (nargs)
     __kmpc_end_sharing_variables();
-}
-
-[[clang::always_inline]] void
-__kmpc_parallel_51(IdentTy *ident, int32_t id, int32_t if_expr,
-                   int32_t num_threads, int proc_bind, void *fn,
-                   void *wrapper_fn, void **args, int64_t nargs) {
-  return __kmpc_parallel_impl(ident, id, if_expr, num_threads, proc_bind, fn,
-                              wrapper_fn, args, nargs);
-}
-
-[[clang::always_inline]] void __kmpc_parallel_60(
-    IdentTy *ident, int32_t id, int32_t if_expr, int32_t num_threads,
-    int proc_bind, void *fn, void *wrapper_fn, void **args, int64_t nargs,
-    int32_t nt_strict = false, int32_t nt_severity = severity_fatal,
-    const char *nt_message = nullptr) {
-  return __kmpc_parallel_impl(ident, id, if_expr, num_threads, proc_bind, fn,
-                              wrapper_fn, args, nargs, nt_strict, nt_severity,
-                              nt_message);
 }
 
 [[clang::noinline]] bool __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {

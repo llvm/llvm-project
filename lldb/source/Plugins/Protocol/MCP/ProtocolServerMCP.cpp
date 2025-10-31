@@ -10,8 +10,6 @@
 #include "Resource.h"
 #include "Tool.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Protocol/MCP/Server.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -54,19 +52,16 @@ llvm::StringRef ProtocolServerMCP::GetPluginDescriptionStatic() {
 }
 
 void ProtocolServerMCP::Extend(lldb_protocol::mcp::Server &server) const {
-  server.AddNotificationHandler("notifications/initialized",
-                                [](const lldb_protocol::mcp::Notification &) {
-                                  LLDB_LOG(GetLog(LLDBLog::Host),
-                                           "MCP initialization complete");
-                                });
   server.AddTool(
-      std::make_unique<CommandTool>("lldb_command", "Run an lldb command."));
+      std::make_unique<CommandTool>("command", "Run an lldb command."));
+  server.AddTool(std::make_unique<DebuggerListTool>(
+      "debugger_list", "List debugger instances with their debugger_id."));
   server.AddResourceProvider(std::make_unique<DebuggerResourceProvider>());
 }
 
 void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
   Log *log = GetLog(LLDBLog::Host);
-  std::string client_name = llvm::formatv("client_{0}", m_instances.size() + 1);
+  std::string client_name = llvm::formatv("client_{0}", ++m_client_count);
   LLDB_LOG(log, "New MCP client connected: {0}", client_name);
 
   lldb::IOObjectSP io_sp = std::move(socket);
@@ -74,16 +69,9 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
       io_sp, io_sp, [client_name](llvm::StringRef message) {
         LLDB_LOG(GetLog(LLDBLog::Host), "{0}: {1}", client_name, message);
       });
-  auto instance_up = std::make_unique<lldb_protocol::mcp::Server>(
-      std::string(kName), std::string(kVersion), std::move(transport_up),
-      m_loop);
-  Extend(*instance_up);
-  llvm::Error error = instance_up->Run();
-  if (error) {
-    LLDB_LOG_ERROR(log, std::move(error), "Failed to run MCP server: {0}");
-    return;
-  }
-  m_instances.push_back(std::move(instance_up));
+
+  if (auto error = m_server->Accept(m_loop, std::move(transport_up)))
+    LLDB_LOG_ERROR(log, std::move(error), "{0}:");
 }
 
 llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
@@ -114,14 +102,21 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
       llvm::join(m_listener->GetListeningConnectionURI(), ", ");
 
   ServerInfo info{listening_uris[0]};
-  llvm::Expected<ServerInfoHandle> handle = ServerInfo::Write(info);
-  if (!handle)
-    return handle.takeError();
+  llvm::Expected<ServerInfoHandle> server_info_handle = ServerInfo::Write(info);
+  if (!server_info_handle)
+    return server_info_handle.takeError();
+
+  m_client_count = 0;
+  m_server = std::make_unique<lldb_protocol::mcp::Server>(
+      std::string(kName), std::string(kVersion), [](StringRef message) {
+        LLDB_LOG(GetLog(LLDBLog::Host), "MCP Server: {0}", message);
+      });
+  Extend(*m_server);
 
   m_running = true;
-  m_server_info_handle = std::move(*handle);
-  m_listen_handlers = std::move(*handles);
-  m_loop_thread = std::thread([=] {
+  m_server_info_handle = std::move(*server_info_handle);
+  m_accept_handles = std::move(*handles);
+  m_loop_thread = std::thread([this] {
     llvm::set_thread_name("protocol-server.mcp");
     m_loop.Run();
   });
@@ -138,16 +133,19 @@ llvm::Error ProtocolServerMCP::Stop() {
   }
 
   // Stop the main loop.
-  m_loop.AddPendingCallback(
+  bool addition_succeeded = m_loop.AddPendingCallback(
       [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
 
-  // Wait for the main loop to exit.
-  if (m_loop_thread.joinable())
+  // Wait for the main loop to exit, but not if we didn't succeed in inserting
+  // our pending callback or we'll wait forever.
+  if (addition_succeeded && m_loop_thread.joinable())
     m_loop_thread.join();
 
-  m_listen_handlers.clear();
-  m_server_info_handle = ServerInfoHandle();
-  m_instances.clear();
+  m_accept_handles.clear();
+
+  m_server.reset(nullptr);
+  m_server_info_handle.Remove();
+  m_listener.reset();
 
   return llvm::Error::success();
 }

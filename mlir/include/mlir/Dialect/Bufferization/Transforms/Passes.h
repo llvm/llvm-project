@@ -131,8 +131,8 @@ struct BufferResultsToOutParamsOpts {
   /// Allocator function: Generate a memref allocation with the given type.
   /// Since `promoteBufferResultsToOutParams` doesn't allow dynamically shaped
   /// results, we don't allow passing a range of values for dynamic dims.
-  using AllocationFn =
-      std::function<FailureOr<Value>(OpBuilder &, Location, MemRefType)>;
+  using AllocationFn = std::function<FailureOr<Value>(OpBuilder &, Location,
+                                                      MemRefType, ValueRange)>;
 
   /// Memcpy function: Generate a memcpy between two memrefs.
   using MemCpyFn =
@@ -147,8 +147,9 @@ struct BufferResultsToOutParamsOpts {
   /// Allocation function; used to allocate a memref.
   /// Default memref.alloc is used
   AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
-                                 MemRefType type) {
-    return memref::AllocOp::create(builder, loc, type).getResult();
+                                 MemRefType type, ValueRange dynamicSizes) {
+    return memref::AllocOp::create(builder, loc, type, dynamicSizes)
+        .getResult();
   };
 
   /// Memcpy function; used to create a copy between two memrefs.
@@ -166,6 +167,10 @@ struct BufferResultsToOutParamsOpts {
   /// If true, the pass eliminates the memref.alloc and memcpy if the returned
   /// memref is allocated in the current function.
   bool hoistStaticAllocs = false;
+
+  /// If true, the pass eliminates the memref.alloc and memcpy if the returned
+  /// memref is allocated in the current function and has dynamic shape.
+  bool hoistDynamicAllocs = false;
 };
 
 /// Replace buffers that are returned from a function with an out parameter.

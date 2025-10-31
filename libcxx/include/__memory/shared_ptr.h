@@ -54,6 +54,7 @@
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/remove_reference.h>
 #include <__utility/declval.h>
+#include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -352,23 +353,16 @@ public:
 
   template <class _Yp, class _Dp, __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(_Yp* __p, _Dp __d) : __ptr_(__p) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-      typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT> _CntrlBlk;
+    auto __guard = std::__make_exception_guard([&] { __d(__p); });
+    typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
+    typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
-      __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
+    __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
 #else
     __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
-      __enable_weak_this(__p, __p);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __d(__p);
-      throw;
-    }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    __enable_weak_this(__p, __p);
+    __guard.__complete();
   }
 
   template <class _Yp,
@@ -376,28 +370,21 @@ public:
             class _Alloc,
             __enable_if_t<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, _Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI shared_ptr(_Yp* __p, _Dp __d, _Alloc __a) : __ptr_(__p) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      typedef __shared_ptr_pointer<_Yp*, _Dp, _Alloc> _CntrlBlk;
-      typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
-      typedef __allocator_destructor<_A2> _D2;
-      _A2 __a2(__a);
-      unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-      ::new ((void*)std::addressof(*__hold2.get()))
+    auto __guard = std::__make_exception_guard([&] { __d(__p); });
+    typedef __shared_ptr_pointer<_Yp*, _Dp, _Alloc> _CntrlBlk;
+    typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
+    typedef __allocator_destructor<_A2> _D2;
+    _A2 __a2(__a);
+    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
+    ::new ((void*)std::addressof(*__hold2.get()))
 #ifndef _LIBCPP_CXX03_LANG
-          _CntrlBlk(__p, std::move(__d), __a);
+        _CntrlBlk(__p, std::move(__d), __a);
 #else
         _CntrlBlk(__p, __d, __a);
 #endif // not _LIBCPP_CXX03_LANG
-      __cntrl_ = std::addressof(*__hold2.release());
-      __enable_weak_this(__p, __p);
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __d(__p);
-      throw;
-    }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    __cntrl_ = std::addressof(*__hold2.release());
+    __enable_weak_this(__p, __p);
+    __guard.__complete();
   }
 
   template <class _Dp>
@@ -406,22 +393,15 @@ public:
       _Dp __d,
       __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp>::value, __nullptr_sfinae_tag> = __nullptr_sfinae_tag())
       : __ptr_(nullptr) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
-      typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT> _CntrlBlk;
+    auto __guard = std::__make_exception_guard([&] { __d(__p); });
+    typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
+    typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
-      __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
+    __cntrl_ = new _CntrlBlk(__p, std::move(__d), _AllocT());
 #else
     __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
 #endif // not _LIBCPP_CXX03_LANG
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __d(__p);
-      throw;
-    }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    __guard.__complete();
   }
 
   template <class _Dp, class _Alloc>
@@ -431,27 +411,20 @@ public:
       _Alloc __a,
       __enable_if_t<__shared_ptr_nullptr_deleter_ctor_reqs<_Dp>::value, __nullptr_sfinae_tag> = __nullptr_sfinae_tag())
       : __ptr_(nullptr) {
-#if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-      typedef __shared_ptr_pointer<nullptr_t, _Dp, _Alloc> _CntrlBlk;
-      typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
-      typedef __allocator_destructor<_A2> _D2;
-      _A2 __a2(__a);
-      unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-      ::new ((void*)std::addressof(*__hold2.get()))
+    auto __guard = std::__make_exception_guard([&] { __d(__p); });
+    typedef __shared_ptr_pointer<nullptr_t, _Dp, _Alloc> _CntrlBlk;
+    typedef typename __allocator_traits_rebind<_Alloc, _CntrlBlk>::type _A2;
+    typedef __allocator_destructor<_A2> _D2;
+    _A2 __a2(__a);
+    unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
+    ::new ((void*)std::addressof(*__hold2.get()))
 #ifndef _LIBCPP_CXX03_LANG
-          _CntrlBlk(__p, std::move(__d), __a);
+        _CntrlBlk(__p, std::move(__d), __a);
 #else
         _CntrlBlk(__p, __d, __a);
 #endif // not _LIBCPP_CXX03_LANG
-      __cntrl_ = std::addressof(*__hold2.release());
-#if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      __d(__p);
-      throw;
-    }
-#endif // _LIBCPP_HAS_EXCEPTIONS
+    __cntrl_ = std::addressof(*__hold2.release());
+    __guard.__complete();
   }
 
   template <class _Yp>

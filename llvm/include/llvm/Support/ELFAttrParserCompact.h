@@ -49,7 +49,7 @@ protected:
   }
 
 public:
-  virtual ~ELFCompactAttrParser() { static_cast<void>(!cursor.takeError()); }
+  ~ELFCompactAttrParser() override { static_cast<void>(!cursor.takeError()); }
   Error integerAttribute(unsigned tag);
   Error stringAttribute(unsigned tag);
 
