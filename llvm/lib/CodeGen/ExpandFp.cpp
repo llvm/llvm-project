@@ -79,7 +79,6 @@ class FRemExpander {
   static constexpr std::array<MVT, 3> ExpandableTypes{MVT::f16, MVT::f32,
                                                       MVT::f64};
 
-
 public:
   static bool canExpandType(Type *Ty) {
     EVT VT = EVT::getEVT(Ty);
