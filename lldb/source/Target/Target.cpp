@@ -3961,9 +3961,7 @@ void Target::StopHook::GetDescription(Stream &s,
     return;
   }
 
-  unsigned indent_level = s.GetIndentLevel();
-
-  s.SetIndentLevel(indent_level + 2);
+  auto indent_scope = s.MakeIndentScope();
 
   s.Printf("Hook: %" PRIu64 "\n", GetID());
   if (m_active)
@@ -3977,22 +3975,19 @@ void Target::StopHook::GetDescription(Stream &s,
   if (m_specifier_sp) {
     s.Indent();
     s.PutCString("Specifier:\n");
-    s.SetIndentLevel(indent_level + 4);
+    auto indent_scope = s.MakeIndentScope();
     m_specifier_sp->GetDescription(&s, level);
-    s.SetIndentLevel(indent_level + 2);
   }
 
   if (m_thread_spec_up) {
     StreamString tmp;
     s.Indent("Thread:\n");
     m_thread_spec_up->GetDescription(&tmp, level);
-    s.SetIndentLevel(indent_level + 4);
+    auto indent_scope = s.MakeIndentScope();
     s.Indent(tmp.GetString());
     s.PutCString("\n");
-    s.SetIndentLevel(indent_level + 2);
   }
   GetSubclassDescription(s, level);
-  s.SetIndentLevel(indent_level);
 }
 
 void Target::StopHookCommandLine::GetSubclassDescription(
@@ -4004,13 +3999,12 @@ void Target::StopHookCommandLine::GetSubclassDescription(
     return;
   }
   s.Indent("Commands:\n");
-  s.SetIndentLevel(s.GetIndentLevel() + 4);
+  auto indent_scope = s.MakeIndentScope(4);
   uint32_t num_commands = m_commands.GetSize();
   for (uint32_t i = 0; i < num_commands; i++) {
     s.Indent(m_commands.GetStringAtIndex(i));
     s.PutCString("\n");
   }
-  s.SetIndentLevel(s.GetIndentLevel() - 4);
 }
 
 // Target::StopHookCommandLine
@@ -4145,7 +4139,7 @@ void Target::StopHookScripted::GetSubclassDescription(
     return;
 
   s.Indent("Args:\n");
-  s.SetIndentLevel(s.GetIndentLevel() + 4);
+  auto indent_scope = s.MakeIndentScope(4);
 
   auto print_one_element = [&s](llvm::StringRef key,
                                 StructuredData::Object *object) {
@@ -4155,8 +4149,6 @@ void Target::StopHookScripted::GetSubclassDescription(
   };
 
   as_dict->ForEach(print_one_element);
-
-  s.SetIndentLevel(s.GetIndentLevel() - 4);
 }
 
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
