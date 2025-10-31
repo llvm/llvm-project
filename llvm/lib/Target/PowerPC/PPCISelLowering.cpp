@@ -8027,8 +8027,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   if (CFlags.IsTailCall && !IsSibCall) {
     // Emit callseq_end just before tailcall node.
-  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, dl);
-  InGlue = Chain.getValue(1);
+    Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, dl);
+    InGlue = Chain.getValue(1);
   }
 
   const int SPDiff = 0;
