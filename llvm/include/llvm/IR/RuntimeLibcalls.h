@@ -9,6 +9,8 @@
 // This file implements a common interface to work with library calls into a
 // runtime that may be emitted by a given backend.
 //
+// FIXME: This should probably move to Analysis
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_IR_RUNTIME_LIBCALLS_H
@@ -20,6 +22,7 @@
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -74,6 +77,8 @@ private:
 public:
   friend class llvm::LibcallLoweringInfo;
 
+  RuntimeLibcallsInfo() = default;
+
   explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
@@ -88,6 +93,11 @@ public:
 
     initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
   }
+
+  explicit RuntimeLibcallsInfo(const Module &M);
+
+  bool invalidate(Module &M, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &);
 
   /// Get the libcall routine name for the specified libcall implementation.
   static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
