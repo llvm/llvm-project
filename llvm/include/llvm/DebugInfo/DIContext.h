@@ -203,7 +203,7 @@ struct DIDumpOptions {
   bool ShowChildren = false;
   bool ShowParents = false;
   /// List of DWARF tags to filter children by.
-  llvm::SmallVector<unsigned> FilterChildTag;
+  llvm::SmallVector<unsigned, 0> FilterChildTag;
   bool ShowForm = false;
   bool SummarizeTypes = false;
   bool Verbose = false;
