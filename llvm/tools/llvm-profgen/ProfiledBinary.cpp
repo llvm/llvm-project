@@ -840,7 +840,7 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
         // Internal suffixes from Bolt
         ".cold", ".warm",
         // Compiler internal
-        ".llvm.",
+        ".llvm."
       });
   StringRef FileName = Obj->getFileName();
   for (const SymbolRef &Symbol : Obj->symbols()) {
@@ -877,6 +877,7 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
     } else {
       // Store/Update Function Range from SymTab
       Func.Ranges.emplace_back(StartAddr, StartAddr + Size);
+      Func.FromSymtab = true;
 
       auto R = StartAddrToFuncRangeMap.emplace(StartAddr, FuncRange());
       FuncRange &FRange = R.first->second;
