@@ -90,16 +90,25 @@ public:
   StandardDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
                     StringRef Spelling, bool MatchAnyFileAndLine,
                     bool MatchAnyLine, StringRef Text, unsigned Min,
-                    unsigned Max)
+                    unsigned Max, bool FullMatchRequired)
       : Directive(DirectiveLoc, DiagnosticLoc, Spelling, MatchAnyFileAndLine,
-                  MatchAnyLine, Text, Min, Max) {}
+                  MatchAnyLine, Text, Min, Max, FullMatchRequired) {}
 
   bool isValid(std::string &Error) override {
     // all strings are considered valid; even empty ones
     return true;
   }
 
-  bool match(StringRef S) override { return S.contains(Text); }
+  DiagnosticMatchResult match(StringRef S) override {
+    if (!S.contains(Text)) {
+      return DiagnosticMatchResult::NoMatch;
+    }
+    if (!FullMatchRequired) {
+      return DiagnosticMatchResult::Match;
+    }
+    return S == Text ? DiagnosticMatchResult::Match
+                     : DiagnosticMatchResult::PartialMatch;
+  }
 };
 
 /// RegexDirective - Directive with regular-expression matching.
@@ -108,17 +117,28 @@ public:
   RegexDirective(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
                  StringRef Spelling, bool MatchAnyFileAndLine,
                  bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max,
-                 StringRef RegexStr)
+                 StringRef RegexStr, bool FullMatchRequired)
       : Directive(DirectiveLoc, DiagnosticLoc, Spelling, MatchAnyFileAndLine,
-                  MatchAnyLine, Text, Min, Max),
+                  MatchAnyLine, Text, Min, Max, FullMatchRequired),
         Regex(RegexStr) {}
 
   bool isValid(std::string &Error) override {
     return Regex.isValid(Error);
   }
 
-  bool match(StringRef S) override {
-    return Regex.match(S);
+  DiagnosticMatchResult match(StringRef S) override {
+    if (!FullMatchRequired) {
+      return Regex.match(S) ? DiagnosticMatchResult::Match
+                            : DiagnosticMatchResult::NoMatch;
+    }
+
+    llvm::SmallVector<StringRef, 4> Matches;
+    Regex.match(S, &Matches);
+    if (Matches.empty()) {
+      return DiagnosticMatchResult::NoMatch;
+    }
+    return Matches[0].size() == S.size() ? DiagnosticMatchResult::Match
+                                         : DiagnosticMatchResult::PartialMatch;
   }
 
 private:
@@ -302,7 +322,8 @@ void attachDirective(DiagnosticsEngine &Diags, const UnattachedDirective &UD,
   // Construct new directive.
   std::unique_ptr<Directive> D = Directive::create(
       UD.RegexKind, UD.DirectivePos, ExpectedLoc, UD.Spelling,
-      MatchAnyFileAndLine, MatchAnyLine, UD.Text, UD.Min, UD.Max);
+      MatchAnyFileAndLine, MatchAnyLine, UD.Text, UD.Min, UD.Max,
+      Diags.getDiagnosticOptions().VerifyDiagnosticsStrict);
 
   std::string Error;
   if (!D->isValid(Error)) {
@@ -940,6 +961,47 @@ static unsigned PrintExpected(DiagnosticsEngine &Diags,
   return DL.size();
 }
 
+/// Takes a list of diagnostics that were partially matched,
+/// despite '-verify-strict' option being set.
+static unsigned PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
+                             llvm::SmallVector<Directive *> &DL) {
+  if (DL.empty())
+    return 0;
+
+  const bool IsSinglePrefix =
+      Diags.getDiagnosticOptions().VerifyPrefixes.size() == 1;
+
+  SmallString<256> Fmt;
+  llvm::raw_svector_ostream OS(Fmt);
+  for (const auto *D : DL) {
+    if (D->DiagnosticLoc.isInvalid() || D->MatchAnyFileAndLine)
+      OS << "\n  File *";
+    else
+      OS << "\n  File " << SourceMgr.getFilename(D->DiagnosticLoc);
+    if (D->MatchAnyLine)
+      OS << " Line *";
+    else
+      OS << " Line " << SourceMgr.getPresumedLineNumber(D->DiagnosticLoc);
+    if (D->DirectiveLoc != D->DiagnosticLoc) {
+      if (SourceMgr.getFilename(D->DirectiveLoc) !=
+          SourceMgr.getFilename(D->DiagnosticLoc)) {
+        OS << " (directive at " << SourceMgr.getFilename(D->DirectiveLoc) << ':'
+           << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << ')';
+      } else {
+        OS << " (directive at line "
+           << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << ')';
+      }
+    }
+    if (!IsSinglePrefix)
+      OS << " \'" << D->Spelling << '\'';
+    OS << ": " << D->Text;
+  }
+
+  Diags.Report(diag::err_verify_message_partial_match).setForceEmit()
+      << OS.str();
+  return DL.size();
+}
+
 /// Determine whether two source locations come from the same file.
 static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
                            SourceLocation DiagnosticLoc) {
@@ -966,6 +1028,7 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
                            bool IgnoreUnexpected) {
   std::vector<Directive *> LeftOnly;
   DiagList Right(d2_begin, d2_end);
+  llvm::SmallVector<Directive *> IncompleteMatches;
 
   for (auto &Owner : Left) {
     Directive &D = *Owner;
@@ -985,8 +1048,13 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
           continue;
 
         const std::string &RightText = II->second;
-        if (D.match(RightText))
+        DiagnosticMatchResult MatchResult = D.match(RightText);
+        if (MatchResult == DiagnosticMatchResult::Match)
           break;
+        if (MatchResult == DiagnosticMatchResult::PartialMatch) {
+          IncompleteMatches.push_back(&D);
+          break;
+        }
       }
       if (II == IE) {
         // Not found.
@@ -1002,6 +1070,7 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
   unsigned num = PrintExpected(Diags, SourceMgr, LeftOnly, Label);
   if (!IgnoreUnexpected)
     num += PrintUnexpected(Diags, &SourceMgr, Right.begin(), Right.end(), Label);
+  num += PrintPartial(Diags, SourceMgr, IncompleteMatches);
   return num;
 }
 
@@ -1159,11 +1228,11 @@ std::unique_ptr<Directive>
 Directive::create(bool RegexKind, SourceLocation DirectiveLoc,
                   SourceLocation DiagnosticLoc, StringRef Spelling,
                   bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-                  unsigned Min, unsigned Max) {
+                  unsigned Min, unsigned Max, bool FullMatchRequired) {
   if (!RegexKind)
-    return std::make_unique<StandardDirective>(DirectiveLoc, DiagnosticLoc,
-                                               Spelling, MatchAnyFileAndLine,
-                                               MatchAnyLine, Text, Min, Max);
+    return std::make_unique<StandardDirective>(
+        DirectiveLoc, DiagnosticLoc, Spelling, MatchAnyFileAndLine,
+        MatchAnyLine, Text, Min, Max, FullMatchRequired);
 
   // Parse the directive into a regular expression.
   std::string RegexStr;
@@ -1187,7 +1256,7 @@ Directive::create(bool RegexKind, SourceLocation DirectiveLoc,
     }
   }
 
-  return std::make_unique<RegexDirective>(DirectiveLoc, DiagnosticLoc, Spelling,
-                                          MatchAnyFileAndLine, MatchAnyLine,
-                                          Text, Min, Max, RegexStr);
+  return std::make_unique<RegexDirective>(
+      DirectiveLoc, DiagnosticLoc, Spelling, MatchAnyFileAndLine, MatchAnyLine,
+      Text, Min, Max, RegexStr, FullMatchRequired);
 }
