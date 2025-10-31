@@ -1301,68 +1301,75 @@ TEST(ScudoCombinedTest, ExactUsableSizeMTE) {
   VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
 }
 
-template <class AllocatorT> void VerifyUsableSize(AllocatorT &Allocator) {
-  // Check primary allocations first.
+template <class AllocatorT>
+void VerifyUsableSizePrimary(AllocatorT &Allocator) {
   std::vector<scudo::uptr> SizeClasses = {1024U, 2048U, 4096U, 8192U};
-  scudo::uptr StartSize = 0;
-  for (auto SizeClass : SizeClasses) {
+  for (size_t I = 0; I < SizeClasses.size(); I++) {
+    scudo::uptr SizeClass = SizeClasses[I];
+    scudo::uptr StartSize;
+    if (I == 0)
+      StartSize = 1;
+    else
+      StartSize = SizeClasses[I - 1];
     scudo::uptr UsableSize = SizeClass - scudo::Chunk::getHeaderSize();
     for (scudo::uptr Size = StartSize; Size < UsableSize; Size++) {
       void *P = Allocator.allocate(Size, Origin);
       EXPECT_EQ(UsableSize, Allocator.getUsableSize(P))
           << "Failed usable size at allocation size " << Size
           << " for size class " << SizeClass;
+      memset(P, 0xff, UsableSize);
+      EXPECT_EQ(Allocator.getBlockBeginTestOnly(P) + SizeClass,
+                reinterpret_cast<scudo::uptr>(P) + UsableSize);
       Allocator.deallocate(P, Origin);
     }
+
     StartSize = UsableSize + 1;
   }
 
-  // Check different alignments to verify usable space is calculated properly.
-  // Currently, the pointer plus usable size is aligned to the size class size.
-  const scudo::uptr AllocSize = 128;
-  EXPECT_TRUE(isPrimaryAllocation<AllocatorT>(128, 32));
-  void *P = Allocator.allocate(AllocSize, Origin, 32);
-  scudo::uptr UsableSize = Allocator.getUsableSize(P);
-  memset(P, 0xff, UsableSize);
-  EXPECT_GE(UsableSize, AllocSize);
-  EXPECT_GE(1024 - scudo::Chunk::getHeaderSize(), UsableSize);
-  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % 1024);
-  Allocator.deallocate(P, Origin);
+  std::vector<scudo::uptr> Alignments = {32U, 128U};
+  for (size_t I = 0; I < SizeClasses.size(); I++) {
+    scudo::uptr SizeClass = SizeClasses[I];
+    scudo::uptr AllocSize;
+    if (I == 0)
+      AllocSize = 1;
+    else
+      AllocSize = SizeClasses[I - 1] + 1;
 
-  EXPECT_TRUE(isPrimaryAllocation<AllocatorT>(AllocSize, 64));
-  P = Allocator.allocate(AllocSize, Origin, 64);
-  UsableSize = Allocator.getUsableSize(P);
-  memset(P, 0xff, UsableSize);
-  EXPECT_GE(UsableSize, AllocSize);
-  EXPECT_GE(1024 - scudo::Chunk::getHeaderSize(), UsableSize);
-  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % 1024);
-  Allocator.deallocate(P, Origin);
+    for (auto Alignment : Alignments) {
+      void *P = Allocator.allocate(AllocSize, Origin, Alignment);
+      scudo::uptr UsableSize = Allocator.getUsableSize(P);
+      memset(P, 0xff, UsableSize);
+      EXPECT_EQ(Allocator.getBlockBeginTestOnly(P) + SizeClass,
+                reinterpret_cast<scudo::uptr>(P) + UsableSize)
+          << "Failed usable size at allocation size " << AllocSize
+          << " for size class " << SizeClass << " at alignment " << Alignment;
+      Allocator.deallocate(P, Origin);
+    }
+  }
+}
 
-  EXPECT_TRUE(isPrimaryAllocation<AllocatorT>(AllocSize, 128));
-  P = Allocator.allocate(AllocSize, Origin, 128);
-  UsableSize = Allocator.getUsableSize(P);
-  memset(P, 0xff, UsableSize);
-  EXPECT_GE(UsableSize, AllocSize);
-  EXPECT_GE(1024 - scudo::Chunk::getHeaderSize(), UsableSize);
-  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % 1024);
-  Allocator.deallocate(P, Origin);
-
-  // Check allocations in the secondary, the end of the allocation is always
-  // aligned to a page.
+template <class AllocatorT>
+void VerifyUsableSizeSecondary(AllocatorT &Allocator) {
   const scudo::uptr LargeAllocSize = 996780;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
-  P = Allocator.allocate(LargeAllocSize, Origin);
-  UsableSize = Allocator.getUsableSize(P);
-  EXPECT_GE(UsableSize, LargeAllocSize);
-  EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % PageSize);
+  void *P = Allocator.allocate(LargeAllocSize, Origin);
+  scudo::uptr UsableSize = Allocator.getUsableSize(P);
+  memset(P, 0xff, UsableSize);
+  // Assumes that the secondary always rounds up allocations to a page boundary.
+  EXPECT_EQ(scudo::roundUp(reinterpret_cast<scudo::uptr>(P) + LargeAllocSize,
+                           PageSize),
+            reinterpret_cast<scudo::uptr>(P) + UsableSize);
   Allocator.deallocate(P, Origin);
 
   // Check aligned allocations now.
-  for (scudo::uptr Align = 1; Align <= 8; Align++) {
-    void *P = Allocator.allocate(LargeAllocSize, Origin, 1U << Align);
-    UsableSize = Allocator.getUsableSize(P);
-    EXPECT_GE(UsableSize, LargeAllocSize);
-    EXPECT_EQ(0U, (reinterpret_cast<scudo::uptr>(P) + UsableSize) % PageSize);
+  for (scudo::uptr Alignment = 1; Alignment <= 8; Alignment++) {
+    void *P = Allocator.allocate(LargeAllocSize, Origin, 1U << Alignment);
+    scudo::uptr UsableSize = Allocator.getUsableSize(P);
+    EXPECT_EQ(scudo::roundUp(reinterpret_cast<scudo::uptr>(P) + LargeAllocSize,
+                             PageSize),
+              reinterpret_cast<scudo::uptr>(P) + UsableSize)
+        << "Failed usable size at allocation size " << LargeAllocSize
+        << " at alignment " << Alignment;
     Allocator.deallocate(P, Origin);
   }
 }
@@ -1375,7 +1382,8 @@ TEST(ScudoCombinedTest, FullUsableSize) {
   using AllocatorT = scudo::Allocator<TestFullUsableSizeConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
-  VerifyUsableSize<AllocatorT>(*Allocator);
+  VerifyUsableSizePrimary<AllocatorT>(*Allocator);
+  VerifyUsableSizeSecondary<AllocatorT>(*Allocator);
   VerifyIterateOverUsableSize<AllocatorT>(*Allocator);
 }
 

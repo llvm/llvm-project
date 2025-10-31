@@ -719,10 +719,11 @@ public:
       if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Primary.Options.load()))) {
         TaggedChunk = loadTag(Chunk);
         Size = getSize(reinterpret_cast<void *>(Chunk), &Header);
-      } else if (AllocatorConfig::getExactUsableSize())
+      } else if (AllocatorConfig::getExactUsableSize()) {
         Size = getSize(reinterpret_cast<void *>(Chunk), &Header);
-      else
+      } else {
         Size = getUsableSize(reinterpret_cast<void *>(Chunk), &Header);
+      }
       Callback(TaggedChunk, Size, Arg);
     };
     Primary.iterateOverBlocks(Lambda);
@@ -988,6 +989,19 @@ public:
       getInlineErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
                          RegionInfoPtr, Memory, MemoryTags, MemoryAddr,
                          MemorySize, 2, 16);
+  }
+
+  uptr getBlockBeginTestOnly(const void *Ptr) {
+    Chunk::UnpackedHeader Header;
+    Chunk::loadHeader(Cookie, Ptr, &Header);
+    DCHECK(Header.State == Chunk::State::Allocated);
+
+    if (allocatorSupportsMemoryTagging<AllocatorConfig>())
+      Ptr = untagPointer(const_cast<void *>(Ptr));
+    void *Begin = getBlockBegin(Ptr, &Header);
+    if (allocatorSupportsMemoryTagging<AllocatorConfig>())
+      Begin = untagPointer(Begin);
+    return reinterpret_cast<uptr>(Begin);
   }
 
 private:
