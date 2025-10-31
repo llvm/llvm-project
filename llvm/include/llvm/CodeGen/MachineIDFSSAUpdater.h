@@ -10,16 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_MACHINE_SSAUPDATER2_H
-#define LLVM_TRANSFORMS_UTILS_MACHINE_SSAUPDATER2_H
+#ifndef LLVM_CODEGEN_MACHINEIDFSSAUPDATER_H
+#define LLVM_CODEGEN_MACHINEIDFSSAUPDATER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 
 namespace llvm {
 
 class MachineDominatorTree;
 class MachineInstrBuilder;
 class MachineBasicBlock;
+class TargetInstrInfo;
 
 class MachineIDFSSAUpdater {
   struct BBValueInfo {
@@ -77,4 +81,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_MACHINE_SSAUPDATER2_H
+#endif // LLVM_CODEGEN_MACHINEIDFSSAUPDATER_H
