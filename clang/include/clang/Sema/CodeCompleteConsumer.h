@@ -865,6 +865,9 @@ public:
   /// be a call.
   bool FunctionCanBeCall : 1;
 
+  /// Whether the completion expects the address of the operand.
+  bool IsAddressOfOperand : 1;
+
   /// If the result should have a nested-name-specifier, this is it.
   /// When \c QualifierIsInformative, the nested-name-specifier is
   /// informative rather than required.
@@ -891,7 +894,8 @@ public:
         FixIts(std::move(FixIts)), Hidden(false), InBaseClass(false),
         QualifierIsInformative(QualifierIsInformative),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
-        DeclaringEntity(false), FunctionCanBeCall(true), Qualifier(Qualifier) {
+        DeclaringEntity(false), FunctionCanBeCall(true),
+        IsAddressOfOperand(false), Qualifier(Qualifier) {
     // FIXME: Add assert to check FixIts range requirements.
     computeCursorKindAndAvailability(Accessible);
   }
@@ -902,7 +906,7 @@ public:
         CursorKind(CXCursor_NotImplemented), Hidden(false), InBaseClass(false),
         QualifierIsInformative(false), StartsNestedNameSpecifier(false),
         AllParametersAreInformative(false), DeclaringEntity(false),
-        FunctionCanBeCall(true) {}
+        FunctionCanBeCall(true), IsAddressOfOperand(false) {}
 
   /// Build a result that refers to a macro.
   CodeCompletionResult(const IdentifierInfo *Macro,
@@ -912,7 +916,7 @@ public:
         CursorKind(CXCursor_MacroDefinition), Hidden(false), InBaseClass(false),
         QualifierIsInformative(false), StartsNestedNameSpecifier(false),
         AllParametersAreInformative(false), DeclaringEntity(false),
-        FunctionCanBeCall(true), MacroDefInfo(MI) {}
+        FunctionCanBeCall(true), IsAddressOfOperand(false), MacroDefInfo(MI) {}
 
   /// Build a result that refers to a pattern.
   CodeCompletionResult(
@@ -924,7 +928,8 @@ public:
         CursorKind(CursorKind), Availability(Availability), Hidden(false),
         InBaseClass(false), QualifierIsInformative(false),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
-        DeclaringEntity(false), FunctionCanBeCall(true) {}
+        DeclaringEntity(false), FunctionCanBeCall(true),
+        IsAddressOfOperand(false) {}
 
   /// Build a result that refers to a pattern with an associated
   /// declaration.
@@ -933,7 +938,8 @@ public:
       : Declaration(D), Pattern(Pattern), Priority(Priority), Kind(RK_Pattern),
         Hidden(false), InBaseClass(false), QualifierIsInformative(false),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
-        DeclaringEntity(false), FunctionCanBeCall(true) {
+        DeclaringEntity(false), FunctionCanBeCall(true),
+        IsAddressOfOperand(false) {
     computeCursorKindAndAvailability();
   }
 
