@@ -1287,6 +1287,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def, m_Select(m_Broadcast(m_VPValue(C)), m_VPValue(), m_VPValue())) && vputils::isSingleScalar(C)) {
+    Def->setOperand(0, C);
+    return;
+  }
+
+
   if (auto *Phi = dyn_cast<VPPhi>(Def)) {
     if (Phi->getNumOperands() == 1)
       Phi->replaceAllUsesWith(Phi->getOperand(0));
