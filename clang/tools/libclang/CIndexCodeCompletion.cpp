@@ -70,6 +70,8 @@ clang_getCompletionChunkKind(CXCompletionString completion_string,
   case CodeCompletionString::CK_Placeholder:
     return CXCompletionChunk_Placeholder;
   case CodeCompletionString::CK_Informative:
+  case CodeCompletionString::CK_FunctionQualifier:
+    // as FunctionQualifier are informative, except for completion.
     return CXCompletionChunk_Informative;
   case CodeCompletionString::CK_ResultType:
     return CXCompletionChunk_ResultType;
@@ -120,6 +122,7 @@ CXString clang_getCompletionChunkText(CXCompletionString completion_string,
   case CodeCompletionString::CK_Placeholder:
   case CodeCompletionString::CK_CurrentParameter:
   case CodeCompletionString::CK_Informative:
+  case CodeCompletionString::CK_FunctionQualifier:
   case CodeCompletionString::CK_LeftParen:
   case CodeCompletionString::CK_RightParen:
   case CodeCompletionString::CK_LeftBracket:
@@ -159,6 +162,7 @@ clang_getCompletionChunkCompletionString(CXCompletionString completion_string,
   case CodeCompletionString::CK_Placeholder:
   case CodeCompletionString::CK_CurrentParameter:
   case CodeCompletionString::CK_Informative:
+  case CodeCompletionString::CK_FunctionQualifier:
   case CodeCompletionString::CK_LeftParen:
   case CodeCompletionString::CK_RightParen:
   case CodeCompletionString::CK_LeftBracket:
