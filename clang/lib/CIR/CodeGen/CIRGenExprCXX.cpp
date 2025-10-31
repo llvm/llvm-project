@@ -257,12 +257,12 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
   if (!e->isArray()) {
     CharUnits typeSize = cgf.getContext().getTypeSizeInChars(type);
     sizeWithoutCookie = cgf.getBuilder().getConstant(
-        loc, cir::IntAttr::get(cgf.SizeTy, typeSize.getQuantity()));
+        loc, cir::IntAttr::get(cgf.sizeTy, typeSize.getQuantity()));
     return sizeWithoutCookie;
   }
 
   // The width of size_t.
-  unsigned sizeWidth = cgf.cgm.getDataLayout().getTypeSizeInBits(cgf.SizeTy);
+  unsigned sizeWidth = cgf.cgm.getDataLayout().getTypeSizeInBits(cgf.sizeTy);
 
   // The number of elements can be have an arbitrary integer type;
   // essentially, we need to multiply it by a constant factor, add a

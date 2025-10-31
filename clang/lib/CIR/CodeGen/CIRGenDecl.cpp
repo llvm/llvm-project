@@ -80,13 +80,13 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
     assert(!cir::MissingFeatures::openMP());
     if (!didCallStackSave) {
       // Save the stack.
-      cir::PointerType defaultTy = AllocaInt8PtrTy;
+      cir::PointerType defaultTy = allocaInt8PtrTy;
       CharUnits align = CharUnits::fromQuantity(
           cgm.getDataLayout().getAlignment(defaultTy, false));
       Address stack = createTempAlloca(defaultTy, align, loc, "saved_stack");
 
       mlir::Value v = builder.createStackSave(loc, defaultTy);
-      assert(v.getType() == AllocaInt8PtrTy);
+      assert(v.getType() == allocaInt8PtrTy);
       builder.createStore(loc, v, stack);
 
       didCallStackSave = true;
