@@ -103,7 +103,7 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
 
   const Expr *PrintedCE = CE->IgnoreParenImpCasts();
 
-  SourceRange SrcRange = PrintedCE->getSourceRange();
+  const SourceRange SrcRange = PrintedCE->getSourceRange();
 
   std::string ReplacementText{
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
