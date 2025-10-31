@@ -307,13 +307,11 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   bool NeedsTransform = false;
 
   // Unwrap GEP ConstantExprs to find the base operand and element type
-  while (auto *CE = dyn_cast<ConstantExpr>(PtrOperand)) {
-    if (auto *GEPCE = dyn_cast<GEPOperator>(CE)) {
-      GOp = GEPCE;
-      PtrOperand = GEPCE->getPointerOperand();
-      NewGEPType = GEPCE->getSourceElementType();
-    } else
-      break;
+  while (auto *GEPCE = dyn_cast_or_null<GEPOperator>(
+             dyn_cast<ConstantExpr>(PtrOperand))) {
+    GOp = GEPCE;
+    PtrOperand = GEPCE->getPointerOperand();
+    NewGEPType = GEPCE->getSourceElementType();
   }
 
   if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
