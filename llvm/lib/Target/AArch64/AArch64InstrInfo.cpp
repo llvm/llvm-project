@@ -5616,7 +5616,6 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI,
                                            Register VReg,
                                            MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
@@ -5630,7 +5629,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   bool Offset = true;
   MCRegister PNRReg = MCRegister::NoRegister;
   unsigned StackID = TargetStackID::Default;
-  switch (TRI->getSpillSize(*RC)) {
+  switch (RI.getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRBui;
@@ -5793,10 +5792,12 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
       .addMemOperand(MMO);
 }
 
-void AArch64InstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            Register DestReg, int FI,
+                                            const TargetRegisterClass *RC,
+                                            Register VReg,
+                                            MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
@@ -5808,7 +5809,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   bool Offset = true;
   unsigned StackID = TargetStackID::Default;
   Register PNRReg = MCRegister::NoRegister;
-  switch (TRI->getSpillSize(*RC)) {
+  switch (TRI.getSpillSize(*RC)) {
   case 1:
     if (AArch64::FPR8RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRBui;
@@ -6444,10 +6445,10 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
              "Mismatched register size in non subreg COPY");
       if (IsSpill)
         storeRegToStackSlot(MBB, InsertPt, SrcReg, SrcMO.isKill(), FrameIndex,
-                            getRegClass(SrcReg), &TRI, Register());
+                            getRegClass(SrcReg), Register());
       else
         loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex,
-                             getRegClass(DstReg), &TRI, Register());
+                             getRegClass(DstReg), Register());
       return &*--InsertPt;
     }
 
@@ -6465,8 +6466,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
       assert(SrcMO.getSubReg() == 0 &&
              "Unexpected subreg on physical register");
       storeRegToStackSlot(MBB, InsertPt, AArch64::XZR, SrcMO.isKill(),
-                          FrameIndex, &AArch64::GPR64RegClass, &TRI,
-                          Register());
+                          FrameIndex, &AArch64::GPR64RegClass, Register());
       return &*--InsertPt;
     }
 
@@ -6500,7 +6500,7 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
         assert(TRI.getRegSizeInBits(*getRegClass(SrcReg)) ==
                    TRI.getRegSizeInBits(*FillRC) &&
                "Mismatched regclass size on folded subreg COPY");
-        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, FillRC, &TRI,
+        loadRegFromStackSlot(MBB, InsertPt, DstReg, FrameIndex, FillRC,
                              Register());
         MachineInstr &LoadMI = *--InsertPt;
         MachineOperand &LoadDst = LoadMI.getOperand(0);
