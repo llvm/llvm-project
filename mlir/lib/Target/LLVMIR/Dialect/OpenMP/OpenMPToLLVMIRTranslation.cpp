@@ -4189,12 +4189,13 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
 ///
 /// Fortran
 ///     map(tofrom: array(2:5, 3:2))
-///   or
-/// C++
-///   map(tofrom: array[1:4][2:3])
+///
 /// We must calculate the initial pointer offset to pass across, this function
 /// performs this using bounds.
 ///
+/// TODO/WARNING: This only supports Fortran's column major indexing currently
+/// as is noted in the note below and comments in the function, we must extend
+/// this function when we add a C++ frontend.
 /// NOTE: which while specified in row-major order it currently needs to be
 /// flipped for Fortran's column order array allocation and access (as
 /// opposed to C++'s row-major, hence the backwards processing where order is
@@ -4231,9 +4232,9 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
     // underlying type e.g. an i32, or f64 etc, e.g. a fortran descriptor base
     // address (pointer pointing to the actual data) so we must caclulate the
     // offset using a single index which the following loop attempts to
-    // compute using the standard column-major algorihtm e.g for a 3D array:
+    // compute using the standard column-major algorithm e.g for a 3D array:
     //
-    // ((((c-idx * b-len) + b-idx) * a-len) + a_idx)
+    // ((((c_idx * b_len) + b_idx) * a_len) + a_idx)
     //
     // It is of note that it's doing column-major rather than row-major at the
     // moment, but having a way for the frontend to indicate which major format
@@ -4244,7 +4245,7 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
     for (int i = bounds.size() - 1; i >= 0; --i) {
       if (auto boundOp = dyn_cast_if_present<omp::MapBoundsOp>(
               bounds[i].getDefiningOp())) {
-        if (i == bounds.size() - 1)
+        if (i == ((int)bounds.size() - 1))
           idx.emplace_back(
               moduleTranslation.lookupValue(boundOp.getLowerBound()));
         else
