@@ -510,12 +510,12 @@ namespace gh153782 {
 
 namespace mutually_exclusive_test_case_1 {
 struct StorageWrapper {
-  // Imagine those two call a reset() function (among other things)
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
   ~StorageWrapper() { delete parts; }
   StorageWrapper(StorageWrapper const&) = default;
 
-  // Mind that there is no assignment here -- this is the bug we would like to find.
-  void operator=(StorageWrapper&&) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
 
   // Not provided, typically would do `parts = new long`.
   StorageWrapper();
@@ -531,12 +531,12 @@ void test_non_trivial_struct_assignment() {
 
 namespace mutually_exclusive_test_case_2 {
 struct StorageWrapper {
-  // Imagine those two call a reset() function (among other things)
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
   ~StorageWrapper() { delete parts; }
   StorageWrapper(StorageWrapper const&) = default;
 
-  // Mind that there is no assignment here -- this is the bug we would like to find.
-  void operator=(StorageWrapper&&) { delete parts; }
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; }
 
   // Not provided, typically would do `parts = new long`.
   StorageWrapper();
@@ -552,12 +552,12 @@ void test_non_trivial_struct_assignment() {
 
 namespace mutually_exclusive_test_case_3 {
 struct StorageWrapper {
-  // Imagine those two call a reset() function (among other things)
+  // Imagine the destructor and copy constructor both call a reset() function (among other things).
   ~StorageWrapper() { delete parts; }
   StorageWrapper(StorageWrapper const&) = default;
 
-  // Mind that there is no assignment here -- this is the bug we would like to find.
-  void operator=(StorageWrapper&&) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
+  // Mind that there is no `parts = other.parts` assignment -- this is the bug we would like to find.
+  void operator=(StorageWrapper&& other) { delete parts; } // newdelete-warning{{Attempt to release already released memory}}
 
   // Not provided, typically would do `parts = new long`.
   StorageWrapper();
