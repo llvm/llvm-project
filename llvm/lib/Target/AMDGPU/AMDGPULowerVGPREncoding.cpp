@@ -58,6 +58,8 @@ class AMDGPULowerVGPREncoding {
   static constexpr unsigned BitsPerField = 2;
   static constexpr unsigned NumFields = 4;
   static constexpr unsigned FieldMask = (1 << BitsPerField) - 1;
+  static constexpr unsigned ModeWidth = NumFields * BitsPerField;
+  static constexpr unsigned ModeMask = (1 << ModeWidth) - 1;
   using ModeType = PackedVector<unsigned, BitsPerField,
                                 std::bitset<BitsPerField * NumFields>>;
 
@@ -152,13 +154,21 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
     CurrentMode |= NewMode;
     CurrentMask |= Mask;
 
-    MostRecentModeSet->getOperand(0).setImm(CurrentMode);
+    MachineOperand &Op = MostRecentModeSet->getOperand(0);
+
+    // Carry old mode bits from the existing instruction.
+    int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
+
+    Op.setImm(CurrentMode | OldModeBits);
     return true;
   }
 
+  // Record previous mode into high 8 bits of the immediate.
+  int64_t OldModeBits = CurrentMode << ModeWidth;
+
   I = handleClause(I);
-  MostRecentModeSet =
-      BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB)).addImm(NewMode);
+  MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
+                          .addImm(NewMode | OldModeBits);
 
   CurrentMode = NewMode;
   CurrentMask = Mask;
