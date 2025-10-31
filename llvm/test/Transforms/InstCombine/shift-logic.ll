@@ -186,6 +186,7 @@ define i32 @ashr_xor(i32 %x, i32 %py) {
   ret i32 %sh1
 }
 
+
 define i32 @shr_mismatch_xor(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shr_mismatch_xor(
 ; CHECK-NEXT:    [[SH0:%.*]] = ashr i32 [[X:%.*]], 5
@@ -545,4 +546,105 @@ define <2 x i64> @lshr_sub_poison(<2 x i64> %x, <2 x i64> %py) {
   %r = sub <2 x i64> %y, %sh0
   %sh1 = lshr <2 x i64> %r, <i64 7, i64 poison>
   ret <2 x i64> %sh1
+}
+
+define i32 @ashr_xor_operand_match(i32 %x, i32 %y) {
+; CHECK-LABEL: @ashr_xor_operand_match(
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R]], [[X]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = xor i32 %x, %y
+  %ret = ashr i32 %r, %x
+  ret i32 %ret
+}
+
+define i32 @ashr_xor_operand_mismtach(i32 %x, i32 %y) {
+; CHECK-LABEL: @ashr_xor_operand_mismtach(
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = xor i32 %x, %y
+  %ret = ashr i32 %r, %y
+  ret i32 %ret
+}
+
+define i32 @lshr_xor_operand_match(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_xor_operand_match(
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R]], [[X]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = xor i32 %x, %y
+  %ret = lshr i32 %r, %x
+  ret i32 %ret
+}
+
+define i32 @lshr_xor_operand_mismtach(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_xor_operand_mismtach(
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = xor i32 %x, %y
+  %ret = lshr i32 %r, %y
+  ret i32 %ret
+}
+
+define i32 @ashr_or_operand_match(i32 %x, i32 %y) {
+; CHECK-LABEL: @ashr_or_operand_match(
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R]], [[X]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = or i32 %x, %y
+  %ret = ashr i32 %r, %x
+  ret i32 %ret
+}
+
+define i32 @ashr_or_operand_mismtach(i32 %x, i32 %y) {
+; CHECK-LABEL: @ashr_or_operand_mismtach(
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = ashr i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = or i32 %x, %y
+  %ret = ashr i32 %r, %y
+  ret i32 %ret
+}
+
+define i32 @lshr_or_operand_match(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_or_operand_match(
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R]], [[X]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = or i32 %x, %y
+  %ret = lshr i32 %r, %x
+  ret i32 %ret
+}
+
+define i32 @lshr_or_operand_mismtach(i32 %x, i32 %y) {
+; CHECK-LABEL: @lshr_or_operand_mismtach(
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = lshr i32 [[R]], [[Y]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = or i32 %x, %y
+  %ret = lshr i32 %r, %y
+  ret i32 %ret
+}
+
+define i32 @ashr_xor_operand_match_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: @ashr_xor_operand_match_multiuse(
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = ashr i32 [[R]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i32 [[R]], [[Q]]
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %r = xor i32 %x, %y
+  %q = ashr i32 %r, %x
+  %ret = xor i32 %r, %q
+  ret i32 %ret
 }
