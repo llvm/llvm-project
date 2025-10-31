@@ -124,7 +124,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
       // directly and exit.
       if (EC)
         reportOpenError(Path, EC.message());
-      WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false);
+      WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/true);
       return true;
     };
   };
