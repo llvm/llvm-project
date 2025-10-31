@@ -480,11 +480,10 @@ ABISysV_arc::GetReturnValueObjectSimple(Thread &thread,
   }
   // Floating point return type.
   else if (type_flags & eTypeIsFloat) {
-    uint32_t float_count = 0;
     bool is_complex = false;
 
-    if (compiler_type.IsFloatingPointType(float_count, is_complex) &&
-        1 == float_count && !is_complex) {
+    if (compiler_type.IsFloatingPointType(is_complex) &&
+        !compiler_type.IsVectorType() && !is_complex) {
       const size_t byte_size =
           llvm::expectedToOptional(compiler_type.GetByteSize(&thread))
               .value_or(0);

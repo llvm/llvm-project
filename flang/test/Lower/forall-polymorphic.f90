@@ -1,6 +1,7 @@
 ! Test lower of FORALL polymorphic pointer assignment 
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
+
 !! Test when LHS is polymorphic and RHS is not polymorphic
 ! CHECK-LABEL: c.func @_QPforallpolymorphic
   subroutine forallPolymorphic()
@@ -46,6 +47,7 @@
 
   end subroutine forallPolymorphic
 
+
 !! Test when LHS is not polymorphic but RHS is polymorphic
 ! CHECK-LABEL: c.func @_QPforallpolymorphic2(
 ! CHECK-SAME: %arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt{ptr:!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFforallpolymorphic2Tdt>>>>}>>>>> {fir.bindc_name = "tar1", fir.target}) {
@@ -87,3 +89,42 @@
 
   end subroutine forallPolymorphic2
 
+
+!! Test when LHS is unlimited polymorphic and RHS non-polymorphic intrinsic
+!! type target.
+! CHECK-LABEL: c.func @_QPforallpolymorphic3
+subroutine forallPolymorphic3()
+  TYPE :: DT
+    CLASS(*), POINTER    :: Ptr => NULL()
+  END TYPE
+
+  TYPE(DT) :: D1(10)
+  CHARACTER*1, TARGET :: TAR1(10)
+  INTEGER :: I
+
+  FORALL (I=1:10)
+    D1(I)%Ptr => Tar1(I)
+  END FORALL
+
+! CHECK: %[[V_7:[0-9]+]] = fir.alloca !fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>> {bindc_name = "d1", uniq_name = "_QFforallpolymorphic3Ed1"}
+! CHECK: %[[V_8:[0-9]+]] = fir.shape %c10 : (index) -> !fir.shape<1>
+! CHECK: %[[V_9:[0-9]+]] = fir.declare %[[V_7]](%[[V_8]]) {uniq_name = "_QFforallpolymorphic3Ed1"} : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>, !fir.shape<1>) -> !fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>
+! CHECK: %[[V_16:[0-9]+]] = fir.alloca !fir.array<10x!fir.char<1>> {bindc_name = "tar1", fir.target, uniq_name = "_QFforallpolymorphic3Etar1"}
+! CHECK: %[[V_17:[0-9]+]] = fir.declare %[[V_16]](%[[V_8]]) typeparams %c1 {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFforallpolymorphic3Etar1"} : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> !fir.ref<!fir.array<10x!fir.char<1>>>
+! CHECK: %[[V_24:[0-9]+]] = fir.convert %c1_i32 : (i32) -> index
+! CHECK: %[[V_25:[0-9]+]] = fir.convert %c10_i32 : (i32) -> index
+! CHECK: fir.do_loop %arg0 = %[[V_24]] to %[[V_25]] step %c1
+! CHECK: {
+! CHECK: %[[V_26:[0-9]+]] = fir.convert %arg0 : (index) -> i32
+! CHECK: %[[V_27:[0-9]+]] = fir.convert %[[V_26]] : (i32) -> i64
+! CHECK: %[[V_28:[0-9]+]] = fir.array_coor %[[V_9]](%[[V_8]]) %[[V_27]] : (!fir.ref<!fir.array<10x!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>
+! CHECK: %[[V_29:[0-9]+]] = fir.field_index ptr, !fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>
+! CHECK: %[[V_30:[0-9]+]] = fir.coordinate_of %[[V_28]], ptr : (!fir.ref<!fir.type<_QFforallpolymorphic3Tdt{ptr:!fir.class<!fir.ptr<none>>}>>) -> !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: %[[V_31:[0-9]+]] = fir.convert %[[V_26]] : (i32) -> i64
+! CHECK: %[[V_32:[0-9]+]] = fir.array_coor %[[V_17]](%[[V_8]]) %31 : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, i64) -> !fir.ref<!fir.char<1>>
+! CHECK: %[[V_33:[0-9]+]] = fir.embox %[[V_32]] : (!fir.ref<!fir.char<1>>) -> !fir.box<!fir.ptr<!fir.char<1>>>
+! CHECK: %[[V_34:[0-9]+]] = fir.rebox %[[V_33]] : (!fir.box<!fir.ptr<!fir.char<1>>>) -> !fir.class<!fir.ptr<none>>
+! CHECK: fir.store %[[V_34]] to %[[V_30]] : !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: }
+
+end subroutine forallPolymorphic3
