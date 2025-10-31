@@ -1476,6 +1476,11 @@ void TargetTransformInfo::collectKernelLaunchBounds(
   return TTIImpl->collectKernelLaunchBounds(F, LB);
 }
 
+InstructionUniformity
+TargetTransformInfo::getInstructionUniformity(const Instruction &I) const {
+  return TTIImpl->getInstructionUniformity(I);
+}
+
 TargetTransformInfoImplBase::~TargetTransformInfoImplBase() = default;
 
 TargetIRAnalysis::TargetIRAnalysis() : TTICallback(&getDefaultTTI) {}
