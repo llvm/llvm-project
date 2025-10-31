@@ -861,7 +861,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
   } else if (return_compiler_type.IsFloatingPointType(is_complex)) {
     if (IsSoftFloat(fp_flag)) {
       uint64_t raw_value = reg_ctx->ReadRegisterAsUnsigned(r2_reg_info, 0);
-      if (!return_compiler_type.IsVectorType() || is_complex)
+      if (is_complex)
         return return_valobj_sp;
       switch (*bit_width) {
       default:
