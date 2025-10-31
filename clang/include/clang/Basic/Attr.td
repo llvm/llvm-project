@@ -483,7 +483,6 @@ def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
 def TargetSPIRV : TargetArch<["spirv", "spirv32", "spirv64"]>;
 def TargetWebAssembly : TargetArch<["wasm32", "wasm64"]>;
 def TargetNVPTX : TargetArch<["nvptx", "nvptx64"]>;
-def TargetPowerPC : TargetArch<["ppc", "ppcle", "ppc64", "ppc64le"]>;
 def TargetWindows : TargetSpec {
   let OSes = ["Win32"];
 }
@@ -509,7 +508,7 @@ def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
 }
 
-def TargetMustTailAvaiable: TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches, TargetAnyX86.Arches, TargetWebAssembly.Arches, TargetPowerPC.Arches)> {
+def TargetMustTailAvaiable:  TargetSpec {
   let CustomCode = [{ Target.hasMustTail() }];
 }
 

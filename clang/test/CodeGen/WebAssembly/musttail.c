@@ -15,6 +15,6 @@ int foo(int x) {
 
 int bar(int x)
 {
-  // notail-error@+1 {{'musttail' attribute is not supported on this target without tail-call feature}}
+  // notail-warning@+1 {{unknown attribute 'clang::musttail' ignored}}
  [[clang::musttail]] return foo(1);
 }
