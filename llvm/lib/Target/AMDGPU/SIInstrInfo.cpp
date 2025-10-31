@@ -10618,6 +10618,29 @@ bool SIInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   return false;
 }
 
+// SCC is already valid after SCCValid.
+// SCCRedefine will redefine SCC to the same value already available after
+// SCCValid. If there are no intervening SCC conflicts delete SCCRedefine and
+// update kill/dead flags if necessary.
+static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
+                        const SIRegisterInfo *RI) {
+  MachineInstr *KillsSCC = nullptr;
+  for (MachineInstr &MI : make_range(std::next(SCCValid->getIterator()),
+                                     SCCRedefine->getIterator())) {
+    if (MI.modifiesRegister(AMDGPU::SCC, RI))
+      return false;
+    if (MI.killsRegister(AMDGPU::SCC, RI))
+      KillsSCC = &MI;
+  }
+  if (MachineOperand *SccDef =
+          SCCValid->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+    SccDef->setIsDead(false);
+  if (KillsSCC)
+    KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
+  SCCRedefine->eraseFromParent();
+  return true;
+}
+
 bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                        Register SrcReg2, int64_t CmpMask,
                                        int64_t CmpValue,
@@ -10628,32 +10651,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
 
-  // SCC is already valid after SCCValid.
-  // SCCRedefine will redefine SCC to the same value already available after
-  // SCCValid. If there are no intervening SCC conflicts delete SCCRedefine and
-  // update kill/dead flags if necessary.
-  const auto optimizeSCC = [this](MachineInstr *SCCValid,
-                                  MachineInstr *SCCRedefine) -> bool {
-    MachineInstr *KillsSCC = nullptr;
-    for (MachineInstr &MI : make_range(std::next(SCCValid->getIterator()),
-                                       SCCRedefine->getIterator())) {
-      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
-        return false;
-      if (MI.killsRegister(AMDGPU::SCC, &RI))
-        KillsSCC = &MI;
-    }
-    if (MachineOperand *SccDef =
-            SCCValid->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
-      SccDef->setIsDead(false);
-    if (KillsSCC)
-      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
-    SCCRedefine->eraseFromParent();
-
-    return true;
-  };
-
   const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
-                                  optimizeSCC]() -> bool {
+                                  this]() -> bool {
     if (CmpValue != 0)
       return false;
 
@@ -10687,13 +10686,13 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(Def))
       return false;
 
-    if (!optimizeSCC(Def, &CmpInstr))
+    if (!optimizeSCC(Def, &CmpInstr, &RI))
       return false;
 
     return true;
   };
 
-  const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI, optimizeSCC,
+  const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue, unsigned SrcSize,
                                      bool IsReversible, bool IsSigned) -> bool {
     // s_cmp_eq_u32 (s_and_b32 $src, 1 << n), 1 << n => s_and_b32 $src, 1 << n
@@ -10767,7 +10766,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    if (!optimizeSCC(Def, &CmpInstr))
+    if (!optimizeSCC(Def, &CmpInstr, &RI))
       return false;
 
     if (!MRI->use_nodbg_empty(DefReg)) {
