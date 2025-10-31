@@ -6,10 +6,19 @@
 // CHECK-DAG: view1#0 <-> view2#0: NoAlias
 // CHECK-DAG: view1#0 <-> func.region0#0: MustAlias
 // CHECK-DAG: view1#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: view1#0 <-> view3#0: MayAlias
+// CHECK-DAG: view1#0 <-> view4#0: NoAlias
 // CHECK-DAG: view2#0 <-> func.region0#0: NoAlias
 // CHECK-DAG: view2#0 <-> func.region0#1: MustAlias
+// CHECK-DAG: view2#0 <-> view3#0: NoAlias
+// CHECK-DAG: view2#0 <-> view4#0: MayAlias
+// CHECK-DAG: view3#0 <-> func.region0#0: MayAlias
+// CHECK-DAG: view3#0 <-> func.region0#1: NoAlias
+// CHECK-DAG: view3#0 <-> view4#0: NoAlias
 func.func @restrict(%arg: memref<?xf32>, %arg1: memref<?xf32> {local_alias_analysis.restrict}) attributes {test.ptr = "func"} {
   %0 = memref.subview %arg[0][2][1] {test.ptr = "view1"} : memref<?xf32> to memref<2xf32>
   %1 = memref.subview %arg1[0][2][1] {test.ptr = "view2"} : memref<?xf32> to memref<2xf32>
+  %2 = memref.subview %arg[1][2][1] {test.ptr = "view3"} : memref<?xf32> to memref<2xf32, strided<[1], offset: 1>>
+  %3 = memref.subview %arg1[1][2][1] {test.ptr = "view4"} : memref<?xf32> to memref<2xf32, strided<[1], offset: 1>>
   return
 }

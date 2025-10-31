@@ -23,21 +23,53 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
   }];
   let cppNamespace = "::mlir";
 
-  let methods = [
-    InterfaceMethod<
-      "Returns the source buffer from which the view is created.",
-      "::mlir::Value", "getViewSource">,
-    InterfaceMethod<
-      /*desc=*/[{ Returns the buffer which the view created. }],
-      /*retTy=*/"::mlir::Value",
-      /*methodName=*/"getViewDest",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
+  let methods =
+      [InterfaceMethod<
+           "Returns the source buffer from which the view is created.",
+           "::mlir::Value", "getViewSource">,
+       InterfaceMethod<
+           /*desc=*/[{ Returns the buffer which the view created. }],
+           /*retTy=*/"::mlir::Value",
+           /*methodName=*/"getViewDest",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
         return $_op->getResult(0);
-      }]
-    >
-  ];
+      }]>,
+       InterfaceMethod<
+           /*desc=*/
+           [{
+             Returns true iff the source buffer and the resulting view
+             are known to start at the same "address".
+           }],
+           /*retTy=*/"bool",
+           /*methodName=*/"isKnownToHaveSameStart",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        return false;
+      }]>,
+       InterfaceMethod<
+           /*desc=*/
+           [{
+             Returns true iff the resulting view is known to be
+             a complete view of the source buffer, i.e.
+             isKnownToHaveSameStart() is true and the result
+             has the same total size and is not a subview of the input.
+           }],
+           /*retTy=*/"bool",
+           /*methodName=*/"isKnownToBeCompleteView",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        return false;
+      }]>];
+
+  let verify = [{
+    auto concreteOp = ::mlir::cast<ConcreteOp>($_op);
+    // isKnownToBeCompleteView() == true implies isKnownToHaveSameStart() == true.
+    return !concreteOp.isKnownToBeCompleteView() || concreteOp.isKnownToHaveSameStart() ? ::mlir::success() : ::mlir::failure();
+  }];
 }
 
 def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface"> {
