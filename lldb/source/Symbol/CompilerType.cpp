@@ -240,13 +240,11 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(uint32_t &count,
-                                       bool &is_complex) const {
+bool CompilerType::IsFloatingPointType(bool &is_complex) const {
   if (IsValid()) {
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, count, is_complex);
+      return type_system_sp->IsFloatingPointType(m_type, is_complex);
   }
-  count = 0;
   is_complex = false;
   return false;
 }
@@ -331,9 +329,8 @@ bool CompilerType::IsInteger() const {
 }
 
 bool CompilerType::IsFloat() const {
-  uint32_t count = 0;
   bool is_complex = false;
-  return IsFloatingPointType(count, is_complex);
+  return IsFloatingPointType(is_complex);
 }
 
 bool CompilerType::IsEnumerationType() const {
