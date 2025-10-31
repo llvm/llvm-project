@@ -7587,8 +7587,8 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
     Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
-    I = SI->removeCase(I);
-    E = SI->case_end();
+    I = SIW->removeCase(I);
+    E = SIW->case_end();
   }
 
   auto Case = SI->findCaseValue(Constant);
