@@ -37,7 +37,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 #if !LIBC_HAS_VECTOR_TYPE
-// Foreword any generic vector impls to architecture specific ones
+// Forward any generic vector impls to architecture specific ones
 namespace arch {}
 namespace generic = arch;
 #endif
