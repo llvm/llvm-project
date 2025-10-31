@@ -1563,6 +1563,32 @@ LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::ReduxOp::verify() {
+  mlir::Type reduxType = getType();
+  if (!reduxType.isF32()) {
+    if (getAbs())
+      return emitOpError("abs attribute is supported only for f32 type");
+    if (getNan())
+      return emitOpError("nan attribute is supported only for f32 type");
+  }
+
+  NVVM::ReduxKind kind = getKind();
+  switch (kind) {
+  case NVVM::ReduxKind::FMIN:
+  case NVVM::ReduxKind::FMAX:
+    if (!reduxType.isF32())
+      return emitOpError("fmin and fmax redux kind must be used with f32 type");
+    break;
+  default:
+    if (reduxType.isF32())
+      return emitOpError(
+          "only fmin and fmax redux kinds are supported for f32 type");
+    break;
+  }
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
