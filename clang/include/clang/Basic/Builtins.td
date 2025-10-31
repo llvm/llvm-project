@@ -4967,13 +4967,13 @@ def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
 def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getdimensions_x"];
   let Attributes = [NoThrow];
-  let Prototype = "void(...)";
+  let Prototype = "void(__hlsl_resource_t, uint32_t&)";
 }
 
 def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getstride"];
   let Attributes = [NoThrow];
-  let Prototype = "void(...)";
+  let Prototype = "void(__hlsl_resource_t, uint32_t&)";
 }
 
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {
