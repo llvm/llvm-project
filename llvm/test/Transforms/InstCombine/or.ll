@@ -2129,7 +2129,7 @@ define i8 @or_positive_minus_non_positive_to_abs(i8 %a){
   ret i8 %or
 }
 
-; TODO Fold to smax https://alive2.llvm.org/ce/z/wDiDh2
+; TODO: Fold to smax https://alive2.llvm.org/ce/z/wDiDh2
 define i8 @or_select_smax_neg_to_abs(i8 %a){
 ; CHECK-LABEL: @or_select_smax_neg_to_abs(
 ; CHECK-NEXT:    [[SGT0:%.*]] = icmp sgt i8 [[A:%.*]], 0
