@@ -29,6 +29,8 @@ namespace mlir {
 namespace xegpu {
 namespace uArch {
 
+constexpr unsigned generalPackedFormatBitSize{32};
+
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {

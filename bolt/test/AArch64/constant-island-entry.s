@@ -10,7 +10,7 @@
 ## Skip caller to check the identical warning is triggered from ScanExternalRefs().
 # RUN: llvm-bolt %t.exe -o %t.bolt -skip-funcs=caller 2>&1 | FileCheck %s
 
-# CHECK: BOLT-WARNING: Ignoring entry point at address 0x{{[0-9a-f]+}} in constant island of function func
+# CHECK: BOLT-WARNING: ignoring entry point at address 0x{{[0-9a-f]+}} in constant island of function func
 
 .globl func
 .type func, %function

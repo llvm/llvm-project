@@ -270,6 +270,8 @@ inline const uArch *getUArch(llvm::StringRef archName) {
     return PVCuArch::getInstance();
   else if (archName.equals_insensitive("bmg"))
     return BMGuArch::getInstance();
+  else
+    llvm_unreachable("No matching uArch found");
 
   return nullptr;
 }

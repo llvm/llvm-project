@@ -771,14 +771,6 @@ mlir::Value CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID,
   case X86::BI_WriteBarrier:
   case X86::BI_AddressOfReturnAddress:
   case X86::BI__stosb:
-  case X86::BI__builtin_ia32_t2rpntlvwz0_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz0rst1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rs_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1t1_internal:
-  case X86::BI__builtin_ia32_t2rpntlvwz1rst1_internal:
   case X86::BI__ud2:
   case X86::BI__int2c:
   case X86::BI__readfsbyte:

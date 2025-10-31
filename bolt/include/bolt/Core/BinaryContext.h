@@ -932,6 +932,16 @@ public:
   std::pair<const MCSymbol *, uint64_t>
   handleAddressRef(uint64_t Address, BinaryFunction &BF, bool IsPCRel);
 
+  /// When \p Address inside function \p BF is a target of a control transfer
+  /// instruction (branch) from another function, return a corresponding symbol
+  /// that should be used by the branch. For example, main or secondary entry
+  /// point.
+  ///
+  /// If \p Address is an invalid destination, such as a constant island, return
+  /// nullptr and mark \p BF as ignored, since we cannot properly handle a
+  /// branch to a constant island.
+  MCSymbol *handleExternalBranchTarget(uint64_t Address, BinaryFunction &BF);
+
   /// Analyze memory contents at the given \p Address and return the type of
   /// memory contents (such as a possible jump table).
   MemoryContentsType analyzeMemoryAt(uint64_t Address, BinaryFunction &BF);

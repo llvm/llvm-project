@@ -1697,21 +1697,12 @@ bool BinaryFunction::scanExternalRefs() {
       if (!TargetFunction || ignoreFunctionRef(*TargetFunction))
         continue;
 
-      const uint64_t FunctionOffset =
-          TargetAddress - TargetFunction->getAddress();
-      if (!TargetFunction->isInConstantIsland(TargetAddress)) {
-        BranchTargetSymbol =
-            FunctionOffset
-                ? TargetFunction->addEntryPointAtOffset(FunctionOffset)
-                : TargetFunction->getSymbol();
-      } else {
-        TargetFunction->setIgnored();
-        BC.outs() << "BOLT-WARNING: Ignoring entry point at address 0x"
-                  << Twine::utohexstr(Address)
-                  << " in constant island of function " << *TargetFunction
-                  << '\n';
+      // Get a reference symbol for the function when address is a valid code
+      // reference.
+      BranchTargetSymbol =
+          BC.handleExternalBranchTarget(TargetAddress, *TargetFunction);
+      if (!BranchTargetSymbol)
         continue;
-      }
     }
 
     // Can't find more references. Not creating relocations since we are not
