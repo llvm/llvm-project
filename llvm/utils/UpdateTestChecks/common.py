@@ -607,7 +607,7 @@ MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 
 IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
-IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\w+")
+IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\S+")
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r"^(\s+)")
 SCRUB_WHITESPACE_RE = re.compile(r"(?!^(|  \w))[ \t]+", flags=re.M)
@@ -1123,6 +1123,8 @@ class FunctionTestBuilder:
 ##### Generator of LLVM IR CHECK lines
 
 SCRUB_IR_COMMENT_RE = re.compile(r"\s*;.*")
+# Comments to indicate the predecessors of a block in the IR.
+SCRUB_PRED_COMMENT_RE = re.compile(r"\s*; preds = .*")
 SCRUB_IR_FUNC_META_RE = re.compile(r"((?:\!(?!dbg\b)[a-zA-Z_]\w*(?:\s+![0-9]+)?)\s*)+")
 
 # TODO: We should also derive check lines for global, debug, loop declarations, etc..
@@ -1361,7 +1363,7 @@ def make_ir_generalizer(version, no_meta_details):
     ]
 
     prefix = r"(\s*)"
-    suffix = r"([,\s\(\)\}]|\Z)"
+    suffix = r"([,\s\(\)\}\]]|\Z)"
 
     # values = [
     #     nameless_value
@@ -1877,6 +1879,7 @@ def generalize_check_lines(
     *,
     unstable_globals_only=False,
     no_meta_details=False,
+    ignore_all_comments=True,  # If False, only ignore comments of predecessors
 ):
     if unstable_globals_only:
         regexp = ginfo.get_unstable_globals_regexp()
@@ -1904,8 +1907,12 @@ def generalize_check_lines(
                         line,
                     )
                     break
-            # Ignore any comments, since the check lines will too.
-            scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
+            if ignore_all_comments:
+                # Ignore any comments, since the check lines will too.
+                scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
+            else:
+                # Ignore comments of predecessors only.
+                scrubbed_line = SCRUB_PRED_COMMENT_RE.sub(r"", line)
             # Ignore the metadata details if check global is none
             if no_meta_details:
                 scrubbed_line = SCRUB_IR_FUNC_META_RE.sub(r"{{.*}}", scrubbed_line)
@@ -2083,6 +2090,7 @@ def add_checks(
     global_tbaa_records_for_prefixes={},
     preserve_names=False,
     original_check_lines: Mapping[str, List[str]] = {},
+    check_inst_comments=True,
 ):
     # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
     prefix_exclusions = set()
@@ -2280,6 +2288,8 @@ def add_checks(
                     global_tbaa_records,
                     preserve_names,
                     original_check_lines=original_check_lines.get(checkprefix),
+                    # IR output might require comments checks, e.g., print-predicate-info, print<memssa>
+                    ignore_all_comments=not check_inst_comments,
                 )
 
                 # This could be selectively enabled with an optional invocation argument.
@@ -2299,8 +2309,9 @@ def add_checks(
                     if func_line.strip() == "":
                         is_blank_line = True
                         continue
-                    # Do not waste time checking IR comments.
-                    func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
+                    if not check_inst_comments:
+                        # Do not waste time checking IR comments unless necessary.
+                        func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
 
                     # Skip blank lines instead of checking them.
                     if is_blank_line:
@@ -2342,6 +2353,7 @@ def add_ir_checks(
     global_vars_seen_dict,
     global_tbaa_records_for_prefixes,
     is_filtered,
+    check_inst_comments=False,
     original_check_lines={},
 ):
     assert ginfo.is_ir()
@@ -2368,6 +2380,7 @@ def add_ir_checks(
         global_tbaa_records_for_prefixes,
         preserve_names,
         original_check_lines=original_check_lines,
+        check_inst_comments=check_inst_comments,
     )
 
 
