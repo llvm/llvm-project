@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Bfloat16ConversionINTEL], [SPV_INTEL_bfloat16_conversion]> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Bfloat16ConversionINTEL, Int16], [SPV_INTEL_bfloat16_conversion]> {
   // CHECK-LABEL: @f32_to_bf16
   spirv.func @f32_to_bf16(%arg0 : f32) "None" {
     // CHECK: {{%.*}} = spirv.INTEL.ConvertFToBF16 {{%.*}} : f32 to i16
@@ -33,11 +38,33 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Bfloat16ConversionINTEL]
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.RoundFToTF32
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, TensorFloat32RoundingINTEL], [SPV_INTEL_tensor_float32_conversion]> {
+  // CHECK-LABEL: @f32_to_tf32
+  spirv.func @f32_to_tf32(%arg0 : f32) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.RoundFToTF32 {{%.*}} : f32 to f32
+    %1 = spirv.INTEL.RoundFToTF32 %arg0 : f32 to f32
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @f32_to_tf32_vec
+  spirv.func @f32_to_tf32_vec(%arg0 : vector<2xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.RoundFToTF32 {{%.*}} : vector<2xf32> to vector<2xf32>
+    %1 = spirv.INTEL.RoundFToTF32 %arg0 : vector<2xf32> to vector<2xf32>
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.SplitBarrier
 //===----------------------------------------------------------------------===//
 
-// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [SplitBarrierINTEL], [SPV_INTEL_split_barrier]>
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [SplitBarrierINTEL], [SPV_INTEL_split_barrier]> {
+// CHECK: spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, SplitBarrierINTEL], [SPV_INTEL_split_barrier]>
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, SplitBarrierINTEL], [SPV_INTEL_split_barrier]> {
   // CHECK-LABEL: @split_barrier
   spirv.func @split_barrier() "None" {
     // CHECK: spirv.INTEL.ControlBarrierArrive <Workgroup> <Device> <Acquire|UniformMemory>

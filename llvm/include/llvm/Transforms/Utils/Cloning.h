@@ -22,7 +22,9 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <functional>
 #include <memory>
@@ -41,20 +43,22 @@ class Instruction;
 class Loop;
 class LoopInfo;
 class Module;
+class OptimizationRemarkEmitter;
 class PGOContextualProfile;
 class ProfileSummaryInfo;
 class ReturnInst;
 class DomTreeUpdater;
 
 /// Return an exact copy of the specified module
-std::unique_ptr<Module> CloneModule(const Module &M);
-std::unique_ptr<Module> CloneModule(const Module &M, ValueToValueMapTy &VMap);
+LLVM_ABI std::unique_ptr<Module> CloneModule(const Module &M);
+LLVM_ABI std::unique_ptr<Module> CloneModule(const Module &M,
+                                             ValueToValueMapTy &VMap);
 
 /// Return a copy of the specified module. The ShouldCloneDefinition function
 /// controls whether a specific GlobalValue's definition is cloned. If the
 /// function returns false, the module copy will contain an external reference
 /// in place of the global definition.
-std::unique_ptr<Module>
+LLVM_ABI std::unique_ptr<Module>
 CloneModule(const Module &M, ValueToValueMapTy &VMap,
             function_ref<bool(const GlobalValue *)> ShouldCloneDefinition);
 
@@ -117,9 +121,22 @@ struct ClonedCodeInfo {
 /// If you would like to collect additional information about the cloned
 /// function, you can specify a ClonedCodeInfo object with the optional fifth
 /// parameter.
-BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
-                            const Twine &NameSuffix = "", Function *F = nullptr,
-                            ClonedCodeInfo *CodeInfo = nullptr);
+///
+/// \p MapAtoms indicates whether source location atoms should be mapped for
+/// later remapping. Must be true when you duplicate a code path and a source
+/// location is intended to appear twice in the generated instructions. Can be
+/// set to false if you are transplanting code from one place to another.
+/// Setting true (default) is always safe (won't produce incorrect debug info)
+/// but is sometimes unnecessary, causing extra work that could be avoided by
+/// setting the parameter to false.
+LLVM_ABI BasicBlock *
+CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
+                const Twine &NameSuffix = "", Function *F = nullptr,
+                ClonedCodeInfo *CodeInfo = nullptr, bool MapAtoms = true);
+
+/// Mark a cloned instruction as a new instance so that its source loc can
+/// be updated when remapped.
+LLVM_ABI void mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap);
 
 /// Return a copy of the specified function and add it to that
 /// function's module.  Also, any references specified in the VMap are changed
@@ -132,8 +149,8 @@ BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 ///
 /// \pre VMap contains no non-identity GlobalValue mappings.
 ///
-Function *CloneFunction(Function *F, ValueToValueMapTy &VMap,
-                        ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI Function *CloneFunction(Function *F, ValueToValueMapTy &VMap,
+                                 ClonedCodeInfo *CodeInfo = nullptr);
 
 enum class CloneFunctionChangeType {
   LocalChangesOnly,
@@ -166,21 +183,22 @@ enum class CloneFunctionChangeType {
 /// FIXME: Consider simplifying this function by splitting out \a
 /// CloneFunctionMetadataInto() and expecting / updating callers to call it
 /// first when / how it's needed.
-void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
-                       ValueToValueMapTy &VMap, CloneFunctionChangeType Changes,
-                       SmallVectorImpl<ReturnInst *> &Returns,
-                       const char *NameSuffix = "",
-                       ClonedCodeInfo *CodeInfo = nullptr,
-                       ValueMapTypeRemapper *TypeMapper = nullptr,
-                       ValueMaterializer *Materializer = nullptr);
+LLVM_ABI void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
+                                ValueToValueMapTy &VMap,
+                                CloneFunctionChangeType Changes,
+                                SmallVectorImpl<ReturnInst *> &Returns,
+                                const char *NameSuffix = "",
+                                ClonedCodeInfo *CodeInfo = nullptr,
+                                ValueMapTypeRemapper *TypeMapper = nullptr,
+                                ValueMaterializer *Materializer = nullptr);
 
 /// Clone OldFunc's attributes into NewFunc, transforming values based on the
 /// mappings in VMap.
-void CloneFunctionAttributesInto(Function *NewFunc, const Function *OldFunc,
-                                 ValueToValueMapTy &VMap,
-                                 bool ModuleLevelChanges,
-                                 ValueMapTypeRemapper *TypeMapper = nullptr,
-                                 ValueMaterializer *Materializer = nullptr);
+LLVM_ABI void
+CloneFunctionAttributesInto(Function *NewFunc, const Function *OldFunc,
+                            ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                            ValueMapTypeRemapper *TypeMapper = nullptr,
+                            ValueMaterializer *Materializer = nullptr);
 
 /// Clone OldFunc's metadata into NewFunc.
 ///
@@ -190,28 +208,27 @@ void CloneFunctionAttributesInto(Function *NewFunc, const Function *OldFunc,
 ///
 /// NOTE: This function doesn't clone !llvm.dbg.cu when cloning into a different
 /// module. Use CloneFunctionInto for that behavior.
-void CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
-                               ValueToValueMapTy &VMap, RemapFlags RemapFlag,
-                               ValueMapTypeRemapper *TypeMapper = nullptr,
-                               ValueMaterializer *Materializer = nullptr,
-                               const MetadataPredicate *IdentityMD = nullptr);
+LLVM_ABI void
+CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
+                          ValueToValueMapTy &VMap, RemapFlags RemapFlag,
+                          ValueMapTypeRemapper *TypeMapper = nullptr,
+                          ValueMaterializer *Materializer = nullptr,
+                          const MetadataPredicate *IdentityMD = nullptr);
 
 /// Clone OldFunc's body into NewFunc.
-void CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
-                           ValueToValueMapTy &VMap, RemapFlags RemapFlag,
-                           SmallVectorImpl<ReturnInst *> &Returns,
-                           const char *NameSuffix = "",
-                           ClonedCodeInfo *CodeInfo = nullptr,
-                           ValueMapTypeRemapper *TypeMapper = nullptr,
-                           ValueMaterializer *Materializer = nullptr,
-                           const MetadataPredicate *IdentityMD = nullptr);
+LLVM_ABI void CloneFunctionBodyInto(
+    Function &NewFunc, const Function &OldFunc, ValueToValueMapTy &VMap,
+    RemapFlags RemapFlag, SmallVectorImpl<ReturnInst *> &Returns,
+    const char *NameSuffix = "", ClonedCodeInfo *CodeInfo = nullptr,
+    ValueMapTypeRemapper *TypeMapper = nullptr,
+    ValueMaterializer *Materializer = nullptr,
+    const MetadataPredicate *IdentityMD = nullptr);
 
-void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
-                               const Instruction *StartingInst,
-                               ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-                               SmallVectorImpl<ReturnInst *> &Returns,
-                               const char *NameSuffix = "",
-                               ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void CloneAndPruneIntoFromInst(
+    Function *NewFunc, const Function *OldFunc, const Instruction *StartingInst,
+    ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+    SmallVectorImpl<ReturnInst *> &Returns, const char *NameSuffix = "",
+    ClonedCodeInfo *CodeInfo = nullptr);
 
 /// This works exactly like CloneFunctionInto,
 /// except that it does some simple constant prop and DCE on the fly.  The
@@ -224,11 +241,10 @@ void CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 /// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
 /// mappings.
 ///
-void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
-                               ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-                               SmallVectorImpl<ReturnInst*> &Returns,
-                               const char *NameSuffix = "",
-                               ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void CloneAndPruneFunctionInto(
+    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
+    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
+    const char *NameSuffix = "", ClonedCodeInfo *CodeInfo = nullptr);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
@@ -263,6 +279,9 @@ public:
   /// `InlinedCalls` above is used.
   SmallVector<CallBase *, 8> InlinedCallSites;
 
+  Value *ConvergenceControlToken = nullptr;
+  Instruction *CallSiteEHPad = nullptr;
+
   /// Update profile for callee as well as cloned version. We need to do this
   /// for regular inlining, but not for inlining from sample profile loader.
   bool UpdateProfile;
@@ -271,8 +290,35 @@ public:
     StaticAllocas.clear();
     InlinedCalls.clear();
     InlinedCallSites.clear();
+    ConvergenceControlToken = nullptr;
+    CallSiteEHPad = nullptr;
   }
 };
+
+/// Check if it is legal to perform inlining of the function called by \p CB
+/// into the caller at this particular use, and sets fields in \p IFI.
+///
+/// This does not consider whether it is possible for the function callee itself
+/// to be inlined; for that see isInlineViable.
+LLVM_ABI InlineResult CanInlineCallSite(const CallBase &CB,
+                                        InlineFunctionInfo &IFI);
+
+/// This should generally not be used, use InlineFunction instead.
+///
+/// Perform mechanical inlining of \p CB into the caller.
+///
+/// This does not perform any legality or profitability checks for the
+/// inlining. This assumes that CanInlineCallSite was already called, populated
+/// \p IFI, and returned InlineResult::success.
+///
+/// Also assumes that isInlineViable returned InlineResult::success for the
+/// called function.
+LLVM_ABI void InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
+                                 bool MergeAttributes = false,
+                                 AAResults *CalleeAAR = nullptr,
+                                 bool InsertLifetime = true,
+                                 Function *ForwardVarArgsTo = nullptr,
+                                 OptimizationRemarkEmitter *ORE = nullptr);
 
 /// This function inlines the called function into the basic
 /// block of the caller.  This returns false if it is not possible to inline
@@ -296,22 +342,24 @@ public:
 ///
 /// The callee's function attributes are merged into the callers' if
 /// MergeAttributes is set to true.
-InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                            bool MergeAttributes = false,
-                            AAResults *CalleeAAR = nullptr,
-                            bool InsertLifetime = true,
-                            Function *ForwardVarArgsTo = nullptr);
+LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                                     bool MergeAttributes = false,
+                                     AAResults *CalleeAAR = nullptr,
+                                     bool InsertLifetime = true,
+                                     Function *ForwardVarArgsTo = nullptr,
+                                     OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Same as above, but it will update the contextual profile. If the contextual
 /// profile is invalid (i.e. not loaded because it is not present), it defaults
 /// to the behavior of the non-contextual profile updating variant above. This
 /// makes it easy to drop-in replace uses of the non-contextual overload.
-InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                            PGOContextualProfile &CtxProf,
-                            bool MergeAttributes = false,
-                            AAResults *CalleeAAR = nullptr,
-                            bool InsertLifetime = true,
-                            Function *ForwardVarArgsTo = nullptr);
+LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                                     PGOContextualProfile &CtxProf,
+                                     bool MergeAttributes = false,
+                                     AAResults *CalleeAAR = nullptr,
+                                     bool InsertLifetime = true,
+                                     Function *ForwardVarArgsTo = nullptr,
+                                     OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p
 /// Blocks.
@@ -319,15 +367,15 @@ InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
 /// Note: Only innermost loops are supported.
-Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
-                             Loop *OrigLoop, ValueToValueMapTy &VMap,
-                             const Twine &NameSuffix, LoopInfo *LI,
-                             DominatorTree *DT,
-                             SmallVectorImpl<BasicBlock *> &Blocks);
+LLVM_ABI Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
+                                      Loop *OrigLoop, ValueToValueMapTy &VMap,
+                                      const Twine &NameSuffix, LoopInfo *LI,
+                                      DominatorTree *DT,
+                                      SmallVectorImpl<BasicBlock *> &Blocks);
 
 /// Remaps instructions in \p Blocks using the mapping in \p VMap.
-void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
-                               ValueToValueMapTy &VMap);
+LLVM_ABI void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
+                                        ValueToValueMapTy &VMap);
 
 /// Split edge between BB and PredBB and duplicate all non-Phi instructions
 /// from BB between its beginning and the StopAt instruction into the split
@@ -335,62 +383,62 @@ void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
 /// we replace them with the uses of corresponding Phi inputs. ValueMapping
 /// is used to map the original instructions from BB to their newly-created
 /// copies. Returns the split block.
-BasicBlock *DuplicateInstructionsInSplitBetween(BasicBlock *BB,
-                                                BasicBlock *PredBB,
-                                                Instruction *StopAt,
-                                                ValueToValueMapTy &ValueMapping,
-                                                DomTreeUpdater &DTU);
+LLVM_ABI BasicBlock *DuplicateInstructionsInSplitBetween(
+    BasicBlock *BB, BasicBlock *PredBB, Instruction *StopAt,
+    ValueToValueMapTy &ValueMapping, DomTreeUpdater &DTU);
 
 /// Updates profile information by adjusting the entry count by adding
 /// EntryDelta then scaling callsite information by the new count divided by the
 /// old count. VMap is used during inlinng to also update the new clone
-void updateProfileCallee(
+LLVM_ABI void updateProfileCallee(
     Function *Callee, int64_t EntryDelta,
     const ValueMap<const Value *, WeakTrackingVH> *VMap = nullptr);
 
 /// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
 /// basic blocks and extract their scope. These are candidates for duplication
 /// when cloning.
-void identifyNoAliasScopesToClone(
-    ArrayRef<BasicBlock *> BBs, SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
+LLVM_ABI void
+identifyNoAliasScopesToClone(ArrayRef<BasicBlock *> BBs,
+                             SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
 
 /// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
 /// instruction range and extract their scope. These are candidates for
 /// duplication when cloning.
-void identifyNoAliasScopesToClone(
-    BasicBlock::iterator Start, BasicBlock::iterator End,
-    SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
+LLVM_ABI void
+identifyNoAliasScopesToClone(BasicBlock::iterator Start,
+                             BasicBlock::iterator End,
+                             SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
 
 /// Duplicate the specified list of noalias decl scopes.
 /// The 'Ext' string is added as an extension to the name.
 /// Afterwards, the ClonedScopes contains the mapping of the original scope
 /// MDNode onto the cloned scope.
 /// Be aware that the cloned scopes are still part of the original scope domain.
-void cloneNoAliasScopes(
-    ArrayRef<MDNode *> NoAliasDeclScopes,
-    DenseMap<MDNode *, MDNode *> &ClonedScopes,
-    StringRef Ext, LLVMContext &Context);
+LLVM_ABI void cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
+                                 DenseMap<MDNode *, MDNode *> &ClonedScopes,
+                                 StringRef Ext, LLVMContext &Context);
 
 /// Adapt the metadata for the specified instruction according to the
 /// provided mapping. This is normally used after cloning an instruction, when
 /// some noalias scopes needed to be cloned.
-void adaptNoAliasScopes(
-    llvm::Instruction *I, const DenseMap<MDNode *, MDNode *> &ClonedScopes,
-    LLVMContext &Context);
+LLVM_ABI void
+adaptNoAliasScopes(llvm::Instruction *I,
+                   const DenseMap<MDNode *, MDNode *> &ClonedScopes,
+                   LLVMContext &Context);
 
 /// Clone the specified noalias decl scopes. Then adapt all instructions in the
 /// NewBlocks basicblocks to the cloned versions.
 /// 'Ext' will be added to the duplicate scope names.
-void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
-                                ArrayRef<BasicBlock *> NewBlocks,
-                                LLVMContext &Context, StringRef Ext);
+LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
+                                         ArrayRef<BasicBlock *> NewBlocks,
+                                         LLVMContext &Context, StringRef Ext);
 
 /// Clone the specified noalias decl scopes. Then adapt all instructions in the
 /// [IStart, IEnd] (IEnd included !) range to the cloned versions. 'Ext' will be
 /// added to the duplicate scope names.
-void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
-                                Instruction *IStart, Instruction *IEnd,
-                                LLVMContext &Context, StringRef Ext);
+LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
+                                         Instruction *IStart, Instruction *IEnd,
+                                         LLVMContext &Context, StringRef Ext);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

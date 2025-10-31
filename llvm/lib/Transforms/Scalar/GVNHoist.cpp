@@ -1166,8 +1166,7 @@ std::pair<unsigned, unsigned> GVNHoist::hoistExpressions(Function &F) {
         SI.insert(Store, VN);
       else if (auto *Call = dyn_cast<CallInst>(&I1)) {
         if (auto *Intr = dyn_cast<IntrinsicInst>(Call)) {
-          if (isa<DbgInfoIntrinsic>(Intr) ||
-              Intr->getIntrinsicID() == Intrinsic::assume ||
+          if (Intr->getIntrinsicID() == Intrinsic::assume ||
               Intr->getIntrinsicID() == Intrinsic::sideeffect)
             continue;
         }

@@ -35,7 +35,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "static-data-annotator"
 
@@ -76,24 +75,12 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
 
   bool Changed = false;
   for (auto &GV : M.globals()) {
-    if (GV.isDeclarationForLinker())
+    if (!llvm::memprof::IsAnnotationOK(GV))
       continue;
-
-    // The implementation below assumes prior passes don't set section prefixes,
-    // and specifically do 'assign' rather than 'update'. So report error if a
-    // section prefix is already set.
-    if (auto maybeSectionPrefix = GV.getSectionPrefix();
-        maybeSectionPrefix && !maybeSectionPrefix->empty())
-      llvm::report_fatal_error("Global variable " + GV.getName() +
-                               " already has a section prefix " +
-                               *maybeSectionPrefix);
 
     StringRef SectionPrefix = SDPI->getConstantSectionPrefix(&GV, PSI);
-    if (SectionPrefix.empty())
-      continue;
-
-    GV.setSectionPrefix(SectionPrefix);
-    Changed = true;
+    // setSectionPrefix returns true if the section prefix is updated.
+    Changed |= GV.setSectionPrefix(SectionPrefix);
   }
 
   return Changed;

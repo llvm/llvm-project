@@ -40,7 +40,7 @@
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_7:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xf32>
-// CHECK:           %[[VAL_8:.*]] = bufferization.to_memref %[[VAL_1]] : tensor<32x16xf32> to memref<32x16xf32>
+// CHECK:           %[[VAL_8:.*]] = bufferization.to_buffer %[[VAL_1]] : tensor<32x16xf32> to memref<32x16xf32>
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:             scf.for %[[VAL_10:.*]] = %[[VAL_5]] to %[[VAL_4]] step %[[VAL_6]] {
@@ -79,7 +79,7 @@ func.func @dense1(%arga: tensor<32x16xf32, #DenseMatrix>,
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_0]] : tensor<32x16xf32> to memref<32x16xf32>
+// CHECK:           %[[VAL_7:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<32x16xf32> to memref<32x16xf32>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index
@@ -122,7 +122,7 @@ func.func @dense2(%arga: tensor<32x16xf32>,
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 16 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_6:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_0]] : tensor<32x16x8xf32> to memref<32x16x8xf32>
+// CHECK:           %[[VAL_7:.*]] = bufferization.to_buffer %[[VAL_0]] : tensor<32x16x8xf32> to memref<32x16x8xf32>
 // CHECK:           %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_1]] : tensor<32x16xf32, #sparse{{[0-9]*}}> to memref<?xf32>
 // CHECK:           scf.for %[[VAL_9:.*]] = %[[VAL_5]] to %[[VAL_3]] step %[[VAL_6]] {
 // CHECK:             %[[VAL_11:.*]] = arith.muli %[[VAL_9]], %[[VAL_4]] : index

@@ -18,8 +18,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Path.h"
 #include <map>
 #include <optional>
 using namespace clang;
@@ -69,24 +69,27 @@ enum DiagnosticClass {
   CLASS_WARNING = DiagnosticIDs::CLASS_WARNING,
   CLASS_EXTENSION = DiagnosticIDs::CLASS_EXTENSION,
   CLASS_ERROR = DiagnosticIDs::CLASS_ERROR,
+  CLASS_TRAP = DiagnosticIDs::CLASS_TRAP,
 };
 
 struct StaticDiagInfoRec {
   uint16_t DiagID;
   LLVM_PREFERRED_TYPE(diag::Severity)
-  uint8_t DefaultSeverity : 3;
+  uint16_t DefaultSeverity : 3;
   LLVM_PREFERRED_TYPE(DiagnosticClass)
-  uint8_t Class : 3;
+  uint16_t Class : 3;
   LLVM_PREFERRED_TYPE(DiagnosticIDs::SFINAEResponse)
-  uint8_t SFINAE : 2;
-  uint8_t Category : 6;
+  uint16_t SFINAE : 2;
+  LLVM_PREFERRED_TYPE(diag::DiagCategory)
+  uint16_t Category : 6;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnNoWerror : 1;
+  uint16_t WarnNoWerror : 1;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnShowInSystemHeader : 1;
+  uint16_t WarnShowInSystemHeader : 1;
   LLVM_PREFERRED_TYPE(bool)
-  uint8_t WarnShowInSystemMacro : 1;
+  uint16_t WarnShowInSystemMacro : 1;
 
+  LLVM_PREFERRED_TYPE(diag::Group)
   uint16_t OptionGroupIndex : 15;
   LLVM_PREFERRED_TYPE(bool)
   uint16_t Deferrable : 1;
@@ -137,6 +140,7 @@ VALIDATE_DIAG_SIZE(SEMA)
 VALIDATE_DIAG_SIZE(ANALYSIS)
 VALIDATE_DIAG_SIZE(REFACTORING)
 VALIDATE_DIAG_SIZE(INSTALLAPI)
+VALIDATE_DIAG_SIZE(TRAP)
 #undef VALIDATE_DIAG_SIZE
 #undef STRINGIFY_NAME
 
@@ -169,6 +173,7 @@ const StaticDiagInfoRec StaticDiagInfo[] = {
 #include "clang/Basic/DiagnosticAnalysisKinds.inc"
 #include "clang/Basic/DiagnosticRefactoringKinds.inc"
 #include "clang/Basic/DiagnosticInstallAPIKinds.inc"
+#include "clang/Basic/DiagnosticTrapKinds.inc"
 // clang-format on
 #undef DIAG
 };
@@ -212,6 +217,7 @@ CATEGORY(SEMA, CROSSTU)
 CATEGORY(ANALYSIS, SEMA)
 CATEGORY(REFACTORING, ANALYSIS)
 CATEGORY(INSTALLAPI, REFACTORING)
+CATEGORY(TRAP, INSTALLAPI)
 #undef CATEGORY
 
   // Avoid out of bounds reads.
@@ -540,26 +546,32 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
     return Result;
 
   const auto &SM = Diag.getSourceManager();
-
-  bool ShowInSystemHeader =
-      IsCustomDiag
-          ? CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader()
-          : !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemHeader;
-
   // If we are in a system header, we ignore it. We look at the diagnostic class
   // because we also want to ignore extensions and warnings in -Werror and
   // -pedantic-errors modes, which *map* warnings/extensions to errors.
-  if (State->SuppressSystemWarnings && !ShowInSystemHeader && Loc.isValid() &&
-      SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
-    return diag::Severity::Ignored;
+  if (State->SuppressSystemWarnings && Loc.isValid() &&
+      SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
+    bool ShowInSystemHeader = true;
+    if (IsCustomDiag)
+      ShowInSystemHeader =
+          CustomDiagInfo->getDescription(DiagID).ShouldShowInSystemHeader();
+    else if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
+      ShowInSystemHeader = Rec->WarnShowInSystemHeader;
 
+    if (!ShowInSystemHeader)
+      return diag::Severity::Ignored;
+  }
   // We also ignore warnings due to system macros
-  bool ShowInSystemMacro =
-      !GetDiagInfo(DiagID) || GetDiagInfo(DiagID)->WarnShowInSystemMacro;
-  if (State->SuppressSystemWarnings && !ShowInSystemMacro && Loc.isValid() &&
-      SM.isInSystemMacro(Loc))
-    return diag::Severity::Ignored;
+  if (State->SuppressSystemWarnings && Loc.isValid() &&
+      SM.isInSystemMacro(Loc)) {
 
+    bool ShowInSystemMacro = true;
+    if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
+      ShowInSystemMacro = Rec->WarnShowInSystemMacro;
+
+    if (!ShowInSystemMacro)
+      return diag::Severity::Ignored;
+  }
   // Clang-diagnostics pragmas always take precedence over suppression mapping.
   if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
     return diag::Severity::Ignored;
@@ -815,103 +827,6 @@ unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
   return StdVer >= D.StdVer ? D.DiagId : D.PreDiagId;
 }
 
-/// ProcessDiag - This is the method used to report a diagnostic that is
-/// finally fully formed.
-bool DiagnosticIDs::ProcessDiag(DiagnosticsEngine &Diag,
-                                const DiagnosticBuilder &DiagBuilder) const {
-  Diagnostic Info(&Diag, DiagBuilder);
-
-  assert(Diag.getClient() && "DiagnosticClient not set!");
-
-  // Figure out the diagnostic level of this message.
-  unsigned DiagID = Info.getID();
-  DiagnosticIDs::Level DiagLevel
-    = getDiagnosticLevel(DiagID, Info.getLocation(), Diag);
-
-  // Update counts for DiagnosticErrorTrap even if a fatal error occurred
-  // or diagnostics are suppressed.
-  if (DiagLevel >= DiagnosticIDs::Error) {
-    ++Diag.TrapNumErrorsOccurred;
-    if (isUnrecoverable(DiagID))
-      ++Diag.TrapNumUnrecoverableErrorsOccurred;
-  }
-
-  if (Diag.SuppressAllDiagnostics)
-    return false;
-
-  if (DiagLevel != DiagnosticIDs::Note) {
-    // Record that a fatal error occurred only when we see a second
-    // non-note diagnostic. This allows notes to be attached to the
-    // fatal error, but suppresses any diagnostics that follow those
-    // notes.
-    if (Diag.LastDiagLevel == DiagnosticIDs::Fatal)
-      Diag.FatalErrorOccurred = true;
-
-    Diag.LastDiagLevel = DiagLevel;
-  }
-
-  // If a fatal error has already been emitted, silence all subsequent
-  // diagnostics.
-  if (Diag.FatalErrorOccurred) {
-    if (DiagLevel >= DiagnosticIDs::Error &&
-        Diag.Client->IncludeInDiagnosticCounts()) {
-      ++Diag.NumErrors;
-    }
-
-    return false;
-  }
-
-  // If the client doesn't care about this message, don't issue it.  If this is
-  // a note and the last real diagnostic was ignored, ignore it too.
-  if (DiagLevel == DiagnosticIDs::Ignored ||
-      (DiagLevel == DiagnosticIDs::Note &&
-       Diag.LastDiagLevel == DiagnosticIDs::Ignored))
-    return false;
-
-  if (DiagLevel >= DiagnosticIDs::Error) {
-    if (isUnrecoverable(DiagID))
-      Diag.UnrecoverableErrorOccurred = true;
-
-    // Warnings which have been upgraded to errors do not prevent compilation.
-    if (isDefaultMappingAsError(DiagID))
-      Diag.UncompilableErrorOccurred = true;
-
-    Diag.ErrorOccurred = true;
-    if (Diag.Client->IncludeInDiagnosticCounts()) {
-      ++Diag.NumErrors;
-    }
-
-    // If we've emitted a lot of errors, emit a fatal error instead of it to
-    // stop a flood of bogus errors.
-    if (Diag.ErrorLimit && Diag.NumErrors > Diag.ErrorLimit &&
-        DiagLevel == DiagnosticIDs::Error) {
-      Diag.Report(diag::fatal_too_many_errors);
-      return false;
-    }
-  }
-
-  // Make sure we set FatalErrorOccurred to ensure that the notes from the
-  // diagnostic that caused `fatal_too_many_errors` won't be emitted.
-  if (Info.getID() == diag::fatal_too_many_errors)
-    Diag.FatalErrorOccurred = true;
-  // Finally, report it.
-  EmitDiag(Diag, DiagBuilder, DiagLevel);
-  return true;
-}
-
-void DiagnosticIDs::EmitDiag(DiagnosticsEngine &Diag,
-                             const DiagnosticBuilder &DiagBuilder,
-                             Level DiagLevel) const {
-  Diagnostic Info(&Diag, DiagBuilder);
-  assert(DiagLevel != DiagnosticIDs::Ignored && "Cannot emit ignored diagnostics!");
-
-  Diag.Client->HandleDiagnostic((DiagnosticsEngine::Level)DiagLevel, Info);
-  if (Diag.Client->IncludeInDiagnosticCounts()) {
-    if (DiagLevel == DiagnosticIDs::Warning)
-      ++Diag.NumWarnings;
-  }
-}
-
 bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
   // Only errors may be unrecoverable.
   if (getDiagClass(DiagID) < CLASS_ERROR)
@@ -921,8 +836,12 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
       DiagID == diag::err_unavailable_message)
     return false;
 
-  // Currently we consider all ARC errors as recoverable.
-  if (isARCDiagnostic(DiagID))
+  // All ARC errors are currently considered recoverable, with the exception of
+  // err_arc_may_not_respond. This specific error is treated as unrecoverable
+  // because sending a message with an unknown selector could lead to crashes
+  // within CodeGen if the resulting expression is used to initialize a C++
+  // auto variable, where type deduction is required.
+  if (isARCDiagnostic(DiagID) && DiagID != diag::err_arc_may_not_respond)
     return false;
 
   if (isCodegenABICheckDiagnostic(DiagID))

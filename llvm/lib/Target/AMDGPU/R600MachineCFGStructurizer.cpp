@@ -121,8 +121,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // FIXME: This pass causes verification failures.
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::FailsVerification);
+    MF.getProperties().setFailsVerification();
 
     TII = MF.getSubtarget<R600Subtarget>().getInstrInfo();
     TRI = &TII->getRegisterInfo();

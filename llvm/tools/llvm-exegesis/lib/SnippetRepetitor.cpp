@@ -97,8 +97,7 @@ public:
       Entry.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       Loop.MBB->addSuccessor(Loop.MBB, BranchProbability::getOne());
       // If the snippet setup completed, then we can track liveness.
-      if (Loop.MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::TracksLiveness)) {
+      if (Loop.MF.getProperties().hasTracksLiveness()) {
         // The live ins are: the loop counter, the registers that were setup by
         // the entry block, and entry block live ins.
         Loop.MBB->addLiveIn(LoopCounter);

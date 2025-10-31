@@ -49,7 +49,7 @@ define half @fadda_nxv6f16(<vscale x 6 x half> %v, half %s) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    ptrue p0.d
@@ -73,7 +73,7 @@ define half @fadda_nxv10f16(<vscale x 10 x half> %v, half %s) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2

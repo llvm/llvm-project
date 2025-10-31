@@ -766,7 +766,7 @@ define i1 @add_ugecmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
 ; RV64I-NEXT:    addi a0, a0, 128
-; RV64I-NEXT:    addiw a2, a2, -1
+; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sltu a0, a0, a1

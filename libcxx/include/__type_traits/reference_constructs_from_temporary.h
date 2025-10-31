@@ -30,6 +30,9 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_constructs_from_tempo
 
 #endif
 
+template <class _Tp, class _Up>
+inline const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_REFERENCE_CONSTRUCTS_FROM_TEMPORARY_H

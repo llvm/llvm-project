@@ -52,7 +52,7 @@ return:                                           ; preds = %check_pointers_are_
 define i32 @main() {
 ; CHECK-LABEL: define i32 @main() {
 ; CHECK-NEXT:    [[G_VAR:%.*]] = alloca [[STRUCT_A:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr [[G_VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[G_VAR]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[G_VAR]], ptr align 8 @g_var, i64 20, i1 false)
 ; CHECK-NEXT:    [[VAL_I:%.*]] = load i32, ptr [[G_VAR]], align 8
 ; CHECK-NEXT:    [[DOTNOT_I:%.*]] = icmp eq i32 [[VAL_I]], 0
@@ -68,7 +68,7 @@ define i32 @main() {
 ; CHECK-NEXT:    call void @abort()
 ; CHECK-NEXT:    unreachable
 ; CHECK:       callee.exit:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr [[G_VAR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[G_VAR]])
 ; CHECK-NEXT:    ret i32 0
 ;
   call void @callee(ptr noundef byval(%struct.a) align 8 @g_var)

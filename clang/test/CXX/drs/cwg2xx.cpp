@@ -98,8 +98,8 @@ public:
 
 void foo() { Templ<Derived> x(&Derived::func); }
 // expected-error@-1 {{no matching constructor for initialization of 'Templ<Derived>'}}
-//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'const Templ<cwg203::ex3::Derived>' for 1st argument}}
-//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'Templ<cwg203::ex3::Derived>' for 1st argument}}
+//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (cwg203::ex3::Base::*)() const') to 'const Templ<cwg203::ex3::Derived>' for 1st argument}}
+//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (cwg203::ex3::Base::*)() const') to 'Templ<cwg203::ex3::Derived>' for 1st argument}}
 //   expected-note@#cwg203-ex3-Templ-ctor {{candidate template ignored: could not match 'cwg203::ex3::Derived' against 'cwg203::ex3::Base'}}
 } // namespace ex3
 
@@ -229,6 +229,38 @@ namespace cwg211 { // cwg211: 2.7
     }
   };
 } // namespace cwg211
+
+namespace cwg212 { // cwg212: 2.7
+  template<typename T> struct Base;
+  template<typename T> struct Derived;
+
+  int *overload(void*);
+  float *overload(Base<int>*);
+  double *overload(Base<long>*);
+
+  void f(Derived<int> *p) {
+    // OK, calls void* overload.
+    int *a = overload(p);
+
+    Base<int> *q = p;
+    // expected-error@-1 {{cannot initialize a variable of type 'Base<int> *' with an lvalue of type 'Derived<int> *'}}
+  }
+
+  template<typename T> struct Base {};
+  template<typename T> struct Derived : Base<T> {};
+
+  void g(Derived<long> *p) {
+    // OK, instantiates and calls Base<long>* overlod.
+    double *b = overload(p);
+    (void)b;
+  }
+
+  void h(Derived<float> *p) {
+    // OK, instantiates and converts.
+    Base<float> *q = p;
+    (void)q;
+  }
+}
 
 namespace cwg213 { // cwg213: 2.7
   template <class T> struct A : T {
@@ -426,7 +458,7 @@ namespace cwg224 { // cwg224: 16
       A::type a;
       A<T>::type b;
       A<T*>::type c;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::type'; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::type' is a C++20 extension}}
       ::cwg224::example1::A<T>::type d;
 
       class B {
@@ -435,13 +467,13 @@ namespace cwg224 { // cwg224: 16
         A::type a;
         A<T>::type b;
         A<T*>::type c;
-        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::type'; implicit 'typename' is a C++20 extension}}
+        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::type' is a C++20 extension}}
         ::cwg224::example1::A<T>::type d;
 
         B::type e;
         A<T>::B::type f;
         A<T*>::B::type g;
-        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B::type'; implicit 'typename' is a C++20 extension}}
+        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B::type' is a C++20 extension}}
         typename A<T*>::B::type h;
       };
     };
@@ -450,25 +482,25 @@ namespace cwg224 { // cwg224: 16
       typedef int type;
       A<T*>::type a;
       A<T>::type b;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T>::type'; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T>::type' is a C++20 extension}}
     };
 
     template <class T1, class T2, int I> struct B {
       typedef int type;
       B<T1, T2, I>::type b1;
       B<T2, T1, I>::type b2;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<T2, T1, I>::type'; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<T2, T1, I>::type' is a C++20 extension}}
 
       typedef T1 my_T1;
       static const int my_I = I;
       static const int my_I2 = I+0;
       static const int my_I3 = my_I;
       B<my_T1, T2, my_I>::type b3;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I>::type'; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I>::type' is a C++20 extension}}
       B<my_T1, T2, my_I2>::type b4;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I2>::type'; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I2>::type' is a C++20 extension}}
       B<my_T1, T2, my_I3>::type b5;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I3>::type'; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I3>::type' is a C++20 extension}}
     };
   }
 
@@ -480,7 +512,7 @@ namespace cwg224 { // cwg224: 16
       X<A::i, char>::type x;
       X<A<T>::i, double>::type y;
       X<A<T*>::i, long>::type z;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<A<T *>::i, long>::type'; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<A<T *>::i, long>::type' is a C++20 extension}}
       int f();
     };
     template <class T> int A<T>::f() {
@@ -593,6 +625,9 @@ namespace cwg231 { // cwg231: 2.7
   }
 } // namespace cwg231
 
+// 232 is NAD; the desired behavior is described in 2823.
+// cwg232: dup 2823
+
 // cwg234: na
 // cwg235: na
 
@@ -690,8 +725,8 @@ namespace cwg244 { // cwg244: 11
 
   void f() {
     D_object.~B();
-    // expected-error@-1 {{destructor type 'cwg244::B' in object destruction expression does not match the type 'D' of the object being destroyed}}
-    //   expected-note@#cwg244-B {{type 'cwg244::B' found by destructor name lookup}}
+    // expected-error@-1 {{destructor type 'B' in object destruction expression does not match the type 'D' of the object being destroyed}}
+    //   expected-note@#cwg244-B {{type 'B' found by destructor name lookup}}
     D_object.B::~B();
     D_object.D::~B(); // FIXME: Missing diagnostic for this.
     B_ptr->~B();
@@ -1400,7 +1435,7 @@ namespace cwg298 { // cwg298: 3.1
   // expected-error@-1 {{a type specifier is required for all declarations}}
   B::A() {} // ok
   C::~C() {}
-  // expected-error@-1 {{destructor cannot be declared using a typedef 'C' (aka 'const cwg298::A') of the class name}}
+  // expected-error@-1 {{destructor cannot be declared using a typedef 'C' (aka 'const A') of the class name}}
 
   typedef struct D E; // #cwg298-E
   struct E {};
@@ -1429,7 +1464,7 @@ namespace cwg299 { // cwg299: 2.8 c++11
   // cxx98-11-error@#cwg299-q {{ambiguous conversion of array size expression of type 'T' to an integral or enumeration type}}
   //  cxx98-11-note@#cwg299-int {{conversion to integral type 'int' declared here}}
   //  cxx98-11-note@#cwg299-ushort {{conversion to integral type 'unsigned short' declared here}}
-  // since-cxx14-error-re@#cwg299-q {{{{conversion from 'T' to 'unsigned (long long|long|int)' is ambiguous}}}}
+  // since-cxx14-error-re@#cwg299-q {{conversion from 'T' to '__size_t' (aka 'unsigned {{long long|long|int}}') is ambiguous}}
   //  since-cxx14-note@#cwg299-int {{candidate function}}
   //  since-cxx14-note@#cwg299-ushort {{candidate function}}
 } // namespace cwg299

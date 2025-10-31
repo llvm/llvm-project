@@ -25,31 +25,31 @@
 
 /// CMSE Only supported by ARMv8-M architecture or later.
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv8m.base app -I %S/Inputs -o app1.o
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app1 app1.o 2>&1 | FileCheck /dev/null --implicit-check-not=error:
+// RUN: ld.lld --cmse-implib -pie -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app1 app1.o 2>&1 | FileCheck /dev/null --implicit-check-not=error:
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv8m.main app -I %S/Inputs -o app2.o
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app2 app2.o 2>&1 | FileCheck /dev/null --implicit-check-not=error:
+// RUN: ld.lld --cmse-implib -pie -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app2 app2.o 2>&1 | FileCheck /dev/null --implicit-check-not=error:
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv8.1m.main app -I %S/Inputs -o app3.o
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app3 app3.o 2>&1 | FileCheck /dev/null --implicit-check-not=error:
+// RUN: ld.lld --cmse-implib -pie -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app3 app3.o 2>&1 | FileCheck /dev/null --implicit-check-not=error:
 
 /// Expect errors for other architectures.
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv9a app -I %S/Inputs -o app4.o
-// RUN: not ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app4 app4.o 2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
+// RUN: not ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app4 app4.o 2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7-m app -I %S/Inputs -o app5.o
-// RUN: not ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app5 app5.o 2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
+// RUN: not ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app5 app5.o 2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv8-m app -I %S/Inputs -o app6.o
-// RUN: not ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app6 app6.o 2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
+// RUN: not ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app6 app6.o 2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
 
 /// Invalid triple defaults to v4T. Error.
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumb app -I %S/Inputs -o app7.o
-// RUN: not ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app7 app7.o  2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
+// RUN: not ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app7 app7.o  2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
 
 /// No build attributes. Error.
 // RUN: llvm-mc -filetype=obj -triple=thumb app -I %S/Inputs -o app8.o
-// RUN: not ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app8 app8.o  2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
+// RUN: not ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o app8 app8.o  2>&1 | FileCheck %s --check-prefixes=ERR_ARCH
 
 // ERR_ARCH: CMSE is only supported by ARMv8-M architecture or later
 
@@ -62,20 +62,20 @@
 /// Create a new import library with the secure gateway veneer and .gnu.sgstubs specified at the same address
 // RUN: ld.lld --cmse-implib --section-start .gnu.sgstubs=0x10000 1.o -o 2 --out-implib=2.lib --in-implib=1.lib 2>&1 | FileCheck /dev/null --implicit-check-not=error:
 /// Create a new import library with the secure gateway veneer specified at a same address but .gnu.sgstubs at a higher address.
-// RUN: not ld.lld --cmse-implib --section-start .gnu.sgstubs=0x11000 1.o -o 3 --out-implib=3.lib --in-implib=1.lib 2>&1 | FileCheck %s --check-prefixes=ERR_ADDR
+// RUN: not ld.lld --cmse-implib -pie --section-start .gnu.sgstubs=0x11000 1.o -o 3 --out-implib=3.lib --in-implib=1.lib 2>&1 | FileCheck %s --check-prefixes=ERR_ADDR
 /// Create a new import library with the secure gateway veneer specified at a same address but .gnu.sgstubs at a lower address.
-// RUN: not ld.lld --cmse-implib --section-start .gnu.sgstubs=0x9000 1.o -o 4 --out-implib=4.lib --in-implib=1.lib 2>&1 | FileCheck %s --check-prefixes=ERR_ADDR
+// RUN: not ld.lld --cmse-implib -pie --section-start .gnu.sgstubs=0x9000 1.o -o 4 --out-implib=4.lib --in-implib=1.lib 2>&1 | FileCheck %s --check-prefixes=ERR_ADDR
 
 // ERR_ADDR: error: start address of '.gnu.sgstubs' is different from previous link
 
 /// Test that the address of .gnu.sgstubs can be specified via command line or linker script.
 /// Test that the linker errors when the address of .gnu.sgstubs is not specified using either method.
 
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --script with_sgstubs.script 1.o -o 1 2>&1 | FileCheck /dev/null --implicit-check-not=error:
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --script wout_sgstubs.script 1.o -o 2 2>&1 | FileCheck /dev/null --implicit-check-not=error:
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 1.o -o 3 2>&1 | FileCheck /dev/null --implicit-check-not=error:
-// RUN: ld.lld --cmse-implib -Ttext=0x8000 --script with_sgstubs.script 1.o -o 4 2>&1 | FileCheck /dev/null --implicit-check-not=error:
-// RUN: not ld.lld --cmse-implib -Ttext=0x8000 --script wout_sgstubs.script 1.o -o 5 2>&1 | FileCheck %s --check-prefixes=ERR_NOADDR
+// RUN: ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --script with_sgstubs.script 1.o -o 1 2>&1 | FileCheck /dev/null --implicit-check-not=error:
+// RUN: ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --script wout_sgstubs.script 1.o -o 2 2>&1 | FileCheck /dev/null --implicit-check-not=error:
+// RUN: ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 1.o -o 3 2>&1 | FileCheck /dev/null --implicit-check-not=error:
+// RUN: ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --script with_sgstubs.script 1.o -o 4 2>&1 | FileCheck /dev/null --implicit-check-not=error:
+// RUN: not ld.lld --cmse-implib --image-base=0x8000 -Ttext=0x8000 --script wout_sgstubs.script 1.o -o 5 2>&1 | FileCheck %s --check-prefixes=ERR_NOADDR
 
 // RUN: llvm-readelf -S 1 | FileCheck %s --check-prefixes=ADDRCMDLINE
 // RUN: llvm-readelf -S 2 | FileCheck %s --check-prefixes=ADDRCMDLINE
@@ -110,9 +110,9 @@
 /// Test diagnostics emitted when a symbol is removed from a later version of the import library.
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -I %S/Inputs --triple=thumbv8m.base libv1 -o libv1.o
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -I %S/Inputs --triple=thumbv8m.base libv2 -o libv2.o
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --out-implib=libv1.lib
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv2.o --in-implib=libv1.lib --out-implib=libv2.lib 2>&1 | FileCheck %s --check-prefixes=WARN_MISSING
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --in-implib=libv2.lib 2>&1 | FileCheck %s --check-prefixes=WARN_NEWENTRY
+// RUN: ld.lld --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --out-implib=libv1.lib
+// RUN: ld.lld --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv2.o --in-implib=libv1.lib --out-implib=libv2.lib 2>&1 | FileCheck %s --check-prefixes=WARN_MISSING
+// RUN: ld.lld --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --in-implib=libv2.lib 2>&1 | FileCheck %s --check-prefixes=WARN_NEWENTRY
 
 // WARN_MISSING: warning: entry function 'bar' from CMSE import library is not present in secure application
 // WARN_NEWENTRY: warning: new entry function 'bar' introduced but no output import library specified

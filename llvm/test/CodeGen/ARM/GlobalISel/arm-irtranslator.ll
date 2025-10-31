@@ -441,8 +441,7 @@ entry:
 define i32 @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], shufflemask(0, 0)
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ARG]](s32), [[ARG]](s32)
 ; CHECK: G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %shuffle = shufflevector <1 x i32> %vec, <1 x i32> undef, <2 x i32> zeroinitializer
@@ -453,8 +452,7 @@ define i32 @test_shufflevector_s32_v2s32(i32 %arg) {
 define i32 @test_shufflevector_s32_s32_s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_s32_s32
 ; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-; CHECK: [[VEC:%[0-9]+]]:_(s32) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], shufflemask(0)
+; CHECK: r0 = COPY [[ARG]](s32)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %shuffle = shufflevector <1 x i32> %vec, <1 x i32> undef, <1 x i32> zeroinitializer
   %res = extractelement <1 x i32> %shuffle, i32 0
@@ -561,7 +559,7 @@ define void @test_load_store_struct(ptr %addr) {
 ; CHECK: [[ADDR1:%[0-9]+]]:_(p0) = COPY $r0
 ; CHECK-DAG: [[VAL1:%[0-9]+]]:_(s32) = G_LOAD [[ADDR1]](p0) :: (load (s32) from %ir.addr)
 ; CHECK-DAG: [[OFFSET:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = G_PTR_ADD [[ADDR1]], [[OFFSET]](s32)
+; CHECK-DAG: [[ADDR2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[ADDR1]], [[OFFSET]](s32)
 ; CHECK-DAG: [[VAL2:%[0-9]+]]:_(s32) = G_LOAD [[ADDR2]](p0) :: (load (s32) from %ir.addr + 4)
 ; CHECK-DAG: G_STORE [[VAL1]](s32), [[ADDR1]](p0) :: (store (s32) into %ir.addr)
 ; CHECK-DAG: [[ADDR3:%[0-9]+]]:_(p0) = COPY [[ADDR2]]

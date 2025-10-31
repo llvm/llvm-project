@@ -10,32 +10,45 @@ subroutine openmp_sections(x, y)
 !==============================================================================
 !CHECK: !$omp sections
 !$omp sections
-  !CHECK: !$omp section
 !CHECK: !$omp end sections
 !$omp end sections
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPSectionsConstruct
-!PARSE-TREE: OmpBeginSectionsDirective
-!PARSE-TREE-NOT: ExecutionPartConstruct
-!PARSE-TREE: OmpEndSectionsDirective
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
+!PARSE-TREE: | OmpBeginSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | Block
+!PARSE-TREE: | OmpEndSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
 
 !==============================================================================
 ! single section, without `!$omp section`
 !==============================================================================
 !CHECK: !$omp sections
 !$omp sections
-  !CHECK: !$omp section
     !CHECK: CALL
     call F1()
 !CHECK: !$omp end sections
 !$omp end sections
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPSectionsConstruct
-!PARSE-TREE:  OmpBeginSectionsDirective
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE-NOT: ExecutionPartConstruct
-!PARSE-TREE:  OmpEndSectionsDirective
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
+!PARSE-TREE: | OmpBeginSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f1()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f1'
+!PARSE-TREE: | OmpEndSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
 
 !==============================================================================
 ! single section with `!$omp section`
@@ -49,12 +62,24 @@ subroutine openmp_sections(x, y)
 !CHECK: !$omp end sections
 !$omp end sections
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPSectionsConstruct
-!PARSE-TREE:  OmpBeginSectionsDirective
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE-NOT: ExecutionPartConstruct
-!PARSE-TREE:  OmpEndSectionsDirective
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
+!PARSE-TREE: | OmpBeginSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = section
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f1()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f1'
+!PARSE-TREE: | OmpEndSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
 
 !==============================================================================
 ! multiple sections
@@ -76,16 +101,42 @@ subroutine openmp_sections(x, y)
 !CHECK: !$omp end sections
 !$omp end sections
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPSectionsConstruct
-!PARSE-TREE:  OmpBeginSectionsDirective
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE-NOT: ExecutionPartConstruct
-!PARSE-TREE:  OmpEndSectionsDirective
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
+!PARSE-TREE: | OmpBeginSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = section
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f1()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f1'
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = section
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f2()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f2'
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = section
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f3()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f3'
+!PARSE-TREE: | OmpEndSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = None
 
 !==============================================================================
 ! multiple sections with clauses
@@ -107,15 +158,42 @@ subroutine openmp_sections(x, y)
 !CHECK: !$omp end sections NOWAIT
 !$omp end sections NOWAIT
 
-!PARSE-TREE: OpenMPConstruct -> OpenMPSectionsConstruct
-!PARSE-TREE:  OmpBeginSectionsDirective
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE:   OpenMPConstruct -> OpenMPSectionConstruct -> Block
-!PARSE-TREE:    CallStmt
-!PARSE-TREE-NOT: ExecutionPartConstruct
-!PARSE-TREE:  OmpEndSectionsDirective
+!PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPSectionsConstruct
+!PARSE-TREE: | OmpBeginSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Private -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | OmpClause -> Firstprivate -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'y'
+!PARSE-TREE: | | Flags = None
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = section
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f1()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f1'
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = section
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f2()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f2'
+!PARSE-TREE: | OpenMPConstruct -> OpenMPSectionConstruct
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = section
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | Block
+!PARSE-TREE: | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> CallStmt = 'CALL f3()'
+!PARSE-TREE: | | | | Call
+!PARSE-TREE: | | | | | ProcedureDesignator -> Name = 'f3'
+!PARSE-TREE: | OmpEndSectionsDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = sections
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> Nowait
+!PARSE-TREE: | | Flags = None
 
 END subroutine openmp_sections

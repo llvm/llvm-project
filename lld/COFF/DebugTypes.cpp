@@ -9,7 +9,6 @@
 #include "DebugTypes.h"
 #include "COFFLinkerContext.h"
 #include "Chunks.h"
-#include "Driver.h"
 #include "InputFiles.h"
 #include "PDB.h"
 #include "TypeMerger.h"

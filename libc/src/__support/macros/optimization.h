@@ -10,7 +10,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H
 
-#include "src/__support/macros/attributes.h"          // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/compiler.h" // LIBC_COMPILER_IS_CLANG
 
@@ -30,8 +30,13 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 
 #if defined(LIBC_COMPILER_IS_CLANG)
 #define LIBC_LOOP_NOUNROLL _Pragma("nounroll")
+#define LIBC_LOOP_UNROLL _Pragma("unroll")
 #elif defined(LIBC_COMPILER_IS_GCC)
 #define LIBC_LOOP_NOUNROLL _Pragma("GCC unroll 0")
+#define LIBC_LOOP_UNROLL _Pragma("GCC unroll 2048")
+#elif defined(LIBC_COMPILER_IS_MSVC)
+#define LIBC_LOOP_NOUNROLL
+#define LIBC_LOOP_UNROLL
 #else
 #error "Unhandled compiler"
 #endif
@@ -61,6 +66,14 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 
 #if (LIBC_MATH & LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT)
 #define LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
+#endif
+
+#if (LIBC_MATH & LIBC_MATH_NO_ERRNO)
+#define LIBC_MATH_HAS_NO_ERRNO
+#endif
+
+#if (LIBC_MATH & LIBC_MATH_NO_EXCEPT)
+#define LIBC_MATH_HAS_NO_EXCEPT
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

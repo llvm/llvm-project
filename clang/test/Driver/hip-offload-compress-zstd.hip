@@ -14,7 +14,7 @@
 
 // CHECK: clang-offload-bundler{{.*}} -type=bc
 // CHECK-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-unknown-gfx1100,hip-amdgcn-amd-amdhsa-unknown-gfx1101
-// CHECK-SAME: -compress -verbose -compression-level=9
+// CHECK-SAME: --compress --verbose --compression-level=9
 // CHECK: Compressed bundle format
 
 // Test uncompress of bundled bitcode.
@@ -41,4 +41,16 @@
 
 // CO: clang-offload-bundler{{.*}} "-type=o"
 // CO-SAME: -targets={{.*}}hipv4-amdgcn-amd-amdhsa--gfx1100,hipv4-amdgcn-amd-amdhsa--gfx1101
-// CO-SAME: "-compress" "-verbose"
+// CO-SAME: "--compress" "--verbose"
+
+// RUN: rm -rf %t.bc
+// RUN: %clang -### -v --target=x86_64-linux-gnu \
+// RUN:   -x hip --offload-arch=gfx1100 --offload-arch=gfx1101 \
+// RUN:   --offload-new-driver -fgpu-rdc -nogpuinc -nogpulib \
+// RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
+// RUN:   --offload-compress --offload-compression-level=9 \
+// RUN:   --gpu-bundle-output \
+// RUN:   -o %t.bc \
+// RUN: 2>&1 | FileCheck %s --check-prefix=NEWDRIVER
+
+// NEWDRIVER: clang-linker-wrapper{{.*}}"--compress" "--verbose" "--compression-level=9"

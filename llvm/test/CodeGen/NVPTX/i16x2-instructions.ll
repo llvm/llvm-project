@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -mattr=+ptx80        \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes COMMON,I16x2 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_90 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90                    \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:   | %ptxas-verify -arch=sm_90                                          \
@@ -12,7 +12,7 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53                      \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN: | FileCheck -allow-deprecated-dag-overlap -check-prefixes COMMON,NO-I16x2 %s
-; RUN: %if ptxas %{                                                           \
+; RUN: %if ptxas-sm_53 %{                                                           \
 ; RUN:   llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_53                    \
 ; RUN:          -O0 -disable-post-ra -frame-pointer=all -verify-machineinstrs \
 ; RUN:   | %ptxas-verify -arch=sm_53                                          \
@@ -23,45 +23,66 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <2 x i16> @test_ret_const() #0 {
 ; COMMON-LABEL: test_ret_const(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<2>;
+; COMMON-EMPTY:
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    mov.b32 %r1, 131073;
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r1;
+; COMMON-NEXT:    st.param.b32 [func_retval0], 131073;
 ; COMMON-NEXT:    ret;
   ret <2 x i16> <i16 1, i16 2>
 }
 
 define i16 @test_extract_0(<2 x i16> %a) #0 {
-; COMMON-LABEL: test_extract_0(
-; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<2>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
-; COMMON-EMPTY:
-; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_extract_0_param_0];
+; I16x2-LABEL: test_extract_0(
+; I16x2:       {
+; I16x2-NEXT:    .reg .b16 %rs<2>;
+; I16x2-NEXT:    .reg .b32 %r<3>;
+; I16x2-EMPTY:
+; I16x2-NEXT:  // %bb.0:
+; I16x2-NEXT:    ld.param.b32 %r1, [test_extract_0_param_0];
 ; I16x2-NEXT:    mov.b32 {%rs1, _}, %r1;
-; NO-I16x2-NEXT: { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r1; }
-; COMMON-NEXT:    cvt.u32.u16 %r2, %rs1;
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
-; COMMON-NEXT:    ret;
+; I16x2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; I16x2-NEXT:    st.param.b32 [func_retval0], %r2;
+; I16x2-NEXT:    ret;
+;
+; NO-I16x2-LABEL: test_extract_0(
+; NO-I16x2:       {
+; NO-I16x2-NEXT:    .reg .b16 %rs<2>;
+; NO-I16x2-NEXT:    .reg .b32 %r<3>;
+; NO-I16x2-EMPTY:
+; NO-I16x2-NEXT:  // %bb.0:
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_extract_0_param_0];
+; NO-I16x2-NEXT:    { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r1; }
+; NO-I16x2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r2;
+; NO-I16x2-NEXT:    ret;
   %e = extractelement <2 x i16> %a, i32 0
   ret i16 %e
 }
 
 define i16 @test_extract_1(<2 x i16> %a) #0 {
-; COMMON-LABEL: test_extract_1(
-; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<2>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
-; COMMON-EMPTY:
-; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_extract_1_param_0];
+; I16x2-LABEL: test_extract_1(
+; I16x2:       {
+; I16x2-NEXT:    .reg .b16 %rs<2>;
+; I16x2-NEXT:    .reg .b32 %r<3>;
+; I16x2-EMPTY:
+; I16x2-NEXT:  // %bb.0:
+; I16x2-NEXT:    ld.param.b32 %r1, [test_extract_1_param_0];
 ; I16x2-NEXT:    mov.b32 {_, %rs1}, %r1;
-; NO-I16x2-NEXT: { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
-; COMMON-NEXT:    cvt.u32.u16 %r2, %rs1;
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
-; COMMON-NEXT:    ret;
+; I16x2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; I16x2-NEXT:    st.param.b32 [func_retval0], %r2;
+; I16x2-NEXT:    ret;
+;
+; NO-I16x2-LABEL: test_extract_1(
+; NO-I16x2:       {
+; NO-I16x2-NEXT:    .reg .b16 %rs<2>;
+; NO-I16x2-NEXT:    .reg .b32 %r<3>;
+; NO-I16x2-EMPTY:
+; NO-I16x2-NEXT:  // %bb.0:
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_extract_1_param_0];
+; NO-I16x2-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r1; }
+; NO-I16x2-NEXT:    cvt.u32.u16 %r2, %rs1;
+; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r2;
+; NO-I16x2-NEXT:    ret;
   %e = extractelement <2 x i16> %a, i32 1
   ret i16 %e
 }
@@ -75,9 +96,9 @@ define i16 @test_extract_i(<2 x i16> %a, i64 %idx) #0 {
 ; COMMON-NEXT:    .reg .b64 %rd<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u64 %rd1, [test_extract_i_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_extract_i_param_0];
-; COMMON-NEXT:    setp.eq.s64 %p1, %rd1, 0;
+; COMMON-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_extract_i_param_0];
+; COMMON-NEXT:    setp.eq.b64 %p1, %rd1, 0;
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; COMMON-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; COMMON-NEXT:    cvt.u32.u16 %r2, %rs3;
@@ -93,8 +114,8 @@ define <2 x i16> @test_add(<2 x i16> %a, <2 x i16> %b) #0 {
 ; I16x2-NEXT:    .reg .b32 %r<4>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.u32 %r2, [test_add_param_1];
-; I16x2-NEXT:    ld.param.u32 %r1, [test_add_param_0];
+; I16x2-NEXT:    ld.param.b32 %r2, [test_add_param_1];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_add_param_0];
 ; I16x2-NEXT:    add.s16x2 %r3, %r1, %r2;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; I16x2-NEXT:    ret;
@@ -102,17 +123,16 @@ define <2 x i16> @test_add(<2 x i16> %a, <2 x i16> %b) #0 {
 ; NO-I16x2-LABEL: test_add(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<7>;
-; NO-I16x2-NEXT:    .reg .b32 %r<4>;
+; NO-I16x2-NEXT:    .reg .b32 %r<3>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.u32 %r2, [test_add_param_1];
-; NO-I16x2-NEXT:    ld.param.u32 %r1, [test_add_param_0];
+; NO-I16x2-NEXT:    ld.param.b32 %r2, [test_add_param_1];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_add_param_0];
 ; NO-I16x2-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; NO-I16x2-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; NO-I16x2-NEXT:    add.s16 %rs5, %rs4, %rs2;
 ; NO-I16x2-NEXT:    add.s16 %rs6, %rs3, %rs1;
-; NO-I16x2-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; NO-I16x2-NEXT:    ret;
   %r = add <2 x i16> %a, %b
   ret <2 x i16> %r
@@ -125,7 +145,7 @@ define <2 x i16> @test_add_imm_0(<2 x i16> %a) #0 {
 ; I16x2-NEXT:    .reg .b32 %r<4>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.u32 %r1, [test_add_imm_0_param_0];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_add_imm_0_param_0];
 ; I16x2-NEXT:    mov.b32 %r2, 131073;
 ; I16x2-NEXT:    add.s16x2 %r3, %r1, %r2;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -134,15 +154,14 @@ define <2 x i16> @test_add_imm_0(<2 x i16> %a) #0 {
 ; NO-I16x2-LABEL: test_add_imm_0(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<5>;
-; NO-I16x2-NEXT:    .reg .b32 %r<3>;
+; NO-I16x2-NEXT:    .reg .b32 %r<2>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.u32 %r1, [test_add_imm_0_param_0];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_add_imm_0_param_0];
 ; NO-I16x2-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; NO-I16x2-NEXT:    add.s16 %rs3, %rs2, 2;
 ; NO-I16x2-NEXT:    add.s16 %rs4, %rs1, 1;
-; NO-I16x2-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r2;
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs3};
 ; NO-I16x2-NEXT:    ret;
   %r = add <2 x i16> <i16 1, i16 2>, %a
   ret <2 x i16> %r
@@ -154,7 +173,7 @@ define <2 x i16> @test_add_imm_1(<2 x i16> %a) #0 {
 ; I16x2-NEXT:    .reg .b32 %r<4>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.u32 %r1, [test_add_imm_1_param_0];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_add_imm_1_param_0];
 ; I16x2-NEXT:    mov.b32 %r2, 131073;
 ; I16x2-NEXT:    add.s16x2 %r3, %r1, %r2;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -163,15 +182,14 @@ define <2 x i16> @test_add_imm_1(<2 x i16> %a) #0 {
 ; NO-I16x2-LABEL: test_add_imm_1(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<5>;
-; NO-I16x2-NEXT:    .reg .b32 %r<3>;
+; NO-I16x2-NEXT:    .reg .b32 %r<2>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.u32 %r1, [test_add_imm_1_param_0];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_add_imm_1_param_0];
 ; NO-I16x2-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; NO-I16x2-NEXT:    add.s16 %rs3, %rs2, 2;
 ; NO-I16x2-NEXT:    add.s16 %rs4, %rs1, 1;
-; NO-I16x2-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r2;
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs3};
 ; NO-I16x2-NEXT:    ret;
   %r = add <2 x i16> %a, <i16 1, i16 2>
   ret <2 x i16> %r
@@ -181,17 +199,16 @@ define <2 x i16> @test_sub(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_sub(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<7>;
-; COMMON-NEXT:    .reg .b32 %r<4>;
+; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_sub_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_sub_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_sub_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_sub_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; COMMON-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; COMMON-NEXT:    sub.s16 %rs5, %rs4, %rs2;
 ; COMMON-NEXT:    sub.s16 %rs6, %rs3, %rs1;
-; COMMON-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; COMMON-NEXT:    ret;
   %r = sub <2 x i16> %a, %b
   ret <2 x i16> %r
@@ -203,8 +220,8 @@ define <2 x i16> @test_smax(<2 x i16> %a, <2 x i16> %b) #0 {
 ; I16x2-NEXT:    .reg .b32 %r<4>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.u32 %r2, [test_smax_param_1];
-; I16x2-NEXT:    ld.param.u32 %r1, [test_smax_param_0];
+; I16x2-NEXT:    ld.param.b32 %r2, [test_smax_param_1];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_smax_param_0];
 ; I16x2-NEXT:    max.s16x2 %r3, %r1, %r2;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; I16x2-NEXT:    ret;
@@ -212,17 +229,16 @@ define <2 x i16> @test_smax(<2 x i16> %a, <2 x i16> %b) #0 {
 ; NO-I16x2-LABEL: test_smax(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<7>;
-; NO-I16x2-NEXT:    .reg .b32 %r<4>;
+; NO-I16x2-NEXT:    .reg .b32 %r<3>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.u32 %r2, [test_smax_param_1];
-; NO-I16x2-NEXT:    ld.param.u32 %r1, [test_smax_param_0];
+; NO-I16x2-NEXT:    ld.param.b32 %r2, [test_smax_param_1];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_smax_param_0];
 ; NO-I16x2-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; NO-I16x2-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; NO-I16x2-NEXT:    max.s16 %rs5, %rs4, %rs2;
 ; NO-I16x2-NEXT:    max.s16 %rs6, %rs3, %rs1;
-; NO-I16x2-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; NO-I16x2-NEXT:    ret;
   %cmp = icmp sgt <2 x i16> %a, %b
   %r = select <2 x i1> %cmp, <2 x i16> %a, <2 x i16> %b
@@ -235,8 +251,8 @@ define <2 x i16> @test_umax(<2 x i16> %a, <2 x i16> %b) #0 {
 ; I16x2-NEXT:    .reg .b32 %r<4>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.u32 %r2, [test_umax_param_1];
-; I16x2-NEXT:    ld.param.u32 %r1, [test_umax_param_0];
+; I16x2-NEXT:    ld.param.b32 %r2, [test_umax_param_1];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_umax_param_0];
 ; I16x2-NEXT:    max.u16x2 %r3, %r1, %r2;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; I16x2-NEXT:    ret;
@@ -244,17 +260,16 @@ define <2 x i16> @test_umax(<2 x i16> %a, <2 x i16> %b) #0 {
 ; NO-I16x2-LABEL: test_umax(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<7>;
-; NO-I16x2-NEXT:    .reg .b32 %r<4>;
+; NO-I16x2-NEXT:    .reg .b32 %r<3>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.u32 %r2, [test_umax_param_1];
-; NO-I16x2-NEXT:    ld.param.u32 %r1, [test_umax_param_0];
+; NO-I16x2-NEXT:    ld.param.b32 %r2, [test_umax_param_1];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_umax_param_0];
 ; NO-I16x2-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; NO-I16x2-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; NO-I16x2-NEXT:    max.u16 %rs5, %rs4, %rs2;
 ; NO-I16x2-NEXT:    max.u16 %rs6, %rs3, %rs1;
-; NO-I16x2-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; NO-I16x2-NEXT:    ret;
   %cmp = icmp ugt <2 x i16> %a, %b
   %r = select <2 x i1> %cmp, <2 x i16> %a, <2 x i16> %b
@@ -267,8 +282,8 @@ define <2 x i16> @test_smin(<2 x i16> %a, <2 x i16> %b) #0 {
 ; I16x2-NEXT:    .reg .b32 %r<4>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.u32 %r2, [test_smin_param_1];
-; I16x2-NEXT:    ld.param.u32 %r1, [test_smin_param_0];
+; I16x2-NEXT:    ld.param.b32 %r2, [test_smin_param_1];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_smin_param_0];
 ; I16x2-NEXT:    min.s16x2 %r3, %r1, %r2;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; I16x2-NEXT:    ret;
@@ -276,17 +291,16 @@ define <2 x i16> @test_smin(<2 x i16> %a, <2 x i16> %b) #0 {
 ; NO-I16x2-LABEL: test_smin(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<7>;
-; NO-I16x2-NEXT:    .reg .b32 %r<4>;
+; NO-I16x2-NEXT:    .reg .b32 %r<3>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.u32 %r2, [test_smin_param_1];
-; NO-I16x2-NEXT:    ld.param.u32 %r1, [test_smin_param_0];
+; NO-I16x2-NEXT:    ld.param.b32 %r2, [test_smin_param_1];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_smin_param_0];
 ; NO-I16x2-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; NO-I16x2-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; NO-I16x2-NEXT:    min.s16 %rs5, %rs4, %rs2;
 ; NO-I16x2-NEXT:    min.s16 %rs6, %rs3, %rs1;
-; NO-I16x2-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; NO-I16x2-NEXT:    ret;
   %cmp = icmp sle <2 x i16> %a, %b
   %r = select <2 x i1> %cmp, <2 x i16> %a, <2 x i16> %b
@@ -299,8 +313,8 @@ define <2 x i16> @test_umin(<2 x i16> %a, <2 x i16> %b) #0 {
 ; I16x2-NEXT:    .reg .b32 %r<4>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.u32 %r2, [test_umin_param_1];
-; I16x2-NEXT:    ld.param.u32 %r1, [test_umin_param_0];
+; I16x2-NEXT:    ld.param.b32 %r2, [test_umin_param_1];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_umin_param_0];
 ; I16x2-NEXT:    min.u16x2 %r3, %r1, %r2;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; I16x2-NEXT:    ret;
@@ -308,17 +322,16 @@ define <2 x i16> @test_umin(<2 x i16> %a, <2 x i16> %b) #0 {
 ; NO-I16x2-LABEL: test_umin(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<7>;
-; NO-I16x2-NEXT:    .reg .b32 %r<4>;
+; NO-I16x2-NEXT:    .reg .b32 %r<3>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.u32 %r2, [test_umin_param_1];
-; NO-I16x2-NEXT:    ld.param.u32 %r1, [test_umin_param_0];
+; NO-I16x2-NEXT:    ld.param.b32 %r2, [test_umin_param_1];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_umin_param_0];
 ; NO-I16x2-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; NO-I16x2-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; NO-I16x2-NEXT:    min.u16 %rs5, %rs4, %rs2;
 ; NO-I16x2-NEXT:    min.u16 %rs6, %rs3, %rs1;
-; NO-I16x2-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; NO-I16x2-NEXT:    ret;
   %cmp = icmp ule <2 x i16> %a, %b
   %r = select <2 x i1> %cmp, <2 x i16> %a, <2 x i16> %b
@@ -329,17 +342,16 @@ define <2 x i16> @test_mul(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_mul(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<7>;
-; COMMON-NEXT:    .reg .b32 %r<4>;
+; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_mul_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_mul_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_mul_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_mul_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; COMMON-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; COMMON-NEXT:    mul.lo.s16 %rs5, %rs4, %rs2;
 ; COMMON-NEXT:    mul.lo.s16 %rs6, %rs3, %rs1;
-; COMMON-NEXT:    mov.b32 %r3, {%rs6, %rs5};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; COMMON-NEXT:    ret;
   %r = mul <2 x i16> %a, %b
   ret <2 x i16> %r
@@ -352,8 +364,8 @@ define <2 x i16> @test_or(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_or_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_or_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_or_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_or_param_0];
 ; COMMON-NEXT:    or.b32 %r3, %r1, %r2;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;
@@ -370,7 +382,7 @@ define <2 x i16> @test_or_computed(i16 %a) {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u16 %rs1, [test_or_computed_param_0];
+; COMMON-NEXT:    ld.param.b16 %rs1, [test_or_computed_param_0];
 ; COMMON-NEXT:    mov.b16 %rs2, 0;
 ; COMMON-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; COMMON-NEXT:    mov.b16 %rs3, 5;
@@ -391,7 +403,7 @@ define <2 x i16> @test_or_imm_0(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_or_imm_0_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_or_imm_0_param_0];
 ; COMMON-NEXT:    or.b32 %r2, %r1, 131073;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -405,7 +417,7 @@ define <2 x i16> @test_or_imm_1(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_or_imm_1_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_or_imm_1_param_0];
 ; COMMON-NEXT:    or.b32 %r2, %r1, 131073;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -419,8 +431,8 @@ define <2 x i16> @test_xor(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_xor_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_xor_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_xor_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_xor_param_0];
 ; COMMON-NEXT:    xor.b32 %r3, %r1, %r2;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;
@@ -435,7 +447,7 @@ define <2 x i16> @test_xor_computed(i16 %a) {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u16 %rs1, [test_xor_computed_param_0];
+; COMMON-NEXT:    ld.param.b16 %rs1, [test_xor_computed_param_0];
 ; COMMON-NEXT:    mov.b16 %rs2, 0;
 ; COMMON-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; COMMON-NEXT:    mov.b16 %rs3, 5;
@@ -456,7 +468,7 @@ define <2 x i16> @test_xor_imm_0(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_xor_imm_0_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_xor_imm_0_param_0];
 ; COMMON-NEXT:    xor.b32 %r2, %r1, 131073;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -470,7 +482,7 @@ define <2 x i16> @test_xor_imm_1(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_xor_imm_1_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_xor_imm_1_param_0];
 ; COMMON-NEXT:    xor.b32 %r2, %r1, 131073;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -484,8 +496,8 @@ define <2 x i16> @test_and(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_and_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_and_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_and_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_and_param_0];
 ; COMMON-NEXT:    and.b32 %r3, %r1, %r2;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;
@@ -502,7 +514,7 @@ define <2 x i16> @test_and_computed(i16 %a) {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u16 %rs1, [test_and_computed_param_0];
+; COMMON-NEXT:    ld.param.b16 %rs1, [test_and_computed_param_0];
 ; COMMON-NEXT:    mov.b16 %rs2, 0;
 ; COMMON-NEXT:    mov.b32 %r1, {%rs1, %rs2};
 ; COMMON-NEXT:    mov.b16 %rs3, 5;
@@ -523,7 +535,7 @@ define <2 x i16> @test_and_imm_0(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_and_imm_0_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_and_imm_0_param_0];
 ; COMMON-NEXT:    and.b32 %r2, %r1, 131073;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -537,7 +549,7 @@ define <2 x i16> @test_and_imm_1(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_and_imm_1_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_and_imm_1_param_0];
 ; COMMON-NEXT:    and.b32 %r2, %r1, 131073;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
 ; COMMON-NEXT:    ret;
@@ -552,10 +564,10 @@ define void @test_ldst_v2i16(ptr %a, ptr %b) {
 ; COMMON-NEXT:    .reg .b64 %rd<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u64 %rd2, [test_ldst_v2i16_param_1];
-; COMMON-NEXT:    ld.param.u64 %rd1, [test_ldst_v2i16_param_0];
-; COMMON-NEXT:    ld.u32 %r1, [%rd1];
-; COMMON-NEXT:    st.u32 [%rd2], %r1;
+; COMMON-NEXT:    ld.param.b64 %rd2, [test_ldst_v2i16_param_1];
+; COMMON-NEXT:    ld.param.b64 %rd1, [test_ldst_v2i16_param_0];
+; COMMON-NEXT:    ld.b32 %r1, [%rd1];
+; COMMON-NEXT:    st.b32 [%rd2], %r1;
 ; COMMON-NEXT:    ret;
   %t1 = load <2 x i16>, ptr %a
   store <2 x i16> %t1, ptr %b, align 16
@@ -572,12 +584,12 @@ define void @test_ldst_v3i16(ptr %a, ptr %b) {
 ; COMMON-NEXT:    .reg .b64 %rd<5>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u64 %rd2, [test_ldst_v3i16_param_1];
-; COMMON-NEXT:    ld.param.u64 %rd1, [test_ldst_v3i16_param_0];
-; COMMON-NEXT:    ld.u64 %rd3, [%rd1];
+; COMMON-NEXT:    ld.param.b64 %rd2, [test_ldst_v3i16_param_1];
+; COMMON-NEXT:    ld.param.b64 %rd1, [test_ldst_v3i16_param_0];
+; COMMON-NEXT:    ld.b64 %rd3, [%rd1];
 ; COMMON-NEXT:    shr.u64 %rd4, %rd3, 32;
-; COMMON-NEXT:    st.u32 [%rd2], %rd3;
-; COMMON-NEXT:    st.u16 [%rd2+4], %rd4;
+; COMMON-NEXT:    st.b32 [%rd2], %rd3;
+; COMMON-NEXT:    st.b16 [%rd2+4], %rd4;
 ; COMMON-NEXT:    ret;
   %t1 = load <3 x i16>, ptr %a
   store <3 x i16> %t1, ptr %b, align 16
@@ -587,14 +599,14 @@ define void @test_ldst_v3i16(ptr %a, ptr %b) {
 define void @test_ldst_v4i16(ptr %a, ptr %b) {
 ; COMMON-LABEL: test_ldst_v4i16(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<5>;
+; COMMON-NEXT:    .reg .b32 %r<3>;
 ; COMMON-NEXT:    .reg .b64 %rd<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u64 %rd2, [test_ldst_v4i16_param_1];
-; COMMON-NEXT:    ld.param.u64 %rd1, [test_ldst_v4i16_param_0];
-; COMMON-NEXT:    ld.v4.u16 {%rs1, %rs2, %rs3, %rs4}, [%rd1];
-; COMMON-NEXT:    st.v4.u16 [%rd2], {%rs1, %rs2, %rs3, %rs4};
+; COMMON-NEXT:    ld.param.b64 %rd2, [test_ldst_v4i16_param_1];
+; COMMON-NEXT:    ld.param.b64 %rd1, [test_ldst_v4i16_param_0];
+; COMMON-NEXT:    ld.v2.b32 {%r1, %r2}, [%rd1];
+; COMMON-NEXT:    st.v2.b32 [%rd2], {%r1, %r2};
 ; COMMON-NEXT:    ret;
   %t1 = load <4 x i16>, ptr %a
   store <4 x i16> %t1, ptr %b, align 16
@@ -608,8 +620,8 @@ define void @test_ldst_v8i16(ptr %a, ptr %b) {
 ; COMMON-NEXT:    .reg .b64 %rd<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u64 %rd2, [test_ldst_v8i16_param_1];
-; COMMON-NEXT:    ld.param.u64 %rd1, [test_ldst_v8i16_param_0];
+; COMMON-NEXT:    ld.param.b64 %rd2, [test_ldst_v8i16_param_1];
+; COMMON-NEXT:    ld.param.b64 %rd1, [test_ldst_v8i16_param_0];
 ; COMMON-NEXT:    ld.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
 ; COMMON-NEXT:    st.v4.b32 [%rd2], {%r1, %r2, %r3, %r4};
 ; COMMON-NEXT:    ret;
@@ -623,23 +635,18 @@ declare <2 x i16> @test_callee(<2 x i16> %a, <2 x i16> %b) #0
 define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_call(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<5>;
+; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_call_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_call_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_call_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_call_param_0];
 ; COMMON-NEXT:    { // callseq 0, 0
 ; COMMON-NEXT:    .param .align 4 .b8 param0[4];
-; COMMON-NEXT:    st.param.b32 [param0], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
-; COMMON-NEXT:    st.param.b32 [param1], %r2;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
-; COMMON-NEXT:    call.uni (retval0),
-; COMMON-NEXT:    test_callee,
-; COMMON-NEXT:    (
-; COMMON-NEXT:    param0,
-; COMMON-NEXT:    param1
-; COMMON-NEXT:    );
+; COMMON-NEXT:    st.param.b32 [param1], %r2;
+; COMMON-NEXT:    st.param.b32 [param0], %r1;
+; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 0
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -651,23 +658,18 @@ define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
 define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_call_flipped(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<5>;
+; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_call_flipped_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_call_flipped_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_call_flipped_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
 ; COMMON-NEXT:    { // callseq 1, 0
 ; COMMON-NEXT:    .param .align 4 .b8 param0[4];
-; COMMON-NEXT:    st.param.b32 [param0], %r2;
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
-; COMMON-NEXT:    st.param.b32 [param1], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
-; COMMON-NEXT:    call.uni (retval0),
-; COMMON-NEXT:    test_callee,
-; COMMON-NEXT:    (
-; COMMON-NEXT:    param0,
-; COMMON-NEXT:    param1
-; COMMON-NEXT:    );
+; COMMON-NEXT:    st.param.b32 [param1], %r1;
+; COMMON-NEXT:    st.param.b32 [param0], %r2;
+; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 1
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -679,23 +681,18 @@ define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 define <2 x i16> @test_tailcall_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-LABEL: test_tailcall_flipped(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b32 %r<5>;
+; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r2, [test_tailcall_flipped_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_tailcall_flipped_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_tailcall_flipped_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
 ; COMMON-NEXT:    { // callseq 2, 0
 ; COMMON-NEXT:    .param .align 4 .b8 param0[4];
-; COMMON-NEXT:    st.param.b32 [param0], %r2;
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
-; COMMON-NEXT:    st.param.b32 [param1], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
-; COMMON-NEXT:    call.uni (retval0),
-; COMMON-NEXT:    test_callee,
-; COMMON-NEXT:    (
-; COMMON-NEXT:    param0,
-; COMMON-NEXT:    param1
-; COMMON-NEXT:    );
+; COMMON-NEXT:    st.param.b32 [param1], %r1;
+; COMMON-NEXT:    st.param.b32 [param0], %r2;
+; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 2
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -712,11 +709,11 @@ define <2 x i16> @test_select(<2 x i16> %a, <2 x i16> %b, i1 zeroext %c) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u8 %rs1, [test_select_param_2];
+; COMMON-NEXT:    ld.param.b8 %rs1, [test_select_param_2];
 ; COMMON-NEXT:    and.b16 %rs2, %rs1, 1;
 ; COMMON-NEXT:    setp.ne.b16 %p1, %rs2, 0;
-; COMMON-NEXT:    ld.param.u32 %r2, [test_select_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_select_param_0];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_select_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_select_param_0];
 ; COMMON-NEXT:    selp.b32 %r3, %r1, %r2, %p1;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;
@@ -729,23 +726,22 @@ define <2 x i16> @test_select_cc(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c, <2 x 
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .pred %p<3>;
 ; COMMON-NEXT:    .reg .b16 %rs<11>;
-; COMMON-NEXT:    .reg .b32 %r<6>;
+; COMMON-NEXT:    .reg .b32 %r<5>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r4, [test_select_cc_param_3];
-; COMMON-NEXT:    ld.param.u32 %r3, [test_select_cc_param_2];
-; COMMON-NEXT:    ld.param.u32 %r2, [test_select_cc_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_select_cc_param_0];
+; COMMON-NEXT:    ld.param.b32 %r4, [test_select_cc_param_3];
+; COMMON-NEXT:    ld.param.b32 %r3, [test_select_cc_param_2];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_select_cc_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_select_cc_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
 ; COMMON-NEXT:    mov.b32 {%rs3, %rs4}, %r3;
-; COMMON-NEXT:    setp.ne.s16 %p1, %rs3, %rs1;
-; COMMON-NEXT:    setp.ne.s16 %p2, %rs4, %rs2;
+; COMMON-NEXT:    setp.ne.b16 %p1, %rs3, %rs1;
+; COMMON-NEXT:    setp.ne.b16 %p2, %rs4, %rs2;
 ; COMMON-NEXT:    mov.b32 {%rs5, %rs6}, %r2;
 ; COMMON-NEXT:    mov.b32 {%rs7, %rs8}, %r1;
 ; COMMON-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p2;
 ; COMMON-NEXT:    selp.b16 %rs10, %rs7, %rs5, %p1;
-; COMMON-NEXT:    mov.b32 %r5, {%rs10, %rs9};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r5;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs10, %rs9};
 ; COMMON-NEXT:    ret;
   %cc = icmp ne <2 x i16> %c, %d
   %r = select <2 x i1> %cc, <2 x i16> %a, <2 x i16> %b
@@ -760,14 +756,14 @@ define <2 x i32> @test_select_cc_i32_i16(<2 x i32> %a, <2 x i32> %b,
 ; COMMON-NEXT:    .reg .b32 %r<9>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.v2.u32 {%r3, %r4}, [test_select_cc_i32_i16_param_1];
-; COMMON-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_select_cc_i32_i16_param_0];
-; COMMON-NEXT:    ld.param.u32 %r6, [test_select_cc_i32_i16_param_3];
-; COMMON-NEXT:    ld.param.u32 %r5, [test_select_cc_i32_i16_param_2];
+; COMMON-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_select_cc_i32_i16_param_1];
+; COMMON-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_select_cc_i32_i16_param_0];
+; COMMON-NEXT:    ld.param.b32 %r6, [test_select_cc_i32_i16_param_3];
+; COMMON-NEXT:    ld.param.b32 %r5, [test_select_cc_i32_i16_param_2];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r6;
 ; COMMON-NEXT:    mov.b32 {%rs3, %rs4}, %r5;
-; COMMON-NEXT:    setp.ne.s16 %p1, %rs3, %rs1;
-; COMMON-NEXT:    setp.ne.s16 %p2, %rs4, %rs2;
+; COMMON-NEXT:    setp.ne.b16 %p1, %rs3, %rs1;
+; COMMON-NEXT:    setp.ne.b16 %p2, %rs4, %rs2;
 ; COMMON-NEXT:    selp.b32 %r7, %r2, %r4, %p2;
 ; COMMON-NEXT:    selp.b32 %r8, %r1, %r3, %p1;
 ; COMMON-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
@@ -783,21 +779,20 @@ define <2 x i16> @test_select_cc_i16_i32(<2 x i16> %a, <2 x i16> %b,
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .pred %p<3>;
 ; COMMON-NEXT:    .reg .b16 %rs<7>;
-; COMMON-NEXT:    .reg .b32 %r<8>;
+; COMMON-NEXT:    .reg .b32 %r<7>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.v2.u32 {%r5, %r6}, [test_select_cc_i16_i32_param_3];
-; COMMON-NEXT:    ld.param.v2.u32 {%r3, %r4}, [test_select_cc_i16_i32_param_2];
-; COMMON-NEXT:    ld.param.u32 %r2, [test_select_cc_i16_i32_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_select_cc_i16_i32_param_0];
-; COMMON-NEXT:    setp.ne.s32 %p1, %r3, %r5;
-; COMMON-NEXT:    setp.ne.s32 %p2, %r4, %r6;
+; COMMON-NEXT:    ld.param.v2.b32 {%r5, %r6}, [test_select_cc_i16_i32_param_3];
+; COMMON-NEXT:    ld.param.v2.b32 {%r3, %r4}, [test_select_cc_i16_i32_param_2];
+; COMMON-NEXT:    ld.param.b32 %r2, [test_select_cc_i16_i32_param_1];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_select_cc_i16_i32_param_0];
+; COMMON-NEXT:    setp.ne.b32 %p1, %r3, %r5;
+; COMMON-NEXT:    setp.ne.b32 %p2, %r4, %r6;
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
 ; COMMON-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
 ; COMMON-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p2;
 ; COMMON-NEXT:    selp.b16 %rs6, %rs3, %rs1, %p1;
-; COMMON-NEXT:    mov.b32 %r7, {%rs6, %rs5};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r7;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs6, %rs5};
 ; COMMON-NEXT:    ret;
                                           <2 x i32> %c, <2 x i32> %d) #0 {
   %cc = icmp ne <2 x i32> %c, %d
@@ -812,7 +807,7 @@ define <2 x i16> @test_trunc_2xi32(<2 x i32> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_trunc_2xi32_param_0];
+; COMMON-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_param_0];
 ; COMMON-NEXT:    prmt.b32 %r3, %r1, %r2, 0x5410U;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;
@@ -827,31 +822,30 @@ define <2 x i16> @test_trunc_2xi32_muliple_use0(<2 x i32> %a, ptr %p) #0 {
 ; I16x2-NEXT:    .reg .b64 %rd<2>;
 ; I16x2-EMPTY:
 ; I16x2-NEXT:  // %bb.0:
-; I16x2-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_trunc_2xi32_muliple_use0_param_0];
-; I16x2-NEXT:    ld.param.u64 %rd1, [test_trunc_2xi32_muliple_use0_param_1];
+; I16x2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_muliple_use0_param_0];
+; I16x2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_muliple_use0_param_1];
 ; I16x2-NEXT:    prmt.b32 %r3, %r1, %r2, 0x5410U;
 ; I16x2-NEXT:    mov.b32 %r4, 65537;
 ; I16x2-NEXT:    add.s16x2 %r5, %r3, %r4;
-; I16x2-NEXT:    st.u32 [%rd1], %r5;
+; I16x2-NEXT:    st.b32 [%rd1], %r5;
 ; I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; I16x2-NEXT:    ret;
 ;
 ; NO-I16x2-LABEL: test_trunc_2xi32_muliple_use0(
 ; NO-I16x2:       {
 ; NO-I16x2-NEXT:    .reg .b16 %rs<5>;
-; NO-I16x2-NEXT:    .reg .b32 %r<5>;
+; NO-I16x2-NEXT:    .reg .b32 %r<4>;
 ; NO-I16x2-NEXT:    .reg .b64 %rd<2>;
 ; NO-I16x2-EMPTY:
 ; NO-I16x2-NEXT:  // %bb.0:
-; NO-I16x2-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_trunc_2xi32_muliple_use0_param_0];
-; NO-I16x2-NEXT:    ld.param.u64 %rd1, [test_trunc_2xi32_muliple_use0_param_1];
+; NO-I16x2-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_muliple_use0_param_0];
+; NO-I16x2-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_muliple_use0_param_1];
 ; NO-I16x2-NEXT:    cvt.u16.u32 %rs1, %r2;
 ; NO-I16x2-NEXT:    cvt.u16.u32 %rs2, %r1;
 ; NO-I16x2-NEXT:    mov.b32 %r3, {%rs2, %rs1};
 ; NO-I16x2-NEXT:    add.s16 %rs3, %rs1, 1;
 ; NO-I16x2-NEXT:    add.s16 %rs4, %rs2, 1;
-; NO-I16x2-NEXT:    mov.b32 %r4, {%rs4, %rs3};
-; NO-I16x2-NEXT:    st.u32 [%rd1], %r4;
+; NO-I16x2-NEXT:    st.v2.b16 [%rd1], {%rs4, %rs3};
 ; NO-I16x2-NEXT:    st.param.b32 [func_retval0], %r3;
 ; NO-I16x2-NEXT:    ret;
   %r = trunc <2 x i32> %a to <2 x i16>
@@ -869,12 +863,12 @@ define <2 x i16> @test_trunc_2xi32_muliple_use1(<2 x i32> %a, ptr %p) #0 {
 ; COMMON-NEXT:    .reg .b64 %rd<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.v2.u32 {%r1, %r2}, [test_trunc_2xi32_muliple_use1_param_0];
-; COMMON-NEXT:    ld.param.u64 %rd1, [test_trunc_2xi32_muliple_use1_param_1];
+; COMMON-NEXT:    ld.param.v2.b32 {%r1, %r2}, [test_trunc_2xi32_muliple_use1_param_0];
+; COMMON-NEXT:    ld.param.b64 %rd1, [test_trunc_2xi32_muliple_use1_param_1];
 ; COMMON-NEXT:    prmt.b32 %r3, %r1, %r2, 0x5410U;
 ; COMMON-NEXT:    add.s32 %r4, %r2, 1;
 ; COMMON-NEXT:    add.s32 %r5, %r1, 1;
-; COMMON-NEXT:    st.v2.u32 [%rd1], {%r5, %r4};
+; COMMON-NEXT:    st.v2.b32 [%rd1], {%r5, %r4};
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;
   %r = trunc <2 x i32> %a to <2 x i16>
@@ -889,15 +883,13 @@ define <2 x i16> @test_trunc_2xi64(<2 x i64> %a) #0 {
 ; COMMON-LABEL: test_trunc_2xi64(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<3>;
-; COMMON-NEXT:    .reg .b32 %r<2>;
 ; COMMON-NEXT:    .reg .b64 %rd<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
+; COMMON-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [test_trunc_2xi64_param_0];
 ; COMMON-NEXT:    cvt.u16.u64 %rs1, %rd2;
 ; COMMON-NEXT:    cvt.u16.u64 %rs2, %rd1;
-; COMMON-NEXT:    mov.b32 %r1, {%rs2, %rs1};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r1;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
 ; COMMON-NEXT:    ret;
   %r = trunc <2 x i64> %a to <2 x i16>
   ret <2 x i16> %r
@@ -910,11 +902,11 @@ define <2 x i32> @test_zext_2xi32(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_zext_2xi32_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_zext_2xi32_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; COMMON-NEXT:    cvt.u32.u16 %r2, %rs1;
-; COMMON-NEXT:    cvt.u32.u16 %r3, %rs2;
-; COMMON-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r3};
+; COMMON-NEXT:    cvt.u32.u16 %r2, %rs2;
+; COMMON-NEXT:    cvt.u32.u16 %r3, %rs1;
+; COMMON-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r2};
 ; COMMON-NEXT:    ret;
   %r = zext <2 x i16> %a to <2 x i32>
   ret <2 x i32> %r
@@ -928,7 +920,7 @@ define <2 x i64> @test_zext_2xi64(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b64 %rd<3>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_zext_2xi64_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_zext_2xi64_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; COMMON-NEXT:    cvt.u64.u16 %rd1, %rs2;
 ; COMMON-NEXT:    cvt.u64.u16 %rd2, %rs1;
@@ -944,7 +936,7 @@ define <2 x i16> @test_bitcast_i32_to_2xi16(i32 %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_bitcast_i32_to_2xi16_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_bitcast_i32_to_2xi16_param_0];
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r1;
 ; COMMON-NEXT:    ret;
   %r = bitcast i32 %a to <2 x i16>
@@ -957,7 +949,7 @@ define i32 @test_bitcast_2xi16_to_i32(<2 x i16> %a) #0 {
 ; COMMON-NEXT:    .reg .b32 %r<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_bitcast_2xi16_to_i32_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_bitcast_2xi16_to_i32_param_0];
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r1;
 ; COMMON-NEXT:    ret;
   %r = bitcast <2 x i16> %a to i32
@@ -967,14 +959,11 @@ define i32 @test_bitcast_2xi16_to_i32(<2 x i16> %a) #0 {
 define <2 x half> @test_bitcast_2xi16_to_2xhalf(i16 %a) #0 {
 ; COMMON-LABEL: test_bitcast_2xi16_to_2xhalf(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<3>;
-; COMMON-NEXT:    .reg .b32 %r<2>;
+; COMMON-NEXT:    .reg .b16 %rs<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u16 %rs1, [test_bitcast_2xi16_to_2xhalf_param_0];
-; COMMON-NEXT:    mov.b16 %rs2, 5;
-; COMMON-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r1;
+; COMMON-NEXT:    ld.param.b16 %rs1, [test_bitcast_2xi16_to_2xhalf_param_0];
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs1, 5};
 ; COMMON-NEXT:    ret;
   %ins.0 = insertelement <2 x i16> undef, i16 %a, i32 0
   %ins.1 = insertelement <2 x i16> %ins.0, i16 5, i32 1
@@ -987,32 +976,41 @@ define <2 x i16> @test_shufflevector(<2 x i16> %a) #0 {
 ; COMMON-LABEL: test_shufflevector(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<3>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
+; COMMON-NEXT:    .reg .b32 %r<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u32 %r1, [test_shufflevector_param_0];
+; COMMON-NEXT:    ld.param.b32 %r1, [test_shufflevector_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; COMMON-NEXT:    mov.b32 %r2, {%rs2, %rs1};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
 ; COMMON-NEXT:    ret;
   %s = shufflevector <2 x i16> %a, <2 x i16> undef, <2 x i32> <i32 1, i32 0>
   ret <2 x i16> %s
 }
 
 define <2 x i16> @test_insertelement(<2 x i16> %a, i16 %x) #0 {
-; COMMON-LABEL: test_insertelement(
-; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<3>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
-; COMMON-EMPTY:
-; COMMON-NEXT:  // %bb.0:
-; COMMON-NEXT:    ld.param.u16 %rs1, [test_insertelement_param_1];
-; COMMON-NEXT:    ld.param.u32 %r1, [test_insertelement_param_0];
+; I16x2-LABEL: test_insertelement(
+; I16x2:       {
+; I16x2-NEXT:    .reg .b16 %rs<3>;
+; I16x2-NEXT:    .reg .b32 %r<2>;
+; I16x2-EMPTY:
+; I16x2-NEXT:  // %bb.0:
+; I16x2-NEXT:    ld.param.b16 %rs1, [test_insertelement_param_1];
+; I16x2-NEXT:    ld.param.b32 %r1, [test_insertelement_param_0];
 ; I16x2-NEXT:    mov.b32 {%rs2, _}, %r1;
-; NO-I16x2-NEXT: { .reg .b16 tmp; mov.b32 {%rs2, tmp}, %r1; }
-; COMMON-NEXT:    mov.b32 %r2, {%rs2, %rs1};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
-; COMMON-NEXT:    ret;
+; I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
+; I16x2-NEXT:    ret;
+;
+; NO-I16x2-LABEL: test_insertelement(
+; NO-I16x2:       {
+; NO-I16x2-NEXT:    .reg .b16 %rs<3>;
+; NO-I16x2-NEXT:    .reg .b32 %r<2>;
+; NO-I16x2-EMPTY:
+; NO-I16x2-NEXT:  // %bb.0:
+; NO-I16x2-NEXT:    ld.param.b16 %rs1, [test_insertelement_param_1];
+; NO-I16x2-NEXT:    ld.param.b32 %r1, [test_insertelement_param_0];
+; NO-I16x2-NEXT:    { .reg .b16 tmp; mov.b32 {%rs2, tmp}, %r1; }
+; NO-I16x2-NEXT:    st.param.v2.b16 [func_retval0], {%rs2, %rs1};
+; NO-I16x2-NEXT:    ret;
   %i = insertelement <2 x i16> %a, i16 %x, i64 1
   ret <2 x i16> %i
 }
@@ -1021,15 +1019,14 @@ define <2 x i16> @test_fptosi_2xhalf_to_2xi16(<2 x half> %a) #0 {
 ; COMMON-LABEL: test_fptosi_2xhalf_to_2xi16(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<5>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
+; COMMON-NEXT:    .reg .b32 %r<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b32 %r1, [test_fptosi_2xhalf_to_2xi16_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; COMMON-NEXT:    cvt.rzi.s16.f16 %rs3, %rs2;
 ; COMMON-NEXT:    cvt.rzi.s16.f16 %rs4, %rs1;
-; COMMON-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs3};
 ; COMMON-NEXT:    ret;
   %r = fptosi <2 x half> %a to <2 x i16>
   ret <2 x i16> %r
@@ -1039,15 +1036,14 @@ define <2 x i16> @test_fptoui_2xhalf_to_2xi16(<2 x half> %a) #0 {
 ; COMMON-LABEL: test_fptoui_2xhalf_to_2xi16(
 ; COMMON:       {
 ; COMMON-NEXT:    .reg .b16 %rs<5>;
-; COMMON-NEXT:    .reg .b32 %r<3>;
+; COMMON-NEXT:    .reg .b32 %r<2>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b32 %r1, [test_fptoui_2xhalf_to_2xi16_param_0];
 ; COMMON-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; COMMON-NEXT:    cvt.rzi.u16.f16 %rs3, %rs2;
 ; COMMON-NEXT:    cvt.rzi.u16.f16 %rs4, %rs1;
-; COMMON-NEXT:    mov.b32 %r2, {%rs4, %rs3};
-; COMMON-NEXT:    st.param.b32 [func_retval0], %r2;
+; COMMON-NEXT:    st.param.v2.b16 [func_retval0], {%rs4, %rs3};
 ; COMMON-NEXT:    ret;
   %r = fptoui <2 x half> %a to <2 x i16>
   ret <2 x i16> %r

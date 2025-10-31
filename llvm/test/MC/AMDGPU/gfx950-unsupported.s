@@ -183,7 +183,7 @@ v_mfma_f32_16x16x8_xf32 v[0:3], a[0:3], a[0:3], v[4:7]
 // ds_read_b64_tr_b4
 //===----------------------------------------------------------------------===//
 ds_read_b64_tr_b4 v[1:2], v0
-// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_read_b64_tr_b4 v1, v0
@@ -202,7 +202,7 @@ ds_read_b64_tr_b4 v[2:3], v2 offset:-64
 //ds_read_b64_tr_b8
 //===----------------------------------------------------------------------===//
 ds_read_b64_tr_b8 v[1:2], v0
-// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_read_b64_tr_b8 v1, v0
@@ -221,7 +221,7 @@ ds_read_b64_tr_b8 v[2:3], v2 offset:-64
 // ds_read_b64_tr_b16
 //===----------------------------------------------------------------------===//
 ds_read_b64_tr_b16 v[1:2], v0
-// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 ds_read_b64_tr_b16 v1, v0

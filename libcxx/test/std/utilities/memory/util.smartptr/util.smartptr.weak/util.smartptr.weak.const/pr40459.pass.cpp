@@ -13,7 +13,7 @@
 // template<class Y> weak_ptr(const weak_ptr<Y>& r);
 // template<class Y> weak_ptr(weak_ptr<Y>&& r);
 //
-// Regression test for https://github.com/llvm/llvm-project/issues/40459
+// Regression test for https://llvm.org/PR41114
 // Verify that these constructors never attempt a derived-to-virtual-base
 // conversion on a dangling weak_ptr.
 

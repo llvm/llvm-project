@@ -21,7 +21,6 @@ static_library("Target") {
 
     #"//lldb/source/Breakpoint", # FIXME: Dependency cycle
     "//lldb/source/Core",
-    "//lldb/source/Core",
     "//lldb/source/Expression",
     "//lldb/source/Host",
     "//lldb/source/Interpreter",

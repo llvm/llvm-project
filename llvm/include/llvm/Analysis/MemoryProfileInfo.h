@@ -15,35 +15,57 @@
 
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {
+
+class OptimizationRemarkEmitter;
+
 namespace memprof {
 
-/// Return the allocation type for a given set of memory profile values.
-AllocationType getAllocType(uint64_t TotalLifetimeAccessDensity,
-                            uint64_t AllocCount, uint64_t TotalLifetime);
+/// Whether the alloc memeprof metadata will include context size info for all
+/// MIBs.
+LLVM_ABI bool metadataIncludesAllContextSizeInfo();
+
+/// Whether the alloc memprof metadata may include context size info for some
+/// MIBs (but possibly not all).
+LLVM_ABI bool metadataMayIncludeContextSizeInfo();
+
+/// Whether we need to record the context size info in the alloc trie used to
+/// build metadata.
+LLVM_ABI bool recordContextSizeInfoForAnalysis();
 
 /// Build callstack metadata from the provided list of call stack ids. Returns
 /// the resulting metadata node.
-MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack, LLVMContext &Ctx);
+LLVM_ABI MDNode *buildCallstackMetadata(ArrayRef<uint64_t> CallStack,
+                                        LLVMContext &Ctx);
 
 /// Build metadata from the provided list of full stack id and profiled size, to
 /// use when reporting of hinted sizes is enabled.
-MDNode *buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
-                                 LLVMContext &Ctx);
+LLVM_ABI MDNode *
+buildContextSizeMetadata(ArrayRef<ContextTotalSize> ContextSizeInfo,
+                         LLVMContext &Ctx);
 
 /// Returns the stack node from an MIB metadata node.
-MDNode *getMIBStackNode(const MDNode *MIB);
+LLVM_ABI MDNode *getMIBStackNode(const MDNode *MIB);
 
 /// Returns the allocation type from an MIB metadata node.
-AllocationType getMIBAllocType(const MDNode *MIB);
+LLVM_ABI AllocationType getMIBAllocType(const MDNode *MIB);
 
 /// Returns the string to use in attributes with the given type.
-std::string getAllocTypeAttributeString(AllocationType Type);
+LLVM_ABI std::string getAllocTypeAttributeString(AllocationType Type);
 
 /// True if the AllocTypes bitmask contains just a single type.
-bool hasSingleAllocType(uint8_t AllocTypes);
+LLVM_ABI bool hasSingleAllocType(uint8_t AllocTypes);
+
+/// Removes any existing "ambiguous" memprof attribute. Called before we apply a
+/// specific allocation type such as "cold", "notcold", or "hot".
+LLVM_ABI void removeAnyExistingAmbiguousAttribute(CallBase *CB);
+
+/// Adds an "ambiguous" memprof attribute to call with a matched allocation
+/// profile but that we haven't yet been able to disambiguate.
+LLVM_ABI void addAmbiguousAttribute(CallBase *CB);
 
 /// Class to build a trie of call stack contexts for a particular profiled
 /// allocation call, along with their associated allocation types.
@@ -56,37 +78,6 @@ private:
     // Allocation types for call context sharing the context prefix at this
     // node.
     uint8_t AllocTypes;
-    // Updated as we add allocations to note if this is the deepest point in the
-    // trie that has an ambiguous allocation type (both Cold and NotCold). It is
-    // used to prune unneeded NotCold contexts, taking advantage of the fact
-    // that we later will only clone Cold contexts, as NotCold is the allocation
-    // default. We only need to keep as metadata the NotCold contexts that
-    // overlap the longest with Cold allocations, so that we know how deeply we
-    // need to clone. For example, assume we add the following contexts to the
-    // trie:
-    //    1 3 (notcold)
-    //    1 2 4 (cold)
-    //    1 2 5 (notcold)
-    //    1 2 6 (notcold)
-    // the trie looks like:
-    //         1
-    //        / \
-    //       2   3
-    //      /|\
-    //     4 5 6
-    //
-    // It is sufficient to prune all but one not cold contexts (either 1,2,5 or
-    // 1,2,6, we arbitrarily keep the first one we encounter which will be
-    // 1,2,5). We'll initially have DeepestAmbiguousAllocType set false for trie
-    // node 1 after the trie is built, and true for node 2. This indicates that
-    // the not cold context ending in 3 is not needed (its immediate callee has
-    // this value set false). The first notcold context we encounter when
-    // iterating the callers of node 2 will be the context ending in 5 (since
-    // std::map iteration is in sorted order of key), which will see that this
-    // field is true for its callee, so we will keep it. But at that point we
-    // set the callee's flag to false which prevents adding the not cold context
-    // ending in 6 unnecessarily.
-    bool DeepestAmbiguousAllocType = true;
     // If the user has requested reporting of hinted sizes, keep track of the
     // associated full stack id and profiled sizes. Can have more than one
     // after trimming (e.g. when building from metadata). This is only placed on
@@ -112,6 +103,19 @@ private:
   // The allocation's leaf stack id.
   uint64_t AllocStackId = 0;
 
+  // If the client provides a remarks emitter object, we will emit remarks on
+  // allocations for which we apply non-context sensitive allocation hints.
+  OptimizationRemarkEmitter *ORE;
+
+  // The maximum size of a cold allocation context, from the profile summary.
+  uint64_t MaxColdSize;
+
+  // Tracks whether we have built the Trie from existing MD_memprof metadata. We
+  // apply different heuristics for determining whether to discard non-cold
+  // contexts when rebuilding as we have lost information available during the
+  // original profile match.
+  bool BuiltFromExistingMetadata = false;
+
   void deleteTrieNode(CallStackTrieNode *Node) {
     if (!Node)
       return;
@@ -134,11 +138,13 @@ private:
   bool buildMIBNodes(CallStackTrieNode *Node, LLVMContext &Ctx,
                      std::vector<uint64_t> &MIBCallStack,
                      std::vector<Metadata *> &MIBNodes,
-                     bool CalleeHasAmbiguousCallerContext,
-                     bool &CalleeDeepestAmbiguousAllocType);
+                     bool CalleeHasAmbiguousCallerContext, uint64_t &TotalBytes,
+                     uint64_t &ColdBytes);
 
 public:
-  CallStackTrie() = default;
+  CallStackTrie(OptimizationRemarkEmitter *ORE = nullptr,
+                uint64_t MaxColdSize = 0)
+      : ORE(ORE), MaxColdSize(MaxColdSize) {}
   ~CallStackTrie() { deleteTrieNode(Alloc); }
 
   bool empty() const { return Alloc == nullptr; }
@@ -148,12 +154,13 @@ public:
   /// matching via a debug location hash), expected to be in order from the
   /// allocation call down to the bottom of the call stack (i.e. callee to
   /// caller order).
-  void addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
-                    std::vector<ContextTotalSize> ContextSizeInfo = {});
+  LLVM_ABI void
+  addCallStack(AllocationType AllocType, ArrayRef<uint64_t> StackIds,
+               std::vector<ContextTotalSize> ContextSizeInfo = {});
 
   /// Add the call stack context along with its allocation type from the MIB
   /// metadata to the Trie.
-  void addCallStack(MDNode *MIB);
+  LLVM_ABI void addCallStack(MDNode *MIB);
 
   /// Build and attach the minimal necessary MIB metadata. If the alloc has a
   /// single allocation type, add a function attribute instead. The reason for
@@ -162,13 +169,13 @@ public:
   /// cloning or another optimization to distinguish the allocation types,
   /// which is lower overhead and more direct than maintaining this metadata.
   /// Returns true if memprof metadata attached, false if not (attribute added).
-  bool buildAndAttachMIBMetadata(CallBase *CI);
+  LLVM_ABI bool buildAndAttachMIBMetadata(CallBase *CI);
 
   /// Add an attribute for the given allocation type to the call instruction.
   /// If hinted by reporting is enabled, a message is emitted with the given
   /// descriptor used to identify the category of single allocation type.
-  void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
-                                   StringRef Descriptor);
+  LLVM_ABI void addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
+                                            StringRef Descriptor);
 };
 
 /// Helper class to iterate through stack ids in both metadata (memprof MIB and
@@ -198,7 +205,7 @@ public:
 
   CallStackIterator begin() const;
   CallStackIterator end() const { return CallStackIterator(N, /*End*/ true); }
-  CallStackIterator beginAfterSharedPrefix(CallStack &Other);
+  CallStackIterator beginAfterSharedPrefix(const CallStack &Other);
   uint64_t back() const;
 
 private:
@@ -236,7 +243,7 @@ CallStack<NodeT, IteratorT>::begin() const {
 
 template <class NodeT, class IteratorT>
 typename CallStack<NodeT, IteratorT>::CallStackIterator
-CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(CallStack &Other) {
+CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(const CallStack &Other) {
   CallStackIterator Cur = begin();
   for (CallStackIterator OtherCur = Other.begin();
        Cur != end() && OtherCur != Other.end(); ++Cur, ++OtherCur)
@@ -246,11 +253,14 @@ CallStack<NodeT, IteratorT>::beginAfterSharedPrefix(CallStack &Other) {
 
 /// Specializations for iterating through IR metadata stack contexts.
 template <>
+LLVM_ABI
 CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
     const MDNode *N, bool End);
 template <>
-uint64_t CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
-template <> uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
+LLVM_ABI uint64_t
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*();
+template <>
+LLVM_ABI uint64_t CallStack<MDNode, MDNode::op_iterator>::back() const;
 
 } // end namespace memprof
 } // end namespace llvm

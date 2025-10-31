@@ -16,15 +16,26 @@
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
 #include "flang/Optimizer/Dialect/CUF/CUFToLLVMIRTranslation.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/MIF/MIFDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
-#include "flang/Optimizer/OpenACC/RegisterOpenACCExtensions.h"
+#include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
 #include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -40,7 +51,8 @@ namespace fir::support {
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
       mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
       mlir::complex::ComplexDialect, mlir::DLTIDialect, cuf::CUFDialect,       \
-      mlir::NVVM::NVVMDialect, mlir::gpu::GPUDialect
+      mlir::NVVM::NVVMDialect, mlir::gpu::GPUDialect,                          \
+      mlir::index::IndexDialect, mif::MIFDialect
 
 #define FLANG_CODEGEN_DIALECT_LIST FIRCodeGenDialect, mlir::LLVM::LLVMDialect
 
@@ -103,6 +115,7 @@ inline void registerMLIRPassesForFortranTools() {
   mlir::registerPrintOpStatsPass();
   mlir::registerInlinerPass();
   mlir::registerSCCPPass();
+  mlir::registerSCFPasses();
   mlir::affine::registerAffineScalarReplacementPass();
   mlir::registerSymbolDCEPass();
   mlir::registerLocationSnapshotPass();

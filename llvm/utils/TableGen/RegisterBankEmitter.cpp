@@ -102,7 +102,7 @@ public:
 
   iterator_range<typename RegisterClassesTy::const_iterator>
   register_classes() const {
-    return llvm::make_range(RCs.begin(), RCs.end());
+    return RCs;
   }
 };
 
@@ -370,8 +370,9 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   if (HasAmbigousOrMissingEntry) {
     OS << "    if (RegBankID != InvalidRegBankID)\n"
           "      return getRegBank(RegBankID);\n";
-  } else
+  } else {
     OS << "    return getRegBank(RegBankID);\n";
+  }
   OS << "  }\n"
         "  llvm_unreachable(llvm::Twine(\"Target needs to handle register "
         "class ID "

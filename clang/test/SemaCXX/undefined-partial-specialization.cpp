@@ -10,6 +10,6 @@ template <typename T>
 class boo<T, true>;
 
 template<typename T>
-void boo<T, true>::foo(){} // expected-error{{out-of-line definition of 'foo' from class 'boo<T, true>' without definition}}
+void boo<T, true>::foo(){} // expected-error{{out-of-line definition of 'foo' from class 'GH61356::boo<T, true>' without definition}}
 
 }

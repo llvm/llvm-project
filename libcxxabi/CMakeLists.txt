@@ -187,10 +187,13 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   if(LIBCXXABI_LIBDIR_SUBDIR)
     string(APPEND LIBCXXABI_TARGET_SUBDIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBCXXABI_TARGET_SUBDIR)
   set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXXABI_TARGET_SUBDIR})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXXABI_TARGET_SUBDIR} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LIBCXXABI_TARGET_SUBDIR}/c++/v1" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
   unset(LIBCXXABI_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
@@ -202,6 +205,8 @@ else()
   endif()
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${LIBCXXABI_INSTALL_INCLUDE_DIR}" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
@@ -239,7 +244,7 @@ include(HandleLibcxxabiFlags)
 #===============================================================================
 
 # Configure target flags
-if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
@@ -247,6 +252,8 @@ add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
+
+include(HandleLibC) # Setup the C library flags
 
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
@@ -451,7 +458,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBCXXABI_C_FLAGS}")
 
 # On AIX, avoid picking up VMX extensions(i.e. vec_malloc) which would change
 # the default alignment of the allocators here.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_XOPEN_SOURCE=700")
 endif()
 

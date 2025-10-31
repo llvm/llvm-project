@@ -15,6 +15,9 @@
 #ifndef LLVM_DEMANGLE_DEMANGLECONFIG_H
 #define LLVM_DEMANGLE_DEMANGLECONFIG_H
 
+// llvm-config.h is required for LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS
+#include "llvm/Config/llvm-config.h"
+
 #ifndef __has_feature
 #define __has_feature(x) 0
 #endif
@@ -93,5 +96,25 @@
 
 #define DEMANGLE_NAMESPACE_BEGIN namespace llvm { namespace itanium_demangle {
 #define DEMANGLE_NAMESPACE_END } }
+
+/// DEMANGLE_ABI is the export/visibility macro used to mark symbols delcared in
+/// llvm/Demangle as exported when built as a shared library.
+#if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+#define DEMANGLE_ABI
+#else
+#if defined(_WIN32)
+#if defined(LLVM_EXPORTS)
+#define DEMANGLE_ABI __declspec(dllexport)
+#else
+#define DEMANGLE_ABI __declspec(dllimport)
+#endif
+#else
+#if __has_attribute(visibility)
+#define DEMANGLE_ABI __attribute__((__visibility__("default")))
+#else
+#define DEMANGLE_ABI
+#endif
+#endif
+#endif
 
 #endif

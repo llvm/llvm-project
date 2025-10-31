@@ -48,6 +48,9 @@ flang:frontend:
   - flang/Evaluate/**/*
   - flang/Semantics/**/*
 
+libclc:
+  - libclc/**
+
 HLSL:
   - clang/*HLSL*/**/*
   - clang/**/*HLSL*
@@ -86,9 +89,6 @@ LTO:
   - llvm/*/ThinLTO/**
   - llvm/lib/Transforms/*/FunctionImport*
   - llvm/tools/gold/**
-
-mc:
-  - llvm/*/MC/**
 
 clang:driver:
   - clang/*/Driver/**
@@ -554,6 +554,12 @@ flang:fir-hlfir:
 flang:codegen:
   - flang/**/CodeGen/**
 
+llvm:codegen:
+  - llvm/lib/CodeGen/*
+  - llvm/lib/CodeGen/MIRParser/*
+  - llvm/lib/CodeGen/LiveDebugValues/*
+  - llvm/lib/CodeGen/AsmPrinter/*
+
 llvm:globalisel:
   - llvm/**/GlobalISel/**
   - llvm/utils/TableGen/GlobalISel*
@@ -612,6 +618,12 @@ llvm:adt:
 llvm:support:
   - llvm/**/Support/**
 
+# Skip llvm/test/MC and llvm/unittests/MC, which includes target-specific directories.
+llvm:mc:
+  - llvm/include/llvm/MC/**
+  - llvm/lib/MC/**
+  - llvm/tools/llvm-mc/**
+
 llvm:transforms:
   - llvm/lib/Transforms/**
   - llvm/include/llvm/Transforms/**
@@ -625,6 +637,10 @@ llvm:instcombine:
   - llvm/include/llvm/Analysis/InstructionSimplify.h
   - llvm/test/Transforms/InstCombine/**
   - llvm/test/Transforms/InstSimplify/**
+
+llvm:vectorcombine:
+  - llvm/lib/Transforms/Vectorize/VectorCombine.cpp
+  - llvm/test/Transforms/VectorCombine/**
 
 clangd:
   - clang-tools-extra/clangd/**
@@ -702,11 +718,26 @@ mlgo:
   - llvm/unittests/CodeGen/ML*
   - llvm/test/CodeGen/MLRegAlloc/**
   - llvm/utils/mlgo-utils/**
+  - llvm/docs/MLGO.rst
+  - llvm/include/llvm/Analysis/IR2Vec.h
+  - llvm/lib/Analysis/IR2Vec.cpp
+  - llvm/lib/Analysis/models/**
+  - llvm/include/llvm/CodeGen/MIR2Vec.h
+  - llvm/lib/CodeGen/MIR2Vec.cpp
+  - llvm/test/Analysis/IR2Vec/**
+  - llvm/test/CodeGen/MIR2Vec/**
+  - llvm/unittests/Analysis/IR2VecTest.cpp
+  - llvm/unittests/CodeGen/MIR2VecTest.cpp
+  - llvm/tools/llvm-ir2vec/**
+  - llvm/docs/CommandGuide/llvm-ir2vec.rst
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
   - llvm/test/tools/llvm-exegesis/**
   - llvm/unittests/tools/llvm-exegesis/**
+
+tools:llvm-reduce:
+  - llvm/tools/llvm-reduce/**
 
 platform:windows:
   - lld/COFF/**
@@ -763,17 +794,23 @@ backend:NVPTX:
   - 'llvm/**/*nvptx*/**'
   - 'llvm/**/*NVPTX*/**'
 
+backend:MIPS:
+  - '**/*mips*'
+  - '**/*Mips*'
+  - '**/*mips*/**'
+  - '**/*Mips*/**'
+
 backend:RISC-V:
-  - clang/**/*riscv*
-  - clang/**/*RISCV*
-  - llvm/**/*riscv*
-  - llvm/**/*RISCV*
+  - '**/*riscv*'
+  - '**/*RISCV*'
+  - '**/*riscv*/**'
+  - '**/*RISCV*/**'
 
 backend:Xtensa:
-  - clang/**/*xtensa*
-  - clang/**/*Xtensa*
-  - llvm/**/*xtensa*
-  - llvm/**/*Xtensa*
+  - '**/*xtensa*'
+  - '**/*Xtensa*'
+  - '**/*xtensa*/**'
+  - '**/*Xtensa*/**'
 
 lld:coff:
   - lld/**/COFF/**
@@ -790,6 +827,12 @@ lld:macho:
 lld:wasm:
   - lld/**/wasm/**
   - lld/Common/**
+
+backend:ARC:
+  - llvm/lib/Target/ARC/**
+  - clang/lib/Basic/Targets/ARC.h
+  - clang/lib/Basic/Targets/ARC.cpp
+  - clang/lib/CodeGen/Targets/ARC.cpp
 
 backend:ARM:
   - llvm/include/llvm/IR/IntrinsicsARM.td
@@ -817,6 +860,19 @@ backend:AArch64:
   - clang/include/clang/Sema/SemaARM.h
   - clang/lib/Sema/SemaARM.cpp
 
+backend:CSKY:
+  - llvm/lib/Target/CSKY/**
+  - llvm/include/llvm/TargetParser/CSKYTargetParser.def
+  - llvm/include/llvm/TargetParser/CSKYTargetParser.h
+  - llvm/include/llvm/BinaryFormat/ELFRelocs/CSKY.def
+  - llvm/lib/TargetParser/CSKYTargetParser.cpp
+  - llvm/lib/Support/CSKYAttributes.cpp
+  - llvm/lib/Support/CSKYAttributeParser.cpp
+  - clang/lib/Basic/Targets/CSKY.h
+  - clang/lib/Basic/Targets/CSKY.cpp
+  - clang/lib/CodeGen/Targets/CSKY.cpp
+  - clang/lib/Driver/ToolChains/CSKY*
+
 backend:Hexagon:
   - clang/include/clang/Basic/BuiltinsHexagon*.def
   - clang/include/clang/Sema/SemaHexagon.h
@@ -839,6 +895,13 @@ backend:Hexagon:
   - llvm/test/MC/Disassembler/Hexagon/**
   - llvm/test/MC/Hexagon/**
   - llvm/test/tools/llvm-objdump/ELF/Hexagon/**
+
+backend:Lanai:
+  - llvm/lib/Target/Lanai/**
+  - clang/lib/Basic/Targets/Lanai.h
+  - clang/lib/Basic/Targets/Lanai.cpp
+  - clang/lib/CodeGen/Targets/Lanai.cpp
+  - clang/lib/Driver/ToolChains/Lanai*
 
 backend:loongarch:
   - llvm/include/llvm/IR/IntrinsicsLoongArch.td
@@ -1032,6 +1095,14 @@ clang:openmp:
   - llvm/unittests/Frontend/OpenMP*
   - llvm/test/Transforms/OpenMP/**
 
+clang:temporal-safety:
+  - clang/include/clang/Analysis/Analyses/LifetimeSafety/**
+  - clang/lib/Analysis/LifetimeSafety/**
+  - clang/unittests/Analysis/LifetimeSafety*
+  - clang/test/Sema/*lifetime-safety*
+  - clang/test/Sema/*lifetime-analysis*
+  - clang/test/Analysis/LifetimeSafety/**
+
 clang:as-a-library:
   - clang/tools/libclang/**
   - clang/bindings/**
@@ -1055,3 +1126,6 @@ tablegen:
   - llvm/include/TableGen/**
   - llvm/lib/TableGen/**
   - llvm/utils/TableGen/**
+
+infrastructure:
+  - .ci/**

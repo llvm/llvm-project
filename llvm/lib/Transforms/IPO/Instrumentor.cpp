@@ -212,14 +212,14 @@ bool InstrumentorImpl::instrumentInstruction(Instruction &I,
   }
 
   if (auto *IO = InstChoicesPOST.lookup(I.getOpcode())) {
-    IIRB.IRB.SetInsertPoint(I.getNextNonDebugInstruction());
+    IIRB.IRB.SetInsertPoint(I.getNextNode());
     ensureDbgLoc(IIRB.IRB);
     Changed |= bool(IO->instrument(IPtr, IConf, IIRB, ICaches));
   }
   IIRB.returnAllocas();
 
   return Changed;
-};
+}
 
 bool InstrumentorImpl::instrumentFunction(Function &Fn) {
   bool Changed = false;

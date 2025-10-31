@@ -746,3 +746,92 @@ Examples:
        @llvm.dx.resource.load.cbufferrow.8(
            target("dx.CBuffer", target("dx.Layout", {i16}, 2, 0)) %buffer,
            i32 %index)
+
+Resource dimensions
+-------------------
+
+*relevant types: Textures and Buffer*
+
+The `getDimensions`_ DXIL operation returns the dimensions of a texture or
+buffer resource. It returns a `Dimensions`_ type, which is a struct
+containing four ``i32`` values. The values in the struct represent the size
+of each dimension of the resource, and when aplicable the number of array
+elements or number of samples. The mapping is defined in the
+`getDimensions`_ documentation.
+
+The LLVM IR representation of this operation has several forms
+depending on the resource type and the specific ``getDimensions`` query.
+The intrinsics return a scalar or anonymous struct with up to 4 `i32`
+elements. The intrinsic names include suffixes to indicate the number of
+elements in the return value. The suffix `.x` indicates a single `i32`
+return value, `.xy` indicates a struct with two `i32` values, and `.xyz`
+indicates a struct with three `i32` values.
+
+Intrinsics representing queries on multisampled texture resources include
+`.ms.` in their name and their return value includes an additional `i32` for
+the number of samples.
+
+Intrinsics with `mip_level` argument and `.levels.` in their name are used
+for texture resources with multiple MIP levels. Their return
+struct includes an additional `i32` for the number of levels the resource has.
+
+.. code-block:: llvm
+
+   i32 @llvm.dx.resource.getdimensions.x( target("dx.*") handle )
+   {i32, i32} @llvm.dx.resource.getdimensions.xy( target("dx.*") handle )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.xyz( target("dx.*") handle )
+   {i32, i32} @llvm.dx.resource.getdimensions.levels.x( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xy( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyz( target("dx.*") handle, i32 mip_level )
+   {i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xy( target("dx.*") handle )
+   {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xyz( target("dx.*") handle )
+
+.. list-table:: ``@llvm.dx.resource.getdimensions.*``
+   :header-rows: 1
+
+   * - Argument
+     -
+     - Type
+     - Description
+   * - Return value
+     -
+     - `i32`, `{i32, i32}`, `{i32, i32, i32}`, or `{i32, i32, i32, i32}`
+     - Width, height, and depth of the resource (based on the specific suffix), and a number of levels or samples where aplicable.
+   * - ``%handle``
+     - 0
+     - ``target(dx.*)``
+     - Resource handle
+   * - ``%mip_level``
+     - 1
+     - ``i32``
+     - MIP level for the requested dimensions.
+
+Examples:
+
+.. code-block:: llvm
+
+  ; RWBuffer<float4>
+  %dim = call i32 @llvm.dx.resource.getdimensions.x(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %handle)
+
+  ; Texture2D
+  %0 = call {i32, i32} @llvm.dx.resource.getdimensions.xy(target("dx.Texture", ...) %tex2d)
+  %tex2d_width = extractvalue {i32, i32} %0, 0
+  %tex2d_height = extractvalue {i32, i32} %0, 1
+
+  ; Texture2DArray with levels
+  %1 = call {i32, i32, i32, i32} @llvm.dx.resource.getdimensions.levels.xyz(
+     target("dx.Texture", ...) %tex2darray, i32 1)
+  %tex2darray_width = extractvalue {i32, i32, i32, i32} %1, 0
+  %tex2darray_height = extractvalue {i32, i32, i32, i32} %1, 1
+  %tex2darray_elem_count = extractvalue {i32, i32, i32, i32} %1, 2
+  %tex2darray_levels_count = extractvalue {i32, i32, i32, i32} %1, 3
+
+  ; Texture2DMS
+  %2 = call {i32, i32, i32} @llvm.dx.resource.getdimensions.ms.xy(
+     target("dx.Texture", ...) %tex2dms)
+  %tex2dms_width = extractvalue {i32, i32, i32} %2, 0
+  %tex2dms_height = extractvalue {i32, i32, i32} %2, 1
+  %tex2dms_samples_count = extractvalue {i32, i32, i32} %2, 2
+
+.. _Dimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#resource-operation-return-types
+.. _getDimensions: https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/DXIL.rst#getdimensions

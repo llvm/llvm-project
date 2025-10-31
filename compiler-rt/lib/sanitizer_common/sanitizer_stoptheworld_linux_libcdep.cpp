@@ -94,17 +94,17 @@ class SuspendedThreadsListLinux final : public SuspendedThreadsList {
  public:
   SuspendedThreadsListLinux() { thread_ids_.reserve(1024); }
 
-  tid_t GetThreadID(uptr index) const override;
+  ThreadID GetThreadID(uptr index) const override;
   uptr ThreadCount() const override;
-  bool ContainsTid(tid_t thread_id) const;
-  void Append(tid_t tid);
+  bool ContainsTid(ThreadID thread_id) const;
+  void Append(ThreadID tid);
 
   PtraceRegistersStatus GetRegistersAndSP(uptr index,
                                           InternalMmapVector<uptr> *buffer,
                                           uptr *sp) const override;
 
  private:
-  InternalMmapVector<tid_t> thread_ids_;
+  InternalMmapVector<ThreadID> thread_ids_;
 };
 
 // Structure for passing arguments into the tracer thread.
@@ -137,10 +137,10 @@ class ThreadSuspender {
  private:
   SuspendedThreadsListLinux suspended_threads_list_;
   pid_t pid_;
-  bool SuspendThread(tid_t thread_id);
+  bool SuspendThread(ThreadID thread_id);
 };
 
-bool ThreadSuspender::SuspendThread(tid_t tid) {
+bool ThreadSuspender::SuspendThread(ThreadID tid) {
   int pterrno;
   if (internal_iserror(internal_ptrace(PTRACE_ATTACH, tid, nullptr, nullptr),
                        &pterrno)) {
@@ -210,7 +210,7 @@ void ThreadSuspender::KillAllThreads() {
 bool ThreadSuspender::SuspendAllThreads() {
   ThreadLister thread_lister(pid_);
   bool retry = true;
-  InternalMmapVector<tid_t> threads;
+  InternalMmapVector<ThreadID> threads;
   threads.reserve(128);
   for (int i = 0; i < 30 && retry; ++i) {
     retry = false;
@@ -226,7 +226,7 @@ bool ThreadSuspender::SuspendAllThreads() {
       case ThreadLister::Ok:
         break;
     }
-    for (tid_t tid : threads) {
+    for (ThreadID tid : threads) {
       // Are we already attached to this thread?
       // Currently this check takes linear time, however the number of threads
       // is usually small.
@@ -403,7 +403,77 @@ struct ScopedSetTracerPID {
   }
 };
 
+// This detects whether ptrace is blocked (e.g., by seccomp), by forking and
+// then attempting ptrace.
+// This separate check is necessary because StopTheWorld() creates a thread
+// with a shared virtual address space and shared TLS, and therefore
+// cannot use waitpid() due to the shared errno.
+static void TestPTrace() {
+#  if SANITIZER_SPARC
+  // internal_fork() on SPARC actually calls __fork(). We can't safely fork,
+  // because it's possible seccomp has been configured to disallow fork() but
+  // allow clone().
+  VReport(1, "WARNING: skipping TestPTrace() because this is SPARC\n");
+  VReport(1,
+          "If seccomp blocks ptrace, LeakSanitizer may hang without further "
+          "notice\n");
+  VReport(
+      1,
+      "If seccomp does not block ptrace, you can safely ignore this warning\n");
+#  else
+  // Heuristic: only check the first time this is called. This is not always
+  // correct (e.g., user manually triggers leak detection, then updates
+  // seccomp, then leak detection is triggered again).
+  static bool checked = false;
+  if (checked)
+    return;
+  checked = true;
+
+  // Hopefully internal_fork() is not too expensive, thanks to copy-on-write.
+  // Besides, this is only called the first time.
+  // Note that internal_fork() on non-SPARC Linux actually calls
+  // SYSCALL(clone); thus, it is reasonable to use it because if seccomp kills
+  // TestPTrace(), it would have killed StopTheWorld() anyway.
+  int pid = internal_fork();
+
+  if (pid < 0) {
+    int rverrno;
+    if (internal_iserror(pid, &rverrno))
+      VReport(0, "WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
+
+    // We don't abort the sanitizer - it's still worth letting the sanitizer
+    // try.
+    return;
+  }
+
+  if (pid == 0) {
+    // Child subprocess
+
+    // TODO: consider checking return value of internal_ptrace, to handle
+    //       SCMP_ACT_ERRNO. However, be careful not to consume too many
+    //       resources performing a proper ptrace.
+    internal_ptrace(PTRACE_ATTACH, 0, nullptr, nullptr);
+    internal__exit(0);
+  } else {
+    int wstatus;
+    internal_waitpid(pid, &wstatus, 0);
+
+    // Handle SCMP_ACT_KILL
+    if (WIFSIGNALED(wstatus)) {
+      VReport(0,
+              "WARNING: ptrace appears to be blocked (is seccomp enabled?). "
+              "LeakSanitizer may hang.\n");
+      VReport(0, "Child exited with signal %d.\n", WTERMSIG(wstatus));
+      // We don't abort the sanitizer - it's still worth letting the sanitizer
+      // try.
+    }
+  }
+#  endif
+}
+
 void StopTheWorld(StopTheWorldCallback callback, void *argument) {
+  TestPTrace();
+
   StopTheWorldScope in_stoptheworld;
   // Prepare the arguments for TracerThread.
   struct TracerThreadArgument tracer_thread_argument;
@@ -457,7 +527,8 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
     internal_prctl(PR_SET_PTRACER, tracer_pid, 0, 0, 0);
     // Allow the tracer thread to start.
     tracer_thread_argument.mutex.Unlock();
-    // NOTE: errno is shared between this thread and the tracer thread.
+    // NOTE: errno is shared between this thread and the tracer thread
+    //       (clone was called without CLONE_SETTLS / newtls).
     // internal_waitpid() may call syscall() which can access/spoil errno,
     // so we can't call it now. Instead we for the tracer thread to finish using
     // the spin loop below. Man page for sched_yield() says "In the Linux
@@ -546,7 +617,7 @@ static constexpr uptr kExtraRegs[] = {0};
 #error "Unsupported architecture"
 #endif // SANITIZER_ANDROID && defined(__arm__)
 
-tid_t SuspendedThreadsListLinux::GetThreadID(uptr index) const {
+ThreadID SuspendedThreadsListLinux::GetThreadID(uptr index) const {
   CHECK_LT(index, thread_ids_.size());
   return thread_ids_[index];
 }
@@ -555,14 +626,14 @@ uptr SuspendedThreadsListLinux::ThreadCount() const {
   return thread_ids_.size();
 }
 
-bool SuspendedThreadsListLinux::ContainsTid(tid_t thread_id) const {
+bool SuspendedThreadsListLinux::ContainsTid(ThreadID thread_id) const {
   for (uptr i = 0; i < thread_ids_.size(); i++) {
     if (thread_ids_[i] == thread_id) return true;
   }
   return false;
 }
 
-void SuspendedThreadsListLinux::Append(tid_t tid) {
+void SuspendedThreadsListLinux::Append(ThreadID tid) {
   thread_ids_.push_back(tid);
 }
 

@@ -30,21 +30,21 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.07                  U     at	s12e1r, x28
-# CHECK-NEXT:  1      1     0.07                  U     brk	#0x8415
-# CHECK-NEXT:  1      1     0.07    *      *      U     clrex
-# CHECK-NEXT:  1      1     0.07    *      *      U     csdb
-# CHECK-NEXT:  1      1     0.07                  U     dcps1
-# CHECK-NEXT:  1      1     0.07                  U     dcps2
-# CHECK-NEXT:  1      1     0.07                  U     dcps3
-# CHECK-NEXT:  1      1     0.07    *      *      U     dmb	sy
-# CHECK-NEXT:  1      1     0.07                  U     hlt	#0x7a67
-# CHECK-NEXT:  1      1     0.07                  U     hvc	#0xecb9
-# CHECK-NEXT:  1      1     0.07    *      *      U     isb
-# CHECK-NEXT:  1      1     0.07    *      *      U     pssbb
-# CHECK-NEXT:  1      1     0.07                  U     smc	#0x7e57
-# CHECK-NEXT:  1      1     0.07                  U     svc	#0x89cb
-# CHECK-NEXT:  1      1     0.07                  U     sysl	x16, #5, c11, c8, #5
+# CHECK-NEXT:  1      1     0.13                  U     at	s12e1r, x28
+# CHECK-NEXT:  1      1     0.13                  U     brk	#0x8415
+# CHECK-NEXT:  1      1     0.13    *      *      U     clrex
+# CHECK-NEXT:  1      1     0.13    *      *      U     csdb
+# CHECK-NEXT:  1      1     0.13                  U     dcps1
+# CHECK-NEXT:  1      1     0.13                  U     dcps2
+# CHECK-NEXT:  1      1     0.13                  U     dcps3
+# CHECK-NEXT:  1      1     0.13    *      *      U     dmb	sy
+# CHECK-NEXT:  1      1     0.13                  U     hlt	#0x7a67
+# CHECK-NEXT:  1      1     0.13                  U     hvc	#0xecb9
+# CHECK-NEXT:  1      1     0.13    *      *      U     isb
+# CHECK-NEXT:  1      1     0.13    *      *      U     pssbb
+# CHECK-NEXT:  1      1     0.13                  U     smc	#0x7e57
+# CHECK-NEXT:  1      1     0.13                  U     svc	#0x89cb
+# CHECK-NEXT:  1      1     0.13                  U     sysl	x16, #5, c11, c8, #5
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V1UnitB

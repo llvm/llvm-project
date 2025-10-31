@@ -23,11 +23,11 @@ entry:
 ; CHECK: .local .align 4 .b8 	__local_depot0[16]
 ; CHECK: mov.b64 %SPL
 
-; CHECK: ld.param.u64 %rd[[A_REG:[0-9]+]], [kernel_func_param_0]
+; CHECK: ld.param.b64 %rd[[A_REG:[0-9]+]], [kernel_func_param_0]
 ; CHECK: cvta.to.global.u64 %rd[[A1_REG:[0-9]+]], %rd[[A_REG]]
 ; CHECK: add.u64 %rd[[SP_REG:[0-9]+]], %SP, 0
-; CHECK: ld.global.f32 %f[[A0_REG:[0-9]+]], [%rd[[A1_REG]]]
-; CHECK: st.local.f32 [{{%rd[0-9]+}}], %f[[A0_REG]]
+; CHECK: ld.global.b32 %r[[A0_REG:[0-9]+]], [%rd[[A1_REG]]]
+; CHECK: st.local.b32 [{{%rd[0-9]+}}], %r[[A0_REG]]
 
   %0 = load float, ptr %a, align 4
   store float %0, ptr %buf, align 4
@@ -44,12 +44,11 @@ entry:
   %arrayidx7 = getelementptr inbounds [16 x i8], ptr %buf, i64 0, i64 3
   store float %3, ptr %arrayidx7, align 4
 
-; CHECK:        .param .b64 param0;
-; CHECK-NEXT:   st.param.b64  [param0], %rd[[A_REG]]
-; CHECK-NEXT:   .param .b64 param1;
-; CHECK-NEXT:   st.param.b64  [param1], %rd[[SP_REG]]
-; CHECK-NEXT:   call.uni
-; CHECK-NEXT:   callee,
+; CHECK-DAG:   .param .b64 param0;
+; CHECK-DAG:   .param .b64 param1;
+; CHECK-DAG:   st.param.b64  [param0], %rd[[A_REG]]
+; CHECK-DAG:   st.param.b64  [param1], %rd[[SP_REG]]
+; CHECK:       call.uni callee,
 
   call void @callee(ptr %a, ptr %buf) #2
   ret void

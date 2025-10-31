@@ -308,6 +308,8 @@ static const StringMap<MachineInfo> TargetMap{
     // RISC-V
     {"elf32-littleriscv", {ELF::EM_RISCV, false, true}},
     {"elf64-littleriscv", {ELF::EM_RISCV, true, true}},
+    {"elf32-bigriscv", {ELF::EM_RISCV, false, false}},
+    {"elf64-bigriscv", {ELF::EM_RISCV, true, false}},
     // PowerPC
     {"elf32-powerpc", {ELF::EM_PPC, false, false}},
     {"elf32-powerpcle", {ELF::EM_PPC, false, true}},
@@ -1079,6 +1081,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           errc::invalid_argument,
           "bad format for --dump-section, expected section=file");
     Config.DumpSection.push_back(Value);
+  }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_extract_section)) {
+    StringRef Value(Arg->getValue());
+    if (Value.split('=').second.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --extract-section, expected section=file");
+    Config.ExtractSection.push_back(Value);
   }
   Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);

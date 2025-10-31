@@ -13,6 +13,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTMutationListener.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
@@ -136,6 +137,7 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
          "modules only.");
 
   llvm::SmallVector<Module *, 4> Worklist;
+  llvm::SmallPtrSet<Module *, 16> Visited;
   Worklist.push_back(Imported);
 
   Module *FoundPrimaryModuleInterface =
@@ -144,18 +146,22 @@ makeTransitiveImportsVisible(ASTContext &Ctx, VisibleModuleSet &VisibleModules,
   while (!Worklist.empty()) {
     Module *Importing = Worklist.pop_back_val();
 
-    if (VisibleModules.isVisible(Importing))
+    if (Visited.count(Importing))
       continue;
+    Visited.insert(Importing);
 
     // FIXME: The ImportLoc here is not meaningful. It may be problematic if we
     // use the sourcelocation loaded from the visible modules.
     VisibleModules.setVisible(Importing, ImportLoc);
 
     if (isImportingModuleUnitFromSameModule(Ctx, Importing, CurrentModule,
-                                            FoundPrimaryModuleInterface))
+                                            FoundPrimaryModuleInterface)) {
       for (Module *TransImported : Importing->Imports)
-        if (!VisibleModules.isVisible(TransImported))
-          Worklist.push_back(TransImported);
+        Worklist.push_back(TransImported);
+
+      for (auto [Exports, _] : Importing->Exports)
+        Worklist.push_back(Exports);
+    }
   }
 }
 
@@ -258,7 +264,8 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
 Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
-                      ModuleIdPath Partition, ModuleImportState &ImportState) {
+                      ModuleIdPath Partition, ModuleImportState &ImportState,
+                      bool SeenNoTrivialPPDirective) {
   assert(getLangOpts().CPlusPlusModules &&
          "should only have module decl in standard C++ modules");
 
@@ -328,18 +335,14 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
           SeenGMF == (bool)this->TheGlobalModuleFragment) &&
          "mismatched global module state");
 
-  // In C++20, the module-declaration must be the first declaration if there
-  // is no global module fragment.
-  if (getLangOpts().CPlusPlusModules && !IsFirstDecl && !SeenGMF) {
+  // In C++20, A module directive may only appear as the first preprocessing
+  // tokens in a file (excluding the global module fragment.).
+  if (getLangOpts().CPlusPlusModules &&
+      (!IsFirstDecl || SeenNoTrivialPPDirective) && !SeenGMF) {
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
-    SourceLocation BeginLoc =
-        ModuleScopes.empty()
-            ? SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
-            : ModuleScopes.back().BeginLoc;
-    if (BeginLoc.isValid()) {
-      Diag(BeginLoc, diag::note_global_module_introducer_missing)
-          << FixItHint::CreateInsertion(BeginLoc, "module;\n");
-    }
+    SourceLocation BeginLoc = PP.getMainFileFirstPPTokenLoc();
+    Diag(BeginLoc, diag::note_global_module_introducer_missing)
+        << FixItHint::CreateInsertion(BeginLoc, "module;\n");
   }
 
   // C++23 [module.unit]p1: ... The identifiers module and import shall not
@@ -395,7 +398,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   case ModuleDeclKind::PartitionInterface: {
     // We can't have parsed or imported a definition of this module or parsed a
     // module map defining it already.
-    if (auto *M = Map.findModule(ModuleName)) {
+    if (auto *M = Map.findOrLoadModule(ModuleName)) {
       Diag(Path[0].getLoc(), diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
@@ -485,6 +488,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // implementation unit importing its interface).  Make this module visible
   // and return the import decl to be added to the current TU.
   if (Interface) {
+    HadImportedNamedModules = true;
 
     makeTransitiveImportsVisible(getASTContext(), VisibleModules, Interface,
                                  Mod, ModuleLoc,
@@ -712,7 +716,13 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       Mod->Kind == Module::ModuleKind::ModulePartitionImplementation) {
     Diag(ExportLoc, diag::err_export_partition_impl)
         << SourceRange(ExportLoc, Path.back().getLoc());
-  } else if (!ModuleScopes.empty() && !currentModuleIsImplementation()) {
+  } else if (ExportLoc.isValid() &&
+             (ModuleScopes.empty() || currentModuleIsImplementation())) {
+    // [module.interface]p1:
+    // An export-declaration shall inhabit a namespace scope and appear in the
+    // purview of a module interface unit.
+    Diag(ExportLoc, diag::err_export_not_in_module_interface);
+  } else if (!ModuleScopes.empty()) {
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
@@ -720,12 +730,9 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       getCurrentModule()->Exports.emplace_back(Mod, false);
     else
       getCurrentModule()->Imports.insert(Mod);
-  } else if (ExportLoc.isValid()) {
-    // [module.interface]p1:
-    // An export-declaration shall inhabit a namespace scope and appear in the
-    // purview of a module interface unit.
-    Diag(ExportLoc, diag::err_export_not_in_module_interface);
   }
+
+  HadImportedNamedModules = true;
 
   return Import;
 }
@@ -765,7 +772,12 @@ void Sema::BuildModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
     Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
         getLangOpts().CurrentModule, DirectiveLoc, false, false);
     (void)ThisModule;
-    assert(ThisModule && "was expecting a module if building one");
+    // For named modules, the current module name is not known while parsing the
+    // global module fragment and lookupModule may return null.
+    assert((getLangOpts().getCompilingModule() ==
+                LangOptionsBase::CMK_ModuleInterface ||
+            ThisModule) &&
+           "was expecting a module if building a Clang module");
   }
 }
 
@@ -942,7 +954,7 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   // HLSL: export declaration is valid only on functions
   if (S.getLangOpts().HLSL) {
     // Export-within-export was already diagnosed in ActOnStartExportDecl
-    if (!dyn_cast<FunctionDecl>(D) && !dyn_cast<ExportDecl>(D)) {
+    if (!isa<FunctionDecl, ExportDecl>(D)) {
       S.Diag(D->getBeginLoc(), diag::err_hlsl_export_not_on_function);
       D->setInvalidDecl();
       return false;
@@ -1100,4 +1112,469 @@ bool Sema::isCurrentModulePurview() const {
   default:
     return false;
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Checking Exposure in modules                                               //
+//===----------------------------------------------------------------------===//
+
+namespace {
+class ExposureChecker {
+public:
+  ExposureChecker(Sema &S) : SemaRef(S) {}
+
+  bool checkExposure(const VarDecl *D, bool Diag);
+  bool checkExposure(const CXXRecordDecl *D, bool Diag);
+  bool checkExposure(const Stmt *S, bool Diag);
+  bool checkExposure(const FunctionDecl *D, bool Diag);
+  bool checkExposure(const NamedDecl *D, bool Diag);
+  void checkExposureInContext(const DeclContext *DC);
+  bool isExposureCandidate(const NamedDecl *D);
+
+  bool isTULocal(QualType Ty);
+  bool isTULocal(const NamedDecl *ND);
+  bool isTULocal(const Expr *E);
+
+  Sema &SemaRef;
+
+private:
+  llvm::DenseSet<const NamedDecl *> ExposureSet;
+  llvm::DenseSet<const NamedDecl *> KnownNonExposureSet;
+};
+
+bool ExposureChecker::isTULocal(QualType Ty) {
+  // [basic.link]p15:
+  // An entity is TU-local if it is
+  // - a type, type alias, namespace, namespace alias, function, variable, or
+  // template that
+  //   -- has internal linkage, or
+  return Ty->getLinkage() == Linkage::Internal;
+
+  // TODO:
+  // [basic.link]p15.2:
+  //   a type with no name that is defined outside a class-specifier, function
+  //   body, or initializer or is introduced by a defining-type-specifier that
+  //   is used to declare only TU-local entities,
+}
+
+bool ExposureChecker::isTULocal(const NamedDecl *D) {
+  if (!D)
+    return false;
+
+  // [basic.link]p15:
+  // An entity is TU-local if it is
+  // - a type, type alias, namespace, namespace alias, function, variable, or
+  // template that
+  //   -- has internal linkage, or
+  if (D->getLinkageInternal() == Linkage::Internal)
+    return true;
+
+  if (D->isInAnonymousNamespace())
+    return true;
+
+  // [basic.link]p15.1.2:
+  // does not have a name with linkage and is declared, or introduced by a
+  // lambda-expression, within the definition of a TU-local entity,
+  if (D->getLinkageInternal() == Linkage::None)
+    if (auto *ND = dyn_cast<NamedDecl>(D->getDeclContext());
+        ND && isTULocal(ND))
+      return true;
+
+  // [basic.link]p15.3, p15.4:
+  // - a specialization of a TU-local template,
+  // - a specialization of a template with any TU-local template argument, or
+  ArrayRef<TemplateArgument> TemplateArgs;
+  NamedDecl *PrimaryTemplate = nullptr;
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    TemplateArgs = CTSD->getTemplateArgs().asArray();
+    PrimaryTemplate = CTSD->getSpecializedTemplate();
+    if (isTULocal(PrimaryTemplate))
+      return true;
+  } else if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D)) {
+    TemplateArgs = VTSD->getTemplateArgs().asArray();
+    PrimaryTemplate = VTSD->getSpecializedTemplate();
+    if (isTULocal(PrimaryTemplate))
+      return true;
+  } else if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (auto *TAList = FD->getTemplateSpecializationArgs())
+      TemplateArgs = TAList->asArray();
+
+    PrimaryTemplate = FD->getPrimaryTemplate();
+    if (isTULocal(PrimaryTemplate))
+      return true;
+  }
+
+  if (!PrimaryTemplate)
+    // Following off, we only check for specializations.
+    return false;
+
+  if (KnownNonExposureSet.count(D))
+    return false;
+
+  for (auto &TA : TemplateArgs) {
+    switch (TA.getKind()) {
+    case TemplateArgument::Type:
+      if (isTULocal(TA.getAsType()))
+        return true;
+      break;
+    case TemplateArgument::Declaration:
+      if (isTULocal(TA.getAsDecl()))
+        return true;
+      break;
+    default:
+      break;
+    }
+  }
+
+  // [basic.link]p15.5
+  // - a specialization of a template whose (possibly instantiated) declaration
+  // is an exposure.
+  if (ExposureSet.count(PrimaryTemplate) ||
+      checkExposure(PrimaryTemplate, /*Diag=*/false))
+    return true;
+
+  // Avoid calling checkExposure again since it is expensive.
+  KnownNonExposureSet.insert(D);
+  return false;
+}
+
+bool ExposureChecker::isTULocal(const Expr *E) {
+  if (!E)
+    return false;
+
+  // [basic.link]p16:
+  //    A value or object is TU-local if either
+  //    - it is of TU-local type,
+  if (isTULocal(E->getType()))
+    return true;
+
+  E = E->IgnoreParenImpCasts();
+  // [basic.link]p16.2:
+  //   - it is, or is a pointer to, a TU-local function or the object associated
+  //   with a TU-local variable,
+  //  - it is an object of class or array type and any of its subobjects or any
+  //  of the objects or functions to which its non-static data members of
+  //  reference type refer is TU-local and is usable in constant expressions, or
+  // FIXME: But how can we know the value of pointers or arrays at compile time?
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    if (auto *FD = dyn_cast_or_null<FunctionDecl>(DRE->getFoundDecl()))
+      return isTULocal(FD);
+    else if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getFoundDecl()))
+      return isTULocal(VD);
+    else if (auto *RD = dyn_cast_or_null<CXXRecordDecl>(DRE->getFoundDecl()))
+      return isTULocal(RD);
+  }
+
+  // TODO:
+  // [basic.link]p16.4:
+  //  it is a reflection value that represents...
+
+  return false;
+}
+
+bool ExposureChecker::isExposureCandidate(const NamedDecl *D) {
+  if (!D)
+    return false;
+
+  // [basic.link]p17:
+  //   If a (possibly instantiated) declaration of, or a deduction guide for,
+  //   a non-TU-local entity in a module interface unit
+  //   (outside the private-module-fragment, if any) or
+  //   module partition is an exposure, the program is ill-formed.
+  Module *M = D->getOwningModule();
+  if (!M || !M->isInterfaceOrPartition())
+    return false;
+
+  if (D->isImplicit())
+    return false;
+
+  // [basic.link]p14:
+  //      A declaration is an exposure if it either names a TU-local entity
+  //      (defined below), ignoring:
+  //      ...
+  //      - friend declarations in a class definition
+  if (D->getFriendObjectKind() &&
+      isa<CXXRecordDecl>(D->getLexicalDeclContext()))
+    return false;
+
+  return true;
+}
+
+bool ExposureChecker::checkExposure(const NamedDecl *D, bool Diag) {
+  if (!isExposureCandidate(D))
+    return false;
+
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    return checkExposure(FD, Diag);
+  if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
+    return checkExposure(FTD->getTemplatedDecl(), Diag);
+
+  if (auto *VD = dyn_cast<VarDecl>(D))
+    return checkExposure(VD, Diag);
+  if (auto *VTD = dyn_cast<VarTemplateDecl>(D))
+    return checkExposure(VTD->getTemplatedDecl(), Diag);
+
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+    return checkExposure(RD, Diag);
+
+  if (auto *CTD = dyn_cast<ClassTemplateDecl>(D))
+    return checkExposure(CTD->getTemplatedDecl(), Diag);
+
+  return false;
+}
+
+bool ExposureChecker::checkExposure(const FunctionDecl *FD, bool Diag) {
+  bool IsExposure = false;
+  if (isTULocal(FD->getReturnType())) {
+    IsExposure = true;
+    if (Diag)
+      SemaRef.Diag(FD->getReturnTypeSourceRange().getBegin(),
+                   diag::warn_exposure)
+          << FD->getReturnType();
+  }
+
+  for (ParmVarDecl *Parms : FD->parameters())
+    if (isTULocal(Parms->getType())) {
+      IsExposure = true;
+      if (Diag)
+        SemaRef.Diag(Parms->getLocation(), diag::warn_exposure)
+            << Parms->getType();
+    }
+
+  bool IsImplicitInstantiation =
+      FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation;
+
+  // [basic.link]p14:
+  //      A declaration is an exposure if it either names a TU-local entity
+  //      (defined below), ignoring:
+  //      - the function-body for a non-inline function or function template
+  //      (but not the deduced return
+  //        type for a (possibly instantiated) definition of a function with a
+  //        declared return type that uses a placeholder type
+  //        ([dcl.spec.auto])),
+  Diag &=
+      (FD->isInlined() || IsImplicitInstantiation) && !FD->isDependentContext();
+
+  IsExposure |= checkExposure(FD->getBody(), Diag);
+  if (IsExposure)
+    ExposureSet.insert(FD);
+
+  return IsExposure;
+}
+
+bool ExposureChecker::checkExposure(const VarDecl *VD, bool Diag) {
+  bool IsExposure = false;
+  // [basic.link]p14:
+  //  A declaration is an exposure if it either names a TU-local entity (defined
+  //  below), ignoring:
+  //  ...
+  //  or defines a constexpr variable initialized to a TU-local value (defined
+  //  below).
+  if (VD->isConstexpr() && isTULocal(VD->getInit())) {
+    IsExposure = true;
+    if (Diag)
+      SemaRef.Diag(VD->getInit()->getExprLoc(), diag::warn_exposure)
+          << VD->getInit();
+  }
+
+  if (isTULocal(VD->getType())) {
+    IsExposure = true;
+    if (Diag)
+      SemaRef.Diag(VD->getLocation(), diag::warn_exposure) << VD->getType();
+  }
+
+  // [basic.link]p14:
+  //   ..., ignoring:
+  //   - the initializer for a variable or variable template (but not the
+  //   variable's type),
+  //
+  // Note: although the spec says to ignore the initializer for all variable,
+  // for the code we generated now for inline variables, it is dangerous if the
+  // initializer of an inline variable is TULocal.
+  Diag &= !VD->getDeclContext()->isDependentContext() && VD->isInline();
+  IsExposure |= checkExposure(VD->getInit(), Diag);
+  if (IsExposure)
+    ExposureSet.insert(VD);
+
+  return IsExposure;
+}
+
+bool ExposureChecker::checkExposure(const CXXRecordDecl *RD, bool Diag) {
+  if (!RD->hasDefinition())
+    return false;
+
+  bool IsExposure = false;
+  for (CXXMethodDecl *Method : RD->methods())
+    IsExposure |= checkExposure(Method, Diag);
+
+  for (FieldDecl *FD : RD->fields()) {
+    if (isTULocal(FD->getType())) {
+      IsExposure = true;
+      if (Diag)
+        SemaRef.Diag(FD->getLocation(), diag::warn_exposure) << FD->getType();
+    }
+  }
+
+  for (const CXXBaseSpecifier &Base : RD->bases()) {
+    if (isTULocal(Base.getType())) {
+      IsExposure = true;
+      if (Diag)
+        SemaRef.Diag(Base.getBaseTypeLoc(), diag::warn_exposure)
+            << Base.getType();
+    }
+  }
+
+  if (IsExposure)
+    ExposureSet.insert(RD);
+
+  return IsExposure;
+}
+
+class ReferenceTULocalChecker : public DynamicRecursiveASTVisitor {
+public:
+  using CallbackTy = std::function<void(DeclRefExpr *, ValueDecl *)>;
+
+  ReferenceTULocalChecker(ExposureChecker &C, CallbackTy &&Callback)
+      : Checker(C), Callback(std::move(Callback)) {}
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+    ValueDecl *Referenced = DRE->getDecl();
+    if (!Referenced)
+      return true;
+
+    if (!Checker.isTULocal(Referenced))
+      // We don't care if the referenced declaration is not TU-local.
+      return true;
+
+    Qualifiers Qual = DRE->getType().getQualifiers();
+    // [basic.link]p14:
+    //      A declaration is an exposure if it either names a TU-local entity
+    //      (defined below), ignoring:
+    //      ...
+    //      - any reference to a non-volatile const object ...
+    if (Qual.hasConst() && !Qual.hasVolatile())
+      return true;
+
+    // [basic.link]p14:
+    // ..., ignoring:
+    //   ...
+    //   (p14.4) - ... or reference with internal or no linkage initialized with
+    //   a constant expression that is not an odr-use
+    ASTContext &Context = Referenced->getASTContext();
+    Linkage L = Referenced->getLinkageInternal();
+    if (DRE->isNonOdrUse() && (L == Linkage::Internal || L == Linkage::None))
+      if (auto *VD = dyn_cast<VarDecl>(Referenced);
+          VD && VD->getInit() && !VD->getInit()->isValueDependent() &&
+          VD->getInit()->isConstantInitializer(Context, /*IsForRef=*/false))
+        return true;
+
+    Callback(DRE, Referenced);
+    return true;
+  }
+
+  ExposureChecker &Checker;
+  CallbackTy Callback;
+};
+
+bool ExposureChecker::checkExposure(const Stmt *S, bool Diag) {
+  if (!S)
+    return false;
+
+  bool HasReferencedTULocals = false;
+  ReferenceTULocalChecker Checker(
+      *this, [this, &HasReferencedTULocals, Diag](DeclRefExpr *DRE,
+                                                  ValueDecl *Referenced) {
+        if (Diag) {
+          SemaRef.Diag(DRE->getExprLoc(), diag::warn_exposure) << Referenced;
+        }
+        HasReferencedTULocals = true;
+      });
+  Checker.TraverseStmt(const_cast<Stmt *>(S));
+  return HasReferencedTULocals;
+}
+
+void ExposureChecker::checkExposureInContext(const DeclContext *DC) {
+  for (auto *TopD : DC->noload_decls()) {
+    auto *TopND = dyn_cast<NamedDecl>(TopD);
+    if (!TopND)
+      continue;
+
+    if (auto *Namespace = dyn_cast<NamespaceDecl>(TopND)) {
+      checkExposureInContext(Namespace);
+      continue;
+    }
+
+    // [basic.link]p17:
+    //   If a (possibly instantiated) declaration of, or a deduction guide for,
+    //   a non-TU-local entity in a module interface unit
+    //   (outside the private-module-fragment, if any) or
+    //   module partition is an exposure, the program is ill-formed.
+    if (!TopND->isFromASTFile() && isExposureCandidate(TopND) &&
+        !isTULocal(TopND))
+      checkExposure(TopND, /*Diag=*/true);
+  }
+}
+
+} // namespace
+
+void Sema::checkExposure(const TranslationUnitDecl *TU) {
+  if (!TU)
+    return;
+
+  ExposureChecker Checker(*this);
+
+  Module *M = TU->getOwningModule();
+  if (M && M->isInterfaceOrPartition())
+    Checker.checkExposureInContext(TU);
+
+  // [basic.link]p18:
+  //   If a declaration that appears in one translation unit names a TU-local
+  //   entity declared in another translation unit that is not a header unit,
+  //   the program is ill-formed.
+  for (auto FDAndInstantiationLocPair : PendingCheckReferenceForTULocal) {
+    FunctionDecl *FD = FDAndInstantiationLocPair.first;
+    SourceLocation PointOfInstantiation = FDAndInstantiationLocPair.second;
+
+    if (!FD->hasBody())
+      continue;
+
+    ReferenceTULocalChecker(Checker, [&, this](DeclRefExpr *DRE,
+                                               ValueDecl *Referenced) {
+      // A "defect" in current implementation. Now an implicit instantiation of
+      // a template, the instantiation is considered to be in the same module
+      // unit as the template instead of the module unit where the instantiation
+      // happens.
+      //
+      // See test/Modules/Exposre-2.cppm for example.
+      if (!Referenced->isFromASTFile())
+        return;
+
+      if (!Referenced->isInAnotherModuleUnit())
+        return;
+
+      // This is not standard conforming. But given there are too many static
+      // (inline) functions in headers in existing code, it is more user
+      // friendly to ignore them temporarily now. maybe we can have another flag
+      // for this.
+      if (Referenced->getOwningModule()->isExplicitGlobalModule() &&
+          isa<FunctionDecl>(Referenced))
+        return;
+
+      Diag(PointOfInstantiation,
+           diag::warn_reference_tu_local_entity_in_other_tu)
+          << FD << Referenced
+          << Referenced->getOwningModule()->getTopLevelModuleName();
+    }).TraverseStmt(FD->getBody());
+  }
+}
+
+void Sema::checkReferenceToTULocalFromOtherTU(
+    FunctionDecl *FD, SourceLocation PointOfInstantiation) {
+  // Checking if a declaration have any reference to TU-local entities in other
+  // TU is expensive. Try to avoid it as much as possible.
+  if (!FD || !HadImportedNamedModules)
+    return;
+
+  PendingCheckReferenceForTULocal.push_back(
+      std::make_pair(FD, PointOfInstantiation));
 }

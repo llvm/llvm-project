@@ -204,7 +204,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:  # %bb.1: # %cond.load
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-SLOW-NEXT:    vmv.x.s a1, v8
-; RV64-SLOW-NEXT:    lwu a2, 4(a1)
+; RV64-SLOW-NEXT:    lw a2, 4(a1)
 ; RV64-SLOW-NEXT:    lwu a1, 0(a1)
 ; RV64-SLOW-NEXT:    slli a2, a2, 32
 ; RV64-SLOW-NEXT:    or a1, a2, a1
@@ -216,7 +216,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
 ; RV64-SLOW-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-SLOW-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-SLOW-NEXT:    vmv.x.s a0, v8
-; RV64-SLOW-NEXT:    lwu a1, 4(a0)
+; RV64-SLOW-NEXT:    lw a1, 4(a0)
 ; RV64-SLOW-NEXT:    lwu a0, 0(a0)
 ; RV64-SLOW-NEXT:    slli a1, a1, 32
 ; RV64-SLOW-NEXT:    or a0, a1, a0
@@ -575,7 +575,7 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
 ; FAST-NEXT:    vse32.v v8, (a1)
 ; FAST-NEXT:    ret
   %mask = icmp eq <2 x i32> %m, zeroinitializer
-  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> undef)
+  %load = call <2 x i32> @llvm.masked.load.v2i32(ptr %a, i32 1, <2 x i1> %mask, <2 x i32> poison)
   store <2 x i32> %load, ptr %res_ptr
   ret void
 }

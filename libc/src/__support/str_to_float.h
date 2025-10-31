@@ -16,6 +16,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H
 
 #include "hdr/errno_macros.h" // For ERANGE
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/optional.h"
@@ -32,8 +33,6 @@
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -1135,7 +1134,7 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
 
   int error = 0;
 
-  size_t index = static_cast<size_t>(first_non_whitespace(src) - src);
+  size_t index = first_non_whitespace(src);
 
   if (src[index] == '+' || src[index] == '-') {
     sign = src[index];

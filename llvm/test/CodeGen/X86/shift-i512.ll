@@ -10,7 +10,7 @@ define <8 x i64> @shl_i512_1(<8 x i64> %a)  {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    valignq {{.*#+}} zmm1 = zmm0[3,4,5,6,7,0,1,2]
 ; AVX512VL-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512VL-NEXT:    vpsllq $1, %xmm0, %xmm3
+; AVX512VL-NEXT:    vpaddq %xmm0, %xmm0, %xmm3
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
 ; AVX512VL-NEXT:    vpsrlq $63, %xmm4, %xmm4
 ; AVX512VL-NEXT:    vpaddq %xmm2, %xmm2, %xmm2
@@ -34,7 +34,7 @@ define <8 x i64> @shl_i512_1(<8 x i64> %a)  {
 ; AVX512VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512VBMI-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
 ; AVX512VBMI-NEXT:    vpshldq $1, %xmm3, %xmm2, %xmm3
-; AVX512VBMI-NEXT:    vpsllq $1, %xmm0, %xmm4
+; AVX512VBMI-NEXT:    vpaddq %xmm0, %xmm0, %xmm4
 ; AVX512VBMI-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
 ; AVX512VBMI-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512VBMI-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[2,3,2,3,6,7,6,7]
@@ -48,46 +48,20 @@ define <8 x i64> @shl_i512_1(<8 x i64> %a)  {
 ;
 ; ZNVER4-LABEL: shl_i512_1:
 ; ZNVER4:       # %bb.0:
-; ZNVER4-NEXT:    vextracti32x4 $3, %zmm0, %xmm1
-; ZNVER4-NEXT:    vmovq %xmm0, %rdx
-; ZNVER4-NEXT:    vpextrq $1, %xmm0, %r9
-; ZNVER4-NEXT:    vpextrq $1, %xmm1, %rax
-; ZNVER4-NEXT:    vmovq %xmm1, %rcx
 ; ZNVER4-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
-; ZNVER4-NEXT:    shrq $63, %rdx
-; ZNVER4-NEXT:    vpextrq $1, %xmm1, %rsi
-; ZNVER4-NEXT:    vmovq %xmm1, %rdi
-; ZNVER4-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; ZNVER4-NEXT:    leaq (%rdx,%r9,2), %rdx
-; ZNVER4-NEXT:    shrq $63, %r9
-; ZNVER4-NEXT:    vpsllq $1, %xmm0, %xmm0
-; ZNVER4-NEXT:    vmovq %xmm1, %r10
-; ZNVER4-NEXT:    vpextrq $1, %xmm1, %r8
-; ZNVER4-NEXT:    leaq (%r9,%r10,2), %r9
-; ZNVER4-NEXT:    shrq $63, %r10
-; ZNVER4-NEXT:    vmovq %rdx, %xmm4
-; ZNVER4-NEXT:    leaq (%r10,%r8,2), %r10
-; ZNVER4-NEXT:    shrq $63, %r8
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
-; ZNVER4-NEXT:    leaq (%r8,%rdi,2), %r8
-; ZNVER4-NEXT:    shrq $63, %rdi
-; ZNVER4-NEXT:    leaq (%rdi,%rsi,2), %rdi
-; ZNVER4-NEXT:    shrq $63, %rsi
-; ZNVER4-NEXT:    leaq (%rsi,%rcx,2), %rsi
-; ZNVER4-NEXT:    shrq $63, %rcx
-; ZNVER4-NEXT:    vmovq %r8, %xmm3
-; ZNVER4-NEXT:    leaq (%rcx,%rax,2), %rax
-; ZNVER4-NEXT:    vmovq %rsi, %xmm2
-; ZNVER4-NEXT:    vmovq %rax, %xmm1
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; ZNVER4-NEXT:    vmovq %rdi, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; ZNVER4-NEXT:    vmovq %r10, %xmm3
+; ZNVER4-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; ZNVER4-NEXT:    vpaddq %xmm0, %xmm0, %xmm4
 ; ZNVER4-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; ZNVER4-NEXT:    vmovq %r9, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; ZNVER4-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; ZNVER4-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; ZNVER4-NEXT:    vpshldq $1, %xmm3, %xmm2, %xmm3
+; ZNVER4-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; ZNVER4-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[2,3,2,3,6,7,6,7]
+; ZNVER4-NEXT:    vpshldq $1, %ymm1, %ymm2, %ymm1
+; ZNVER4-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
+; ZNVER4-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm1
+; ZNVER4-NEXT:    vpshufd {{.*#+}} zmm3 = zmm0[2,3,2,3,6,7,6,7,10,11,10,11,14,15,14,15]
+; ZNVER4-NEXT:    vpshldq $1, %zmm0, %zmm3, %zmm0
+; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm1[0],zmm0[0],zmm1[2],zmm0[2],zmm1[4],zmm0[4],zmm1[6],zmm0[6]
 ; ZNVER4-NEXT:    retq
   %d = bitcast <8 x i64> %a to i512
   %s = shl i512 %d, 1
@@ -142,65 +116,21 @@ define <8 x i64> @lshr_i512_1(<8 x i64> %a)  {
 ;
 ; ZNVER4-LABEL: lshr_i512_1:
 ; ZNVER4:       # %bb.0:
-; ZNVER4-NEXT:    pushq %rbx
-; ZNVER4-NEXT:    .cfi_def_cfa_offset 16
-; ZNVER4-NEXT:    .cfi_offset %rbx, -16
+; ZNVER4-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
 ; ZNVER4-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; ZNVER4-NEXT:    vmovq %xmm0, %r10
-; ZNVER4-NEXT:    vpextrq $1, %xmm0, %rsi
-; ZNVER4-NEXT:    vpextrq $1, %xmm1, %rcx
-; ZNVER4-NEXT:    vmovq %xmm1, %r9
-; ZNVER4-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
-; ZNVER4-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
-; ZNVER4-NEXT:    shrq %r10
-; ZNVER4-NEXT:    vpextrq $1, %xmm0, %rax
-; ZNVER4-NEXT:    vmovq %xmm0, %rdx
-; ZNVER4-NEXT:    vmovq %xmm1, %rdi
-; ZNVER4-NEXT:    vpextrq $1, %xmm1, %r11
-; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; ZNVER4-NEXT:    movq %rdx, %r8
-; ZNVER4-NEXT:    shrq %r8
-; ZNVER4-NEXT:    shlq $63, %rax
-; ZNVER4-NEXT:    movq %rdi, %rbx
-; ZNVER4-NEXT:    shrq %rbx
-; ZNVER4-NEXT:    shlq $63, %rdx
-; ZNVER4-NEXT:    shlq $63, %rdi
-; ZNVER4-NEXT:    vpsrlq $1, %xmm0, %xmm0
-; ZNVER4-NEXT:    orq %r8, %rax
-; ZNVER4-NEXT:    movq %r11, %r8
-; ZNVER4-NEXT:    shlq $63, %r8
-; ZNVER4-NEXT:    shrq %r11
-; ZNVER4-NEXT:    orq %rbx, %r8
-; ZNVER4-NEXT:    movq %r9, %rbx
-; ZNVER4-NEXT:    orq %r11, %rdx
-; ZNVER4-NEXT:    movq %rsi, %r11
-; ZNVER4-NEXT:    shrq %r11
-; ZNVER4-NEXT:    shlq $63, %rbx
-; ZNVER4-NEXT:    shrq %r9
-; ZNVER4-NEXT:    shlq $63, %rsi
-; ZNVER4-NEXT:    vmovq %rax, %xmm4
-; ZNVER4-NEXT:    orq %r11, %rbx
-; ZNVER4-NEXT:    movq %rcx, %r11
-; ZNVER4-NEXT:    shlq $63, %r11
-; ZNVER4-NEXT:    shrq %rcx
-; ZNVER4-NEXT:    orq %r10, %rsi
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm4[0],xmm0[0]
-; ZNVER4-NEXT:    orq %r9, %r11
-; ZNVER4-NEXT:    orq %rdi, %rcx
-; ZNVER4-NEXT:    vmovq %rbx, %xmm3
-; ZNVER4-NEXT:    vmovq %rcx, %xmm1
-; ZNVER4-NEXT:    vmovq %r11, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; ZNVER4-NEXT:    vmovq %rsi, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; ZNVER4-NEXT:    vmovq %r8, %xmm3
-; ZNVER4-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; ZNVER4-NEXT:    vmovq %rdx, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; ZNVER4-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; ZNVER4-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; ZNVER4-NEXT:    popq %rbx
-; ZNVER4-NEXT:    .cfi_def_cfa_offset 8
+; ZNVER4-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
+; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
+; ZNVER4-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; ZNVER4-NEXT:    vpshufd {{.*#+}} ymm3 = ymm0[2,3,2,3,6,7,6,7]
+; ZNVER4-NEXT:    vpshldq $63, %xmm4, %xmm2, %xmm4
+; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
+; ZNVER4-NEXT:    vpshldq $63, %ymm3, %ymm1, %ymm1
+; ZNVER4-NEXT:    vpshufd {{.*#+}} zmm3 = zmm0[2,3,2,3,6,7,6,7,10,11,10,11,14,15,14,15]
+; ZNVER4-NEXT:    vpsrlq $1, %xmm2, %xmm2
+; ZNVER4-NEXT:    vpshldq $63, %zmm0, %zmm3, %zmm0
+; ZNVER4-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
+; ZNVER4-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; ZNVER4-NEXT:    retq
   %d = bitcast <8 x i64> %a to i512
   %s = lshr i512 %d, 1
@@ -255,65 +185,21 @@ define <8 x i64> @ashr_i512_1(<8 x i64> %a)  {
 ;
 ; ZNVER4-LABEL: ashr_i512_1:
 ; ZNVER4:       # %bb.0:
-; ZNVER4-NEXT:    pushq %rbx
-; ZNVER4-NEXT:    .cfi_def_cfa_offset 16
-; ZNVER4-NEXT:    .cfi_offset %rbx, -16
+; ZNVER4-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
 ; ZNVER4-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; ZNVER4-NEXT:    vmovq %xmm0, %r10
-; ZNVER4-NEXT:    vpextrq $1, %xmm0, %rsi
-; ZNVER4-NEXT:    vpextrq $1, %xmm1, %rcx
-; ZNVER4-NEXT:    vmovq %xmm1, %r9
-; ZNVER4-NEXT:    vextracti32x4 $2, %zmm0, %xmm1
-; ZNVER4-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
-; ZNVER4-NEXT:    shrq %r10
-; ZNVER4-NEXT:    vpextrq $1, %xmm0, %rax
-; ZNVER4-NEXT:    vmovq %xmm0, %rdx
-; ZNVER4-NEXT:    vmovq %xmm1, %rdi
-; ZNVER4-NEXT:    vpextrq $1, %xmm1, %r11
-; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; ZNVER4-NEXT:    movq %rdx, %r8
-; ZNVER4-NEXT:    shrq %r8
-; ZNVER4-NEXT:    shlq $63, %rax
-; ZNVER4-NEXT:    movq %rdi, %rbx
-; ZNVER4-NEXT:    shrq %rbx
-; ZNVER4-NEXT:    shlq $63, %rdx
-; ZNVER4-NEXT:    shlq $63, %rdi
-; ZNVER4-NEXT:    vpsraq $1, %xmm0, %xmm0
-; ZNVER4-NEXT:    orq %r8, %rax
-; ZNVER4-NEXT:    movq %r11, %r8
-; ZNVER4-NEXT:    shlq $63, %r8
-; ZNVER4-NEXT:    shrq %r11
-; ZNVER4-NEXT:    orq %rbx, %r8
-; ZNVER4-NEXT:    movq %r9, %rbx
-; ZNVER4-NEXT:    orq %r11, %rdx
-; ZNVER4-NEXT:    movq %rsi, %r11
-; ZNVER4-NEXT:    shrq %r11
-; ZNVER4-NEXT:    shlq $63, %rbx
-; ZNVER4-NEXT:    shrq %r9
-; ZNVER4-NEXT:    shlq $63, %rsi
-; ZNVER4-NEXT:    vmovq %rax, %xmm4
-; ZNVER4-NEXT:    orq %r11, %rbx
-; ZNVER4-NEXT:    movq %rcx, %r11
-; ZNVER4-NEXT:    shlq $63, %r11
-; ZNVER4-NEXT:    shrq %rcx
-; ZNVER4-NEXT:    orq %r10, %rsi
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm4[0],xmm0[0]
-; ZNVER4-NEXT:    orq %r9, %r11
-; ZNVER4-NEXT:    orq %rdi, %rcx
-; ZNVER4-NEXT:    vmovq %rbx, %xmm3
-; ZNVER4-NEXT:    vmovq %rcx, %xmm1
-; ZNVER4-NEXT:    vmovq %r11, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; ZNVER4-NEXT:    vmovq %rsi, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; ZNVER4-NEXT:    vmovq %r8, %xmm3
-; ZNVER4-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
-; ZNVER4-NEXT:    vmovq %rdx, %xmm2
-; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; ZNVER4-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
-; ZNVER4-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; ZNVER4-NEXT:    popq %rbx
-; ZNVER4-NEXT:    .cfi_def_cfa_offset 8
+; ZNVER4-NEXT:    vextracti32x4 $3, %zmm0, %xmm2
+; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[2,3,2,3]
+; ZNVER4-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; ZNVER4-NEXT:    vpshufd {{.*#+}} ymm3 = ymm0[2,3,2,3,6,7,6,7]
+; ZNVER4-NEXT:    vpshldq $63, %xmm4, %xmm2, %xmm4
+; ZNVER4-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
+; ZNVER4-NEXT:    vpshldq $63, %ymm3, %ymm1, %ymm1
+; ZNVER4-NEXT:    vpshufd {{.*#+}} zmm3 = zmm0[2,3,2,3,6,7,6,7,10,11,10,11,14,15,14,15]
+; ZNVER4-NEXT:    vpsraq $1, %xmm2, %xmm2
+; ZNVER4-NEXT:    vpshldq $63, %zmm0, %zmm3, %zmm0
+; ZNVER4-NEXT:    vinserti128 $1, %xmm2, %ymm4, %ymm2
+; ZNVER4-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; ZNVER4-NEXT:    vpunpcklqdq {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[2],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
 ; ZNVER4-NEXT:    retq
   %d = bitcast <8 x i64> %a to i512
   %s = ashr i512 %d, 1

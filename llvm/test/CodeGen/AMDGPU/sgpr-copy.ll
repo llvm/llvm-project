@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}phi1:
 ; CHECK: s_buffer_load_dword [[DST:s[0-9]]], {{s\[[0-9]+:[0-9]+\]}}, 0x0
@@ -256,7 +256,7 @@ endif:                                            ; preds = %else, %if
 define amdgpu_kernel void @copy1(ptr addrspace(1) %out, ptr addrspace(1) %in0) {
 entry:
   %tmp = load float, ptr addrspace(1) %in0
-  %tmp1 = fcmp oeq float %tmp, 0.000000e+00
+  %tmp1 = fcmp one float %tmp, 0.000000e+00
   br i1 %tmp1, label %if0, label %endif
 
 if0:                                              ; preds = %entry

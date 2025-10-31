@@ -149,6 +149,67 @@ TEST(BasicBlockDbgInfoTest, SplitBasicBlockBefore) {
   ASSERT_TRUE(I2->hasDbgRecords());
 }
 
+TEST(BasicBlockDbgInfoTest, DropSourceAtomOnSplit) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"---(
+    define dso_local void @func() !dbg !10 {
+      %1 = alloca i32, align 4
+      ret void, !dbg !DILocation(line: 3, column: 2, scope: !10, atomGroup: 1, atomRank: 1)
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2, !3}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "dummy", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "dummy", directory: "dummy")
+    !2 = !{i32 7, !"Dwarf Version", i32 5}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+    !10 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13, keyInstructions: true)
+    !11 = !DISubroutineType(types: !12)
+    !12 = !{null}
+    !13 = !{}
+    !14 = !DILocalVariable(name: "a", scope: !10, file: !1, line: 2, type: !15)
+    !15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  )---");
+  ASSERT_TRUE(M);
+
+  Function *F = M->getFunction("func");
+
+  // Test splitBasicBlockBefore.
+  {
+    BasicBlock &BB = F->back();
+    // Split at `ret void`.
+    BasicBlock *Before =
+        BB.splitBasicBlockBefore(std::prev(BB.end(), 1), "before");
+    const DebugLoc &BrToAfterDL = Before->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(BrToAfterDL);
+    EXPECT_EQ(BrToAfterDL->getAtomGroup(), 0u);
+
+    BasicBlock *After = Before->getSingleSuccessor();
+    ASSERT_TRUE(After);
+    const DebugLoc &OrigTerminatorDL = After->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(OrigTerminatorDL);
+    EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 1u);
+  }
+
+  // Test splitBasicBlock.
+  {
+    BasicBlock &BB = F->back();
+    // Split at `ret void`.
+    BasicBlock *After = BB.splitBasicBlock(std::prev(BB.end(), 1), "before");
+
+    const DebugLoc &OrigTerminatorDL = After->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(OrigTerminatorDL);
+    EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 1u);
+
+    BasicBlock *Before = After->getSinglePredecessor();
+    ASSERT_TRUE(Before);
+    const DebugLoc &BrToAfterDL = Before->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(BrToAfterDL);
+    EXPECT_EQ(BrToAfterDL->getAtomGroup(), 0u);
+  }
+}
+
 TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"(

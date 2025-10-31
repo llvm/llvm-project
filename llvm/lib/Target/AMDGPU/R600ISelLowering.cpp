@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
@@ -1448,7 +1449,7 @@ CCAssignFn *R600TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::AMDGPU_LS:
     return CC_R600;
   default:
-    report_fatal_error("Unsupported calling convention.");
+    reportFatalUsageError("unsupported calling convention");
   }
 }
 

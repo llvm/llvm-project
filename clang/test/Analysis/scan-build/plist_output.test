@@ -1,5 +1,3 @@
-REQUIRES: shell
-
 RUN: rm -rf %t.output_dir && mkdir %t.output_dir
 RUN: %scan-build -plist -o %t.output_dir %clang -S %S/Inputs/single_null_dereference.c \
 RUN:     | FileCheck %s -check-prefix CHECK-STDOUT

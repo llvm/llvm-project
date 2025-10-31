@@ -335,7 +335,8 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   BitcastBuffer Buffer(FullBitWidth);
   size_t BuffSize = FullBitWidth.roundToBytes();
-  if (!CheckBitcastType(S, OpPC, Ptr.getType(), /*IsToType=*/false))
+  QualType DataType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
+  if (!CheckBitcastType(S, OpPC, DataType, /*IsToType=*/false))
     return false;
 
   bool Success = readPointerToBuffer(S.getContext(), Ptr, Buffer,
@@ -370,8 +371,8 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   assert(FromPtr.isBlockPointer());
   assert(ToPtr.isBlockPointer());
 
-  QualType FromType = FromPtr.getType();
-  QualType ToType = ToPtr.getType();
+  QualType FromType = FromPtr.getFieldDesc()->getDataType(S.getASTContext());
+  QualType ToType = ToPtr.getFieldDesc()->getDataType(S.getASTContext());
 
   if (!CheckBitcastType(S, OpPC, ToType, /*IsToType=*/true))
     return false;
@@ -402,7 +403,9 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
           if (llvm::sys::IsBigEndianHost)
             swapBytes(M.get(), NumBits.roundToBytes());
 
-          P.deref<Floating>() = Floating::bitcastFromMemory(M.get(), Semantics);
+          Floating R = S.allocFloat(Semantics);
+          Floating::bitcastFromMemory(M.get(), Semantics, &R);
+          P.deref<Floating>() = R;
           P.initialize();
           return true;
         }
@@ -438,13 +441,27 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
         if (llvm::sys::IsBigEndianHost)
           swapBytes(Memory.get(), FullBitWidth.roundToBytes());
 
-        BITCAST_TYPE_SWITCH_FIXED_SIZE(T, {
-          if (BitWidth.nonZero())
-            P.deref<T>() = T::bitcastFromMemory(Memory.get(), T::bitWidth())
-                               .truncate(BitWidth.getQuantity());
-          else
-            P.deref<T>() = T::zero();
-        });
+        if (T == PT_IntAPS) {
+          P.deref<IntegralAP<true>>() =
+              S.allocAP<IntegralAP<true>>(FullBitWidth.getQuantity());
+          IntegralAP<true>::bitcastFromMemory(Memory.get(),
+                                              FullBitWidth.getQuantity(),
+                                              &P.deref<IntegralAP<true>>());
+        } else if (T == PT_IntAP) {
+          P.deref<IntegralAP<false>>() =
+              S.allocAP<IntegralAP<false>>(FullBitWidth.getQuantity());
+          IntegralAP<false>::bitcastFromMemory(Memory.get(),
+                                               FullBitWidth.getQuantity(),
+                                               &P.deref<IntegralAP<false>>());
+        } else {
+          BITCAST_TYPE_SWITCH_FIXED_SIZE(T, {
+            if (BitWidth.nonZero())
+              P.deref<T>() = T::bitcastFromMemory(Memory.get(), T::bitWidth())
+                                 .truncate(BitWidth.getQuantity());
+            else
+              P.deref<T>() = T::zero();
+          });
+        }
         P.initialize();
         return true;
       });

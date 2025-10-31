@@ -35,25 +35,28 @@ static_assert(!CanExtract<std::flat_multimap<int, int> const&>);
 static_assert(!CanExtract<std::flat_multimap<int, int> const&&>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using M = std::flat_multimap<int, int, std::less<int>, KeyContainer, ValueContainer>;
   M m     = M({1, 2, 2, 2, 3, 3}, {4, 5, 6, 7, 8, 9});
 
   std::same_as<typename M::containers> auto containers = std::move(m).extract();
 
-  auto expected_keys   = {1, 2, 2, 2, 3, 3};
-  auto expected_values = {4, 5, 6, 7, 8, 9};
+  auto expected_keys = {1, 2, 2, 2, 3, 3};
   assert(std::ranges::equal(containers.keys, expected_keys));
-  assert(std::ranges::equal(containers.values, expected_values));
+  check_possible_values(
+      containers.values, std::vector<std::vector<int>>{{4}, {5, 6, 7}, {5, 6, 7}, {5, 6, 7}, {8, 9}, {8, 9}});
   check_invariant(m);
   LIBCPP_ASSERT(m.empty());
   LIBCPP_ASSERT(m.keys().size() == 0);
   LIBCPP_ASSERT(m.values().size() == 0);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<int>>();
-  test<std::deque<int>, std::vector<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque<int>, std::vector<int>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<int>>();
   test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
   {
@@ -69,7 +72,7 @@ int main(int, char**) {
     LIBCPP_ASSERT(m.values().size() == 0);
   }
 
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
     using KeyContainer   = std::vector<int>;
     using ValueContainer = ThrowOnMoveContainer<int>;
@@ -89,5 +92,15 @@ int main(int, char**) {
     }
 #endif
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

@@ -701,7 +701,7 @@ define void @test_revdv4f64_sve2p1(ptr %a) #1 {
 ; CHECK-LABEL: test_revdv4f64_sve2p1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    revd z0.q, p0/m, z0.q
 ; CHECK-NEXT:    revd z1.q, p0/m, z1.q
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -710,7 +710,7 @@ define void @test_revdv4f64_sve2p1(ptr %a) #1 {
 ; NONEON-NOSVE-LABEL: test_revdv4f64_sve2p1:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [x0]
-; NONEON-NOSVE-NEXT:    ptrue p0.d
+; NONEON-NOSVE-NEXT:    ptrue p0.d, vl2
 ; NONEON-NOSVE-NEXT:    revd z0.q, p0/m, z0.q
 ; NONEON-NOSVE-NEXT:    revd z1.q, p0/m, z1.q
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [x0]

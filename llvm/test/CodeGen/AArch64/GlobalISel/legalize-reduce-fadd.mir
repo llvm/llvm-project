@@ -10,10 +10,11 @@ body:             |
 
     ; CHECK-LABEL: name: fadd_v2s32
     ; CHECK: liveins: $d0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[VECREDUCE_FADD:%[0-9]+]]:_(s32) = G_VECREDUCE_FADD [[COPY]](<2 x s32>)
-    ; CHECK: $w0 = COPY [[VECREDUCE_FADD]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[VECREDUCE_FADD:%[0-9]+]]:_(s32) = G_VECREDUCE_FADD [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: $w0 = COPY [[VECREDUCE_FADD]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(s32) = G_VECREDUCE_FADD %0(<2 x s32>)
     $w0 = COPY %1(s32)
@@ -29,10 +30,11 @@ body:             |
 
     ; CHECK-LABEL: name: fadd_v2s64
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[VECREDUCE_FADD:%[0-9]+]]:_(s64) = G_VECREDUCE_FADD [[COPY]](<2 x s64>)
-    ; CHECK: $x0 = COPY [[VECREDUCE_FADD]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[VECREDUCE_FADD:%[0-9]+]]:_(s64) = G_VECREDUCE_FADD [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[VECREDUCE_FADD]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<2 x s64>) = COPY $q0
     %2:_(s64) = G_VECREDUCE_FADD %0(<2 x s64>)
     $x0 = COPY %2(s64)
@@ -49,16 +51,17 @@ body:             |
     ; This is a power-of-2 legalization, so use a tree reduction.
     ; CHECK-LABEL: name: fadd_v8s64
     ; CHECK: liveins: $q0, $q1, $q2, $q3
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-    ; CHECK: [[FADD:%[0-9]+]]:_(<2 x s64>) = G_FADD [[COPY]], [[COPY1]]
-    ; CHECK: [[FADD1:%[0-9]+]]:_(<2 x s64>) = G_FADD [[COPY2]], [[COPY3]]
-    ; CHECK: [[FADD2:%[0-9]+]]:_(<2 x s64>) = G_FADD [[FADD]], [[FADD1]]
-    ; CHECK: [[VECREDUCE_FADD:%[0-9]+]]:_(s64) = G_VECREDUCE_FADD [[FADD2]](<2 x s64>)
-    ; CHECK: $x0 = COPY [[VECREDUCE_FADD]](s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(<2 x s64>) = G_FADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FADD1:%[0-9]+]]:_(<2 x s64>) = G_FADD [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: [[FADD2:%[0-9]+]]:_(<2 x s64>) = G_FADD [[FADD]], [[FADD1]]
+    ; CHECK-NEXT: [[VECREDUCE_FADD:%[0-9]+]]:_(s64) = G_VECREDUCE_FADD [[FADD2]](<2 x s64>)
+    ; CHECK-NEXT: $x0 = COPY [[VECREDUCE_FADD]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s64>) = COPY $q2

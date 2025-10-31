@@ -38,8 +38,8 @@
 ; CHECK-NEXT:   .quad   liveConstant
 ; CHECK-NEXT:   .quad   0
 ; CHECK-NEXT:   .quad   1
-; CHECK-NEXT:   .quad   spilledValue
-; CHECK-NEXT:   .quad   144
+; CHECK-NEXT:   .quad   liveArgs
+; CHECK-NEXT:   .quad   0
 ; CHECK-NEXT:   .quad   1
 ; CHECK-NEXT:   .quad   directFrameIdx
 ; CHECK-NEXT:   .quad   48
@@ -278,7 +278,7 @@ define void @liveConstant() {
 ;
 ; Verify 28 stack map entries.
 ;
-; CHECK-LABEL:  .word   .L{{.*}}-spilledValue
+; CHECK-LABEL:  .word   .L{{.*}}-liveArgs
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .half   28
 ;
@@ -290,9 +290,9 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .half   2
 ; CHECK-NEXT:   .half   0
 ; CHECK-NEXT:   .word
-define void @spilledValue(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27) {
+define void @liveArgs(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i8 %l25, i16 zeroext %l26, i32 signext %l27) {
 entry:
-  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 11, i32 28, ptr null, i32 5, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 11, i32 28, ptr null, i32 5, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i8 %l25, i16 %l26, i32 %l27)
   ret void
 }
 

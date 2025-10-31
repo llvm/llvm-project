@@ -99,7 +99,7 @@ public:
   TraversalKind GetTraversalKind() const { return Traversal; }
 
   void Visit(const Decl *D, bool VisitLocs = false) {
-    if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isImplicit())
+    if (Traversal == TK_IgnoreUnlessSpelledInSource && D && D->isImplicit())
       return;
 
     getNodeDelegate().AddChild([=] {
@@ -394,12 +394,14 @@ public:
   }
   void VisitMemberPointerType(const MemberPointerType *T) {
     // FIXME: Provide a NestedNameSpecifier visitor.
-    NestedNameSpecifier *Qualifier = T->getQualifier();
-    if (NestedNameSpecifier::SpecifierKind K = Qualifier->getKind();
-        K == NestedNameSpecifier::TypeSpec)
-      Visit(Qualifier->getAsType());
+    NestedNameSpecifier Qualifier = T->getQualifier();
+    if (NestedNameSpecifier::Kind K = Qualifier.getKind();
+        K == NestedNameSpecifier::Kind::Type)
+      Visit(Qualifier.getAsType());
     if (T->isSugared())
-      Visit(T->getMostRecentCXXRecordDecl()->getTypeForDecl());
+      Visit(cast<MemberPointerType>(T->getCanonicalTypeUnqualified())
+                ->getQualifier()
+                .getAsType());
     Visit(T->getPointeeType());
   }
   void VisitArrayType(const ArrayType *T) { Visit(T->getElementType()); }
@@ -450,6 +452,24 @@ public:
     if (!Contained.isNull())
       Visit(Contained);
   }
+  void VisitHLSLInlineSpirvType(const HLSLInlineSpirvType *T) {
+    for (auto &Operand : T->getOperands()) {
+      using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+      switch (Operand.getKind()) {
+      case SpirvOperandKind::ConstantId:
+      case SpirvOperandKind::Literal:
+        break;
+
+      case SpirvOperandKind::TypeId:
+        Visit(Operand.getResultType());
+        break;
+
+      default:
+        llvm_unreachable("Invalid SpirvOperand kind!");
+      }
+    }
+  }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *) {}
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {
@@ -492,7 +512,7 @@ public:
   }
   void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
     // FIXME: Provide NestedNamespecifierLoc visitor.
-    Visit(TL.getQualifierLoc().getTypeLoc());
+    Visit(TL.getQualifierLoc().castAsTypeLoc());
   }
   void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
     Visit(TL.getSizeExpr());
@@ -510,11 +530,6 @@ public:
     Visit(TL.getUnderlyingExpr());
   }
   void VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
-    for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
-      dumpTemplateArgumentLoc(TL.getArgLoc(I));
-  }
-  void VisitDependentTemplateSpecializationTypeLoc(
-      DependentTemplateSpecializationTypeLoc TL) {
     for (unsigned I=0, N=TL.getNumArgs(); I < N; ++I)
       dumpTemplateArgumentLoc(TL.getArgLoc(I));
   }
@@ -587,7 +602,7 @@ public:
   }
 
   void VisitFileScopeAsmDecl(const FileScopeAsmDecl *D) {
-    Visit(D->getAsmString());
+    Visit(D->getAsmStringExpr());
   }
 
   void VisitTopLevelStmtDecl(const TopLevelStmtDecl *D) { Visit(D->getStmt()); }
@@ -601,6 +616,11 @@ public:
   void VisitCapturedDecl(const CapturedDecl *D) { Visit(D->getBody()); }
 
   void VisitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
+    for (const auto *E : D->varlist())
+      Visit(E);
+  }
+
+  void VisitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *D) {
     for (const auto *E : D->varlist())
       Visit(E);
   }
@@ -629,21 +649,8 @@ public:
 
   template <typename SpecializationDecl>
   void dumpTemplateDeclSpecialization(const SpecializationDecl *D) {
-    for (const auto *RedeclWithBadType : D->redecls()) {
-      // FIXME: The redecls() range sometimes has elements of a less-specific
-      // type. (In particular, ClassTemplateSpecializationDecl::redecls() gives
-      // us TagDecls, and should give CXXRecordDecls).
-      auto *Redecl = dyn_cast<SpecializationDecl>(RedeclWithBadType);
-      if (!Redecl) {
-        // Found the injected-class-name for a class template. This will be
-        // dumped as part of its surrounding class so we don't need to dump it
-        // here.
-        assert(isa<CXXRecordDecl>(RedeclWithBadType) &&
-               "expected an injected-class-name");
-        continue;
-      }
-      Visit(Redecl);
-    }
+    for (const auto *Redecl : D->redecls())
+      Visit(cast<SpecializationDecl>(Redecl));
   }
 
   template <typename TemplateDecl>
@@ -754,17 +761,16 @@ public:
   }
 
   void VisitUsingShadowDecl(const UsingShadowDecl *D) {
-    if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
-      Visit(TD->getTypeForDecl());
+    Visit(D->getTargetDecl());
   }
 
   void VisitFriendDecl(const FriendDecl *D) {
     if (D->getFriendType()) {
       // Traverse any CXXRecordDecl owned by this type, since
       // it will not be in the parent context:
-      if (auto *ET = D->getFriendType()->getType()->getAs<ElaboratedType>())
-        if (auto *TD = ET->getOwnedTagDecl())
-          Visit(TD);
+      if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
+        if (TT->isTagOwned())
+          Visit(TT->getDecl());
     } else {
       Visit(D->getFriendDecl());
     }

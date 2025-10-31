@@ -174,6 +174,9 @@ protected:
     DefineStd(Builder, "unix", Opts);
     if (this->HasFloat128)
       Builder.defineMacro("__FLOAT128__");
+
+    if (Opts.C11)
+      Builder.defineMacro("__STDC_NO_THREADS__");
   }
 
 public:
@@ -325,9 +328,21 @@ protected:
       Builder.defineMacro("_REENTRANT");
     if (Opts.CPlusPlus)
       Builder.defineMacro("_GNU_SOURCE");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
   }
 public:
-  using OSTargetInfo<Target>::OSTargetInfo;
+  HurdTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
+  }
 };
 
 // Linux target
@@ -392,6 +407,42 @@ public:
 
   const char *getStaticInitSectionSpecifier() const override {
     return ".text.startup";
+  }
+
+  // This allows template specializations, see
+  // LinuxTargetInfo<AArch64leTargetInfo>::setABI
+  bool setABI(const std::string &Name) override {
+    return OSTargetInfo<Target>::setABI(Name);
+  }
+};
+
+// Managarm Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY ManagarmTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__managarm__");
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+    if (this->HasFloat128)
+      Builder.defineMacro("__FLOAT128__");
+  }
+
+public:
+  ManagarmTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
   }
 };
 
@@ -466,6 +517,7 @@ public:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
       break;
+    case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
       break;
     }
@@ -835,53 +887,6 @@ public:
   }
 };
 
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY NaClTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    if (Opts.POSIXThreads)
-      Builder.defineMacro("_REENTRANT");
-    if (Opts.CPlusPlus)
-      Builder.defineMacro("_GNU_SOURCE");
-
-    DefineStd(Builder, "unix", Opts);
-    Builder.defineMacro("__native_client__");
-  }
-
-public:
-  NaClTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {
-    this->LongAlign = 32;
-    this->LongWidth = 32;
-    this->PointerAlign = 32;
-    this->PointerWidth = 32;
-    this->IntMaxType = TargetInfo::SignedLongLong;
-    this->Int64Type = TargetInfo::SignedLongLong;
-    this->DoubleAlign = 64;
-    this->LongDoubleWidth = 64;
-    this->LongDoubleAlign = 64;
-    this->LongLongWidth = 64;
-    this->LongLongAlign = 64;
-    this->SizeType = TargetInfo::UnsignedInt;
-    this->PtrDiffType = TargetInfo::SignedInt;
-    this->IntPtrType = TargetInfo::SignedInt;
-    // RegParmMax is inherited from the underlying architecture.
-    this->LongDoubleFormat = &llvm::APFloat::IEEEdouble();
-    if (Triple.getArch() == llvm::Triple::arm) {
-      // Handled in ARM's setABI().
-    } else if (Triple.getArch() == llvm::Triple::x86) {
-      this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-i128:128-n8:16:32-S128");
-    } else if (Triple.getArch() == llvm::Triple::x86_64) {
-      this->resetDataLayout("e-m:e-p:32:32-p270:32:32-p271:32:32-p272:64:64-"
-                            "i64:64-i128:128-n8:16:32:64-S128");
-    } else if (Triple.getArch() == llvm::Triple::mipsel) {
-      // Handled on mips' setDataLayout.
-    }
-  }
-};
-
 // Fuchsia Target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY FuchsiaTargetInfo : public OSTargetInfo<Target> {
@@ -949,6 +954,23 @@ public:
   using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
 };
 
+// WALI target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY WALITargetInfo
+    : public WebAssemblyOSTargetInfo<Target> {
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const final {
+    WebAssemblyOSTargetInfo<Target>::getOSDefines(Opts, Triple, Builder);
+    // Linux defines; list based off of gcc output
+    DefineStd(Builder, "unix", Opts);
+    DefineStd(Builder, "linux", Opts);
+    Builder.defineMacro("__wali__");
+  }
+
+public:
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
+};
+
 // Emscripten target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY EmscriptenTargetInfo
@@ -972,6 +994,7 @@ public:
     // Emscripten's ABI is unstable and we may change this back to 128 to match
     // the WebAssembly default in the future.
     this->LongDoubleAlign = 64;
+    this->Float128Align = 64;
   }
 };
 

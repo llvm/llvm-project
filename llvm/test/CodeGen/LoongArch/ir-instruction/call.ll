@@ -9,7 +9,7 @@ define i32 @test_call_external(i32 %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(external_function)
+; LA32-NEXT:    bl external_function
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -46,7 +46,7 @@ define i32 @test_call_defined(i32 %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    addi.w $sp, $sp, -16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl %plt(defined_function)
+; LA32-NEXT:    bl defined_function
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret

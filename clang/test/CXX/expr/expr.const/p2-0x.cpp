@@ -199,15 +199,15 @@ namespace UndefinedBehavior {
 
     constexpr A *na = nullptr;
     constexpr B *nb = nullptr;
-    constexpr A &ra = *nb; // expected-error {{constant expression}} expected-note {{cannot access base class of null pointer}}
-    constexpr B &rb = (B&)*na; // expected-error {{constant expression}} expected-note {{cannot access derived class of null pointer}}
+    constexpr A &ra = *nb; // expected-error {{constant expression}} expected-note {{dereferencing a null pointer}}
+    constexpr B &rb = (B&)*na; // expected-error {{constant expression}} expected-note {{dereferencing a null pointer}}
     static_assert((A*)nb == 0, "");
     static_assert((B*)na == 0, "");
     constexpr const int &nf = nb->n; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
     constexpr const int &mf = nb->m; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
     constexpr const int *np1 = (int*)nullptr + 0; // ok
-    constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
-    constexpr const int *np3 = &(*(int(*)[4])nullptr)[2]; // expected-error {{constant expression}} expected-note {{cannot perform pointer arithmetic on null pointer}}
+    constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // expected-error {{constant expression}} expected-note {{dereferencing a null pointer}}
+    constexpr const int *np3 = &(*(int(*)[4])nullptr)[2]; // expected-error {{constant expression}} expected-note {{dereferencing a null pointer}}
 
     struct C {
       constexpr int f() const { return 0; }
@@ -356,7 +356,7 @@ namespace LValueToRValue {
   // - a non-volatile glvalue of literal type that refers to a non-volatile
   //   temporary object whose lifetime has not ended, initialized with a
   //   constant expression;
-  constexpr volatile S f() { return S(); }
+  constexpr volatile S f() { return S(); } // cxx20-warning {{volatile-qualified return type 'volatile S' is deprecated}}
   static_assert(f().i, ""); // expected-error {{constant expression}} expected-note {{read of volatile-qualified type}}
   static_assert(((volatile const S&&)(S)0).i, ""); // expected-error {{constant expression}} expected-note {{read of volatile-qualified type}}
 }
@@ -438,6 +438,11 @@ namespace ReinterpretCast {
   struct U {
     int m : (long)(S*)6; // expected-warning {{constant expression}} expected-note {{reinterpret_cast}}
   };
+  void f();
+  constexpr void* fp1 = (void*)f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
+  constexpr int* fp2 = (int*)f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
+  constexpr int (*fp3)() = (int(*)())f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
+  constexpr int (&fp4)() = (int(&)())f; // expected-error {{constant expression}} expected-note {{reinterpret_cast}}
 }
 
 // - a pseudo-destructor call (5.2.4);
@@ -485,7 +490,7 @@ namespace std {
 namespace TypeId {
   struct S { virtual void f(); };
   constexpr S *p = 0;
-  constexpr const std::type_info &ti1 = typeid(*p); // expected-error {{must be initialized by a constant expression}} cxx11-note {{typeid applied to expression of polymorphic type 'S'}} cxx20-note {{dereferenced null pointer}}
+  constexpr const std::type_info &ti1 = typeid(*p); // expected-error {{must be initialized by a constant expression}} cxx11-note {{typeid applied to expression of polymorphic type 'S'}} cxx20-note {{dereferencing a null pointer}}
 
   struct T {} t;
   constexpr const std::type_info &ti2 = typeid(t);

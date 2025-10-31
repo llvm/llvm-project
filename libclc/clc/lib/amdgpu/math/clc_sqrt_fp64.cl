@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/internal/clc.h>
 #include <clc/math/clc_fma.h>
 #include <clc/math/clc_ldexp.h>
@@ -43,6 +42,9 @@ _CLC_OVERLOAD _CLC_DEF double __clc_sqrt(double x) {
   return (x == __builtin_inf() || (x == 0.0)) ? v01 : v23;
 }
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_sqrt, double);
+#define __CLC_DOUBLE_ONLY
+#define __CLC_FUNCTION __clc_sqrt
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
 
 #endif
