@@ -386,14 +386,6 @@ LogicalResult ConvertF32x2ToBF16x2Op::verify() {
 LogicalResult ConvertF32x4ToF8x4Op::verify() {
   mlir::MLIRContext *ctx = getContext();
 
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
-                       "conversions from f32x4 to f8x4.");
-
-  if (getSat() == SaturationMode::NONE)
-    return emitOpError("Only SATFINITE saturation mode is supported for "
-                       "conversions from f32x4 to f8x4.");
-
   if (!llvm::isa<mlir::Float8E4M3FNType, mlir::Float8E5M2Type>(getDstTy()))
     return emitOpError("Only ")
            << mlir::Float8E4M3FNType::get(ctx) << " and "
@@ -406,14 +398,6 @@ LogicalResult ConvertF32x4ToF8x4Op::verify() {
 LogicalResult ConvertF32x4ToF6x4Op::verify() {
   mlir::MLIRContext *ctx = getContext();
 
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
-                       "conversions from f32x4 to f6x4.");
-
-  if (getSat() == SaturationMode::NONE)
-    return emitOpError("Only SATFINITE saturation mode is supported for "
-                       "conversions from f32x4 to f6x4.");
-
   if (!llvm::isa<mlir::Float6E2M3FNType, mlir::Float6E3M2FNType>(getDstTy()))
     return emitOpError("Only ")
            << mlir::Float6E2M3FNType::get(ctx) << " and "
@@ -425,14 +409,6 @@ LogicalResult ConvertF32x4ToF6x4Op::verify() {
 
 LogicalResult ConvertF32x4ToF4x4Op::verify() {
   mlir::MLIRContext *ctx = getContext();
-
-  if (getRnd() != FPRoundingMode::RS)
-    return emitOpError("Only RS rounding mode is supported for "
-                       "conversions from f32x4 to f4x4.");
-
-  if (getSat() == SaturationMode::NONE)
-    return emitOpError("Only SATFINITE saturation mode is supported for "
-                       "conversions from f32x4 to f4x4.");
 
   if (!llvm::isa<mlir::Float4E2M1FNType>(getDstTy()))
     return emitOpError("Only ") << mlir::Float4E2M1FNType::get(ctx)

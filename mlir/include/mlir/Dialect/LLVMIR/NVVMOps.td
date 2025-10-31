@@ -1969,21 +1969,21 @@ def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"bf16x2", "conve
 
 // Base class for stochastic rounding conversions from F32x4 to FPx4 formats
 // (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
+// These operations always use RS (stochastic rounding) mode with SATFINITE saturation.
 class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type resultType> :
   NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
   Results<(outs resultType:$dst)>,
   Arguments<(ins VectorOfLengthAndType<[4], [F32]>:$src, I32:$rbits,
-                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RS">:$rnd,
-                 DefaultValuedAttr<SaturationModeAttr, "SaturationMode::SATFINITE">:$sat,
                  DefaultValuedAttr<BoolAttr, "false">:$relu,
                  TypeAttr:$dstTy)> {
-  let summary = "Convert vector<4xf32> to packed " # dstFormat # " with stochastic rounding (.rs)";
+  let summary = "Convert vector<4xf32> to packed " # dstFormat # " with stochastic rounding (.rs) and satfinite";
   let description = [{
     Converts a vector<4xf32> to packed }] # dstFormat # [{ format using 
-    stochastic rounding (.rs) mode with randomness provided by the `rbits` 
-    parameter. The `dstTy` attribute specifies the target format. The `relu` 
-    attribute clamps negative results to 0. The `sat` attribute determines 
-    saturation behavior.
+    stochastic rounding (.rs) mode with SATFINITE saturation. Randomness is 
+    provided by the `rbits` parameter. The `dstTy` attribute specifies the 
+    target format. The `relu` attribute clamps negative results to 0.
+    
+    Note: These operations always use RS rounding mode and SATFINITE saturation mode.
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];

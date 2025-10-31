@@ -14,47 +14,6 @@ gpu.module @invalid_arch_sm_100 [#nvvm.target<chip = "sm_100">] {
 
 // -----
 
-// Test that FP8/FP6/FP4 conversions require satfinite mode
-llvm.func @invalid_sat_mode_f8x4_e4m3(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
-  // expected-error@+1 {{Only SATFINITE saturation mode is supported for conversions from f32x4 to f8x4.}}
-  %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits {sat = #nvvm.sat_mode<none>} : vector<4xf32> -> vector<4xi8> (f8E4M3FN)
-  llvm.return %res : vector<4xi8>
-}
-
-// -----
-
-llvm.func @invalid_sat_mode_f8x4_e5m2(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
-  // expected-error@+1 {{Only SATFINITE saturation mode is supported for conversions from f32x4 to f8x4.}}
-  %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits {sat = #nvvm.sat_mode<none>} : vector<4xf32> -> vector<4xi8> (f8E5M2)
-  llvm.return %res : vector<4xi8>
-}
-
-// -----
-
-llvm.func @invalid_sat_mode_f6x4_e2m3(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
-  // expected-error@+1 {{Only SATFINITE saturation mode is supported for conversions from f32x4 to f6x4.}}
-  %res = nvvm.convert.f32x4.to.f6x4 %src, %rbits {sat = #nvvm.sat_mode<none>} : vector<4xf32> -> vector<4xi8> (f6E2M3FN)
-  llvm.return %res : vector<4xi8>
-}
-
-// -----
-
-llvm.func @invalid_sat_mode_f6x4_e3m2(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
-  // expected-error@+1 {{Only SATFINITE saturation mode is supported for conversions from f32x4 to f6x4.}}
-  %res = nvvm.convert.f32x4.to.f6x4 %src, %rbits {sat = #nvvm.sat_mode<none>} : vector<4xf32> -> vector<4xi8> (f6E3M2FN)
-  llvm.return %res : vector<4xi8>
-}
-
-// -----
-
-llvm.func @invalid_sat_mode_f4x4_e2m1(%src : vector<4xf32>, %rbits : i32) -> i16 {
-  // expected-error@+1 {{Only SATFINITE saturation mode is supported for conversions from f32x4 to f4x4.}}
-  %res = nvvm.convert.f32x4.to.f4x4 %src, %rbits {sat = #nvvm.sat_mode<none>} : vector<4xf32> -> i16 (f4E2M1FN)
-  llvm.return %res : i16
-}
-
-// -----
-
 // Test that operations require stochastic rounding mode
 llvm.func @invalid_rnd_mode_f16x2(%srcA : f32, %srcB : f32, %rbits : i32) -> vector<2xf16> {
   // expected-error@+1 {{Only RS rounding mode is supported for conversions from f32x2 to f16x2.}}
@@ -68,22 +27,6 @@ llvm.func @invalid_rnd_mode_bf16x2(%srcA : f32, %srcB : f32, %rbits : i32) -> ve
   // expected-error@+1 {{Only RS rounding mode is supported for conversions from f32x2 to bf16x2.}}
   %res = nvvm.convert.f32x2.to.bf16x2 %srcA, %srcB, %rbits {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16>
   llvm.return %res : vector<2xbf16>
-}
-
-// -----
-
-llvm.func @invalid_rnd_mode_f8x4_e4m3(%src : vector<4xf32>, %rbits : i32) -> vector<4xi8> {
-  // expected-error@+1 {{Only RS rounding mode is supported for conversions from f32x4 to f8x4.}}
-  %res = nvvm.convert.f32x4.to.f8x4 %src, %rbits {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<satfinite>} : vector<4xf32> -> vector<4xi8> (f8E4M3FN)
-  llvm.return %res : vector<4xi8>
-}
-
-// -----
-
-llvm.func @invalid_rnd_mode_f4x4_e2m1(%src : vector<4xf32>, %rbits : i32) -> i16 {
-  // expected-error@+1 {{Only RS rounding mode is supported for conversions from f32x4 to f4x4.}}
-  %res = nvvm.convert.f32x4.to.f4x4 %src, %rbits {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<satfinite>} : vector<4xf32> -> i16 (f4E2M1FN)
-  llvm.return %res : i16
 }
 
 // -----
