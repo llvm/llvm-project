@@ -474,26 +474,18 @@ void GccIRCompiler::loadPlugin() {
   (*onload)(tv.data());
 }
 
-enum ld_plugin_status regClaimFile(ld_plugin_claim_file_handler handler) {
-  GccIRCompiler *c = GccIRCompiler::getInstance();
-  return c->registerClaimFile(handler);
-}
-
 enum ld_plugin_status
 GccIRCompiler::registerClaimFile(ld_plugin_claim_file_handler handler) {
-  claimFileHandler = handler;
+  GccIRCompiler *c = GccIRCompiler::getInstance();
+  c->claimFileHandler = handler;
   return LDPS_OK;
 }
 
 #if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
-enum ld_plugin_status regClaimFileV2(ld_plugin_claim_file_handler handler) {
-  GccIRCompiler *c = GccIRCompiler::getInstance();
-  return c->registerClaimFileV2(handler);
-}
-
 enum ld_plugin_status
 GccIRCompiler::registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler) {
-  claimFileHandlerV2 = handler;
+  GccIRCompiler *c = GccIRCompiler::getInstance();
+  c->claimFileHandlerV2 = handler;
   return LDPS_OK;
 }
 #endif
@@ -570,9 +562,9 @@ void GccIRCompiler::initializeTv() {
   TVU_SETTAG(LDPT_OUTPUT_NAME, string, ctx.arg.outputFile.data());
   // Share the address of a C wrapper that is API-compatible with
   // plugin-api.h.
-  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK, register_claim_file, regClaimFile);
+  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK, register_claim_file, registerClaimFile);
 #if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
-  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK_V2, register_claim_file_v2,
+  TVU_SETTAG(LDPT_REGISTER_CLAIM_FILE_HOOK_V2, registerClaimFileV2,
              regClaimFileV2);
 #endif
 

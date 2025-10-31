@@ -94,10 +94,10 @@ public:
   void add(ELFFileBase &f);
   SmallVector<std::unique_ptr<InputFile>, 0> compile() override;
   static enum ld_plugin_status message(int level, const char *format, ...);
-  enum ld_plugin_status registerClaimFile(ld_plugin_claim_file_handler handler);
+  static enum ld_plugin_status registerClaimFile(ld_plugin_claim_file_handler handler);
 #if HAVE_LDPT_REGISTER_CLAIM_FILE_HOOK_V2
   enum ld_plugin_status
-  registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler);
+  static registerClaimFileV2(ld_plugin_claim_file_handler_v2 handler);
 #endif
   enum ld_plugin_status
   registerAllSymbolsRead(ld_plugin_all_symbols_read_handler handler);
