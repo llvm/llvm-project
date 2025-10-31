@@ -50,24 +50,15 @@ first_non_whitespace(const CharType *__restrict src,
   return src_cur;
 }
 
-// Returns 1 if 'src' starts with + or - sign, and returns 0 otherwise.
-// Writes the sign value to |is_positive|.
+// Returns +1, -1, or 0 if 'src' starts with (respectively)
+// plus sign, minus sign, or neither.
 template <typename CharType>
-LIBC_INLINE static size_t consume_sign(const CharType *__restrict src,
-                                       bool *is_positive) {
-  *is_positive = true;
+LIBC_INLINE static int get_sign(const CharType *__restrict src) {
   if constexpr (cpp::is_same_v<CharType, char>) {
-    if (*src == '+' || *src == '-') {
-      *is_positive = (*src == '+');
-      return 1;
-    }
+    return (src[0] == '+') ? 1 : (src[0] == '-' ? -1 : 0);
   } else {
-    if (*src == L'+' || *src == L'-') {
-      *is_positive = (*src == L'+');
-      return 1;
-    }
+    return (src[0] == L'+') ? 1 : (src[0] == L'-' ? -1 : 0);
   }
-  return 0;
 }
 
 // checks if the next 3 characters of the string pointer are the start of a
@@ -137,8 +128,9 @@ strtointeger(const CharType *__restrict src, int base,
     return {0, 0, 0};
   }
 
-  bool is_positive;
-  src_cur += consume_sign(src + src_cur, &is_positive);
+  int sign = get_sign(src + src_cur);
+  bool is_positive = (sign >= 0);
+  src_cur += (sign != 0);
 
   if (base == 0)
     base = infer_base(src + src_cur, src_len - src_cur);
