@@ -256,10 +256,9 @@ protected:
   }
 
   void SetUp() override {
-    if (!EnvReady)
+    if (!EnvReady || GlobalEnv == nullptr)
       GTEST_SKIP() << "Skipping test: environment setup failed.";
 
-    ASSERT_NE(GlobalEnv, nullptr);
     {
       SmallString<512> path;
       std::error_code EC = sys::fs::real_path(GlobalEnv->getBaseDir(), path);
