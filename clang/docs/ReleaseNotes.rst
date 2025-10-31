@@ -505,6 +505,7 @@ Bug Fixes to AST Handling
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed missing diagnostics of ``diagnose_if`` on templates involved in initialization. (#GH160776)
+- Fix `-ibuiltininc` compiler flag being ignored if `-nostdinc` is specified. (#GH165790)
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
