@@ -2540,16 +2540,58 @@ bool GVNPass::propagateEquality(
       }
     }
 
-    // If "ballot(cond) == -1" or "ballot(cond) == exec_mask" then cond is true
-    // on all active lanes, so cond can be replaced with true.
-    if (IntrinsicInst *IntrCall = dyn_cast<IntrinsicInst>(LHS)) {
-      if (IntrCall->getIntrinsicID() ==
-          Intrinsic::AMDGCNIntrinsics::amdgcn_ballot) {
-        Value *BallotArg = IntrCall->getArgOperand(0);
-        if (BallotArg->getType()->isIntegerTy(1) &&
-            (match(RHS, m_AllOnes()) || !isa<Constant>(RHS))) {
+    // Helper function to check if a value represents the current exec mask.
+    auto IsExecMask = [](Value *V) -> bool {
+      // Pattern 1: ballot(true)
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(V)) {
+        if (II->getIntrinsicID() == Intrinsic::AMDGCNIntrinsics::amdgcn_ballot) {
+          // Check if argument is constant true
+          if (match(II->getArgOperand(0), m_One())) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    };
+
+    // Check if either of the operands is a ballot intrinsic.
+    IntrinsicInst *BallotCall = nullptr;
+    Value *CompareValue = nullptr;
+
+    // Check both LHS and RHS for ballot intrinsic and its value since GVN may
+    // swap the operands.
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(LHS)) {
+      if (II->getIntrinsicID() == Intrinsic::AMDGCNIntrinsics::amdgcn_ballot) {
+        BallotCall = II;
+        CompareValue = RHS;
+      }
+    }
+    if (!BallotCall && isa<IntrinsicInst>(RHS)) {
+      IntrinsicInst *II = cast<IntrinsicInst>(RHS);
+      if (II->getIntrinsicID() == Intrinsic::AMDGCNIntrinsics::amdgcn_ballot) {
+        BallotCall = II;
+        CompareValue = LHS;
+      }
+    }
+
+    // If a ballot intrinsic is found, calculate the truth value of the ballot
+    // argument based on the RHS.
+    if (BallotCall) {
+      Value *BallotArg = BallotCall->getArgOperand(0);
+      if (BallotArg->getType()->isIntegerTy(1)) {
+        // Case 1: ballot(cond) == -1: cond true in all lanes -> cond = true.
+        // Case 2: ballot(cond) == exec_mask: cond true in all active lanes ->
+        // cond = true.
+        if (match(CompareValue, m_AllOnes()) || IsExecMask(CompareValue)) {
           Worklist.push_back(std::make_pair(
               BallotArg, ConstantInt::getTrue(BallotArg->getType())));
+          continue;
+        }
+        // Case 3: ballot(cond) == 0: cond false in all lanes -> cond = false.
+        if (match(CompareValue, m_Zero())) {
+          Worklist.push_back(std::make_pair(
+              BallotArg, ConstantInt::getFalse(BallotArg->getType())));
           continue;
         }
       }
