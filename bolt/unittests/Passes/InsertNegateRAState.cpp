@@ -158,6 +158,69 @@ TEST_P(PassTester, ExampleTest) {
   EXPECT_EQ(CFILoc[0], 4);
 }
 
+TEST_P(PassTester, fillUnknownStateInBBTest) {
+  /* Check that a if BB starts with unknown RAState, we can fill the unknown
+   states based on following instructions with known RAStates.
+   *
+   * .LBB0 (1 instructions, align : 1)
+        Entry Point
+        CFI State : 0
+          00000000:   adds    x0, x0, #0x0
+        CFI State: 0
+
+     .LBB1 (4 instructions, align : 1)
+        CFI State : 0
+          00000004:   !CFI    $0      ; OpNegateRAState
+          00000004:   adds    x0, x0, #0x1
+          00000008:   adds    x0, x0, #0x2
+          0000000c:   adds    x0, x0, #0x3
+        CFI State: 0
+   */
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  ASSERT_NE(TextSection, nullptr);
+
+  PREPARE_FUNC("FuncWithUnknownStateInBB");
+  BinaryBasicBlock *BB2 = BF->addBasicBlock();
+  BB2->setCFIState(0);
+
+  MCInst Unsigned = MCInstBuilder(AArch64::ADDSXri)
+                        .addReg(AArch64::X0)
+                        .addReg(AArch64::X0)
+                        .addImm(0)
+                        .addImm(0);
+  BC->MIB->setRAState(Unsigned, false);
+  BB->addInstruction(Unsigned);
+
+  MCInst Unknown = MCInstBuilder(AArch64::ADDSXri)
+                       .addReg(AArch64::X0)
+                       .addReg(AArch64::X0)
+                       .addImm(1)
+                       .addImm(0);
+  MCInst Unknown1 = MCInstBuilder(AArch64::ADDSXri)
+                        .addReg(AArch64::X0)
+                        .addReg(AArch64::X0)
+                        .addImm(2)
+                        .addImm(0);
+  MCInst Signed = MCInstBuilder(AArch64::ADDSXri)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::X0)
+                      .addImm(3)
+                      .addImm(0);
+  BC->MIB->setRAState(Signed, true);
+  BB2->addInstruction(Unknown);
+  BB2->addInstruction(Unknown1);
+  BB2->addInstruction(Signed);
+
+  Error E = PassManager->runPasses();
+  EXPECT_FALSE(E);
+
+  auto CFILoc = findCFIOffsets(*BF);
+  EXPECT_EQ(CFILoc.size(), 1u);
+  EXPECT_EQ(CFILoc[0], 4);
+}
+
 #ifdef AARCH64_AVAILABLE
 INSTANTIATE_TEST_SUITE_P(AArch64, PassTester,
                          ::testing::Values(Triple::aarch64));
