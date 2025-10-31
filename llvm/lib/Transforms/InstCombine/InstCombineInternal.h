@@ -744,6 +744,7 @@ public:
                                      const APInt &C);
   Instruction *foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
                                            const SimplifyQuery &Q);
+  Instruction *foldICmpWithSextAndAdd(ICmpInst &ICmp);
   Instruction *foldICmpAndConstant(ICmpInst &Cmp, BinaryOperator *And,
                                    const APInt &C);
   Instruction *foldICmpXorConstant(ICmpInst &Cmp, BinaryOperator *Xor,
