@@ -10641,6 +10641,19 @@ static bool optimizeSCC(MachineInstr *SCCValid, MachineInstr *SCCRedefine,
   return true;
 }
 
+static bool foldableSelect(MachineInstr *Def) {
+  if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+      Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
+    bool Op1IsNonZeroImm =
+        Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
+    bool Op2IsZeroImm =
+        Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
+    if (Op1IsNonZeroImm && Op2IsZeroImm)
+      return true;
+  }
+  return false;
+}
+
 bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                                        Register SrcReg2, int64_t CmpMask,
                                        int64_t CmpValue,
@@ -10659,19 +10672,6 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
     if (!Def || Def->getParent() != CmpInstr.getParent())
       return false;
-
-    const auto foldableSelect = [](MachineInstr *Def) -> bool {
-      if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-          Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
-        bool Op1IsNonZeroImm =
-            Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
-        bool Op2IsZeroImm =
-            Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
-        if (Op1IsNonZeroImm && Op2IsZeroImm)
-          return true;
-      }
-      return false;
-    };
 
     // For S_OP that set SCC = DST!=0, do the transformation
     //
