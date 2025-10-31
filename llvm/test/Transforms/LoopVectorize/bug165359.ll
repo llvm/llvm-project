@@ -1,6 +1,8 @@
 ; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks=loop-vectorize 2>%t
 ; RUN: cat %t | FileCheck --check-prefix=CHECK-REMARKS %s
 
+; CHECK-REMARKS: remark: repro.f90:9:5: vectorized loop (vectorization width: vscale x 2, interleaved count: 2)
+
 ; ModuleID = 'FIRModule'
 source_filename = "FIRModule"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
