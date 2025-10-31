@@ -77,6 +77,23 @@ void TestSetValueFromData(const Scalar &etalon, void *src, size_t src_byte_size,
   EXPECT_EQ(s, etalon);
 }
 
+static const Scalar etalon72(APInt(72, 0x0000000000000008ull) << 1 * 64 |
+                             APInt(72, 0x0706050403020100ull) << 0 * 64);
+
+// Test that the "RegisterValue::SetValueFromData" method works correctly
+// with 72-bit little-endian data that represents an integer.
+TEST(RegisterValueTest, SetValueFromData_72_le) {
+  uint8_t src[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+  TestSetValueFromData(etalon72, src, 9, lldb::ByteOrder::eByteOrderLittle);
+}
+
+// Test that the "RegisterValue::SetValueFromData" method works correctly
+// with 72-bit big-endian data that represents an integer.
+TEST(RegisterValueTest, SetValueFromData_72_be) {
+  uint8_t src[] = {0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
+  TestSetValueFromData(etalon72, src, 9, lldb::ByteOrder::eByteOrderBig);
+}
+
 static const Scalar etalon128(APInt(128, 0x0f0e0d0c0b0a0908ull) << 1 * 64 |
                               APInt(128, 0x0706050403020100ull) << 0 * 64);
 
