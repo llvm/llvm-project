@@ -1625,8 +1625,7 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     if (InAttrGroup) {
       Lex.Lex();
       LocTy DepthLoc = Lex.getLoc();
-      if (parseToken(lltok::equal, "expected '=' here") ||
-          parseUInt64(Depth))
+      if (parseToken(lltok::equal, "expected '=' here") || parseUInt64(Depth))
         return true;
       if (!Depth)
         return error(DepthLoc, "flatten_deep depth must be non-zero");
