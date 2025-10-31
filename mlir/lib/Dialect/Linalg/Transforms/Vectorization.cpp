@@ -656,7 +656,7 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
           [&](auto op) { return CombiningKind::MUL; })
       .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
       .Case<arith::XOrIOp>([&](auto op) { return CombiningKind::XOR; })
-      .Default([&](auto op) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 /// Check whether `outputOperand` is a reduction with a single combiner

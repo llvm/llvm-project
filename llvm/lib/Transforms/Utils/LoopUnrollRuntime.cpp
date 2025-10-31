@@ -460,25 +460,10 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
 
   Loop *NewLoop = NewLoops[L];
   assert(NewLoop && "L should have been cloned");
-  MDNode *LoopID = NewLoop->getLoopID();
-
-  // Only add loop metadata if the loop is not going to be completely
-  // unrolled.
-  if (UnrollRemainder)
-    return NewLoop;
-
-  std::optional<MDNode *> NewLoopID = makeFollowupLoopID(
-      LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
-  if (NewLoopID) {
-    NewLoop->setLoopID(*NewLoopID);
-
-    // Do not setLoopAlreadyUnrolled if loop attributes have been defined
-    // explicitly.
-    return NewLoop;
-  }
 
   // Add unroll disable metadata to disable future unrolling for this loop.
-  NewLoop->setLoopAlreadyUnrolled();
+  if (!UnrollRemainder)
+    NewLoop->setLoopAlreadyUnrolled();
   return NewLoop;
 }
 
