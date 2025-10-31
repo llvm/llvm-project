@@ -511,11 +511,14 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
     }
   }
 
+  bool WriteAfterRead = !Src->IsWritePtr && Sink->IsWritePtr;
+
   LLVM_DEBUG(dbgs() << "LAA: Creating diff runtime check for:\n"
                     << "SrcStart: " << *SrcStartInt << '\n'
                     << "SinkStartInt: " << *SinkStartInt << '\n');
   DiffChecks.emplace_back(SrcStartInt, SinkStartInt, AllocSize,
-                          Src->NeedsFreeze || Sink->NeedsFreeze);
+                          Src->NeedsFreeze || Sink->NeedsFreeze,
+                          WriteAfterRead);
   return true;
 }
 
