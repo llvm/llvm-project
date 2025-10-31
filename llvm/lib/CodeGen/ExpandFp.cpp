@@ -107,7 +107,7 @@ public:
   static bool shouldExpandFremType(const TargetLowering &TLI, EVT VT) {
     assert(!VT.isVector() && "Cannot handle vector type; must scalarize first");
     return TLI.getOperationAction(ISD::FREM, VT) ==
-            TargetLowering::LegalizeAction::Expand;
+           TargetLowering::LegalizeAction::Expand;
   }
 
   static bool shouldExpandFremType(const TargetLowering &TLI, Type *Ty) {
