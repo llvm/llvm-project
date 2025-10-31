@@ -1,5 +1,6 @@
-# RUN: yaml2obj %S/Inputs/basic-macho.yaml -o %T/symtab-macho.out
-# RUN: %lldb %T/symtab-macho.out -o "target symbols add %S/Inputs/symtab-macho.syms" \
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/basic-macho.yaml -o %t.dir/symtab-macho.out
+# RUN: %lldb %t.dir/symtab-macho.out -o "target symbols add %S/Inputs/symtab-macho.syms" \
 # RUN:   -s %s | FileCheck %s
 
 image dump symtab symtab-macho.out

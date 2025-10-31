@@ -144,7 +144,7 @@ destructive patching could overwrite program text or data outside the
 current function. We disallow overlapping stack map shadows so that
 the runtime does not need to consider this corner case.
 
-For example, a stack map with 8 byte shadow:
+For example, a stack map with 8-byte shadow:
 
 .. code-block:: llvm
 

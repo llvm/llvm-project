@@ -17,25 +17,20 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <vector>
 
 using namespace llvm;
@@ -116,7 +111,16 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
   // Initialize ltoObj.
   lto::ThinBackend backend;
-  if (ctx.config.thinLTOIndexOnly) {
+  if (!ctx.config.dtltoDistributor.empty()) {
+    backend = lto::createOutOfProcessThinBackend(
+        llvm::hardware_concurrency(ctx.config.thinLTOJobs),
+        /*OnWrite=*/nullptr,
+        /*ShouldEmitIndexFiles=*/false,
+        /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
+        ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
+        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerPrependArgs,
+        ctx.config.dtltoCompilerArgs, !ctx.config.saveTempsArgs.empty());
+  } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.config.thinLTOJobs),
@@ -173,6 +177,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 std::vector<InputFile *> BitcodeCompiler::compile() {
+  llvm::TimeTraceScope timeScope("Bitcode compile");
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);

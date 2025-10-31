@@ -243,17 +243,16 @@ def AffineForOp : Affine_Op<"for",
   let regions = (region SizedRegion<1>:$region);
 
   let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins "int64_t":$lowerBound, "int64_t":$upperBound,
-      CArg<"int64_t", "1">:$step, CArg<"ValueRange", "std::nullopt">:$iterArgs,
-      CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
-           "nullptr">:$bodyBuilder)>,
-    OpBuilder<(ins "ValueRange":$lbOperands, "AffineMap":$lbMap,
-      "ValueRange":$ubOperands, "AffineMap":$ubMap, CArg<"int64_t", "1">:$step,
-      CArg<"ValueRange", "std::nullopt">:$iterArgs,
-      CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
-           "nullptr">:$bodyBuilder)>
-  ];
+  let builders =
+      [OpBuilder<(ins "int64_t":$lowerBound, "int64_t":$upperBound,
+           CArg<"int64_t", "1">:$step, CArg<"ValueRange", "{}">:$iterArgs,
+           CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
+                "nullptr">:$bodyBuilder)>,
+       OpBuilder<(ins "ValueRange":$lbOperands, "AffineMap":$lbMap,
+           "ValueRange":$ubOperands, "AffineMap":$ubMap,
+           CArg<"int64_t", "1">:$step, CArg<"ValueRange", "{}">:$iterArgs,
+           CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
+                "nullptr">:$bodyBuilder)>];
 
   let extraClassDeclaration = [{
     /// Defining the function type we use for building the body of affine.for.
@@ -331,7 +330,6 @@ def AffineForOp : Affine_Op<"for",
     Speculation::Speculatability getSpeculatability();
   }];
 
-  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasRegionVerifier = 1;
@@ -716,7 +714,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     operand_range getUpperBoundsOperands();
     AffineValueMap getUpperBoundsValueMap();
 
-    /// Sets elements fo the loop upper bound.
+    /// Sets elements of the loop upper bound.
     void setUpperBounds(ValueRange operands, AffineMap map);
 
     void setSteps(ArrayRef<int64_t> newSteps);
@@ -920,9 +918,7 @@ def AffineYieldOp : Affine_Op<"yield", [Pure, Terminator, ReturnLike,
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [
-    OpBuilder<(ins), [{ build($_builder, $_state, std::nullopt); }]>
-  ];
+  let builders = [OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;
@@ -1003,7 +999,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
     elemental type, supplied as its second operand.
     The index for each memref dimension is an affine expression of loop
     induction variables and symbols. These indices determine the start position
-    of the write within the memref. The shape of th input vector determines the
+    of the write within the memref. The shape of the input vector determines the
     shape of the slice written to the memref. This slice is contiguous along the
     respective dimensions of the shape. Strided vector stores will be supported
     in the future.
@@ -1113,6 +1109,10 @@ def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index", [Pure]> {
     Due to the constraints of affine maps, all the basis elements must
     be strictly positive. A dynamic basis element being 0 or negative causes
     undefined behavior.
+
+    As with other affine operations, lowerings of delinearize_index may assume
+    that the underlying computations do not overflow the index type in a signed sense
+    - that is, the product of all basis elements is positive as an `index` as well.
   }];
 
   let arguments = (ins Index:$linear_index,
@@ -1188,15 +1188,19 @@ def AffineLinearizeIndexOp : Affine_Op<"linearize_index",
     If all `N` basis elements are provided, the linearize_index operation is said to
     "have an outer bound".
 
-    As a convenience, and for symmetry with `getPaddedBasis()`, ifg the first
+    As a convenience, and for symmetry with `getPaddedBasis()`, if the first
     element of a set of `OpFoldResult`s passed to the builders of this operation is
     `nullptr`, that element is ignored.
 
     If the `disjoint` property is present, this is an optimization hint that,
     for all `i`, `0 <= %idx_i < B_i` - that is, no index affects any other index,
     except that `%idx_0` may be negative to make the index as a whole negative.
+    In addition, `disjoint` is an assertion that all bases elements are non-negative.
 
     Note that the outputs of `affine.delinearize_index` are, by definition, `disjoint`.
+
+    As with other affine ops, undefined behavior occurs if the linearization
+    computation overflows in the signed sense.
 
     Example:
 

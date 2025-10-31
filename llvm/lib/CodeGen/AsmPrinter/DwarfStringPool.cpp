@@ -24,7 +24,7 @@ DwarfStringPool::DwarfStringPool(BumpPtrAllocator &A, AsmPrinter &Asm,
 
 StringMapEntry<DwarfStringPool::EntryTy> &
 DwarfStringPool::getEntryImpl(AsmPrinter &Asm, StringRef Str) {
-  auto I = Pool.insert(std::make_pair(Str, EntryTy()));
+  auto I = Pool.try_emplace(Str);
   auto &Entry = I.first->second;
   if (I.second) {
     Entry.Index = EntryTy::NotIndexed;

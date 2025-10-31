@@ -7,12 +7,12 @@ void f() {
   int *p = new int(42);
   delete p;
   delete p;
-  // CHECK: warning: Attempt to free released memory [clang-analyzer-cplusplus.NewDelete]
+  // CHECK: warning: Attempt to release already released memory [clang-analyzer-cplusplus.NewDelete]
 }
 
 void g() {
   void *q = malloc(132);
   free(q);
   free(q);
-  // CHECK: warning: Attempt to free released memory [clang-analyzer-unix.Malloc]
+  // CHECK: warning: Attempt to release already released memory [clang-analyzer-unix.Malloc]
 }

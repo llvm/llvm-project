@@ -1,27 +1,27 @@
 # RUN: yaml2obj %s -o %t1.o
 # RUN: yaml2obj %s -o %t2.o
 
-# RUN: printf "\x04" > %t.stats
+# RUN: printf "\004" > %t.stats
 
 # RUN: printf "%%s" "%t1.o" >> %t.stats
-# RUN: printf "\x00" >> %t.stats
-# RUN: printf "\x01\x00\x00\x00\x01\x00\x00\x00" >> %t.stats
-# RUN: printf "\x11\x00\x00\x00\x02\x00\x00\x20" >> %t.stats
-# RUN: printf "\x21\x00\x00\x00\x03\x00\x00\x40" >> %t.stats
-# RUN: printf "\x01\x00\x00\x00\x04\x00\x00\x60" >> %t.stats
-# RUN: printf "\x11\x00\x00\x00\x05\x00\x00\x80" >> %t.stats
-# RUN: printf "\x21\x00\x00\x00\x06\x00\x00\xa0" >> %t.stats
-# RUN: printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> %t.stats
+# RUN: printf "\000" >> %t.stats
+# RUN: printf "\001\000\000\000\001\000\000\000" >> %t.stats
+# RUN: printf "\021\000\000\000\002\000\000\040" >> %t.stats
+# RUN: printf "\041\000\000\000\003\000\000\100" >> %t.stats
+# RUN: printf "\001\000\000\000\004\000\000\140" >> %t.stats
+# RUN: printf "\021\000\000\000\005\000\000\200" >> %t.stats
+# RUN: printf "\041\000\000\000\006\000\000\240" >> %t.stats
+# RUN: printf "\000\000\000\000\000\000\000\000" >> %t.stats
 
 # RUN: printf "%%s" "%t2.o" >> %t.stats
-# RUN: printf "\x00" >> %t.stats
-# RUN: printf "\x21\x00\x00\x00\x07\x00\x00\x00" >> %t.stats
-# RUN: printf "\x11\x00\x00\x00\x08\x00\x00\x20" >> %t.stats
-# RUN: printf "\x01\x00\x00\x00\x09\x00\x00\x40" >> %t.stats
-# RUN: printf "\x21\x00\x00\x00\x0b\x00\x00\x60" >> %t.stats
-# RUN: printf "\x11\x00\x00\x00\x0c\x00\x00\x80" >> %t.stats
-# RUN: printf "\x01\x00\x00\x00\x0e\x00\x00\xa0" >> %t.stats
-# RUN: printf "\x00\x00\x00\x00\x00\x00\x00\x00" >> %t.stats
+# RUN: printf "\000" >> %t.stats
+# RUN: printf "\041\000\000\000\007\000\000\000" >> %t.stats
+# RUN: printf "\021\000\000\000\010\000\000\040" >> %t.stats
+# RUN: printf "\001\000\000\000\011\000\000\100" >> %t.stats
+# RUN: printf "\041\000\000\000\013\000\000\140" >> %t.stats
+# RUN: printf "\021\000\000\000\014\000\000\200" >> %t.stats
+# RUN: printf "\001\000\000\000\016\000\000\240" >> %t.stats
+# RUN: printf "\000\000\000\000\000\000\000\000" >> %t.stats
 
 # RUN: sanstats %t.stats | FileCheck %s
 

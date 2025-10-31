@@ -14,39 +14,24 @@ declare i32 @callee(%struct.1float %a)
 define i32 @test(%struct.1float alignstack(32) %data) {
 ; CHECK-LABEL: test(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<18>;
-; CHECK-NEXT:    .reg .b32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %r<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u8 %r1, [test_param_0+1];
-; CHECK-NEXT:    shl.b32 %r2, %r1, 8;
-; CHECK-NEXT:    ld.param.u8 %r3, [test_param_0];
-; CHECK-NEXT:    or.b32 %r4, %r2, %r3;
-; CHECK-NEXT:    ld.param.u8 %r5, [test_param_0+3];
-; CHECK-NEXT:    shl.b32 %r6, %r5, 8;
-; CHECK-NEXT:    ld.param.u8 %r7, [test_param_0+2];
-; CHECK-NEXT:    or.b32 %r8, %r6, %r7;
-; CHECK-NEXT:    shl.b32 %r9, %r8, 16;
-; CHECK-NEXT:    or.b32 %r17, %r9, %r4;
-; CHECK-NEXT:    mov.b32 %f1, %r17;
-; CHECK-NEXT:    shr.u32 %r12, %r17, 8;
-; CHECK-NEXT:    shr.u32 %r13, %r17, 16;
-; CHECK-NEXT:    shr.u32 %r14, %r17, 24;
+; CHECK-NEXT:    ld.param.b32 %r1, [test_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 1 .b8 param0[4];
-; CHECK-NEXT:    st.param.b8 [param0], %r17;
-; CHECK-NEXT:    st.param.b8 [param0+1], %r12;
-; CHECK-NEXT:    st.param.b8 [param0+2], %r13;
-; CHECK-NEXT:    st.param.b8 [param0+3], %r14;
 ; CHECK-NEXT:    .param .b32 retval0;
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    callee,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
-; CHECK-NEXT:    ld.param.b32 %r15, [retval0];
+; CHECK-NEXT:    st.param.b8 [param0], %r1;
+; CHECK-NEXT:    shr.u32 %r2, %r1, 8;
+; CHECK-NEXT:    st.param.b8 [param0+1], %r2;
+; CHECK-NEXT:    shr.u32 %r3, %r1, 16;
+; CHECK-NEXT:    st.param.b8 [param0+2], %r3;
+; CHECK-NEXT:    shr.u32 %r4, %r3, 8;
+; CHECK-NEXT:    st.param.b8 [param0+3], %r4;
+; CHECK-NEXT:    call.uni (retval0), callee, (param0);
+; CHECK-NEXT:    ld.param.b32 %r5, [retval0];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r15;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
 
   %1 = call i32 @callee(%struct.1float %data)

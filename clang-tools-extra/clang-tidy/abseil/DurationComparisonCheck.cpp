@@ -1,4 +1,4 @@
-//===--- DurationComparisonCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,9 +8,7 @@
 
 #include "DurationComparisonCheck.h"
 #include "DurationRewriter.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Tooling/FixIt.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -19,7 +17,7 @@ namespace clang::tidy::abseil {
 
 void DurationComparisonCheck::registerMatchers(MatchFinder *Finder) {
   auto Matcher = expr(comparisonOperatorWithCallee(functionDecl(
-                          functionDecl(DurationConversionFunction())
+                          functionDecl(durationConversionFunction())
                               .bind("function_decl"))))
                      .bind("binop");
 

@@ -14,8 +14,22 @@
 #ifndef LLVM_SUPPORT_SIGNALS_H
 #define LLVM_SUPPORT_SIGNALS_H
 
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+namespace llvm {
+// Typedefs that are convenient but only used by the stack-trace-collection code
+// added if DebugLoc origin-tracking is enabled.
+using AddressSet = DenseSet<void *>;
+using SymbolizedAddressMap = DenseMap<void *, SmallVector<std::string, 0>>;
+} // namespace llvm
+#endif
 
 namespace llvm {
 class StringRef;
@@ -25,16 +39,17 @@ namespace sys {
 
 /// This function runs all the registered interrupt handlers, including the
 /// removal of files registered by RemoveFileOnSignal.
-void RunInterruptHandlers();
+LLVM_ABI void RunInterruptHandlers();
 
 /// This function registers signal handlers to ensure that if a signal gets
 /// delivered that the named file is removed.
 /// Remove a file if a fatal signal occurs.
-bool RemoveFileOnSignal(StringRef Filename, std::string *ErrMsg = nullptr);
+LLVM_ABI bool RemoveFileOnSignal(StringRef Filename,
+                                 std::string *ErrMsg = nullptr);
 
 /// This function removes a file from the list of files to be removed on
 /// signal delivery.
-void DontRemoveFileOnSignal(StringRef Filename);
+LLVM_ABI void DontRemoveFileOnSignal(StringRef Filename);
 
 /// When an error signal (such as SIGABRT or SIGSEGV) is delivered to the
 /// process, print a stack trace and then exit.
@@ -44,26 +59,48 @@ void DontRemoveFileOnSignal(StringRef Filename);
 ///        StringRef(), in which case we will only search $PATH.
 /// \param DisableCrashReporting if \c true, disable the normal crash
 ///        reporting mechanisms on the underlying operating system.
-void PrintStackTraceOnErrorSignal(StringRef Argv0,
-                                  bool DisableCrashReporting = false);
+LLVM_ABI void PrintStackTraceOnErrorSignal(StringRef Argv0,
+                                           bool DisableCrashReporting = false);
 
 /// Disable all system dialog boxes that appear when the process crashes.
-void DisableSystemDialogsOnCrash();
+LLVM_ABI void DisableSystemDialogsOnCrash();
 
 /// Print the stack trace using the given \c raw_ostream object.
 /// \param Depth refers to the number of stackframes to print. If not
 ///        specified, the entire frame is printed.
-void PrintStackTrace(raw_ostream &OS, int Depth = 0);
+LLVM_ABI void PrintStackTrace(raw_ostream &OS, int Depth = 0);
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#ifdef NDEBUG
+#error DebugLoc origin-tracking should not be enabled in Release builds.
+#endif
+/// Populates the given array with a stack trace of the current program, up to
+/// MaxDepth frames. Returns the number of frames returned, which will be
+/// inserted into \p StackTrace from index 0. All entries after the returned
+/// depth will be unmodified. NB: This is only intended to be used for
+/// introspection of LLVM by Debugify, will not be enabled in release builds,
+/// and should not be relied on for other purposes.
+template <unsigned long MaxDepth>
+int getStackTrace(std::array<void *, MaxDepth> &StackTrace);
+
+/// Takes a set of \p Addresses, symbolizes them and stores the result in the
+/// provided \p SymbolizedAddresses map.
+/// NB: This is only intended to be used for introspection of LLVM by
+/// Debugify, will not be enabled in release builds, and should not be relied
+/// on for other purposes.
+void symbolizeAddresses(AddressSet &Addresses,
+                        SymbolizedAddressMap &SymbolizedAddresses);
+#endif
 
 // Run all registered signal handlers.
-void RunSignalHandlers();
+LLVM_ABI void RunSignalHandlers();
 
 using SignalHandlerCallback = void (*)(void *);
 
 /// Add a function to be called when an abort/kill signal is delivered to the
 /// process. The handler can have a cookie passed to it to identify what
 /// instance of the handler it is.
-void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie);
+LLVM_ABI void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie);
 
 /// This function registers a function to be called when the user "interrupts"
 /// the program (typically by pressing ctrl-c).  When the user interrupts the
@@ -74,7 +111,7 @@ void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie);
 /// functions.  An null interrupt function pointer disables the current
 /// installed function.  Note also that the handler may be executed on a
 /// different thread on some platforms.
-void SetInterruptFunction(void (*IF)());
+LLVM_ABI void SetInterruptFunction(void (*IF)());
 
 /// Registers a function to be called when an "info" signal is delivered to
 /// the process.
@@ -86,7 +123,7 @@ void SetInterruptFunction(void (*IF)());
 /// functions.  An null function pointer disables the current installed
 /// function.  Note also that the handler may be executed on a different
 /// thread on some platforms.
-void SetInfoSignalFunction(void (*Handler)());
+LLVM_ABI void SetInfoSignalFunction(void (*Handler)());
 
 /// Registers a function to be called in a "one-shot" manner when a pipe
 /// signal is delivered to the process (i.e., on a failed write to a pipe).
@@ -102,15 +139,15 @@ void SetInfoSignalFunction(void (*Handler)());
 /// functions.  A null handler pointer disables the current installed
 /// function.  Note also that the handler may be executed on a
 /// different thread on some platforms.
-void SetOneShotPipeSignalFunction(void (*Handler)());
+LLVM_ABI void SetOneShotPipeSignalFunction(void (*Handler)());
 
 /// On Unix systems and Windows, this function exits with an "IO error" exit
 /// code.
-void DefaultOneShotPipeSignalHandler();
+LLVM_ABI void DefaultOneShotPipeSignalHandler();
 
 #ifdef _WIN32
 /// Windows does not support signals and this handler must be called manually.
-void CallOneShotPipeSignalHandler();
+LLVM_ABI void CallOneShotPipeSignalHandler();
 #endif
 
 /// This function does the following:
@@ -120,9 +157,9 @@ void CallOneShotPipeSignalHandler();
 /// - create a core/mini dump of the exception context whenever possible
 /// Context is a system-specific failure context: it is the signal type on
 /// Unix; the ExceptionContext on Windows.
-void CleanupOnSignal(uintptr_t Context);
+LLVM_ABI void CleanupOnSignal(uintptr_t Context);
 
-void unregisterHandlers();
+LLVM_ABI void unregisterHandlers();
 } // namespace sys
 } // namespace llvm
 

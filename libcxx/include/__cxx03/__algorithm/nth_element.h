@@ -29,7 +29,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_find_guard(
+_LIBCPP_HIDE_FROM_ABI bool __nth_element_find_guard(
     _RandomAccessIterator& __i, _RandomAccessIterator& __j, _RandomAccessIterator __m, _Compare __comp) {
   // manually guard downward moving __j against __i
   while (true) {
@@ -43,7 +43,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __nth_element_find_guar
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+_LIBCPP_HIDE_FROM_ABI void
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 __nth_element(
     _RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp) {
@@ -227,7 +227,7 @@ __nth_element(
 }
 
 template <class _AlgPolicy, class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __nth_element_impl(
+inline _LIBCPP_HIDE_FROM_ABI void __nth_element_impl(
     _RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare& __comp) {
   if (__nth == __last)
     return;
@@ -243,13 +243,13 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __nth_element_im
 }
 
 template <class _RandomAccessIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+inline _LIBCPP_HIDE_FROM_ABI void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last, _Compare __comp) {
   std::__nth_element_impl<_ClassicAlgPolicy>(std::move(__first), std::move(__nth), std::move(__last), __comp);
 }
 
 template <class _RandomAccessIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+inline _LIBCPP_HIDE_FROM_ABI void
 nth_element(_RandomAccessIterator __first, _RandomAccessIterator __nth, _RandomAccessIterator __last) {
   std::nth_element(std::move(__first), std::move(__nth), std::move(__last), __less<>());
 }

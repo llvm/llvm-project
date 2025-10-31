@@ -6,23 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/acoshf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcAcoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAcoshfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -71,6 +75,6 @@ TEST_F(LlvmLibcAcoshfTest, SpecificBitPatterns) {
   for (int i = 0; i < N; ++i) {
     float x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
-                                   LIBC_NAMESPACE::acoshf(x), 0.5);
+                                   LIBC_NAMESPACE::acoshf(x), TOLERANCE + 0.5);
   }
 }

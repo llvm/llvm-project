@@ -17,14 +17,21 @@ include "mlir/IR/Constraints.td"
 include "mlir/IR/Utils.td"
 
 // Base class for defining properties.
-class Property<string storageTypeParam = "", string desc = ""> {
-  // User-readable one line summary used in error reporting messages. If empty,
-  // a generic message will be used.
-  string summary = desc;
+// `desc` is the summary, a user-readable one-line description of the property
+// used in error messages. If empty, a generic message will be used.
+// `storageTypeParam` is the type which will be used to store the property in
+// a property struct, while `interfaceTypeParam` (which defaults to `storageTypeParam`)
+// is the type returned from the getter of the property and used as an argument
+// to the property's builder.
+// Properties have a `predicate` field. It defaults to the true predicate since
+// properties always hold their C++ type. Within these predicates, $_self is the
+// **interface** type of the property.
+class Property<string storageTypeParam = "", string desc = "", string interfaceTypeParam = storageTypeParam>
+    : PropConstraint<TruePred, desc, interfaceTypeParam> {
   // The full description of this property.
   string description = "";
   code storageType = storageTypeParam;
-  code interfaceType = storageTypeParam;
+  // Note: the interface type is a field on PropConstraint.
 
   // The expression to convert from the storage type to the Interface
   // type. For example, an enum can be stored as an int but returned as an
@@ -65,13 +72,6 @@ class Property<string storageTypeParam = "", string desc = ""> {
   code convertFromAttribute = [{
     return convertFromAttribute($_storage, $_attr, $_diag);
   }];
-
-  // The verification predicate for this property. Defaults to the true predicate,
-  // since properties are always their expected type.
-  // Within the predicate, `$_self` is an instance of the **interface**
-  // type of the property. Setting this field to ? will also result in a
-  // true predicate but is not recommended, as it breaks composability.
-  Pred predicate = TruePred;
 
   // The call expression to hash the property.
   //
@@ -219,6 +219,7 @@ class IntProp<string storageTypeParam, string desc = ""> :
   let optionalParser = [{
     return $_parser.parseOptionalInteger($_storage);
   }];
+  let printer = "$_printer.printInteger($_storage)";
   let writeToMlirBytecode = [{
     $_writer.writeVarInt($_storage);
   }];
@@ -240,8 +241,7 @@ def I32Property : IntProp<"int32_t">, Deprecated<"moved to shorter name I32Prop"
 def I64Property : IntProp<"int64_t">, Deprecated<"moved to shorter name I64Prop">;
 
 // Note: only a class so we can deprecate the old name
-class _cls_StringProp : Property<"std::string", "string"> {
-  let interfaceType = "::llvm::StringRef";
+class _cls_StringProp : Property<"std::string", "string", "::llvm::StringRef"> {
   let convertFromStorage = "::llvm::StringRef{$_storage}";
   let assignToStorage = "$_storage = $_value.str()";
   let optionalParser = [{
@@ -347,7 +347,8 @@ def UnitProperty : _cls_UnitProp, Deprecated<"moved to shorter name UnitProp">;
 /// Class for giving a property a default value.
 /// This doesn't change anything about the property other than giving it a default
 /// which can be used by ODS to elide printing.
-class DefaultValuedProp<Property p, string default = "", string storageDefault = ""> : Property<p.storageType, p.summary> {
+class DefaultValuedProp<Property p, string default = "", string storageDefault = "">
+    : Property<p.storageType, p.summary, p.interfaceType> {
   let defaultValue = default;
   let storageTypeValueOverride = storageDefault;
   let baseProperty = p;
@@ -375,7 +376,7 @@ class DefaultValuedProperty<Property p, string default = "", string storageDefau
 /// predicates it may already have. If `newSummary` is provided, replace the
 /// summary of `p` with `newSummary`.
 class ConfinedProp<Property p, Pred pred, string newSummary = "">
-    : Property<p.storageType, !if(!empty(newSummary), p.summary, newSummary)> {
+    : Property<p.storageType, !if(!empty(newSummary), p.summary, newSummary), p.interfaceType> {
   let predicate = !if(!ne(p.predicate, TruePred), And<[p.predicate, pred]>, pred);
   let baseProperty = p;
   // Keep up to date with `Property` above.
@@ -399,6 +400,21 @@ class ConfinedProp<Property p, Pred pred, string newSummary = "">
 class ConfinedProperty<Property p, Pred pred, string newSummary = "">
   : ConfinedProp<p, pred, newSummary>,
     Deprecated<"moved to shorter name ConfinedProp">;
+
+/// Defines a constant value of type `prop` to be used in pattern matching.
+/// When used as a constraint, forms a matcher that tests that the property is
+/// equal to the given value (and matches any other constraints on the property).
+/// The constant value is given as a string and should be of the _interface_ type
+/// of the attribute.
+///
+/// This requires that the given property's inference type be comparable to the
+/// given value with `==`, and does require specify a concrete property type.
+class ConstantProp<Property prop, string val>
+    : ConfinedProp<prop,
+        CPred<"$_self == " # val>,
+        "constant '" # prop.summary # "': " # val> {
+  string value = val;
+}
 
 //===----------------------------------------------------------------------===//
 // Primitive property combinators
@@ -441,8 +457,8 @@ class _makeStorageWrapperPred<Property wrappedProp> {
 /// subclass `ArrayProp`.
 class ArrayProp<Property elem = Property<>, string newSummary = ""> :
   Property<"::llvm::SmallVector<" # elem.storageType # ">",
-    !if(!empty(newSummary), "array of " # elem.summary, newSummary)> {
-  let interfaceType = "::llvm::ArrayRef<" # elem.storageType # ">";
+    !if(!empty(newSummary), "array of " # elem.summary, newSummary),
+    "::llvm::ArrayRef<" # elem.storageType # ">"> {
   let convertFromStorage = "::llvm::ArrayRef<" # elem.storageType # ">{$_storage}";
   let assignToStorage = "$_storage.assign($_value.begin(), $_value.end())";
 
@@ -548,13 +564,13 @@ class ArrayProp<Property elem = Property<>, string newSummary = ""> :
   // In the non-trivial case, we define a mapped range to get internal hash
   // codes.
   let hashProperty = !if(!empty(elem.hashProperty),
-    [{::llvm::hash_value(::llvm::ArrayRef<}] # elem.storageType # [{>{$_storage})}],
+    [{hash_value(::llvm::ArrayRef<}] # elem.storageType # [{>{$_storage})}],
     [{[&]() -> ::llvm::hash_code {
         auto getElemHash = [](const auto& propStorage) -> ::llvm::hash_code {
           return }] # !subst("$_storage", "propStorage", elem.hashProperty) # [{;
         };
         auto mapped = ::llvm::map_range($_storage, getElemHash);
-        return ::llvm::hash_combine_range(mapped.begin(), mapped.end());
+        return ::llvm::hash_combine_range(mapped);
       }()
     }]);
 }
@@ -585,7 +601,8 @@ class IntArrayProperty<Property elem, string newSummary="">
 /// syntax of the underlying property, or the keyword `none` in the rare cases that
 /// it is needed. This behavior can be disabled by setting `canDelegateParsing` to 0.
 class OptionalProp<Property p, bit canDelegateParsing = 1>
-    : Property<"std::optional<" # p.storageType # ">", "optional " # p.summary> {
+    : Property<"std::optional<" # p.storageType # ">",
+        "optional " # p.summary, "std::optional<" # p.interfaceType # ">"> {
 
   // In the cases where the underlying attribute is plain old data that's passed by
   // value, the conversion code is trivial.
@@ -596,7 +613,6 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
   defvar delegatesParsing = !and(!empty(p.defaultValue),
     !not(!empty(p.optionalParser)), canDelegateParsing);
 
-  let interfaceType = "std::optional<" # p.interfaceType # ">";
   let defaultValue = "std::nullopt";
 
   let convertFromStorage = !if(hasTrivialStorage,
@@ -757,12 +773,13 @@ class OptionalProp<Property p, bit canDelegateParsing = 1>
   }];
   let writeToMlirBytecode = [{
     $_writer.writeOwnedBool($_storage.has_value());
-    if (!$_storage.has_value())
-      return;
-  }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode);
+    if ($_storage.has_value()) {
+      }] # !subst("$_storage", "(*($_storage))", p.writeToMlirBytecode) # [{
+    }
+  }];
 
   let hashProperty = !if(!empty(p.hashProperty), p.hashProperty,
-    [{ ::llvm::hash_value($_storage.has_value() ? std::optional<::llvm::hash_code>{}] #
+    [{ hash_value($_storage.has_value() ? std::optional<::llvm::hash_code>{}] #
       !subst("$_storage", "(*($_storage))", p.hashProperty) #[{} : std::nullopt) }]);
   assert !or(!not(delegatesParsing), !eq(defaultValue, "std::nullopt")),
     "For delegated parsing to be used, the default value must be nullopt. " #

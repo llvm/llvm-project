@@ -44,14 +44,14 @@ define dso_local i32 @_Z3fooi1S(i32 %count, ptr nocapture readonly byval(%struct
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[COUNT_TR]], 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], ptr nonnull align 8 dereferenceable(20) [[P1]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[AGG_TMP14]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[AGG_TMP_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP14]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP_I]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], i64 20, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP_I]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], i64 20, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP_I1]], ptr align 8 [[AGG_TMP_I]], i64 20, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P1]], ptr align 8 [[AGG_TMP_I1]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[AGG_TMP14]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[AGG_TMP_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP14]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP_I]])
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 [[CALL]]
@@ -72,13 +72,13 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   %add = add nsw i32 %count, 1
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) %agg.tmp1, ptr nonnull align 8 dereferenceable(20) %p1, i64 20, i1 false)
-  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %agg.tmp14)
-  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %agg.tmp.i)
+  call void @llvm.lifetime.start.p0(ptr nonnull %agg.tmp14)
+  call void @llvm.lifetime.start.p0(ptr nonnull %agg.tmp.i)
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) %agg.tmp14, ptr nonnull align 8 dereferenceable(20) %agg.tmp1, i64 20, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) %agg.tmp.i, ptr nonnull align 8 dereferenceable(20) %agg.tmp14, i64 20, i1 false)
   %call.i = call i32 @_Z3fooi1S(i32 %add, ptr nonnull byval(%struct.S) align 8 %agg.tmp.i)
-  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %agg.tmp14)
-  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %agg.tmp.i)
+  call void @llvm.lifetime.end.p0(ptr nonnull %agg.tmp14)
+  call void @llvm.lifetime.end.p0(ptr nonnull %agg.tmp.i)
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
@@ -89,10 +89,10 @@ return:                                           ; preds = %if.end, %if.then
 declare dso_local i32 @_Z3zoo1S(ptr byval(%struct.S) align 8) local_unnamed_addr #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2

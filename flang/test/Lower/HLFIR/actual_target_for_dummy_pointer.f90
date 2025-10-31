@@ -246,7 +246,7 @@ end subroutine char_explicit_shape_array
 ! CHECK:           fir.store %[[VAL_30]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:           fir.call @_QPchar_explicit_shape_array_assumed_len_callee(%[[VAL_2]]) fastmath<contract> : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> ()
 ! CHECK:           %[[VAL_31:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_32:.*]] = fir.embox %[[VAL_16]]#1(%[[VAL_31]]) : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
+! CHECK:           %[[VAL_32:.*]] = fir.embox %[[VAL_16]]#1(%[[VAL_31]]) typeparams %[[VAL_12]]#1 : (!fir.ref<!fir.array<100x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.class<!fir.ptr<!fir.array<?xnone>>>
 ! CHECK:           fir.store %[[VAL_32]] to %[[VAL_1]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>
 ! CHECK:           fir.call @_QPchar_explicit_shape_array_uclass_callee(%[[VAL_1]]) fastmath<contract> : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?xnone>>>>) -> ()
 ! CHECK:           return

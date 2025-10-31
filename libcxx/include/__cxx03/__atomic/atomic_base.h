@@ -32,6 +32,8 @@ struct __atomic_base // false
 {
   mutable __cxx_atomic_impl<_Tp> __a_;
 
+  using value_type = _Tp;
+
   _LIBCPP_HIDE_FROM_ABI bool is_lock_free() const volatile _NOEXCEPT {
     return __cxx_atomic_is_lock_free(sizeof(__cxx_atomic_impl<_Tp>));
   }
@@ -116,7 +118,7 @@ struct __atomic_base // false
 
   _LIBCPP_HIDE_FROM_ABI __atomic_base() _NOEXCEPT = default;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
+  _LIBCPP_HIDE_FROM_ABI __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
 
   __atomic_base(const __atomic_base&) = delete;
 };
@@ -127,9 +129,11 @@ template <class _Tp>
 struct __atomic_base<_Tp, true> : public __atomic_base<_Tp, false> {
   using __base = __atomic_base<_Tp, false>;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __atomic_base() _NOEXCEPT = default;
+  using difference_type = typename __base::value_type;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
+  _LIBCPP_HIDE_FROM_ABI __atomic_base() _NOEXCEPT = default;
+
+  _LIBCPP_HIDE_FROM_ABI __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
     return std::__cxx_atomic_fetch_add(std::addressof(this->__a_), __op, __m);

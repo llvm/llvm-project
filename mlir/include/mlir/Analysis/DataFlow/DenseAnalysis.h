@@ -125,7 +125,7 @@ protected:
   /// Visit an operation. If this analysis can confirm that lattice content
   /// of lattice anchors around operation are necessarily identical, join
   /// them into the same equivalent class.
-  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) {}
 
   /// Propagate the dense lattice forward along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -386,7 +386,7 @@ protected:
   /// Visit an operation. If this analysis can confirm that lattice content
   /// of lattice anchors around operation are necessarily identical, join
   /// them into the same equivalent class.
-  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) {}
 
   /// Propagate the dense lattice backwards along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -397,7 +397,7 @@ protected:
   /// itself.
   virtual void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
+      RegionSuccessor regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) {
     meet(before, after);
   }
@@ -526,7 +526,7 @@ public:
   /// and "to" regions.
   virtual void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionFrom,
-      RegionBranchPoint regionTo, const LatticeT &after, LatticeT *before) {
+      RegionSuccessor regionTo, const LatticeT &after, LatticeT *before) {
     AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
         branch, regionFrom, regionTo, after, before);
   }
@@ -571,7 +571,7 @@ protected:
   }
   void visitRegionBranchControlFlowTransfer(
       RegionBranchOpInterface branch, RegionBranchPoint regionForm,
-      RegionBranchPoint regionTo, const AbstractDenseLattice &after,
+      RegionSuccessor regionTo, const AbstractDenseLattice &after,
       AbstractDenseLattice *before) final {
     visitRegionBranchControlFlowTransfer(branch, regionForm, regionTo,
                                          static_cast<const LatticeT &>(after),

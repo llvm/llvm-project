@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCTargetStreamer.h"
 #include "PPCInstrInfo.h"
@@ -16,7 +16,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -37,9 +38,6 @@ DEFINE_PPC_REGCLASSES
 static int64_t
 EvaluateCRExpr(const MCExpr *E) {
   switch (E->getKind()) {
-  case MCExpr::Target:
-    return -1;
-
   case MCExpr::Constant: {
     int64_t Res = cast<MCConstantExpr>(E)->getValue();
     return Res < 0 ? -1 : Res;
@@ -87,6 +85,10 @@ EvaluateCRExpr(const MCExpr *E) {
 
     return Res < 0 ? -1 : Res;
   }
+  case MCExpr::Specifier:
+    return -1;
+  case MCExpr::Target:
+    llvm_unreachable("unused by this backend");
   }
 
   llvm_unreachable("Invalid expression kind!");
@@ -347,32 +349,30 @@ public:
   bool isImm() const override {
     return Kind == Immediate || Kind == Expression;
   }
-  bool isU1Imm() const { return Kind == Immediate && isUInt<1>(getImm()); }
-  bool isU2Imm() const { return Kind == Immediate && isUInt<2>(getImm()); }
-  bool isU3Imm() const { return Kind == Immediate && isUInt<3>(getImm()); }
-  bool isU4Imm() const { return Kind == Immediate && isUInt<4>(getImm()); }
-  bool isU5Imm() const { return Kind == Immediate && isUInt<5>(getImm()); }
-  bool isS5Imm() const { return Kind == Immediate && isInt<5>(getImm()); }
-  bool isU6Imm() const { return Kind == Immediate && isUInt<6>(getImm()); }
-  bool isU6ImmX2() const { return Kind == Immediate &&
-                                  isUInt<6>(getImm()) &&
-                                  (getImm() & 1) == 0; }
-  bool isU7Imm() const { return Kind == Immediate && isUInt<7>(getImm()); }
-  bool isU7ImmX4() const { return Kind == Immediate &&
-                                  isUInt<7>(getImm()) &&
-                                  (getImm() & 3) == 0; }
-  bool isU8Imm() const { return Kind == Immediate && isUInt<8>(getImm()); }
-  bool isU8ImmX8() const { return Kind == Immediate &&
-                                  isUInt<8>(getImm()) &&
-                                  (getImm() & 7) == 0; }
 
-  bool isU10Imm() const { return Kind == Immediate && isUInt<10>(getImm()); }
-  bool isU12Imm() const { return Kind == Immediate && isUInt<12>(getImm()); }
+  template <uint64_t N> bool isUImm() const {
+    return Kind == Immediate && isUInt<N>(getImm());
+  }
+  template <uint64_t N> bool isSImm() const {
+    return Kind == Immediate && isInt<N>(getImm());
+  }
+  bool isU6ImmX2() const { return isUImm<6>() && (getImm() & 1) == 0; }
+  bool isU7ImmX4() const { return isUImm<7>() && (getImm() & 3) == 0; }
+  bool isU8ImmX8() const { return isUImm<8>() && (getImm() & 7) == 0; }
+
   bool isU16Imm() const { return isExtImm<16>(/*Signed*/ false, 1); }
   bool isS16Imm() const { return isExtImm<16>(/*Signed*/ true, 1); }
   bool isS16ImmX4() const { return isExtImm<16>(/*Signed*/ true, 4); }
   bool isS16ImmX16() const { return isExtImm<16>(/*Signed*/ true, 16); }
   bool isS17Imm() const { return isExtImm<17>(/*Signed*/ true, 1); }
+  bool isS34Imm() const {
+    // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
+    // ContextImmediate is needed.
+    return Kind == Expression || isSImm<34>();
+  }
+  bool isS34ImmX16() const {
+    return Kind == Expression || (isSImm<34>() && (getImm() & 15) == 0);
+  }
 
   bool isHashImmX8() const {
     // The Hash Imm form is used for instructions that check or store a hash.
@@ -380,16 +380,6 @@ public:
     // -8 and -512.
     return (Kind == Immediate && getImm() <= -8 && getImm() >= -512 &&
             (getImm() & 7) == 0);
-  }
-
-  bool isS34ImmX16() const {
-    return Kind == Expression ||
-           (Kind == Immediate && isInt<34>(getImm()) && (getImm() & 15) == 0);
-  }
-  bool isS34Imm() const {
-    // Once the PC-Rel ABI is finalized, evaluate whether a 34-bit
-    // ContextImmediate is needed.
-    return Kind == Expression || (Kind == Immediate && isInt<34>(getImm()));
   }
 
   bool isTLSReg() const { return Kind == TLSRegister; }
@@ -664,7 +654,7 @@ public:
     return StringRef(Tok.Data, Tok.Length);
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<PPCOperand> CreateToken(StringRef Str, SMLoc S,
                                                  bool IsPPC64) {
@@ -744,13 +734,13 @@ public:
       return CreateImm(CE->getValue(), S, E, IsPPC64);
 
     if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(Val))
-      if (getSpecifier(SRE) == PPCMCExpr::VK_TLS ||
-          getSpecifier(SRE) == PPCMCExpr::VK_TLS_PCREL)
+      if (getSpecifier(SRE) == PPC::S_TLS ||
+          getSpecifier(SRE) == PPC::S_TLS_PCREL)
         return CreateTLSReg(SRE, S, E, IsPPC64);
 
-    if (const PPCMCExpr *TE = dyn_cast<PPCMCExpr>(Val)) {
+    if (const auto *SE = dyn_cast<MCSpecifierExpr>(Val)) {
       int64_t Res;
-      if (TE->evaluateAsConstant(Res))
+      if (PPC::evaluateAsConstant(*SE, Res))
         return CreateContextImm(Res, S, E, IsPPC64);
     }
 
@@ -779,7 +769,7 @@ private:
 
 } // end anonymous namespace.
 
-void PPCOperand::print(raw_ostream &OS) const {
+void PPCOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case Token:
     OS << "'" << getToken() << "'";
@@ -789,10 +779,10 @@ void PPCOperand::print(raw_ostream &OS) const {
     OS << getImm();
     break;
   case Expression:
-    OS << *getExpr();
+    MAI.printExpr(OS, *getExpr());
     break;
   case TLSRegister:
-    OS << *getTLSReg();
+    MAI.printExpr(OS, *getTLSReg());
     break;
   }
 }
@@ -1372,30 +1362,30 @@ const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
   switch (E->getKind()) {
   case MCExpr::Constant:
     break;
-  case MCExpr::Target: {
+  case MCExpr::Specifier: {
     // Detect error but do not return a modified expression.
-    auto *TE = cast<PPCMCExpr>(E);
+    auto *TE = cast<MCSpecifierExpr>(E);
     Spec = TE->getSpecifier();
     (void)extractSpecifier(TE->getSubExpr(), Spec);
-    Spec = PPCMCExpr::VK_None;
+    Spec = PPC::S_None;
   } break;
 
   case MCExpr::SymbolRef: {
     const auto *SRE = cast<MCSymbolRefExpr>(E);
     switch (getSpecifier(SRE)) {
-    case PPCMCExpr::VK_None:
+    case PPC::S_None:
     default:
       break;
-    case PPCMCExpr::VK_LO:
-    case PPCMCExpr::VK_HI:
-    case PPCMCExpr::VK_HA:
-    case PPCMCExpr::VK_HIGH:
-    case PPCMCExpr::VK_HIGHA:
-    case PPCMCExpr::VK_HIGHER:
-    case PPCMCExpr::VK_HIGHERA:
-    case PPCMCExpr::VK_HIGHEST:
-    case PPCMCExpr::VK_HIGHESTA:
-      if (Spec == PPCMCExpr::VK_None)
+    case PPC::S_LO:
+    case PPC::S_HI:
+    case PPC::S_HA:
+    case PPC::S_HIGH:
+    case PPC::S_HIGHA:
+    case PPC::S_HIGHER:
+    case PPC::S_HIGHERA:
+    case PPC::S_HIGHEST:
+    case PPC::S_HIGHESTA:
+      if (Spec == PPC::S_None)
         Spec = getSpecifier(SRE);
       else
         Error(E->getLoc(), "cannot contain more than one relocation specifier");
@@ -1407,7 +1397,7 @@ const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
   case MCExpr::Unary: {
     const MCUnaryExpr *UE = cast<MCUnaryExpr>(E);
     const MCExpr *Sub = extractSpecifier(UE->getSubExpr(), Spec);
-    if (Spec != PPCMCExpr::VK_None)
+    if (Spec != PPC::S_None)
       return MCUnaryExpr::create(UE->getOpcode(), Sub, Context);
     break;
   }
@@ -1416,10 +1406,12 @@ const MCExpr *PPCAsmParser::extractSpecifier(const MCExpr *E,
     const MCBinaryExpr *BE = cast<MCBinaryExpr>(E);
     const MCExpr *LHS = extractSpecifier(BE->getLHS(), Spec);
     const MCExpr *RHS = extractSpecifier(BE->getRHS(), Spec);
-    if (Spec != PPCMCExpr::VK_None)
+    if (Spec != PPC::S_None)
       return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, Context);
     break;
   }
+  case MCExpr::Target:
+    llvm_unreachable("unused by this backend");
   }
 
   return E;
@@ -1433,10 +1425,10 @@ bool PPCAsmParser::parseExpression(const MCExpr *&EVal) {
   if (getParser().parseExpression(EVal))
     return true;
 
-  auto Spec = PPCMCExpr::VK_None;
+  uint16_t Spec = PPC::S_None;
   const MCExpr *E = extractSpecifier(EVal, Spec);
-  if (Spec != PPCMCExpr::VK_None)
-    EVal = PPCMCExpr::create(Spec, E, getParser().getContext());
+  if (Spec != PPC::S_None)
+    EVal = MCSpecifierExpr::create(E, Spec, getParser().getContext());
 
   return false;
 }
@@ -1509,9 +1501,8 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
       if (!(parseOptionalToken(AsmToken::Identifier) &&
             Tok.getString().compare_insensitive("plt") == 0))
         return Error(Tok.getLoc(), "expected 'plt'");
-      EVal = MCSymbolRefExpr::create(
-          getContext().getOrCreateSymbol(TlsGetAddr),
-          MCSymbolRefExpr::VariantKind(PPCMCExpr::VK_PLT), getContext());
+      EVal = MCSymbolRefExpr::create(getContext().getOrCreateSymbol(TlsGetAddr),
+                                     PPC::S_PLT, getContext());
       if (parseOptionalToken(AsmToken::Plus)) {
         const MCExpr *Addend = nullptr;
         SMLoc EndLoc;
@@ -1634,7 +1625,7 @@ bool PPCAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     if (Operands.size() != 5)
       return false;
     PPCOperand &EHOp = (PPCOperand &)*Operands[4];
-    if (EHOp.isU1Imm() && EHOp.getImm() == 0)
+    if (EHOp.isUImm<1>() && EHOp.getImm() == 0)
       Operands.pop_back();
   }
 
@@ -1753,7 +1744,7 @@ bool PPCAsmParser::parseDirectiveLocalEntry(SMLoc L) {
   if (getParser().parseIdentifier(Name))
     return Error(L, "expected identifier in '.localentry' directive");
 
-  MCSymbolELF *Sym = cast<MCSymbolELF>(getContext().getOrCreateSymbol(Name));
+  auto *Sym = static_cast<MCSymbolELF *>(getContext().getOrCreateSymbol(Name));
   const MCExpr *Expr;
 
   if (parseToken(AsmToken::Comma) ||
@@ -1781,7 +1772,8 @@ bool PPCAsmParser::parseGNUAttribute(SMLoc L) {
 }
 
 /// Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCAsmParser() {
   RegisterMCAsmParser<PPCAsmParser> A(getThePPC32Target());
   RegisterMCAsmParser<PPCAsmParser> B(getThePPC32LETarget());
   RegisterMCAsmParser<PPCAsmParser> C(getThePPC64Target());
@@ -1813,7 +1805,7 @@ unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   }
 
   PPCOperand &Op = static_cast<PPCOperand &>(AsmOp);
-  if (Op.isU3Imm() && Op.getImm() == ImmVal)
+  if (Op.isUImm<3>() && Op.getImm() == ImmVal)
     return Match_Success;
 
   return Match_InvalidOperand;
@@ -1823,20 +1815,20 @@ const MCExpr *PPCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec,
                                            MCContext &Ctx) {
   if (isa<MCConstantExpr>(E)) {
     switch (PPCMCExpr::Specifier(Spec)) {
-    case PPCMCExpr::VK_LO:
-    case PPCMCExpr::VK_HI:
-    case PPCMCExpr::VK_HA:
-    case PPCMCExpr::VK_HIGH:
-    case PPCMCExpr::VK_HIGHA:
-    case PPCMCExpr::VK_HIGHER:
-    case PPCMCExpr::VK_HIGHERA:
-    case PPCMCExpr::VK_HIGHEST:
-    case PPCMCExpr::VK_HIGHESTA:
+    case PPC::S_LO:
+    case PPC::S_HI:
+    case PPC::S_HA:
+    case PPC::S_HIGH:
+    case PPC::S_HIGHA:
+    case PPC::S_HIGHER:
+    case PPC::S_HIGHERA:
+    case PPC::S_HIGHEST:
+    case PPC::S_HIGHESTA:
       break;
     default:
       return nullptr;
     }
   }
 
-  return PPCMCExpr::create(PPCMCExpr::Specifier(Spec), E, Ctx);
+  return MCSpecifierExpr::create(E, Spec, Ctx);
 }

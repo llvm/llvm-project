@@ -22,7 +22,7 @@ v_dual_fmamk_f32    v122, v74, 0xa0172923, v161  ::  v_dual_lshlrev_b32  v247, 0
 v_dual_add_f32      v5, 0xaf123456, v2           ::  v_dual_fmaak_f32     v6, v3, v1, 0xbabe
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // GFX12-NEXT:{{^}}v_dual_add_f32      v5, 0xaf123456, v2           ::  v_dual_fmaak_f32     v6, v3, v1, 0xbabe
-// GFX12-NEXT:{{^}}                        ^
+// GFX12-NEXT:{{^}}                                                                                      ^
 
 v_dual_add_f32      v5, 0xaf123456, v2           ::  v_dual_fmaak_f32     v6, 0xbabe, v1, 0xbabe
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
@@ -32,12 +32,12 @@ v_dual_add_f32      v5, 0xaf123456, v2           ::  v_dual_fmaak_f32     v6, 0x
 v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v123, 0xdeadbeef, 0x1234, v162
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // GFX12-NEXT:{{^}}v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v123, 0xdeadbeef, 0x1234, v162
-// GFX12-NEXT:{{^}}                                                                                   ^
+// GFX12-NEXT:{{^}}                                                                                               ^
 
 v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v123, s0, 0x1234, v162
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // GFX12-NEXT:{{^}}v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v123, s0, 0x1234, v162
-// GFX12-NEXT:{{^}}                          ^
+// GFX12-NEXT:{{^}}                                                                                       ^
 
 //===----------------------------------------------------------------------===//
 // Check that assembler detects a different literal regardless of its location.
@@ -46,7 +46,7 @@ v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v12
 v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v123, 0xdeadbeef, 0x1234, v162
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // GFX12-NEXT:{{^}}v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v123, 0xdeadbeef, 0x1234, v162
-// GFX12-NEXT:{{^}}                                                                                   ^
+// GFX12-NEXT:{{^}}                                                                                               ^
 
 v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v123, 0x1234, 0xdeadbeef, v162
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
@@ -56,7 +56,7 @@ v_dual_fmamk_f32    v122, 0xdeadbeef, 0xdeadbeef, v161 ::  v_dual_fmamk_f32  v12
 v_dual_fmamk_f32    v122, 0xdeadbeef, 0x1234, v161     ::  v_dual_fmamk_f32  v123, 0xdeadbeef, 0xdeadbeef, v162
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed
 // GFX12-NEXT:{{^}}v_dual_fmamk_f32    v122, 0xdeadbeef, 0x1234, v161     ::  v_dual_fmamk_f32  v123, 0xdeadbeef, 0xdeadbeef, v162
-// GFX12-NEXT:{{^}}                                                                                   ^
+// GFX12-NEXT:{{^}}                                      ^
 
 v_dual_fmamk_f32    v122, 0x1234, 0xdeadbeef, v161     ::  v_dual_fmamk_f32  v123, 0xdeadbeef, 0xdeadbeef, v162
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: only one unique literal operand is allowed

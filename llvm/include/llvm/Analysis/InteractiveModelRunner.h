@@ -13,6 +13,7 @@
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Analysis/Utils/TrainingLogger.h"
+#include "llvm/Support/Compiler.h"
 #include <system_error>
 
 namespace llvm {
@@ -35,7 +36,7 @@ namespace llvm {
 /// the compiler - i.e. the "Inbound" - and then the "Outbound", to avoid
 /// deadlock. This is because the compiler first tries to open the inbound
 /// (which will hang until there's a writer on the other end).
-class InteractiveModelRunner : public MLModelRunner {
+class LLVM_ABI InteractiveModelRunner : public MLModelRunner {
 public:
   InteractiveModelRunner(LLVMContext &Ctx,
                          const std::vector<TensorSpec> &Inputs,
@@ -50,7 +51,7 @@ public:
     Log->flush();
   }
 
-  virtual ~InteractiveModelRunner();
+  ~InteractiveModelRunner() override;
 
 private:
   void *evaluateUntyped() override;

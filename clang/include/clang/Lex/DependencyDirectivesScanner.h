@@ -47,11 +47,10 @@ struct Token {
 
   bool is(tok::TokenKind K) const { return Kind == K; }
   bool isNot(tok::TokenKind K) const { return Kind != K; }
-  bool isOneOf(tok::TokenKind K1, tok::TokenKind K2) const {
-    return is(K1) || is(K2);
-  }
-  template <typename... Ts> bool isOneOf(tok::TokenKind K1, Ts... Ks) const {
-    return is(K1) || isOneOf(Ks...);
+  template <typename... Ts> bool isOneOf(Ts... Ks) const {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    return (is(Ks) || ...);
   }
 };
 
@@ -135,6 +134,13 @@ void printDependencyDirectivesAsSource(
     StringRef Source,
     ArrayRef<dependency_directives_scan::Directive> Directives,
     llvm::raw_ostream &OS);
+
+/// Scan an input source buffer for C++20 named module usage.
+///
+/// \param Source The input source buffer.
+///
+/// \returns true if any C++20 named modules related directive was found.
+bool scanInputForCXX20ModulesUsage(StringRef Source);
 
 /// Functor that returns the dependency directives for a given file.
 class DependencyDirectivesGetter {

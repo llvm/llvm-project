@@ -12,7 +12,9 @@
 
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
+
 using namespace clang;
 
 OpenACCComputeConstruct *
@@ -41,11 +43,8 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(unsigned NumClauses)
           OpenACCLoopConstructClass, OpenACCDirectiveKind::Loop,
           SourceLocation{}, SourceLocation{}, SourceLocation{},
           /*AssociatedStmt=*/nullptr) {
-  std::uninitialized_value_construct(
-      getTrailingObjects<const OpenACCClause *>(),
-      getTrailingObjects<const OpenACCClause *>() + NumClauses);
-  setClauseList(
-      MutableArrayRef(getTrailingObjects<const OpenACCClause *>(), NumClauses));
+  std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+  setClauseList(getTrailingObjects(NumClauses));
 }
 
 OpenACCLoopConstruct::OpenACCLoopConstruct(
@@ -61,11 +60,9 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(
   assert((Loop == nullptr || isa<ForStmt, CXXForRangeStmt>(Loop)) &&
          "Associated Loop not a for loop?");
   // Initialize the trailing storage.
-  std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                          getTrailingObjects<const OpenACCClause *>());
+  llvm::uninitialized_copy(Clauses, getTrailingObjects());
 
-  setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                Clauses.size()));
+  setClauseList(getTrailingObjects(Clauses.size()));
 }
 
 OpenACCLoopConstruct *OpenACCLoopConstruct::CreateEmpty(const ASTContext &C,
@@ -214,7 +211,7 @@ OpenACCWaitConstruct *OpenACCWaitConstruct::Create(
     ArrayRef<Expr *> QueueIdExprs, SourceLocation RParenLoc, SourceLocation End,
     ArrayRef<const OpenACCClause *> Clauses) {
 
-  assert(llvm::all_of(QueueIdExprs, [](Expr *E) { return E != nullptr; }));
+  assert(!llvm::is_contained(QueueIdExprs, nullptr));
 
   void *Mem = C.Allocate(
       OpenACCWaitConstruct::totalSizeToAlloc<Expr *, OpenACCClause *>(
@@ -325,6 +322,86 @@ OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
   auto *Inst = new (Mem) OpenACCAtomicConstruct(Start, DirectiveLoc, AtKind,
                                                 End, Clauses, AssociatedStmt);
   return Inst;
+}
+
+static std::pair<const Expr *, const Expr *> getBinaryOpArgs(const Expr *Op) {
+  if (const auto *BO = dyn_cast<BinaryOperator>(Op)) {
+    assert(BO->isAssignmentOp());
+    return {BO->getLHS(), BO->getRHS()};
+  }
+
+  const auto *OO = cast<CXXOperatorCallExpr>(Op);
+  assert(OO->isAssignmentOp());
+  return {OO->getArg(0), OO->getArg(1)};
+}
+
+static std::pair<bool, const Expr *> getUnaryOpArgs(const Expr *Op) {
+  if (const auto *UO = dyn_cast<UnaryOperator>(Op))
+    return {true, UO->getSubExpr()};
+
+  if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(Op)) {
+    // Post-inc/dec have a second unused argument to differentiate it, so we
+    // accept -- or ++ as unary, or any operator call with only 1 arg.
+    if (OpCall->getNumArgs() == 1 || OpCall->getOperator() != OO_PlusPlus ||
+        OpCall->getOperator() != OO_MinusMinus)
+      return {true, OpCall->getArg(0)};
+  }
+
+  return {false, nullptr};
+}
+
+const OpenACCAtomicConstruct::StmtInfo
+OpenACCAtomicConstruct::getAssociatedStmtInfo() const {
+  // This ends up being a vastly simplified version of SemaOpenACCAtomic, since
+  // it doesn't have to worry about erroring out, but we should do a lot of
+  // asserts to ensure we don't get off into the weeds.
+  assert(getAssociatedStmt() && "invalid associated stmt?");
+
+  const Expr *AssocStmt = cast<const Expr>(getAssociatedStmt());
+  switch (AtomicKind) {
+  case OpenACCAtomicKind::Capture:
+    assert(false && "Only 'read'/'write'/'update' have been implemented here");
+    return {};
+  case OpenACCAtomicKind::Read: {
+    // Read only supports the format 'v = x'; where both sides are a scalar
+    // expression. This can come in 2 forms; BinaryOperator or
+    // CXXOperatorCallExpr (rarely).
+    std::pair<const Expr *, const Expr *> BinaryArgs =
+        getBinaryOpArgs(AssocStmt);
+    // We want the L-value for each side, so we ignore implicit casts.
+    return {BinaryArgs.first->IgnoreImpCasts(),
+            BinaryArgs.second->IgnoreImpCasts(), /*expr=*/nullptr};
+  }
+  case OpenACCAtomicKind::Write: {
+    // Write supports only the format 'x = expr', where the expression is scalar
+    // type, and 'x' is a scalar l value. As above, this can come in 2 forms;
+    // Binary Operator or CXXOperatorCallExpr.
+    std::pair<const Expr *, const Expr *> BinaryArgs =
+        getBinaryOpArgs(AssocStmt);
+    // We want the L-value for ONLY the X side, so we ignore implicit casts. For
+    // the right side (the expr), we emit it as an r-value so we need to
+    // maintain implicit casts.
+    return {/*v=*/nullptr, BinaryArgs.first->IgnoreImpCasts(),
+            BinaryArgs.second};
+  }
+  case OpenACCAtomicKind::None:
+  case OpenACCAtomicKind::Update: {
+    std::pair<bool, const Expr *> UnaryArgs = getUnaryOpArgs(AssocStmt);
+    if (UnaryArgs.first)
+      return {/*v=*/nullptr, UnaryArgs.second->IgnoreImpCasts(),
+              /*expr=*/nullptr};
+
+    std::pair<const Expr *, const Expr *> BinaryArgs =
+        getBinaryOpArgs(AssocStmt);
+    // For binary args, we just store the RHS as an expression (in the
+    // expression slot), since the codegen just wants the whole thing for a
+    // recipe.
+    return {/*v=*/nullptr, BinaryArgs.first->IgnoreImpCasts(),
+            BinaryArgs.second};
+  }
+  }
+
+  llvm_unreachable("unknown OpenACC atomic kind");
 }
 
 OpenACCCacheConstruct *OpenACCCacheConstruct::CreateEmpty(const ASTContext &C,

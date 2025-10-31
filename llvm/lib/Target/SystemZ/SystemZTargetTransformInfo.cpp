@@ -436,20 +436,6 @@ bool SystemZTTIImpl::isLSRCostLess(
              C2.ScaleCost, C2.SetupCost);
 }
 
-bool SystemZTTIImpl::areInlineCompatible(const Function *Caller,
-                                         const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Support only equal feature bitsets. Restriction should be relaxed in the
-  // future to allow inlining when callee's bits are subset of the caller's.
-  return CallerBits == CalleeBits;
-}
-
 unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   bool Vector = (ClassID == 1);
   if (!Vector)
@@ -738,20 +724,22 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
                                        Args, CxtI);
 }
 
-InstructionCost SystemZTTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
-    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
-  Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
+InstructionCost
+SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                               VectorType *SrcTy, ArrayRef<int> Mask,
+                               TTI::TargetCostKind CostKind, int Index,
+                               VectorType *SubTp, ArrayRef<const Value *> Args,
+                               const Instruction *CxtI) const {
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
   if (ST->hasVector()) {
-    unsigned NumVectors = getNumVectorRegs(Tp);
+    unsigned NumVectors = getNumVectorRegs(SrcTy);
 
     // TODO: Since fp32 is expanded, the shuffle cost should always be 0.
 
     // FP128 values are always in scalar registers, so there is no work
     // involved with a shuffle, except for broadcast. In that case register
     // moves are done with a single instruction per element.
-    if (Tp->getScalarType()->isFP128Ty())
+    if (SrcTy->getScalarType()->isFP128Ty())
       return (Kind == TargetTransformInfo::SK_Broadcast ? NumVectors - 1 : 0);
 
     switch (Kind) {
@@ -775,7 +763,8 @@ InstructionCost SystemZTTIImpl::getShuffleCost(
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 // Return the log2 difference of the element sizes of the two vector types.

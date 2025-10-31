@@ -36,6 +36,13 @@ jdoerfert@llnl.gov (email), [jdoerfert](https://github.com/jdoerfert) (GitHub)
 Florian Hahn \
 flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 
+#### HashRecognize
+
+Ramkumar Ramachandra \
+r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse) \
+Piotr Fusik \
+p.fusik@samsung.com (email), [pfusik](https://github.com/pfusik) (GitHub)
+
 #### InferAddressSpaces
 
 Matt Arsenault \
@@ -80,7 +87,9 @@ quentin.colombet@gmail.com (email), [qcolombet](https://github.com/qcolombet) (G
 #### LoopVectorize
 
 Florian Hahn \
-flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
+flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub) \
+David Sherwood \
+david.sherwood@arm.com (email), [david-arm](https://github.com/david-arm) (GitHub)
 
 #### MemorySSA
 
@@ -113,6 +122,13 @@ a.bataev@outlook.com (email), [alexey-bataev](https://github.com/alexey-bataev) 
 
 Chandler Carruth \
 chandlerc@gmail.com, chandlerc@google.com (email), [chandlerc](https://github.com/chandlerc) (GitHub)
+
+#### DFAJumpThreading
+
+Hongyu Chen \
+xxs\_chy@outlook.com (email), [XChy](https://github.com/XChy) (Github) \
+Usman Nadeem \
+mnadeem@quicinc.com (email), [UsmanNadeem](https://github.com/UsmanNadeem) (Github)
 
 ### Instrumentation and sanitizers
 
@@ -181,7 +197,7 @@ david.green@arm.com (email), [davemgreen](https://github.com/davemgreen) (GitHub
 Amara Emerson (esp. AArch64 GlobalISel) \
 amara@apple.com (email), [aemerson](https://github.com/aemerson) (GitHub) \
 Eli Friedman (esp. ARM64EC) \
-efriedma@quicinc.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub) \
+efriedma@qti.qualcomm.com (email), [efriedma-quic](https://github.com/efriedma-quic) (GitHub) \
 Sjoerd Meijer \
 smeijer@nvidia.com (email), [sjoerdmeijer](https://github.com/sjoerdmeijer) (GitHub) \
 Nashe Mncube \
@@ -230,7 +246,7 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 #### Hexagon backend
 
 Sundeep Kushwaha \
-sundeepk@quicinc.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
+sundeepk@qti.qualcomm.com (email), [SundeepKushwaha](https://github.com/SundeepKushwaha) (GitHub)
 
 #### Lanai backend
 
@@ -260,13 +276,23 @@ Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
 amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
-Justin Fargnoli \
-jfargnoli@nvidia.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
 
 #### PowerPC backend
 
-Zheng Chen \
-czhengsz@cn.ibm.com (email), [chenzheng1030](https://github.com/chenzheng1030) (GitHub)
+Amy Kwan (esp. release issues) \
+Amy.Kwan1@ibm.com (email), [amy-kwan](https://github.com/amy-kwan) (GitHub) \
+Lei Huang \
+lei@ca.ibm.com (email), [lei137](https://github.com/lei137) (GitHub) \
+Sean Fertile (esp. ABI/ELF/XCOFF) \
+sfertile@ca.ibm.com (email), [mandlebug](https://github.com/mandlebug) (GitHub) \
+Zhijian Lin \
+zhijian@ca.ibm.com (email), [diggerlin](https://github.com/diggerlin) (GitHub) \
+Maryam Moghadas \
+maryammo@ca.ibm.com (email), [maryammo](https://github.com/maryammo) (GitHub) \
+Roland Froese \
+froese@ca.ibm.com (email), [RolandF77](https://github.com/RolandF77) (GitHub) \
+llvmonpower \
+powerllvm@ca.ibm.com (email), [llvmonpower](https://github.com/llvmonpower) (GitHub)
 
 #### RISCV backend
 
@@ -302,8 +328,10 @@ marukawa@nec.com (email), [kaz7](https://github.com/kaz7) (GitHub)
 
 #### WebAssembly backend
 
-Dan Gohman \
-llvm@sunfishcode.online (email), [sunfishcode](https://github.com/sunfishcode) (GitHub)
+Derek Schuff \
+dschuff@chromium.org (email), [dschuff](https://github.com/dschuff) (GitHub) \
+Heejin Ahn \
+aheejin@gmail.com (email), [aheejin](https://github.com/aheejin) (GitHub)
 
 #### X86 backend
 
@@ -475,7 +503,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.md)
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
@@ -485,7 +513,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [LLD maintainers](https://github.com/llvm/llvm-project/blob/main/lld/Maintainers.md)
 
-[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.rst)
+[LLDB maintainers](https://github.com/llvm/llvm-project/blob/main/lldb/Maintainers.md)
 
 [LLVM OpenMP Library maintainers](https://github.com/llvm/llvm-project/blob/main/openmp/Maintainers.md)
 
@@ -511,6 +539,7 @@ Peter Collingbourne (peter@pcc.me.uk, [pcc](https://github.com/pcc)) -- LTO \
 Evan Cheng (evan.cheng@apple.com) -- Parts of code generator not covered by someone else \
 Jake Ehrlich (jakehehrlich@google.com, [jakehehrlich](https://github.com/jakehehrlich)) -- llvm-objcopy and ObjCopy library \
 Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel) -- AliasAnalysis \
+Justin Fargnoli (jfargnoli@nvidia.com, [justinfargnoli](https://github.com/justinfargnoli)) -- NVPTX backend \
 Renato Golin (rengolin@systemcall.eu, [rengolin](https://github.com/rengolin)) -- ARM backend \
 Venkatraman Govindaraju (venkatra@cs.wisc.edu, [vegovin](https://github.com/vegovin) -- Sparc backend \
 James Grosbach (grosbach@apple.com) -- MC layer \
@@ -523,10 +552,11 @@ Hans Wennborg (hans@chromium.org, [zmodem](https://github.com/zmodem)) -- Releas
 Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
 Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
-Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers
+Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
+Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
+Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
 
 ### Former maintainers of removed components
 
 Duncan Sands (baldrick@free.fr, [CunningBaldrick](https://github.com/CunningBaldrick)) -- DragonEgg \
 Hal Finkel (hfinkel@anl.gov, [hfinkel](https://github.com/hfinkel)) -- LoopReroll
-

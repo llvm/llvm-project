@@ -39,8 +39,8 @@ let Predicates = [HasDotProd] in {
 def ext_addv_to_udot_addv : GICombineRule<
   (defs root:$root, ext_addv_to_udot_addv_matchinfo:$matchinfo),
   (match (wip_match_opcode G_VECREDUCE_ADD):$root,
-         [{ return matchExtAddvToUdotAddv(*${root}, MRI, STI, ${matchinfo}); }]),
-  (apply [{ applyExtAddvToUdotAddv(*${root}, MRI, B, Observer, STI, ${matchinfo}); }])
+         [{ return matchExtAddvToDotAddv(*${root}, MRI, STI, ${matchinfo}); }]),
+  (apply [{ applyExtAddvToDotAddv(*${root}, MRI, B, Observer, STI, ${matchinfo}); }])
 >;
 }
 
@@ -62,21 +62,23 @@ class push_opcode_through_ext<Instruction opcode, Instruction extOpcode> : GICom
 
 def push_sub_through_zext : push_opcode_through_ext<G_SUB, G_ZEXT>;
 def push_add_through_zext : push_opcode_through_ext<G_ADD, G_ZEXT>;
+def push_mul_through_zext : push_opcode_through_ext<G_MUL, G_ZEXT>;
 def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
+def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
-                                      fconstant_to_constant,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
-                                      shuffle_to_extract,
                                       ext_addv_to_udot_addv,
                                       ext_uaddv_to_uaddlv,
                                       push_sub_through_zext,
                                       push_add_through_zext,
+                                      push_mul_through_zext,
                                       push_sub_through_sext,
-                                      push_add_through_sext]> {
+                                      push_add_through_sext,
+                                      push_mul_through_sext]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -172,8 +174,23 @@ def form_duplane : GICombineRule <
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn, fullrev,
-                                              form_duplane, shuf_to_ins]>;
+// Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
+class unmerge_duplane<Instruction Op> : GICombineRule <
+  (defs root:$root),
+  (match (Op $a, $src, $c),
+         (G_UNMERGE_VALUES $d1, $d2, $a):$root,
+         [{ return MRI.getType(${d1}.getReg()).getSizeInBits() == 64; }]),
+  (apply (GIReplaceReg $d2, $d1), (Op $d1, $src, $c))
+>;
+def unmerge_duplane8 : unmerge_duplane<G_DUPLANE8>;
+def unmerge_duplane16 : unmerge_duplane<G_DUPLANE16>;
+def unmerge_duplane32 : unmerge_duplane<G_DUPLANE32>;
+// G_DUPLANE64 is not included as the result in scalar.
+def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
+                                       unmerge_duplane32]>;
+
+def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
+                                              uzp, trn, fullrev, shuf_to_ins]>;
 
 // Turn G_UNMERGE_VALUES -> G_EXTRACT_VECTOR_ELT's
 def vector_unmerge_lowering : GICombineRule <
@@ -322,18 +339,20 @@ def AArch64PostLegalizerLowering
     : GICombiner<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
-                        lower_vector_fcmp, form_truncstore,
+                        lower_vector_fcmp, form_truncstore, fconstant_to_constant,
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
-                        vector_unmerge_lowering, insertelt_nonconst]> {
+                        vector_unmerge_lowering, insertelt_nonconst,
+                        unmerge_duplanes]> {
 }
 
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
-                       [copy_prop, cast_of_cast_combines, buildvector_of_truncate,
-                        integer_of_truncate, mutate_anyext_to_zext,
-                        combines_for_extload, combine_indexed_load_store, sext_trunc_sextload,
+                       [copy_prop, cast_of_cast_combines, constant_fold_fp_ops, 
+                        buildvector_of_truncate, integer_of_truncate,
+                        mutate_anyext_to_zext, combines_for_extload, 
+                        combine_indexed_load_store, sext_trunc_sextload,
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
@@ -345,7 +364,9 @@ def AArch64PostLegalizerCombiner
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax, or_to_bsp, combine_concat_vector,
-                        commute_constant_to_rhs,
+                        commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
-                        combine_mul_cmlt, combine_use_vector_truncate, extmultomull]> {
+                        combine_mul_cmlt, combine_use_vector_truncate,
+                        extmultomull, truncsat_combines, lshr_of_trunc_of_lshr,
+                        funnel_shift_from_or_shift_constants_are_legal]> {
 }

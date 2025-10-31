@@ -8,7 +8,7 @@
 
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "MCTargetDesc/LoongArchTargetStreamer.h"
@@ -17,7 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -26,6 +26,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -554,7 +555,7 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
         return LoongArchInstPrinter::getRegisterName(Reg);
@@ -564,7 +565,7 @@ public:
 
     switch (Kind) {
     case KindTy::Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";
@@ -755,7 +756,7 @@ LoongArchAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
     return Error(getLoc(), "expected valid identifier for operand modifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
-  LoongArchMCExpr::Specifier VK = LoongArchMCExpr::parseSpecifier(Identifier);
+  auto VK = LoongArch::parseSpecifier(Identifier);
   if (VK == LoongArchMCExpr::VK_None)
     return Error(getLoc(), "invalid relocation specifier");
 
@@ -956,8 +957,10 @@ void LoongArchAsmParser::emitLoadAddressAbs(MCInst &Inst, SMLoc IDLoc,
                              : Inst.getOperand(2).getExpr();
   InstSeq Insts;
 
+  // To distinguish between la.abs and %abs_hi20, la.abs will generate
+  // R_LARCH_MARK_LA and R_LARCH_ABS_HI20 relocations.
   Insts.push_back(
-      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_ABS_HI20));
+      LoongArchAsmParser::Inst(LoongArch::LU12I_W, ELF::R_LARCH_MARK_LA));
   Insts.push_back(
       LoongArchAsmParser::Inst(LoongArch::ORI, ELF::R_LARCH_ABS_LO12));
 
@@ -1633,6 +1636,9 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     return Match_Success;
   }
 
+  if (Kind == MCK_GPRNoR0R1 && (Reg == LoongArch::R0 || Reg == LoongArch::R1))
+    return Match_RequiresOpnd2NotR0R1;
+
   return Match_InvalidOperand;
 }
 
@@ -1949,7 +1955,8 @@ ParseStatus LoongArchAsmParser::parseDirective(AsmToken DirectiveID) {
   return ParseStatus::NoMatch;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchAsmParser() {
   RegisterMCAsmParser<LoongArchAsmParser> X(getTheLoongArch32Target());
   RegisterMCAsmParser<LoongArchAsmParser> Y(getTheLoongArch64Target());
 }

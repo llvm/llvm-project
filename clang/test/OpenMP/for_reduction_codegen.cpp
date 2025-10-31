@@ -27,7 +27,6 @@ struct S {
   ~S() {}
 };
 
-
 template <typename T, int length>
 T tmain() {
   T t;
@@ -60,6 +59,15 @@ T tmain() {
 }
 
 extern S<float> **foo();
+int g_arr[10];
+
+void reductionArrayElement() {
+#pragma omp parallel
+#pragma omp for reduction(+:g_arr[1])
+  for (int i = 0; i < 10; i++) {
+    g_arr[1] += i;
+  }
+}
 
 int main() {
 #ifdef LAMBDA
@@ -164,6 +172,7 @@ int main() {
 #pragma omp for reduction(& : var3)
   for (int i = 0; i < 10; ++i)
     ;
+  reductionArrayElement();
   return tmain<int, 42>();
 #endif
 }
@@ -535,6 +544,26 @@ int main() {
 //.
 // CHECK4: @.gomp_critical_user_.reduction.var = common global [8 x i32] zeroinitializer, align 8
 //.
+
+// CHECK1-LABEL: define {{.*}}reductionArrayElement{{.*}}.omp_outlined{{.*}}
+// CHECK1-NEXT:  entry:
+// CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
+// CHECK1:         [[G_ARR:%.*]] = alloca i32, align 4
+// CHECK1:         [[TMP0:%.*]] = sdiv exact i64 sub (i64 ptrtoint (ptr @g_arr to i64){{.*}}
+// CHECK1-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[G_ARR:%.*]], i64 [[TMP0]]
+// CHECK1:       omp.inner.for.body:
+// CHECK1:         [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[TMP1]], i64 0, i64 1
+// CHECK1-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// CHECK1-NEXT:    [[ADD2:%.*]] = add nsw i32 [[TMP11]],{{.+}}
+// CHECK1-NEXT:    store i32 [[ADD2]], ptr [[ARRAYIDX]], align 4
+// CHECK1:       omp.loop.exit:
+// CHECK1-NEXT:    call void {{.*}}__kmpc_for_static_fini{{.+}}
+// CHECK1:         {{.*}}call i32 {{.*}}__kmpc_reduce{{.+}}
+// CHECK1:       omp.reduction.default:
+// CHECK1-NEXT:    call void @__kmpc_barrier{{.+}}
+// CHECK1-NEXT:    ret void
+//
+
 // CHECK1-LABEL: define {{[^@]+}}@main
 // CHECK1-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK1-NEXT:  entry:
@@ -614,6 +643,7 @@ int main() {
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @main.omp_outlined.11, ptr [[TMP7]])
 // CHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[VAR3]], align 8
 // CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @main.omp_outlined.12, ptr [[TMP8]])
+// CHECK1-NEXT:    call void {{.*}}reductionArrayElement{{.*}}
 // CHECK1-NEXT:    [[CALL10:%.*]] = call noundef i32 @_Z5tmainIiLi42EET_v()
 // CHECK1-NEXT:    store i32 [[CALL10]], ptr [[RETVAL]], align 4
 // CHECK1-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8

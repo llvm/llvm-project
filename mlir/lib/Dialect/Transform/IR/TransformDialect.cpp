@@ -13,11 +13,16 @@
 #include "mlir/Dialect/Transform/IR/Utils.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Verifier.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
 #include "mlir/Dialect/Transform/IR/TransformDialect.cpp.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
 
 #ifndef NDEBUG
 void transform::detail::checkImplementsTransformOpInterface(
@@ -66,6 +71,10 @@ void transform::TransformDialect::initialize() {
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
   initializeTypes();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/Transform/IR/TransformAttrs.cpp.inc"
+      >();
   initializeLibraryModule();
 }
 
@@ -131,6 +140,20 @@ LogicalResult transform::TransformDialect::verifyOperationAttribute(
                                      << " attribute can only be attached to "
                                         "operations with symbol tables";
     }
+
+    // Pre-verify calls and callables because call graph construction below
+    // assumes they are valid, but this verifier runs before verifying the
+    // nested operations.
+    WalkResult walkResult = op->walk([](Operation *nested) {
+      if (!isa<CallableOpInterface, CallOpInterface>(nested))
+        return WalkResult::advance();
+
+      if (failed(verify(nested, /*verifyRecursively=*/false)))
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    if (walkResult.wasInterrupted())
+      return failure();
 
     const mlir::CallGraph callgraph(op);
     for (auto scc = llvm::scc_begin(&callgraph); !scc.isAtEnd(); ++scc) {

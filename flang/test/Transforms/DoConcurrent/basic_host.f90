@@ -1,6 +1,3 @@
-! Fails until we update the pass to use the `fir.do_concurrent` op.
-! XFAIL: *
-
 ! Tests mapping of a basic `do concurrent` loop to `!$omp parallel do`.
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
@@ -8,7 +5,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
 ! RUN:   | FileCheck %s
  
-! CHECK-LABEL: do_concurrent_basic
+! CHECK-LABEL: DO_CONCURRENT_BASIC
 program do_concurrent_basic
     ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 

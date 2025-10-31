@@ -14,6 +14,7 @@
 #include "DebugTypes.h"
 #include "Driver.h"
 #include "InputFiles.h"
+#include "PDB.h"
 #include "SymbolTable.h"
 #include "Writer.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -50,9 +51,18 @@ public:
     f(symtab);
   }
 
+  // Invoke the specified callback for each active symbol table,
+  // skipping the native symbol table on pure ARM64EC targets.
+  void forEachActiveSymtab(std::function<void(SymbolTable &symtab)> f) {
+    if (symtab.ctx.config.machine == ARM64X)
+      f(*hybridSymtab);
+    f(symtab);
+  }
+
   std::vector<ObjFile *> objFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
   std::vector<ImportFile *> importFileInstances;
+  std::int64_t consumedInputsSize = 0;
 
   MergeChunk *mergeChunkInstances[Log2MaxSectionAlignment + 1] = {};
 
@@ -103,6 +113,8 @@ public:
   Timer publicsLayoutTimer;
   Timer tpiStreamLayoutTimer;
   Timer diskCommitTimer;
+
+  std::optional<PDBStats> pdbStats;
 
   Configuration config;
 

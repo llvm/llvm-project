@@ -14,6 +14,7 @@
 //   void insert(InputIterator first, InputIterator last);
 
 #include <flat_set>
+#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <deque>
@@ -79,6 +80,12 @@ void test() {
   test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
   test_one<std::vector<int, min_allocator<int>>>();
+  {
+    std::flat_multiset<int, std::less<int>, SillyReserveVector<int>> m{1, 2};
+    std::vector<int> v{3, 4};
+    m.insert(v.begin(), v.end());
+    assert(std::ranges::equal(m, std::vector<int>{1, 2, 3, 4}));
+  }
 }
 
 void test_exception() {

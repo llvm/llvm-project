@@ -13,9 +13,7 @@
 
 #include "ReduceBasicBlocks.h"
 #include "Utils.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -51,7 +49,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   if (isa<CatchSwitchInst>(Term))
     return;
 
-  bool IsBranch = isa<BranchInst>(Term);
+  bool IsBranch = isa<BranchInst>(Term) || isa<CallBrInst>(Term);
   if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
     BasicBlock *UnwindDest = Invoke->getUnwindDest();
     BasicBlock::iterator LP = UnwindDest->getFirstNonPHIIt();

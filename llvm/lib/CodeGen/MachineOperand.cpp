@@ -218,6 +218,19 @@ void MachineOperand::ChangeToBA(const BlockAddress *BA, int64_t Offset,
   setTargetFlags(TargetFlags);
 }
 
+void MachineOperand::ChangeToCPI(unsigned Idx, int Offset,
+                                 unsigned TargetFlags) {
+  assert((!isReg() || !isTied()) &&
+         "Cannot change a tied operand into a constant pool index");
+
+  removeRegFromUses();
+
+  OpKind = MO_ConstantPoolIndex;
+  setIndex(Idx);
+  setOffset(Offset);
+  setTargetFlags(TargetFlags);
+}
+
 void MachineOperand::ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags) {
   assert((!isReg() || !isTied()) &&
          "Cannot change a tied operand into an MCSymbol");
@@ -1272,6 +1285,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (AAInfo.NoAlias) {
     OS << ", !noalias ";
     AAInfo.NoAlias->printAsOperand(OS, MST);
+  }
+  if (AAInfo.NoAliasAddrSpace) {
+    OS << ", !noalias.addrspace ";
+    AAInfo.NoAliasAddrSpace->printAsOperand(OS, MST);
   }
   if (getRanges()) {
     OS << ", !range ";

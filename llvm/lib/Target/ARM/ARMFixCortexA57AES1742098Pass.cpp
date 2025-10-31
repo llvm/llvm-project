@@ -52,9 +52,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <assert.h>
@@ -75,8 +73,7 @@ public:
   bool runOnMachineFunction(MachineFunction &F) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override {
@@ -84,7 +81,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ReachingDefAnalysis>();
+    AU.addRequired<ReachingDefInfoWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -98,7 +95,7 @@ private:
     MachineOperand *MOp;
   };
 
-  void analyzeMF(MachineFunction &MF, ReachingDefAnalysis &RDA,
+  void analyzeMF(MachineFunction &MF, ReachingDefInfo &RDI,
                  const ARMBaseRegisterInfo *TRI,
                  SmallVectorImpl<AESFixupLocation> &FixupLocsForFn) const;
 
@@ -115,7 +112,7 @@ char ARMFixCortexA57AES1742098::ID = 0;
 INITIALIZE_PASS_BEGIN(ARMFixCortexA57AES1742098, DEBUG_TYPE,
                       "ARM fix for Cortex-A57 AES Erratum 1742098", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(ReachingDefAnalysis);
+INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass);
 INITIALIZE_PASS_END(ARMFixCortexA57AES1742098, DEBUG_TYPE,
                     "ARM fix for Cortex-A57 AES Erratum 1742098", false, false)
 
@@ -252,11 +249,11 @@ bool ARMFixCortexA57AES1742098::runOnMachineFunction(MachineFunction &F) {
   const ARMBaseRegisterInfo *TRI = STI.getRegisterInfo();
   const ARMBaseInstrInfo *TII = STI.getInstrInfo();
 
-  auto &RDA = getAnalysis<ReachingDefAnalysis>();
+  auto &RDI = getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
 
   // Analyze whole function to find instructions which need fixing up...
   SmallVector<AESFixupLocation> FixupLocsForFn{};
-  analyzeMF(F, RDA, TRI, FixupLocsForFn);
+  analyzeMF(F, RDI, TRI, FixupLocsForFn);
 
   // ... and fix the instructions up all at the same time.
   bool Changed = false;
@@ -270,8 +267,7 @@ bool ARMFixCortexA57AES1742098::runOnMachineFunction(MachineFunction &F) {
 }
 
 void ARMFixCortexA57AES1742098::analyzeMF(
-    MachineFunction &MF, ReachingDefAnalysis &RDA,
-    const ARMBaseRegisterInfo *TRI,
+    MachineFunction &MF, ReachingDefInfo &RDI, const ARMBaseRegisterInfo *TRI,
     SmallVectorImpl<AESFixupLocation> &FixupLocsForFn) const {
   unsigned MaxAllowedFixups = 0;
 
@@ -292,7 +288,7 @@ void ARMFixCortexA57AES1742098::analyzeMF(
       // Inspect all operands, choosing whether to insert a fixup.
       for (MachineOperand &MOp : MI.uses()) {
         SmallPtrSet<MachineInstr *, 1> AllDefs{};
-        RDA.getGlobalReachingDefs(&MI, MOp.getReg(), AllDefs);
+        RDI.getGlobalReachingDefs(&MI, MOp.getReg(), AllDefs);
 
         // Planned Fixup: This should be added to FixupLocsForFn at most once.
         AESFixupLocation NewLoc{&MBB, &MI, &MOp};

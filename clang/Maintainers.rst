@@ -20,7 +20,7 @@ assistance.
 Lead Maintainer
 ---------------
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Contained Components
@@ -31,7 +31,7 @@ Clang that are typically contained to one area of the compiler.
 AST matchers
 ~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 AST Visitors
@@ -46,7 +46,7 @@ Clang LLVM IR generation
 | rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 | Eli Friedman
-| efriedma\@quicinc.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
+| efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
@@ -59,6 +59,8 @@ Clang MLIR generation
 | Bruno Cardoso Lopes
 | bruno.cardoso\@gmail.com (email), sonicsprawl (Discord), bcardosolopes (GitHub)
 
+| Henrich Lauko
+| henrich.lau\@gmail.com  (email), henrich.lauko (Discord), xlauko (GitHub)
 
 Analysis & CFG
 ~~~~~~~~~~~~~~
@@ -300,7 +302,7 @@ standard, when fixing standards bugs, or when implementing a new standard featur
 C conformance
 ~~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 C++ conformance

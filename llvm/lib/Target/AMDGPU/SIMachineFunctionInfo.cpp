@@ -29,10 +29,23 @@ enum { MAX_LANES = 64 };
 
 using namespace llvm;
 
+// TODO -- delete this flag once we have more robust mechanisms to allocate the
+// optimal RC for Opc and Dest of MFMA. In particular, there are high RP cases
+// where it is better to produce the VGPR form (e.g. if there are VGPR users
+// of the MFMA result).
+static cl::opt<bool, true> MFMAVGPRFormOpt(
+    "amdgpu-mfma-vgpr-form",
+    cl::desc("Whether to force use VGPR for Opc and Dest of MFMA. If "
+             "unspecified, default to compiler heuristics"),
+    cl::location(SIMachineFunctionInfo::MFMAVGPRForm), cl::init(false),
+    cl::Hidden);
+
 const GCNTargetMachine &getTM(const GCNSubtarget *STI) {
   const SITargetLowering *TLI = STI->getTargetLowering();
   return static_cast<const GCNTargetMachine &>(TLI->getTargetMachine());
 }
+
+bool SIMachineFunctionInfo::MFMAVGPRForm = false;
 
 SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
                                              const GCNSubtarget *STI)
@@ -41,12 +54,20 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
       WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
-  const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
+      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
+      IsWholeWaveFunction(F.getCallingConv() ==
+                          CallingConv::AMDGPU_Gfx_WholeWave) {
+  const GCNSubtarget &ST = *STI;
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
+
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is completely removed.
+  DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
+  if (DynamicVGPRBlockSize == 0 && ST.isDynamicVGPREnabled())
+    DynamicVGPRBlockSize = ST.getDynamicVGPRBlockSize();
 
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
@@ -63,11 +84,14 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
-  MayNeedAGPRs = ST.hasMAIInsts();
-  if (ST.hasGFX90AInsts() &&
-      ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
-      !mayUseAGPRs(F))
-    MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+  if (ST.hasGFX90AInsts()) {
+    // FIXME: Extract logic out of getMaxNumVectorRegs; we need to apply the
+    // allocation granule and clamping.
+    auto [MinNumAGPRAttr, MaxNumAGPRAttr] =
+        AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                        /*OnlyFirstRequired=*/true);
+    MinNumAGPRs = MinNumAGPRAttr;
+  }
 
   if (AMDGPU::isChainCC(CC)) {
     // Chain functions don't receive an SP from their caller, but are free to
@@ -83,7 +107,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
     ImplicitArgPtr = false;
   } else if (!isEntryFunction()) {
-    if (CC != CallingConv::AMDGPU_Gfx)
+    if (CC != CallingConv::AMDGPU_Gfx &&
+        CC != CallingConv::AMDGPU_Gfx_WholeWave)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;
@@ -109,13 +134,16 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   if (!AMDGPU::isGraphics(CC) ||
       ((CC == CallingConv::AMDGPU_CS || CC == CallingConv::AMDGPU_Gfx) &&
        ST.hasArchitectedSGPRs())) {
-    if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
+    if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-x"))
       WorkGroupIDX = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y"))
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-y") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-y"))
       WorkGroupIDY = true;
 
-    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z"))
+    if (!F.hasFnAttribute("amdgpu-no-workgroup-id-z") ||
+        !F.hasFnAttribute("amdgpu-no-cluster-id-z"))
       WorkGroupIDZ = true;
   }
 
@@ -172,6 +200,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     VGPRForAGPRCopy =
         AMDGPU::VGPR_32RegClass.getRegister(ST.getMaxNumVGPRs(F) - 1);
   }
+
+  ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
 }
 
 MachineFunctionInfo *SIMachineFunctionInfo::clone(
@@ -705,6 +735,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
+      NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
+      NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
       Occupancy(MFI.getOccupancy()),
       ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
@@ -716,6 +748,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
       Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      IsWholeWaveFunction(MFI.isWholeWaveFunction()),
+      DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
@@ -759,8 +793,11 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
+  NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
+  IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());

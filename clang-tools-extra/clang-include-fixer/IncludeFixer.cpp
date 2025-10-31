@@ -53,7 +53,7 @@ public:
 
     Compiler->createSema(getTranslationUnitKind(), CompletionConsumer);
     SemaSource->setCompilerInstance(Compiler);
-    Compiler->getSema().addExternalSource(SemaSource.get());
+    Compiler->getSema().addExternalSource(SemaSource);
 
     clang::ParseAST(Compiler->getSema(), Compiler->getFrontendOpts().ShowStats,
                     Compiler->getFrontendOpts().SkipFunctionBodies);
@@ -90,14 +90,14 @@ bool IncludeFixerActionFactory::runInvocation(
 
   // Set up Clang.
   CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
+  Compiler.setVirtualFileSystem(Files->getVirtualFileSystemPtr());
   Compiler.setFileManager(Files);
 
   // Create the compiler's actual diagnostics engine. We want to drop all
   // diagnostics here.
-  Compiler.createDiagnostics(Files->getVirtualFileSystem(),
-                             new clang::IgnoringDiagConsumer,
+  Compiler.createDiagnostics(new clang::IgnoringDiagConsumer,
                              /*ShouldOwnClient=*/true);
-  Compiler.createSourceManager(*Files);
+  Compiler.createSourceManager();
 
   // We abort on fatal errors so don't let a large number of errors become
   // fatal. A missing #include can cause thousands of errors.

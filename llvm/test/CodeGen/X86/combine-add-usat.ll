@@ -62,12 +62,13 @@ define <8 x i16> @combine_constfold_v8i16() {
 define <8 x i16> @combine_constfold_undef_v8i16() {
 ; SSE-LABEL: combine_constfold_undef_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,65535,2,65535]
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [65535,65535,u,65535,65535,65535,2,65535]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_constfold_undef_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [65535,65535,65535,65535,65535,65535,2,65535]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = [65535,65535,2,65535,65535,65535,2,65535]
+; AVX-NEXT:    # xmm0 = mem[0,0]
 ; AVX-NEXT:    retq
   %res = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> <i16 undef, i16 1, i16 undef, i16 65535, i16 -1, i16 -255, i16 -65535, i16 1>, <8 x i16> <i16 1, i16 undef, i16 undef, i16 65535, i16 1, i16 65535, i16 1, i16 65535>)
   ret <8 x i16> %res

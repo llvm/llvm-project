@@ -30,7 +30,8 @@ void TokenSequence::clear() {
 
 void TokenSequence::pop_back() {
   CHECK(!start_.empty());
-  CHECK(nextStart_ > start_.back());
+  // If the last token is empty then `nextStart_ == start_.back()`.
+  CHECK(nextStart_ >= start_.back());
   std::size_t bytes{nextStart_ - start_.back()};
   nextStart_ = start_.back();
   start_.pop_back();
@@ -357,7 +358,7 @@ ProvenanceRange TokenSequence::GetProvenanceRange() const {
 
 const TokenSequence &TokenSequence::CheckBadFortranCharacters(
     Messages &messages, const Prescanner &prescanner,
-    bool allowAmpersand) const {
+    bool preprocessingOnly) const {
   std::size_t tokens{SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
     CharBlock token{TokenAt(j)};
@@ -371,8 +372,10 @@ const TokenSequence &TokenSequence::CheckBadFortranCharacters(
                 TokenAt(j + 1))) { // !dir$, &c.
           ++j;
           continue;
+        } else if (preprocessingOnly) {
+          continue;
         }
-      } else if (ch == '&' && allowAmpersand) {
+      } else if (ch == '&' && preprocessingOnly) {
         continue;
       }
       if (ch < ' ' || ch >= '\x7f') {

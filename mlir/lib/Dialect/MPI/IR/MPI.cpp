@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 

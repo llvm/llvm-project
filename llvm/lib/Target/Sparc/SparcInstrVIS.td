@@ -281,6 +281,8 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 // FP immediate patterns.
 def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
 def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
+def fpimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.5);}]>;
+def fpnegimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.5);}]>;
 
 // VIS instruction patterns.
 let Predicates = [HasVIS] in {
@@ -293,6 +295,16 @@ def : Pat<(f32 fpnegimm0), (FNEGS (FZEROS))>;
 
 // VIS3 instruction patterns.
 let Predicates = [HasVIS3] in {
+// +/-0.5 immediate.
+// This is needed to enable halving instructions.
+// FIXME generalize this to arbitrary immediates.
+// SET/MOVWTOS or SETX/MOVXTOD pair should let us materialize FP constants
+// faster than constant pool loading.
+def : Pat<(f32 fpimmhalf), (MOVWTOS (SETHIi 0x0FC000))>;
+def : Pat<(f32 fpnegimmhalf), (MOVWTOS (SETHIi 0x2FC000))>;
+def : Pat<(f64 fpimmhalf), (MOVXTOD (SLLXri (SETHIi 0x0FF800), 32))>;
+def : Pat<(f64 fpnegimmhalf), (MOVXTOD (SLLXri (SETHIi 0x2FF800), 32))>;
+
 def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
 
 def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
@@ -329,4 +341,12 @@ def : Pat<(f64 (fneg (fadd f64:$rs1, f64:$rs2))), (FNADDD $rs1, $rs2)>;
 def : Pat<(f32 (fneg (fmul f32:$rs1, f32:$rs2))), (FNMULS $rs1, $rs2)>;
 def : Pat<(f64 (fneg (fmul f64:$rs1, f64:$rs2))), (FNMULD $rs1, $rs2)>;
 def : Pat<(f64 (fneg (fmul (fpextend f32:$rs1), (fpextend f32:$rs2)))), (FNSMULD $rs1, $rs2)>;
+
+// Op-then-halve FP operations.
+def : Pat<(f32 (fmul (fadd f32:$rs1, f32:$rs2), fpimmhalf)), (FHADDS $rs1, $rs2)>;
+def : Pat<(f64 (fmul (fadd f64:$rs1, f64:$rs2), fpimmhalf)), (FHADDD $rs1, $rs2)>;
+def : Pat<(f32 (fmul (fsub f32:$rs1, f32:$rs2), fpimmhalf)), (FHSUBS $rs1, $rs2)>;
+def : Pat<(f64 (fmul (fsub f64:$rs1, f64:$rs2), fpimmhalf)), (FHSUBD $rs1, $rs2)>;
+def : Pat<(f32 (fmul (fadd f32:$rs1, f32:$rs2), fpnegimmhalf)), (FNHADDS $rs1, $rs2)>;
+def : Pat<(f64 (fmul (fadd f64:$rs1, f64:$rs2), fpnegimmhalf)), (FNHADDD $rs1, $rs2)>;
 } // Predicates = [HasVIS3]

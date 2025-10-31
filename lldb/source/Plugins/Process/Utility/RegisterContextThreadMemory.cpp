@@ -153,14 +153,14 @@ uint32_t RegisterContextThreadMemory::ConvertRegisterKindToRegisterNumber(
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(kind, num);
-  return false;
+  return LLDB_INVALID_REGNUM;
 }
 
 uint32_t RegisterContextThreadMemory::NumSupportedHardwareBreakpoints() {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->NumSupportedHardwareBreakpoints();
-  return false;
+  return 0;
 }
 
 uint32_t RegisterContextThreadMemory::SetHardwareBreakpoint(lldb::addr_t addr,

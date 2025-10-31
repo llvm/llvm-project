@@ -1,5 +1,5 @@
 // Test UTF8 BOM at start of file
-// RUN: printf '\xef\xbb\xbf' > %t.c
+// RUN: printf '\357\273\277' > %t.c
 ﻿// RUN: echo '#ifdef TEST\n' >> %t.c
 // RUN: echo '#include <string>' >> %t.c
 // RUN: echo '#endif' >> %t.c

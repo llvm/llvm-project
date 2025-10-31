@@ -92,7 +92,7 @@ public:
         Name(std::move(Name)), Ctx(Ctx), Materialize(Materialize),
         Discard(Discard), Destroy(Destroy) {}
 
-  ~OrcCAPIMaterializationUnit() {
+  ~OrcCAPIMaterializationUnit() override {
     if (Ctx)
       Destroy(Ctx);
   }
@@ -264,7 +264,7 @@ public:
       LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction TryToGenerate)
       : Dispose(Dispose), Ctx(Ctx), TryToGenerate(TryToGenerate) {}
 
-  ~CAPIDefinitionGenerator() {
+  ~CAPIDefinitionGenerator() override {
     if (Dispose)
       Dispose(Ctx);
   }
@@ -729,9 +729,9 @@ LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {
   return wrap(new ThreadSafeContext(std::make_unique<LLVMContext>()));
 }
 
-LLVMContextRef
-LLVMOrcThreadSafeContextGetContext(LLVMOrcThreadSafeContextRef TSCtx) {
-  return wrap(unwrap(TSCtx)->getContext());
+LLVMOrcThreadSafeContextRef
+LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextRef Ctx) {
+  return wrap(new ThreadSafeContext(std::unique_ptr<LLVMContext>(unwrap(Ctx))));
 }
 
 void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx) {
@@ -1021,8 +1021,10 @@ LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
     LLVMOrcExecutionSessionRef ES) {
   assert(ES && "ES must not be null");
-  return wrap(new RTDyldObjectLinkingLayer(
-      *unwrap(ES), [] { return std::make_unique<SectionMemoryManager>(); }));
+  return wrap(
+      new RTDyldObjectLinkingLayer(*unwrap(ES), [](const MemoryBuffer &) {
+        return std::make_unique<SectionMemoryManager>();
+      }));
 }
 
 LLVMOrcObjectLayerRef
@@ -1128,9 +1130,10 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithMCJITMemoryManagerLikeCallbacks(
       CreateContextCtx, CreateContext, NotifyTerminating, AllocateCodeSection,
       AllocateDataSection, FinalizeMemory, Destroy);
 
-  return wrap(new RTDyldObjectLinkingLayer(*unwrap(ES), [CBs = std::move(CBs)] {
-    return std::make_unique<MCJITMemoryManagerLikeCallbacksMemMgr>(CBs);
-  }));
+  return wrap(new RTDyldObjectLinkingLayer(
+      *unwrap(ES), [CBs = std::move(CBs)](const MemoryBuffer &) {
+        return std::make_unique<MCJITMemoryManagerLikeCallbacksMemMgr>(CBs);
+      }));
 
   return nullptr;
 }

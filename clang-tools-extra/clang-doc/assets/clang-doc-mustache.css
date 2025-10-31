@@ -396,7 +396,7 @@ body, html {
 
 .sidebar {
     width: 250px;
-    top: 0;
+    top: 60px;
     left: 0;
     height: 100%;
     position: fixed;
@@ -468,4 +468,8 @@ body, html {
 a, a:visited, a:hover, a:active {
     text-decoration: none;
     color: inherit;
+}
+
+.code-block {
+  white-space: pre-line;
 }

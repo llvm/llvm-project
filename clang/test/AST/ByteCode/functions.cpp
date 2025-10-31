@@ -1,9 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++14 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -pedantic -verify=expected,both %s
-// RUN: %clang_cc1 -pedantic -verify=ref,both %s
-// RUN: %clang_cc1 -pedantic -std=c++14 -verify=ref,both %s
-// RUN: %clang_cc1 -pedantic -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1            -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -pedantic -verify=expected,both %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1            -pedantic -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++14 -pedantic -verify=ref,both      %s
+// RUN: %clang_cc1 -std=c++20 -pedantic -verify=ref,both      %s
+
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
 
 constexpr void doNothing() {}
 constexpr int gimme5() {
@@ -620,7 +622,7 @@ namespace FromIntegral {
   int a[(int)DoubleFn((void*)-1)()]; // both-error {{not allowed at file scope}} \
                                     // both-warning {{variable length arrays}}
   int b[(int)DoubleFn((void*)(-1 + 1))()]; // both-error {{not allowed at file scope}} \
-                                           // expected-note {{evaluates to a null function pointer}} \
+                                           // both-note {{evaluates to a null function pointer}} \
                                            // both-warning {{variable length arrays}}
 #endif
 }
@@ -637,7 +639,7 @@ namespace {
 
 namespace {
   /// The InitListExpr here is of void type.
-  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'annotate' attribute requires parameter 1 to be a constant expression}} \
+  void bir [[clang::annotate("B", {1, 2, 3, 4})]] (); // both-error {{'clang::annotate' attribute requires parameter 1 to be a constant expression}} \
                                                       // both-note {{subexpression not valid in a constant expression}}
 }
 
@@ -654,14 +656,24 @@ namespace {
 }
 
 namespace FunctionCast {
-  // When folding, we allow functions to be cast to different types. Such
-  // cast functions cannot be called, even if they're constexpr.
+  // When folding, we allow functions to be cast to different types. We only
+  // allow calls if the dynamic type of the pointer matches the type of the
+  // call.
   constexpr int f() { return 1; }
+  constexpr void* f2() { return nullptr; }
+  constexpr int f3(int a) { return a; }
   typedef double (*DoubleFn)();
   typedef int (*IntFn)();
-  int a[(int)DoubleFn(f)()]; // both-error {{variable length array}} \
-                             // both-warning {{are a Clang extension}}
-  int b[(int)IntFn(f)()];    // ok
+  typedef int* (*IntPtrFn)();
+  constexpr int test1 = (int)DoubleFn(f)(); // both-error {{constant expression}} both-note {{reinterpret_cast}}
+  // FIXME: We should print a note explaining the error.
+  constexpr int test2 = (int)fold(DoubleFn(f))(); // both-error {{constant expression}}
+  constexpr int test3 = (int)IntFn(f)();    // no-op cast
+  constexpr int test4 = fold(IntFn(DoubleFn(f)))();
+  constexpr int test5 = IntFn(fold(DoubleFn(f)))(); // both-error {{constant expression}} \
+                                                    // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+  constexpr int test6 = fold(IntPtrFn(f2))() == nullptr; // both-error {{constant expression}}
+  constexpr int test7 = fold(IntFn(f3)()); // both-error {{must be initialized by a constant expression}}
 }
 
 #if __cplusplus >= 202002L
@@ -693,4 +705,33 @@ namespace NoDiags {
     hd_fun<1>();
     return true;
   }
+}
+
+namespace EnableIfWithTemporary {
+  struct A { ~A(); };
+  int &h() __attribute__((enable_if((A(), true), ""))); // both-warning {{clang extension}}
+}
+
+namespace LocalVarForParmVarDecl {
+  struct Iter {
+    void *p;
+  };
+  constexpr bool bar2(Iter A) {
+    return true;
+  }
+  constexpr bool bar(Iter A, bool b) {
+    if (b)
+      return true;
+
+    return bar(A, true);
+  }
+  constexpr int foo() {
+    return bar(Iter(), false);
+  }
+  static_assert(foo(), "");
+}
+
+namespace PtrPtrCast {
+  void foo() { ; }
+  void bar(int *a) { a = (int *)(void *)(foo); }
 }

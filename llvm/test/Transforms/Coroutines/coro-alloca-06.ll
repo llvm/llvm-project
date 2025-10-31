@@ -17,11 +17,11 @@ entry:
 tricky:
   %2 = call ptr @await_suspend()
   store ptr %2, ptr %0, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %1)
+  call void @llvm.lifetime.start.p0(ptr %1)
   store ptr %0, ptr %1, align 8
   %3 = load ptr, ptr %1, align 8
   %4 = load ptr, ptr %3, align 8
-  call void @llvm.lifetime.end.p0(i64 8, ptr %1)
+  call void @llvm.lifetime.end.p0(ptr %1)
   br label %finish
 
 finish:
@@ -37,7 +37,7 @@ cleanup:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
@@ -49,9 +49,9 @@ suspend:
 
 ; CHECK:         [[TMP2:%.*]] = call ptr @await_suspend()
 ; CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ;
 
 declare ptr @llvm.coro.free(token, ptr)
@@ -63,10 +63,10 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare ptr @await_suspend()
 declare void @print(ptr nocapture)

@@ -21,6 +21,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -116,7 +117,7 @@ protected:
 
 private:
   Type *VTy;
-  Use *UseList;
+  Use *UseList = nullptr;
 
   friend class ValueAsMetadata; // Allow access to IsUsedByMD.
   friend class ValueHandleBase; // Allow access to HasValueHandle.
@@ -212,30 +213,30 @@ private:
   };
 
 protected:
-  Value(Type *Ty, unsigned scid);
+  LLVM_ABI Value(Type *Ty, unsigned scid);
 
   /// Value's destructor should be virtual by design, but that would require
   /// that Value and all of its subclasses have a vtable that effectively
   /// duplicates the information in the value ID. As a size optimization, the
   /// destructor has been protected, and the caller should manually call
   /// deleteValue.
-  ~Value(); // Use deleteValue() to delete a generic Value.
+  LLVM_ABI ~Value(); // Use deleteValue() to delete a generic Value.
 
 public:
   Value(const Value &) = delete;
   Value &operator=(const Value &) = delete;
 
   /// Delete a pointer to a generic Value.
-  void deleteValue();
+  LLVM_ABI void deleteValue();
 
   /// Support for debugging, callable in GDB: V->dump()
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// Implement operator<< on Value.
   /// @{
-  void print(raw_ostream &O, bool IsForDebug = false) const;
-  void print(raw_ostream &O, ModuleSlotTracker &MST,
-             bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false) const;
+  LLVM_ABI void print(raw_ostream &O, ModuleSlotTracker &MST,
+                      bool IsForDebug = false) const;
   /// @}
 
   /// Print the name of this Value out to the specified raw_ostream.
@@ -245,22 +246,22 @@ public:
   /// even constants get pretty-printed; for example, the type of a null
   /// pointer is printed symbolically.
   /// @{
-  void printAsOperand(raw_ostream &O, bool PrintType = true,
-                      const Module *M = nullptr) const;
-  void printAsOperand(raw_ostream &O, bool PrintType,
-                      ModuleSlotTracker &MST) const;
+  LLVM_ABI void printAsOperand(raw_ostream &O, bool PrintType = true,
+                               const Module *M = nullptr) const;
+  LLVM_ABI void printAsOperand(raw_ostream &O, bool PrintType,
+                               ModuleSlotTracker &MST) const;
   /// @}
 
   /// All values are typed, get the type of this value.
   Type *getType() const { return VTy; }
 
   /// All values hold a context through their type.
-  LLVMContext &getContext() const;
+  LLVM_ABI LLVMContext &getContext() const;
 
   // All values can potentially be named.
   bool hasName() const { return HasName; }
-  ValueName *getValueName() const;
-  void setValueName(ValueName *VN);
+  LLVM_ABI ValueName *getValueName() const;
+  LLVM_ABI void setValueName(ValueName *VN);
 
 private:
   void destroyValueName();
@@ -274,50 +275,50 @@ public:
   /// This guaranteed to return the same reference as long as the value is not
   /// modified.  If the value has a name, this does a hashtable lookup, so it's
   /// not free.
-  StringRef getName() const;
+  LLVM_ABI StringRef getName() const;
 
   /// Change the name of the value.
   ///
   /// Choose a new unique name if the provided name is taken.
   ///
   /// \param Name The new name; or "" if the value's name should be removed.
-  void setName(const Twine &Name);
+  LLVM_ABI void setName(const Twine &Name);
 
   /// Transfer the name from V to this value.
   ///
   /// After taking V's name, sets V's name to empty.
   ///
   /// \note It is an error to call V->takeName(V).
-  void takeName(Value *V);
+  LLVM_ABI void takeName(Value *V);
 
-  std::string getNameOrAsOperand() const;
+  LLVM_ABI std::string getNameOrAsOperand() const;
 
   /// Change all uses of this to point to a new Value.
   ///
   /// Go through the uses list for this definition and make each use point to
   /// "V" instead of "this".  After this completes, 'this's use list is
   /// guaranteed to be empty.
-  void replaceAllUsesWith(Value *V);
+  LLVM_ABI void replaceAllUsesWith(Value *V);
 
   /// Change non-metadata uses of this to point to a new Value.
   ///
   /// Go through the uses list for this definition and make each use point to
   /// "V" instead of "this". This function skips metadata entries in the list.
-  void replaceNonMetadataUsesWith(Value *V);
+  LLVM_ABI void replaceNonMetadataUsesWith(Value *V);
 
   /// Go through the uses list for this definition and make each use point
   /// to "V" if the callback ShouldReplace returns true for the given Use.
   /// Unlike replaceAllUsesWith() this function does not support basic block
   /// values.
-  void replaceUsesWithIf(Value *New,
-                         llvm::function_ref<bool(Use &U)> ShouldReplace);
+  LLVM_ABI void
+  replaceUsesWithIf(Value *New, llvm::function_ref<bool(Use &U)> ShouldReplace);
 
   /// replaceUsesOutsideBlock - Go through the uses list for this definition and
   /// make each use point to "V" instead of "this" when the use is outside the
   /// block. 'This's use list is expected to have at least one element.
   /// Unlike replaceAllUsesWith() this function does not support basic block
   /// values.
-  void replaceUsesOutsideBlock(Value *V, BasicBlock *BB);
+  LLVM_ABI void replaceUsesOutsideBlock(Value *V, BasicBlock *BB);
 
   //----------------------------------------------------------------------
   // Methods for handling the chain of uses of this Value.
@@ -329,7 +330,7 @@ public:
   // when using them since you might not get all uses.
   // The methods that don't start with materialized_ assert that modules is
   // fully materialized.
-  void assertModuleIsMaterializedImpl() const;
+  LLVM_ABI void assertModuleIsMaterializedImpl() const;
   // This indirection exists so we can keep assertModuleIsMaterializedImpl()
   // around in release builds of Value.cpp to be linked with other code built
   // in debug mode. But this avoids calling it in any of the release built code.
@@ -339,20 +340,25 @@ public:
 #endif
   }
 
+  /// Check if this Value has a use-list.
+  bool hasUseList() const { return !isa<ConstantData>(this); }
+
   bool use_empty() const {
     assertModuleIsMaterialized();
     return UseList == nullptr;
   }
 
-  bool materialized_use_empty() const {
-    return UseList == nullptr;
-  }
+  bool materialized_use_empty() const { return UseList == nullptr; }
 
   using use_iterator = use_iterator_impl<Use>;
   using const_use_iterator = use_iterator_impl<const Use>;
 
-  use_iterator materialized_use_begin() { return use_iterator(UseList); }
+  use_iterator materialized_use_begin() {
+    assert(hasUseList());
+    return use_iterator(UseList);
+  }
   const_use_iterator materialized_use_begin() const {
+    assert(hasUseList());
     return const_use_iterator(UseList);
   }
   use_iterator use_begin() {
@@ -380,16 +386,17 @@ public:
     return materialized_uses();
   }
 
-  bool user_empty() const {
-    assertModuleIsMaterialized();
-    return UseList == nullptr;
-  }
+  bool user_empty() const { return use_empty(); }
 
   using user_iterator = user_iterator_impl<User>;
   using const_user_iterator = user_iterator_impl<const User>;
 
-  user_iterator materialized_user_begin() { return user_iterator(UseList); }
+  user_iterator materialized_user_begin() {
+    assert(hasUseList());
+    return user_iterator(UseList);
+  }
   const_user_iterator materialized_user_begin() const {
+    assert(hasUseList());
     return const_user_iterator(UseList);
   }
   user_iterator user_begin() {
@@ -429,15 +436,15 @@ public:
   ///
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
-  bool hasOneUse() const { return hasSingleElement(uses()); }
+  bool hasOneUse() const { return UseList && hasSingleElement(uses()); }
 
   /// Return true if this Value has exactly N uses.
-  bool hasNUses(unsigned N) const;
+  LLVM_ABI bool hasNUses(unsigned N) const;
 
   /// Return true if this value has N uses or more.
   ///
   /// This is logically equivalent to getNumUses() >= N.
-  bool hasNUsesOrMore(unsigned N) const;
+  LLVM_ABI bool hasNUsesOrMore(unsigned N) const;
 
   /// Return true if there is exactly one user of this value.
   ///
@@ -447,18 +454,18 @@ public:
   ///
   /// This check is potentially costly, since it requires traversing,
   /// in the worst case, the whole use list of a value.
-  bool hasOneUser() const;
+  LLVM_ABI bool hasOneUser() const;
 
   /// Return true if there is exactly one use of this value that cannot be
   /// dropped.
-  Use *getSingleUndroppableUse();
+  LLVM_ABI Use *getSingleUndroppableUse();
   const Use *getSingleUndroppableUse() const {
     return const_cast<Value *>(this)->getSingleUndroppableUse();
   }
 
   /// Return true if there is exactly one unique user of this value that cannot be
   /// dropped (that user can have multiple uses of this value).
-  User *getUniqueUndroppableUser();
+  LLVM_ABI User *getUniqueUndroppableUser();
   const User *getUniqueUndroppableUser() const {
     return const_cast<Value *>(this)->getUniqueUndroppableUser();
   }
@@ -467,40 +474,46 @@ public:
   ///
   /// This is specialized because it is a common request and does not require
   /// traversing the whole use list.
-  bool hasNUndroppableUses(unsigned N) const;
+  LLVM_ABI bool hasNUndroppableUses(unsigned N) const;
 
   /// Return true if this value has N uses or more.
   ///
   /// This is logically equivalent to getNumUses() >= N.
-  bool hasNUndroppableUsesOrMore(unsigned N) const;
+  LLVM_ABI bool hasNUndroppableUsesOrMore(unsigned N) const;
 
   /// Remove every uses that can safely be removed.
   ///
   /// This will remove for example uses in llvm.assume.
-  /// This should be used when performing want to perform a tranformation but
-  /// some Droppable uses pervent it.
+  /// This should be used when performing want to perform a transformation but
+  /// some Droppable uses prevent it.
   /// This function optionally takes a filter to only remove some droppable
   /// uses.
-  void dropDroppableUses(llvm::function_ref<bool(const Use *)> ShouldDrop =
-                             [](const Use *) { return true; });
+  LLVM_ABI void
+  dropDroppableUses(llvm::function_ref<bool(const Use *)> ShouldDrop =
+                        [](const Use *) { return true; });
 
   /// Remove every use of this value in \p User that can safely be removed.
-  void dropDroppableUsesIn(User &Usr);
+  LLVM_ABI void dropDroppableUsesIn(User &Usr);
 
   /// Remove the droppable use \p U.
-  static void dropDroppableUse(Use &U);
+  LLVM_ABI static void dropDroppableUse(Use &U);
 
   /// Check if this value is used in the specified basic block.
-  bool isUsedInBasicBlock(const BasicBlock *BB) const;
+  ///
+  /// Not supported for ConstantData.
+  LLVM_ABI bool isUsedInBasicBlock(const BasicBlock *BB) const;
 
   /// This method computes the number of uses of this Value.
   ///
   /// This is a linear time operation.  Use hasOneUse, hasNUses, or
   /// hasNUsesOrMore to check for specific values.
-  unsigned getNumUses() const;
+  LLVM_ABI unsigned getNumUses() const;
 
   /// This method should only be used by the Use class.
-  void addUse(Use &U) { U.addToList(&UseList); }
+  void addUse(Use &U) {
+    if (hasUseList())
+      U.addToList(&UseList);
+  }
 
   /// Concrete subclass of this.
   ///
@@ -565,22 +578,24 @@ protected:
       return nullptr;
     return getMetadataImpl(KindID);
   }
-  MDNode *getMetadata(StringRef Kind) const;
+  LLVM_ABI MDNode *getMetadata(StringRef Kind) const;
   /// @}
 
   /// Appends all attachments with the given ID to \c MDs in insertion order.
   /// If the Value has no attachments with the given ID, or if ID is invalid,
   /// leaves MDs unchanged.
   /// @{
-  void getMetadata(unsigned KindID, SmallVectorImpl<MDNode *> &MDs) const;
-  void getMetadata(StringRef Kind, SmallVectorImpl<MDNode *> &MDs) const;
+  LLVM_ABI void getMetadata(unsigned KindID,
+                            SmallVectorImpl<MDNode *> &MDs) const;
+  LLVM_ABI void getMetadata(StringRef Kind,
+                            SmallVectorImpl<MDNode *> &MDs) const;
   /// @}
 
   /// Appends all metadata attached to this value to \c MDs, sorting by
   /// KindID. The first element of each pair returned is the KindID, the second
   /// element is the metadata value. Attachments with the same ID appear in
   /// insertion order.
-  void
+  LLVM_ABI void
   getAllMetadata(SmallVectorImpl<std::pair<unsigned, MDNode *>> &MDs) const;
 
   /// Return true if this value has any metadata attached to it.
@@ -601,44 +616,44 @@ protected:
   /// Sets the given attachment to \c MD, erasing it if \c MD is \c nullptr or
   /// replacing it if it already exists.
   /// @{
-  void setMetadata(unsigned KindID, MDNode *Node);
-  void setMetadata(StringRef Kind, MDNode *Node);
+  LLVM_ABI void setMetadata(unsigned KindID, MDNode *Node);
+  LLVM_ABI void setMetadata(StringRef Kind, MDNode *Node);
   /// @}
 
   /// Add a metadata attachment.
   /// @{
-  void addMetadata(unsigned KindID, MDNode &MD);
-  void addMetadata(StringRef Kind, MDNode &MD);
+  LLVM_ABI void addMetadata(unsigned KindID, MDNode &MD);
+  LLVM_ABI void addMetadata(StringRef Kind, MDNode &MD);
   /// @}
 
   /// Erase all metadata attachments with the given kind.
   ///
   /// \returns true if any metadata was removed.
-  bool eraseMetadata(unsigned KindID);
+  LLVM_ABI bool eraseMetadata(unsigned KindID);
 
   /// Erase all metadata attachments matching the given predicate.
-  void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
+  LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
 
   /// Erase all metadata attached to this Value.
-  void clearMetadata();
+  LLVM_ABI void clearMetadata();
 
   /// Get metadata for the given kind, if any.
   /// This is an internal function that must only be called after
   /// checking that `hasMetadata()` returns true.
-  MDNode *getMetadataImpl(unsigned KindID) const;
+  LLVM_ABI MDNode *getMetadataImpl(unsigned KindID) const;
 
 public:
   /// Return true if this value is a swifterror value.
   ///
   /// swifterror values can be either a function argument or an alloca with a
   /// swifterror attribute.
-  bool isSwiftError() const;
+  LLVM_ABI bool isSwiftError() const;
 
   /// Strip off pointer casts, all-zero GEPs and address space casts.
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  const Value *stripPointerCasts() const;
+  LLVM_ABI const Value *stripPointerCasts() const;
   Value *stripPointerCasts() {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripPointerCasts());
@@ -648,7 +663,7 @@ public:
   ///
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  const Value *stripPointerCastsAndAliases() const;
+  LLVM_ABI const Value *stripPointerCastsAndAliases() const;
   Value *stripPointerCastsAndAliases() {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripPointerCastsAndAliases());
@@ -659,7 +674,7 @@ public:
   ///
   /// Returns the original uncasted value with the same representation. If this
   /// is called on a non-pointer value, it returns 'this'.
-  const Value *stripPointerCastsSameRepresentation() const;
+  LLVM_ABI const Value *stripPointerCastsSameRepresentation() const;
   Value *stripPointerCastsSameRepresentation() {
     return const_cast<Value *>(static_cast<const Value *>(this)
                                    ->stripPointerCastsSameRepresentation());
@@ -671,7 +686,7 @@ public:
   /// Returns the original uncasted value.  If this is called on a non-pointer
   /// value, it returns 'this'. This function should be used only in
   /// Alias analysis.
-  const Value *stripPointerCastsForAliasAnalysis() const;
+  LLVM_ABI const Value *stripPointerCastsForAliasAnalysis() const;
   Value *stripPointerCastsForAliasAnalysis() {
     return const_cast<Value *>(static_cast<const Value *>(this)
                                    ->stripPointerCastsForAliasAnalysis());
@@ -681,7 +696,7 @@ public:
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  const Value *stripInBoundsConstantOffsets() const;
+  LLVM_ABI const Value *stripInBoundsConstantOffsets() const;
   Value *stripInBoundsConstantOffsets() {
     return const_cast<Value *>(
               static_cast<const Value *>(this)->stripInBoundsConstantOffsets());
@@ -720,7 +735,7 @@ public:
   /// between the underlying value and the returned one. Thus, if no constant
   /// offset was found, the returned value is the underlying one and \p Offset
   /// is unchanged.
-  const Value *stripAndAccumulateConstantOffsets(
+  LLVM_ABI const Value *stripAndAccumulateConstantOffsets(
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
       bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
@@ -756,8 +771,8 @@ public:
   ///
   /// Returns the original pointer value.  If this is called on a non-pointer
   /// value, it returns 'this'.
-  const Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
-                                        [](const Value *) {}) const;
+  LLVM_ABI const Value *stripInBoundsOffsets(
+      function_ref<void(const Value *)> Func = [](const Value *) {}) const;
   inline Value *stripInBoundsOffsets(function_ref<void(const Value *)> Func =
                                   [](const Value *) {}) {
     return const_cast<Value *>(
@@ -766,14 +781,14 @@ public:
 
   /// If this ptr is provably equal to \p Other plus a constant offset, return
   /// that offset in bytes. Essentially `ptr this` subtract `ptr Other`.
-  std::optional<int64_t> getPointerOffsetFrom(const Value *Other,
-                                              const DataLayout &DL) const;
+  LLVM_ABI std::optional<int64_t>
+  getPointerOffsetFrom(const Value *Other, const DataLayout &DL) const;
 
   /// Return true if the memory object referred to by V can by freed in the
   /// scope for which the SSA value defining the allocation is statically
   /// defined.  E.g.  deallocation after the static scope of a value does not
   /// count, but a deallocation before that does.
-  bool canBeFreed() const;
+  LLVM_ABI bool canBeFreed() const;
 
   /// Returns the number of bytes known to be dereferenceable for the
   /// pointer value.
@@ -784,15 +799,15 @@ public:
   /// IF CanBeFreed is true, the pointer is known to be dereferenceable at
   /// point of definition only.  Caller must prove that allocation is not
   /// deallocated between point of definition and use.
-  uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
-                                          bool &CanBeNull,
-                                          bool &CanBeFreed) const;
+  LLVM_ABI uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
+                                                   bool &CanBeNull,
+                                                   bool &CanBeFreed) const;
 
   /// Returns an alignment of the pointer value.
   ///
   /// Returns an alignment which is either specified explicitly, e.g. via
   /// align attribute of a function argument, or guaranteed by DataLayout.
-  Align getPointerAlignment(const DataLayout &DL) const;
+  LLVM_ABI Align getPointerAlignment(const DataLayout &DL) const;
 
   /// Translate PHI node to its predecessor from the given basic block.
   ///
@@ -800,8 +815,8 @@ public:
   /// the PHI node corresponding to PredBB.  If not, return ourself.  This is
   /// useful if you want to know the value something has in a predecessor
   /// block.
-  const Value *DoPHITranslation(const BasicBlock *CurBB,
-                                const BasicBlock *PredBB) const;
+  LLVM_ABI const Value *DoPHITranslation(const BasicBlock *CurBB,
+                                         const BasicBlock *PredBB) const;
   Value *DoPHITranslation(const BasicBlock *CurBB, const BasicBlock *PredBB) {
     return const_cast<Value *>(
              static_cast<const Value *>(this)->DoPHITranslation(CurBB, PredBB));
@@ -831,7 +846,7 @@ public:
   template <class Compare> void sortUseList(Compare Cmp);
 
   /// Reverse the use-list.
-  void reverseUseList();
+  LLVM_ABI void reverseUseList();
 
 private:
   /// Merge two lists together.
@@ -888,9 +903,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Value &V) {
 }
 
 void Use::set(Value *V) {
-  if (Val) removeFromList();
+  removeFromList();
   Val = V;
-  if (V) V->addUse(*this);
+  if (V)
+    V->addUse(*this);
 }
 
 Value *Use::operator=(Value *RHS) {
@@ -975,15 +991,17 @@ template <class Compare> void Value::sortUseList(Compare Cmp) {
 //
 template <> struct isa_impl<Constant, Value> {
   static inline bool doit(const Value &Val) {
-    static_assert(Value::ConstantFirstVal == 0, "Val.getValueID() >= Value::ConstantFirstVal");
+    static_assert(Value::ConstantFirstVal == 0,
+                  "Val.getValueID() >= Value::ConstantFirstVal");
     return Val.getValueID() <= Value::ConstantLastVal;
   }
 };
 
 template <> struct isa_impl<ConstantData, Value> {
   static inline bool doit(const Value &Val) {
-    return Val.getValueID() >= Value::ConstantDataFirstVal &&
-           Val.getValueID() <= Value::ConstantDataLastVal;
+    static_assert(Value::ConstantDataFirstVal == 0,
+                  "Val.getValueID() >= Value::ConstantDataFirstVal");
+    return Val.getValueID() <= Value::ConstantDataLastVal;
   }
 };
 

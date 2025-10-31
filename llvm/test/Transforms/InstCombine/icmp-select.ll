@@ -248,10 +248,9 @@ define i1 @icmp_select_implied_cond_relational_off_by_one(i8 %x, i8 %y) {
 
 define i1 @umin_seq_comparison(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_seq_comparison(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP21]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    [[Y:%.*]] = freeze i8 [[Y1:%.*]]
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ule i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP21]]
 ;
   %min = call i8 @llvm.umin.i8(i8 %x, i8 %y)
   %cmp1 = icmp eq i8 %x, 0
@@ -328,10 +327,7 @@ define i1 @select_constants_and_icmp_eq0_common_bit(i1 %x, i1 %y) {
 
 define i1 @select_constants_and_icmp_eq0_no_common_op1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_eq0_no_common_op1(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 16, i8 3
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 24, i8 3
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 16, i8 3
@@ -345,10 +341,7 @@ define i1 @select_constants_and_icmp_eq0_no_common_op1(i1 %x, i1 %y) {
 
 define i1 @select_constants_and_icmp_eq0_no_common_op2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_eq0_no_common_op2(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 16, i8 3
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 16, i8 7
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 16, i8 3
@@ -387,14 +380,9 @@ define i1 @select_constants_and_icmp_eq0_zero_fval(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
-; TODO: x & y
-
 define i1 @select_constants_and_icmp_eq_tval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_eq_tval(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 6, i8 1
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 6, i8 1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 6, i8 1
@@ -404,14 +392,10 @@ define i1 @select_constants_and_icmp_eq_tval(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
-; TODO: ~(x | y)
-
 define i1 @select_constants_and_icmp_eq_fval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_eq_fval(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 12, i8 3
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 12, i8 3
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 12, i8 3
@@ -512,10 +496,8 @@ define i1 @select_constants_and_icmp_ne0_common_bit(i1 %x, i1 %y) {
 
 define i1 @select_constants_and_icmp_ne0_no_common_op1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_no_common_op1(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 16, i8 3
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 24, i8 3
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 16, i8 3
@@ -529,10 +511,8 @@ define i1 @select_constants_and_icmp_ne0_no_common_op1(i1 %x, i1 %y) {
 
 define i1 @select_constants_and_icmp_ne0_no_common_op2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne0_no_common_op2(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 16, i8 3
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 16, i8 7
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 16, i8 3
@@ -571,14 +551,10 @@ define i1 @select_constants_and_icmp_ne0_zero_fval(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
-; TODO: ~(x & y)
-
 define i1 @select_constants_and_icmp_ne_tval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne_tval(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 6, i8 1
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 6, i8 1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 6, i8 1
@@ -588,14 +564,9 @@ define i1 @select_constants_and_icmp_ne_tval(i1 %x, i1 %y) {
   ret i1 %cmp
 }
 
-; TODO: (x | y)
-
 define i1 @select_constants_and_icmp_ne_fval(i1 %x, i1 %y) {
 ; CHECK-LABEL: @select_constants_and_icmp_ne_fval(
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[X:%.*]], i8 12, i8 3
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[Y:%.*]], i8 12, i8 3
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[S1]], [[S2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %s1 = select i1 %x, i8 12, i8 3

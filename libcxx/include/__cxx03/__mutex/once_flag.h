@@ -10,6 +10,7 @@
 #define _LIBCPP___CXX03___MUTEX_ONCE_FLAG_H
 
 #include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__memory/shared_ptr.h> // __libcpp_acquire_load
 #include <__cxx03/__tuple/tuple_indices.h>
 #include <__cxx03/__tuple/tuple_size.h>
@@ -36,7 +37,7 @@ template <class _Callable>
 _LIBCPP_HIDE_FROM_ABI void call_once(once_flag&, const _Callable&);
 
 struct _LIBCPP_TEMPLATE_VIS once_flag {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR once_flag() _NOEXCEPT : __state_(_Unset) {}
+  _LIBCPP_HIDE_FROM_ABI once_flag() _NOEXCEPT : __state_(_Unset) {}
   once_flag(const once_flag&)            = delete;
   once_flag& operator=(const once_flag&) = delete;
 
@@ -82,7 +83,7 @@ template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     __call_once_param<_Callable> __p(__func);
-    std::__call_once(__flag.__state_, &__p, &__call_once_proxy<_Callable>);
+    std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Callable>));
   }
 }
 
@@ -90,7 +91,7 @@ template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, const _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     __call_once_param<const _Callable> __p(__func);
-    std::__call_once(__flag.__state_, &__p, &__call_once_proxy<const _Callable>);
+    std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<const _Callable>));
   }
 }
 

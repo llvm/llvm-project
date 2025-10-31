@@ -28,6 +28,7 @@ struct support::adapt_operations<std::multimap<K, V>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::multimap<int, int>>("std::multimap<int, int>");
+  support::associative_container_benchmarks<std::multimap<std::string, int>>("std::multimap<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

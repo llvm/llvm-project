@@ -34,8 +34,6 @@ MCCodeEmitter *createSPIRVMCCodeEmitter(const MCInstrInfo &MCII,
 MCAsmBackend *createSPIRVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
-
-std::unique_ptr<MCObjectTargetWriter> createSPIRVObjectTargetWriter();
 } // namespace llvm
 
 // Defines symbolic names for SPIR-V registers.  This defines a mapping from

@@ -5,12 +5,6 @@
 // RUN:   -ffreestanding \
 // RUN:   -emit-llvm -w -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -triple armv7-unknown-nacl-gnueabi \
-// RUN:  -target-cpu cortex-a8 \
-// RUN:  -mfloat-abi hard \
-// RUN:  -ffreestanding \
-// RUN:  -emit-llvm -w -o - %s | FileCheck %s
-
 // RUN: %clang_cc1 -triple arm64-apple-darwin9 -target-feature +neon \
 // RUN:   -ffreestanding \
 // RUN:   -emit-llvm -w -o - %s | FileCheck -check-prefix=CHECK64 %s
@@ -71,7 +65,7 @@ struct big_struct {
   float f4;
 };
 // CHECK: define{{.*}} arm_aapcs_vfpcc void @test_big([5 x i32] %{{.*}})
-// CHECK64: define{{.*}} void @test_big(ptr noundef %{{.*}})
+// CHECK64: define{{.*}} void @test_big(ptr dead_on_return noundef %{{.*}})
 // CHECK64: call void @llvm.memcpy
 // CHECK64: call void @big_callee(ptr
 extern void big_callee(struct big_struct);
