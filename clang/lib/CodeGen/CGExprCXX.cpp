@@ -1744,9 +1744,6 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   TypeCheckKind checkKind = CodeGenFunction::TCK_ConstructorCall;
   const TargetInfo &TI = getContext().getTargetInfo();
   unsigned DefaultTargetAlignment = TI.getNewAlign() / TI.getCharWidth();
-  SourceManager &SM = getContext().getSourceManager();
-  SourceLocation Loc = E->getOperatorNew()->getLocation();
-  bool IsCustomOverload = !SM.isInSystemHeader(Loc);
   if (SanOpts.has(SanitizerKind::Alignment) &&
       (DefaultTargetAlignment >
        CGM.getContext().getTypeAlignInChars(allocType).getQuantity()))
