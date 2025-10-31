@@ -77,8 +77,8 @@ void ManualDWARFIndex::IndexImpl() {
                           lldb::eDescriptionLevelBrief);
 
   // Include 2 passes per unit to index for extracting DIEs from the unit and
-  // indexing the unit, and then extra entries for finalizing each index in
-  // the set.
+  // indexing the unit, and then extra entries for finalizing each index in the
+  // set.
   const auto indices = IndexSet<NameToDIE>::Indices();
   const uint64_t total_progress = units_to_index.size() * 2 + indices.size();
   Progress progress("Manually indexing DWARF", module_desc.GetData(),
@@ -113,10 +113,10 @@ void ManualDWARFIndex::IndexImpl() {
 
   // Extract dies for all DWARFs unit in parallel.  Figure out which units
   // didn't have their DIEs already parsed and remember this.  If no DIEs were
-  // parsed prior to this index function call, we are going to want to clear
-  // the CU dies after we are done indexing to make sure we don't pull in all
-  // DWARF dies, but we need to wait until all units have been indexed in case
-  // a DIE in one unit refers to another and the indexes accesses those DIEs.
+  // parsed prior to this index function call, we are going to want to clear the
+  // CU dies after we are done indexing to make sure we don't pull in all DWARF
+  // dies, but we need to wait until all units have been indexed in case a DIE
+  // in one unit refers to another and the indexes accesses those DIEs.
   std::vector<std::optional<DWARFUnit::ScopedExtractDIEs>> clear_cu_dies(
       units_to_index.size());
   for_each_unit([&clear_cu_dies](size_t, size_t idx, DWARFUnit *unit) {
