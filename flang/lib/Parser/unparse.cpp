@@ -2095,14 +2095,12 @@ public:
 
   // OpenMP Clauses & Directives
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
+  void Unparse(const OmpTypeNameList &x) { Walk(x.v, ", "); }
 
   void Unparse(const OmpBaseVariantNames &x) {
     Walk(std::get<0>(x.t)); // OmpObject
     Put(":");
     Walk(std::get<1>(x.t)); // OmpObject
-  }
-  void Unparse(const OmpTypeNameList &x) { //
-    Walk(x.v, ",");
   }
   void Unparse(const OmpMapperSpecifier &x) {
     const auto &mapperName{std::get<std::string>(x.t)};
@@ -2201,6 +2199,15 @@ public:
   void Unparse(const OmpDirectiveNameModifier &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
     Word(llvm::omp::getOpenMPDirectiveName(x.v, ompVersion));
+  }
+  void Unparse(const OmpStylizedDeclaration &x) {
+    // empty
+  }
+  void Unparse(const OmpStylizedExpression &x) { //
+    Put(x.source.ToString());
+  }
+  void Unparse(const OmpStylizedInstance &x) {
+    // empty
   }
   void Unparse(const OmpIteratorSpecifier &x) {
     Walk(std::get<TypeDeclarationStmt>(x.t));
@@ -2511,29 +2518,11 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OmpInitializerProc &x) {
-    Walk(std::get<ProcedureDesignator>(x.t));
-    Put("(");
-    Walk(std::get<std::list<ActualArgSpec>>(x.t));
-    Put(")");
-  }
-  void Unparse(const OmpInitializerClause &x) {
-    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
-    // it adds an extra newline that we don't want.
-    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
-      Walk(assignment->t, " = ");
-    } else {
-      Walk(x.u);
-    }
+  void Unparse(const OmpInitializerExpression &x) {
+    Unparse(static_cast<const OmpStylizedExpression &>(x));
   }
   void Unparse(const OmpCombinerExpression &x) {
-    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
-    // it adds an extra newline that we don't want.
-    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
-      Walk(assignment->t, " = ");
-    } else {
-      Walk(x.u);
-    }
+    Unparse(static_cast<const OmpStylizedExpression &>(x));
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();

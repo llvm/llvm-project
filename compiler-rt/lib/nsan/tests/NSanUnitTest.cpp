@@ -43,8 +43,8 @@ template <typename FT, auto next> void TestFT() {
   ASSERT_EQ(GetULPDiff<FT>(-X, -Y), 3);
 
   // Values with larger differences.
-  static constexpr const __uint128_t MantissaSize =
-      __uint128_t{1} << FTInfo<FT>::kMantissaBits;
+  static constexpr const __sanitizer::u64 MantissaSize =
+      __sanitizer::u64{1} << FTInfo<FT>::kMantissaBits;
   ASSERT_EQ(GetULPDiff<FT>(1.0, next(2.0, 1.0)), MantissaSize - 1);
   ASSERT_EQ(GetULPDiff<FT>(1.0, 2.0), MantissaSize);
   ASSERT_EQ(GetULPDiff<FT>(1.0, next(2.0, 3.0)), MantissaSize + 1);
@@ -57,6 +57,11 @@ TEST(NSanTest, Double) {
   TestFT<double, static_cast<double (*)(double, double)>(nextafter)>();
 }
 
-TEST(NSanTest, Float128) { TestFT<__float128, nextafterf128>(); }
+TEST(NSanTest, Float128) {
+  // Very basic tests. FIXME: improve when we have nextafter<__float128>.
+  ASSERT_EQ(GetULPDiff<__float128>(0.0, 0.0), 0);
+  ASSERT_EQ(GetULPDiff<__float128>(-0.0, 0.0), 0);
+  ASSERT_NE(GetULPDiff<__float128>(-0.01, 0.01), kMaxULPDiff);
+}
 
 } // end namespace __nsan
