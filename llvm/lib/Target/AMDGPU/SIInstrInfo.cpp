@@ -10652,8 +10652,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     return true;
   };
 
-  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI, optimizeSCC,
-                                  this]() -> bool {
+  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+                                  optimizeSCC]() -> bool {
     if (CmpValue != 0)
       return false;
 
