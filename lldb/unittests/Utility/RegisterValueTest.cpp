@@ -57,13 +57,11 @@ TEST(RegisterValueTest, GetScalarValue) {
                    APInt(128, 0x7766554433221100)));
 }
 
-static const Scalar etalon128(APInt(128, 0xffeeddccbbaa9988ull) << 64 |
-                              APInt(128, 0x7766554433221100ull));
-
-void TestSetValueFromData128(void *src, const lldb::ByteOrder endianness) {
+void TestSetValueFromData(const Scalar &etalon, void *src, size_t src_byte_size,
+                          const lldb::ByteOrder endianness) {
   RegisterInfo ri{"uint128_register",
                   nullptr,
-                  16,
+                  static_cast<uint32_t>(src_byte_size),
                   0,
                   lldb::Encoding::eEncodingUint,
                   lldb::Format::eFormatDefault,
@@ -71,26 +69,29 @@ void TestSetValueFromData128(void *src, const lldb::ByteOrder endianness) {
                   nullptr,
                   nullptr,
                   nullptr};
-  DataExtractor src_extractor(src, 16, endianness, 8);
+  DataExtractor src_extractor(src, src_byte_size, endianness, 8);
   RegisterValue rv;
   EXPECT_TRUE(rv.SetValueFromData(ri, src_extractor, 0, false).Success());
   Scalar s;
   EXPECT_TRUE(rv.GetScalarValue(s));
-  EXPECT_EQ(s, etalon128);
+  EXPECT_EQ(s, etalon);
 }
+
+static const Scalar etalon128(APInt(128, 0x0f0e0d0c0b0a0908ull) << 1 * 64 |
+                              APInt(128, 0x0706050403020100ull) << 0 * 64);
 
 // Test that the "RegisterValue::SetValueFromData" method works correctly
 // with 128-bit little-endian data that represents an integer.
 TEST(RegisterValueTest, SetValueFromData_128_le) {
-  uint8_t src[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-                   0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-  TestSetValueFromData128(src, lldb::ByteOrder::eByteOrderLittle);
+  uint8_t src[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+                   0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
+  TestSetValueFromData(etalon128, src, 16, lldb::ByteOrder::eByteOrderLittle);
 }
 
 // Test that the "RegisterValue::SetValueFromData" method works correctly
 // with 128-bit big-endian data that represents an integer.
 TEST(RegisterValueTest, SetValueFromData_128_be) {
-  uint8_t src[] = {0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
-                   0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
-  TestSetValueFromData128(src, lldb::ByteOrder::eByteOrderBig);
+  uint8_t src[] = {0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08,
+                   0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00};
+  TestSetValueFromData(etalon128, src, 16, lldb::ByteOrder::eByteOrderBig);
 }
