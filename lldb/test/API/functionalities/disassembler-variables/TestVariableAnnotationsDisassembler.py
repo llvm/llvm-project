@@ -135,7 +135,8 @@ class TestVariableAnnotationsDisassembler(TestBase):
         instructions = target.ReadInstructions(start_addr, 16)
         self.assertGreater(instructions.GetSize(), 0, "No instructions read")
 
-        print(f"\nTesting GetVariableAnnotations() API on {instructions.GetSize()} instructions")
+        if self.TraceOn():
+            print(f"\nTesting GetVariableAnnotations() API on {instructions.GetSize()} instructions")
 
         # Track what we find.
         found_annotations = False
@@ -265,17 +266,18 @@ class TestVariableAnnotationsDisassembler(TestBase):
                         elif var_name == "i":
                             self.assertEqual(type_name, "int", "i should be type 'int'")
 
-                # Only print if something happened (location changed or variable appeared/disappeared)
-                if should_print or len(current_locations) != len(prev_locations):
-                    print(f"\nInstruction {i} at {inst.GetAddress()}: {annotations.GetSize()} annotations")
-                    for var_name, location in current_locations.items():
-                        change_marker = " <- CHANGED" if var_name in prev_locations and prev_locations[var_name] != location else ""
-                        new_marker = " <- NEW" if var_name not in prev_locations else ""
-                        print(f"  {var_name} = {location}{change_marker}{new_marker}")
-                    # Check for disappeared variables
-                    for var_name in prev_locations:
-                        if var_name not in current_locations:
-                            print(f"  {var_name} <- GONE")
+                if self.TraceOn():
+                    # Only print if something happened (location changed or variable appeared/disappeared)
+                    if should_print or len(current_locations) != len(prev_locations):
+                        print(f"\nInstruction {i} at {inst.GetAddress()}: {annotations.GetSize()} annotations")
+                        for var_name, location in current_locations.items():
+                            change_marker = " <- CHANGED" if var_name in prev_locations and prev_locations[var_name] != location else ""
+                            new_marker = " <- NEW" if var_name not in prev_locations else ""
+                            print(f"  {var_name} = {location}{change_marker}{new_marker}")
+                        # Check for disappeared variables
+                        for var_name in prev_locations:
+                            if var_name not in current_locations:
+                                print(f"  {var_name} <- GONE")
 
                 # Update tracking
                 prev_locations = current_locations.copy()
@@ -286,4 +288,5 @@ class TestVariableAnnotationsDisassembler(TestBase):
         self.assertGreater(len(found_variables), 0,
                          "Should find at least one variable")
 
-        print(f"\nTest complete. Found variables: {found_variables}")
+        if self.TraceOn():
+            print(f"\nTest complete. Found variables: {found_variables}")
