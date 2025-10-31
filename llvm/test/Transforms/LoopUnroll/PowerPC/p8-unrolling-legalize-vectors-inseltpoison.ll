@@ -51,16 +51,16 @@ define ptr @f(ptr returned %s, i32 zeroext %x, i32 signext %k) local_unnamed_add
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i64 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[MIDDLE_BLOCK_UNR_LCSSA_LOOPEXIT:%.*]], label [[VECTOR_BODY]]
-; CHECK:       middle.block.unr-lcssa.loopexit:
+; CHECK:       middle.block.unr-lcssa:
 ; CHECK-NEXT:    [[INDEX_UNR_PH:%.*]] = phi i64 [ [[INDEX_NEXT_1]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND12_UNR_PH:%.*]] = phi <16 x i32> [ [[VEC_IND_NEXT13_1]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    br label [[MIDDLE_BLOCK_UNR_LCSSA]]
-; CHECK:       middle.block.unr-lcssa:
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[MIDDLE_BLOCK_UNR_LCSSA]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       vector.body.epil.preheader:
 ; CHECK-NEXT:    [[INDEX_UNR:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_UNR_PH]], [[MIDDLE_BLOCK_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[VEC_IND12_UNR:%.*]] = phi <16 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, [[VECTOR_PH]] ], [ [[VEC_IND12_UNR_PH]], [[MIDDLE_BLOCK_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[VECTOR_BODY_EPIL_PREHEADER:%.*]], label [[MIDDLE_BLOCK:%.*]]
-; CHECK:       vector.body.epil.preheader:
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY_EPIL:%.*]]
 ; CHECK:       vector.body.epil:
 ; CHECK-NEXT:    [[TMP14:%.*]] = shl <16 x i32> splat (i32 1), [[VEC_IND12_UNR]]

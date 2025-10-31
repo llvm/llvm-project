@@ -1,9 +1,5 @@
 import sys
-
-if sys.version_info[0] < 3:
-    import __builtin__ as builtins
-else:
-    import builtins
+import builtins
 import code
 import lldb
 import traceback

@@ -21,3 +21,8 @@ N: Android libc++
 E: pirama@google.com, sharjeelkhan@google.com
 G: pirama-arumuga-nainar, Sharjeel-Khan
 D: Emulator-based x86[-64] libc++ CI testing
+
+N: FreeBSD libc++
+E: emaste@freebsd.org
+G: emaste
+D: FreeBSD x86-64 libc++ CI testing

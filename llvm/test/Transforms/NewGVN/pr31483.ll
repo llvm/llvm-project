@@ -6,7 +6,7 @@ target datalayout = "E-m:e-i64:64-n32:64"
 ;; Ensure we do not believe the indexing increments are unreachable due to incorrect memory
 ;; equivalence detection.  In PR31483, we were deleting those blocks as unreachable
 ; Function Attrs: nounwind
-define signext i32 @ham(ptr %arg, ptr %arg1) #0 {
+define signext i32 @ham(ptr %arg, ptr %arg1) {
 ; CHECK-LABEL: @ham(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
@@ -89,12 +89,7 @@ bb23:                                             ; preds = %bb2
   ret i32 undef
 }
 
-declare signext i32 @zot(ptr, ...) #1
+declare signext i32 @zot(ptr, ...)
 
 ; Function Attrs: nounwind
-declare void @llvm.va_end(ptr) #2
-
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
-
+declare void @llvm.va_end(ptr)

@@ -162,6 +162,9 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128_t"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
             GetBasicQualType("__uint128_t"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
+            GetBasicQualType("unsigned __int128"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeVoid), GetBasicQualType("void"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeBool), GetBasicQualType("bool"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeFloat), GetBasicQualType("float"));
@@ -1118,6 +1121,30 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   // DeclContext of each parameter should be the CXXMethodDecl itself.
   EXPECT_EQ(method_it->getParamDecl(0)->getDeclContext(), *method_it);
   EXPECT_EQ(method_it->getParamDecl(1)->getDeclContext(), *method_it);
+}
+
+TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
+  // Tests TypeSystemClang::GetTypeInfo
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  CompilerType complex_int = m_ast->GetType(ast.getComplexType(ast.IntTy));
+  EXPECT_EQ(complex_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType complex_float = m_ast->GetType(ast.getComplexType(ast.FloatTy));
+  EXPECT_EQ(complex_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsComplex | eTypeIsBuiltIn | eTypeHasValue));
+
+  CompilerType vector_of_int =
+      m_ast->GetType(ast.getVectorType(ast.IntTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_int.GetTypeInfo(),
+            (eTypeIsInteger | eTypeIsVector | eTypeHasChildren));
+
+  CompilerType vector_of_float =
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
+  EXPECT_EQ(vector_of_float.GetTypeInfo(),
+            (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
 }
 
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {

@@ -705,12 +705,13 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_load_b32 v1, v0, s[0:1] scale_offset
-; GFX1250-NEXT:    global_load_b32 v0, v0, s[2:3] scale_offset
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s4 :: v_dual_mov_b32 v3, s5
+; GFX1250-NEXT:    global_load_b32 v2, v0, s[2:3] scale_offset
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v3, s5
 ; GFX1250-NEXT:    s_wait_loadcnt 0x1
-; GFX1250-NEXT:    ds_store_b32 v2, v1 offset:32
+; GFX1250-NEXT:    ds_store_b32 v0, v1 offset:32
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ds_store_b32 v3, v0 offset:32
+; GFX1250-NEXT:    ds_store_b32 v3, v2 offset:32
 ; GFX1250-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %in0.gep = getelementptr float, ptr addrspace(1) %in0, i32 %x.i
@@ -1282,14 +1283,14 @@ define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) 
 ;
 ; GFX1250-LABEL: simple_write2_v4f32_superreg_align4:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
-; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b32 s4, s[4:5], 0x0
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x8
+; GFX1250-NEXT:    s_load_b32 s8, s[4:5], 0x0
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1250-NEXT:    s_load_b128 s[0:3], s[6:7], 0x0
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshl_add_u32 v0, v0, 4, s4
+; GFX1250-NEXT:    v_lshl_add_u32 v0, v0, 4, s8
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_mov_b32 v2, s3
 ; GFX1250-NEXT:    v_dual_mov_b32 v3, s0 :: v_dual_mov_b32 v4, s1

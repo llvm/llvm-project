@@ -107,7 +107,7 @@ so both arguments will have the same type.
 Options
 -------
 
-.. option:: CharTypdefsToIgnore
+.. option:: CharTypedefsToIgnore
 
   A semicolon-separated list of typedef names. In this list, we can list
   typedefs for ``char`` or ``signed char``, which will be ignored by the

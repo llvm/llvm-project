@@ -1010,7 +1010,7 @@ public:
         },
         nb::arg("elements"), nb::arg("context") = nb::none(),
         // clang-format off
-        nb::sig("def get_tuple(elements: Sequence[Type], context: mlir.ir.Context | None = None) -> TupleType"),
+        nb::sig("def get_tuple(elements: Sequence[Type], context: Context | None = None) -> TupleType"),
         // clang-format on
         "Create a tuple type");
     c.def(
@@ -1070,7 +1070,7 @@ public:
         },
         nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
         // clang-format off
-        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: mlir.ir.Context | None = None) -> FunctionType"),
+        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: Context | None = None) -> FunctionType"),
         // clang-format on
         "Gets a FunctionType from a list of input and result types");
     c.def_prop_ro(

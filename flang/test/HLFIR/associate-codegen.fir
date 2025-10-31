@@ -259,8 +259,8 @@ func.func @test_multiple_associations(%arg0: !hlfir.expr<1x2xi32>) {
 // CHECK:           %[[VAL_6:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<1x2xi32> {bindc_name = ".tmp", uniq_name = ""}
 // CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_4]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<1x2xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<1x2xi32>>, !fir.heap<!fir.array<1x2xi32>>)
-// CHECK:           %[[VAL_8:.*]] = arith.constant true
 // CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_9]]#0 temporary_lhs : !hlfir.expr<1x2xi32>, !fir.heap<!fir.array<1x2xi32>>
+// CHECK:           %[[VAL_8:.*]] = arith.constant true
 // CHECK:           %[[VAL_10:.*]] = fir.undefined tuple<!fir.heap<!fir.array<1x2xi32>>, i1>
 // CHECK:           %[[VAL_11:.*]] = fir.insert_value %[[VAL_10]], %[[VAL_8]], [1 : index] : (tuple<!fir.heap<!fir.array<1x2xi32>>, i1>, i1) -> tuple<!fir.heap<!fir.array<1x2xi32>>, i1>
 // CHECK:           %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_9]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<1x2xi32>>, i1>, !fir.heap<!fir.array<1x2xi32>>) -> tuple<!fir.heap<!fir.array<1x2xi32>>, i1>
@@ -272,8 +272,8 @@ func.func @test_multiple_associations(%arg0: !hlfir.expr<1x2xi32>) {
 // CHECK:           %[[VAL_17:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_18:.*]] = fir.allocmem !fir.array<1x2xi32> {bindc_name = ".tmp", uniq_name = ""}
 // CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_18]](%[[VAL_15]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<1x2xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<1x2xi32>>, !fir.heap<!fir.array<1x2xi32>>)
-// CHECK:           %[[VAL_19:.*]] = arith.constant true
 // CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_20]]#0 temporary_lhs : !hlfir.expr<1x2xi32>, !fir.heap<!fir.array<1x2xi32>>
+// CHECK:           %[[VAL_19:.*]] = arith.constant true
 // CHECK:           %[[VAL_21:.*]] = fir.undefined tuple<!fir.heap<!fir.array<1x2xi32>>, i1>
 // CHECK:           %[[VAL_22:.*]] = fir.insert_value %[[VAL_21]], %[[VAL_19]], [1 : index] : (tuple<!fir.heap<!fir.array<1x2xi32>>, i1>, i1) -> tuple<!fir.heap<!fir.array<1x2xi32>>, i1>
 // CHECK:           %[[VAL_23:.*]] = fir.insert_value %[[VAL_22]], %[[VAL_20]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<1x2xi32>>, i1>, !fir.heap<!fir.array<1x2xi32>>) -> tuple<!fir.heap<!fir.array<1x2xi32>>, i1>
@@ -303,8 +303,8 @@ func.func @test_get_length(%arg0: !fir.ref<!fir.char<1,2>>) {
 // CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1,2> {bindc_name = ".tmp"}
 // CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
 // CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_2]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
-// CHECK:           %[[VAL_3:.*]] = arith.constant false
 // CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_4]]#0 temporary_lhs : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>
+// CHECK:           %[[VAL_3:.*]] = arith.constant false
 // CHECK:           %[[VAL_5:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,2>>, i1>
 // CHECK:           %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_3]], [1 : index] : (tuple<!fir.ref<!fir.char<1,2>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,2>>, i1>
 // CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_4]]#0, [0 : index] : (tuple<!fir.ref<!fir.char<1,2>>, i1>, !fir.ref<!fir.char<1,2>>) -> tuple<!fir.ref<!fir.char<1,2>>, i1>
@@ -355,8 +355,8 @@ func.func @_QPtest_multiple_expr_uses_inside_elemental() {
 // CHECK:           fir.do_loop %[[VAL_15:.*]] = %[[VAL_14]] to %[[VAL_9]] step %[[VAL_14]] unordered {
 // CHECK:             %[[VAL_16:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_4]] : index) {bindc_name = ".tmp"}
 // CHECK:             %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_16]] typeparams %[[VAL_4]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-// CHECK:             %[[VAL_17:.*]] = arith.constant false
 // CHECK:             hlfir.assign %[[VAL_5]]#0 to %[[VAL_18]]#0 temporary_lhs : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:             %[[VAL_17:.*]] = arith.constant false
 // CHECK:             %[[VAL_19:.*]] = fir.undefined tuple<!fir.boxchar<1>, i1>
 // CHECK:             %[[VAL_20:.*]] = fir.insert_value %[[VAL_19]], %[[VAL_17]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:             %[[VAL_21:.*]] = fir.insert_value %[[VAL_20]], %[[VAL_18]]#0, [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
@@ -407,8 +407,8 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
 // CHECK:           %[[VAL_12:.*]] = fir.insert_value %[[VAL_11]], %[[VAL_4]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, !fir.heap<!fir.array<10x!fir.char<1>>>) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
 // CHECK:           %[[VAL_13:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp", uniq_name = ""}
 // CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_13]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
-// CHECK:           %[[VAL_14:.*]] = arith.constant true
 // CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_15]]#0 temporary_lhs : !fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_14:.*]] = arith.constant true
 // CHECK:           %[[VAL_16:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
 // CHECK:           %[[VAL_17:.*]] = fir.insert_value %[[VAL_16]], %[[VAL_14]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
 // CHECK:           %[[VAL_18:.*]] = fir.insert_value %[[VAL_17]], %[[VAL_15]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, !fir.heap<!fir.array<10x!fir.char<1>>>) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
@@ -418,8 +418,8 @@ func.func @_QPtest_multitple_associates_for_same_expr() {
 // CHECK:           fir.freemem %[[VAL_21]] : !fir.heap<!fir.array<10x!fir.char<1>>>
 // CHECK:           %[[VAL_22:.*]] = fir.allocmem !fir.array<10x!fir.char<1>> {bindc_name = ".tmp", uniq_name = ""}
 // CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_2]]) typeparams %[[VAL_0]] {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, index) -> (!fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>)
-// CHECK:           %[[VAL_23:.*]] = arith.constant true
 // CHECK:           hlfir.assign %[[VAL_4]]#0 to %[[VAL_24]]#0 temporary_lhs : !fir.heap<!fir.array<10x!fir.char<1>>>, !fir.heap<!fir.array<10x!fir.char<1>>>
+// CHECK:           %[[VAL_23:.*]] = arith.constant true
 // CHECK:           %[[VAL_25:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
 // CHECK:           %[[VAL_26:.*]] = fir.insert_value %[[VAL_25]], %[[VAL_23]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>
 // CHECK:           %[[VAL_27:.*]] = fir.insert_value %[[VAL_26]], %[[VAL_24]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>, !fir.heap<!fir.array<10x!fir.char<1>>>) -> tuple<!fir.heap<!fir.array<10x!fir.char<1>>>, i1>

@@ -10,11 +10,11 @@
 #include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/Runtime/Coarray.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Runtime/CUDA/init.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
@@ -71,7 +71,7 @@ void fir::runtime::genMain(
     fir::CallOp::create(builder, loc, initFn);
   }
   if (initCoarrayEnv)
-    fir::runtime::genInitCoarray(builder, loc);
+    mif::InitOp::create(builder, loc);
 
   fir::CallOp::create(builder, loc, qqMainFn);
   fir::CallOp::create(builder, loc, stopFn);

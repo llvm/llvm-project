@@ -435,3 +435,23 @@ def testPrintIrTree():
 
             print_file_tree(temp_dir)
         log("// Tree printing end")
+
+
+# CHECK-LABEL: TEST: testEnableStatistics
+@run
+def testEnableStatistics():
+    with Context() as ctx:
+        module = ModuleOp.parse(
+            """
+          module {
+            func.func @main() {
+              %0 = arith.constant 10
+              return
+            }
+          }
+        """
+        )
+        pm = PassManager.parse("builtin.module(canonicalize)")
+        pm.enable_statistics()
+        # CHECK: Pass statistics report
+        pm.run(module)

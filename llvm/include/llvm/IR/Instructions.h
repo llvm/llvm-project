@@ -1715,7 +1715,7 @@ public:
   static SelectInst *Create(Value *C, Value *S1, Value *S2,
                             const Twine &NameStr = "",
                             InsertPosition InsertBefore = nullptr,
-                            Instruction *MDFrom = nullptr) {
+                            const Instruction *MDFrom = nullptr) {
     SelectInst *Sel =
         new (AllocMarker) SelectInst(C, S1, S2, NameStr, InsertBefore);
     if (MDFrom)

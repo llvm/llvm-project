@@ -224,6 +224,8 @@ public:
   }
 
   bool isAggregate() const { return hasLV || rv.isAggregate(); }
+
+  void copyInto(CIRGenFunction &cgf, Address addr, mlir::Location loc) const;
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {

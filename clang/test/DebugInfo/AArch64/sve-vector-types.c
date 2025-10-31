@@ -3,10 +3,10 @@
 
 void test_locals(void) {
   // CHECK-DAG: name: "__SVBool_t",{{.*}}, baseType: ![[CT1:[0-9]+]]
-  // CHECK-DAG: ![[CT1]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTYU8:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS1_64:[0-9]+]])
+  // CHECK-DAG: ![[CT1]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTYU8:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS8:[0-9]+]], bitStride: i64 1)
   // CHECK-DAG: ![[ELTTYU8]] = !DIBasicType(name: "unsigned char", size: 8, encoding: DW_ATE_unsigned_char)
-  // CHECK-DAG: ![[ELTS1_64]] = !{![[REALELTS1_64:[0-9]+]]}
-  // CHECK-DAG: ![[REALELTS1_64]] = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 1, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
+  // CHECK-DAG: ![[ELTS8]] = !{![[REALELTS8:[0-9]+]]}
+  // CHECK-DAG: ![[REALELTS8]] = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 8, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
   __SVBool_t b8;
 
   // CHECK-DAG: name: "__SVCount_t",{{.*}}, baseType: ![[CT1_2:[0-9]+]]
@@ -18,8 +18,6 @@ void test_locals(void) {
   // CHECK-DAG: name: "__SVInt8_t",{{.*}}, baseType: ![[CT8:[0-9]+]]
   // CHECK-DAG: ![[CT8]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTYS8:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS8:[0-9]+]])
   // CHECK-DAG: ![[ELTTYS8]] = !DIBasicType(name: "signed char", size: 8, encoding: DW_ATE_signed_char)
-  // CHECK-DAG: ![[ELTS8]] = !{![[REALELTS8:[0-9]+]]}
-  // CHECK-DAG: ![[REALELTS8]] = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 8, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
   __SVInt8_t s8;
 
   // CHECK-DAG: name: "__SVUint8_t",{{.*}}, baseType: ![[CT8:[0-9]+]]
@@ -51,12 +49,14 @@ void test_locals(void) {
   __SVUint32_t u32;
 
   // CHECK-DAG: name: "__SVInt64_t",{{.*}}, baseType: ![[CT64:[0-9]+]]
-  // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS1_64]])
+  // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS64:[0-9]+]])
   // CHECK-DAG: ![[ELTTY64]] = !DIBasicType(name: "long", size: 64, encoding: DW_ATE_signed)
+  // CHECK-DAG: ![[ELTS64]] = !{![[REALELTS64:[0-9]+]]}
+  // CHECK-DAG: ![[REALELTS64]] = !DISubrange(lowerBound: 0, upperBound: !DIExpression(DW_OP_constu, 1, DW_OP_bregx, 46, 0, DW_OP_mul, DW_OP_constu, 1, DW_OP_minus))
   __SVInt64_t s64;
 
   // CHECK-DAG: name: "__SVUint64_t",{{.*}}, baseType: ![[CT64:[0-9]+]]
-  // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS1_64]])
+  // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS64]])
   // CHECK-DAG: ![[ELTTY64]] = !DIBasicType(name: "unsigned long", size: 64, encoding: DW_ATE_unsigned)
   __SVUint64_t u64;
 
@@ -71,7 +71,7 @@ void test_locals(void) {
   __SVFloat32_t f32;
 
   // CHECK:     name: "__SVFloat64_t",{{.*}}, baseType: ![[CT64:[0-9]+]]
-  // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS1_64]])
+  // CHECK-DAG: ![[CT64]] = !DICompositeType(tag: DW_TAG_array_type, baseType: ![[ELTTY64:[0-9]+]], flags: DIFlagVector, elements: ![[ELTS64]])
   // CHECK-DAG: ![[ELTTY64]] = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
   __SVFloat64_t f64;
 }
