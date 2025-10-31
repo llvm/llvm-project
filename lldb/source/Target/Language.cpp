@@ -316,10 +316,6 @@ bool Language::LanguageIsCPlusPlus(LanguageType language) {
   }
 }
 
-bool Language::LanguageIsRust(LanguageType language) {
-  return language == eLanguageTypeRust;
-}
-
 bool Language::LanguageIsObjC(LanguageType language) {
   switch (language) {
   case eLanguageTypeObjC:

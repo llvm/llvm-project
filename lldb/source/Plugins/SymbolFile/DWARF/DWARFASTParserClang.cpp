@@ -1700,12 +1700,10 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
   // For C++, we rely solely upon the one definition rule that says
   // only one thing can exist at a given decl context. We ignore the
   // file and line that things are declared on.
-  // For Rust, we do the same since Rust also has a similar qualified name?
-  // Is there a better way to do this for Rust?
-  if (!die.IsValid() ||
-      (!Language::LanguageIsCPlusPlus(language) &&
-       !Language::LanguageIsRust(language)) ||
-      unique_typename.IsEmpty())
+  // FIXME: Rust pretends to be C++ for now, so use C++ name qualification rules
+  auto isCPlusPlusOrSimilar = Language::LanguageIsCPlusPlus(language) ||
+                              language == lldb::eLanguageTypeRust;
+  if (!die.IsValid() || !isCPlusPlusOrSimilar || unique_typename.IsEmpty())
     return;
   decl_declaration.Clear();
   std::string qualified_name;
