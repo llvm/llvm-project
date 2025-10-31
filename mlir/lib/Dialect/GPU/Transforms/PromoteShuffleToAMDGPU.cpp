@@ -26,6 +26,8 @@ namespace {
 
 constexpr amdgpu::Chipset kGfx950 = amdgpu::Chipset(9, 5, 0);
 
+// TODO: Move amdgpu specific patterns out of GPU dialect (#165811).
+
 /// Try to promote `gpu.shuffle` to `amdgpu.swizzle_bitmode`, width must be 64
 /// and offset must be a constant integer in the range [0, 31].
 struct PromoteShuffleToSwizzlePattern

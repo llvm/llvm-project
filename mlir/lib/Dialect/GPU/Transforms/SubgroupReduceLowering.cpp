@@ -367,6 +367,8 @@ private:
   bool matchClustered = false;
 };
 
+// TODO: Move amdgpu specific patterns out of GPU dialect (#165811).
+
 static FailureOr<Value>
 createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                            Value input, gpu::AllReduceOperation mode,
