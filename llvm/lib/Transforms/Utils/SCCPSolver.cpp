@@ -20,6 +20,7 @@
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
@@ -760,6 +761,7 @@ private:
   void handleCallArguments(CallBase &CB);
   void handleExtractOfWithOverflow(ExtractValueInst &EVI,
                                    const WithOverflowInst *WO, unsigned Idx);
+  bool isInstFullyOverDefined(Instruction &Inst);
 
 private:
   friend class InstVisitor<SCCPInstVisitor>;
@@ -1374,49 +1376,66 @@ bool SCCPInstVisitor::isEdgeFeasible(BasicBlock *From, BasicBlock *To) const {
 // 7. If a conditional branch has a value that is overdefined, make all
 //    successors executable.
 void SCCPInstVisitor::visitPHINode(PHINode &PN) {
-  // If this PN returns a struct, just mark the result overdefined.
-  // TODO: We could do a lot better than this if code actually uses this.
-  if (PN.getType()->isStructTy())
-    return (void)markOverdefined(&PN);
-
-  if (getValueState(&PN).isOverdefined())
-    return; // Quick exit
-
   // Super-extra-high-degree PHI nodes are unlikely to ever be marked constant,
   // and slow us down a lot.  Just mark them overdefined.
   if (PN.getNumIncomingValues() > 64)
     return (void)markOverdefined(&PN);
 
-  unsigned NumActiveIncoming = 0;
+  if (isInstFullyOverDefined(PN))
+    return;
+  SmallVector<unsigned> FeasibleIncomingIndices;
+  for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
+    if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
+      continue;
+    FeasibleIncomingIndices.push_back(i);
+  }
 
   // Look at all of the executable operands of the PHI node.  If any of them
   // are overdefined, the PHI becomes overdefined as well.  If they are all
   // constant, and they agree with each other, the PHI becomes the identical
   // constant.  If they are constant and don't agree, the PHI is a constant
   // range. If there are no executable operands, the PHI remains unknown.
-  ValueLatticeElement PhiState = getValueState(&PN);
-  for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
-    if (!isEdgeFeasible(PN.getIncomingBlock(i), PN.getParent()))
-      continue;
-
-    const ValueLatticeElement &IV = getValueState(PN.getIncomingValue(i));
-    PhiState.mergeIn(IV);
-    NumActiveIncoming++;
-    if (PhiState.isOverdefined())
-      break;
+  if (StructType *STy = dyn_cast<StructType>(PN.getType())) {
+    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+      ValueLatticeElement PhiState = getStructValueState(&PN, i);
+      if (PhiState.isOverdefined())
+        continue;
+      for (unsigned j : FeasibleIncomingIndices) {
+        const ValueLatticeElement &IV =
+            getStructValueState(PN.getIncomingValue(j), i);
+        PhiState.mergeIn(IV);
+        if (PhiState.isOverdefined())
+          break;
+      }
+      ValueLatticeElement &PhiStateRef = getStructValueState(&PN, i);
+      mergeInValue(PhiStateRef, &PN, PhiState,
+                   ValueLatticeElement::MergeOptions().setMaxWidenSteps(
+                       FeasibleIncomingIndices.size() + 1));
+      PhiStateRef.setNumRangeExtensions(
+          std::max((unsigned)FeasibleIncomingIndices.size(),
+                   PhiStateRef.getNumRangeExtensions()));
+    }
+  } else {
+    ValueLatticeElement PhiState = getValueState(&PN);
+    for (unsigned i : FeasibleIncomingIndices) {
+      const ValueLatticeElement &IV = getValueState(PN.getIncomingValue(i));
+      PhiState.mergeIn(IV);
+      if (PhiState.isOverdefined())
+        break;
+    }
+    // We allow up to 1 range extension per active incoming value and one
+    // additional extension. Note that we manually adjust the number of range
+    // extensions to match the number of active incoming values. This helps to
+    // limit multiple extensions caused by the same incoming value, if other
+    // incoming values are equal.
+    ValueLatticeElement &PhiStateRef = ValueState[&PN];
+    mergeInValue(PhiStateRef, &PN, PhiState,
+                 ValueLatticeElement::MergeOptions().setMaxWidenSteps(
+                     FeasibleIncomingIndices.size() + 1));
+    PhiStateRef.setNumRangeExtensions(
+        std::max((unsigned)FeasibleIncomingIndices.size(),
+                 PhiStateRef.getNumRangeExtensions()));
   }
-
-  // We allow up to 1 range extension per active incoming value and one
-  // additional extension. Note that we manually adjust the number of range
-  // extensions to match the number of active incoming values. This helps to
-  // limit multiple extensions caused by the same incoming value, if other
-  // incoming values are equal.
-  ValueLatticeElement &PhiStateRef = ValueState[&PN];
-  mergeInValue(PhiStateRef, &PN, PhiState,
-               ValueLatticeElement::MergeOptions().setMaxWidenSteps(
-                   NumActiveIncoming + 1));
-  PhiStateRef.setNumRangeExtensions(
-      std::max(NumActiveIncoming, PhiStateRef.getNumRangeExtensions()));
 }
 
 void SCCPInstVisitor::visitReturnInst(ReturnInst &I) {
@@ -2125,6 +2144,21 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
     // If so, propagate the return value of the callee into this call result.
     mergeInValue(ValueState[&CB], &CB, TFRVI->second, getMaxWidenStepsOpts());
   }
+}
+
+bool SCCPInstVisitor::isInstFullyOverDefined(Instruction &Inst) {
+  // For structure Type, we handle each member separately.
+  // A structure object won't be considered as overdefined when
+  // there is at least one member that is not overdefined.
+  if (StructType *STy = dyn_cast<StructType>(Inst.getType())) {
+    for (unsigned i = 0, e = STy->getNumElements(); i < e; ++i) {
+      if (!getStructValueState(&Inst, i).isOverdefined())
+        return false;
+    }
+    return true;
+  }
+
+  return getValueState(&Inst).isOverdefined();
 }
 
 void SCCPInstVisitor::solve() {

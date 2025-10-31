@@ -5343,7 +5343,7 @@ private:
             unsigned &OpCnt =
                 OrderedEntriesCount.try_emplace(TE, 0).first->getSecond();
             EdgeInfo EI(TE, U.getOperandNo());
-            if (!getScheduleCopyableData(EI, Op) && OpCnt < NumOps)
+            if (!getScheduleCopyableData(EI, Op))
               continue;
             // Found copyable operand - continue.
             ++OpCnt;
@@ -5577,62 +5577,96 @@ private:
           }
           // Decrement the unscheduled counter and insert to ready list if
           // ready.
-          auto DecrUnschedForInst = [&](Instruction *I, TreeEntry *UserTE,
-                                        unsigned OpIdx) {
-            if (!ScheduleCopyableDataMap.empty()) {
-              const EdgeInfo EI = {UserTE, OpIdx};
-              if (ScheduleCopyableData *CD = getScheduleCopyableData(EI, I)) {
-                DecrUnsched(CD, /*IsControl=*/false);
-                return;
-              }
-            }
-            auto It = OperandsUses.find(I);
-            assert(It != OperandsUses.end() && "Operand not found");
-            if (It->second > 0) {
-              --It->getSecond();
-              assert(TotalOpCount > 0 && "No more operands to decrement");
-              --TotalOpCount;
-              if (ScheduleData *OpSD = getScheduleData(I))
-                DecrUnsched(OpSD, /*IsControl=*/false);
-            }
-          };
+          auto DecrUnschedForInst =
+              [&](Instruction *I, TreeEntry *UserTE, unsigned OpIdx,
+                  SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>>
+                      &Checked) {
+                if (!ScheduleCopyableDataMap.empty()) {
+                  const EdgeInfo EI = {UserTE, OpIdx};
+                  if (ScheduleCopyableData *CD =
+                          getScheduleCopyableData(EI, I)) {
+                    if (!Checked.insert(std::make_pair(CD, OpIdx)).second)
+                      return;
+                    DecrUnsched(CD, /*IsControl=*/false);
+                    return;
+                  }
+                }
+                auto It = OperandsUses.find(I);
+                assert(It != OperandsUses.end() && "Operand not found");
+                if (It->second > 0) {
+                  --It->getSecond();
+                  assert(TotalOpCount > 0 && "No more operands to decrement");
+                  --TotalOpCount;
+                  if (ScheduleData *OpSD = getScheduleData(I)) {
+                    if (!Checked.insert(std::make_pair(OpSD, OpIdx)).second)
+                      return;
+                    DecrUnsched(OpSD, /*IsControl=*/false);
+                  }
+                }
+              };
 
           for (ScheduleBundle *Bundle : Bundles) {
             if (ScheduleCopyableDataMap.empty() && TotalOpCount == 0)
               break;
+            SmallPtrSet<Value *, 4> ParentsUniqueUsers;
             // Need to search for the lane since the tree entry can be
             // reordered.
-            int Lane = std::distance(Bundle->getTreeEntry()->Scalars.begin(),
-                                     find(Bundle->getTreeEntry()->Scalars, In));
-            assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst>(In) &&
-                !Bundle->getTreeEntry()->ReorderIndices.empty())
-              Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
-            assert(Lane < static_cast<int>(
-                              Bundle->getTreeEntry()->Scalars.size()) &&
-                   "Couldn't find extract lane");
+            auto *It = find(Bundle->getTreeEntry()->Scalars, In);
+            SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
+            do {
+              int Lane =
+                  std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
+              assert(Lane >= 0 && "Lane not set");
+              if (isa<StoreInst>(In) &&
+                  !Bundle->getTreeEntry()->ReorderIndices.empty())
+                Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
+              assert(Lane < static_cast<int>(
+                                Bundle->getTreeEntry()->Scalars.size()) &&
+                     "Couldn't find extract lane");
 
-            // Since vectorization tree is being built recursively this
-            // assertion ensures that the tree entry has all operands set before
-            // reaching this code. Couple of exceptions known at the moment are
-            // extracts where their second (immediate) operand is not added.
-            // Since immediates do not affect scheduler behavior this is
-            // considered okay.
-            assert(In &&
-                   (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
-                    In->getNumOperands() ==
-                        Bundle->getTreeEntry()->getNumOperands() ||
-                    Bundle->getTreeEntry()->isCopyableElement(In)) &&
-                   "Missed TreeEntry operands?");
+              // Since vectorization tree is being built recursively this
+              // assertion ensures that the tree entry has all operands set
+              // before reaching this code. Couple of exceptions known at the
+              // moment are extracts where their second (immediate) operand is
+              // not added. Since immediates do not affect scheduler behavior
+              // this is considered okay.
+              assert(In &&
+                     (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
+                      In->getNumOperands() ==
+                          Bundle->getTreeEntry()->getNumOperands() ||
+                      Bundle->getTreeEntry()->isCopyableElement(In)) &&
+                     "Missed TreeEntry operands?");
 
-            for (unsigned OpIdx :
-                 seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
-              if (auto *I = dyn_cast<Instruction>(
-                      Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
-                LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): " << *I
-                                  << "\n");
-                DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx);
+              bool IsNonSchedulableWithParentPhiNode =
+                  Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
+                  Bundle->getTreeEntry()->UserTreeIndex &&
+                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->hasState() &&
+                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
+                      Instruction::PHI;
+              // Count the number of unique phi nodes, which are the parent for
+              // parent entry, and exit, if all the unique phis are processed.
+              if (IsNonSchedulableWithParentPhiNode) {
+                const TreeEntry *ParentTE =
+                    Bundle->getTreeEntry()->UserTreeIndex.UserTE;
+                Value *User = ParentTE->Scalars[Lane];
+                if (!ParentsUniqueUsers.insert(User).second)
+                  break;
               }
+
+              for (unsigned OpIdx :
+                   seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
+                if (auto *I = dyn_cast<Instruction>(
+                        Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
+                  LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
+                                    << *I << "\n");
+                  DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx, Checked);
+                }
+              // If parent node is schedulable, it will be handled correctly.
+              if (!IsNonSchedulableWithParentPhiNode)
+                break;
+              It = std::find(std::next(It),
+                             Bundle->getTreeEntry()->Scalars.end(), In);
+            } while (It != Bundle->getTreeEntry()->Scalars.end());
           }
         } else {
           // If BundleMember is a stand-alone instruction, no operand reordering
@@ -10546,8 +10580,11 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
             PoisonValue::get(UniqueValues.front()->getType()));
         // Check that extended with poisons/copyable operations are still valid
         // for vectorization (div/rem are not allowed).
-        if (!S.areInstructionsWithCopyableElements() &&
-            !getSameOpcode(PaddedUniqueValues, TLI).valid()) {
+        if ((!S.areInstructionsWithCopyableElements() &&
+             !getSameOpcode(PaddedUniqueValues, TLI).valid()) ||
+            (S.areInstructionsWithCopyableElements() && S.isMulDivLikeOp() &&
+             (S.getMainOp()->isIntDivRem() || S.getMainOp()->isFPDivRem() ||
+              isa<CallInst>(S.getMainOp())))) {
           LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
           ReuseShuffleIndices.clear();
           return false;
@@ -16883,7 +16920,10 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
            TEUseEI.EdgeIdx < UseEI.EdgeIdx || TEUseEI.UserTE != UseEI.UserTE) &&
-          !CheckOrdering(InsertPt))
+          (!CheckOrdering(InsertPt) ||
+           (UseEI.UserTE->hasCopyableElements() &&
+            isUsedOutsideBlock(const_cast<Instruction *>(TEInsertPt)) &&
+            is_contained(UseEI.UserTE->Scalars, TEInsertPt))))
         continue;
       // The node is reused - exit.
       if (CheckAndUseSameNode(TEPtr))
@@ -17621,12 +17661,28 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                 [](Value *V) {
                   return !isa<GetElementPtrInst>(V) && isa<Instruction>(V);
                 })) ||
-        all_of(E->Scalars, [&](Value *V) {
-          return isa<PoisonValue>(V) ||
-                 (E->Idx == 0 && isa<InsertElementInst>(V)) ||
-                 E->isCopyableElement(V) ||
-                 (!isVectorLikeInstWithConstOps(V) && isUsedOutsideBlock(V));
-        }))
+        (all_of(E->Scalars,
+                [&](Value *V) {
+                  return isa<PoisonValue>(V) ||
+                         (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                         E->isCopyableElement(V) ||
+                         (!isVectorLikeInstWithConstOps(V) &&
+                          isUsedOutsideBlock(V));
+                }) &&
+         (!E->doesNotNeedToSchedule() ||
+          any_of(E->Scalars,
+                 [&](Value *V) {
+                   if (!isa<Instruction>(V) ||
+                       (E->hasCopyableElements() && E->isCopyableElement(V)))
+                     return false;
+                   return !areAllOperandsNonInsts(V);
+                 }) ||
+          none_of(E->Scalars, [&](Value *V) {
+            if (!isa<Instruction>(V) ||
+                (E->hasCopyableElements() && E->isCopyableElement(V)))
+              return false;
+            return MustGather.contains(V);
+          }))))
       Res = FindLastInst();
     else
       Res = FindFirstInst();

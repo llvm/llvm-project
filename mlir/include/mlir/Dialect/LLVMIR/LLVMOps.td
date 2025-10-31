@@ -1975,7 +1975,6 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<StrAttr>:$reciprocal_estimates,
     OptionalAttr<StrAttr>:$prefer_vector_width,
     OptionalAttr<LLVM_TargetFeaturesAttr>:$target_features,
-    OptionalAttr<BoolAttr>:$unsafe_fp_math,
     OptionalAttr<BoolAttr>:$no_infs_fp_math,
     OptionalAttr<BoolAttr>:$no_nans_fp_math,
     OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,

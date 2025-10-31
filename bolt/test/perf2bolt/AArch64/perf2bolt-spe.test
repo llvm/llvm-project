@@ -6,6 +6,6 @@ RUN: %clang %cflags %p/../../Inputs/asm_foo.s %p/../../Inputs/asm_main.c -o %t.e
 
 RUN: perf record -e cycles -q -o %t.perf.data -- %t.exe 2> /dev/null
 
-RUN: perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe %t.exe | FileCheck %s --check-prefix=CHECK-SPE-LBR
+RUN: perf2bolt -p %t.perf.data -o %t.perf.boltdata --spe %t.exe | FileCheck %s --check-prefix=CHECK-SPE-BRSTACK
 
-CHECK-SPE-LBR: PERF2BOLT: parse SPE branch events in LBR-format
+CHECK-SPE-BRSTACK: PERF2BOLT: parse SPE branch events in brstack-format

@@ -674,7 +674,7 @@ using zip_traits = iterator_facade_base<
     ReferenceTupleType *, ReferenceTupleType>;
 
 template <typename ZipType, typename ReferenceTupleType, typename... Iters>
-struct zip_common : public zip_traits<ZipType, ReferenceTupleType, Iters...> {
+struct zip_common : zip_traits<ZipType, ReferenceTupleType, Iters...> {
   using Base = zip_traits<ZipType, ReferenceTupleType, Iters...>;
   using IndexSequence = std::index_sequence_for<Iters...>;
   using value_type = typename Base::value_type;

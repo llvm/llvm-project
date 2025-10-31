@@ -240,13 +240,11 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(uint32_t &count,
-                                       bool &is_complex) const {
+bool CompilerType::IsFloatingPointType(bool &is_complex) const {
   if (IsValid()) {
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, count, is_complex);
+      return type_system_sp->IsFloatingPointType(m_type, is_complex);
   }
-  count = 0;
   is_complex = false;
   return false;
 }
@@ -331,9 +329,8 @@ bool CompilerType::IsInteger() const {
 }
 
 bool CompilerType::IsFloat() const {
-  uint32_t count = 0;
   bool is_complex = false;
-  return IsFloatingPointType(count, is_complex);
+  return IsFloatingPointType(is_complex);
 }
 
 bool CompilerType::IsEnumerationType() const {
@@ -793,10 +790,10 @@ CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   return {};
 }
 
-lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
+lldb::Encoding CompilerType::GetEncoding() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetEncoding(m_type, count);
+      return type_system_sp->GetEncoding(m_type);
   return lldb::eEncodingInvalid;
 }
 
@@ -1093,10 +1090,10 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   if (IsAggregateType()) {
     return false; // Aggregate types don't have scalar values
   } else {
-    uint64_t count = 0;
-    lldb::Encoding encoding = GetEncoding(count);
+    // FIXME: check that type is scalar instead of checking encoding?
+    lldb::Encoding encoding = GetEncoding();
 
-    if (encoding == lldb::eEncodingInvalid || count != 1)
+    if (encoding == lldb::eEncodingInvalid || (GetTypeInfo() & eTypeIsComplex))
       return false;
 
     auto byte_size_or_err = GetByteSize(exe_scope);

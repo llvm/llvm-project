@@ -37,6 +37,10 @@ CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
                                 addedArgs.suffix.size());
 }
 
+CatchTypeInfo CIRGenCXXABI::getCatchAllTypeInfo() {
+  return CatchTypeInfo{{}, 0};
+}
+
 void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
                                   FunctionArgList &params) {
   const auto *md = cast<CXXMethodDecl>(cgf.curGD.getDecl());
@@ -66,8 +70,8 @@ cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
 mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
   ImplicitParamDecl *vd = getThisDecl(cgf);
   Address addr = cgf.getAddrOfLocalVar(vd);
-  return cgf.getBuilder().create<cir::LoadOp>(
-      cgf.getLoc(vd->getLocation()), addr.getElementType(), addr.getPointer());
+  return cir::LoadOp::create(cgf.getBuilder(), cgf.getLoc(vd->getLocation()),
+                             addr.getElementType(), addr.getPointer());
 }
 
 void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
@@ -81,8 +85,7 @@ CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *e) {
   if (!requiresArrayCookie(e))
     return CharUnits::Zero();
 
-  cgm.errorNYI(e->getSourceRange(), "CIRGenCXXABI::getArrayCookieSize");
-  return CharUnits::Zero();
+  return getArrayCookieSizeImpl(e->getAllocatedType());
 }
 
 bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
