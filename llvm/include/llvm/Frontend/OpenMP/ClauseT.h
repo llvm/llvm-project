@@ -1167,6 +1167,14 @@ struct ThreadsT {
   using EmptyTrait = std::true_type;
 };
 
+// V6.0: [14.8] `threadset` clause
+template <typename T, typename I, typename E> //
+struct ThreadsetT {
+  ENUM(ThreadsetPolicy, Omp_Pool, Omp_Team);
+  using WrapperTrait = std::true_type;
+  ThreadsetPolicy v;
+};
+
 // V5.2: [5.9.1] `to` clause
 template <typename T, typename I, typename E> //
 struct ToT {
@@ -1352,9 +1360,9 @@ using WrapperClausesT = std::variant<
     ProcBindT<T, I, E>, ReverseOffloadT<T, I, E>, SafelenT<T, I, E>,
     SelfMapsT<T, I, E>, SeverityT<T, I, E>, SharedT<T, I, E>, SimdlenT<T, I, E>,
     SizesT<T, I, E>, PermutationT<T, I, E>, ThreadLimitT<T, I, E>,
-    UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>, UniformT<T, I, E>,
-    UpdateT<T, I, E>, UseDeviceAddrT<T, I, E>, UseDevicePtrT<T, I, E>,
-    UsesAllocatorsT<T, I, E>>;
+    ThreadsetT<T, I, E>, UnifiedAddressT<T, I, E>,
+    UnifiedSharedMemoryT<T, I, E>, UniformT<T, I, E>, UpdateT<T, I, E>,
+    UseDeviceAddrT<T, I, E>, UseDevicePtrT<T, I, E>, UsesAllocatorsT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using UnionOfAllClausesT = typename type::Union< //
