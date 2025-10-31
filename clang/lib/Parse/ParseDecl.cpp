@@ -4248,6 +4248,13 @@ void Parser::ParseDeclarationSpecifiers(
 
     // type-specifier
     case tok::kw_short:
+      if (!getLangOpts().NativeInt16Type) {
+        Diag(Tok, diag::err_unknown_typename) << Tok.getName();
+        DS.SetTypeSpecError();
+        DS.SetRangeEnd(Tok.getLocation());
+        ConsumeToken();
+        goto DoneWithDeclSpec;
+      }
       isInvalid = DS.SetTypeSpecWidth(TypeSpecifierWidth::Short, Loc, PrevSpec,
                                       DiagID, Policy);
       break;

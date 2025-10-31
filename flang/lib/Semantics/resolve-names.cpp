@@ -9435,13 +9435,18 @@ bool ResolveNamesVisitor::SetProcFlag(
     SayWithDecl(name, symbol,
         "Implicit declaration of function '%s' has a different result type than in previous declaration"_err_en_US);
     return false;
-  } else if (symbol.has<ProcEntityDetails>()) {
-    symbol.set(flag); // in case it hasn't been set yet
-    if (flag == Symbol::Flag::Function) {
-      ApplyImplicitRules(symbol);
-    }
-    if (symbol.attrs().test(Attr::INTRINSIC)) {
-      AcquireIntrinsicProcedureFlags(symbol);
+  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (IsPointer(symbol) && !proc->type() && !proc->procInterface()) {
+      // PROCEDURE(), POINTER -- errors will be emitted later about a lack
+      // of known characteristics if used as a function
+    } else {
+      symbol.set(flag); // in case it hasn't been set yet
+      if (flag == Symbol::Flag::Function) {
+        ApplyImplicitRules(symbol);
+      }
+      if (symbol.attrs().test(Attr::INTRINSIC)) {
+        AcquireIntrinsicProcedureFlags(symbol);
+      }
     }
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(

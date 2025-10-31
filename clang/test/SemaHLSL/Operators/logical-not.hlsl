@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple  dxil-pc-shadermodel6.6-library %s -fnative-half-type -ast-dump -ast-dump-filter=case | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -triple  dxil-pc-shadermodel6.6-library %s -fnative-half-type -fnative-int16-type -ast-dump -ast-dump-filter=case | FileCheck %s
 
 // CHECK-LABEL: FunctionDecl {{.*}} used case1 'uint32_t2 (uint32_t2)'
 // CHECK-NEXT: ParmVarDecl {{.*}} used b 'uint32_t2':'vector<uint32_t, 2>'
