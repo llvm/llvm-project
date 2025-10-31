@@ -950,9 +950,9 @@ def Xarch__
   the host system, which can be used to suppress incompatible GPU arguments.}]>,
       MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the CUDA/HIP/SYCL host compilation">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to host compilation in offloading toolchain">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the CUDA/HIP/SYCL device compilation">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to device compilation in offloading toolchain">, MetaVarName<"<arg>">;
 def Xassembler : Separate<["-"], "Xassembler">,
   HelpText<"Pass <arg> to the assembler">, MetaVarName<"<arg>">,
   Group<CompileOnly_Group>;
