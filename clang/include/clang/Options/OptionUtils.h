@@ -53,6 +53,16 @@ inline uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
   return getLastArgUInt64Value(Args, Id, Default, &Diags, Base);
 }
 
+// Parse -mprefer-vector-width=. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
+                                        const llvm::opt::ArgList &Args);
+
+// Parse -mrecip. Return the Value string if well-formed.
+// Otherwise, return an empty string and issue a diagnosic message if needed.
+StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
+                            const llvm::opt::ArgList &Args);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_OPTIONS_OPTIONUTILS_H
