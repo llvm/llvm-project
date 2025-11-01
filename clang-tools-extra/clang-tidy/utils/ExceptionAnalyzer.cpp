@@ -563,16 +563,6 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       }
     }
     Results.merge(Uncaught);
-  } else if (const auto *Call = dyn_cast<CallExpr>(St)) {
-    if (const FunctionDecl *Func = Call->getDirectCallee()) {
-      ExceptionInfo Excs =
-          throwsException(Func, Caught, CallStack, Call->getBeginLoc());
-      Results.merge(Excs);
-    }
-  } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-    ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
-                                         CallStack, Construct->getBeginLoc());
-    Results.merge(Excs);
   } else if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(St)) {
     ExceptionInfo Excs =
         throwsException(DefaultInit->getExpr(), Caught, CallStack);
@@ -603,6 +593,18 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
   } else {
     for (const Stmt *Child : St->children()) {
       ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      Results.merge(Excs);
+    }
+
+    if (const auto *Call = dyn_cast<CallExpr>(St)) {
+      if (const FunctionDecl *Func = Call->getDirectCallee()) {
+        ExceptionInfo Excs =
+            throwsException(Func, Caught, CallStack, Call->getBeginLoc());
+        Results.merge(Excs);
+      }
+    } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
+      ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
+                                           CallStack, Construct->getBeginLoc());
       Results.merge(Excs);
     }
   }
