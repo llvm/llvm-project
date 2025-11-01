@@ -31,7 +31,6 @@
 /// implementation, which includes a name and type signature.
 #define GET_RUNTIME_LIBCALL_ENUM
 #include "llvm/IR/RuntimeLibcalls.inc"
-#undef GET_RUNTIME_LIBCALL_ENUM
 
 namespace llvm {
 
@@ -170,7 +169,6 @@ public:
   // querying a real set of symbols
 #define GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
 #include "llvm/IR/RuntimeLibcalls.inc"
-#undef GET_LOOKUP_LIBCALL_IMPL_NAME_BODY
   }
 
   /// Check if this is valid libcall for the current module, otherwise
@@ -238,7 +236,7 @@ private:
 
   static bool hasAEABILibcalls(const Triple &TT) {
     return TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
-           TT.isTargetMuslAEABI() || TT.isAndroid();
+           TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isAndroid();
   }
 
   LLVM_READONLY

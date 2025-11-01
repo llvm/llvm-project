@@ -2400,10 +2400,11 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   Results.push_back(Rem);
 }
 
-/// Return true if sincos libcall is available.
+/// Return true if sincos or __sincos_stret libcall is available.
 static bool isSinCosLibcallAvailable(SDNode *Node, const TargetLowering &TLI) {
-  RTLIB::Libcall LC = RTLIB::getSINCOS(Node->getSimpleValueType(0).SimpleTy);
-  return TLI.getLibcallName(LC) != nullptr;
+  MVT::SimpleValueType VT = Node->getSimpleValueType(0).SimpleTy;
+  return TLI.getLibcallImpl(RTLIB::getSINCOS(VT)) != RTLIB::Unsupported ||
+         TLI.getLibcallImpl(RTLIB::getSINCOS_STRET(VT)) != RTLIB::Unsupported;
 }
 
 /// Only issue sincos libcall if both sin and cos are needed.
@@ -3752,9 +3753,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     EVT VT = Node->getValueType(0);
     // Turn fsin / fcos into ISD::FSINCOS node if there are a pair of fsin /
     // fcos which share the same operand and both are used.
-    if ((TLI.isOperationLegalOrCustom(ISD::FSINCOS, VT) ||
-         isSinCosLibcallAvailable(Node, TLI))
-        && useSinCos(Node)) {
+    if ((TLI.isOperationLegal(ISD::FSINCOS, VT) ||
+         isSinCosLibcallAvailable(Node, TLI)) &&
+        useSinCos(Node)) {
       SDVTList VTs = DAG.getVTList(VT, VT);
       Tmp1 = DAG.getNode(ISD::FSINCOS, dl, VTs, Node->getOperand(0));
       if (Node->getOpcode() == ISD::FCOS)

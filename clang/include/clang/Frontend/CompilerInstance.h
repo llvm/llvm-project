@@ -460,7 +460,7 @@ public:
     FileMgr.resetWithoutRelease();
   }
 
-  /// Replace the current file manager and virtual file system.
+  /// Replace the current file manager.
   void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}

@@ -11,6 +11,7 @@
 #include "TestTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
+#include "mlir/Dialect/ControlFlow/Transforms/StructuralTypeConversions.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
@@ -2042,6 +2043,10 @@ struct TestTypeConversionDriver
     });
     converter.addConversion([](IndexType type) { return type; });
     converter.addConversion([](IntegerType type, SmallVectorImpl<Type> &types) {
+      if (type.isInteger(1)) {
+        // i1 is legal.
+        types.push_back(type);
+      }
       if (type.isInteger(38)) {
         // i38 is legal.
         types.push_back(type);
@@ -2136,7 +2141,7 @@ struct TestTypeConversionDriver
                                           Location loc) -> Value {
       if (inputs.size() != 1 || !inputs[0].getType().isInteger(37))
         return Value();
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResult(0);
     });
 
@@ -2175,6 +2180,8 @@ struct TestTypeConversionDriver
                                                               converter);
     mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
         converter, patterns, target);
+    mlir::cf::populateCFStructuralTypeConversionsAndLegality(converter,
+                                                             patterns, target);
 
     ConversionConfig config;
     config.allowPatternRollback = allowPatternRollback;

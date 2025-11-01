@@ -169,7 +169,7 @@ void DefinitionBlockSeparator::separateBlocks(
         }
       }
 
-      if (Style.isCSharp() && OperateLine->First->is(TT_AttributeSquare))
+      if (Style.isCSharp() && OperateLine->First->is(TT_AttributeLSquare))
         return true;
       return false;
     };

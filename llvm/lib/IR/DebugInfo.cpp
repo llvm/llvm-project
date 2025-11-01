@@ -294,9 +294,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   // just DISubprogram's, referenced from anywhere within the Function being
   // cloned prior to calling MapMetadata / RemapInstruction to avoid their
   // duplication later as DICompileUnit's are also directly referenced by
-  // llvm.dbg.cu list. Thefore we need to collect DICompileUnit's here as well.
-  // Also, DICompileUnit's may reference DISubprogram's too and therefore need
-  // to be at least looked through.
+  // llvm.dbg.cu list. Therefore we need to collect DICompileUnit's here as
+  // well. Also, DICompileUnit's may reference DISubprogram's too and therefore
+  // need to be at least looked through.
   processCompileUnit(SP->getUnit());
   processType(SP->getType());
   for (auto *Element : SP->getTemplateParams()) {
@@ -377,7 +377,7 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
 
 /// Recursively handle DILocations in followup metadata etc.
 ///
-/// TODO: If for example a followup loop metadata would refence itself this
+/// TODO: If for example a followup loop metadata would reference itself this
 /// function would go into infinite recursion. We do not expect such cycles in
 /// the loop metadata (except for the self-referencing first element
 /// "LoopID"). However, we could at least handle such situations more gracefully
@@ -679,7 +679,7 @@ private:
     auto Variables = nullptr;
     auto TemplateParams = nullptr;
 
-    // Make a distinct DISubprogram, for situations that warrent it.
+    // Make a distinct DISubprogram, for situations that warrant it.
     auto distinctMDSubprogram = [&]() {
       return DISubprogram::getDistinct(
           MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
@@ -2043,7 +2043,7 @@ void at::remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map,
     I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
 }
 
-/// Collect constant properies (base, size, offset) of \p StoreDest.
+/// Collect constant properties (base, size, offset) of \p StoreDest.
 /// Return std::nullopt if any properties are not constants or the
 /// offset from the base pointer is negative.
 static std::optional<AssignmentInfo>
@@ -2329,7 +2329,7 @@ PreservedAnalyses AssignmentTrackingPass::run(Function &F,
     return PreservedAnalyses::all();
 
   // Record that this module uses assignment tracking. It doesn't matter that
-  // some functons in the module may not use it - the debug info in those
+  // some functions in the module may not use it - the debug info in those
   // functions will still be handled properly.
   setAssignmentTrackingModuleFlag(*F.getParent());
 

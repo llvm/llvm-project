@@ -807,7 +807,7 @@ def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
 // MathToXeVM
 //===----------------------------------------------------------------------===//
 
-def ConvertMathToXeVM : Pass<"convert-math-to-xevm", "ModuleOp"> {
+def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   let summary =
       "Convert (fast) math operations to native XeVM/SPIRV equivalents";
   let description = [{

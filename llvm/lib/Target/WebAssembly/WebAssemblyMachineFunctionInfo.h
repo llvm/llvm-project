@@ -192,7 +192,7 @@ struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
                           const llvm::WebAssemblyFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~WebAssemblyFunctionInfo() = default;
+  ~WebAssemblyFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<WebAssemblyFunctionInfo> {

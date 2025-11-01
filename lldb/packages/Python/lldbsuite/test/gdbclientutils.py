@@ -5,8 +5,9 @@ import io
 import threading
 import socket
 import traceback
+from enum import Enum
 from lldbsuite.support import seven
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union, Sequence
 
 
 def checksum(message):
@@ -76,6 +77,35 @@ def hex_decode_bytes(hex_bytes):
     return out
 
 
+class PacketDirection(Enum):
+    RECV = "recv"
+    SEND = "send"
+
+
+class PacketLog:
+    def __init__(self):
+        self._packets: list[tuple[PacketDirection, str]] = []
+
+    def add_sent(self, packet: str):
+        self._packets.append((PacketDirection.SEND, packet))
+
+    def add_received(self, packet: str):
+        self._packets.append((PacketDirection.RECV, packet))
+
+    def get_sent(self):
+        return [
+            pkt for direction, pkt in self._packets if direction == PacketDirection.SEND
+        ]
+
+    def get_received(self):
+        return [
+            pkt for direction, pkt in self._packets if direction == PacketDirection.RECV
+        ]
+
+    def __iter__(self):
+        return iter(self._packets)
+
+
 class MockGDBServerResponder:
     """
     A base class for handling client packets and issuing server responses for
@@ -90,21 +120,33 @@ class MockGDBServerResponder:
 
     registerCount: int = 40
 
-    class RESPONSE_DISCONNECT:
-        pass
+    class SpecialResponse(Enum):
+        RESPONSE_DISCONNECT = 0
+        RESPONSE_NONE = 1
 
-    class RESPONSE_NONE:
-        pass
+    RESPONSE_DISCONNECT = SpecialResponse.RESPONSE_DISCONNECT
+    RESPONSE_NONE = SpecialResponse.RESPONSE_NONE
+    Response = Union[str, SpecialResponse]
 
     def __init__(self):
-        self.packetLog: List[str] = []
+        self.packetLog = PacketLog()
 
-    def respond(self, packet):
+    def respond(self, packet: str) -> Sequence[Response]:
         """
         Return the unframed packet data that the server should issue in response
         to the given packet received from the client.
         """
-        self.packetLog.append(packet)
+        self.packetLog.add_received(packet)
+        response = self._respond_impl(packet)
+        if not isinstance(response, list):
+            response = [response]
+        for part in response:
+            if isinstance(part, self.SpecialResponse):
+                continue
+            self.packetLog.add_sent(part)
+        return response
+
+    def _respond_impl(self, packet) -> Union[Response, List[Response]]:
         if packet is MockGDBServer.PACKET_INTERRUPT:
             return self.interrupt()
         if packet == "c":
@@ -664,17 +706,19 @@ class MockGDBServer:
             # adding validation code to make sure the client only sends ACKs
             # when it's supposed to.
             return
-        response = ""
+        response = [""]
         # We'll handle the ack stuff here since it's not something any of the
         # tests will be concerned about, and it'll get turned off quickly anyway.
         if self._shouldSendAck:
             self._socket.sendall(seven.bitcast_to_bytes("+"))
         if packet == "QStartNoAckMode":
             self._shouldSendAck = False
-            response = "OK"
+            response = ["OK"]
         elif self.responder is not None:
             # Delegate everything else to our responder
             response = self.responder.respond(packet)
+        # MockGDBServerResponder no longer returns non-lists but others like
+        # ReverseTestBase still do
         if not isinstance(response, list):
             response = [response]
         for part in response:
@@ -682,6 +726,8 @@ class MockGDBServer:
                 continue
             if part is MockGDBServerResponder.RESPONSE_DISCONNECT:
                 raise self.TerminateConnectionException()
+            # Should have handled the non-str's above
+            assert isinstance(part, str)
             self._sendPacket(part)
 
     PACKET_ACK = object()

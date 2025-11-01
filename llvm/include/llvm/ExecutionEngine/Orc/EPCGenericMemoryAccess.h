@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements ExecutorProcessControl::MemoryAccess by making calls to
+// Implements the MemoryAccess interface by making calls to
 // ExecutorProcessControl::callWrapperAsync.
 //
 // This simplifies the implementaton of new ExecutorProcessControl instances,
@@ -19,6 +19,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICMEMORYACCESS_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/MemoryAccess.h"
 
 namespace llvm {
 namespace orc {
