@@ -36,7 +36,7 @@ AST_POLYMORPHIC_MATCHER_P(
 
 } // namespace
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 void DontModifyStdNamespaceCheck::registerMatchers(MatchFinder *Finder) {
   auto HasStdParent =
@@ -96,7 +96,7 @@ void DontModifyStdNamespaceCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("decl"),
                      this);
 }
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
 
 static const NamespaceDecl *getTopLevelLexicalNamespaceDecl(const Decl *D) {
   const NamespaceDecl *LastNS = nullptr;
@@ -108,7 +108,7 @@ static const NamespaceDecl *getTopLevelLexicalNamespaceDecl(const Decl *D) {
   return LastNS;
 }
 
-void clang::tidy::cert::DontModifyStdNamespaceCheck::check(
+void clang::tidy::bugprone::DontModifyStdNamespaceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *D = Result.Nodes.getNodeAs<Decl>("decl");
   const auto *NS = Result.Nodes.getNodeAs<NamespaceDecl>("nmspc");

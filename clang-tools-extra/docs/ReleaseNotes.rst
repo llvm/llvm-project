@@ -244,6 +244,11 @@ New check aliases
   <clang-tidy/checks/modernize/avoid-variadic-functions>`
   keeping initial check as an alias to the new one.
 
+- Renamed :doc:`cert-dcl58-cpp <clang-tidy/checks/cert/dcl58-cpp>` to
+  :doc:`bugprone-dont-modify-std-namespace
+  <clang-tidy/checks/bugprone/dont-modify-std-namespace>`
+  keeping initial check as an alias to the new one.
+
 - Renamed :doc:`cert-env33-c <clang-tidy/checks/cert/env33-c>` to
   :doc:`bugprone-command-processor
   <clang-tidy/checks/bugprone/command-processor>`
@@ -367,7 +372,7 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false
-  positives when pointers is transferred to non-const references 
+  positives when pointers is transferred to non-const references
   and avoid false positives of function pointer and fix false
   positives on return of non-const pointer.
 
