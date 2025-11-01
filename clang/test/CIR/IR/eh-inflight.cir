@@ -1,0 +1,15 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+module {
+
+cir.func dso_local @function_with_inflight_exception() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception
+  cir.return
+}
+
+// CHECK: cir.func dso_local @function_with_inflight_exception() {
+// CHECK:  %exception_ptr, %type_id = cir.eh.inflight_exception
+// CHECK:  cir.return
+// CHECK: }
+
+}
