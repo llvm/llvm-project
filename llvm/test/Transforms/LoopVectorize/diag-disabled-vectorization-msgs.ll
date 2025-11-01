@@ -43,7 +43,7 @@
 ; FORCEDONLY-SAME: loop not vectorized: only vectorizing loops that explicitly request it
 ; FORCEDONLY: LV: Loop hints prevent vectorization
 
-define double @CompareDistmats(ptr %distmat1, ptr %distmat2){
+define double @CompareDistmats(ptr %distmat1){
 entry:
   br label %for.body
 
@@ -58,9 +58,7 @@ for.body:                                         ; preds = %entry, %for.body
   %RMSD.013 = phi double [ 0.000000e+00, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds nuw double, ptr %distmat1, i64 %i.014
   %1 = load double, ptr %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds nuw double, ptr %distmat2, i64 %i.014
-  %2 = load double, ptr %arrayidx1, align 8
-  %sub = fsub fast double %1, %2
+  %sub = fsub fast double %1, 1.234e+0
   %mul = fmul fast double %sub, %sub
   %add = fadd fast double %mul, %RMSD.013
   %inc = add nuw nsw i64 %i.014, 1
