@@ -286,6 +286,11 @@ def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
 def : GINodeEquiv<G_USDOT, AArch64usdot>;
 
+def : GINodeEquiv<G_AVGFLOORU, avgflooru>;
+def : GINodeEquiv<G_AVGCEILU, avgceilu>;
+def : GINodeEquiv<G_AVGFLOORS, avgfloors>;
+def : GINodeEquiv<G_AVGCEILS, avgceils>;
+
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
 def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
