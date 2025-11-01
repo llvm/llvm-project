@@ -7752,6 +7752,14 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     if (CM.isPredicatedInst(I)) {
       SmallVector<VPValue *> Ops(Operands);
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
+      if (auto *Inst = dyn_cast<VPInstruction>(Mask)) {
+        if (Inst->getOpcode() == VPInstruction::LogicalAnd) {
+          VPValue *Zero =
+              Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 0));
+          Mask = Builder.createICmp(CmpInst::ICMP_NE, Ops[1], Zero);
+        }
+      }
+
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
       auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
