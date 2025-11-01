@@ -2380,13 +2380,6 @@ void AArch64FrameLowering::determineStackHazardSlot(
       return;
     }
 
-    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (MFI.hasVarSizedObjects() || TRI->hasStackRealignment(MF)) {
-      LLVM_DEBUG(dbgs() << "SplitSVEObjects is not supported with variable "
-                           "sized objects or realignment\n");
-      return;
-    }
-
     // If another calling convention is explicitly set FPRs can't be promoted to
     // ZPR callee-saves.
     if (!is_contained({CallingConv::C, CallingConv::Fast,
@@ -2402,6 +2395,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
     assert(Subtarget.isSVEorStreamingSVEAvailable() &&
            "Expected SVE to be available for PPRs");
 
+    const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     // With SplitSVEObjects the CS hazard padding is placed between the
     // PPRs and ZPRs. If there are any FPR CS there would be a hazard between
     // them and the CS GRPs. Avoid this by promoting all FPR CS to ZPRs.
