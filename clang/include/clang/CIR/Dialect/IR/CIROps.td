@@ -4491,6 +4491,48 @@ def CIR_TryOp : CIR_Op<"try",[
 }
 
 //===----------------------------------------------------------------------===//
+// CatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CatchParamKind  : CIR_I32EnumAttr<
+  "CatchParamKind", "Designate limits for begin/end of catch param handling", [
+    I32EnumAttrCase<"Begin", 0, "begin">,
+    I32EnumAttrCase<"End",  1, "end">
+]>;
+
+def CIR_CatchParamOp : CIR_Op<"catch_param"> {
+  let summary = "Represents catch clause formal parameter";
+  let description = [{
+    The `cir.catch_param` can operate in two modes: within catch regions of
+    `cir.try` or anywhere else with the `begin` or `end` markers. The `begin`
+    version requires an exception pointer of `cir.ptr<!void>`.
+
+    Example:
+
+    ```mlir
+    %exception = cir.catch_param begin %exception_obj -> !cir.ptr<!s32i>
+    %exception = cir.catch_param -> !cir.ptr<!void>
+    cir.catch_param end
+    ```
+  }];
+
+  let arguments = (ins
+    Optional<CIR_VoidPtrType>:$exception_ptr,
+    OptionalAttr<CIR_CatchParamKind>:$kind
+  );
+
+  let results = (outs Optional<CIR_AnyType>:$param);
+  let assemblyFormat = [{
+    ($kind^)?
+    ($exception_ptr^)?
+    (`:` qualified(type($param))^)?
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 

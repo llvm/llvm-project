@@ -2981,6 +2981,35 @@ mlir::LogicalResult CIRToLLVMThrowOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMCatchParamOpLowering::matchAndRewrite(
+    cir::CatchParamOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  std::optional<cir::CatchParamKind> kind = op.getKind();
+  if (!kind)
+    llvm_unreachable("only begin/end supposed to make to lowering stage");
+
+  if (kind == cir::CatchParamKind::Begin) {
+    // Get or create `declare ptr @__cxa_begin_catch(ptr)`
+    const llvm::StringRef fnName = "__cxa_begin_catch";
+    auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+    auto fnTy = mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {llvmPtrTy});
+    createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op, mlir::TypeRange{llvmPtrTy}, fnName,
+        mlir::ValueRange{adaptor.getExceptionPtr()});
+    return mlir::success();
+  }
+
+  // Get or create `declare void @__cxa_end_catch()`
+  const llvm::StringRef fnName = "__cxa_end_catch";
+  auto voidTy = mlir::LLVM::LLVMVoidType::get(rewriter.getContext());
+  auto fnTy = mlir::LLVM::LLVMFunctionType::get(voidTy, {});
+  createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, mlir::TypeRange{}, fnName,
+                                                  mlir::ValueRange{});
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAllocExceptionOpLowering::matchAndRewrite(
     cir::AllocExceptionOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

@@ -1,0 +1,65 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func dso_local @catch_param_without_kind_and_without_try_scope() {
+  // expected-error @below {{op without `kind` requires `cir.try` surrounding scope}}
+  %0 = cir.catch_param : !cir.ptr<!void>
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func private @division() -> !s32i
+cir.func dso_local @catch_param_with_exception_ptr_but_without_kind() {
+  cir.scope {
+    cir.try {
+      %0 = cir.call @division() : () -> !s32i
+      cir.yield
+    } catch all {
+      %0 = cir.const #cir.ptr<null> : !cir.ptr<!void>
+      // expected-error @below {{op with exception pointer must be of `begin` kind}}
+      %1 = cir.catch_param %0 : !cir.ptr<!void>
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func private @division() -> !s32i
+cir.func dso_local @catch_param_with_exception_ptr_but_with_end_kind() {
+  cir.scope {
+    cir.try {
+      %0 = cir.call @division() : () -> !s32i
+      cir.yield
+    } catch all {
+      %0 = cir.const #cir.ptr<null> : !cir.ptr<!void>
+      // expected-error @below {{'cir.catch_param' op with exception pointer must be of `begin` kind}}
+      %1 = cir.catch_param end %0 : !cir.ptr<!void>
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
