@@ -269,10 +269,15 @@ void lld::coff::wrapSymbols(SymbolTable &symtab) {
       // (We can't easily distinguish whether any object file actually
       // referenced it or not, though.)
       if (imp) {
-        DefinedLocalImport *wrapimp = make<DefinedLocalImport>(
-            symtab.ctx, saver().save("__imp_" + w.wrap->getName()), d);
-        symtab.localImportChunks.push_back(wrapimp->getChunk());
-        map[imp] = wrapimp;
+        if (Symbol *wrapimp =
+                symtab.find(("__imp_" + w.wrap->getName()).str())) {
+          map[imp] = wrapimp;
+        } else {
+          DefinedLocalImport *localwrapimp = make<DefinedLocalImport>(
+              symtab.ctx, saver().save("__imp_" + w.wrap->getName()), d);
+          symtab.localImportChunks.push_back(localwrapimp->getChunk());
+          map[imp] = localwrapimp;
+        }
       }
     }
   }

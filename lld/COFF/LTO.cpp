@@ -26,6 +26,7 @@
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <memory>
@@ -117,8 +118,8 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         /*ShouldEmitIndexFiles=*/false,
         /*ShouldEmitImportFiles=*/false, ctx.config.outputFile,
         ctx.config.dtltoDistributor, ctx.config.dtltoDistributorArgs,
-        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerArgs,
-        !ctx.config.saveTempsArgs.empty());
+        ctx.config.dtltoCompiler, ctx.config.dtltoCompilerPrependArgs,
+        ctx.config.dtltoCompilerArgs, !ctx.config.saveTempsArgs.empty());
   } else if (ctx.config.thinLTOIndexOnly) {
     auto OnIndexWrite = [&](StringRef S) { thinIndices.erase(S); };
     backend = lto::createWriteIndexesThinBackend(
@@ -176,6 +177,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 std::vector<InputFile *> BitcodeCompiler::compile() {
+  llvm::TimeTraceScope timeScope("Bitcode compile");
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);

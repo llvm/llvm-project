@@ -58,9 +58,9 @@ static bool getFullyQualifiedTemplateName(const ASTContext &Ctx,
   NestedNameSpecifier NNS = std::nullopt;
 
   TemplateDecl *ArgTDecl = TName.getAsTemplateDecl();
-  // ArgTDecl won't be NULL because we asserted that this isn't a
-  // dependent context very early in the call chain.
-  assert(ArgTDecl != nullptr);
+  if (!ArgTDecl) // ArgTDecl can be null in dependent contexts.
+    return false;
+
   QualifiedTemplateName *QTName = TName.getAsQualifiedTemplateName();
 
   if (QTName &&
@@ -125,7 +125,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
   // which can point to a template instantiation with no sugar in any of
   // its template argument, however we still need to fully qualify them.
 
-  const auto *TD = TSTRecord->getOriginalDecl();
+  const auto *TD = TSTRecord->getDecl();
   const auto *TSTDecl = dyn_cast<ClassTemplateSpecializationDecl>(TD);
   if (!TSTDecl)
     return Ctx.getTagType(Keyword, Qualifier, TD, /*OwnsTag=*/false)
@@ -232,7 +232,7 @@ static NestedNameSpecifier getFullyQualifiedNestedNameSpecifier(
     // Find decl context.
     const TypeDecl *TD;
     if (const TagType *TagDeclType = Type->getAs<TagType>())
-      TD = TagDeclType->getOriginalDecl();
+      TD = TagDeclType->getDecl();
     else if (const auto *D = dyn_cast<TypedefType>(Type))
       TD = D->getDecl();
     else
@@ -252,6 +252,9 @@ createNestedNameSpecifierForScopeOf(const ASTContext &Ctx, const Decl *Decl,
                                     bool WithGlobalNsPrefix) {
   assert(Decl);
 
+  // Some declaration cannot be qualified.
+  if (Decl->isTemplateParameter())
+    return std::nullopt;
   const DeclContext *DC = Decl->getDeclContext()->getRedeclContext();
   const auto *Outer = dyn_cast<NamedDecl>(DC);
   const auto *OuterNS = dyn_cast<NamespaceDecl>(DC);
@@ -313,7 +316,7 @@ createNestedNameSpecifierForScopeOf(const ASTContext &Ctx, const Type *TypePtr,
   if (const auto *TDT = dyn_cast<TypedefType>(TypePtr)) {
     Decl = TDT->getDecl();
   } else if (const auto *TagDeclType = dyn_cast<TagType>(TypePtr)) {
-    Decl = TagDeclType->getOriginalDecl();
+    Decl = TagDeclType->getDecl();
   } else if (const auto *TST = dyn_cast<TemplateSpecializationType>(TypePtr)) {
     Decl = TST->getTemplateName().getAsTemplateDecl();
   } else {

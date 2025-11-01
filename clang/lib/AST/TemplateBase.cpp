@@ -56,8 +56,8 @@ static void printIntegral(const TemplateArgument &TemplArg, raw_ostream &Out,
   const llvm::APSInt &Val = TemplArg.getAsIntegral();
 
   if (Policy.UseEnumerators) {
-    if (const EnumType *ET = T->getAs<EnumType>()) {
-      for (const EnumConstantDecl *ECD : ET->getOriginalDecl()->enumerators()) {
+    if (const auto *ED = T->getAsEnumDecl()) {
+      for (const EnumConstantDecl *ECD : ED->enumerators()) {
         // In Sema::CheckTemplateArugment, enum template arguments value are
         // extended to the size of the integer underlying the enum type.  This
         // may create a size difference between the enum value and template
@@ -340,13 +340,14 @@ bool TemplateArgument::isPackExpansion() const {
 }
 
 bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
-  if (getKind() == TemplateArgument::Template) {
-    if (isa<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
-      return true;
-    else if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
-                 getAsTemplate().getAsTemplateDecl()))
-      return TTP->templateParameterKind() == TNK_Concept_template;
-  }
+  if (getKind() != TemplateArgument::Template)
+    return false;
+
+  if (isa_and_nonnull<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
+    return true;
+  if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
+          getAsTemplate().getAsTemplateDecl()))
+    return TTP->templateParameterKind() == TNK_Concept_template;
   return false;
 }
 

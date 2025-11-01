@@ -1,4 +1,4 @@
-//===--- StructPackAlignCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,9 +76,9 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
   CharUnits CurrSize = Result.Context->getASTRecordLayout(Struct).getSize();
   CharUnits MinByteSize =
       CharUnits::fromQuantity(std::max<clang::CharUnits::QuantityType>(
-          ceil(static_cast<float>(TotalBitSize) / CharSize), 1));
+          std::ceil(static_cast<float>(TotalBitSize) / CharSize), 1));
   CharUnits MaxAlign = CharUnits::fromQuantity(
-      ceil((float)Struct->getMaxAlignment() / CharSize));
+      std::ceil((float)Struct->getMaxAlignment() / CharSize));
   CharUnits CurrAlign =
       Result.Context->getASTRecordLayout(Struct).getAlignment();
   CharUnits NewAlign = computeRecommendedAlignment(MinByteSize);

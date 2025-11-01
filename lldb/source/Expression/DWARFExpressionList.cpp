@@ -254,7 +254,7 @@ llvm::Expected<Value> DWARFExpressionList::Evaluate(
     }
 
     if (!pc.IsValid()) {
-      return llvm::createStringError("Invalid PC in frame.");
+      return llvm::createStringError("invalid PC in frame");
     }
     addr_t pc_load_addr = pc.GetLoadAddress(exe_ctx->GetTargetPtr());
     const DWARFExpression *entry =

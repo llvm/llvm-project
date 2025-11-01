@@ -77,8 +77,7 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GCN-NEXT:    s_mov_b32 s9, s1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v2, v0
-; GCN-NEXT:    v_not_b32_e32 v0, v0
-; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_bfi_b32 v0, v0, 0, 1
 ; GCN-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; GCN-NEXT:    s_endpgm
 ;

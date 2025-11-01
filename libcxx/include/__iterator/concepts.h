@@ -117,15 +117,12 @@ template <class _Tp>
 concept __signed_integer_like = signed_integral<_Tp>;
 
 template <class _Ip>
-concept weakly_incrementable =
-    // TODO: remove this once the clang bug is fixed (bugs.llvm.org/PR48173).
-    !same_as<_Ip, bool> && // Currently, clang does not handle bool correctly.
-    movable<_Ip> && requires(_Ip __i) {
-      typename iter_difference_t<_Ip>;
-      requires __signed_integer_like<iter_difference_t<_Ip>>;
-      { ++__i } -> same_as<_Ip&>; // not required to be equality-preserving
-      __i++;                      // not required to be equality-preserving
-    };
+concept weakly_incrementable = movable<_Ip> && requires(_Ip __i) {
+  typename iter_difference_t<_Ip>;
+  requires __signed_integer_like<iter_difference_t<_Ip>>;
+  { ++__i } -> same_as<_Ip&>; // not required to be equality-preserving
+  __i++;                      // not required to be equality-preserving
+};
 
 // [iterator.concept.inc]
 template <class _Ip>

@@ -81,7 +81,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #if CLANG_ENABLE_CIR
     return std::make_unique<cir::EmitCIRAction>();
 #else
-    llvm_unreachable("CIR suppport not built into clang");
+    CI.getDiagnostics().Report(diag::err_fe_cir_not_built);
+    return nullptr;
 #endif
   case EmitHTML:               return std::make_unique<HTMLPrintAction>();
   case EmitLLVM: {
@@ -181,6 +182,9 @@ CreateFrontendAction(CompilerInstance &CI) {
 
   const FrontendOptions &FEOpts = CI.getFrontendOpts();
 
+  if (CI.getLangOpts().HLSL)
+    Act = std::make_unique<HLSLFrontendAction>(std::move(Act));
+
   if (FEOpts.FixAndRecompile) {
     Act = std::make_unique<FixItRecompile>(std::move(Act));
   }
@@ -207,6 +211,8 @@ CreateFrontendAction(CompilerInstance &CI) {
 }
 
 bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
+  unsigned NumErrorsBefore = Clang->getDiagnostics().getNumErrors();
+
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
     driver::getDriverOptTable().printHelp(
@@ -238,7 +244,9 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Clang->getFrontendOpts().LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
+                                      /*Errs=*/nullptr,
+                                      /*VFS=*/&Clang->getVirtualFileSystem());
   }
 
 #if CLANG_ENABLE_STATIC_ANALYZER
@@ -289,9 +297,12 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   }
 #endif
 
-  // If there were errors in processing arguments, don't do anything else.
-  if (Clang->getDiagnostics().hasErrorOccurred())
+  // If there were errors in the above, don't do anything else.
+  // This intentionally ignores errors emitted before this function to
+  // accommodate lenient callers that decided to make progress despite errors.
+  if (Clang->getDiagnostics().getNumErrors() != NumErrorsBefore)
     return false;
+
   // Create and execute the frontend action.
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)

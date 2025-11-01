@@ -92,6 +92,13 @@ def parse_args():
         action="store_true",
     )
     format_group.add_argument(
+        "-r",
+        "--relative-paths",
+        dest="printPathRelativeCWD",
+        help="Print paths relative to CWD",
+        action="store_true",
+    )
+    format_group.add_argument(
         "-o",
         "--output",
         type=lit.reports.JsonReport,
@@ -229,6 +236,12 @@ def parse_args():
         dest="ignoreFail",
         action="store_true",
         help="Exit with status zero even if some tests fail",
+    )
+    execution_group.add_argument(
+        "--update-tests",
+        dest="update_tests",
+        action="store_true",
+        help="Try to update regression tests to reflect current behavior, if possible",
     )
     execution_test_time_group = execution_group.add_mutually_exclusive_group()
     execution_test_time_group.add_argument(

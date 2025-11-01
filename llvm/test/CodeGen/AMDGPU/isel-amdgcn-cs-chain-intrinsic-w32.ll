@@ -693,8 +693,6 @@ define amdgpu_cs_chain void @nonuniform_callee(ptr %callee, i32 inreg %sgpr, i32
   ; DAGISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr9
   ; DAGISEL-GFX11-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; DAGISEL-GFX11-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX11-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX11-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; DAGISEL-GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
   ; DAGISEL-GFX11-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec
@@ -715,8 +713,6 @@ define amdgpu_cs_chain void @nonuniform_callee(ptr %callee, i32 inreg %sgpr, i32
   ; DAGISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; DAGISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr9
   ; DAGISEL-GFX10-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; DAGISEL-GFX10-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; DAGISEL-GFX10-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; DAGISEL-GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; DAGISEL-GFX10-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
   ; DAGISEL-GFX10-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY4]], implicit $exec

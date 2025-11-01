@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "llvm/ADT/MapVector.h"
@@ -464,26 +465,33 @@ struct UnrollElementwisePattern : public RewritePattern {
     auto targetShape = getTargetShape(options, op);
     if (!targetShape)
       return failure();
+    int64_t targetShapeRank = targetShape->size();
     auto dstVecType = cast<VectorType>(op->getResult(0).getType());
     SmallVector<int64_t> originalSize =
         *cast<VectorUnrollOpInterface>(op).getShapeForUnroll();
-    // Bail-out if rank(source) != rank(target). The main limitation here is the
-    // fact that `ExtractStridedSlice` requires the rank for the input and
-    // output to match. If needed, we can relax this later.
-    if (originalSize.size() != targetShape->size())
-      return rewriter.notifyMatchFailure(
-          op, "expected input vector rank to match target shape rank");
+    int64_t originalShapeRank = originalSize.size();
+
     Location loc = op->getLoc();
+
+    // Handle rank mismatch by adding leading unit dimensions to targetShape
+    SmallVector<int64_t> adjustedTargetShape(originalShapeRank);
+    int64_t rankDiff = originalShapeRank - targetShapeRank;
+    std::fill(adjustedTargetShape.begin(),
+              adjustedTargetShape.begin() + rankDiff, 1);
+    std::copy(targetShape->begin(), targetShape->end(),
+              adjustedTargetShape.begin() + rankDiff);
+
+    int64_t adjustedTargetShapeRank = adjustedTargetShape.size();
     // Prepare the result vector.
     Value result = arith::ConstantOp::create(rewriter, loc, dstVecType,
                                              rewriter.getZeroAttr(dstVecType));
-    SmallVector<int64_t> strides(targetShape->size(), 1);
-    VectorType newVecType =
+    SmallVector<int64_t> strides(adjustedTargetShapeRank, 1);
+    VectorType unrolledVecType =
         VectorType::get(*targetShape, dstVecType.getElementType());
 
     // Create the unrolled computation.
     for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalSize, *targetShape)) {
+         StaticTileOffsetRange(originalSize, adjustedTargetShape)) {
       SmallVector<Value> extractOperands;
       for (OpOperand &operand : op->getOpOperands()) {
         auto vecType = dyn_cast<VectorType>(operand.get().getType());
@@ -491,14 +499,31 @@ struct UnrollElementwisePattern : public RewritePattern {
           extractOperands.push_back(operand.get());
           continue;
         }
-        extractOperands.push_back(
-            rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-                loc, operand.get(), offsets, *targetShape, strides));
+        Value extracted = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+            loc, operand.get(), offsets, adjustedTargetShape, strides);
+
+        // Reshape to remove leading unit dims if needed
+        if (adjustedTargetShapeRank > targetShapeRank) {
+          extracted = rewriter.createOrFold<vector::ShapeCastOp>(
+              loc, VectorType::get(*targetShape, vecType.getElementType()),
+              extracted);
+        }
+        extractOperands.push_back(extracted);
       }
+
       Operation *newOp = cloneOpWithOperandsAndTypes(
-          rewriter, loc, op, extractOperands, newVecType);
+          rewriter, loc, op, extractOperands, unrolledVecType);
+
+      Value computeResult = newOp->getResult(0);
+
+      // Use strides sized to targetShape for proper insertion
+      SmallVector<int64_t> insertStrides =
+          (adjustedTargetShapeRank > targetShapeRank)
+              ? SmallVector<int64_t>(targetShapeRank, 1)
+              : strides;
+
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
-          loc, newOp->getResult(0), result, offsets, strides);
+          loc, computeResult, result, offsets, insertStrides);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -640,7 +665,7 @@ struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
       // decomposed shape from each of the index, mask, and pass-through
       // vectors.
       Value indexSubVec = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
-          loc, gatherOp.getIndexVec(), elementOffsets, *targetShape, strides);
+          loc, gatherOp.getIndices(), elementOffsets, *targetShape, strides);
       Value maskSubVec = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
           loc, gatherOp.getMask(), elementOffsets, *targetShape, strides);
       Value passThruSubVec =
@@ -648,7 +673,7 @@ struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
               loc, gatherOp.getPassThru(), elementOffsets, *targetShape,
               strides);
       auto slicedGather = vector::GatherOp::create(
-          rewriter, loc, targetType, gatherOp.getBase(), gatherOp.getIndices(),
+          rewriter, loc, targetType, gatherOp.getBase(), gatherOp.getOffsets(),
           indexSubVec, maskSubVec, passThruSubVec);
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
@@ -809,6 +834,175 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand. For example:
+///
+/// ```
+/// %0:4 = vector.to_elements %v : vector<2x2xf32>
+///
+/// ==>
+///
+/// %v0 = vector.extract %v[0] : vector<2x2xf32> from vector<2x2x2xf32>
+/// %v1 = vector.extract %v[1] : vector<2x2xf32> from vector<2x2x2xf32>
+/// %0:4 = vector.to_elements %v0 : vector<2x2xf32>
+/// %1:4 = vector.to_elements %v1 : vector<2x2xf32>
+/// ```
+///
+/// When this pattern is applied until a fixed-point is reached,
+/// this will produce a sequence of 1-d from_elements
+/// ops.
+struct UnrollToElements final : public OpRewritePattern<vector::ToElementsOp> {
+  UnrollToElements(MLIRContext *context,
+                   const vector::UnrollVectorOptions &options,
+                   PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::ToElementsOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::ToElementsOp op,
+                                PatternRewriter &rewriter) const override {
+
+    TypedValue<VectorType> source = op.getSource();
+    FailureOr<SmallVector<Value>> result =
+        vector::unrollVectorValue(source, rewriter);
+    if (failed(result)) {
+      return failure();
+    }
+    SmallVector<Value> vectors = *result;
+
+    SmallVector<Value> results;
+    for (Value vector : vectors) {
+      auto subElements =
+          vector::ToElementsOp::create(rewriter, op.getLoc(), vector);
+      llvm::append_range(results, subElements.getResults());
+    }
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+/// This pattern unrolls `vector.step` operations according to the provided
+/// target unroll shape. It decomposes a large step vector into smaller step
+/// vectors (segments) and assembles the result by inserting each computed
+/// segment into the appropriate offset of the original vector.
+///
+/// The pattern does not support scalable vectors and will fail to match them.
+///
+/// For each segment, it adds the base step vector and the segment's offset,
+/// then inserts the result into the output vector at the corresponding
+/// position.
+///
+/// Example:
+///   Given a step operation:
+///     %0 = vector.step : vector<8xindex>
+///
+///   and a target unroll shape of <4>, the pattern produces:
+///
+///     %base = vector.step : vector<4xindex>
+///     %zero = arith.constant dense<0> : vector<8xindex>
+///     %result0 = vector.insert_strided_slice %base, %zero
+///       {offsets = [0], strides = [1]} : vector<4xindex> into vector<8xindex>
+///     %offset = arith.constant dense<4> : vector<4xindex>
+///     %segment1 = arith.addi %base, %offset : vector<4xindex>
+///     %result1 = vector.insert_strided_slice %segment1, %result0
+///       {offsets = [4], strides = [1]} : vector<4xindex> into vector<8xindex>
+///
+struct UnrollStepPattern : public OpRewritePattern<vector::StepOp> {
+  UnrollStepPattern(MLIRContext *context,
+                    const vector::UnrollVectorOptions &options,
+                    PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::StepOp>(context, benefit), options(options) {}
+
+  LogicalResult matchAndRewrite(vector::StepOp stepOp,
+                                PatternRewriter &rewriter) const override {
+    std::optional<SmallVector<int64_t>> targetShape =
+        getTargetShape(options, stepOp);
+    if (!targetShape)
+      return failure();
+
+    VectorType vecType = stepOp.getType();
+    if (vecType.isScalable()) {
+      // Scalable vectors are not supported by this pattern.
+      return failure();
+    }
+    int64_t originalSize = vecType.getShape()[0];
+    Location loc = stepOp.getLoc();
+    SmallVector<int64_t> strides(1, 1);
+
+    Value result = arith::ConstantOp::create(rewriter, loc, vecType,
+                                             rewriter.getZeroAttr(vecType));
+
+    auto targetVecType =
+        VectorType::get(*targetShape, vecType.getElementType());
+    Value baseStep = vector::StepOp::create(rewriter, loc, targetVecType);
+    for (const SmallVector<int64_t> &offsets :
+         StaticTileOffsetRange({originalSize}, *targetShape)) {
+      Value bcastOffset = arith::ConstantOp::create(
+          rewriter, loc, targetVecType,
+          DenseElementsAttr::get(
+              targetVecType,
+              IntegerAttr::get(targetVecType.getElementType(), offsets[0])));
+      Value tileStep =
+          arith::AddIOp::create(rewriter, loc, baseStep, bcastOffset);
+
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, tileStep, result, offsets, strides);
+    }
+    rewriter.replaceOp(stepOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+/// Unrolls 2 or more dimensional `vector.from_elements` ops by unrolling the
+/// outermost dimension. For example:
+/// ```
+/// %v = vector.from_elements %e0, %e1, %e2, %e3, %e4, %e5 : vector<2x3xf32>
+///
+/// ==>
+///
+/// %0   = ub.poison : vector<2x3xf32>
+/// %v0  = vector.from_elements %e0, %e1, %e2 : vector<3xf32>
+/// %1   = vector.insert %v0, %0 [0] : vector<3xf32> into vector<2x3xf32>
+/// %v1  = vector.from_elements %e3, %e4, %e5 : vector<3xf32>
+/// %v   = vector.insert %v1, %1 [1] : vector<3xf32> into vector<2x3xf32>
+/// ```
+///
+/// When this pattern is applied until a fixed-point is reached,
+/// this will produce a sequence of 1-d from_elements
+/// ops.
+struct UnrollFromElements : OpRewritePattern<vector::FromElementsOp> {
+  UnrollFromElements(MLIRContext *context,
+                     const vector::UnrollVectorOptions &options,
+                     PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::FromElementsOp>(context, benefit),
+        options(options) {}
+
+  LogicalResult matchAndRewrite(vector::FromElementsOp op,
+                                PatternRewriter &rewriter) const override {
+    ValueRange allElements = op.getElements();
+
+    auto unrollFromElementsFn = [&](PatternRewriter &rewriter, Location loc,
+                                    VectorType subTy, int64_t index) {
+      size_t subTyNumElements = subTy.getNumElements();
+      assert((index + 1) * subTyNumElements <= allElements.size() &&
+             "out of bounds");
+      ValueRange subElements =
+          allElements.slice(index * subTyNumElements, subTyNumElements);
+      return vector::FromElementsOp::create(rewriter, loc, subTy, subElements);
+    };
+
+    return unrollVectorOp(op, rewriter, unrollFromElementsFn);
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -818,6 +1012,19 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollContractionPattern, UnrollElementwisePattern,
                UnrollReductionPattern, UnrollMultiReductionPattern,
                UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
-               UnrollStorePattern, UnrollBroadcastPattern>(
-      patterns.getContext(), options, benefit);
+               UnrollStorePattern, UnrollBroadcastPattern, UnrollFromElements,
+               UnrollToElements, UnrollStepPattern>(patterns.getContext(),
+                                                    options, benefit);
+}
+
+void mlir::vector::populateVectorToElementsUnrollPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<UnrollToElements>(patterns.getContext(), UnrollVectorOptions(),
+                                 benefit);
+}
+
+void mlir::vector::populateVectorFromElementsUnrollPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<UnrollFromElements>(patterns.getContext(), UnrollVectorOptions(),
+                                   benefit);
 }

@@ -80,6 +80,8 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
                 % ns,
                 "(%s::string *) null_str = nullptr" % ns,
+                '(CustomString) custom_str = "hello!"',
+                '(CustomWString) custom_wstr = L"hello!"',
             ],
         )
 
@@ -143,6 +145,10 @@ class StdStringDataFormatterTestCase(TestBase):
                 '(%s::u16string) u16_empty = u""' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
                 '(%s::u32string) u32_empty = U""' % ns,
+                '(CustomStringU16) custom_u16 = u"ß水氶"',
+                '(CustomStringU16) custom_u16_empty = u""',
+                '(CustomStringU32) custom_u32 = U"🍄🍅🍆🍌"',
+                '(CustomStringU32) custom_u32_empty = U""',
             ],
         )
 

@@ -463,7 +463,7 @@ recovery.
    situations where you absolutely must emit a non-programmatic error and
    the ``Error`` model isn't workable you can call ``reportFatalUsageError``,
    which will call installed error handlers, print a message, and exit the
-   program. The use of `reportFatalUsageError` in this case is discouraged.
+   program. The use of ``reportFatalUsageError`` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer
@@ -579,7 +579,7 @@ This second form is often more readable for functions that involve multiple
 
 If an ``Expected<T>`` value will be moved into an existing variable then the
 ``moveInto()`` method avoids the need to name an extra variable.  This is
-useful to enable ``operator->()`` the ``Expected<T>`` value has pointer-like
+useful to enable ``operator->()`` if the ``Expected<T>`` value has pointer-like
 semantics.  For example:
 
 .. code-block:: c++
@@ -957,7 +957,7 @@ Concatenating Errors with joinErrors
 """"""""""""""""""""""""""""""""""""
 
 In the archive walking example above, ``BadFileFormat`` errors are simply
-consumed and ignored. If the client had wanted report these errors after
+consumed and ignored. If the client had wanted to report these errors after
 completing the walk over the archive they could use the ``joinErrors`` utility:
 
 .. code-block:: c++
@@ -989,7 +989,7 @@ Building fallible iterators and iterator ranges
 """""""""""""""""""""""""""""""""""""""""""""""
 
 The archive walking examples above retrieve archive members by index; however,
-this requires considerable boiler-plate for iteration and error checking. We can
+this requires considerable boilerplate for iteration and error checking. We can
 clean this up by using the "fallible iterator" pattern, which supports the
 following natural iteration idiom for fallible containers like Archive:
 
@@ -1039,11 +1039,11 @@ fallible_iterator utility which provides ``operator++`` and ``operator--``,
 returning any errors via a reference passed in to the wrapper at construction
 time. The fallible_iterator wrapper takes care of (a) jumping to the end of the
 range on error, and (b) marking the error as checked whenever an iterator is
-compared to ``end`` and found to be inequal (in particular, this marks the
+compared to ``end`` and found to be unequal (in particular, this marks the
 error as checked throughout the body of a range-based for loop), enabling early
 exit from the loop without redundant error checking.
 
-Instances of the fallible iterator interface (e.g. FallibleChildIterator above)
+Instances of the fallible iterator interface (e.g., FallibleChildIterator above)
 are wrapped using the ``make_fallible_itr`` and ``make_fallible_end``
 functions. E.g.:
 
@@ -1143,8 +1143,8 @@ be passed by value.
 
 .. _DEBUG:
 
-The ``LLVM_DEBUG()`` macro and ``-debug`` option
-------------------------------------------------
+The ``LDBG`` and ``LLVM_DEBUG()`` macros and ``-debug`` option
+--------------------------------------------------------------
 
 Often when working on your pass you will put a bunch of debugging printouts and
 other code into your pass.  After you get it working, you want to remove it, but
@@ -1154,36 +1154,66 @@ Naturally, because of this, you don't want to delete the debug printouts, but
 you don't want them to always be noisy.  A standard compromise is to comment
 them out, allowing you to enable them if you need them in the future.
 
-The ``llvm/Support/Debug.h`` (`doxygen
-<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
-``LLVM_DEBUG()`` that is a much nicer solution to this problem.  Basically, you can
-put arbitrary code into the argument of the ``LLVM_DEBUG`` macro, and it is only
-executed if '``opt``' (or any other tool) is run with the '``-debug``' command
-line argument:
+The ``llvm/Support/DebugLog.h`` file provides a macro named ``LDBG`` that is a
+more convenient way to add debug output to your code. It is a macro that
+provides a raw_ostream that is used to write the debug output.
 
 .. code-block:: c++
 
-  LLVM_DEBUG(dbgs() << "I am here!\n");
+  LDBG() << "I am here!";
 
-Then you can run your pass like this:
+It'll only print the output if the debug output is enabled.
+It also supports a `level` argument to control the verbosity of the output.
+
+.. code-block:: c++
+
+  LDBG(2) << "I am here!";
+
+A ``DEBUG_TYPE`` macro may optionally be defined in the file before using
+``LDBG()``, otherwise the file name is used as the debug type.
+The file name and line number are automatically added to the output, as well as
+a terminating newline.
+
+The debug output can be enabled by passing the ``-debug`` command line argument.
 
 .. code-block:: none
 
   $ opt < a.bc > /dev/null -mypass
   <no output>
   $ opt < a.bc > /dev/null -mypass -debug
-  I am here!
+  [my-pass MyPass.cpp:123 2] I am here!
 
-Using the ``LLVM_DEBUG()`` macro instead of a home-brewed solution allows you to not
-have to create "yet another" command-line option for the debug output for your
-pass.  Note that ``LLVM_DEBUG()`` macros are disabled for non-asserts builds, so they
-do not cause a performance impact at all (for the same reason, they should also
-not contain side-effects!).
+While `LDBG()` is useful to add debug output to your code, there are cases
+where you may need to guard a block of code with a debug check. The
+``llvm/Support/Debug.h`` (`doxygen
+<https://llvm.org/doxygen/Debug_8h_source.html>`__) file provides a macro named
+``LLVM_DEBUG()`` that offers a solution to this problem.  You can put arbitrary
+code into the argument of the ``LLVM_DEBUG`` macro, and it is only executed if
+'``opt``' (or any other tool) is run with the '``-debug``' command
+line argument.
 
-One additional nice thing about the ``LLVM_DEBUG()`` macro is that you can enable or
-disable it directly in gdb.  Just use "``set DebugFlag=0``" or "``set
-DebugFlag=1``" from the gdb if the program is running.  If the program hasn't
-been started yet, you can always just run it with ``-debug``.
+.. code-block:: c++
+
+  LLVM_DEBUG({
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
+
+
+Using these macros instead of a home-brewed solution allows you to not have to
+create "yet another" command-line option for the debug output for your pass.
+Note that ``LDBG()`` and ``LLVM_DEBUG()`` macros are disabled for non-asserts
+builds, so they do not cause a performance impact at all (for the same reason,
+they should also not contain side-effects!).
+
+One additional nice thing about the ``LDBG()`` and ``LLVM_DEBUG()`` macros is
+that you can enable or disable it directly in gdb.  Just use
+"``set DebugFlag=0``" or "``set DebugFlag=1``" from the gdb if the program is
+running.  If the program hasn't been started yet, you can always just run it
+with ``-debug``.
 
 .. _DEBUG_TYPE:
 
@@ -1193,58 +1223,80 @@ Fine grained debug info with ``DEBUG_TYPE`` and the ``-debug-only`` option
 Sometimes you may find yourself in a situation where enabling ``-debug`` just
 turns on **too much** information (such as when working on the code generator).
 If you want to enable debug information with more fine-grained control, you
-should define the ``DEBUG_TYPE`` macro and use the ``-debug-only`` option as
-follows:
+can control the debug type and level with associate with each logging statement
+as follows:
 
 .. code-block:: c++
 
-  #define DEBUG_TYPE "foo"
-  LLVM_DEBUG(dbgs() << "'foo' debug type\n");
-  #undef  DEBUG_TYPE
-  #define DEBUG_TYPE "bar"
-  LLVM_DEBUG(dbgs() << "'bar' debug type\n");
-  #undef  DEBUG_TYPE
+  #define DEBUG_TYPE "foo" // Optional: the file name is used instead if not defined
+  LDBG(2) << "Hello,";
+  // DEBUG_TYPE can be overridden locally, here with "bar"
+  LDBG("bar", 3) << "'bar' debug type";
 
-Then you can run your pass like this:
+
+A more fine-grained control of the output can be achieved by passing the
+``-debug-only`` command line argument:
 
 .. code-block:: none
 
-  $ opt < a.bc > /dev/null -mypass
-  <no output>
-  $ opt < a.bc > /dev/null -mypass -debug
-  'foo' debug type
-  'bar' debug type
   $ opt < a.bc > /dev/null -mypass -debug-only=foo
-  'foo' debug type
-  $ opt < a.bc > /dev/null -mypass -debug-only=bar
-  'bar' debug type
+  [foo MyPass.cpp:123 2] Hello,
   $ opt < a.bc > /dev/null -mypass -debug-only=foo,bar
-  'foo' debug type
-  'bar' debug type
+  [foo MyPass.cpp:123 2] Hello,
+  [bar MyPass.cpp:124 3] World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar
+  [bar MyPass.cpp:124 3] World!
 
-Of course, in practice, you should only set ``DEBUG_TYPE`` at the top of a file,
-to specify the debug type for the entire module. Be careful that you only do
-this after including ``Debug.h`` and not around any #include of headers. Also, you
-should use names more meaningful than "foo" and "bar", because there is no
-system in place to ensure that names do not conflict. If two different modules
-use the same string, they will all be turned on when the name is specified.
+The debug-only argument is a comma separated list of debug types and levels.
+The level is an optional integer setting the maximum debug level to enable:
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:2,bar:2
+  [foo MyPass.cpp:123 2] Hello,
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:1,bar:3
+  [bar MyPass.cpp:124 3] World!
+
+Instead of opting in specific debug types, the ``-debug-only`` option also
+works to filter out debug output for specific debug types, by omitting the
+level (or setting it to 0):
+
+.. code-block:: none
+
+  $ opt < a.bc > /dev/null -mypass -debug-only=foo:
+  [bar MyPass.cpp:124 3] World!
+  $ opt < a.bc > /dev/null -mypass -debug-only=bar:0,foo:
+
+
+In practice, you should only set ``DEBUG_TYPE`` at the top of a file, to
+specify the debug type for the entire module. Be careful that you only do
+this after you're done including headers (in particular ``Debug.h``/``DebugLog.h``).
+Also, you should use names more meaningful than "foo" and "bar", because there
+is no system in place to ensure that names do not conflict. If two different
+modules use the same string, they will all be turned on when the name is specified.
 This allows, for example, all debug information for instruction scheduling to be
 enabled with ``-debug-only=InstrSched``, even if the source lives in multiple
 files. The name must not include a comma (,) as that is used to separate the
 arguments of the ``-debug-only`` option.
 
-For performance reasons, -debug-only is not available in optimized build
-(``--enable-optimized``) of LLVM.
+For performance reasons, -debug-only is not available in non-asserts build
+of LLVM.
 
-The ``DEBUG_WITH_TYPE`` macro is also available for situations where you would
-like to set ``DEBUG_TYPE``, but only for one specific ``DEBUG`` statement.  It
-takes an additional first parameter, which is the type to use.  For example, the
-preceding example could be written as:
+The ``DEBUG_WITH_TYPE`` macro is an alternative to the ``LLVM_DEBUG()`` macro
+for situations where you would like to set ``DEBUG_TYPE``, but only for one
+specific ``LLVM_DEBUG`` statement.  It takes an additional first parameter,
+which is the type to use. The example from the previous section could be
+written as:
 
 .. code-block:: c++
 
-  DEBUG_WITH_TYPE("foo", dbgs() << "'foo' debug type\n");
-  DEBUG_WITH_TYPE("bar", dbgs() << "'bar' debug type\n");
+  DEBUG_WITH_TYPE("special-type", {
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
+        llvm::MemoryBuffer::getFile(logFile->first);
+    if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
+      LDBG("special-type") << "Output:\n" << (*logBuffer)->getBuffer();
+    }
+  });
 
 .. _Statistic:
 
@@ -1400,7 +1452,7 @@ A more general utility is provided in `llvm/tools/reduce-chunk-list/reduce-chunk
 How to use reduce-chunk-list:
 First, Figure out the number of calls to the debug counter you want to minimize.
 To do so, run the compilation command causing you want to minimize with `-print-debug-counter` adding a `-mllvm` if needed.
-Than find the line with the counter of interest. it should look like:
+Then find the line with the counter of interest. it should look like:
 
 .. code-block:: none
 
@@ -1408,7 +1460,7 @@ Than find the line with the counter of interest. it should look like:
 
 The number of calls to `my-counter` is 5678
 
-Than Find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
+Then find the minimum set of chunks that is interesting, with `reduce-chunk-list`.
 Build a reproducer script like:
 
 .. code-block:: bash
@@ -1417,7 +1469,7 @@ Build a reproducer script like:
   opt -debug-counter=my-counter=$1
   # ... Test result of the command. Failure of the script is considered interesting
 
-Than run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
+Then run `reduce-chunk-list my-script.sh 0-5678 2>&1 | tee dump_bisect`
 This command may take some time.
 but when it is done, it will print the result like: `Minimal Chunks = 0:1:5:11-12:33-34`
 
@@ -1476,7 +1528,7 @@ LLVM has a plethora of data structures in the ``llvm/ADT/`` directory, and we
 commonly use STL data structures.  This section describes the trade-offs you
 should consider when you pick one.
 
-The first step is a choose your own adventure: do you want a sequential
+The first step is to choose your own adventure: do you want a sequential
 container, a set-like container, or a map-like container?  The most important
 thing when choosing a container is the algorithmic properties of how you plan to
 access the container.  Based on that, you should use:
@@ -1588,7 +1640,7 @@ dynamically smaller than N, no malloc is performed.  This can be a big win in
 cases where the malloc/free call is far more expensive than the code that
 fiddles around with the elements.
 
-This is good for vectors that are "usually small" (e.g. the number of
+This is good for vectors that are "usually small" (e.g., the number of
 predecessors/successors of a block is usually less than 8).  On the other hand,
 this makes the size of the ``SmallVector`` itself large, so you don't want to
 allocate lots of them (doing so will waste a lot of space).  As such,
@@ -1632,7 +1684,7 @@ to keep ``sizeof(SmallVector<T>)`` around 64 bytes).
 
    .. code-block:: c++
 
-      // DISCOURAGED: Clients cannot pass e.g. raw arrays.
+      // DISCOURAGED: Clients cannot pass e.g., raw arrays.
       hardcodedContiguousStorage(const SmallVectorImpl<Foo> &In);
       // ENCOURAGED: Clients can pass any contiguous storage of Foo.
       allowsAnyContiguousStorage(ArrayRef<Foo> In);
@@ -1643,7 +1695,7 @@ to keep ``sizeof(SmallVector<T>)`` around 64 bytes).
         allowsAnyContiguousStorage(Vec); // Works.
       }
 
-      // DISCOURAGED: Clients cannot pass e.g. SmallVector<Foo, 8>.
+      // DISCOURAGED: Clients cannot pass e.g., SmallVector<Foo, 8>.
       hardcodedSmallSize(SmallVector<Foo, 2> &Out);
       // ENCOURAGED: Clients can pass any SmallVector<Foo, N>.
       allowsAnySmallSize(SmallVectorImpl<Foo> &Out);
@@ -2012,7 +2064,7 @@ so it can be embedded into heap data structures and returned by-value.  On the
 other hand, ``std::string`` is highly inefficient for inline editing (e.g.
 concatenating a bunch of stuff together) and because it is provided by the
 standard library, its performance characteristics depend a lot of the host
-standard library (e.g. libc++ and MSVC provide a highly optimized string class,
+standard library (e.g., libc++ and MSVC provide a highly optimized string class,
 GCC contains a really slow implementation).
 
 The major disadvantage of ``std::string`` is that almost every operation that makes
@@ -2109,6 +2161,16 @@ that are not simple pointers (use :ref:`SmallPtrSet <dss_smallptrset>` for
 pointers).  Note that ``DenseSet`` has the same requirements for the value type that
 :ref:`DenseMap <dss_densemap>` has.
 
+.. _dss_radixtree:
+
+llvm/ADT/RadixTree.h
+^^^^^^^^^^^^^^^^^^^^
+
+``RadixTree`` is a trie-based data structure that stores range-like keys and
+their associated values. It is particularly efficient for storing keys that
+share common prefixes, as it can compress these prefixes to save memory. It
+supports efficient search of matching prefixes.
+
 .. _dss_sparseset:
 
 llvm/ADT/SparseSet.h
@@ -2136,7 +2198,7 @@ physical registers, virtual registers, or numbered basic blocks.
 ``SparseMultiSet`` is useful for algorithms that need very fast
 clear/find/insert/erase of the entire collection, and iteration over sets of
 elements sharing a key. It is often a more efficient choice than using composite
-data structures (e.g. vector-of-vectors, map-of-vectors). It is not intended for
+data structures (e.g., vector-of-vectors, map-of-vectors). It is not intended for
 building composite data structures.
 
 .. _dss_FoldingSet:
@@ -2206,7 +2268,7 @@ iteration.
 The difference between ``SetVector`` and other sets is that the order of iteration
 is guaranteed to match the order of insertion into the ``SetVector``.  This property
 is really important for things like sets of pointers.  Because pointer values
-are non-deterministic (e.g. vary across runs of the program on different
+are non-deterministic (e.g., vary across runs of the program on different
 machines), iterating over the pointers in the set will not be in a well-defined
 order.
 
@@ -2411,7 +2473,7 @@ pair in the map, etc.
 
 ``std::map`` is most useful when your keys or values are very large, if you need to
 iterate over the collection in sorted order, or if you need stable iterators
-into the map (i.e. they don't get invalidated if an insertion or deletion of
+into the map (i.e., they don't get invalidated if an insertion or deletion of
 another element takes place).
 
 .. _dss_mapvector:
@@ -2480,7 +2542,7 @@ There are several bit storage containers, and choosing when to use each is
 relatively straightforward.
 
 One additional option is ``std::vector<bool>``: we discourage its use for two
-reasons 1) the implementation in many common compilers (e.g.  commonly
+reasons 1) the implementation in many common compilers (e.g.,  commonly
 available versions of GCC) is extremely inefficient and 2) the C++ standards
 committee is likely to deprecate this container and/or change it significantly
 somehow.  In any case, please don't use it.
@@ -2495,7 +2557,7 @@ It supports individual bit setting/testing, as well as set operations.  The set
 operations take time O(size of bitvector), but operations are performed one word
 at a time, instead of one bit at a time.  This makes the ``BitVector`` very fast for
 set operations compared to other containers.  Use the ``BitVector`` when you expect
-the number of set bits to be high (i.e. a dense set).
+the number of set bits to be high (i.e., a dense set).
 
 .. _dss_smallbitvector:
 
@@ -2641,16 +2703,7 @@ with an ``assert``).
 Debugging
 =========
 
-A handful of `GDB pretty printers
-<https://sourceware.org/gdb/onlinedocs/gdb/Pretty-Printing.html>`__ are
-provided for some of the core LLVM libraries. To use them, execute the
-following (or add it to your ``~/.gdbinit``)::
-
-  source /path/to/llvm/src/utils/gdb-scripts/prettyprinters.py
-
-It also might be handy to enable the `print pretty
-<http://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_57.html>`__ option to
-avoid data structures being printed as a big block of text.
+See :doc:`Debugging LLVM <DebuggingLLVM>`.
 
 .. _common:
 
@@ -3252,7 +3305,7 @@ naming value definitions.  The symbol table can provide a name for any Value_.
 Note that the ``SymbolTable`` class should not be directly accessed by most
 clients.  It should only be used when iteration over the symbol table names
 themselves are required, which is very special purpose.  Note that not all LLVM
-Value_\ s have names, and those without names (i.e. they have an empty name) do
+Value_\ s have names, and those without names (i.e., they have an empty name) do
 not exist in the symbol table.
 
 Symbol tables support iteration over the values in the symbol table with
@@ -3789,7 +3842,7 @@ Important Subclasses of the ``Instruction`` class
 
 * ``BinaryOperator``
 
-  This subclasses represents all two operand instructions whose operands must be
+  This subclass represents all two operand instructions whose operands must be
   the same type, except for the comparison instructions.
 
 .. _CastInst:
@@ -3818,7 +3871,7 @@ Important Public Members of the ``Instruction`` class
 
 * ``bool mayWriteToMemory()``
 
-  Returns true if the instruction writes to memory, i.e. it is a ``call``,
+  Returns true if the instruction writes to memory, i.e., it is a ``call``,
   ``free``, ``invoke``, or ``store``.
 
 * ``unsigned getOpcode()``
@@ -3828,7 +3881,7 @@ Important Public Members of the ``Instruction`` class
 * ``Instruction *clone() const``
 
   Returns another instance of the specified instruction, identical in all ways
-  to the original except that the instruction has no parent (i.e. it's not
+  to the original except that the instruction has no parent (i.e., it's not
   embedded into a BasicBlock_), and it has no name.
 
 .. _Constant:

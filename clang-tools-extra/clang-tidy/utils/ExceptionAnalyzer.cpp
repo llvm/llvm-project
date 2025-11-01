@@ -1,4 +1,4 @@
-//===--- ExceptionAnalyzer.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -594,6 +594,11 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
             ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});
         Results.merge(DestructorExcs);
       }
+    }
+  } else if (const auto *Lambda = dyn_cast<LambdaExpr>(St)) {
+    for (const Stmt *Init : Lambda->capture_inits()) {
+      ExceptionInfo Excs = throwsException(Init, Caught, CallStack);
+      Results.merge(Excs);
     }
   } else {
     for (const Stmt *Child : St->children()) {

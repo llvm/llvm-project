@@ -59,7 +59,7 @@ TEST_F(UniqueResourceFromUseTest, TestResourceCounterDecrement) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, i1 false, ptr null)
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, ptr null)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
@@ -89,7 +89,7 @@ TEST_F(UniqueResourceFromUseTest, TestResourceCounterIncrement) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, i1 false, ptr null)
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, ptr null)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
@@ -119,7 +119,7 @@ TEST_F(UniqueResourceFromUseTest, TestResourceCounterUnknown) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, i1 false, ptr null)
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, ptr null)
   ret void
 }
   )";
@@ -146,8 +146,8 @@ TEST_F(UniqueResourceFromUseTest, TestResourceCounterMultiple) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handle1 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, i1 false, ptr null)
-  %handle2 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 4, i32 3, i32 2, i32 1, i1 false, ptr null)
+  %handle1 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, ptr null)
+  %handle2 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 4, i32 3, i32 2, i32 1, ptr null)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle1, i8 -1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle2, i8 1)
   ret void
@@ -182,7 +182,7 @@ TEST_F(UniqueResourceFromUseTest, TestResourceCounterInvalid) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, i1 false, ptr null)
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding(i32 1, i32 2, i32 3, i32 4, ptr null)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
   call i32 @llvm.dx.resource.updatecounter(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
   ret void

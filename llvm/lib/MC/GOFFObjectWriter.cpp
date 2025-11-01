@@ -17,7 +17,6 @@
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -441,7 +440,7 @@ public:
     SetBuffer(Buffer, sizeof(Buffer));
   }
 
-  ~TextStream() { flush(); }
+  ~TextStream() override { flush(); }
 };
 } // namespace
 

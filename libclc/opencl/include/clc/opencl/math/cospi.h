@@ -10,10 +10,10 @@
 #define __CLC_OPENCL_MATH_COSPI_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define FUNCTION cospi
+#define __CLC_FUNCTION cospi
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_MATH_COSPI_H__

@@ -268,6 +268,7 @@ public:
     CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
                        // operations; used by X86.
     Expand,            // Generic expansion in terms of other atomic operations.
+    CustomExpand,      // Custom target-specific expansion using TLI hooks.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
     // environment.
@@ -301,6 +302,9 @@ public:
   public:
     Value *Val;
     SDValue Node;
+    /// Original unlegalized argument type.
+    Type *OrigTy;
+    /// Same as OrigTy, or partially legalized for soft float libcalls.
     Type *Ty;
     bool IsSExt : 1;
     bool IsZExt : 1;
@@ -321,9 +325,9 @@ public:
     Type *IndirectType = nullptr;
 
     ArgListEntry(Value *Val, SDValue Node, Type *Ty)
-        : Val(Val), Node(Node), Ty(Ty), IsSExt(false), IsZExt(false),
-          IsNoExt(false), IsInReg(false), IsSRet(false), IsNest(false),
-          IsByVal(false), IsByRef(false), IsInAlloca(false),
+        : Val(Val), Node(Node), OrigTy(Ty), Ty(Ty), IsSExt(false),
+          IsZExt(false), IsNoExt(false), IsInReg(false), IsSRet(false),
+          IsNest(false), IsByVal(false), IsByRef(false), IsInAlloca(false),
           IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
           IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
 
@@ -469,15 +473,10 @@ public:
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
                                                     const DataLayout &DL) const;
+  MachineMemOperand::Flags
+  getVPIntrinsicMemOperandFlags(const VPIntrinsic &VPIntrin) const;
 
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
-    return true;
-  }
-
-  /// Return true if the @llvm.experimental.vector.partial.reduce.* intrinsic
-  /// should be expanded using generic code in SelectionDAGBuilder.
-  virtual bool
-  shouldExpandPartialReductionIntrinsic(const IntrinsicInst *I) const {
     return true;
   }
 
@@ -848,8 +847,7 @@ public:
   /// This is usually true on most targets. But some targets, like Thumb1,
   /// have immediate shift instructions, but no immediate "and" instruction;
   /// this makes the fold unprofitable.
-  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                                 CombineLevel Level) const {
+  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N) const {
     return true;
   }
 
@@ -1435,9 +1433,9 @@ public:
   /// \p High as its lowest and highest case values, and expects \p NumCmps
   /// case value comparisons. Check if the number of destinations, comparison
   /// metric, and range are all suitable.
-  bool isSuitableForBitTests(unsigned NumDests, unsigned NumCmps,
-                             const APInt &Low, const APInt &High,
-                             const DataLayout &DL) const {
+  bool isSuitableForBitTests(
+      const DenseMap<const BasicBlock *, unsigned int> &DestCmps,
+      const APInt &Low, const APInt &High, const DataLayout &DL) const {
     // FIXME: I don't think NumCmps is the correct metric: a single case and a
     // range of cases both require only one branch to lower. Just looking at the
     // number of clusters and destinations should be enough to decide whether to
@@ -1446,6 +1444,20 @@ public:
     // To lower a range with bit tests, the range must fit the bitwidth of a
     // machine word.
     if (!rangeFitsInWord(Low, High, DL))
+      return false;
+
+    unsigned NumDests = DestCmps.size();
+    unsigned NumCmps = 0;
+    unsigned int MaxBitTestEntry = 0;
+    for (auto &DestCmp : DestCmps) {
+      NumCmps += DestCmp.second;
+      if (DestCmp.second > MaxBitTestEntry)
+        MaxBitTestEntry = DestCmp.second;
+    }
+
+    // Comparisons might be cheaper for small number of comparisons, which can
+    // be Arch Target specific.
+    if (MaxBitTestEntry < getMinimumBitTestCmps())
       return false;
 
     // Decide whether it's profitable to lower this range with bit tests. Each
@@ -2057,6 +2069,9 @@ public:
 
   virtual bool isJumpTableRelative() const;
 
+  /// Retuen the minimum of largest number of comparisons in BitTest.
+  unsigned getMinimumBitTestCmps() const;
+
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
   Register getStackPointerRegisterToSaveRestore() const {
@@ -2129,7 +2144,7 @@ public:
   /// performs validation and error handling, returns the function. Otherwise,
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
   /// Should be used only when getIRStackGuard returns nullptr.
-  virtual Function *getSSPStackGuardCheck(const Module &M) const;
+  Function *getSSPStackGuardCheck(const Module &M) const;
 
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -2270,6 +2285,18 @@ public:
         "Generic atomicrmw expansion unimplemented on this target");
   }
 
+  /// Perform a atomic store using a target-specific way.
+  virtual void emitExpandAtomicStore(StoreInst *SI) const {
+    llvm_unreachable(
+        "Generic atomic store expansion unimplemented on this target");
+  }
+
+  /// Perform a atomic load using a target-specific way.
+  virtual void emitExpandAtomicLoad(LoadInst *LI) const {
+    llvm_unreachable(
+        "Generic atomic load expansion unimplemented on this target");
+  }
+
   /// Perform a cmpxchg expansion using a target-specific method.
   virtual void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
     llvm_unreachable("Generic cmpxchg expansion unimplemented on this target");
@@ -2374,8 +2401,8 @@ public:
   }
 
   /// Returns how the given (atomic) store should be expanded by the IR-level
-  /// AtomicExpand pass into. For instance AtomicExpansionKind::Expand will try
-  /// to use an atomicrmw xchg.
+  /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
+  /// will try to use an atomicrmw xchg.
   virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
@@ -2446,6 +2473,12 @@ public:
   /// the input can be ANY_EXTEND, but the output will still have a specific
   /// extension.
   virtual ISD::NodeType getExtendForAtomicCmpSwapArg() const {
+    return ISD::ANY_EXTEND;
+  }
+
+  /// Returns how the platform's atomic rmw operations expect their input
+  /// argument to be extended (ZERO_EXTEND, SIGN_EXTEND, or ANY_EXTEND).
+  virtual ISD::NodeType getExtendForAtomicRMWArg(unsigned Op) const {
     return ISD::ANY_EXTEND;
   }
 
@@ -2560,6 +2593,9 @@ protected:
   /// Indicate the maximum number of entries in jump tables.
   /// Set to zero to generate unlimited jump tables.
   void setMaximumJumpTableSize(unsigned);
+
+  /// Set the minimum of largest of number of comparisons to generate BitTest.
+  void setMinimumBitTestCmps(unsigned Val);
 
   /// If set to a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
@@ -3226,9 +3262,11 @@ public:
   /// result is unconditional.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
   virtual bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                                     ShuffleVectorInst *SVI,
-                                     unsigned Factor) const {
+                                     ShuffleVectorInst *SVI, unsigned Factor,
+                                     const APInt &GapMask) const {
     return false;
   }
 
@@ -3435,6 +3473,10 @@ public:
   /// matching of other patterns.
   virtual bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                                     bool MathUsed) const {
+    // Form it if it is legal.
+    if (isOperationLegal(Opcode, VT))
+      return true;
+
     // TODO: The default logic is inherited from code in CodeGenPrepare.
     // The opcode should not make a difference by default?
     if (Opcode != ISD::UADDO)
@@ -3485,9 +3527,10 @@ public:
     return isOperationLegalOrCustom(Op, VT);
   }
 
-  /// Should we expand [US]CMP nodes using two selects and two compares, or by
-  /// doing arithmetic on boolean types
-  virtual bool shouldExpandCmpUsingSelects(EVT VT) const { return false; }
+  /// Should we prefer selects to doing arithmetic on boolean types
+  virtual bool preferSelectsOverBooleanArithmetic(EVT VT) const {
+    return false;
+  }
 
   /// True if target has some particular form of dealing with pointer arithmetic
   /// semantics for pointers with the given value type. False if pointer
@@ -3495,6 +3538,13 @@ public:
   /// selection, and can fallback to regular arithmetic.
   /// This should be removed when PTRADD nodes are widely supported by backends.
   virtual bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const {
+    return false;
+  }
+
+  /// True if the target allows transformations of in-bounds pointer
+  /// arithmetic that cause out-of-bounds intermediate results.
+  virtual bool canTransformPtrArithOutOfBounds(const Function &F,
+                                               EVT PtrVT) const {
     return false;
   }
 
@@ -3546,6 +3596,10 @@ public:
     return nullptr;
   }
 
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
+    return Libcalls;
+  }
+
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     Libcalls.setLibcallImpl(Call, Impl);
   }
@@ -3569,6 +3623,12 @@ public:
   const char *getMemcpyName() const {
     // FIXME: Return StringRef
     return Libcalls.getMemcpyName().data();
+  }
+
+  /// Check if this is valid libcall for the current module, otherwise
+  /// RTLIB::Unsupported.
+  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
+    return Libcalls.getSupportedLibcallImpl(FuncName);
   }
 
   /// Get the comparison predicate that's to be used to test the result of the
@@ -3679,6 +3739,9 @@ private:
   /// backend supports.
   unsigned MinCmpXchgSizeInBits;
 
+  /// The minimum of largest number of comparisons to use bit test for switch.
+  unsigned MinimumBitTestCmps;
+
   /// This indicates if the target supports unaligned atomic operations.
   bool SupportsUnalignedAtomics;
 
@@ -3698,7 +3761,7 @@ private:
   /// register class is the largest legal super-reg register class of the
   /// register class of the specified type. e.g. On x86, i8, i16, and i32's
   /// representative class would be GR32.
-  const TargetRegisterClass *RepRegClassForVT[MVT::VALUETYPE_SIZE] = {0};
+  const TargetRegisterClass *RepRegClassForVT[MVT::VALUETYPE_SIZE] = {nullptr};
 
   /// This indicates the "cost" of the "representative" register class for each
   /// ValueType. The cost is used by the scheduler to approximate register
@@ -3776,10 +3839,6 @@ private:
 
   /// The list of libcalls that the target will use.
   RTLIB::RuntimeLibcallsInfo Libcalls;
-
-  /// The ISD::CondCode that should be used to test the result of each of the
-  /// comparison libcall against zero.
-  ISD::CondCode CmpLibcallCCs[RTLIB::UNKNOWN_LIBCALL];
 
   /// The bits of IndexedModeActions used to store the legalisation actions
   /// We store the data as   | ML | MS |  L |  S | each taking 4 bits.
@@ -4623,23 +4682,6 @@ public:
     return false;
   }
 
-  /// Allows the target to handle physreg-carried dependency
-  /// in target-specific way. Used from the ScheduleDAGSDNodes to decide whether
-  /// to add the edge to the dependency graph.
-  /// Def - input: Selection DAG node defininfg physical register
-  /// User - input: Selection DAG node using physical register
-  /// Op - input: Number of User operand
-  /// PhysReg - inout: set to the physical register if the edge is
-  /// necessary, unchanged otherwise
-  /// Cost - inout: physical register copy cost.
-  /// Returns 'true' is the edge is necessary, 'false' otherwise
-  virtual bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                         const TargetRegisterInfo *TRI,
-                                         const TargetInstrInfo *TII,
-                                         MCRegister &PhysReg, int &Cost) const {
-    return false;
-  }
-
   /// Target-specific combining of register parts into its original value
   virtual SDValue
   joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
@@ -4660,6 +4702,13 @@ public:
     llvm_unreachable("Not Implemented");
   }
 
+  /// Optional target hook to add target-specific actions when entering EH pad
+  /// blocks. The implementation should return the resulting token chain value.
+  virtual SDValue lowerEHPadEntry(SDValue Chain, const SDLoc &DL,
+                                  SelectionDAG &DAG) const {
+    return SDValue();
+  }
+
   virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                      ArgListTy &Args) const {}
 
@@ -4677,6 +4726,9 @@ public:
   /// implementation.
   struct CallLoweringInfo {
     SDValue Chain;
+    /// Original unlegalized return type.
+    Type *OrigRetTy = nullptr;
+    /// Same as OrigRetTy, or partially legalized for soft float libcalls.
     Type *RetTy = nullptr;
     bool RetSExt           : 1;
     bool RetZExt           : 1;
@@ -4731,6 +4783,14 @@ public:
     // setCallee with target/module-specific attributes
     CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
                                    SDValue Target, ArgListTy &&ArgsList) {
+      return setLibCallee(CC, ResultType, ResultType, Target,
+                          std::move(ArgsList));
+    }
+
+    CallLoweringInfo &setLibCallee(CallingConv::ID CC, Type *ResultType,
+                                   Type *OrigResultType, SDValue Target,
+                                   ArgListTy &&ArgsList) {
+      OrigRetTy = OrigResultType;
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
@@ -4745,7 +4805,7 @@ public:
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 AttributeSet ResultAttrs = {}) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
       IsInReg = ResultAttrs.hasAttribute(Attribute::InReg);
       RetSExt = ResultAttrs.hasAttribute(Attribute::SExt);
       RetZExt = ResultAttrs.hasAttribute(Attribute::ZExt);
@@ -4761,7 +4821,7 @@ public:
     CallLoweringInfo &setCallee(Type *ResultType, FunctionType *FTy,
                                 SDValue Target, ArgListTy &&ArgsList,
                                 const CallBase &Call) {
-      RetTy = ResultType;
+      RetTy = OrigRetTy = ResultType;
 
       IsInReg = Call.hasRetAttr(Attribute::InReg);
       DoesNotReturn =
@@ -5087,14 +5147,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
-
-  /// This hook allows the target to expand an inline asm call to be explicit
-  /// llvm code if it wants to.  This is useful for turning simple inline asms
-  /// into LLVM intrinsics, which gives the compiler more information about the
-  /// behavior of the code.
-  virtual bool ExpandInlineAsm(CallInst *) const {
-    return false;
-  }
 
   enum ConstraintType {
     C_Register,            // Constraint represents specific register(s).
@@ -5597,17 +5649,35 @@ public:
   /// Get a pointer to vector element \p Idx located in memory for a vector of
   /// type \p VecVT starting at a base address of \p VecPtr. If \p Idx is out of
   /// bounds the returned pointer is unspecified, but will be within the vector
-  /// bounds.
-  SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                  SDValue Index) const;
+  /// bounds. \p PtrArithFlags can be used to mark that arithmetic within the
+  /// vector in memory is known to not wrap or to be inbounds.
+  SDValue getVectorElementPointer(
+      SelectionDAG &DAG, SDValue VecPtr, EVT VecVT, SDValue Index,
+      const SDNodeFlags PtrArithFlags = SDNodeFlags()) const;
+
+  /// Get a pointer to vector element \p Idx located in memory for a vector of
+  /// type \p VecVT starting at a base address of \p VecPtr. If \p Idx is out of
+  /// bounds the returned pointer is unspecified, but will be within the vector
+  /// bounds. \p VecPtr is guaranteed to point to the beginning of a memory
+  /// location large enough for the vector.
+  SDValue getInboundsVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr,
+                                          EVT VecVT, SDValue Index) const {
+    return getVectorElementPointer(DAG, VecPtr, VecVT, Index,
+                                   SDNodeFlags::NoUnsignedWrap |
+                                       SDNodeFlags::InBounds);
+  }
 
   /// Get a pointer to a sub-vector of type \p SubVecVT at index \p Idx located
   /// in memory for a vector of type \p VecVT starting at a base address of
   /// \p VecPtr. If \p Idx plus the size of \p SubVecVT is out of bounds the
   /// returned pointer is unspecified, but the value returned will be such that
-  /// the entire subvector would be within the vector bounds.
-  SDValue getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
-                                 EVT SubVecVT, SDValue Index) const;
+  /// the entire subvector would be within the vector bounds. \p PtrArithFlags
+  /// can be used to mark that arithmetic within the vector in memory is known
+  /// to not wrap or to be inbounds.
+  SDValue
+  getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
+                         EVT SubVecVT, SDValue Index,
+                         const SDNodeFlags PtrArithFlags = SDNodeFlags()) const;
 
   /// Method for building the DAG expansion of ISD::[US][MIN|MAX]. This
   /// method accepts integers as its arguments.

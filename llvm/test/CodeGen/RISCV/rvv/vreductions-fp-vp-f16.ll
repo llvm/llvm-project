@@ -124,8 +124,9 @@ define half @vpreduce_fminimum_nxv4f16(half %start, <vscale x 4 x half> %val, <v
 ; ZVFH-NEXT:    or a1, a1, a2
 ; ZVFH-NEXT:    beqz a1, .LBB4_2
 ; ZVFH-NEXT:  # %bb.1:
-; ZVFH-NEXT:    lui a0, %hi(.LCPI4_0)
-; ZVFH-NEXT:    flh fa0, %lo(.LCPI4_0)(a0)
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -512
+; ZVFH-NEXT:    fmv.h.x fa0, a0
 ; ZVFH-NEXT:    ret
 ; ZVFH-NEXT:  .LBB4_2:
 ; ZVFH-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
@@ -176,8 +177,9 @@ define half @vpreduce_fmaximum_nxv4f16(half %start, <vscale x 4 x half> %val, <v
 ; ZVFH-NEXT:    or a1, a1, a2
 ; ZVFH-NEXT:    beqz a1, .LBB5_2
 ; ZVFH-NEXT:  # %bb.1:
-; ZVFH-NEXT:    lui a0, %hi(.LCPI5_0)
-; ZVFH-NEXT:    flh fa0, %lo(.LCPI5_0)(a0)
+; ZVFH-NEXT:    lui a0, 8
+; ZVFH-NEXT:    addi a0, a0, -512
+; ZVFH-NEXT:    fmv.h.x fa0, a0
 ; ZVFH-NEXT:    ret
 ; ZVFH-NEXT:  .LBB5_2:
 ; ZVFH-NEXT:    vsetivli zero, 1, e16, m1, ta, ma

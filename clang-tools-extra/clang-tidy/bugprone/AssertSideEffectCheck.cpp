@@ -1,4 +1,4 @@
-//===--- AssertSideEffectCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -92,7 +92,7 @@ AssertSideEffectCheck::AssertSideEffectCheck(StringRef Name,
       RawAssertList(Options.get("AssertMacros", "assert,NSAssert,NSCAssert")),
       IgnoredFunctions(utils::options::parseListPair(
           "__builtin_expect;", Options.get("IgnoredFunctions", ""))) {
-  StringRef(RawAssertList).split(AssertMacros, ",", -1, false);
+  RawAssertList.split(AssertMacros, ",", -1, false);
 }
 
 // The options are explained in AssertSideEffectCheck.h.

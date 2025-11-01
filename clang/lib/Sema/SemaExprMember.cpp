@@ -1126,8 +1126,9 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       return ExprError();
     }
 
-    DeclResult VDecl = CheckVarTemplateId(VarTempl, TemplateKWLoc,
-                                          MemberNameInfo.getLoc(), *TemplateArgs);
+    DeclResult VDecl =
+        CheckVarTemplateId(VarTempl, TemplateKWLoc, MemberNameInfo.getLoc(),
+                           *TemplateArgs, /*SetWrittenArgs=*/false);
     if (VDecl.isInvalid())
       return ExprError();
 

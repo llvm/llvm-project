@@ -759,6 +759,10 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
           MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
                         LoongArchII::getDirectFlags(ImmOp));
           break;
+        case MachineOperand::MO_ConstantPoolIndex:
+          MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(),
+                         LoongArchII::getDirectFlags(ImmOp));
+          break;
         default:
           report_fatal_error("unsupported machine operand type");
           break;

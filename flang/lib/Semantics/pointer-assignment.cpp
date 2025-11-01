@@ -159,7 +159,7 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
       msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
     return false;
-  } else if (evaluate::IsAssumedRank(lhs)) {
+  } else if (IsAssumedRank(lhs)) {
     Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
   } else if (evaluate::ExtractCoarrayRef(lhs)) { // F'2023 C1027

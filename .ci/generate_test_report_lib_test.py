@@ -126,6 +126,39 @@ class TestReports(unittest.TestCase):
             ),
         )
 
+    # Test that we can correctly handle the runtimes build. the LLVM runtimes
+    # build will involve ninja invoking more ninja processes within the
+    # runtimes directory. This means that we see two failures for a failure in
+    # the runtimes build: one from the inner ninja containing the actual action
+    # that failed, and one for the sub ninja invocation that failed.
+    def test_ninja_log_runtimes_failure(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/5] test/1.stamp",
+                    "[2/5] test/2.stamp",
+                    "FAILED: touch test/2.stamp",
+                    "Wow! This system is really broken!",
+                    "ninja: build stopped: subcommand failed.",
+                    "FAILED: running check-runtime failed.",
+                    "<some random command>",
+                    "ninja: build stopped: subcommand failed.",
+                ]
+            ]
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(
+            failures[0],
+            (
+                "test/2.stamp",
+                dedent(
+                    """\
+                    FAILED: touch test/2.stamp
+                    Wow! This system is really broken!"""
+                ),
+            ),
+        )
+
     def test_title_only(self):
         self.assertEqual(
             generate_test_report_lib.generate_report("Foo", 0, [], []),

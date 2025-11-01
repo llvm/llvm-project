@@ -413,14 +413,13 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       return Match;
 
     case AnyCharTy: {
-      if (const auto *ETy = argTy->getAs<EnumType>()) {
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration.
-        const EnumDecl *ED = ETy->getOriginalDecl()->getDefinitionOrSelf();
         if (!ED->isComplete())
           return NoMatch;
-        if (ETy->isUnscopedEnumerationType())
+        if (!ED->isScoped())
           argTy = ED->getIntegerType();
       }
 
@@ -463,14 +462,13 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         return matchesSizeTPtrdiffT(C, argTy, T);
       }
 
-      if (const EnumType *ETy = argTy->getAs<EnumType>()) {
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration as that needs an exact match.
-        const EnumDecl *ED = ETy->getOriginalDecl()->getDefinitionOrSelf();
         if (!ED->isComplete())
           argTy = C.IntTy;
-        else if (ETy->isUnscopedEnumerationType())
+        else if (!ED->isScoped())
           argTy = ED->getIntegerType();
       }
 
@@ -655,7 +653,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         // to Objective-C objects.  Since the compiler doesn't know which
         // structs can be toll-free bridged, we just accept them all.
         QualType pointee = PT->getPointeeType();
-        if (pointee->getAsStructureType() || pointee->isVoidType())
+        if (pointee->isStructureType() || pointee->isVoidType())
           return Match;
       }
       return NoMatch;

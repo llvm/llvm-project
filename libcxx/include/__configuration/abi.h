@@ -30,8 +30,20 @@
 #elif _LIBCPP_ABI_FORCE_MICROSOFT
 #  define _LIBCPP_ABI_MICROSOFT
 #else
+// Windows uses the Microsoft ABI
 #  if defined(_WIN32) && defined(_MSC_VER)
 #    define _LIBCPP_ABI_MICROSOFT
+
+// 32-bit ARM uses the Itanium ABI with a few differences (array cookies, etc),
+// and so does 64-bit ARM on Apple platforms.
+#  elif defined(__arm__) || (defined(__APPLE__) && defined(__aarch64__))
+#    define _LIBCPP_ABI_ITANIUM_WITH_ARM_DIFFERENCES
+
+// Non-Apple 64-bit ARM uses the vanilla Itanium ABI
+#  elif defined(__aarch64__)
+#    define _LIBCPP_ABI_ITANIUM
+
+// We assume that other architectures also use the vanilla Itanium ABI too
 #  else
 #    define _LIBCPP_ABI_ITANIUM
 #  endif
@@ -49,14 +61,6 @@
 // According to the Standard, `bitset::operator[] const` returns bool
 #  define _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
 
-// In LLVM 20, we've changed to take these ABI breaks unconditionally. These flags only exist in case someone is running
-// into the static_asserts we added to catch the ABI break and don't care that it is one.
-// TODO(LLVM 22): Remove these flags
-#  define _LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB
-#  define _LIBCPP_ABI_TREE_REMOVE_NODE_POINTER_UB
-#  define _LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB
-#  define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
-
 // These flags are documented in ABIGuarantees.rst
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
 #  define _LIBCPP_ABI_DO_NOT_EXPORT_BASIC_STRING_COMMON
@@ -72,6 +76,7 @@
 #  define _LIBCPP_ABI_NO_FILESYSTEM_INLINE_NAMESPACE
 #  define _LIBCPP_ABI_NO_ITERATOR_BASES
 #  define _LIBCPP_ABI_NO_RANDOM_DEVICE_COMPATIBILITY_LAYOUT
+#  define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER
 #  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 #  define _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
 #  define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
@@ -98,11 +103,20 @@
 #  endif
 #endif
 
+// TODO(LLVM 22): Remove this check
+#if defined(_LIBCPP_ABI_NO_ITERATOR_BASES) && !defined(_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER)
+#  ifndef _LIBCPP_ONLY_NO_ITERATOR_BASES
+#    error "You probably want to define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER. This has been split out from"   \
+ " _LIBCPP_ABI_NO_ITERATOR_BASES to allow only removing the second iterator member, since they aren't really related." \
+ "If you actually want this ABI configuration, please define _LIBCPP_ONLY_NO_ITERATOR_BASES instead."
+#  endif
+#endif
+
 // We had some bugs where we use [[no_unique_address]] together with construct_at,
 // which causes UB as the call on construct_at could write to overlapping subobjects
 //
-// https://github.com/llvm/llvm-project/issues/70506
-// https://github.com/llvm/llvm-project/issues/70494
+// https://llvm.org/PR70506
+// https://llvm.org/PR70494
 //
 // To fix the bug we had to change the ABI of some classes to remove [[no_unique_address]] under certain conditions.
 // The macro below is used for all classes whose ABI have changed as part of fixing these bugs.

@@ -383,7 +383,7 @@ namespace cwg635 { // cwg635: 2.7
   template<typename T> template<typename U> D<T>::D() {}
   template<typename T> D<T>::D<T>() {} // #cwg635-D-T
   // expected-error@#cwg635-D-T {{out-of-line constructor for 'D' cannot have template arguments}}
-  // expected-error@#cwg635-D-T {{redefinition of 'cwg635::D<T>'}}
+  // expected-error@#cwg635-D-T {{redefinition of 'D<T>'}}
   //   expected-note@#cwg635-D {{previous definition is here}}
 } // namespace cwg635
 

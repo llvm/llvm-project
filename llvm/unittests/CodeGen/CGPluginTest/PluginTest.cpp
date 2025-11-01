@@ -25,20 +25,6 @@
 
 using namespace llvm;
 
-namespace {
-void anchor() {}
-
-std::string libPath(const std::string &Name) {
-  const auto &Argvs = testing::internal::GetArgvs();
-  const char *Argv0 = Argvs.size() > 0 ? Argvs[0].c_str() : "CGPluginTest";
-  void *Ptr = (void *)(intptr_t)anchor;
-  std::string Path = sys::fs::getMainExecutable(Argv0, Ptr);
-  SmallString<256> Buf{sys::path::parent_path(Path)};
-  sys::path::append(Buf, (Name + LLVM_PLUGIN_EXT).c_str());
-  return std::string(Buf.str());
-}
-} // namespace
-
 namespace llvm {
 class CGPluginTests : public testing::Test {
 protected:
@@ -56,8 +42,7 @@ TEST_F(CGPluginTests, LoadPlugin) {
   GTEST_SKIP();
 #endif
 
-  auto PluginPath = libPath("CGTestPlugin");
-  ASSERT_NE("", PluginPath);
+  auto PluginPath{std::string{"CGTestPlugin"} + LLVM_PLUGIN_EXT};
 
   std::string Error;
   auto Library = sys::DynamicLibrary::getLibrary(PluginPath.c_str(), &Error);

@@ -102,8 +102,7 @@ public:
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
@@ -125,7 +124,7 @@ public:
 
   bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;
   bool hasBasePointer(const MachineFunction &MF) const;
-  unsigned getBaseRegister() const;
+  MCRegister getBaseRegister() const;
 
   bool isArgumentRegister(const MachineFunction &MF,
                           MCRegister Reg) const override;
@@ -155,7 +154,7 @@ public:
 
   bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
 
-  virtual bool isIgnoredCVReg(MCRegister LLVMReg) const override;
+  bool isIgnoredCVReg(MCRegister LLVMReg) const override;
 };
 
 } // end namespace llvm

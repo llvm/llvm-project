@@ -24,7 +24,7 @@ class Record;
 class SourceInfo;
 struct InitMap;
 struct Descriptor;
-enum PrimType : unsigned;
+enum PrimType : uint8_t;
 
 using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;

@@ -94,7 +94,7 @@ RValue ARCABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 ABIArgInfo ARCABIInfo::classifyArgumentType(QualType Ty,
                                             uint8_t FreeRegs) const {
   // Handle the generic C++ ABI.
-  const RecordType *RT = Ty->getAs<RecordType>();
+  const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
     CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
     if (RAA == CGCXXABI::RAA_Indirect)
@@ -105,15 +105,14 @@ ABIArgInfo ARCABIInfo::classifyArgumentType(QualType Ty,
   }
 
   // Treat an enum type as its underlying type.
-  if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   auto SizeInRegs = llvm::alignTo(getContext().getTypeSize(Ty), 32) / 32;
 
   if (isAggregateTypeForABI(Ty)) {
     // Structures with flexible arrays are always indirect.
-    if (RT &&
-        RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
+    if (RT && RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getIndirectByValue(Ty);
 
     // Ignore empty structs/unions.

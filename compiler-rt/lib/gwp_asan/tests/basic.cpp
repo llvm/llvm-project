@@ -8,6 +8,8 @@
 
 #include "gwp_asan/tests/harness.h"
 
+#include <unistd.h>
+
 TEST_F(CustomGuardedPoolAllocator, BasicAllocation) {
   InitNumSlots(1);
   void *Ptr = GPA.allocate(1);

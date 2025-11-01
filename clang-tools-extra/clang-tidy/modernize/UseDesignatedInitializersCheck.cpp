@@ -1,4 +1,4 @@
-//===--- UseDesignatedInitializersCheck.cpp - clang-tidy ------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -108,8 +108,7 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
                                          IgnoreSingleElementAggregatesDefault)),
       RestrictToPODTypes(
           Options.get(RestrictToPODTypesName, RestrictToPODTypesDefault)),
-      IgnoreMacros(
-          Options.getLocalOrGlobal(IgnoreMacrosName, IgnoreMacrosDefault)),
+      IgnoreMacros(Options.get(IgnoreMacrosName, IgnoreMacrosDefault)),
       StrictCStandardCompliance(Options.get(StrictCStandardComplianceName,
                                             StrictCStandardComplianceDefault)),
       StrictCppStandardCompliance(

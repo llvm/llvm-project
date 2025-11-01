@@ -1,4 +1,4 @@
-//===--- UseEqualsDefaultCheck.cpp - clang-tidy----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -204,13 +204,13 @@ static bool bodyEmpty(const ASTContext *Context, const CompoundStmt *Body) {
       CharSourceRange::getCharRange(Body->getLBracLoc().getLocWithOffset(1),
                                     Body->getRBracLoc()),
       Context->getSourceManager(), Context->getLangOpts(), &Invalid);
-  return !Invalid && std::strspn(Text.data(), " \t\r\n") == Text.size();
+  return !Invalid && Text.ltrim(" \t\r\n").empty();
 }
 
 UseEqualsDefaultCheck::UseEqualsDefaultCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

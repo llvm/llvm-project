@@ -1,5 +1,4 @@
-; REQUIRES: x86_64-linux
-; REQUIRES: asserts
+; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
 
 ; The profiled source code:
@@ -100,9 +99,6 @@
 ; CHECK:    11:  call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 11, i32 0, i64 -1), !dbg ![[#]] - weight: 116 - factor: 1.00)
 ; CHECK:    1:  call void @llvm.pseudoprobe(i64 -2624081020897602054, i64 1, i32 0, i64 -1), !dbg ![[#]] - weight: 0 - factor: 1.00)
 
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @x = dso_local global i32 1, align 4, !dbg !0
 

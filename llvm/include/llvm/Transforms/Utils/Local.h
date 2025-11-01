@@ -452,6 +452,11 @@ LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
 LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
                                            DominatorTree &DT,
                                            const BasicBlock *BB);
+/// Replace each use of 'From' with 'To' if that use is dominated by the
+/// given instruction. Returns the number of replacements made.
+LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
+                                           DominatorTree &DT,
+                                           const Instruction *I);
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge and the callback ShouldReplace returns true. Returns the
 /// number of replacements made.
@@ -463,6 +468,12 @@ LLVM_ABI unsigned replaceDominatedUsesWithIf(
 /// Returns the number of replacements made.
 LLVM_ABI unsigned replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the given instruction and the callback ShouldReplace returns true. Returns
+/// the number of replacements made.
+LLVM_ABI unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const Instruction *I,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
 
 /// Return true if this call calls a gc leaf function.

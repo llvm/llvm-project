@@ -524,12 +524,18 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
         descAddr =
             builder.createConvert(loc, builder.getRefType(symType), varAddr);
       } else {
+        fir::BaseBoxType boxType;
         const auto expr = Fortran::evaluate::AsGenericExpr(s);
         fir::ExtendedValue exv = converter.genExprAddr(*expr, stmtCtx);
         mlir::Type type = fir::getBase(exv).getType();
+        bool isClassType = mlir::isa<fir::ClassType>(type);
         if (mlir::Type baseTy = fir::dyn_cast_ptrOrBoxEleTy(type))
           type = baseTy;
-        fir::BoxType boxType = fir::BoxType::get(fir::PointerType::get(type));
+
+        if (isClassType)
+          boxType = fir::ClassType::get(fir::PointerType::get(type));
+        else
+          boxType = fir::BoxType::get(fir::PointerType::get(type));
         descAddr = builder.createTemporary(loc, boxType);
         fir::MutableBoxValue box = fir::MutableBoxValue(descAddr, {}, {});
         fir::factory::associateMutableBox(builder, loc, box, exv,
@@ -944,7 +950,8 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
-  const auto &loopSym = *control.name.thing.thing.symbol;
+  const auto &loopSym =
+      *Fortran::parser::UnwrapRef<Fortran::parser::Name>(control.name).symbol;
   mlir::Value loopVar = fir::getBase(converter.genExprAddr(
       Fortran::evaluate::AsGenericExpr(loopSym).value(), stmtCtx));
   auto genControlValue = [&](const Fortran::parser::ScalarIntExpr &expr) {
@@ -977,9 +984,9 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
     fir::StoreOp::create(builder, loc, lcv, loopVar);
     genItemList(ioImpliedDo);
     builder.setInsertionPointToEnd(doLoopOp.getBody());
-    mlir::Value result = mlir::arith::AddIOp::create(
-        builder, loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr);
-    fir::ResultOp::create(builder, loc, result);
+    // fir.do_loop's induction variable's increment is implied,
+    // so we do not need to increment it explicitly.
+    fir::ResultOp::create(builder, loc, doLoopOp.getInductionVar());
     builder.setInsertionPointAfter(doLoopOp);
     // The loop control variable may be used after the loop.
     lcv = builder.createConvert(loc, fir::unwrapRefType(loopVar.getType()),

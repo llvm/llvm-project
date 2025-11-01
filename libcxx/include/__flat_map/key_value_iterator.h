@@ -20,7 +20,6 @@
 #include <__type_traits/conditional.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

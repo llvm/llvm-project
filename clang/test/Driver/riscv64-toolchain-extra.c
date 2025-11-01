@@ -3,7 +3,6 @@
 // The tests here are similar to those in riscv64-toolchain.c, however
 // these tests need to create symlinks to test directory trees in order to
 // set up the environment and therefore shell support is required.
-// REQUIRES: shell
 // UNSUPPORTED: system-windows
 
 // If there is no GCC install detected then the driver searches for executables

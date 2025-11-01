@@ -37,6 +37,13 @@ std::string Record::getName() const {
   return Ret;
 }
 
+bool Record::hasTrivialDtor() const {
+  if (isAnonymousUnion())
+    return true;
+  const CXXDestructorDecl *Dtor = getDestructor();
+  return !Dtor || Dtor->isTrivial();
+}
+
 const Record::Field *Record::getField(const FieldDecl *FD) const {
   auto It = FieldMap.find(FD->getFirstDecl());
   assert(It != FieldMap.end() && "Missing field");
@@ -50,10 +57,8 @@ const Record::Base *Record::getBase(const RecordDecl *FD) const {
 }
 
 const Record::Base *Record::getBase(QualType T) const {
-  if (auto *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  if (auto *RD = T->getAsCXXRecordDecl())
     return BaseMap.lookup(RD);
-  }
   return nullptr;
 }
 

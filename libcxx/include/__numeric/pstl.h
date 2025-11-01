@@ -70,7 +70,7 @@ template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI __iter_value_type<_ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI __iterator_value_type<_ForwardIterator>
 reduce(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "reduce requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__reduce, __pstl::__current_configuration, _RawPolicy>;
@@ -78,7 +78,7 @@ reduce(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator _
       std::forward<_ExecutionPolicy>(__policy),
       std::move(__first),
       std::move(__last),
-      __iter_value_type<_ForwardIterator>(),
+      __iterator_value_type<_ForwardIterator>(),
       plus{});
 }
 

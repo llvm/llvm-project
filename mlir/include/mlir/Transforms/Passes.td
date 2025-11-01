@@ -270,7 +270,14 @@ def GenerateRuntimeVerification : Pass<"generate-runtime-verification"> {
     passes that are suspected to introduce faulty IR.
   }];
   let constructor = "mlir::createGenerateRuntimeVerificationPass()";
+  let options = [
+    Option<"verboseLevel", "verbose-level", "unsigned", /*default=*/"1",
+           "Verbosity level for runtime verification messages: "
+           "0 = Minimum (only source location), "
+           "1 = Detailed (include full operation details, names, types, shapes, etc.)">
+  ];
 }
+
 
 def Inliner : Pass<"inline"> {
   let summary = "Inline function calls";
@@ -364,8 +371,8 @@ def Mem2Reg : Pass<"mem2reg"> {
   let description = [{
     This pass removes loads out of and stores into a memory slot, and turns
     them into direct uses of SSA values. This is done generically using the
-    `PromoteAllocationOpInterface`, `PromoteOpInterface` and
-    `PromoteMemOpInterface` interfaces.
+    `PromotableAllocationOpInterface`, `PromotableOpInterface` and
+    `PromotableMemOpInterface` interfaces.
 
     This pass will attempt to compute which definitions of the content of
     the memory slot reach operations that use the memory slot pointer. It
@@ -583,6 +590,50 @@ def CompositeFixedPointPass : Pass<"composite-fixed-point-pass"> {
     Option<"maxIter", "max-iterations", "int", /*default=*/"10",
       "Maximum number of iterations if inner pipeline">,
   ];
+}
+
+def BubbleDownMemorySpaceCasts :
+    Pass<"bubble-down-memory-space-casts"> {
+  let summary = "Bubbles down memory-space cast operations.";
+  let description = [{
+    This pass tries to iteratively bubble down all possible memory-space cast
+    operations. It is important to note that the determination of which casts
+    are bubbled down is based on the interfaces
+    `MemorySpaceCastConsumerOpInterface`, and `MemorySpaceCastOpInterface`, and
+    not the pass. The pass only looks for operations implementing the
+    `MemorySpaceCastConsumerOpInterface` interface, and invoking the interface
+    methods to perform the bubbling down.
+
+    Example:
+
+    ```mlir
+    func.func @op_with_cast_sequence(%arg0: memref<4x4xf32, 1>, %arg1: index, %arg2: f32) -> memref<16xf32> {
+      %memspacecast = memref.memory_space_cast %arg0 : memref<4x4xf32, 1> to memref<4x4xf32>
+      %c0 = arith.constant 0 : index
+      %c4 = arith.constant 4 : index
+      %expanded = memref.expand_shape %memspacecast [[0], [1, 2]] output_shape [4, 2, 2] : memref<4x4xf32> into memref<4x2x2xf32>
+      %collapsed = memref.collapse_shape %expanded [[0, 1, 2]] : memref<4x2x2xf32> into memref<16xf32>
+      %loaded = memref.load %collapsed[%c0] : memref<16xf32>
+      %added = arith.addf %loaded, %arg2 : f32
+      memref.store %added, %collapsed[%c0] : memref<16xf32>
+      %atomic_result = memref.atomic_rmw addf %arg2, %collapsed[%c4] : (f32, memref<16xf32>) -> f32
+      return %collapsed : memref<16xf32>
+    }
+    // mlir-opt --bubble-down-memory-space-casts
+    func.func @op_with_cast_sequence(%arg0: memref<4x4xf32, 1>, %arg1: index, %arg2: f32) -> memref<16xf32> {
+      %c4 = arith.constant 4 : index
+      %c0 = arith.constant 0 : index
+      %expand_shape = memref.expand_shape %arg0 [[0], [1, 2]] output_shape [4, 2, 2] : memref<4x4xf32, 1> into memref<4x2x2xf32, 1>
+      %collapse_shape = memref.collapse_shape %expand_shape [[0, 1, 2]] : memref<4x2x2xf32, 1> into memref<16xf32, 1>
+      %memspacecast = memref.memory_space_cast %collapse_shape : memref<16xf32, 1> to memref<16xf32>
+      %0 = memref.load %collapse_shape[%c0] : memref<16xf32, 1>
+      %1 = arith.addf %0, %arg2 : f32
+      memref.store %1, %collapse_shape[%c0] : memref<16xf32, 1>
+      %2 = memref.atomic_rmw addf %arg2, %collapse_shape[%c4] : (f32, memref<16xf32, 1>) -> f32
+      return %memspacecast : memref<16xf32>
+    }
+    ```
+  }];
 }
 
 #endif // MLIR_TRANSFORMS_PASSES

@@ -53,7 +53,6 @@
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -381,7 +380,7 @@ bool ExpandVariadics::runOnModule(Module &M) {
           if (CB->isIndirectCall()) {
             FunctionType *FTy = CB->getFunctionType();
             if (FTy->isVarArg())
-              Changed |= expandCall(M, Builder, CB, FTy, 0);
+              Changed |= expandCall(M, Builder, CB, FTy, /*NF=*/nullptr);
           }
         }
       }

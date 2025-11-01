@@ -64,6 +64,9 @@ filecheck = None
 # Path to the yaml2obj tool. Not optional.
 yaml2obj = None
 
+# Path to the yaml2macho-core tool. Not optional.
+yaml2macho_core = None
+
 # The arch might dictate some specific CFLAGS to be passed to the toolchain to build
 # the inferior programs.  The global variable cflags_extras provides a hook to do
 # just that.
@@ -174,3 +177,11 @@ def get_yaml2obj_path():
     """
     if yaml2obj and os.path.lexists(yaml2obj):
         return yaml2obj
+
+
+def get_yaml2macho_core_path():
+    """
+    Get the path to the yaml2macho-core tool.
+    """
+    if yaml2macho_core and os.path.lexists(yaml2macho_core):
+        return yaml2macho_core

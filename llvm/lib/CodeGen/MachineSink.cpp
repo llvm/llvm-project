@@ -1209,7 +1209,7 @@ MachineSinking::getBBRegisterPressure(const MachineBasicBlock &MBB,
                                          MIE = MBB.instr_begin();
        MII != MIE; --MII) {
     const MachineInstr &MI = *std::prev(MII);
-    if (MI.isDebugInstr() || MI.isPseudoProbe())
+    if (MI.isDebugOrPseudoInstr())
       continue;
     RegisterOperands RegOpers;
     RegOpers.collect(MI, *TRI, *MRI, false, false);
@@ -2187,11 +2187,9 @@ static void clearKillFlags(MachineInstr *MI, MachineBasicBlock &CurBB,
 static void updateLiveIn(MachineInstr *MI, MachineBasicBlock *SuccBB,
                          const SmallVectorImpl<unsigned> &UsedOpsInCopy,
                          const SmallVectorImpl<Register> &DefedRegsInCopy) {
-  MachineFunction &MF = *SuccBB->getParent();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   for (Register DefReg : DefedRegsInCopy)
-    for (MCPhysReg S : TRI->subregs_inclusive(DefReg))
-      SuccBB->removeLiveIn(S);
+    SuccBB->removeLiveInOverlappedWith(DefReg);
+
   for (auto U : UsedOpsInCopy)
     SuccBB->addLiveIn(MI->getOperand(U).getReg());
   SuccBB->sortUniqueLiveIns();

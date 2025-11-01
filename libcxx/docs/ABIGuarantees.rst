@@ -44,6 +44,10 @@ This removes the ``iterator`` base class from ``back_insert_iterator``, ``front_
 This doesn't directly affect the layout of these types in most cases, but may result in more padding being used when
 they are used in combination, for example ``reverse_iterator<reverse_iterator<T>>``.
 
+``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER``
+-------------------------------------------------
+This removes a second member in ``reverse_iterator`` that is unused after LWG2360.
+
 ``_LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION``
 -------------------------------------------------
 This changes the index type used inside ``variant`` to the smallest required type to reduce the datasize of variants in

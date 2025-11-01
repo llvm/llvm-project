@@ -1649,6 +1649,15 @@ inline constexpr MyBitEnum operator&(MyBitEnum a, MyBitEnum b) {
 inline constexpr MyBitEnum operator^(MyBitEnum a, MyBitEnum b) {
   return static_cast<MyBitEnum>(static_cast<uint32_t>(a) ^ static_cast<uint32_t>(b));
 }
+inline constexpr MyBitEnum &operator|=(MyBitEnum &a, MyBitEnum b) {
+  return a = a | b;
+}
+inline constexpr MyBitEnum &operator&=(MyBitEnum &a, MyBitEnum b) {
+  return a = a & b;
+}
+inline constexpr MyBitEnum &operator^=(MyBitEnum &a, MyBitEnum b) {
+  return a = a ^ b;
+}
 inline constexpr MyBitEnum operator~(MyBitEnum bits) {
   // Ensure only bits that can be present in the enum are set
   return static_cast<MyBitEnum>(~static_cast<uint32_t>(bits) & static_cast<uint32_t>(15u));

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/expm1.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -21,10 +21,16 @@ TEST_F(LlvmLibcExpm1Test, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::expm1(aNaN));
+  EXPECT_MATH_ERRNO(0);
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::expm1(inf));
+  EXPECT_MATH_ERRNO(0);
   EXPECT_FP_EQ_ALL_ROUNDING(-1.0, LIBC_NAMESPACE::expm1(neg_inf));
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::expm1(0x1.0p20),
                               FE_OVERFLOW);
+  EXPECT_MATH_ERRNO(ERANGE);
+
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::expm1(zero));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::expm1(neg_zero));
   // |x| < 2^-53, expm1(x) = x

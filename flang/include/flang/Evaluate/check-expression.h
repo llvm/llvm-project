@@ -125,6 +125,9 @@ std::optional<bool> IsContiguous(const A &, FoldingContext &,
 extern template std::optional<bool> IsContiguous(const Expr<SomeType> &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
+extern template std::optional<bool> IsContiguous(const ActualArgument &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ArrayRef &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
@@ -159,6 +162,9 @@ extern template bool IsErrorExpr(const Expr<SomeType> &);
 
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
+
+bool MayNeedCopy(const ActualArgument *, const characteristics::DummyArgument *,
+    FoldingContext &, bool forCopyOut);
 
 } // namespace Fortran::evaluate
 #endif

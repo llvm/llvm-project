@@ -4,11 +4,12 @@
 // runtime in the library search order, which means that we cannot intercept
 // symbols.
 
+// RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx %p/Inputs/no-interception-dso.c -fsanitize=undefined -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
 
 // Make sure that libc is first in DT_NEEDED.
-// RUN: %clangxx %s -lc -o %t %ld_flags_rpath_exe
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx %s -lc -o %t.dir/EXE %ld_flags_rpath_exe
+// RUN: %run %t.dir/EXE 2>&1 | FileCheck %s
 
 #include <limits.h>
 

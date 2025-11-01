@@ -19,6 +19,16 @@
 
 namespace llvm {
 
+class TargetLowering;
+class AArch64FunctionInfo;
+class AArch64PrologueEmitter;
+class AArch64EpilogueEmitter;
+
+struct SVEStackSizes {
+  uint64_t ZPRStackSize{0};
+  uint64_t PPRStackSize{0};
+};
+
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
   explicit AArch64FrameLowering()
@@ -59,8 +69,9 @@ public:
                                          bool ForSimm) const;
   StackOffset resolveFrameOffsetReference(const MachineFunction &MF,
                                           int64_t ObjectOffset, bool isFixed,
-                                          bool isSVE, Register &FrameReg,
-                                          bool PreferFP, bool ForSimm) const;
+                                          TargetStackID::Value StackID,
+                                          Register &FrameReg, bool PreferFP,
+                                          bool ForSimm) const;
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -119,6 +130,7 @@ public:
       return false;
     case TargetStackID::Default:
     case TargetStackID::ScalableVector:
+    case TargetStackID::ScalablePredicateVector:
     case TargetStackID::NoAlloc:
       return true;
     }
@@ -127,7 +139,8 @@ public:
   bool isStackIdSafeForLocalArea(unsigned StackId) const override {
     // We don't support putting SVE objects into the pre-allocated local
     // frame block at the moment.
-    return StackId != TargetStackID::ScalableVector;
+    return (StackId != TargetStackID::ScalableVector &&
+            StackId != TargetStackID::ScalablePredicateVector);
   }
 
   void
@@ -135,6 +148,26 @@ public:
                     SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
   bool isFPReserved(const MachineFunction &MF) const;
+
+  bool needsWinCFI(const MachineFunction &MF) const;
+
+  bool requiresSaveVG(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire ZPR stackframe (calleesaves + spills).
+  StackOffset getZPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire PPR stackframe (calleesaves + spills +
+  /// hazard padding).
+  StackOffset getPPRStackSize(const MachineFunction &MF) const;
+
+  /// Returns the size of the entire SVE stackframe (PPRs + ZPRs).
+  StackOffset getSVEStackSize(const MachineFunction &MF) const {
+    return getZPRStackSize(MF) + getPPRStackSize(MF);
+  }
+
+  friend class AArch64PrologueEpilogueCommon;
+  friend class AArch64PrologueEmitter;
+  friend class AArch64EpilogueEmitter;
 
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
@@ -150,28 +183,6 @@ private:
   /// Returns true if CSRs should be paired.
   bool producePairRegisters(MachineFunction &MF) const;
 
-  bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
-                                      uint64_t StackBumpBytes) const;
-
-  int64_t estimateSVEStackObjectOffsets(MachineFrameInfo &MF) const;
-  int64_t assignSVEStackObjectOffsets(MachineFrameInfo &MF,
-                                      int &MinCSFrameIndex,
-                                      int &MaxCSFrameIndex) const;
-  bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
-                                                uint64_t StackBumpBytes) const;
-  void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI) const;
-  void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MBBI) const;
-  void emitCalleeSavedGPRRestores(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI) const;
-  void emitCalleeSavedSVERestores(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator MBBI) const;
-  void allocateStackSpace(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI,
-                          int64_t RealignmentPadding, StackOffset AllocSize,
-                          bool NeedsWinCFI, bool *HasWinCFI, bool EmitCFI,
-                          StackOffset InitialOffset, bool FollowupAllocs) const;
   /// Make a determination whether a Hazard slot is used and create it if
   /// needed.
   void determineStackHazardSlot(MachineFunction &MF,
@@ -196,6 +207,52 @@ private:
 
   void emitRemarks(const MachineFunction &MF,
                    MachineOptimizationRemarkEmitter *ORE) const override;
+
+  bool windowsRequiresStackProbe(const MachineFunction &MF,
+                                 uint64_t StackSizeInBytes) const;
+
+  bool shouldSignReturnAddressEverywhere(const MachineFunction &MF) const;
+
+  StackOffset getFPOffset(const MachineFunction &MF,
+                          int64_t ObjectOffset) const;
+
+  StackOffset getStackOffset(const MachineFunction &MF,
+                             int64_t ObjectOffset) const;
+
+  // Given a load or a store instruction, generate an appropriate unwinding SEH
+  // code on Windows.
+  MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
+                                        const TargetInstrInfo &TII,
+                                        MachineInstr::MIFlag Flag) const;
+
+  /// Returns how much of the incoming argument stack area (in bytes) we should
+  /// clean up in an epilogue. For the C calling convention this will be 0, for
+  /// guaranteed tail call conventions it can be positive (a normal return or a
+  /// tail call to a function that uses less stack space for arguments) or
+  /// negative (for a tail call to a function that needs more stack space than
+  /// us for arguments).
+  int64_t getArgumentStackToRestore(MachineFunction &MF,
+                                    MachineBasicBlock &MBB) const;
+
+  // Find a scratch register that we can use at the start of the prologue to
+  // re-align the stack pointer.  We avoid using callee-save registers since
+  // they may appear to be free when this is called from canUseAsPrologue
+  // (during shrink wrapping), but then no longer be free when this is called
+  // from emitPrologue.
+  //
+  // FIXME: This is a bit conservative, since in the above case we could use one
+  // of the callee-save registers as a scratch temp to re-align the stack
+  // pointer, but we would then have to make sure that we were in fact saving at
+  // least one callee-save register in the prologue, which is additional
+  // complexity that doesn't seem worth the benefit.
+  Register findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB,
+                                            bool HasCall = false) const;
+
+  /// Returns the size of the fixed object area (allocated next to sp on entry)
+  /// On Win64 this may include a var args area and an UnwindHelp object for EH.
+  unsigned getFixedObjectSize(const MachineFunction &MF,
+                              const AArch64FunctionInfo *AFI, bool IsWin64,
+                              bool IsFunclet) const;
 };
 
 } // End llvm namespace

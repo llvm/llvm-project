@@ -392,9 +392,9 @@ MemInfoBlock makePartialMIB() {
 }
 
 IndexedMemProfRecord
-makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
-             std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
-             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
+makeRecord(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
+           std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
+           const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
   IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
@@ -436,16 +436,16 @@ MATCHER_P(EqualsRecord, Want, "") {
   return true;
 }
 
-TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
+TEST_F(InstrProfTest, test_memprof_v4_full_schema) {
   const MemInfoBlock MIB = makeFullMIB();
 
-  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfVersionRequested(memprof::Version4);
   Writer.setMemProfFullSchema(true);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
   IndexedMemProfData MemProfData = getMemProfDataForTest();
@@ -470,16 +470,16 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
-TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
+TEST_F(InstrProfTest, test_memprof_v4_partial_schema) {
   const MemInfoBlock MIB = makePartialMIB();
 
-  Writer.setMemProfVersionRequested(memprof::Version2);
+  Writer.setMemProfVersionRequested(memprof::Version4);
   Writer.setMemProfFullSchema(false);
 
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
   IndexedMemProfData MemProfData = getMemProfDataForTest();
@@ -525,7 +525,7 @@ TEST_F(InstrProfTest, test_caller_callee_pairs) {
   //       Line: 7, Column: 8
   //         new(...)
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, MIB, memprof::getHotColdSchema());
 
@@ -584,7 +584,7 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222},
       /*CallSiteFrames=*/{}, makePartialMIB(), memprof::getHotColdSchema());
 
@@ -914,7 +914,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_THAT(ValueData, SizeIs(0));
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
   ValueData = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5, T);
@@ -932,7 +932,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(2U, ValueData[4].Count);
 
   // Remove the MD_prof metadata
-  Inst->setMetadata(LLVMContext::MD_prof, 0);
+  Inst->setMetadata(LLVMContext::MD_prof, nullptr);
   // Annotate with 4 records.
   InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
                               {5000, 2}, {6000, 1}};

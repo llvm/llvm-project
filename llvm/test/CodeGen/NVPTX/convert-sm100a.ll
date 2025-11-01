@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_101a -mattr=+ptx86 | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120a -mattr=+ptx86 | FileCheck %s
-; RUN: %if ptxas-12.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | %ptxas-verify -arch=sm_100a %}
-; RUN: %if ptxas-12.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_101a -mattr=+ptx86 | %ptxas-verify -arch=sm_101a %}
-; RUN: %if ptxas-12.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120a -mattr=+ptx86 | %ptxas-verify -arch=sm_120a %}
+; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | %ptxas-verify -arch=sm_100a %}
+; RUN: %if ptxas-sm_101a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_101a -mattr=+ptx86 | %ptxas-verify -arch=sm_101a %}
+; RUN: %if ptxas-sm_120a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120a -mattr=+ptx86 | %ptxas-verify -arch=sm_120a %}
 
 define i16 @cvt_rn_sf_e2m3x2_f32(float %f1, float %f2) {
 ; CHECK-LABEL: cvt_rn_sf_e2m3x2_f32(

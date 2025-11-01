@@ -439,10 +439,8 @@ static AccessResult MatchesFriend(Sema &S,
 static AccessResult MatchesFriend(Sema &S,
                                   const EffectiveContext &EC,
                                   CanQualType Friend) {
-  if (const RecordType *RT = Friend->getAs<RecordType>())
-    return MatchesFriend(
-        S, EC,
-        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf());
+  if (const auto *RD = Friend->getAsCXXRecordDecl())
+    return MatchesFriend(S, EC, RD);
 
   // TODO: we can do better than this
   if (Friend->isDependentType())
@@ -1786,10 +1784,7 @@ Sema::AccessResult Sema::CheckMemberOperatorAccess(SourceLocation OpLoc,
   if (!getLangOpts().AccessControl || Found.getAccess() == AS_public)
     return AR_accessible;
 
-  const RecordType *RT = ObjectExpr->getType()->castAs<RecordType>();
-  CXXRecordDecl *NamingClass =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
-
+  auto *NamingClass = ObjectExpr->getType()->castAsCXXRecordDecl();
   AccessTarget Entity(Context, AccessTarget::Member, NamingClass, Found,
                       ObjectExpr->getType());
   Entity.setDiag(diag::err_access) << ObjectExpr->getSourceRange() << Range;

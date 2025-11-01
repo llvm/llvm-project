@@ -26,6 +26,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
@@ -83,13 +84,11 @@ static std::pair<StringRef, bool> classifyCapability(QualType QT) {
   // We need to look at the declaration of the type of the value to determine
   // which it is. The type should either be a record or a typedef, or a pointer
   // or reference thereof.
-  if (const auto *RT = QT->getAs<RecordType>()) {
-    if (const auto *RD = RT->getOriginalDecl())
-      return classifyCapability(*RD->getDefinitionOrSelf());
-  } else if (const auto *TT = QT->getAs<TypedefType>()) {
-    if (const auto *TD = TT->getDecl())
-      return classifyCapability(*TD);
-  } else if (QT->isPointerOrReferenceType())
+  if (const auto *RD = QT->getAsRecordDecl())
+    return classifyCapability(*RD);
+  if (const auto *TT = QT->getAs<TypedefType>())
+    return classifyCapability(*TT->getDecl());
+  if (QT->isPointerOrReferenceType())
     return classifyCapability(QT->getPointeeType());
 
   return ClassifyCapabilityFallback;
@@ -241,7 +240,44 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
-til::LiteralPtr *SExprBuilder::createVariable(const VarDecl *VD) {
+til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
+                                            CallingContext *Ctx) {
+  assert(VD);
+
+  // General recursion guard for x = f(x). If we are already in the process of
+  // defining VD, use its pre-assignment value to break the cycle.
+  if (VarsBeingTranslated.contains(VD->getCanonicalDecl()))
+    return new (Arena) til::LiteralPtr(VD);
+
+  // The closure captures state that is updated to correctly translate chains of
+  // aliases. Restore it when we are done with recursive translation.
+  auto Cleanup = llvm::make_scope_exit(
+      [&, RestoreClosure =
+              VarsBeingTranslated.empty() ? LookupLocalVarExpr : nullptr] {
+        VarsBeingTranslated.erase(VD->getCanonicalDecl());
+        if (VarsBeingTranslated.empty())
+          LookupLocalVarExpr = RestoreClosure;
+      });
+  VarsBeingTranslated.insert(VD->getCanonicalDecl());
+
+  QualType Ty = VD->getType();
+  if (!VD->isStaticLocal() && Ty->isPointerType()) {
+    // Substitute local variable aliases with a canonical definition.
+    if (LookupLocalVarExpr) {
+      // Attempt to resolve an alias through the more complex local variable map
+      // lookup. This will fail with complex control-flow graphs (where we
+      // revert to no alias resolution to retain stable variable names).
+      if (const Expr *E = LookupLocalVarExpr(VD)) {
+        til::SExpr *Result = translate(E, Ctx);
+        // Unsupported expression (such as heap allocations) will be undefined;
+        // rather than failing here, we simply revert to the pointer being the
+        // canonical variable.
+        if (Result && !isa<til::Undefined>(Result))
+          return Result;
+      }
+    }
+  }
+
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -313,6 +349,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);
+  case Stmt::StmtExprClass:
+    return translateStmtExpr(cast<StmtExpr>(S), Ctx);
   default:
     break;
   }
@@ -352,6 +390,9 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
              ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
              : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
   }
+
+  if (const auto *VarD = dyn_cast<VarDecl>(VD))
+    return translateVariable(VarD, Ctx);
 
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
@@ -689,6 +730,15 @@ SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
     }
   }
   return nullptr;
+}
+
+til::SExpr *SExprBuilder::translateStmtExpr(const StmtExpr *SE,
+                                            CallingContext *Ctx) {
+  // The value of a statement expression is the value of the last statement,
+  // which must be an expression.
+  const CompoundStmt *CS = SE->getSubStmt();
+  return CS->body_empty() ? new (Arena) til::Undefined(SE)
+                          : translate(CS->body_back(), Ctx);
 }
 
 // If (E) is non-trivial, then add it to the current basic block, and

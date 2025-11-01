@@ -43,6 +43,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/NoTrivialPPDirectiveTracer.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "clang/Lex/PreprocessorLexer.h"
@@ -247,8 +248,6 @@ void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
     llvm::errs() << " [LeadingSpace]";
   if (Tok.isExpandDisabled())
     llvm::errs() << " [ExpandDisabled]";
-  if (Tok.isFirstPPToken())
-    llvm::errs() << " [First pp-token]";
   if (Tok.needsCleaning()) {
     const char *Start = SourceMgr.getCharacterData(Tok.getLocation());
     llvm::errs() << " [UnClean='" << StringRef(Start, Tok.getLength())
@@ -577,8 +576,11 @@ void Preprocessor::EnterMainSourceFile() {
     // export module M; // error: module declaration must occur
     //                  //        at the start of the translation unit.
     if (getLangOpts().CPlusPlusModules) {
+      auto Tracer = std::make_unique<NoTrivialPPDirectiveTracer>(*this);
+      DirTracer = Tracer.get();
+      addPPCallbacks(std::move(Tracer));
       std::optional<Token> FirstPPTok = CurLexer->peekNextPPToken();
-      if (FirstPPTok && FirstPPTok->isFirstPPToken())
+      if (FirstPPTok)
         FirstPPTokenLoc = FirstPPTok->getLocation();
     }
   }
@@ -940,6 +942,8 @@ void Preprocessor::Lex(Token &Result) {
       StdCXXImportSeqState.handleHeaderName();
       break;
     case tok::kw_export:
+      if (hasSeenNoTrivialPPDirective())
+        Result.setFlag(Token::HasSeenNoTrivialPPDirective);
       TrackGMFState.handleExport();
       StdCXXImportSeqState.handleExport();
       ModuleDeclState.handleExport();
@@ -968,6 +972,8 @@ void Preprocessor::Lex(Token &Result) {
           }
           break;
         } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
+          if (hasSeenNoTrivialPPDirective())
+            Result.setFlag(Token::HasSeenNoTrivialPPDirective);
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
           break;
@@ -1681,4 +1687,32 @@ const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   }
 
   return nullptr;
+}
+
+bool Preprocessor::hasSeenNoTrivialPPDirective() const {
+  return DirTracer && DirTracer->hasSeenNoTrivialPPDirective();
+}
+
+bool NoTrivialPPDirectiveTracer::hasSeenNoTrivialPPDirective() const {
+  return SeenNoTrivialPPDirective;
+}
+
+void NoTrivialPPDirectiveTracer::setSeenNoTrivialPPDirective() {
+  if (InMainFile && !SeenNoTrivialPPDirective)
+    SeenNoTrivialPPDirective = true;
+}
+
+void NoTrivialPPDirectiveTracer::LexedFileChanged(
+    FileID FID, LexedFileChangeReason Reason,
+    SrcMgr::CharacteristicKind FileType, FileID PrevFID, SourceLocation Loc) {
+  InMainFile = (FID == PP.getSourceManager().getMainFileID());
+}
+
+void NoTrivialPPDirectiveTracer::MacroExpands(const Token &MacroNameTok,
+                                              const MacroDefinition &MD,
+                                              SourceRange Range,
+                                              const MacroArgs *Args) {
+  // FIXME: Does only enable builtin macro expansion make sense?
+  if (!MD.getMacroInfo()->isBuiltinMacro())
+    setSeenNoTrivialPPDirective();
 }

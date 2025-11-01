@@ -192,17 +192,12 @@ func.func @image_write_texel_type_mismatch(%arg0 : !spirv.image<f32, Dim2D, NoDe
 // spirv.ImageSampleExplicitLod
 //===----------------------------------------------------------------------===//
 
+// No need to have a negative test for Dim being Buffer as this is already handled
+// by SampledImageType logic.
+
 func.func @sample_explicit_lod(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : f32) -> () {
   // CHECK: {{%.*}} = spirv.ImageSampleExplicitLod {{%.*}}, {{%.*}} ["Lod"], {{%.*}} : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, f32 -> vector<4xf32>
   %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Lod"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, f32 -> vector<4xf32>
-  spirv.Return
-}
-
-// -----
-
-func.func @sample_explicit_lod_buffer_dim(%arg0 : !spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>, %arg2 : f32) -> () {
-  // expected-error @+1 {{the Dim operand of the underlying image must not be Buffer}}
-  %0 = spirv.ImageSampleExplicitLod %arg0, %arg1 ["Lod"], %arg2 : !spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32>, f32 -> vector<4xf32>
   spirv.Return
 }
 
@@ -236,17 +231,12 @@ func.func @sample_explicit_lod_no_lod(%arg0 : !spirv.sampled_image<!spirv.image<
 // spirv.ImageSampleImplicitLod
 //===----------------------------------------------------------------------===//
 
+// No need to have a negative test for Dim being Buffer as this is already handled
+// by SampledImageType logic.
+
 func.func @sample_implicit_lod(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>) -> () {
   // CHECK: {{%.*}} = spirv.ImageSampleImplicitLod {{%.*}}, {{%.*}} : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32> -> vector<4xf32>
   %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 : !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32> -> vector<4xf32>
-  spirv.Return
-}
-
-// -----
-
-func.func @sample_implicit_lod_buffer(%arg0 : !spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<2xf32>) -> () {
-  // expected-error @+1 {{the Dim operand of the underlying image must not be Buffer}}
-  %0 = spirv.ImageSampleImplicitLod %arg0, %arg1 : !spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<2xf32> -> vector<4xf32>
   spirv.Return
 }
 
@@ -272,17 +262,12 @@ func.func @sample_implicit_lod_wrong_result(%arg0 : !spirv.sampled_image<!spirv.
 // spirv.ImageSampleProjDrefImplicitLod
 //===----------------------------------------------------------------------===//
 
+// No need to have a negative test for Dim being Buffer as this is already handled
+// by SampledImageType logic.
+
 func.func @sample_implicit_proj_dref(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
   // CHECK: {{%.*}} = spirv.ImageSampleProjDrefImplicitLod {{%.*}}, {{%.*}}, {{%.*}} : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<4xf32>, f32 -> f32
   %0 = spirv.ImageSampleProjDrefImplicitLod %arg0, %arg1, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<4xf32>, f32 -> f32
-  spirv.Return
-}
-
-// -----
-
-func.func @sample_implicit_proj_dref_buffer_dim(%arg0 : !spirv.sampled_image<!spirv.image<f32, Buffer, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
-  // expected-error @+1 {{the Dim operand of the underlying image must not be Buffer}}
-  %0 = spirv.ImageSampleProjDrefImplicitLod %arg0, %arg1, %arg2 : !spirv.sampled_image<!spirv.image<f32, Buffer, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<4xf32>, f32 -> f32
   spirv.Return
 }
 

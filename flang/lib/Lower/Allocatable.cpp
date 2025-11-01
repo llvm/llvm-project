@@ -450,9 +450,6 @@ private:
     if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
       Fortran::lower::attachDeclarePostAllocAction(converter, builder,
                                                    alloc.getSymbol());
-    if (Fortran::semantics::HasCUDAComponent(alloc.getSymbol()))
-      Fortran::lower::initializeDeviceComponentAllocator(
-          converter, alloc.getSymbol(), box);
   }
 
   void setPinnedToFalse() {
@@ -488,6 +485,16 @@ private:
       postAllocationAction(alloc, box);
       setPinnedToFalse();
       return;
+    }
+
+    // Preserve characters' dynamic length.
+    if (lenParams.empty() && box.isCharacter() &&
+        !box.hasNonDeferredLenParams()) {
+      auto charTy = mlir::dyn_cast<fir::CharacterType>(box.getEleTy());
+      if (charTy && charTy.hasDynamicLen()) {
+        fir::ExtendedValue exv{box};
+        lenParams.push_back(fir::factory::readCharLen(builder, loc, exv));
+      }
     }
 
     // Generate a sequence of runtime calls.
@@ -621,6 +628,10 @@ private:
                                const fir::MutableBoxValue &box, bool isSource) {
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
+
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+      if (Fortran::semantics::IsCUDADevice(*sym))
+        TODO(loc, "CUDA Fortran: allocate with device source");
 
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
@@ -760,6 +771,15 @@ private:
                               const fir::MutableBoxValue &box,
                               ErrorManager &errorManager,
                               const Fortran::semantics::Symbol &sym) {
+
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        if (derivedTypeSpec->HasDefaultInitialization(
+                /*ignoreAllocatable=*/true, /*ignorePointer=*/true))
+          TODO(loc,
+               "CUDA Fortran: allocate on device with default initialization");
+
     Fortran::lower::StatementContext stmtCtx;
     cuf::DataAttributeAttr cudaAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),
