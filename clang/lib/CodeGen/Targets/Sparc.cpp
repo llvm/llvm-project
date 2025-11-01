@@ -26,19 +26,29 @@ public:
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
+  ABIArgInfo classifyArgumentType(QualType Ty) const;
   void computeInfo(CGFunctionInfo &FI) const override;
 };
 } // end anonymous namespace
 
+ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
+  if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
-ABIArgInfo
-SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
   if (Ty->isAnyComplexType()) {
-    return ABIArgInfo::getDirect();
+    auto AI = ABIArgInfo::getDirect();
+    AI.setInReg(true);
+    return AI;
   }
-  else {
-    return DefaultABIInfo::classifyReturnType(Ty);
-  }
+
+  return DefaultABIInfo::classifyReturnType(Ty);
+}
+
+ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
+  if (Ty->isRealFloatingType() && getContext().getTypeSize(Ty) == 128)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+
+  return DefaultABIInfo::classifyArgumentType(Ty);
 }
 
 void SparcV8ABIInfo::computeInfo(CGFunctionInfo &FI) const {

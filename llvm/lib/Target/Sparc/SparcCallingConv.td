@@ -24,8 +24,8 @@ def CC_Sparc32 : CallingConv<[
   // As are v2i32 arguments (this would be the default behavior for
   // v2i32 if it wasn't allocated to the IntPair register-class)
   CCIfType<[v2i32], CCCustom<"CC_Sparc_Assign_Split_64">>,
-
-
+  // f128 arguments are passed indirectly.
+  CCIfType<[f128], CCPassIndirect<i32>>,
   // Alternatively, they are assigned to the stack in 4-byte aligned units.
   CCAssignToStack<4, 4>
 ]>;
@@ -34,6 +34,7 @@ def RetCC_Sparc32 : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[I0, I1, I2, I3, I4, I5]>>,
   CCIfType<[f32], CCAssignToReg<[F0, F1, F2, F3]>>,
   CCIfType<[f64], CCAssignToReg<[D0, D1]>>,
+  CCIfType<[f128], CCAssignToReg<[Q0, Q1]>>,
   CCIfType<[v2i32], CCCustom<"CC_Sparc_Assign_Ret_Split_64">>
 ]>;
 
