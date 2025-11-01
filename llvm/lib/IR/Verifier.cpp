@@ -1564,10 +1564,20 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DIImportedEntity>(Op)),
-              "invalid retained nodes, expected DILocalVariable, DILabel or "
-              "DIImportedEntity",
+                     isa<DIImportedEntity>(Op) || isa<DIType>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel, "
+              "DIImportedEntity or DIType",
               &N, Node, Op);
+      if (auto *T = dyn_cast<DIType>(Op)) {
+        auto *TypeScope = dyn_cast_or_null<DILocalScope>(T->getScope());
+        DISubprogram *TypeSP = TypeScope ? TypeScope->getSubprogram() : nullptr;
+        DICompileUnit *TypeSPUnit = TypeSP ? TypeSP->getUnit() : nullptr;
+        if (isa_and_nonnull<DILocalScope>(T->getScope()))
+          CheckDI(!TypeScope || TypeSP == &N,
+                  "invalid retained node, DIType should have the scope of "
+                  "DISubprogram",
+                  &N, N.getUnit(), Node, Op, TypeScope, TypeSP, TypeSPUnit);
+      }
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
