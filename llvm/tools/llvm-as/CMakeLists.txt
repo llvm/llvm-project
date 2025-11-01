@@ -1,4 +1,6 @@
 set(LLVM_LINK_COMPONENTS
+  AllTargetsCodeGens
+  AllTargetsInfos
   AsmParser
   BitWriter
   Core
