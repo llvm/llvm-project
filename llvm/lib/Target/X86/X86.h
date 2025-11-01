@@ -179,7 +179,18 @@ FunctionPass *createX86LowerAMXTypeLegacyPass();
 
 /// The pass transforms amx intrinsics to scalar operation if the function has
 /// optnone attribute or it is O0.
-FunctionPass *createX86LowerAMXIntrinsicsPass();
+class X86LowerAMXIntrinsicsPass
+    : public PassInfoMixin<X86LowerAMXIntrinsicsPass> {
+private:
+  const TargetMachine *TM;
+
+public:
+  X86LowerAMXIntrinsicsPass(const TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  static bool isRequired() { return true; }
+};
+
+FunctionPass *createX86LowerAMXIntrinsicsLegacyPass();
 
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
