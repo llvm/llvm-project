@@ -47,10 +47,6 @@ include(HandleCompilerRT)
 # Basic options ---------------------------------------------------------------
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_STATIC "Build libc++ as a static library." ON)
-option(LIBCXX_ENABLE_EXCEPTIONS "Enable exceptions in the built library." ON)
-option(LIBCXX_ENABLE_RTTI
-  "Use runtime type information.
-  This option may only be set to OFF when LIBCXX_ENABLE_EXCEPTIONS=OFF." ON)
 option(LIBCXX_ENABLE_FILESYSTEM
   "Whether to include support for parts of the library that rely on a filesystem being
    available on the platform. This includes things like most parts of <filesystem> and
@@ -164,8 +160,8 @@ if (WIN32 OR MINGW OR ANDROID OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX"
     OR NOT LIBCXX_ENABLE_THREADS
     OR NOT LIBCXX_ENABLE_FILESYSTEM
     OR NOT LIBCXX_ENABLE_RANDOM_DEVICE
-    OR NOT LIBCXX_ENABLE_EXCEPTIONS
-    OR NOT LIBCXX_ENABLE_RTTI)
+    OR NOT RUNTIMES_ENABLE_EXCEPTIONS
+    OR NOT RUNTIMES_ENABLE_RTTI)
   set(_include_benchmarks OFF)
 else()
   set(_include_benchmarks ON)
@@ -358,12 +354,6 @@ if (LIBCXX_HAS_PTHREAD_API)
   endif()
 endif()
 
-if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
-  message(FATAL_ERROR "Libc++ cannot be built with exceptions enabled but RTTI"
-                      " disabled, since that configuration is broken. See"
-                      " https://llvm.org/PR66117 for details.")
-endif()
-
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
     if (APPLE)
       message(FATAL_ERROR "LIBCXX_ENABLE_ABI_LINKER_SCRIPT cannot be used on APPLE targets")
@@ -538,29 +528,6 @@ function(cxx_add_basic_build_flags target)
     endif()
   endif()
   target_compile_options(${target} PUBLIC "${LIBCXX_ADDITIONAL_COMPILE_FLAGS}")
-endfunction()
-
-# Exception flags =============================================================
-function(cxx_add_exception_flags target)
-  if (LIBCXX_ENABLE_EXCEPTIONS)
-    # Catches C++ exceptions only and tells the compiler to assume that extern C
-    # functions never throw a C++ exception.
-    target_add_compile_flags_if_supported(${target} PUBLIC -EHsc)
-  else()
-    target_add_compile_flags_if_supported(${target} PUBLIC -EHs- -EHa-)
-    target_add_compile_flags_if_supported(${target} PUBLIC -fno-exceptions)
-  endif()
-endfunction()
-
-# RTTI flags ==================================================================
-function(cxx_add_rtti_flags target)
-  if (NOT LIBCXX_ENABLE_RTTI)
-    if (MSVC)
-      target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
-    else()
-      target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
-    endif()
-  endif()
 endfunction()
 
 # Modules flags ===============================================================
@@ -817,11 +784,10 @@ function(cxx_add_common_build_flags target)
   cxx_add_basic_build_flags(${target})
   cxx_add_warning_flags(${target} ${LIBCXX_ENABLE_WERROR} ${LIBCXX_ENABLE_PEDANTIC})
   cxx_add_windows_flags(${target})
-  cxx_add_exception_flags(${target})
-  cxx_add_rtti_flags(${target})
   cxx_add_module_flags(${target})
   cxx_link_system_libraries(${target})
   target_link_libraries(${target} PRIVATE cxx-sanitizer-flags)
+  target_link_libraries(${target} PRIVATE runtimes-language-flags)
 endfunction()
 
 #===============================================================================

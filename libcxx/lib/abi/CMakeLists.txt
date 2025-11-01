@@ -53,7 +53,7 @@ cxx_abi_list_identifier(abi_list_identifier
   "${LIBCXX_CXX_ABI}"
   "${LIBCXX_ABI_VERSION}"
   "${LIBCXX_ABI_UNSTABLE}"
-  "${LIBCXX_ENABLE_EXCEPTIONS}"
+  "${RUNTIMES_ENABLE_EXCEPTIONS}"
   "${LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS}"
 )
 

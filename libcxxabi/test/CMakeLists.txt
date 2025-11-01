@@ -66,7 +66,7 @@ set(SERIALIZED_LIT_PARAMS "# Lit parameters serialized here for llvm-lit to pick
 
 serialize_lit_string_param(SERIALIZED_LIT_PARAMS compiler "${CMAKE_CXX_COMPILER}")
 
-if (NOT LIBCXXABI_ENABLE_EXCEPTIONS)
+if (NOT RUNTIMES_ENABLE_EXCEPTIONS)
   serialize_lit_param(SERIALIZED_LIT_PARAMS enable_exceptions False)
 endif()
 
