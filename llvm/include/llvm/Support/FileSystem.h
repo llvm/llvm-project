@@ -35,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/File.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/MD5.h"
 #include <cassert>
@@ -48,15 +49,6 @@
 namespace llvm {
 namespace sys {
 namespace fs {
-
-#if defined(_WIN32)
-// A Win32 HANDLE is a typedef of void*
-using file_t = void *;
-#else
-using file_t = int;
-#endif
-
-LLVM_ABI extern const file_t kInvalidFile;
 
 /// An enumeration for the file system's view of the type.
 enum class file_type {
@@ -633,13 +625,11 @@ LLVM_ABI std::error_code is_other(const Twine &path, bool &result);
 LLVM_ABI std::error_code status(const Twine &path, file_status &result,
                                 bool follow = true);
 
+/// A version for when a file_t is already available.
+LLVM_ABI std::error_code status(file_t F, file_status &Result);
+
 /// A version for when a file descriptor is already available.
 LLVM_ABI std::error_code status(int FD, file_status &Result);
-
-#ifdef _WIN32
-/// A version for when a file descriptor is already available.
-LLVM_ABI std::error_code status(file_t FD, file_status &Result);
-#endif
 
 /// Get file creation mode mask of the process.
 ///
@@ -988,19 +978,19 @@ LLVM_ABI Expected<file_t> openNativeFile(const Twine &Name,
 LLVM_ABI file_t convertFDToNativeFile(int FD);
 
 #ifndef _WIN32
-inline file_t convertFDToNativeFile(int FD) { return FD; }
+inline file_t convertFDToNativeFile(int FD) { return file_t(FD); }
 #endif
 
 /// Return an open handle to standard in. On Unix, this is typically FD 0.
-/// Returns kInvalidFile when the stream is closed.
+/// Returns invalid file_t when the stream is closed.
 LLVM_ABI file_t getStdinHandle();
 
 /// Return an open handle to standard out. On Unix, this is typically FD 1.
-/// Returns kInvalidFile when the stream is closed.
+/// Returns invalid file_t when the stream is closed.
 LLVM_ABI file_t getStdoutHandle();
 
 /// Return an open handle to standard error. On Unix, this is typically FD 2.
-/// Returns kInvalidFile when the stream is closed.
+/// Returns invalid file_t when the stream is closed.
 LLVM_ABI file_t getStderrHandle();
 
 /// Reads \p Buf.size() bytes from \p FileHandle into \p Buf. Returns the number
@@ -1290,7 +1280,7 @@ private:
   size_t Size = 0;
   void *Mapping = nullptr;
 #ifdef _WIN32
-  sys::fs::file_t FileHandle = nullptr;
+  sys::fs::file_t FileHandle;
 #endif
   mapmode Mode = readonly;
 
