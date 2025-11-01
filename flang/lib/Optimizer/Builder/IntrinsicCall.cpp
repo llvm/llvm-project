@@ -3333,8 +3333,7 @@ IntrinsicLibrary::genBarrierArrive(mlir::Type resultType,
   assert(args.size() == 1);
   mlir::Value barrier = convertPtrToNVVMSpace(
       builder, loc, args[0], mlir::NVVM::NVVMMemorySpace::Shared);
-  return mlir::NVVM::MBarrierArriveSharedOp::create(builder, loc, resultType,
-                                                    barrier)
+  return mlir::NVVM::MBarrierArriveOp::create(builder, loc, resultType, barrier)
       .getResult();
 }
 
