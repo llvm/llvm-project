@@ -15,7 +15,7 @@
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad   liveArgs
-; CHECK-NEXT:   .quad   16
+; CHECK-NEXT:   .quad   0
 ; CHECK-NEXT:   .quad   1
 
 ; Spilled stack map values.
