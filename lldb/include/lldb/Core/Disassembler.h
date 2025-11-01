@@ -601,9 +601,7 @@ public:
   std::vector<std::string> Annotate(Instruction &inst, Target &target,
                                     lldb::ModuleSP module_sp);
 
-  /// Compute structured annotation data for a single instruction and update
-  /// `Live_`. Returns structured data for all variables relevant at this
-  /// instruction.
+  /// Returns structured data for all variables relevant at this instruction.
   std::vector<VariableAnnotation> AnnotateStructured(Instruction &inst,
                                                      Target &target,
                                                      lldb::ModuleSP module_sp);
