@@ -30,6 +30,7 @@ elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
   check_cxx_compiler_flag(-nostdlibinc CXX_SUPPORTS_NOSTDLIBINC_FLAG)
   if(CXX_SUPPORTS_NOSTDLIBINC_FLAG)
     target_compile_options(runtimes-libc-headers INTERFACE "-nostdlibinc")
+    target_compile_options(runtimes-libc-headers INTERFACE "-idirafter${LIBC_KERNEL_HEADERS}")
   endif()
 
   add_library(runtimes-libc-static INTERFACE)

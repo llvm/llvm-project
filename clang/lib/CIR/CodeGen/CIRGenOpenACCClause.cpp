@@ -126,7 +126,7 @@ class OpenACCClauseCIREmitter final
         .CaseLower("default", mlir::acc::DeviceType::Default)
         .CaseLower("host", mlir::acc::DeviceType::Host)
         .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
-        .CasesLower("nvidia", "acc_device_nvidia",
+        .CasesLower({"nvidia", "acc_device_nvidia"},
                     mlir::acc::DeviceType::Nvidia)
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
