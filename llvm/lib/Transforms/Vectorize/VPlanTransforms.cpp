@@ -151,7 +151,27 @@ static bool cannotHoistOrSinkRecipe(const VPRecipeBase &R) {
 
 static bool sinkScalarOperands(VPlan &Plan) {
   auto Iter = vp_depth_first_deep(Plan.getEntry());
+  bool ScalarVFOnly = Plan.hasScalarVFOnly();
   bool Changed = false;
+
+  auto IsValidSinkCandidate = [ScalarVFOnly](VPBasicBlock *SinkTo,
+                                             VPSingleDefRecipe *Candidate) {
+    // We only know how to duplicate VPReplicateRecipes and
+    // VPScalarIVStepsRecipes for now.
+    if (!isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(Candidate))
+      return false;
+
+    if (Candidate->getParent() == SinkTo || Candidate->mayHaveSideEffects() ||
+        Candidate->mayReadOrWriteMemory())
+      return false;
+
+    if (auto *RepR = dyn_cast<VPReplicateRecipe>(Candidate))
+      if (!ScalarVFOnly && RepR->isSingleScalar())
+        return false;
+
+    return true;
+  };
+
   // First, collect the operands of all recipes in replicate blocks as seeds for
   // sinking.
   SetVector<std::pair<VPBasicBlock *, VPSingleDefRecipe *>> WorkList;
@@ -159,51 +179,37 @@ static bool sinkScalarOperands(VPlan &Plan) {
     VPBasicBlock *EntryVPBB = VPR->getEntryBasicBlock();
     if (!VPR->isReplicator() || EntryVPBB->getSuccessors().size() != 2)
       continue;
-    VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(EntryVPBB->getSuccessors()[0]);
-    if (!VPBB || VPBB->getSingleSuccessor() != VPR->getExitingBasicBlock())
+    VPBasicBlock *VPBB = cast<VPBasicBlock>(EntryVPBB->getSuccessors().front());
+    if (VPBB->getSingleSuccessor() != VPR->getExitingBasicBlock())
       continue;
     for (auto &Recipe : *VPBB) {
-      for (VPValue *Op : Recipe.operands())
+      for (VPValue *Op : Recipe.operands()) {
         if (auto *Def =
                 dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
-          WorkList.insert({VPBB, Def});
+          if (IsValidSinkCandidate(VPBB, Def))
+            WorkList.insert({VPBB, Def});
+      }
     }
   }
 
-  bool ScalarVFOnly = Plan.hasScalarVFOnly();
   // Try to sink each replicate or scalar IV steps recipe in the worklist.
   for (unsigned I = 0; I != WorkList.size(); ++I) {
     VPBasicBlock *SinkTo;
     VPSingleDefRecipe *SinkCandidate;
     std::tie(SinkTo, SinkCandidate) = WorkList[I];
-    if (SinkCandidate->getParent() == SinkTo ||
-        SinkCandidate->mayHaveSideEffects() ||
-        SinkCandidate->mayReadOrWriteMemory())
-      continue;
-    if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
-      if (!ScalarVFOnly && RepR->isSingleScalar())
-        continue;
-    } else if (!isa<VPScalarIVStepsRecipe>(SinkCandidate))
-      continue;
 
-    bool NeedsDuplicating = false;
     // All recipe users of the sink candidate must be in the same block SinkTo
-    // or all users outside of SinkTo must be uniform-after-vectorization (
-    // i.e., only first lane is used) . In the latter case, we need to duplicate
-    // SinkCandidate.
-    auto CanSinkWithUser = [SinkTo, &NeedsDuplicating,
-                            SinkCandidate](VPUser *U) {
-      auto *UI = cast<VPRecipeBase>(U);
-      if (UI->getParent() == SinkTo)
-        return true;
-      NeedsDuplicating = UI->onlyFirstLaneUsed(SinkCandidate);
-      // We only know how to duplicate VPReplicateRecipes and
-      // VPScalarIVStepsRecipes for now.
-      return NeedsDuplicating &&
-             isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(SinkCandidate);
-    };
-    if (!all_of(SinkCandidate->users(), CanSinkWithUser))
+    // or all users outside of SinkTo must have only their first lane used. In
+    // the latter case, we need to duplicate SinkCandidate.
+    auto UsersOutsideSinkTo =
+        make_filter_range(SinkCandidate->users(), [SinkTo](VPUser *U) {
+          return cast<VPRecipeBase>(U)->getParent() != SinkTo;
+        });
+    if (any_of(UsersOutsideSinkTo, [SinkCandidate](VPUser *U) {
+          return !U->onlyFirstLaneUsed(SinkCandidate);
+        }))
       continue;
+    bool NeedsDuplicating = !UsersOutsideSinkTo.empty();
 
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
@@ -230,7 +236,8 @@ static bool sinkScalarOperands(VPlan &Plan) {
     for (VPValue *Op : SinkCandidate->operands())
       if (auto *Def =
               dyn_cast_or_null<VPSingleDefRecipe>(Op->getDefiningRecipe()))
-        WorkList.insert({SinkTo, Def});
+        if (IsValidSinkCandidate(SinkTo, Def))
+          WorkList.insert({SinkTo, Def});
     Changed = true;
   }
   return Changed;
