@@ -219,7 +219,6 @@ Options:\n\
   --components      List of all possible components.\n\
   --cppflags        C preprocessor flags for files that include LLVM headers.\n\
   --cxxflags        C++ compiler flags for files that include LLVM headers.\n\
-  --quote-paths     Quote and escape paths when needed.\n\
   --has-rtti        Print whether or not LLVM was built with rtti (YES or NO).\n\
   --help            Print a summary of llvm-config arguments.\n\
   --host-target     Target triple used to configure LLVM.\n\
@@ -234,6 +233,7 @@ Options:\n\
   --link-static     Link the component libraries statically.\n\
   --obj-root        Print the object root used to build LLVM.\n\
   --prefix          Print the installation prefix.\n\
+  --quote-paths     Quote and escape paths when needed.\n\
   --shared-mode     Print how the provided components can be collectively linked (`shared` or `static`).\n\
   --system-libs     System Libraries needed to link against LLVM components.\n\
   --targets-built   List of all targets currently built.\n\
