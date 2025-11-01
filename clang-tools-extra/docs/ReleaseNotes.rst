@@ -459,6 +459,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by correctly recognizes 
+  const member functions returning lvalues as side-effect-free, preventing 
+  missed transformations.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
