@@ -6734,8 +6734,10 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     // If Arg is declared in the default address space and Param is declared
     // in a non-default address space, perform an implicit address space cast to
     // the parameter type.
-    if (getLangOpts().HIP && getLangOpts().CUDAIsDevice && FD &&
-        FD->getBuiltinID()) {
+    FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda =*/true);
+    bool CallerIsDevice = Caller && (Caller->hasAttr<CUDAGlobalAttr>() ||
+                                     Caller->hasAttr<CUDADeviceAttr>());
+    if (getLangOpts().HIP && CallerIsDevice && FD && FD->getBuiltinID()) {
       for (unsigned Idx = 0; Idx < ArgExprs.size() && Idx < FD->param_size();
           ++Idx) {
         ParmVarDecl *Param = FD->getParamDecl(Idx);
