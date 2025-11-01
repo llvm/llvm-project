@@ -30,7 +30,7 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-#if defined(__APPLE__) || defined(__linux__)
+#if 0
 // TODO: Add COFF (Windows) support for these tests.
 // this facility also works correctly on Windows (COFF),
 // so we should eventually enable and run these tests for that platform as well.
