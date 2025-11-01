@@ -10697,8 +10697,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     //   (S_CSELECT_B64 (non-zero imm), 0)
     if (Def->getOpcode() == AMDGPU::S_OR_B32 &&
         MRI->use_nodbg_empty(Def->getOperand(0).getReg())) {
-      MachineOperand OrOpnd1 = Def->getOperand(1);
-      MachineOperand OrOpnd2 = Def->getOperand(2);
+      const MachineOperand &OrOpnd1 = Def->getOperand(1);
+      const MachineOperand &OrOpnd2 = Def->getOperand(2);
 
       if (OrOpnd1.isReg() && OrOpnd2.isReg() &&
           OrOpnd1.getReg() != OrOpnd2.getReg()) {
