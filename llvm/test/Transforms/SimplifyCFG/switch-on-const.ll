@@ -164,20 +164,9 @@ define void @pr165179(i1 %cond) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[SWITCHBB]]
-; CHECK:       switchbb:
-; CHECK-NEXT:    [[COND1:%.*]] = phi i32 [ 1, [[IF_ELSE]] ], [ -1, [[IF_THEN]] ]
-; CHECK-NEXT:    switch i32 [[COND1]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 1, label [[EXIT:%.*]]
-; CHECK-NEXT:      i32 -1, label [[EXIT]]
-; CHECK-NEXT:    ]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
 ; CHECK:       exit:
 ; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0]]
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
-; CHECK:       default:
-; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   br i1 %cond, label %if.then, label %if.else
@@ -219,10 +208,8 @@ define void @switch_remove_dead_case_phi(i1 %cond1, i1 %cond2) {
 ; CHECK-NEXT:    br label [[SWITCHBB]]
 ; CHECK:       switchbb:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[PHI]], [[IF_ELSE]] ], [ 5, [[IF_THEN]] ]
-; CHECK-NEXT:    switch i32 [[COND]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 1, label [[EXIT:%.*]]
-; CHECK-NEXT:      i32 -1, label [[EXIT]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[COND3:%.*]] = icmp eq i32 [[COND]], -1
+; CHECK-NEXT:    br i1 [[COND3]], label [[EXIT:%.*]], label [[DEFAULT:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
@@ -265,10 +252,8 @@ define void @switch_remove_dead_case_select(i1 %cond1, i1 %cond2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = select i1 [[COND1:%.*]], i32 -1, i32 3
 ; CHECK-NEXT:    [[Y:%.*]] = select i1 [[COND2:%.*]], i32 [[X]], i32 5
-; CHECK-NEXT:    switch i32 [[Y]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:      i32 1, label [[EXIT:%.*]]
-; CHECK-NEXT:      i32 -1, label [[EXIT]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[Y]], -1
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[DEFAULT:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       exit:
