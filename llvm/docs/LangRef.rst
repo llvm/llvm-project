@@ -668,7 +668,7 @@ representation is not just an integer address are called "non-integral".
 Non-integral pointers have at least one of the following three properties:
 
 * the pointer representation contains non-address bits
-* the pointer representation is unstable (may changed at any time in a
+* the pointer representation is unstable (may change at any time in a
   target-specific way)
 * the pointer representation has external state
 
@@ -757,7 +757,7 @@ The following restrictions apply to IR level optimization passes:
 
 The ``inttoptr`` instruction does not recreate the external state and therefore
 it is target dependent whether it can be used to create a dereferenceable
-pointer. In general passes should assume that the result of such an inttoptr
+pointer. In general passes should assume that the result of such an ``inttoptr``
 is not dereferenceable. For example, on CHERI targets an ``inttoptr`` will
 yield a capability with the external state (the validity tag bit) set to zero,
 which will cause any dereference to trap.
@@ -784,7 +784,7 @@ be performed as loads and stores of the correct type since stores of other
 types may not propagate the external data.
 Therefore it is not legal to convert an existing load/store (or a
 ``llvm.memcpy`` / ``llvm.memmove`` intrinsic) of pointer types with external
-state to a load/store of an integer type with same bitwidth, as that may drop
+state to a load/store of an integer type with the same bitwidth, as that may drop
 the external state.
 
 
@@ -806,7 +806,7 @@ Global variables can optionally specify a :ref:`linkage type <linkage>`.
 Either global variable definitions or declarations may have an explicit section
 to be placed in and may have an optional explicit alignment specified. If there
 is a mismatch between the explicit or inferred section information for the
-variable declaration and its definition the resulting behavior is undefined.
+variable declaration and its definition, the resulting behavior is undefined.
 
 A variable may be defined as a global ``constant``, which indicates that
 the contents of the variable will **never** be modified (enabling better
@@ -1334,7 +1334,7 @@ Currently, only the following parameter attributes are defined:
     The byval type argument indicates the in-memory value type.
 
     The byval attribute also supports specifying an alignment with the
-    align attribute. It indicates the alignment of the stack slot to
+    ``align`` attribute. It indicates the alignment of the stack slot to
     form and the known alignment of the pointer specified to the call
     site. If the alignment is not specified, then the code generator
     makes a target-specific assumption.
@@ -1355,7 +1355,7 @@ Currently, only the following parameter attributes are defined:
 
     This is not a valid attribute for return values.
 
-    The alignment for an ``byref`` parameter can be explicitly
+    The alignment for a ``byref`` parameter can be explicitly
     specified by combining it with the ``align`` attribute, similar to
     ``byval``. If the alignment is not specified, then the code generator
     makes a target-specific assumption.
@@ -1382,7 +1382,7 @@ Currently, only the following parameter attributes are defined:
     The preallocated attribute requires a type argument.
 
     The preallocated attribute also supports specifying an alignment with the
-    align attribute. It indicates the alignment of the stack slot to
+    ``align`` attribute. It indicates the alignment of the stack slot to
     form and the known alignment of the pointer specified to the call
     site. If the alignment is not specified, then the code generator
     makes a target-specific assumption.
@@ -1550,7 +1550,7 @@ Currently, only the following parameter attributes are defined:
 
 ``nonnull``
     This indicates that the parameter or return pointer is not null. This
-    attribute may only be applied to pointer typed parameters. This is not
+    attribute may only be applied to pointer-typed parameters. This is not
     checked or enforced by LLVM; if the parameter or return pointer is null,
     :ref:`poison value <poisonvalues>` is returned or passed instead.
     The ``nonnull`` attribute should be combined with the ``noundef`` attribute
@@ -1558,7 +1558,7 @@ Currently, only the following parameter attributes are defined:
 
 ``dereferenceable(<n>)``
     This indicates that the parameter or return pointer is dereferenceable. This
-    attribute may only be applied to pointer typed parameters. A pointer that
+    attribute may only be applied to pointer-typed parameters. A pointer that
     is dereferenceable can be loaded from speculatively without a risk of
     trapping. The number of bytes known to be dereferenceable must be provided
     in parentheses. It is legal for the number of bytes to be less than the
@@ -1584,7 +1584,7 @@ Currently, only the following parameter attributes are defined:
     implies that a pointer is at least one of ``dereferenceable(<n>)``
     or ``null`` (i.e., it may be both ``null`` and
     ``dereferenceable(<n>)``). This attribute may only be applied to
-    pointer typed parameters.
+    pointer-typed parameters.
 
 ``swiftself``
     This indicates that the parameter is the self/context parameter. This is not
@@ -1601,7 +1601,7 @@ Currently, only the following parameter attributes are defined:
 
 ``swifterror``
     This attribute is motivated to model and optimize Swift error handling. It
-    can be applied to a parameter with pointer to pointer type or a
+    can be applied to a parameter with pointer-to-pointer type or a
     pointer-sized alloca. At the call site, the actual argument that corresponds
     to a ``swifterror`` parameter has to come from a ``swifterror`` alloca or
     the ``swifterror`` parameter of the caller. A ``swifterror`` value (either
