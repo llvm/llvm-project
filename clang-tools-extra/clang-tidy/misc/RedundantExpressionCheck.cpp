@@ -29,7 +29,6 @@ using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
 
 namespace clang::tidy::misc {
-namespace {
 using llvm::APSInt;
 
 static constexpr llvm::StringLiteral KnownBannedMacroNames[] = {
@@ -420,6 +419,8 @@ markDuplicateOperands(const TExpr *TheExpr,
   return Duplicates.any();
 }
 
+namespace {
+
 AST_MATCHER(Expr, isIntegerConstantExpr) {
   if (Node.isInstantiationDependent())
     return false;
@@ -469,6 +470,8 @@ AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<llvm::StringLiteral>, Names) {
   }
   return false;
 }
+
+} // namespace
 
 // Returns a matcher for integer constant expressions.
 static ast_matchers::internal::Matcher<Expr>
@@ -805,7 +808,8 @@ static bool isSameRawIdentifierToken(const Token &T1, const Token &T2,
          StringRef(SM.getCharacterData(T2.getLocation()), T2.getLength());
 }
 
-bool isTokAtEndOfExpr(SourceRange ExprSR, Token T, const SourceManager &SM) {
+static bool isTokAtEndOfExpr(SourceRange ExprSR, Token T,
+                             const SourceManager &SM) {
   return SM.getExpansionLoc(ExprSR.getEnd()) == T.getLocation();
 }
 
@@ -921,7 +925,6 @@ static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
 
   return false;
 }
-} // namespace
 
 void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto BannedIntegerLiteral =

@@ -112,7 +112,7 @@ integer :: i,j
 ! CHECK:                 omp.distribute {
 ! CHECK:                   omp.wsloop {
 ! CHECK:                     omp.simd private({{.*}}) {
-! CHECK:                       omp.loop_nest (%[[I_IV:.*]], %[[J_IV:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) {
+! CHECK:                       omp.loop_nest (%[[I_IV:.*]], %[[J_IV:.*]]) : i32 = ({{.*}}) to ({{.*}}) inclusive step ({{.*}}) collapse(2) {
 ! CHECK:                         %[[Y_MAX_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}y_max"}
 
 ! CHECK:                         %[[I_UB:.*]] = fir.load %[[X_MAX_MAPPED]]#0 : !fir.ref<i32>

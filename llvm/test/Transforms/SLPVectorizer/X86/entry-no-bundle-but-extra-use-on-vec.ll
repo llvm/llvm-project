@@ -7,11 +7,11 @@ define void @test(ptr %nExp, float %0, i1 %cmp, float %1) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[NEXP]], align 4
-; CHECK-NEXT:    [[DIV_1_I_I:%.*]] = fmul float [[TMP4]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[NEXP]], align 4
+; CHECK-NEXT:    [[DIV_1_I_I:%.*]] = fmul float [[TMP11]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[DIV_1_I_I]], i32 0
 ; CHECK-NEXT:    br label %[[IF_END]]

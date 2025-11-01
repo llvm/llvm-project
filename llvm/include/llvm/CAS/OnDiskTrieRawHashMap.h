@@ -133,38 +133,38 @@ public:
     bool IsValue = false;
   };
 
-  class pointer;
-  class const_pointer : public PointerImpl<ConstValueProxy> {
+  class OnDiskPtr;
+  class ConstOnDiskPtr : public PointerImpl<ConstValueProxy> {
   public:
-    const_pointer() = default;
+    ConstOnDiskPtr() = default;
 
   private:
-    friend class pointer;
+    friend class OnDiskPtr;
     friend class OnDiskTrieRawHashMap;
-    using const_pointer::PointerImpl::PointerImpl;
+    using ConstOnDiskPtr::PointerImpl::PointerImpl;
   };
 
-  class pointer : public PointerImpl<ValueProxy> {
+  class OnDiskPtr : public PointerImpl<ValueProxy> {
   public:
-    operator const_pointer() const {
-      return const_pointer(Value, getOffset(), IsValue);
+    operator ConstOnDiskPtr() const {
+      return ConstOnDiskPtr(Value, getOffset(), IsValue);
     }
 
-    pointer() = default;
+    OnDiskPtr() = default;
 
   private:
     friend class OnDiskTrieRawHashMap;
-    using pointer::PointerImpl::PointerImpl;
+    using OnDiskPtr::PointerImpl::PointerImpl;
   };
 
   /// Find the value from hash.
   ///
   /// \returns pointer to the value if exists, otherwise returns a non-value
   /// pointer that evaluates to `false` when convert to boolean.
-  const_pointer find(ArrayRef<uint8_t> Hash) const;
+  ConstOnDiskPtr find(ArrayRef<uint8_t> Hash) const;
 
   /// Helper function to recover a pointer into the trie from file offset.
-  Expected<const_pointer> recoverFromFileOffset(FileOffset Offset) const;
+  Expected<ConstOnDiskPtr> recoverFromFileOffset(FileOffset Offset) const;
 
   using LazyInsertOnConstructCB =
       function_ref<void(FileOffset TentativeOffset, ValueProxy TentativeValue)>;
@@ -186,11 +186,11 @@ public:
   /// The in-memory \a TrieRawHashMap uses LazyAtomicPointer to synchronize
   /// simultaneous writes, but that seems dangerous to use in a memory-mapped
   /// file in case a process crashes in the busy state.
-  Expected<pointer> insertLazy(ArrayRef<uint8_t> Hash,
-                               LazyInsertOnConstructCB OnConstruct = nullptr,
-                               LazyInsertOnLeakCB OnLeak = nullptr);
+  Expected<OnDiskPtr> insertLazy(ArrayRef<uint8_t> Hash,
+                                 LazyInsertOnConstructCB OnConstruct = nullptr,
+                                 LazyInsertOnLeakCB OnLeak = nullptr);
 
-  Expected<pointer> insert(const ConstValueProxy &Value) {
+  Expected<OnDiskPtr> insert(const ConstValueProxy &Value) {
     return insertLazy(Value.Hash, [&](FileOffset, ValueProxy Allocated) {
       assert(Allocated.Hash == Value.Hash);
       assert(Allocated.Data.size() == Value.Data.size());

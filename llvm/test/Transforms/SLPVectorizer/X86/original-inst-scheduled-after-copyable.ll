@@ -13,9 +13,9 @@ define void @test(ptr %0, i32 %1, i32 %2) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i32 [[ADD_NARROWED_I_I]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], -1
 ; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x i32>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr null)
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x i32> <i32 1, i32 poison>, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP33:%.*]] = and <2 x i32> [[TMP17]], [[TMP32]]
+; CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr null)
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext <2 x i32> [[TMP33]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x i32> [[TMP33]], <2 x i32> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <2 x i32> [[TMP20]], i32 [[TMP10]], i32 0

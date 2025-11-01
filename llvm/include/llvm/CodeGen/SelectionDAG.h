@@ -1113,7 +1113,8 @@ public:
                                       SDValue Mask, SDValue EVL);
 
   /// Returns sum of the base pointer and offset.
-  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap by default.
+  /// Unlike getObjectPtrOffset this does not set NoUnsignedWrap and InBounds by
+  /// default.
   LLVM_ABI SDValue
   getMemBasePlusOffset(SDValue Base, TypeSize Offset, const SDLoc &DL,
                        const SDNodeFlags Flags = SDNodeFlags());
@@ -1123,15 +1124,18 @@ public:
 
   /// Create an add instruction with appropriate flags when used for
   /// addressing some offset of an object. i.e. if a load is split into multiple
-  /// components, create an add nuw from the base pointer to the offset.
+  /// components, create an add nuw (or ptradd nuw inbounds) from the base
+  /// pointer to the offset.
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, TypeSize Offset) {
-    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
+    return getMemBasePlusOffset(
+        Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap | SDNodeFlags::InBounds);
   }
 
   SDValue getObjectPtrOffset(const SDLoc &SL, SDValue Ptr, SDValue Offset) {
     // The object itself can't wrap around the address space, so it shouldn't be
     // possible for the adds of the offsets to the split parts to overflow.
-    return getMemBasePlusOffset(Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap);
+    return getMemBasePlusOffset(
+        Ptr, Offset, SL, SDNodeFlags::NoUnsignedWrap | SDNodeFlags::InBounds);
   }
 
   /// Return a new CALLSEQ_START node, that starts new call frame, in which
@@ -1850,9 +1854,11 @@ public:
   /// Get the specified node if it's already available, or else return NULL.
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
                                    ArrayRef<SDValue> Ops,
-                                   const SDNodeFlags Flags);
+                                   const SDNodeFlags Flags,
+                                   bool AllowCommute = false);
   LLVM_ABI SDNode *getNodeIfExists(unsigned Opcode, SDVTList VTList,
-                                   ArrayRef<SDValue> Ops);
+                                   ArrayRef<SDValue> Ops,
+                                   bool AllowCommute = false);
 
   /// Check if a node exists without modifying its flags.
   LLVM_ABI bool doesNodeExist(unsigned Opcode, SDVTList VTList,

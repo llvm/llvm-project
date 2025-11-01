@@ -126,8 +126,7 @@ hash_code hash_value(const ComplexValue &Arg) {
 } // end namespace
 typedef SmallVector<struct ComplexValue, 2> ComplexValues;
 
-namespace llvm {
-template <> struct DenseMapInfo<ComplexValue> {
+template <> struct llvm::DenseMapInfo<ComplexValue> {
   static inline ComplexValue getEmptyKey() {
     return {DenseMapInfo<Value *>::getEmptyKey(),
             DenseMapInfo<Value *>::getEmptyKey()};
@@ -144,7 +143,6 @@ template <> struct DenseMapInfo<ComplexValue> {
     return LHS.Real == RHS.Real && LHS.Imag == RHS.Imag;
   }
 };
-} // end namespace llvm
 
 namespace {
 template <typename T, typename IterT>

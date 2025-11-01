@@ -529,13 +529,15 @@ inline std::string join_items(Sep Separator, Args &&... Items) {
 class ListSeparator {
   bool First = true;
   StringRef Separator;
+  StringRef Prefix;
 
 public:
-  ListSeparator(StringRef Separator = ", ") : Separator(Separator) {}
+  ListSeparator(StringRef Separator = ", ", StringRef Prefix = "")
+      : Separator(Separator), Prefix(Prefix) {}
   operator StringRef() {
     if (First) {
       First = false;
-      return {};
+      return Prefix;
     }
     return Separator;
   }

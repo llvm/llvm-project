@@ -21,6 +21,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 #include <numeric>
 
 #define DEBUG_TYPE "vector-shape-cast-lowering"
@@ -166,10 +167,7 @@ class ShapeCastOpRewritePattern : public OpRewritePattern<vector::ShapeCastOp> {
     const VectorType resultType = shapeCast.getResultVectorType();
     const ArrayRef<int64_t> resultShape = resultType.getShape();
 
-    const int64_t nSlices =
-        std::accumulate(sourceShape.begin(), sourceShape.begin() + sourceDim, 1,
-                        std::multiplies<int64_t>());
-
+    const int64_t nSlices = llvm::product_of(sourceShape.take_front(sourceDim));
     SmallVector<int64_t> extractIndex(sourceDim, 0);
     SmallVector<int64_t> insertIndex(resultDim, 0);
     Value result = ub::PoisonOp::create(rewriter, loc, resultType);

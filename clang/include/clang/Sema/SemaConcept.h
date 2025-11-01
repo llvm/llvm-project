@@ -257,6 +257,7 @@ public:
     case ConstraintKind::FoldExpanded:
       return FoldExpanded.Pattern->getBeginLoc();
     }
+    llvm_unreachable("Unknown ConstraintKind enum");
   }
 
   SourceLocation getEndLoc() const {
@@ -270,6 +271,7 @@ public:
     case ConstraintKind::FoldExpanded:
       return FoldExpanded.Pattern->getEndLoc();
     }
+    llvm_unreachable("Unknown ConstraintKind enum");
   }
 
   SourceRange getSourceRange() const { return {getBeginLoc(), getEndLoc()}; }

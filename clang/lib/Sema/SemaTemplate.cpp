@@ -318,7 +318,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
     }
   }
 
-  if (isPackProducingBuiltinTemplateName(Template) &&
+  if (isPackProducingBuiltinTemplateName(Template) && S &&
       S->getTemplateParamParent() == nullptr)
     Diag(Name.getBeginLoc(), diag::err_builtin_pack_outside_template) << TName;
   // Recover by returning the template, even though we would never be able to
@@ -408,9 +408,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     IsDependent = !LookupCtx && ObjectType->isDependentType();
     assert((IsDependent || !ObjectType->isIncompleteType() ||
             !ObjectType->getAs<TagType>() ||
-            ObjectType->castAs<TagType>()
-                ->getOriginalDecl()
-                ->isEntityBeingDefined()) &&
+            ObjectType->castAs<TagType>()->getDecl()->isEntityBeingDefined()) &&
            "Caller should have completed object type");
 
     // Template names cannot appear inside an Objective-C class or object type
@@ -1819,7 +1817,7 @@ public:
   }
 
   bool VisitTagType(const TagType *T) override {
-    return TraverseDecl(T->getOriginalDecl());
+    return TraverseDecl(T->getDecl());
   }
 
   bool TraverseDecl(const Decl *D) override {
@@ -2790,7 +2788,7 @@ struct DependencyChecker : DynamicRecursiveASTVisitor {
     // An InjectedClassNameType will never have a dependent template name,
     // so no need to traverse it.
     return TraverseTemplateArguments(
-        T->getTemplateArgs(T->getOriginalDecl()->getASTContext()));
+        T->getTemplateArgs(T->getDecl()->getASTContext()));
   }
 };
 } // end anonymous namespace
@@ -2914,7 +2912,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     if (const EnumType *EnumT = T->getAsCanonical<EnumType>()) {
       // FIXME: Forward-declared enums require a TSK_ExplicitSpecialization
       // check here.
-      EnumDecl *Enum = EnumT->getOriginalDecl();
+      EnumDecl *Enum = EnumT->getDecl();
 
       // Get to the parent type.
       if (TypeDecl *Parent = dyn_cast<TypeDecl>(Enum->getParent()))
@@ -3352,7 +3350,7 @@ static QualType builtinCommonTypeImpl(Sema &S, ElaboratedTypeKeyword Keyword,
 }
 
 static bool isInVkNamespace(const RecordType *RT) {
-  DeclContext *DC = RT->getOriginalDecl()->getDeclContext();
+  DeclContext *DC = RT->getDecl()->getDeclContext();
   if (!DC)
     return false;
 
@@ -3369,9 +3367,8 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
   if (auto *RT = OperandArg->getAsCanonical<RecordType>()) {
     bool Literal = false;
     SourceLocation LiteralLoc;
-    if (isInVkNamespace(RT) && RT->getOriginalDecl()->getName() == "Literal") {
-      auto SpecDecl =
-          dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
+    if (isInVkNamespace(RT) && RT->getDecl()->getName() == "Literal") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
       assert(SpecDecl);
 
       const TemplateArgumentList &LiteralArgs = SpecDecl->getTemplateArgs();
@@ -3382,9 +3379,8 @@ static SpirvOperand checkHLSLSpirvTypeOperand(Sema &SemaRef,
     }
 
     if (RT && isInVkNamespace(RT) &&
-        RT->getOriginalDecl()->getName() == "integral_constant") {
-      auto SpecDecl =
-          dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
+        RT->getDecl()->getName() == "integral_constant") {
+      auto SpecDecl = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
       assert(SpecDecl);
 
       const TemplateArgumentList &ConstantArgs = SpecDecl->getTemplateArgs();
@@ -3822,14 +3818,19 @@ QualType Sema::CheckTemplateIdType(ElaboratedTypeKeyword Keyword,
         AliasTemplate->getTemplateParameters()->getDepth());
 
     LocalInstantiationScope Scope(*this);
-    InstantiatingTemplate Inst(
-        *this, /*PointOfInstantiation=*/TemplateLoc,
-        /*Entity=*/AliasTemplate,
-        /*TemplateArgs=*/TemplateArgLists.getInnermost());
 
     // Diagnose uses of this alias.
     (void)DiagnoseUseOfDecl(AliasTemplate, TemplateLoc);
 
+    // FIXME: The TemplateArgs passed here are not used for the context note,
+    // nor they should, because this note will be pointing to the specialization
+    // anyway. These arguments are needed for a hack for instantiating lambdas
+    // in the pattern of the alias. In getTemplateInstantiationArgs, these
+    // arguments will be used for collating the template arguments needed to
+    // instantiate the lambda.
+    InstantiatingTemplate Inst(*this, /*PointOfInstantiation=*/TemplateLoc,
+                               /*Entity=*/AliasTemplate,
+                               /*TemplateArgs=*/CTAI.SugaredConverted);
     if (Inst.isInvalid())
       return QualType();
 
@@ -4105,7 +4106,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
 
   // Check the tag kind
   if (const RecordType *RT = Result->getAs<RecordType>()) {
-    RecordDecl *D = RT->getOriginalDecl();
+    RecordDecl *D = RT->getDecl();
 
     IdentifierInfo *Id = D->getIdentifier();
     assert(Id && "templated class must have an identifier");
@@ -6378,11 +6379,11 @@ bool UnnamedLocalNoLinkageFinder::VisitDeducedTemplateSpecializationType(
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitRecordType(const RecordType* T) {
-  return VisitTagDecl(T->getOriginalDecl()->getDefinitionOrSelf());
+  return VisitTagDecl(T->getDecl()->getDefinitionOrSelf());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitEnumType(const EnumType* T) {
-  return VisitTagDecl(T->getOriginalDecl()->getDefinitionOrSelf());
+  return VisitTagDecl(T->getDecl()->getDefinitionOrSelf());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitTemplateTypeParmType(
@@ -6407,7 +6408,7 @@ bool UnnamedLocalNoLinkageFinder::VisitTemplateSpecializationType(
 
 bool UnnamedLocalNoLinkageFinder::VisitInjectedClassNameType(
                                               const InjectedClassNameType* T) {
-  return VisitTagDecl(T->getOriginalDecl()->getDefinitionOrSelf());
+  return VisitTagDecl(T->getDecl()->getDefinitionOrSelf());
 }
 
 bool UnnamedLocalNoLinkageFinder::VisitDependentNameType(

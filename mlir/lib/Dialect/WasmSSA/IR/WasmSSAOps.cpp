@@ -12,6 +12,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/SymbolTable.h"
@@ -38,28 +39,6 @@ void printElseRegion(OpAsmPrinter &opPrinter, Operation *op,
     return;
   opPrinter.printKeywordOrString("else ");
   opPrinter.printRegion(elseRegion);
-}
-
-ParseResult parseWasmVisibility(OpAsmParser &opParser, StringAttr &visibility) {
-  std::string keyword;
-  auto initLocation = opParser.getCurrentLocation();
-  std::ignore = opParser.parseOptionalKeywordOrString(&keyword);
-  if (keyword == "nested" or keyword == "") {
-    visibility = StringAttr::get(opParser.getContext(), "nested");
-    return ParseResult::success();
-  }
-
-  if (keyword == "public" || keyword == "private") {
-    visibility = StringAttr::get(opParser.getContext(), keyword);
-    return ParseResult::success();
-  }
-  opParser.emitError(initLocation, "expecting symbol visibility");
-  return ParseResult::failure();
-}
-
-void printWasmVisibility(OpAsmPrinter &opPrinter, Operation *op,
-                         Attribute visibility) {
-  opPrinter.printKeywordOrString(cast<StringAttr>(visibility).strref());
 }
 } // namespace
 
@@ -167,10 +146,23 @@ Block *FuncOp::addEntryBlock() {
 
 void FuncOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                    StringRef symbol, FunctionType funcType) {
-  FuncOp::build(odsBuilder, odsState, symbol, funcType, {}, {}, "nested");
+  FuncOp::build(odsBuilder, odsState, symbol, funcType, {}, {});
 }
 
 ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto *ctx = parser.getContext();
+  std::string visibilityString;
+  auto loc = parser.getNameLoc();
+  ParseResult res = parser.parseOptionalKeywordOrString(&visibilityString);
+  bool exported{false};
+  if (res.succeeded()) {
+    if (visibilityString != "exported")
+      return parser.emitError(
+                 loc, "expecting either `exported` or symbol name. got ")
+             << visibilityString;
+    exported = true;
+  }
+
   auto buildFuncType = [&parser](Builder &builder, ArrayRef<Type> argTypes,
                                  ArrayRef<Type> results,
                                  function_interface_impl::VariadicFlag,
@@ -191,11 +183,13 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
     return builder.getFunctionType(argTypesWithoutLocal, results);
   };
-
-  return function_interface_impl::parseFunctionOp(
+  auto funcParseRes = function_interface_impl::parseFunctionOp(
       parser, result, /*allowVariadic=*/false,
       getFunctionTypeAttrName(result.name), buildFuncType,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
+  if (exported)
+    result.addAttribute(getExportedAttrName(result.name), UnitAttr::get(ctx));
+  return funcParseRes;
 }
 
 LogicalResult FuncOp::verifyBody() {
@@ -224,9 +218,18 @@ LogicalResult FuncOp::verifyBody() {
 }
 
 void FuncOp::print(OpAsmPrinter &p) {
+  /// If exported, print it before and mask it before printing
+  /// using generic interface.
+  auto exported = getExported();
+  if (exported) {
+    p << " exported";
+    removeExportedAttr();
+  }
   function_interface_impl::printFunctionOp(
       p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
       getArgAttrsAttrName(), getResAttrsAttrName());
+  if (exported)
+    setExported(true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -237,38 +240,37 @@ void FuncImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                          StringRef symbol, StringRef moduleName,
                          StringRef importName, FunctionType type) {
   FuncImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
-                      type, {}, {}, odsBuilder.getStringAttr("nested"));
+                      type, {}, {});
 }
 
 //===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
-
-void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                     StringRef symbol, Type type, bool isMutable) {
-  GlobalOp::build(odsBuilder, odsState, symbol, type, isMutable,
-                  odsBuilder.getStringAttr("nested"));
-}
-
 // Custom formats
 ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr symbolName;
   Type globalType;
   auto *ctx = parser.getContext();
-  ParseResult res = parser.parseSymbolName(
-      symbolName, SymbolTable::getSymbolAttrName(), result.attributes);
+  std::string visibilityString;
+  auto loc = parser.getNameLoc();
+  ParseResult res = parser.parseOptionalKeywordOrString(&visibilityString);
+  if (res.succeeded()) {
+    if (visibilityString != "exported")
+      return parser.emitError(
+                 loc, "expecting either `exported` or symbol name. got ")
+             << visibilityString;
+    result.addAttribute(getExportedAttrName(result.name), UnitAttr::get(ctx));
+  }
 
+  res = parser.parseSymbolName(symbolName, SymbolTable::getSymbolAttrName(),
+                               result.attributes);
   res = parser.parseType(globalType);
   result.addAttribute(getTypeAttrName(result.name), TypeAttr::get(globalType));
   std::string mutableString;
   res = parser.parseOptionalKeywordOrString(&mutableString);
   if (res.succeeded() && mutableString == "mutable")
     result.addAttribute("isMutable", UnitAttr::get(ctx));
-  std::string visibilityString;
-  res = parser.parseOptionalKeywordOrString(&visibilityString);
-  if (res.succeeded())
-    result.addAttribute("sym_visibility",
-                        StringAttr::get(ctx, visibilityString));
+
   res = parser.parseColon();
   Region *globalInitRegion = result.addRegion();
   res = parser.parseRegion(*globalInitRegion);
@@ -276,11 +278,11 @@ ParseResult GlobalOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void GlobalOp::print(OpAsmPrinter &printer) {
+  if (getExported())
+    printer << " exported";
   printer << " @" << getSymName().str() << " " << getType();
   if (getIsMutable())
     printer << " mutable";
-  if (auto vis = getSymVisibility())
-    printer << " " << *vis;
   printer << " :";
   Region &body = getRegion();
   if (!body.empty()) {
@@ -319,13 +321,6 @@ GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // GlobalImportOp
 //===----------------------------------------------------------------------===//
 
-void GlobalImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                           StringRef symbol, StringRef moduleName,
-                           StringRef importName, Type type, bool isMutable) {
-  GlobalImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
-                        type, isMutable, odsBuilder.getStringAttr("nested"));
-}
-
 ParseResult GlobalImportOp::parse(OpAsmParser &parser, OperationState &result) {
   auto *ctx = parser.getContext();
   ParseResult res = parseImportOp(parser, result);
@@ -335,12 +330,8 @@ ParseResult GlobalImportOp::parse(OpAsmParser &parser, OperationState &result) {
   res = parser.parseOptionalKeywordOrString(&mutableOrSymVisString);
   if (res.succeeded() && mutableOrSymVisString == "mutable") {
     result.addAttribute("isMutable", UnitAttr::get(ctx));
-    res = parser.parseOptionalKeywordOrString(&mutableOrSymVisString);
   }
 
-  if (res.succeeded())
-    result.addAttribute("sym_visibility",
-                        StringAttr::get(ctx, mutableOrSymVisString));
   res = parser.parseColon();
 
   Type importedType;
@@ -356,8 +347,6 @@ void GlobalImportOp::print(OpAsmPrinter &printer) {
           << "\" as @" << getSymName();
   if (getIsMutable())
     printer << " mutable";
-  if (auto vis = getSymVisibility())
-    printer << " " << *vis;
   printer << " : " << getType();
 }
 
@@ -431,27 +420,6 @@ LogicalResult LocalTeeOp::verify() {
 Block *LoopOp::getLabelTarget() { return &getBody().front(); }
 
 //===----------------------------------------------------------------------===//
-// MemOp
-//===----------------------------------------------------------------------===//
-
-void MemOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                  StringRef symbol, LimitType limit) {
-  MemOp::build(odsBuilder, odsState, symbol, limit,
-               odsBuilder.getStringAttr("nested"));
-}
-
-//===----------------------------------------------------------------------===//
-// MemImportOp
-//===----------------------------------------------------------------------===//
-
-void MemImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                        StringRef symbol, StringRef moduleName,
-                        StringRef importName, LimitType limits) {
-  MemImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
-                     limits, odsBuilder.getStringAttr("nested"));
-}
-
-//===----------------------------------------------------------------------===//
 // ReinterpretOp
 //===----------------------------------------------------------------------===//
 
@@ -471,24 +439,3 @@ LogicalResult ReinterpretOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void ReturnOp::build(OpBuilder &odsBuilder, OperationState &odsState) {}
-
-//===----------------------------------------------------------------------===//
-// TableOp
-//===----------------------------------------------------------------------===//
-
-void TableOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                    StringRef symbol, TableType type) {
-  TableOp::build(odsBuilder, odsState, symbol, type,
-                 odsBuilder.getStringAttr("nested"));
-}
-
-//===----------------------------------------------------------------------===//
-// TableImportOp
-//===----------------------------------------------------------------------===//
-
-void TableImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          StringRef symbol, StringRef moduleName,
-                          StringRef importName, TableType type) {
-  TableImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
-                       type, odsBuilder.getStringAttr("nested"));
-}

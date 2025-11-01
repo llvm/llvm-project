@@ -1121,7 +1121,7 @@ private:
     void setTypeInfo(AsmTypeInfo Type) { CurType = Type; }
   };
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt,
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {},
              bool MatchingInlineAsm = false) {
     MCAsmParser &Parser = getParser();
     if (MatchingInlineAsm) {
@@ -3514,15 +3514,16 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // xacquire <insn>      ; xacquire must be accompanied by 'lock'
   bool IsPrefix =
       StringSwitch<bool>(Name)
-          .Cases("cs", "ds", "es", "fs", "gs", "ss", true)
-          .Cases("rex64", "data32", "data16", "addr32", "addr16", true)
-          .Cases("xacquire", "xrelease", true)
-          .Cases("acquire", "release", isParsingIntelSyntax())
+          .Cases({"cs", "ds", "es", "fs", "gs", "ss"}, true)
+          .Cases({"rex64", "data32", "data16", "addr32", "addr16"}, true)
+          .Cases({"xacquire", "xrelease"}, true)
+          .Cases({"acquire", "release"}, isParsingIntelSyntax())
           .Default(false);
 
   auto isLockRepeatNtPrefix = [](StringRef N) {
     return StringSwitch<bool>(N)
-        .Cases("lock", "rep", "repe", "repz", "repne", "repnz", "notrack", true)
+        .Cases({"lock", "rep", "repe", "repz", "repne", "repnz", "notrack"},
+               true)
         .Default(false);
   };
 
@@ -3532,10 +3533,10 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   while (isLockRepeatNtPrefix(Name.lower())) {
     unsigned Prefix =
         StringSwitch<unsigned>(Name)
-            .Cases("lock", "lock", X86::IP_HAS_LOCK)
-            .Cases("rep", "repe", "repz", X86::IP_HAS_REPEAT)
-            .Cases("repne", "repnz", X86::IP_HAS_REPEAT_NE)
-            .Cases("notrack", "notrack", X86::IP_HAS_NOTRACK)
+            .Case("lock", X86::IP_HAS_LOCK)
+            .Cases({"rep", "repe", "repz"}, X86::IP_HAS_REPEAT)
+            .Cases({"repne", "repnz"}, X86::IP_HAS_REPEAT_NE)
+            .Case("notrack", X86::IP_HAS_NOTRACK)
             .Default(X86::IP_NO_PREFIX); // Invalid prefix (impossible)
     Flags |= Prefix;
     if (getLexer().is(AsmToken::EndOfStatement)) {
@@ -4321,7 +4322,7 @@ bool X86AsmParser::matchAndEmitATTInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  SMRange EmptyRange = std::nullopt;
+  SMRange EmptyRange;
   // In 16-bit mode, if data32 is specified, temporarily switch to 32-bit mode
   // when matching the instruction.
   if (ForcedDataPrefix == X86::Is32Bit)
@@ -4547,7 +4548,7 @@ bool X86AsmParser::matchAndEmitIntelInstruction(
     SMLoc IDLoc, unsigned &Opcode, MCInst &Inst, OperandVector &Operands,
     MCStreamer &Out, uint64_t &ErrorInfo, bool MatchingInlineAsm) {
   X86Operand &Op = static_cast<X86Operand &>(*Operands[0]);
-  SMRange EmptyRange = std::nullopt;
+  SMRange EmptyRange;
   // Find one unsized memory operand, if present.
   X86Operand *UnsizedMemOp = nullptr;
   for (const auto &Op : Operands) {

@@ -367,11 +367,16 @@ private:
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
   const Symbol *ResolveForward(const Symbol &);
-  std::pair<const Symbol *, bool /* failure due ambiguity */> ResolveGeneric(
-      const Symbol &, const ActualArguments &, const AdjustActuals &,
-      bool isSubroutine, bool mightBeStructureConstructor = false);
-  void EmitGenericResolutionError(
-      const Symbol &, bool dueToNullActuals, bool isSubroutine);
+  struct GenericResolution {
+    const Symbol *specific{nullptr};
+    bool failedDueToAmbiguity{false};
+    SymbolVector tried{};
+  };
+  GenericResolution ResolveGeneric(const Symbol &, const ActualArguments &,
+      const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
+      bool mightBeStructureConstructor = false);
+  void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
+      bool isSubroutine, ActualArguments &, const SymbolVector &);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,
@@ -535,6 +540,7 @@ public:
     return true;
   }
   void Post(const parser::ComponentDefStmt &) { inComponentDefStmt_ = false; }
+  bool Pre(const parser::KindSelector &) { return !inComponentDefStmt_; }
   bool Pre(const parser::Initialization &x) {
     // Default component initialization expressions (but not DATA-like ones
     // as in DEC STRUCTUREs) were already analyzed in name resolution

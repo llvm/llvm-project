@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/log1pf.h"
-#include "common_constants.h" // Lookup table for (1/f) and log(f)
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FMA.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -18,6 +17,8 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/acosh_float_constants.h"
+#include "src/__support/math/common_constants.h" // Lookup table for (1/f) and log(f)
 
 // This is an algorithm for log10(x) in single precision which is
 // correctly rounded for all rounding modes.
@@ -38,6 +39,7 @@ namespace internal {
 // We don't need to treat denormal and 0
 LIBC_INLINE float log(double x) {
   using namespace acoshf_internal;
+  using namespace common_constants_internal;
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
 
   using FPBits = typename fputil::FPBits<double>;

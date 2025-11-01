@@ -64,15 +64,17 @@ static unsigned getLength(const Expr *E,
   if (!E)
     return 0;
 
-  Expr::EvalResult Length;
   E = E->IgnoreImpCasts();
 
   if (const auto *LengthDRE = dyn_cast<DeclRefExpr>(E))
     if (const auto *LengthVD = dyn_cast<VarDecl>(LengthDRE->getDecl()))
       if (!isa<ParmVarDecl>(LengthVD))
-        if (const Expr *LengthInit = LengthVD->getInit())
+        if (const Expr *LengthInit = LengthVD->getInit();
+            LengthInit && !LengthInit->isValueDependent()) {
+          Expr::EvalResult Length;
           if (LengthInit->EvaluateAsInt(Length, *Result.Context))
             return Length.Val.getInt().getZExtValue();
+        }
 
   if (const auto *LengthIL = dyn_cast<IntegerLiteral>(E))
     return LengthIL->getValue().getZExtValue();
@@ -307,10 +309,9 @@ static void lengthExprHandle(const Expr *LengthExpr,
   // Try to obtain an 'IntegerLiteral' and adjust it.
   if (!IsMacroDefinition) {
     if (const auto *LengthIL = dyn_cast<IntegerLiteral>(LengthExpr)) {
-      size_t NewLength = LengthIL->getValue().getZExtValue() +
-                         (LengthHandle == LengthHandleKind::Increase
-                              ? (isInjectUL(Result) ? 1UL : 1)
-                              : -1);
+      uint64_t NewLength =
+          LengthIL->getValue().getZExtValue() +
+          (LengthHandle == LengthHandleKind::Increase ? 1 : -1);
 
       const auto NewLengthFix = FixItHint::CreateReplacement(
           LengthIL->getSourceRange(),
@@ -822,7 +823,7 @@ void NotNullTerminatedResultCheck::check(
   if (Name.starts_with("mem") || Name.starts_with("wmem"))
     memoryHandlerFunctionFix(Name, Result);
   else if (Name == "strerror_s")
-    strerror_sFix(Result);
+    strerrorSFix(Result);
   else if (Name.ends_with("ncmp"))
     ncmpFix(Name, Result);
   else if (Name.ends_with("xfrm"))
@@ -851,7 +852,7 @@ void NotNullTerminatedResultCheck::memoryHandlerFunctionFix(
   if (Name.ends_with("cpy")) {
     memcpyFix(Name, Result, Diag);
   } else if (Name.ends_with("cpy_s")) {
-    memcpy_sFix(Name, Result, Diag);
+    memcpySFix(Name, Result, Diag);
   } else if (Name.ends_with("move")) {
     memmoveFix(Name, Result, Diag);
   } else if (Name.ends_with("move_s")) {
@@ -888,7 +889,7 @@ void NotNullTerminatedResultCheck::memcpyFix(
     insertNullTerminatorExpr(Name, Result, Diag);
 }
 
-void NotNullTerminatedResultCheck::memcpy_sFix(
+void NotNullTerminatedResultCheck::memcpySFix(
     StringRef Name, const MatchFinder::MatchResult &Result,
     DiagnosticBuilder &Diag) {
   bool IsOverflows = isDestCapacityFix(Result, Diag);
@@ -949,7 +950,7 @@ void NotNullTerminatedResultCheck::memmoveFix(
   lengthArgHandle(LengthHandleKind::Increase, Result, Diag);
 }
 
-void NotNullTerminatedResultCheck::strerror_sFix(
+void NotNullTerminatedResultCheck::strerrorSFix(
     const MatchFinder::MatchResult &Result) {
   auto Diag =
       diag(Result.Nodes.getNodeAs<CallExpr>(FunctionExprName)->getBeginLoc(),

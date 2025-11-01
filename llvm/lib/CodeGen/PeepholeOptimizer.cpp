@@ -196,7 +196,7 @@ public:
   CopyRewriter(MachineInstr &MI) : Rewriter(MI) {
     assert(MI.isCopy() && "Expected copy instruction");
   }
-  virtual ~CopyRewriter() = default;
+  ~CopyRewriter() override = default;
 
   bool getNextRewritableSource(RegSubRegPair &Src,
                                RegSubRegPair &Dst) override {

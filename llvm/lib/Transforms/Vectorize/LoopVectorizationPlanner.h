@@ -280,8 +280,7 @@ public:
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
     VPlan &Plan = *getInsertBlock()->getPlan();
-    VPValue *RuntimeEC =
-        Plan.getOrAddLiveIn(ConstantInt::get(Ty, EC.getKnownMinValue()));
+    VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
     if (EC.isScalable()) {
       VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
       RuntimeEC = EC.getKnownMinValue() == 1
@@ -322,7 +321,13 @@ public:
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
-    return tryInsertInstruction(new VPWidenCastRecipe(Opcode, Op, ResultTy));
+    VPIRFlags Flags;
+    if (Opcode == Instruction::Trunc)
+      Flags = VPIRFlags::TruncFlagsTy(false, false);
+    else if (Opcode == Instruction::ZExt)
+      Flags = VPIRFlags::NonNegFlagsTy(false);
+    return tryInsertInstruction(
+        new VPWidenCastRecipe(Opcode, Op, ResultTy, Flags));
   }
 
   VPScalarIVStepsRecipe *

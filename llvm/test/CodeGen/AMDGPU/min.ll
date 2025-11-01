@@ -6,9 +6,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX11,GFX11-FAKE16 %s
-; TODO: FIXME-TRUE16 - Enable this llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-TRUE16 %s
-; Crashing on v_test_imin_slt_i16
-; LLVM ERROR: Cannot select: 0x5f895f65b050: i16,ch = load<(load (s16) from %ir.b.gep, addrspace 1)>
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-FAKE16 %s
 
 define amdgpu_kernel void @v_test_imin_sle_i32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
@@ -1482,20 +1480,35 @@ define amdgpu_kernel void @v_test_imin_slt_i16(ptr addrspace(1) %out, ptr addrsp
 ; GFX11-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
 ;
-; GFX1250-LABEL: v_test_imin_slt_i16:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
-; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_load_u16 v1, v0, s[2:3] scale_offset
-; GFX1250-NEXT:    global_load_u16 v2, v0, s[6:7] scale_offset
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_min_i16 v1, v1, v2
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-TRUE16-LABEL: v_test_imin_slt_i16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_clause 0x1
+; GFX1250-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX1250-TRUE16-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_clause 0x1
+; GFX1250-TRUE16-NEXT:    global_load_u16 v0, v1, s[2:3] scale_offset
+; GFX1250-TRUE16-NEXT:    global_load_u16 v2, v1, s[6:7] scale_offset
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_min_i16 v0.l, v0.l, v2.l
+; GFX1250-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1] scale_offset
+; GFX1250-TRUE16-NEXT:    s_endpgm
+;
+; GFX1250-FAKE16-LABEL: v_test_imin_slt_i16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX1250-FAKE16-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-FAKE16-NEXT:    global_load_u16 v1, v0, s[2:3] scale_offset
+; GFX1250-FAKE16-NEXT:    global_load_u16 v2, v0, s[6:7] scale_offset
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_min_i16 v1, v1, v2
+; GFX1250-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1] scale_offset
+; GFX1250-FAKE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i16, ptr addrspace(1) %aptr, i32 %tid
   %b.gep = getelementptr inbounds i16, ptr addrspace(1) %bptr, i32 %tid
@@ -2769,20 +2782,35 @@ define amdgpu_kernel void @v_test_umin_ult_i8(ptr addrspace(1) %out, ptr addrspa
 ; GFX11-FAKE16-NEXT:    global_store_b8 v0, v1, s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
 ;
-; GFX1250-LABEL: v_test_umin_ult_i8:
-; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
-; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_load_u8 v1, v0, s[2:3]
-; GFX1250-NEXT:    global_load_u8 v2, v0, s[6:7]
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    v_min_u16 v1, v1, v2
-; GFX1250-NEXT:    global_store_b8 v0, v1, s[0:1]
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-TRUE16-LABEL: v_test_umin_ult_i8:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_clause 0x1
+; GFX1250-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX1250-TRUE16-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX1250-TRUE16-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_clause 0x1
+; GFX1250-TRUE16-NEXT:    global_load_u8 v0, v1, s[2:3]
+; GFX1250-TRUE16-NEXT:    global_load_u8 v2, v1, s[6:7]
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    v_min_u16 v0.l, v0.l, v2.l
+; GFX1250-TRUE16-NEXT:    global_store_b8 v1, v0, s[0:1]
+; GFX1250-TRUE16-NEXT:    s_endpgm
+;
+; GFX1250-FAKE16-LABEL: v_test_umin_ult_i8:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX1250-FAKE16-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10
+; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-FAKE16-NEXT:    global_load_u8 v1, v0, s[2:3]
+; GFX1250-FAKE16-NEXT:    global_load_u8 v2, v0, s[6:7]
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    v_min_u16 v1, v1, v2
+; GFX1250-FAKE16-NEXT:    global_store_b8 v0, v1, s[0:1]
+; GFX1250-FAKE16-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %a.gep = getelementptr inbounds i8, ptr addrspace(1) %a.ptr, i32 %tid
   %b.gep = getelementptr inbounds i8, ptr addrspace(1) %b.ptr, i32 %tid
@@ -5069,5 +5097,3 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX1250-FAKE16: {{.*}}

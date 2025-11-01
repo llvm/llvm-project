@@ -130,8 +130,6 @@ public:
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
                    bool HasMinSize = false);
 
-  virtual unsigned getHwModeSet() const override;
-
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool GETTER() const { return ATTRIBUTE; }

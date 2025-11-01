@@ -2,11 +2,10 @@
 ; RUN: opt < %s -passes='default<O2>' -debug-info-for-profiling -pseudo-probe-for-profiling -S | FileCheck %s --check-prefix=PROBE
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -debug-info-for-profiling -pseudo-probe-for-profiling -S | FileCheck %s --check-prefix=PROBE
 
-
 @a = dso_local global i32 0, align 4
 
 ; Function Attrs: uwtable
-define void @_Z3foov(i32 %x) #0 !dbg !4 {
+define void @_Z3foov(i32 %x) !dbg !4 {
 bb0:
   %cmp = icmp eq i32 %x, 0, !dbg !10
   br i1 %cmp, label %bb1, label %bb2
@@ -30,12 +29,9 @@ bb3:
   ret void, !dbg !12
 }
 
-declare void @_Z3barv() #1
+declare void @_Z3barv()
 declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind argmemonly
 declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind argmemonly
-
-attributes #0 = { uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!7, !8}
@@ -61,7 +57,6 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "fra
 ; DEBUG: ![[CALL2BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 8)
 ; DEBUG: ![[INST]] = !DILocation(line: 4, column: 15, scope: ![[INSTBLOCK:[0-9]+]])
 ; DEBUG: ![[INSTBLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 4)
-
 
 ; PROBE: ![[CALL1]] = !DILocation(line: 4, column: 3, scope: ![[CALL1BLOCK:[0-9]+]])
 ; PROBE: ![[CALL1BLOCK]] = !DILexicalBlockFile({{.*}} discriminator: 455147551)

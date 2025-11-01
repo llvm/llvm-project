@@ -30,13 +30,17 @@ return:                                           ; preds = %if.else, %if.then
   %4 = load i32, ptr %retval, align 4
   ret i32 %4
 }
-
-; CHECK: Basic block vectors:
+; We'll get individual basic block embeddings for all blocks in the function.
+; But unreachable blocks are not counted for computing the function embedding.
+; CHECK: Function vector:  [ 1301.20  1318.20  1335.20 ]
+; CHECK-NEXT: Basic block vectors:
 ; CHECK-NEXT: Basic block: entry:
 ; CHECK-NEXT: [ 816.20  825.20  834.20 ]
 ; CHECK-NEXT: Basic block: if.then:
 ; CHECK-NEXT: [ 195.00  198.00  201.00 ]
 ; CHECK-NEXT: Basic block: if.else:
 ; CHECK-NEXT: [ 195.00  198.00  201.00 ]
+; CHECK-NEXT: Basic block: unreachable:
+; CHECK-NEXT:  [ 101.00  103.00  105.00 ]
 ; CHECK-NEXT: Basic block: return:
 ; CHECK-NEXT: [ 95.00  97.00  99.00 ]

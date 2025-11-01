@@ -1587,6 +1587,7 @@ module std [system] {
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
+      textual header "__locale_dir/support/netbsd.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/windows.h"
@@ -2115,7 +2116,6 @@ module std [system] {
     module ignore                   { header "__tuple/ignore.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
