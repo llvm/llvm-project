@@ -79,9 +79,12 @@ enum RISCVMachineCombinerPattern : unsigned {
 };
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
+  const RISCVRegisterInfo RegInfo;
 
 public:
   explicit RISCVInstrInfo(const RISCVSubtarget &STI);
+
+  const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   MCInst getNop() const override;
 

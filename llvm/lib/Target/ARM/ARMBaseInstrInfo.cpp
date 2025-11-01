@@ -107,8 +107,9 @@ static const ARM_MLxEntry ARM_MLxTable[] = {
   { ARM::VMLSslfq,    ARM::VMULslfq,    ARM::VSUBfq,     false,  true  },
 };
 
-ARMBaseInstrInfo::ARMBaseInstrInfo(const ARMSubtarget &STI)
-    : ARMGenInstrInfo(STI, ARM::ADJCALLSTACKDOWN, ARM::ADJCALLSTACKUP),
+ARMBaseInstrInfo::ARMBaseInstrInfo(const ARMSubtarget &STI,
+                                   const ARMBaseRegisterInfo &TRI)
+    : ARMGenInstrInfo(STI, TRI, ARM::ADJCALLSTACKDOWN, ARM::ADJCALLSTACKUP),
       Subtarget(STI) {
   for (unsigned i = 0, e = std::size(ARM_MLxTable); i != e; ++i) {
     if (!MLxEntryMap.insert(std::make_pair(ARM_MLxTable[i].MLxOpc, i)).second)

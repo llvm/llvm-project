@@ -27,7 +27,7 @@
 using namespace llvm;
 
 BPFInstrInfo::BPFInstrInfo(const BPFSubtarget &STI)
-    : BPFGenInstrInfo(STI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
+    : BPFGenInstrInfo(STI, RI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
 
 void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
