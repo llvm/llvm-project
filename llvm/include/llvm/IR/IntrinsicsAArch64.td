@@ -2807,6 +2807,20 @@ def int_aarch64_sve_sudot_lane : AdvSIMD_SVE_DOT_Indexed_Intrinsic;
 //
 def int_aarch64_sve_fmmla : AdvSIMD_3VectorArg_Intrinsic;
 
+def int_aarch64_sve_fmmla_f16f32
+    : DefaultAttrsIntrinsic<[llvm_nxv4f32_ty],
+                          [ llvm_nxv4f32_ty, llvm_nxv8f16_ty, llvm_nxv8f16_ty ],
+                          [IntrNoMem]>;
+
+def int_aarch64_sve_fmmla_mf8f32
+  : DefaultAttrsIntrinsic<[llvm_nxv4f32_ty],
+                          [ llvm_nxv4f32_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty ],
+                          [IntrNoMem]>;
+
+def int_aarch64_sve_fmmla_mf8f16
+  : DefaultAttrsIntrinsic<[llvm_nxv8f16_ty],
+                          [ llvm_nxv8f16_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty ],
+                          [IntrNoMem]>;                     
 //
 // SVE ACLE: 7.2. BFloat16 extensions
 //
