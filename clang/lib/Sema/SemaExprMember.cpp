@@ -19,6 +19,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 
@@ -1669,12 +1670,19 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
   // HLSL supports implicit conversion of scalar types to single element vector
   // rvalues in member expressions.
-  if (S.getLangOpts().HLSL && BaseType->isScalarType()) {
-    QualType VectorTy = S.Context.getExtVectorType(BaseType, 1);
-    BaseExpr = S.ImpCastExprToType(BaseExpr.get(), VectorTy, CK_VectorSplat,
-                                   BaseExpr.get()->getValueKind());
-    return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS, ObjCImpDecl,
-                            HasTemplateArgs, TemplateKWLoc);
+  if (S.getLangOpts().HLSL) {
+    if (BaseType->isScalarType()) {
+      QualType VectorTy = S.Context.getExtVectorType(BaseType, 1);
+      BaseExpr = S.ImpCastExprToType(BaseExpr.get(), VectorTy, CK_VectorSplat,
+                                     BaseExpr.get()->getValueKind());
+      return LookupMemberExpr(S, R, BaseExpr, IsArrow, OpLoc, SS, ObjCImpDecl,
+                              HasTemplateArgs, TemplateKWLoc);
+    }
+    if (!IsArrow && BaseType->isConstantMatrixType()) {
+      if (const auto *II = MemberName.getAsIdentifierInfo())
+        return S.HLSL().tryBuildHLSLMatrixElementAccessor(BaseExpr.get(),
+                                                          MemberLoc, II);
+    }
   }
 
   S.Diag(OpLoc, diag::err_typecheck_member_reference_struct_union)
