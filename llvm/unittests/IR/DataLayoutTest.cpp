@@ -700,6 +700,15 @@ TEST(DataLayout, NonIntegralHelpers) {
   }
 }
 
+TEST(DataLayoutTest, GetNullPointerValue) {
+  EXPECT_EQ(DataLayout("").getNullPointerValue(0), APInt::getZero(64));
+  EXPECT_EQ(DataLayout("").getNullPointerValue(1), std::nullopt);
+  EXPECT_EQ(DataLayout("p:32:32").getNullPointerValue(0), APInt::getZero(32));
+  EXPECT_EQ(DataLayout("p:32:32").getNullPointerValue(1), std::nullopt);
+  EXPECT_EQ(DataLayout("p:64:64").getNullPointerValue(0), APInt::getZero(64));
+  EXPECT_EQ(DataLayout("p:64:64").getNullPointerValue(1), std::nullopt);
+}
+
 TEST(DataLayoutTest, CopyAssignmentInvalidatesStructLayout) {
   DataLayout DL1 = cantFail(DataLayout::parse("p:32:32"));
   DataLayout DL2 = cantFail(DataLayout::parse("p:64:64"));
