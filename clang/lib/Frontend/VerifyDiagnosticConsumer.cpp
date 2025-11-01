@@ -432,7 +432,8 @@ static std::string DetailedErrorString(const DiagnosticsEngine &Diags) {
 static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
                            Preprocessor *PP, SourceLocation Pos,
                            VerifyDiagnosticConsumer::ParsingState &State,
-                           VerifyDiagnosticConsumer::MarkerTracker &Markers) {
+                           VerifyDiagnosticConsumer::MarkerTracker &Markers,
+                           bool OneDiagPerDirective) {
   DiagnosticsEngine &Diags = PP ? PP->getDiagnostics() : SM.getDiagnostics();
 
   // First, scan the comment looking for markers.
@@ -613,17 +614,32 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
 
     // Next optional token: positive integer or a '+'.
     if (PH.Next(D.Min)) {
+      if (OneDiagPerDirective && D.Min != 1) {
+        Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                     diag::err_verify_non_singular_match);
+        continue;
+      }
       PH.Advance();
       // A positive integer can be followed by a '+' meaning min
       // or more, or by a '-' meaning a range from min to max.
       if (PH.Next("+")) {
         D.Max = Directive::MaxCount;
         PH.Advance();
+        if (OneDiagPerDirective) {
+          Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                       diag::err_verify_non_singular_match);
+          continue;
+        }
       } else if (PH.Next("-")) {
         PH.Advance();
         if (!PH.Next(D.Max) || D.Max < D.Min) {
           Diags.Report(Pos.getLocWithOffset(PH.C-PH.Begin),
                        diag::err_verify_invalid_range) << KindStr;
+          continue;
+        }
+        if (OneDiagPerDirective && D.Max != 1) {
+          Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                       diag::err_verify_non_singular_match);
           continue;
         }
         PH.Advance();
@@ -632,6 +648,11 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
       }
     } else if (PH.Next("+")) {
       // '+' on its own means "1 or more".
+      if (OneDiagPerDirective && D.Max != 1) {
+        Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                     diag::err_verify_non_singular_match);
+        continue;
+      }
       D.Max = Directive::MaxCount;
       PH.Advance();
     }
@@ -703,6 +724,7 @@ VerifyDiagnosticConsumer::VerifyDiagnosticConsumer(DiagnosticsEngine &Diags_)
   if (Diags.hasSourceManager())
     setSourceManager(Diags.getSourceManager());
   CheckOrderOfDirectives = Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
+  OneDiagPerDirective = Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
 }
 
 VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
@@ -818,7 +840,8 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
   // Fold any "\<EOL>" sequences
   size_t loc = C.find('\\');
   if (loc == StringRef::npos) {
-    ParseDirective(C, &ED, SM, &PP, CommentBegin, State, *Markers);
+    ParseDirective(C, &ED, SM, &PP, CommentBegin, State, *Markers,
+                   OneDiagPerDirective);
     return false;
   }
 
@@ -848,7 +871,8 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
   }
 
   if (!C2.empty())
-    ParseDirective(C2, &ED, SM, &PP, CommentBegin, State, *Markers);
+    ParseDirective(C2, &ED, SM, &PP, CommentBegin, State, *Markers,
+                   OneDiagPerDirective);
   return false;
 }
 
@@ -887,7 +911,7 @@ static bool findDirectives(SourceManager &SM, FileID FID,
 
     // Find first directive.
     if (ParseDirective(Comment, nullptr, SM, nullptr, Tok.getLocation(), State,
-                       Markers))
+                       Markers, /*OneDiagPerDirective=*/false))
       return true;
   }
   return false;
@@ -1198,7 +1222,7 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags, SourceManager &
         else {
           OS << SourceMgr.getFilename(Directive->DiagnosticLoc) << ":" << SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc);
         }
-           OS << "\n  does not match diagnostic at ";
+        OS << "\n  does not match diagnostic at ";
         if (IsFromSameFile(SourceMgr, DirLoc, DiagLoc)) {
           OS << "line " << SourceMgr.getPresumedLineNumber(DiagLoc);
         }
@@ -1301,6 +1325,7 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // Check that the expected diagnostics occurred.
     NumErrors += CheckResults(Diags, *SrcManager, *Buffer, ED);
     if (CheckOrderOfDirectives && NumErrors == 0) {
+      assert(OneDiagPerDirective);
       NumErrors += CheckResultsAreInOrder(Diags, *SrcManager, *Buffer, ED);
     }
   } else {

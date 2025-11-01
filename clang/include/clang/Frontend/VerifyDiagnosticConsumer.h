@@ -138,6 +138,7 @@ private:
   ParsingState State;
   ExpectedData ED;
   bool CheckOrderOfDirectives;
+  bool OneDiagPerDirective;
 
   void CheckDiagnostics();
 
