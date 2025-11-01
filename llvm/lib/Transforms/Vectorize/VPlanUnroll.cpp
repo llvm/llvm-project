@@ -352,6 +352,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
+        match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
@@ -375,6 +376,12 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
                       m_VPValue(Op0)))) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
+      if (isa<VPFirstOrderRecurrencePHIRecipe>(Op0)) {
+        assert(match(&R, m_ExtractLastElement(m_VPValue())) &&
+               "can only extract last element of FOR");
+        continue;
+      }
+
       if (Plan.hasScalarVFOnly()) {
         auto *I = cast<VPInstruction>(&R);
         // Extracting from end with VF = 1 implies retrieving the last or
