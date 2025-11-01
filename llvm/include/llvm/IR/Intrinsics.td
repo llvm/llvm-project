@@ -1091,6 +1091,14 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                 [ llvm_anyfloat_ty, llvm_metadata_ty ]>;
 
+  // Convert between arbitrary interpreted floating-point and integer values.
+  def int_arbitrary_fp_convert
+      : DefaultAttrsIntrinsic<
+            [ llvm_any_ty ],
+            [ llvm_any_ty, llvm_metadata_ty, llvm_metadata_ty,
+              llvm_metadata_ty, llvm_i32_ty ],
+            [ IntrNoMem, IntrSpeculatable ]>;
+
   def int_canonicalize : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
   // Arithmetic fence intrinsic.
