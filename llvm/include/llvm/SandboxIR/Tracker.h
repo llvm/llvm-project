@@ -42,13 +42,14 @@
 
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StableHashing.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Use.h"
+#include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <memory>
-#include <regex>
 
 namespace llvm::sandboxir {
 
@@ -59,6 +60,60 @@ class StoreInst;
 class Instruction;
 class Tracker;
 class AllocaInst;
+class CatchSwitchInst;
+class SwitchInst;
+class ConstantInt;
+class ShuffleVectorInst;
+class CmpInst;
+class GlobalVariable;
+
+#ifndef NDEBUG
+
+/// A class that saves hashes and textual IR snapshots of functions in a
+/// SandboxIR Context, and does hash comparison when `expectNoDiff` is called.
+/// If hashes differ, it prints textual IR for both old and new versions to
+/// aid debugging.
+///
+/// This is used as an additional debug check when reverting changes to
+/// SandboxIR, to verify the reverted state matches the initial state.
+class IRSnapshotChecker {
+  Context &Ctx;
+
+  // A snapshot of textual IR for a function, with a hash for quick comparison.
+  struct FunctionSnapshot {
+    llvm::stable_hash Hash;
+    std::string TextualIR;
+  };
+
+  // A snapshot for each llvm::Function found in every module in the SandboxIR
+  // Context. In practice there will always be one module, but sandbox IR
+  // save/restore ops work at the Context level, so we must take the full state
+  // into account.
+  using ContextSnapshot = DenseMap<const llvm::Function *, FunctionSnapshot>;
+
+  ContextSnapshot OrigContextSnapshot;
+
+  // Dumps to a string the textual IR for a single Function.
+  std::string dumpIR(const llvm::Function &F) const;
+
+  // Returns a snapshot of all the modules in the sandbox IR context.
+  ContextSnapshot takeSnapshot() const;
+
+  // Compares two snapshots and returns true if they differ.
+  bool diff(const ContextSnapshot &Orig, const ContextSnapshot &Curr) const;
+
+public:
+  IRSnapshotChecker(Context &Ctx) : Ctx(Ctx) {}
+
+  /// Saves a snapshot of the current state. If there was any previous snapshot,
+  /// it will be replaced with the new one.
+  void save();
+
+  /// Checks current state against saved state, crashes if different.
+  void expectNoDiff();
+};
+
+#endif // NDEBUG
 
 /// The base class for IR Change classes.
 class IRChangeBase {
@@ -96,26 +151,7 @@ public:
 #endif
 };
 
-class PHISetIncoming : public IRChangeBase {
-  PHINode *PHI;
-  unsigned Idx;
-  PointerUnion<Value *, BasicBlock *> OrigValueOrBB;
-
-public:
-  enum class What {
-    Value,
-    Block,
-  };
-  PHISetIncoming(PHINode *PHI, unsigned Idx, What What);
-  void revert(Tracker &Tracker) final;
-  void accept() final {}
-#ifndef NDEBUG
-  void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
-  LLVM_DUMP_METHOD void dump() const final;
-#endif
-};
-
-class PHIRemoveIncoming : public IRChangeBase {
+class LLVM_ABI PHIRemoveIncoming : public IRChangeBase {
   PHINode *PHI;
   unsigned RemovedIdx;
   Value *RemovedV;
@@ -131,7 +167,7 @@ public:
 #endif
 };
 
-class PHIAddIncoming : public IRChangeBase {
+class LLVM_ABI PHIAddIncoming : public IRChangeBase {
   PHINode *PHI;
   unsigned Idx;
 
@@ -141,6 +177,19 @@ public:
   void accept() final {}
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const final { OS << "PHISetIncoming"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
+class LLVM_ABI CmpSwapOperands : public IRChangeBase {
+  CmpInst *Cmp;
+
+public:
+  CmpSwapOperands(CmpInst *Cmp);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "CmpSwapOperands"; }
   LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
@@ -163,7 +212,7 @@ public:
 #endif
 };
 
-class EraseFromParent : public IRChangeBase {
+class LLVM_ABI EraseFromParent : public IRChangeBase {
   /// Contains all the data we need to restore an "erased" (i.e., detached)
   /// instruction: the instruction itself and its operands in order.
   struct InstrAndOperands {
@@ -195,7 +244,7 @@ public:
 #endif
 };
 
-class RemoveFromParent : public IRChangeBase {
+class LLVM_ABI RemoveFromParent : public IRChangeBase {
   /// The instruction that is about to get removed.
   Instruction *RemovedI = nullptr;
   /// This is either the next instr, or the parent BB if at the end of the BB.
@@ -226,13 +275,13 @@ public:
 ///
 template <auto GetterFn, auto SetterFn>
 class GenericSetter final : public IRChangeBase {
-  /// Helper for getting the class type from the getter
-  template <typename ClassT, typename RetT>
-  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)() const);
-  template <typename ClassT, typename RetT>
-  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)());
-
-  using InstrT = decltype(getClassTypeFromGetter(GetterFn));
+  /// Traits for getting the class type from GetterFn type.
+  template <typename> struct GetClassTypeFromGetter;
+  template <typename RetT, typename ClassT>
+  struct GetClassTypeFromGetter<RetT (ClassT::*)() const> {
+    using ClassType = ClassT;
+  };
+  using InstrT = typename GetClassTypeFromGetter<decltype(GetterFn)>::ClassType;
   using SavedValT = std::invoke_result_t<decltype(GetterFn), InstrT>;
   InstrT *I;
   SavedValT OrigVal;
@@ -250,22 +299,88 @@ public:
 #endif
 };
 
-class CallBrInstSetIndirectDest : public IRChangeBase {
-  CallBrInst *CallBr;
+/// Similar to GenericSetter but the setters/getters have an index as their
+/// first argument. This is commont in cases like: getOperand(unsigned Idx)
+template <auto GetterFn, auto SetterFn>
+class GenericSetterWithIdx final : public IRChangeBase {
+  /// Helper for getting the class type from the getter
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)(unsigned) const);
+  template <typename ClassT, typename RetT>
+  static ClassT getClassTypeFromGetter(RetT (ClassT::*Fn)(unsigned));
+
+  using InstrT = decltype(getClassTypeFromGetter(GetterFn));
+  using SavedValT = std::invoke_result_t<decltype(GetterFn), InstrT, unsigned>;
+  InstrT *I;
+  SavedValT OrigVal;
   unsigned Idx;
-  BasicBlock *OrigIndirectDest;
 
 public:
-  CallBrInstSetIndirectDest(CallBrInst *CallBr, unsigned Idx);
-  void revert(Tracker &Tracker) final;
+  GenericSetterWithIdx(InstrT *I, unsigned Idx)
+      : I(I), OrigVal((I->*GetterFn)(Idx)), Idx(Idx) {}
+  void revert(Tracker &Tracker) final { (I->*SetterFn)(Idx, OrigVal); }
   void accept() final {}
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const final { OS << "CallBrInstSetIndirectDest"; }
-  LLVM_DUMP_METHOD void dump() const final;
+  void dump(raw_ostream &OS) const final { OS << "GenericSetterWithIdx"; }
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
+  }
 #endif
 };
 
-class MoveInstr : public IRChangeBase {
+class LLVM_ABI CatchSwitchAddHandler : public IRChangeBase {
+  CatchSwitchInst *CSI;
+  unsigned HandlerIdx;
+
+public:
+  CatchSwitchAddHandler(CatchSwitchInst *CSI);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "CatchSwitchAddHandler"; }
+  LLVM_DUMP_METHOD void dump() const final {
+    dump(dbgs());
+    dbgs() << "\n";
+  }
+#endif // NDEBUG
+};
+
+class LLVM_ABI SwitchAddCase : public IRChangeBase {
+  SwitchInst *Switch;
+  ConstantInt *Val;
+
+public:
+  SwitchAddCase(SwitchInst *Switch, ConstantInt *Val)
+      : Switch(Switch), Val(Val) {}
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "SwitchAddCase"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
+};
+
+class LLVM_ABI SwitchRemoveCase : public IRChangeBase {
+  SwitchInst *Switch;
+  struct Case {
+    ConstantInt *Val;
+    BasicBlock *Dest;
+  };
+  SmallVector<Case> Cases;
+
+public:
+  SwitchRemoveCase(SwitchInst *Switch);
+
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "SwitchRemoveCase"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif // NDEBUG
+};
+
+class LLVM_ABI MoveInstr : public IRChangeBase {
   /// The instruction that moved.
   Instruction *MovedI;
   /// This is either the next instruction in the block, or the parent BB if at
@@ -282,7 +397,7 @@ public:
 #endif // NDEBUG
 };
 
-class InsertIntoBB final : public IRChangeBase {
+class LLVM_ABI InsertIntoBB final : public IRChangeBase {
   Instruction *InsertedI = nullptr;
 
 public:
@@ -295,7 +410,7 @@ public:
 #endif // NDEBUG
 };
 
-class CreateAndInsertInst final : public IRChangeBase {
+class LLVM_ABI CreateAndInsertInst final : public IRChangeBase {
   Instruction *NewI = nullptr;
 
 public:
@@ -308,13 +423,28 @@ public:
 #endif
 };
 
+class LLVM_ABI ShuffleVectorSetMask final : public IRChangeBase {
+  ShuffleVectorInst *SVI;
+  SmallVector<int, 8> PrevMask;
+
+public:
+  ShuffleVectorSetMask(ShuffleVectorInst *SVI);
+  void revert(Tracker &Tracker) final;
+  void accept() final {}
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final { OS << "ShuffleVectorSetMask"; }
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 /// The tracker collects all the change objects and implements the main API for
 /// saving / reverting / accepting.
 class Tracker {
 public:
   enum class TrackerState {
-    Disabled, ///> Tracking is disabled
-    Record,   ///> Tracking changes
+    Disabled,  ///> Tracking is disabled
+    Record,    ///> Tracking changes
+    Reverting, ///> Reverting changes
   };
 
 private:
@@ -324,6 +454,10 @@ private:
   TrackerState State = TrackerState::Disabled;
   Context &Ctx;
 
+#ifndef NDEBUG
+  IRSnapshotChecker SnapshotChecker;
+#endif
+
 public:
 #ifndef NDEBUG
   /// Helps catch bugs where we are creating new change objects while in the
@@ -331,9 +465,19 @@ public:
   bool InMiddleOfCreatingChange = false;
 #endif // NDEBUG
 
-  explicit Tracker(Context &Ctx) : Ctx(Ctx) {}
-  ~Tracker();
+  explicit Tracker(Context &Ctx)
+      : Ctx(Ctx)
+#ifndef NDEBUG
+        ,
+        SnapshotChecker(Ctx)
+#endif
+  {
+  }
+
+  LLVM_ABI ~Tracker();
   Context &getContext() const { return Ctx; }
+  /// \Returns true if there are no changes tracked.
+  bool empty() const { return Changes.empty(); }
   /// Record \p Change and take ownership. This is the main function used to
   /// track Sandbox IR changes.
   void track(std::unique_ptr<IRChangeBase> &&Change) {
@@ -364,11 +508,11 @@ public:
   /// \Returns the current state of the tracker.
   TrackerState getState() const { return State; }
   /// Turns on IR tracking.
-  void save();
+  LLVM_ABI void save();
   /// Stops tracking and accept changes.
-  void accept();
+  LLVM_ABI void accept();
   /// Stops tracking and reverts to saved state.
-  void revert();
+  LLVM_ABI void revert();
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;

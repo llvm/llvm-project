@@ -6,4 +6,3 @@ int H((int()[)]);
 // expected-error@-1 {{expected expression}}
 // expected-error@-2 {{expected ']'}}
 // expected-note@-3 {{to match this '['}}
-// expected-error@-4 {{expected ';' after top level declarator}}

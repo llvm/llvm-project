@@ -57,8 +57,8 @@ void ctor_notetag_on_constraining_symbol(const char *p) {
 
   free((void *)p); // expected-note {{Memory is released}}
   free((void *)p);
-  // expected-warning@-1 {{Attempt to free released memory}}
-  // expected-note@-2    {{Attempt to free released memory}}
+  // expected-warning@-1 {{Attempt to release already released memory}}
+  // expected-note@-2    {{Attempt to release already released memory}}
 }
 
 void ctor_no_notetag_symbol_already_constrained(const char *p) {
@@ -73,8 +73,8 @@ void ctor_no_notetag_symbol_already_constrained(const char *p) {
 
   free((void *)p); // expected-note {{Memory is released}}
   free((void *)p);
-  // expected-warning@-1 {{Attempt to free released memory}}
-  // expected-note@-2    {{Attempt to free released memory}}
+  // expected-warning@-1 {{Attempt to release already released memory}}
+  // expected-note@-2    {{Attempt to release already released memory}}
 }
 
 void ctor_no_notetag_if_not_interesting(const char *p1, const char *p2) {
@@ -83,6 +83,6 @@ void ctor_no_notetag_if_not_interesting(const char *p1, const char *p2) {
 
   free((void *)p1); // expected-note {{Memory is released}}
   free((void *)p1);
-  // expected-warning@-1 {{Attempt to free released memory}}
-  // expected-note@-2    {{Attempt to free released memory}}
+  // expected-warning@-1 {{Attempt to release already released memory}}
+  // expected-note@-2    {{Attempt to release already released memory}}
 }

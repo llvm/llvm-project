@@ -7,10 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/cos.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcCosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -50,15 +57,14 @@ TEST_F(LlvmLibcCosTest, TrickyInputs) {
       0x1.2b5fe88a9d8d5p+903,   0x1.f6d7518808571p+1023,
       -0x1.a880417b7b119p+1023, 0x1.00a33764a0a83p-7,
       0x1.fe81868fc47fep+1,     0x1.0da8cc189b47dp-10,
-      0x1.da1838053b866p+5,
-
+      0x1.da1838053b866p+5,     0x1.ffffffffe854bp199,
   };
   constexpr int N = sizeof(INPUTS) / sizeof(INPUTS[0]);
 
   for (int i = 0; i < N; ++i) {
     double x = INPUTS[i];
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   LIBC_NAMESPACE::cos(x), 0.5);
+                                   LIBC_NAMESPACE::cos(x), TOLERANCE + 0.5);
   }
 }
 

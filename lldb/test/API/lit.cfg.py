@@ -90,6 +90,8 @@ def find_python_interpreter():
     )
 
     shutil.copy(real_python, copied_python)
+    # macOS 15+ restricts injecting the ASAN runtime to only user-compiled code.
+    subprocess.check_call(["/usr/bin/codesign", "--remove-signature", copied_python])
 
     # Now make sure the copied Python works. The Python in Xcode has a relative
     # RPATH and cannot be copied.
@@ -127,17 +129,17 @@ def delete_module_cache(path):
 
 
 if is_configured("llvm_use_sanitizer"):
+    config.environment["MallocNanoZone"] = "0"
     if "Address" in config.llvm_use_sanitizer:
         config.environment["ASAN_OPTIONS"] = "detect_stack_use_after_return=1"
-        if "Darwin" in config.host_os:
+        if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.asan_osx_dynamic.dylib"
             )
-            config.environment["MallocNanoZone"] = "0"
 
     if "Thread" in config.llvm_use_sanitizer:
         config.environment["TSAN_OPTIONS"] = "halt_on_error=1"
-        if "Darwin" in config.host_os:
+        if "Darwin" in config.target_os:
             config.environment["DYLD_INSERT_LIBRARIES"] = find_sanitizer_runtime(
                 "libclang_rt.tsan_osx_dynamic.dylib"
             )
@@ -179,6 +181,9 @@ if lldb_use_simulator:
     elif lldb_use_simulator == "tvos":
         lit_config.note("Running API tests on tvOS simulator")
         config.available_features.add("lldb-simulator-tvos")
+    elif lldb_use_simulator == "qemu-user":
+        lit_config.note("Running API tests on qemu-user simulator")
+        config.available_features.add("lldb-simulator-qemu-user")
     else:
         lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
@@ -250,6 +255,9 @@ if is_configured("test_compiler"):
 if is_configured("dsymutil"):
     dotest_cmd += ["--dsymutil", config.dsymutil]
 
+if is_configured("make"):
+    dotest_cmd += ["--make", config.make]
+
 if is_configured("llvm_tools_dir"):
     dotest_cmd += ["--llvm-tools-dir", config.llvm_tools_dir]
 
@@ -265,11 +273,8 @@ if is_configured("lldb_libs_dir"):
 if is_configured("lldb_framework_dir"):
     dotest_cmd += ["--framework", config.lldb_framework_dir]
 
-if (
-    "lldb-repro-capture" in config.available_features
-    or "lldb-repro-replay" in config.available_features
-):
-    dotest_cmd += ["--skip-category=lldb-dap", "--skip-category=std-module"]
+if is_configured("cmake_build_type"):
+    dotest_cmd += ["--cmake-build-type", config.cmake_build_type]
 
 if "lldb-simulator-ios" in config.available_features:
     dotest_cmd += ["--apple-sdk", "iphonesimulator", "--platform-name", "ios-simulator"]
@@ -288,6 +293,9 @@ elif "lldb-simulator-tvos" in config.available_features:
         "tvos-simulator",
     ]
 
+if "lldb-simulator-qemu-user" in config.available_features:
+    dotest_cmd += ["--platform-name", "qemu-user"]
+
 if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:
         dotest_cmd += ["--enable-plugin", plugin]
@@ -302,6 +310,13 @@ if is_configured("enabled_plugins"):
 # Check them in this order, so that more specific overrides are visited last.
 # In particular, (1) is visited at the top of the file, since the script
 # derives other information from it.
+
+if is_configured("lldb_platform_url"):
+    dotest_cmd += ["--platform-url", config.lldb_platform_url]
+if is_configured("lldb_platform_working_dir"):
+    dotest_cmd += ["--platform-working-dir", config.lldb_platform_working_dir]
+if is_configured("cmake_sysroot"):
+    dotest_cmd += ["--sysroot", config.cmake_sysroot]
 
 if is_configured("dotest_user_args_str"):
     dotest_cmd.extend(config.dotest_user_args_str.split(";"))
@@ -330,3 +345,17 @@ if "FREEBSD_LEGACY_PLUGIN" in os.environ:
 # Propagate XDG_CACHE_HOME
 if "XDG_CACHE_HOME" in os.environ:
     config.environment["XDG_CACHE_HOME"] = os.environ["XDG_CACHE_HOME"]
+
+# Transfer some environment variables into the tests on Windows build host.
+if platform.system() == "Windows":
+    for v in ["SystemDrive"]:
+        if v in os.environ:
+            config.environment[v] = os.environ[v]
+
+# Some steps required to initialize the tests dynamically link with python.dll
+# and need to know the location of the Python libraries. This ensures that we
+# use the same version of Python that was used to build lldb to run our tests.
+config.environment["PYTHONHOME"] = config.python_root_dir
+config.environment["PATH"] = os.path.pathsep.join(
+    (config.python_root_dir, config.environment.get("PATH", ""))
+)

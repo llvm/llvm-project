@@ -22,15 +22,12 @@ using namespace llvm;
 /// DisableFramePointerElim - This returns true if frame pointer elimination
 /// optimization should be disabled for the given machine function.
 bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
-  // Check to see if the target want to forcibly keep frame pointer.
-  if (MF.getSubtarget().getFrameLowering()->keepFramePointer(MF))
-    return true;
-
   const Function &F = MF.getFunction();
 
-  if (!F.hasFnAttribute("frame-pointer"))
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
     return false;
-  StringRef FP = F.getFnAttribute("frame-pointer").getValueAsString();
+  StringRef FP = FPAttr.getValueAsString();
   if (FP == "all")
     return true;
   if (FP == "non-leaf")
@@ -41,25 +38,20 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
 }
 
 bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
-  // Check to see if the target want to forcibly keep frame pointer.
-  if (MF.getSubtarget().getFrameLowering()->keepFramePointer(MF))
-    return true;
-
   const Function &F = MF.getFunction();
-
-  if (!F.hasFnAttribute("frame-pointer"))
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
     return false;
 
-  StringRef FP = F.getFnAttribute("frame-pointer").getValueAsString();
-  return StringSwitch<bool>(FP)
-      .Cases("all", "non-leaf", "reserved", true)
+  return StringSwitch<bool>(FPAttr.getValueAsString())
+      .Cases({"all", "non-leaf", "reserved"}, true)
       .Case("none", false);
 }
 
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume
 /// that the rounding mode of the FPU can change from its default.
 bool TargetOptions::HonorSignDependentRoundingFPMath() const {
-  return !UnsafeFPMath && HonorSignDependentRoundingFPMathOption;
+  return HonorSignDependentRoundingFPMathOption;
 }
 
 /// NOTE: There are targets that still do not support the debug entry values

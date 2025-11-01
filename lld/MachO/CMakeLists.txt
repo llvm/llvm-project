@@ -18,6 +18,7 @@ add_lld_library(lldMachO
   ICF.cpp
   InputFiles.cpp
   InputSection.cpp
+  LinkerOptimizationHints.cpp
   LTO.cpp
   MapFile.cpp
   MarkLive.cpp
@@ -40,6 +41,7 @@ add_lld_library(lldMachO
   BinaryFormat
   BitReader
   BitWriter
+  CGData
   Core
   DebugInfoDWARF
   Demangle
@@ -57,6 +59,7 @@ add_lld_library(lldMachO
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${LLVM_ATOMIC_LIB}
 
   DEPENDS
   MachOOptionsTableGen

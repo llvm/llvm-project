@@ -15,7 +15,9 @@
 #define LLVM_ANALYSIS_UNIFORMITYANALYSIS_H
 
 #include "llvm/ADT/GenericUniformityInfo.h"
-#include "llvm/Analysis/CycleAnalysis.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/SSAContext.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 

@@ -3,12 +3,12 @@
 // RUN:  -analyzer-checker=core \
 // RUN:  -analyzer-checker=cplusplus.NewDelete
 
+// leak-no-diagnostics
+
 // RUN: %clang_analyze_cc1 -std=c++11 -DLEAKS -fblocks %s \
 // RUN:   -verify=leak \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
-
-// leak-no-diagnostics
 
 // RUN: %clang_analyze_cc1 -std=c++11 -DLEAKS -fblocks %s \
 // RUN:   -verify=mismatch \
@@ -78,11 +78,11 @@ void testObjcFreeNewed() {
 void testFreeAfterDelete() {
   int *p = new int;
   delete p;
-  free(p); // newdelete-warning{{Use of memory after it is freed}}
+  free(p); // newdelete-warning{{Use of memory after it is released}}
 }
 
 void testStandardPlacementNewAfterDelete() {
   int *p = new int;
   delete p;
-  p = new (p) int; // newdelete-warning{{Use of memory after it is freed}}
+  p = new (p) int; // newdelete-warning{{Use of memory after it is released}}
 }

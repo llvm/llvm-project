@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_DIA_DIAUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/PDB/DIA/DIASupport.h"
 #include "llvm/Support/ConvertUTF.h"
 
 template <typename Obj>

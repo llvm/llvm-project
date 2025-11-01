@@ -40,6 +40,8 @@ namespace impl {
 
 template <typename Derived>
 class ExtractAPIVisitorBase : public RecursiveASTVisitor<Derived> {
+  using Base = RecursiveASTVisitor<Derived>;
+
 protected:
   ExtractAPIVisitorBase(ASTContext &Context, APISet &API)
       : Context(Context), API(API) {}
@@ -81,8 +83,10 @@ public:
 
   bool VisitNamespaceDecl(const NamespaceDecl *Decl);
 
+  bool TraverseRecordDecl(RecordDecl *Decl);
   bool VisitRecordDecl(const RecordDecl *Decl);
 
+  bool TraverseCXXRecordDecl(CXXRecordDecl *Decl);
   bool VisitCXXRecordDecl(const CXXRecordDecl *Decl);
 
   bool VisitCXXMethodDecl(const CXXMethodDecl *Decl);
@@ -169,6 +173,10 @@ private:
 
 protected:
   SmallVector<SymbolReference> getBases(const CXXRecordDecl *Decl) {
+    if (!Decl->isCompleteDefinition()) {
+      return {};
+    }
+
     // FIXME: store AccessSpecifier given by inheritance
     SmallVector<SymbolReference> Bases;
     for (const auto &BaseSpecifier : Decl->bases()) {
@@ -209,7 +217,7 @@ protected:
 
   StringRef getOwningModuleName(const Decl &D) {
     if (auto *OwningModule = D.getImportedOwningModule())
-      return OwningModule->Name;
+      return OwningModule->getTopLevelModule()->Name;
 
     return {};
   }
@@ -240,7 +248,7 @@ protected:
 
   bool isEmbeddedInVarDeclarator(const TagDecl &D) {
     return D.getName().empty() && getTypedefName(&D).empty() &&
-           D.isEmbeddedInDeclarator();
+           D.isEmbeddedInDeclarator() && !D.isFreeStanding();
   }
 
   void maybeMergeWithAnonymousTag(const DeclaratorDecl &D,
@@ -248,12 +256,19 @@ protected:
     if (!NewRecordContext)
       return;
     auto *Tag = D.getType()->getAsTagDecl();
+    if (!Tag) {
+      if (const auto *AT = D.getASTContext().getAsArrayType(D.getType())) {
+        Tag = AT->getElementType()->getAsTagDecl();
+      }
+    }
     SmallString<128> TagUSR;
     clang::index::generateUSRForDecl(Tag, TagUSR);
     if (auto *Record = llvm::dyn_cast_if_present<TagRecord>(
             API.findRecordForUSR(TagUSR))) {
-      if (Record->IsEmbeddedInVarDeclarator)
+      if (Record->IsEmbeddedInVarDeclarator) {
         NewRecordContext->stealRecordChain(*Record);
+        API.removeRecord(Record);
+      }
     }
   }
 };
@@ -549,6 +564,19 @@ bool ExtractAPIVisitorBase<Derived>::VisitNamespaceDecl(
 }
 
 template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::TraverseRecordDecl(RecordDecl *Decl) {
+  bool Ret = Base::TraverseRecordDecl(Decl);
+
+  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
+    SmallString<128> USR;
+    index::generateUSRForDecl(Decl, USR);
+    API.removeRecord(USR);
+  }
+
+  return Ret;
+}
+
+template <typename Derived>
 bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
@@ -586,6 +614,20 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
         SubHeading, isInSystemHeader(Decl), isEmbeddedInVarDeclarator(*Decl));
 
   return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::TraverseCXXRecordDecl(
+    CXXRecordDecl *Decl) {
+  bool Ret = Base::TraverseCXXRecordDecl(Decl);
+
+  if (!isEmbeddedInVarDeclarator(*Decl) && Decl->isAnonymousStructOrUnion()) {
+    SmallString<128> USR;
+    index::generateUSRForDecl(Decl, USR);
+    API.removeRecord(USR);
+  }
+
+  return Ret;
 }
 
 template <typename Derived>
@@ -1108,11 +1150,29 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
 
   StringRef Name = Decl->getName();
 
+  auto nameMatches = [&Name](TagDecl *TagDecl) {
+    StringRef TagName = TagDecl->getName();
+
+    if (TagName == Name)
+      return true;
+
+    // Also check whether the tag decl's name is the same as the typedef name
+    // with prefixed underscores
+    if (TagName.starts_with('_')) {
+      StringRef StrippedName = TagName.ltrim('_');
+
+      if (StrippedName == Name)
+        return true;
+    }
+
+    return false;
+  };
+
   // If the underlying type was defined as part of the typedef modify it's
   // fragments directly and pretend the typedef doesn't exist.
   if (auto *TagDecl = Decl->getUnderlyingType()->getAsTagDecl()) {
     if (TagDecl->isEmbeddedInDeclarator() && TagDecl->isCompleteDefinition() &&
-        Decl->getName() == TagDecl->getName()) {
+        nameMatches(TagDecl)) {
       SmallString<128> TagUSR;
       index::generateUSRForDecl(TagDecl, TagUSR);
       if (auto *Record = API.findRecordForUSR(TagUSR)) {
@@ -1125,6 +1185,11 @@ bool ExtractAPIVisitorBase<Derived>::VisitTypedefNameDecl(
             .append(" { ... } ", DeclarationFragments::FragmentKind::Text)
             .append(Name, DeclarationFragments::FragmentKind::Identifier)
             .appendSemicolon();
+
+        // Replace the name and subheading in case it's underscored so we can
+        // use the non-underscored version
+        Record->Name = Name;
+        Record->SubHeading = DeclarationFragmentsBuilder::getSubHeading(Decl);
 
         return true;
       }

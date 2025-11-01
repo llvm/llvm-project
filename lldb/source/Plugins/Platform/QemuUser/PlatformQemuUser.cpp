@@ -225,7 +225,7 @@ lldb::ProcessSP PlatformQemuUser::DebugProcess(ProcessLaunchInfo &launch_info,
       process_gdb_remote::ProcessGDBRemote::GetPluginNameStatic(), nullptr,
       true);
   if (!process_sp) {
-    error.SetErrorString("Failed to create GDB process");
+    error = Status::FromErrorString("Failed to create GDB process");
     return nullptr;
   }
 

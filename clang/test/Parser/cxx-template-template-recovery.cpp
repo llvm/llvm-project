@@ -22,18 +22,18 @@ auto V3 = true; // #V3
 template <template <typename T> typename C>
 constexpr bool test = true;
 
-static_assert(test<a::C1>); // expected-error {{too few template arguments for concept 'C1'}} \
+static_assert(test<a::C1>); // expected-error {{template argument does not refer to a class or alias template, or template template parameter}} \
                             // expected-note@#C1 {{here}}
-static_assert(test<a::b::C2>); // expected-error {{too few template arguments for concept 'C2'}} \
+static_assert(test<a::b::C2>); // expected-error {{template argument does not refer to a class or alias template, or template template parameter}} \
                                // expected-note@#C2 {{here}}
-static_assert(test<C3>); // expected-error {{too few template arguments for concept 'C3'}} \
+static_assert(test<C3>); // expected-error {{template argument does not refer to a class or alias template, or template template parameter}} \
                          // expected-note@#C3 {{here}}
 
-static_assert(test<a::V1>); // expected-error {{use of variable template 'a::V1' requires template arguments}} \
+static_assert(test<a::V1>); // expected-error {{template argument does not refer to a class or alias template, or template template parameter}} \
                             // expected-note@#V1 {{here}}
-static_assert(test<a::b::V2>); // expected-error {{use of variable template 'a::b::V2' requires template arguments}} \
+static_assert(test<a::b::V2>); // expected-error {{template argument does not refer to a class or alias template, or template template parameter}} \
                             // expected-note@#V2 {{here}}
-static_assert(test<V3>); // expected-error {{use of variable template 'V3' requires template arguments}} \
+static_assert(test<V3>); // expected-error {{template argument does not refer to a class or alias template, or template template parameter}} \
                          // expected-note@#V3 {{here}}
 
 

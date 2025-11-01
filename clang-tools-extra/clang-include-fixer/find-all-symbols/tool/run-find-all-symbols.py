@@ -26,7 +26,7 @@ import argparse
 import json
 import multiprocessing
 import os
-import Queue
+from queue import Queue
 import shutil
 import subprocess
 import sys
@@ -105,7 +105,7 @@ def main():
 
     try:
         # Spin up a bunch of tidy-launching threads.
-        queue = Queue.Queue(max_task)
+        queue = Queue(max_task)
         for _ in range(max_task):
             t = threading.Thread(
                 target=run_find_all_symbols, args=(args, tmpdir, build_path, queue)

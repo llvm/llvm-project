@@ -21,6 +21,7 @@
 #define LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -32,9 +33,6 @@ class InstructionPrecedenceTracking {
   // nullptr, it means that it is known that this block does not contain any
   // special instructions.
   DenseMap<const BasicBlock *, const Instruction *> FirstSpecialInsts;
-
-  // Fills information about the given block's special instructions.
-  void fill(const BasicBlock *BB);
 
 #ifndef NDEBUG
   /// Asserts that the cached info for \p BB is up-to-date. This helps to catch
@@ -51,15 +49,15 @@ class InstructionPrecedenceTracking {
 protected:
   /// Returns the topmost special instruction from the block \p BB. Returns
   /// nullptr if there is no special instructions in the block.
-  const Instruction *getFirstSpecialInstruction(const BasicBlock *BB);
+  LLVM_ABI const Instruction *getFirstSpecialInstruction(const BasicBlock *BB);
 
   /// Returns true iff at least one instruction from the basic block \p BB is
   /// special.
-  bool hasSpecialInstructions(const BasicBlock *BB);
+  LLVM_ABI bool hasSpecialInstructions(const BasicBlock *BB);
 
   /// Returns true iff the first special instruction of \p Insn's block exists
   /// and dominates \p Insn.
-  bool isPreceededBySpecialInstruction(const Instruction *Insn);
+  LLVM_ABI bool isPreceededBySpecialInstruction(const Instruction *Insn);
 
   /// A predicate that defines whether or not the instruction \p Insn is
   /// considered special and needs to be tracked. Implementing this method in
@@ -74,19 +72,20 @@ public:
   /// Notifies this tracking that we are going to insert a new instruction \p
   /// Inst to the basic block \p BB. It makes all necessary updates to internal
   /// caches to keep them consistent.
-  void insertInstructionTo(const Instruction *Inst, const BasicBlock *BB);
+  LLVM_ABI void insertInstructionTo(const Instruction *Inst,
+                                    const BasicBlock *BB);
 
   /// Notifies this tracking that we are going to remove the instruction \p Inst
   /// It makes all necessary updates to internal caches to keep them consistent.
-  void removeInstruction(const Instruction *Inst);
+  LLVM_ABI void removeInstruction(const Instruction *Inst);
 
   /// Notifies this tracking that we are going to replace all uses of \p Inst.
   /// It makes all necessary updates to internal caches to keep them consistent.
   /// Should typically be called before a RAUW.
-  void removeUsersOf(const Instruction *Inst);
+  LLVM_ABI void removeUsersOf(const Instruction *Inst);
 
   /// Invalidates all information from this tracking.
-  void clear();
+  LLVM_ABI void clear();
 };
 
 /// This class allows to keep track on instructions with implicit control flow.
@@ -96,7 +95,8 @@ public:
 /// is reached, then we need to make sure that there is no implicit control flow
 /// instruction (ICFI) preceding it. For example, this check is required if we
 /// perform PRE moving non-speculable instruction to other place.
-class ImplicitControlFlowTracking : public InstructionPrecedenceTracking {
+class LLVM_ABI ImplicitControlFlowTracking
+    : public InstructionPrecedenceTracking {
 public:
   /// Returns the topmost instruction with implicit control flow from the given
   /// basic block. Returns nullptr if there is no such instructions in the block.
@@ -118,7 +118,7 @@ public:
   bool isSpecialInstruction(const Instruction *Insn) const override;
 };
 
-class MemoryWriteTracking : public InstructionPrecedenceTracking {
+class LLVM_ABI MemoryWriteTracking : public InstructionPrecedenceTracking {
 public:
   /// Returns the topmost instruction that may write memory from the given
   /// basic block. Returns nullptr if there is no such instructions in the block.

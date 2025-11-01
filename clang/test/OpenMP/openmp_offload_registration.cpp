@@ -8,7 +8,7 @@ void foo(void) {
   {}
 }
 
-// CHECK-DAG: [[ENTTY:%.+]] = type { ptr, ptr, i[[SZ:32|64]], i32, i32 }
+// CHECK-DAG: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
 // Check presence of foo() and the outlined target region
 // CHECK: define{{.*}} void [[FOO:@.+]]()

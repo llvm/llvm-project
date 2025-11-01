@@ -30,30 +30,46 @@
 #include <vector>
 
 // Sanity-check that std::vector is constructible from two ints...
-static_assert( std::is_constructible<std::vector<int>,         int*, int*>::value, "");
-static_assert( std::is_constructible<std::vector<int>,         int , int >::value, "");
+static_assert(std::is_constructible<std::vector<int>, int*, int*>::value, "");
+static_assert(std::is_constructible<std::vector<int>, int, int >::value, "");
 
 // ...but std::priority_queue is not.
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int >::value, "");
+static_assert(std::is_constructible<std::priority_queue<int>, int*, int*>::value, "");
+static_assert(!std::is_constructible<std::priority_queue<int>, int, int >::value, "");
 
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int , std::less<int>>::value, "");
+static_assert(std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>>::value, "");
+static_assert(!std::is_constructible<std::priority_queue<int>, int, int, std::less<int>>::value, "");
 
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int , std::less<int>, std::vector<int>>::value, "");
+static_assert(std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>>::value, "");
+static_assert(!std::is_constructible<std::priority_queue<int>, int, int, std::less<int>, std::vector<int>>::value, "");
 
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>&>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int , std::less<int>, std::vector<int>&>::value, "");
+static_assert(std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>&>::value,
+              "");
+static_assert(!std::is_constructible<std::priority_queue<int>, int, int, std::less<int>, std::vector<int>&>::value, "");
 
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*, std::allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int , std::allocator<int>>::value, "");
+static_assert(std::is_constructible<std::priority_queue<int>, int*, int*, std::allocator<int>>::value, "");
+static_assert(!std::is_constructible<std::priority_queue<int>, int, int, std::allocator<int>>::value, "");
 
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int , std::less<int>, std::allocator<int>>::value, "");
+static_assert(std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::allocator<int>>::value,
+              "");
+static_assert(!std::is_constructible<std::priority_queue<int>, int, int, std::less<int>, std::allocator<int>>::value,
+              "");
 
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>, std::allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int , std::less<int>, std::vector<int>, std::allocator<int>>::value, "");
+static_assert(
+    std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>, std::allocator<int>>::
+        value,
+    "");
+static_assert(
+    !std::is_constructible<std::priority_queue<int>, int, int, std::less<int>, std::vector<int>, std::allocator<int>>::
+        value,
+    "");
 
-static_assert( std::is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>&, std::allocator<int>>::value, "");
-static_assert(!std::is_constructible<std::priority_queue<int>, int , int , std::less<int>, std::vector<int>&, std::allocator<int>>::value, "");
+static_assert(
+    std::
+        is_constructible<std::priority_queue<int>, int*, int*, std::less<int>, std::vector<int>&, std::allocator<int>>::
+            value,
+    "");
+static_assert(
+    !std::is_constructible<std::priority_queue<int>, int, int, std::less<int>, std::vector<int>&, std::allocator<int>>::
+        value,
+    "");

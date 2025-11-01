@@ -26,6 +26,9 @@ TEST_CONSTEXPR_CXX17 void test() {
 TEST_CONSTEXPR_CXX17 bool tests() {
     test<bidirectional_iterator<const char*> >();
     test<random_access_iterator<char*> >();
+#if TEST_STD_VER >= 20
+    test<cpp20_random_access_iterator<char*> >();
+#endif
     test<char*>();
     test<const char*>();
     return true;

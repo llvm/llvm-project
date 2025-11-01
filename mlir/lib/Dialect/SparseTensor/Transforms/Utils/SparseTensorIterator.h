@@ -95,6 +95,8 @@ enum class IterKind : uint8_t {
 class SparseIterationSpace {
 public:
   SparseIterationSpace() = default;
+  SparseIterationSpace(SparseIterationSpace &) = delete;
+  SparseIterationSpace(SparseIterationSpace &&) = default;
 
   // Constructs a N-D iteration space.
   SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,
@@ -175,8 +177,12 @@ protected:
 public:
   virtual ~SparseIterator() = default;
 
-  void setSparseEmitStrategy(SparseEmitStrategy strategy) {
+  virtual void setSparseEmitStrategy(SparseEmitStrategy strategy) {
     emitStrategy = strategy;
+  }
+
+  virtual SparseEmitStrategy getSparseEmitStrategy() const {
+    return emitStrategy;
   }
 
   virtual std::string getDebugInterfacePrefix() const = 0;

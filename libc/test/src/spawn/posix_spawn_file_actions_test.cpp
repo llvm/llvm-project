@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/spawn/file_actions.h"
 #include "src/spawn/posix_spawn_file_actions_addclose.h"
 #include "src/spawn/posix_spawn_file_actions_adddup2.h"
@@ -14,9 +16,7 @@
 #include "src/spawn/posix_spawn_file_actions_init.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <spawn.h>
-#include <stdint.h>
 
 TEST(LlvmLibcPosixSpawnFileActionsTest, AddActions) {
   posix_spawn_file_actions_t actions;

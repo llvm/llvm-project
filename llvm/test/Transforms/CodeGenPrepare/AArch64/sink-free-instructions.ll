@@ -984,3 +984,22 @@ if.else:
   ret <5 x float> %r.4
 }
 
+; This ran in an assert in `areExtractShuffleVectors`.
+define <vscale x 8 x i16> @scalable_types_cannot_be_extract_shuffle() {
+; CHECK-LABEL: @scalable_types_cannot_be_extract_shuffle(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BROADCAST_SPLAT68:%.*]] = shufflevector <vscale x 8 x i8> zeroinitializer, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = zext <vscale x 8 x i8> [[BROADCAST_SPLAT68]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[BROADCAST_SPLAT70:%.*]] = shufflevector <vscale x 8 x i8> zeroinitializer, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 8 x i8> [[BROADCAST_SPLAT70]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <vscale x 8 x i16> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP2]]
+;
+entry:
+  %broadcast.splat68 = shufflevector <vscale x 8 x i8> zeroinitializer, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %0 = zext <vscale x 8 x i8> %broadcast.splat68 to <vscale x 8 x i16>
+  %broadcast.splat70 = shufflevector <vscale x 8 x i8> zeroinitializer, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %1 = zext <vscale x 8 x i8> %broadcast.splat70 to <vscale x 8 x i16>
+  %2 = sub <vscale x 8 x i16> %0, %1
+  ret <vscale x 8 x i16> %2
+}

@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyGoogleModule
+add_clang_library(clangTidyGoogleModule STATIC
   AvoidCStyleCastsCheck.cpp
   AvoidNSObjectNewCheck.cpp
   AvoidThrowingObjCExceptionCheck.cpp
@@ -11,6 +11,7 @@ add_clang_library(clangTidyGoogleModule
   DefaultArgumentsCheck.cpp
   ExplicitConstructorCheck.cpp
   ExplicitMakePairCheck.cpp
+  FloatTypesCheck.cpp
   FunctionNamingCheck.cpp
   GlobalNamesInHeadersCheck.cpp
   GlobalVariableDeclarationCheck.cpp

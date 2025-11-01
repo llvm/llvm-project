@@ -1,25 +1,43 @@
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-#===----------------------------------------------------------------------===##
+# ===----------------------------------------------------------------------===##
 
 # Test that headers are not tripped up by the surrounding code defining various
 # alphabetic macros. Also ensure that we don't swallow the definition of user
 # provided macros (in other words, ensure that we push/pop correctly everywhere).
 
+# This test fails with MSVC headers, with Clang 20 (and early 21 versions);
+# the headers end up pulling in Clang intrinsics headers, which in 20.x and
+# early 21.x versions use unreserved identifiers,
+# see https://github.com/llvm/llvm-project/issues/161808.
+#
+# UNSUPPORTED: clang-20 && msvc
+
 # RUN: %{python} %s %{libcxx-dir}/utils
+# END.
 
 import sys
+
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import (
+    lit_header_restrictions,
+    lit_header_undeprecations,
+    public_headers,
+)
 
 for header in public_headers:
-  print(f"""\
+    print(
+        f"""\
 //--- {header}.compile.pass.cpp
 {lit_header_restrictions.get(header, '')}
+{lit_header_undeprecations.get(header, '')}
+
+// This is required to detect the platform we're building for below.
+#include <__config>
 
 #define SYSTEM_RESERVED_NAME This name should not be used in libc++
 
@@ -112,6 +130,11 @@ for header in public_headers:
 #define __acquire SYSTEM_RESERVED_NAME
 #define __release SYSTEM_RESERVED_NAME
 
+// Android and FreeBSD use this for __attribute__((__unused__))
+#if !defined(__FreeBSD__)  && !defined(__ANDROID__)
+#define __unused SYSTEM_RESERVED_NAME
+#endif
+
 // These names are not reserved, so the user can macro-define them.
 // These are intended to find improperly _Uglified template parameters.
 #define A SYSTEM_RESERVED_NAME
@@ -162,6 +185,18 @@ for header in public_headers:
 #define erase SYSTEM_RESERVED_NAME
 #define refresh SYSTEM_RESERVED_NAME
 
+// Dinkumware libc ctype.h uses these definitions
+#define _XA SYSTEM_RESERVED_NAME
+#define _XS SYSTEM_RESERVED_NAME
+#define _BB SYSTEM_RESERVED_NAME
+#define _CN SYSTEM_RESERVED_NAME
+#define _DI SYSTEM_RESERVED_NAME
+#define _LO SYSTEM_RESERVED_NAME
+#define _PU SYSTEM_RESERVED_NAME
+#define _SP SYSTEM_RESERVED_NAME
+#define _UP SYSTEM_RESERVED_NAME
+#define _XD SYSTEM_RESERVED_NAME
+
 #include <{header}>
 
 // Make sure we don't swallow the definition of the macros we push/pop
@@ -172,4 +207,5 @@ static_assert(__builtin_strcmp(STRINGIFY(max), STRINGIFY(SYSTEM_RESERVED_NAME)) 
 static_assert(__builtin_strcmp(STRINGIFY(move), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
 static_assert(__builtin_strcmp(STRINGIFY(erase), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
 static_assert(__builtin_strcmp(STRINGIFY(refresh), STRINGIFY(SYSTEM_RESERVED_NAME)) == 0, "");
-""")
+"""
+    )

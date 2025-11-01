@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
 ; Control Flow Guard is currently only available on Windows
 
-; CHECK: .set @feat.00, 2048
+; CHECK: @feat.00 = 2048
 
 ; CHECK: .section .gfids$y
 ; CHECK: .symidx "?address_taken@@YAXXZ"

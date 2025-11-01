@@ -43,15 +43,15 @@
         dsrl32     $s3,23            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         dsrl32     $s3,$6,23         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         dsrlv      $s3,$t2,$s4       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        dsub       $a3,$s6,$a4       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
+        dsub       $a3,$s6,$a4       # CHECK: :[[#@LINE]]:[[#]]: error: unexpected token in argument list
         dsubu      $a1,$a1,$k0       # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         dsubu      $15,$11,5025      # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         dsubu      $14,-4586         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         eret                         # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         floor.l.d  $f26,$f7          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         floor.l.s  $f12,$f5          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
-        lld        $zero,-14736($ra) # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction
-        lwu        $s3,-24086($v1)   # CHECK: :[[@LINE]]:24: error: invalid operand for instruction
+        lld        $zero,-14736($ra) # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
+        lwu        $s3,-24086($v1)   # CHECK: :[[#@LINE]]:[[#]]: error: instruction requires a CPU feature not currently enabled
         round.l.d  $f12,$f1          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         round.l.s  $f25,$f5          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled
         trunc.l.d   $f23,$f23        # CHECK: :[[@LINE]]:{{[0-9]+}}: error: instruction requires a CPU feature not currently enabled

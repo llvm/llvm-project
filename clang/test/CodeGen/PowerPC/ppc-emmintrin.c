@@ -438,7 +438,7 @@ test_converts() {
 // CHECK-LABEL: define available_externally <2 x double> @_mm_cvtepi32_pd
 // CHECK: call <2 x i64> @vec_unpackh(int vector[4])
 // CHECK: %[[CONV:[0-9a-zA-Z_.]+]] = sitofp <2 x i64> %{{[0-9a-zA-Z_.]+}} to <2 x double>
-// CHECK: fmul <2 x double> %[[CONV]], <double 1.000000e+00, double 1.000000e+00>
+// CHECK: fmul <2 x double> %[[CONV]], splat (double 1.000000e+00)
 
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cvtepi32_ps
 // CHECK: call <4 x float> @llvm.ppc.altivec.vcfsx(<4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 0)
@@ -466,7 +466,7 @@ test_converts() {
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK: call <2 x i64> @vec_unpackl(int vector[4])
 // CHECK: %[[CONV:[0-9a-zA-Z_.]+]] = sitofp <2 x i64> %{{[0-9a-zA-Z._]+}} to <2 x double>
-// CHECK: fmul <2 x double> %[[CONV]], <double 1.000000e+00, double 1.000000e+00>
+// CHECK: fmul <2 x double> %[[CONV]], splat (double 1.000000e+00)
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_cvtps_epi32
 // CHECK: call <4 x float> @vec_rint(float vector[4])
@@ -1012,14 +1012,14 @@ test_shuffle() {
 // CHECK: %[[SHR:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds nuw [4 x i32], ptr @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])
 
@@ -1050,7 +1050,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 1663540288323457296, i64 0>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 1157726452361532951, i64 0>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], ptr @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds nuw [4 x i16], ptr @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_shufflelo_epi16
@@ -1067,7 +1067,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 0, i64 2242261671028070680>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 0, i64 1736447835066146335>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], ptr @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds nuw [4 x i16], ptr @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 void __attribute__((noinline))
@@ -1084,23 +1084,23 @@ test_sll() {
 // CHECK-LABEL: @test_sll
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sll_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> splat (i16 15), ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)
 // CHECK-BE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)
-// CHECK: call <8 x i16> @vec_cmple(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
+// CHECK: call <8 x i16> @vec_cmple(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef splat (i16 15))
 // CHECK: call <8 x i16> @vec_sl(unsigned short vector[8], unsigned short vector[8])
 // CHECK: call <8 x i16> @vec_sel(unsigned short vector[8], unsigned short vector[8], bool vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sll_epi32
 // CHECK-LE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 1)
-// CHECK: call <4 x i32> @vec_cmplt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef {{[0-9a-zA-Z_%.]+}}, <4 x i32> noundef <i32 32, i32 32, i32 32, i32 32>)
+// CHECK: call <4 x i32> @vec_cmplt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef {{[0-9a-zA-Z_%.]+}}, <4 x i32> noundef splat (i32 32))
 // CHECK: call <4 x i32> @vec_sl(unsigned int vector[4], unsigned int vector[4])
 // CHECK: call <4 x i32> @vec_sel(unsigned int vector[4], unsigned int vector[4], bool vector[4])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sll_epi64
 // CHECK: call <2 x i64> @vec_splat(unsigned long long vector[2], unsigned int)(<2 x i64> noundef {{[0-9a-zA-Z_%.]+}}, i32 noundef zeroext 0)
-// CHECK: call <2 x i64> @vec_cmplt(unsigned long long vector[2], unsigned long long vector[2])(<2 x i64> noundef {{[0-9a-zA-Z_%.]+}}, <2 x i64> noundef <i64 64, i64 64>)
+// CHECK: call <2 x i64> @vec_cmplt(unsigned long long vector[2], unsigned long long vector[2])(<2 x i64> noundef {{[0-9a-zA-Z_%.]+}}, <2 x i64> noundef splat (i64 64))
 // CHECK: call <2 x i64> @vec_sl(unsigned long long vector[2], unsigned long long vector[2])
 // CHECK: call <2 x i64> @vec_sel(unsigned long long vector[2], unsigned long long vector[2], bool vector[2])
 
@@ -1179,21 +1179,21 @@ test_sra() {
 // CHECK-LABEL: @test_sra
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sra_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> splat (i16 15), ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 3)
-// CHECK: call <8 x i16> @vec_min(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
+// CHECK: call <8 x i16> @vec_min(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef splat (i16 15))
 // CHECK: call <8 x i16> @vec_sra(short vector[8], unsigned short vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_sra_epi32
-// CHECK: store <4 x i32> <i32 31, i32 31, i32 31, i32 31>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> splat (i32 31), ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 1)
-// CHECK: call <4 x i32> @vec_min(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 31, i32 31, i32 31, i32 31>)
+// CHECK: call <4 x i32> @vec_min(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 31))
 // CHECK: call <4 x i32> @vec_sra(int vector[4], unsigned int vector[4])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srai_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> splat (i16 15), ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 16
 // CHECK: br i1 %[[CMP]]
 // CHECK: call i1 @llvm.is.constant
@@ -1204,7 +1204,7 @@ test_sra() {
 // CHECK: call <8 x i16> @vec_sra(short vector[8], unsigned short vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srai_epi32
-// CHECK: store <4 x i32> <i32 31, i32 31, i32 31, i32 31>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <4 x i32> splat (i32 31), ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: %[[CMP:[0-9a-zA-Z_.]+]] = icmp slt i32 %{{[0-9a-zA-Z_.]+}}, 32
 // CHECK: br i1 %[[CMP]]
 // CHECK: call i1 @llvm.is.constant
@@ -1230,23 +1230,23 @@ test_srl() {
 // CHECK-LABEL: @test_srl
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srl_epi16
-// CHECK: store <8 x i16> <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>, ptr %{{[0-9a-zA-Z_.]+}}, align 16
+// CHECK: store <8 x i16> splat (i16 15), ptr %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-LE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <8 x i16> @vec_splat(unsigned short vector[8], unsigned int)(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 3)
-// CHECK: call <8 x i16> @vec_cmple(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>)
+// CHECK: call <8 x i16> @vec_cmple(unsigned short vector[8], unsigned short vector[8])(<8 x i16> noundef %{{[0-9a-zA-Z_.]+}}, <8 x i16> noundef splat (i16 15))
 // CHECK: call <8 x i16> @vec_sr(unsigned short vector[8], unsigned short vector[8])
 // CHECK: call <8 x i16> @vec_sel(unsigned short vector[8], unsigned short vector[8], bool vector[8])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srl_epi32
 // CHECK-LE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK-BE: call <4 x i32> @vec_splat(unsigned int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 1)
-// CHECK: call <4 x i32> @vec_cmplt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef <i32 32, i32 32, i32 32, i32 32>)
+// CHECK: call <4 x i32> @vec_cmplt(unsigned int vector[4], unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef splat (i32 32))
 // CHECK: call <4 x i32> @vec_sr(unsigned int vector[4], unsigned int vector[4])
 // CHECK: call <4 x i32> @vec_sel(unsigned int vector[4], unsigned int vector[4], bool vector[4])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srl_epi64
 // CHECK: call <2 x i64> @vec_splat(unsigned long long vector[2], unsigned int)(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
-// CHECK: call <2 x i64> @vec_cmplt(unsigned long long vector[2], unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef <i64 64, i64 64>)
+// CHECK: call <2 x i64> @vec_cmplt(unsigned long long vector[2], unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef splat (i64 64))
 // CHECK: call <2 x i64> @vec_sr(unsigned long long vector[2], unsigned long long vector[2])
 // CHECK: call <2 x i64> @vec_sel(unsigned long long vector[2], unsigned long long vector[2], bool vector[2])
 

@@ -570,7 +570,7 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
 
   this_thr->th.th_teams_microtask = NULL;
   this_thr->th.th_teams_level = 0;
-  *(kmp_int64 *)(&this_thr->th.th_teams_size) = 0L;
+  memset(&this_thr->th.th_teams_size, 0, sizeof(kmp_teams_size_t));
   va_end(ap);
 #if KMP_STATS_ENABLED
   if (previous_state == stats_state_e::SERIAL_REGION) {
@@ -1589,7 +1589,7 @@ void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
   kmp_dyna_lockseq_t lockseq = __kmp_map_hint_to_lock(hint);
   if (*lk == 0) {
     if (KMP_IS_D_LOCK(lockseq)) {
-      KMP_COMPARE_AND_STORE_ACQ32(
+      (void)KMP_COMPARE_AND_STORE_ACQ32(
           (volatile kmp_int32 *)&((kmp_base_tas_lock_t *)crit)->poll, 0,
           KMP_GET_D_TAG(lockseq));
     } else {
@@ -3486,8 +3486,8 @@ __kmp_enter_critical_section_reduce_block(ident_t *loc, kmp_int32 global_tid,
   // Check if it is initialized.
   if (*lk == 0) {
     if (KMP_IS_D_LOCK(__kmp_user_lock_seq)) {
-      KMP_COMPARE_AND_STORE_ACQ32((volatile kmp_int32 *)crit, 0,
-                                  KMP_GET_D_TAG(__kmp_user_lock_seq));
+      (void)KMP_COMPARE_AND_STORE_ACQ32((volatile kmp_int32 *)crit, 0,
+                                        KMP_GET_D_TAG(__kmp_user_lock_seq));
     } else {
       __kmp_init_indirect_csptr(crit, loc, global_tid,
                                 KMP_GET_I_TAG(__kmp_user_lock_seq));

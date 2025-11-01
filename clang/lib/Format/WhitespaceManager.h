@@ -212,7 +212,7 @@ private:
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
   void calculateLineBreakInformation();
 
-  /// \brief Align consecutive C/C++ preprocessor macros over all \c Changes.
+  /// Align consecutive C/C++ preprocessor macros over all \c Changes.
   void alignConsecutiveMacros();
 
   /// Align consecutive assignments over all \c Changes.
@@ -349,7 +349,7 @@ private:
 
   /// Stores \p Text as the replacement for the whitespace in \p Range.
   void storeReplacement(SourceRange Range, StringRef Text);
-  void appendNewlineText(std::string &Text, unsigned Newlines);
+  void appendNewlineText(std::string &Text, const Change &C);
   void appendEscapedNewlineText(std::string &Text, unsigned Newlines,
                                 unsigned PreviousEndOfTokenColumn,
                                 unsigned EscapedNewlineColumn);

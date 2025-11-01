@@ -1,4 +1,4 @@
-//===--- MakeSharedCheck.h - clang-tidy--------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,7 +24,7 @@ namespace clang::tidy::modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/make-shared.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/make-shared.html
 class MakeSharedCheck : public MakeSmartPtrCheck {
 public:
   MakeSharedCheck(StringRef Name, ClangTidyContext *Context);

@@ -1,11 +1,7 @@
-; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck  \
-; RUN: %s
-; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S          \
-; RUN: -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
-; RUN: opt < %s -msan-check-access-address=0 -S          \
-; RUN: -passes="msan<track-origins=1>" 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
-; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S          \
-; RUN: -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
+; RUN: opt < %s -msan-check-access-address=0 -S -passes="msan<track-origins=1>" 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,CHECK-ORIGIN"
 
 ; Test that shadow and origin are stored for variadic function params.
 
@@ -20,20 +16,20 @@ entry:
   ret i32 %call
 }
 
-; CHECK: store i32 0, {{.*}} @__msan_param_tls {{.*}} i64 8
-; CHECK: store i32 0, {{.*}} @__msan_param_tls {{.*}} i64 16
-; CHECK: store i32 0, {{.*}} @__msan_param_tls {{.*}} i64 24
-; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls {{.*}} i64 8
-; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls {{.*}} i64 8
-; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls {{.*}} i64 16
-; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls {{.*}} i64 16
-; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls {{.*}} i64 24
-; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls {{.*}} i64 24
+; CHECK: store i32 0, {{.*}} @__msan_param_tls, i64 8
+; CHECK: store i32 0, {{.*}} @__msan_param_tls, i64 16
+; CHECK: store i32 0, {{.*}} @__msan_param_tls, i64 24
+; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls, i64 8
+; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls, i64 8
+; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls, i64 16
+; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls, i64 16
+; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls, i64 24
+; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls, i64 24
 
 define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 entry:
   %args = alloca [1 x %struct.__va_list_tag], align 16
-  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %args) #2
+  call void @llvm.lifetime.start.p0(ptr nonnull %args) #2
   call void @llvm.va_start(ptr nonnull %args)
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body.lr.ph, label %for.end
@@ -89,13 +85,13 @@ vaarg.end:                                        ; preds = %vaarg.in_mem, %vaar
 for.end:                                          ; preds = %vaarg.end, %entry
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add, %vaarg.end ]
   call void @llvm.va_end(ptr nonnull %args)
-  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %args) #2
+  call void @llvm.lifetime.end.p0(ptr nonnull %args) #2
   ret i32 %sum.0.lcssa
 }
 
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind
 declare void @llvm.va_start(ptr) #2
@@ -104,7 +100,7 @@ declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 declare dso_local i80 @sum_i80(i32, ...) local_unnamed_addr
 

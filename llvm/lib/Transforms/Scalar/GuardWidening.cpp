@@ -52,7 +52,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -75,8 +74,6 @@ static cl::opt<bool>
                       cl::desc("Whether or not we should widen guards  "
                                "expressed as branches by widenable conditions"),
                       cl::init(true));
-
-namespace {
 
 // Get the condition of \p I. It can either be a guard or a conditional branch.
 static Value *getCondition(Instruction *I) {
@@ -130,6 +127,8 @@ findInsertionPointForWideCondition(Instruction *WCOrGuard) {
     return cast<Instruction>(WC)->getIterator();
   return std::nullopt;
 }
+
+namespace {
 
 class GuardWideningImpl {
   DominatorTree &DT;
@@ -329,7 +328,7 @@ public:
   /// The entry point for this pass.
   bool run();
 };
-}
+} // namespace
 
 static bool isSupportedGuardInstruction(const Instruction *Insn) {
   if (isGuard(Insn))
@@ -643,9 +642,9 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
     return FI;
   }
 
-  SmallSet<Value *, 16> Visited;
+  SmallPtrSet<Value *, 16> Visited;
   SmallVector<Value *, 16> Worklist;
-  SmallSet<Instruction *, 16> DropPoisonFlags;
+  SmallPtrSet<Instruction *, 16> DropPoisonFlags;
   SmallVector<Value *, 16> NeedFreeze;
   DenseMap<Value *, FreezeInst *> CacheOfFreezes;
 
@@ -666,8 +665,8 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig,
       CacheOfFreezes[Def] = FI;
     }
 
-    if (CacheOfFreezes.count(Def))
-      U.set(CacheOfFreezes[Def]);
+    if (auto It = CacheOfFreezes.find(Def); It != CacheOfFreezes.end())
+      U.set(It->second);
     return true;
   };
 
@@ -728,7 +727,7 @@ GuardWideningImpl::mergeChecks(SmallVectorImpl<Value *> &ChecksToHoist,
     // L >u C0 && L >u C1  ->  L >u max(C0, C1)
     ConstantInt *RHS0, *RHS1;
     Value *LHS;
-    ICmpInst::Predicate Pred0, Pred1;
+    CmpPredicate Pred0, Pred1;
     // TODO: Support searching for pairs to merge from both whole lists of
     // ChecksToHoist and ChecksToWiden.
     if (ChecksToWiden.size() == 1 && ChecksToHoist.size() == 1 &&
@@ -980,11 +979,11 @@ StringRef GuardWideningImpl::scoreTypeToString(WideningScore WS) {
 PreservedAnalyses GuardWideningPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   // Avoid requesting analyses if there are no guards or widenable conditions.
-  auto *GuardDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_guard));
+  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_guard);
   bool HasIntrinsicGuards = GuardDecl && !GuardDecl->use_empty();
-  auto *WCDecl = F.getParent()->getFunction(
-      Intrinsic::getName(Intrinsic::experimental_widenable_condition));
+  auto *WCDecl = Intrinsic::getDeclarationIfExists(
+      F.getParent(), Intrinsic::experimental_widenable_condition);
   bool HasWidenableConditions = WCDecl && !WCDecl->use_empty();
   if (!HasIntrinsicGuards && !HasWidenableConditions)
     return PreservedAnalyses::all();

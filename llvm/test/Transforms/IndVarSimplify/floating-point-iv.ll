@@ -10,7 +10,7 @@ define void @test1() nounwind {
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[IV_INT]] to double
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @foo(double [[INDVAR_CONV]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[DOTINT]] = add nuw nsw i32 [[IV_INT]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[DOTINT]], 10000
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp samesign ult i32 [[DOTINT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB]], label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -145,7 +145,7 @@ define double @test_max_be() {
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[TMP11_INT]] to double
 ; CHECK-NEXT:    [[TMP12]] = fadd double [[TMP10]], [[INDVAR_CONV]]
 ; CHECK-NEXT:    [[TMP13_INT]] = add nuw nsw i32 [[TMP11_INT]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13_INT]], 99999
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp samesign ult i32 [[TMP13_INT]], 99999
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[BB22]], label [[BB6:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[BB6]]
@@ -184,7 +184,7 @@ define float @test_max_be2() {
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[TMP11_INT]] to float
 ; CHECK-NEXT:    [[TMP12]] = fadd float [[TMP10]], [[INDVAR_CONV]]
 ; CHECK-NEXT:    [[TMP13_INT]] = add nuw nsw i32 [[TMP11_INT]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13_INT]], 99999
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp samesign ult i32 [[TMP13_INT]], 99999
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[BB22]], label [[BB6:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[BB6]]
@@ -224,7 +224,7 @@ define float @test_max_be3() {
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[TMP11_INT]] to float
 ; CHECK-NEXT:    [[TMP12]] = fadd float [[TMP10]], [[INDVAR_CONV]]
 ; CHECK-NEXT:    [[TMP13_INT]] = add nuw nsw i32 [[TMP11_INT]], 1
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp ult i32 [[TMP13_INT]], 99999
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp samesign ult i32 [[TMP13_INT]], 99999
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[BB22]], label [[BB6:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    br i1 true, label [[BB8]], label [[BB6]]
@@ -263,7 +263,7 @@ define void @fcmp1() nounwind {
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IV]], 20000
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[IV]], 20000
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[RETURN:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_FP:%.*]] = sitofp i64 [[IV]] to double
@@ -299,7 +299,7 @@ define void @fcmp2() nounwind {
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IV]], 2000
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp samesign ult i64 [[IV]], 2000
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[BACKEDGE]], label [[RETURN:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_FP:%.*]] = sitofp i64 [[IV]] to double
@@ -389,7 +389,7 @@ define void @pr55505_remove_redundant_fptosi_for_float_iv(i32 %index, ptr %dst) 
 ; CHECK-NEXT:    call void @use.i16(i16 [[FLOAT_IV_INT_TRUNC2]])
 ; CHECK-NEXT:    call void @use.i64(i64 [[FLOAT_IV_INT_ZEXT]])
 ; CHECK-NEXT:    [[FLOAT_IV_NEXT_INT]] = add nsw i32 [[FLOAT_IV_INT]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[FLOAT_IV_NEXT_INT]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[FLOAT_IV_NEXT_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

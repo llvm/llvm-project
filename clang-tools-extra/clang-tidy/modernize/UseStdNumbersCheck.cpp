@@ -1,4 +1,4 @@
-//===--- UseStdNumbersCheck.cpp - clang_tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -91,8 +91,11 @@ struct MatchBuilder {
 
   auto matchMathCall(const StringRef FunctionName,
                      const Matcher<clang::Expr> ArgumentMatcher) const {
+    auto HasAnyPrecisionName = hasAnyName(
+        FunctionName, (FunctionName + "l").str(),
+        (FunctionName + "f").str()); // Support long double(l) and float(f).
     return expr(ignoreParenAndFloatingCasting(
-        callExpr(callee(functionDecl(hasName(FunctionName),
+        callExpr(callee(functionDecl(HasAnyPrecisionName,
                                      hasParameter(0, hasType(isArithmetic())))),
                  hasArgument(0, ArgumentMatcher))));
   }
@@ -252,8 +255,10 @@ struct MatchBuilder {
   double DiffThreshold;
 };
 
-std::string getCode(const StringRef Constant, const bool IsFloat,
-                    const bool IsLongDouble) {
+} // namespace
+
+static std::string getCode(const StringRef Constant, const bool IsFloat,
+                           const bool IsLongDouble) {
   if (IsFloat) {
     return ("std::numbers::" + Constant + "_v<float>").str();
   }
@@ -263,9 +268,9 @@ std::string getCode(const StringRef Constant, const bool IsFloat,
   return ("std::numbers::" + Constant).str();
 }
 
-bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
-                            const clang::SourceManager &SM,
-                            const clang::LangOptions &LO) {
+static bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
+                                   const clang::SourceManager &SM,
+                                   const clang::LangOptions &LO) {
   if (!Range.getBegin().isMacroID()) {
     return false;
   }
@@ -283,8 +288,6 @@ bool isRangeOfCompleteMacro(const clang::SourceRange &Range,
 
   return true;
 }
-
-} // namespace
 
 namespace clang::tidy::modernize {
 UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
@@ -316,7 +319,7 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
 
   Finder->addMatcher(
       expr(
-          anyOfExhaustive(std::move(ConstantMatchers)),
+          anyOfExhaustive(ConstantMatchers),
           unless(hasParent(explicitCastExpr(hasDestinationType(isFloating())))),
           hasType(qualType(hasCanonicalTypeUnqualified(
               anyOf(qualType(asString("float")).bind("float"),
@@ -412,9 +415,7 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  llvm::sort(MatchedLiterals, [](const auto &LHS, const auto &RHS) {
-    return std::get<1>(LHS) < std::get<1>(RHS);
-  });
+  llvm::sort(MatchedLiterals, llvm::less_second());
 
   const auto &[Constant, Diff, Node] = MatchedLiterals.front();
 

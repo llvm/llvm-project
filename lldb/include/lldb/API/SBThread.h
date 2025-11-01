@@ -81,6 +81,14 @@ public:
   SBThreadCollection
   GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type);
 
+  /// Gets a human-readable description of why the thread stopped.
+  ///
+  /// \param stream Output stream to receive the stop description text
+  /// \return
+  ///   true if obtained and written to the stream,
+  //    false if there was an error retrieving the description.
+  bool GetStopDescription(lldb::SBStream &stream) const;
+
   size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
   SBValue GetStopReturnValue();
@@ -233,6 +241,7 @@ private:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
   friend class SBBreakpointCallbackBaton;
+  friend class SBSaveCoreOptions;
   friend class SBExecutionContext;
   friend class SBFrame;
   friend class SBProcess;
@@ -250,8 +259,7 @@ private:
 
   void SetThread(const lldb::ThreadSP &lldb_object_sp);
 
-  SBError ResumeNewPlan(lldb_private::ExecutionContext &exe_ctx,
-                        lldb_private::ThreadPlan *new_plan);
+  lldb::ThreadSP GetSP() const;
 
   lldb::ExecutionContextRefSP m_opaque_sp;
 

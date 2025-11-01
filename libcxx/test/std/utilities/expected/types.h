@@ -157,12 +157,12 @@ struct MoveOnlyErrorType {
 // tail padding. With this type we can check that `std::expected` handles
 // the case where the "has value" flag is an overlapping subobject correctly.
 //
-// See https://github.com/llvm/llvm-project/issues/68552 for details.
+// See https://llvm.org/PR68552 for details.
 template <int Constant>
 struct TailClobberer {
   constexpr TailClobberer() noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, Constant, sizeof(*this));
+      std::memset(static_cast<void*>(this), Constant, sizeof(*this));
     }
     // Always set `b` itself to `false` so that the comparison works.
     b = false;
@@ -200,9 +200,8 @@ static_assert(std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0
 static_assert(!std::is_nothrow_move_constructible_v<TailClobbererNonTrivialMove<0, false>>);
 
 // The `CheckForInvalidWrites` class recreates situations where other objects
-// may be placed into a `std::expected`'s tail padding (see
-// https://github.com/llvm/llvm-project/issues/70494). With a template
-// parameter `WithPaddedExpected` two cases can be tested:
+// may be placed into a `std::expected`'s tail padding (see https://llvm.org/PR70494).
+// With a template parameter `WithPaddedExpected` two cases can be tested:
 //
 // 1. The `std::expected<T, E>` itself has padding, because `T`/`E` _don't_
 //    have tail padding. This is modelled by `CheckForInvalidWrites<true>`
@@ -245,7 +244,7 @@ struct BoolWithPadding {
   constexpr explicit BoolWithPadding() noexcept : BoolWithPadding(false) {}
   constexpr BoolWithPadding(bool val) noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, 0, sizeof(*this));
+      std::memset(static_cast<void*>(this), 0, sizeof(*this));
     }
     val_ = val;
   }
@@ -268,7 +267,7 @@ struct IntWithoutPadding {
   constexpr explicit IntWithoutPadding() noexcept : IntWithoutPadding(0) {}
   constexpr IntWithoutPadding(int val) noexcept {
     if (!std::is_constant_evaluated()) {
-      std::memset(this, 0, sizeof(*this));
+      std::memset(static_cast<void*>(this), 0, sizeof(*this));
     }
     val_ = val;
   }

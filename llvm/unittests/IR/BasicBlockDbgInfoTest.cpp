@@ -141,12 +141,73 @@ TEST(BasicBlockDbgInfoTest, SplitBasicBlockBefore) {
   Function *F = M->getFunction("func");
 
   BasicBlock &BB = F->getEntryBlock();
-  auto I = std::prev(BB.end(), 2);
+  auto I = std::prev(BB.end(), 2); // store i32 2, ptr %1.
   BB.splitBasicBlockBefore(I, "before");
 
   BasicBlock &BBBefore = F->getEntryBlock();
-  auto I2 = std::prev(BBBefore.end(), 2);
+  auto I2 = std::prev(BBBefore.end()); // br label %1 (new).
   ASSERT_TRUE(I2->hasDbgRecords());
+}
+
+TEST(BasicBlockDbgInfoTest, DropSourceAtomOnSplit) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"---(
+    define dso_local void @func() !dbg !10 {
+      %1 = alloca i32, align 4
+      ret void, !dbg !DILocation(line: 3, column: 2, scope: !10, atomGroup: 1, atomRank: 1)
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2, !3}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "dummy", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+    !1 = !DIFile(filename: "dummy", directory: "dummy")
+    !2 = !{i32 7, !"Dwarf Version", i32 5}
+    !3 = !{i32 2, !"Debug Info Version", i32 3}
+    !10 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !11, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13, keyInstructions: true)
+    !11 = !DISubroutineType(types: !12)
+    !12 = !{null}
+    !13 = !{}
+    !14 = !DILocalVariable(name: "a", scope: !10, file: !1, line: 2, type: !15)
+    !15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  )---");
+  ASSERT_TRUE(M);
+
+  Function *F = M->getFunction("func");
+
+  // Test splitBasicBlockBefore.
+  {
+    BasicBlock &BB = F->back();
+    // Split at `ret void`.
+    BasicBlock *Before =
+        BB.splitBasicBlockBefore(std::prev(BB.end(), 1), "before");
+    const DebugLoc &BrToAfterDL = Before->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(BrToAfterDL);
+    EXPECT_EQ(BrToAfterDL->getAtomGroup(), 0u);
+
+    BasicBlock *After = Before->getSingleSuccessor();
+    ASSERT_TRUE(After);
+    const DebugLoc &OrigTerminatorDL = After->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(OrigTerminatorDL);
+    EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 1u);
+  }
+
+  // Test splitBasicBlock.
+  {
+    BasicBlock &BB = F->back();
+    // Split at `ret void`.
+    BasicBlock *After = BB.splitBasicBlock(std::prev(BB.end(), 1), "before");
+
+    const DebugLoc &OrigTerminatorDL = After->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(OrigTerminatorDL);
+    EXPECT_EQ(OrigTerminatorDL->getAtomGroup(), 1u);
+
+    BasicBlock *Before = After->getSinglePredecessor();
+    ASSERT_TRUE(Before);
+    const DebugLoc &BrToAfterDL = Before->getTerminator()->getDebugLoc();
+    ASSERT_TRUE(BrToAfterDL);
+    EXPECT_EQ(BrToAfterDL->getAtomGroup(), 0u);
+  }
 }
 
 TEST(BasicBlockDbgInfoTest, MarkerOperations) {
@@ -224,9 +285,8 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
   EXPECT_EQ(BB.size(), 1u);
   EXPECT_EQ(Marker2->StoredDbgRecords.size(), 2u);
   // They should also be in the correct order.
-  SmallVector<DbgRecord *, 2> DVRs;
-  for (DbgRecord &DVR : Marker2->getDbgRecordRange())
-    DVRs.push_back(&DVR);
+  SmallVector<DbgRecord *, 2> DVRs(
+      llvm::make_pointer_range(Marker2->getDbgRecordRange()));
   EXPECT_EQ(DVRs[0], DVR1);
   EXPECT_EQ(DVRs[1], DVR2);
 
@@ -363,7 +423,7 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   EXPECT_EQ(CInst->getNextNode(), DInst);
 
   // Move back.
-  CInst->moveBefore(BInst);
+  CInst->moveBefore(BInst->getIterator());
   EXPECT_EQ(&*BB.begin(), DInst);
 
   // Current order of insts: "D -> C -> B -> Ret". DbgVariableRecords on "D".
@@ -577,9 +637,8 @@ protected:
 
   bool CheckDVROrder(Instruction *I,
                      SmallVector<DbgVariableRecord *> CheckVals) {
-    SmallVector<DbgRecord *> Vals;
-    for (DbgRecord &D : I->getDbgRecordRange())
-      Vals.push_back(&D);
+    SmallVector<DbgRecord *> Vals(
+        llvm::make_pointer_range(I->getDbgRecordRange()));
 
     EXPECT_EQ(Vals.size(), CheckVals.size());
     if (Vals.size() != CheckVals.size())
@@ -1259,7 +1318,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
   EXPECT_EQ(std::distance(R3.begin(), R3.end()), 2u);
 
   // Re-insert and re-insert.
-  AddInst->insertAfter(SubInst);
+  AddInst->insertAfter(SubInst->getIterator());
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
   // We should be back into a position of having one DbgVariableRecord on add
   // and ret.
@@ -1331,7 +1390,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDbgVariableRecord) {
   EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
 
   // Re-insert and re-insert.
-  AddInst->insertAfter(SubInst);
+  AddInst->insertAfter(SubInst->getIterator());
   Entry.reinsertInstInDbgRecords(AddInst, Pos);
   // We should be back into a position of having one DbgVariableRecord on the
   // AddInst.
@@ -1523,6 +1582,58 @@ TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
   EXPECT_EQ(Entry.getTrailingDbgRecords(), nullptr);
   EXPECT_EQ(Exit.getTrailingDbgRecords(), nullptr);
   EXPECT_FALSE(Ret->hasDbgRecords());
+}
+
+TEST(BasicBlockDbgInfoTest, CloneTrailingRecordsToEmptyBlock) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @foo(i16 %a) !dbg !6 {
+    entry:
+      %b = add i16 %a, 0
+        #dbg_value(i16 %b, !9, !DIExpression(), !11)
+      ret i16 0, !dbg !11
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+  ASSERT_TRUE(M);
+
+  Function *F = M->getFunction("foo");
+  BasicBlock &BB = F->getEntryBlock();
+  // Start with no trailing records.
+  ASSERT_FALSE(BB.getTrailingDbgRecords());
+
+  BasicBlock::iterator Ret = std::prev(BB.end());
+  BasicBlock::iterator B = std::prev(Ret);
+
+  // Delete terminator which has debug records: we now get trailing records.
+  Ret->eraseFromParent();
+  EXPECT_TRUE(BB.getTrailingDbgRecords());
+
+  BasicBlock *NewBB = BasicBlock::Create(C, "NewBB", F);
+  NewBB->splice(NewBB->end(), &BB, B, BB.end());
+
+  // The trailing records should've been absorbed into NewBB.
+  EXPECT_FALSE(BB.getTrailingDbgRecords());
+  EXPECT_TRUE(NewBB->getTrailingDbgRecords());
+  if (DbgMarker *Trailing = NewBB->getTrailingDbgRecords()) {
+    EXPECT_EQ(llvm::range_size(Trailing->getDbgRecordRange()), 1u);
+    // Drop the trailing records now, to prevent a cleanup assertion.
+    Trailing->eraseFromParent();
+    NewBB->deleteTrailingDbgRecords();
+  }
 }
 
 } // End anonymous namespace.

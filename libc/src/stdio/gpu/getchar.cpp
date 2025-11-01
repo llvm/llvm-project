@@ -7,13 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/getchar.h"
+
 #include "file.h"
-#include "src/__support/macros/config.h"
-
-#include "hdr/stdio_macros.h" // for EOF.
-#include "hdr/types/FILE.h"
-
-#include <stdio.h> //needed for stdin
+#include "hdr/stdio_macros.h" // for EOF and stdin.
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

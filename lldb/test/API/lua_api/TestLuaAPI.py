@@ -158,19 +158,20 @@ class TestLuaAPI(TestBase):
         return tests
 
     def test_lua_api(self):
-        if "LUA_EXECUTABLE" not in os.environ or len(os.environ["LUA_EXECUTABLE"]) == 0:
+        if "LUA_EXECUTABLE" not in os.environ or not os.path.exists(
+            os.environ["LUA_EXECUTABLE"]
+        ):
             self.skipTest("Lua API tests could not find Lua executable.")
             return
         lua_executable = os.environ["LUA_EXECUTABLE"]
+        lldb_lua_cpath = os.environ["LLDB_LUA_CPATH"]
 
         self.build()
         test_exe = self.getBuildArtifact("a.out")
         test_output = self.getBuildArtifact("output")
         test_input = self.getBuildArtifact("input")
 
-        lua_lldb_cpath = "%s/lua/5.3/?.so" % configuration.lldb_libs_dir
-
-        lua_prelude = "package.cpath = '%s;' .. package.cpath" % lua_lldb_cpath
+        lua_prelude = "package.cpath = '%s/?.so;' .. package.cpath" % lldb_lua_cpath
 
         lua_env = {
             "TEST_EXE": os.path.join(self.getBuildDir(), test_exe),

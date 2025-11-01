@@ -40,6 +40,9 @@ def MLProgram_ExternAttr : MLProgram_Attr<"Extern", [TypedAttrInterface]> {
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
   let mnemonic = "extern";
   let assemblyFormat = "";
+
+  // Generate mnemonic alias for the attribute.
+  let genMnemonicAlias = 1;
 }
 
 #endif // MLPROGRAM_ATTRIBUTES

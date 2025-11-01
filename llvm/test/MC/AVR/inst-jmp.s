@@ -1,9 +1,7 @@
 ; RUN: llvm-mc -triple avr -mattr=jmpcall -show-encoding < %s | FileCheck %s
 ; RUN: llvm-mc -filetype=obj -triple avr -mattr=jmpcall < %s | llvm-objdump --no-print-imm-hex -dr --mattr=jmpcall - | FileCheck -check-prefix=CHECK-INST %s
 
-
 foo:
-
   jmp   200
   jmp  -12
   jmp   80
@@ -21,7 +19,6 @@ foo:
 ; CHECK: jmp  0                    ; encoding: [0x0c,0x94,0x00,0x00]
 
 ; CHECK: jmp foo+1                 ; encoding: [0x0c'A',0x94'A',0b00AAAAAA,0x00]
-; CHECK:                           ;   fixup A - offset: 0, value: foo+1, kind: fixup_call
 
 ; CHECK: jmp 262142                ; encoding: [0x0d,0x94,0xff,0xff]
 ; CHECK: jmp 8126464               ; encoding: [0xfc,0x95,0x00,0x00]

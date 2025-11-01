@@ -17,7 +17,7 @@ class Record;
 
 /// Sort an array of Records on the "Name" field, and check for records with
 /// duplicate "Name" field. If duplicates are found, report a fatal error.
-void sortAndReportDuplicates(MutableArrayRef<Record *> Records,
+void sortAndReportDuplicates(MutableArrayRef<const Record *> Records,
                              StringRef ObjectName);
 
 } // namespace llvm

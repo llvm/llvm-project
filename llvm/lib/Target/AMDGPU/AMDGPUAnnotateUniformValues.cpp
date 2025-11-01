@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -92,10 +92,10 @@ AMDGPUAnnotateUniformValuesPass::run(Function &F,
   AMDGPUAnnotateUniformValues Impl(UI, MSSA, AA, F);
   Impl.visit(F);
 
-  PreservedAnalyses PA = PreservedAnalyses::none();
   if (!Impl.changed())
-    return PA;
+    return PreservedAnalyses::all();
 
+  PreservedAnalyses PA = PreservedAnalyses::none();
   // TODO: Should preserve nearly everything
   PA.preserveSet<CFGAnalyses>();
   return PA;

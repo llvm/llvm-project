@@ -31,7 +31,6 @@ void test_lambda() {
 //CHECK: define dso_local void @{{.*}}test_lambda{{.*}}() #0 {
 //CHECK: entry:
 //CHECK:  %agg.tmp = alloca %class.anon, align 1
-//CHECK:  %ref.tmp = alloca %class.anon, align 1
 //CHECK:  %call = call noundef i32 @"_ZZ11test_lambdavENH3$_0clIS_EEiT_"()
 //CHECK:  ret void
 //CHECK: }
@@ -264,4 +263,56 @@ void test() {
 // CHECK-LABEL: {{.*}} @_ZN5P27971C1dEv
 // CHECK: call void @_ZNH5P27971C1cERKS0_
 // CHECK: call void @_ZN5P27971C1cEi
+}
+
+// This used to crash because we weren’t instantiating a dependent 'this'.
+namespace GH154054 {
+struct S {
+  int x;
+  auto byval() {
+    return [*this](this auto) { return this->x; };
+  }
+};
+
+// CHECK-LABEL: define {{.*}} void @_ZN8GH1540544mainEv
+void main() {
+  S s{ 42 };
+
+  // CHECK: call {{.*}} i32 @_ZZN8GH1540541S5byvalEvENHUlT_E_clIS2_EEDaS1_
+  if ( s.byval()() != 42)
+    __builtin_abort();
+}
+
+// CHECK-LABEL: define {{.*}} i32 @_ZZN8GH1540541S5byvalEvENHUlT_E_clIS2_EEDaS1_(i32 %.coerce)
+// CHECK: entry:
+// CHECK:   %0 = alloca %class.anon.11, align 4
+// CHECK:   %coerce.dive = getelementptr inbounds nuw %class.anon.11, ptr %0, i32 0, i32 0
+// CHECK:   %coerce.dive1 = getelementptr inbounds nuw %"struct.GH154054::S", ptr %coerce.dive, i32 0, i32 0
+// CHECK:   store i32 %.coerce, ptr %coerce.dive1, align 4
+// CHECK:   %1 = getelementptr inbounds nuw %class.anon.11, ptr %0, i32 0, i32 0
+// CHECK:   %x = getelementptr inbounds nuw %"struct.GH154054::S", ptr %1, i32 0, i32 0
+// CHECK:   %2 = load i32, ptr %x, align 4
+// CHECK:   ret i32 %2
+
+struct s {
+  int q;
+  auto f() {
+    return [*this](this auto) { return this; };
+  }
+};
+
+// CHECK-LABEL: define {{.*}} void @_ZN8GH1540541fEv
+void f() {
+  // CHECK: call {{.*}} ptr @_ZZN8GH1540541s1fEvENHUlT_E_clIS2_EEDaS1_
+  s{}.f()();
+}
+
+// CHECK-LABEL: define {{.*}} ptr @_ZZN8GH1540541s1fEvENHUlT_E_clIS2_EEDaS1_(i32 %.coerce)
+// CHECK: entry:
+// CHECK:   %0 = alloca %class.anon.12, align 4
+// CHECK:   %coerce.dive = getelementptr inbounds nuw %class.anon.12, ptr %0, i32 0, i32 0
+// CHECK:   %coerce.dive1 = getelementptr inbounds nuw %"struct.GH154054::s", ptr %coerce.dive, i32 0, i32 0
+// CHECK:   store i32 %.coerce, ptr %coerce.dive1, align 4
+// CHECK:   %1 = getelementptr inbounds nuw %class.anon.12, ptr %0, i32 0, i32 0
+// CHECK:   ret ptr %1
 }

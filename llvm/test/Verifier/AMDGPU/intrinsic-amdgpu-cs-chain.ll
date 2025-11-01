@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 declare void @llvm.amdgcn.cs.chain(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) noreturn
 declare i32 @llvm.amdgcn.set.inactive.chain.arg(i32, i32) convergent willreturn nofree nocallback readnone
@@ -30,6 +30,13 @@ define amdgpu_cs_chain void @bad_exec(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr,
   ; CHECK-NEXT: @llvm.amdgcn.cs.chain
   call void(ptr, <4 x i32>, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, <4 x i32> %sgpr, <4 x i32> %sgpr, { ptr, <3 x i32> } %vgpr, i32 %flags)
   unreachable
+}
+
+define amdgpu_cs_chain void @not_unreachable(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {
+  ; CHECK: llvm.amdgcn.cs.chain must be followed by unreachable
+  ; CHECK-NEXT: @llvm.amdgcn.cs.chain
+  call void(ptr, i32, <4 x i32>, { ptr, <3 x i32> }, i32, ...) @llvm.amdgcn.cs.chain(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr, i32 0)
+  ret void
 }
 
 define void @bad_caller_default_cc(ptr %fn, i32 %exec, <4 x i32> inreg %sgpr, { ptr, <3 x i32> } %vgpr) {

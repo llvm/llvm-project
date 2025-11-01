@@ -13,8 +13,8 @@ define i8 @test1(i32 %arg) {
 ; CHECK-NEXT:      #dbg_value(i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]], [[META2:![0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 8), [[META7:![0-9]+]])
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG]], 8
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_2_0_EXTRACT_SHIFT]] to i24
-; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META8:![0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 8, 16), [[META7]])
-; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META9:![0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META8:![0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META10:![0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 8, 16), [[META7]])
 ; CHECK-NEXT:    ret i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]]
 ;
 entry:
@@ -36,11 +36,11 @@ define i8 @test2(i32 %arg1, i8 %arg2) {
 ; CHECK-NEXT:      #dbg_value(i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]], [[META2]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 8), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG1]], 8
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_2_0_EXTRACT_SHIFT]] to i16
-; CHECK-NEXT:      #dbg_value(i16 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META9]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 16), [[META7]])
+; CHECK-NEXT:      #dbg_value(i16 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 16), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_21_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG1]], 24
 ; CHECK-NEXT:    [[PTR_SROA_21_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_21_0_EXTRACT_SHIFT]] to i8
-; CHECK-NEXT:      #dbg_value(i8 [[PTR_SROA_21_0_EXTRACT_TRUNC]], [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 8), [[META7]])
-; CHECK-NEXT:      #dbg_value(i8 [[ARG2]], [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i8 [[PTR_SROA_21_0_EXTRACT_TRUNC]], [[META10]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i8 [[ARG2]], [[META10]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 8), [[META7]])
 ; CHECK-NEXT:    ret i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]]
 ;
 entry:
@@ -84,7 +84,7 @@ define i16 @test4(i32 %arg) {
 ; CHECK-NEXT:      #dbg_value(i16 [[PTR_SROA_0_0_EXTRACT_TRUNC]], [[META2]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 8), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG]], 16
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_2_0_EXTRACT_SHIFT]] to i16
-; CHECK-NEXT:      #dbg_value(i16 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 8, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i16 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META10]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 8, 8), [[META7]])
 ; CHECK-NEXT:    ret i16 [[PTR_SROA_0_0_EXTRACT_TRUNC]]
 ;
 entry:
@@ -107,8 +107,8 @@ define i8 @test5(i32 %arg) {
 ; CHECK-NEXT:      #dbg_value(i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]], [[META11:![0-9]+]], !DIExpression(), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG]], 8
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_2_0_EXTRACT_SHIFT]] to i24
-; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 8, 8), [[META7]])
-; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META9]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i24 [[PTR_SROA_2_0_EXTRACT_TRUNC]], [[META10]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 8, 8), [[META7]])
 ; CHECK-NEXT:    ret i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]]
 ;
 entry:
@@ -130,11 +130,11 @@ define i8 @test6(i32 %arg1, i8 %arg2) {
 ; CHECK-NEXT:      #dbg_value(i8 poison, [[META2]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG1]], 8
 ; CHECK-NEXT:    [[PTR_SROA_2_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_2_0_EXTRACT_SHIFT]] to i16
-; CHECK-NEXT:      #dbg_value(i16 poison, [[META9]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 16), [[META7]])
+; CHECK-NEXT:      #dbg_value(i16 poison, [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 16), [[META7]])
 ; CHECK-NEXT:    [[PTR_SROA_21_0_EXTRACT_SHIFT:%.*]] = lshr i32 [[ARG1]], 24
 ; CHECK-NEXT:    [[PTR_SROA_21_0_EXTRACT_TRUNC:%.*]] = trunc i32 [[PTR_SROA_21_0_EXTRACT_SHIFT]] to i8
-; CHECK-NEXT:      #dbg_value(i8 poison, [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
-; CHECK-NEXT:      #dbg_value(i8 poison, [[META8]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i8 poison, [[META10]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
+; CHECK-NEXT:      #dbg_value(i8 poison, [[META10]], !DIExpression(DW_OP_LLVM_extract_bits_sext, 0, 8), [[META7]])
 ; CHECK-NEXT:    ret i8 [[PTR_SROA_0_0_EXTRACT_TRUNC]]
 ;
 entry:
@@ -197,9 +197,9 @@ entry:
 ; CHECK: [[META5]] = !DIFile(filename: "dbg-bit-piece.cpp", directory: "")
 ; CHECK: [[META6]] = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
 ; CHECK: [[META7]] = !DILocation(line: 0, scope: [[META3]])
-; CHECK: [[META8]] = !DILocalVariable(name: "z", scope: [[META3]], type: [[META6]])
-; CHECK: [[META9]] = !DILocalVariable(name: "y", scope: [[META3]], type: [[META10:![0-9]+]])
-; CHECK: [[META10]] = !DIBasicType(name: "signed int", size: 32, encoding: DW_ATE_signed)
+; CHECK: [[META8]] = !DILocalVariable(name: "y", scope: [[META3]], type: [[META9:![0-9]+]])
+; CHECK: [[META9]] = !DIBasicType(name: "signed int", size: 32, encoding: DW_ATE_signed)
+; CHECK: [[META10]] = !DILocalVariable(name: "z", scope: [[META3]], type: [[META6]])
 ; CHECK: [[META11]] = !DILocalVariable(name: "x", scope: [[META3]], type: [[META12:![0-9]+]])
 ; CHECK: [[META12]] = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 ;.

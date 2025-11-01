@@ -338,14 +338,11 @@ template <class Tr>
 typename Tr::RegionNodeT *RegionBase<Tr>::getBBNode(BlockT *BB) const {
   assert(contains(BB) && "Can get BB node out of this region!");
 
-  typename BBNodeMapT::const_iterator at = BBNodeMap.find(BB);
-
-  if (at == BBNodeMap.end()) {
+  auto [at, Inserted] = BBNodeMap.try_emplace(BB);
+  if (Inserted) {
     auto Deconst = const_cast<RegionBase<Tr> *>(this);
-    typename BBNodeMapT::value_type V = {
-        BB,
-        std::make_unique<RegionNodeT>(static_cast<RegionT *>(Deconst), BB)};
-    at = BBNodeMap.insert(std::move(V)).first;
+    at->second =
+        std::make_unique<RegionNodeT>(static_cast<RegionT *>(Deconst), BB);
   }
   return at->second.get();
 }
@@ -723,16 +720,14 @@ void RegionInfoBase<Tr>::buildRegionsTree(DomTreeNodeT *N, RegionT *region) {
   while (BB == region->getExit())
     region = region->getParent();
 
-  typename BBtoRegionMap::iterator it = BBtoRegion.find(BB);
+  auto [It, Inserted] = BBtoRegion.try_emplace(BB, region);
 
   // This basic block is a start block of a region. It is already in the
   // BBtoRegion relation. Only the child basic blocks have to be updated.
-  if (it != BBtoRegion.end()) {
-    RegionT *newRegion = it->second;
+  if (!Inserted) {
+    RegionT *newRegion = It->second;
     region->addSubRegion(getTopMostParent(newRegion));
     region = newRegion;
-  } else {
-    BBtoRegion[BB] = region;
   }
 
   for (DomTreeNodeBase<BlockT> *C : *N) {

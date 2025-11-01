@@ -32,7 +32,7 @@ inline bool isSpecificDef(const Init &N, StringRef Def) {
 /// subclass of the given class and coerce it to a def if it is. This is
 /// primarily useful for testing for subclasses of GIDefKind and similar in
 /// DagInit's since DagInit's support any type inside them.
-inline Record *getDefOfSubClass(const Init &N, StringRef Cls) {
+inline const Record *getDefOfSubClass(const Init &N, StringRef Cls) {
   if (const DefInit *OpI = dyn_cast<DefInit>(&N))
     if (OpI->getDef()->isSubClassOf(Cls))
       return OpI->getDef();
@@ -67,6 +67,7 @@ inline const DagInit *getDagWithOperatorOfSubClass(const Init &N,
 }
 
 /// Copies a StringRef into a static pool to preserve it.
+// FIXME: Use UniqueStringSaver instead.
 StringRef insertStrRef(StringRef S);
 
 } // namespace llvm

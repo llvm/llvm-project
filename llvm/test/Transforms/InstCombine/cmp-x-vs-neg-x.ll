@@ -132,7 +132,7 @@ define i1 @t9(i8 %x) {
 define i1 @n10(i8 %x) {
 ; CHECK-LABEL: @n10(
 ; CHECK-NEXT:    [[NEG_X:%.*]] = sub i8 0, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[NEG_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], [[NEG_X]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg_x = sub i8 0, %x ; not nsw
@@ -154,7 +154,7 @@ define i1 @n11(i8 %x) {
 define i1 @n12(i8 %x1, i8 %x2) {
 ; CHECK-LABEL: @n12(
 ; CHECK-NEXT:    [[NEG_X:%.*]] = sub nsw i8 0, [[X1:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[NEG_X]], [[X2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X2:%.*]], [[NEG_X]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg_x = sub nsw i8 0, %x1 ; not %x2

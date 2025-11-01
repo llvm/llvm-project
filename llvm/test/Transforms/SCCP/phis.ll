@@ -100,7 +100,7 @@ end:
 }
 
 define <2 x i16> @phi_vector_merge1(i1 %c, <2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @phi_vector_merge1(
+; CHECK-LABEL: define range(i16 2, 259) <2 x i16> @phi_vector_merge1(
 ; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>
@@ -126,7 +126,7 @@ join:
 }
 
 define <2 x i16> @phi_vector_merge2(i1 %c, <2 x i8> %a) {
-; CHECK-LABEL: define <2 x i16> @phi_vector_merge2(
+; CHECK-LABEL: define range(i16 2, 259) <2 x i16> @phi_vector_merge2(
 ; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i8> [[A]] to <2 x i16>

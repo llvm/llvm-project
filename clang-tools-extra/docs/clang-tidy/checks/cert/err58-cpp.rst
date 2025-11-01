@@ -1,10 +1,13 @@
 .. title:: clang-tidy - cert-err58-cpp
+.. meta::
+   :http-equiv=refresh: 5;URL=../bugprone/throwing-static-initialization.html
 
 cert-err58-cpp
 ==============
 
-This check flags all ``static`` or ``thread_local`` variable declarations where
-the initializer for the object may throw an exception.
+The `cert-err58-cpp` check is an alias, please see
+`bugprone-throwing-static-initialization <../bugprone/throwing-static-initialization.html>`_
+for more information.
 
 This check corresponds to the CERT C++ Coding Standard rule
 `ERR58-CPP. Handle all exceptions thrown before main() begins executing

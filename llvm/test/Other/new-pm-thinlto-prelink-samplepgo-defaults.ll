@@ -53,6 +53,7 @@
 ; CHECK-O-NEXT: Running pass: GlobalOptPass
 ; CHECK-O-NEXT: Running pass: PromotePass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
+; CHECK-O-NEXT: Running analysis: LastRunTrackingAnalysis
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: AAManager on foo
 ; CHECK-O-NEXT: Running analysis: BasicAA
@@ -64,6 +65,7 @@
 ; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass on foo
+; CHECK-O-NEXT: Running pass: PGOForceFunctionAttrsPass
 ; CHECK-O-NEXT: Running pass: AlwaysInlinerPass
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
@@ -112,7 +114,6 @@
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: SimpleLoopUnswitchPass
-; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass

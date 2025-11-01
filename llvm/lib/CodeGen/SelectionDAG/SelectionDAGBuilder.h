@@ -56,7 +56,6 @@ class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
 class ConstrainedFPIntrinsic;
-class DbgValueInst;
 class DataLayout;
 class DIExpression;
 class DILocalVariable;
@@ -196,6 +195,11 @@ private:
   /// Update root to include all chains from the Pending list.
   SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
 
+  /// Given a node representing a floating-point operation and its specified
+  /// exception behavior, this either updates the root or stores the node in
+  /// a list to be added to chains latter.
+  void pushFPOpOutChain(SDValue Result, fp::ExceptionBehavior EB);
+
   /// A unique monotonically increasing number used to order the SDNodes we
   /// create.
   unsigned SDNodeOrder;
@@ -225,7 +229,7 @@ public:
   static const unsigned LowestSDNodeOrder = 1;
 
   SelectionDAG &DAG;
-  AAResults *AA = nullptr;
+  BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
 
@@ -254,7 +258,7 @@ public:
 
   // Emit PHI-node-operand constants only once even if used by multiple
   // PHI nodes.
-  DenseMap<const Constant *, unsigned> ConstantsOut;
+  DenseMap<const Constant *, Register> ConstantsOut;
 
   /// Information about the function as a whole.
   FunctionLoweringInfo &FuncInfo;
@@ -280,7 +284,7 @@ public:
         SL(std::make_unique<SDAGSwitchLowering>(this, funcinfo)),
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
-  void init(GCFunctionInfo *gfi, AAResults *AA, AssumptionCache *AC,
+  void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
             const TargetLibraryInfo *li);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
@@ -301,6 +305,13 @@ public:
   /// memory node that may need to be ordered after any prior load instructions.
   SDValue getMemoryRoot();
 
+  /// Return the current virtual root of the Selection DAG, flushing
+  /// PendingConstrainedFP or PendingConstrainedFPStrict items if the new
+  /// exception behavior (specified by \p EB) differs from that of the pending
+  /// instructions. This must be done before emitting constrained FP operation
+  /// call.
+  SDValue getFPOperationRoot(fp::ExceptionBehavior EB);
+
   /// Similar to getMemoryRoot, but also flushes PendingConstrainedFP(Strict)
   /// items. This must be done before emitting any call other any other node
   /// that may need to be ordered after FP instructions due to other side
@@ -320,7 +331,7 @@ public:
     return CurInst ? CurInst->getDebugLoc() : DebugLoc();
   }
 
-  void CopyValueToVirtualRegister(const Value *V, unsigned Reg,
+  void CopyValueToVirtualRegister(const Value *V, Register Reg,
                                   ISD::NodeType ExtendType = ISD::ANY_EXTEND);
 
   void visit(const Instruction &I);
@@ -409,6 +420,10 @@ public:
                    bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr,
                    const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
+  // Check some of the target-independent constraints for tail calls. This does
+  // not iterate over the call arguments.
+  bool canTailCall(const CallBase &CB) const;
+
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
@@ -439,8 +454,8 @@ public:
     /// The set of gc.relocate calls associated with this gc.statepoint.
     SmallVector<const GCRelocateInst *, 16> GCRelocates;
 
-    /// The full list of gc arguments to the gc.statepoint being lowered.
-    ArrayRef<const Use> GCArgs;
+    /// The full list of gc-live arguments to the gc.statepoint being lowered.
+    ArrayRef<const Use> GCLives;
 
     /// The gc.statepoint instruction.
     const Instruction *StatepointInstr = nullptr;
@@ -526,7 +541,7 @@ public:
   void visitBitTestHeader(SwitchCG::BitTestBlock &B,
                           MachineBasicBlock *SwitchBB);
   void visitBitTestCase(SwitchCG::BitTestBlock &BB, MachineBasicBlock *NextMBB,
-                        BranchProbability BranchProbToNext, unsigned Reg,
+                        BranchProbability BranchProbToNext, Register Reg,
                         SwitchCG::BitTestCase &B, MachineBasicBlock *SwitchBB);
   void visitJumpTable(SwitchCG::JumpTable &JT);
   void visitJumpTableHeader(SwitchCG::JumpTable &JT,
@@ -575,6 +590,7 @@ private:
   void visitFPToSI(const User &I);
   void visitUIToFP(const User &I);
   void visitSIToFP(const User &I);
+  void visitPtrToAddr(const User &I);
   void visitPtrToInt(const User &I);
   void visitIntToPtr(const User &I);
   void visitBitCast(const User &I);
@@ -629,8 +645,11 @@ private:
   void visitConstrainedFPIntrinsic(const ConstrainedFPIntrinsic &FPI);
   void visitConvergenceControl(const CallInst &I, unsigned Intrinsic);
   void visitVectorHistogram(const CallInst &I, unsigned IntrinsicID);
+  void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPLoadFF(const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,
@@ -658,8 +677,8 @@ private:
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
   void visitVectorReverse(const CallInst &I);
   void visitVectorSplice(const CallInst &I);
-  void visitVectorInterleave(const CallInst &I);
-  void visitVectorDeinterleave(const CallInst &I);
+  void visitVectorInterleave(const CallInst &I, unsigned Factor);
+  void visitVectorDeinterleave(const CallInst &I, unsigned Factor);
   void visitStepVector(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {
@@ -704,9 +723,6 @@ private:
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
 
-  /// Lowers CallInst to an external symbol.
-  void lowerCallToExternalSymbol(const CallInst &I, const char *FunctionName);
-
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);
   SDValue lowerEndEH(SDValue Chain, const InvokeInst *II,
@@ -740,7 +756,7 @@ struct RegsForValue {
   /// This list holds the registers assigned to the values.
   /// Each legal or promoted value requires one register, and each
   /// expanded value requires multiple registers.
-  SmallVector<unsigned, 4> Regs;
+  SmallVector<Register, 4> Regs;
 
   /// This list holds the number of registers for each value.
   SmallVector<unsigned, 4> RegCount;
@@ -750,10 +766,10 @@ struct RegsForValue {
   std::optional<CallingConv::ID> CallConv;
 
   RegsForValue() = default;
-  RegsForValue(const SmallVector<unsigned, 4> &regs, MVT regvt, EVT valuevt,
+  RegsForValue(const SmallVector<Register, 4> &regs, MVT regvt, EVT valuevt,
                std::optional<CallingConv::ID> CC = std::nullopt);
   RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
-               const DataLayout &DL, unsigned Reg, Type *Ty,
+               const DataLayout &DL, Register Reg, Type *Ty,
                std::optional<CallingConv::ID> CC);
 
   bool isABIMangled() const { return CallConv.has_value(); }
@@ -796,7 +812,7 @@ struct RegsForValue {
   }
 
   /// Return a list of registers and their sizes.
-  SmallVector<std::pair<unsigned, TypeSize>, 4> getRegsAndSizes() const;
+  SmallVector<std::pair<Register, TypeSize>, 4> getRegsAndSizes() const;
 };
 
 } // end namespace llvm

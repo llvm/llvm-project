@@ -1,7 +1,17 @@
-// RUN: %clang_cc1 -fsanitize=local-bounds -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -O3 -mllvm -bounds-checking-unique-traps -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s --check-prefixes=NOOPTLOCAL
-// RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds -O3 -mllvm -ubsan-unique-traps -emit-llvm -triple x86_64-apple-darwin10 %s -o - | FileCheck %s --check-prefixes=NOOPTARRAY
+// N.B. The clang driver defaults to -fsanitize-merge but clang_cc1 effectively
+// defaults to -fno-sanitize-merge.
+// RUN: %clang_cc1 -fsanitize=array-bounds -O -fsanitize-trap=array-bounds -emit-llvm -triple x86_64-apple-darwin10 -DNO_DYNAMIC %s -o - |     FileCheck %s
+// RUN: %clang_cc1 -fsanitize=array-bounds -O                              -emit-llvm -triple x86_64-apple-darwin10 %s -o -              | not FileCheck %s
+//
+// RUN: %clang_cc1 -fsanitize=local-bounds    -fsanitize-trap=local-bounds -emit-llvm -triple x86_64-apple-darwin10              %s -o - |     FileCheck %s
+//
+// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds                               -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTLOCAL
+// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -fno-sanitize-merge           -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTLOCAL
+// RUN: %clang_cc1 -fsanitize=local-bounds -fsanitize-trap=local-bounds -fsanitize-merge=local-bounds -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - | not FileCheck %s --check-prefixes=NOOPTLOCAL
+//
+// RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds                               -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTARRAY
+// RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds -fno-sanitize-merge           -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - |     FileCheck %s --check-prefixes=NOOPTARRAY
+// RUN: %clang_cc1 -fsanitize=array-bounds -fsanitize-trap=array-bounds -fsanitize-merge=array-bounds -O3 -emit-llvm -triple x86_64-apple-darwin10 %s -o - | not FileCheck %s --check-prefixes=NOOPTARRAY
 //
 // REQUIRES: x86-registered-target
 
@@ -43,7 +53,7 @@ int f4(int i) {
   return b[i];
 }
 
-// Union flexible-array memebers are a C99 extension. All array members with a
+// Union flexible-array members are a C99 extension. All array members with a
 // constant size should be considered FAMs.
 
 union U { int a[0]; int b[1]; int c[2]; };
@@ -72,13 +82,17 @@ int f7(union U *u, int i) {
 char B[10];
 char B2[10];
 // CHECK-LABEL: @f8
+// Check the label to prevent spuriously matching ubsantraps from other
+// functions.
+// NOOPTLOCAL-LABEL: @f8
+// NOOPTARRAY-LABEL: @f8
 void f8(int i, int k) {
-  // NOOPTLOCAL: call void @llvm.ubsantrap(i8 3)
-  // NOOPTARRAY: call void @llvm.ubsantrap(i8 2)
+  // NOOPTLOCAL: call void @llvm.ubsantrap(i8 3) #[[ATTR1:[0-9]+]]
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18) #[[ATTR2:[0-9]+]]
   B[i] = '\0';
 
-  // NOOPTLOCAL: call void @llvm.ubsantrap(i8 5)
-  // NOOPTARRAY: call void @llvm.ubsantrap(i8 4)
+  // NOOPTLOCAL: call void @llvm.ubsantrap(i8 5) #[[ATTR1:[0-9]+]]
+  // NOOPTARRAY: call void @llvm.ubsantrap(i8 18) #[[ATTR2:[0-9]+]]
   B2[k] = '\0';
 }
 
@@ -90,3 +104,5 @@ struct S {
 struct S *f9(int i) {
   return &s[i];
 }
+// NOOPTLOCAL: attributes #[[ATTR1]] = { nomerge noreturn nounwind }
+// NOOPTARRAY: attributes #[[ATTR2]] = { nomerge noreturn nounwind }

@@ -21,6 +21,7 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_DEBUGMAP_H
 #define LLVM_TOOLS_DSYMUTIL_DEBUGMAP_H
 
+#include "BinaryHolder.h"
 #include "RelocationMap.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
@@ -90,9 +91,7 @@ class DebugMap {
 
 public:
   DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
-           ArrayRef<uint8_t> BinaryUUID = ArrayRef<uint8_t>())
-      : BinaryTriple(BinaryTriple), BinaryPath(std::string(BinaryPath)),
-        BinaryUUID(BinaryUUID.begin(), BinaryUUID.end()) {}
+           ArrayRef<uint8_t> BinaryUUID = ArrayRef<uint8_t>());
 
   using const_iterator = ObjectContainer::const_iterator;
 
@@ -127,7 +126,8 @@ public:
 
   /// Read a debug map for \a InputFile.
   static ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
-  parseYAMLDebugMap(StringRef InputFile, StringRef PrependPath, bool Verbose);
+  parseYAMLDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
+                    StringRef PrependPath, bool Verbose);
 };
 
 /// The DebugMapObject represents one object file described by the DebugMap. It

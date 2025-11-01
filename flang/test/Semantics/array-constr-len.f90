@@ -11,4 +11,8 @@ subroutine subr(s,n)
   print *, [(s(1:1),j=1,0)] ! ok
   print *, [character(2)::(s(1:n),j=1,0)] ! ok
   print *, [character(n)::(s(1:n),j=1,0)]
+  !ERROR: A length specifier of '*' or ':' may not appear in the type of an array constructor
+  print *, [ character(:) :: ]
+  !ERROR: A length specifier of '*' or ':' may not appear in the type of an array constructor
+  print *, [ character(*) :: ]
 end

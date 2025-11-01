@@ -26,11 +26,17 @@ auto CB = clang::IncrementalCompilerBuilder();
 
 class CodeCompletionTest : public InterpreterTestBase {
 public:
-  std::unique_ptr<Interpreter> Interp;
+  std::unique_ptr<clang::Interpreter> Interp;
 
   void SetUp() override {
+// FIXME : WebAssembly doesn't currently support Jit (see
+// https: // github.com/llvm/llvm-project/pull/150977#discussion_r2237521095).
+// so this check of HostSupportsJIT has been skipped
+// over until support is added, and HostSupportsJIT can return true.
+#ifndef __EMSCRIPTEN__
     if (!HostSupportsJIT())
       GTEST_SKIP();
+#endif
     std::unique_ptr<CompilerInstance> CI = cantFail(CB.CreateCpp());
     this->Interp = cantFail(clang::Interpreter::create(std::move(CI)));
   }

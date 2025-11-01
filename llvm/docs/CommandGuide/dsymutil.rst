@@ -75,13 +75,9 @@ OPTIONS
  Make a static variable keep the enclosing function even if it would have been
  omitted otherwise.
 
-.. option:: --minimize, -z
+.. option:: --no-object-timestamp
 
- When used when creating a dSYM file, this option will suppress the emission of
- the .debug_inlines, .debug_pubnames, and .debug_pubtypes sections since
- dsymutil currently has better equivalents: .apple_names and .apple_types. When
- used in conjunction with ``--update`` option, this option will cause redundant
- accelerator tables to be removed.
+ Don't check timestamp for object files.
 
 .. option:: --no-odr
 

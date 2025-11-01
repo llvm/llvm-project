@@ -6,7 +6,7 @@
 !
 !===------------------------------------------------------------------------===!
 
-include '../include/flang/Runtime/magic-numbers.h'
+#include '../include/flang/Runtime/magic-numbers.h'
 
 ! These naming shenanigans prevent names from Fortran intrinsic modules
 ! from being usable on INTRINSIC statements, and force the program
@@ -21,6 +21,9 @@ module __fortran_builtins
 
   intrinsic :: __builtin_c_loc
   public :: __builtin_c_loc
+
+  intrinsic :: __builtin_c_devloc
+  public :: __builtin_c_devloc
 
   intrinsic :: __builtin_c_f_pointer
   public :: __builtin_c_f_pointer
@@ -40,15 +43,15 @@ module __fortran_builtins
   end type
 
   type, public :: __builtin_event_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_notify_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_lock_type
-    integer(kind=int64), private :: __count
+    integer(kind=int64), private :: __count = -1
   end type
 
   type, public :: __builtin_ieee_flag_type
@@ -88,7 +91,7 @@ module __fortran_builtins
       __builtin_ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
 
   type, public :: __builtin_team_type
-    integer(kind=int64), private :: __id
+    integer(kind=int64), private :: __id = -1
   end type
 
   integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)
@@ -102,13 +105,19 @@ module __fortran_builtins
     __builtin_threadIdx, __builtin_blockDim, __builtin_blockIdx, &
     __builtin_gridDim
   integer, parameter, public :: __builtin_warpsize = 32
+  
+  type, public, bind(c) :: __builtin_c_devptr
+    type(__builtin_c_ptr) :: cptr
+  end type
 
   intrinsic :: __builtin_fma
+  intrinsic :: __builtin_ieee_int
   intrinsic :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   intrinsic :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
     __builtin_ieee_next_up
   intrinsic :: scale ! for ieee_scalb
+  intrinsic :: __builtin_ieee_real
   intrinsic :: __builtin_ieee_selected_real_kind
   intrinsic :: __builtin_ieee_support_datatype, &
     __builtin_ieee_support_denormal, __builtin_ieee_support_divide, &
@@ -119,10 +128,12 @@ module __fortran_builtins
     __builtin_ieee_support_standard, __builtin_ieee_support_subnormal, &
     __builtin_ieee_support_underflow_control
   public :: __builtin_fma
+  public :: __builtin_ieee_int
   public :: __builtin_ieee_is_nan, __builtin_ieee_is_negative, &
     __builtin_ieee_is_normal
   public :: __builtin_ieee_next_after, __builtin_ieee_next_down, &
     __builtin_ieee_next_up
+  public :: __builtin_ieee_real
   public :: scale ! for ieee_scalb
   public :: __builtin_ieee_selected_real_kind
   public :: __builtin_ieee_support_datatype, &
@@ -136,6 +147,7 @@ module __fortran_builtins
 
   type :: __force_derived_type_instantiations
     type(__builtin_c_ptr) :: c_ptr
+    type(__builtin_c_devptr) :: c_devptr
     type(__builtin_c_funptr) :: c_funptr
     type(__builtin_event_type) :: event_type
     type(__builtin_lock_type) :: lock_type

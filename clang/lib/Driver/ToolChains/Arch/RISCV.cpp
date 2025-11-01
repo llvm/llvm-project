@@ -8,14 +8,11 @@
 
 #include "RISCV.h"
 #include "../Clang.h"
-#include "ToolChains/CommonArgs.h"
-#include "clang/Basic/CharInfo.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -52,11 +49,8 @@ static bool getArchFeatures(const Driver &D, StringRef Arch,
   return true;
 }
 
-// Get features except standard extension feature
-static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
-                                    const llvm::Triple &Triple,
-                                    StringRef Mcpu,
-                                    std::vector<StringRef> &Features) {
+static bool isValidRISCVCPU(const Driver &D, const Arg *A,
+                            const llvm::Triple &Triple, StringRef Mcpu) {
   bool Is64Bit = Triple.isRISCV64();
   if (!llvm::RISCV::parseCPU(Mcpu, Is64Bit)) {
     // Try inverting Is64Bit in case the CPU is valid, but for the wrong target.
@@ -66,7 +60,9 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
     else
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << Mcpu;
+    return false;
   }
+  return true;
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -87,7 +83,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (CPU == "native")
       CPU = llvm::sys::getHostCPUName();
 
-    getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
+    if (!isValidRISCVCPU(D, A, Triple, CPU))
+      return;
 
     if (llvm::RISCV::hasFastScalarUnalignedAccess(CPU))
       CPUFastScalarUnaligned = true;
@@ -95,69 +92,42 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       CPUFastVectorUnaligned = true;
   }
 
-  // Handle features corresponding to "-ffixed-X" options
-  if (Args.hasArg(options::OPT_ffixed_x1))
-    Features.push_back("+reserve-x1");
-  if (Args.hasArg(options::OPT_ffixed_x2))
-    Features.push_back("+reserve-x2");
-  if (Args.hasArg(options::OPT_ffixed_x3))
-    Features.push_back("+reserve-x3");
-  if (Args.hasArg(options::OPT_ffixed_x4))
-    Features.push_back("+reserve-x4");
-  if (Args.hasArg(options::OPT_ffixed_x5))
-    Features.push_back("+reserve-x5");
-  if (Args.hasArg(options::OPT_ffixed_x6))
-    Features.push_back("+reserve-x6");
-  if (Args.hasArg(options::OPT_ffixed_x7))
-    Features.push_back("+reserve-x7");
-  if (Args.hasArg(options::OPT_ffixed_x8))
-    Features.push_back("+reserve-x8");
-  if (Args.hasArg(options::OPT_ffixed_x9))
-    Features.push_back("+reserve-x9");
-  if (Args.hasArg(options::OPT_ffixed_x10))
-    Features.push_back("+reserve-x10");
-  if (Args.hasArg(options::OPT_ffixed_x11))
-    Features.push_back("+reserve-x11");
-  if (Args.hasArg(options::OPT_ffixed_x12))
-    Features.push_back("+reserve-x12");
-  if (Args.hasArg(options::OPT_ffixed_x13))
-    Features.push_back("+reserve-x13");
-  if (Args.hasArg(options::OPT_ffixed_x14))
-    Features.push_back("+reserve-x14");
-  if (Args.hasArg(options::OPT_ffixed_x15))
-    Features.push_back("+reserve-x15");
-  if (Args.hasArg(options::OPT_ffixed_x16))
-    Features.push_back("+reserve-x16");
-  if (Args.hasArg(options::OPT_ffixed_x17))
-    Features.push_back("+reserve-x17");
-  if (Args.hasArg(options::OPT_ffixed_x18))
-    Features.push_back("+reserve-x18");
-  if (Args.hasArg(options::OPT_ffixed_x19))
-    Features.push_back("+reserve-x19");
-  if (Args.hasArg(options::OPT_ffixed_x20))
-    Features.push_back("+reserve-x20");
-  if (Args.hasArg(options::OPT_ffixed_x21))
-    Features.push_back("+reserve-x21");
-  if (Args.hasArg(options::OPT_ffixed_x22))
-    Features.push_back("+reserve-x22");
-  if (Args.hasArg(options::OPT_ffixed_x23))
-    Features.push_back("+reserve-x23");
-  if (Args.hasArg(options::OPT_ffixed_x24))
-    Features.push_back("+reserve-x24");
-  if (Args.hasArg(options::OPT_ffixed_x25))
-    Features.push_back("+reserve-x25");
-  if (Args.hasArg(options::OPT_ffixed_x26))
-    Features.push_back("+reserve-x26");
-  if (Args.hasArg(options::OPT_ffixed_x27))
-    Features.push_back("+reserve-x27");
-  if (Args.hasArg(options::OPT_ffixed_x28))
-    Features.push_back("+reserve-x28");
-  if (Args.hasArg(options::OPT_ffixed_x29))
-    Features.push_back("+reserve-x29");
-  if (Args.hasArg(options::OPT_ffixed_x30))
-    Features.push_back("+reserve-x30");
-  if (Args.hasArg(options::OPT_ffixed_x31))
-    Features.push_back("+reserve-x31");
+// Handle features corresponding to "-ffixed-X" options
+#define RESERVE_REG(REG)                                                       \
+  if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
+    Features.push_back("+reserve-" #REG);
+  RESERVE_REG(x1)
+  RESERVE_REG(x2)
+  RESERVE_REG(x3)
+  RESERVE_REG(x4)
+  RESERVE_REG(x5)
+  RESERVE_REG(x6)
+  RESERVE_REG(x7)
+  RESERVE_REG(x8)
+  RESERVE_REG(x9)
+  RESERVE_REG(x10)
+  RESERVE_REG(x11)
+  RESERVE_REG(x12)
+  RESERVE_REG(x13)
+  RESERVE_REG(x14)
+  RESERVE_REG(x15)
+  RESERVE_REG(x16)
+  RESERVE_REG(x17)
+  RESERVE_REG(x18)
+  RESERVE_REG(x19)
+  RESERVE_REG(x20)
+  RESERVE_REG(x21)
+  RESERVE_REG(x22)
+  RESERVE_REG(x23)
+  RESERVE_REG(x24)
+  RESERVE_REG(x25)
+  RESERVE_REG(x26)
+  RESERVE_REG(x27)
+  RESERVE_REG(x28)
+  RESERVE_REG(x29)
+  RESERVE_REG(x30)
+  RESERVE_REG(x31)
+#undef RESERVE_REG
 
   // -mrelax is default, unless -mno-relax is specified.
   if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true)) {
@@ -303,9 +273,12 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // Clang does not yet support MULTILIB_REUSE, so we use `rv{XLEN}imafdc`
   // instead of `rv{XLEN}gc` though they are (currently) equivalent.
 
-  // 1. If `-march=` is specified, use it.
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    return A->getValue();
+  // 1. If `-march=` is specified, use it unless the value is "unset".
+  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
+    StringRef MArch = A->getValue();
+    if (MArch != "unset")
+      return MArch.str();
+  }
 
   // 2. Get march (isa string) based on `-mcpu=`
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
@@ -330,7 +303,7 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
     StringRef MArch = llvm::RISCV::getMArchFromMcpu(CPU);
     // Bypass if target cpu's default march is empty.
-    if (MArch != "")
+    if (!MArch.empty())
       return MArch.str();
   }
 
@@ -345,14 +318,15 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
     if (MABI.equals_insensitive("ilp32e"))
       return "rv32e";
-    else if (MABI.equals_insensitive("lp64e"))
+    if (MABI.equals_insensitive("lp64e"))
       return "rv64e";
-    else if (MABI.starts_with_insensitive("ilp32"))
+    if (MABI.starts_with_insensitive("ilp32"))
       return "rv32imafdc";
-    else if (MABI.starts_with_insensitive("lp64")) {
+    if (MABI.starts_with_insensitive("lp64")) {
       if (Triple.isAndroid())
         return "rv64imafdcv_zba_zbb_zbs";
-
+      if (Triple.isOSFuchsia())
+        return "rva22u64_v";
       return "rv64imafdc";
     }
   }
@@ -365,16 +339,16 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   if (Triple.isRISCV32()) {
     if (Triple.getOS() == llvm::Triple::UnknownOS)
       return "rv32imac";
-    else
-      return "rv32imafdc";
-  } else {
-    if (Triple.getOS() == llvm::Triple::UnknownOS)
-      return "rv64imac";
-    else if (Triple.isAndroid())
-      return "rv64imafdcv_zba_zbb_zbs";
-    else
-      return "rv64imafdc";
+    return "rv32imafdc";
   }
+
+  if (Triple.getOS() == llvm::Triple::UnknownOS)
+    return "rv64imac";
+  if (Triple.isAndroid())
+    return "rv64imafdcv_zba_zbb_zbs";
+  if (Triple.isOSFuchsia())
+    return "rva22u64_v";
+  return "rv64imafdc";
 }
 
 std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,

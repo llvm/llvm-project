@@ -50,10 +50,11 @@
 #define LLVM_IR_PASSINSTRUMENTATION_H
 
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 #include <vector>
 
@@ -61,6 +62,13 @@ namespace llvm {
 
 class PreservedAnalyses;
 class StringRef;
+class Module;
+class Loop;
+class Function;
+
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Module *>;
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Function *>;
+extern template struct LLVM_TEMPLATE_ABI Any::TypeId<const Loop *>;
 
 /// This class manages callbacks registration, as well as provides a way for
 /// PassInstrumentation to pass control to the registered callbacks.
@@ -155,9 +163,9 @@ public:
   }
 
   /// Add a class name to pass name mapping for use by pass instrumentation.
-  void addClassToPassName(StringRef ClassName, StringRef PassName);
-  /// Get the pass name for a given pass class name.
-  StringRef getPassNameForClassName(StringRef ClassName);
+  LLVM_ABI void addClassToPassName(StringRef ClassName, StringRef PassName);
+  /// Get the pass name for a given pass class name. Empty if no match found.
+  LLVM_ABI StringRef getPassNameForClassName(StringRef ClassName);
 
 private:
   friend class PassInstrumentation;
@@ -174,7 +182,7 @@ private:
       BeforeNonSkippedPassCallbacks;
   /// These are run on passes that have just run.
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
-  /// These are run passes that have just run on invalidated IR.
+  /// These are run on passes that have just run on invalidated IR.
   SmallVector<llvm::unique_function<AfterPassInvalidatedFunc>, 4>
       AfterPassInvalidatedCallbacks;
   /// These are run on analyses that are about to be run.
@@ -208,14 +216,9 @@ class PassInstrumentation {
   template <typename PassT>
   using has_required_t = decltype(std::declval<PassT &>().isRequired());
 
-  template <typename PassT>
-  static std::enable_if_t<is_detected<has_required_t, PassT>::value, bool>
-  isRequired(const PassT &Pass) {
-    return Pass.isRequired();
-  }
-  template <typename PassT>
-  static std::enable_if_t<!is_detected<has_required_t, PassT>::value, bool>
-  isRequired(const PassT &Pass) {
+  template <typename PassT> static bool isRequired(const PassT &Pass) {
+    if constexpr (is_detected<has_required_t, PassT>::value)
+      return Pass.isRequired();
     return false;
   }
 
@@ -341,14 +344,15 @@ public:
   }
 };
 
-bool isSpecialPass(StringRef PassID, const std::vector<StringRef> &Specials);
+LLVM_ABI bool isSpecialPass(StringRef PassID,
+                            const std::vector<StringRef> &Specials);
 
 /// Pseudo-analysis pass that exposes the \c PassInstrumentation to pass
 /// managers.
 class PassInstrumentationAnalysis
     : public AnalysisInfoMixin<PassInstrumentationAnalysis> {
   friend AnalysisInfoMixin<PassInstrumentationAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
   PassInstrumentationCallbacks *Callbacks;
 

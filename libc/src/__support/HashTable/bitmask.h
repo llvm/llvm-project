@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_HASHTABLE_BITMASK_H
 #define LLVM_LIBC_SRC___SUPPORT_HASHTABLE_BITMASK_H
 
+#include "hdr/stdint_proxy.h" // uint8_t, uint64_t
 #include "src/__support/CPP/bit.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h"
 #include <stddef.h> // size_t
-#include <stdint.h> // uint8_t, uint64_t
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {

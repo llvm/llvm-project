@@ -340,7 +340,7 @@ struct ValueFromPointerCast
 /// during the cast. It's also a good example of how to implement a move-only
 /// cast.
 template <typename To, typename From, typename Derived = void>
-struct UniquePtrCast : public CastIsPossible<To, From *> {
+struct UniquePtrCast : CastIsPossible<To, From *> {
   using Self = detail::SelfType<Derived, UniquePtrCast<To, From>>;
   using CastResultType = std::unique_ptr<
       std::remove_reference_t<typename cast_retty<To, From>::ret_type>>;
@@ -473,7 +473,7 @@ struct ForwardToPointerCast {
 // take advantage of the cast traits whenever possible!
 
 template <typename To, typename From, typename Enable = void>
-struct CastInfo : public CastIsPossible<To, From> {
+struct CastInfo : CastIsPossible<To, From> {
   using Self = CastInfo<To, From, Enable>;
 
   using CastReturnType = typename cast_retty<To, From>::ret_type;
@@ -536,22 +536,16 @@ struct CastInfo<To, std::unique_ptr<From>> : public UniquePtrCast<To, From> {};
 /// the input is std::optional<From> that the output can be std::optional<To>.
 /// If that's not the case, specialize CastInfo for your use case.
 template <typename To, typename From>
-struct CastInfo<To, std::optional<From>> : public OptionalValueCast<To, From> {
-};
+struct CastInfo<To, std::optional<From>> : OptionalValueCast<To, From> {};
 
 /// isa<X> - Return true if the parameter to the template is an instance of one
 /// of the template type arguments.  Used like this:
 ///
 ///  if (isa<Type>(myVal)) { ... }
 ///  if (isa<Type0, Type1, Type2>(myVal)) { ... }
-template <typename To, typename From>
+template <typename... To, typename From>
 [[nodiscard]] inline bool isa(const From &Val) {
-  return CastInfo<To, const From>::isPossible(Val);
-}
-
-template <typename First, typename Second, typename... Rest, typename From>
-[[nodiscard]] inline bool isa(const From &Val) {
-  return isa<First>(Val) || isa<Second, Rest...>(Val);
+  return (CastInfo<To, const From>::isPossible(Val) || ...);
 }
 
 /// cast<X> - Return the argument parameter cast to the specified type.  This
@@ -755,7 +749,7 @@ template <class X, class Y> auto dyn_cast_if_present(Y *Val) {
 
 // Forwards to dyn_cast_if_present to avoid breaking current users. This is
 // deprecated and will be removed in a future patch, use
-// cast_if_present instead.
+// dyn_cast_if_present instead.
 template <class X, class Y> auto dyn_cast_or_null(const Y &Val) {
   return dyn_cast_if_present<X>(Val);
 }

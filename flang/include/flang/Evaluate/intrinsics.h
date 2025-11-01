@@ -12,9 +12,9 @@
 #include "call.h"
 #include "characteristics.h"
 #include "type.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
+#include "flang/Support/default-kinds.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -86,6 +86,7 @@ public:
   bool IsIntrinsic(const std::string &) const;
   bool IsIntrinsicFunction(const std::string &) const;
   bool IsIntrinsicSubroutine(const std::string &) const;
+  bool IsDualIntrinsic(const std::string &) const;
 
   // Inquiry intrinsics are defined in section 16.7, table 16.1
   IntrinsicClass GetIntrinsicClass(const std::string &) const;

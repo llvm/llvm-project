@@ -15,7 +15,8 @@
 // to undefined symbols when linking against a libc++ that re-exports the symbols,
 // but running against a libc++ that doesn't. Fortunately, usage of __cxa_uncaught_exception()
 // in the wild seems to be close to non-existent.
-// XFAIL: using-built-library-before-llvm-19
+// TODO: Remove && !darwin once availability markup for LLVM 19 on macOS has been added
+// XFAIL: using-built-library-before-llvm-19 && !darwin
 
 #include <cxxabi.h>
 #include <cassert>

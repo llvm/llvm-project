@@ -47,7 +47,7 @@ define arm_aapcs_vfpcc i32 @main() nounwind {
 ; ELFASM-NEXT:  @ %bb.4:
 ; ELFASM-NEXT:  .LCPI0_0:
 ; ELFASM-NEXT:  .Ltmp0:
-; ELFASM-NEXT:    .long i(GOTTPOFF)-((.LPC0_0+4)-.Ltmp0)
+; ELFASM-NEXT:    .long i(GOTTPOFF)-(.LPC0_0+4-.Ltmp0)
 entry:
   %0 = load i32, ptr @i, align 4
   switch i32 %0, label %bb2 [

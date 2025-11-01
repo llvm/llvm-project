@@ -28,11 +28,9 @@ enum SDNP {
   SDNPSideEffect,
   SDNPMemOperand,
   SDNPVariadic,
-  SDNPWantRoot,
-  SDNPWantParent
 };
 
-unsigned parseSDPatternOperatorProperties(Record *R);
+unsigned parseSDPatternOperatorProperties(const Record *R);
 
 } // namespace llvm
 

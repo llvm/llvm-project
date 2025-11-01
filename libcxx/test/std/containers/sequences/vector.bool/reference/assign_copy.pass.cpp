@@ -23,19 +23,19 @@ TEST_CONSTEXPR_CXX20 bool test() {
   vec.push_back(false);
   Ref ref1 = vec[0];
   Ref ref2 = vec[1];
-  ref2 = ref1;
+  ref2     = ref1;
   // Ref&
   {
     vec[0] = false;
     vec[1] = true;
-    ref1 = ref2;
+    ref1   = ref2;
     assert(vec[0]);
     assert(vec[1]);
   }
   {
     vec[0] = true;
     vec[1] = false;
-    ref1 = ref2;
+    ref1   = ref2;
     assert(!vec[0]);
     assert(!vec[1]);
   }
@@ -43,14 +43,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     vec[0] = false;
     vec[1] = true;
-    ref1 = std::move(ref2);
+    ref1   = std::move(ref2);
     assert(vec[0]);
     assert(vec[1]);
   }
   {
     vec[0] = true;
     vec[1] = false;
-    ref1 = std::move(ref2);
+    ref1   = std::move(ref2);
     assert(!vec[0]);
     assert(!vec[1]);
   }
@@ -58,14 +58,14 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     vec[0] = false;
     vec[1] = true;
-    ref1 = static_cast<const Ref&>(ref2);
+    ref1   = static_cast<const Ref&>(ref2);
     assert(vec[0]);
     assert(vec[1]);
   }
   {
     vec[0] = true;
     vec[1] = false;
-    ref1 = static_cast<const Ref&>(ref2);
+    ref1   = static_cast<const Ref&>(ref2);
     assert(!vec[0]);
     assert(!vec[1]);
   }
@@ -75,7 +75,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
-    static_assert(test());
+  static_assert(test());
 #endif
 
   return 0;

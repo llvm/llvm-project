@@ -10,7 +10,7 @@ define void @fs(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: fs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq $0, (%rdi,%rax,8)
@@ -40,7 +40,7 @@ define void @bs(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: bs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq $0, (%rdi,%rax,8)
@@ -70,7 +70,7 @@ define void @fu(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: fu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq $0, (%rdi,%rax,8)
@@ -100,7 +100,7 @@ define void @bu(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-LABEL: bu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq $0, (%rdi,%rax,8)

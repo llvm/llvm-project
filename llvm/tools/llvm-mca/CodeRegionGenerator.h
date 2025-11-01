@@ -19,7 +19,7 @@
 #include "CodeRegion.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -106,7 +106,6 @@ public:
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, Align ByteAlignment = Align(1),
                     SMLoc Loc = SMLoc()) override {}
-  void emitGPRel32Value(const MCExpr *Value) override {}
   void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
   void emitCOFFSymbolStorageClass(int StorageClass) override {}
   void emitCOFFSymbolType(int Type) override {}

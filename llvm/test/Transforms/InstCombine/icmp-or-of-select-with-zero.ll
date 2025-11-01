@@ -271,7 +271,7 @@ define i1 @src_tv_ne_invert(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
 ; CHECK-NEXT:    [[C0:%.*]] = xor i1 [[NOT_C0]], true
 ; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C0]], i8 [[Y]], i8 0
-; CHECK-NEXT:    [[CC:%.*]] = or i1 [[C0]], [[C1:%.*]]
+; CHECK-NEXT:    [[CC:%.*]] = or i1 [[C1:%.*]], [[C0]]
 ; CHECK-NEXT:    [[SEL_OTHER:%.*]] = select i1 [[CC]], i8 [[Y]], i8 [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[TMP1]], [[NOT_C0]]
@@ -292,4 +292,21 @@ define i1 @src_tv_ne_invert(i1 %c1, i8 %a, i8 %b, i8 %x, i8 %yy) {
   call void @use.i8(i8 %sel)
   call void @use.i8(i8 %sel_other)
   ret i1 %r
+}
+
+; Make sure we don't crash on this case.
+
+define <4 x i1> @pr119063(<4 x i32> %x, i1 %cond) {
+; CHECK-LABEL: @pr119063(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[SEL]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <4 x i32> [[OR]], zeroinitializer
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+entry:
+  %sel = select i1 %cond, <4 x i32> splat (i32 1), <4 x i32> zeroinitializer
+  %or = or <4 x i32> %sel, %x
+  %cmp = icmp ne <4 x i32> %or, zeroinitializer
+  ret <4 x i1> %cmp
 }

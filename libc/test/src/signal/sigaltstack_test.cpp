@@ -7,22 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
-#include "src/errno/libc_errno.h"
 #include "src/signal/linux/signal_utils.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaction.h"
 #include "src/signal/sigaltstack.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <stdint.h>
 #include <sys/syscall.h>
 
 constexpr int LOCAL_VAR_SIZE = 512;
 constexpr int ALT_STACK_SIZE = SIGSTKSZ + LOCAL_VAR_SIZE * 2;
 static uint8_t alt_stack[ALT_STACK_SIZE];
 
+using LlvmLibcSigaltstackTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
@@ -44,9 +45,8 @@ static void handler(int) {
   good_stack = true;
 }
 
-TEST(LlvmLibcSignalTest, SigaltstackRunOnAltStack) {
+TEST_F(LlvmLibcSigaltstackTest, SigaltstackRunOnAltStack) {
   struct sigaction action;
-  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGUSR1, nullptr, &action),
               Succeeds(0));
   action.sa_handler = handler;
@@ -68,7 +68,7 @@ TEST(LlvmLibcSignalTest, SigaltstackRunOnAltStack) {
 }
 
 // This tests for invalid input.
-TEST(LlvmLibcSignalTest, SigaltstackInvalidStack) {
+TEST_F(LlvmLibcSigaltstackTest, SigaltstackInvalidStack) {
   stack_t ss;
   ss.ss_sp = alt_stack;
   ss.ss_size = 0;

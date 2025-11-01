@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   DIExpressionLegalization.cpp
   DIExpressionRewriter.cpp
   DIScopeForLLVMFuncOp.cpp
+  InlinerInterfaceImpl.cpp
   LegalizeForExport.cpp
   OptimizeForNVVM.cpp
   RequestCWrappers.cpp
@@ -17,4 +18,5 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   MLIRPass
   MLIRTransforms
   MLIRNVVMDialect
+  MLIROpenMPDialect
   )

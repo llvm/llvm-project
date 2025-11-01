@@ -250,6 +250,7 @@ def : ReadAdvance<ReadFClass64, 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
+defm : UnsupportedSchedQ;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedZabha;
 defm : UnsupportedSchedZba;
@@ -259,8 +260,8 @@ defm : UnsupportedSchedZbs;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
-defm : UnsupportedSchedZfh;
+defm : UnsupportedSchedZfhmin;
 defm : UnsupportedSchedSFB;
-defm : UnsupportedSchedXsfvcp;
 defm : UnsupportedSchedZvk;
+defm : UnsupportedSchedXsf;
 }

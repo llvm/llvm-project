@@ -1,9 +1,10 @@
-// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan %if MSVC %{ /Od %} %else %{ -O1 %} \
+// RUN:     %s -o %t && not %run %t 2>&1 | FileCheck %s
+
+#include "defines.h"
 
 struct IntHolder {
-  __attribute__((noinline)) const IntHolder &Self() const {
-    return *this;
-  }
+  ATTRIBUTE_NOINLINE const IntHolder &Self() const { return *this; }
   int val = 3;
 };
 

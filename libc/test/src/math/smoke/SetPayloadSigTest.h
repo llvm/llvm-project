@@ -13,6 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class SetPayloadSigTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
@@ -52,15 +54,31 @@ public:
     EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 1).uintval(),
               FPBits(res).uintval());
 
-    EXPECT_EQ(0, func(&res, T(0x42.0p+0)));
-    EXPECT_TRUE(FPBits(res).is_signaling_nan());
-    EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x42).uintval(),
-              FPBits(res).uintval());
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 6) {
+      EXPECT_EQ(0, func(&res, T(0x31.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_signaling_nan());
+      EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x31).uintval(),
+                FPBits(res).uintval());
 
-    EXPECT_EQ(0, func(&res, T(0x123.0p+0)));
-    EXPECT_TRUE(FPBits(res).is_signaling_nan());
-    EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x123).uintval(),
-              FPBits(res).uintval());
+      EXPECT_EQ(0, func(&res, T(0x15.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_signaling_nan());
+      EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x15).uintval(),
+                FPBits(res).uintval());
+    }
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 7) {
+      EXPECT_EQ(0, func(&res, T(0x42.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_signaling_nan());
+      EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x42).uintval(),
+                FPBits(res).uintval());
+    }
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 9) {
+      EXPECT_EQ(0, func(&res, T(0x123.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_signaling_nan());
+      EXPECT_EQ(FPBits::signaling_nan(Sign::POS, 0x123).uintval(),
+                FPBits(res).uintval());
+    }
 
     FPBits nan_payload_bits = FPBits::one();
     nan_payload_bits.set_biased_exponent(FPBits::FRACTION_LEN - 2 +

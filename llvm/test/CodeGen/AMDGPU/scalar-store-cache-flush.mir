@@ -19,7 +19,7 @@
 
   define amdgpu_kernel void @multi_block_store() {
   bb0:
-    br i1 undef, label %bb1, label %bb2
+    br i1 poison, label %bb1, label %bb2
 
    bb1:
      ret void
@@ -30,7 +30,7 @@
 
   define amdgpu_kernel void @one_block_store() {
   bb0:
-    br i1 undef, label %bb1, label %bb2
+    br i1 poison, label %bb1, label %bb2
 
    bb1:
      ret void
@@ -40,7 +40,7 @@
   }
 
   define amdgpu_ps float @si_return() {
-    ret float undef
+    ret float poison
   }
 
 ...

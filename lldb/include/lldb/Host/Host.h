@@ -31,6 +31,25 @@ class ProcessInstanceInfo;
 class ProcessInstanceInfoMatch;
 typedef std::vector<ProcessInstanceInfo> ProcessInstanceInfoList;
 
+// System log category and channel. This log channel is always enabled and
+// therefore is supposed to be used sparsely. Use this log channel to log
+// critical information that is expected to be relevant to the majority of bug
+// reports.
+enum class SystemLog : Log::MaskType {
+  System = Log::ChannelFlag<0>,
+  LLVM_MARK_AS_BITMASK_ENUM(System)
+};
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+class LogChannelSystem {
+public:
+  static void Initialize();
+  static void Terminate();
+};
+
+template <> Log::Channel &LogChannelFor<SystemLog>();
+
 // Exit Type for inferior processes
 struct WaitStatus {
   enum Type : uint8_t {
@@ -239,6 +258,8 @@ public:
   static llvm::Error OpenFileInExternalEditor(llvm::StringRef editor,
                                               const FileSpec &file_spec,
                                               uint32_t line_no);
+
+  static llvm::Error OpenURL(llvm::StringRef url);
 
   /// Check if we're running in an interactive graphical session.
   ///

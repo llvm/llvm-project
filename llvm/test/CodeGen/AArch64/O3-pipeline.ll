@@ -20,7 +20,7 @@
 ; CHECK-NEXT:     Pre-ISel Intrinsic Lowering
 ; CHECK-NEXT:     FunctionPass Manager
 ; CHECK-NEXT:       Expand large div/rem
-; CHECK-NEXT:       Expand large fp convert
+; CHECK-NEXT:       Expand fp
 ; CHECK-NEXT:       Expand Atomic instructions
 ; CHECK-NEXT:     SVE intrinsics optimizations
 ; CHECK-NEXT:       FunctionPass Manager
@@ -59,12 +59,14 @@
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Constant Hoisting
 ; CHECK-NEXT:       Replace intrinsics with calls to vector library
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Partially inline calls to library functions
 ; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       TLS Variable Hoist
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
@@ -72,7 +74,6 @@
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Optimize selects
-; CHECK-NEXT:     AArch64 Globals Tagging
 ; CHECK-NEXT:     Stack Safety Analysis
 ; CHECK-NEXT:       FunctionPass Manager
 ; CHECK-NEXT:         Dominator Tree Construction
@@ -83,6 +84,10 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Lazy Branch Probability Analysis
+; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       Complex Deinterleaving Pass
 ; CHECK-NEXT:       Function Alias Analysis Results
@@ -122,6 +127,7 @@
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       AArch64 Local Dynamic TLS Access Clean-up
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
+; CHECK-NEXT:       SME Peephole Optimization pass
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Tail Duplication
 ; CHECK-NEXT:       Optimize machine instruction PHIs
@@ -223,6 +229,7 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
+; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata

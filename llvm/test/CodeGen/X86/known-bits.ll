@@ -14,13 +14,13 @@ define void @knownbits_zext_in_reg(ptr) nounwind {
 ; X86-NEXT:    shrl $14, %edx
 ; X86-NEXT:    movzbl %al, %ecx
 ; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %CF
 ; X86-NEXT:    # =>This Loop Header: Depth=1
 ; X86-NEXT:    # Child Loop BB0_2 Depth 2
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    divb %dl
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_2: # %CF237
 ; X86-NEXT:    # Parent Loop BB0_1 Depth=1
 ; X86-NEXT:    # => This Inner Loop Header: Depth=2
@@ -37,13 +37,13 @@ define void @knownbits_zext_in_reg(ptr) nounwind {
 ; X64-NEXT:    shrl $14, %edx
 ; X64-NEXT:    movzbl %cl, %ecx
 ; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %CF
 ; X64-NEXT:    # =>This Loop Header: Depth=1
 ; X64-NEXT:    # Child Loop BB0_2 Depth 2
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    divb %dl
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_2: # %CF237
 ; X64-NEXT:    # Parent Loop BB0_1 Depth=1
 ; X64-NEXT:    # => This Inner Loop Header: Depth=2

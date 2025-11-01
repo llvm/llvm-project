@@ -1,38 +1,20 @@
 # Check the internal shell handling component of the ShTest format.
 
 # RUN: not %{lit} -v %{inputs}/shtest-shell > %t.out
-# FIXME: Temporarily dump test output so we can debug failing tests on
-# buildbots.
-# RUN: cat %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
 # Test again in non-UTF shell to catch potential errors with python 2 seen
 # on stdout-encoding.txt
 # RUN: env PYTHONIOENCODING=ascii not %{lit} -a %{inputs}/shtest-shell > %t.ascii.out
-# FIXME: Temporarily dump test output so we can debug failing tests on
-# buildbots.
-# RUN: cat %t.ascii.out
 # RUN: FileCheck --input-file %t.ascii.out %s
 #
 # END.
 
 # CHECK: -- Testing:
 
-# CHECK: FAIL: shtest-shell :: cat-error-0.txt
-# CHECK: *** TEST 'shtest-shell :: cat-error-0.txt' FAILED ***
-# CHECK: cat -b temp1.txt
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | Unsupported: 'cat':  option -b not recognized
-# CHECK: # error: command failed with exit status: 1
-# CHECK: ***
-
-# CHECK: FAIL: shtest-shell :: cat-error-1.txt
-# CHECK: *** TEST 'shtest-shell :: cat-error-1.txt' FAILED ***
-# CHECK: cat temp1.txt
-# CHECK: # .---command stderr{{-*}}
-# CHECK: # | [Errno 2] No such file or directory: 'temp1.txt'
-# CHECK: # error: command failed with exit status: 1
-# CHECK: ***
+# CHECK: UNRESOLVED: shtest-shell :: capital-t-error-message.txt
+# CHECK: *** TEST 'shtest-shell :: capital-t-error-message.txt' FAILED ***
+# CHECK: ValueError: %T is no longer supported. Please create directories with names based on %t.
 
 # CHECK: FAIL: shtest-shell :: colon-error.txt
 # CHECK: *** TEST 'shtest-shell :: colon-error.txt' FAILED ***
@@ -602,6 +584,11 @@
 # CHECK: # error: command failed with exit status: 127
 # CHECK: ***
 
+# CHECK: FAIL: shtest-shell :: pipefail.txt
+# CHECK: *** TEST 'shtest-shell :: pipefail.txt' FAILED ***
+# CHECK: error: command failed with exit status: 1
+# CHECK: ***
+
 # CHECK: PASS: shtest-shell :: redirects.txt
 
 # CHECK: FAIL: shtest-shell :: rm-error-0.txt
@@ -650,5 +637,5 @@
 #      CHECK: ***
 
 # CHECK: PASS: shtest-shell :: valid-shell.txt
-# CHECK: Unresolved Tests (1)
-# CHECK: Failed Tests (38)
+# CHECK: Unresolved Tests (2)
+# CHECK: Failed Tests (37)

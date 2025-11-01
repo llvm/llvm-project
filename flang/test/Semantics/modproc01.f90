@@ -125,7 +125,7 @@ program test
   x = mf(3, "abc", pdt1(1,3)())
 !  call ms(mf)
 end program
-!CHECK:  MainProgram scope: test size=88 alignment=8
+!CHECK:  MainProgram scope: TEST size=88 alignment=8
 !CHECK:    mf, MODULE (Function): Use from mf in m
 !CHECK:    pdt1: Use from pdt1 in m
 !CHECK:    pdt2: Use from pdt2 in m
@@ -144,8 +144,12 @@ end program
 !CHECK:      a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=3_4))
 !CHECK:      k1: TypeParam type:INTEGER(4) Kind init:1_4
 !CHECK:      l1: TypeParam type:INTEGER(4) Len init:3_4
-!CHECK:      DerivedType scope: size=1 alignment=1 instantiation of pdt2(k2=1_4,l2=3_4)
-!CHECK:        a2: ObjectEntity type: TYPE(pdt1(k1=1_4,l1=3_4)) shape: 1_8:1_8
+!CHECK:      DerivedType scope: size=48 alignment=8 instantiation of pdt2(k2=1_4,l2=3_4) sourceRange=0 bytes
+!CHECK:        a2 size=40 offset=8: ObjectEntity type: TYPE(pdt1(k1=1_4,l1=3_4)) shape: 1_8:1_8
 !CHECK:        j2 size=1 offset=0: ObjectEntity type: INTEGER(1)
 !CHECK:        k2: TypeParam type:INTEGER(4) Kind init:1_4
 !CHECK:        l2: TypeParam type:INTEGER(4) Len init:3_4
+!CHECK:        DerivedType scope: size=40 alignment=8 instantiation of pdt1(k1=1_4,l1=3_4) sourceRange=0 bytes
+!CHECK:          a1, ALLOCATABLE size=40 offset=0: ObjectEntity type: TYPE(pdt2(k2=1_4,l2=3_4))
+!CHECK:          k1: TypeParam type:INTEGER(4) Kind init:1_4
+!CHECK:          l1: TypeParam type:INTEGER(4) Len init:3_4

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=stel
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -relocation-model=static < %s | FileCheck %s -check-prefix=stel
 
 @x = common global float 0.000000e+00, align 4
 @y = common global float 0.000000e+00, align 4
@@ -1026,5 +1026,5 @@ declare { double, double } @dc_sf(float) #1
 ; stel: jr $18
 ; stel: .end __call_stub_fp_dc_sf
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }

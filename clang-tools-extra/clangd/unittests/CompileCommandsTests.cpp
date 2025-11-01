@@ -18,6 +18,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -525,6 +526,25 @@ TEST(CommandMangler, RespectsOriginalSysroot) {
                 Not(HasSubstr(testPath("fake/sysroot"))));
   }
 }
+
+TEST(CommandMangler, StdLatestFlag) {
+  const auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
+  Mangler(Cmd, "/Users/foo.cc");
+  // Check that the /std:c++latest flag is not dropped
+  EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+}
+
+TEST(CommandMangler, StdLatestFlag_Inference) {
+  const auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
+  Mangler(Cmd, "/Users/foo.hpp");
+  // Check that the /std:c++latest flag is not dropped during inference
+  EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
