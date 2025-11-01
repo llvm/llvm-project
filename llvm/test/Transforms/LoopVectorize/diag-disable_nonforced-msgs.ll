@@ -21,8 +21,7 @@
 ; CHECK: LV: Loop hints prevent vectorization
 define void @disable_nonforced(ptr nocapture %a, i32 %n) {
 entry:
-  %cmp4 = icmp sgt i32 %n, 0
-  br i1 %cmp4, label %for.body, label %for.end
+  br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
