@@ -889,7 +889,7 @@ CSKYTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                .Cases("{t9}", "{bsp}", CSKY::R25)
                                .Case("{r26}", CSKY::R26)
                                .Case("{r27}", CSKY::R27)
-                               .Cases("{gb}", "{rgb}", "{rdb}", CSKY::R28)
+                               .Cases({"{gb}", "{rgb}", "{rdb}"}, CSKY::R28)
                                .Cases("{tb}", "{rtb}", CSKY::R29)
                                .Case("{svbr}", CSKY::R30)
                                .Case("{tls}", CSKY::R31)
