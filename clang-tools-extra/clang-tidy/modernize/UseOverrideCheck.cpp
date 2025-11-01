@@ -22,6 +22,7 @@ UseOverrideCheck::UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
       IgnoreTemplateInstantiations(
           Options.get("IgnoreTemplateInstantiations", false)),
       AllowOverrideAndFinal(Options.get("AllowOverrideAndFinal", false)),
+      AllowVirtual(Options.get("AllowVirtual", false)),
       OverrideSpelling(Options.get("OverrideSpelling", "override")),
       FinalSpelling(Options.get("FinalSpelling", "final")) {}
 
@@ -30,6 +31,7 @@ void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreTemplateInstantiations",
                 IgnoreTemplateInstantiations);
   Options.store(Opts, "AllowOverrideAndFinal", AllowOverrideAndFinal);
+  Options.store(Opts, "AllowVirtual", AllowVirtual);
   Options.store(Opts, "OverrideSpelling", OverrideSpelling);
   Options.store(Opts, "FinalSpelling", FinalSpelling);
 }
@@ -111,15 +113,19 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   unsigned KeywordCount = HasVirtual + HasOverride + HasFinal;
 
   if ((!OnlyVirtualSpecified && KeywordCount == 1) ||
+      (HasVirtual && HasOverride && AllowVirtual) ||
       (!HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal))
     return; // Nothing to do.
 
   std::string Message;
   if (OnlyVirtualSpecified) {
-    Message = "prefer using '%0' or (rarely) '%1' instead of 'virtual'";
+    if (AllowVirtual)
+      Message = "add '%0' or (rarely) '%1' for 'virtual' function";
+    else
+      Message = "prefer using '%0' or (rarely) '%1' instead of 'virtual'";
   } else if (KeywordCount == 0) {
     Message = "annotate this function with '%0' or (rarely) '%1'";
-  } else {
+  } else if (!AllowVirtual) {
     StringRef Redundant =
         HasVirtual ? (HasOverride && HasFinal && !AllowOverrideAndFinal
                           ? "'virtual' and '%0' are"
@@ -226,7 +232,8 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
         CharSourceRange::getTokenRange(OverrideLoc, OverrideLoc));
   }
 
-  if (HasVirtual) {
+  // Remove virtual unless requested otherwise
+  if (HasVirtual && !AllowVirtual) {
     for (Token Tok : Tokens) {
       if (Tok.is(tok::kw_virtual)) {
         std::optional<Token> NextToken =
