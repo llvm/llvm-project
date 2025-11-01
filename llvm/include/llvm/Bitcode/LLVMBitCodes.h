@@ -801,6 +801,7 @@ enum AttributeKindCodes {
   ATTR_KIND_CAPTURES = 102,
   ATTR_KIND_DEAD_ON_RETURN = 103,
   ATTR_KIND_SANITIZE_ALLOC_TOKEN = 104,
+  ATTR_KIND_FLATTEN_DEEP = 105,
 };
 
 enum ComdatSelectionKindCodes {
