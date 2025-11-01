@@ -1375,7 +1375,7 @@ class InstructionPredicateMatcher : public PredicateMatcher {
 public:
   InstructionPredicateMatcher(PredicateKind Kind, unsigned InsnVarID)
       : PredicateMatcher(Kind, InsnVarID) {}
-  ~InstructionPredicateMatcher() override {}
+  ~InstructionPredicateMatcher() override = default;
 
   /// Compare the priority of this object and B.
   ///
@@ -2319,7 +2319,7 @@ public:
 
   ActionKind getKind() const { return Kind; }
 
-  virtual ~MatchAction() {}
+  virtual ~MatchAction() = default;
 
   // Some actions may need to add extra predicates to ensure they can run.
   virtual void emitAdditionalPredicates(MatchTable &Table,
