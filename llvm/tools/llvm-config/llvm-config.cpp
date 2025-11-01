@@ -402,7 +402,7 @@ int main(int argc, char **argv) {
       llvm::replace(ActiveLibDir, '/', '\\');
       llvm::replace(ActiveCMakeDir, '/', '\\');
       llvm::replace(ActiveIncludeDir, '/', '\\');
-      for (auto& Include : ActiveIncludeOptions)
+      for (auto &Include : ActiveIncludeOptions)
         llvm::replace(Include, '/', '\\');
     }
     SharedDir = ActiveBinDir;
