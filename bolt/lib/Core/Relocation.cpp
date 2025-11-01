@@ -19,6 +19,7 @@
 #include "llvm/Object/ObjectFile.h"
 #define DEBUG_TYPE "bolt-reloc"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 
 using namespace llvm;
 using namespace bolt;
@@ -304,10 +305,9 @@ static size_t getSizeForTypePPC64(uint32_t Type) {
   case ELF::R_PPC64_GOT16_HI:
   case ELF::R_PPC64_GOT16_HA:
     return 2;
-  case ELF::R_PPC64_REL14:
-    return 2;
   case ELF::R_PPC64_ADDR32:
   case ELF::R_PPC64_REL24:
+  case ELF::R_PPC64_REL14:
     return 4;
   case ELF::R_PPC64_ADDR64:
   case ELF::R_PPC64_REL32:
@@ -554,6 +554,9 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
 
 static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
                                   uint64_t /*PC*/) {
+LLVM_DEBUG(dbgs() << "[extractValuePPC64] Type=" << Type
+                  << " Contents=0x" << llvm::format_hex(Contents, 10) << "\n");
+
   switch (Type) {
   default:
     errs() << object::getELFRelocationTypeName(ELF::EM_PPC64, Type) << '\n';
@@ -584,15 +587,28 @@ static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
   case ELF::R_PPC64_GOT16_LO:
   case ELF::R_PPC64_GOT16_HI:
   case ELF::R_PPC64_GOT16_HA:
-    return Contents;
-
-  // Code relocs: for the verifier, return the ELF RELA addend (usually 0)
   case ELF::R_PPC64_REL32:
-  case ELF::R_PPC64_REL24:
-  case ELF::R_PPC64_REL14:
-    return Contents;
+    return 0;
+
+case ELF::R_PPC64_REL24: {
+  uint32_t li = (Contents >> 2) & 0x00FFFFFF;  // bits [6..29]
+  int32_t off = (int32_t)(li << 8) >> 8;       // sign-extend 24 bits
+  LLVM_DEBUG(dbgs() << "[extractValuePPC64] REL24 offset=" << off
+                  << " bytes\n");
+
+  return off << 2;                             // bytes
+}
+case ELF::R_PPC64_REL14:
+case ELF::R_PPC64_REL14_BRTAKEN:
+case ELF::R_PPC64_REL14_BRNTAKEN: {
+  uint32_t bd = (Contents >> 2) & 0x00003FFF;  // bits [16..29]
+  int32_t off = (int32_t)(bd << 18) >> 18;     // sign-extend 14 bits
+LLVM_DEBUG(dbgs() << "[extractValuePPC64] REL14 extracted offset=" << off << "\n");
+return off << 2;
+}
 
   case ELF::R_PPC64_NONE:
+  LLVM_DEBUG(dbgs() << "[extractValuePPC64] R_PPC64_NONE\n");
     return 0;
   }
 }
@@ -1203,6 +1219,9 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
   }
 
   if (isPCRelative(Type)) {
+      LLVM_DEBUG(dbgs() << "[reloc][isPCRelative] Arch=" << Arch
+                    << " Type=" << Type
+                    << " → rewriting as PC-relative expression\n");
     MCSymbol *TempLabel = Ctx.createNamedTempSymbol();
     Streamer->emitLabel(TempLabel);
     Value = MCBinaryExpr::createSub(
