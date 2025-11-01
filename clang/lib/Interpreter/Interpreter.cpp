@@ -397,33 +397,48 @@ Interpreter::getOrcRuntimePath(const driver::ToolChain &TC) {
   std::optional<std::string> CompilerRTPath = TC.getCompilerRTPath();
   std::optional<std::string> ResourceDir = TC.getRuntimePath();
 
-  if (!CompilerRTPath) {
-    return llvm::make_error<llvm::StringError>("CompilerRT path not found",
-                                               std::error_code());
+  if (!CompilerRTPath && !ResourceDir) {
+    return llvm::make_error<llvm::StringError>(
+        "Neither CompilerRT path nor ResourceDir path found",
+        std::error_code());
   }
 
   const std::array<const char *, 3> OrcRTLibNames = {
       "liborc_rt.a", "liborc_rt_osx.a", "liborc_rt-x86_64.a"};
 
-  for (const char *LibName : OrcRTLibNames) {
-    llvm::SmallString<256> CandidatePath((*CompilerRTPath).c_str());
-    llvm::sys::path::append(CandidatePath, LibName);
-
-    if (llvm::sys::fs::exists(CandidatePath)) {
-      return CandidatePath.str().str();
+  auto findInDir = [&](llvm::StringRef Base) -> std::optional<std::string> {
+    for (const char *LibName : OrcRTLibNames) {
+      llvm::SmallString<256> CandidatePath(Base);
+      llvm::sys::path::append(CandidatePath, LibName);
+      if (llvm::sys::fs::exists(CandidatePath))
+        return std::string(CandidatePath.str());
     }
+    return std::nullopt;
+  };
+
+  std::string searched;
+
+  if (CompilerRTPath) {
+    if (auto Found = findInDir(*CompilerRTPath))
+      return *Found;
+    searched += *CompilerRTPath;
+  }
+
+  if (ResourceDir) {
+    if (auto Found = findInDir(*ResourceDir))
+      return *Found;
+    if (!searched.empty())
+      searched += "; ";
+    searched += *ResourceDir;
   }
 
   return llvm::make_error<llvm::StringError>(
-      llvm::Twine("OrcRuntime library not found in: ") + (*CompilerRTPath),
+      llvm::Twine("OrcRuntime library not found in: ") + searched,
       std::error_code());
 }
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
-  llvm::Error Err = llvm::Error::success();
-
-  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
   if (Config.IsOutOfProcess) {
     const TargetInfo &TI = CI->getTarget();
@@ -452,6 +467,9 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI, JITConfig Config) {
       Config.OrcRuntimePath = *OrcRuntimePathOrErr;
     }
   }
+
+  llvm::Error Err = llvm::Error::success();
+  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
 
   auto Interp = std::unique_ptr<Interpreter>(new Interpreter(
       std::move(CI), Err, std::move(JB), /*Consumer=*/nullptr, Config));
