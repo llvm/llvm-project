@@ -3280,7 +3280,7 @@ private:
       // Copy any metadata that is valid for the new load. This may require
       // conversion to a different kind of metadata, e.g. !nonnull might change
       // to !range or vice versa.
-      copyMetadataForLoad(*NewLI, LI);
+      copyMetadataForAccess(*NewLI, LI);
 
       // Do this after copyMetadataForLoad() to preserve the TBAA shift.
       if (AATags)
