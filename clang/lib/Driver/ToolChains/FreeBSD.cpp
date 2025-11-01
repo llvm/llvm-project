@@ -281,8 +281,6 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  unsigned Major = ToolChain.getTriple().getOSMajorVersion();
-  bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
                    options::OPT_r)) {
     // Use the static OpenMP runtime with -static-openmp
@@ -293,10 +291,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (D.CCCIsCXX()) {
       if (ToolChain.ShouldLinkCXXStdlib(Args))
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
-      if (Profiling)
-        CmdArgs.push_back("-lm_p");
-      else
-        CmdArgs.push_back("-lm");
+      CmdArgs.push_back("-lm");
     }
 
     // Silence warnings when linking C code with a C++ '-stdlib' argument.
@@ -310,10 +305,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
       ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
       ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
-      if (Profiling)
-        CmdArgs.push_back("-lm_p");
-      else
-        CmdArgs.push_back("-lm");
+      CmdArgs.push_back("-lm");
     }
 
     if (NeedsSanitizerDeps)
@@ -322,42 +314,23 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
     // FIXME: For some reason GCC passes -lgcc and -lgcc_s before adding
     // the default system libraries. Just mimic this for now.
-    if (Profiling)
-      CmdArgs.push_back("-lgcc_p");
-    else
-      CmdArgs.push_back("-lgcc");
+    CmdArgs.push_back("-lgcc");
     if (Args.hasArg(options::OPT_static)) {
       CmdArgs.push_back("-lgcc_eh");
-    } else if (Profiling) {
-      CmdArgs.push_back("-lgcc_eh_p");
     } else {
       CmdArgs.push_back("--as-needed");
       CmdArgs.push_back("-lgcc_s");
       CmdArgs.push_back("--no-as-needed");
     }
 
-    if (Args.hasArg(options::OPT_pthread)) {
-      if (Profiling)
-        CmdArgs.push_back("-lpthread_p");
-      else
-        CmdArgs.push_back("-lpthread");
-    }
+    if (Args.hasArg(options::OPT_pthread))
+      CmdArgs.push_back("-lpthread");
 
-    if (Profiling) {
-      if (Args.hasArg(options::OPT_shared))
-        CmdArgs.push_back("-lc");
-      else
-        CmdArgs.push_back("-lc_p");
-      CmdArgs.push_back("-lgcc_p");
-    } else {
-      CmdArgs.push_back("-lc");
-      CmdArgs.push_back("-lgcc");
-    }
+    CmdArgs.push_back("-lc");
+    CmdArgs.push_back("-lgcc");
 
     if (Args.hasArg(options::OPT_static)) {
       CmdArgs.push_back("-lgcc_eh");
-    } else if (Profiling) {
-      CmdArgs.push_back("-lgcc_eh_p");
     } else {
       CmdArgs.push_back("--as-needed");
       CmdArgs.push_back("-lgcc_s");
@@ -442,12 +415,6 @@ void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
   Generic_ELF::AddCXXStdlibLibArgs(Args, CmdArgs);
-  unsigned Major = getTriple().getOSMajorVersion();
-  bool SuffixedLib = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
-  if (SuffixedLib && GetCXXStdlibType(Args) == CST_Libcxx)
-    std::replace_if(
-        CmdArgs.begin(), CmdArgs.end(),
-        [](const char *S) { return StringRef(S) == "-lc++"; }, "-lc++_p");
 }
 
 void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,
