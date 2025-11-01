@@ -4,6 +4,8 @@
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=builtin %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-BUILTIN %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=array-bounds %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ARRAY-BOUNDS %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=enum %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-ENUM %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=fixed-point-divide-by-zero %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FIXED-POINT-DIVIDE-BY-ZERO,CHECK-FIXED-POINT %s
+// RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=fixed-point %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FIXED-POINT %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=float-cast-overflow %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-FLOAT-CAST-OVERFLOW %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=integer-divide-by-zero %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-INTEGER-DIVIDE-BY-ZERO %s
 // RUN: %clang -E -target x86_64-unknown-linux-gnu -fsanitize=nonnull-attribute %s -o - | FileCheck --check-prefixes=CHECK-UBSAN,CHECK-NONNULL-ATTRIBUTE %s
@@ -63,6 +65,18 @@ int ArrayBoundsSanitizerDisabled();
 int EnumSanitizerEnabled();
 #else
 int EnumSanitizerDisabled();
+#endif
+
+#if __has_feature(fixed_point_divide_by_zero_sanitizer)
+int FixedPointDivideByZeroSanitizerEnabled();
+#else
+int FixedPointDivideByZeroSanitizerDisabled();
+#endif
+
+#if __has_feature(fixed_point_sanitizer)
+int FixedPointSanitizerEnabled();
+#else
+int FixedPointSanitizerDisabled();
 #endif
 
 #if __has_feature(float_cast_overflow_sanitizer)
@@ -161,6 +175,8 @@ int FunctionSanitizerDisabled();
 // CHECK-BUILTIN: BuiltinSanitizerEnabled
 // CHECK-ARRAY-BOUNDS: ArrayBoundsSanitizerEnabled
 // CHECK-ENUM: EnumSanitizerEnabled
+// CHECK-FIXED-POINT-DIVIDE-BY-ZERO: FixedPointDivideByZeroSanitizerEnabled
+// CHECK-FIXED-POINT: FixedPointSanitizerEnabled
 // CHECK-FLOAT-CAST-OVERFLOW: FloatCastOverflowSanitizerEnabled
 // CHECK-INTEGER-DIVIDE-BY-ZERO: IntegerDivideByZeroSanitizerEnabled
 // CHECK-NONNULL-ATTRIBUTE: NonnullAttributeSanitizerEnabled

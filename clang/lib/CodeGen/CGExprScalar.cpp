@@ -4591,9 +4591,20 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     Result = FPBuilder.CreateMul(LHS, LHSFixedSema, RHS, RHSFixedSema);
     break;
   case BO_DivAssign:
-  case BO_Div:
+  case BO_Div: {
+    SanitizerDebugLocation SanScope(&CGF,
+                                    {SanitizerKind::SO_FixedPointDivideByZero},
+                                    SanitizerHandler::DivremOverflow);
+    if (CGF.SanOpts.has(SanitizerKind::FixedPointDivideByZero)) {
+      Value *Zero = llvm::Constant::getNullValue(RHS->getType());
+      const std::pair<Value *, SanitizerKind::SanitizerOrdinal> Check = {
+          Builder.CreateICmpNE(RHS, Zero),
+          SanitizerKind::SO_FixedPointDivideByZero};
+      EmitBinOpCheck(Check, op);
+    }
     Result = FPBuilder.CreateDiv(LHS, LHSFixedSema, RHS, RHSFixedSema);
     break;
+  }
   case BO_ShlAssign:
   case BO_Shl:
     Result = FPBuilder.CreateShl(LHS, LHSFixedSema, RHS);
