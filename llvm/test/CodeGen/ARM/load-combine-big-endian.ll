@@ -53,9 +53,9 @@ define i32 @load_i32_by_i8_bswap(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_i8_bswap:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -220,14 +220,13 @@ define i64 @load_i64_by_i8_bswap(ptr %arg) {
 ; CHECK-LABEL: load_i64_by_i8_bswap:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r1, [r0]
+; CHECK-NEXT:    mvn r3, #65280
 ; CHECK-NEXT:    ldr r0, [r0, #4]
 ; CHECK-NEXT:    eor r2, r0, r0, ror #16
-; CHECK-NEXT:    bic r2, r2, #16711680
-; CHECK-NEXT:    lsr r2, r2, #8
+; CHECK-NEXT:    and r2, r3, r2, lsr #8
 ; CHECK-NEXT:    eor r0, r2, r0, ror #8
 ; CHECK-NEXT:    eor r2, r1, r1, ror #16
-; CHECK-NEXT:    bic r2, r2, #16711680
-; CHECK-NEXT:    lsr r2, r2, #8
+; CHECK-NEXT:    and r2, r3, r2, lsr #8
 ; CHECK-NEXT:    eor r1, r2, r1, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -369,9 +368,9 @@ define i32 @load_i32_by_i8_nonzero_offset(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_i8_nonzero_offset:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0, #1]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -423,9 +422,9 @@ define i32 @load_i32_by_i8_neg_offset(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_i8_neg_offset:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0, #-4]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -573,9 +572,9 @@ define i32 @load_i32_by_bswap_i16(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_bswap_i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -649,10 +648,10 @@ define i32 @load_i32_by_i8_base_offset_index(ptr %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    add r0, r0, r1
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    ldr r0, [r0, #12]
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -712,10 +711,10 @@ define i32 @load_i32_by_i8_base_offset_index_2(ptr %arg, i32 %i) {
 ; CHECK-LABEL: load_i32_by_i8_base_offset_index_2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    add r0, r1, r0
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    ldr r0, [r0, #13]
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;

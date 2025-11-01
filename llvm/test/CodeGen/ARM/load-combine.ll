@@ -137,9 +137,9 @@ define i32 @load_i32_by_i8_bswap(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_i8_bswap:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -153,15 +153,15 @@ define i32 @load_i32_by_i8_bswap(ptr %arg) {
 ; CHECK-THUMBv5-NEXT:    movs r3, r0
 ; CHECK-THUMBv5-NEXT:    rors r3, r1
 ; CHECK-THUMBv5-NEXT:    eors r3, r0
+; CHECK-THUMBv5-NEXT:    lsrs r1, r3, #8
 ; CHECK-THUMBv5-NEXT:    ldr r0, .LCPI2_0
-; CHECK-THUMBv5-NEXT:    ands r0, r3
-; CHECK-THUMBv5-NEXT:    lsrs r0, r0, #8
+; CHECK-THUMBv5-NEXT:    ands r0, r1
 ; CHECK-THUMBv5-NEXT:    eors r0, r2
 ; CHECK-THUMBv5-NEXT:    bx lr
 ; CHECK-THUMBv5-NEXT:    .p2align 2
 ; CHECK-THUMBv5-NEXT:  @ %bb.1:
 ; CHECK-THUMBv5-NEXT:  .LCPI2_0:
-; CHECK-THUMBv5-NEXT:    .long 4278255360 @ 0xff00ff00
+; CHECK-THUMBv5-NEXT:    .long 16711935 @ 0xff00ff
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_bswap:
 ; CHECK-ARMv6:       @ %bb.0:
@@ -281,47 +281,46 @@ define i64 @load_i64_by_i8_bswap(ptr %arg) {
 ; CHECK-LABEL: load_i64_by_i8_bswap:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r1, [r0]
+; CHECK-NEXT:    mvn r3, #65280
 ; CHECK-NEXT:    ldr r0, [r0, #4]
 ; CHECK-NEXT:    eor r2, r0, r0, ror #16
-; CHECK-NEXT:    bic r2, r2, #16711680
-; CHECK-NEXT:    lsr r2, r2, #8
+; CHECK-NEXT:    and r2, r3, r2, lsr #8
 ; CHECK-NEXT:    eor r0, r2, r0, ror #8
 ; CHECK-NEXT:    eor r2, r1, r1, ror #16
-; CHECK-NEXT:    bic r2, r2, #16711680
-; CHECK-NEXT:    lsr r2, r2, #8
+; CHECK-NEXT:    and r2, r3, r2, lsr #8
 ; CHECK-NEXT:    eor r1, r2, r1, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
 ; CHECK-THUMBv5-LABEL: load_i64_by_i8_bswap:
 ; CHECK-THUMBv5:       @ %bb.0:
 ; CHECK-THUMBv5-NEXT:    push {r4, r5, r7, lr}
-; CHECK-THUMBv5-NEXT:    ldr r1, [r0, #4]
-; CHECK-THUMBv5-NEXT:    movs r3, #8
-; CHECK-THUMBv5-NEXT:    movs r4, r1
-; CHECK-THUMBv5-NEXT:    rors r4, r3
-; CHECK-THUMBv5-NEXT:    movs r5, #16
-; CHECK-THUMBv5-NEXT:    movs r2, r1
-; CHECK-THUMBv5-NEXT:    rors r2, r5
-; CHECK-THUMBv5-NEXT:    eors r2, r1
-; CHECK-THUMBv5-NEXT:    ldr r1, .LCPI4_0
-; CHECK-THUMBv5-NEXT:    ands r2, r1
-; CHECK-THUMBv5-NEXT:    lsrs r2, r2, #8
-; CHECK-THUMBv5-NEXT:    eors r2, r4
-; CHECK-THUMBv5-NEXT:    ldr r0, [r0]
-; CHECK-THUMBv5-NEXT:    movs r4, r0
-; CHECK-THUMBv5-NEXT:    rors r4, r3
+; CHECK-THUMBv5-NEXT:    movs r1, r0
+; CHECK-THUMBv5-NEXT:    ldr r0, [r0, #4]
+; CHECK-THUMBv5-NEXT:    movs r2, #8
 ; CHECK-THUMBv5-NEXT:    movs r3, r0
-; CHECK-THUMBv5-NEXT:    rors r3, r5
-; CHECK-THUMBv5-NEXT:    eors r3, r0
-; CHECK-THUMBv5-NEXT:    ands r3, r1
-; CHECK-THUMBv5-NEXT:    lsrs r1, r3, #8
-; CHECK-THUMBv5-NEXT:    eors r1, r4
-; CHECK-THUMBv5-NEXT:    movs r0, r2
+; CHECK-THUMBv5-NEXT:    rors r3, r2
+; CHECK-THUMBv5-NEXT:    movs r4, #16
+; CHECK-THUMBv5-NEXT:    movs r5, r0
+; CHECK-THUMBv5-NEXT:    rors r5, r4
+; CHECK-THUMBv5-NEXT:    eors r5, r0
+; CHECK-THUMBv5-NEXT:    lsrs r0, r5, #8
+; CHECK-THUMBv5-NEXT:    ldr r5, .LCPI4_0
+; CHECK-THUMBv5-NEXT:    ands r0, r5
+; CHECK-THUMBv5-NEXT:    eors r0, r3
+; CHECK-THUMBv5-NEXT:    ldr r1, [r1]
+; CHECK-THUMBv5-NEXT:    movs r3, r1
+; CHECK-THUMBv5-NEXT:    rors r3, r2
+; CHECK-THUMBv5-NEXT:    movs r2, r1
+; CHECK-THUMBv5-NEXT:    rors r2, r4
+; CHECK-THUMBv5-NEXT:    eors r2, r1
+; CHECK-THUMBv5-NEXT:    lsrs r1, r2, #8
+; CHECK-THUMBv5-NEXT:    ands r1, r5
+; CHECK-THUMBv5-NEXT:    eors r1, r3
 ; CHECK-THUMBv5-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-THUMBv5-NEXT:    .p2align 2
 ; CHECK-THUMBv5-NEXT:  @ %bb.1:
 ; CHECK-THUMBv5-NEXT:  .LCPI4_0:
-; CHECK-THUMBv5-NEXT:    .long 4278255360 @ 0xff00ff00
+; CHECK-THUMBv5-NEXT:    .long 16711935 @ 0xff00ff
 ;
 ; CHECK-ARMv6-LABEL: load_i64_by_i8_bswap:
 ; CHECK-ARMv6:       @ %bb.0:
@@ -495,9 +494,9 @@ define i32 @load_i32_by_i8_nonzero_offset_bswap(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_i8_nonzero_offset_bswap:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0, #1]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -509,17 +508,17 @@ define i32 @load_i32_by_i8_nonzero_offset_bswap(ptr %arg) {
 ; CHECK-THUMBv5-NEXT:    movs r2, r0
 ; CHECK-THUMBv5-NEXT:    rors r2, r1
 ; CHECK-THUMBv5-NEXT:    eors r2, r0
-; CHECK-THUMBv5-NEXT:    ldr r1, .LCPI7_0
-; CHECK-THUMBv5-NEXT:    ands r1, r2
-; CHECK-THUMBv5-NEXT:    lsrs r1, r1, #8
-; CHECK-THUMBv5-NEXT:    movs r2, #8
-; CHECK-THUMBv5-NEXT:    rors r0, r2
-; CHECK-THUMBv5-NEXT:    eors r0, r1
+; CHECK-THUMBv5-NEXT:    lsrs r1, r2, #8
+; CHECK-THUMBv5-NEXT:    ldr r2, .LCPI7_0
+; CHECK-THUMBv5-NEXT:    ands r2, r1
+; CHECK-THUMBv5-NEXT:    movs r1, #8
+; CHECK-THUMBv5-NEXT:    rors r0, r1
+; CHECK-THUMBv5-NEXT:    eors r0, r2
 ; CHECK-THUMBv5-NEXT:    bx lr
 ; CHECK-THUMBv5-NEXT:    .p2align 2
 ; CHECK-THUMBv5-NEXT:  @ %bb.1:
 ; CHECK-THUMBv5-NEXT:  .LCPI7_0:
-; CHECK-THUMBv5-NEXT:    .long 4278255360 @ 0xff00ff00
+; CHECK-THUMBv5-NEXT:    .long 16711935 @ 0xff00ff
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_nonzero_offset_bswap:
 ; CHECK-ARMv6:       @ %bb.0:
@@ -568,9 +567,9 @@ define i32 @load_i32_by_i8_neg_offset_bswap(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_i8_neg_offset_bswap:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0, #-4]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -585,15 +584,15 @@ define i32 @load_i32_by_i8_neg_offset_bswap(ptr %arg) {
 ; CHECK-THUMBv5-NEXT:    movs r3, r0
 ; CHECK-THUMBv5-NEXT:    rors r3, r1
 ; CHECK-THUMBv5-NEXT:    eors r3, r0
+; CHECK-THUMBv5-NEXT:    lsrs r1, r3, #8
 ; CHECK-THUMBv5-NEXT:    ldr r0, .LCPI8_0
-; CHECK-THUMBv5-NEXT:    ands r0, r3
-; CHECK-THUMBv5-NEXT:    lsrs r0, r0, #8
+; CHECK-THUMBv5-NEXT:    ands r0, r1
 ; CHECK-THUMBv5-NEXT:    eors r0, r2
 ; CHECK-THUMBv5-NEXT:    bx lr
 ; CHECK-THUMBv5-NEXT:    .p2align 2
 ; CHECK-THUMBv5-NEXT:  @ %bb.1:
 ; CHECK-THUMBv5-NEXT:  .LCPI8_0:
-; CHECK-THUMBv5-NEXT:    .long 4278255360 @ 0xff00ff00
+; CHECK-THUMBv5-NEXT:    .long 16711935 @ 0xff00ff
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_i8_neg_offset_bswap:
 ; CHECK-ARMv6:       @ %bb.0:
@@ -644,9 +643,9 @@ define i32 @load_i32_by_bswap_i16(ptr %arg) {
 ; CHECK-LABEL: load_i32_by_bswap_i16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    ldr r0, [r0]
+; CHECK-NEXT:    mvn r2, #65280
 ; CHECK-NEXT:    eor r1, r0, r0, ror #16
-; CHECK-NEXT:    bic r1, r1, #16711680
-; CHECK-NEXT:    lsr r1, r1, #8
+; CHECK-NEXT:    and r1, r2, r1, lsr #8
 ; CHECK-NEXT:    eor r0, r1, r0, ror #8
 ; CHECK-NEXT:    mov pc, lr
 ;
@@ -660,15 +659,15 @@ define i32 @load_i32_by_bswap_i16(ptr %arg) {
 ; CHECK-THUMBv5-NEXT:    movs r3, r0
 ; CHECK-THUMBv5-NEXT:    rors r3, r1
 ; CHECK-THUMBv5-NEXT:    eors r3, r0
+; CHECK-THUMBv5-NEXT:    lsrs r1, r3, #8
 ; CHECK-THUMBv5-NEXT:    ldr r0, .LCPI9_0
-; CHECK-THUMBv5-NEXT:    ands r0, r3
-; CHECK-THUMBv5-NEXT:    lsrs r0, r0, #8
+; CHECK-THUMBv5-NEXT:    ands r0, r1
 ; CHECK-THUMBv5-NEXT:    eors r0, r2
 ; CHECK-THUMBv5-NEXT:    bx lr
 ; CHECK-THUMBv5-NEXT:    .p2align 2
 ; CHECK-THUMBv5-NEXT:  @ %bb.1:
 ; CHECK-THUMBv5-NEXT:  .LCPI9_0:
-; CHECK-THUMBv5-NEXT:    .long 4278255360 @ 0xff00ff00
+; CHECK-THUMBv5-NEXT:    .long 16711935 @ 0xff00ff
 ;
 ; CHECK-ARMv6-LABEL: load_i32_by_bswap_i16:
 ; CHECK-ARMv6:       @ %bb.0:
