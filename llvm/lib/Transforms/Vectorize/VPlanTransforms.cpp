@@ -647,6 +647,14 @@ static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
   return Users.takeVector();
 }
 
+static SmallVector<VPValue *> collectOperandsRecursively(VPRecipeBase *R) {
+  SetVector<VPValue *> Operands(llvm::from_range, R->operands());
+  for (unsigned I = 0; I != Operands.size(); ++I)
+    if (auto *Cur = Operands[I]->getDefiningRecipe())
+      Operands.insert_range(Cur->operands());
+  return Operands.takeVector();
+}
+
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
 /// VPWidenPointerInductionRecipe will generate vectors only. If some users
@@ -4095,25 +4103,51 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   return ExpandedSCEVs;
 }
 
-/// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
-/// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
-/// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
-/// the same interleave group at index 0. A VPWidenLoadRecipe can be narrowed to
-/// an index-independent load if it feeds all wide ops at all indices (\p OpV
-/// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
-/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
-/// is defined at \p Idx of a load interleave group.
-static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
-                          VPValue *OpV, unsigned Idx) {
-  auto *DefR = OpV->getDefiningRecipe();
-  if (!DefR)
-    return WideMember0->getOperand(OpIdx) == OpV;
-  if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
-    return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
-
-  if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefR))
-    return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
-  return false;
+/// Returns true if the \p StoredValues of an interleave group match. It does
+/// this by going through operands recursively until it hits the leaf cases:
+/// VPWidenLoadRecipe, VPInterleaveRecipe, and live-ins.
+static bool interleaveStoredValuesMatch(ArrayRef<VPValue *> StoredValues) {
+  auto *WideMember0 =
+      dyn_cast_or_null<VPWidenRecipe>(StoredValues[0]->getDefiningRecipe());
+  if (!WideMember0)
+    return false;
+  SmallVector<VPValue *> Ops0 = collectOperandsRecursively(WideMember0);
+  for (VPValue *ValI : StoredValues) {
+    auto *WideMemberI =
+        dyn_cast_or_null<VPWidenRecipe>(ValI->getDefiningRecipe());
+    if (!WideMemberI || WideMemberI->getOpcode() != WideMember0->getOpcode())
+      return false;
+    SmallVector<VPValue *> OpsI = collectOperandsRecursively(WideMemberI);
+    if (Ops0.size() != OpsI.size())
+      return false;
+    for (const auto &[Op0, OpI] : zip(Ops0, OpsI)) {
+      auto *Def0 = Op0->getDefiningRecipe();
+      auto *DefI = OpI->getDefiningRecipe();
+      if (!Def0 || !DefI) {
+        if (Op0 != OpI)
+          return false;
+      } else if (Def0->getVPDefID() != DefI->getVPDefID()) {
+        return false;
+      } else if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefI)) {
+        if (W->isMasked() || Op0 != OpI)
+          return false;
+      } else if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefI)) {
+        if (!IR->getInterleaveGroup()->isFull() ||
+            !equal(DefI->definedValues(), Def0->definedValues()))
+          return false;
+      } else if (Def0 != DefI) {
+        auto *SingleDef0 = dyn_cast<VPSingleDefRecipe>(Def0);
+        auto *SingleDefI = dyn_cast<VPSingleDefRecipe>(DefI);
+        if (!SingleDef0 || !SingleDefI)
+          return false;
+        auto Opc0 = getOpcodeOrIntrinsicID(SingleDef0);
+        auto OpcI = getOpcodeOrIntrinsicID(SingleDefI);
+        if (!Opc0 || Opc0 != OpcI)
+          return false;
+      }
+    }
+  }
+  return true;
 }
 
 /// Returns true if \p IR is a full interleave group with factor and number of
@@ -4232,24 +4266,9 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       continue;
     }
 
-    // Check if all values feeding InterleaveR are matching wide recipes, which
-    // operands that can be narrowed.
-    auto *WideMember0 = dyn_cast_or_null<VPWidenRecipe>(
-        InterleaveR->getStoredValues()[0]->getDefiningRecipe());
-    if (!WideMember0)
+    // Check if all values feeding InterleaveR match.
+    if (!interleaveStoredValuesMatch(InterleaveR->getStoredValues()))
       return;
-    for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
-      if (!R || R->getOpcode() != WideMember0->getOpcode() ||
-          R->getNumOperands() > 2)
-        return;
-      if (any_of(enumerate(R->operands()),
-                 [WideMember0, Idx = I](const auto &P) {
-                   const auto &[OpIdx, OpV] = P;
-                   return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
-                 }))
-        return;
-    }
     StoreGroups.push_back(InterleaveR);
   }
 
@@ -4281,6 +4300,11 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
              "must be a single scalar load");
       NarrowedOps.insert(RepR);
       return RepR;
+    }
+    if (isa<VPSingleDefRecipe>(R)) {
+      // Narrow any intervening single-def recipes.
+      NarrowedOps.insert(V);
+      return V;
     }
     auto *WideLoad = cast<VPWidenLoadRecipe>(R);
 
