@@ -14,8 +14,10 @@
 #include "BuiltinTargetFeatures.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/LangStandard.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 using namespace clang;
 
 const char *HeaderDesc::getName() const {
@@ -135,6 +137,24 @@ bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   return false;
 }
 
+static bool isSymbolAvailableInC89(const llvm::StringTable &Strings,
+                                   const Builtin::Info &BuiltinInfo) {
+
+  auto NameStr = Strings[BuiltinInfo.Offsets.Name];
+
+  if (NameStr.starts_with("__builtin_")) {
+    return true;
+  }
+
+  // FIXME: add other C89 symbols here
+  if (NameStr == "log" || NameStr == "va_start" || NameStr == "va_arg" ||
+      NameStr == "va_end") {
+    return true;
+  }
+
+  return false;
+}
+
 /// Is this builtin supported according to the given language options?
 static bool builtinIsSupported(const llvm::StringTable &Strings,
                                const Builtin::Info &BuiltinInfo,
@@ -147,6 +167,11 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* CorBuiltins Unsupported */
   if (!LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
     return false;
+  bool isC89 = /*C89*/ LangOpts.LangStd == LangStandard::lang_c89;
+  if (isC89 && BuiltinInfo.Header.ID != BuiltinInfo.Header.NO_HEADER &&
+      !isSymbolAvailableInC89(Strings, BuiltinInfo)) {
+    return false;
+  }
   /* MathBuiltins Unsupported */
   if (LangOpts.NoMathBuiltin && BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
     return false;
