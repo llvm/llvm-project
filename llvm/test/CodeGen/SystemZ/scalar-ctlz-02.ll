@@ -11,25 +11,31 @@ define i128 @f1(i128 %a) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vrepib %v1, 1
 ; CHECK-NEXT:    vsrl %v1, %v0, %v1
+; CHECK-NEXT:    vno %v2, %v0, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 2
 ; CHECK-NEXT:    vsrl %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 4
 ; CHECK-NEXT:    vsrl %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 8
 ; CHECK-NEXT:    vsrlb %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 16
 ; CHECK-NEXT:    vsrlb %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 32
 ; CHECK-NEXT:    vsrlb %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 64
-; CHECK-NEXT:    vsrlb %v1, %v0, %v1
-; CHECK-NEXT:    vno %v0, %v0, %v1
+; CHECK-NEXT:    vsrlb %v0, %v0, %v1
+; CHECK-NEXT:    vnc %v0, %v2, %v0
 ; CHECK-NEXT:    vpopct %v0, %v0, 0
 ; CHECK-NEXT:    vgbm %v1, 0
 ; CHECK-NEXT:    vsumb %v0, %v0, %v1
@@ -47,25 +53,31 @@ define i128 @f2(i128 %a) {
 ; CHECK-NEXT:    vl %v0, 0(%r3), 3
 ; CHECK-NEXT:    vrepib %v1, 1
 ; CHECK-NEXT:    vsrl %v1, %v0, %v1
+; CHECK-NEXT:    vno %v2, %v0, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 2
 ; CHECK-NEXT:    vsrl %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 4
 ; CHECK-NEXT:    vsrl %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 8
 ; CHECK-NEXT:    vsrlb %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 16
 ; CHECK-NEXT:    vsrlb %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 32
 ; CHECK-NEXT:    vsrlb %v1, %v0, %v1
+; CHECK-NEXT:    vnc %v2, %v2, %v1
 ; CHECK-NEXT:    vo %v0, %v0, %v1
 ; CHECK-NEXT:    vrepib %v1, 64
-; CHECK-NEXT:    vsrlb %v1, %v0, %v1
-; CHECK-NEXT:    vno %v0, %v0, %v1
+; CHECK-NEXT:    vsrlb %v0, %v0, %v1
+; CHECK-NEXT:    vnc %v0, %v2, %v0
 ; CHECK-NEXT:    vpopct %v0, %v0, 0
 ; CHECK-NEXT:    vgbm %v1, 0
 ; CHECK-NEXT:    vsumb %v0, %v0, %v1
