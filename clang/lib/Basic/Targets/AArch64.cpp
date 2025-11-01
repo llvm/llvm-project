@@ -1495,6 +1495,17 @@ std::string
 AArch64TargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
+  case 'r':
+    // Check for "rZ" or "rz" constraint (register or zero)
+    if (Constraint[1] == 'Z' || Constraint[1] == 'z') {
+      // Return with "^" prefix to indicate 2-character constraint
+      R = "^r";
+      R += Constraint[1];
+      Constraint += 1;
+      return R;
+    }
+    R = TargetInfo::convertConstraint(Constraint);
+    break;
   case 'U': // Three-character constraint; add "@3" hint for later parsing.
     R = std::string("@3") + std::string(Constraint, 3);
     Constraint += 2;
@@ -1517,6 +1528,14 @@ bool AArch64TargetInfo::validateAsmConstraint(
     const char *&Name, TargetInfo::ConstraintInfo &Info) const {
   switch (*Name) {
   default:
+    return false;
+  case 'r':
+    // Check if this is "rZ" constraint (register or zero)
+    if (Name[1] == 'Z' || Name[1] == 'z') {
+      Info.setAllowsRegister();
+      Name++;
+      return true;
+    }
     return false;
   case 'w': // Floating point and SIMD registers (V0-V31)
     Info.setAllowsRegister();

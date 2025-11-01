@@ -13018,6 +13018,9 @@ AArch64TargetLowering::getConstraintType(StringRef Constraint) const {
     case 'S': // A symbol or label reference with a constant offset
       return C_Other;
     }
+  } else if (Constraint.size() == 2 &&
+             (Constraint == "rZ" || Constraint == "rz")) {
+    return C_Other;
   } else if (parsePredicateConstraint(Constraint))
     return C_RegisterClass;
   else if (parseReducedGprConstraint(Constraint))
@@ -13043,6 +13046,14 @@ AArch64TargetLowering::getSingleConstraintMatchWeight(
   // Look at the constraint type.
   switch (*constraint) {
   default:
+    weight = TargetLowering::getSingleConstraintMatchWeight(info, constraint);
+    break;
+  case 'r':
+    // Check for "rZ" or "rz" constraint (register or zero)
+    if (constraint[1] == 'Z' || constraint[1] == 'z') {
+      weight = CW_Register;
+      break;
+    }
     weight = TargetLowering::getSingleConstraintMatchWeight(info, constraint);
     break;
   case 'x':
@@ -13195,6 +13206,23 @@ void AArch64TargetLowering::LowerAsmOperandForConstraint(
     SDValue Op, StringRef Constraint, std::vector<SDValue> &Ops,
     SelectionDAG &DAG) const {
   SDValue Result;
+
+  // Handle "rZ" and "rz" constraints (register or zero)
+  if (Constraint.size() == 2 && Constraint[0] == 'r' &&
+      (Constraint[1] == 'Z' || Constraint[1] == 'z')) {
+    if (isNullConstant(Op)) {
+      if (Op.getValueType() == MVT::i64)
+        Result = DAG.getRegister(AArch64::XZR, MVT::i64);
+      else
+        Result = DAG.getRegister(AArch64::WZR, MVT::i32);
+
+      if (Result.getNode()) {
+        Ops.push_back(Result);
+        return;
+      }
+    }
+    return;
+  }
 
   // Currently only support length 1 constraints.
   if (Constraint.size() != 1)
