@@ -155,7 +155,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_predicated_io",
          SPIRV::Extension::Extension::SPV_INTEL_predicated_io},
         {"SPV_KHR_maximal_reconvergence",
-         SPIRV::Extension::Extension::SPV_KHR_maximal_reconvergence}};
+         SPIRV::Extension::Extension::SPV_KHR_maximal_reconvergence},
+        {"SPV_INTEL_kernel_attributes",
+         SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
