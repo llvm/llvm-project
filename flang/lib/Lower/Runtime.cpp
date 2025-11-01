@@ -12,10 +12,10 @@
 #include "flang/Lower/OpenMP.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/Runtime/Coarray.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
@@ -52,7 +52,6 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
 static std::pair<mlir::Value, mlir::Value> getStatAndErrmsg(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::lower::StatementContext stmtCtx;
 
   mlir::Value errMsgExpr, statExpr;
@@ -71,16 +70,6 @@ static std::pair<mlir::Value, mlir::Value> getStatAndErrmsg(
                statOrErr.u);
   }
 
-  if (!statExpr) {
-    statExpr = fir::AbsentOp::create(builder, loc,
-                                     builder.getRefType(builder.getI32Type()));
-  }
-  if (!errMsgExpr) {
-    errMsgExpr = fir::AbsentOp::create(
-        builder, loc,
-        fir::BoxType::get(fir::CharacterType::get(
-            builder.getContext(), 1, fir::CharacterType::unknownLen())));
-  }
   return {statExpr, errMsgExpr};
 }
 
@@ -215,7 +204,7 @@ void Fortran::lower::genSyncAllStatement(
   auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  fir::runtime::genSyncAllStatement(builder, loc, statAddr, errMsgAddr);
+  mif::SyncAllOp::create(builder, loc, statAddr, errMsgAddr);
 }
 
 void Fortran::lower::genSyncImagesStatement(
@@ -244,16 +233,12 @@ void Fortran::lower::genSyncImagesStatement(
                        fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
                  },
                  [&](const Fortran::parser::Star &) {
-                   imageSet = fir::AbsentOp::create(
-                       builder, loc,
-                       fir::BoxType::get(fir::SequenceType::get(
-                           {fir::SequenceType::getUnknownExtent()},
-                           builder.getI32Type())));
+                   // Image set is not set.
+                   imageSet = mlir::Value{};
                  }},
              imgSet.u);
 
-  fir::runtime::genSyncImagesStatement(builder, loc, imageSet, statAddr,
-                                       errMsgAddr);
+  mif::SyncImagesOp::create(builder, loc, imageSet, statAddr, errMsgAddr);
 }
 
 void Fortran::lower::genSyncMemoryStatement(
@@ -267,7 +252,7 @@ void Fortran::lower::genSyncMemoryStatement(
   auto [statAddr, errMsgAddr] = getStatAndErrmsg(converter, loc, statOrErrList);
 
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  fir::runtime::genSyncMemoryStatement(builder, loc, statAddr, errMsgAddr);
+  mif::SyncMemoryOp::create(builder, loc, statAddr, errMsgAddr);
 }
 
 void Fortran::lower::genSyncTeamStatement(

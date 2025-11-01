@@ -46,7 +46,7 @@ Clang LLVM IR generation
 | rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 | Eli Friedman
-| efriedma\@quicinc.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
+| efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)

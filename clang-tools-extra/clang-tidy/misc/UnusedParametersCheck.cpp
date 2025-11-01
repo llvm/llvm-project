@@ -22,15 +22,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::misc {
 
-namespace {
-bool isOverrideMethod(const FunctionDecl *Function) {
+static bool isOverrideMethod(const FunctionDecl *Function) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Function))
     return MD->size_overridden_methods() > 0 || MD->hasAttr<OverrideAttr>();
   return false;
 }
 
-bool hasAttrAfterParam(const SourceManager *SourceManager,
-                       const ParmVarDecl *Param) {
+static bool hasAttrAfterParam(const SourceManager *SourceManager,
+                              const ParmVarDecl *Param) {
   for (const auto *Attr : Param->attrs()) {
     if (SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
                                                  Attr->getLocation())) {
@@ -39,7 +38,6 @@ bool hasAttrAfterParam(const SourceManager *SourceManager,
   }
   return false;
 }
-} // namespace
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(functionDecl(isDefinition(), hasBody(stmt()),
