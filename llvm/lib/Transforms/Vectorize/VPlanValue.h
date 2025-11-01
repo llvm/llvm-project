@@ -41,6 +41,7 @@ class VPRecipeBase;
 class VPInterleaveBase;
 class VPPhiAccessors;
 struct VPRegionValue;
+class VPRegionBlock;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -62,9 +63,13 @@ protected:
   /// Hold the underlying Value, if any, attached to this VPValue.
   Value *UnderlyingVal;
 
-  /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
-  /// VPValue is not defined by any recipe modeled in VPlan.
-  VPDef *Def;
+  /// Pointer to the VPDef that defines this VPValue, or VPRegionBlock for
+  /// VPRegionValue. If it is nullptr, the VPValue is not defined by any recipe
+  /// or region in VPlan, i.e. is a live-in.
+  union {
+    VPDef *Def;
+    VPRegionBlock *DefiningRegion;
+  };
 
   VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
 
@@ -200,9 +205,14 @@ public:
 
 /// VPValues defined by a VPRegionBlock, like the canonical IV.
 struct VPRegionValue : public VPValue {
-  VPRegionValue() : VPValue(VPValue::VPRegionValueSC) {}
+  VPRegionValue(VPRegionBlock *Region) : VPValue(VPValue::VPRegionValueSC) {
+    DefiningRegion = Region;
+  }
 
   ~VPRegionValue() override = default;
+
+  /// Returns the region that defines this value.
+  VPRegionBlock *getDefiningRegion() const { return DefiningRegion; }
 
   static inline bool classof(const VPValue *V) {
     return V->getVPValueID() == VPValue::VPRegionValueSC;

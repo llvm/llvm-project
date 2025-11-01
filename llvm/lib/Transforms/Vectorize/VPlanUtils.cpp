@@ -83,17 +83,19 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return SE.getCouldNotCompute();
   }
 
+  if (auto *CanIV = dyn_cast<VPRegionValue>(V)) {
+    if (!L)
+      return SE.getCouldNotCompute();
+    const SCEV *Start =
+        SE.getZero(CanIV->getDefiningRegion()->getCanonicalIVType());
+    return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                            SCEV::FlagAnyWrap);
+  }
+
   // TODO: Support constructing SCEVs for more recipes as needed.
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-      .Case<VPCanonicalIVPHIRecipe>([&SE, L](const VPCanonicalIVPHIRecipe *R) {
-        if (!L)
-          return SE.getCouldNotCompute();
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
-        return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
-                                SCEV::FlagAnyWrap);
-      })
       .Case<VPDerivedIVRecipe>([&SE, L](const VPDerivedIVRecipe *R) {
         const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), SE, L);
         const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), SE, L);

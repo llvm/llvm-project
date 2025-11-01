@@ -103,20 +103,20 @@ VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
 
 VPValue::~VPValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
-  if (Def)
-    Def->removeDefinedValue(this);
+  if (VPDef *D = getDefiningRecipe())
+    D->removeDefinedValue(this);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
-  if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
+  if (const VPRecipeBase *R = getDefiningRecipe())
     R->print(OS, "", SlotTracker);
   else
     printAsOperand(OS, SlotTracker);
 }
 
 void VPValue::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this->Def);
+  const VPRecipeBase *Instr = getDefiningRecipe();
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   print(dbgs(), SlotTracker);
@@ -133,10 +133,14 @@ void VPDef::dump() const {
 #endif
 
 VPRecipeBase *VPValue::getDefiningRecipe() {
+  if (SubclassID == VPRegionValueSC)
+    return nullptr;
   return cast_or_null<VPRecipeBase>(Def);
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
+  if (SubclassID == VPRegionValueSC)
+    return nullptr;
   return cast_or_null<VPRecipeBase>(Def);
 }
 

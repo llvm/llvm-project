@@ -3936,12 +3936,13 @@ class VPCanonicalIVInfo {
   DebugLoc DL = DebugLoc::getUnknown();
 
 public:
-  VPCanonicalIVInfo(Type *Ty, DebugLoc DL, bool HasNUW = true)
-      : CanIV(std::make_unique<VPRegionValue>()), Ty(Ty), HasNUW(HasNUW),
+  VPCanonicalIVInfo(Type *Ty, DebugLoc DL, VPRegionBlock *Region,
+                    bool HasNUW = true)
+      : CanIV(std::make_unique<VPRegionValue>(Region)), Ty(Ty), HasNUW(HasNUW),
         DL(DL) {}
 
-  VPCanonicalIVInfo *clone() const {
-    return new VPCanonicalIVInfo(Ty, DL, HasNUW);
+  VPCanonicalIVInfo *clone(VPRegionBlock *Region) const {
+    return new VPCanonicalIVInfo(Ty, DL, Region, HasNUW);
   }
 
   VPRegionValue *getVPValue() { return CanIV.get(); }
@@ -3991,7 +3992,7 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   VPRegionBlock(Type *CanIVTy, DebugLoc DL, VPBlockBase *Entry,
                 VPBlockBase *Exiting, const std::string &Name = "")
       : VPRegionBlock(Entry, Exiting, Name) {
-    CanIVInfo = new VPCanonicalIVInfo(CanIVTy, DL);
+    CanIVInfo = new VPCanonicalIVInfo(CanIVTy, DL, this);
   }
 
 public:
