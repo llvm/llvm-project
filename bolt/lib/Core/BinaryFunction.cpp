@@ -1393,6 +1393,7 @@ Error BinaryFunction::disassemble() {
       setIgnored();
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
+
       uint64_t TargetAddress = 0;
       if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
