@@ -1325,6 +1325,10 @@ private:
   friend struct __variant_detail::__visitation::__variant;
 };
 
+template <class... _Types>
+variant<_Types...> __upcast_to_variant(const volatile variant<_Types...>*);
+void __upcast_to_variant(...);
+
 template <size_t _Ip, class... _Types>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __holds_alternative(const variant<_Types...>& __v) noexcept {
   return __v.index() == _Ip;
@@ -1578,11 +1582,42 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __throw_if_valueless(_Vs&&... __vs) {
   }
 }
 
-template < class _Visitor, class... _Vs, typename>
+template <class _Visitor, class... _Vs, typename>
 _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
-  using __variant_detail::__visitation::__variant;
-  std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
-  return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
+#    define _XDispatchIndex(_I)                                                                                        \
+    case _I:                                                                                                           \
+      if constexpr (__variant_size::value > _I) {                                                                      \
+        return std::forward<_Visitor>(__visitor)(__variant::__get_alt<_I>(std::forward<_Vs>(__vs)...).__value);        \
+      }                                                                                                                \
+      [[__fallthrough__]]
+#    define _XDispatchCount 8 // Speed up compilation for the common cases
+  using __variant_size = variant_size<decltype(std::__upcast_to_variant(std::declval<remove_reference_t<_Vs>*>()...))>;
+  if constexpr (sizeof...(_Vs) == 1 &&
+                conditional_t<is_same_v<variant_size<void>, __variant_size>,
+                              std::integral_constant<size_t, variant_npos>,
+                              __variant_size>::value < _XDispatchCount) {
+    using __variant_detail::__access::__variant;
+    const size_t __indexes[] = {
+        __vs.decltype(std::__upcast_to_variant(std::declval<remove_reference_t<_Vs>*>()))::index()...};
+    switch (__indexes[0]) {
+      _XDispatchIndex(_XDispatchCount - 8);
+      _XDispatchIndex(_XDispatchCount - 7);
+      _XDispatchIndex(_XDispatchCount - 6);
+      _XDispatchIndex(_XDispatchCount - 5);
+      _XDispatchIndex(_XDispatchCount - 4);
+      _XDispatchIndex(_XDispatchCount - 3);
+      _XDispatchIndex(_XDispatchCount - 2);
+      _XDispatchIndex(_XDispatchCount - 1);
+    default:
+      __throw_bad_variant_access();
+    }
+  } else {
+    using __variant_detail::__visitation::__variant;
+    std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
+    return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
+  }
+#    undef _XDispatchCount
+#    undef _XDispatchIndex
 }
 
 #    if _LIBCPP_STD_VER >= 20
