@@ -1052,15 +1052,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   // Lower READCYCLECOUNTER using an mrs from CNTVCT_EL0.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
 
-  if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
-      getLibcallName(RTLIB::SINCOS_STRET_F64) != nullptr) {
     // Issue __sincos_stret if available.
-    setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
-  } else {
-    setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-    setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-  }
+  setOperationAction(ISD::FSINCOS, MVT::f64, Custom);
+  setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
 
   // Make floating-point constants legal for the large code model, so they don't
   // become loads from the constant pool.
@@ -5353,20 +5347,23 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
   SDLoc DL(Op);
   SDValue Arg = Op.getOperand(0);
   EVT ArgVT = Arg.getValueType();
+  RTLIB::Libcall LC = RTLIB::getSINCOS_STRET(ArgVT);
+  RTLIB::LibcallImpl SincosStret = getLibcallImpl(LC);
+  if (SincosStret == RTLIB::Unsupported)
+    return SDValue();
+
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
 
   ArgListTy Args;
   Args.emplace_back(Arg, ArgTy);
 
-  RTLIB::Libcall LC = ArgVT == MVT::f64 ? RTLIB::SINCOS_STRET_F64
-                                        : RTLIB::SINCOS_STRET_F32;
-  const char *LibcallName = getLibcallName(LC);
-  SDValue Callee =
-      DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
+  StringRef LibcallImplName = getLibcallImplName(SincosStret);
+  SDValue Callee = DAG.getExternalSymbol(LibcallImplName.data(),
+                                         getPointerTy(DAG.getDataLayout()));
 
   StructType *RetTy = StructType::get(ArgTy, ArgTy);
   TargetLowering::CallLoweringInfo CLI(DAG);
-  CallingConv::ID CC = getLibcallCallingConv(LC);
+  CallingConv::ID CC = getLibcallImplCallingConv(SincosStret);
   CLI.setDebugLoc(DL)
       .setChain(DAG.getEntryNode())
       .setLibCallee(CC, RetTy, Callee, std::move(Args));
