@@ -584,7 +584,7 @@ void ForOp::print(OpAsmPrinter &p) {
 LogicalResult ForOp::verifyRegions() {
   // Check that the body defines as single block argument for the induction
   // variable.
-  if (getBody()->getNumArguments() == 0)
+  if (getBody()->getNumArguments() != 1)
     return emitOpError("expected body to have a single block argument for the "
                        "induction variable");
 
