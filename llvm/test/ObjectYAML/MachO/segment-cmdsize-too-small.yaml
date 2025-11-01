@@ -1,0 +1,33 @@
+## Test that yaml2obj handles cmdsize that is too small for LC_SEGMENT_64
+## without crashing (due to integer underflow).
+
+# RUN: yaml2obj %s -o %t 2>&1 | FileCheck %s --check-prefix=WARNING
+# RUN: not llvm-readobj --file-headers %t 2>&1 | FileCheck %s --check-prefix=MALFORMED
+
+# WARNING: warning: load command 25 cmdsize too small (56 bytes) for actual size (72 bytes)
+
+# MALFORMED: error: {{.*}}: truncated or malformed object (load command 0 LC_SEGMENT_64 cmdsize too small)
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           1
+  sizeofcmds:      56
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         56          ## Should be 72 for LC_SEGMENT_64
+    segname:         '__TEXT'
+    vmaddr:          0x1000
+    vmsize:          0x10
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          0
+    flags:           0
+...
