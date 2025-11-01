@@ -175,7 +175,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
 
   constructLlvmLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
-  // Emit SPIR-V binary.
+  // Use the SPIRV translator for code gen.
   llvm::opt::ArgStringList TrArgs{
       "--spirv-max-version=1.6",
       "--spirv-ext=+all",
