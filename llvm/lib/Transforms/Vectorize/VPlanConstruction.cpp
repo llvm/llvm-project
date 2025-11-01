@@ -823,7 +823,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   };
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  VPReductionPHIRecipe *RedPhiR = nullptr;
+  SmallVector<VPReductionPHIRecipe *> ReductionsToConvert;
   bool HasUnsupportedPhi = false;
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
     if (isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe>(&R))
@@ -834,19 +834,15 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       HasUnsupportedPhi = true;
       continue;
     }
-    // For now, only a single reduction is supported.
-    // TODO: Support multiple MaxNum/MinNum reductions and other reductions.
-    if (RedPhiR)
-      return false;
     if (!RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
             Cur->getRecurrenceKind())) {
       HasUnsupportedPhi = true;
       continue;
     }
-    RedPhiR = Cur;
+    ReductionsToConvert.push_back(Cur);
   }
 
-  if (!RedPhiR)
+  if (ReductionsToConvert.empty())
     return true;
 
   // We won't be able to resume execution in the scalar tail, if there are
@@ -854,14 +850,6 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   // tail-folding.
   if (HasUnsupportedPhi || !Plan.hasScalarTail())
     return false;
-
-  VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
-  if (!MinMaxOp)
-    return false;
-
-  assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
-             RedPhiR->getRecurrenceKind()) &&
-         "unsupported reduction");
 
   /// Check if the vector loop of \p Plan can early exit and restart
   /// execution of last vector iteration in the scalar loop. This requires all
@@ -879,52 +867,72 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   }
 
   VPBasicBlock *LatchVPBB = LoopRegion->getExitingBasicBlock();
+  VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
+  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->begin());
   VPBuilder Builder(LatchVPBB->getTerminator());
-  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
-  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+  VPValue *AnyNaN = nullptr;
+  SmallPtrSet<VPValue *, 2> RdxResults;
+  for (VPReductionPHIRecipe *RedPhiR : ReductionsToConvert) {
+    assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
+               RedPhiR->getRecurrenceKind()) &&
+           "unsupported reduction");
+
+    VPValue *MinMaxOp = GetMinMaxCompareValue(RedPhiR);
+    if (!MinMaxOp)
+      return false;
+
+    VPValue *IsNaN = Builder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
+    VPValue *HasNaN = Builder.createNaryOp(VPInstruction::AnyOf, {IsNaN});
+    if (AnyNaN)
+      AnyNaN = Builder.createOr(AnyNaN, HasNaN);
+    else
+      AnyNaN = HasNaN;
+
+    // If we exit early due to NaNs, compute the final reduction result based
+    // on the reduction phi at the beginning of the last vector iteration.
+    auto *RdxResult = find_singleton<VPSingleDefRecipe>(
+        RedPhiR->getBackedgeValue()->users(),
+        [RedPhiR](VPUser *U, bool) -> VPSingleDefRecipe * {
+          auto *VPI = dyn_cast<VPInstruction>(U);
+          if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
+            return VPI;
+          assert(U == RedPhiR &&
+                 "Backedge value must only be used by "
+                 "ComputeReductionResult and the reduction phi");
+          return nullptr;
+        });
+
+    auto *NewSel =
+        MiddleBuilder.createSelect(HasNaN, RedPhiR, RdxResult->getOperand(1));
+    RdxResult->setOperand(1, NewSel);
+    RdxResults.insert(RdxResult);
+  }
+
+  auto *LatchExitingBranch = LatchVPBB->getTerminator();
+  assert(match(LatchExitingBranch, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
          "Unexpected terminator");
   auto *IsLatchExitTaken =
       Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
                          LatchExitingBranch->getOperand(1));
-
-  VPValue *IsNaN = Builder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
-  VPValue *AnyNaN = Builder.createNaryOp(VPInstruction::AnyOf, {IsNaN});
   auto *AnyExitTaken =
       Builder.createNaryOp(Instruction::Or, {AnyNaN, IsLatchExitTaken});
   Builder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
 
-  // If we exit early due to NaNs, compute the final reduction result based on
-  // the reduction phi at the beginning of the last vector iteration.
-  auto *RdxResult = find_singleton<VPSingleDefRecipe>(
-      RedPhiR->users(), [](VPUser *U, bool) -> VPSingleDefRecipe * {
-        auto *VPI = dyn_cast<VPInstruction>(U);
-        if (VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult)
-          return VPI;
-        return nullptr;
-      });
-
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  Builder.setInsertPoint(MiddleVPBB, MiddleVPBB->begin());
-  auto *NewSel =
-      Builder.createSelect(AnyNaN, RedPhiR, RdxResult->getOperand(1));
-  RdxResult->setOperand(1, NewSel);
-
-  auto *ScalarPH = Plan.getScalarPreheader();
   // Update resume phis for inductions in the scalar preheader. If AnyNaN is
   // true, the resume from the start of the last vector iteration via the
   // canonical IV, otherwise from the original value.
-  for (auto &R : ScalarPH->phis()) {
+  for (auto &R : Plan.getScalarPreheader()->phis()) {
     auto *ResumeR = cast<VPPhi>(&R);
     VPValue *VecV = ResumeR->getOperand(0);
-    if (VecV == RdxResult)
+    if (RdxResults.contains(VecV))
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       if (DerivedIV->getNumUsers() == 1 &&
           DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
-        auto *NewSel = Builder.createSelect(
+        auto *NewSel = MiddleBuilder.createSelect(
             AnyNaN, LoopRegion->getCanonicalIV(), &Plan.getVectorTripCount());
-        DerivedIV->moveAfter(&*Builder.getInsertPoint());
+        DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
       }
@@ -937,7 +945,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       return false;
     }
     auto *NewSel =
-        Builder.createSelect(AnyNaN, LoopRegion->getCanonicalIV(), VecV);
+        MiddleBuilder.createSelect(AnyNaN, LoopRegion->getCanonicalIV(), VecV);
     ResumeR->setOperand(0, NewSel);
   }
 
