@@ -993,3 +993,9 @@ def OpPredicatedLoadINTEL: Op<6528, (outs ID:$res), (ins TYPE:$resType, ID:$ptr,
                   "$res = OpPredicatedLoadINTEL $resType $ptr $predicate $default_value">;
 def OpPredicatedStoreINTEL: Op<6529, (outs), (ins ID:$ptr, ID:$object, ID:$predicate, variable_ops),
                   "OpPredicatedStoreINTEL $ptr $object $predicate">;
+
+//SPV_INTEL_blocking_pipes
+def OpReadPipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpReadPipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;
+def OpWritePipeBlockingINTEL :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+                   "OpWritePipeBlockingINTEL $pipe $pointer $packetSize $packetAlignment">;
