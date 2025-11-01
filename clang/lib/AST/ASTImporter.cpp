@@ -1287,6 +1287,44 @@ bool ASTNodeImporter::hasSameVisibilityContextAndLinkage(TypedefNameDecl *Found,
 
 using namespace clang;
 
+class ASTImporter::FunctionReturnTypeDeclCycleDetector {
+public:
+  class DeclCycleMapInserter {
+  public:
+    // Do not track cycles on D == nullptr.
+    DeclCycleMapInserter(FunctionReturnTypeDeclCycleDetector &owner,
+                         const FunctionDecl *D)
+        : CycleDetector(owner), D(D) {
+      if (D)
+        CycleDetector.FunctionReturnTypeDeclCycles.insert(D);
+    }
+    ~DeclCycleMapInserter() {
+      if (D)
+        CycleDetector.FunctionReturnTypeDeclCycles.erase(D);
+    }
+    DeclCycleMapInserter(const DeclCycleMapInserter &) = delete;
+    DeclCycleMapInserter &operator=(const DeclCycleMapInserter &) = delete;
+
+  private:
+    FunctionReturnTypeDeclCycleDetector &CycleDetector;
+    const FunctionDecl *D;
+  };
+
+  DeclCycleMapInserter detectImportCycle(const FunctionDecl *D) {
+    if (!isCycle(D))
+      return DeclCycleMapInserter(*this, D);
+    return DeclCycleMapInserter(*this, nullptr);
+  }
+
+  bool isCycle(const FunctionDecl *D) const {
+    return FunctionReturnTypeDeclCycles.find(D) !=
+           FunctionReturnTypeDeclCycles.end();
+  }
+
+private:
+  llvm::DenseSet<const FunctionDecl *> FunctionReturnTypeDeclCycles;
+};
+
 ExpectedType ASTNodeImporter::VisitType(const Type *T) {
   Importer.FromDiag(SourceLocation(), diag::err_unsupported_ast_node)
     << T->getTypeClassName();
@@ -4034,7 +4072,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // E.g.: auto foo() { struct X{}; return X(); }
     // To avoid an infinite recursion when importing, create the FunctionDecl
     // with a simplified return type.
-    if (hasReturnTypeDeclaredInside(D)) {
+    // Reuse this approach for auto return types declared as typenames from
+    // template params, tracked in FunctionReturnTypeCycleDetector.
+    if (hasReturnTypeDeclaredInside(D) ||
+        Importer.FunctionReturnTypeCycleDetector->isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
     }
@@ -4057,6 +4098,8 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   Error Err = Error::success();
+  auto ScopedReturnTypeDeclCycleDetector =
+      Importer.FunctionReturnTypeCycleDetector->detectImportCycle(D);
   auto T = importChecked(Err, FromTy);
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
@@ -9293,7 +9336,9 @@ ASTImporter::ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,
                          std::shared_ptr<ASTImporterSharedState> SharedState)
     : SharedState(SharedState), ToContext(ToContext), FromContext(FromContext),
       ToFileManager(ToFileManager), FromFileManager(FromFileManager),
-      Minimal(MinimalImport), ODRHandling(ODRHandlingType::Conservative) {
+      Minimal(MinimalImport), ODRHandling(ODRHandlingType::Conservative),
+      FunctionReturnTypeCycleDetector(
+          std::make_unique<FunctionReturnTypeDeclCycleDetector>()) {
 
   // Create a default state without the lookup table: LLDB case.
   if (!SharedState) {
