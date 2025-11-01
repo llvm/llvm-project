@@ -69,6 +69,11 @@ Potentially Breaking Changes
   - `CharTypdefsToIgnore` to `CharTypedefsToIgnore` in
     :doc:`bugprone-signed-char-misuse
     <clang-tidy/checks/bugprone/signed-char-misuse>`
+  
+- Modified the custom message format of :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` by hiding the default suffix
+  when the reason starts with the character `>` in the `CustomFunctions` option.
+  The warning locations are not changed, but the message is different.
 
 - :program:`clang-tidy` now displays warnings from all non-system headers by
   default. Previously, users had to explicitly opt-in to header warnings using
@@ -330,6 +335,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
+  
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by hiding the default
+  suffix when the reason starts with the character `>` in the `CustomFunctions`
+  option.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
