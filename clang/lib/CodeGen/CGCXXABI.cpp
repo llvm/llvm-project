@@ -319,10 +319,6 @@ llvm::GlobalValue::LinkageTypes CGCXXABI::getCXXDestructorLinkage(
   return CGM.getLLVMLinkageForDeclarator(Dtor, Linkage);
 }
 
-bool CGCXXABI::NeedsVTTParameter(GlobalDecl GD) {
-  return false;
-}
-
 llvm::CallInst *
 CGCXXABI::emitTerminateForUnexpectedException(CodeGenFunction &CGF,
                                               llvm::Value *Exn) {
