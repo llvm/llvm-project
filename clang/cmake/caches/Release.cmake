@@ -57,7 +57,7 @@ endif()
 
 # Don't build flang on Darwin due to:
 # https://github.com/llvm/llvm-project/issues/160546
-# Skip flang build on Windows because it makes the insaller too big.
+# Skip flang build on Windows because it makes the installer too big.
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "flang")
 endif()
@@ -182,8 +182,9 @@ if (RELEASE_LINKER_FLAGS)
 endif()
 
 # Final Stage Config (stage2)
-set_final_stage_var(LLVM_ENABLE_RUNTIMES "" STRING)
-set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS};compiler-rt" STRING)
+set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
+set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
 endif()
