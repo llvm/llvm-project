@@ -1177,6 +1177,13 @@ def or_disjoint : PatFrag<(ops node:$lhs, node:$rhs),
   }];
 }
 
+def addlike : PatFrags<(ops node:$lhs, node:$rhs),
+                       [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
+  if (Op.getOpcode() == ISD::ADD)
+    return true;
+  return CurDAG->isADDLike(Op);
+}]>;
+
 def xor_like : PatFrags<(ops node:$lhs, node:$rhs),
                         [(xor node:$lhs, node:$rhs),
                          (or_disjoint node:$lhs, node:$rhs)]>;
