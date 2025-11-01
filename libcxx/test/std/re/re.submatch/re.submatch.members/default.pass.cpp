@@ -16,21 +16,20 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
-        typedef char CharT;
-        typedef std::sub_match<const CharT*> SM;
-        SM sm;
-        assert(sm.matched == false);
-    }
+int main(int, char**) {
+  {
+    typedef char CharT;
+    typedef std::sub_match<const CharT*> SM;
+    SM sm;
+    assert(sm.matched == false);
+  }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    {
-        typedef wchar_t CharT;
-        typedef std::sub_match<const CharT*> SM;
-        SM sm;
-        assert(sm.matched == false);
-    }
+  {
+    typedef wchar_t CharT;
+    typedef std::sub_match<const CharT*> SM;
+    SM sm;
+    assert(sm.matched == false);
+  }
 #endif
 
   return 0;

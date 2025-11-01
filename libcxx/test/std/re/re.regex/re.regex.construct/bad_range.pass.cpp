@@ -18,22 +18,20 @@
 #include <cassert>
 #include "test_macros.h"
 
-static bool error_range_thrown(const char *pat)
-{
-    bool result = false;
-    try {
-        std::regex re(pat);
-    } catch (const std::regex_error &ex) {
-        result = (ex.code() == std::regex_constants::error_range);
-    }
-    return result;
+static bool error_range_thrown(const char* pat) {
+  bool result = false;
+  try {
+    std::regex re(pat);
+  } catch (const std::regex_error& ex) {
+    result = (ex.code() == std::regex_constants::error_range);
+  }
+  return result;
 }
 
-int main(int, char**)
-{
-    assert(error_range_thrown("([\\w-a])"));
-    assert(error_range_thrown("([a-\\w])"));
-    assert(error_range_thrown("([w-a])"));
+int main(int, char**) {
+  assert(error_range_thrown("([\\w-a])"));
+  assert(error_range_thrown("([a-\\w])"));
+  assert(error_range_thrown("([w-a])"));
 
-    return 0;
+  return 0;
 }

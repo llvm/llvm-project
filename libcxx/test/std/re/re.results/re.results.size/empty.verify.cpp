@@ -16,6 +16,6 @@
 #include <regex>
 
 void f() {
-    std::match_results<const char*> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::match_results<const char*> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

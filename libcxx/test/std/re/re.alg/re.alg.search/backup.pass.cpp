@@ -21,45 +21,44 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    // This regex_iterator uses regex_search(__wrap_iter<_Iter> __first, ...)
-    // Test for https://llvm.org/PR16240 fixed in r185273.
-    {
-        std::string s("aaaa a");
-        std::regex re("\\ba");
-        std::sregex_iterator it(s.begin(), s.end(), re);
-        std::sregex_iterator end = std::sregex_iterator();
+int main(int, char**) {
+  // This regex_iterator uses regex_search(__wrap_iter<_Iter> __first, ...)
+  // Test for https://llvm.org/PR16240 fixed in r185273.
+  {
+    std::string s("aaaa a");
+    std::regex re("\\ba");
+    std::sregex_iterator it(s.begin(), s.end(), re);
+    std::sregex_iterator end = std::sregex_iterator();
 
-        assert(it->position(0) == 0);
-        assert(it->length(0) == 1);
+    assert(it->position(0) == 0);
+    assert(it->length(0) == 1);
 
-        ++it;
-        assert(it->position(0) == 5);
-        assert(it->length(0) == 1);
+    ++it;
+    assert(it->position(0) == 5);
+    assert(it->length(0) == 1);
 
-        ++it;
-        assert(it == end);
-    }
+    ++it;
+    assert(it == end);
+  }
 
-    // This regex_iterator uses regex_search(_BidirectionalIterator __first, ...)
-    {
-        std::string s("aaaa a");
-        std::list<char> l(s.begin(), s.end());
-        std::regex re("\\ba");
-        std::regex_iterator<std::list<char>::iterator> it(l.begin(), l.end(), re);
-        std::regex_iterator<std::list<char>::iterator> end = std::regex_iterator<std::list<char>::iterator>();
+  // This regex_iterator uses regex_search(_BidirectionalIterator __first, ...)
+  {
+    std::string s("aaaa a");
+    std::list<char> l(s.begin(), s.end());
+    std::regex re("\\ba");
+    std::regex_iterator<std::list<char>::iterator> it(l.begin(), l.end(), re);
+    std::regex_iterator<std::list<char>::iterator> end = std::regex_iterator<std::list<char>::iterator>();
 
-        assert(it->position(0) == 0);
-        assert(it->length(0) == 1);
+    assert(it->position(0) == 0);
+    assert(it->length(0) == 1);
 
-        ++it;
-        assert(it->position(0) == 5);
-        assert(it->length(0) == 1);
+    ++it;
+    assert(it->position(0) == 5);
+    assert(it->length(0) == 1);
 
-        ++it;
-        assert(it == end);
-    }
+    ++it;
+    assert(it == end);
+  }
 
   return 0;
 }

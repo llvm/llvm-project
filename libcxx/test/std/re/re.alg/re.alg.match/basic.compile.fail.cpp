@@ -22,16 +22,15 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
-#error
+#  error
 #endif
 
-int main(int, char**)
-{
-    {
-        std::smatch m;
-        std::regex re{"*"};
-        std::regex_match(std::string("abcde"), m, re);
-    }
+int main(int, char**) {
+  {
+    std::smatch m;
+    std::regex re{"*"};
+    std::regex_match(std::string("abcde"), m, re);
+  }
 
   return 0;
 }

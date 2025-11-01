@@ -18,24 +18,21 @@
 #include <cstddef>
 #include "test_macros.h"
 
-void
-test()
-{
-    std::match_results<const char*> m;
-    const char s[] = "abcdefghijk";
-    assert(std::regex_search(s, m, std::regex("cd((e)fg)hi")));
+void test() {
+  std::match_results<const char*> m;
+  const char s[] = "abcdefghijk";
+  assert(std::regex_search(s, m, std::regex("cd((e)fg)hi")));
 
-    std::match_results<const char*>::const_iterator i = m.cbegin();
-    std::match_results<const char*>::const_iterator e = m.cend();
+  std::match_results<const char*>::const_iterator i = m.cbegin();
+  std::match_results<const char*>::const_iterator e = m.cend();
 
-    assert(static_cast<std::size_t>(e - i) == m.size());
-    for (int j = 0; i != e; ++i, ++j)
-        assert(*i == m[j]);
+  assert(static_cast<std::size_t>(e - i) == m.size());
+  for (int j = 0; i != e; ++i, ++j)
+    assert(*i == m[j]);
 }
 
-int main(int, char**)
-{
-    test();
+int main(int, char**) {
+  test();
 
   return 0;
 }
