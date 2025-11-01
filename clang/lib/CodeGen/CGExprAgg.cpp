@@ -2249,6 +2249,22 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
                                         bool isVolatile) {
   assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
 
+  // Sanitizer checks to verify source and destination pointers are
+  // non-null and properly aligned before copying.
+  // Without these checks, undefined behavior from invalid pointers goes undetected.
+  Address SrcAddr = Src.getAddress();
+  Address DestAddr = Dest.getAddress();
+
+  // Check source pointer for null and alignment violations
+  EmitTypeCheck(TCK_Load, SourceLocation(),
+                SrcAddr.emitRawPointer(*this), Ty, SrcAddr.getAlignment(),
+                SanitizerSet());
+
+  // Check destination pointer for null and alignment violations
+  EmitTypeCheck(TCK_Store, SourceLocation(),
+                DestAddr.emitRawPointer(*this), Ty, DestAddr.getAlignment(),
+                SanitizerSet());
+
   Address DestPtr = Dest.getAddress();
   Address SrcPtr = Src.getAddress();
 
