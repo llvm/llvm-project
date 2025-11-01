@@ -1160,12 +1160,16 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
    // appropriate @ha/@lo/@ds fixups to the individual instructinos.
   if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
     switch (Type) {
-    case ELF::R_PPC64_ADDR16_HA:
-    case ELF::R_PPC64_ADDR16_LO:
-    case ELF::R_PPC64_ADDR16_DS:
-    case ELF::R_PPC64_ADDR16_LO_DS:
-    case ELF::R_PPC64_TOC16_HA:
-    case ELF::R_PPC64_TOC16_LO:
+  case ELF::R_PPC64_ADDR16:
+  case ELF::R_PPC64_ADDR16_HI:
+  case ELF::R_PPC64_ADDR16_HA:
+  case ELF::R_PPC64_ADDR16_LO:
+  case ELF::R_PPC64_ADDR16_DS:
+  case ELF::R_PPC64_ADDR16_LO_DS:
+  case ELF::R_PPC64_TOC16:
+  case ELF::R_PPC64_TOC16_HI:
+  case ELF::R_PPC64_TOC16_HA:
+  case ELF::R_PPC64_TOC16_LO:
       // Let MC layer emit as-is; PPC backend handles @ha/@lo/@ds relocations.
       return Value;
     default:
@@ -1186,6 +1190,10 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
 const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
                                      const MCExpr *RetainedValue) const {
   const auto *Value = createExpr(Streamer);
+
+    // PPC64: never compose relocation expressions — return whichever side you’re asked for.
+  if (Arch == Triple::ppc64 || Arch == Triple::ppc64le)
+    return RetainedValue ? RetainedValue : Value;
 
   if (RetainedValue) {
     Value = MCBinaryExpr::create(getComposeOpcodeFor(Type), RetainedValue,
