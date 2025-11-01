@@ -21,7 +21,7 @@ from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
-from lit.util import to_bytes, to_string
+from lit.util import to_bytes
 from lit.BooleanExpression import BooleanExpression
 
 
@@ -391,18 +391,14 @@ def executeBuiltinEcho(cmd, shenv):
     # Some tests have un-redirected echo commands to help debug test failures.
     # Buffer our output and return it to the caller.
     is_redirected = True
-    encode = lambda x: x
     if stdout == subprocess.PIPE:
         is_redirected = False
         stdout = StringIO()
     elif kIsWindows:
-        # Reopen stdout in binary mode to avoid CRLF translation. The versions
-        # of echo we are replacing on Windows all emit plain LF, and the LLVM
-        # tests now depend on this.
-        # When we open as binary, however, this also means that we have to write
-        # 'bytes' objects to stdout instead of 'str' objects.
-        encode = lit.util.to_bytes
-        stdout = open(stdout.name, stdout.mode + "b")
+        # Reopen stdout with specifying `newline` to avoid CRLF translation.
+        # The versions of echo we are replacing on Windows all emit plain LF,
+        # and the LLVM tests now depend on this.
+        stdout = open(stdout.name, stdout.mode, newline='')
         opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
@@ -423,16 +419,15 @@ def executeBuiltinEcho(cmd, shenv):
         if not interpret_escapes:
             return arg
 
-        arg = lit.util.to_bytes(arg)
-        return arg.decode("unicode_escape")
+        return arg.encode("utf-8").decode("unicode_escape")
 
     if args:
         for arg in args[:-1]:
-            stdout.write(encode(maybeUnescape(arg)))
-            stdout.write(encode(" "))
-        stdout.write(encode(maybeUnescape(args[-1])))
+            stdout.write(maybeUnescape(arg))
+            stdout.write(" ")
+        stdout.write(maybeUnescape(args[-1]))
     if write_newline:
-        stdout.write(encode("\n"))
+        stdout.write("\n")
 
     for (name, mode, f, path) in opened_files:
         f.close()
@@ -1062,14 +1057,14 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             if out is None:
                 out = ""
             else:
-                out = to_string(out.decode("utf-8", errors="replace"))
+                out = out.decode("utf-8", errors="replace")
         except:
             out = str(out)
         try:
             if err is None:
                 err = ""
             else:
-                err = to_string(err.decode("utf-8", errors="replace"))
+                err = err.decode("utf-8", errors="replace")
         except:
             err = str(err)
 
@@ -1261,7 +1256,7 @@ def executeScriptInternal(
 
         # Add the command output, if redirected.
         for (name, path, data) in result.outputFiles:
-            data = to_string(data.decode("utf-8", errors="replace"))
+            data = data.decode("utf-8", errors="replace")
             out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
         if result.stdout.strip():
             out += formatOutput("command stdout", result.stdout)
@@ -1471,8 +1466,8 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             keyword, ln = match.groups()
             yield (
                 line_number,
-                to_string(keyword.decode("utf-8")),
-                to_string(ln.decode("utf-8").rstrip("\r")),
+                keyword.decode("utf-8"),
+                ln.decode("utf-8").rstrip("\r"),
             )
     finally:
         f.close()

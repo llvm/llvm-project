@@ -327,7 +327,7 @@ def executeCommand(
 
     """
     if input is not None:
-        input = to_bytes(input)
+        input = input.encode("utf-8")
     err_out = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     p = subprocess.Popen(
         command,
@@ -363,8 +363,8 @@ def executeCommand(
             timerObject.cancel()
 
     # Ensure the resulting output is always of string type.
-    out = to_string(out)
-    err = "" if redirect_stderr else to_string(err)
+    out = out.decode("utf-8", errors="replace")
+    err = "" if redirect_stderr else err.decode("utf-8", errors="replace")
 
     if hitTimeOut[0]:
         raise ExecuteCommandTimeoutException(
