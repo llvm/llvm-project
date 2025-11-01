@@ -8492,7 +8492,8 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   DeclContext *NewDC = D->getDeclContext();
 
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
-    if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
+    if (CXXMethodDecl *MD =
+            dyn_cast<CXXMethodDecl>(getFunctionLevelDeclContext())) {
       // Fields are not shadowed by variables in C++ static methods.
       if (MD->isStatic())
         return;
