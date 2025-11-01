@@ -298,6 +298,15 @@ private:
   bool GlobalOpt;
 };
 
+void initializeAMDGPULowerSpecialLDSLegacyPass(PassRegistry &);
+extern char &AMDGPULowerSpecialLDSLegacyPassID;
+ModulePass *createAMDGPULowerSpecialLDSLegacyPass();
+
+struct AMDGPULowerSpecialLDSPass : PassInfoMixin<AMDGPULowerSpecialLDSPass> {
+  AMDGPULowerSpecialLDSPass() {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
 extern char &AMDGPUSwLowerLDSLegacyPassID;
 ModulePass *
