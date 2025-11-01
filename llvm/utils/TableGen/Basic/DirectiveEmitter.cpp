@@ -353,10 +353,8 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "LLVM_ABI Association getDirectiveAssociation(Directive D);\n";
   OS << "LLVM_ABI Category getDirectiveCategory(Directive D);\n";
   OS << "LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);\n";
-  if (EnumHelperFuncs.length() > 0) {
-    OS << EnumHelperFuncs;
-    OS << "\n";
-  }
+  if (EnumHelperFuncs.length() > 0)
+    OS << EnumHelperFuncs << '\n';
 
   DirLangNS.close();
 
@@ -368,7 +366,6 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
     OS << "  static constexpr bool is_iterable = true;\n";
     OS << "};\n";
   }
-  LlvmNS.close();
 }
 
 // Given a list of spellings (for a given clause/directive), order them
@@ -940,24 +937,18 @@ static void generateClauseSet(ArrayRef<const Record *> VerClauses,
 // Generate an enum set for the 4 kinds of clauses linked to a directive.
 static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
                                         Frontend FE, raw_ostream &OS) {
+  IfDefEmitter Scope(OS, "GEN_" + getFESpelling(FE).upper() +
+                             "_DIRECTIVE_CLAUSE_SETS");
 
-  std::string IfDefName{"GEN_"};
-  IfDefName += getFESpelling(FE).upper();
-  IfDefName += "_DIRECTIVE_CLAUSE_SETS";
-  IfDefEmitter Scope(OS, IfDefName);
-
-  StringRef Namespace =
-      getFESpelling(FE == Frontend::Flang ? Frontend::LLVM : FE);
+  std::string Namespace =
+      getFESpelling(FE == Frontend::Flang ? Frontend::LLVM : FE).str();
   // The namespace has to be different for clang vs flang, as 2 structs with the
   // same name but different layout is UB.  So just put the 'clang' on in the
   // clang namespace.
-  OS << "namespace " << Namespace << " {\n";
-
-  // Open namespaces defined in the directive language.
-  SmallVector<StringRef, 2> Namespaces;
-  SplitString(DirLang.getCppNamespace(), Namespaces, "::");
-  for (auto Ns : Namespaces)
-    OS << "namespace " << Ns << " {\n";
+  // Additionally, open namespaces defined in the directive language.
+  if (!DirLang.getCppNamespace().empty())
+    Namespace += "::" + DirLang.getCppNamespace().str();
+  NamespaceEmitter NS(OS, Namespace);
 
   for (const Directive Dir : DirLang.getDirectives()) {
     OS << "\n";
@@ -972,12 +963,6 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
     generateClauseSet(Dir.getRequiredClauses(), OS, "requiredClauses_", Dir,
                       DirLang, FE);
   }
-
-  // Closing namespaces
-  for (auto Ns : reverse(Namespaces))
-    OS << "} // namespace " << Ns << "\n";
-
-  OS << "} // namespace " << Namespace << "\n";
 }
 
 // Generate a map of directive (key) with DirectiveClauses struct as values.
@@ -985,10 +970,8 @@ static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
 // allowances (allowed, allowed once, allowed exclusive and required).
 static void generateDirectiveClauseMap(const DirectiveLanguage &DirLang,
                                        Frontend FE, raw_ostream &OS) {
-  std::string IfDefName{"GEN_"};
-  IfDefName += getFESpelling(FE).upper();
-  IfDefName += "_DIRECTIVE_CLAUSE_MAP";
-  IfDefEmitter Scope(OS, IfDefName);
+  IfDefEmitter Scope(OS, "GEN_" + getFESpelling(FE).upper() +
+                             "_DIRECTIVE_CLAUSE_MAP");
 
   OS << "{\n";
 
