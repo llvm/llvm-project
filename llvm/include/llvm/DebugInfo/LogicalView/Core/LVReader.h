@@ -189,6 +189,7 @@ protected:
     return std::string(Path);
   }
 
+  Error printDebugger();
   virtual Error printScopes();
   virtual Error printMatchedElements(bool UseMatchedElements);
   virtual void sortScopes() {}

@@ -208,6 +208,31 @@ void LVLineDebug::printExtra(raw_ostream &OS, bool Full) const {
   OS << "\n";
 }
 
+void LVLineDebug::printInlineCallstack(raw_ostream &OS) const {
+  const LVScope *Scope = getParentScope();
+  const LVScope *PrevScope = nullptr;
+  while (Scope) {
+    if (Scope->getIsFunction() || Scope->getIsInlinedFunction()) {
+      OS << "[" << Scope->getName();
+      if (PrevScope && PrevScope->getIsInlinedFunction()) {
+        OS << ":"
+           << cast<LVScopeFunctionInlined>(PrevScope)->getCallLineNumber();
+      }
+      OS << "]";
+      PrevScope = Scope;
+    }
+    Scope = Scope->getParentScope();
+  }
+}
+
+void LVLineDebug::printDebugger(raw_ostream &OS, LVLevel Indent) const {
+  OS << indentAsString(Indent) << formattedKind(kind()) << " ";
+  printAttributes(OS);
+  OS << " " << getPathname() << ":" << getLineNumber() << " ";
+  printInlineCallstack(OS);
+  OS << "\n";
+}
+
 //===----------------------------------------------------------------------===//
 // Assembler line extracted from the ELF .text section.
 //===----------------------------------------------------------------------===//
@@ -219,4 +244,10 @@ void LVLineAssembler::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind());
   OS << " " << formattedName(getName());
   OS << "\n";
+}
+
+void LVLineAssembler::printDebugger(raw_ostream &OS, LVLevel Indent) const {
+  OS << indentAsString(Indent) << formattedKind(kind()) << " ";
+  printAttributes(OS);
+  OS << " " << getName() << "\n";
 }

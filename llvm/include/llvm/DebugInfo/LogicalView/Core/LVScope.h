@@ -325,6 +325,9 @@ public:
   // given 'Targets'.
   static bool equals(const LVScopes *References, const LVScopes *Targets);
 
+  // Returns true if 'Scope' is in the parent stack, false if not.
+  bool isChildScopeOf(const LVScope *Scope) const;
+
   // For the given 'Scopes' returns a scope that is logically equal
   // to the current scope; otherwise 'nullptr'.
   virtual LVScope *findEqualScope(const LVScopes *Scopes) const;
@@ -338,6 +341,8 @@ public:
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   virtual void printWarnings(raw_ostream &OS, bool Full = true) const {}
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
+  virtual void printDebugger(raw_ostream &OS) const {}
+  virtual void printInlineCallstack(raw_ostream &OS) const {}
 };
 
 // Class to represent a DWARF Union/Structure/Class.
@@ -635,6 +640,7 @@ public:
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   void printWarnings(raw_ostream &OS, bool Full = true) const override;
   void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) override;
+  void printDebugger(raw_ostream &OS) const override;
 };
 
 // Class to represent a DWARF enumerator (DW_TAG_enumeration_type).
@@ -716,6 +722,7 @@ public:
   LVScope *findEqualScope(const LVScopes *Scopes) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
+  void printDebugger(raw_ostream &OS) const override;
 };
 
 // Class to represent a DWARF inlined function.
@@ -850,6 +857,7 @@ public:
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   Error doPrintMatches(bool Split, raw_ostream &OS,
                        bool UseMatchedElements) const;
+  Error doPrintDebugger(bool Split, raw_ostream &OS) const;
 };
 
 // Class to represent a DWARF template parameter pack
