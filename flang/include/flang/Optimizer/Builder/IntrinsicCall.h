@@ -294,6 +294,7 @@ struct IntrinsicLibrary {
   void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genGetGID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genGetTeam(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genGetUID(mlir::Type resultType,
                         llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genHostnm(std::optional<mlir::Type> resultType,
@@ -458,6 +459,8 @@ struct IntrinsicLibrary {
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTanpi(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genTeamNumber(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genTMABulkCommitGroup(llvm::ArrayRef<fir::ExtendedValue>);
   void genTMABulkG2S(llvm::ArrayRef<fir::ExtendedValue>);

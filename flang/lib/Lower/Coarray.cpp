@@ -16,6 +16,7 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
 
@@ -33,21 +34,144 @@ void Fortran::lower::genChangeTeamConstruct(
 void Fortran::lower::genChangeTeamStmt(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &,
-    const Fortran::parser::ChangeTeamStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: CHANGE TEAM statement");
+    const Fortran::parser::ChangeTeamStmt &stmt) {
+  mlir::Location loc = converter.getCurrentLocation();
+  converter.checkCoarrayEnabled();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  mlir::Value errMsgAddr, statAddr, team;
+  // Handle STAT and ERRMSG values
+  Fortran::lower::StatementContext stmtCtx;
+  const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
+      std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t);
+  for (const Fortran::parser::StatOrErrmsg &statOrErr : statOrErrList) {
+    std::visit(Fortran::common::visitors{
+                   [&](const Fortran::parser::StatVariable &statVar) {
+                     const auto *expr = Fortran::semantics::GetExpr(statVar);
+                     statAddr = fir::getBase(
+                         converter.genExprAddr(loc, *expr, stmtCtx));
+                   },
+                   [&](const Fortran::parser::MsgVariable &errMsgVar) {
+                     const auto *expr = Fortran::semantics::GetExpr(errMsgVar);
+                     errMsgAddr = fir::getBase(
+                         converter.genExprBox(loc, *expr, stmtCtx));
+                   },
+               },
+               statOrErr.u);
+  }
+
+  // TODO: Manage the list of coarrays associated in
+  // `std::list<CoarrayAssociation>`. According to the PRIF specification, it is
+  // necessary to call `prif_alias_{create|destroy}` for each coarray defined in
+  // this list. Support will be added once lowering to this procedure is
+  // possible.
+  const std::list<Fortran::parser::CoarrayAssociation> &coarrayAssocList =
+      std::get<std::list<Fortran::parser::CoarrayAssociation>>(stmt.t);
+  if (coarrayAssocList.size())
+    mlir::emitWarning(loc,
+                      "Coarrays provided in the association list are ignored.");
+
+  // Handle TEAM-VALUE
+  const auto *teamExpr =
+      Fortran::semantics::GetExpr(std::get<Fortran::parser::TeamValue>(stmt.t));
+  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+
+  mif::ChangeTeamOp changeOp = mif::ChangeTeamOp::create(
+      builder, loc, team, statAddr, errMsgAddr, /*terminator*/ false);
+  builder.setInsertionPointToStart(changeOp.getBody());
 }
 
 void Fortran::lower::genEndChangeTeamStmt(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &,
-    const Fortran::parser::EndChangeTeamStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: END CHANGE TEAM statement");
+    const Fortran::parser::EndChangeTeamStmt &stmt) {
+  converter.checkCoarrayEnabled();
+  mlir::Location loc = converter.getCurrentLocation();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  mlir::Value errMsgAddr, statAddr;
+  // Handle STAT and ERRMSG values
+  Fortran::lower::StatementContext stmtCtx;
+  const std::list<Fortran::parser::StatOrErrmsg> &statOrErrList =
+      std::get<std::list<Fortran::parser::StatOrErrmsg>>(stmt.t);
+  for (const Fortran::parser::StatOrErrmsg &statOrErr : statOrErrList) {
+    std::visit(Fortran::common::visitors{
+                   [&](const Fortran::parser::StatVariable &statVar) {
+                     const auto *expr = Fortran::semantics::GetExpr(statVar);
+                     statAddr = fir::getBase(
+                         converter.genExprAddr(loc, *expr, stmtCtx));
+                   },
+                   [&](const Fortran::parser::MsgVariable &errMsgVar) {
+                     const auto *expr = Fortran::semantics::GetExpr(errMsgVar);
+                     errMsgAddr = fir::getBase(
+                         converter.genExprBox(loc, *expr, stmtCtx));
+                   },
+               },
+               statOrErr.u);
+  }
+
+  mif::EndTeamOp endOp =
+      mif::EndTeamOp::create(builder, loc, statAddr, errMsgAddr);
+  builder.setInsertionPointAfter(endOp.getParentOp());
 }
 
 void Fortran::lower::genFormTeamStatement(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::pft::Evaluation &, const Fortran::parser::FormTeamStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: FORM TEAM statement");
+    Fortran::lower::pft::Evaluation &,
+    const Fortran::parser::FormTeamStmt &stmt) {
+  converter.checkCoarrayEnabled();
+  mlir::Location loc = converter.getCurrentLocation();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  mlir::Value errMsgAddr, statAddr, newIndex, teamNumber, team;
+  // Handle NEW_INDEX, STAT and ERRMSG
+  std::list<Fortran::parser::StatOrErrmsg> statOrErrList{};
+  Fortran::lower::StatementContext stmtCtx;
+  const auto &formSpecList =
+      std::get<std::list<Fortran::parser::FormTeamStmt::FormTeamSpec>>(stmt.t);
+  for (const Fortran::parser::FormTeamStmt::FormTeamSpec &formSpec :
+       formSpecList) {
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::StatOrErrmsg &statOrErr) {
+              std::visit(
+                  Fortran::common::visitors{
+                      [&](const Fortran::parser::StatVariable &statVar) {
+                        const auto *expr = Fortran::semantics::GetExpr(statVar);
+                        statAddr = fir::getBase(
+                            converter.genExprAddr(loc, *expr, stmtCtx));
+                      },
+                      [&](const Fortran::parser::MsgVariable &errMsgVar) {
+                        const auto *expr =
+                            Fortran::semantics::GetExpr(errMsgVar);
+                        errMsgAddr = fir::getBase(
+                            converter.genExprBox(loc, *expr, stmtCtx));
+                      },
+                  },
+                  statOrErr.u);
+            },
+            [&](const Fortran::parser::ScalarIntExpr &intExpr) {
+              fir::ExtendedValue newIndexExpr = converter.genExprValue(
+                  loc, Fortran::semantics::GetExpr(intExpr), stmtCtx);
+              newIndex = fir::getBase(newIndexExpr);
+            },
+        },
+        formSpec.u);
+  }
+
+  // Handle TEAM-NUMBER
+  const auto *teamNumberExpr = Fortran::semantics::GetExpr(
+      std::get<Fortran::parser::ScalarIntExpr>(stmt.t));
+  teamNumber =
+      fir::getBase(converter.genExprValue(loc, *teamNumberExpr, stmtCtx));
+
+  // Handle TEAM-VARIABLE
+  const auto *teamExpr = Fortran::semantics::GetExpr(
+      std::get<Fortran::parser::TeamVariable>(stmt.t));
+  team = fir::getBase(converter.genExprBox(loc, *teamExpr, stmtCtx));
+
+  mif::FormTeamOp::create(builder, loc, teamNumber, team, newIndex, statAddr,
+                          errMsgAddr);
 }
 
 //===----------------------------------------------------------------------===//
