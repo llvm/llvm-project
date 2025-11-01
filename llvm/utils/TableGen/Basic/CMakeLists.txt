@@ -19,6 +19,7 @@ add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLV
   SDNodeProperties.cpp
   TableGen.cpp
   TargetFeaturesEmitter.cpp
+  TargetLibraryInfoEmitter.cpp
   VTEmitter.cpp
 )
 
