@@ -1,6 +1,6 @@
 ; RUN: opt < %s -S | FileCheck %s
 
-; Test whether the UTC check empty lines instead of skipping them.
+; Test whether UTC checks empty lines instead of skipping them.
 define i32 @test(i32 %x) {
 entry:
   br label %block1
