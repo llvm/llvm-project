@@ -18,14 +18,14 @@
 #include "test_range.h"
 #include "types.h"
 
-struct MoveOnlyOuter : SimpleForwardCommonOuter<ForwardCommonInner> {
+struct MoveOnlyView : SimpleForwardCommonOuter<ForwardCommonInner> {
   using SimpleForwardCommonOuter<ForwardCommonInner>::SimpleForwardCommonOuter;
 
-  constexpr MoveOnlyOuter(MoveOnlyOuter&&) = default;
-  constexpr MoveOnlyOuter(const MoveOnlyOuter&) = delete;
+  constexpr MoveOnlyView(MoveOnlyView&&) = default;
+  constexpr MoveOnlyView(const MoveOnlyView&) = delete;
 
-  constexpr MoveOnlyOuter& operator=(MoveOnlyOuter&&) = default;
-  constexpr MoveOnlyOuter& operator=(const MoveOnlyOuter&) = delete;
+  constexpr MoveOnlyView& operator=(MoveOnlyView&&) = default;
+  constexpr MoveOnlyView& operator=(const MoveOnlyView&) = delete;
 };
 
 struct Foo {
@@ -51,13 +51,13 @@ constexpr bool test() {
   {
     // Test `views::join(move-only-view)`
     ForwardCommonInner inners[3] = {buffer1, buffer2, buffer3};
-    using Result = std::ranges::join_view<MoveOnlyOuter>;
-    std::same_as<Result> decltype(auto) v = std::views::join(MoveOnlyOuter{inners});
+    using Result = std::ranges::join_view<MoveOnlyView>;
+    std::same_as<Result> decltype(auto) v = std::views::join(MoveOnlyView{inners});
     assert(std::ranges::next(v.begin(), 9) == v.end());
     assert(&(*v.begin()) == buffer1);
 
-    static_assert(std::invocable<decltype(std::views::join), MoveOnlyOuter>);
-    static_assert(!std::invocable<decltype(std::views::join), MoveOnlyOuter&>);
+    static_assert(std::invocable<decltype(std::views::join), MoveOnlyView>);
+    static_assert(!std::invocable<decltype(std::views::join), MoveOnlyView&>);
   }
 
   {
@@ -86,13 +86,13 @@ constexpr bool test() {
   {
     // Test `move-only-view | views::join`
     ForwardCommonInner inners[3] = {buffer1, buffer2, buffer3};
-    using Result = std::ranges::join_view<MoveOnlyOuter>;
-    std::same_as<Result> decltype(auto) v = MoveOnlyOuter{inners} | std::views::join;
+    using Result = std::ranges::join_view<MoveOnlyView>;
+    std::same_as<Result> decltype(auto) v = MoveOnlyView{inners} | std::views::join;
     assert(std::ranges::next(v.begin(), 9) == v.end());
     assert(&(*v.begin()) == buffer1);
 
-    static_assert(CanBePiped<MoveOnlyOuter, decltype((std::views::join))>);
-    static_assert(!CanBePiped<MoveOnlyOuter&, decltype((std::views::join))>);
+    static_assert(CanBePiped<MoveOnlyView, decltype((std::views::join))>);
+    static_assert(!CanBePiped<MoveOnlyView&, decltype((std::views::join))>);
   }
 
   {

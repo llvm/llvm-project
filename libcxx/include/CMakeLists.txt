@@ -697,6 +697,7 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
@@ -740,6 +741,7 @@ set(files
   __ranges/view_interface.h
   __ranges/views.h
   __ranges/zip_transform_view.h
+  __ranges/zip_utils.h
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
