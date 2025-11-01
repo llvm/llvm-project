@@ -326,3 +326,53 @@ gpu.func @store_to_subview(%vec: vector<8xf16>,
 // STORE-SCATTER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : vector<8xf16>, i64, vector<8xindex>, vector<8xi1>
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_2D_layout(%vec: vector<8x16xf32>,
+    %source: memref<8x16x32xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset, %offset]
+    {
+      in_bounds = [true, true],
+      layout_operand_0 = #xegpu.layout<sg_layout = [8, 16]>
+    }
+    : vector<8x16xf32>, memref<8x16x32xf32>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_2D_layout(
+// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc {{[^:]*}} :
+// STORE-ND-SAME:     memref<8x16x32xf32> -> !xegpu.tensor_desc<8x16xf32,
+// STORE-ND-SAME:     #xegpu.block_tdesc_attr<boundary_check = false>, #xegpu.layout<sg_layout = [8, 16]>>
+
+// STORE-SCATTER-LABEL:  @store_2D_layout(
+// STORE-SCATTER:        xegpu.store {{[^{]*}}
+// STORE-SCATTER-SAME    {layout_operand_0 = #xegpu.layout_attr<sg_layout = [8, 16]>,
+// STORE-SCATTER-SAME     layout_operand_1 = #xegpu.layout_attr<sg_layout = [8, 16]>,
+// STORE-SCATTER-SAME     layout_result_0 = #xegpu.layout_attr<sg_layout = [8, 16]>} : vector<8x16xf32>, i64, vector<8x16xindex>, vector<8x16xi1>
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @store_2D_cache_hints(%vec: vector<8x16xf32>,
+    %source: memref<8x16x32xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset, %offset]
+    {
+      in_bounds = [true, true],
+      l1_hint = #xegpu.cache_hint<cached>,
+      l2_hint = #xegpu.cache_hint<uncached>,
+      l3_hint = #xegpu.cache_hint<write_back>
+    }
+    : vector<8x16xf32>, memref<8x16x32xf32>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_2D_cache_hints(
+// STORE-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc {{[^:]*}} :
+// STORE-ND:        xegpu.store_nd {{[^<]*}}
+// STORE-ND-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<write_back>}>
+
+// STORE-SCATTER-LABEL:  @store_2D_cache_hints(
+// STORE-SCATTER:        xegpu.store {{[^<]*}}
+// STORE-SCATTER-SAME:  <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<write_back>}>
+}

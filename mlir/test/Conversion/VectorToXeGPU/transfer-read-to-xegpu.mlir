@@ -441,3 +441,52 @@ gpu.func @load_from_subview(%source: memref<4096x4096xf16>, %off1: index, %off2:
 // LOAD-GATHER:        %[[COLLAPSE_I:.+]] = arith.index_cast %[[COLLAPSE]] : index to i64
 // LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE_I]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : i64, vector<8xindex>, vector<8xi1> -> vector<8xf16>
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_2D_layouts(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<8x16xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
+    {
+      in_bounds = [true, true],
+      layout_result_0 = #xegpu.layout<sg_layout = [8, 16]>
+    } : memref<8x16x32xf32>, vector<8x16xf32>
+  gpu.return %0 : vector<8x16xf32>
+}
+
+// LOAD-ND-LABEL:  @load_2D_layouts(
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc {{[^:]*}} :
+// LOAD-ND-SAME:     memref<8x16x32xf32> -> !xegpu.tensor_desc<8x16xf32,
+// LOAD-ND-SAME:     #xegpu.block_tdesc_attr<boundary_check = false>, #xegpu.layout<sg_layout = [8, 16]>>
+
+// LOAD-GATHER-LABEL:  @load_2D_layouts(
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
+// LOAD-GATHER-SAME    {layout_operand_0 = #xegpu.layout_attr<sg_layout = [8, 16]>,
+// LOAD-GATHER-SAME     layout_operand_1 = #xegpu.layout_attr<sg_layout = [8, 16]>,
+// LOAD-GATHER-SAME     layout_result_0 = #xegpu.layout_attr<sg_layout = [8, 16]>} : i64, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_2D_cache_hints(%source: memref<8x16x32xf32>,
+    %offset: index) -> vector<8x16xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %offset, %offset], %c0
+    {
+      in_bounds = [true, true],
+      l1_hint = #xegpu.cache_hint<cached>,
+      l2_hint = #xegpu.cache_hint<uncached>,
+      l3_hint = #xegpu.cache_hint<streaming>
+    } : memref<8x16x32xf32>, vector<8x16xf32>
+  gpu.return %0 : vector<8x16xf32>
+}
+
+// LOAD-ND-LABEL:  @load_2D_cache_hints(
+// LOAD-ND:        xegpu.load_nd {{[^<]*}}
+// LOAD-ND-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<streaming>}>
+
+// LOAD-GATHER-LABEL:  @load_2D_cache_hints(
+// LOAD-GATHER:        xegpu.load {{[^<]*}}
+// LOAD-GATHER-SAME:  <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<streaming>}>  
+}

@@ -249,3 +249,160 @@ gpu.func @non_unit_inner_stride_3D(
 // CHECK:        %[[RES:.+]] = arith.select %[[MASK]], %[[V]], %[[PASS]] : vector<8xi1>, vector<8xf32>
 // CHECK:        gpu.return %[[RES]] : vector<8xf32>
 }
+
+// -----
+
+gpu.module @xevm_module {
+// Layouts are only specified for the gather op itself.
+gpu.func @load_dynamic_layout_operands(%source: memref<?x?xf32>,
+    %off0: index, %off1: index,
+    %indices: vector<8x16xindex>, %mask: vector<8x16xi1>,
+    %pass_thru: vector<8x16xf32>) -> vector<8x16xf32> {
+  %res = vector.gather %source[%off0, %off1][%indices], %mask,
+       %pass_thru {
+        layout_result_0 = #xegpu.layout<sg_layout = [0]>,
+        layout_operand_3 = #xegpu.layout<sg_layout = [1]>,
+        layout_operand_4 = #xegpu.layout<sg_layout = [2]>,
+        layout_operand_5 = #xegpu.layout<sg_layout = [3]>
+  } : memref<?x?xf32>, vector<8x16xindex>, vector<8x16xi1>, vector<8x16xf32> into vector<8x16xf32>
+  gpu.return %res : vector<8x16xf32>
+}
+// CHECK-LABEL:  @load_dynamic_layout_operands(
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
+// CHECK-SAME:   {layout_operand_1 = #xegpu.layout<sg_layout = [1]>, layout_operand_2 = #xegpu.layout<sg_layout = [2]>,
+// CHECK-SAME:   layout_result_0 = #xegpu.layout<sg_layout = [0]>}
+// CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
+// CHECK-SAME:   {{{[^}]*}}layout_operand_0 = #xegpu.layout<sg_layout = [2]>,
+// CHECK-SAME:   {{[^}]*}}layout_operand_2 = #xegpu.layout<sg_layout = [3]>,
+// CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [0]>} : vector<8x16xi1>, vector<8x16xf32>
+}
+
+// -----
+
+gpu.module @xevm_module {
+gpu.func @load_dynamic_layout_mixed(%source: memref<?x?x?xf32>,
+    %off0: index, %off1: index, %off2: index,
+    %mask: vector<8x16xi1>) -> vector<8x16xf32> {
+  %pass_thru = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [0]>} dense<0.000000e+00> : vector<8x16xf32>
+  %cst_1 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [1]>} dense<[[0], [32], [64], [96], [128], [160], [192], [224]]> : vector<8x1xindex>
+  %cst_2 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2]>} dense<[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]> : vector<1x16xindex>
+  %0 = vector.broadcast %cst_1 {layout_result_0 = #xegpu.layout<sg_layout = [3]>} : vector<8x1xindex> to vector<8x16xindex>
+  %1 = vector.broadcast %cst_2 {layout_result_0 = #xegpu.layout<sg_layout = [4]>} : vector<1x16xindex> to vector<8x16xindex>
+  %2 = arith.addi %0, %1 {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
+
+  %res = vector.gather %source[%off0, %off1, %off2][%2], %mask,
+       %pass_thru {
+        layout_result_0 = #xegpu.layout<sg_layout = [6]>,
+        layout_operand_5 = #xegpu.layout<sg_layout = [7]>
+  } : memref<?x?x?xf32>, vector<8x16xindex>, vector<8x16xi1>, vector<8x16xf32> into vector<8x16xf32>
+  %res2 = arith.addf %res, %pass_thru : vector<8x16xf32>
+  gpu.return %res2 : vector<8x16xf32>
+}
+// CHECK-LABEL:  @load_dynamic_layout_mixed(
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
+// CHECK-SAME:   {{{[^}]*}}layout_operand_2 = #xegpu.layout<sg_layout = [7]>
+// CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>}
+// CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
+// CHECK-SAME:   {{{[^}]*}}layout_operand_0 = #xegpu.layout<sg_layout = [7]>,
+// CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>} : vector<8x16xi1>, vector<8x16xf32>
+}
+
+
+// -----
+
+gpu.module @xevm_module {
+gpu.func @load_static_layout_mixed(%source: memref<8x16x32xf32>,
+    %off0: index, %off1: index, %off2: index,
+    %mask: vector<8x16xi1>) -> vector<8x16xf32> {
+  %pass_thru = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [0]>} dense<0.000000e+00> : vector<8x16xf32>
+  %cst_1 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [1]>} dense<[[0], [32], [64], [96], [128], [160], [192], [224]]> : vector<8x1xindex>
+  %cst_2 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2]>} dense<[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]> : vector<1x16xindex>
+  %0 = vector.broadcast %cst_1 {layout_result_0 = #xegpu.layout<sg_layout = [3]>} : vector<8x1xindex> to vector<8x16xindex>
+  %1 = vector.broadcast %cst_2 {layout_result_0 = #xegpu.layout<sg_layout = [4]>} : vector<1x16xindex> to vector<8x16xindex>
+  %2 = arith.addi %0, %1 {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
+
+  %res = vector.gather %source[%off0, %off1, %off2][%2], %mask,
+       %pass_thru {
+        layout_result_0 = #xegpu.layout<sg_layout = [6]>,
+        layout_operand_5 = #xegpu.layout<sg_layout = [7]>
+  } : memref<8x16x32xf32>, vector<8x16xindex>, vector<8x16xi1>, vector<8x16xf32> into vector<8x16xf32>
+  %res2 = arith.addf %res, %pass_thru : vector<8x16xf32>
+  gpu.return %res2 : vector<8x16xf32>
+}
+// CHECK-LABEL:  @load_static_layout_mixed(
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
+// CHECK-SAME:   {{{[^}]*}}layout_operand_2 = #xegpu.layout<sg_layout = [7]>
+// CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>}
+// CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
+// CHECK-SAME:   {{{[^}]*}}layout_operand_0 = #xegpu.layout<sg_layout = [7]>,
+// CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>} : vector<8x16xi1>, vector<8x16xf32>
+}
+
+// -----
+
+gpu.module @xevm_module {
+gpu.func @load_dynamic_layout_mixed_override(%source: memref<?x?x?xf32>,
+    %off0: index, %off1: index, %off2: index,
+    %mask: vector<8x16xi1>) -> vector<8x16xf32> {
+  %pass_thru = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [0]>} dense<0.000000e+00> : vector<8x16xf32>
+  %cst_1 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [1]>} dense<[[0], [32], [64], [96], [128], [160], [192], [224]]> : vector<8x1xindex>
+  %cst_2 = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2]>} dense<[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]]> : vector<1x16xindex>
+  %0 = vector.broadcast %cst_1 {layout_result_0 = #xegpu.layout<sg_layout = [3]>} : vector<8x1xindex> to vector<8x16xindex>
+  %1 = vector.broadcast %cst_2 {layout_result_0 = #xegpu.layout<sg_layout = [4]>} : vector<1x16xindex> to vector<8x16xindex>
+  %2 = arith.addi %0, %1 {layout_result_0 = #xegpu.layout<sg_layout = [5]>} : vector<8x16xindex>
+
+  %res = vector.gather %source[%off0, %off1, %off2][%2], %mask,
+       %pass_thru {
+        layout_result_0 = #xegpu.layout<sg_layout = [6]>,
+        layout_operand_4 = #xegpu.layout<sg_layout = [99]>, // overriding %2's layout
+        layout_operand_5 = #xegpu.layout<sg_layout = [7]>
+  } : memref<?x?x?xf32>, vector<8x16xindex>, vector<8x16xi1>, vector<8x16xf32> into vector<8x16xf32>
+  %res2 = arith.addf %res, %pass_thru : vector<8x16xf32>
+  gpu.return %res2 : vector<8x16xf32>
+}
+// CHECK-LABEL:  @load_dynamic_layout_mixed_override(
+// CHECK:        %[[VEC:.+]] = xegpu.load {{[^{]*}}
+// CHECK-SAME:   {layout_operand_1 = #xegpu.layout<sg_layout = [99]>, layout_operand_2 = #xegpu.layout<sg_layout = [7]>
+// CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>}
+// CHECK:        %[[RES:.+]] = arith.select {{[^{]*}}
+// CHECK-SAME:   {{{[^}]*}}layout_operand_0 = #xegpu.layout<sg_layout = [7]>,
+// CHECK-SAME:   {{[^}]*}}layout_result_0 = #xegpu.layout<sg_layout = [6]>} : vector<8x16xi1>, vector<8x16xf32>
+}
+
+// -----
+
+gpu.module @xevm_module {
+gpu.func @load_with_cache_hints(%source: memref<8x16x32xf32>,
+     %off1: index, %off2: index, %off3: index,
+     %indices: vector<8xindex>, %mask: vector<8xi1>,
+     %pass_thru: vector<8xf32>) -> vector<8xf32> {
+  %0 = vector.gather %source[%off1, %off2, %off3][%indices], %mask,
+       %pass_thru {
+        l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>,
+        l3_hint = #xegpu.cache_hint<streaming>
+  } : memref<8x16x32xf32>, vector<8xindex>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  gpu.return %0 : vector<8xf32>
+}
+// CHECK-LABEL:  @load_with_cache_hints(
+// CHECK:        xegpu.load {{[^<]*}}
+// CHECK-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<streaming>}>
+}
+
+// -----
+
+gpu.module @xevm_module {
+gpu.func @load_with_partial_cache_hints(%source: memref<8x16x32xf32>,
+     %off1: index, %off2: index, %off3: index,
+     %indices: vector<8xindex>, %mask: vector<8xi1>,
+     %pass_thru: vector<8xf32>) -> vector<8xf32> {
+  %0 = vector.gather %source[%off1, %off2, %off3][%indices], %mask,
+       %pass_thru {
+        l1_hint = #xegpu.cache_hint<cached>,
+        l3_hint = #xegpu.cache_hint<streaming>
+  } : memref<8x16x32xf32>, vector<8xindex>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  gpu.return %0 : vector<8xf32>
+}
+// CHECK-LABEL:  @load_with_partial_cache_hints(
+// CHECK:        xegpu.load {{[^<]*}}
+// CHECK-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l3_hint = #xegpu.cache_hint<streaming>}>
+}
