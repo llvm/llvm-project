@@ -873,6 +873,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr128:
   case Vgpr128:
     return LLT::scalar(128);
+  case SgprP0:
   case VgprP0:
     return LLT::pointer(0, 64);
   case SgprP1:
@@ -972,6 +973,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr32_WF:
   case Sgpr64:
   case Sgpr128:
+  case SgprP0:
   case SgprP1:
   case SgprP3:
   case SgprP4:
@@ -1055,6 +1057,7 @@ void RegBankLegalizeHelper::applyMappingDst(
     case Sgpr32:
     case Sgpr64:
     case Sgpr128:
+    case SgprP0:
     case SgprP1:
     case SgprP3:
     case SgprP4:
@@ -1198,6 +1201,7 @@ void RegBankLegalizeHelper::applyMappingSrc(
     case Sgpr32:
     case Sgpr64:
     case Sgpr128:
+    case SgprP0:
     case SgprP1:
     case SgprP3:
     case SgprP4:
