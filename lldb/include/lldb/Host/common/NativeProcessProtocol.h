@@ -264,8 +264,9 @@ public:
     memory_tagging = (1u << 6),
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
+    resume_without_disabling_breakpoints = (1u << 9),
 
-    LLVM_MARK_AS_BITMASK_ENUM(siginfo_read)
+    LLVM_MARK_AS_BITMASK_ENUM(resume_without_disabling_breakpoints)
   };
 
   class Manager {
