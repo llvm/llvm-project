@@ -273,6 +273,9 @@ public:
   /// return true.
   bool ContainsOnlyDebugInfo() const;
 
+  /// Returns true if this is a global offset table section.
+  bool IsGOTSection() const;
+
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should
                             // be read from

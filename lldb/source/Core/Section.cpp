@@ -471,6 +471,10 @@ bool Section::ContainsOnlyDebugInfo() const {
   return false;
 }
 
+bool Section::IsGOTSection() const {
+  return GetObjectFile()->IsGOTSection(*this);
+}
+
 #pragma mark SectionList
 
 SectionList &SectionList::operator=(const SectionList &rhs) {
