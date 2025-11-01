@@ -61,7 +61,7 @@ protected:
 
   /// Tracks the mapping of unit level debug information variables to debug
   /// information entries.
-  DenseMap<const MDNode *, DIE *> MDNodeToDieMap;
+  DwarfInfoHolder InfoHolder;
 
   /// A list of all the DIEBlocks in use.
   std::vector<DIEBlock *> DIEBlocks;
@@ -139,7 +139,7 @@ public:
   /// We delegate the request to DwarfDebug when the MDNode can be part of the
   /// type system, since DIEs for the type system can be shared across CUs and
   /// the mappings are kept in DwarfDebug.
-  DIE *getDIE(const DINode *D) const;
+  DIE *getDIE(const DINode *D) const { return getDIEs(D).getDIE(D); }
 
   /// Returns a fresh newly allocated DIELoc.
   DIELoc *getDIELoc() { return new (DIEValueAllocator) DIELoc; }
@@ -152,6 +152,18 @@ public:
   void insertDIE(const DINode *Desc, DIE *D);
 
   void insertDIE(DIE *D);
+
+  const DwarfInfoHolder &getDIEs(const DINode *N) const {
+    if (isShareableAcrossCUs(N))
+      return DU->getDIEs();
+
+    return InfoHolder;
+  }
+
+  DwarfInfoHolder &getDIEs(const DINode *N) {
+    return const_cast<DwarfInfoHolder &>(
+        const_cast<const DwarfUnit *>(this)->getDIEs(N));
+  }
 
   /// Add a flag that is true to the DIE.
   void addFlag(DIE &Die, dwarf::Attribute Attribute);
