@@ -8816,14 +8816,24 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     }
 
     // Update all users outside the vector region. Also replace redundant
-    // ExtractLastElement.
+    // extracts.
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
       U->replaceUsesOfWith(OrigExitingVPV, FinalReductionResult);
-      if (match(U, m_ExtractLastElement(m_VPValue())))
-        cast<VPInstruction>(U)->replaceAllUsesWith(FinalReductionResult);
+
+      // Check for redundant ExtractLastPart followed by ExtractLastLane.
+      if (!match(U, m_ExtractLastPart(m_VPValue())))
+        continue;
+
+      auto *ExtractPart = cast<VPInstruction>(U);
+      if (ExtractPart->getNumUsers() != 1)
+        continue;
+
+      VPUser *User = *ExtractPart->user_begin();
+      if (match(User, m_ExtractLastLane(m_VPValue())))
+        cast<VPInstruction>(User)->replaceAllUsesWith(FinalReductionResult);
     }
 
     // Adjust AnyOf reductions; replace the reduction phi for the selected value
