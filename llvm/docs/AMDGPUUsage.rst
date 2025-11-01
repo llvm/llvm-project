@@ -1385,7 +1385,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.sched.barrier                        Controls the types of instructions that may be allowed to cross the intrinsic
                                                    during instruction scheduling. The parameter is a mask for the instruction types
-                                                   that can cross the intrinsic.
+                                                   that can cross the intrinsic. When bits for specific instructions are set, their
+                                                   more general version (all ALU or all VMEM) is ignored.
 
                                                    - 0x0000: No instructions may be scheduled across sched_barrier.
                                                    - 0x0001: All, non-memory, non-side-effect producing instructions may be
