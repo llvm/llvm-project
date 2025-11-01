@@ -52,13 +52,10 @@ size_t strlen(const char* s);
 */
 
 #include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
-#endif
-
-#if __has_include_next(<string.h>)
-#  include_next <string.h>
 #endif
 
 // MSVCRT, GNU libc and its derivates may already have the correct prototype in

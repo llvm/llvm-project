@@ -457,7 +457,7 @@ module cxx03_std_locale_h [system] {
   export *
 }
 module cxx03_std_math_h [system] {
-  header "math.h"
+  textual header "math.h"
   export *
 }
 // <setjmp.h> provided by C library.
@@ -513,48 +513,6 @@ module cxx03_std_wchar_h [system] {
 module cxx03_std_wctype_h [system] {
   header "wctype.h"
   export *
-}
-
-// Experimental C++ standard library interfaces
-module cxx03_std_experimental [system] {
-  module iterator {
-    header "experimental/iterator"
-    export *
-  }
-  module memory {
-    header "experimental/memory"
-    export *
-  }
-  module propagate_const {
-    header "experimental/propagate_const"
-    export *
-  }
-  module simd {
-    module aligned_tag          { private header "experimental/__simd/aligned_tag.h" }
-    module declaration          { private header "experimental/__simd/declaration.h" }
-    module reference            { private header "experimental/__simd/reference.h" }
-    module scalar               { private header "experimental/__simd/scalar.h" }
-    module simd                 { private header "experimental/__simd/simd.h" }
-    module simd_mask            { private header "experimental/__simd/simd_mask.h" }
-    module traits               { private header "experimental/__simd/traits.h" }
-    module utility              { private header "experimental/__simd/utility.h" }
-    module vec_ext              { private header "experimental/__simd/vec_ext.h" }
-
-    header "experimental/simd"
-    export *
-  }
-  module type_traits {
-    header "experimental/type_traits"
-    export *
-  }
-  module utility {
-    header "experimental/utility"
-    export *
-  }
-  module __config {
-    textual header "experimental/__config"
-    export *
-  }
 }
 
 // Convenience method to get all of the above modules in a single import statement.
@@ -1109,8 +1067,8 @@ module cxx03_std_private_chrono_formatter              [system] {
 module cxx03_std_private_chrono_hh_mm_ss               [system] { header "__chrono/hh_mm_ss.h" }
 module cxx03_std_private_chrono_high_resolution_clock  [system] {
   header "__chrono/high_resolution_clock.h"
-  export std_private_chrono_steady_clock
-  export std_private_chrono_system_clock
+  export cxx03_std_private_chrono_steady_clock
+  export cxx03_std_private_chrono_system_clock
 }
 module cxx03_std_private_chrono_leap_second            [system] { header "__chrono/leap_second.h" }
 module cxx03_std_private_chrono_literals               [system] { header "__chrono/literals.h" }
@@ -1130,7 +1088,7 @@ module cxx03_std_private_chrono_parser_std_format_spec [system] {
 module cxx03_std_private_chrono_statically_widen       [system] { header "__chrono/statically_widen.h" }
 module cxx03_std_private_chrono_steady_clock           [system] {
   header "__chrono/steady_clock.h"
-  export std_private_chrono_time_point
+  export cxx03_std_private_chrono_time_point
 }
 module cxx03_std_private_chrono_time_zone              [system] {
   header "__chrono/time_zone.h"
@@ -1980,7 +1938,7 @@ module cxx03_std_private_type_traits_is_member_pointer                         [
 module cxx03_std_private_type_traits_is_nothrow_assignable                     [system] { header "__type_traits/is_nothrow_assignable.h" }
 module cxx03_std_private_type_traits_is_nothrow_constructible                  [system] {
   header "__type_traits/is_nothrow_constructible.h"
-  export std_private_type_traits_integral_constant
+  export cxx03_std_private_type_traits_integral_constant
 }
 module cxx03_std_private_type_traits_is_nothrow_convertible                    [system] { header "__type_traits/is_nothrow_convertible.h" }
 module cxx03_std_private_type_traits_is_nothrow_destructible                   [system] {

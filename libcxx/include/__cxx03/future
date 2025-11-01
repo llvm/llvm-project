@@ -384,6 +384,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #  include <__cxx03/__system_error/error_code.h>
 #  include <__cxx03/__system_error/error_condition.h>
 #  include <__cxx03/__type_traits/aligned_storage.h>
+#  include <__cxx03/__type_traits/invoke.h>
 #  include <__cxx03/__type_traits/strip_signature.h>
 #  include <__cxx03/__utility/auto_cast.h>
 #  include <__cxx03/__utility/forward.h>

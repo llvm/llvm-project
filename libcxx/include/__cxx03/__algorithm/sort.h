@@ -27,6 +27,7 @@
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/disjunction.h>
+#include <__cxx03/__type_traits/integral_constant.h>
 #include <__cxx03/__type_traits/is_arithmetic.h>
 #include <__cxx03/__type_traits/is_constant_evaluated.h>
 #include <__cxx03/__utility/move.h>
