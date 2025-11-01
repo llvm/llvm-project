@@ -553,6 +553,22 @@ def N3Write_16c_16V0 : SchedWriteRes<[N3UnitV0, N3UnitV0, N3UnitV0, N3UnitV0,
     let NumMicroOps = 16;
 }
 
+
+//===----------------------------------------------------------------------===//
+// Define predicate-controlled types
+
+def N3Write_0or1c_1I : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_1c_1I]>]>;
+
+def N3Write_0or2c_1V : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_2c_1V]>]>;
+
+def N3Write_0or3c_1M0 : SchedWriteVariant<[
+                      SchedVar<NeoverseZeroMove, [N3Write_0c]>,
+                      SchedVar<NoSchedPred,      [N3Write_3c_1M0]>]>;
+
 // Miscellaneous
 // -----------------------------------------------------------------------------
 
@@ -581,6 +597,7 @@ def : InstRW<[N3Write_1c_1B_1S], (instrs BL, BLR)>;
 // Conditional compare
 // Conditional select
 def : SchedAlias<WriteI, N3Write_1c_1I>;
+def : InstRW<[N3Write_0or1c_1I], (instregex "^MOVZ[WX]i$")>;
 
 // ALU, extend and shift
 def : SchedAlias<WriteIEReg, N3Write_2c_1M>;
@@ -610,7 +627,8 @@ def : InstRW<[N3Write_1c_1I], (instrs GMI, SUBP, SUBPS)>;
 
 // Logical, shift, no flagset
 def : InstRW<[N3Write_1c_1I],
-             (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
+             (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
+def : InstRW<[N3Write_0or1c_1I], (instregex "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
 def : InstRW<[N3Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
@@ -855,10 +873,11 @@ def : SchedAlias<WriteFCvt, N3Write_3c_1V0>;
 def : SchedAlias<WriteFImm, N3Write_2c_1V>;
 
 // FP move, register
-def : InstRW<[N3Write_2c_1V], (instrs FMOVHr, FMOVSr, FMOVDr)>;
+def : InstRW<[N3Write_2c_1V], (instrs FMOVHr)>;
+def : InstRW<[N3Write_0c], (instrs FMOVSr, FMOVDr)>;
 
 // FP transfer, from gen to low half of vec reg
-def : InstRW<[N3Write_3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
+def : InstRW<[N3Write_0or3c_1M0], (instrs FMOVWHr, FMOVXHr, FMOVWSr, FMOVXDr)>;
 
 // FP transfer, from gen to high half of vec reg
 def : InstRW<[N3Write_5c_1M0_1V], (instrs FMOVXDHighr)>;
@@ -1186,6 +1205,7 @@ def : InstRW<[N3Write_3c_1V0], (instrs BFCVT)>;
 // ASIMD transpose
 // ASIMD unzip/zip
 // Covered by WriteV[dq]
+def : InstRW<[N3Write_0or2c_1V], (instrs MOVID, MOVIv2d_ns)>;
 
 // ASIMD duplicate, gen reg
 def : InstRW<[N3Write_3c_1M0], (instregex "^DUPv.+gpr")>;
