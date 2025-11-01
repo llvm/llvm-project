@@ -230,3 +230,28 @@ void init_expr(int a, int b, int c) {
 // OGCG:   %[[C_PLUS_THREE:.*]] = add nsw i32 %[[C]], 3
 // OGCG:   store i32 %[[C_PLUS_THREE]], ptr %[[S_C]]
 // OGCG:   ret void
+
+void cxx_default_init_with_struct_field() {
+  struct Parent {
+    struct {
+      int a;
+    } child;
+  };
+  Parent p = Parent{};
+}
+
+// CIR: %[[P_ADDR:.*]] = cir.alloca !rec_Parent, !cir.ptr<!rec_Parent>, ["p", init]
+// CIR: %[[P_ELEM_0_PTR:.*]] = cir.get_member %[[P_ADDR]][0] {name = "child"} : !cir.ptr<!rec_Parent> -> !cir.ptr<!rec_anon2E0>
+// CIR: %[[CHILD_ELEM_0_PTR:.*]] = cir.get_member %[[P_ELEM_0_PTR]][0] {name = "a"} : !cir.ptr<!rec_anon2E0> -> !cir.ptr<!s32i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: cir.store{{.*}} %3, %[[CHILD_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// TODO(cir): zero-initialize the padding
+
+// LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
+// LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// LLVM: %[[CHILD_ELEM_0_PTR:.*]] = getelementptr %struct.anon.0, ptr %[[P_ELEM_0_PTR]], i32 0, i32 0
+// LLVM: store i32 0, ptr %[[CHILD_ELEM_0_PTR]], align 4
+
+// OGCG: %[[P_ADDR:.*]] = alloca %struct.Parent, align 4
+// OGCG: call void @llvm.memset.p0.i64(ptr align 4 %[[P_ADDR]], i8 0, i64 4, i1 false)
