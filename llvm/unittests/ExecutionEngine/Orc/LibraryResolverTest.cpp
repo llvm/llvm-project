@@ -30,6 +30,8 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+// Disabled due to test setup issue — YAML to shared library creation seems
+// invalid on some build bots. (PR #165360) Not related to code logic.
 #if 0
 // TODO: Add COFF (Windows) support for these tests.
 // this facility also works correctly on Windows (COFF),
