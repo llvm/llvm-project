@@ -413,29 +413,30 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    /// TypeByteSize is either the common store size of both accesses, or 0 when
-    /// store sizes mismatch.
-    uint64_t TypeByteSize;
+    /// TypeByteSize is a pair of alloc sizes of the source and sink.
+    std::pair<uint64_t, uint64_t> TypeByteSize;
+
+    // HasSameSize is a boolean indicating whether the store sizes of the source
+    // and sink are equal.
+    // TODO: Remove this.
+    bool HasSameSize;
 
     bool AIsWrite;
     bool BIsWrite;
 
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
-                                 uint64_t TypeByteSize, bool AIsWrite,
-                                 bool BIsWrite)
+                                 std::pair<uint64_t, uint64_t> TypeByteSize,
+                                 bool HasSameSize, bool AIsWrite, bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+          TypeByteSize(TypeByteSize), HasSameSize(HasSameSize),
+          AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
   /// Get the dependence distance, strides, type size and whether it is a write
-  /// for the dependence between A and B. Returns a DepType, if we can prove
-  /// there's no dependence or the analysis fails. Outlined to lambda to limit
-  /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
-  /// others. Returns either the dependence result, if it could already be
-  /// determined, or a DepDistanceStrideAndSizeInfo struct, noting that
-  /// TypeByteSize could be 0 when store sizes mismatch, and this should be
-  /// checked in the caller.
+  /// for the dependence between A and B. Returns either a DepType, the
+  /// dependence result, if it could already be determined, or a
+  /// DepDistanceStrideAndSizeInfo struct.
   std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
