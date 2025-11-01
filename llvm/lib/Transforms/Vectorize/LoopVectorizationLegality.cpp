@@ -194,16 +194,17 @@ bool LoopVectorizeHints::allowVectorization(
     if (Force.Value == LoopVectorizeHints::FK_Disabled) {
       reportDisallowedVectorization("#pragma vectorize disable",
                                     "MissedExplicitlyDisabled",
-                                    "vectorization is explicitly disabled");
+                                    "vectorization is explicitly disabled", L);
     } else if (hasDisableAllTransformsHint(L)) {
       reportDisallowedVectorization("loop hasDisableAllTransformsHint",
                                     "MissedTransformsDisabled",
-                                    "loop transformations are disabled");
+                                    "loop transformations are disabled", L);
     } else {
       // This should be unreachable unless there is a bug.
       reportDisallowedVectorization(
           "disabled for an unknown reason", "MissedUnknown",
-          "unknown reason, please file a bug report on the LLVM issue tracker");
+          "unknown reason, please file a bug report on the LLVM issue tracker",
+          L);
       llvm_unreachable("loop vect disabled for an unknown reason");
     }
     return false;
@@ -212,7 +213,8 @@ bool LoopVectorizeHints::allowVectorization(
   if (VectorizeOnlyWhenForced && getForce() != LoopVectorizeHints::FK_Enabled) {
     reportDisallowedVectorization(
         "VectorizeOnlyWhenForced is set, and no #pragma vectorize enable",
-        "MissedForceOnly", "only vectorizing loops that explicitly request it");
+        "MissedForceOnly", "only vectorizing loops that explicitly request it",
+        L);
     return false;
   }
 
