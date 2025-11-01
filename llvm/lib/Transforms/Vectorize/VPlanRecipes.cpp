@@ -490,10 +490,10 @@ template class VPUnrollPartAccessor<3>;
 }
 
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                             const VPIRFlags &Flags, DebugLoc DL,
-                             const Twine &Name)
+                             const VPIRFlags &Flags, const VPIRMetadata &MD,
+                             DebugLoc DL, const Twine &Name)
     : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, Flags, DL),
-      VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {
+      VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
   assert((getNumOperandsForOpcode(Opcode) == -1u ||

@@ -737,8 +737,7 @@ TEST(TargetParserTest, ARMFPUNeonSupportLevel) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
-    if (FK == ARM::FK_LAST ||
-        ARM::getFPUName(FK).find("neon") == std::string::npos)
+    if (FK == ARM::FK_LAST || !ARM::getFPUName(FK).contains("neon"))
       EXPECT_EQ(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
     else
       EXPECT_NE(ARM::NeonSupportLevel::None, ARM::getFPUNeonSupportLevel(FK));
@@ -748,9 +747,8 @@ TEST(TargetParserTest, ARMFPURestriction) {
   for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1)) {
-    if (FK == ARM::FK_LAST ||
-        (ARM::getFPUName(FK).find("d16") == std::string::npos &&
-         ARM::getFPUName(FK).find("vfpv3xd") == std::string::npos))
+    if (FK == ARM::FK_LAST || (!ARM::getFPUName(FK).contains("d16") &&
+                               !ARM::getFPUName(FK).contains("vfpv3xd")))
       EXPECT_EQ(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
     else
       EXPECT_NE(ARM::FPURestriction::None, ARM::getFPURestriction(FK));
