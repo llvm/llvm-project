@@ -485,6 +485,7 @@ Bug Fixes to C++ Support
   the function type.
 - Fix an assertion failure when a ``constexpr`` variable is only referenced through
   ``__builtin_addressof``, and related issues with builtin arguments. (#GH154034)
+- Fixed spurious diagnoses of certain nested lambda expressions. (#GH149121)
 - Fix an assertion failure when taking the address on a non-type template parameter argument of
   object type. (#GH151531)
 - Suppress ``-Wdouble-promotion`` when explicitly asked for with C++ list initialization (#GH33409).
