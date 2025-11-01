@@ -199,7 +199,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
     else if (reg_info.byte_size <= 16) {
       uint64_t data1 = src.GetU64(&src_offset);
       uint64_t data2 = src.GetU64(&src_offset);
-      if (src.GetByteOrder() == eByteOrderBig) {
+      if (src.GetByteOrder() == eByteOrderLittle) {
         int128.x[0] = data1;
         int128.x[1] = data2;
       } else {

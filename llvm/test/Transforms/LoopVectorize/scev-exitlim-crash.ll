@@ -16,7 +16,7 @@ entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %entry
-  %i.0 = phi i32 [ undef, %entry ], [ %inc, %for.cond ]
+  %i.0 = phi i32 [ poison, %entry ], [ %inc, %for.cond ]
   %cmp = icmp slt i32 %i.0, 0
   %fsub = fsub double undef, undef
   %fadd = fadd double %fsub, 1.000000e+00
@@ -36,7 +36,7 @@ for.cond7.preheader.lr.ph:                        ; preds = %for.cond4.preheader
 for.cond7.preheader:                              ; preds = %for.cond7.preheader.lr.ph, %for.inc23
   %y.017 = phi i32 [ 0, %for.cond7.preheader.lr.ph ], [ %inc24, %for.inc23 ]
   %i.116 = phi i32 [ 0, %for.cond7.preheader.lr.ph ], [ %i.2.lcssa, %for.inc23 ]
-  %n.015 = phi i32 [ undef, %for.cond7.preheader.lr.ph ], [ %inc25, %for.inc23 ]
+  %n.015 = phi i32 [ poison, %for.cond7.preheader.lr.ph ], [ %inc25, %for.inc23 ]
   %1 = load i32, ptr @b, align 4, !tbaa !5
   %tobool11 = icmp eq i32 %1, 0
   br i1 %tobool11, label %for.inc23, label %for.body8.lr.ph
@@ -104,8 +104,8 @@ for.end26:                                        ; preds = %for.cond4.for.end26
 }
 declare i32 @fn2(double) #1
 
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }
 
 !0 = !{!"int", !1}
 !1 = !{!"omnipotent char", !2}

@@ -2600,8 +2600,7 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
     int exponentChange = omsb - fromSemantics.precision;
     if (exponent + exponentChange < toSemantics.minExponent)
       exponentChange = toSemantics.minExponent - exponent;
-    if (exponentChange < shift)
-      exponentChange = shift;
+    exponentChange = std::max(exponentChange, shift);
     if (exponentChange < 0) {
       shift -= exponentChange;
       exponent += exponentChange;
@@ -3043,8 +3042,7 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
       if (decSig.exponent < semantics->minExponent) {
         excessPrecision += (semantics->minExponent - decSig.exponent);
         truncatedBits = excessPrecision;
-        if (excessPrecision > calcSemantics.precision)
-          excessPrecision = calcSemantics.precision;
+        excessPrecision = std::min(excessPrecision, calcSemantics.precision);
       }
       /* Extra half-ulp lost in reciprocal of exponent.  */
       powHUerr = (powStatus == opOK && calcLostFraction == lfExactlyZero) ? 0:2;
@@ -3441,8 +3439,7 @@ char *IEEEFloat::convertNormalToHexString(char *dst, unsigned int hexDigits,
     /* Convert as much of "part" to hexdigits as we can.  */
     unsigned int curDigits = integerPartWidth / 4;
 
-    if (curDigits > outputDigits)
-      curDigits = outputDigits;
+    curDigits = std::min(curDigits, outputDigits);
     dst += partAsHex (dst, part, curDigits, hexDigitChars);
     outputDigits -= curDigits;
   }
@@ -5357,7 +5354,7 @@ APInt DoubleAPFloat::bitcastToAPInt() const {
       Floats[0].bitcastToAPInt().getRawData()[0],
       Floats[1].bitcastToAPInt().getRawData()[0],
   };
-  return APInt(128, 2, Data);
+  return APInt(128, Data);
 }
 
 Expected<APFloat::opStatus> DoubleAPFloat::convertFromString(StringRef S,
@@ -5646,8 +5643,7 @@ APFloat::opStatus DoubleAPFloat::convertFromUnsignedParts(
 
   // Create a minimally-sized APInt to represent the source value.
   const unsigned SrcBitWidth = SrcMSB + 1;
-  APSInt SrcInt{APInt{/*numBits=*/SrcBitWidth,
-                      /*numWords=*/SrcCount, Src},
+  APSInt SrcInt{APInt{/*numBits=*/SrcBitWidth, ArrayRef(Src, SrcCount)},
                 /*isUnsigned=*/true};
 
   // Stage 1: Initial Approximation.
@@ -6163,6 +6159,70 @@ float APFloat::convertToFloat() const {
   assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
   (void)St;
   return Temp.getIEEE().convertToFloat();
+}
+
+APFloat::Storage::~Storage() {
+  if (usesLayout<IEEEFloat>(*semantics)) {
+    IEEE.~IEEEFloat();
+    return;
+  }
+  if (usesLayout<DoubleAPFloat>(*semantics)) {
+    Double.~DoubleAPFloat();
+    return;
+  }
+  llvm_unreachable("Unexpected semantics");
+}
+
+APFloat::Storage::Storage(const APFloat::Storage &RHS) {
+  if (usesLayout<IEEEFloat>(*RHS.semantics)) {
+    new (this) IEEEFloat(RHS.IEEE);
+    return;
+  }
+  if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    new (this) DoubleAPFloat(RHS.Double);
+    return;
+  }
+  llvm_unreachable("Unexpected semantics");
+}
+
+APFloat::Storage::Storage(APFloat::Storage &&RHS) {
+  if (usesLayout<IEEEFloat>(*RHS.semantics)) {
+    new (this) IEEEFloat(std::move(RHS.IEEE));
+    return;
+  }
+  if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    new (this) DoubleAPFloat(std::move(RHS.Double));
+    return;
+  }
+  llvm_unreachable("Unexpected semantics");
+}
+
+APFloat::Storage &APFloat::Storage::operator=(const APFloat::Storage &RHS) {
+  if (usesLayout<IEEEFloat>(*semantics) &&
+      usesLayout<IEEEFloat>(*RHS.semantics)) {
+    IEEE = RHS.IEEE;
+  } else if (usesLayout<DoubleAPFloat>(*semantics) &&
+             usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    Double = RHS.Double;
+  } else if (this != &RHS) {
+    this->~Storage();
+    new (this) Storage(RHS);
+  }
+  return *this;
+}
+
+APFloat::Storage &APFloat::Storage::operator=(APFloat::Storage &&RHS) {
+  if (usesLayout<IEEEFloat>(*semantics) &&
+      usesLayout<IEEEFloat>(*RHS.semantics)) {
+    IEEE = std::move(RHS.IEEE);
+  } else if (usesLayout<DoubleAPFloat>(*semantics) &&
+             usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    Double = std::move(RHS.Double);
+  } else if (this != &RHS) {
+    this->~Storage();
+    new (this) Storage(std::move(RHS));
+  }
+  return *this;
 }
 
 } // namespace llvm

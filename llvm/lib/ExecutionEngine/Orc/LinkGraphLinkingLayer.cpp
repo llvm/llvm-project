@@ -55,7 +55,7 @@ public:
     Plugins = Layer.Plugins;
   }
 
-  ~JITLinkCtx() {
+  ~JITLinkCtx() override {
     // If there is an object buffer return function then use it to
     // return ownership of the buffer.
     if (Layer.ReturnObjectBuffer && ObjBuffer)

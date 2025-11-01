@@ -39,13 +39,13 @@ public:
 
   static mlir::Operation *load(mlir::OpBuilder &builder, mlir::Location loc,
                                mlir::Value value) {
-    return builder.create<fir::LoadOp>(loc, value);
+    return fir::LoadOp::create(builder, loc, value);
   }
 
   static mlir::Value placeInMemory(mlir::OpBuilder &builder, mlir::Location loc,
                                    mlir::Value value) {
-    auto alloca = builder.create<fir::AllocaOp>(loc, value.getType());
-    builder.create<fir::StoreOp>(loc, value, alloca);
+    auto alloca = fir::AllocaOp::create(builder, loc, value.getType());
+    fir::StoreOp::create(builder, loc, value, alloca);
     return alloca;
   }
 };

@@ -21,14 +21,16 @@ using namespace llvm;
 namespace clang::tidy::modernize {
 namespace {
 
-const char CastSequence[] = "sequence";
-
 AST_MATCHER(Type, sugaredNullptrType) {
   const Type *DesugaredType = Node.getUnqualifiedDesugaredType();
   if (const auto *BT = dyn_cast<BuiltinType>(DesugaredType))
     return BT->getKind() == BuiltinType::NullPtr;
   return false;
 }
+
+} // namespace
+
+static const char CastSequence[] = "sequence";
 
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
@@ -43,7 +45,8 @@ AST_MATCHER(Type, sugaredNullptrType) {
 /// would check for the "NULL" macro instead, but that'd be harder to express.
 /// In practice, "NULL" is often defined as "__null", and this is a useful
 /// condition.
-StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
+static StatementMatcher
+makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
   auto ImplicitCastToNull = implicitCastExpr(
       anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
       anyOf(hasSourceExpression(gnuNullExpr()),
@@ -79,16 +82,16 @@ StatementMatcher makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
                 unless(hasAncestor(functionDecl(isDefaulted()))))));
 }
 
-bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
-                        const SourceManager &SM) {
+static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
+                               const SourceManager &SM) {
   return SM.isWrittenInSameFile(StartLoc, EndLoc);
 }
 
 /// Replaces the provided range with the text "nullptr", but only if
 /// the start and end location are both in main file.
 /// Returns true if and only if a replacement was made.
-void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
-                        SourceLocation StartLoc, SourceLocation EndLoc) {
+static void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
+                               SourceLocation StartLoc, SourceLocation EndLoc) {
   CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
   // Add a space if nullptr follows an alphanumeric character. This happens
   // whenever there is an c-style explicit cast to nullptr not surrounded by
@@ -106,8 +109,9 @@ void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
 /// #define MY_NULL NULL
 /// \endcode
 /// If \p Loc points to NULL, this function will return the name MY_NULL.
-StringRef getOutermostMacroName(SourceLocation Loc, const SourceManager &SM,
-                                const LangOptions &LO) {
+static StringRef getOutermostMacroName(SourceLocation Loc,
+                                       const SourceManager &SM,
+                                       const LangOptions &LO) {
   assert(Loc.isMacroID());
   SourceLocation OutermostMacroLoc;
 
@@ -118,6 +122,8 @@ StringRef getOutermostMacroName(SourceLocation Loc, const SourceManager &SM,
 
   return Lexer::getImmediateMacroName(OutermostMacroLoc, SM, LO);
 }
+
+namespace {
 
 /// RecursiveASTVisitor for ensuring all nodes rooted at a given AST
 /// subtree that have file-level source locations corresponding to a macro
