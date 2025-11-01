@@ -16,6 +16,8 @@
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_pointer.h>
+#include <__utility/move.h>
+#include <__utility/swap.h>
 #include <cstdlib>
 #include <typeinfo>
 
@@ -23,7 +25,32 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #ifndef _LIBCPP_ABI_MICROSOFT
+
+// Previously, parts of exception_ptr were defined out-of-line, which prevented
+// useful compiler optimizations. Changing the out-of-line definitions to inline
+// definitions is an ABI break, however. To prevent this, we have to make sure
+// the symbols remain available in the libc++ library, in addition to being
+// defined inline here in this header.
+// To this end, we use _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE macro:
+// The macro is defined as empty for src/exception.cpp, forcing the definitions of
+// the functions to be emitted and included in the library. When users of libc++
+// compile their code, the __gnu_inline__ attribute will suppress generation of
+// these functions while making their definitions available for inlining.
+#ifdef _LIBCPP_EMIT_CODE_FOR_EXCEPTION_PTR
+#  define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE _LIBCPP_EXPORTED_FROM_ABI
+#else
+#  if !__has_cpp_attribute(__gnu__::__gnu_inline__)
+#    error "GNU inline attribute is not supported"
+#  endif
+#  define _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE [[__gnu__::__gnu_inline__]] inline
+#endif
+
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgnu-inline-cpp-without-extern")
 
 #  if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
 
@@ -57,8 +84,15 @@ _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
+inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT;
+
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
+
+  static void __do_increment_refcount(void* __ptr) _NOEXCEPT;
+  static void __do_decrement_refcount(void* __ptr) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI static void __increment_refcount(void* __ptr) _NOEXCEPT { if (__ptr) __do_increment_refcount(__ptr); }
+  _LIBCPP_HIDE_FROM_ABI static void __decrement_refcount(void* __ptr) _NOEXCEPT { if (__ptr) __do_decrement_refcount(__ptr); }
 
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
@@ -74,9 +108,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr() _NOEXCEPT : __ptr_() {}
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
 
-  exception_ptr(const exception_ptr&) _NOEXCEPT;
-  exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
-  ~exception_ptr() _NOEXCEPT;
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr(exception_ptr&& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
+    __other.__ptr_ = nullptr;
+  }
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(exception_ptr&& __other) _NOEXCEPT {
+    __decrement_refcount(__ptr_);
+    __ptr_         = __other.__ptr_;
+    __other.__ptr_ = nullptr;
+    return *this;
+  }
+  _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE ~exception_ptr() _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __ptr_ != nullptr; }
 
@@ -88,9 +131,34 @@ public:
     return !(__x == __y);
   }
 
+  friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT;
+
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
+
+// Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::exception_ptr(const exception_ptr& __other) _NOEXCEPT
+    : __ptr_(__other.__ptr_) {
+  __increment_refcount(__ptr_);
+}
+
+// Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr& exception_ptr::operator=(const exception_ptr& __other) _NOEXCEPT {
+  if (__ptr_ != __other.__ptr_) {
+    __increment_refcount(__other.__ptr_);
+    __decrement_refcount(__ptr_);
+    __ptr_ = __other.__ptr_;
+  }
+  return *this;
+}
+
+// Must be defined outside the class definition due to _LIBCPP_EXPORTED_FROM_LIB_INLINEABLE
+_LIBCPP_EXPORTED_FROM_LIB_INLINEABLE exception_ptr::~exception_ptr() _NOEXCEPT { __decrement_refcount(__ptr_); }
+
+inline _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
+  std::swap(__x.__ptr_, __y.__ptr_);
+}
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
@@ -200,5 +268,9 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 
 #endif // _LIBCPP_ABI_MICROSOFT
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+
+_LIBCPP_DIAGNOSTIC_POP
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H
