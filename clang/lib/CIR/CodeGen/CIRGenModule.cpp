@@ -1424,6 +1424,23 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *s,
   return builder.getGlobalViewAttr(ptrTy, gv);
 }
 
+// TODO(cir): this could be a common AST helper for both CIR and LLVM codegen.
+LangAS CIRGenModule::getLangTempAllocaAddressSpace() const {
+  if (getLangOpts().OpenCL)
+    return LangAS::opencl_private;
+
+  // For temporaries inside functions, CUDA treats them as normal variables.
+  // LangAS::cuda_device, on the other hand, is reserved for those variables
+  // explicitly marked with __device__.
+  if (getLangOpts().CUDAIsDevice)
+    return LangAS::Default;
+
+  if (getLangOpts().SYCLIsDevice ||
+      (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice))
+    errorNYI("SYCL or OpenMP temp address space");
+  return LangAS::Default;
+}
+
 void CIRGenModule::emitExplicitCastExprType(const ExplicitCastExpr *e,
                                             CIRGenFunction *cgf) {
   if (cgf && e->getType()->isVariablyModifiedType())
