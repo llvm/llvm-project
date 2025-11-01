@@ -2018,7 +2018,9 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   Value *ScalarV = Ext->getOperand(0);
   if (!isGuaranteedNotToBePoison(ScalarV, &AC, dyn_cast<Instruction>(ScalarV),
                                  &DT)) {
-    // Check if all lanes are extracted and all extracts trigger UB on poison.
+    // Check wether all lanes are extracted, all extracts trigger UB on
+    // poison, and the last extract (and hence all previous ones)
+    // are guaranteed to execute if Ext executes.
     // If so, we do not need to insert a freeze.
     SmallDenseSet<ConstantInt *, 8> ExtractedLanes;
     bool AllExtractsTriggerUB = true;
@@ -2034,16 +2036,10 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
       if (!LastExtract || LastExtract->comesBefore(Extract))
         LastExtract = Extract;
     }
-    // Check that the last extract (and hence all previous ones) are guaranteed
-    // to execute if Ext executes.
-    AllExtractsTriggerUB =
-        AllExtractsTriggerUB &&
-        all_of(make_range(Ext->getIterator(), LastExtract->getIterator()),
-               [](Instruction &I) {
-                 return isGuaranteedToTransferExecutionToSuccessor(&I);
-               });
-    if (!AllExtractsTriggerUB ||
-        ExtractedLanes.size() != DstTy->getNumElements())
+    if (ExtractedLanes.size() != DstTy->getNumElements() ||
+        !AllExtractsTriggerUB ||
+        !isGuaranteedToTransferExecutionToSuccessor(Ext->getIterator(),
+                                                    LastExtract->getIterator()))
       ScalarV = Builder.CreateFreeze(ScalarV);
   }
   ScalarV = Builder.CreateBitCast(
