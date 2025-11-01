@@ -6,10 +6,8 @@
 
 define i1 @shl_add_const_eq_base(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_base(
-; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 %v0, 5
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 %v3, 5
-; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 32
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1]], [[V5]]
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V3:%.*]], 1
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1:%.*]], [[V5]]
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v1 = shl nsw i64 %v0, 5
@@ -22,10 +20,8 @@ define i1 @shl_add_const_eq_base(i64 %v0, i64 %v3) {
 ; Test: icmp ne
 define i1 @shl_add_const_ne(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_ne(
-; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 [[V0:%.*]], 5
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 [[V3:%.*]], 5
-; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 32
-; CHECK-NEXT:    [[V6:%.*]] = icmp ne i64 [[V1]], [[V5]]
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V3:%.*]], 1
+; CHECK-NEXT:    [[V6:%.*]] = icmp ne i64 [[V1:%.*]], [[V5]]
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v1 = shl nsw i64 %v0, 5
@@ -38,8 +34,8 @@ define i1 @shl_add_const_ne(i64 %v0, i64 %v3) {
 ; Test: shl amounts do not match (5 vs 4).
 define i1 @shl_add_const_eq_mismatch_shl_amt(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_mismatch_shl_amt(
-; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 %v0, 5
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 %v3, 4
+; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 [[V0:%.*]], 5
+; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 [[V3:%.*]], 4
 ; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 16
 ; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1]], [[V5]]
 ; CHECK-NEXT:    ret i1 [[V6]]
@@ -54,8 +50,8 @@ define i1 @shl_add_const_eq_mismatch_shl_amt(i64 %v0, i64 %v3) {
 ; Test: Constant is wrong (32 vs 64).
 define i1 @shl_add_const_eq_wrong_constant(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_wrong_constant(
-; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 %v0, 5
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 %v3, 5
+; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 [[V0:%.*]], 5
+; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 [[V3:%.*]], 5
 ; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 64
 ; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1]], [[V5]]
 ; CHECK-NEXT:    ret i1 [[V6]]
@@ -70,8 +66,8 @@ define i1 @shl_add_const_eq_wrong_constant(i64 %v0, i64 %v3) {
 ; Test: Missing NSW flag on one of the shl instructions.
 define i1 @shl_add_const_eq_no_nsw_on_v1(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_no_nsw_on_v1(
-; CHECK-NEXT:    [[V1:%.*]] = shl i64 %v0, 5
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 %v3, 5
+; CHECK-NEXT:    [[V1:%.*]] = shl i64 [[V0:%.*]], 5
+; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 [[V3:%.*]], 5
 ; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 32
 ; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1]], [[V5]]
 ; CHECK-NEXT:    ret i1 [[V6]]
@@ -86,8 +82,8 @@ define i1 @shl_add_const_eq_no_nsw_on_v1(i64 %v0, i64 %v3) {
 ; Test: Lower bit width (i8) and different shift amount (3). Constant is 8.
 define i1 @shl_add_const_eq_i8(i8 %v0, i8 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_i8(
-; CHECK-NEXT:    [[V7:%.*]] = add nsw i8 %v3, 1
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i8 %v0, [[V7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[V3:%.*]], 1
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i8 [[V0:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v1 = shl nsw i8 %v0, 3
@@ -100,8 +96,8 @@ define i1 @shl_add_const_eq_i8(i8 %v0, i8 %v3) {
 ; Test: i32 bit width and larger shift amount (10). Constant is 1024.
 define i1 @shl_add_const_eq_i32(i32 %v0, i32 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_i32(
-; CHECK-NEXT:    [[V7:%.*]] = add nsw i32 %v3, 1
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i32 %v0, [[V7]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[V3:%.*]], 1
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i32 [[V0:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v1 = shl nsw i32 %v0, 10
