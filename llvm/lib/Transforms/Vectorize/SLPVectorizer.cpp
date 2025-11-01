@@ -5608,6 +5608,7 @@ private:
           for (ScheduleBundle *Bundle : Bundles) {
             if (ScheduleCopyableDataMap.empty() && TotalOpCount == 0)
               break;
+            SmallPtrSet<Value *, 4> ParentsUniqueUsers;
             // Need to search for the lane since the tree entry can be
             // reordered.
             auto *It = find(Bundle->getTreeEntry()->Scalars, In);
@@ -5636,6 +5637,22 @@ private:
                       Bundle->getTreeEntry()->isCopyableElement(In)) &&
                      "Missed TreeEntry operands?");
 
+              bool IsNonSchedulableWithParentPhiNode =
+                  Bundle->getTreeEntry()->doesNotNeedToSchedule() &&
+                  Bundle->getTreeEntry()->UserTreeIndex &&
+                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->hasState() &&
+                  Bundle->getTreeEntry()->UserTreeIndex.UserTE->getOpcode() ==
+                      Instruction::PHI;
+              // Count the number of unique phi nodes, which are the parent for
+              // parent entry, and exit, if all the unique phis are processed.
+              if (IsNonSchedulableWithParentPhiNode) {
+                const TreeEntry *ParentTE =
+                    Bundle->getTreeEntry()->UserTreeIndex.UserTE;
+                Value *User = ParentTE->Scalars[Lane];
+                if (!ParentsUniqueUsers.insert(User).second)
+                  break;
+              }
+
               for (unsigned OpIdx :
                    seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
                 if (auto *I = dyn_cast<Instruction>(
@@ -5644,8 +5661,8 @@ private:
                                     << *I << "\n");
                   DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx, Checked);
                 }
-              // If parent node is schedulable, it will be handle correctly.
-              if (!Bundle->getTreeEntry()->doesNotNeedToSchedule())
+              // If parent node is schedulable, it will be handled correctly.
+              if (!IsNonSchedulableWithParentPhiNode)
                 break;
               It = std::find(std::next(It),
                              Bundle->getTreeEntry()->Scalars.end(), In);
@@ -16903,7 +16920,10 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       // otherwise TEPtr depends on TE.
       if ((TEInsertBlock != InsertPt->getParent() ||
            TEUseEI.EdgeIdx < UseEI.EdgeIdx || TEUseEI.UserTE != UseEI.UserTE) &&
-          !CheckOrdering(InsertPt))
+          (!CheckOrdering(InsertPt) ||
+           (UseEI.UserTE->hasCopyableElements() &&
+            isUsedOutsideBlock(const_cast<Instruction *>(TEInsertPt)) &&
+            is_contained(UseEI.UserTE->Scalars, TEInsertPt))))
         continue;
       // The node is reused - exit.
       if (CheckAndUseSameNode(TEPtr))
@@ -22113,6 +22133,27 @@ bool BoUpSLP::collectValuesToDemote(
         BitWidth,
         {VectorizableTree[E.CombinedEntriesWithIndices.front().first].get(),
          VectorizableTree[E.CombinedEntriesWithIndices.back().first].get()});
+
+  if (E.isAltShuffle()) {
+    // Combining these opcodes may lead to incorrect analysis, skip for now.
+    auto IsDangerousOpcode = [](unsigned Opcode) {
+      switch (Opcode) {
+      case Instruction::Shl:
+      case Instruction::AShr:
+      case Instruction::LShr:
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+      case Instruction::URem:
+      case Instruction::SRem:
+        return true;
+      default:
+        break;
+      }
+      return false;
+    };
+    if (IsDangerousOpcode(E.getAltOpcode()))
+      return FinalAnalysis();
+  }
 
   switch (E.getOpcode()) {
 

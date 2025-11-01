@@ -2715,6 +2715,12 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
           (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
       SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
       AddToWorklist(Add.getNode());
+      // We can't set InBounds even if both original ptradds were InBounds and
+      // NUW: SDAG usually represents pointers as integers, therefore, the
+      // matched pattern behaves as if it had implicit casts:
+      //   (ptradd inbounds (inttoptr (ptrtoint (ptradd inbounds x, y))), z)
+      // The outer inbounds ptradd might therefore rely on a provenance that x
+      // does not have.
       return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
     }
   }
@@ -2740,6 +2746,12 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
         // that.
         SDNodeFlags Flags =
             (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+        // We can't set InBounds even if both original ptradds were InBounds and
+        // NUW: SDAG usually represents pointers as integers, therefore, the
+        // matched pattern behaves as if it had implicit casts:
+        //   (ptradd inbounds (inttoptr (ptrtoint (ptradd inbounds GA, v))), c)
+        // The outer inbounds ptradd might therefore rely on a provenance that
+        // GA does not have.
         SDValue Inner = DAG.getMemBasePlusOffset(GAValue, N1, DL, Flags);
         AddToWorklist(Inner.getNode());
         return DAG.getMemBasePlusOffset(Inner, N0.getOperand(1), DL, Flags);
@@ -2763,8 +2775,13 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
     bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
 
     // If both additions in the original were NUW, reassociation preserves that.
-    SDNodeFlags ReassocFlags =
-        (N->getFlags() & N1->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+    SDNodeFlags CommonFlags = N->getFlags() & N1->getFlags();
+    SDNodeFlags ReassocFlags = CommonFlags & SDNodeFlags::NoUnsignedWrap;
+    if (CommonFlags.hasNoUnsignedWrap()) {
+      // If both operations are NUW and the PTRADD is inbounds, the offests are
+      // both non-negative, so the reassociated PTRADDs are also inbounds.
+      ReassocFlags |= N->getFlags() & SDNodeFlags::InBounds;
+    }
 
     if (ZIsConstant != YIsConstant) {
       if (YIsConstant)
@@ -22743,7 +22760,10 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
     NewPtr = DAG.getMemBasePlusOffset(Ptr, TypeSize::getFixed(COffset), DL);
     PointerInfo = ST->getPointerInfo().getWithOffset(COffset);
   } else {
-    NewPtr = TLI.getVectorElementPointer(DAG, Ptr, Value.getValueType(), Idx);
+    // The original DAG loaded the entire vector from memory, so arithmetic
+    // within it must be inbounds.
+    NewPtr = TLI.getInboundsVectorElementPointer(DAG, Ptr, Value.getValueType(),
+                                                 Idx);
   }
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
@@ -23506,6 +23526,93 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >
     if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT))
       return DAG.getSplat(VT, DL, InVal);
+
+    // Extend this type to be byte-addressable
+    EVT OldVT = VT;
+    EVT EltVT = VT.getVectorElementType();
+    bool IsByteSized = EltVT.isByteSized();
+    if (!IsByteSized) {
+      EltVT =
+          EltVT.changeTypeToInteger().getRoundIntegerType(*DAG.getContext());
+      VT = VT.changeElementType(EltVT);
+    }
+
+    // Check if this operation will be handled the default way for its type.
+    auto IsTypeDefaultHandled = [this](EVT VT) {
+      return TLI.getTypeAction(*DAG.getContext(), VT) ==
+                 TargetLowering::TypeSplitVector ||
+             TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT);
+    };
+
+    // Check if this operation is illegal and will be handled the default way,
+    // even after extending the type to be byte-addressable.
+    if (IsTypeDefaultHandled(OldVT) && IsTypeDefaultHandled(VT)) {
+      // For each dynamic insertelt, the default way will save the vector to
+      // the stack, store at an offset, and load the modified vector. This can
+      // dramatically increase code size if we have a chain of insertelts on a
+      // large vector: requiring O(V*C) stores/loads where V = length of
+      // vector and C is length of chain. If each insertelt is only fed into the
+      // next, the vector is write-only across this chain, and we can just
+      // save once before the chain and load after in O(V + C) operations.
+      SmallVector<SDNode *> Seq{N};
+      unsigned NumDynamic = 1;
+      while (true) {
+        SDValue InVec = Seq.back()->getOperand(0);
+        if (InVec.getOpcode() != ISD::INSERT_VECTOR_ELT)
+          break;
+        Seq.push_back(InVec.getNode());
+        NumDynamic += !isa<ConstantSDNode>(InVec.getOperand(2));
+      }
+
+      // It always and only makes sense to lower this sequence when we have more
+      // than one dynamic insertelt, since we will not have more than V constant
+      // insertelts, so we will be reducing the total number of stores+loads.
+      if (NumDynamic > 1) {
+        // In cases where the vector is illegal it will be broken down into
+        // parts and stored in parts - we should use the alignment for the
+        // smallest part.
+        Align SmallestAlign = DAG.getReducedAlign(VT, /*UseABI=*/false);
+        SDValue StackPtr =
+            DAG.CreateStackTemporary(VT.getStoreSize(), SmallestAlign);
+        auto &MF = DAG.getMachineFunction();
+        int FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+        auto PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIndex);
+
+        // Save the vector to the stack
+        SDValue InVec = Seq.back()->getOperand(0);
+        if (!IsByteSized)
+          InVec = DAG.getNode(ISD::ANY_EXTEND, DL, VT, InVec);
+        SDValue Store = DAG.getStore(DAG.getEntryNode(), DL, InVec, StackPtr,
+                                     PtrInfo, SmallestAlign);
+
+        // Lower each dynamic insertelt to a store
+        for (SDNode *N : reverse(Seq)) {
+          SDValue Elmnt = N->getOperand(1);
+          SDValue Index = N->getOperand(2);
+
+          // Check if we have to extend the element type
+          if (!IsByteSized && Elmnt.getValueType().bitsLT(EltVT))
+            Elmnt = DAG.getNode(ISD::ANY_EXTEND, DL, EltVT, Elmnt);
+
+          // Store the new element. This may be larger than the vector element
+          // type, so use a truncating store.
+          SDValue EltPtr =
+              TLI.getVectorElementPointer(DAG, StackPtr, VT, Index);
+          EVT EltVT = Elmnt.getValueType();
+          Store = DAG.getTruncStore(
+              Store, DL, Elmnt, EltPtr, MachinePointerInfo::getUnknownStack(MF),
+              EltVT,
+              commonAlignment(SmallestAlign, EltVT.getFixedSizeInBits() / 8));
+        }
+
+        // Load the saved vector from the stack
+        SDValue Load =
+            DAG.getLoad(VT, DL, Store, StackPtr, PtrInfo, SmallestAlign);
+        SDValue LoadV = Load.getValue(0);
+        return IsByteSized ? LoadV : DAG.getAnyExtOrTrunc(LoadV, DL, OldVT);
+      }
+    }
+
     return SDValue();
   }
 
