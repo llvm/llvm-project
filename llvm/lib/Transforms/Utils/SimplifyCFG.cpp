@@ -80,6 +80,7 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -1866,10 +1867,19 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // If either of the blocks has it's address taken, then we can't do this fold,
   // because the code we'd hoist would no longer run when we jump into the block
   // by it's address.
-  for (auto *Succ : successors(BB))
-    if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
+  for (auto *Succ : successors(BB)) {
+    if (Succ->hasAddressTaken())
       return false;
-
+    if (Succ->getSinglePredecessor())
+      continue;
+    // If Succ has >1 predecessors, continue to check if the Succ contains only
+    // one `unreachable` inst. Since executing `unreachable` inst is an UB, we
+    // can relax the condition based on the assumptiom that the program would
+    // never enter Succ and trigger such an UB.
+    if (isa<UnreachableInst>(*Succ->begin()))
+      continue;
+    return false;
+  }
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
@@ -5946,7 +5956,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   }
 
   // Update weight for the newly-created conditional branch.
-  if (hasBranchWeightMD(*SI)) {
+  if (hasBranchWeightMD(*SI) && NewBI->isConditional()) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
@@ -5968,14 +5978,14 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   }
 
   // Prune obsolete incoming values off the successors' PHI nodes.
-  for (auto BBI = Dest->begin(); isa<PHINode>(BBI); ++BBI) {
+  for (auto &PHI : make_early_inc_range(Dest->phis())) {
     unsigned PreviousEdges = Cases->size();
     if (Dest == SI->getDefaultDest())
       ++PreviousEdges;
     for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
-      cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
+      PHI.removeIncomingValue(SI->getParent());
   }
-  for (auto BBI = OtherDest->begin(); isa<PHINode>(BBI); ++BBI) {
+  for (auto &PHI : make_early_inc_range(OtherDest->phis())) {
     unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
@@ -5984,7 +5994,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     if (NewBI->isUnconditional())
       ++E;
     for (unsigned I = 0; I != E; ++I)
-      cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
+      PHI.removeIncomingValue(SI->getParent());
   }
 
   // Clean up the default block - it may have phis or other instructions before
@@ -7623,7 +7633,33 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     auto *DefaultCaseBB = SI->getDefaultDest();
     BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
     auto It = OrigBB->getTerminator()->getIterator();
+    SmallVector<uint32_t> Weights;
+    auto HasWeights =
+        !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
     auto *BI = BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    if (HasWeights && any_of(Weights, [](const auto &V) { return V != 0; })) {
+      // IsPow2 covers a subset of the cases in which we'd go to the default
+      // label. The other is those powers of 2 that don't appear in the case
+      // statement. We don't know the distribution of the values coming in, so
+      // the safest is to split 50-50 the original probability to `default`.
+      uint64_t OrigDenominator = sum_of(map_range(
+          Weights, [](const auto &V) { return static_cast<uint64_t>(V); }));
+      SmallVector<uint64_t> NewWeights(2);
+      NewWeights[1] = Weights[0] / 2;
+      NewWeights[0] = OrigDenominator - NewWeights[1];
+      setFittedBranchWeights(*BI, NewWeights, /*IsExpected=*/false);
+
+      // For the original switch, we reduce the weight of the default by the
+      // amount by which the previous branch contributes to getting to default,
+      // and then make sure the remaining weights have the same relative ratio
+      // wrt eachother.
+      uint64_t CasesDenominator = OrigDenominator - Weights[0];
+      Weights[0] /= 2;
+      for (auto &W : drop_begin(Weights))
+        W = NewWeights[0] * static_cast<double>(W) / CasesDenominator;
+
+      setBranchWeights(*SI, Weights, /*IsExpected=*/false);
+    }
     // BI is handling the default case for SI, and so should share its DebugLoc.
     BI->setDebugLoc(SI->getDebugLoc());
     It->eraseFromParent();
