@@ -30,8 +30,6 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
-set(LLVM_RELEASE_LIBXML2_PREFIX OFF CACHE STRING "")
-
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
   #set_instrument_and_final_stage_var(LLVM_TARGETS_TO_BUILD "AArch64;ARM;X86;BPF;WebAssembly;RISCV;NVPTX" STRING)
@@ -46,6 +44,8 @@ if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set_instrument_and_final_stage_var(LLVM_ENABLE_RPMALLOC "ON" BOOL)
   set_final_stage_var(BUILD_LLVM_C_DYLIB "ON" STRING)
   set_final_stage_var(LLVM_INSTALL_TOOLCHAIN_ONLY "ON" BOOL)
+  # Disable lldb tests on Windows since some aren't working.
+  set_final_stage_var(LLDB_INCLUDE_TESTS "OFF" BOOL)
 else()
   set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir")
 endif()
