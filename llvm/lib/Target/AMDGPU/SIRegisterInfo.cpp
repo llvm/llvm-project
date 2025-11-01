@@ -3915,13 +3915,10 @@ const TargetRegisterClass *SIRegisterInfo::getVGPR64Class() const {
                                 : &AMDGPU::VReg_64RegClass;
 }
 
+// FIXME: This should be deleted
 const TargetRegisterClass *
 SIRegisterInfo::getRegClass(unsigned RCID) const {
   switch ((int)RCID) {
-  case AMDGPU::SReg_1RegClassID:
-    return getBoolRC();
-  case AMDGPU::SReg_1_XEXECRegClassID:
-    return getWaveMaskRegClass();
   case -1:
     return nullptr;
   default:
