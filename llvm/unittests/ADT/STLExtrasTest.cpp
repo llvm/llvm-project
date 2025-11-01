@@ -1669,6 +1669,13 @@ TEST(STLExtrasTest, SumOf) {
   EXPECT_EQ(sum_of(V3), 3.0f);
 }
 
+TEST(STLExtrasTest, StaticCastTo) {
+  std::vector<int32_t> R{1, 2, 3};
+  EXPECT_TRUE(all_of(R, [](auto V) { return sizeof(V) == sizeof(int32_t); }));
+  EXPECT_TRUE(all_of(static_cast_to<int64_t>(R),
+                     [](auto V) { return sizeof(V) == sizeof(int64_t); }));
+}
+
 TEST(STLExtrasTest, ProductOf) {
   EXPECT_EQ(product_of(std::vector<int>()), 1);
   EXPECT_EQ(product_of(std::vector<int>(), 0), 0);

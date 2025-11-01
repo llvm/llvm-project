@@ -1704,6 +1704,11 @@ auto sum_of(R &&Range, E Init = E{0}) {
   return accumulate(std::forward<R>(Range), std::move(Init));
 }
 
+/// Returns a range where each value of `R` is static_cast to `T`
+template <typename T, typename R> auto static_cast_to(R &&Range) {
+  return map_range(Range, [](const auto &V) { return static_cast<T>(V); });
+}
+
 /// Returns the product of all values in `Range` with `Init` initial value.
 /// The default initial value is 1.
 template <typename R, typename E = detail::ValueOfRange<R>>
