@@ -9111,6 +9111,7 @@ static int getEstimateRefinementSteps(EVT VT,
   return RefinementSteps;
 }
 
+// NOTE: May cause worse results. See tests in 'fsqrt-reciprocal-estimate.ll'.
 SDValue LoongArchTargetLowering::getSqrtEstimate(SDValue Operand,
                                                  SelectionDAG &DAG, int Enabled,
                                                  int &RefinementSteps,
@@ -9120,7 +9121,8 @@ SDValue LoongArchTargetLowering::getSqrtEstimate(SDValue Operand,
     SDLoc DL(Operand);
     EVT VT = Operand.getValueType();
 
-    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
+    if (((VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD())) &&
+         Subtarget.is64Bit()) ||
         (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
         (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
         (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
@@ -9140,6 +9142,7 @@ SDValue LoongArchTargetLowering::getSqrtEstimate(SDValue Operand,
   return SDValue();
 }
 
+// NOTE: May cause worse results. See tests in 'fdiv-reciprocal-estimate.ll'.
 SDValue LoongArchTargetLowering::getRecipEstimate(SDValue Operand,
                                                   SelectionDAG &DAG,
                                                   int Enabled,
@@ -9148,7 +9151,8 @@ SDValue LoongArchTargetLowering::getRecipEstimate(SDValue Operand,
     SDLoc DL(Operand);
     EVT VT = Operand.getValueType();
 
-    if (VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD()) ||
+    if (((VT == MVT::f32 || (VT == MVT::f64 && Subtarget.hasBasicD())) &&
+         Subtarget.is64Bit()) ||
         (VT == MVT::v4f32 && Subtarget.hasExtLSX()) ||
         (VT == MVT::v2f64 && Subtarget.hasExtLSX()) ||
         (VT == MVT::v8f32 && Subtarget.hasExtLASX()) ||
