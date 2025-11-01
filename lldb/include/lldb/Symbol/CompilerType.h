@@ -136,6 +136,8 @@ public:
 
   bool IsBeingDefined() const;
 
+  bool IsClassTypeForLanguage(lldb::LanguageType language) const;
+
   bool IsCharType() const;
 
   bool IsCompleteType() const;

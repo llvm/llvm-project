@@ -649,6 +649,9 @@ public:
 
   static bool IsCXXClassType(const CompilerType &type);
 
+  bool IsClassTypeForLanguage(lldb::opaque_compiler_type_t type,
+                              lldb::LanguageType language) override;
+
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 
   bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
