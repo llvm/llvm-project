@@ -408,13 +408,6 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
     if (loc.empty())
       continue;
 
-    lldb::addr_t start_addr = inst.GetAddress().GetFileAddress();
-    lldb::addr_t end_addr = LLDB_INVALID_ADDRESS;
-    if (entry.file_range.has_value()) {
-      start_addr = entry.file_range->GetBaseAddress().GetFileAddress();
-      end_addr = start_addr + entry.file_range->GetByteSize();
-    }
-
     std::optional<std::string> decl_file;
     std::optional<uint32_t> decl_line;
     std::optional<std::string> type_name;
@@ -432,9 +425,9 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
 
     Current.try_emplace(v->GetID(),
                         VariableAnnotation{std::string(name), std::string(loc),
-                                           start_addr, end_addr, true,
-                                           entry.expr->GetRegisterKind(),
-                                           decl_file, decl_line, type_name});
+                                           true, entry.expr->GetRegisterKind(),
+                                           entry.file_range, decl_file,
+                                           decl_line, type_name});
   }
 
   // Diff Live_ → Current.

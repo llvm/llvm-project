@@ -571,14 +571,12 @@ struct VariableAnnotation {
   std::string variable_name;
   /// Location description (e.g., "r15", "undef", "const_0").
   std::string location_description;
-  /// Where this annotation starts being valid.
-  lldb::addr_t start_address;
-  /// Where this annotation ends being valid.
-  lldb::addr_t end_address;
   /// Whether variable is live at this instruction.
   bool is_live;
   /// Register numbering scheme for location interpretation.
   lldb::RegisterKind register_kind;
+  /// Where this annotation is valid.
+  std::optional<lldb_private::AddressRange> address_range;
   /// Source file where variable was declared.
   std::optional<std::string> decl_file;
   /// Line number where variable was declared.

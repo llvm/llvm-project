@@ -384,12 +384,16 @@ SBInstruction::GetVariableAnnotations(lldb::SBTarget target) {
     dict_sp->AddStringItem("variable_name", ann.variable_name);
     dict_sp->AddStringItem("location_description", ann.location_description);
     dict_sp->AddBooleanItem("is_live", ann.is_live);
-    dict_sp->AddItem(
-        "start_address",
-        std::make_shared<StructuredData::UnsignedInteger>(ann.start_address));
-    dict_sp->AddItem(
-        "end_address",
-        std::make_shared<StructuredData::UnsignedInteger>(ann.end_address));
+    if (ann.address_range.has_value()) {
+      const auto &range = *ann.address_range;
+      dict_sp->AddItem("start_address",
+                       std::make_shared<StructuredData::UnsignedInteger>(
+                           range.GetBaseAddress().GetFileAddress()));
+      dict_sp->AddItem(
+          "end_address",
+          std::make_shared<StructuredData::UnsignedInteger>(
+              range.GetBaseAddress().GetFileAddress() + range.GetByteSize()));
+    }
     dict_sp->AddItem(
         "register_kind",
         std::make_shared<StructuredData::UnsignedInteger>(ann.register_kind));
