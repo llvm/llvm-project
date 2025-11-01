@@ -21,7 +21,7 @@ from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
-from lit.util import to_bytes, to_string, to_unicode
+from lit.util import to_bytes, to_string
 from lit.BooleanExpression import BooleanExpression
 
 
@@ -463,7 +463,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
     exitCode = 0
     for dir in args:
         dir = pathlib.Path(dir)
-        cwd = pathlib.Path(to_unicode(cmd_shenv.cwd))
+        cwd = pathlib.Path(cmd_shenv.cwd)
         if not dir.is_absolute():
             dir = lit.util.abs_path_preserve_drive(cwd / dir)
         if parent:
@@ -508,8 +508,6 @@ def executeBuiltinRm(cmd, cmd_shenv):
     exitCode = 0
     for path in args:
         cwd = cmd_shenv.cwd
-        path = to_unicode(path) if kIsWindows else to_bytes(path)
-        cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
             path = lit.util.abs_path_preserve_drive(os.path.join(cwd, path))
         if force and not os.path.exists(path):
@@ -703,9 +701,6 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
-            redir_filename = (
-                to_unicode(redir_filename) if kIsWindows else to_bytes(redir_filename)
-            )
             fd = open(redir_filename, mode)
         # Workaround a Win32 and/or subprocess bug when appending.
         #
