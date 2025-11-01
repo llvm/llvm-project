@@ -1314,6 +1314,22 @@ static std::string getOpenMPClauseNameForDiag(OpenMPClauseKind C) {
   return getOpenMPClauseName(C).str();
 }
 
+bool isAllocatableType(QualType QT) {
+  if (QT->isPointerType())
+    return true;
+  QT = QT.getCanonicalType().getUnqualifiedType();
+  if (const CXXRecordDecl *RD = QT->getAsCXXRecordDecl()) {
+    if (isa<ClassTemplateSpecializationDecl>(RD)) {
+      std::string QName = RD->getQualifiedNameAsString();
+      return (QName == "std::vector" || QName == "vector" ||
+              QName == "std::unique_ptr" || QName == "unique_ptr" ||
+              QName == "std::shared_ptr" || QName == "shared_ptr" ||
+              QName == "llvm::SmallVector" || QName == "SmallVector");
+    }
+  }
+  return false;
+}
+
 DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
                                           ValueDecl *D) const {
   D = getCanonicalDecl(D);
@@ -1370,20 +1386,19 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   DefaultDataSharingAttributes IterDA = Iter->DefaultAttr;
   switch (Iter->DefaultVCAttr) {
   case DSA_VC_aggregate:
-    if (!VD->getType()->isAggregateType())
+    if (!D->getType()->isAggregateType())
       IterDA = DSA_none;
     break;
   case DSA_VC_allocatable:
-    if (!(VD->getType()->isPointerType() ||
-          VD->getType()->isVariableArrayType()))
+    if (!isAllocatableType(D->getType()))
       IterDA = DSA_none;
     break;
   case DSA_VC_pointer:
-    if (!VD->getType()->isPointerType())
+    if (!D->getType()->isPointerType())
       IterDA = DSA_none;
     break;
   case DSA_VC_scalar:
-    if (!VD->getType()->isScalarType())
+    if (!D->getType()->isScalarType())
       IterDA = DSA_none;
     break;
   case DSA_VC_all:
