@@ -1107,14 +1107,15 @@ public:
         VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL = DebugLoc::getUnknown(),
-                const Twine &Name = "");
+                const VPIRFlags &Flags, const VPIRMetadata &MD = {},
+                DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
-    auto *New = new VPInstruction(Opcode, Operands, *this, getDebugLoc(), Name);
+    auto *New =
+        new VPInstruction(Opcode, Operands, *this, *this, getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
@@ -1196,7 +1197,14 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags, DebugLoc DL,
                         const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, DL, Name), ResultTy(ResultTy) {}
+      : VPInstruction(Opcode, Operands, Flags, {}, DL, Name),
+        ResultTy(ResultTy) {}
+
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, DebugLoc DL, const VPIRFlags &Flags,
+                        const VPIRMetadata &Metadata, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
+        ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
