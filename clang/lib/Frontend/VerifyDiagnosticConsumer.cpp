@@ -1347,7 +1347,8 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
     // Check that the expected diagnostics occurred.
     NumErrors += CheckResults(Diags, *SrcManager, *Buffer, ED);
     if (CheckOrderOfDirectives && NumErrors == 0) {
-      assert(OneDiagPerDirective);
+      assert(OneDiagPerDirective && "Can't check order of directives unless "
+                                    "they match only one diagnostic!");
       NumErrors += CheckResultsAreInOrder(Diags, *SrcManager, *Buffer, ED);
     }
   } else {
