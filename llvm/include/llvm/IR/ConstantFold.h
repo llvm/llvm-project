@@ -26,42 +26,41 @@
 #include <optional>
 
 namespace llvm {
-  template <typename T> class ArrayRef;
-  class Value;
-  class Constant;
-  class Type;
+template <typename T> class ArrayRef;
+class Value;
+class Constant;
+class Type;
 
-  // Constant fold various types of instruction...
-  LLVM_ABI Constant *
-  ConstantFoldCastInstruction(unsigned opcode, ///< The opcode of the cast
-                              Constant *V,     ///< The source constant
-                              Type *DestTy     ///< The destination type
-  );
-  LLVM_ABI Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
-                                                   Constant *V2);
-  LLVM_ABI Constant *ConstantFoldExtractElementInstruction(Constant *Val,
-                                                           Constant *Idx);
-  LLVM_ABI Constant *ConstantFoldInsertElementInstruction(Constant *Val,
-                                                          Constant *Elt,
-                                                          Constant *Idx);
-  LLVM_ABI Constant *ConstantFoldShuffleVectorInstruction(Constant *V1,
-                                                          Constant *V2,
-                                                          ArrayRef<int> Mask);
-  LLVM_ABI Constant *
-  ConstantFoldExtractValueInstruction(Constant *Agg, ArrayRef<unsigned> Idxs);
-  LLVM_ABI Constant *
-  ConstantFoldInsertValueInstruction(Constant *Agg, Constant *Val,
-                                     ArrayRef<unsigned> Idxs);
-  LLVM_ABI Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
-  LLVM_ABI Constant *ConstantFoldBinaryInstruction(unsigned Opcode,
-                                                   Constant *V1, Constant *V2);
-  LLVM_ABI Constant *
-  ConstantFoldCompareInstruction(CmpInst::Predicate Predicate, Constant *C1,
-                                 Constant *C2);
-  LLVM_ABI Constant *
-  ConstantFoldGetElementPtr(Type *Ty, Constant *C,
-                            std::optional<ConstantRange> InRange,
-                            ArrayRef<Value *> Idxs);
-} // End llvm namespace
+// Constant fold various types of instruction...
+LLVM_ABI Constant *
+ConstantFoldCastInstruction(unsigned opcode, ///< The opcode of the cast
+                            Constant *V,     ///< The source constant
+                            Type *DestTy     ///< The destination type
+);
+LLVM_ABI Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
+                                                 Constant *V2);
+LLVM_ABI Constant *ConstantFoldExtractElementInstruction(Constant *Val,
+                                                         Constant *Idx);
+LLVM_ABI Constant *ConstantFoldInsertElementInstruction(Constant *Val,
+                                                        Constant *Elt,
+                                                        Constant *Idx);
+LLVM_ABI Constant *ConstantFoldShuffleVectorInstruction(Constant *V1,
+                                                        Constant *V2,
+                                                        ArrayRef<int> Mask);
+LLVM_ABI Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
+                                                       ArrayRef<unsigned> Idxs);
+LLVM_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg,
+                                                      Constant *Val,
+                                                      ArrayRef<unsigned> Idxs);
+LLVM_ABI Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
+LLVM_ABI Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
+                                                 Constant *V2);
+LLVM_ABI Constant *ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
+                                                  Constant *C1, Constant *C2);
+LLVM_ABI Constant *
+ConstantFoldGetElementPtr(Type *Ty, Constant *C,
+                          std::optional<ConstantRange> InRange,
+                          ArrayRef<Value *> Idxs);
+} // namespace llvm
 
 #endif

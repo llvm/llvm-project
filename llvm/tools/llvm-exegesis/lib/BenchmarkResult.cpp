@@ -202,7 +202,7 @@ struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
       Io.setError("Key is not a valid validation event");
       return;
     }
-    Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
+    Io.mapRequired(KeyStr, VI[*Key]);
   }
 
   static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
