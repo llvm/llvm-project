@@ -627,6 +627,10 @@ def ROCDL_wmma_f16_16x16x128_fp8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x128.fp8
 def ROCDL_wmma_f16_16x16x128_bf8_fp8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x128.bf8_fp8", [0]>;
 def ROCDL_wmma_f16_16x16x128_bf8_bf8 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x128.bf8_bf8", [0]>;
 def ROCDL_wmma_i32_16x16x64_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x64.iu8", [1]>;
+def ROCDL_wmma_scale_f32_16x16x128_f8f6f4   : ROCDL_Wmma_IntrOp<"wmma.scale.f32.16x16x128.f8f6f4", [1,3]>;
+def ROCDL_wmma_scale16_f32_16x16x128_f8f6f4   : ROCDL_Wmma_IntrOp<"wmma.scale16.f32.16x16x128.f8f6f4", [1,3]>;
+def ROCDL_wmma_scale_f32_32x16x128_f4   : ROCDL_Wmma_IntrOp<"wmma.scale.f32.32x16x128.f4", [0,1]>;
+def ROCDL_wmma_scale16_f32_32x16x128_f4   : ROCDL_Wmma_IntrOp<"wmma.scale16.f32.32x16x128.f4", [0,1]>;
 
 //===---------------------------------------------------------------------===//
 // LDS transpose intrinsics (available in GFX950)
