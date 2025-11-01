@@ -299,7 +299,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 // The goal is to give users helpful live variable hints alongside the
 // disassembled instruction stream, similar to how debug information
 // enhances source-level debugging.
-std::vector<std::string> VariableAnnotator::annotate(Instruction &inst,
+std::vector<std::string> VariableAnnotator::Annotate(Instruction &inst,
                                                      Target &target,
                                                      lldb::ModuleSP module_sp) {
   auto structured_annotations = AnnotateStructured(inst, target, module_sp);
@@ -740,7 +740,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  address_text_size);
 
       if ((options & eOptionVariableAnnotations) && target_sp) {
-        auto annotations = annot.annotate(*inst, *target_sp, module_sp);
+        auto annotations = annot.Annotate(*inst, *target_sp, module_sp);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;
           inst_line.FillLastLineToColumn(annotation_column, ' ');
