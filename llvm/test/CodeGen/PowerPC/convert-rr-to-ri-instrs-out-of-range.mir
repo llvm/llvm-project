@@ -720,9 +720,9 @@ body:             |
     %0 = COPY $x3
     %2 = LI 48
     %3 = COPY %0.sub_32
-    %4 = SRAW killed %3, killed %2, implicit-def dead $carry
+    %4 = SRAW killed %3, killed %2, implicit-def dead $xer
     ; CHECK: LI 48
-    ; CHECK: SRAW8 killed %7, killed %9, implicit-def $carry, implicit-def dead $carry 
+    ; CHECK: SRAW8 killed %7, killed %9, implicit-def $xer, implicit-def dead $xer 
     ; CHECK-LATE: sraw 3, 3, 4
     %5 = EXTSW_32_64 killed %4
     $x3 = COPY %5
@@ -778,8 +778,8 @@ body:             |
     %0 = COPY $x3
     %2 = LI 80
     %3 = COPY %0.sub_32
-    %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRAW8_rec killed %10, killed %12, implicit-def $carry, implicit-def $cr0, implicit-def dead $carry, implicit-def $cr0
+    %4 = SRAW_rec killed %3, %2, implicit-def dead $xer, implicit-def $cr0
+    ; CHECK: SRAW8_rec killed %10, killed %12, implicit-def $xer, implicit-def $cr0, implicit-def dead $xer, implicit-def $cr0
     ; CHECK-LATE: sraw. 3, 3, 4
     %5 = COPY killed $cr0
     %6 = ISEL %2, %4, %5.sub_eq
@@ -1264,8 +1264,8 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI -44
-    %3 = SRAD %0, killed %2, implicit-def dead $carry
-    ; CHECK: SRAD killed %0, killed %2, implicit-def dead $carry
+    %3 = SRAD %0, killed %2, implicit-def dead $xer
+    ; CHECK: SRAD killed %0, killed %2, implicit-def dead $xer
     ; CHECK-LATE: srad 3, 3, 4
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -1317,8 +1317,8 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 68
-    %3 = SRAD_rec %0, killed %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRAD_rec killed %0, killed %2, implicit-def dead $carry, implicit-def $cr0
+    %3 = SRAD_rec %0, killed %2, implicit-def dead $xer, implicit-def $cr0
+    ; CHECK: SRAD_rec killed %0, killed %2, implicit-def dead $xer, implicit-def $cr0
     ; CHECK-LATE: srad. 3, 3, 5
     %4 = COPY killed $cr0
     %5 = ISEL8 %1, %3, %4.sub_eq

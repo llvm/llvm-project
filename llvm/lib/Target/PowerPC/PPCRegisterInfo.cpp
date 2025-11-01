@@ -626,7 +626,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
 
 const TargetRegisterClass *
 PPCRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
-  if (RC == &PPC::CARRYRCRegClass)
+  if (RC == &PPC::XERRCRegClass)
     return TM.isPPC64() ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
   return RC;
 }
