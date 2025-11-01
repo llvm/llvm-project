@@ -196,7 +196,6 @@ LLVM_ABI void setExplicitlyUnknownBranchWeights(Instruction &I,
 /// instruction has an entry count. This is to not confuse users by injecting
 /// profile data into non-profiled functions.
 LLVM_ABI void setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I,
-                                                          Function &F,
                                                           StringRef PassName);
 
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
