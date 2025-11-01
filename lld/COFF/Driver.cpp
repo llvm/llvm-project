@@ -28,6 +28,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -256,6 +257,23 @@ MemoryBufferRef LinkerDriver::takeBuffer(std::unique_ptr<MemoryBuffer> mb) {
   return mbref;
 }
 
+InputFile *LinkerDriver::tryCreateFatLTOFile(MemoryBufferRef mb,
+                                             StringRef archiveName,
+                                             uint64_t offsetInArchive,
+                                             bool lazy) {
+  if (!ctx.config.fatLTOObjects)
+    return nullptr;
+
+  Expected<MemoryBufferRef> fatLTOData =
+      IRObjectFile::findBitcodeInMemBuffer(mb);
+
+  if (errorToBool(fatLTOData.takeError()))
+    return nullptr;
+
+  return BitcodeFile::create(ctx, *fatLTOData, archiveName, offsetInArchive,
+                             lazy);
+}
+
 void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
                              bool wholeArchive, bool lazy) {
   StringRef filename = mb->getBufferIdentifier();
@@ -289,7 +307,14 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
   case file_magic::bitcode:
     addFile(BitcodeFile::create(ctx, mbref, "", 0, lazy));
     break;
-  case file_magic::coff_object:
+  case file_magic::coff_object: {
+    InputFile *obj = tryCreateFatLTOFile(mbref, "", 0, lazy);
+    if (obj)
+      addFile(obj);
+    else
+      addFile(ObjFile::create(ctx, mbref, lazy));
+    break;
+  }
   case file_magic::coff_import_library:
     addFile(ObjFile::create(ctx, mbref, lazy));
     break;
@@ -374,7 +399,9 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 
   InputFile *obj;
   if (magic == file_magic::coff_object) {
-    obj = ObjFile::create(ctx, mb);
+    obj = tryCreateFatLTOFile(mb, parentName, offsetInArchive, /*lazy=*/false);
+    if (!obj)
+      obj = ObjFile::create(ctx, mb);
   } else if (magic == file_magic::bitcode) {
     obj = BitcodeFile::create(ctx, mb, parentName, offsetInArchive,
                               /*lazy=*/false);
@@ -2120,6 +2147,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /thinlto-remote-compiler-arg:<arg>
   config->dtltoCompilerArgs =
       args::getStrings(args, OPT_thinlto_remote_compiler_arg);
+
+  // Handle /fat-lto-objects
+  config->fatLTOObjects =
+      args.hasFlag(OPT_fat_lto_objects, OPT_fat_lto_objects_no, false);
 
   // Handle /dwodir
   config->dwoDir = args.getLastArgValue(OPT_dwodir);

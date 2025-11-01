@@ -169,6 +169,8 @@ private:
 
   std::set<std::string> visitedLibs;
 
+  InputFile *tryCreateFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
+                                 uint64_t offsetInArchive, bool lazy);
   void addBuffer(std::unique_ptr<MemoryBuffer> mb, bool wholeArchive,
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
