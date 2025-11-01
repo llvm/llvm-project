@@ -162,16 +162,16 @@ define <4 x float> @shuffle5(<16 x i8> %v1, <16 x i8> %v2, <16 x i8> %v3, <16 x 
 ; BE-ENABLE-NEXT:    vextublx 3, 3, 2
 ; BE-ENABLE-NEXT:    xxmrghw 0, 1, 0
 ; BE-ENABLE-NEXT:    andi. 3, 3, 255
-; BE-ENABLE-NEXT:    xxlor 1, 0, 0
+; BE-ENABLE-NEXT:    xxlor 35, 0, 0
 ; BE-ENABLE-NEXT:    beq 0, .LBB4_2
 ; BE-ENABLE-NEXT:  # %bb.1: # %exit
-; BE-ENABLE-NEXT:    xvaddsp 34, 0, 1
+; BE-ENABLE-NEXT:    xvaddsp 34, 35, 0
 ; BE-ENABLE-NEXT:    blr
 ; BE-ENABLE-NEXT:  .LBB4_2: # %second
-; BE-ENABLE-NEXT:    xxmrglw 1, 36, 37
-; BE-ENABLE-NEXT:    xxmrghw 2, 36, 37
-; BE-ENABLE-NEXT:    xxmrghw 1, 2, 1
-; BE-ENABLE-NEXT:    xvaddsp 34, 0, 1
+; BE-ENABLE-NEXT:    xxmrglw 0, 36, 37
+; BE-ENABLE-NEXT:    xxmrghw 1, 36, 37
+; BE-ENABLE-NEXT:    xxmrghw 0, 1, 0
+; BE-ENABLE-NEXT:    xvaddsp 34, 35, 0
 ; BE-ENABLE-NEXT:    blr
 entry:
   %shuf1 = shufflevector <16 x i8> %v1, <16 x i8> %v2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>

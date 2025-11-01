@@ -442,22 +442,22 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-NEXT:    cvt.f32.f16 %r10, %rs1;
 ; CHECK-NEXT:  $L__BB24_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    shr.u32 %r8, %r17, %r1;
+; CHECK-NEXT:    mov.b32 %r3, %r17;
+; CHECK-NEXT:    shr.u32 %r8, %r3, %r1;
 ; CHECK-NEXT:    cvt.u16.u32 %rs2, %r8;
 ; CHECK-NEXT:    cvt.f32.f16 %r9, %rs2;
 ; CHECK-NEXT:    add.rn.f32 %r11, %r9, %r10;
 ; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r11;
 ; CHECK-NEXT:    cvt.u32.u16 %r12, %rs3;
 ; CHECK-NEXT:    shl.b32 %r13, %r12, %r1;
-; CHECK-NEXT:    and.b32 %r14, %r17, %r2;
+; CHECK-NEXT:    and.b32 %r14, %r3, %r2;
 ; CHECK-NEXT:    or.b32 %r15, %r14, %r13;
 ; CHECK-NEXT:    membar.sys;
-; CHECK-NEXT:    atom.cas.b32 %r3, [%rd1], %r17, %r15;
-; CHECK-NEXT:    setp.ne.b32 %p1, %r3, %r17;
-; CHECK-NEXT:    mov.b32 %r17, %r3;
+; CHECK-NEXT:    atom.cas.b32 %r17, [%rd1], %r3, %r15;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r17, %r3;
 ; CHECK-NEXT:    @%p1 bra $L__BB24_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-NEXT:    shr.u32 %r16, %r3, %r1;
+; CHECK-NEXT:    shr.u32 %r16, %r17, %r1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %r16;
 ; CHECK-NEXT:    ret;
   %ret = atomicrmw fadd ptr %addr, half %val seq_cst

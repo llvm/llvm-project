@@ -377,7 +377,6 @@ public:
   bool isRWPI() const;
 
   bool useMachineScheduler() const { return UseMISched; }
-  bool enableTerminalRule() const override { return true; }
   bool useMachinePipeliner() const { return UseMIPipeliner; }
   bool hasMinSize() const { return OptMinSize; }
   bool isThumb1Only() const { return isThumb() && !hasThumb2(); }
