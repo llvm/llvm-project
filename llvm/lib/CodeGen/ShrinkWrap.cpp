@@ -113,7 +113,7 @@ namespace {
 /// are safe for such insertion.
 class ShrinkWrapImpl {
   /// Hold callee-saved information.
-  RegisterClassInfo RCI;
+  RegisterClassInfo *RCI = nullptr;
   MachineDominatorTree *MDT = nullptr;
   MachinePostDominatorTree *MPDT = nullptr;
 
@@ -224,7 +224,9 @@ class ShrinkWrapImpl {
 
   /// Initialize the pass for \p MF.
   void init(MachineFunction &MF) {
-    RCI.runOnMachineFunction(MF);
+    RCI = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     Save = nullptr;
     Restore = nullptr;
     EntryFreq = MBFI->getEntryFreq();
@@ -271,6 +273,7 @@ public:
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -298,8 +301,10 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(ShrinkWrapLegacy, DEBUG_TYPE, "Shrink Wrap Pass", false,
                     false)
+>>>>>>> master
 
 bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
                                      bool StackAddressUsed) const {
@@ -359,7 +364,7 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       // register. Until the FP is assigned a Physical Register PPC's FP needs
       // to be checked separately.
       UseOrDefCSR = (!MI.isCall() && PhysReg == SP) ||
-                    RCI.getLastCalleeSavedAlias(PhysReg) ||
+                    RCI->getLastCalleeSavedAlias(PhysReg) ||
                     (!MI.isReturn() &&
                      TRI->isNonallocatableRegisterCalleeSave(PhysReg)) ||
                     TRI->isVirtualFrameRegister(PhysReg);
