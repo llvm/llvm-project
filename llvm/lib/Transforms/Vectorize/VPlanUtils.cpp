@@ -342,11 +342,18 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
       if (Load->isMasked())
         return std::nullopt;
 
+      Recipes.push_back(Load);
+
+      // Look through vector-pointer recipes.
       VPValue *GEP = Load->getAddr();
+      if (auto *VecPtrR = dyn_cast<VPVectorPointerRecipe>(GEP)) {
+        Recipes.push_back(VecPtrR);
+        GEP = VecPtrR->getOperand(0);
+      }
+
       if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
         return std::nullopt;
 
-      Recipes.push_back(Load);
       Recipes.push_back(GEP->getDefiningRecipe());
       GEPs.push_back(GEP->getDefiningRecipe());
     } else

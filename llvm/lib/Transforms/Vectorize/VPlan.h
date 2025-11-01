@@ -4188,6 +4188,14 @@ class VPlan {
   /// VPlan is destroyed.
   SmallVector<VPBlockBase *> CreatedBlocks;
 
+  /// The entry block in a vplan, which may be a check block that needs to
+  /// be wired up in the right place with existing check blocks.
+  std::optional<VPBasicBlock *> EarlyExitPreheader;
+
+  /// Indicates that an early exit loop will exit before the condition is
+  /// reached, and that the scalar loop must perform the last few iterations.
+  bool EarlyExitContinuesInScalarLoop = false;
+
   /// Construct a VPlan with \p Entry to the plan and with \p ScalarHeader
   /// wrapping the original header of the scalar loop.
   VPlan(VPBasicBlock *Entry, VPIRBasicBlock *ScalarHeader)
@@ -4230,11 +4238,16 @@ public:
   /// Returns the preheader of the vector loop region, if one exists, or null
   /// otherwise.
   VPBasicBlock *getVectorPreheader() {
+    if (EarlyExitPreheader)
+      return *EarlyExitPreheader;
     VPRegionBlock *VectorRegion = getVectorLoopRegion();
     return VectorRegion
                ? cast<VPBasicBlock>(VectorRegion->getSinglePredecessor())
                : nullptr;
   }
+
+  /// Overrides the current vplan preheader block.
+  void setEarlyExitPreheader(VPBasicBlock *BB) { EarlyExitPreheader = BB; }
 
   /// Returns the VPRegionBlock of the vector loop.
   LLVM_ABI_FOR_TEST VPRegionBlock *getVectorLoopRegion();
@@ -4497,6 +4510,17 @@ public:
                     [](VPIRBasicBlock *EB) { return EB->hasPredecessors(); }) >
                1 ||
            (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
+  }
+
+  /// Returns true if the vector iteration containing an exit should be handled
+  /// in the scalar loop instead of by masking.
+  bool shouldEarlyExitContinueInScalarLoop() const {
+    return EarlyExitContinuesInScalarLoop;
+  }
+
+  /// If set to true, early exits should be handled in the scalar loop.
+  void setEarlyExitContinuesInScalarLoop(bool Continues) {
+    EarlyExitContinuesInScalarLoop = Continues;
   }
 
   /// Returns true if the scalar tail may execute after the vector loop. Note
