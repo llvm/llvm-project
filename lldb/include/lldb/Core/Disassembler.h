@@ -569,16 +569,22 @@ private:
 /// Structured data for a single variable annotation.
 struct VariableAnnotation {
   std::string variable_name;
-  std::string location_description; // e.g., "r15", "undef", "const_0"
-  lldb::addr_t start_address;       // Where this annotation starts being valid
-  lldb::addr_t end_address;         // Where this annotation ends being valid
-  bool is_live; // Whether variable is live at this instruction
-  lldb::RegisterKind
-      register_kind; // Register numbering scheme for location interpretation
-  std::optional<std::string>
-      decl_file;                     // Source file where variable was declared
-  std::optional<uint32_t> decl_line; // Line number where variable was declared
-  std::optional<std::string> type_name; // Variable's type name
+  /// Location description (e.g., "r15", "undef", "const_0").
+  std::string location_description;
+  /// Where this annotation starts being valid.
+  lldb::addr_t start_address;
+  /// Where this annotation ends being valid.
+  lldb::addr_t end_address;
+  /// Whether variable is live at this instruction.
+  bool is_live;
+  /// Register numbering scheme for location interpretation.
+  lldb::RegisterKind register_kind;
+  /// Source file where variable was declared.
+  std::optional<std::string> decl_file;
+  /// Line number where variable was declared.
+  std::optional<uint32_t> decl_line;
+  /// Variable's type name.
+  std::optional<std::string> type_name;
 };
 
 /// Tracks live variable annotations across instructions and produces
