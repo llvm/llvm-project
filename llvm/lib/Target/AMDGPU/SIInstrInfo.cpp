@@ -10704,8 +10704,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           OrOpnd1.getReg() != OrOpnd2.getReg()) {
         auto *Def1 = getVRegSubRegDef(getRegSubRegPair(OrOpnd1), *MRI);
         auto *Def2 = getVRegSubRegDef(getRegSubRegPair(OrOpnd2), *MRI);
-        if (Def1 == Def2 && foldableSelect(Def1))
-          optimizeSCC(Def1, Def);
+        if (Def1 == Def2 && foldableSelect(*Def1))
+          optimizeSCC(Def1, Def, RI);
       }
     }
     return true;
