@@ -237,6 +237,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds predicated load and store instructions that conditionally read from or write to memory based on a boolean predicate.
    * - ``SPV_KHR_maximal_reconvergence``
      - Adds execution mode and capability to enable maximal reconvergence.
+   * - `` SPV_KHR_relaxed_extended_instruction``
+     - Adds the ability to have forward declaration in some specific non-semantic instructions.
 
 SPIR-V representation in LLVM IR
 ================================

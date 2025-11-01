@@ -646,15 +646,41 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         const unsigned OpCode = MI.getOpcode();
         if (OpCode == SPIRV::OpString) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
-        } else if (OpCode == SPIRV::OpExtInst && MI.getOperand(2).isImm() &&
+        } else if ((OpCode == SPIRV::OpExtInst ||
+                    OpCode == SPIRV::OpExtInstWithForwardRefsKHR) &&
+                   MI.getOperand(2).isImm() &&
                    MI.getOperand(2).getImm() ==
                        SPIRV::InstructionSet::
                            NonSemantic_Shader_DebugInfo_100) {
           MachineOperand Ins = MI.getOperand(3);
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
-              NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
-              NS::DebugTypeBasic, NS::DebugTypePointer};
+              NS::DebugSource,
+              NS::DebugCompilationUnit,
+              NS::DebugInfoNone,
+              NS::DebugTypeBasic,
+              NS::DebugTypePointer,
+              NS::DebugBuildIdentifier,
+              NS::DebugStoragePath,
+              NS::DebugSourceContinued,
+              NS::DebugFunction,
+              NS::DebugTypeFunction,
+              NS::DebugFunctionDeclaration,
+              NS::DebugLexicalBlock,
+              NS::DebugLexicalBlockDiscriminator,
+              NS::DebugTypeQualifier,
+              NS::DebugImportedEntity,
+              NS::DebugTypedef,
+              NS::DebugGlobalVariable,
+              NS::DebugTypeArray,
+              NS::DebugTypeComposite,
+              NS::DebugTypeTemplate,
+              NS::DebugTypeTemplateParameter,
+              NS::DebugTypeMember,
+              NS::DebugMacroDef,
+              NS::DebugMacroUndef,
+              NS::DebugTypePtrToMember,
+              NS::DebugTypeEnum};
           bool IsGlobalDI = false;
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
             IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
@@ -2031,6 +2057,16 @@ void addInstrRequirements(const MachineInstr &MI,
         SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate);
     Reqs.addCapability(
         SPIRV::Capability::SubgroupMatrixMultiplyAccumulateINTEL);
+    break;
+  }
+  case SPIRV::OpExtInstWithForwardRefsKHR: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_relaxed_extended_instruction))
+      report_fatal_error("OpExtInstWithForwardRefsKHR instruction requires the "
+                         "following SPIR-V "
+                         "extension: SPV_KHR_relaxed_extended_instruction",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
     break;
   }
   case SPIRV::OpBitwiseFunctionINTEL: {
