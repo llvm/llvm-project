@@ -59,12 +59,21 @@
 #include <stdalign.h> // <stdalign.h>
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'stdalign.h' has no effect in C++; consider removing it
 // CHECK-FIXES: // <stdalign.h>
+#include <cstdalign> // <cstdalign>
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'cstdalign' has no effect in C++; consider removing it
+// CHECK-FIXES: // <cstdalign>
 #include <stdbool.h> // <stdbool.h>
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'stdbool.h' has no effect in C++; consider removing it
 // CHECK-FIXES: // <stdbool.h>
+#include <cstdbool> // <cstdbool>
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'cstdbool' has no effect in C++; consider removing it
+// CHECK-FIXES: // <cstdbool>
 #include <iso646.h> // <iso646.h>
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'iso646.h' has no effect in C++; consider removing it
 // CHECK-FIXES: // <iso646.h>
+#include <ciso646> // <ciso646>
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'ciso646' has no effect in C++; consider removing it
+// CHECK-FIXES: // <ciso646>
 
 // Headers deprecated since C++11: expect no diagnostics.
 #include <fenv.h>
@@ -133,12 +142,21 @@
 #include "stdalign.h" // "stdalign.h"
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'stdalign.h' has no effect in C++; consider removing it
 // CHECK-FIXES: // "stdalign.h"
+#include "cstdalign" // "cstdalign"
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'cstdalign' has no effect in C++; consider removing it
+// CHECK-FIXES: // "cstdalign"
 #include "stdbool.h" // "stdbool.h"
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'stdbool.h' has no effect in C++; consider removing it
 // CHECK-FIXES: // "stdbool.h"
+#include "cstdbool" // "cstdbool"
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'cstdbool' has no effect in C++; consider removing it
+// CHECK-FIXES: // "cstdbool"
 #include "iso646.h" // "iso646.h"
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'iso646.h' has no effect in C++; consider removing it
 // CHECK-FIXES: // "iso646.h"
+#include "ciso646" // "ciso646"
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: including 'ciso646' has no effect in C++; consider removing it
+// CHECK-FIXES: // "ciso646"
 
 // Headers deprecated since C++11; expect no diagnostics
 #include "fenv.h"

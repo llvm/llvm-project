@@ -3,12 +3,55 @@
 modernize-deprecated-headers
 ============================
 
-Some headers from C library were deprecated in C++ and are no longer welcome in
-C++ codebases. Some have no effect in C++. For more details refer to the C++14
-Standard [depr.c.headers] section.
+There exist headers that produce no effect when included, which are there
+solely to ease migrating code. The check will suggest removing them.
+In C++, they are:
 
-This check replaces C standard library headers with their C++ alternatives and
-removes redundant ones.
+* ``stdalign.h`` / ``cstdalign``
+* ``stdbool.h`` / ``cstdbool``
+* ``iso646.h`` / ``ciso646``
+
+And in C they are:
+
+* ``stdalign.h`` // No-op since C23
+* ``stdbool.h`` // No-op since C23
+* ``stdnoreturn.h`` // No-op since C23
+
+In C++, there is additionally a number of headers intended for
+interoperability with C, which should not be used in pure C++ code.
+The check will suggest replacing them with their C++ counterparts
+(e.g. replacing ``<signal.h>`` with ``<csignal>``). These headers are:
+
+* ``<assert.h>``
+* ``<complex.h>``
+* ``<ctype.h>``
+* ``<errno.h>``
+* ``<fenv.h>``     // deprecated since C++11
+* ``<float.h>``
+* ``<inttypes.h>``
+* ``<limits.h>``
+* ``<locale.h>``
+* ``<math.h>``
+* ``<setjmp.h>``
+* ``<signal.h>``
+* ``<stdarg.h>``
+* ``<stddef.h>``
+* ``<stdint.h>``
+* ``<stdio.h>``
+* ``<stdlib.h>``
+* ``<string.h>``
+* ``<tgmath.h>``   // deprecated since C++11
+* ``<time.h>``
+* ``<uchar.h>``    // deprecated since C++11
+* ``<wchar.h>``
+* ``<wctype.h>``
+
+Important note: the C++ headers are not identical to their C counterparts.
+The C headers provide names in the global namespace (e.g. ``<stdio.h>``
+provides ``printf``), but the C++ headers might provide them only in the
+``std`` namespace (e.g. ``<cstdio>`` provides ``std::printf``, but not
+necessarily ``printf``). The check can break code that uses the unqualified
+names.
 
 .. code-block:: c++
 
@@ -21,46 +64,9 @@ removes redundant ones.
   #include <cassert>
   // No 'stdbool.h' here.
 
-Important note: the Standard doesn't guarantee that the C++ headers declare all
-the same functions in the global namespace. The check in its current form can
-break the code that uses library symbols from the global namespace.
-
-* `<assert.h>`
-* `<complex.h>`
-* `<ctype.h>`
-* `<errno.h>`
-* `<fenv.h>`     // deprecated since C++11
-* `<float.h>`
-* `<inttypes.h>`
-* `<limits.h>`
-* `<locale.h>`
-* `<math.h>`
-* `<setjmp.h>`
-* `<signal.h>`
-* `<stdarg.h>`
-* `<stddef.h>`
-* `<stdint.h>`
-* `<stdio.h>`
-* `<stdlib.h>`
-* `<string.h>`
-* `<tgmath.h>`   // deprecated since C++11
-* `<time.h>`
-* `<uchar.h>`    // deprecated since C++11
-* `<wchar.h>`
-* `<wctype.h>`
-
-If the specified standard is older than C++11 the check will only replace
-headers deprecated before C++11, otherwise -- every header that appeared in
-the previous list.
-
-These headers don't have effect in C++:
-
-* `<iso646.h>`
-* `<stdalign.h>`
-* `<stdbool.h>`
-
-The checker ignores `include` directives within `extern "C" { ... }` blocks,
-since a library might want to expose some API for C and C++ libraries.
+The check will ignore `include` directives within `extern "C" { ... }`
+blocks, under the assumption that such code is an API meant to compile as
+both C and C++:
 
 .. code-block:: c++
 
