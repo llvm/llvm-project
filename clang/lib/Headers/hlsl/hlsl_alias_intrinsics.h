@@ -1053,6 +1053,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_exp2)
 float4 exp2(float4);
 
 //===----------------------------------------------------------------------===//
+// f16tof32 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float f16tof32(uint x)
+/// \brief Returns the half value stored in the low 16 bits of the uint arg
+/// converted to a float.
+/// \param x The uint containing two half values.
+///
+/// The float value of the half value found in the low 16 bits of the \a xi
+/// parameter.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float f16tof32(uint);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float2 f16tof32(uint2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float3 f16tof32(uint3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
+float4 f16tof32(uint4);
+
+//===----------------------------------------------------------------------===//
 // firstbithigh builtins
 //===----------------------------------------------------------------------===//
 
