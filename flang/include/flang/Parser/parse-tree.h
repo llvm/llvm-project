@@ -5155,7 +5155,7 @@ struct OpenMPThreadprivate {
 struct OpenMPDeclarativeAllocate {
   TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAllocate);
   CharBlock source;
-  std::tuple<Verbatim, OmpObjectList, OmpClauseList> t;
+  std::tuple<Verbatim, std::optional<OmpObjectList>, OmpClauseList> t;
 };
 
 struct OpenMPDeclarativeConstruct {

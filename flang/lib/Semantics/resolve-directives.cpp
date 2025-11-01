@@ -2560,8 +2560,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
-  const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpDeclarativeAllocateDirective);
+  if (const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
+    ResolveOmpObjectList(*list, Symbol::Flag::OmpDeclarativeAllocateDirective);
+  }
   return false;
 }
 
