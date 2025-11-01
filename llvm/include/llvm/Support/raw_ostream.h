@@ -682,6 +682,8 @@ public:
   void reserveExtraSpace(uint64_t ExtraSize) override {
     OS.reserve(tell() + ExtraSize);
   }
+
+  // void flush() = delete;
 };
 
 /// A raw_ostream that writes to an SmallVector or SmallString.  This is a

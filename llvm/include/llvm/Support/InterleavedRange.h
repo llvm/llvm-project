@@ -56,7 +56,6 @@ public:
     std::string Result;
     raw_string_ostream Stream(Result);
     Stream << *this;
-    Stream.flush();
     return Result;
   }
 
