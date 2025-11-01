@@ -517,11 +517,16 @@ static void selectInterestingSourceRegion(
   // highlighting information. In particular, if we've removed
   // from the front of the line, we need to move the style ranges to the
   // left and remove unneeded ranges.
+  // Note in particular that variables like CaretEnd are defined in the
+  // CaretLine, which only contains ASCII, while the style ranges are defined in
+  // the source line, where we have to care for the byte-index != column-index
+  // case.
   Bytes BytesRemoved =
       FrontColumnsRemoved > FrontEllipse.size()
           ? (Map.columnToByte(FrontColumnsRemoved) - Bytes(FrontEllipse.size()))
           : 0;
-  Bytes CodeEnd = Map.columnToByte(CaretEnd);
+  Bytes CodeEnd =
+      CaretEnd < Map.columns() ? Map.columnToByte(CaretEnd.V) : CaretEnd.V;
   for (TextDiagnostic::StyleRange &R : Styles) {
     if (R.End < static_cast<unsigned>(BytesRemoved.V)) {
       R.Start = R.End = std::numeric_limits<int>::max();
@@ -535,7 +540,7 @@ static void selectInterestingSourceRegion(
     // Don't leak into the ellipse at the end.
     if (R.Start < static_cast<unsigned>(CodeEnd.V) &&
         R.End > static_cast<unsigned>(CodeEnd.V))
-      R.End = CodeEnd.V;
+      R.End = CodeEnd.V + 1; // R.End is inclusive.
 
     // Remove style ranges after the end of the snippet.
     if (R.Start >= static_cast<unsigned>(CodeEnd.V))
