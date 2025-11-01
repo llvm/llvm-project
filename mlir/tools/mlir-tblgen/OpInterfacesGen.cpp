@@ -442,8 +442,7 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
 }
 
 void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
-  auto cppNamespace = (interface.getCppNamespace() + "::detail").str();
-  llvm::NamespaceEmitter ns(os, cppNamespace);
+  llvm::NamespaceEmitter ns(os, interface.getCppNamespace() + "::detail");
 
   StringRef interfaceName = interface.getName();
   auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
