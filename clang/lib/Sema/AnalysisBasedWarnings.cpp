@@ -467,6 +467,40 @@ struct TransferFunctions : public StmtVisitor<TransferFunctions> {
               AllValuesAreNoReturn = false;
     }
   }
+
+  void VisitCXXOperatorCallExpr(CXXOperatorCallExpr *CE) {
+    if (CE->getOperator() == OO_Call && CE->getNumArgs() > 0) {
+      Expr *Obj = CE->getArg(0)->IgnoreParenCasts();
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Obj))
+        Obj = MTE->getSubExpr();
+      if (auto *DRE = dyn_cast<DeclRefExpr>(Obj)) {
+        auto *D = dyn_cast<VarDecl>(DRE->getDecl());
+        if (D && D->hasInit())
+          Obj = D->getInit();
+      }
+      Visit(Obj);
+    }
+    VisitCallExpr(CE);
+  }
+
+  void VisitLambdaExpr(LambdaExpr *LE) {
+    for (const LambdaCapture &Capture : LE->captures())
+      if (Capture.capturesVariable())
+        if (const VarDecl *VD = dyn_cast<VarDecl>(Capture.getCapturedVar()))
+          if (VD == Var && Capture.getCaptureKind() == LCK_ByRef)
+            AllValuesAreNoReturn = false;
+  }
+
+  void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *MTE) {
+    Visit(MTE->getSubExpr());
+  }
+
+  void VisitExprWithCleanups(FullExpr *FE) { Visit(FE->getSubExpr()); }
+
+  void VisitCXXConstructExpr(CXXConstructExpr *CE) {
+    if (CE->getNumArgs() > 0)
+      Visit(CE->getArg(0));
+  }
 };
 } // namespace
 
