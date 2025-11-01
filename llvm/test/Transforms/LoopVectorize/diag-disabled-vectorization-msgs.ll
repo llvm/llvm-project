@@ -47,12 +47,6 @@ define double @CompareDistmats(ptr %distmat1){
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
-  %add.lcssa = phi double [ %add, %for.body ]
-  %div = fmul fast double %add.lcssa, 0x3FB1111111111111
-  %0 = tail call fast double @llvm.sqrt.f64(double %div)
-  ret double %0
-
 for.body:                                         ; preds = %entry, %for.body
   %i.014 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %RMSD.013 = phi double [ 0.000000e+00, %entry ], [ %add, %for.body ]
@@ -63,7 +57,10 @@ for.body:                                         ; preds = %entry, %for.body
   %add = fadd fast double %mul, %RMSD.013
   %inc = add nuw nsw i64 %i.014, 1
   %exitcond.not = icmp eq i64 %inc, 15
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body, !llvm.loop !0
+  br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !0
+
+exit:
+  ret double %add
 }
 
 !0 = distinct !{!0, !1}
