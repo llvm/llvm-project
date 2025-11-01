@@ -17,7 +17,7 @@
 #include <chrono>
 
 #if defined(__MVS__)
-#  include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
+#  include <support/ibm/gettod_zos.h> // gettimeofdayMonotonic
 #endif
 
 #include "include/apple_availability.h"
