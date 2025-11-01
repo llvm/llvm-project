@@ -1028,7 +1028,8 @@ static bool isCountAttributedPointerArgumentSafeImpl(
     PtrArgNoImp = DAE->getExpr()->IgnoreParenImpCasts();
 
   // check form 0:
-  if (PtrArgNoImp->getType()->isNullPtrType()) {
+  if (PtrArgNoImp->isNullPointerConstant(Context,
+                                         Expr::NPC_ValueDependentIsNotNull)) {
     if (isOrNull)
       return true;
     if (CountArg)
