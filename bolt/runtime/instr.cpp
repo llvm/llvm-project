@@ -1693,7 +1693,7 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
 #if defined(__aarch64__)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldp x0, x1, [sp, #288]\n"
+                       "ldp x0, x1, [sp, #320]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"
@@ -1730,7 +1730,7 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 #if defined(__aarch64__)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                       "ldp x0, x1, [sp, #288]\n"
+                       "ldp x0, x1, [sp, #320]\n"
                        "bl instrumentIndirectCall\n"
                        RESTORE_ALL
                        "ret\n"
