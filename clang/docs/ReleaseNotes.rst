@@ -496,6 +496,8 @@ Bug Fixes to C++ Support
   nontrivial member when another member has an initializer. (#GH81774)
 - Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
+- Fixed a crash that occurred when a static constexpr data member of a class
+  template was declared with an incomplete type. (#GH120371)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
