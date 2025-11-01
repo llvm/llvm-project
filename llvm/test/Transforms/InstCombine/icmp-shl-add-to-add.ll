@@ -4,6 +4,8 @@
 ; Test case: Fold (X << 5) == ((Y << 5) + 32) into X == (Y + 1).
 ; This corresponds to the provided alive2 proof.
 
+declare void @use_i64(i64)
+
 define i1 @shl_add_const_eq_base(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_base(
 ; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V3:%.*]], 1
@@ -105,4 +107,71 @@ define i1 @shl_add_const_eq_i32(i32 %v0, i32 %v3) {
   %v5 = add nsw i32 %v4, 1024 ; 2^10 = 1024
   %v6 = icmp eq i32 %v1, %v5
   ret i1 %v6
+}
+
+; Test: Multi-use case. The optimization should still occur if applicable,
+; but the extraneous call must be preserved.
+define i1 @shl_add_const_eq_multi_use(i64 %v0, i64 %v3) {
+; CHECK-LABEL: @shl_add_const_eq_multi_use(
+; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 [[V0:%.*]], 5
+; CHECK-NEXT:    call void @use_i64(i64 [[V1]])
+; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 [[V3:%.*]], 5
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 32
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1]], [[V5]]
+; CHECK-NEXT:    ret i1 [[V6]]
+;
+  %v1 = shl nsw i64 %v0, 5
+  call void @use_i64(i64 %v1) ; Additional use of v1
+  %v4 = shl nsw i64 %v3, 5
+  %v5 = add nsw i64 %v4, 32
+  %v6 = icmp eq i64 %v1, %v5
+  ret i1 %v6
+}
+
+; Test: Vector splat. Should fold once optimization is applied.
+define <2 x i1> @shl_add_const_eq_vec_splat(<2 x i64> %v0, <2 x i64> %v3) {
+; CHECK-LABEL: @shl_add_const_eq_vec_splat(
+; CHECK-NEXT:    [[V1:%.*]] = shl nsw <2 x i64> [[V0:%.*]], <i64 5, i64 5>
+; CHECK-NEXT:    [[V4:%.*]] = shl nsw <2 x i64> [[V3:%.*]], <i64 5, i64 5>
+; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V4]], <i64 32, i64 32>
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1]], [[V5]]
+; CHECK-NEXT:    ret <2 x i1> [[V6]]
+;
+  %v1 = shl nsw <2 x i64> %v0, <i64 5, i64 5>
+  %v4 = shl nsw <2 x i64> %v3, <i64 5, i64 5>
+  %v5 = add nsw <2 x i64> %v4, <i64 32, i64 32>
+  %v6 = icmp eq <2 x i64> %v1, %v5
+  ret <2 x i1> %v6
+}
+
+; Test: Vector splat with poison. Should fold once optimization is applied.
+define <2 x i1> @shl_add_const_eq_vec_splat_poison(<2 x i64> %v0, <2 x i64> %v3) {
+; CHECK-LABEL: @shl_add_const_eq_vec_splat_poison(
+; CHECK-NEXT:    [[V1:%.*]] = shl nsw <2 x i64> [[V0:%.*]], <i64 5, i64 5>
+; CHECK-NEXT:    [[V4:%.*]] = shl nsw <2 x i64> [[V3:%.*]], <i64 5, i64 5>
+; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V4]], <i64 32, i64 poison>
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1]], [[V5]]
+; CHECK-NEXT:    ret <2 x i1> [[V6]]
+;
+  %v1 = shl nsw <2 x i64> %v0, <i64 5, i64 5>
+  %v4 = shl nsw <2 x i64> %v3, <i64 5, i64 5>
+  %v5 = add nsw <2 x i64> %v4, <i64 32, i64 poison>
+  %v6 = icmp eq <2 x i64> %v1, %v5
+  ret <2 x i1> %v6
+}
+
+; Test: Vector non-splat (should not fold).
+define <2 x i1> @shl_add_const_eq_vec_non_splat(<2 x i64> %v0, <2 x i64> %v3) {
+; CHECK-LABEL: @shl_add_const_eq_vec_non_splat(
+; CHECK-NEXT:    [[V1:%.*]] = shl nsw <2 x i64> [[V0:%.*]], <i64 5, i64 6>
+; CHECK-NEXT:    [[V4:%.*]] = shl nsw <2 x i64> [[V3:%.*]], <i64 5, i64 6>
+; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V4]], <i64 32, i64 64>
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1]], [[V5]]
+; CHECK-NEXT:    ret <2 x i1> [[V6]]
+;
+  %v1 = shl nsw <2 x i64> %v0, <i64 5, i64 6>
+  %v4 = shl nsw <2 x i64> %v3, <i64 5, i64 6>
+  %v5 = add nsw <2 x i64> %v4, <i64 32, i64 64>
+  %v6 = icmp eq <2 x i64> %v1, %v5
+  ret <2 x i1> %v6
 }
