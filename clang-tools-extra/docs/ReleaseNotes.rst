@@ -226,6 +226,11 @@ New checks
   Finds virtual function overrides with different visibility than the function
   in the base class.
 
+- New :doc:`readability-avoid-default-lambda-capture
+  <clang-tidy/checks/readability/avoid-default-lambda-capture>` check.
+
+  Warns on default lambda captures (e.g. ``[&](){ ... }``, ``[=](){ ... }``).
+  
 - New :doc:`readability-redundant-parentheses
   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
