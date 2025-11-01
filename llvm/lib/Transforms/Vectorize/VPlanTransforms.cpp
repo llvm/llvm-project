@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -4562,6 +4563,88 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
           VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
           {}, "vector.recur.extract.for.phi");
       cast<VPInstruction>(U)->replaceAllUsesWith(PenultimateElement);
+    }
+  }
+}
+
+void VPlanTransforms::convertFindLastRecurrences(
+    VPlan &Plan, VPRecipeBuilder &RecipeBuilder,
+    LoopVectorizationLegality *Legal) {
+  assert(Legal && "Need valid LoopVecLegality");
+
+  // May need to do something better than this?
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  // We want to create the following nodes:
+  // vec.body:
+  //   mask.phi = phi <VF x i1> [ all.false, vec.ph ], [ new.mask, vec.body ]
+  //   ...data.phi already exists, but needs updating...
+  //   data.phi = phi <VF x Ty> [ default.val, vec.ph ], [ new.data, vec.body ]
+  //
+  //   ...'data' and 'compare' created by existing nodes...
+  //
+  //   any_active = i1 any_of_reduction(compare)
+  //   new.mask = select any_active, compare, mask.phi
+  //   new.data = select any_active, data, data.phi
+  //
+  // middle.block:
+  //   ...the extract already exists, but needs updating...
+  //   result = extract-last-active new.data, new.mask, default.val
+
+  for (const auto &[Phi, RdxDesc] : Legal->getReductionVars()) {
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            RdxDesc.getRecurrenceKind())) {
+      VPRecipeBase *PhiR = RecipeBuilder.getRecipe(Phi);
+      VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+
+      // Add mask phi...
+      VPValue *False =
+          Plan.getOrAddLiveIn(ConstantInt::getFalse(Phi->getContext()));
+      // FIXME: Either come up with a new phi recipe or make an existing one
+      //        more generic. There's only supposed to be one ALM PHI.
+      VPActiveLaneMaskPHIRecipe *MaskPHI =
+          new VPActiveLaneMaskPHIRecipe(False, DebugLoc());
+      Builder.insert(MaskPHI);
+
+      SelectInst *Select = cast<SelectInst>(RdxDesc.getLoopExitInstr());
+      auto *SR = cast<VPWidenSelectRecipe>(RecipeBuilder.getRecipe(Select));
+
+      // Add select for mask...
+      VPValue *Cond = SR->getCond();
+      Builder.setInsertPoint(SR);
+      VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+      VPValue *SplatAnyOf =
+          Builder.createNaryOp(VPInstruction::Broadcast, AnyOf);
+      VPValue *MaskSelect = Builder.createSelect(SplatAnyOf, Cond, MaskPHI);
+      MaskPHI->addOperand(MaskSelect);
+
+      // Create new select for data...
+      VPValue *DataSelect = Builder.createSelect(SplatAnyOf, SR->getOperand(1),
+                                                 SR->getOperand(2));
+      SR->replaceAllUsesWith(DataSelect);
+      SR->eraseFromParent();
+
+      // Find final reduction and replace it with an
+      // extract.last.active intrinsic.
+      VPInstruction *RdxResult = nullptr;
+      for (VPUser *U : DataSelect->users()) {
+        VPInstruction *I = dyn_cast<VPInstruction>(U);
+        if (I && I->getOpcode() == VPInstruction::ComputeReductionResult) {
+          RdxResult = I;
+          break;
+        }
+      }
+
+      assert(RdxResult);
+      Builder.setInsertPoint(RdxResult);
+      VPValue *Default = RecipeBuilder.getVPValueOrAddLiveIn(
+          RdxDesc.getRecurrenceStartValue());
+      auto *ExtractLastActive = Builder.createNaryOp(
+          VPInstruction::ExtractLastActive, {DataSelect, MaskSelect, Default},
+          RdxResult->getDebugLoc());
+      RdxResult->replaceAllUsesWith(ExtractLastActive);
+      RdxResult->eraseFromParent();
     }
   }
 }
