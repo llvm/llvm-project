@@ -10,16 +10,8 @@
 #ifndef _LIBCPP___BASIC_STACKTRACE_H
 #define _LIBCPP___BASIC_STACKTRACE_H
 
-#include <__config>
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 #include <__assert>
+#include <__config>
 #include <__cstddef/size_t.h>
 #include <__functional/function.h>
 #include <__functional/hash.h>
@@ -29,24 +21,28 @@ _LIBCPP_PUSH_MACROS
 #include <__memory/allocator_traits.h>
 #include <__memory_resource/polymorphic_allocator.h>
 #include <__new/allocate.h>
+#include <__stacktrace/stacktrace_entry.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__vector/vector.h>
 #include <cstddef>
 #include <iostream>
 #include <string>
 #include <utility>
-
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <__fwd/ostream.h>
 #endif // _LIBCPP_HAS_LOCALIZATION
-
 #if !defined(_WIN32)
 #  include <unwind.h>
 #endif
 
-#if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
 
-#  include <__stacktrace/stacktrace_entry.h>
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -103,12 +99,9 @@ class basic_stacktrace : private __stacktrace::_Trace {
   friend struct __stacktrace::_Trace;
 
   vector<stacktrace_entry, _Allocator> __entries_;
-  _LIBCPP_HIDE_FROM_ABI _EntryIters entry_iters() {
-    auto* __data = __entries_.data();
-    auto __size  = __entries_.size();
-    std::cerr << "@@@ data:" << __data << " size:" << __size << '\n';
-    return {__data, __size};
-  }
+
+  _LIBCPP_HIDE_FROM_ABI _EntryIters entry_iters() { return {__entries_.data(), __entries_.size()}; }
+
   _LIBCPP_HIDE_FROM_ABI __stacktrace::_Entry& entry_append() {
     return (__stacktrace::_Entry&)__entries_.emplace_back();
   }
@@ -170,10 +163,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace() noexcept(is_nothrow_default_constructible_v<allocator_type>)
       : basic_stacktrace(allocator_type()) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc)
+  _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc) noexcept
       : _Trace(entry_iters_fn(), entry_append_fn()), __entries_(__alloc) {}
 
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other) noexcept
+  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other)
       : _Trace(entry_iters_fn(), entry_append_fn()) {
     __entries_ = __other.__entries_;
   }
@@ -354,6 +347,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void _Trace::populate_addrs(s
 #  endif // _WIN32
 
 _Trace& _Trace::base(auto& __trace) { return *static_cast<_Trace*>(std::addressof(__trace)); }
+
 _Trace const& _Trace::base(auto const& __trace) { return *static_cast<_Trace const*>(std::addressof(__trace)); }
 
 } // namespace __stacktrace

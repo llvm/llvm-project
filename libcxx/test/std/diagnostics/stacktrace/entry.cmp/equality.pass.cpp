@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
   (19.6.3.5) Comparison [stacktrace.entry.cmp]
@@ -21,27 +21,23 @@ namespace std {
 */
 
 #include <cassert>
-#include <cstdint>
 #include <stacktrace>
 
 namespace {
-int func1() { return 41; }
-int func2() { return 42; }
+std::stacktrace_entry func1() { return std::stacktrace::current()[0]; }
+std::stacktrace_entry func2() { return std::stacktrace::current()[0]; }
 } // namespace
 
 int main(int, char**) {
-  std::stacktrace_entry a;
-  std::stacktrace_entry b;
-  std::stacktrace_entry c;
+  auto entry1 = func1();
+  auto entry2 = func2();
 
-  *(uintptr_t*)(&a) = uintptr_t(&func1);
-  *(uintptr_t*)(&b) = uintptr_t(&func1);
-  *(uintptr_t*)(&c) = uintptr_t(&func2);
+  static_assert(noexcept(entry1 == entry2));
+  static_assert(noexcept(entry1 != entry2));
 
-  static_assert(noexcept(a == b));
-
-  assert(a == b);
-  assert(a != c);
+  assert(entry1 != entry2);
+  auto entry2b = func2();
+  assert(entry2 == entry2b);
 
   return 0;
 }

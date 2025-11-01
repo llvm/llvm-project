@@ -7,53 +7,41 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 // (19.6.4.4) Comparisons [stacktrace.basic.cmp]
-// template<class Allocator2>
-// friend bool operator==(const basic_stacktrace& x,
-//                         const basic_stacktrace<Allocator2>& y) noexcept;
+//
+//   template<class Allocator2>
+//   friend bool operator==(const basic_stacktrace& x,
+//                          const basic_stacktrace<Allocator2>& y) noexcept;
 
 #include <cassert>
 #include <stacktrace>
 
-#include "test_macros.h"
+// Call chain is: main -> c -> b -> a -> stacktrace::current;
+// we're only checking a, b, c in the returned stacktrace, so use max_depth of 3.
+_LIBCPP_NOINLINE std::stacktrace a(size_t skip = 0) { return std::stacktrace::current(skip, 3); }
+_LIBCPP_NOINLINE std::stacktrace b(size_t skip = 0) { return a(skip); }
+_LIBCPP_NOINLINE std::stacktrace c(size_t skip = 0) { return b(skip); }
 
-// Disable TCO for calls into, and out from, the annotated function.
-#define STACKTRACE_AVOID_OPT TEST_NO_TAIL_CALLS_IN TEST_NO_TAIL_CALLS_OUT TEST_NOINLINE
+int main(int, char**) {
+  std::stacktrace st0;
+  static_assert(noexcept(st0 == st0));
+  static_assert(noexcept(st0 != st0));
+  assert(st0 == st0);
 
-// Some non-inlinable functions to help contrive different stacktraces:
-// main calls the "middle" funcs, and those both call "top".
-// We'll consider main the "bottom" func, even though there are other functions
-// like `_start` which call main; those are trimmed via `max_depth` argument.
+  std::stacktrace st1 = a();
+  assert(st1 != st0);
 
-STACKTRACE_AVOID_OPT std::stacktrace top(size_t skip, size_t depth) { return std::stacktrace::current(skip, depth); }
-STACKTRACE_AVOID_OPT std::stacktrace middle1(size_t skip, size_t depth) { return top(skip, depth); }
-STACKTRACE_AVOID_OPT std::stacktrace middle2(size_t skip, size_t depth) { return top(skip, depth); }
+  std::stacktrace st2 = b();
+  assert(st2 != st1);
+  assert(st2 != st0);
 
-STACKTRACE_AVOID_OPT int main(int, char**) {
-  // Collect a few different stacktraces and test `operator==` and `operator!=`.
-
-  std::stacktrace st0;                 // default-initializable empty stacktrace
-  static_assert(noexcept(st0 == st0)); // verify noexcept-ness
-  static_assert(noexcept(st0 != st0)); // verify noexcept-ness
-  assert(st0 == st0);                  // trivial: self-equality
-
-  std::stacktrace st1a = top(0, 2);     // st1a = [top, main]
-  assert(st1a == st1a);                 // trivial: self-equality
-  assert(st1a != st0);                  //
-  std::stacktrace st2a = middle1(0, 3); // st2a = [top, middle1, main]
-  assert(st2a == st2a);                 //
-  assert(st1a != st2a);                 //
-  std::stacktrace st2b = middle2(0, 3); // st2b = [top, middle2, main]
-  assert(st2b == st2b);                 //
-  assert(st2a != st2b);                 //
-
-  // Verify two equivalent stacktrace instances are equal, even if not "same".
-  // For both, we'll take only two entries, which should be equivalent.
-  std::stacktrace st3a = middle1(0, 2); // st3a = [top, middle1]
-  std::stacktrace st3b = middle1(0, 2); // st3b = [top, middle1]
-  assert(st3a == st3b);
+  std::stacktrace st3 = c();
+  assert(st3 != st0);
+  assert(st3 != st1);
+  assert(st3 != st2);
+  assert(c() == st3);
 
   return 0;
 }

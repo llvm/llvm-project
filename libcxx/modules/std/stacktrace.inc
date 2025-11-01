@@ -8,15 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if _LIBCPP_STD_VER >= 23
+#if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
-  // [stacktrace.entry], class stacktrace_­entry
+  // [stacktrace.entry], class stacktrace_entry
   using std::stacktrace_entry;
 
-  // [stacktrace.basic], class template basic_­stacktrace
+  // [stacktrace.basic], class template basic_stacktrace
   using std::basic_stacktrace;
 
-  // basic_­stacktrace typedef-names
+  // basic_stacktrace typedef-names
   using std::stacktrace;
 
   // [stacktrace.basic.nonmem], non-member functions
@@ -39,5 +39,5 @@ export namespace std {
   // P2693R1, "Formatting thread::id and stacktrace")
   // using std::formatter;
 
-#endif // _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 } // namespace std

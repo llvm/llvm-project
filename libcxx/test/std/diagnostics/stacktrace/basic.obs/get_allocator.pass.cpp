@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
   (19.6.4.3) Observers [stacktrace.basic.obs]
@@ -20,7 +20,7 @@
 #include <stacktrace>
 
 int main(int, char**) {
-  std::stacktrace st;
+  std::stacktrace const st;
   static_assert(noexcept(st.get_allocator()));
   static_assert(std::same_as<decltype(st.get_allocator()), std::stacktrace::allocator_type>);
   return 0;

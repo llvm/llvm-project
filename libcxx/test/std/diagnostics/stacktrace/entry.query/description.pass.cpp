@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
     (19.6.3.4) Query [stacktrace.entry.query]
@@ -24,9 +24,8 @@ namespace std {
 #include <string>
 
 int main(int, char**) {
-  std::stacktrace_entry e;
-  auto desc = e.description();
-  assert(desc.empty());
+  std::stacktrace_entry entry;
+  assert(entry.description().empty());
 
   return 0;
 }
