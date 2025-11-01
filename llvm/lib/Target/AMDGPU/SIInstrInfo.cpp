@@ -10689,12 +10689,13 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!optimizeSCC(Def, &CmpInstr, RI))
       return false;
 
-    // If s_or_b32 result is unused (i.e. it is effectively a 64-bit s_cmp_lg of
-    // a register pair) and the inputs are the hi and lo-halves of a 64-bit
-    // foldableSelect then transform:
-    //
-    //   (s_or_b32 [hi and lo (S_CSELECT_B64 (non-zero imm), 0)]) =>
-    //   (S_CSELECT_B64 (non-zero imm), 0)
+    // If s_or_b32 result, sY, is unused (i.e. it is effectively a 64-bit
+    // s_cmp_lg of a register pair) and the inputs are the hi and lo-halves of a
+    // 64-bit foldableSelect then transform:
+    //    s_cselect_b64 sX, (non-zero imm), 0
+    //    s_or_b32 sY, hi(sX), lo(sX)
+    // to:
+    //    s_cselect_b64 sX, (non-zero imm), 0
     if (Def->getOpcode() == AMDGPU::S_OR_B32 &&
         MRI->use_nodbg_empty(Def->getOperand(0).getReg())) {
       const MachineOperand &OrOpnd1 = Def->getOperand(1);
