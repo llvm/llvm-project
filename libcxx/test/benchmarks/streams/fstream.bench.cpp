@@ -22,4 +22,22 @@ static void bm_write(benchmark::State& state) {
 }
 BENCHMARK(bm_write);
 
+static void bm_read(benchmark::State& state) {
+  std::vector<char> buffer;
+  buffer.resize(16384);
+
+  std::ofstream gen_testfile("testfile");
+  gen_testfile.write(buffer.data(), buffer.size());
+
+  std::ifstream stream("testfile");
+  assert(stream);
+
+  for (auto _ : state) {
+    stream.read(buffer.data(), buffer.size());
+    benchmark::DoNotOptimize(buffer);
+    stream.seekg(0);
+  }
+}
+BENCHMARK(bm_read);
+
 BENCHMARK_MAIN();
