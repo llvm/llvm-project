@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 if __name__ == "__main__":
     import use_lldb_suite
