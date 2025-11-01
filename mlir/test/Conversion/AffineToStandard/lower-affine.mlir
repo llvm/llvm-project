@@ -928,11 +928,18 @@ func.func @affine_parallel_with_reductions_i64(%arg0: memref<3x3xi64>, %arg1: me
 // CHECK:    }
 // CHECK:  }
 
-#map_mod_8 = affine_map<(i) -> (i mod 8)>
 // CHECK-LABEL: func @affine_apply_mod_8
 func.func @affine_apply_mod_8(%arg0 : index) -> (index) {
   // CHECK-NEXT: %[[c7:.*]] = arith.constant 7 : index
   // CHECK-NEXT: %[[v0:.*]] = arith.andi %arg0, %[[c7]] : index
-  %0 = affine.apply #map_mod_8 (%arg0)
+  %0 = affine.apply affine_map<(i) -> (i mod 8)> (%arg0)
+  return %0 : index
+}
+
+// CHECK-LABEL: func @affine_apply_mod_1
+func.func @affine_apply_mod_1(%arg0 : index) -> (index) {
+  // CHECK-NEXT: %[[c0:.*]] = arith.constant 0 : index
+  // CHECK-NEXT: return %[[c0]] : index
+  %0 = affine.apply affine_map<(i) -> (i mod 1)> (%arg0)
   return %0 : index
 }
