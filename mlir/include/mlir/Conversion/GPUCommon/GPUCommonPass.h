@@ -73,6 +73,12 @@ using MemorySpaceMapping = std::function<unsigned(gpu::AddressSpace)>;
 /// gpu.address_space to integer values.
 void populateGpuMemorySpaceAttributeConversions(
     TypeConverter &typeConverter, const MemorySpaceMapping &mapping);
+
+/// Insert gpu.wait calls before gpu operations with multiple async dependencies
+/// when the gpu operation does not support multiple async dependencies, i.e.
+/// gpu.launch_func.
+void populateGpuMultipleAsyncDepsConversionPatterns(
+    RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
