@@ -230,6 +230,75 @@ bytes.
 `zt0`'s value and whether it is active or not will be saved prior to
 expression evaluation and restored afterwards.
 
+## SME Only Systems
+
+AArch64 systems may have both SVE and SME (that is, `FEAT_SVE` and `FEAT_SVE`),
+or they can have only SME. If they only have SME, the system has the usual
+SVE state, but that state and SVE instructions may only be used while in
+streaming mode.
+
+The LLDB experience is very similar to SVE+SME systems, with a few notable
+changes.
+
+### Registers
+
+When in streaming mode, registers act as they would on an SVE+SME system.
+Outside of streaming mode LLDB will show the `Z` registers as zero extended copies
+of the `V` registers.
+
+Writes to `Z` registers are allowed, but these are converted to `V` register writes
+and so only the bottom 128-bits will be applied. Note that the size of the value
+written to a `Z` register must match the current streaming vector length, even if
+the process is in non-streaming mode.
+
+It is useful for LLDB developers to know that for an SME only system,
+`lldb-server` describes the system as having `Z` registers with `V` registers
+as subsets of those registers. We do not change the representation each time
+the mode changes.
+
+A consequence of this is that if the user writes to a `V` register while in
+non-streaming mode, it will be sent to `lldb-server` as a `Z` register write
+of a zero extended value. Then `lldb-server` will convert that back into a `V`
+register write with the value truncated to 128-bit.
+
+In streaming mode, it will be zero extended, sent as a `Z` write and written
+to the real streaming SVE `Z` register without truncation.
+
+`P` registers will be shown as 0s outside of streaming mode. They cannot be written
+to in this state.
+
+The `ffr` register will also be shown as 0s outside of streaming mode. In streaming
+mode, use of `ffr` is forbidden so it will also show as 0s. It cannot be written
+to in either state.
+
+(in the former, LLDB generates the fake value, in the latter, the kernel
+generates it)
+
+The `ZA` and `ZT0` registers act as they would for an SVE+SME system.
+
+Since there is no non-streaming SVE, there is non non-streaming vector length.
+Therefore even in non-streaming mode, the value shown in `vg` will be the
+streaming vector length, and be equal to the value shown for `svg`.
+
+### Expression Evaluation
+
+Some instructions are illegal to use in streaming mode (unless `FEAT_SMEFA64`
+is present). LLDB will not make any attempt to make expressions compatible
+with the current mode. If part of the expression is not compatible, it will
+result in a SIGILL that will be cleaned up as it normally would be.
+
+All register, ZA and mode state will be restored as normal after an expression.
+
+Note that to restore to a non-streaming state from a streaming state, LLDB uses
+a special part of the Linux Kernel's
+[SME ABI](https://docs.kernel.org/arch/arm64/sme.html). Where FPSIMD data is
+written to the non-existent non-streaming SVE register set, with the vector
+length set to 0 to cause the process to exit streaming mode.
+
+This is only used for this purpose. Otherwise, in non-streaming mode FP
+registers are accessed using the FP register set, and in streaming mode using
+the streaming SVE register set.
+
 ## Guarded Control Stack Extension (GCS)
 
 GCS support includes the following new registers:
