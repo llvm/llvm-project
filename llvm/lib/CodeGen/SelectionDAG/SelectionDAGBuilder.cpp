@@ -3757,7 +3757,7 @@ void SelectionDAGBuilder::visitFCmp(const FCmpInst &I) {
 
   ISD::CondCode Condition = getFCmpCondCode(predicate);
   auto *FPMO = cast<FPMathOperator>(&I);
-  if (FPMO->hasNoNaNs() || TM.Options.NoNaNsFPMath)
+  if (FPMO->hasNoNaNs())
     Condition = getFCmpCodeWithoutNaN(Condition);
 
   SDNodeFlags Flags;

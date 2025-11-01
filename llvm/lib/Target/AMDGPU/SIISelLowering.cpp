@@ -14331,6 +14331,7 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
 }
 
 bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
+                                       SDNodeFlags UserFlags,
                                        unsigned MaxDepth) const {
   unsigned Opcode = Op.getOpcode();
   if (Opcode == ISD::FCANONICALIZE)
@@ -14338,7 +14339,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 
   if (auto *CFP = dyn_cast<ConstantFPSDNode>(Op)) {
     const auto &F = CFP->getValueAPF();
-    if (F.isNaN() && F.isSignaling())
+    if ((UserFlags.hasNoNaNs() || F.isNaN()) && F.isSignaling())
       return false;
     if (!F.isDenormal())
       return true;
@@ -14530,7 +14531,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 
   // FIXME: denormalsEnabledForType is broken for dynamic
   return denormalsEnabledForType(DAG, Op.getValueType()) &&
-         DAG.isKnownNeverSNaN(Op);
+         (UserFlags.hasNoNaNs() || DAG.isKnownNeverSNaN(Op));
 }
 
 bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
