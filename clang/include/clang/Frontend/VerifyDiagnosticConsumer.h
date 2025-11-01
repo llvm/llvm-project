@@ -139,6 +139,7 @@ private:
   ExpectedData ED;
   bool CheckOrderOfDirectives;
   bool OneDiagPerDirective;
+  bool DisableWildcardInDiagLoc;
 
   void CheckDiagnostics();
 

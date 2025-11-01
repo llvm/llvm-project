@@ -433,7 +433,8 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
                            Preprocessor *PP, SourceLocation Pos,
                            VerifyDiagnosticConsumer::ParsingState &State,
                            VerifyDiagnosticConsumer::MarkerTracker &Markers,
-                           bool OneDiagPerDirective) {
+                           bool OneDiagPerDirective,
+                           bool DisableWildcardInDiagLoc) {
   DiagnosticsEngine &Diags = PP ? PP->getDiagnostics() : SM.getDiagnostics();
 
   // First, scan the comment looking for markers.
@@ -564,6 +565,11 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
         PH.Advance();
 
         if (Filename == "*") {
+          if (DisableWildcardInDiagLoc) {
+            Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                         diag::err_verify_wildcard_loc);
+            continue;
+          }
           MatchAnyFileAndLine = true;
           if (!PH.Next("*")) {
             Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
@@ -592,11 +598,21 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           if (PH.Next(Line) && Line > 0)
             ExpectedLoc = SM.translateLineCol(FID, Line, 1);
           else if (PH.Next("*")) {
+            if (DisableWildcardInDiagLoc) {
+              Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                           diag::err_verify_wildcard_loc);
+              continue;
+            }
             MatchAnyLine = true;
             ExpectedLoc = SM.translateLineCol(FID, 1, 1);
           }
         }
       } else if (PH.Next("*")) {
+        if (DisableWildcardInDiagLoc) {
+          Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
+                       diag::err_verify_wildcard_loc);
+          continue;
+        }
         MatchAnyLine = true;
         ExpectedLoc = SourceLocation();
       }
@@ -725,6 +741,8 @@ VerifyDiagnosticConsumer::VerifyDiagnosticConsumer(DiagnosticsEngine &Diags_)
     setSourceManager(Diags.getSourceManager());
   CheckOrderOfDirectives = Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
   OneDiagPerDirective = Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
+  DisableWildcardInDiagLoc =
+      Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
 }
 
 VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
@@ -841,7 +859,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
   size_t loc = C.find('\\');
   if (loc == StringRef::npos) {
     ParseDirective(C, &ED, SM, &PP, CommentBegin, State, *Markers,
-                   OneDiagPerDirective);
+                   OneDiagPerDirective, DisableWildcardInDiagLoc);
     return false;
   }
 
@@ -872,7 +890,7 @@ bool VerifyDiagnosticConsumer::HandleComment(Preprocessor &PP,
 
   if (!C2.empty())
     ParseDirective(C2, &ED, SM, &PP, CommentBegin, State, *Markers,
-                   OneDiagPerDirective);
+                   OneDiagPerDirective, DisableWildcardInDiagLoc);
   return false;
 }
 
@@ -911,7 +929,8 @@ static bool findDirectives(SourceManager &SM, FileID FID,
 
     // Find first directive.
     if (ParseDirective(Comment, nullptr, SM, nullptr, Tok.getLocation(), State,
-                       Markers, /*OneDiagPerDirective=*/false))
+                       Markers, /*OneDiagPerDirective=*/false,
+                       /*DisableWildcardInDiagLoc=*/false))
       return true;
   }
   return false;
