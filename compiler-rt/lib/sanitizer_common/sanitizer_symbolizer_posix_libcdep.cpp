@@ -505,7 +505,7 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   }
 
 #  if SANITIZER_APPLE
-  if (list.empty()) {
+  if (list->empty()) {
     Report(
         "WARN: No external symbolizers found. Symbols may be missing or "
         "unreliable.\n");
