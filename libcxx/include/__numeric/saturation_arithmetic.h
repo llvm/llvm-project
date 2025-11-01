@@ -30,6 +30,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__signed_or_unsigned_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
+#  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
+  return __builtin_elementwise_add_sat(__x, __y);
+#  else
   if (_Tp __sum; !__builtin_add_overflow(__x, __y, std::addressof(__sum)))
     return __sum;
   // Handle overflow
@@ -44,10 +47,14 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
       // Overflows if  (x < 0 && y < 0)
       return std::numeric_limits<_Tp>::min();
   }
+#  endif
 }
 
 template <__signed_or_unsigned_integer _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
+#  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
+  return __builtin_elementwise_sub_sat(__x, __y);
+#  else
   if (_Tp __sub; !__builtin_sub_overflow(__x, __y, std::addressof(__sub)))
     return __sub;
   // Handle overflow
@@ -63,6 +70,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
       // Overflows if (x < 0 && y > 0)
       return std::numeric_limits<_Tp>::min();
   }
+#  endif
 }
 
 template <__signed_or_unsigned_integer _Tp>
