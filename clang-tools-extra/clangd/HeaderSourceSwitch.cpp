@@ -26,16 +26,16 @@ std::optional<Path> getCorrespondingHeaderOrSource(
       ".h",    ".hh",  ".hpp",  ".hxx",  ".inc",
       ".cppm", ".ccm", ".cxxm", ".c++m", ".ixx"};
 
-  llvm::StringRef PathExt = llvm::sys::path::extension(OriginalFile);
+  llvm::StringRef PathExt = OriginalFile.extension();
 
   // Lookup in a list of known extensions.
   const bool IsSource =
-      llvm::any_of(SourceExtensions, [&PathExt](PathRef SourceExt) {
+      llvm::any_of(SourceExtensions, [&PathExt](StringRef SourceExt) {
         return SourceExt.equals_insensitive(PathExt);
       });
 
   const bool IsHeader =
-      llvm::any_of(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
+      llvm::any_of(HeaderExtensions, [&PathExt](StringRef HeaderExt) {
         return HeaderExt.equals_insensitive(PathExt);
       });
 
@@ -52,7 +52,7 @@ std::optional<Path> getCorrespondingHeaderOrSource(
     NewExts = SourceExtensions;
 
   // Storage for the new path.
-  llvm::SmallString<128> NewPath = OriginalFile;
+  llvm::SmallString<128> NewPath = OriginalFile.raw();
 
   // Loop through switched extension candidates.
   for (llvm::StringRef NewExt : NewExts) {
@@ -83,8 +83,8 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   }
   llvm::StringMap<int> Candidates; // Target path => score.
   auto AwardTarget = [&](const char *TargetURI) {
-    if (auto TargetPath = URI::resolve(TargetURI, OriginalFile)) {
-      if (!pathEqual(*TargetPath, OriginalFile)) // exclude the original file.
+    if (auto TargetPath = URI::resolve(TargetURI, OriginalFile.raw())) {
+      if (PathRef(*TargetPath) != OriginalFile) // exclude the original file.
         ++Candidates[*TargetPath];
     } else {
       elog("Failed to resolve URI {0}: {1}", TargetURI, TargetPath.takeError());
@@ -96,7 +96,7 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   //
   // For each symbol in the original file, we get its target location (decl or
   // def) from the index, then award that target file.
-  const bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
+  const bool IsHeader = isHeaderFile(OriginalFile.raw(), AST.getLangOpts());
   Index->lookup(Request, [&](const Symbol &Sym) {
     if (IsHeader)
       AwardTarget(Sym.Definition.FileURI);

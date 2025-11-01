@@ -1399,14 +1399,14 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   CI->getLangOpts().DelayedTemplateParsing = false;
   // Setup code completion.
   FrontendOpts.CodeCompleteOpts = Options;
-  FrontendOpts.CodeCompletionAt.FileName = std::string(Input.FileName);
+  FrontendOpts.CodeCompletionAt.FileName = Input.FileName.owned().raw();
   std::tie(FrontendOpts.CodeCompletionAt.Line,
            FrontendOpts.CodeCompletionAt.Column) =
       offsetToClangLineColumn(Input.ParseInput.Contents, Input.Offset);
 
   std::unique_ptr<llvm::MemoryBuffer> ContentsBuffer =
       llvm::MemoryBuffer::getMemBuffer(Input.ParseInput.Contents,
-                                       Input.FileName);
+                                       Input.FileName.raw());
   // The diagnostic options must be set before creating a CompilerInstance.
   CI->getDiagnosticOpts().IgnoreWarnings = true;
   // We reuse the preamble whether it's valid or not. This is a
@@ -1659,7 +1659,7 @@ public:
       assert(Recorder && "Recorder is not set");
       CCContextKind = Recorder->CCContext.getKind();
       IsUsingDeclaration = Recorder->CCContext.isUsingDeclaration();
-      auto Style = getFormatStyleForFile(SemaCCInput.FileName,
+      auto Style = getFormatStyleForFile(SemaCCInput.FileName.raw(),
                                          SemaCCInput.ParseInput.Contents,
                                          *SemaCCInput.ParseInput.TFS, false);
       const auto NextToken = findTokenAfterCompletionPoint(
@@ -1670,7 +1670,7 @@ public:
       // If preprocessor was run, inclusions from preprocessor callback should
       // already be added to Includes.
       Inserter.emplace(
-          SemaCCInput.FileName, SemaCCInput.ParseInput.Contents, Style,
+          SemaCCInput.FileName.raw(), SemaCCInput.ParseInput.Contents, Style,
           SemaCCInput.ParseInput.CompileCommand.Directory,
           &Recorder->CCSema->getPreprocessor().getHeaderSearchInfo(),
           Config::current().Style.QuotedHeaders,
@@ -1751,12 +1751,12 @@ public:
     ReplacedRange.start.character -= HeuristicPrefix.Name.size();
 
     llvm::StringMap<SourceParams> ProxSources;
-    ProxSources[FileName].Cost = 0;
+    ProxSources[FileName.raw()].Cost = 0;
     FileProximity.emplace(ProxSources);
 
-    auto Style = getFormatStyleForFile(FileName, Content, TFS, false);
+    auto Style = getFormatStyleForFile(FileName.raw(), Content, TFS, false);
     // This will only insert verbatim headers.
-    Inserter.emplace(FileName, Content, Style,
+    Inserter.emplace(FileName.raw(), Content, Style,
                      /*BuildDir=*/"", /*HeaderSearchInfo=*/nullptr,
                      Config::current().Style.QuotedHeaders,
                      Config::current().Style.AngledHeaders);
@@ -1935,7 +1935,7 @@ private:
     Req.Scopes = QueryScopes;
     Req.AnyScope = AllScopes;
     // FIXME: we should send multiple weighted paths here.
-    Req.ProximityPaths.push_back(std::string(FileName));
+    Req.ProximityPaths.push_back(FileName.owned().raw());
     if (PreferredType)
       Req.PreferredTypes.push_back(std::string(PreferredType->raw()));
     vlog("Code complete: fuzzyFind({0:2})", toJSON(Req));
@@ -1990,8 +1990,9 @@ private:
         assert(IdentifierResult);
         C.Name = IdentifierResult->Name;
       }
-      if (auto OverloadSet = C.overloadSet(
-              Opts, FileName, Inserter ? &*Inserter : nullptr, CCContextKind)) {
+      if (auto OverloadSet =
+              C.overloadSet(Opts, FileName.raw(),
+                            Inserter ? &*Inserter : nullptr, CCContextKind)) {
         auto Ret = BundleLookup.try_emplace(OverloadSet, Bundles.size());
         if (Ret.second)
           Bundles.emplace_back();
@@ -2158,8 +2159,9 @@ private:
                           : nullptr;
       if (!Builder)
         Builder.emplace(Recorder ? &Recorder->CCSema->getASTContext() : nullptr,
-                        Item, SemaCCS, AccessibleScopes, *Inserter, FileName,
-                        CCContextKind, Opts, IsUsingDeclaration, NextTokenKind);
+                        Item, SemaCCS, AccessibleScopes, *Inserter,
+                        FileName.raw(), CCContextKind, Opts, IsUsingDeclaration,
+                        NextTokenKind);
       else
         Builder->add(Item, SemaCCS, CCContextKind);
     }
@@ -2233,7 +2235,7 @@ CodeCompleteResult codeCompleteComment(PathRef FileName, unsigned Offset,
   semaCodeComplete(
       std::make_unique<ParamNameCollector>(Options, ParamNames), Options,
       {FileName, Offset, *Preamble,
-       PreamblePatch::createFullPatch(FileName, ParseInput, *Preamble),
+       PreamblePatch::createFullPatch(FileName.raw(), ParseInput, *Preamble),
        ParseInput});
   if (ParamNames.empty())
     return CodeCompleteResult();
@@ -2307,7 +2309,7 @@ CodeCompleteResult codeComplete(PathRef FileName, Position Pos,
              : std::move(Flow).run({FileName, *Offset, *Preamble,
                                     /*PreamblePatch=*/
                                     PreamblePatch::createMacroPatch(
-                                        FileName, ParseInput, *Preamble),
+                                        FileName.raw(), ParseInput, *Preamble),
                                     ParseInput});
 }
 
@@ -2331,7 +2333,7 @@ SignatureHelp signatureHelp(PathRef FileName, Position Pos,
                                                ParseInput.Index, Result),
       Options,
       {FileName, *Offset, Preamble,
-       PreamblePatch::createFullPatch(FileName, ParseInput, Preamble),
+       PreamblePatch::createFullPatch(FileName.raw(), ParseInput, Preamble),
        ParseInput});
   return Result;
 }

@@ -428,7 +428,7 @@ public:
   }
 
   bool prepare(const Selection &Sel) override {
-    SameFile = !isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts());
+    SameFile = !isHeaderFile(Sel.AST->tuPath().raw(), Sel.AST->getLangOpts());
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
 
     // Bail out if the selection is not a in-line function definition.
@@ -489,12 +489,12 @@ public:
 
   Expected<Effect> apply(const Selection &Sel) override {
     const SourceManager &SM = Sel.AST->getSourceManager();
-    auto CCFile = SameFile ? Sel.AST->tuPath().str()
-                           : getSourceFile(Sel.AST->tuPath(), Sel);
+    auto CCFile = SameFile ? Sel.AST->tuPath().owned()
+                           : getSourceFile(Sel.AST->tuPath().raw(), Sel);
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");
     assert(Sel.FS && "FS Must be set in apply");
-    auto Buffer = Sel.FS->getBufferForFile(*CCFile);
+    auto Buffer = Sel.FS->getBufferForFile(CCFile->raw());
     // FIXME: Maybe we should consider creating the implementation file if it
     // doesn't exist?
     if (!Buffer)
@@ -507,13 +507,14 @@ public:
     auto FuncDef = getFunctionSourceCode(
         Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens(),
         Sel.AST->getHeuristicResolver(),
-        SameFile && isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts()));
+        SameFile &&
+            isHeaderFile(Sel.AST->tuPath().raw(), Sel.AST->getLangOpts()));
     if (!FuncDef)
       return FuncDef.takeError();
 
-    SourceManagerForFile SMFF(*CCFile, Contents);
+    SourceManagerForFile SMFF(CCFile->raw(), Contents);
     const tooling::Replacement InsertFunctionDef(
-        *CCFile, InsertionPoint->Offset, 0, *FuncDef);
+        CCFile->raw(), InsertionPoint->Offset, 0, *FuncDef);
     auto Effect = Effect::mainFileEdit(
         SMFF.get(), tooling::Replacements(InsertFunctionDef));
     if (!Effect)
@@ -536,7 +537,7 @@ public:
     }
 
     if (SameFile) {
-      tooling::Replacements &R = Effect->ApplyEdits[*CCFile].Replacements;
+      tooling::Replacements &R = Effect->ApplyEdits[CCFile->raw()].Replacements;
       R = R.merge(HeaderUpdates);
     } else {
       auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(), HeaderUpdates);

@@ -102,7 +102,7 @@ public:
     bool HadError = diagsContainErrors(Diagnostics);
 
     std::lock_guard<std::mutex> Lock(Mutex);
-    LastDiagsHadError[File] = HadError;
+    LastDiagsHadError[File.raw()] = HadError;
   }
 
   /// Exposes all files consumed by onDiagnosticsReady in an unspecified order.
@@ -591,8 +591,8 @@ struct Something {
 )cpp";
   Path BarCpp = testPath("bar.cpp");
 
-  FS.Files[FooCpp] = "";
-  FS.Files[BarCpp] = "";
+  FS.Files[FooCpp.raw()] = "";
+  FS.Files[BarCpp.raw()] = "";
 
   EXPECT_THAT(Server.fileStats(), IsEmpty());
 
@@ -691,7 +691,7 @@ int d;
 
     void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
                             llvm::ArrayRef<Diag> Diagnostics) override {
-      StringRef FileIndexStr = llvm::sys::path::stem(File);
+      StringRef FileIndexStr = File.stem().raw();
       ASSERT_TRUE(FileIndexStr.consume_front("Foo"));
 
       unsigned long FileIndex = std::stoul(FileIndexStr.str());
@@ -1117,11 +1117,11 @@ TEST(ClangdServerTest, FallbackWhenWaitingForCompileCommand) {
       // FIXME: make this timeout and fail instead of waiting forever in case
       // something goes wrong.
       CanReturnCommand.wait();
-      auto FileName = llvm::sys::path::filename(File);
+      auto FileName = File.filename();
       std::vector<std::string> CommandLine = {"clangd", "-ffreestanding",
-                                              std::string(File)};
-      return {tooling::CompileCommand(llvm::sys::path::parent_path(File),
-                                      FileName, std::move(CommandLine), "")};
+                                              File.owned().raw()};
+      return {tooling::CompileCommand(File.parentPath().raw(), FileName,
+                                      std::move(CommandLine), "")};
     }
 
     std::vector<std::string> ExtraClangFlags;

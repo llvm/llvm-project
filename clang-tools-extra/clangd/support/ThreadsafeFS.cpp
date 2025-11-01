@@ -74,7 +74,7 @@ private:
 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 ThreadsafeFS::view(PathRef CWD) const {
   auto FS = view(std::nullopt);
-  if (auto EC = FS->setCurrentWorkingDirectory(CWD))
+  if (auto EC = FS->setCurrentWorkingDirectory(CWD.raw()))
     elog("VFS: failed to set CWD to {0}: {1}", CWD, EC.message());
   return FS;
 }

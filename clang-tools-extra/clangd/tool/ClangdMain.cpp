@@ -673,12 +673,12 @@ public:
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
     if (!CompileCommandsDir.empty()) {
-      if (llvm::sys::fs::exists(CompileCommandsDir)) {
+      if (CompileCommandsDir.ref().exists()) {
         // We support passing both relative and absolute paths to the
         // --compile-commands-dir argument, but we assume the path is absolute
         // in the rest of clangd so we make sure the path is absolute before
         // continuing.
-        llvm::SmallString<128> Path(CompileCommandsDir);
+        llvm::SmallString<128> Path(CompileCommandsDir.raw());
         if (std::error_code EC = llvm::sys::fs::make_absolute(Path)) {
           elog("Error while converting the relative path specified by "
                "--compile-commands-dir to an absolute path: {0}. The argument "
@@ -695,7 +695,7 @@ public:
     if (!IndexFile.empty()) {
       Config::ExternalIndexSpec Spec;
       Spec.Kind = Spec.File;
-      Spec.Location = IndexFile;
+      Spec.Location = IndexFile.raw();
       IndexSpec = std::move(Spec);
     }
 #if CLANGD_ENABLE_REMOTE
@@ -821,7 +821,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   std::optional<llvm::raw_fd_ostream> InputMirrorStream;
   if (!InputMirrorFile.empty()) {
     std::error_code EC;
-    InputMirrorStream.emplace(InputMirrorFile, /*ref*/ EC,
+    InputMirrorStream.emplace(InputMirrorFile.raw(), /*ref*/ EC,
                               llvm::sys::fs::FA_Read | llvm::sys::fs::FA_Write);
     if (EC) {
       InputMirrorStream.reset();
@@ -906,7 +906,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     break;
   }
   if (!ResourceDir.empty())
-    Opts.ResourceDir = ResourceDir;
+    Opts.ResourceDir = ResourceDir.raw();
   Opts.BuildDynamicSymbolIndex = true;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
@@ -1007,9 +1007,9 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
-    if (auto Error =
-            llvm::sys::fs::real_path(CheckFile, Path, /*expand_tilde=*/true)) {
-      elog("Failed to resolve path {0}: {1}", CheckFile, Error.message());
+    if (auto Error = llvm::sys::fs::real_path(CheckFile.raw(), Path,
+                                              /*expand_tilde=*/true)) {
+      elog("Failed to resolve path {0}: {1}", CheckFile.raw(), Error.message());
       return 1;
     }
     log("Entering check mode (no LSP server)");
