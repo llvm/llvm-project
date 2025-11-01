@@ -71,6 +71,22 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA);
 bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA);
 
+/// Create a new global variable in \p M based on \p GV, but uniquified for
+/// \p KF. The new global variable will have the same properties as \p GV, but
+/// will have a name based on \p GV and \p KF to ensure uniqueness.
+GlobalVariable *uniquifyGVPerKernel(Module &M, GlobalVariable *GV,
+                                    Function *KF);
+
+/// Record the absolute address of \p GV in the module flag metadata of \p M.
+void recordLDSAbsoluteAddress(Module *M, GlobalVariable *GV, uint32_t Address);
+
+/// Lower special LDS variables i.e named barriers in \p M.
+/// Update \p LDSUsesInfo and \p LDSToKernelsThatNeedToAccessItIndirectly
+/// to reflect any changes made.
+bool lowerSpecialLDSVariables(
+    Module &M, LDSUsesInfoTy &LDSUsesInfo,
+    VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly);
+
 } // end namespace AMDGPU
 
 } // end namespace llvm
