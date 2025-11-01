@@ -347,25 +347,26 @@ def untyped   : ValueType<8,    243> { // Produces an untyped value
 }
 def funcref   : ValueType<0,    244>;  // WebAssembly's funcref type
 def externref : ValueType<0,    245>;  // WebAssembly's externref type
-def exnref    : ValueType<0,    246>;  // WebAssembly's exnref type
-def x86amx    : ValueType<8192, 247>;  // X86 AMX value
-def i64x8     : ValueType<512,  248>;  // 8 Consecutive GPRs (AArch64)
+def externref_nn : ValueType<0, 246>;  // WebAssembly's nonnull externref type
+def exnref    : ValueType<0,    247>;  // WebAssembly's exnref type
+def x86amx    : ValueType<8192, 248>;  // X86 AMX value
+def i64x8     : ValueType<512,  249>;  // 8 Consecutive GPRs (AArch64)
 def aarch64svcount
-              : ValueType<16,  249>;  // AArch64 predicate-as-counter
-def spirvbuiltin : ValueType<0, 250>; // SPIR-V's builtin type
+              : ValueType<16,  250>;  // AArch64 predicate-as-counter
+def spirvbuiltin : ValueType<0, 251>; // SPIR-V's builtin type
 // AMDGPU buffer fat pointer, buffer rsrc + offset, rewritten before MIR translation.
 // FIXME: Remove this and the getPointerType() override if MVT::i160 is added.
-def amdgpuBufferFatPointer : ValueType<160, 251>;
+def amdgpuBufferFatPointer : ValueType<160, 252>;
 // AMDGPU buffer strided pointer, buffer rsrc + index + offset, doesn't reach MIR.
 // FIXME: Remove this and the getPointerType() override if MVT::i82 is added.
-def amdgpuBufferStridedPointer : ValueType<192, 252>;
+def amdgpuBufferStridedPointer : ValueType<192, 253>;
 
-def aarch64mfp8 : ValueType<8,  253>;  // 8-bit value in FPR (AArch64)
+def aarch64mfp8 : ValueType<8,  254>;  // 8-bit value in FPR (AArch64)
 
 // CHERI capabilities. Pointer-like values that carry additional metadata
 // for enforcing safety guarantees on CHERI-enabled targets.
-def c64 : VTCheriCapability<64, 254>;   // 64-bit CHERI capability value
-def c128 : VTCheriCapability<128, 255>; // 128-bit CHERI capability value
+def c64 : VTCheriCapability<64, 255>;   // 64-bit CHERI capability value
+def c128 : VTCheriCapability<128, 256>; // 128-bit CHERI capability value
 
 let isNormalValueType = false in {
 // Pseudo valuetype mapped to the current CHERI capability pointer size.
