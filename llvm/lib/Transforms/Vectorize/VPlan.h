@@ -4109,6 +4109,12 @@ public:
   const VPCanonicalIVPHIRecipe *getCanonicalIV() const {
     return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
   }
+
+  /// Return the type of the canonical IV for loop regions.
+  Type *getCanonicalIVType() { return getCanonicalIV()->getScalarType(); }
+  const Type *getCanonicalIVType() const {
+    return getCanonicalIV()->getScalarType();
+  }
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {
