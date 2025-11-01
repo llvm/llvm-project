@@ -44,7 +44,8 @@ static void normalizeCharSetName(StringRef CSName,
 }
 
 // Maps the encoding name to enum constant if possible.
-static std::optional<TextEncoding> getKnownEncoding(StringRef Name) {
+std::optional<TextEncoding>
+TextEncodingConverter::getKnownEncoding(StringRef Name) {
   SmallString<16> Normalized;
   normalizeCharSetName(Name, Normalized);
   if (Normalized.equals("utf8"))
