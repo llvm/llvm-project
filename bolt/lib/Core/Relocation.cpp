@@ -304,10 +304,9 @@ static size_t getSizeForTypePPC64(uint32_t Type) {
   case ELF::R_PPC64_GOT16_HI:
   case ELF::R_PPC64_GOT16_HA:
     return 2;
-  case ELF::R_PPC64_REL14:
-    return 2;
   case ELF::R_PPC64_ADDR32:
   case ELF::R_PPC64_REL24:
+  case ELF::R_PPC64_REL14:
     return 4;
   case ELF::R_PPC64_ADDR64:
   case ELF::R_PPC64_REL32:
@@ -544,6 +543,11 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
   }
 }
 
+static inline int64_t signExtend(uint64_t v, unsigned bits) {
+  uint64_t m = 1ull << (bits - 1);
+  return (int64_t)((v ^ m) - m);
+}
+
 static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
                                   uint64_t /*PC*/) {
   switch (Type) {
@@ -576,13 +580,24 @@ static uint64_t extractValuePPC64(uint32_t Type, uint64_t Contents,
   case ELF::R_PPC64_GOT16_LO:
   case ELF::R_PPC64_GOT16_HI:
   case ELF::R_PPC64_GOT16_HA:
-    return Contents;
-
-  // Code relocs: for the verifier, return the ELF RELA addend (usually 0)
   case ELF::R_PPC64_REL32:
-  case ELF::R_PPC64_REL24:
-  case ELF::R_PPC64_REL14:
-    return Contents;
+
+    return 0;
+
+    case ELF::R_PPC64_REL24: {
+      // Branch LI field: bits [6..29], stored as (disp >> 2). AA/LK are bits [30,31].
+      uint32_t insn = static_cast<uint32_t>(Contents);
+      int32_t  li   = (insn >> 2) & 0x00FFFFFF;   // 24 bits
+      int32_t  disp = signExtend(li, 24) << 2;   // bytes
+      return static_cast<int64_t>(disp);
+    }
+    case ELF::R_PPC64_REL14: {
+      // Cond branch BD field: bits [16..29], stored as (disp >> 2).
+      uint32_t insn = static_cast<uint32_t>(Contents);
+      int32_t  bd   = (insn >> 2) & 0x00003FFF;   // 14 bits
+      int32_t  disp = signExtend(bd, 14) << 2;   // bytes
+      return static_cast<int64_t>(disp);
+    }
 
   case ELF::R_PPC64_NONE:
     return 0;
