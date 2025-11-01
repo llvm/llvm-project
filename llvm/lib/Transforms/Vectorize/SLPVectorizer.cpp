@@ -7241,10 +7241,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
               VectorGEPCost;
           break;
         case LoadsState::StridedVectorize:
-          VecLdCost += TTI.getStridedMemoryOpCost(Instruction::Load, SubVecTy,
-                                                  LI0->getPointerOperand(),
-                                                  /*VariableMask=*/false,
-                                                  CommonAlignment, CostKind) +
+          VecLdCost += TTI.getIntrinsicInstrCost(
+                           {Intrinsic::experimental_vp_strided_load,
+                            SubVecTy,
+                            {},
+                            CommonAlignment,
+                            /*VariableMask=*/false},
+                           CostKind) +
                        VectorGEPCost;
           break;
         case LoadsState::CompressVectorize:
@@ -13208,9 +13211,13 @@ void BoUpSLP::transformNodes() {
                                  BaseLI->getPointerAddressSpace(), CostKind,
                                  TTI::OperandValueInfo()) +
             ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
-        InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
-            Instruction::Load, VecTy, BaseLI->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind, BaseLI);
+        InstructionCost StridedCost =
+            TTI->getIntrinsicInstrCost({Intrinsic::experimental_vp_strided_load,
+                                        VecTy,
+                                        {},
+                                        CommonAlignment,
+                                        /*VariableMask=*/false},
+                                       CostKind);
         if (StridedCost < OriginalVecCost || ForceStridedLoads) {
           // Strided load is more profitable than consecutive load + reverse -
           // transform the node to strided load.
@@ -13243,9 +13250,13 @@ void BoUpSLP::transformNodes() {
                                  BaseSI->getPointerAddressSpace(), CostKind,
                                  TTI::OperandValueInfo()) +
             ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
-        InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
-            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind, BaseSI);
+        InstructionCost StridedCost = TTI->getIntrinsicInstrCost(
+            {Intrinsic::experimental_vp_strided_store,
+             Type::getVoidTy(VecTy->getContext()),
+             {VecTy},
+             CommonAlignment,
+             /*VariableMask=*/false},
+            CostKind);
         if (StridedCost < OriginalVecCost)
           // Strided store is more profitable than reverse + consecutive store -
           // transform the node to strided store.
@@ -15008,9 +15019,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::StridedVectorize: {
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
-        VecLdCost = TTI->getStridedMemoryOpCost(
-            Instruction::Load, VecTy, LI0->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind);
+        VecLdCost =
+            TTI->getIntrinsicInstrCost({Intrinsic::experimental_vp_strided_load,
+                                        VecTy,
+                                        {},
+                                        CommonAlignment,
+                                        /*VariableMask=*/false},
+                                       CostKind);
         break;
       }
       case TreeEntry::CompressVectorize: {
@@ -15101,9 +15116,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (E->State == TreeEntry::StridedVectorize) {
         Align CommonAlignment =
             computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
-        VecStCost = TTI->getStridedMemoryOpCost(
-            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
-            /*VariableMask=*/false, CommonAlignment, CostKind);
+        VecStCost = TTI->getIntrinsicInstrCost(
+            {Intrinsic::experimental_vp_strided_store,
+             Type::getVoidTy(VecTy->getContext()),
+             {VecTy},
+             CommonAlignment,
+             /*VariableMask=*/false},
+            CostKind);
       } else {
         assert(E->State == TreeEntry::Vectorize &&
                "Expected either strided or consecutive stores.");

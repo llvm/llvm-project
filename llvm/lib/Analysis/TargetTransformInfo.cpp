@@ -96,6 +96,14 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
   ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
 }
 
+IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
+                                                 ArrayRef<Type *> Tys,
+                                                 Align Alignment,
+                                                 bool VariableMask)
+    : RetTy(RTy), IID(Id), Alignment(Alignment), VariableMask(VariableMask) {
+  ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
+}
+
 IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
                                                  ArrayRef<const Value *> Args)
     : RetTy(Ty), IID(Id) {
@@ -1206,15 +1214,6 @@ InstructionCost TargetTransformInfo::getExpandCompressMemoryOpCost(
     TTI::TargetCostKind CostKind, const Instruction *I) const {
   InstructionCost Cost = TTIImpl->getExpandCompressMemoryOpCost(
       Opcode, DataTy, VariableMask, Alignment, CostKind, I);
-  assert(Cost >= 0 && "TTI should not produce negative costs!");
-  return Cost;
-}
-
-InstructionCost TargetTransformInfo::getStridedMemoryOpCost(
-    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) const {
-  InstructionCost Cost = TTIImpl->getStridedMemoryOpCost(
-      Opcode, DataTy, Ptr, VariableMask, Alignment, CostKind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

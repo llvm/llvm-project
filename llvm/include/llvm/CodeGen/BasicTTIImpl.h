@@ -1575,18 +1575,6 @@ public:
                                        /*IsGatherScatter*/ true, CostKind);
   }
 
-  InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
-                                         const Value *Ptr, bool VariableMask,
-                                         Align Alignment,
-                                         TTI::TargetCostKind CostKind,
-                                         const Instruction *I) const override {
-    // For a target without strided memory operations (or for an illegal
-    // operation type on one which does), assume we lower to a gather/scatter
-    // operation.  (Which may in turn be scalarized.)
-    return thisT()->getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
-                                           Alignment, CostKind, I);
-  }
-
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
@@ -1959,27 +1947,26 @@ public:
     }
     case Intrinsic::experimental_vp_strided_store: {
       const Value *Data = Args[0];
-      const Value *Ptr = Args[1];
       const Value *Mask = Args[3];
       const Value *EVL = Args[4];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
       Type *EltTy = cast<VectorType>(Data->getType())->getElementType();
       Align Alignment =
           I->getParamAlign(1).value_or(thisT()->DL.getABITypeAlign(EltTy));
-      return thisT()->getStridedMemoryOpCost(Instruction::Store,
-                                             Data->getType(), Ptr, VarMask,
-                                             Alignment, CostKind, I);
+      return thisT()->getCommonMaskedMemoryOpCost(
+          Instruction::Store, Data->getType(), Alignment, VarMask,
+          /*IsGatherScatter*/ true, CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
-      const Value *Ptr = Args[0];
       const Value *Mask = Args[2];
       const Value *EVL = Args[3];
       bool VarMask = !isa<Constant>(Mask) || !isa<Constant>(EVL);
       Type *EltTy = cast<VectorType>(RetTy)->getElementType();
       Align Alignment =
           I->getParamAlign(0).value_or(thisT()->DL.getABITypeAlign(EltTy));
-      return thisT()->getStridedMemoryOpCost(Instruction::Load, RetTy, Ptr,
-                                             VarMask, Alignment, CostKind, I);
+      return thisT()->getCommonMaskedMemoryOpCost(
+          Instruction::Load, RetTy, Alignment, VarMask,
+          /*IsGatherScatter*/ true, CostKind);
     }
     case Intrinsic::stepvector: {
       if (isa<ScalableVectorType>(RetTy))
@@ -2419,17 +2406,21 @@ public:
     }
     case Intrinsic::experimental_vp_strided_store: {
       auto *Ty = cast<VectorType>(ICA.getArgTypes()[0]);
-      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
-      return thisT()->getStridedMemoryOpCost(
-          Instruction::Store, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
-          Alignment, CostKind, ICA.getInst());
+      Align Alignment = ICA.getAlign().value_or(
+          thisT()->DL.getABITypeAlign(Ty->getElementType()));
+      return thisT()->getCommonMaskedMemoryOpCost(
+          Instruction::Store, Ty, Alignment,
+          /*VariableMask=*/true,
+          /*IsGatherScatter*/ true, CostKind);
     }
     case Intrinsic::experimental_vp_strided_load: {
       auto *Ty = cast<VectorType>(ICA.getReturnType());
-      Align Alignment = thisT()->DL.getABITypeAlign(Ty->getElementType());
-      return thisT()->getStridedMemoryOpCost(
-          Instruction::Load, Ty, /*Ptr=*/nullptr, /*VariableMask=*/true,
-          Alignment, CostKind, ICA.getInst());
+      Align Alignment = ICA.getAlign().value_or(
+          thisT()->DL.getABITypeAlign(Ty->getElementType()));
+      return thisT()->getCommonMaskedMemoryOpCost(
+          Instruction::Load, Ty, Alignment,
+          /*VariableMask=*/true,
+          /*IsGatherScatter*/ true, CostKind);
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
