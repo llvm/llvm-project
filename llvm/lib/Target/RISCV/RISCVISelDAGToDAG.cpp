@@ -991,6 +991,18 @@ static unsigned getSegInstNF(unsigned Intrinsic) {
   }
 }
 
+static bool isApplicableToPLI(int Val) {
+  // Check if the immediate is packed i8 or i10
+  int16_t Bit31To16 = Val >> 16;
+  int16_t Bit15To0 = Val;
+  int8_t Bit15To8 = Bit15To0 >> 8;
+  int8_t Bit7To0 = Val;
+  if (Bit31To16 != Bit15To0)
+    return false;
+
+  return isInt<10>(Bit31To16) || Bit15To8 == Bit7To0;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -1033,6 +1045,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // sign extending bit 32.
     if (!isInt<32>(Imm) && isUInt<32>(Imm) && hasAllWUsers(Node))
       Imm = SignExtend64<32>(Imm);
+
+    if (hasAllWUsers(Node) && isApplicableToPLI(Imm) &&
+        Subtarget->hasStdExtP() && Subtarget->enablePExtCodeGen()) {
+      // If its 4 packed 8 bit integer or 2 packed signed integer, we can simply
+      // copy lower 32 bits to higher 32 bits to make it able to rematerialize
+      // to PLI_B or PLI_H
+      Imm = ((uint64_t)Imm << 32) | (Imm & 0xFFFFFFFF);
+    }
 
     ReplaceNode(Node, selectImm(CurDAG, DL, VT, Imm, *Subtarget).getNode());
     return;
@@ -2652,6 +2672,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         (VT.isFixedLengthVector() && SrcVT.isFixedLengthVector())) {
       ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
       CurDAG->RemoveDeadNode(Node);
+      return;
+    }
+    if (Subtarget->hasStdExtP() && Subtarget->enablePExtCodeGen()) {
+      if (((VT == MVT::v4i16 || VT == MVT::v8i8) && SrcVT == MVT::i64) ||
+          ((SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8) && VT == MVT::i64)) {
+        ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+        CurDAG->RemoveDeadNode(Node);
+      }
       return;
     }
     break;
