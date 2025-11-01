@@ -25,6 +25,13 @@
 
 namespace Fortran::parser::omp {
 
+template <typename T> constexpr auto addr_if(std::optional<T> &x) {
+  return x ? &*x : nullptr;
+}
+template <typename T> constexpr auto addr_if(const std::optional<T> &x) {
+  return x ? &*x : nullptr;
+}
+
 namespace detail {
 using D = llvm::omp::Directive;
 
@@ -133,8 +140,23 @@ template <typename T> OmpDirectiveName GetOmpDirectiveName(const T &x) {
 }
 
 const OmpObjectList *GetOmpObjectList(const OmpClause &clause);
+
+template <typename T>
+const T *GetFirstArgument(const OmpDirectiveSpecification &spec) {
+  for (const OmpArgument &arg : spec.Arguments().v) {
+    if (auto *t{std::get_if<T>(&arg.u)}) {
+      return t;
+    }
+  }
+  return nullptr;
+}
+
 const BlockConstruct *GetFortranBlockConstruct(
     const ExecutionPartConstruct &epc);
+
+const OmpCombinerExpression *GetCombinerExpr(
+    const OmpReductionSpecifier &rspec);
+const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init);
 
 } // namespace Fortran::parser::omp
 

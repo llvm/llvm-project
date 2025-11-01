@@ -133,6 +133,8 @@ include "AArch64SchedNeoverseN2.td"
 include "AArch64SchedNeoverseN3.td"
 include "AArch64SchedNeoverseV1.td"
 include "AArch64SchedNeoverseV2.td"
+include "AArch64SchedNeoverseV3.td"
+include "AArch64SchedNeoverseV3AE.td"
 include "AArch64SchedOryon.td"
 
 include "AArch64Processors.td"

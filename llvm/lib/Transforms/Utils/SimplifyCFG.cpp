@@ -80,6 +80,7 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -1866,10 +1867,19 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
   // If either of the blocks has it's address taken, then we can't do this fold,
   // because the code we'd hoist would no longer run when we jump into the block
   // by it's address.
-  for (auto *Succ : successors(BB))
-    if (Succ->hasAddressTaken() || !Succ->getSinglePredecessor())
+  for (auto *Succ : successors(BB)) {
+    if (Succ->hasAddressTaken())
       return false;
-
+    if (Succ->getSinglePredecessor())
+      continue;
+    // If Succ has >1 predecessors, continue to check if the Succ contains only
+    // one `unreachable` inst. Since executing `unreachable` inst is an UB, we
+    // can relax the condition based on the assumptiom that the program would
+    // never enter Succ and trigger such an UB.
+    if (isa<UnreachableInst>(*Succ->begin()))
+      continue;
+    return false;
+  }
   // The second of pair is a SkipFlags bitmask.
   using SuccIterPair = std::pair<BasicBlock::iterator, unsigned>;
   SmallVector<SuccIterPair, 8> SuccIterPairs;
@@ -5228,32 +5238,52 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
         CompVal, DL.getIntPtrType(CompVal->getType()), "magicptr");
   }
 
-  // Create the new switch instruction now.
-  SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
-  if (HasProfile) {
-    // We know the weight of the default case. We don't know the weight of the
-    // other cases, but rather than completely lose profiling info, we split
-    // the remaining probability equally over them.
-    SmallVector<uint32_t> NewWeights(Values.size() + 1);
-    NewWeights[0] = BranchWeights[1]; // this is the default, and we swapped if
-                                      // TrueWhenEqual.
-    for (auto &V : drop_begin(NewWeights))
-      V = BranchWeights[0] / Values.size();
-    setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
-  }
+  // Check if we can represent the values as a contiguous range. If so, we use a
+  // range check + conditional branch instead of a switch.
+  if (Values.front()->getValue() - Values.back()->getValue() ==
+      Values.size() - 1) {
+    ConstantRange RangeToCheck = ConstantRange::getNonEmpty(
+        Values.back()->getValue(), Values.front()->getValue() + 1);
+    APInt Offset, RHS;
+    ICmpInst::Predicate Pred;
+    RangeToCheck.getEquivalentICmp(Pred, RHS, Offset);
+    Value *X = CompVal;
+    if (!Offset.isZero())
+      X = Builder.CreateAdd(X, ConstantInt::get(CompVal->getType(), Offset));
+    Value *Cond =
+        Builder.CreateICmp(Pred, X, ConstantInt::get(CompVal->getType(), RHS));
+    BranchInst *NewBI = Builder.CreateCondBr(Cond, EdgeBB, DefaultBB);
+    if (HasProfile)
+      setBranchWeights(*NewBI, BranchWeights, /*IsExpected=*/false);
+    // We don't need to update PHI nodes since we don't add any new edges.
+  } else {
+    // Create the new switch instruction now.
+    SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
+    if (HasProfile) {
+      // We know the weight of the default case. We don't know the weight of the
+      // other cases, but rather than completely lose profiling info, we split
+      // the remaining probability equally over them.
+      SmallVector<uint32_t> NewWeights(Values.size() + 1);
+      NewWeights[0] = BranchWeights[1]; // this is the default, and we swapped
+                                        // if TrueWhenEqual.
+      for (auto &V : drop_begin(NewWeights))
+        V = BranchWeights[0] / Values.size();
+      setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
+    }
 
-  // Add all of the 'cases' to the switch instruction.
-  for (ConstantInt *Val : Values)
-    New->addCase(Val, EdgeBB);
+    // Add all of the 'cases' to the switch instruction.
+    for (ConstantInt *Val : Values)
+      New->addCase(Val, EdgeBB);
 
-  // We added edges from PI to the EdgeBB.  As such, if there were any
-  // PHI nodes in EdgeBB, they need entries to be added corresponding to
-  // the number of edges added.
-  for (BasicBlock::iterator BBI = EdgeBB->begin(); isa<PHINode>(BBI); ++BBI) {
-    PHINode *PN = cast<PHINode>(BBI);
-    Value *InVal = PN->getIncomingValueForBlock(BB);
-    for (unsigned i = 0, e = Values.size() - 1; i != e; ++i)
-      PN->addIncoming(InVal, BB);
+    // We added edges from PI to the EdgeBB.  As such, if there were any
+    // PHI nodes in EdgeBB, they need entries to be added corresponding to
+    // the number of edges added.
+    for (BasicBlock::iterator BBI = EdgeBB->begin(); isa<PHINode>(BBI); ++BBI) {
+      PHINode *PN = cast<PHINode>(BBI);
+      Value *InVal = PN->getIncomingValueForBlock(BB);
+      for (unsigned i = 0, e = Values.size() - 1; i != e; ++i)
+        PN->addIncoming(InVal, BB);
+    }
   }
 
   // Erase the old branch instruction.
@@ -5926,7 +5956,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   }
 
   // Update weight for the newly-created conditional branch.
-  if (hasBranchWeightMD(*SI)) {
+  if (hasBranchWeightMD(*SI) && NewBI->isConditional()) {
     SmallVector<uint64_t, 8> Weights;
     getBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
@@ -5948,14 +5978,14 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
   }
 
   // Prune obsolete incoming values off the successors' PHI nodes.
-  for (auto BBI = Dest->begin(); isa<PHINode>(BBI); ++BBI) {
+  for (auto &PHI : make_early_inc_range(Dest->phis())) {
     unsigned PreviousEdges = Cases->size();
     if (Dest == SI->getDefaultDest())
       ++PreviousEdges;
     for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
-      cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
+      PHI.removeIncomingValue(SI->getParent());
   }
-  for (auto BBI = OtherDest->begin(); isa<PHINode>(BBI); ++BBI) {
+  for (auto &PHI : make_early_inc_range(OtherDest->phis())) {
     unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
@@ -5964,7 +5994,7 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     if (NewBI->isUnconditional())
       ++E;
     for (unsigned I = 0; I != E; ++I)
-      cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
+      PHI.removeIncomingValue(SI->getParent());
   }
 
   // Clean up the default block - it may have phis or other instructions before
@@ -7603,7 +7633,35 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     auto *DefaultCaseBB = SI->getDefaultDest();
     BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
     auto It = OrigBB->getTerminator()->getIterator();
-    BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    SmallVector<uint32_t> Weights;
+    auto HasWeights =
+        !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
+    auto *BI = BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    if (HasWeights && any_of(Weights, [](const auto &V) { return V != 0; })) {
+      // IsPow2 covers a subset of the cases in which we'd go to the default
+      // label. The other is those powers of 2 that don't appear in the case
+      // statement. We don't know the distribution of the values coming in, so
+      // the safest is to split 50-50 the original probability to `default`.
+      uint64_t OrigDenominator = sum_of(map_range(
+          Weights, [](const auto &V) { return static_cast<uint64_t>(V); }));
+      SmallVector<uint64_t> NewWeights(2);
+      NewWeights[1] = Weights[0] / 2;
+      NewWeights[0] = OrigDenominator - NewWeights[1];
+      setFittedBranchWeights(*BI, NewWeights, /*IsExpected=*/false);
+
+      // For the original switch, we reduce the weight of the default by the
+      // amount by which the previous branch contributes to getting to default,
+      // and then make sure the remaining weights have the same relative ratio
+      // wrt eachother.
+      uint64_t CasesDenominator = OrigDenominator - Weights[0];
+      Weights[0] /= 2;
+      for (auto &W : drop_begin(Weights))
+        W = NewWeights[0] * static_cast<double>(W) / CasesDenominator;
+
+      setBranchWeights(*SI, Weights, /*IsExpected=*/false);
+    }
+    // BI is handling the default case for SI, and so should share its DebugLoc.
+    BI->setDebugLoc(SI->getDebugLoc());
     It->eraseFromParent();
 
     addPredecessorToBlock(DefaultCaseBB, OrigBB, SplitBB);

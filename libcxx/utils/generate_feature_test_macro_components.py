@@ -369,6 +369,16 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_constexpr_flat_map",
+            "values": {"c++26": 202502},
+            "headers": ["flat_map"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_flat_set",
+            "values": {"c++26": 202502},
+            "headers": ["flat_set"],
+        },
+        {
             "name": "__cpp_lib_constexpr_forward_list",
             "values": {"c++26": 202502},
             "headers": ["forward_list"],

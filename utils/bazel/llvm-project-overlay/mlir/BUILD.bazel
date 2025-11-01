@@ -3781,6 +3781,7 @@ cc_library(
         ":XeGPUDialect",
         ":XeGPUPassIncGen",
         ":XeGPUUtils",
+        ":XeGPUuArch",
         "//llvm:Support",
     ],
 )
@@ -4681,6 +4682,8 @@ cc_library(
         ":ControlFlowDialect",
         ":IR",
         ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
     ],
 )
 
@@ -7898,6 +7901,7 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":AffineToStandard",
+        ":Analysis",
         ":ArithDialect",
         ":ComplexDialect",
         ":ConversionPassIncGen",
@@ -12086,6 +12090,7 @@ cc_library(
     srcs = glob(["lib/Dialect/Transform/TuneExtension/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/Transform/TuneExtension/*.h"]),
     deps = [
+        ":ControlFlowInterfaces",
         ":IR",
         ":TransformDialect",
         ":TransformDialectInterfaces",
