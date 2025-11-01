@@ -40,6 +40,12 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/default_impl.cpp
+  stacktrace/entry.cpp
+  stacktrace/images.h
+  stacktrace/macos_impl.cpp
+  stacktrace/trace.cpp
+  stacktrace/windows_impl.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
@@ -246,6 +252,11 @@ endif()
 
 if (LIBCXX_ENABLE_SHARED)
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
+endif()
+
+if(WIN32)
+  string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}dbghelp")
+  string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}psapi")
 endif()
 
 if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
