@@ -22,6 +22,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -47,7 +48,10 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -74,6 +78,7 @@
 #include <optional>
 #include <string>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -181,6 +186,16 @@ struct GroupSection {
   uint32_t Info;
   uint32_t Type;
   std::vector<GroupMember> Members;
+};
+
+// Per-function call graph information.
+struct FunctionCallgraphInfo {
+  uint64_t FunctionAddress;
+  uint8_t FormatVersionNumber;
+  bool IsIndirectTarget;
+  uint64_t FunctionTypeId;
+  SmallSet<uint64_t, 4> DirectCallees;
+  SmallSet<uint64_t, 4> IndirectTypeIDs;
 };
 
 namespace {
@@ -432,9 +447,31 @@ protected:
       const SFrameParser<ELFT::Endianness> &Parser,
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
+  // Callgraph - Main data structure to maintain per function callgraph
+  // information.
+  SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
+
+  // Read the .llvm.callgraph section and process its contents to populate
+  // call graph related data structures which will be used to dump call graph
+  // info. Returns false if there is no .llvm.callgraph section in the input
+  // file.
+  bool processCallGraphSection();
+
+  void getCallGraphRelocations(std::vector<Relocation<ELFT>> &Relocations,
+                               const Elf_Shdr *&RelocSymTab);
 
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
+
+protected:
+  SmallVector<std::string> getFunctionNames(uint64_t FuncAddr) {
+    SmallVector<uint32_t> FuncSymIndexes =
+        this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
+    SmallVector<std::string> FuncSymNames;
+    for (uint32_t Index : FuncSymIndexes)
+      FuncSymNames.push_back(this->getStaticSymbolName(Index));
+    return FuncSymNames;
+  }
 };
 
 template <class ELFT>
@@ -619,6 +656,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
+  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -730,6 +768,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
+  void printCallGraphInfo() override;
   void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
@@ -5264,6 +5303,274 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT>
+static std::optional<object::SectionRef>
+getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
+  // Get the .llvm.callgraph section.
+  StringRef CallGraphSectionName(".llvm.callgraph");
+  for (auto Sec : ObjF.sections()) {
+    if (Expected<StringRef> NameOrErr = Sec.getName()) {
+      StringRef Name = *NameOrErr;
+      if (Name == CallGraphSectionName)
+        return Sec;
+    } else
+      consumeError(NameOrErr.takeError());
+  }
+  return std::nullopt;
+}
+
+namespace callgraph {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+enum Flags : uint8_t {
+  None = 0,
+  IsIndirectTarget = 1u << 0,
+  HasDirectCallees = 1u << 1,
+  HasIndirectCallees = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ HasIndirectCallees)
+};
+} // namespace callgraph
+
+template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
+  const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
+  if (!CGSection)
+    reportError(createError("No .llvm.callgraph section found."),
+                "Missing section");
+
+  Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
+      Obj.getSectionContents(*CGSection);
+  if (!SectionBytesOrErr) {
+    reportError(SectionBytesOrErr.takeError(),
+                "Unable to read the .llvm.callgraph section");
+  }
+
+  auto PrintMalformedError = [&](Error &E, Twine FuncPC, StringRef Component) {
+    reportError(std::move(E),
+                Twine("While reading call graph info's [" + Component +
+                      "] for function at [0x" + FuncPC + "]")
+                    .str());
+  };
+
+  DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
+                     ObjF.getBytesInAddress());
+
+  uint64_t UnknownCount = 0;
+  uint64_t Offset = 0;
+  while (Offset < CGSection->sh_size) {
+    Error CGSectionErr = Error::success();
+    uint8_t FormatVersionNumber = Data.getU8(&Offset, &CGSectionErr);
+    if (CGSectionErr) {
+      reportError(std::move(CGSectionErr),
+                  "While reading call graph info FormatVersionNumber");
+    }
+    if (FormatVersionNumber != 0) {
+      reportError(createError("Unknown format version value [" +
+                              std::to_string(FormatVersionNumber) +
+                              "] in .llvm.callgraph section."),
+                  "Unknown value");
+    }
+
+    uint8_t FlagsVal = Data.getU8(&Offset, &CGSectionErr);
+    if (CGSectionErr)
+      reportError(std::move(CGSectionErr),
+                  "While reading call graph info's Flags");
+    callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
+    if (FlagsVal > 7) {
+      reportError(createError("Unexpected value. Expected [0-7] but found [" +
+                              std::to_string(FlagsVal) + "]"),
+                  "While reading call graph info's Flags");
+    }
+    uint64_t FuncAddrOffset = Offset;
+    typename ELFT::uint FuncAddr =
+        Data.getUnsigned(&Offset, sizeof(FuncAddr), &CGSectionErr);
+    if (CGSectionErr)
+      reportError(std::move(CGSectionErr),
+                  "While reading call graph info function entry PC");
+
+    bool IsETREL = this->Obj.getHeader().e_type == ELF::ET_REL;
+    // Create a new entry for this function.
+    FunctionCallgraphInfo CGInfo;
+    CGInfo.FunctionAddress = IsETREL ? FuncAddrOffset : FuncAddr;
+    CGInfo.FormatVersionNumber = FormatVersionNumber;
+    bool IsIndirectTarget =
+        (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
+    CGInfo.IsIndirectTarget = IsIndirectTarget;
+    uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
+    if (CGSectionErr)
+      PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                          "indirect type id");
+    CGInfo.FunctionTypeId = TypeId;
+    if (IsIndirectTarget && TypeId == 0)
+      UnknownCount++;
+
+    bool HasDirectCallees =
+        (CGFlags & callgraph::HasDirectCallees) != callgraph::None;
+    if (HasDirectCallees) {
+      // Read number of direct call sites for this function.
+      uint64_t NumDirectCallees = Data.getULEB128(&Offset, &CGSectionErr);
+      if (CGSectionErr)
+        PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                            "number of direct callsites");
+      // Read uniqeu direct callees and populate FuncCGInfos.
+      for (uint64_t I = 0; I < NumDirectCallees; ++I) {
+        uint64_t CalleeOffset = Offset;
+        typename ELFT::uint Callee =
+            Data.getUnsigned(&Offset, sizeof(Callee), &CGSectionErr);
+        if (CGSectionErr)
+          PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                              "direct callee PC");
+        CGInfo.DirectCallees.insert((IsETREL ? CalleeOffset : Callee));
+      }
+    }
+
+    bool HasIndirectTypeIds =
+        (CGFlags & callgraph::HasIndirectCallees) != callgraph::None;
+    if (HasIndirectTypeIds) {
+      uint64_t NumIndirectTargetTypeIDs =
+          Data.getULEB128(&Offset, &CGSectionErr);
+      if (CGSectionErr)
+        PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                            "number of indirect target type IDs");
+
+      // Read unique indirect target type IDs  and populate FuncCGInfos.
+      for (uint64_t I = 0; I < NumIndirectTargetTypeIDs; ++I) {
+        uint64_t TargetType = Data.getU64(&Offset, &CGSectionErr);
+        if (CGSectionErr)
+          PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
+                              "indirect type ID");
+        CGInfo.IndirectTypeIDs.insert(TargetType);
+      }
+    }
+    FuncCGInfos.push_back(CGInfo);
+  }
+
+  if (UnknownCount)
+    reportUniqueWarning(".llvm.callgraph section has unknown type id for " +
+                        std::to_string(UnknownCount) + " indirect targets.");
+  return true;
+}
+
+template <class ELFT>
+void ELFDumper<ELFT>::getCallGraphRelocations(
+    std::vector<Relocation<ELFT>> &Relocations, const Elf_Shdr *&RelocSymTab) {
+  const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
+  if (!CGSection)
+    return;
+
+  const Elf_Shdr *CGRelSection = nullptr;
+  auto IsMatch = [&](const Elf_Shdr &Sec) { return &Sec == CGSection; };
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
+      Obj.getSectionAndRelocations(IsMatch);
+  if (MapOrErr && !MapOrErr->empty()) {
+    CGRelSection = MapOrErr->front().second;
+  }
+
+  if (CGRelSection) {
+    forEachRelocationDo(*CGRelSection,
+                        [&](const Relocation<ELFT> &R, unsigned Ndx,
+                            const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
+                          RelocSymTab = SymTab;
+                          Relocations.push_back(R);
+                        });
+    llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
+      return LHS.Offset < RHS.Offset;
+    });
+  }
+}
+
+template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
+  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
+    return;
+
+  std::vector<Relocation<ELFT>> Relocations;
+  const Elf_Shdr *RelocSymTab = nullptr;
+  this->getCallGraphRelocations(Relocations, RelocSymTab);
+
+  auto PrintFunc = [](uint64_t FuncEntryPC, ArrayRef<std::string> FuncNames,
+                      formatted_raw_ostream &OS) {
+    OS.PadToColumn(4);
+    OS << "Address:";
+    OS.PadToColumn(21);
+    OS << to_string(format_hex(FuncEntryPC, 1));
+    if (!FuncNames.empty())
+      OS << " <" << join(FuncNames.begin(), FuncNames.end(), ", ") << ">";
+    OS << "\n";
+  };
+
+  auto PrintReloc =
+      [&](uint64_t FuncEntryPC,
+          typename std::vector<Relocation<ELFT>>::iterator &Reloc) {
+        OS.PadToColumn(4);
+        if (Reloc == Relocations.end()) {
+          OS << "Offset:";
+          OS.PadToColumn(22);
+          OS << to_string(format_hex(FuncEntryPC, 1));
+          OS << "\n";
+          return;
+        }
+        Expected<RelSymbol<ELFT>> RelSym =
+            this->getRelocationTarget(*Reloc, RelocSymTab);
+        if (!RelSym) {
+          this->reportUniqueWarning(RelSym.takeError());
+          OS << "Offset:";
+          OS.PadToColumn(22);
+          OS << to_string(format_hex(FuncEntryPC, 1));
+          OS << "\n";
+          return;
+        }
+        SmallString<32> RelocName;
+        this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
+        OS << RelSym->Name;
+        if (Reloc->Addend) {
+          if (*Reloc->Addend >= 0)
+            OS << " + " << *Reloc->Addend;
+          else
+            OS << " - " << -(*Reloc->Addend);
+        }
+        OS << " (" << RelocName << ")";
+        OS << "\n";
+      };
+
+  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
+    if (this->Obj.getHeader().e_type != ELF::ET_REL) {
+      PrintFunc(FuncEntryPC, this->getFunctionNames(FuncEntryPC), OS);
+      return;
+    }
+    auto Reloc = llvm::lower_bound(
+        Relocations, FuncEntryPC,
+        [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
+    PrintReloc(FuncEntryPC, Reloc);
+  };
+
+  OS << "\nCall graph section '.llvm.callgraph' contains "
+     << this->FuncCGInfos.size() << " entries:\n";
+
+  int EntryIndex = 0;
+  for (const auto &CGInfo : this->FuncCGInfos) {
+    OS << "\n";
+    OS.PadToColumn(2);
+    OS << "Entry " << EntryIndex++ << ":\n";
+    PrintFunctionInfo(CGInfo.FunctionAddress);
+    OS.PadToColumn(4);
+    OS << "Indirect Target:  " << (CGInfo.IsIndirectTarget ? "Yes" : "No")
+       << "\n";
+    OS.PadToColumn(4);
+    OS << "Type ID:          " << format_hex(CGInfo.FunctionTypeId, 1) << "\n";
+    OS.PadToColumn(4);
+    OS << "Direct Callees (" << CGInfo.DirectCallees.size() << "):\n";
+    for (auto CalleePC : CGInfo.DirectCallees) {
+      OS.PadToColumn(6);
+      PrintFunctionInfo(CalleePC);
+    }
+    OS.PadToColumn(4);
+    OS << "Indirect Callees by Type ID (" << CGInfo.IndirectTypeIDs.size()
+       << "):\n";
+    for (auto TypeId : CGInfo.IndirectTypeIDs) {
+      OS.PadToColumn(6);
+      OS << format_hex(TypeId, 1) << "\n";
+    }
+  }
+}
+
+template <class ELFT>
 void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
 }
@@ -8090,6 +8397,81 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
         W.printNumber("To", this->getStaticSymbolName(To), To);
       }
       W.printNumber("Weight", CGPE.cgp_weight);
+    }
+  }
+}
+
+template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
+  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
+    return;
+
+  std::vector<Relocation<ELFT>> Relocations;
+  const Elf_Shdr *RelocSymTab = nullptr;
+  this->getCallGraphRelocations(Relocations, RelocSymTab);
+
+  auto PrintFunc = [](uint64_t FuncEntryPC, ArrayRef<std::string> FuncNames,
+                      ScopedPrinter &W) {
+    if (!FuncNames.empty())
+      W.printList("Functions", FuncNames);
+    W.printHex("Address", FuncEntryPC);
+  };
+
+  auto PrintReloc =
+      [&](uint64_t FuncEntryPC,
+          typename std::vector<Relocation<ELFT>>::iterator &Reloc) {
+        if (Reloc == Relocations.end()) {
+          W.printHex("Offset", FuncEntryPC);
+          return;
+        }
+        Expected<RelSymbol<ELFT>> RelSym =
+            this->getRelocationTarget(*Reloc, RelocSymTab);
+        if (!RelSym) {
+          this->reportUniqueWarning(RelSym.takeError());
+          W.printHex("Offset", FuncEntryPC);
+          return;
+        }
+        DictScope DCs(W, "Entry");
+        SmallString<32> RelocName;
+        this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
+        W.printString("Relocation", RelocName);
+        W.printString("Symbol", RelSym->Name);
+        if (Reloc->Addend)
+          W.printHex("Addend", (uintX_t)*Reloc->Addend);
+      };
+
+  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
+    if (this->Obj.getHeader().e_type != ELF::ET_REL) {
+      PrintFunc(FuncEntryPC, this->getFunctionNames(FuncEntryPC), W);
+      return;
+    }
+    auto Reloc = llvm::lower_bound(
+        Relocations, FuncEntryPC,
+        [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
+    PrintReloc(FuncEntryPC, Reloc);
+  };
+
+  ListScope CGI(W, "callgraph_info");
+  for (const auto &CGInfo : this->FuncCGInfos) {
+    DictScope D(W, "Function");
+    PrintFunctionInfo(CGInfo.FunctionAddress);
+    W.printNumber("Version", CGInfo.FormatVersionNumber);
+    W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
+    W.printHex("TypeId", CGInfo.FunctionTypeId);
+    W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
+    {
+      ListScope DCs(W, "DirectCallees");
+      for (auto CalleePC : CGInfo.DirectCallees) {
+        DictScope D(W, "Entry");
+        PrintFunctionInfo(CalleePC);
+      }
+    }
+    W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
+    {
+      ListScope ICSs(W, "IndirectTypeIDs");
+      for (auto TypeId : CGInfo.IndirectTypeIDs) {
+        DictScope ICS(W, "Entry");
+        W.printHex("TypeId", TypeId);
+      }
     }
   }
 }
