@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc < %s | FileCheck %s
+; RUN: llc --fast-isel -mtriple=x86_64-pc-windows-msvc -o - %s | FileCheck %s
 
 ; CHECK-LABEL:  uses_rax:
 ; CHECK:        .Limpcall0:
