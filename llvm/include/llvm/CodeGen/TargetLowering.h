@@ -1485,27 +1485,40 @@ public:
   /// Return how this load with extension should be treated: either it is legal,
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
-  LegalizeAction getLoadExtAction(unsigned ExtType, EVT ValVT,
-                                  EVT MemVT) const {
-    if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
-    unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
-    unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
+  LegalizeAction getLoadExtAction(unsigned ExtType, EVT ValVT, EVT MemVT,
+                                  unsigned AddrSpace) const {
+    if (ValVT.isExtended() || MemVT.isExtended())
+      return Expand;
+    unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;
+    unsigned MemI = (unsigned)MemVT.getSimpleVT().SimpleTy;
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
            MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
     unsigned Shift = 4 * ExtType;
+
+    uint64_t OverrideKey = ((uint64_t)(ValI & 0xFF) << 40) |
+                           ((uint64_t)(MemI & 0xFF) << 32) |
+                           (uint64_t)AddrSpace;
+
+    if (LoadExtActionOverrides.count(OverrideKey)) {
+      return (
+          LegalizeAction)((LoadExtActionOverrides.at(OverrideKey) >> Shift) &
+                          0xf);
+    }
     return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
   }
 
   /// Return true if the specified load with extension is legal on this target.
-  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal;
+  bool isLoadExtLegal(unsigned ExtType, EVT ValVT, EVT MemVT,
+                      unsigned AddrSpace) const {
+    return getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Legal;
   }
 
   /// Return true if the specified load with extension is legal or custom
   /// on this target.
-  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT) const {
-    return getLoadExtAction(ExtType, ValVT, MemVT) == Legal ||
-           getLoadExtAction(ExtType, ValVT, MemVT) == Custom;
+  bool isLoadExtLegalOrCustom(unsigned ExtType, EVT ValVT, EVT MemVT,
+                              unsigned AddrSpace) const {
+    return getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Legal ||
+           getLoadExtAction(ExtType, ValVT, MemVT, AddrSpace) == Custom;
   }
 
   /// Same as getLoadExtAction, but for atomic loads.
@@ -2659,23 +2672,38 @@ protected:
   /// Indicate that the specified load with extension does not work with the
   /// specified type and indicate what to do about it.
   void setLoadExtAction(unsigned ExtType, MVT ValVT, MVT MemVT,
-                        LegalizeAction Action) {
+                        LegalizeAction Action, unsigned AddrSpace = ~0) {
     assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValVT.isValid() &&
            MemVT.isValid() && "Table isn't big enough!");
     assert((unsigned)Action < 0x10 && "too many bits for bitfield array");
+
     unsigned Shift = 4 * ExtType;
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &= ~((uint16_t)0xF << Shift);
-    LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action << Shift;
+
+    if (AddrSpace == ~((unsigned)0)) {
+      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] &=
+          ~((uint16_t)0xF << Shift);
+      LoadExtActions[ValVT.SimpleTy][MemVT.SimpleTy] |= (uint16_t)Action
+                                                        << Shift;
+    } else {
+      uint64_t OverrideKey = ((uint64_t)(ValVT.SimpleTy & 0xFF) << 40) |
+                             ((uint64_t)(MemVT.SimpleTy & 0xFF) << 32) |
+                             (uint64_t)AddrSpace;
+      uint16_t &OverrideVal = LoadExtActionOverrides[OverrideKey];
+
+      OverrideVal &= ~((uint16_t)0xF << Shift);
+      OverrideVal |= (uint16_t)Action << Shift;
+    }
   }
   void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT, MVT MemVT,
-                        LegalizeAction Action) {
+                        LegalizeAction Action, unsigned AddrSpace = ~0) {
     for (auto ExtType : ExtTypes)
-      setLoadExtAction(ExtType, ValVT, MemVT, Action);
+      setLoadExtAction(ExtType, ValVT, MemVT, Action, AddrSpace);
   }
   void setLoadExtAction(ArrayRef<unsigned> ExtTypes, MVT ValVT,
-                        ArrayRef<MVT> MemVTs, LegalizeAction Action) {
+                        ArrayRef<MVT> MemVTs, LegalizeAction Action,
+                        unsigned AddrSpace = ~0) {
     for (auto MemVT : MemVTs)
-      setLoadExtAction(ExtTypes, ValVT, MemVT, Action);
+      setLoadExtAction(ExtTypes, ValVT, MemVT, Action, AddrSpace);
   }
 
   /// Let target indicate that an extending atomic load of the specified type
@@ -3151,7 +3179,7 @@ public:
       LType = ISD::SEXTLOAD;
     }
 
-    return isLoadExtLegal(LType, VT, LoadVT);
+    return isLoadExtLegal(LType, VT, LoadVT, Load->getPointerAddressSpace());
   }
 
   /// Return true if any actual instruction that defines a value of type FromTy
@@ -3785,8 +3813,11 @@ private:
   /// For each load extension type and each value type, keep a LegalizeAction
   /// that indicates how instruction selection should deal with a load of a
   /// specific value type and extension type. Uses 4-bits to store the action
-  /// for each of the 4 load ext types.
+  /// for each of the 4 load ext types. These actions can be specified for each
+  /// address space.
   uint16_t LoadExtActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
+  using LoadExtActionOverrideMap = std::map<uint64_t, uint16_t>;
+  LoadExtActionOverrideMap LoadExtActionOverrides;
 
   /// Similar to LoadExtActions, but for atomic loads. Only Legal or Expand
   /// (default) values are supported.
