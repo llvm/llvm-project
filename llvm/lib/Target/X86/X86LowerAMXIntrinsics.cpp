@@ -630,13 +630,9 @@ bool X86LowerAMXIntrinsics::visit() {
 }
 
 namespace {
-bool shouldRunLowerAMXIntrinsics(Function &F, const TargetMachine *TM) {
-  if (!X86ScalarizeAMX)
-    return false;
-  if (!F.hasFnAttribute(Attribute::OptimizeNone) &&
-      TM->getOptLevel() != CodeGenOptLevel::None)
-    return false;
-  return true;
+bool shouldRunLowerAMXIntrinsics(const Function &F, const TargetMachine *TM) {
+  return X86ScalarizeAMX && (F.hasFnAttribute(Attribute::OptimizeNone) ||
+                             TM->getOptLevel() == CodeGenOptLevel::None);
 }
 
 bool runLowerAMXIntrinsics(Function &F, DominatorTree *DT, LoopInfo *LI) {

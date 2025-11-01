@@ -870,7 +870,8 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return true;
 }
 
-bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                bool WillBeActivated) {
   if (!Ptr.isBlockPointer() || Ptr.isZero())
     return false;
 
@@ -885,7 +886,7 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
     return false;
-  if (!CheckActive(S, OpPC, Ptr, AK_Assign))
+  if (!WillBeActivated && !CheckActive(S, OpPC, Ptr, AK_Assign))
     return false;
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;
@@ -932,6 +933,15 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   if (F->isValid() && F->hasBody() && F->isConstexpr())
     return true;
 
+  const FunctionDecl *DiagDecl = F->getDecl();
+  const FunctionDecl *Definition = nullptr;
+  DiagDecl->getBody(Definition);
+
+  if (!Definition && S.checkingPotentialConstantExpression() &&
+      DiagDecl->isConstexpr()) {
+    return false;
+  }
+
   // Implicitly constexpr.
   if (F->isLambdaStaticInvoker())
     return true;
@@ -939,7 +949,7 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   // Bail out if the function declaration itself is invalid.  We will
   // have produced a relevant diagnostic while parsing it, so just
   // note the problematic sub-expression.
-  if (F->getDecl()->isInvalidDecl())
+  if (DiagDecl->isInvalidDecl())
     return Invalid(S, OpPC);
 
   // Diagnose failed assertions specially.
@@ -957,64 +967,61 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
     }
   }
 
-  if (S.getLangOpts().CPlusPlus11) {
-    const FunctionDecl *DiagDecl = F->getDecl();
-
-    // Invalid decls have been diagnosed before.
-    if (DiagDecl->isInvalidDecl())
-      return false;
-
-    // If this function is not constexpr because it is an inherited
-    // non-constexpr constructor, diagnose that directly.
-    const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
-    if (CD && CD->isInheritingConstructor()) {
-      const auto *Inherited = CD->getInheritedConstructor().getConstructor();
-      if (!Inherited->isConstexpr())
-        DiagDecl = CD = Inherited;
-    }
-
-    // Silently reject constructors of invalid classes. The invalid class
-    // has been rejected elsewhere before.
-    if (CD && CD->getParent()->isInvalidDecl())
-      return false;
-
-    // FIXME: If DiagDecl is an implicitly-declared special member function
-    // or an inheriting constructor, we should be much more explicit about why
-    // it's not constexpr.
-    if (CD && CD->isInheritingConstructor()) {
-      S.FFDiag(S.Current->getLocation(OpPC),
-               diag::note_constexpr_invalid_inhctor, 1)
-          << CD->getInheritedConstructor().getConstructor()->getParent();
-      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
-    } else {
-      // Don't emit anything if the function isn't defined and we're checking
-      // for a constant expression. It might be defined at the point we're
-      // actually calling it.
-      bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
-      bool IsDefined = F->isDefined();
-      if (!IsDefined && !IsExtern && DiagDecl->isConstexpr() &&
-          S.checkingPotentialConstantExpression())
-        return false;
-
-      // If the declaration is defined, declared 'constexpr' _and_ has a body,
-      // the below diagnostic doesn't add anything useful.
-      if (DiagDecl->isDefined() && DiagDecl->isConstexpr() &&
-          DiagDecl->hasBody())
-        return false;
-
-      S.FFDiag(S.Current->getLocation(OpPC),
-               diag::note_constexpr_invalid_function, 1)
-          << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
-
-      if (DiagDecl->getDefinition())
-        S.Note(DiagDecl->getDefinition()->getLocation(),
-               diag::note_declared_at);
-      else
-        S.Note(DiagDecl->getLocation(), diag::note_declared_at);
-    }
-  } else {
+  if (!S.getLangOpts().CPlusPlus11) {
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr);
+    return false;
+  }
+
+  // Invalid decls have been diagnosed before.
+  if (DiagDecl->isInvalidDecl())
+    return false;
+
+  // If this function is not constexpr because it is an inherited
+  // non-constexpr constructor, diagnose that directly.
+  const auto *CD = dyn_cast<CXXConstructorDecl>(DiagDecl);
+  if (CD && CD->isInheritingConstructor()) {
+    const auto *Inherited = CD->getInheritedConstructor().getConstructor();
+    if (!Inherited->isConstexpr())
+      DiagDecl = CD = Inherited;
+  }
+
+  // Silently reject constructors of invalid classes. The invalid class
+  // has been rejected elsewhere before.
+  if (CD && CD->getParent()->isInvalidDecl())
+    return false;
+
+  // FIXME: If DiagDecl is an implicitly-declared special member function
+  // or an inheriting constructor, we should be much more explicit about why
+  // it's not constexpr.
+  if (CD && CD->isInheritingConstructor()) {
+    S.FFDiag(S.Current->getLocation(OpPC), diag::note_constexpr_invalid_inhctor,
+             1)
+        << CD->getInheritedConstructor().getConstructor()->getParent();
+    S.Note(DiagDecl->getLocation(), diag::note_declared_at);
+  } else {
+    // Don't emit anything if the function isn't defined and we're checking
+    // for a constant expression. It might be defined at the point we're
+    // actually calling it.
+    bool IsExtern = DiagDecl->getStorageClass() == SC_Extern;
+    bool IsDefined = F->isDefined();
+    if (!IsDefined && !IsExtern && DiagDecl->isConstexpr() &&
+        S.checkingPotentialConstantExpression())
+      return false;
+
+    // If the declaration is defined, declared 'constexpr' _and_ has a body,
+    // the below diagnostic doesn't add anything useful.
+    if (DiagDecl->isDefined() && DiagDecl->isConstexpr() && DiagDecl->hasBody())
+      return false;
+
+    S.FFDiag(S.Current->getLocation(OpPC),
+             diag::note_constexpr_invalid_function, 1)
+        << DiagDecl->isConstexpr() << (bool)CD << DiagDecl;
+
+    if (DiagDecl->getDefinition())
+      S.Note(DiagDecl->getDefinition()->getLocation(), diag::note_declared_at);
+    else
+      S.Note(DiagDecl->getLocation(), diag::note_declared_at);
   }
 
   return false;
@@ -1644,8 +1651,8 @@ static bool GetDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
 
   QualType DynamicType = TypePtr.getType();
   if (TypePtr.isStatic() || TypePtr.isConst()) {
-    const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
-    if (!VD->isConstexpr()) {
+    if (const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
+        VD && !VD->isConstexpr()) {
       const Expr *E = S.Current->getExpr(OpPC);
       APValue V = TypePtr.toAPValue(S.getASTContext());
       QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
@@ -1676,20 +1683,6 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
   const FunctionDecl *Callee = Func->getDecl();
 
-  if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
-
-  // C++2a [class.abstract]p6:
-  //   the effect of making a virtual call to a pure virtual function [...] is
-  //   undefined
-  if (Callee->isPureVirtual()) {
-    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_pure_virtual_call,
-             1)
-        << Callee;
-    S.Note(Callee->getLocation(), diag::note_declared_at);
-    return false;
-  }
-
   const CXXRecordDecl *DynamicDecl = nullptr;
   if (!GetDynamicDecl(S, OpPC, ThisPtr, DynamicDecl))
     return false;
@@ -1699,7 +1692,8 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
-  if (StaticDecl != DynamicDecl) {
+  if (StaticDecl != DynamicDecl &&
+      !llvm::is_contained(S.InitializingBlocks, ThisPtr.block())) {
     if (!DynamicDecl->isDerivedFrom(StaticDecl))
       return false;
     Overrider = S.getContext().getOverridingFunction(DynamicDecl, StaticDecl,
@@ -1707,6 +1701,17 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
   } else {
     Overrider = InitialFunction;
+  }
+
+  // C++2a [class.abstract]p6:
+  //   the effect of making a virtual call to a pure virtual function [...] is
+  //   undefined
+  if (Overrider->isPureVirtual()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_pure_virtual_call,
+             1)
+        << Callee;
+    S.Note(Callee->getLocation(), diag::note_declared_at);
+    return false;
   }
 
   if (Overrider != InitialFunction) {
