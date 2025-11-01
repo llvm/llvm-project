@@ -145,7 +145,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
   ASSERT_TRUE(Invocation2);
   CompilerInstance Instance2(std::move(Invocation2),
                              Instance.getPCHContainerOperations(),
-                             &Instance.getModuleCache());
+                             Instance.getModuleCachePtr());
   Instance2.setVirtualFileSystem(CIOpts.VFS);
   Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;
@@ -191,7 +191,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
   ASSERT_TRUE(Invocation2);
   CompilerInstance Instance2(std::move(Invocation2),
                              Instance.getPCHContainerOperations(),
-                             &Instance.getModuleCache());
+                             Instance.getModuleCachePtr());
   Instance2.setVirtualFileSystem(CIOpts.VFS);
   Instance2.setDiagnostics(Diags);
   SyntaxOnlyAction Action2;

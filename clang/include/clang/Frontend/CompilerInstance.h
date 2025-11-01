@@ -108,7 +108,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  std::shared_ptr<ModuleCache> ModCache;
 
   /// Functor for getting the dependency preprocessor directives of a file.
   std::unique_ptr<DependencyDirectivesGetter> GetDependencyDirectives;
@@ -201,7 +201,7 @@ public:
           std::make_shared<CompilerInvocation>(),
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      ModuleCache *ModCache = nullptr);
+      std::shared_ptr<ModuleCache> ModCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -949,6 +949,7 @@ public:
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
   ModuleCache &getModuleCache() const { return *ModCache; }
+  std::shared_ptr<ModuleCache> getModuleCachePtr() const { return ModCache; }
 };
 
 } // end namespace clang
