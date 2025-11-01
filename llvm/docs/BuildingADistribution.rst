@@ -255,3 +255,10 @@ that are already documented include: *LLVM_TARGETS_TO_BUILD*, *LLVM_ENABLE_PROJE
   default ``install`` target. Including the development tools is not recommended
   for distributions as many of the LLVM tools are only intended for development
   and testing use.
+
+**LLVM_INSTALL_BACKEND_HEADERS**:BOOL
+  This option defaults to ``Off``: When set to ``On`` it installs backend
+  headers for specified Targets. It allows to use LLVM's backend info out of
+  project tree. Note that this option does not work if
+  LLVM_INSTALL_TOOLCHAIN_ONLY set to ``On`` as it is meant to install component
+  library headers
