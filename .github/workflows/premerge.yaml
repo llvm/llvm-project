@@ -174,7 +174,7 @@ jobs:
 
   premerge-check-macos:
     name: MacOS Premerge Checks
-    runs-on: macos-14
+    runs-on: macos-15
     if: >-
       github.repository_owner == 'llvm' &&
       (startswith(github.ref_name, 'release/') ||
