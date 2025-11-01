@@ -278,8 +278,9 @@ int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
 }
 
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
-  DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
-     DPxPTR(HstPtr), Size);
+  DPIF(MAP,
+       "Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
+       DPxPTR(HstPtr), Size);
 
   if (RTL->data_notify_mapped(RTLDeviceID, HstPtr, Size)) {
     REPORT("Notifying about data mapping failed.\n");
@@ -289,7 +290,8 @@ int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
 }
 
 int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
-  DP("Notifying about an unmapping: HstPtr=" DPxMOD "\n", DPxPTR(HstPtr));
+  DPIF(MAP, "Notifying about an unmapping: HstPtr=" DPxMOD "\n",
+       DPxPTR(HstPtr));
 
   if (RTL->data_notify_unmapped(RTLDeviceID, HstPtr)) {
     REPORT("Notifying about data unmapping failed.\n");

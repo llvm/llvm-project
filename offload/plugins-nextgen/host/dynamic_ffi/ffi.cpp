@@ -41,7 +41,7 @@ uint32_t ffi_init() {
       llvm::sys::DynamicLibrary::getPermanentLibrary(FFI_PATH, &ErrMsg));
 
   if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", FFI_PATH, ErrMsg.c_str());
+    DPIF(RTL, "Unable to load library '%s': %s!\n", FFI_PATH, ErrMsg.c_str());
     return DYNAMIC_FFI_FAIL;
   }
 
@@ -50,10 +50,10 @@ uint32_t ffi_init() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, FFI_PATH);
+      DPIF(RTL, "Unable to find '%s' in '%s'!\n", Sym, FFI_PATH);
       return DYNAMIC_FFI_FAIL;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    DPIF(RTL, "Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
 
     *dlwrap::pointer(I) = P;
   }
@@ -62,7 +62,7 @@ uint32_t ffi_init() {
   {                                                                            \
     void *SymbolPtr = DynlibHandle->getAddressOfSymbol(#SYMBOL);               \
     if (!SymbolPtr) {                                                          \
-      DP("Unable to find '%s' in '%s'!\n", #SYMBOL, FFI_PATH);                 \
+      DPIF(RTL, "Unable to find '%s' in '%s'!\n", #SYMBOL, FFI_PATH);          \
       return DYNAMIC_FFI_FAIL;                                                 \
     }                                                                          \
     SYMBOL = *reinterpret_cast<decltype(SYMBOL) *>(SymbolPtr);                 \
