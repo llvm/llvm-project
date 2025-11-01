@@ -1448,17 +1448,22 @@ public:
     ReductionInfo(Type *ElementType, Value *Variable, Value *PrivateVariable,
                   EvalKind EvaluationKind, ReductionGenCBTy ReductionGen,
                   ReductionGenClangCBTy ReductionGenClang,
-                  ReductionGenAtomicCBTy AtomicReductionGen)
+                  ReductionGenAtomicCBTy AtomicReductionGen,
+                  Type *ByRefAllocatedType = nullptr,
+                  Type *ByRefElementType = nullptr)
         : ElementType(ElementType), Variable(Variable),
           PrivateVariable(PrivateVariable), EvaluationKind(EvaluationKind),
           ReductionGen(ReductionGen), ReductionGenClang(ReductionGenClang),
-          AtomicReductionGen(AtomicReductionGen) {}
+          AtomicReductionGen(AtomicReductionGen),
+          ByRefAllocatedType(ByRefAllocatedType),
+          ByRefElementType(ByRefElementType) {}
     ReductionInfo(Value *PrivateVariable)
         : ElementType(nullptr), Variable(nullptr),
           PrivateVariable(PrivateVariable), EvaluationKind(EvalKind::Scalar),
           ReductionGen(), ReductionGenClang(), AtomicReductionGen() {}
 
-    /// Reduction element type, must match pointee type of variable.
+    /// Reduction element type, must match pointee type of variable. For by-ref
+    /// reductions, this would be just an opaque `ptr`.
     Type *ElementType;
 
     /// Reduction variable of pointer type.
@@ -1485,6 +1490,18 @@ public:
     /// reduction. If null, the implementation will use the non-atomic version
     /// along with the appropriate synchronization mechanisms.
     ReductionGenAtomicCBTy AtomicReductionGen;
+
+    /// For by-ref reductions, we need to keep track of 2 extra types that are
+    /// potentially different:
+    /// * The allocated type is the type of the storage allocated by the
+    /// reduction op's `alloc` region. For example, for allocatables and arrays,
+    /// this type would be the descriptor/box struct.
+    Type *ByRefAllocatedType;
+    /// * The by-ref element type is the type of the actual storage needed for
+    /// the data of the allocatable or array. For example, an float allocatable
+    /// of would need some float storage to store intermediate reduction
+    /// results.
+    Type *ByRefElementType;
   };
 
   enum class CopyAction : unsigned {
@@ -1529,14 +1546,15 @@ private:
 
   /// Function to shuffle over the value from the remote lane.
   void shuffleAndStore(InsertPointTy AllocaIP, Value *SrcAddr, Value *DstAddr,
-                       Type *ElementType, Value *Offset,
-                       Type *ReductionArrayTy);
+                       Type *ElementType, Value *Offset, Type *ReductionArrayTy,
+                       bool IsByRefElem);
 
   /// Emit instructions to copy a Reduce list, which contains partially
   /// aggregated values, in the specified direction.
   void emitReductionListCopy(
       InsertPointTy AllocaIP, CopyAction Action, Type *ReductionArrayTy,
       ArrayRef<ReductionInfo> ReductionInfos, Value *SrcBase, Value *DestBase,
+      ArrayRef<bool> IsByRef,
       CopyOptionsTy CopyOptions = {nullptr, nullptr, nullptr});
 
   /// Emit a helper that reduces data across two OpenMP threads (lanes)
@@ -1610,11 +1628,13 @@ private:
   /// \param ReduceFn The reduction function.
   /// \param FuncAttrs Optional param to specify any function attributes that
   ///                  need to be copied to the new function.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
+  ///                  or not.
   ///
   /// \return The ShuffleAndReduce function.
   Function *emitShuffleAndReduceFunction(
       ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
-      Function *ReduceFn, AttributeList FuncAttrs);
+      Function *ReduceFn, AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// Helper function for CreateCanonicalScanLoops to create InputLoop
   /// in the firstGen and Scan Loop in the SecondGen
@@ -1674,12 +1694,14 @@ private:
   /// \param ReductionInfos Array type containing the ReductionOps.
   /// \param FuncAttrs Optional param to specify any function attributes that
   ///                  need to be copied to the new function.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
+  ///                  or not.
   ///
   /// \return The InterWarpCopy function.
   Expected<Function *>
   emitInterWarpCopyFunction(const LocationDescription &Loc,
                             ArrayRef<ReductionInfo> ReductionInfos,
-                            AttributeList FuncAttrs);
+                            AttributeList FuncAttrs, ArrayRef<bool> IsByRef);
 
   /// This function emits a helper that copies all the reduction variables from
   /// the team into the provided global buffer for the reduction variables.
@@ -1773,6 +1795,7 @@ private:
   /// \return The reduction function.
   Expected<Function *> createReductionFunction(
       StringRef ReducerName, ArrayRef<ReductionInfo> ReductionInfos,
+      ArrayRef<bool> IsByRef,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       AttributeList FuncAttrs = {});
 
@@ -2025,11 +2048,14 @@ public:
   ///                           reduction variables.
   /// \param AllocaIP           An insertion point suitable for allocas usable
   ///                           in reductions.
-  /// \param CodeGenIP           An insertion point suitable for code
-  /// generation. \param ReductionInfos     A list of info on each reduction
-  /// variable. \param IsNoWait           Optional flag set if the reduction is
-  /// marked as
-  ///                           nowait.
+  /// \param CodeGenIP          An insertion point suitable for code
+  ///                           generation.
+  /// \param ReductionInfos     A list of info on each reduction
+  ///                           variable.
+  /// \param IsNoWait           Optional flag set if the reduction is
+  ///                           marked as nowait.
+  /// \param IsByRef For each reduction clause, whether the reduction is by-ref
+  ///                  or not.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
   /// \param GridValue          Optional GPU grid value.
@@ -2039,7 +2065,8 @@ public:
   LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
-      bool IsNoWait = false, bool IsTeamsReduction = false,
+      ArrayRef<bool> IsByRef, bool IsNoWait = false,
+      bool IsTeamsReduction = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);

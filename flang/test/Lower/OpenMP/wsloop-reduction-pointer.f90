@@ -18,7 +18,7 @@ program reduce_pointer
   deallocate(v)
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_i32 : !fir.ref<!fir.box<!fir.ptr<i32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
 ! CHECK-LABEL:   } init {

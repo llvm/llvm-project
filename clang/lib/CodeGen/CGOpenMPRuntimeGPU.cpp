@@ -1784,8 +1784,8 @@ void CGOpenMPRuntimeGPU::emitReduction(
 
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createReductionsGPU(
-          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, false, TeamsReduction,
-          llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
+          OmpLoc, AllocaIP, CodeGenIP, ReductionInfos, /*IsByRef=*/{}, false,
+          TeamsReduction, llvm::OpenMPIRBuilder::ReductionGenCBKind::Clang,
           CGF.getTarget().getGridValue(),
           C.getLangOpts().OpenMPCUDAReductionBufNum, RTLoc));
   CGF.Builder.restoreIP(AfterIP);

@@ -1311,7 +1311,8 @@ static void collectReductionInfo(
     SmallVectorImpl<OwningReductionGen> &owningReductionGens,
     SmallVectorImpl<OwningAtomicReductionGen> &owningAtomicReductionGens,
     const ArrayRef<llvm::Value *> privateReductionVariables,
-    SmallVectorImpl<llvm::OpenMPIRBuilder::ReductionInfo> &reductionInfos) {
+    SmallVectorImpl<llvm::OpenMPIRBuilder::ReductionInfo> &reductionInfos,
+    ArrayRef<bool> isByRef) {
   unsigned numReductions = loop.getNumReductionVars();
 
   for (unsigned i = 0; i < numReductions; ++i) {
@@ -1329,12 +1330,27 @@ static void collectReductionInfo(
       atomicGen = owningAtomicReductionGens[i];
     llvm::Value *variable =
         moduleTranslation.lookupValue(loop.getReductionVars()[i]);
+    mlir::Type allocatedType;
+    reductionDecls[i].getAllocRegion().walk([&](mlir::Operation *op) {
+      if (auto alloca = mlir::dyn_cast<LLVM::AllocaOp>(op)) {
+        allocatedType = alloca.getElemType();
+        return mlir::WalkResult::interrupt();
+      }
+
+      return mlir::WalkResult::advance();
+    });
+
     reductionInfos.push_back(
         {moduleTranslation.convertType(reductionDecls[i].getType()), variable,
          privateReductionVariables[i],
          /*EvaluationKind=*/llvm::OpenMPIRBuilder::EvalKind::Scalar,
          owningReductionGens[i],
-         /*ReductionGenClang=*/nullptr, atomicGen});
+         /*ReductionGenClang=*/nullptr, atomicGen,
+         allocatedType ? moduleTranslation.convertType(allocatedType) : nullptr,
+         reductionDecls[i].getByrefElementType()
+             ? moduleTranslation.convertType(
+                   *reductionDecls[i].getByrefElementType())
+             : nullptr});
   }
 }
 
@@ -1400,7 +1416,7 @@ static LogicalResult createReductionsAndCleanup(
   // ReductionInfo only accepts references to the generators.
   collectReductionInfo(op, builder, moduleTranslation, reductionDecls,
                        owningReductionGens, owningAtomicReductionGens,
-                       privateReductionVariables, reductionInfos);
+                       privateReductionVariables, reductionInfos, isByRef);
 
   // The call to createReductions below expects the block to have a
   // terminator. Create an unreachable instruction to serve as terminator
@@ -2732,7 +2748,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
       collectReductionInfo(opInst, builder, moduleTranslation, reductionDecls,
                            owningReductionGens, owningAtomicReductionGens,
-                           privateReductionVariables, reductionInfos);
+                           privateReductionVariables, reductionInfos, isByRef);
 
       // Move to region cont block
       builder.SetInsertPoint((*regionBlock)->getTerminator());

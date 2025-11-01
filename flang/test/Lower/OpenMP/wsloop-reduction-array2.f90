@@ -14,7 +14,7 @@ enddo
 print *,r
 end program
 
-! CHECK-LABEL:  omp.declare_reduction @add_reduction_byref_box_2xi32 : !fir.ref<!fir.box<!fir.array<2xi32>>> alloc {
+! CHECK-LABEL:  omp.declare_reduction @add_reduction_byref_box_2xi32 : !fir.ref<!fir.box<!fir.array<2xi32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_8:.*]] = fir.alloca !fir.box<!fir.array<2xi32>>
 ! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<2xi32>>>)
 ! CHECK-LABEL:  } init {
