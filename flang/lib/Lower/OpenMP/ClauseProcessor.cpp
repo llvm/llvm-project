@@ -14,6 +14,7 @@
 #include "Utils.h"
 
 #include "flang/Lower/ConvertExprToHLFIR.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/ReductionProcessor.h"
@@ -1253,6 +1254,11 @@ void ClauseProcessor::processMapObjects(
     const omp::Object &object = objects.front();
     if (mapperIdNameRef == "default")
       getDefaultMapperID(object, mapperIdName);
+    // On-demand materialize named or default mappers if missing.
+    if (!converter.getModuleOp().lookupSymbol(mapperIdName))
+      if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+        Fortran::lower::materializeOpenMPDeclareMapperForSymbol(
+            converter, semaCtx, sym->GetUltimate());
     assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
            "mapper not found");
     mapperId =
@@ -1293,6 +1299,12 @@ void ClauseProcessor::processMapObjects(
     if (mapperIdNameRef == "__implicit_mapper") {
       std::string mapperIdName;
       getDefaultMapperID(object, mapperIdName);
+      // On-demand materialize default mappers if missing.
+      if (!mapperIdName.empty() &&
+          !converter.getModuleOp().lookupSymbol(mapperIdName))
+        if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+          Fortran::lower::materializeOpenMPDeclareMapperForSymbol(
+              converter, semaCtx, sym->GetUltimate());
       mapperId = converter.getModuleOp().lookupSymbol(mapperIdName)
                      ? mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
                                                     mapperIdName)
@@ -1392,10 +1404,18 @@ bool ClauseProcessor::processMap(
     }
     if (mappers) {
       assert(mappers->size() == 1 && "more than one mapper");
-      mapperIdName = mappers->front().v.id().symbol->name().ToString();
-      if (mapperIdName != "default")
-        mapperIdName = converter.mangleName(
-            mapperIdName, mappers->front().v.id().symbol->owner());
+      const semantics::Symbol *mapperSym = mappers->front().v.id().symbol;
+      mapperIdName = mapperSym->name().ToString();
+      if (mapperIdName != "default") {
+        // Mangle with the ultimate owner so that use-associated mapper
+        // identifiers resolve to the same symbol as their defining scope.
+        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+      }
+      // On-demand materialize if missing.
+      if (!converter.getModuleOp().lookupSymbol(mapperIdName))
+        Fortran::lower::materializeOpenMPDeclareMapperForSymbol(
+            converter, semaCtx, *mapperSym);
     }
 
     processMapObjects(stmtCtx, clauseLocation,
