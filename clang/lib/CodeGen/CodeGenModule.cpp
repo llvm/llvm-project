@@ -4105,6 +4105,53 @@ template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
   return D->isImplicit();
 }
 
+static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
+                                    const ValueDecl *Global) {
+  const LangOptions &LangOpts = CGM.getLangOpts();
+  if (!(LangOpts.OpenMPIsTargetDevice || LangOpts.CUDA))
+    return false;
+
+  const auto *AA = Global->getAttr<AliasAttr>();
+  GlobalDecl AliaseeGD;
+
+  // Check if the aliasee exists.
+  if (!CGM.lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD)) {
+    // If the aliasee is not found, skip the alias emission.
+    // This is not a hard error as this branch is executed for both the host
+    // and device, with no respect to where the aliasee is defined.
+    // For some OpenMP cases (functions) this will return true even if the
+    // aliasee is not on the device, which is handled by the case below
+    return true;
+  }
+
+  const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());
+  if (LangOpts.OpenMPIsTargetDevice) {
+    if (!AliaseeDecl ||
+        !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(AliaseeDecl))
+      // On OpenMP device, skip alias emission if the aliasee is not marked
+      // with declare target.
+      return true;
+    return false;
+  }
+
+  // CUDA / HIP
+  const bool HasDeviceAttr = Global->hasAttr<CUDADeviceAttr>();
+  const bool AliaseeHasDeviceAttr =
+      AliaseeDecl && AliaseeDecl->hasAttr<CUDADeviceAttr>();
+
+  if (LangOpts.CUDAIsDevice) {
+    if (!HasDeviceAttr || !AliaseeHasDeviceAttr)
+      // On device, skip alias emission if either the alias or the aliasee
+      // is not marked with __device__.
+      return true;
+    return false;
+  }
+
+  // CUDA / HIP Host
+  // we know that the aliasee exists from above, so we know to emit
+  return false;
+}
+
 bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
   assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
   // We need to emit host-side 'shadows' for all global
@@ -4127,8 +4174,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
-  if (Global->hasAttr<AliasAttr>())
+  if (Global->hasAttr<AliasAttr>()) {
+    if (shouldSkipAliasEmission(*this, Global))
+      return;
     return EmitAliasDefinition(GD);
+  }
 
   // IFunc like an alias whose value is resolved at runtime by calling resolver.
   if (Global->hasAttr<IFuncAttr>())
