@@ -3,8 +3,5 @@
 ## This mkdir should fail because the `example_file*.input`s are regular files.
 # RUN: not mkdir %S/example_file*.input
 
-# RUN: mkdir %S/example_dir1.new
-# RUN: mkdir %S/example_dir2.new
-
-## This mkdir should succeed (so RUN should fail) because the `example_dir*.news` that already exist are directories.
-# RUN: not mkdir %S/example_dir*.new
+## This mkdir should succeed (so RUN should fail) because the `example_dir*.input`s that already exist are directories.
+# RUN: not mkdir %S/example_dir*.input
