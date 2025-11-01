@@ -88,10 +88,15 @@ llvm::createUnpackMachineBundles(
 /// DILocation is found, then an empty location is returned.
 static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
-  for (auto MII = FirstMI; MII != LastMI; ++MII)
-    if (MII->getDebugLoc())
-      return MII->getDebugLoc();
-  return DebugLoc();
+  DebugLoc DL;
+  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    if (DebugLoc MIIDL = MII->getDebugLoc()) {
+      if (MIIDL.getLine() != 0)
+        return MIIDL;
+      DL = MIIDL.get();
+    }
+  }
+  return DL;
 }
 
 /// Check if target reg is contained in given lists, which are:
