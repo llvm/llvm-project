@@ -1760,6 +1760,10 @@ defm : PatVrVrF<fmul, "VFMUL">;
 // VFDIV_{S/D}
 defm : PatVrVrF<fdiv, "VFDIV">;
 
+// VFMAX_{S/D}, VFMIN_{S/D}
+defm : PatVrVrF<fmaxnum, "VFMAX">;
+defm : PatVrVrF<fminnum, "VFMIN">;
+
 // VFMADD_{S/D}
 def : Pat<(fma v4f32:$vj, v4f32:$vk, v4f32:$va),
           (VFMADD_S v4f32:$vj, v4f32:$vk, v4f32:$va)>;
