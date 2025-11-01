@@ -115,6 +115,9 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUSelectionDAGInfo.cpp
   AMDGPUSetWavePriority.cpp
   AMDGPUSplitModule.cpp
+  AMDGPUSSASpiller.cpp
+  AMDGPURebuildSSA.cpp
+  AMDGPUNextUseAnalysis.cpp
   AMDGPUSubtarget.cpp
   AMDGPUTargetMachine.cpp
   AMDGPUTargetObjectFile.cpp
