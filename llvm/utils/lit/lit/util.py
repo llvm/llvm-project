@@ -50,45 +50,6 @@ def to_bytes(s):
     return s.encode("utf-8")
 
 
-def to_string(b):
-    """Return the parameter as type 'str', possibly encoding it.
-
-    In Python2, the 'str' type is the same as 'bytes'. In Python3, the
-    'str' type is (essentially) Python2's 'unicode' type, and 'bytes' is
-    distinct.
-
-    """
-    if isinstance(b, str):
-        # In Python2, this branch is taken for types 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'str'.
-        return b
-    if isinstance(b, bytes):
-        # In Python2, this branch is never taken ('bytes' is handled as 'str').
-        # In Python3, this is true only for 'bytes'.
-        try:
-            return b.decode("utf-8")
-        except UnicodeDecodeError:
-            # If the value is not valid Unicode, return the default
-            # repr-line encoding.
-            return str(b)
-
-    # By this point, here's what we *don't* have:
-    #
-    #  - In Python2:
-    #    - 'str' or 'bytes' (1st branch above)
-    #  - In Python3:
-    #    - 'str' (1st branch above)
-    #    - 'bytes' (2nd branch above)
-    #
-    # The last type we might expect is the Python2 'unicode' type. There is no
-    # 'unicode' type in Python3 (all the Python3 cases were already handled). In
-    # order to get a 'str' object, we need to encode the 'unicode' object.
-    try:
-        return b.encode("utf-8")
-    except AttributeError:
-        raise TypeError("not sure how to convert %s to %s" % (type(b), str))
-
-
 def usable_core_count():
     """Return the number of cores the current process can use, if supported.
     Otherwise, return the total number of cores (like `os.cpu_count()`).
