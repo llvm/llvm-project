@@ -8445,6 +8445,10 @@ def aligned_alloc_unavailable : Flag<["-"], "faligned-alloc-unavailable">,
   MarshallingInfoFlag<LangOpts<"AlignedAllocationUnavailable">>,
   ShouldParseIf<faligned_allocation.KeyPath>;
 
+def finitial_counter_value_EQ : Joined<["-"], "finitial-counter-value=">,
+  HelpText<"Sets the initial value for __COUNTER__, defaults to 0.">,
+  MarshallingInfoInt<PreprocessorOpts<"InitialCounterValue">, "0">;
+
 } // let Visibility = [CC1Option]
 
 //===----------------------------------------------------------------------===//
