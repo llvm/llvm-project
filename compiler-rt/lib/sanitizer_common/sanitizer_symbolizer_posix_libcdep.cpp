@@ -505,9 +505,9 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
   }
 
 #  if SANITIZER_APPLE
-  if (list.size() == 0) {
+  if (list.empty()) {
     Report(
-        "WARN: No external symbolizers found. Symbols will be missing or "
+        "WARN: No external symbolizers found. Symbols may be missing or "
         "unreliable.\n");
     Report(
         "HINT: Is PATH set? Does sandbox allow file-read of /usr/bin/atos?\n");

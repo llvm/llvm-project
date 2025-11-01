@@ -966,11 +966,10 @@ static void DisableMmapExcGuardExceptions() {
         "WARN: task_set_exc_guard_behavior returned %d (%s), "
         "mmap may fail unexpectedly.\n",
         res, mach_error_string(res));
-    if (res == KERN_DENIED) {
+    if (res == KERN_DENIED)
       Report(
           "HINT: Check that task_set_exc_guard_behavior is allowed by "
           "sandbox.\n");
-    }
   }
 }
 
