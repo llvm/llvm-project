@@ -1095,6 +1095,9 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
 std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string FileName;
 
+  if (!File)
+    return "";
+
   if (!File->getFilename().starts_with("/") && File->getDirectory().size())
     FileName = File->getDirectory().str() + "/" + File->getFilename().str();
   else
