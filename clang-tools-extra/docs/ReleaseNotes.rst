@@ -275,7 +275,9 @@ Changes in existing checks
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
   exceptions from captures are now diagnosed, exceptions in the bodies of
-  lambdas that aren't actually invoked are not.
+  lambdas that aren't actually invoked are not. Added fine-grained configuration
+  via options `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
+  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
