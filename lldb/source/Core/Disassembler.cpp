@@ -302,7 +302,7 @@ bool Disassembler::ElideMixedSourceAndDisassemblyLine(
 std::vector<std::string>
 VariableAnnotator::annotate(Instruction &inst, Target &target,
                             const lldb::ModuleSP &module_sp) {
-  auto structured_annotations = annotateStructured(inst, target, module_sp);
+  auto structured_annotations = AnnotateStructured(inst, target, module_sp);
 
   std::vector<std::string> events;
   events.reserve(structured_annotations.size());
@@ -324,7 +324,7 @@ VariableAnnotator::annotate(Instruction &inst, Target &target,
 }
 
 std::vector<VariableAnnotation>
-VariableAnnotator::annotateStructured(Instruction &inst, Target &target,
+VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
                                       const lldb::ModuleSP &module_sp) {
   std::vector<VariableAnnotation> annotations;
 

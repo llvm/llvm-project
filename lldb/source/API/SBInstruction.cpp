@@ -374,7 +374,7 @@ SBInstruction::GetVariableAnnotations(lldb::SBTarget target) {
 
   VariableAnnotator annotator;
   std::vector<VariableAnnotation> annotations =
-      annotator.annotateStructured(*inst_sp, *target_sp, module_sp);
+      annotator.AnnotateStructured(*inst_sp, *target_sp, module_sp);
 
   auto array_sp = std::make_shared<StructuredData::Array>();
 
