@@ -357,6 +357,12 @@ see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
                                               cl::init(false),
                                               cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> DumpYAMLSchema("dump-yaml-schema", desc(R"(
+Dumps configuration YAML Schema in JSON format to
+stdout.
+)"),
+                                    cl::init(false),
+                                    cl::cat(ClangTidyCategory));
 namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
@@ -683,6 +689,11 @@ int clangTidyMain(int argc, const char **argv) {
         ClangTidyOptions::getDefaults().merge(EffectiveOptions, 0);
     filterCheckOptions(OptionsToDump, EnabledChecks);
     llvm::outs() << configurationAsText(OptionsToDump) << "\n";
+    return 0;
+  }
+
+  if (DumpYAMLSchema) {
+    dumpConfigurationYAMLSchema(llvm::outs());
     return 0;
   }
 

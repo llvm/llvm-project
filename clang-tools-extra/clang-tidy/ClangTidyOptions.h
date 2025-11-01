@@ -343,6 +343,9 @@ std::error_code parseLineFilter(llvm::StringRef LineFilter,
 llvm::ErrorOr<ClangTidyOptions>
 parseConfiguration(llvm::MemoryBufferRef Config);
 
+/// Dumps configuration YAML Schema to \p Stream
+void dumpConfigurationYAMLSchema(llvm::raw_ostream &Stream);
+
 using DiagCallback = llvm::function_ref<void(const llvm::SMDiagnostic &)>;
 
 llvm::ErrorOr<ClangTidyOptions>
