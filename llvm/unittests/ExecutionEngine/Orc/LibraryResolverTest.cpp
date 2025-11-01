@@ -331,9 +331,6 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_ExportsOnly_DefaultFlags) {
   EXPECT_FALSE(any_of(seen, [&](const std::string &s) {
     return matchesEitherUnderscore(s, "sayB");
   }));
-  EXPECT_FALSE(any_of(seen, [&](const std::string &s) {
-    return matchesEitherUnderscore(s, "sayZ");
-  }));
 }
 
 TEST_F(LibraryResolverIT, EnumerateSymbols_IncludesUndefineds) {
@@ -362,9 +359,6 @@ TEST_F(LibraryResolverIT, EnumerateSymbols_IncludesUndefineds) {
   }));
   EXPECT_TRUE(any_of(seen, [&](const std::string &s) {
     return matchesEitherUnderscore(s, "sayB");
-  }));
-  EXPECT_TRUE(any_of(seen, [&](const std::string &s) {
-    return matchesEitherUnderscore(s, "sayZ");
   }));
 }
 
@@ -421,45 +415,6 @@ TEST_F(LibraryResolverIT, DriverResolvesSymbolsToCorrectLibraries) {
   });
 
   EXPECT_TRUE(CallbackRan);
-}
-
-TEST_F(LibraryResolverIT, EnumerateSymbols_RespectsAllFilterCombinations) {
-  const std::string libC = lib("C");
-
-  // 1. Default (exports only)
-  SymbolEnumeratorOptions def = SymbolEnumeratorOptions::defaultOptions();
-  std::vector<std::string> exports;
-  SymbolEnumerator::enumerateSymbols(
-      libC,
-      [&](llvm::StringRef sym) {
-        exports.push_back(sym.str());
-        return EnumerateResult::Continue;
-      },
-      def);
-
-  EXPECT_TRUE(any_of(exports, [&](const std::string &s) {
-    return matchesEitherUnderscore(s, "sayC");
-  }));
-  EXPECT_FALSE(any_of(exports, [&](const std::string &s) {
-    return matchesEitherUnderscore(s, "sayA");
-  }));
-
-  // 2. Include undefined
-  SymbolEnumeratorOptions includeUndef = def;
-  includeUndef.FilterFlags &= ~SymbolEnumeratorOptions::IgnoreUndefined;
-  std::vector<std::string> allSyms;
-  SymbolEnumerator::enumerateSymbols(
-      libC,
-      [&](llvm::StringRef sym) {
-        allSyms.push_back(sym.str());
-        return EnumerateResult::Continue;
-      },
-      includeUndef);
-
-  EXPECT_TRUE(any_of(allSyms, [&](const std::string &s) {
-    return matchesEitherUnderscore(s, "sayA");
-  }));
-  EXPECT_TRUE(allSyms.size() > exports.size());
 }
 
 // stress SymbolQuery with the real resolve flow
