@@ -16,8 +16,7 @@ emitc.func @lvalue_variables(%v1: i32, %v2: i32) -> i32 {
 // CHECK-NEXT: int32_t [[VAL:[^ ]*]] = [[V1]] * [[V2]];
 // CHECK-NEXT: int32_t [[VAR:[^ ]*]];
 // CHECK-NEXT: [[VAR]] = [[VAL]];
-// CHECK-NEXT: int32_t* [[VAR_PTR:[^ ]*]] = &[[VAR]];
-// CHECK-NEXT: zero([[VAR_PTR]]);
+// CHECK: zero(&[[VAR]]);
 // CHECK-NEXT: int32_t [[VAR_LOAD:[^ ]*]] = [[VAR]]; 
 // CHECK-NEXT: int32_t [[NEG_ONE:[^ ]*]] = -1; 
 // CHECK-NEXT: [[VAR]] = [[NEG_ONE]];
