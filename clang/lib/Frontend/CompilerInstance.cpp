@@ -31,6 +31,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -358,8 +359,16 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
     Diags->setClient(Client, ShouldOwnClient);
   } else if (Opts.getFormat() == DiagnosticOptions::SARIF) {
     Diags->setClient(new SARIFDiagnosticPrinter(llvm::errs(), Opts));
-  } else
-    Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
+  } else {
+    if (N2978::managerCompiler) {
+      std::string &Out = N2978::managerCompiler->lastMessage.errorOutput;
+      Out.reserve(16 * 1024);
+      llvm::raw_string_ostream *S = new llvm::raw_string_ostream(Out);
+      Diags->setClient(new TextDiagnosticPrinter(*S, Opts));
+    } else {
+      Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
+    }
+  }
 
   // Chain in -verify checker, if requested.
   if (Opts.VerifyDiagnostics)
@@ -1757,8 +1766,21 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
   // Select the source and filename for loading the named module.
   std::string ModuleFilename;
-  ModuleSource Source =
-      selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
+  ModuleSource Source;
+
+  if (N2978::managerCompiler) {
+    const auto &Result = N2978::managerCompiler->findResponse(
+        std::string(ModuleName), N2978::FileType::MODULE);
+    if (!Result) {
+      // error happened in receiving message
+    }
+    ModuleFilename = Result->file.filePath;
+    Source = MS_PrebuiltModulePath;
+  } else {
+    Source =
+        selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
+  }
+
   if (Source == MS_ModuleNotFound) {
     // We can't find a module, error out here.
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
@@ -2249,6 +2271,40 @@ CompilerInstance::lookupMissingImports(StringRef Name,
 
   return false;
 }
+
+static SourceLocation EndLoc;
+void CompilerInstance::makeModuleAndDependenciesVisible(
+    serialization::ModuleFile *ModFile, Module *Mod) {
+
+  ModuleMap &MMap = getPreprocessor().getHeaderSearchInfo().getModuleMap();
+  SourceLocation &ImportLoc = ModFile->ImportLoc;
+
+  getASTReader()->makeModuleVisible(Mod, Module::AllVisible, EndLoc);
+  getPreprocessor().makeModuleVisible(Mod, EndLoc);
+  getSema().makeModuleVisible(Mod, EndLoc);
+
+  // Make all imported modules visible
+  for (auto *Import : ModFile->Imports) {
+    makeModuleAndDependenciesVisible(Import,
+                                     MMap.findModule(ModFile->FileName));
+  }
+}
+
+Module *CompilerInstance::loadIPCReceivedHeaderUnit(const StringRef FileName,
+                                                    SourceLocation ImportLoc) {
+  serialization::ModuleFile *ModuleFile =
+      getASTReader()->getModuleManager().lookupByFileName(FileName);
+  if (!ModuleFile)
+    loadModuleFile(FileName, ModuleFile);
+  ModuleFile->Kind = serialization::MK_PrebuiltModule;
+
+  Module *Mod = PP->getHeaderSearchInfo().getModuleMap().findModule(
+      ModuleFile->ModuleName);
+  EndLoc = ImportLoc;
+  makeModuleAndDependenciesVisible(ModuleFile, Mod);
+  return Mod;
+}
+
 void CompilerInstance::resetAndLeakSema() { llvm::BuryPointer(takeSema()); }
 
 void CompilerInstance::setExternalSemaSource(

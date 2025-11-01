@@ -942,6 +942,11 @@ public:
 
   bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override;
 
+  void makeModuleAndDependenciesVisible(serialization::ModuleFile *ModFile,
+                                        Module *Mod);
+  Module *loadIPCReceivedHeaderUnit(StringRef FileName,
+                                    SourceLocation ImportLoc) override;
+
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));
   }
