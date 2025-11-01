@@ -1489,10 +1489,6 @@ bool TargetTransformInfo::enableScalableVectorization() const {
   return TTIImpl->enableScalableVectorization();
 }
 
-bool TargetTransformInfo::hasActiveVectorLength() const {
-  return TTIImpl->hasActiveVectorLength();
-}
-
 bool TargetTransformInfo::isProfitableToSinkOperands(
     Instruction *I, SmallVectorImpl<Use *> &OpsToSink) const {
   return TTIImpl->isProfitableToSinkOperands(I, OpsToSink);
