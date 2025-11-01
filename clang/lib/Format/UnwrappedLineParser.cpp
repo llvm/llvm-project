@@ -1588,15 +1588,15 @@ void UnwrappedLineParser::parseStructuralElement(
     parseTryCatch();
     return;
   case tok::kw_extern:
-    nextToken();
     if (Style.isVerilog()) {
-      // In Verilog and extern module declaration looks like a start of module.
+      // In Verilog an extern module declaration looks like a start of module.
       // But there is no body and endmodule. So we handle it separately.
-      if (Keywords.isVerilogHierarchy(*FormatTok)) {
-        parseVerilogHierarchyHeader();
+      if (tryToParseVerilogExtern())
         return;
-      }
-    } else if (FormatTok->is(tok::string_literal)) {
+      break;
+    }
+    nextToken();
+    if (FormatTok->is(tok::string_literal)) {
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
         if (Style.BraceWrapping.AfterExternBlock)
@@ -1621,6 +1621,8 @@ void UnwrappedLineParser::parseStructuralElement(
       parseJavaScriptEs6ImportExport();
       return;
     }
+    if (Style.isVerilog() && tryToParseVerilogExtern())
+      return;
     if (IsCpp) {
       nextToken();
       if (FormatTok->is(tok::kw_namespace)) {
@@ -1669,6 +1671,8 @@ void UnwrappedLineParser::parseStructuralElement(
         addUnwrappedLine();
         return;
       }
+      if (Style.isVerilog() && tryToParseVerilogExtern())
+        return;
       if (IsCpp && parseModuleImport())
         return;
     }
@@ -4553,6 +4557,26 @@ void UnwrappedLineParser::parseVerilogCaseLabel() {
   if (CurrentLines->size() > FirstLine)
     (*CurrentLines)[FirstLine].Level = OrigLevel;
   Line->Level = OrigLevel;
+}
+
+bool UnwrappedLineParser::tryToParseVerilogExtern() {
+  assert(
+      FormatTok->isOneOf(tok::kw_extern, tok::kw_export, Keywords.kw_import));
+  nextToken();
+  // "DPI-C"
+  if (FormatTok->is(tok::string_literal))
+    nextToken();
+  if (FormatTok->isOneOf(Keywords.kw_context, Keywords.kw_pure))
+    nextToken();
+  if (Keywords.isVerilogIdentifier(*FormatTok))
+    nextToken();
+  if (FormatTok->is(tok::equal))
+    nextToken();
+  if (Keywords.isVerilogHierarchy(*FormatTok)) {
+    parseVerilogHierarchyHeader();
+    return true;
+  }
+  return false;
 }
 
 bool UnwrappedLineParser::containsExpansion(const UnwrappedLine &Line) const {
