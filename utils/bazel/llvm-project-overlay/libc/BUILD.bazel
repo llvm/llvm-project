@@ -1000,6 +1000,7 @@ libc_support_library(
         ":__support_ctype_utils",
         ":__support_str_to_num_result",
         ":__support_uint128",
+        ":__support_wctype_utils",
         ":hdr_errno_macros",
     ],
 )
@@ -3093,8 +3094,8 @@ libc_support_library(
 libc_support_library(
     name = "__support_sincosf_utils",
     hdrs = [
-        "src/__support/math/sincosf_utils.h",
         "src/__support/math/sincosf_float_eval.h",
+        "src/__support/math/sincosf_utils.h",
     ],
     deps = [
         ":__support_fputil_double_double",

@@ -18,7 +18,8 @@
 // RUN: %env_memprof_opts=print_text=true:log_path=/dev/null/INVALID not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-DIR --dump-input=always
 
 // Too long log_path.
-// RUN: %env_memprof_opts=print_text=true:log_path=`for((i=0;i<10000;i++)); do echo -n $i; done` \
+// RUN: %python -c "for i in range(0, 10000): print(i, end='')" > %t.long_log_path
+// RUN: %env_memprof_opts=print_text=true:log_path=%{readfile:%t.long_log_path} \
 // RUN:   not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-LONG --dump-input=always
 
 // Specifying the log name via the __memprof_profile_filename variable.

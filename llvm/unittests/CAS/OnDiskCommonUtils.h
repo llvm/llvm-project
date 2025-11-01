@@ -45,7 +45,7 @@ inline HashType digest(StringRef Data) {
 }
 
 inline ValueType valueFromString(StringRef S) {
-  ValueType Val;
+  ValueType Val = {};
   llvm::copy(S.substr(0, sizeof(Val)), Val.data());
   return Val;
 }

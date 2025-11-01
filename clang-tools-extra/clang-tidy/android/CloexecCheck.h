@@ -82,7 +82,7 @@ protected:
   /// \param Mode The required mode char.
   /// \param ArgPos The 0-based position of the flag argument.
   void insertStringFlag(const ast_matchers::MatchFinder::MatchResult &Result,
-                        const char Mode, const int ArgPos);
+                        char Mode, int ArgPos);
 
   /// Helper function to get the spelling of a particular argument.
   StringRef getSpellingArg(const ast_matchers::MatchFinder::MatchResult &Result,
