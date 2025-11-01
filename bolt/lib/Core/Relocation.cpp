@@ -17,6 +17,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ObjectFile.h"
+#define DEBUG_TYPE "bolt-reloc"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 using namespace bolt;
@@ -1178,6 +1180,28 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
     Value = MCConstantExpr::create(Addend, Ctx);
   }
 
+   // PPC64 handling: don't compose relocation expressions for these relocation types
+   // since these are handled natively by PPC64 backend. The back end will attach the
+   // appropriate @ha/@lo/@ds fixups to the individual instructinos.
+  if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
+    switch (Type) {
+  case ELF::R_PPC64_ADDR16:
+  case ELF::R_PPC64_ADDR16_HI:
+  case ELF::R_PPC64_ADDR16_HA:
+  case ELF::R_PPC64_ADDR16_LO:
+  case ELF::R_PPC64_ADDR16_DS:
+  case ELF::R_PPC64_ADDR16_LO_DS:
+  case ELF::R_PPC64_TOC16:
+  case ELF::R_PPC64_TOC16_HI:
+  case ELF::R_PPC64_TOC16_HA:
+  case ELF::R_PPC64_TOC16_LO:
+      // Let MC layer emit as-is; PPC backend handles @ha/@lo/@ds relocations.
+      return Value;
+    default:
+      break;
+    }
+  }
+
   if (isPCRelative(Type)) {
     MCSymbol *TempLabel = Ctx.createNamedTempSymbol();
     Streamer->emitLabel(TempLabel);
@@ -1192,6 +1216,10 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
                                      const MCExpr *RetainedValue) const {
   const auto *Value = createExpr(Streamer);
 
+    // PPC64: never compose relocation expressions — return whichever side you’re asked for.
+  if (Arch == Triple::ppc64 || Arch == Triple::ppc64le)
+    return RetainedValue ? RetainedValue : Value;
+
   if (RetainedValue) {
     Value = MCBinaryExpr::create(getComposeOpcodeFor(Type), RetainedValue,
                                  Value, Streamer->getContext());
@@ -1201,6 +1229,12 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
 }
 
 MCBinaryExpr::Opcode Relocation::getComposeOpcodeFor(uint32_t Type) {
+
+  if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
+   // No generic composition for PPC64; MC handles @ha/@lo/…_ds itself.
+   return MCBinaryExpr::Add; // unused; caller short-circuits for PPC64
+  }
+
   assert((Arch == Triple::riscv32 || Arch == Triple::riscv64) &&
          "only implemented for RISC-V");
 
