@@ -3977,14 +3977,28 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfOp_ATOMIC_STORE(SDNode *N,
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_STACKMAP(SDNode *N, unsigned OpNo) {
   assert(OpNo > 1); // Because the first two arguments are guaranteed legal.
   SmallVector<SDValue> NewOps(N->ops());
-  NewOps[OpNo] = GetSoftPromotedHalf(NewOps[OpNo]);
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+  SDValue Op = N->getOperand(OpNo);
+  NewOps[OpNo] = GetSoftPromotedHalf(Op);
+  SDValue NewNode =
+      DAG.getNode(N->getOpcode(), SDLoc(N), N->getVTList(), NewOps);
+
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+    ReplaceValueWith(SDValue(N, ResNum), NewNode.getValue(ResNum));
+
+  return SDValue(); // Signal that we replaced the node ourselves.
 }
 
 SDValue DAGTypeLegalizer::SoftPromoteHalfOp_PATCHPOINT(SDNode *N,
                                                        unsigned OpNo) {
   assert(OpNo >= 7);
   SmallVector<SDValue> NewOps(N->ops());
-  NewOps[OpNo] = GetSoftPromotedHalf(NewOps[OpNo]);
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+  SDValue Op = N->getOperand(OpNo);
+  NewOps[OpNo] = GetSoftPromotedHalf(Op);
+  SDValue NewNode =
+      DAG.getNode(N->getOpcode(), SDLoc(N), N->getVTList(), NewOps);
+
+  for (unsigned ResNum = 0; ResNum < N->getNumValues(); ResNum++)
+    ReplaceValueWith(SDValue(N, ResNum), NewNode.getValue(ResNum));
+
+  return SDValue(); // Signal that we replaced the node ourselves.
 }
