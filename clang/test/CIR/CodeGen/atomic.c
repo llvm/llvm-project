@@ -46,6 +46,19 @@ void f2(void) {
 // OGCG-NEXT:    store i32 42, ptr %[[SLOT]], align 4
 // OGCG:       }
 
+void f3(_Atomic(int) *p) {
+  *p = 42;
+}
+
+// CIR-LABEL: @f3
+// CIR: cir.store align(4) atomic(seq_cst) %{{.+}}, %{{.+}} : !s32i, !cir.ptr<!s32i>
+
+// LLVM-LABEL: @f3
+// LLVM: store atomic i32 42, ptr %{{.+}} seq_cst, align 4
+
+// OGCG-LABEL: @f3
+// OGCG: store atomic i32 42, ptr %{{.+}} seq_cst, align 4
+
 void load(int *ptr) {
   int x;
   __atomic_load(ptr, &x, __ATOMIC_RELAXED);
