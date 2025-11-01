@@ -1732,11 +1732,16 @@ namespace cwg395 { // cwg395: 3.0
 namespace cwg396 { // cwg396: 3.0
   void f() {
     auto int a();
-    // since-cxx11-error@-1 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
-    // expected-error@-2 {{illegal storage class on function}}
+    // since-cxx11-error@-1 {{'auto' cannot be combined with a type specifier in C++}}
+#if __cplusplus < 201103L
+    // expected-error@-3 {{illegal storage class on function}}
+#else
+    // expected-warning@-5 {{empty parentheses interpreted as a function declaration}}
+    // expected-note@-6 {{replace parentheses with an initializer to declare a variable}}
+#endif
     int (i); // #cwg396-i
     auto int (i);
-    // since-cxx11-error@-1 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+    // since-cxx11-error@-1 {{'auto' cannot be combined with a type specifier in C++}}
     // expected-error@-2 {{redefinition of 'i'}}
     //   expected-note@#cwg396-i {{previous definition is here}}
   }

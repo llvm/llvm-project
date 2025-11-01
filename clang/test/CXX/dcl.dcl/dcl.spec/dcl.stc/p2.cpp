@@ -5,14 +5,18 @@
 // The auto or register specifiers can be applied only to names of objects
 // declared in a block (6.3) or to function parameters (8.4).
 
-auto int ao; // expected-error {{illegal storage class on file-scoped variable}}
+auto int ao;
 #if __cplusplus >= 201103L // C++11 or later
-// expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-2 {{'auto' cannot be combined with a type specifier in C++}}
+#else
+// expected-error@-4 {{illegal storage class on file-scoped variable}}
 #endif
 
-auto void af(); // expected-error {{illegal storage class on function}}
+auto void af();
 #if __cplusplus >= 201103L // C++11 or later
-// expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-2 {{'auto' cannot be combined with a type specifier in C++}}
+#else
+// expected-error@-4 {{illegal storage class on function}}
 #endif
 
 register int ro; // expected-error {{illegal storage class on file-scoped variable}}
@@ -25,13 +29,17 @@ register int ro; // expected-error {{illegal storage class on file-scoped variab
 register void rf(); // expected-error {{illegal storage class on function}}
 
 struct S {
-  auto int ao; // expected-error {{storage class specified for a member declaration}}
+  auto int ao;
 #if __cplusplus >= 201103L // C++11 or later
-// expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-2 {{'auto' cannot be combined with a type specifier in C++}}
+#else
+// expected-error@-4 {{storage class specified for a member declaration}}
 #endif
-  auto void af(); // expected-error {{storage class specified for a member declaration}}
+  auto void af();
 #if __cplusplus >= 201103L // C++11 or later
-// expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-2 {{'auto' cannot be combined with a type specifier in C++}}
+#else
+// expected-error@-4 {{storage class specified for a member declaration}}
 #endif
 
   register int ro; // expected-error {{storage class specified for a member declaration}}
@@ -40,19 +48,21 @@ struct S {
 
 void foo(auto int ap, register int rp) {
 #if __cplusplus >= 201703L
-// expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-2 {{'auto' cannot be combined with a type specifier in C++}}
 // expected-error@-3 {{ISO C++17 does not allow 'register' storage class specifier}}
 #elif __cplusplus >= 201103L
-// expected-warning@-5 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-5 {{'auto' cannot be combined with a type specifier in C++}}
 // expected-warning@-6 {{'register' storage class specifier is deprecated}}
 #endif
   auto int abo;
 #if __cplusplus >= 201103L // C++11 or later
-// expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-2 {{'auto' cannot be combined with a type specifier in C++}}
 #endif
-  auto void abf(); // expected-error {{illegal storage class on function}}
+  auto void abf();
 #if __cplusplus >= 201103L // C++11 or later
-// expected-warning@-2 {{'auto' storage class specifier is not permitted in C++11, and will not be supported in future releases}}
+// expected-error@-2 {{'auto' cannot be combined with a type specifier in C++}}
+#else
+// expected-error@-4 {{illegal storage class on function}}
 #endif
 
   register int rbo;
