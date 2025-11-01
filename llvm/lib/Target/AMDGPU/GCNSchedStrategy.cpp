@@ -75,6 +75,22 @@ static cl::opt<unsigned> PendingQueueLimit(
         "Max (Available+Pending) size to inspect pending queue (0 disables)"),
     cl::init(256));
 
+static cl::opt<float> SpillCopyLatencyScale(
+    "amdgpu-spill-copy-latency-scale", cl::Hidden,
+    cl::desc(
+        "Sets the factor by which we scale the latency impact of allowing"
+        "AGPR/VGPR copies to be inserted for spilling."),
+    cl::init(.5));
+
+static cl::opt<unsigned> AllowAVGPRCopiesForSpill(
+    "amdgpu-allow-avgpr-copies-for-spill", cl::Hidden,
+    cl::desc(
+        "Allow the introduction of avgpr copies for vgpr spilling"
+        "rather than reverting the schedule.  0=disallow (default), "
+        "1=allow if no memory spilling, 2=same as 1, but require"
+        "an improved schedule"),
+    cl::init(0));
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 #define DUMP_MAX_REG_PRESSURE
 static cl::opt<bool> PrintMaxRPRegUsageBeforeScheduler(
@@ -108,6 +124,8 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::SGPR_32RegClass);
   VGPRExcessLimit =
       Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass);
+  AGPRExcessLimit =
+      Context->RegClassInfo->getNumAllocatableRegs(&AMDGPU::AGPR_32RegClass);
 
   SIMachineFunctionInfo &MFI = *MF->getInfo<SIMachineFunctionInfo>();
   // Set the initial TargetOccupnacy to the maximum occupancy that we can
@@ -145,6 +163,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
   SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
   VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
+  SGPRExcessLimit -= std::min(AGPRLimitBias + ErrorMargin, AGPRExcessLimit);
 
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
@@ -1232,6 +1251,7 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
   // stage. Temporarily increase occupancy target in the region.
   S.SGPRLimitBias = S.HighRPSGPRBias;
   S.VGPRLimitBias = S.HighRPVGPRBias;
+  S.AGPRLimitBias = S.HighRPAGPRBias;
   if (MFI.getMaxWavesPerEU() > DAG.MinOccupancy)
     MFI.increaseOccupancy(MF, ++DAG.MinOccupancy);
 
@@ -1318,7 +1338,7 @@ void GCNSchedStage::finalizeGCNSchedStage() {
 
 void UnclusteredHighRPStage::finalizeGCNSchedStage() {
   SavedMutations.swap(DAG.Mutations);
-  S.SGPRLimitBias = S.VGPRLimitBias = 0;
+  S.SGPRLimitBias = S.VGPRLimitBias = S.AGPRLimitBias = 0;
   if (DAG.MinOccupancy > InitialOccupancy) {
     LLVM_DEBUG(dbgs() << StageID
                       << " stage successfully increased occupancy to "
@@ -1739,9 +1759,73 @@ bool MemoryClauseInitialScheduleStage::shouldRevertScheduling(
   return mayCauseSpilling(WavesAfter);
 }
 
+bool GCNSchedStage::spillsAsCopiesProfitable() {
+  if (!AllowAVGPRCopiesForSpill)
+    return false;
+
+  unsigned MaxAGPR = S.AGPRExcessLimit;
+  if (MaxAGPR == 0)
+    // AGPR not supported on architecture.
+    return false;
+
+  // For now, only consider allowing copies profitable if occupancy was
+  // already 1.
+  unsigned TargetOccupancy = std::min(
+      S.getTargetOccupancy(), ST.getOccupancyWithWorkGroupSizes(MF).second);
+  unsigned WavesBefore = std::min(
+      TargetOccupancy,
+      PressureBefore.getOccupancy(ST, DAG.MFI.getDynamicVGPRBlockSize()));
+
+  if (WavesBefore != 1)
+    return false;
+
+  // Only allow copies when VGPR pressure is the problem.
+  unsigned MaxSGPR = S.SGPRExcessLimit;
+  unsigned NumSGPR = PressureAfter.getSGPRNum();
+  if (NumSGPR > MaxSGPR)
+    return false;
+
+  unsigned MaxVGPR = S.VGPRExcessLimit;
+  unsigned NumAGPR = PressureAfter.getAGPRNum();
+  unsigned NumVGPR = PressureAfter.getVGPRNum(ST.hasGFX90AInsts());
+  unsigned NumAVGPR = PressureAfter.getAVGPRNum();
+
+  // We are assuming that in the presence of excessive VGPR requirements, that
+  // AVGPR virtuals with be assigned to AGPRs.  This is almost certainly too
+  // optimistic as these can still generate copies, but we can't know how many
+  // we will get.
+  int NumSpillCopies = NumVGPR - MaxVGPR - NumAVGPR;
+  if (NumSpillCopies <= 0)
+    return true;
+
+  assert(NumVGPR > MaxVGPR);
+  if (NumAGPR + NumSpillCopies > MaxAGPR)
+    return false;
+
+  if (AllowAVGPRCopiesForSpill == 1)
+    return true;
+
+  ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
+  auto LengthBefore = MBefore.getLength();
+  ScheduleMetrics MAfter = getScheduleMetrics(DAG);
+  auto LengthAfter = MAfter.getLength();
+
+  const TargetSchedModel &SM = ST.getInstrInfo()->getSchedModel();
+  unsigned AccReadLatency =
+      SM.computeInstrLatency(AMDGPU::V_ACCVGPR_READ_B32_e64);
+  unsigned AccWriteLatency =
+      SM.computeInstrLatency(AMDGPU::V_ACCVGPR_WRITE_B32_e64);
+  unsigned SpillCopyLatency =
+      NumSpillCopies * (AccReadLatency + AccWriteLatency);
+
+  SpillCopyLatency *= SpillCopyLatencyScale;
+
+  return (LengthAfter + SpillCopyLatency) < LengthBefore;
+}
+
 bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
   if (WavesAfter <= MFI.getMinWavesPerEU() && isRegionWithExcessRP() &&
-      !PressureAfter.less(MF, PressureBefore)) {
+      !PressureAfter.less(MF, PressureBefore) && !spillsAsCopiesProfitable()) {
     LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
     return true;
   }
