@@ -268,6 +268,7 @@ public:
   HANDLE_ATTR_CLASS(PrefixSpec::Non_Recursive, NON_RECURSIVE)
   HANDLE_ATTR_CLASS(PrefixSpec::Pure, PURE)
   HANDLE_ATTR_CLASS(PrefixSpec::Recursive, RECURSIVE)
+  HANDLE_ATTR_CLASS(PrefixSpec::Simple, SIMPLE)
   HANDLE_ATTR_CLASS(TypeAttrSpec::BindC, BIND_C)
   HANDLE_ATTR_CLASS(BindAttr::Deferred, DEFERRED)
   HANDLE_ATTR_CLASS(BindAttr::Non_Overridable, NON_OVERRIDABLE)
@@ -2437,6 +2438,7 @@ bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
       HaveAttrConflict(attrName, Attr::INTENT_INOUT, Attr::INTENT_OUT) ||
       HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) || // C781
       HaveAttrConflict(attrName, Attr::PURE, Attr::IMPURE) ||
+      HaveAttrConflict(attrName, Attr::PURE, Attr::SIMPLE) ||
       HaveAttrConflict(attrName, Attr::PUBLIC, Attr::PRIVATE) ||
       HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE) ||
       HaveAttrConflict(attrName, Attr::INTRINSIC, Attr::EXTERNAL);
