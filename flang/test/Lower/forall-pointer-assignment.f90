@@ -130,8 +130,8 @@ subroutine forallPolymorphic3()
 end subroutine forallPolymorphic3
 
 
-!! Test the LHS of a pointer assignment gets the isAllocatable flag from the
-!! RHS that is a function reference.
+!! Test the LHS of a pointer assignment gets the isPointer flag from the
+!! RHS that is a reference to a function that returns a pointer.
 ! CHECK-LABEL: c.func @_QPforallpointerassignment1
   subroutine forallPointerAssignment1()
     type base
