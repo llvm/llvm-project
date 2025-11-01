@@ -401,9 +401,9 @@ int main(int argc, char **argv) {
       llvm::replace(ActiveBinDir, '/', '\\');
       llvm::replace(ActiveLibDir, '/', '\\');
       llvm::replace(ActiveCMakeDir, '/', '\\');
-      llvm::replace(ActiveIncludeDir.begin(), ActiveIncludeDir.end(), '/', '\\');
+      llvm::replace(ActiveIncludeDir, '/', '\\');
       for (auto& Include : ActiveIncludeOptions)
-        llvm::replace(Include.begin(), Include.end(), '/', '\\');
+        llvm::replace(Include, '/', '\\');
     }
     SharedDir = ActiveBinDir;
     StaticDir = ActiveLibDir;
