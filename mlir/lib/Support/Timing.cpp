@@ -50,7 +50,8 @@ public:
   llvm::sys::SmartRWMutex<true> identifierMutex;
 
   /// A thread local cache of identifiers to reduce lock contention.
-  ThreadLocalCache<llvm::StringMap<llvm::StringMapEntry<llvm::StringSetTag> *>>
+  ThreadLocalCache<
+      llvm::StringMap<llvm::StringMapEntry<llvm::EmptyStringSetTag> *>>
       localIdentifierCache;
 
   TimingManagerImpl() : identifiers(identifierAllocator) {}

@@ -22,8 +22,8 @@ namespace llvm {
 
 /// StringSet - A wrapper for StringMap that provides set-like functionality.
 template <class AllocatorTy = MallocAllocator>
-class StringSet : public StringMap<StringSetTag, AllocatorTy> {
-  using Base = StringMap<StringSetTag, AllocatorTy>;
+class StringSet : public StringMap<EmptyStringSetTag, AllocatorTy> {
+  using Base = StringMap<EmptyStringSetTag, AllocatorTy>;
 
 public:
   StringSet() = default;
