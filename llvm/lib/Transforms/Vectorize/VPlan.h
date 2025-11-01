@@ -4393,15 +4393,25 @@ public:
   }
 
   /// Return a VPValue wrapping i1 true.
-  VPValue *getTrue() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getTrue(Ctx));
-  }
+  VPValue *getTrue() { return getConstantInt(1, 1); }
 
   /// Return a VPValue wrapping i1 false.
-  VPValue *getFalse() {
-    LLVMContext &Ctx = getContext();
-    return getOrAddLiveIn(ConstantInt::getFalse(Ctx));
+  VPValue *getFalse() { return getConstantInt(1, 0); }
+
+  /// Return a VPValue wrapping a ConstantInt with the given type and value.
+  VPValue *getConstantInt(Type *Ty, uint64_t Val, bool IsSigned = false) {
+    return getOrAddLiveIn(ConstantInt::get(Ty, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given bitwidth and value.
+  VPValue *getConstantInt(unsigned BitWidth, uint64_t Val,
+                          bool IsSigned = false) {
+    return getConstantInt(APInt(BitWidth, Val, IsSigned));
+  }
+
+  /// Return a VPValue wrapping a ConstantInt with the given APInt value.
+  VPValue *getConstantInt(const APInt &Val) {
+    return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.

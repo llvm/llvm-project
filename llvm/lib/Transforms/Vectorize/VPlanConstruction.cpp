@@ -612,8 +612,7 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan,
   if (!RequiresScalarEpilogueCheck)
     Cmp = Plan.getFalse();
   else if (TailFolded)
-    Cmp = Plan.getOrAddLiveIn(
-        ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
+    Cmp = Plan.getTrue();
   else
     Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
                              &Plan.getVectorTripCount(), LatchDL, "cmp.n");
@@ -712,8 +711,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // additional overflow check is required before entering the vector loop.
 
       // Get the maximum unsigned value for the type.
-      VPValue *MaxUIntTripCount = Plan.getOrAddLiveIn(ConstantInt::get(
-          TripCountTy, cast<IntegerType>(TripCountTy)->getMask()));
+      VPValue *MaxUIntTripCount =
+          Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
       VPValue *DistanceToMax = Builder.createNaryOp(
           Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
           DebugLoc::getUnknown());
