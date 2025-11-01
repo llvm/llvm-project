@@ -42,13 +42,13 @@ int main() {
   B *b = new B;
   break_optimization(b);
 
-  // CFI: 1
-  // NCFI: 1
+  // CFI: {{^1$}}
+  // NCFI: {{^1$}}
   fprintf(stderr, "1\n");
 
   ((C *)b)->f(); // UB here
 
-  // CFI-NOT: 2
-  // NCFI: 2
+  // CFI-NOT: {{^2$}}
+  // NCFI: {{^2$}}
   fprintf(stderr, "2\n");
 }
