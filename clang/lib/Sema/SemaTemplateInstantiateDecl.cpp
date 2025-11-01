@@ -7063,9 +7063,10 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
 
   if (!ParentDependsOnArgs) {
     if (CurrentInstantiationScope) {
-      if (llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *> *Found =
-          CurrentInstantiationScope->getInstantiationOfIfExists(D)) {
-        if (Decl* FD = Found->dyn_cast<Decl *>())
+      if (llvm::PointerUnion<
+              Decl *, LocalInstantiationScope::DeclArgumentPack *> *Found =
+              CurrentInstantiationScope->getInstantiationOfIfExists(D)) {
+        if (Decl *FD = Found->dyn_cast<Decl *>())
           return cast<NamedDecl>(FD);
       }
     }
