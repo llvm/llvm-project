@@ -190,7 +190,9 @@ def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 def err_verify_message_partial_match
     : Error<"diagnostic messages not fully matched: %0">;
-def err_verify_directive_out_of_order : Error<"out of order directive found: %0\nSubsequent directives were skipped">;
+def err_verify_directive_out_of_order
+    : Error<"out of order directive found: %0\nSubsequent directives were "
+            "skipped">;
 def err_verify_non_singular_match
     : Error<"exactly one diagnostic can be matched">;
 
