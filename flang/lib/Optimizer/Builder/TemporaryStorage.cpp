@@ -258,13 +258,9 @@ void fir::factory::AnyVariableStack::pushValue(mlir::Location loc,
                                                fir::FirOpBuilder &builder,
                                                mlir::Value variable) {
   hlfir::Entity entity{variable};
-  mlir::Type storageElementType =
-      hlfir::getFortranElementType(retValueBox.getType());
-  auto [box, maybeCleanUp] =
-      hlfir::convertToBox(loc, builder, entity, storageElementType);
+  mlir::Value box =
+      hlfir::genVariableBox(loc, builder, entity, entity.getBoxType());
   fir::runtime::genPushDescriptor(loc, builder, opaquePtr, fir::getBase(box));
-  if (maybeCleanUp)
-    (*maybeCleanUp)();
 }
 
 void fir::factory::AnyVariableStack::resetFetchPosition(

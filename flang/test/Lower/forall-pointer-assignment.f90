@@ -1,4 +1,4 @@
-! Test lower of FORALL polymorphic pointer assignment 
+! Test lower of FORALL pointer assignment 
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 
@@ -128,3 +128,47 @@ subroutine forallPolymorphic3()
 ! CHECK: }
 
 end subroutine forallPolymorphic3
+
+
+!! Test the LHS of a pointer assignment gets the isPointer flag from the
+!! RHS that is a reference to a function that returns a pointer.
+! CHECK-LABEL: c.func @_QPforallpointerassignment1
+  subroutine forallPointerAssignment1()
+    type base
+        real, pointer :: data => null()
+    end type
+
+    interface
+      pure function makeData (i)
+        real, pointer :: makeData
+        integer*4, intent(in) :: i
+      end function
+    end interface
+
+    type(base) :: co1(10)
+
+    forall (i=1:10)
+        co1(i)%data => makeData (i)
+    end forall
+
+! CHECK: %[[V_3:[0-9]+]] = fir.alloca i64
+! CHECK: %[[V_3:[0-9]+]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[V_4:[0-9]+]] = fir.alloca !fir.box<!fir.ptr<f32>> {bindc_name = ".result"}
+! CHECK: %[[V_25:[0-9]+]] = fir.convert %c1_i32 : (i32) -> index
+! CHECK: %[[V_26:[0-9]+]] = fir.convert %c10_i32 : (i32) -> index
+! CHECK: %[[V_27:[0-9]+]] = fir.address_of(@{{_QQcl.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
+! CHECK: %[[V_28:[0-9]+]] = fir.convert %[[V_27]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+! CHECK: %[[V_29:[0-9]+]] = fir.call @_FortranACreateDescriptorStack(%[[V_28]], %c{{.*}}) : (!fir.ref<i8>, i32) -> !fir.llvm_ptr<i8>
+! CHECK: fir.do_loop %arg0 = %[[V_25]] to %[[V_26]] step %c1
+! CHECK: {
+! CHECK: %[[V_32:[0-9]+]] = fir.convert %arg0 : (index) -> i32
+! CHECK: fir.store %[[V_32]] to %[[V_3]] : !fir.ref<i32>
+! CHECK: %[[V_33:[0-9]+]] = fir.call @_QPmakedata(%[[V_3]]) proc_attrs<pure> fastmath<contract> : (!fir.ref<i32>) -> !fir.box<!fir.ptr<f32>>
+! CHECK: fir.save_result %[[V_33]] to %[[V_4]] : !fir.box<!fir.ptr<f32>>, !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK: %[[V_34:[0-9]+]] = fir.declare %[[V_4]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.box<!fir.ptr<f32>>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK: %[[V_35:[0-9]+]] = fir.load %[[V_34]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
+! CHECK: %[[V_36:[0-9]+]] = fir.convert %[[V_35]] : (!fir.box<!fir.ptr<f32>>) -> !fir.box<none>
+! CHECK: fir.call @_FortranAPushDescriptor(%[[V_29]], %[[V_36]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
+! CHECK: }
+
+  end subroutine forallPointerAssignment1
