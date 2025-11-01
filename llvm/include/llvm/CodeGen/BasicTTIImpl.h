@@ -302,7 +302,6 @@ private:
   /// (e.g. scalarization).
   std::optional<InstructionCost> getMultipleResultIntrinsicVectorLibCallCost(
       const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind,
-      RTLIB::Libcall LC,
       std::optional<unsigned> CallRetElementIndex = {}) const {
     Type *RetTy = ICA.getReturnType();
     // Vector variants of the intrinsic can be mapped to a vector library call.
@@ -311,10 +310,42 @@ private:
         !isVectorizedStructTy(cast<StructType>(RetTy)))
       return std::nullopt;
 
-    // Find associated libcall.
-    const char *LCName = getTLI()->getLibcallName(LC);
-    if (!LCName)
+    Type *Ty = getContainedTypes(RetTy).front();
+    EVT VT = getTLI()->getValueType(DL, Ty);
+
+    EVT ScalarVT = VT.getScalarType();
+    RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
+
+    bool UsesMemoryOutArgument = true;
+
+    switch (ICA.getID()) {
+    case Intrinsic::modf:
+      LC = RTLIB::getMODF(ScalarVT);
+      break;
+    case Intrinsic::sincospi:
+      LC = RTLIB::getSINCOSPI(ScalarVT);
+      break;
+    case Intrinsic::sincos:
+      LC = RTLIB::getSINCOS_STRET(ScalarVT);
+      UsesMemoryOutArgument = false;
+
+      if (getTLI()->getLibcallImpl(LC) == RTLIB::Unsupported) {
+        LC = RTLIB::getSINCOS(ScalarVT);
+        UsesMemoryOutArgument = true;
+      }
+
+      break;
+    default:
       return std::nullopt;
+    }
+
+    // Find associated libcall.
+    RTLIB::LibcallImpl LibcallImpl = getTLI()->getLibcallImpl(LC);
+    if (LibcallImpl == RTLIB::Unsupported)
+      return std::nullopt;
+
+    StringRef LCName =
+        RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
 
     // Search for a corresponding vector variant.
     LLVMContext &Ctx = RetTy->getContext();
@@ -335,6 +366,11 @@ private:
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});
     }
+
+    // Technically this depends on the ABI, but assume sincos_stret passes in
+    // registers.
+    if (!UsesMemoryOutArgument)
+      return Cost;
 
     // Lowering to a library call (with output pointers) may require us to emit
     // reloads for the results.
@@ -2137,22 +2173,6 @@ public:
     case Intrinsic::modf:
     case Intrinsic::sincos:
     case Intrinsic::sincospi: {
-      Type *Ty = getContainedTypes(RetTy).front();
-      EVT VT = getTLI()->getValueType(DL, Ty);
-
-      RTLIB::Libcall LC = [&] {
-        switch (ICA.getID()) {
-        case Intrinsic::modf:
-          return RTLIB::getMODF;
-        case Intrinsic::sincos:
-          return RTLIB::getSINCOS;
-        case Intrinsic::sincospi:
-          return RTLIB::getSINCOSPI;
-        default:
-          llvm_unreachable("unexpected intrinsic");
-        }
-      }()(VT.getScalarType());
-
       std::optional<unsigned> CallRetElementIndex;
       // The first element of the modf result is returned by value in the
       // libcall.
@@ -2160,7 +2180,7 @@ public:
         CallRetElementIndex = 0;
 
       if (auto Cost = getMultipleResultIntrinsicVectorLibCallCost(
-              ICA, CostKind, LC, CallRetElementIndex))
+              ICA, CostKind, CallRetElementIndex))
         return *Cost;
       // Otherwise, fallback to default scalarization cost.
       break;
