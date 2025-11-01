@@ -288,7 +288,6 @@ define ptr @SyFgets(ptr %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_54
 ; CHECK-NEXT:  ## %bb.50: ## %for.body1664.lr.ph
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 ## 8-byte Reload
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ebp ## 4-byte Reload

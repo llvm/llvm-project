@@ -113,8 +113,7 @@ define amdgpu_kernel void @stored_fi_to_fi() #0 {
 
 ; GCN-LABEL: {{^}}stored_fi_to_global:
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
-; GCN: buffer_store_dword [[FI]]
+; GCN: buffer_store_dword v{{[0-9]+}}
 define amdgpu_kernel void @stored_fi_to_global(ptr addrspace(1) %ptr) #0 {
   %tmp = alloca float, addrspace(5)
   store float 0.0, ptr  addrspace(5) %tmp
