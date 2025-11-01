@@ -32,6 +32,7 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Target/Statistics.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -696,6 +697,21 @@ public:
 
   Status Attach(ProcessAttachInfo &attach_info,
                 Stream *stream); // Optional stream to receive first stop info
+
+  // Frame provider methods
+
+  /// Set the scripted frame provider descriptor for this target.
+  /// All new threads in this target will use this descriptor to create their
+  /// frame providers.
+  Status SetScriptedFrameProviderDescriptor(
+      const SyntheticFrameProviderDescriptor &descriptor);
+
+  /// Clear the scripted frame provider descriptor for this target.
+  void ClearScriptedFrameProviderDescriptor();
+
+  /// Get the scripted frame provider descriptor for this target, if set.
+  std::optional<SyntheticFrameProviderDescriptor>
+  GetScriptedFrameProviderDescriptor() const;
 
   // This part handles the breakpoints.
 
@@ -1688,6 +1704,11 @@ protected:
   lldb::SearchFilterSP m_search_filter_sp;
   PathMappingList m_image_search_paths;
   TypeSystemMap m_scratch_type_system_map;
+
+  /// The scripted frame provider descriptor for this target, if set.
+  /// Used to initialize frame providers for new threads.
+  std::optional<SyntheticFrameProviderDescriptor> m_frame_provider_descriptor;
+  mutable std::recursive_mutex m_frame_provider_descriptor_mutex;
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;

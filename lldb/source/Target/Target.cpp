@@ -3713,6 +3713,37 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   return error;
 }
 
+Status Target::SetScriptedFrameProviderDescriptor(
+    const SyntheticFrameProviderDescriptor &descriptor) {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptor_mutex);
+  m_frame_provider_descriptor = descriptor;
+  if (ProcessSP process_sp = GetProcessSP()) {
+    for (ThreadSP thread_sp : process_sp->Threads()) {
+      thread_sp->ClearScriptedFrameProvider();
+    }
+  }
+  return {};
+}
+
+void Target::ClearScriptedFrameProviderDescriptor() {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptor_mutex);
+  m_frame_provider_descriptor.reset();
+  if (ProcessSP process_sp = GetProcessSP()) {
+    for (ThreadSP thread_sp : process_sp->Threads()) {
+      thread_sp->ClearScriptedFrameProvider();
+    }
+  }
+}
+
+std::optional<SyntheticFrameProviderDescriptor>
+Target::GetScriptedFrameProviderDescriptor() const {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptor_mutex);
+  return m_frame_provider_descriptor;
+}
+
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
   Log *log = GetLog(LLDBLog::Process);
 

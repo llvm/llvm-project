@@ -51,6 +51,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
@@ -5392,6 +5393,109 @@ public:
   ~CommandObjectTargetDump() override = default;
 };
 
+#pragma mark CommandObjectTargetFrameProvider
+
+#define LLDB_OPTIONS_target_frame_provider_register
+#include "CommandOptions.inc"
+
+class CommandObjectTargetFrameProviderRegister : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderRegister(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target frame-provider register",
+            "Register frame provider for all threads in this target.", nullptr,
+            eCommandRequiresTarget),
+
+        m_class_options("target frame-provider", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+
+    AddSimpleArgumentList(eArgTypeRunArgs, eArgRepeatOptional);
+  }
+
+  ~CommandObjectTargetFrameProviderRegister() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    return std::string("");
+  }
+
+protected:
+  void DoExecute(Args &launch_args, CommandReturnObject &result) override {
+    ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+        m_class_options.GetName(), m_class_options.GetStructuredData());
+
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target) {
+      result.AppendError("invalid target");
+      return;
+    }
+
+    // Create a descriptor from the metadata (applies to all threads by default)
+    SyntheticFrameProviderDescriptor descriptor(metadata_sp);
+
+    Status error = target->SetScriptedFrameProviderDescriptor(descriptor);
+    if (error.Success())
+      result.AppendMessageWithFormat(
+          "Successfully registered scripted frame provider '%s' for target\n",
+          m_class_options.GetName().c_str());
+    result.SetError(std::move(error));
+  }
+
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
+};
+
+class CommandObjectTargetFrameProviderClear : public CommandObjectParsed {
+public:
+  CommandObjectTargetFrameProviderClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target frame-provider clear",
+                            "Delete registered frame provider from target.",
+                            nullptr, eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetFrameProviderClear() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if (!target) {
+      result.AppendError("invalid target");
+      return;
+    }
+
+    target->ClearScriptedFrameProviderDescriptor();
+    if (ProcessSP process_sp = target->GetProcessSP()) {
+      for (ThreadSP thread_sp : process_sp->Threads()) {
+        thread_sp->ClearScriptedFrameProvider();
+      }
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+class CommandObjectTargetFrameProvider : public CommandObjectMultiword {
+public:
+  CommandObjectTargetFrameProvider(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target frame-provider",
+            "Commands for registering and viewing frame providers for the "
+            "target.",
+            "target frame-provider [<sub-command-options>] ") {
+    LoadSubCommand("register",
+                   CommandObjectSP(new CommandObjectTargetFrameProviderRegister(
+                       interpreter)));
+    LoadSubCommand("clear",
+                   CommandObjectSP(
+                       new CommandObjectTargetFrameProviderClear(interpreter)));
+  }
+
+  ~CommandObjectTargetFrameProvider() override = default;
+};
+
 #pragma mark CommandObjectMultiwordTarget
 
 // CommandObjectMultiwordTarget
@@ -5407,6 +5511,9 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
                  CommandObjectSP(new CommandObjectTargetDelete(interpreter)));
   LoadSubCommand("dump",
                  CommandObjectSP(new CommandObjectTargetDump(interpreter)));
+  LoadSubCommand(
+      "frame-provider",
+      CommandObjectSP(new CommandObjectTargetFrameProvider(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectTargetList(interpreter)));
   LoadSubCommand("select",
