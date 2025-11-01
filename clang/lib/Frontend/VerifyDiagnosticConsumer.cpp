@@ -1050,10 +1050,10 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
 
         const std::string &RightText = II->second;
         DiagnosticMatchResult MatchResult = D.match(RightText);
-        if (MatchResult == DiagnosticMatchResult::Match)
-          break;
-        if (MatchResult == DiagnosticMatchResult::PartialMatch) {
-          IncompleteMatches.push_back(&D);
+        if (MatchResult != DiagnosticMatchResult::NoMatch) {
+          if (D.FullMatchRequired && MatchResult == DiagnosticMatchResult::PartialMatch) {
+            IncompleteMatches.push_back(&D);
+          }
           break;
         }
       }
