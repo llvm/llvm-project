@@ -604,6 +604,26 @@ namespace llvm {
     /// the last operand.
     TOC_ENTRY,
     LAST_MEMORY_OPCODE = TOC_ENTRY,
+
+    /// BCDSHIFT - The PPC bcdshift instruction
+    ///
+    BCDSHIFT,
+
+    /// BCDSHIFTROUND - The PPC bcdshiftround instruction
+    ///
+    BCDSHIFTROUND,
+
+    /// BCDTRUNC - The PPC bcdtruncate instruction
+    ///
+    BCDTRUNC,
+
+    /// BCDUTRUNC - The PPC bcdunsigned truncate instruction
+    ///
+    BCDUTRUNC,
+
+    /// BCDUSHIFT - The PPC bcdunsigned shift instruction
+    ///
+    BCDUSHIFT,
   };
 
   } // end namespace PPCISD
