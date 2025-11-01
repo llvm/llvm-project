@@ -599,14 +599,14 @@ public:
   /// Compute annotation strings for a single instruction and update `Live_`.
   /// Returns only the events that should be printed *at this instruction*.
   std::vector<std::string> annotate(Instruction &inst, Target &target,
-                                    const lldb::ModuleSP &module_sp);
+                                    lldb::ModuleSP module_sp);
 
   /// Compute structured annotation data for a single instruction and update
   /// `Live_`. Returns structured data for all variables relevant at this
   /// instruction.
-  std::vector<VariableAnnotation>
-  AnnotateStructured(Instruction &inst, Target &target,
-                     const lldb::ModuleSP &module_sp);
+  std::vector<VariableAnnotation> AnnotateStructured(Instruction &inst,
+                                                     Target &target,
+                                                     lldb::ModuleSP module_sp);
 };
 
 } // namespace lldb_private
