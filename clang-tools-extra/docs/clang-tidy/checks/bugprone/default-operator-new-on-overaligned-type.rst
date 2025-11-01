@@ -3,10 +3,11 @@
 bugprone-default-operator-new-on-overaligned-type
 =================================================
 
-This check flags uses of default ``operator new`` where the type has extended
-alignment (an alignment greater than the fundamental alignment). (The default
-``operator new`` is guaranteed to provide the correct alignment if the
-requested alignment is less or equal to the fundamental alignment).
+Flags uses of default ``operator new`` where the type has extended
+alignment (an alignment greater than the fundamental alignment).
+
+The default ``operator new`` is guaranteed to provide the correct alignment if the
+requested alignment is less or equal to the fundamental alignment.
 Only cases are detected (by design) where the ``operator new`` is not
 user-defined and is not a placement new (the reason is that in these cases we
 assume that the user provided the correct memory allocation).
