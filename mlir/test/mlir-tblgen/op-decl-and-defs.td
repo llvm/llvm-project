@@ -232,7 +232,7 @@ def NS_FOp : NS_Op<"op_with_all_types_constraint",
 // DEFS: void FOp::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Value a) {
 // DEFS:   if (::mlir::succeeded(FOp::inferReturnTypes(odsBuilder.getContext(),
 // DEFS:   else
-// DEFS:     ::mlir::detail::reportFatalInferReturnTypesError(odsState);
+// DEFS:     ::mlir::detail::emitInferReturnTypesError(odsState);
 
 // DEFS: FOp FOp::create(::mlir::OpBuilder &builder, ::mlir::Location location, ::mlir::Value a) {
 // DEFS:   ::mlir::OperationState __state__(location, getOperationName());
