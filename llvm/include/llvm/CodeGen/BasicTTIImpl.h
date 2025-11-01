@@ -316,8 +316,6 @@ private:
     EVT ScalarVT = VT.getScalarType();
     RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
 
-    bool UsesMemoryOutArgument = true;
-
     switch (ICA.getID()) {
     case Intrinsic::modf:
       LC = RTLIB::getMODF(ScalarVT);
@@ -326,13 +324,12 @@ private:
       LC = RTLIB::getSINCOSPI(ScalarVT);
       break;
     case Intrinsic::sincos:
+      // TODO: Account for sincos_stret not always using a memory operation for
+      // the out argument
       LC = RTLIB::getSINCOS_STRET(ScalarVT);
-      UsesMemoryOutArgument = false;
 
-      if (getTLI()->getLibcallImpl(LC) == RTLIB::Unsupported) {
+      if (getTLI()->getLibcallImpl(LC) == RTLIB::Unsupported)
         LC = RTLIB::getSINCOS(ScalarVT);
-        UsesMemoryOutArgument = true;
-      }
 
       break;
     default:
@@ -366,11 +363,6 @@ private:
       Cost += thisT()->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
                                       VecTy, {}, CostKind, 0, nullptr, {});
     }
-
-    // Technically this depends on the ABI, but assume sincos_stret passes in
-    // registers.
-    if (!UsesMemoryOutArgument)
-      return Cost;
 
     // Lowering to a library call (with output pointers) may require us to emit
     // reloads for the results.
