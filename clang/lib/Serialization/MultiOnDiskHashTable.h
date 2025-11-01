@@ -28,6 +28,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstdint>
@@ -37,7 +38,8 @@ namespace clang {
 namespace serialization {
 
 /// A collection of on-disk hash tables, merged when relevant for performance.
-template<typename Info> class MultiOnDiskHashTable {
+template <typename Info, bool UseExternalKey = false>
+class MultiOnDiskHashTable {
 public:
   /// A handle to a file, used when overriding tables.
   using file_type = typename Info::file_type;
@@ -47,6 +49,9 @@ public:
 
   using external_key_type = typename Info::external_key_type;
   using internal_key_type = typename Info::internal_key_type;
+  using merged_key_type =
+      std::conditional_t<UseExternalKey, typename Info::external_key_type,
+                         typename Info::internal_key_type>;
   using data_type = typename Info::data_type;
   using data_type_builder = typename Info::data_type_builder;
   using hash_value_type = unsigned;
@@ -72,7 +77,7 @@ private:
 
   struct MergedTable {
     std::vector<file_type> Files;
-    llvm::DenseMap<internal_key_type, data_type> Data;
+    llvm::DenseMap<merged_key_type, data_type> Data;
   };
 
   using Table = llvm::PointerUnion<OnDiskTable *, MergedTable *>;
@@ -84,6 +89,8 @@ private:
   /// There can be at most one MergedTable in this vector, and if present,
   /// it is the first table.
   TableVector Tables;
+
+  bool CanCondense = true;
 
   /// Files corresponding to overridden tables that we've not yet
   /// discarded.
@@ -141,9 +148,8 @@ private:
   }
 
   void condense() {
-    MergedTable *Merged = getMergedTable();
-    if (!Merged)
-      Merged = new MergedTable;
+    llvm::SaveAndRestore GuardCondense(CanCondense, false);
+    MergedTable *NewMerged = new MergedTable;
 
     // Read in all the tables and merge them together.
     // FIXME: Be smarter about which tables we merge.
@@ -157,15 +163,34 @@ private:
         // FIXME: Don't rely on the OnDiskHashTable format here.
         auto L = InfoObj.ReadKeyDataLength(LocalPtr);
         const internal_key_type &Key = InfoObj.ReadKey(LocalPtr, L.first);
-        data_type_builder ValueBuilder(Merged->Data[Key]);
-        InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second,
-                             ValueBuilder);
+        if constexpr (UseExternalKey) {
+          if (auto EKey = InfoObj.TryGetExternalKey(Key)) {
+            data_type_builder ValueBuilder(NewMerged->Data[*EKey]);
+            InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second,
+                                 ValueBuilder);
+          }
+        } else {
+          data_type_builder ValueBuilder(NewMerged->Data[Key]);
+          InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second, ValueBuilder);
+        }
       }
 
-      Merged->Files.push_back(ODT->File);
-      delete ODT;
+      NewMerged->Files.push_back(ODT->File);
     }
-
+    MergedTable *Merged = getMergedTable();
+    if (!Merged) {
+      Merged = NewMerged;
+    } else {
+      for (auto &[Key, Value] : NewMerged->Data) {
+        data_type_builder ValueBuilder(Merged->Data[Key]);
+        Info::MergeDataInto(Value, ValueBuilder);
+      }
+      Merged->Files.insert(Merged->Files.end(), NewMerged->Files.begin(),
+                           NewMerged->Files.end());
+      delete NewMerged;
+    }
+    for (auto *T : tables())
+      delete T;
     Tables.clear();
     Tables.push_back(Table(Merged).getOpaqueValue());
   }
@@ -213,13 +238,18 @@ public:
 
     // Read the OnDiskChainedHashTable header.
     storage_type Buckets = Data + BucketOffset;
+    add(File, Buckets, Ptr, Data, std::move(InfoObj));
+  }
+
+  void add(file_type File, storage_type Buckets, storage_type Payload,
+           storage_type Base, Info InfoObj) {
     auto NumBucketsAndEntries =
         OnDiskTable::HashTable::readNumBucketsAndEntries(Buckets);
 
     // Register the table.
     Table NewTable = new OnDiskTable(File, NumBucketsAndEntries.first,
-                                     NumBucketsAndEntries.second,
-                                     Buckets, Ptr, Data, std::move(InfoObj));
+                                     NumBucketsAndEntries.second, Buckets,
+                                     Payload, Base, std::move(InfoObj));
     Tables.push_back(NewTable.getOpaqueValue());
   }
 
@@ -230,14 +260,17 @@ public:
     if (!PendingOverrides.empty())
       removeOverriddenTables();
 
-    if (Tables.size() > static_cast<unsigned>(Info::MaxTables))
+    if (Tables.size() > static_cast<unsigned>(Info::MaxTables) && CanCondense)
       condense();
 
-    internal_key_type Key = Info::GetInternalKey(EKey);
-    auto KeyHash = Info::ComputeHash(Key);
-
     if (MergedTable *M = getMergedTable()) {
-      auto It = M->Data.find(Key);
+      merged_key_type MKey = [&] {
+        if constexpr (UseExternalKey)
+          return EKey;
+        else
+          return Info::GetInternalKey(EKey);
+      }();
+      auto It = M->Data.find(MKey);
       if (It != M->Data.end())
         Result = It->second;
     }
@@ -246,6 +279,8 @@ public:
 
     for (auto *ODT : tables()) {
       auto &HT = ODT->Table;
+      const internal_key_type &Key = HT.getInfoObj().GetInternalKey(EKey);
+      auto KeyHash = Info::ComputeHash(Key);
       auto It = HT.find_hashed(Key, KeyHash);
       if (It != HT.end())
         HT.getInfoObj().ReadDataInto(Key, It.getDataPtr(), It.getDataLen(),
