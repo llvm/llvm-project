@@ -948,3 +948,101 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   MiddleTerm->setOperand(0, NewCond);
   return true;
 }
+
+bool VPlanTransforms::legalizeMultiUseReductions(VPlan &Plan) {
+  for (auto &PhiR : make_early_inc_range(
+           Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
+    auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
+    if (!MinMaxPhiR)
+      continue;
+
+    RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
+    // TODO: check for multi-uses in VPlan directly.
+    if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) ||
+        !MinMaxPhiR->isPhiMultiUse())
+      continue;
+
+    // One user of MinMaxPhiR is MinMaxOp, the other users must be a compare
+    // that's part of a FindLastIV chain.
+    auto *MinMaxOp =
+        dyn_cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
+    if (!MinMaxOp || MinMaxOp->getNumUsers() != 2)
+      return false;
+    auto MinMaxUsers = to_vector(MinMaxPhiR->users());
+    auto *Cmp = dyn_cast<VPRecipeWithIRFlags>(
+        MinMaxUsers[0] == MinMaxOp ? MinMaxUsers[1] : MinMaxUsers[0]);
+    VPValue *CmpOpA;
+    VPValue *CmpOpB;
+    if (!Cmp || Cmp->getNumUsers() != 1 ||
+        !match(Cmp, m_Binary<Instruction::ICmp>(m_VPValue(CmpOpA),
+                                                m_VPValue(CmpOpB))))
+      return false;
+
+    // Normalize the predicate so MinMaxPhiR is on the right side.
+    CmpInst::Predicate Pred = Cmp->getPredicate();
+    if (CmpOpA == MinMaxPhiR)
+      Pred = CmpInst::getSwappedPredicate(Pred);
+
+    // Determine if the predicate is not strict.
+    bool IsNonStrictPred = ICmpInst::isLE(Pred) || ICmpInst::isGE(Pred);
+    // Account for a mis-match between RdxKind and the predicate.
+    switch (RdxKind) {
+    case RecurKind::UMin:
+    case RecurKind::SMin:
+      IsNonStrictPred |= ICmpInst::isGT(Pred);
+      break;
+    case RecurKind::UMax:
+    case RecurKind::SMax:
+      IsNonStrictPred |= ICmpInst::isLT(Pred);
+      break;
+    default:
+      llvm_unreachable("unsupported kind");
+    }
+
+    // TODO: Strict predicates need to find the first IV value for which the
+    // predicate holds, not the last.
+    if (Pred == CmpInst::ICMP_NE || !IsNonStrictPred)
+      return false;
+
+    // Cmp must be used by the select of a FindLastIV chain.
+    VPValue *Sel = dyn_cast<VPSingleDefRecipe>(*Cmp->user_begin());
+    VPValue *IVOp, *FindIV;
+    if (!Sel ||
+        !match(Sel,
+               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))) ||
+        Sel->getNumUsers() != 2 || !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
+      return false;
+    auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+                           FindIVPhiR->getRecurrenceKind()))
+      return false;
+
+    assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
+           "cannot handle inloop/ordered reductions yet");
+
+    // The reduction using MinMaxPhiR needs adjusting to compute the correct
+    // result:
+    //  1. We need to find the last IV for which the condition based on the
+    //  min/max recurrence is true,
+    //  2. Compare the partial min/max reduction result to its final value and,
+    //  3. Select the lanes of the partial FindLastIV reductions which
+    //  correspond to the lanes matching the min/max reduction result.
+    VPInstruction *FindIVResult = dyn_cast<VPInstruction>(
+        *(Sel->user_begin() + (*Sel->user_begin() == FindIVPhiR ? 1 : 0)));
+    if (!FindIVResult)
+      return false;
+    VPBuilder B(FindIVResult);
+    VPInstruction *MinMaxResult = B.createNaryOp(
+        VPInstruction::ComputeReductionResult,
+        {MinMaxPhiR, MinMaxPhiR->getBackedgeValue()}, VPIRFlags(), {});
+    MinMaxPhiR->getBackedgeValue()->replaceUsesWithIf(
+        MinMaxResult, [](VPUser &U, unsigned) { return isa<VPPhi>(&U); });
+    auto *FinalMinMaxCmp = B.createICmp(
+        CmpInst::ICMP_EQ, MinMaxResult->getOperand(1), MinMaxResult);
+    auto *FinalIVSelect =
+        B.createSelect(FinalMinMaxCmp, FindIVResult->getOperand(3),
+                       FindIVResult->getOperand(2));
+    FindIVResult->setOperand(3, FinalIVSelect);
+  }
+  return true;
+}
