@@ -418,7 +418,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
-  the type of the diagnosed variable.
+  the type of the diagnosed variable and adding detection for local variables
+  initialized with a member variable of a ``const`` object.
 
 - Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` by printing
