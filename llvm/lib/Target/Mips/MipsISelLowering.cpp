@@ -3404,23 +3404,33 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
     CSInfo = MachineFunction::CallSiteInfo(*CB);
 
-  // Check if it's really possible to do a tail call. Restrict it to functions
-  // that are part of this compilation unit.
-  bool InternalLinkage = false;
-  if (IsTailCall) {
-    IsTailCall = isEligibleForTailCallOptimization(
-        CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
-    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-      InternalLinkage = G->getGlobal()->hasInternalLinkage();
-      IsTailCall &= (InternalLinkage || G->getGlobal()->hasLocalLinkage() ||
-                     G->getGlobal()->hasPrivateLinkage() ||
-                     G->getGlobal()->hasHiddenVisibility() ||
-                     G->getGlobal()->hasProtectedVisibility());
-     }
+  // Check if it's really possible to do a tail call.
+  // For non-musttail calls, restrict to functions that won't require $gp
+  // restoration. In PIC mode, calling external functions via tail call can
+  // cause issues with $gp register handling (see D24763).
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool CalleeIsLocal = true;
+  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    const GlobalValue *GV = G->getGlobal();
+    bool HasLocalLinkage = GV->hasLocalLinkage() || GV->hasPrivateLinkage();
+    bool HasHiddenVisibility =
+        GV->hasHiddenVisibility() || GV->hasProtectedVisibility();
+    if (GV->isDeclarationForLinker())
+      CalleeIsLocal = HasLocalLinkage || HasHiddenVisibility;
+    else
+      CalleeIsLocal = GV->isDSOLocal();
   }
-  if (!IsTailCall && CLI.CB && CLI.CB->isMustTailCall())
-    report_fatal_error("failed to perform tail call elimination on a call "
-                       "site marked musttail");
+
+  if (IsTailCall) {
+    bool Eligible = isEligibleForTailCallOptimization(
+        CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>(), IsMustTail);
+    if (!Eligible || !CalleeIsLocal) {
+      IsTailCall = false;
+      if (IsMustTail)
+        report_fatal_error("failed to perform tail call elimination on a call "
+                           "site marked musttail");
+    }
+  }
 
   if (IsTailCall)
     ++NumTailCalls;
@@ -3595,6 +3605,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
+  bool InternalLinkage = false;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
     if (Subtarget.isTargetCOFF() &&
         G->getGlobal()->hasDLLImportStorageClass()) {
