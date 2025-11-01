@@ -31,7 +31,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -1860,16 +1859,19 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
         }
       }
 
-  CodeMetrics Metrics;
-  SmallPtrSet<const Value *, 32> EphValues;
-  for (BasicBlock *BB : L->blocks()) {
-    Metrics.analyzeBasicBlock(BB, *TTI, EphValues, /* PrepareForLTO= */ false,
-                              L);
-  }
-
-  if (Metrics.Convergence == ConvergenceKind::ExtendedLoop) {
-    // Do not predicate loops with extended convergence.
-    return false;
+  // Skip if the loop has tokens referenced outside the loop to avoid
+  // changing convergence behavior.
+  for (BasicBlock *Block : L->blocks()) {
+    for (Instruction &I : *Block) {
+      if (I.getType()->isTokenTy()) {
+        for (User *U : I.users()) {
+          Instruction *UserInst = dyn_cast<Instruction>(U);
+          if (UserInst && !L->contains(UserInst)) {
+            return false;
+          }
+        }
+      }
+    }
   }
 
   bool Changed = false;
