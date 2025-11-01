@@ -330,8 +330,12 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
 
   // If we lost module context, mark all live variables as undefined.
   if (!module_sp) {
-    for (const auto &KV : Live_)
-      annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
+    for (const auto &KV : Live_) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = false;
+      annotation_entity.location_description = kUndefLocation;
+      annotations.push_back(annotation_entity);
+    }
     Live_.clear();
     return annotations;
   }
@@ -343,8 +347,12 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
   if (!module_sp->ResolveSymbolContextForAddress(iaddr, mask, sc) ||
       !sc.function) {
     // No function context: everything dies here.
-    for (const auto &KV : Live_)
-      annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
+    for (const auto &KV : Live_) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = false;
+      annotation_entity.location_description = kUndefLocation;
+      annotations.push_back(annotation_entity);
+    }
     Live_.clear();
     return annotations;
   }
@@ -373,7 +381,7 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
   // Prefer "register-only" output when we have an ABI.
   opts.PrintRegisterOnly = static_cast<bool>(abi_sp);
 
-  llvm::DenseMap<lldb::user_id_t, VarState> Current;
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> Current;
 
   for (size_t i = 0, e = var_list.GetSize(); i != e; ++i) {
     lldb::VariableSP v = var_list.GetVariableAtIndex(i);
@@ -422,10 +430,11 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
       if (const char *type_str = type->GetName().AsCString())
         type_name = type_str;
 
-    Current.try_emplace(
-        v->GetID(), VarState{std::string(name), std::string(loc), start_addr,
-                             end_addr, entry.expr->GetRegisterKind(), decl_file,
-                             decl_line, type_name});
+    Current.try_emplace(v->GetID(),
+                        VariableAnnotation{std::string(name), std::string(loc),
+                                           start_addr, end_addr, true,
+                                           entry.expr->GetRegisterKind(),
+                                           decl_file, decl_line, type_name});
   }
 
   // Diff Live_ → Current.
@@ -435,39 +444,31 @@ VariableAnnotator::AnnotateStructured(Instruction &inst, Target &target,
     auto it = Live_.find(KV.first);
     if (it == Live_.end()) {
       // Newly live.
-      annotations.push_back(createAnnotation(KV.second, true));
-    } else if (it->second.last_loc != KV.second.last_loc) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = true;
+      annotations.push_back(annotation_entity);
+    } else if (it->second.location_description !=
+               KV.second.location_description) {
       // Location changed.
-      annotations.push_back(createAnnotation(KV.second, true));
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = true;
+      annotations.push_back(annotation_entity);
     }
   }
 
   // 2) Ends: anything that was live but is not in Current becomes
   // <kUndefLocation>.
   for (const auto &KV : Live_)
-    if (!Current.count(KV.first))
-      annotations.push_back(createAnnotation(KV.second, false, kUndefLocation));
+    if (!Current.count(KV.first)) {
+      auto annotation_entity = KV.second;
+      annotation_entity.is_live = false;
+      annotation_entity.location_description = kUndefLocation;
+      annotations.push_back(annotation_entity);
+    }
 
   // Commit new state.
   Live_ = std::move(Current);
   return annotations;
-}
-
-VariableAnnotation VariableAnnotator::createAnnotation(
-    const VarState &var_state, bool is_live,
-    const std::optional<std::string> &location_desc) {
-  VariableAnnotation annotation;
-  annotation.variable_name = var_state.name;
-  annotation.location_description =
-      location_desc.has_value() ? *location_desc : var_state.last_loc;
-  annotation.start_address = var_state.start_address;
-  annotation.end_address = var_state.end_address;
-  annotation.is_live = is_live;
-  annotation.register_kind = var_state.register_kind;
-  annotation.decl_file = var_state.decl_file;
-  annotation.decl_line = var_state.decl_line;
-  annotation.type_name = var_state.type_name;
-  return annotation;
 }
 
 void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,

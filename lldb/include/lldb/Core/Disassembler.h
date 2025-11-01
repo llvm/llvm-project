@@ -590,24 +590,8 @@ struct VariableAnnotation {
 /// Tracks live variable annotations across instructions and produces
 /// per-instruction "events" like `name = RDI` or `name = <undef>`.
 class VariableAnnotator {
-  struct VarState {
-    /// Display name.
-    std::string name;
-    /// Last printed location (empty means <undef>).
-    std::string last_loc;
-    /// Address range where this variable state is valid.
-    lldb::addr_t start_address;
-    lldb::addr_t end_address;
-    /// Register numbering scheme for location interpretation.
-    lldb::RegisterKind register_kind;
-
-    std::optional<std::string> decl_file;
-    std::optional<uint32_t> decl_line;
-    std::optional<std::string> type_name;
-  };
-
   // Live state from the previous instruction, keyed by Variable::GetID().
-  llvm::DenseMap<lldb::user_id_t, VarState> Live_;
+  llvm::DenseMap<lldb::user_id_t, VariableAnnotation> Live_;
 
   static constexpr const char *kUndefLocation = "undef";
 
@@ -623,11 +607,6 @@ public:
   std::vector<VariableAnnotation>
   AnnotateStructured(Instruction &inst, Target &target,
                      const lldb::ModuleSP &module_sp);
-
-private:
-  VariableAnnotation createAnnotation(
-      const VarState &var_state, bool is_live,
-      const std::optional<std::string> &location_desc = std::nullopt);
 };
 
 } // namespace lldb_private
