@@ -2,11 +2,18 @@
 
 using namespace llvm;
 
-PreservedAnalyses PointerTypeInFunctionPass::run(Function &F,
+AnalysisKey PointerTypeInFunctionPass::Key;
+
+PointerTypeInFunctionPass::Result PointerTypeInFunctionPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
-  visit(F);
-  testPrint(F);
-  return PreservedAnalyses::all();
+  if (F.getName() == "main") {
+    // 暂且先多遍历几遍
+    for (unsigned int i = 0; i < 10; i++) {
+      visit(F);
+    }
+    //testPrint(F);
+  }
+  return result;
 }
 
 void PointerTypeInFunctionPass::visitAllocaInst(AllocaInst& AI) {
@@ -15,21 +22,24 @@ void PointerTypeInFunctionPass::visitAllocaInst(AllocaInst& AI) {
 }
 
 void PointerTypeInFunctionPass::visitLoadInst(LoadInst &LI) {
+  Value *opr = LI.getPointerOperand();
   if (LI.getType()->isPointerTy()) {
     Value *val = cast<Value>(&LI);
-    addPointerTypeMap(LI.getPointerOperand(), val);
+    addPointerTypeMap(opr, val);
   }
   else {
-    addPointerTypeMap(LI.getPointerOperand(), LI.getType());
+    addPointerTypeMap(opr, LI.getType());
   }
 }
 
 void PointerTypeInFunctionPass::visitStoreInst(StoreInst &SI) {
-  if (SI.getValueOperand()->getType()->isPointerTy()) {
-    addPointerTypeMap(SI.getPointerOperand(), SI.getValueOperand());
+  Value *opr = SI.getPointerOperand();
+  Value *val = SI.getValueOperand();
+  if (val->getType()->isPointerTy()) {
+    addPointerTypeMap(opr, val);
   }
   else {
-    addPointerTypeMap(SI.getPointerOperand(), SI.getValueOperand()->getType());
+    addPointerTypeMap(opr, val->getType());
   }
 }
 
@@ -38,49 +48,88 @@ void PointerTypeInFunctionPass::visitGetElementPtrInst(GetElementPtrInst &GI) {
   auto opr = GI.getPointerOperand();
   Value *val = cast<Value>(&GI);
   auto cnt = GI.getNumIndices();
-  if (cnt > 1) {
-    addPointerTypeMap(opr, type);
-    auto tarTy = type;
-    for (unsigned int i = 1; i < cnt; i++) {
-      if (tarTy->getTypeID() == Type::ArrayTyID) {
-        tarTy = cast<ArrayType>(tarTy);
-        tarTy = tarTy->getArrayElementType();
-      }
-      // Todo: Get type from Struct.
+  addPointerTypeMap(opr, type);
+  result.pointerTypeMap[opr]->update(view_gep_index(val, type, 1, cnt)); 
+  view_gep_index(
+      val, MyTy::ptr_cast<MyPointerTy>(result.pointerTypeMap[opr])->getInner(),
+      1, cnt);
+}
+
+std::shared_ptr<MyTy>
+PointerTypeInFunctionPass::view_gep_index(Value *val, Type* ty, int now, int cnt) {
+  if (now == cnt) {
+    addPointerTypeMap(val, ty);
+    auto iTy =
+        MyTy::ptr_cast<MyPointerTy>(result.pointerTypeMap[val])->getInner();
+    return iTy;
+  } else {
+    if (ty->isArrayTy()) {
+      auto nxTy = cast<ArrayType>(ty);
+      return std::make_shared<MyArrayTy>(
+          view_gep_index(val, nxTy->getElementType(), now + 1, cnt),
+          nxTy->getNumElements());
     }
-    addPointerTypeMap(val, tarTy);
+  }
+}
+
+void PointerTypeInFunctionPass::view_gep_index(Value *val, std::shared_ptr<MyTy> ty, 
+                                          int now, int cnt) {
+  if (now == cnt) {
+    result.pointerTypeMap[val]->update(ty);
+    return;
+  } else {
+    if (ty->isArray()) {
+      auto nxTy = MyTy::ptr_cast<MyArrayTy>(ty);
+      view_gep_index(val, nxTy->getElementTy(), now + 1, cnt);
+    }
   }
 }
 
 void PointerTypeInFunctionPass::addPointerTypeMap(Value *opr, Type *type) {
-  if (pointerTypeMap.contains(opr)) {
-    pointerTypeMap[opr]->update(MyTy::from(type));
+  auto mTy = MyTy::from(type);
+  errs() << " Update ";
+  opr->printAsOperand(errs());
+  errs() << " with " << mTy->to_string() << "\n";
+  if (result.pointerTypeMap.contains(opr)) {
+    result.pointerTypeMap[opr]->update(mTy);
   }
   else {
-    pointerTypeMap[opr] = new MyPointerTy(MyTy::from(type));
+    result.pointerTypeMap[opr] = std::make_shared<MyPointerTy>(mTy);
   }
 }
 
 void PointerTypeInFunctionPass::addPointerTypeMap(Value *opr, Value *val) {
-  if (!pointerTypeMap.contains(val)) {
-    pointerTypeMap[val] = MyTy::from(val->getType());
+  if (!result.pointerTypeMap.contains(val)) {    
+    result.pointerTypeMap[val] = MyTy::from(val->getType());
   }
-  if (pointerTypeMap.contains(opr)) {
-    pointerTypeMap[opr]->update(pointerTypeMap[val]);
+  if (result.pointerTypeMap.contains(opr)) {  
+    auto pTy =
+        MyTy::ptr_cast<MyPointerTy>(result.pointerTypeMap[opr])->getInner();
+    if (pTy->compatibleWith(result.pointerTypeMap[val])) {
+      result.pointerTypeMap[val] =
+          MyTy::leastCompatibleType(result.pointerTypeMap[val], pTy);
+    } 
+  }
+  auto mTy = result.pointerTypeMap[val];
+  errs() << " Update ";
+  opr->printAsOperand(errs());
+  errs() << " with " << mTy->to_string() << "\n";
+  if (result.pointerTypeMap.contains(opr)) {
+    result.pointerTypeMap[opr]->update(result.pointerTypeMap[val]);
   }
   else {
-    pointerTypeMap[opr] = new MyPointerTy(pointerTypeMap[val]);
+    result.pointerTypeMap[opr] = std::make_shared<MyPointerTy>(result.pointerTypeMap[val]);
   }
 }
 
 void PointerTypeInFunctionPass::testPrint(Function &F) {
-  if (F.getName() == "main") {
-    errs() << "Pointers in function: " << F.getName() << "\n";
-    for (auto &entry: pointerTypeMap) {
-      errs() << "  The pointer \" ";
-      entry.getFirst()->printAsOperand(errs(), false);
-      errs() << " \" has type \" " << entry.getSecond()->to_string() << " \" \n";
-    }
-  }
+  errs() << "Pointers in function: " << F.getName() << "\n";
+  for (auto &entry: result.pointerTypeMap) {
+    errs() << "  The pointer \" ";
+    entry.getFirst()->printAsOperand(errs(), false);
+    errs() << " \" has type \" " << entry.getSecond()->to_string() << " \" \n";
+  }  
 }
 
+
+//wllvm

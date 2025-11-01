@@ -2,158 +2,198 @@
 
 using namespace llvm;
 
-llvm::MyTy::MyTy() { typeId = MyTypeID::Null; }
+llvm::MyTy::MyTy() { typeId = MyTypeID::Unknown; }
 
-std::string llvm::MyTy::to_string() { return "null"; }
+std::string llvm::MyTy::to_string() { return "unknown"; }
 
-void llvm::MyTy::update(MyTy *) { return; }
-
-MyTy *llvm::MyTy::clone() {
-  return new MyTy();
-}
+void llvm::MyTy::update(std::shared_ptr<MyTy>) { return; }
 
 llvm::MyTy::MyTypeID llvm::MyTy::getTypeID() { return typeId; }
 
 void llvm::MyTy::setTypeID(MyTypeID t) { typeId = t; }
 
-MyTy *MyTy::from(Type *type) {
+std::shared_ptr<MyTy> MyTy::from(Type *type) {
   switch (type->getTypeID()) {
   case Type::IntegerTyID:
-    return new MyBasicTy(type);
+    return std::make_shared<MyBasicTy>(type);
   case Type::ArrayTyID:
-    return new MyArrayTy(type);
+    return std::make_shared<MyArrayTy>(type);
   case Type::PointerTyID:
-    return new MyPointerTy(new MyVoidTy());
-  case Type::StructTyID:
-    return new MyStructTy(type);
+    return std::make_shared<MyPointerTy>(std::make_shared<MyTy>());
   default:
     return nullptr;
   }
 }
 
-template <typename MySomeTy> MySomeTy *MyTy::castAs() {
-  return static_cast<MySomeTy *>(this);
+bool MyTy::isArray() { return getTypeID() == MyTypeID::Array; }
+
+bool MyTy::isBasic() { return getTypeID() == MyTypeID::Basic; }
+
+bool MyTy::isPointer() { return getTypeID() == MyTypeID::Pointer; }
+
+bool MyTy::isVoid() { return getTypeID() == MyTypeID::Void; }
+
+bool MyTy::isUnknown() { return getTypeID() == MyTypeID::Unknown; }
+
+template <typename T, typename U>
+std::shared_ptr<T> MyTy::ptr_cast(std::shared_ptr<U> u) {
+  if (T *t = cast<T>(u.get())) {
+    return std::shared_ptr<T>(u, t);
+  }
+  return nullptr;
 }
 
-MyTy *llvm::MyTy::leastCommonType(MyTy *t1, MyTy *t2) {
-  MyTy *ret = nullptr;
-  if (t1->getTypeID() == MyTypeID::Void) {
-    ret = t2->clone();
-  } else if (t1->getTypeID() == MyTypeID::Basic) {
-    if (t2->getTypeID() == MyTypeID::Void) {
-      ret = t1->clone();
-    } else if (t2->getTypeID() == MyTypeID::Basic) {
-      // Need to check ALL basic types.
-      Type *b1 = t1->castAs<MyBasicTy>()->getBasic();
-      Type *b2 = t2->castAs<MyBasicTy>()->getBasic();
+std::shared_ptr<MyTy> MyTy::int_with_int(Type* t1, Type* t2) {
+  auto i1 = cast<IntegerType>(t1);
+  auto i2 = cast<IntegerType>(t2);
+  return std::make_shared<MyBasicTy>(i1->getBitWidth() > i2->getBitWidth() ? i1 : i2);
+}
+
+std::shared_ptr<MyTy> MyTy::basic_with_basic(std::shared_ptr<MyTy> t1,
+                                             std::shared_ptr<MyTy> t2) {
+  auto b1 = ptr_cast<MyBasicTy>(t1)->getBasic();
+  auto b2 = ptr_cast<MyBasicTy>(t2)->getBasic();
+  if (b1->isIntegerTy()) {
+    if (b2->isIntegerTy()) {
+      return int_with_int(b1, b2);
+    } else {
+      // Figure out whether I should add Float.
+    }
+  }
+  return std::make_shared<MyTy>();
+}
+
+std::shared_ptr<MyTy> MyTy::ptr_with_array(std::shared_ptr<MyTy> t1,
+                                           std::shared_ptr<MyTy> t2) {
+  auto pt1 = ptr_cast<MyPointerTy>(t1);
+  auto pt2 = ptr_cast<MyArrayTy>(t2);
+  if (pt2->getElementTy()->compatibleWith(pt1->getInner())) {
+    return pt2;
+  } else {
+    return std::make_shared<MyVoidTy>();
+  }
+}
+
+bool MyTy::compatibleWith(std::shared_ptr<MyTy> ty) {
+  errs() << "Check " << this->to_string() << " and " << ty->to_string() << "\n";
+  if (this->isUnknown() || ty->isUnknown()) {
+    return true;
+  } else if (this->getTypeID() != ty->getTypeID()) {
+    return false;
+  } else {
+    if (this->isPointer()) {
+      return cast<MyPointerTy>(this)->getInner()->compatibleWith(
+          ptr_cast<MyPointerTy>(ty)->getInner());
+    } else if (this->isArray()) {
+      return cast<MyArrayTy>(this)->getElementTy()->compatibleWith(
+          ptr_cast<MyArrayTy>(ty)->getElementTy());
+    } else if (this->isBasic()) {
+      auto b1 = cast<MyBasicTy>(this)->getBasic();
+      auto b2 = ptr_cast<MyBasicTy>(ty)->getBasic();
       if (b1->isIntegerTy()) {
         if (b2->isIntegerTy()) {
-          auto *i1 = cast<IntegerType>(b1);
-          auto *i2 = cast<IntegerType>(b2);
-          ret = new MyBasicTy(i1->getBitWidth() > i2->getBitWidth() ? i1 : i2);
+          auto i1 = cast<IntegerType>(b1);
+          auto i2 = cast<IntegerType>(b2);
+          return i1->getBitWidth() >= i2->getBitWidth();
         } else {
           // Figure out whether I should add Float.
         }
       }
+      return false;
     } else {
-      ret = new MyVoidTy();
+      return false;
     }
-  } else if (t1->getTypeID() == MyTypeID::Pointer) {
-    if (t2->getTypeID() == MyTypeID::Void) {
-      ret = t1->clone();
-    } else if (t2->getTypeID() == MyTypeID::Pointer) {
-      MyPointerTy *pt1 = t1->castAs<MyPointerTy>();
-      MyPointerTy *pt2 = t2->castAs<MyPointerTy>();
-      if (pt1->getInner()->getTypeID() == MyTypeID::Array) {
-        // 由于内存布局，数组指针*可以*作为其元素指针使用
-        // 新建一个指针类型，递归调用该函数，按照结果回来更新数组指针
-        auto *aTy =
-            new MyPointerTy(pt1->getInner()->castAs<MyArrayTy>()->getElement());
-        // 暂且只允许相同类型，这样不用递归调用
-        if (MyTy::equal(aTy, pt2)) {
-          ret = pt1->clone();
-        } else {
-          ret = new MyPointerTy(
-              leastCommonType(pt1->getInner(), pt2->getInner()));
-        }
-      } else if (pt2->getInner()->getTypeID() == MyTypeID::Array) {
-        auto *aTy =
-            new MyPointerTy(pt2->getInner()->castAs<MyArrayTy>()->getElement());
-        if (MyTy::equal(aTy, pt1)) {
-          ret = pt2->clone();
-        } else {
-          ret = new MyPointerTy(
-              leastCommonType(pt1->getInner(), pt2->getInner()));
-        }
-      } else {
-        ret = new MyPointerTy(leastCommonType(pt1->getInner(), pt2->getInner()));
-      }
-    } else if (t2->getTypeID() == MyTypeID::Array) {
-      MyPointerTy *pt1 = t1->castAs<MyPointerTy>();
-      MyArrayTy *pt2 = t2->castAs<MyArrayTy>();
-      if (MyTy::equal(pt1->getInner(), pt2->getElement())) {
-        ret = pt2->clone();
-      } else {
-        ret = new MyVoidTy();
-      }
+  }
+}
+
+std::shared_ptr<MyTy> llvm::MyTy::leastCompatibleType(std::shared_ptr<MyTy> t1,
+                                                      std::shared_ptr<MyTy> t2) {
+  std::shared_ptr<MyTy> ret;
+  if (t1->isUnknown()) {
+    ret = t2;
+  } else if (t1->isVoid()) {
+    ret = t1;
+  } else if (t1->isBasic()) {
+    if (t2->isUnknown()) {
+      ret = t1;
+    } else if (t2->isVoid()) {
+      ret = t2;
+    } else if (t2->isBasic()) {
+      ret = basic_with_basic(t1, t2);
     } else {
-      ret = new MyVoidTy();
+      ret = std::make_shared<MyVoidTy>();
     }
-  } else if (t1->getTypeID() == MyTypeID::Array) {
-    if (t2->getTypeID() == MyTypeID::Void) {
-      ret = t1->clone();
-    } else if (t2->getTypeID() == MyTypeID::Pointer) {
-      MyArrayTy *pt1 = t1->castAs<MyArrayTy>();
-      MyPointerTy *pt2 = t2->castAs<MyPointerTy>();
-      if (MyTy::equal(pt1->getElement(), pt2->getInner())) {
-        ret = pt1->clone();
-      } else {
-        ret = new MyVoidTy();
-      }
-    } else if (t2->getTypeID() == MyTypeID::Array) {
-      MyArrayTy *pt1 = (MyArrayTy *)t1;
-      MyArrayTy *pt2 = (MyArrayTy *)t2;
-      ret = new MyArrayTy(leastCommonType(pt1->getElement(), pt2->getElement()),
-                          std::max(pt1->size(), pt2->size()));
+  } else if (t1->isPointer()) {
+    if (t2->isUnknown()) {
+      ret = t1;
+    } else if (t2->isVoid()) {
+      ret = t2;
+    } else if (t2->isPointer()) {
+      auto pt1 = ptr_cast<MyPointerTy>(t1);
+      auto pt2 = ptr_cast<MyPointerTy>(t2);
+      ret = std::make_shared<MyPointerTy>(
+          leastCompatibleType(pt1->getInner(), pt2->getInner()));
+    } else if (t2->isArray()) {
+      ret = ptr_with_array(t1, t2);
     } else {
-      ret = new MyVoidTy();
+      ret = std::make_shared<MyVoidTy>();
+    }
+  } else if (t1->isArray()) {
+    if (t2->isUnknown()) {
+      ret = t1;
+    } else if (t2->isVoid()) {
+      ret = t2;
+    } else if (t2->isPointer()) {
+      ret = ptr_with_array(t2, t1);
+    } else if (t2->isArray()) {
+      auto pt1 = ptr_cast<MyArrayTy>(t1);
+      auto pt2 = ptr_cast<MyArrayTy>(t2);
+      ret = std::make_shared<MyArrayTy>(
+          leastCompatibleType(pt1->getElementTy(), pt2->getElementTy()),
+          std::max(pt1->size(), pt2->size()));
+    } else {
+      ret = std::make_shared<MyVoidTy>();
     }
   } else {
-    ret = new MyVoidTy();
+    ret = std::make_shared<MyVoidTy>();
   }
-  // 需要正确处理内存问题！
-  // delete t1;
-  // delete t2;
   /*errs() << t1->to_string() << " and " << t2->to_string() << " common is "
          << ret->to_string() << "\n";*/
   return ret;
-}
-
-bool llvm::MyTy::equal(MyTy *t1, MyTy *t2) {
-  return t1->to_string() == t2->to_string();
 }
 
 MyVoidTy::MyVoidTy() { setTypeID(MyTypeID::Void); }
 
 std::string MyVoidTy::to_string() { return "void"; }
 
-MyTy *MyVoidTy::clone() { return new MyVoidTy(); }
-
-MyPointerTy::MyPointerTy(MyTy *inner) {
+MyPointerTy::MyPointerTy(std::shared_ptr<MyTy> inner) {
   innerTy = inner;
   setTypeID(MyTypeID::Pointer);
 }
 
-MyTy *llvm::MyPointerTy::getInner() { return innerTy; }
+std::shared_ptr<MyTy> llvm::MyPointerTy::getInner() { return innerTy; }
 
-void MyPointerTy::update(MyTy *inner) {
-  // Todo: Find common type.
-  innerTy = MyTy::leastCommonType(innerTy, inner);
+void MyPointerTy::update(std::shared_ptr<MyTy> inner) {
+  errs() << "The pointer to update is " << this->to_string() << "\n";
+  if (innerTy->isArray()) {
+    errs() << "Update Array Pointer " << this->to_string() << " with "
+         << inner->to_string() << "\n";
+    auto at = ptr_cast<MyArrayTy>(innerTy);
+    if (at->getElementTy()->compatibleWith(inner)) {
+      errs() << "Array pointer used as element pointer\n";
+      innerTy = std::make_shared<MyArrayTy>(
+          MyTy::leastCompatibleType(at->getElementTy(), inner), at->size());
+    } else {
+      errs() << "Array pointer used as array pointer\n";
+      innerTy = MyTy::leastCompatibleType(innerTy, inner);
+    }
+  } else {
+    innerTy = MyTy::leastCompatibleType(innerTy, inner);
+  }
+  errs() << "Update to " << this->to_string() << "\n";
 }
 
 std::string MyPointerTy::to_string() { return innerTy->to_string() + "*"; }
-
-MyTy *MyPointerTy::clone() { return new MyPointerTy(this->innerTy); }
 
 MyBasicTy::MyBasicTy(Type *basic) {
   basicTy = basic;
@@ -165,33 +205,28 @@ Type *llvm::MyBasicTy::getBasic() { return basicTy; }
 std::string MyBasicTy::to_string() {
   switch (basicTy->getTypeID()) {
   case Type::IntegerTyID: {
-    auto *intTy = cast<IntegerType>(basicTy);
+    auto intTy = cast<IntegerType>(basicTy);
     return "i" + std::to_string(intTy->getBitWidth());
   }
-  case Type::FloatTyID:
-    return "float";
-  case Type::DoubleTyID:
-    return "double";
   default:
-    return "error";
+    return "not_added";
   }
 }
 
-MyTy *MyBasicTy::clone() { return new MyBasicTy(this->basicTy); }
-
 MyArrayTy::MyArrayTy(Type *array) {
-  auto *arrayTy = cast<ArrayType>(array);
+  auto arrayTy = cast<ArrayType>(array);
   elementCnt = arrayTy->getNumElements();
   elementTy = MyTy::from(arrayTy->getElementType());
   setTypeID(MyTypeID::Array);
 }
 
-llvm::MyArrayTy::MyArrayTy(MyTy *eTy, int eCnt) {
+llvm::MyArrayTy::MyArrayTy(std::shared_ptr<MyTy> eTy, int eCnt) {
   elementCnt = eCnt;
   elementTy = eTy;
+  setTypeID(MyTypeID::Array);
 }
 
-MyTy *llvm::MyArrayTy::getElement() { return elementTy; }
+std::shared_ptr<MyTy> llvm::MyArrayTy::getElementTy() { return elementTy; }
 
 int llvm::MyArrayTy::size() { return elementCnt; }
 
@@ -200,22 +235,15 @@ std::string MyArrayTy::to_string() {
          "]";
 }
 
-void MyArrayTy::update(MyTy *inner) {
-  // Todo: Find common type.
-  elementTy = MyTy::leastCommonType(elementTy, inner);
+void MyArrayTy::update(std::shared_ptr<MyTy> inner) {
+  elementTy = MyTy::leastCompatibleType(elementTy, inner);
 }
 
-MyTy *MyArrayTy::clone() { return new MyArrayTy(elementTy, elementCnt); }
+template std::shared_ptr<MyPointerTy>
+MyTy::ptr_cast<MyPointerTy, MyTy>(std::shared_ptr<MyTy>);
 
-MyStructTy::MyStructTy(Type *_struct) {
-  structTy = cast<StructType>(_struct);
-  elementCnt = structTy->getNumElements();
-  for (auto i = 0; i < elementCnt; i++) {
-    elementTy.push_back(MyTy::from(structTy->getElementType(i)));
-  }
-  setTypeID(MyTy::Struct);
-}
+template std::shared_ptr<MyArrayTy>
+MyTy::ptr_cast<MyArrayTy, MyTy>(std::shared_ptr<MyTy>);
 
-std::string MyStructTy::to_string() { return structTy->getName().str(); }
-
-MyTy *llvm::MyStructTy::clone() { return new MyStructTy(structTy); }
+template std::shared_ptr<MyBasicTy>
+MyTy::ptr_cast<MyBasicTy, MyTy>(std::shared_ptr<MyTy>);

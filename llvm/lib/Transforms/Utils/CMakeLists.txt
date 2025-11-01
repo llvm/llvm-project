@@ -69,6 +69,8 @@ add_llvm_component_library(LLVMTransformUtils
   NameAnonGlobals.cpp
   MyTy.cpp
   PointerTypeInFunction.cpp
+  PointerTypePrinter.cpp
+  PointerTypeTransformer.cpp
   PredicateInfo.cpp
   ProfileVerify.cpp
   PromoteMemoryToRegister.cpp
