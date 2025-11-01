@@ -265,7 +265,7 @@ void ProfiledBinary::load() {
     decodePseudoProbe(Obj);
 
   if (LoadFunctionFromSymbol && UsePseudoProbes)
-    populateSymbolsFromBinary(Obj);
+    loadSymbolsFromSymtab(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -830,16 +830,16 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
   }
 }
 
-void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
+void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
   // Load binary functions from symbol table when Debug info is incomplete.
   // Strip the internal suffixes which are not reflected in the DWARF info.
-  const SmallVector<StringRef, 6> Suffixes(
+  const SmallVector<StringRef, 10> Suffixes(
       {// Internal suffixes from CoroSplit pass
        ".cleanup", ".destroy", ".resume",
        // Internal suffixes from Bolt
        ".cold", ".warm",
-       // Compiler internal
-       ".llvm."});
+       // Compiler/LTO internal
+       ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
   StringRef FileName = Obj->getFileName();
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
@@ -857,33 +857,34 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
     const StringRef SymName =
         FunctionSamples::getCanonicalFnName(Name, Suffixes);
 
-    auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
-    auto &Func = Ret.first->second;
-    if (Ret.second) {
-      Func.FuncName = Ret.first->first;
-      Func.FromSymtab = true;
-      HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
-    }
+    auto Range = findFuncRange(StartAddr);
+    if (!Range || Range->StartAddress != StartAddr) {
+      // Function from symbol table not found previously in DWARF, store ranges.
+      auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
+      auto &Func = Ret.first->second;
+      if (Ret.second) {
+        Func.FuncName = Ret.first->first;
+        HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
+      }
 
-    if (auto Range = findFuncRange(StartAddr)) {
-      if (Ret.second && Range->getFuncName() != SymName && ShowDetailedWarning)
-        WithColor::warning()
-            << "Conflicting symbol " << Name << " already exists in DWARF as "
-            << Range->getFuncName() << " at address "
-            << format("%8" PRIx64, StartAddr)
-            << ". The DWARF indicates a range from "
-            << format("%8" PRIx64, Range->StartAddress) << " to "
-            << format("%8" PRIx64, Range->EndAddress) << "\n";
-    } else {
-      // Store/Update Function Range from SymTab
-      Func.Ranges.emplace_back(StartAddr, StartAddr + Size);
       Func.FromSymtab = true;
+      Func.Ranges.emplace_back(StartAddr, StartAddr + Size);
 
       auto R = StartAddrToFuncRangeMap.emplace(StartAddr, FuncRange());
       FuncRange &FRange = R.first->second;
+
       FRange.Func = &Func;
       FRange.StartAddress = StartAddr;
       FRange.EndAddress = StartAddr + Size;
+
+    } else if (SymName != Range->getFuncName() && ShowDetailedWarning) {
+      // Function already found from DWARF, check consistency between symbol
+      // table and DWARF.
+      WithColor::warning() << "Conflicting name for symbol" << Name
+                           << " at address " << format("%8" PRIx64, StartAddr)
+                           << ", but the DWARF symbol " << Range->getFuncName()
+                           << " indicates a starting address at "
+                           << format("%8" PRIx64, Range->StartAddress) << "\n";
     }
   }
 }
@@ -912,10 +913,8 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
     // BinaryFunction indexed by the name.
     auto Ret = BinaryFunctions.emplace(Name, BinaryFunction());
     auto &Func = Ret.first->second;
-    if (Ret.second) {
+    if (Ret.second)
       Func.FuncName = Ret.first->first;
-      Func.FromSymtab = false;
-    }
 
     for (const auto &Range : Ranges) {
       uint64_t StartAddress = Range.LowPC;

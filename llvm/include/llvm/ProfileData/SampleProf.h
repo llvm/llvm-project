@@ -1235,7 +1235,7 @@ public:
         if (It == StringRef::npos)
           continue;
         auto Dit = Cand.rfind('.');
-        if (Dit == It + Suffix.size() - 1)
+        if (Dit == It || Dit == It + Suffix.size() - 1)
           Cand = Cand.substr(0, It);
       }
       return Cand;
