@@ -1704,6 +1704,43 @@ mlir::LogicalResult CIRToLLVMPrefetchOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+// Make sure the LLVM function we are about to create a call for actually
+// exists, if not create one. Returns a function
+static void getOrCreateLLVMFuncOp(mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Operation *srcOp,
+                                  llvm::StringRef fnName, mlir::Type fnTy) {
+  auto modOp = srcOp->getParentOfType<mlir::ModuleOp>();
+  auto enclosingFnOp = srcOp->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+  mlir::Operation *sourceSymbol =
+      mlir::SymbolTable::lookupSymbolIn(modOp, fnName);
+  if (!sourceSymbol) {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPoint(enclosingFnOp);
+    mlir::LLVM::LLVMFuncOp::create(rewriter, srcOp->getLoc(), fnName, fnTy);
+  }
+}
+
+mlir::LogicalResult CIRToLLVMDeleteArrayOpLowering::matchAndRewrite(
+    cir::DeleteArrayOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  StringRef fnName = "_ZdaPv";
+
+  auto voidTy = rewriter.getType<mlir::LLVM::LLVMVoidType>();
+  mlir::Type llvmPtrTy =
+      mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+
+  mlir::Type fnTy = mlir::LLVM::LLVMFunctionType::get(voidTy, {llvmPtrTy},
+                                                      /*isVarArg=*/false);
+
+  getOrCreateLLVMFuncOp(rewriter, op, fnName, fnTy);
+
+  // Replace the operation with a call to _ZdaPv with the pointer argument
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+      op, mlir::TypeRange{}, fnName, mlir::ValueRange{adaptor.getAddress()});
+
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
     cir::PtrDiffOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

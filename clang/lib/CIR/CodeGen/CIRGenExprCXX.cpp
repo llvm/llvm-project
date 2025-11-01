@@ -626,8 +626,8 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
 
   if (e->isArrayForm()) {
-    assert(!cir::MissingFeatures::deleteArray());
-    cgm.errorNYI(e->getSourceRange(), "emitCXXDeleteExpr: array delete");
+    cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
+                               ptr.getPointer());
     return;
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
