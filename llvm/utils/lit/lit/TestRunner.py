@@ -397,7 +397,7 @@ def executeBuiltinEcho(cmd, shenv):
         # Reopen stdout with specifying `newline` to avoid CRLF translation.
         # The versions of echo we are replacing on Windows all emit plain LF,
         # and the LLVM tests now depend on this.
-        stdout = open(stdout.name, stdout.mode, newline="")
+        stdout = open(stdout.name, stdout.mode, encoding="utf-8", newline="")
         opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
@@ -695,7 +695,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
-            fd = open(redir_filename, mode)
+            fd = open(redir_filename, mode, encoding="utf-8")
         # Workaround a Win32 and/or subprocess bug when appending.
         #
         # FIXME: Actually, this is probably an instance of PR6753.
@@ -1311,13 +1311,6 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         script += ".bat"
 
     # Write script file
-    mode = "w"
-    open_kwargs = {}
-    if litConfig.isWindows and not isWin32CMDEXE:
-        mode += "b"  # Avoid CRLFs when writing bash scripts.
-    else:
-        open_kwargs["encoding"] = "utf-8"
-    f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
             match = re.fullmatch(kPdbgRegex, ln)
@@ -1326,8 +1319,9 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 commands[i] = match.expand(
                     "echo '\\1' > nul && " if command else "echo '\\1' > nul"
                 )
-        f.write("@echo on\n")
-        f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
+        with open(script, "w", encoding="utf-8") as f:
+            f.write("@echo on\n")
+            f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
             match = re.fullmatch(kPdbgRegex, ln)
@@ -1366,8 +1360,6 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 # seen the latter manage to terminate the shell running lit.
                 if command:
                     commands[i] += f" && {{ {command}; }}"
-        if test.config.pipefail:
-            f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
 
         # Manually export any DYLD_* variables used by dyld on macOS because
         # otherwise they are lost when the shell executable is run, before the
@@ -1377,14 +1369,14 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
             for k, v in test.config.environment.items()
             if k.startswith("DYLD_")
         )
-        f.write(bytes(env_str, "utf-8") if mode == "wb" else env_str)
-        f.write(b"set -x;" if mode == "wb" else "set -x;")
-        if mode == "wb":
-            f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
-        else:
+
+        with open(script, "w", encoding="utf-8", newline="") as f:
+            if test.config.pipefail:
+                f.write("set -o pipefail;")
+            f.write(env_str)
+            f.write("set -x;")
             f.write("{ " + "; } &&\n{ ".join(commands) + "; }")
-    f.write(b"\n" if mode == "wb" else "\n")
-    f.close()
+            f.write("\n")
 
     if isWin32CMDEXE:
         command = ["cmd", "/c", script]
