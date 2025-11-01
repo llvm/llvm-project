@@ -3206,6 +3206,9 @@ protected:
       : VPRecipeBase(SC, Operands, DL), VPIRMetadata(Metadata), Ingredient(I),
         Alignment(Alignment), Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
+    assert(isa<VPVectorEndPointerRecipe>(getAddr()) ||
+           !Reverse &&
+               "Reversed acccess without VPVectorEndPointerRecipe address?");
   }
 
 public:
