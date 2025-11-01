@@ -175,6 +175,7 @@
 ; CHECK-O23SZ-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23SZ-NEXT: Running pass: DSEPass
 ; CHECK-O23SZ-NEXT: Running pass: MoveAutoInitPass
+; CHECK-O23SZ-NEXT: Running pass: MoveEntryAllocaInitPass
 ; CHECK-O23SZ-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23SZ-NEXT: Running pass: LCSSAPass
 ; CHECK-O23SZ-NEXT: Running pass: LICMPass on loop
