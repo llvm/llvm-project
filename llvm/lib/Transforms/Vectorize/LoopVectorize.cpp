@@ -7512,7 +7512,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
 
   VPValue *Mask = nullptr;
   if (Legal->isMaskRequired(I))
-    Mask = getBlockInMask(Builder.getInsertBlock());
+    Mask = Builder.getInsertBlock()->getEntryMask();
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -7709,7 +7709,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       //      all-true mask.
       VPValue *Mask = nullptr;
       if (Legal->isMaskRequired(CI))
-        Mask = getBlockInMask(Builder.getInsertBlock());
+        Mask = Builder.getInsertBlock()->getEntryMask();
       else
         Mask = Plan.getOrAddLiveIn(
             ConstantInt::getTrue(IntegerType::getInt1Ty(CI->getContext())));
@@ -7751,7 +7751,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     // div/rem operation itself.  Otherwise fall through to general handling below.
     if (CM.isPredicatedInst(I)) {
       SmallVector<VPValue *> Ops(Operands);
-      VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
+      VPValue *Mask = Builder.getInsertBlock()->getEntryMask();
       VPValue *One =
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
       auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
@@ -7833,7 +7833,7 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
   if (Legal->isMaskRequired(HI->Store))
-    HGramOps.push_back(getBlockInMask(Builder.getInsertBlock()));
+    HGramOps.push_back(Builder.getInsertBlock()->getEntryMask());
 
   return new VPHistogramRecipe(Opcode, HGramOps, HI->Store->getDebugLoc());
 }
@@ -7887,7 +7887,7 @@ VPRecipeBuilder::handleReplication(Instruction *I, ArrayRef<VPValue *> Operands,
     // added initially. Masked replicate recipes will later be placed under an
     // if-then construct to prevent side-effects. Generate recipes to compute
     // the block mask for this region.
-    BlockInMask = getBlockInMask(Builder.getInsertBlock());
+    BlockInMask = Builder.getInsertBlock()->getEntryMask();
   }
 
   // Note that there is some custom logic to mark some intrinsics as uniform
@@ -8178,7 +8178,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
             ReductionOpcode == Instruction::Sub) &&
            "Expected an ADD or SUB operation for predicated partial "
            "reductions (because the neutral element in the mask is zero)!");
-    Cond = getBlockInMask(Builder.getInsertBlock());
+    Cond = Builder.getInsertBlock()->getEntryMask();
     VPValue *Zero =
         Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
     BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
@@ -8306,15 +8306,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  auto BlockMaskCache = VPlanTransforms::introduceMasksAndLinearize(
-      *Plan, CM.foldTailByMasking());
+  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
-                                Builder, BlockMaskCache, LVer);
+                                Builder, LVer);
   RecipeBuilder.collectScaledReductions(Range);
 
   // Scan the body of the loop in a topological order to visit each basic block
@@ -8325,9 +8324,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   auto *MiddleVPBB = Plan->getMiddleBlock();
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
-  // Mapping from VPValues in the initial plan to their widened VPValues. Needed
-  // temporarily to update created block masks.
-  DenseMap<VPValue *, VPValue *> Old2New;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Convert input VPInstructions to widened recipes.
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -8381,7 +8377,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       }
       if (Recipe->getNumDefinedValues() == 1) {
         SingleDef->replaceAllUsesWith(Recipe->getVPSingleValue());
-        Old2New[SingleDef] = Recipe->getVPSingleValue();
+        SingleDef->eraseFromParent();
       } else {
         assert(Recipe->getNumDefinedValues() == 0 &&
                "Unexpected multidef recipe");
@@ -8389,14 +8385,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       }
     }
   }
-
-  // replaceAllUsesWith above may invalidate the block masks. Update them here.
-  // TODO: Include the masks as operands in the predicated VPlan directly
-  // to remove the need to keep a map of masks beyond the predication
-  // transform.
-  RecipeBuilder.updateBlockMaskCache(Old2New);
-  for (VPValue *Old : Old2New.keys())
-    Old->getDefiningRecipe()->eraseFromParent();
 
   assert(isa<VPRegionBlock>(LoopRegion) &&
          !LoopRegion->getEntryBasicBlock()->empty() &&
@@ -8430,6 +8418,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
+
+  // Erase the block entry masks, since they're not used any longer, so that
+  // future transforms only deal with recipe VPUsers.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))
+    VPBB->eraseEntryMask();
 
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
@@ -8521,9 +8514,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 
   // Collect mapping of IR header phis to header phi recipes, to be used in
   // addScalarResumePhis.
-  DenseMap<VPBasicBlock *, VPValue *> BlockMaskCache;
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
-                                Builder, BlockMaskCache, nullptr /*LVer*/);
+                                Builder, nullptr /*LVer*/);
   for (auto &R : Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R))
       continue;
@@ -8681,7 +8673,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 
       VPValue *CondOp = nullptr;
       if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
-        CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
+        CondOp = CurrentLink->getParent()->getEntryMask();
 
       // TODO: Retrieve FMFs from recipes directly.
       RecurrenceDescriptor RdxDesc = Legal->getRecurrenceDescriptor(
@@ -8729,7 +8721,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // different numbers of lanes. Partial reductions mask the input instead.
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
-      VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
+      VPValue *Cond = PhiR->getParent()->getEntryMask();
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
               ? std::make_optional(RdxDesc.getFastMathFlags())
