@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -81,6 +82,24 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
     LLVM_DEBUG(dbgs() << "  Can\'t treat the result of call " << *CB
                       << " as a constant\n");
     return false;
+  }
+
+  // Perform constant pointer propagation as long as assuming PredicateInfo
+  // derived equality between the two holds, and their provenance is the same.
+  if (mayForwardPointerPredicatedCopy(V)) {
+    bool MadeChange = false;
+    const auto &DL = cast<Instruction>(V)->getDataLayout();
+
+    V->replaceUsesWithIf(Const, [&](Use &U) {
+      bool CanReplace = canReplacePointersInUseIfEqual(U, Const, DL);
+      if (CanReplace)
+        LLVM_DEBUG(dbgs() << "  Constant pointer: " << *Const << " = " << *V
+                          << '\n');
+
+      MadeChange |= CanReplace;
+      return CanReplace;
+    });
+    return MadeChange;
   }
 
   LLVM_DEBUG(dbgs() << "  Constant: " << *Const << " = " << *V << '\n');
@@ -356,11 +375,12 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (wouldInstructionBeTriviallyDead(&Inst))
+      if (isInstructionTriviallyDead(&Inst)) {
         Inst.eraseFromParent();
+        ++InstRemovedStat;
+      }
 
       MadeChanges = true;
-      ++InstRemovedStat;
     } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
@@ -574,6 +594,9 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   // The BasicBlock work list
   SmallVector<BasicBlock *, 64> BBWorkList;
+
+  /// List of users that carry forward the predicated copy.
+  SmallPtrSet<Value *, 16> VisitedUsers;
 
   /// KnownFeasibleEdges - Entries in this set are edges which have already had
   /// PHI nodes retriggered.
@@ -1028,6 +1051,27 @@ public:
           ResolvedUndefs |= resolvedUndef(*I);
     }
     Invalidated.clear();
+  }
+
+  bool mayForwardPointerPredicatedCopy(Value *V) {
+    if (auto *I = dyn_cast<Instruction>(V); I && I->getType()->isPointerTy()) {
+      auto It = FnPredicateInfo.find(I->getFunction());
+      if (It == FnPredicateInfo.end())
+        return false;
+      if (It->second->getPredicateInfoFor(I))
+        return true;
+      // See whether there are intermediate copies of the predicated value.
+      // As per how the solver propagates constants, it should suffice to visit
+      // the operands of the currently examined instruction, adding it to the
+      // already visited users.
+      for (Value *Op : I->operand_values()) {
+        if (It->second->getPredicateInfoFor(Op) || VisitedUsers.count(Op)) {
+          VisitedUsers.insert(I);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 };
 
@@ -2420,3 +2464,7 @@ void SCCPSolver::markFunctionUnreachable(Function *F) {
 void SCCPSolver::visit(Instruction *I) { Visitor->visit(I); }
 
 void SCCPSolver::visitCall(CallInst &I) { Visitor->visitCall(I); }
+
+bool SCCPSolver::mayForwardPointerPredicatedCopy(Value *V) {
+  return Visitor->mayForwardPointerPredicatedCopy(V);
+}
