@@ -27,6 +27,13 @@ transforms to:
   virtual auto f3() const && -> float = delete;
   auto lambda = []() -> void {};
 
+Options
+-------
+
+.. option:: WarnOnNonTrailingVoid
+
+  If the option is set to `true`, the check will apply even to function
+  signatures with return type ``void``. Default is `false`.
 
 Limitations
 -----------
