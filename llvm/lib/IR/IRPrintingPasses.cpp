@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/IRPrintingPasses.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -20,6 +22,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -28,7 +32,7 @@ namespace {
 
 class PrintModulePassWrapper : public ModulePass {
   raw_ostream &OS;
-  std::string Banner;
+  const std::string Banner;
   bool ShouldPreserveUseListOrder;
 
 public:
@@ -44,19 +48,21 @@ public:
     // TODO: consider removing this as debug-intrinsics are gone.
     M.removeDebugIntrinsicDeclarations();
 
+    IRDumpStream dmp("module", Banner, OS);
+
     if (llvm::isFunctionInPrintList("*")) {
       if (!Banner.empty())
-        OS << Banner << "\n";
-      M.print(OS, nullptr, ShouldPreserveUseListOrder);
+        dmp.os() << Banner << "\n";
+      M.print(dmp.os(), nullptr, ShouldPreserveUseListOrder);
     } else {
       bool BannerPrinted = false;
       for (const auto &F : M.functions()) {
         if (llvm::isFunctionInPrintList(F.getName())) {
           if (!BannerPrinted && !Banner.empty()) {
-            OS << Banner << "\n";
+            dmp.os() << Banner << "\n";
             BannerPrinted = true;
           }
-          F.print(OS);
+          F.print(dmp.os());
         }
       }
     }
@@ -73,7 +79,7 @@ public:
 
 class PrintFunctionPassWrapper : public FunctionPass {
   raw_ostream &OS;
-  std::string Banner;
+  const std::string Banner;
 
 public:
   static char ID;
@@ -84,11 +90,12 @@ public:
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
     if (isFunctionInPrintList(F.getName())) {
+      IRDumpStream dmp("function", Banner, OS);
       if (forcePrintModuleIR())
-        OS << Banner << " (function: " << F.getName() << ")\n"
-           << *F.getParent();
+        dmp.os() << Banner << " (function: " << F.getName() << ")\n"
+                 << *F.getParent();
       else
-        OS << Banner << '\n' << static_cast<Value &>(F);
+        dmp.os() << Banner << '\n' << static_cast<Value &>(F);
     }
 
     return false;
