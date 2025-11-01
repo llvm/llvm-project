@@ -190,6 +190,7 @@ def err_verify_nonconst_addrspace : Error<
   "qualifier 'const' is needed for variables in address space '%0'">;
 def err_verify_message_partial_match
     : Error<"diagnostic messages not fully matched: %0">;
+def err_verify_directive_out_of_order : Error<"out of order directive found: %0\nSubsequent directives were skipped">;
 
 def note_fixit_applied : Note<"FIX-IT applied suggested code changes">;
 def note_fixit_in_macro : Note<

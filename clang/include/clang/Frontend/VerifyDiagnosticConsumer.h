@@ -76,7 +76,7 @@ public:
     virtual bool isValid(std::string &Error) = 0;
 
     // Returns true on match.
-    virtual DiagnosticMatchResult match(StringRef S) = 0;
+    virtual DiagnosticMatchResult match(StringRef S) const = 0;
 
   protected:
     Directive(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
@@ -137,6 +137,7 @@ private:
   unsigned ActiveSourceFiles = 0;
   ParsingState State;
   ExpectedData ED;
+  bool CheckOrderOfDirectives;
 
   void CheckDiagnostics();
 

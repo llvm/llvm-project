@@ -99,7 +99,7 @@ public:
     return true;
   }
 
-  DiagnosticMatchResult match(StringRef S) override {
+  DiagnosticMatchResult match(StringRef S) const override {
     if (!S.contains(Text)) {
       return DiagnosticMatchResult::NoMatch;
     }
@@ -126,7 +126,7 @@ public:
     return Regex.isValid(Error);
   }
 
-  DiagnosticMatchResult match(StringRef S) override {
+  DiagnosticMatchResult match(StringRef S) const override {
     if (!FullMatchRequired) {
       return Regex.match(S) ? DiagnosticMatchResult::Match
                             : DiagnosticMatchResult::NoMatch;
@@ -702,6 +702,7 @@ VerifyDiagnosticConsumer::VerifyDiagnosticConsumer(DiagnosticsEngine &Diags_)
       State{HasNoDirectives, {}} {
   if (Diags.hasSourceManager())
     setSourceManager(Diags.getSourceManager());
+  CheckOrderOfDirectives = Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
 }
 
 VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
@@ -1113,6 +1114,105 @@ static unsigned CheckResults(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
   return NumProblems;
 }
 
+// Checks that directives are lexically in the same order as the emitted
+// diagnostics. Assumes that CheckResults returned 0 problems, i.e. that
+// every diagnostic was matched by every directive without considering the
+// order.
+static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
+                                       const TextDiagnosticBuffer &Buffer,
+                                       const ExpectedData &ED) {
+  // Building a set of all directives ordered by their location
+  auto directiveComparator = [] (const Directive *LHS, const Directive *RHS) {
+      return LHS->DirectiveLoc < RHS->DiagnosticLoc;
+    };
+  auto sortDirectives = [&] (const DirectiveList &Unordered) {
+    std::vector<const Directive *> Ordered(Unordered.size());
+    std::transform(Unordered.cbegin(), Unordered.cend(), Ordered.begin(), [] (const std::unique_ptr<Directive> &D) {
+      return &*D;
+    });
+    std::sort(Ordered.begin(), Ordered.end(), directiveComparator);
+    return Ordered;
+  };
+  std::vector<const Directive *> OrderedErrors = sortDirectives(ED.Errors);
+  std::vector<const Directive *> OrderedWarns = sortDirectives(ED.Warnings);
+  std::vector<const Directive *> OrderedNotes = sortDirectives(ED.Notes);
+  std::vector<const Directive *> OrderedRemarks = sortDirectives(ED.Remarks);
+
+  std::vector<const Directive *> OrderedDirectives = [&]{
+    std::vector<const Directive *> OrderedER(OrderedErrors.size() + OrderedRemarks.size());
+    std::merge(OrderedErrors.cbegin(), OrderedErrors.cend(), OrderedRemarks.cbegin(), OrderedRemarks.cend(), OrderedER.begin(), directiveComparator);
+    std::vector<const Directive *> OrderedWN(OrderedWarns.size() + OrderedNotes.size());
+    std::merge(OrderedWarns.cbegin(), OrderedWarns.cend(), OrderedNotes.cbegin(), OrderedNotes.cend(), OrderedWN.begin(), directiveComparator);
+    std::vector<const Directive *> OrderedDirectives(OrderedER.size() + OrderedWN.size());
+    std::merge(OrderedER.cbegin(), OrderedER.cend(), OrderedWN.cbegin(), OrderedWN.cend(), OrderedDirectives.begin(), directiveComparator);
+    return OrderedDirectives;
+  }();
+
+  auto getLocDiagPair = [&] (DiagnosticsEngine::Level DiagLevel, long DiagIndex) {
+    TextDiagnosticBuffer::const_iterator It = [&]{
+      switch (DiagLevel) {
+        case DiagnosticsEngine::Level::Fatal:
+        case DiagnosticsEngine::Level::Error:
+          assert(DiagIndex < Buffer.err_end() - Buffer.err_begin() && "DiagIndex is out of bounds!");
+          return Buffer.err_begin();
+        case DiagnosticsEngine::Level::Warning:
+          assert(DiagIndex < Buffer.warn_end() - Buffer.warn_begin() && "DiagIndex is out of bounds!");
+          return Buffer.warn_begin();
+        case DiagnosticsEngine::Level::Note:
+          assert(DiagIndex < Buffer.note_end() - Buffer.note_begin()  && "DiagIndex is out of bounds!");
+          return Buffer.note_begin();
+        case DiagnosticsEngine::Level::Remark:
+          assert(DiagIndex < Buffer.remark_end() - Buffer.remark_begin() && "DiagIndex is out of bounds!");
+          return Buffer.remark_begin();
+        case DiagnosticsEngine::Level::Ignored:
+          llvm_unreachable("Unexpected diagnostic level!");
+      }
+    }();
+    
+    std::advance(It, DiagIndex);
+    return *It;
+  };
+
+  using LevelDiagPairT = std::pair<DiagnosticsEngine::Level, size_t>;
+  static_assert(std::is_same_v<LevelDiagPairT, TextDiagnosticBuffer::AllDiagList::value_type>);
+
+  // CheckResults already ensured that there are as many directives as emitted
+  // diagnostics
+  for (const auto [Directive, LevelDiagPair] : llvm::zip_equal(OrderedDirectives, llvm::iterator_range{Buffer.all_begin(), Buffer.all_end()})) {
+    assert(!Directive->MatchAnyFileAndLine);
+    assert(!Directive->MatchAnyLine);
+    const auto [DiagLevel, DiagIndex] = LevelDiagPair;
+    const auto [DiagLoc, DiagText] = getLocDiagPair(DiagLevel, DiagIndex);
+    const SourceLocation DirLoc = Directive->DirectiveLoc;
+    bool LocsMatch = SourceMgr.getPresumedLineNumber(DiagLoc) == SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc) && IsFromSameFile(SourceMgr, DiagLoc, Directive->DiagnosticLoc);
+    if (!LocsMatch || Directive->match(DiagText) != DiagnosticMatchResult::Match) {
+        SmallString<256> Fmt;
+        llvm::raw_svector_ostream OS(Fmt);
+        OS << "\n  directive at " << SourceMgr.getFilename(DirLoc)
+             << ":" << SourceMgr.getPresumedLineNumber(DirLoc)
+             << ": " << Directive->Text
+           << "\n  that expects diagnostic at ";
+        if (IsFromSameFile(SourceMgr, DirLoc, Directive->DiagnosticLoc)) {
+          OS << "line " << SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc);
+        }
+        else {
+          OS << SourceMgr.getFilename(Directive->DiagnosticLoc) << ":" << SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc);
+        }
+           OS << "\n  does not match diagnostic at ";
+        if (IsFromSameFile(SourceMgr, DirLoc, DiagLoc)) {
+          OS << "line " << SourceMgr.getPresumedLineNumber(DiagLoc);
+        }
+        else {
+          OS << SourceMgr.getFilename(DiagLoc) << ":" << SourceMgr.getPresumedLineNumber(DiagLoc);
+        }
+        OS << ": " << DiagText;
+        Diags.Report(diag::err_verify_directive_out_of_order) << OS.str();
+        return 1;
+    }
+  }
+  return 0;
+}
+
 void VerifyDiagnosticConsumer::UpdateParsedFileStatus(SourceManager &SM,
                                                       FileID FID,
                                                       ParsedStatus PS) {
@@ -1200,6 +1300,9 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
 
     // Check that the expected diagnostics occurred.
     NumErrors += CheckResults(Diags, *SrcManager, *Buffer, ED);
+    if (CheckOrderOfDirectives && NumErrors == 0) {
+      NumErrors += CheckResultsAreInOrder(Diags, *SrcManager, *Buffer, ED);
+    }
   } else {
     const DiagnosticLevelMask DiagMask =
         ~Diags.getDiagnosticOptions().getVerifyIgnoreUnexpected();
