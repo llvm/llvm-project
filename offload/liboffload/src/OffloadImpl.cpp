@@ -147,8 +147,8 @@ llvm::Error ol_platform_impl_t::init() {
     if (llvm::Error Err = Plugin->initDevice(Id))
       return Err;
 
-    auto Device = &Plugin->getDevice(Id);
-    auto Info = Device->obtainInfoImpl();
+    GenericDeviceTy *Device = &Plugin->getDevice(Id);
+    llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
     if (llvm::Error Err = Info.takeError())
       return Err;
     Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, Device, *this,
@@ -467,6 +467,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   switch (PropName) {
   case OL_DEVICE_INFO_NAME:
   case OL_DEVICE_INFO_PRODUCT_NAME:
+  case OL_DEVICE_INFO_UID:
   case OL_DEVICE_INFO_VENDOR:
   case OL_DEVICE_INFO_DRIVER_VERSION: {
     // String values
@@ -544,6 +545,8 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.writeString("Virtual Host Device");
   case OL_DEVICE_INFO_PRODUCT_NAME:
     return Info.writeString("Virtual Host Device");
+  case OL_DEVICE_INFO_UID:
+    return Info.writeString(GenericPluginTy::getHostDeviceUid());
   case OL_DEVICE_INFO_VENDOR:
     return Info.writeString("Liboffload");
   case OL_DEVICE_INFO_DRIVER_VERSION:
