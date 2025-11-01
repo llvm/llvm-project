@@ -97,6 +97,9 @@ add_lldb_library(lldbTarget
     lldbUtility
     lldbValueObject
     lldbPluginProcessUtility
+
+  CLANG_LIBS
+    clangCodeGen
   )
 
 add_dependencies(lldbTarget
