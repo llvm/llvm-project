@@ -43,7 +43,7 @@
 ; FORCEDONLY-SAME: loop not vectorized: only vectorizing loops that explicitly request it
 ; FORCEDONLY: LV: Loop hints prevent vectorization
 
-define double @CompareDistmats(ptr %distmat1){
+define double @disabled_loop_vectorization(ptr %distmat1){
 entry:
   br label %for.body
 
