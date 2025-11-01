@@ -240,27 +240,27 @@ private:
     }
     // Relocations targeting the PLT associated with the symbol.
     case ELF::R_390_PLT64: {
-      Kind = systemz::BranchPCRelPLT64;
+      Kind = systemz::DeltaPLT64;
       break;
     }
     case ELF::R_390_PLT32: {
-      Kind = systemz::BranchPCRelPLT32;
+      Kind = systemz::DeltaPLT32;
       break;
     }
     case ELF::R_390_PLT32DBL: {
-      Kind = systemz::BranchPCRelPLT32dbl;
+      Kind = systemz::DeltaPLT32dbl;
       break;
     }
     case ELF::R_390_PLT24DBL: {
-      Kind = systemz::BranchPCRelPLT24dbl;
+      Kind = systemz::DeltaPLT24dbl;
       break;
     }
     case ELF::R_390_PLT16DBL: {
-      Kind = systemz::BranchPCRelPLT16dbl;
+      Kind = systemz::DeltaPLT16dbl;
       break;
     }
     case ELF::R_390_PLT12DBL: {
-      Kind = systemz::BranchPCRelPLT12dbl;
+      Kind = systemz::DeltaPLT12dbl;
       break;
     }
     case ELF::R_390_PLTOFF64: {
@@ -277,72 +277,53 @@ private:
     }
     // Relocations targeting the GOT entry associated with the symbol.
     case ELF::R_390_GOTOFF64: {
-      Kind = systemz::Delta64FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta64FromGOT;
       break;
     }
-    // Seems loke ‘R_390_GOTOFF32’.
     case ELF::R_390_GOTOFF: {
-      Kind = systemz::Delta32FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta32FromGOT;
       break;
     }
     case ELF::R_390_GOTOFF16: {
-      Kind = systemz::Delta16FromGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta16FromGOT;
       break;
     }
-    case ELF::R_390_GOT64: {
-      Kind = systemz::Delta64GOT;
+    case ELF::R_390_GOT64:
+    case ELF::R_390_GOTPLT64: {
+      Kind = systemz::RequestGOTAndTransformToDelta64;
       break;
     }
-    case ELF::R_390_GOT32: {
-      Kind = systemz::Delta32GOT;
+    case ELF::R_390_GOT32:
+    case ELF::R_390_GOTPLT32: {
+      Kind = systemz::RequestGOTAndTransformToDelta32;
       break;
     }
-    case ELF::R_390_GOT20: {
-      Kind = systemz::Delta20GOT;
+    case ELF::R_390_GOT20:
+    case ELF::R_390_GOTPLT20: {
+      Kind = systemz::RequestGOTAndTransformToDelta20;
       break;
     }
-    case ELF::R_390_GOT16: {
-      Kind = systemz::Delta16GOT;
+    case ELF::R_390_GOT16:
+    case ELF::R_390_GOTPLT16: {
+      Kind = systemz::RequestGOTAndTransformToDelta16;
       break;
     }
-    case ELF::R_390_GOT12: {
-      Kind = systemz::Delta12GOT;
+    case ELF::R_390_GOT12:
+    case ELF::R_390_GOTPLT12: {
+      Kind = systemz::RequestGOTAndTransformToDelta12;
       break;
     }
     case ELF::R_390_GOTPC: {
-      Kind = systemz::DeltaPCRelGOT;
+      Kind = systemz::RequestGOTAndTransformToDelta32GOTBase;
       break;
     }
     case ELF::R_390_GOTPCDBL: {
-      Kind = systemz::DeltaPCRelGOTdbl;
+      Kind = systemz::RequestGOTAndTransformToDelta32GOTBasedbl;
       break;
     }
-    case ELF::R_390_GOTPLT64: {
-      Kind = systemz::Delta64JumpSlot;
-      break;
-    }
-    case ELF::R_390_GOTPLT32: {
-      Kind = systemz::Delta32JumpSlot;
-      break;
-    }
-    case ELF::R_390_GOTPLT20: {
-      Kind = systemz::Delta20JumpSlot;
-      break;
-    }
-    case ELF::R_390_GOTPLT16: {
-      Kind = systemz::Delta16JumpSlot;
-      break;
-    }
-    case ELF::R_390_GOTPLT12: {
-      Kind = systemz::Delta12JumpSlot;
-      break;
-    }
+    case ELF::R_390_GOTENT:
     case ELF::R_390_GOTPLTENT: {
-      Kind = systemz::PCRel32JumpSlot;
-      break;
-    }
-    case ELF::R_390_GOTENT: {
-      Kind = systemz::PCRel32GOTEntry;
+      Kind = systemz::RequestGOTAndTransformToDelta32dbl;
       break;
     }
     default:
@@ -390,7 +371,7 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_systemz(
     return Features.takeError();
 
   assert((*ELFObj)->getArch() == Triple::systemz &&
-         "Only SystemZ (big endian) is supported for now");
+         "Only SystemZ is supported");
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64BE>>(**ELFObj);
   return ELFLinkGraphBuilder_systemz(
