@@ -1031,6 +1031,68 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
   ModifiedDT = true;
 }
 
+static void scalarizeMaskedSpeculativeLoad(const DataLayout &DL, CallInst *CI,
+                                           DomTreeUpdater *DTU,
+                                           bool &ModifiedDT) {
+  // For a target without speculative/first-faulting load support, we can't
+  // actually scalarize accesses for all lanes. However, lanes beyond the
+  // first may be considered inactive due to reasons beyond a fault, so for
+  // generic 'scalarization' we can just load the first lane (if the
+  // corresponding input mask bit is active), then mark all other lanes as
+  // inactive in the output mask and embed the first lane into a vector of
+  // poison.
+  Value *Ptr = CI->getArgOperand(0);
+  Value *Align = CI->getArgOperand(1);
+  Value *Mask = CI->getArgOperand(2);
+  StructType *RetTy = cast<StructType>(CI->getType());
+  VectorType *DataTy = cast<VectorType>(RetTy->getElementType(0));
+  VectorType *MaskTy = cast<VectorType>(RetTy->getElementType(1));
+  Type *ScalarTy = DataTy->getScalarType();
+
+  MaybeAlign AlignVal = cast<ConstantInt>(Align)->getMaybeAlignValue();
+
+  IRBuilder<> Builder(CI->getContext());
+  BasicBlock *IfBlock = CI->getParent();
+  Builder.SetInsertPoint(CI);
+  Builder.SetCurrentDebugLocation(CI->getDebugLoc());
+  Value *EmptyMask = Constant::getNullValue(MaskTy);
+  Value *PoisonData = PoisonValue::get(DataTy);
+
+  // FIXME: If the mask is a constant, we can skip the extract.
+  Value *FirstActive =
+      Builder.CreateExtractElement(Mask, 0ul, Twine("first.active"));
+  Instruction *ThenTerm =
+      SplitBlockAndInsertIfThen(FirstActive, CI,
+                                /*Unreachable=*/false,
+                                /*BranchWeights=*/nullptr, DTU);
+
+  BasicBlock *ThenBlock = ThenTerm->getParent();
+  ThenBlock->setName("speculative.load.first.lane");
+  Builder.SetInsertPoint(ThenBlock->getTerminator());
+  LoadInst *Load = Builder.CreateAlignedLoad(ScalarTy, Ptr, AlignVal);
+  Value *OneLaneData = Builder.CreateInsertElement(PoisonData, Load, 0ul);
+  Value *OneLaneMask = Builder.CreateInsertElement(
+      EmptyMask, Constant::getAllOnesValue(MaskTy->getElementType()), 0ul);
+
+  Builder.SetInsertPoint(CI);
+  PHINode *ResData = Builder.CreatePHI(DataTy, 2);
+  ResData->addIncoming(PoisonData, IfBlock);
+  ResData->addIncoming(OneLaneData, ThenBlock);
+  PHINode *ResMask = Builder.CreatePHI(MaskTy, 2);
+  ResMask->addIncoming(EmptyMask, IfBlock);
+  ResMask->addIncoming(OneLaneMask, ThenBlock);
+
+  Value *Result = PoisonValue::get(RetTy);
+  Result = Builder.CreateInsertValue(Result, ResData, 0ul);
+  Result = Builder.CreateInsertValue(Result, ResMask, 1ul);
+  if (CI->hasName())
+    Result->setName(CI->getName() + ".first.lane.only");
+  CI->getParent()->setName("speculative.result");
+  CI->replaceAllUsesWith(Result);
+  CI->eraseFromParent();
+  ModifiedDT = true;
+}
+
 static bool runImpl(Function &F, const TargetTransformInfo &TTI,
                     DominatorTree *DT) {
   std::optional<DomTreeUpdater> DTU;
@@ -1170,7 +1232,11 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
       scalarizeMaskedCompressStore(DL, HasBranchDivergence, CI, DTU,
                                    ModifiedDT);
       return true;
+    case Intrinsic::masked_speculative_load: {
+      scalarizeMaskedSpeculativeLoad(DL, CI, DTU, ModifiedDT);
+      return true;
     }
+  }
   }
 
   return false;
