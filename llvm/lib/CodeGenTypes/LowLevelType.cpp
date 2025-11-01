@@ -54,9 +54,3 @@ LLVM_DUMP_METHOD void LLT::dump() const {
   dbgs() << '\n';
 }
 #endif
-
-const constexpr LLT::BitFieldInfo LLT::ScalarSizeFieldInfo;
-const constexpr LLT::BitFieldInfo LLT::PointerSizeFieldInfo;
-const constexpr LLT::BitFieldInfo LLT::PointerAddressSpaceFieldInfo;
-const constexpr LLT::BitFieldInfo LLT::VectorElementsFieldInfo;
-const constexpr LLT::BitFieldInfo LLT::VectorScalableFieldInfo;
