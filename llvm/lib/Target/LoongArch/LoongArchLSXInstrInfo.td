@@ -2552,6 +2552,11 @@ def : Pat<(f64 (froundeven FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
                (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64), 0)), sub_64))>;
 
+defm : PatVrF<fceil, "VFRINTRP">;
+defm : PatVrF<ffloor, "VFRINTRM">;
+defm : PatVrF<ftrunc, "VFRINTRZ">;
+defm : PatVrF<froundeven, "VFRINTRNE">;
+
 // load
 def : Pat<(int_loongarch_lsx_vld GPR:$rj, timm:$imm),
           (VLD GPR:$rj, (to_valid_timm timm:$imm))>;
