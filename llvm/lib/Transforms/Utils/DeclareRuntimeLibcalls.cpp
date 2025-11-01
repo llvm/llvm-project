@@ -21,8 +21,8 @@ PreservedAnalyses DeclareRuntimeLibcallsPass::run(Module &M,
   RTLIB::RuntimeLibcallsInfo RTLCI(M.getTargetTriple());
   LLVMContext &Ctx = M.getContext();
 
-  for (RTLIB::LibcallImpl Impl : RTLCI.getLibcallImpls()) {
-    if (Impl == RTLIB::Unsupported)
+  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+    if (!RTLCI.isAvailable(Impl))
       continue;
 
     // TODO: Declare with correct type, calling convention, and attributes.
