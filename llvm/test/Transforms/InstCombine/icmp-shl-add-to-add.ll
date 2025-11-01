@@ -115,9 +115,8 @@ define i1 @shl_add_const_eq_multi_use(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_multi_use(
 ; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 [[V0:%.*]], 5
 ; CHECK-NEXT:    call void @use_i64(i64 [[V1]])
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw i64 [[V3:%.*]], 5
-; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V4]], 32
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V1]], [[V5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[V3:%.*]], 1
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V0]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v1 = shl nsw i64 %v0, 5
@@ -131,10 +130,8 @@ define i1 @shl_add_const_eq_multi_use(i64 %v0, i64 %v3) {
 ; Test: Vector splat. Should fold once optimization is applied.
 define <2 x i1> @shl_add_const_eq_vec_splat(<2 x i64> %v0, <2 x i64> %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_vec_splat(
-; CHECK-NEXT:    [[V1:%.*]] = shl nsw <2 x i64> [[V0:%.*]], <i64 5, i64 5>
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw <2 x i64> [[V3:%.*]], <i64 5, i64 5>
-; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V4]], <i64 32, i64 32>
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1]], [[V5]]
+; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V3:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1:%.*]], [[V5]]
 ; CHECK-NEXT:    ret <2 x i1> [[V6]]
 ;
   %v1 = shl nsw <2 x i64> %v0, <i64 5, i64 5>
@@ -147,10 +144,8 @@ define <2 x i1> @shl_add_const_eq_vec_splat(<2 x i64> %v0, <2 x i64> %v3) {
 ; Test: Vector splat with poison. Should fold once optimization is applied.
 define <2 x i1> @shl_add_const_eq_vec_splat_poison(<2 x i64> %v0, <2 x i64> %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_vec_splat_poison(
-; CHECK-NEXT:    [[V1:%.*]] = shl nsw <2 x i64> [[V0:%.*]], <i64 5, i64 5>
-; CHECK-NEXT:    [[V4:%.*]] = shl nsw <2 x i64> [[V3:%.*]], <i64 5, i64 5>
-; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V4]], <i64 32, i64 poison>
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1]], [[V5]]
+; CHECK-NEXT:    [[V5:%.*]] = add nsw <2 x i64> [[V3:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq <2 x i64> [[V1:%.*]], [[V5]]
 ; CHECK-NEXT:    ret <2 x i1> [[V6]]
 ;
   %v1 = shl nsw <2 x i64> %v0, <i64 5, i64 5>

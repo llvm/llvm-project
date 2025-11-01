@@ -6002,25 +6002,25 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   const CmpInst::Predicate Pred = I.getPredicate();
 
-  //icmp (shl nsw X, Log2), (add nsw (shl nsw Y, Log2), K) -> icmp X, (add nsw Y, 1)
+  // icmp (shl nsw X, Log2), (add nsw (shl nsw Y, Log2), K) -> icmp X, (add nsw
+  // Y, 1)
   Value *X, *Y;
-  ConstantInt *CLog2M0, *CLog2M1, *CVal;
-  auto M0 = m_NSWShl(m_Value(X), m_ConstantInt(CLog2M0));
-  auto M1 = m_NSWAdd(m_NSWShl (m_Value(Y), m_ConstantInt(CLog2M1)),
-                      m_ConstantInt(CVal));
+  const APInt *CLog2M0, *CLog2M1, *CVal;
+  auto M0 = m_NSWShl(m_Value(X), m_APIntAllowPoison(CLog2M0));
+  auto M1 = m_NSWAdd(m_NSWShl(m_Value(Y), m_APIntAllowPoison(CLog2M1)),
+                     m_APIntAllowPoison(CVal));
 
-  if (match(&I, m_c_ICmp(M0, M1)) && CLog2M0->getValue() == CLog2M1->getValue()) {
+  if (match(&I, m_c_ICmp(M0, M1)) && *CLog2M0 == *CLog2M1) {
     unsigned BitWidth = CLog2M0->getBitWidth();
     unsigned ShAmt = (unsigned)CLog2M0->getLimitedValue(BitWidth);
     APInt ExpectedK = APInt::getOneBitSet(BitWidth, ShAmt);
-    if (CVal->getValue() == ExpectedK) {
-      Value *NewRHS = Builder.CreateAdd(
-          Y, ConstantInt::get(Y->getType(), 1),
-          "", /*HasNUW=*/false, /*HasNSW=*/true);
+    if (*CVal == ExpectedK) {
+      Value *NewRHS = Builder.CreateAdd(Y, ConstantInt::get(Y->getType(), 1),
+                                        "", /*HasNUW=*/false, /*HasNSW=*/true);
       return new ICmpInst(Pred, X, NewRHS);
     }
   }
-  
+
   Value *A, *B, *C, *D;
   if (match(Op0, m_Xor(m_Value(A), m_Value(B)))) {
     if (A == Op1 || B == Op1) { // (A^B) == A  ->  B == 0
