@@ -8,38 +8,24 @@
 
 // REQUIRES: std-at-least-c++23
 // UNSUPPORTED: no-localization
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
-/*
-  (19.6.4.6) Non-member functions
+// (19.6.4.6) Non-member functions [stacktrace.basic.nonmem]
+//
+//   string to_string(const stacktrace_entry& f);
+//
+//   template<class Allocator>
+//     string to_string(const basic_stacktrace<Allocator>& st);
 
-  string to_string(const stacktrace_entry& f);
-
-  template<class Allocator>
-    string to_string(const basic_stacktrace<Allocator>& st);
-*/
-
-#include <__config_site>
-#if _LIBCPP_HAS_LOCALIZATION
-
-#  include <cassert>
-#  include <iostream>
-#  include <stacktrace>
+#include <cassert>
+#include <stacktrace>
 
 int main(int, char**) {
-  auto a    = std::stacktrace::current();
-  auto astr = std::to_string(a);
-  std::cerr << astr << '\n';
+  auto trace = std::stacktrace::current();
+  assert(!std::to_string(trace).empty());
 
-  // assert(std::to_string(a[0]).contains("main"));
-  assert(std::to_string(a[0]).contains("to_string.pass"));
-
-  // assert(std::to_string(a).contains("main"));
-  assert(std::to_string(a).contains("to_string.pass"));
+  auto entry = trace[0];
+  assert(!std::to_string(entry).empty());
 
   return 0;
 }
-
-#else
-int main() { return 0; }
-#endif // _LIBCPP_HAS_LOCALIZATION

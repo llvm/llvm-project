@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
   (19.6.3.3) Observers [stacktrace.entry.obs]
@@ -19,19 +19,18 @@ namespace std {
 */
 
 #include <cassert>
-#include <cstdint>
 #include <stacktrace>
 
 int main(int, char**) {
-  std::stacktrace_entry e;
-  // "Returns: false if and only if *this is empty."
-  assert(!e);
-  // Now set addr to something nonzero
-  *(uintptr_t*)(&e) = uintptr_t(&main);
-  assert(e.native_handle() == uintptr_t(&main));
-  assert(e);
+  std::stacktrace_entry entry;
 
-  static_assert(noexcept(bool(e)));
+  static_assert(noexcept(bool(entry)));
+
+  // "Returns: false if and only if *this is empty."
+  assert(!entry);
+
+  std::stacktrace trace = std::stacktrace::current();
+  assert(trace[0]);
 
   return 0;
 }

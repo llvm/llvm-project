@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
   (19.6.3.2) Constructors [stacktrace.entry.cons]
@@ -23,16 +23,12 @@ namespace std {
 #include <stacktrace>
 #include <type_traits>
 
-#include "test_macros.h"
-
-TEST_NO_TAIL_CALLS
 int main(int, char**) {
-  static_assert(std::is_nothrow_copy_constructible_v<std::stacktrace_entry>);
+  auto entry1 = std::stacktrace::current()[0];
 
-  auto e1 = std::stacktrace::current()[0];
-  static_assert(noexcept(std::stacktrace_entry(e1)));
-  std::stacktrace_entry e2(e1);
-  assert(e2 == e1);
+  static_assert(std::is_nothrow_copy_constructible_v<std::stacktrace_entry>);
+  std::stacktrace_entry entry2(entry1);
+  assert(entry2 == entry1);
 
   return 0;
 }

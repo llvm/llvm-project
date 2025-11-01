@@ -7,40 +7,39 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
-/*
-  (19.6.4.3) Observers [stacktrace.basic.obs]
-
-  const_iterator begin() const noexcept;
-  const_iterator end() const noexcept;
-*/
+// (19.6.4.3) Observers [stacktrace.basic.obs]
+//
+//   const_iterator begin() const noexcept;
+//   const_iterator end() const noexcept;
 
 #include <cassert>
 #include <iterator>
 #include <stacktrace>
 
-#include "test_macros.h"
+// Call chain is: main -> c -> b -> a -> stacktrace::current
+_LIBCPP_NOINLINE std::stacktrace a() { return std::stacktrace::current(); }
+_LIBCPP_NOINLINE std::stacktrace b() { return a(); }
+_LIBCPP_NOINLINE std::stacktrace c() { return b(); }
 
-_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test1() { return std::stacktrace::current(0, 4); }
-_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test2() { return test1(); }
-_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test3() { return test2(); }
-
-TEST_NO_TAIL_CALLS
 int main(int, char**) {
-  std::stacktrace st;
-  static_assert(noexcept(st.begin()));
-  static_assert(noexcept(st.end()));
-  static_assert(std::random_access_iterator<decltype(st.begin())>);
-  assert(st.begin() == st.end());
-  // no longer empty:
-  st = test3();
-  assert(!st.empty());
-  assert(st.begin() != st.end());
-  auto f0 = st[0];
-  auto it = st.begin();
-  assert(*it == f0);
-  assert(it != st.end());
+  {
+    std::stacktrace st;
+    static_assert(noexcept(st.begin()));
+    static_assert(noexcept(st.end()));
+    static_assert(std::random_access_iterator<decltype(st.begin())>);
+    assert(st.begin() == st.end());
+  }
+
+  {
+    std::stacktrace st = c();
+    assert(st.begin() != st.end());
+
+    auto first = st[0];
+    auto it    = st.begin();
+    assert(*it == first);
+  }
 
   return 0;
 }

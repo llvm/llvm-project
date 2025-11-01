@@ -10,8 +10,18 @@
 #ifndef _LIBCPP___STACKTRACE_ENTRY_H
 #define _LIBCPP___STACKTRACE_ENTRY_H
 
+#include <__assert>
 #include <__config>
+#include <__functional/function.h>
+#include <__fwd/format.h>
+#include <cstddef>
+#include <cstdint>
 #include <cstring>
+#include <string>
+#include <string_view>
+#if _LIBCPP_HAS_LOCALIZATION
+#  include <__fwd/ostream.h>
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -19,18 +29,6 @@
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
-
-#include <__assert>
-#include <__functional/function.h>
-#include <__fwd/format.h>
-#include <cstddef>
-#include <cstdint>
-#include <string>
-#include <string_view>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <__fwd/ostream.h>
-#endif // _LIBCPP_HAS_LOCALIZATION
 
 #if _LIBCPP_STD_VER >= 23 && _LIBCPP_AVAILABILITY_HAS_STACKTRACE
 
@@ -52,23 +50,14 @@ struct _StringWrapper {
   //   4. just use std::string, which is just plain wrong
   //   5. ...?
 
-  char __chars_[1024]{0};
+  std::string __str_;
 
-  _LIBCPP_HIDE_FROM_ABI std::string_view view() const { return __chars_; }
+  _LIBCPP_HIDE_FROM_ABI std::string_view view() const { return __str_; }
 
   _LIBCPP_HIDE_FROM_ABI _StringWrapper& assign(std::string_view __view) {
-    size_t __size = std::min(__view.size(), sizeof(__chars_) - 1);
-    memcpy(__chars_, __view.data(), __size);
-    __chars_[__size] = 0;
+    __str_ = __view;
     return *this;
   }
-
-  _LIBCPP_HIDE_FROM_ABI ~_StringWrapper()                                = default;
-  _LIBCPP_HIDE_FROM_ABI _StringWrapper()                                 = default;
-  _LIBCPP_HIDE_FROM_ABI _StringWrapper(_StringWrapper const&)            = default;
-  _LIBCPP_HIDE_FROM_ABI _StringWrapper(_StringWrapper&&)                 = default;
-  _LIBCPP_HIDE_FROM_ABI _StringWrapper& operator=(_StringWrapper const&) = default;
-  _LIBCPP_HIDE_FROM_ABI _StringWrapper& operator=(_StringWrapper&&)      = default;
 };
 
 struct _Entry {
@@ -176,6 +165,7 @@ struct hash<stacktrace_entry> {
 namespace __stacktrace {
 
 _LIBCPP_HIDE_FROM_ABI inline _Entry& _Entry::base(stacktrace_entry& __entry) { return __entry.__base_; }
+
 _LIBCPP_HIDE_FROM_ABI inline _Entry const& _Entry::base(stacktrace_entry const& __entry) { return __entry.__base_; }
 
 } // namespace __stacktrace

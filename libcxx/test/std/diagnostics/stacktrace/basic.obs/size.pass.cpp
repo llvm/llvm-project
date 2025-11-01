@@ -7,30 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
-/*
-  (19.6.4.3) Observers [stacktrace.basic.obs]
-
-  size_type size() const noexcept;
-*/
+// (19.6.4.3) Observers [stacktrace.basic.obs]
+//
+//   size_type size() const noexcept;
 
 #include <cassert>
 #include <stacktrace>
 
-#include "test_macros.h"
+// Call chain is: main -> c -> b -> a -> stacktrace::current
+_LIBCPP_NOINLINE std::stacktrace a() { return std::stacktrace::current(); }
+_LIBCPP_NOINLINE std::stacktrace b() { return a(); }
+_LIBCPP_NOINLINE std::stacktrace c() { return b(); }
 
-_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test1() { return std::stacktrace::current(0, 4); }
-_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test2() { return test1(); }
-_LIBCPP_NOINLINE TEST_NO_TAIL_CALLS std::stacktrace test3() { return test2(); }
-
-TEST_NO_TAIL_CALLS
 int main(int, char**) {
   std::stacktrace st;
   static_assert(noexcept(st.size()));
   assert(st.size() == 0);
-  st = test3();
-  assert(st.size() > 0);
+
+  st = c();
+  assert(st.size() >= 4); // at least 4 frames: a, b, c, main
 
   return 0;
 }

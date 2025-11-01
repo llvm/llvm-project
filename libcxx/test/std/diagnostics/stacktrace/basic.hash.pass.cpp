@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// ADDITIONAL_COMPILE_FLAGS: -O0 -g
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
   (19.6.6) Hash Support
 
-  template<> struct hash<stacktrace_entry>;                                 [1]
-  template<class Allocator> struct hash<basic_stacktrace<Allocator>>;       [2]
+  template<> struct hash<stacktrace_entry>;
+  template<class Allocator> struct hash<basic_stacktrace<Allocator>>;
 
   The specializations are enabled ([unord.hash]).
 */
@@ -24,15 +23,19 @@
 #include <stacktrace>
 
 int main(int, char**) {
-  std::stacktrace trace; // initially empty
-  auto hash_val_empty    = std::hash<std::stacktrace>()(trace);
-  trace                  = /* reassign */ std::stacktrace::current();
-  auto hash_val_nonempty = std::hash<std::stacktrace>()(trace);
-  assert(hash_val_empty != hash_val_nonempty);
+  std::stacktrace empty_trace;
+  std::stacktrace nonempty_trace = std::stacktrace::current();
 
-  std::stacktrace_entry empty_entry;
-  auto nonempty_entry = trace[0];
-  assert(std::hash<std::stacktrace_entry>()(nonempty_entry) != std::hash<std::stacktrace_entry>()(empty_entry));
+  size_t empty_hash    = std::hash<std::stacktrace>()(empty_trace);
+  size_t nonempty_hash = std::hash<std::stacktrace>()(nonempty_trace);
+  assert(empty_hash != nonempty_hash);
+
+  std::stacktrace_entry const empty_entry;
+  std::stacktrace_entry const& nonempty_entry = nonempty_trace[0];
+
+  size_t empty_entry_hash    = std::hash<std::stacktrace_entry>()(empty_entry);
+  size_t nonempty_entry_hash = std::hash<std::stacktrace_entry>()(nonempty_entry);
+  assert(empty_entry_hash != nonempty_entry_hash);
 
   return 0;
 }

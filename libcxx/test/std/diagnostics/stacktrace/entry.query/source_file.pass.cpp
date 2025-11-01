@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
     (19.6.3.4) Query [stacktrace.entry.query]
@@ -24,9 +24,14 @@ namespace std {
 #include <string>
 
 int main(int, char**) {
-  std::stacktrace_entry e;
-  auto src = e.source_file();
+  std::stacktrace_entry entry;
+  auto src = entry.source_file();
   assert(src.empty());
+
+  entry = std::stacktrace::current()[0];
+  src   = entry.source_file();
+  assert(!src.empty());
+  assert(src.find("source_file.pass.cpp") != std::string::npos);
 
   return 0;
 }

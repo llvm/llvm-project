@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
   (19.6.3.3) Observers [stacktrace.entry.obs]
@@ -22,8 +22,13 @@ namespace std {
 #include <stacktrace>
 
 int main(int, char**) noexcept {
-  std::stacktrace_entry e;
-  static_assert(noexcept(e.native_handle()));
-  assert(e.native_handle() == 0);
+  std::stacktrace_entry entry;
+  static_assert(noexcept(entry.native_handle()));
+  assert(entry.native_handle() == 0);
+
+  std::stacktrace trace = std::stacktrace::current();
+  assert(trace[0].native_handle() != 0);
+  assert(trace[0].native_handle() > uintptr_t(&main));
+
   return 0;
 }

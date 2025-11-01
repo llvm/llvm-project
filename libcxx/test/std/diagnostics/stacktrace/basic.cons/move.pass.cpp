@@ -7,84 +7,104 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
-/*
-  (19.6.4.2)
-
-  // [stacktrace.basic.cons], creation and assignment
-  basic_stacktrace(basic_stacktrace&& other) noexcept;                                    
-  basic_stacktrace(basic_stacktrace&& other, const allocator_type& alloc);                
-  basic_stacktrace& operator=(basic_stacktrace&& other)
-    noexcept(allocator_traits<Allocator>::propagate_on_container_move_assignment::value ||
-      allocator_traits<Allocator>::is_always_equal::value);                               
-*/
+// (19.6.4.2) [stacktrace.basic.cons], creation and assignment
+//
+//   basic_stacktrace(basic_stacktrace&& other) noexcept;
+//
+//   basic_stacktrace(basic_stacktrace&& other, const allocator_type& alloc);
+//
+//   basic_stacktrace& operator=(basic_stacktrace&& other)
+//     noexcept(allocator_traits<Allocator>::propagate_on_container_move_assignment::value ||
+//       allocator_traits<Allocator>::is_always_equal::value);
 
 #include <cassert>
 #include <stacktrace>
+#include <type_traits>
 #include <utility>
 
-#include "test_macros.h"
-#include "../test_allocs.h"
+namespace {
 
-void test_move_construct() {
-  auto a = std::stacktrace::current();
-  std::stacktrace b{a};
-  assert(a == b);
-}
+template <typename T>
+struct AllocNoPropagate : std::allocator<T> {
+  using propagate_on_container_move_assignment = std::false_type;
+  using is_always_equal                        = std::false_type;
+};
 
-void test_move_assign() {
+template <typename T>
+struct AllocPropagate : std::allocator<T> {
+  using propagate_on_container_move_assignment = std::true_type;
+  using is_always_equal                        = std::false_type;
+};
+
+template <typename T>
+struct AllocAlwaysEqual : std::allocator<T> {
+  using propagate_on_container_move_assignment = std::false_type;
+  using is_always_equal                        = std::true_type;
+};
+
+} // namespace
+
+int main() {
+  // Move-construction tests
+
   {
-    using A =
-        TestAlloc<std::stacktrace_entry,
-                  /*_KNoExCtors=*/true,
-                  /*_KNoExAlloc=*/true,
-                  /*_KPropagate=*/false,
-                  /*_KAlwaysEqual=*/false>;
+    using A = AllocNoPropagate<std::stacktrace_entry>;
     auto s0 = std::basic_stacktrace<A>::current();
     std::basic_stacktrace<A> s1{s0};
+    static_assert(noexcept(std::basic_stacktrace<A>(std::move(s0))));
     std::basic_stacktrace<A> s2(std::move(s0));
     assert(s1 == s2);
-    auto a1 = s1.get_allocator();
-    auto a2 = s2.get_allocator();
-    // Allocator should not propagate
-    assert(a1 != a2);
   }
-  {
-    using A =
-        TestAlloc<std::stacktrace_entry,
-                  /*_KNoExCtors=*/true,
-                  /*_KNoExAlloc=*/true,
-                  /*_KPropagate=*/true,
-                  /*_KAlwaysEqual=*/false>;
-    auto s0 = std::basic_stacktrace<A>::current();
-    std::basic_stacktrace<A> s1{s0};
-    std::basic_stacktrace<A> s2(std::move(s0));
-    auto a1 = s1.get_allocator();
-    auto a2 = s2.get_allocator();
-    // Allocator should propagate
-    assert(a1 == a2);
-  }
-  {
-    using A =
-        TestAlloc<std::stacktrace_entry,
-                  /*_KNoExCtors=*/true,
-                  /*_KNoExAlloc=*/true,
-                  /*_KPropagate=*/false,
-                  /*_KAlwaysEqual=*/true>;
-    auto s0 = std::basic_stacktrace<A>::current();
-    std::basic_stacktrace<A> s1{s0};
-    std::basic_stacktrace<A> s2(std::move(s0));
-    auto a1 = s1.get_allocator();
-    auto a2 = s2.get_allocator();
-    // Allocator should propagate
-    assert(a1 == a2);
-  }
-}
 
-TEST_NO_TAIL_CALLS
-int main(int, char**) {
-  test_move_construct();
-  test_move_assign();
+  {
+    using A = AllocPropagate<std::stacktrace_entry>;
+    auto s0 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1{s0};
+    static_assert(noexcept(std::basic_stacktrace<A>(std::move(s0))));
+    std::basic_stacktrace<A> s2(std::move(s0));
+  }
+
+  {
+    using A = AllocAlwaysEqual<std::stacktrace_entry>;
+    auto s0 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1{s0};
+    static_assert(noexcept(std::basic_stacktrace<A>(std::move(s0))));
+    std::basic_stacktrace<A> s2(std::move(s0));
+  }
+
+  // Move-assignment tests
+
+  {
+    using A = AllocNoPropagate<std::stacktrace_entry>;
+    auto s0 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1{s0};
+    std::basic_stacktrace<A> s2;
+    static_assert(!noexcept(s2 = std::move(s0)));
+    s2 = std::move(s0);
+    assert(s1 == s2);
+  }
+
+  {
+    using A = AllocPropagate<std::stacktrace_entry>;
+    auto s0 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1{s0};
+    std::basic_stacktrace<A> s2;
+    static_assert(noexcept(s2 = std::move(s0)));
+    s2 = std::move(s0);
+    assert(s1 == s2);
+  }
+
+  {
+    using A = AllocAlwaysEqual<std::stacktrace_entry>;
+    auto s0 = std::basic_stacktrace<A>::current();
+    std::basic_stacktrace<A> s1{s0};
+    std::basic_stacktrace<A> s2;
+    static_assert(noexcept(s2 = std::move(s0)));
+    s2 = std::move(s0);
+    assert(s1 == s2);
+  }
+
   return 0;
 }

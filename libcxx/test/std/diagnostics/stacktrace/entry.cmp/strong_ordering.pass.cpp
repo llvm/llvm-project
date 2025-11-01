@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++23
-// XFAIL: availability-stacktrace-missing
+// UNSUPPORTED: availability-stacktrace-missing
 
 /*
   (19.6.3.5) Comparison [stacktrace.entry.cmp]
@@ -23,34 +23,31 @@ namespace std {
 #include <cassert>
 #include <cstdint>
 #include <stacktrace>
-#include <utility>
 
 namespace {
-int func1() { return 41; }
-int func2() { return 42; }
+auto func1() { return std::stacktrace::current()[0]; }
+auto func2() { return std::stacktrace::current()[0]; }
 } // namespace
 
 int main(int, char**) {
-  auto addr1 = uintptr_t(&func1);
-  auto addr2 = uintptr_t(&func2);
-  assert(addr1 != addr2);
-  if (addr1 > addr2) {
-    std::swap(addr1, addr2);
+  std::stacktrace_entry entry1a = func1();
+  std::stacktrace_entry entry1b = func1();
+  static_assert(noexcept(entry1a <=> entry1b));
+
+  assert(std::strong_ordering::equal == (entry1a <=> entry1b));
+  assert(std::strong_ordering::equivalent == (entry1a <=> entry1b));
+
+  std::stacktrace_entry entry2 = func2();
+
+  uintptr_t func1p = uintptr_t(&func1);
+  uintptr_t func2p = uintptr_t(&func2);
+  if (func1p < func2p) {
+    assert(std::strong_ordering::less == (entry1a <=> entry2));
+    assert(std::strong_ordering::greater == (entry2 <=> entry1a));
+  } else {
+    assert(std::strong_ordering::less == (entry2 <=> entry1a));
+    assert(std::strong_ordering::greater == (entry1a <=> entry2));
   }
-
-  std::stacktrace_entry a;
-  std::stacktrace_entry b;
-  std::stacktrace_entry c;
-
-  *(uintptr_t*)(&a) = uintptr_t(addr1);
-  *(uintptr_t*)(&b) = uintptr_t(addr1);
-  *(uintptr_t*)(&c) = uintptr_t(addr2);
-
-  static_assert(noexcept(a <=> b));
-
-  assert(std::strong_ordering::equal == (a <=> b));
-  assert(std::strong_ordering::equivalent == (a <=> b));
-  assert(std::strong_ordering::greater == (c <=> a));
 
   return 0;
 }
