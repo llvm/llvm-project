@@ -2548,10 +2548,10 @@ public:
   }
 
   /* TO_UPSTREAM(BoundsSafety) ON */
-  void handleUnsafeCountAttributedPointerArgument(const CallExpr *Call,
-                                                  const Expr *Arg,
-                                                  bool IsRelatedToDecl,
-                                                  ASTContext &Ctx) override {
+  void handleUnsafeCountAttributedPointerArgument(
+      const CallExpr *Call, const Expr *Arg,
+      [[maybe_unused]] bool IsRelatedToDecl,
+      [[maybe_unused]] ASTContext &Ctx) override {
     const FunctionDecl *FD = Call->getDirectCallee();
     const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
 
@@ -2594,14 +2594,16 @@ public:
         << PtrParamName << CountParamName;
   }
 
-  void handleUnsafeSinglePointerArgument(const Expr *Arg, bool IsRelatedToDecl,
-                                         ASTContext &Ctx) override {
+  void
+  handleUnsafeSinglePointerArgument(const Expr *Arg,
+                                    [[maybe_unused]] bool IsRelatedToDecl,
+                                    [[maybe_unused]] ASTContext &Ctx) override {
     S.Diag(Arg->getBeginLoc(), diag::warn_unsafe_single_pointer_argument);
   }
 
-  void handleTooComplexCountAttributedAssign(const Expr *E, const ValueDecl *VD,
-                                             bool IsRelatedToDecl,
-                                             ASTContext &Ctx) override {
+  void handleTooComplexCountAttributedAssign(
+      const Expr *E, const ValueDecl *VD, [[maybe_unused]] bool IsRelatedToDecl,
+      [[maybe_unused]] ASTContext &Ctx) override {
     SourceLocation Loc = E->getBeginLoc();
     if (const auto *BO = dyn_cast<BinaryOperator>(E))
       Loc = BO->getOperatorLoc();
@@ -2624,11 +2626,10 @@ public:
     }
   }
 
-  void handleAssignToImmutableObject(const BinaryOperator *Assign,
-                                     const ValueDecl *VD,
-                                     AssignToImmutableObjectKind Kind,
-                                     bool IsRelatedToDecl,
-                                     ASTContext &Ctx) override {
+  void handleAssignToImmutableObject(
+      const BinaryOperator *Assign, const ValueDecl *VD,
+      AssignToImmutableObjectKind Kind, [[maybe_unused]] bool IsRelatedToDecl,
+      [[maybe_unused]] ASTContext &Ctx) override {
     S.Diag(Assign->getOperatorLoc(),
            diag::warn_cannot_assign_to_immutable_bounds_attributed_object)
         << getBoundsAttributedObjectKind(VD) << VD << Kind;
@@ -2653,8 +2654,8 @@ public:
       const Expr *LastAssignInGroup,
       const llvm::SmallPtrSetImpl<const ValueDecl *> &Required,
       const llvm::SmallPtrSetImpl<const ValueDecl *> &Missing,
-      bool IsRelatedToDecl, ASTContext &Ctx) override {
-
+      [[maybe_unused]] bool IsRelatedToDecl,
+      [[maybe_unused]] ASTContext &Ctx) override {
     llvm::SmallString<64> RequiredAssignments = DeclSetToStr(Required);
     llvm::SmallString<64> MissingAssignments = DeclSetToStr(Missing);
     auto Loc =
@@ -2667,8 +2668,9 @@ public:
 
   void handleDuplicatedAssignment(const BinaryOperator *Assign,
                                   const BinaryOperator *PrevAssign,
-                                  const ValueDecl *VD, bool IsRelatedToDecl,
-                                  ASTContext &Ctx) override {
+                                  const ValueDecl *VD,
+                                  [[maybe_unused]] bool IsRelatedToDecl,
+                                  [[maybe_unused]] ASTContext &Ctx) override {
     S.Diag(Assign->getOperatorLoc(),
            diag::warn_duplicated_assignment_in_bounds_attributed_group)
         << getBoundsAttributedObjectKind(VD) << VD;
