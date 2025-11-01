@@ -45,19 +45,19 @@
 
 define double @disabled_loop_vectorization(ptr %distmat1){
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:                                         ; preds = %entry, %for.body
-  %i.014 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  %RMSD.013 = phi double [ 0.000000e+00, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds nuw double, ptr %distmat1, i64 %i.014
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]
+  %RMSD = phi double [ 0.000000e+00, %entry ], [ %add, %loop ]
+  %arrayidx = getelementptr inbounds nuw double, ptr %distmat1, i64 %iv
   %1 = load double, ptr %arrayidx, align 8
   %sub = fsub fast double %1, 1.234e+0
   %mul = fmul fast double %sub, %sub
-  %add = fadd fast double %mul, %RMSD.013
-  %inc = add nuw nsw i64 %i.014, 1
+  %add = fadd fast double %mul, %RMSD
+  %inc = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %inc, 15
-  br i1 %exitcond.not, label %exit, label %for.body, !llvm.loop !0
+  br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
 
 exit:
   ret double %add
