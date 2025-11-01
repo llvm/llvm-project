@@ -17,6 +17,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ObjectFile.h"
+#define DEBUG_TYPE "bolt-reloc"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 using namespace bolt;
