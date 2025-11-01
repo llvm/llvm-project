@@ -591,26 +591,26 @@ define signext i128 @and_i128_4(i128 signext %b) {
 ; MIPS-LABEL: and_i128_4:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    andi $5, $7, 4
-; MIPS-NEXT:    addiu $2, $zero, 0
-; MIPS-NEXT:    addiu $3, $zero, 0
-; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $4, $zero, 0
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $3, $4
 ;
 ; MIPS32R2-LABEL: and_i128_4:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    andi $5, $7, 4
-; MIPS32R2-NEXT:    addiu $2, $zero, 0
-; MIPS32R2-NEXT:    addiu $3, $zero, 0
-; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    addiu $4, $zero, 0
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    move $3, $4
 ;
 ; MIPS32R6-LABEL: and_i128_4:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    andi $5, $7, 4
-; MIPS32R6-NEXT:    addiu $2, $zero, 0
-; MIPS32R6-NEXT:    addiu $3, $zero, 0
-; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    addiu $4, $zero, 0
+; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    move $3, $4
 ;
 ; MIPS64-LABEL: and_i128_4:
 ; MIPS64:       # %bb.0: # %entry
@@ -633,17 +633,17 @@ define signext i128 @and_i128_4(i128 signext %b) {
 ; MM32R3-LABEL: and_i128_4:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    andi16 $5, $7, 4
-; MM32R3-NEXT:    li16 $2, 0
-; MM32R3-NEXT:    li16 $3, 0
 ; MM32R3-NEXT:    li16 $4, 0
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    move $3, $4
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i128_4:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    andi16 $5, $7, 4
-; MM32R6-NEXT:    li16 $2, 0
-; MM32R6-NEXT:    li16 $3, 0
 ; MM32R6-NEXT:    li16 $4, 0
+; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    move $3, $4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = and i128 4, %b
@@ -884,26 +884,26 @@ define signext i128 @and_i128_31(i128 signext %b) {
 ; MIPS-LABEL: and_i128_31:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    andi $5, $7, 31
-; MIPS-NEXT:    addiu $2, $zero, 0
-; MIPS-NEXT:    addiu $3, $zero, 0
-; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $4, $zero, 0
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $3, $4
 ;
 ; MIPS32R2-LABEL: and_i128_31:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    andi $5, $7, 31
-; MIPS32R2-NEXT:    addiu $2, $zero, 0
-; MIPS32R2-NEXT:    addiu $3, $zero, 0
-; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    addiu $4, $zero, 0
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    move $3, $4
 ;
 ; MIPS32R6-LABEL: and_i128_31:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    andi $5, $7, 31
-; MIPS32R6-NEXT:    addiu $2, $zero, 0
-; MIPS32R6-NEXT:    addiu $3, $zero, 0
-; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    addiu $4, $zero, 0
+; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    move $3, $4
 ;
 ; MIPS64-LABEL: and_i128_31:
 ; MIPS64:       # %bb.0: # %entry
@@ -926,17 +926,17 @@ define signext i128 @and_i128_31(i128 signext %b) {
 ; MM32R3-LABEL: and_i128_31:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    andi16 $5, $7, 31
-; MM32R3-NEXT:    li16 $2, 0
-; MM32R3-NEXT:    li16 $3, 0
 ; MM32R3-NEXT:    li16 $4, 0
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    move $3, $4
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i128_31:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    andi16 $5, $7, 31
-; MM32R6-NEXT:    li16 $2, 0
-; MM32R6-NEXT:    li16 $3, 0
 ; MM32R6-NEXT:    li16 $4, 0
+; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    move $3, $4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = and i128 31, %b
@@ -1177,26 +1177,26 @@ define signext i128 @and_i128_255(i128 signext %b) {
 ; MIPS-LABEL: and_i128_255:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    andi $5, $7, 255
-; MIPS-NEXT:    addiu $2, $zero, 0
-; MIPS-NEXT:    addiu $3, $zero, 0
-; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $4, $zero, 0
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $3, $4
 ;
 ; MIPS32R2-LABEL: and_i128_255:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    andi $5, $7, 255
-; MIPS32R2-NEXT:    addiu $2, $zero, 0
-; MIPS32R2-NEXT:    addiu $3, $zero, 0
-; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    addiu $4, $zero, 0
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    move $3, $4
 ;
 ; MIPS32R6-LABEL: and_i128_255:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    andi $5, $7, 255
-; MIPS32R6-NEXT:    addiu $2, $zero, 0
-; MIPS32R6-NEXT:    addiu $3, $zero, 0
-; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    addiu $4, $zero, 0
+; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    move $3, $4
 ;
 ; MIPS64-LABEL: and_i128_255:
 ; MIPS64:       # %bb.0: # %entry
@@ -1219,17 +1219,17 @@ define signext i128 @and_i128_255(i128 signext %b) {
 ; MM32R3-LABEL: and_i128_255:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    andi16 $5, $7, 255
-; MM32R3-NEXT:    li16 $2, 0
-; MM32R3-NEXT:    li16 $3, 0
 ; MM32R3-NEXT:    li16 $4, 0
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    move $3, $4
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i128_255:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    andi16 $5, $7, 255
-; MM32R6-NEXT:    li16 $2, 0
-; MM32R6-NEXT:    li16 $3, 0
 ; MM32R6-NEXT:    li16 $4, 0
+; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    move $3, $4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = and i128 255, %b
@@ -1479,26 +1479,26 @@ define signext i128 @and_i128_32768(i128 signext %b) {
 ; MIPS-LABEL: and_i128_32768:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    andi $5, $7, 32768
-; MIPS-NEXT:    addiu $2, $zero, 0
-; MIPS-NEXT:    addiu $3, $zero, 0
-; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $4, $zero, 0
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $3, $4
 ;
 ; MIPS32R2-LABEL: and_i128_32768:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    andi $5, $7, 32768
-; MIPS32R2-NEXT:    addiu $2, $zero, 0
-; MIPS32R2-NEXT:    addiu $3, $zero, 0
-; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    addiu $4, $zero, 0
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    move $3, $4
 ;
 ; MIPS32R6-LABEL: and_i128_32768:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    andi $5, $7, 32768
-; MIPS32R6-NEXT:    addiu $2, $zero, 0
-; MIPS32R6-NEXT:    addiu $3, $zero, 0
-; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    addiu $4, $zero, 0
+; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    move $3, $4
 ;
 ; MIPS64-LABEL: and_i128_32768:
 ; MIPS64:       # %bb.0: # %entry
@@ -1521,17 +1521,17 @@ define signext i128 @and_i128_32768(i128 signext %b) {
 ; MM32R3-LABEL: and_i128_32768:
 ; MM32R3:       # %bb.0: # %entry
 ; MM32R3-NEXT:    andi16 $5, $7, 32768
-; MM32R3-NEXT:    li16 $2, 0
-; MM32R3-NEXT:    li16 $3, 0
 ; MM32R3-NEXT:    li16 $4, 0
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    move $3, $4
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i128_32768:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    andi16 $5, $7, 32768
-; MM32R6-NEXT:    li16 $2, 0
-; MM32R6-NEXT:    li16 $3, 0
 ; MM32R6-NEXT:    li16 $4, 0
+; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    move $3, $4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = and i128 32768, %b
@@ -1772,26 +1772,26 @@ define signext i128 @and_i128_65(i128 signext %b) {
 ; MIPS-LABEL: and_i128_65:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    andi $5, $7, 65
-; MIPS-NEXT:    addiu $2, $zero, 0
-; MIPS-NEXT:    addiu $3, $zero, 0
-; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $4, $zero, 0
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $3, $4
 ;
 ; MIPS32R2-LABEL: and_i128_65:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    andi $5, $7, 65
-; MIPS32R2-NEXT:    addiu $2, $zero, 0
-; MIPS32R2-NEXT:    addiu $3, $zero, 0
-; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    addiu $4, $zero, 0
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    move $3, $4
 ;
 ; MIPS32R6-LABEL: and_i128_65:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    andi $5, $7, 65
-; MIPS32R6-NEXT:    addiu $2, $zero, 0
-; MIPS32R6-NEXT:    addiu $3, $zero, 0
-; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    addiu $4, $zero, 0
+; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    move $3, $4
 ;
 ; MIPS64-LABEL: and_i128_65:
 ; MIPS64:       # %bb.0: # %entry
@@ -1813,18 +1813,18 @@ define signext i128 @and_i128_65(i128 signext %b) {
 ;
 ; MM32R3-LABEL: and_i128_65:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    li16 $2, 0
-; MM32R3-NEXT:    li16 $3, 0
-; MM32R3-NEXT:    li16 $4, 0
-; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    andi $5, $7, 65
+; MM32R3-NEXT:    li16 $4, 0
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    move $3, $4
+; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i128_65:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    andi $5, $7, 65
-; MM32R6-NEXT:    li16 $2, 0
-; MM32R6-NEXT:    li16 $3, 0
 ; MM32R6-NEXT:    li16 $4, 0
+; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    move $3, $4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = and i128 65, %b
@@ -2065,26 +2065,26 @@ define signext i128 @and_i128_256(i128 signext %b) {
 ; MIPS-LABEL: and_i128_256:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    andi $5, $7, 256
-; MIPS-NEXT:    addiu $2, $zero, 0
-; MIPS-NEXT:    addiu $3, $zero, 0
-; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $4, $zero, 0
+; MIPS-NEXT:    move $2, $4
+; MIPS-NEXT:    jr $ra
+; MIPS-NEXT:    move $3, $4
 ;
 ; MIPS32R2-LABEL: and_i128_256:
 ; MIPS32R2:       # %bb.0: # %entry
 ; MIPS32R2-NEXT:    andi $5, $7, 256
-; MIPS32R2-NEXT:    addiu $2, $zero, 0
-; MIPS32R2-NEXT:    addiu $3, $zero, 0
-; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    addiu $4, $zero, 0
+; MIPS32R2-NEXT:    move $2, $4
+; MIPS32R2-NEXT:    jr $ra
+; MIPS32R2-NEXT:    move $3, $4
 ;
 ; MIPS32R6-LABEL: and_i128_256:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    andi $5, $7, 256
-; MIPS32R6-NEXT:    addiu $2, $zero, 0
-; MIPS32R6-NEXT:    addiu $3, $zero, 0
-; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    addiu $4, $zero, 0
+; MIPS32R6-NEXT:    move $2, $4
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    move $3, $4
 ;
 ; MIPS64-LABEL: and_i128_256:
 ; MIPS64:       # %bb.0: # %entry
@@ -2106,18 +2106,18 @@ define signext i128 @and_i128_256(i128 signext %b) {
 ;
 ; MM32R3-LABEL: and_i128_256:
 ; MM32R3:       # %bb.0: # %entry
-; MM32R3-NEXT:    li16 $2, 0
-; MM32R3-NEXT:    li16 $3, 0
-; MM32R3-NEXT:    li16 $4, 0
-; MM32R3-NEXT:    jr $ra
 ; MM32R3-NEXT:    andi $5, $7, 256
+; MM32R3-NEXT:    li16 $4, 0
+; MM32R3-NEXT:    move $2, $4
+; MM32R3-NEXT:    move $3, $4
+; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: and_i128_256:
 ; MM32R6:       # %bb.0: # %entry
 ; MM32R6-NEXT:    andi $5, $7, 256
-; MM32R6-NEXT:    li16 $2, 0
-; MM32R6-NEXT:    li16 $3, 0
 ; MM32R6-NEXT:    li16 $4, 0
+; MM32R6-NEXT:    move $2, $4
+; MM32R6-NEXT:    move $3, $4
 ; MM32R6-NEXT:    jrc $ra
 entry:
   %r = and i128 256, %b

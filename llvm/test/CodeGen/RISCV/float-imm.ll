@@ -65,6 +65,7 @@ define float @float_negative_zero(ptr %pf) nounwind {
 ; CHECKZFINX-LABEL: float_negative_zero:
 ; CHECKZFINX:       # %bb.0:
 ; CHECKZFINX-NEXT:    lui a0, 524288
+; CHECKZFINX-NEXT:    # kill: def $x10_w killed $x10_w killed $x10
 ; CHECKZFINX-NEXT:    ret
   ret float -0.0
 }

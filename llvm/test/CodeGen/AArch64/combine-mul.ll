@@ -18,6 +18,7 @@ define <4 x i1> @PR48683_vec(<4 x i32> %x) {
 ; CHECK-LABEL: PR48683_vec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %a = mul <4 x i32> %x, %x
   %b = and <4 x i32> %a, <i32 2, i32 2, i32 2, i32 2>
@@ -29,6 +30,7 @@ define <4 x i1> @PR48683_vec_undef(<4 x i32> %x) {
 ; CHECK-LABEL: PR48683_vec_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %a = mul <4 x i32> %x, %x
   %b = and <4 x i32> %a, <i32 2, i32 2, i32 2, i32 undef>
