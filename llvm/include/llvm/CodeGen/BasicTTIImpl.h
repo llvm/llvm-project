@@ -345,6 +345,10 @@ private:
         RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
 
     // Search for a corresponding vector variant.
+    //
+    // FIXME: CodeGen use RuntimeLibcallsInfo, not TargetLibraryInfo and has no
+    // path to using the vector libcalls. So this guess at how legalization will
+    // work is just wrong.
     LLVMContext &Ctx = RetTy->getContext();
     ElementCount VF = getVectorizedTypeVF(RetTy);
     VecDesc const *VD = nullptr;
