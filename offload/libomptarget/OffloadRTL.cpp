@@ -35,7 +35,7 @@ void initRuntime() {
 
   RefCount++;
   if (RefCount == 1) {
-    DP("Init offload library!\n");
+    OPENMP_DEBUG("Init offload library!\n");
 #ifdef OMPT_SUPPORT
     // Initialize OMPT first
     llvm::omp::target::ompt::connectLibrary();
