@@ -397,7 +397,7 @@ def executeBuiltinEcho(cmd, shenv):
         # Reopen stdout with specifying `newline` to avoid CRLF translation.
         # The versions of echo we are replacing on Windows all emit plain LF,
         # and the LLVM tests now depend on this.
-        stdout = open(stdout.name, stdout.mode, newline='')
+        stdout = open(stdout.name, stdout.mode, newline="")
         opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
@@ -1441,9 +1441,7 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # Compute the updated line number by counting the intervening
             # newlines.
             match_position = match.start()
-            line_number += data.count(
-                b"\n", last_match_position, match_position
-            )
+            line_number += data.count(b"\n", last_match_position, match_position)
             last_match_position = match_position
 
             # Convert the keyword and line to UTF-8 strings and yield the
