@@ -1176,27 +1176,86 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
    // PPC64 handling: don't compose relocation expressions for these relocation types
    // since these are handled natively by PPC64 backend. The back end will attach the
    // appropriate @ha/@lo/@ds fixups to the individual instructinos.
-  if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
-    switch (Type) {
-  case ELF::R_PPC64_ADDR16:
-  case ELF::R_PPC64_ADDR16_HI:
-  case ELF::R_PPC64_ADDR16_HA:
-  case ELF::R_PPC64_ADDR16_LO:
-  case ELF::R_PPC64_ADDR16_DS:
-  case ELF::R_PPC64_ADDR16_LO_DS:
-  case ELF::R_PPC64_TOC16:
-  case ELF::R_PPC64_TOC16_HI:
-  case ELF::R_PPC64_TOC16_HA:
-  case ELF::R_PPC64_TOC16_LO:
-      // Let MC layer emit as-is; PPC backend handles @ha/@lo/@ds relocations.
-      return Value;
+ if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
+  switch (Type) {
+    case ELF::R_PPC64_ADDR16:
+    case ELF::R_PPC64_ADDR16_HI:
+    case ELF::R_PPC64_ADDR16_HA:
+    case ELF::R_PPC64_ADDR16_LO:
+    case ELF::R_PPC64_ADDR16_DS:
+    case ELF::R_PPC64_ADDR16_LO_DS:
+    case ELF::R_PPC64_TOC16:
+    case ELF::R_PPC64_TOC16_HI:
+    case ELF::R_PPC64_TOC16_HA:
+    case ELF::R_PPC64_TOC16_LO:
+    case ELF::R_PPC64_TOC16_DS:
+    case ELF::R_PPC64_TOC16_LO_DS:
+    case ELF::R_PPC64_REL14:
+    case ELF::R_PPC64_REL14_BRTAKEN:
+    case ELF::R_PPC64_REL14_BRNTAKEN:
+    case ELF::R_PPC64_REL24:
+    case ELF::R_PPC64_REL32:
+    case ELF::R_PPC64_ADDR64:
+    {
+      LLVM_DEBUG(dbgs() << "[reloc][skipCompose] Arch=" << Arch
+                        << " Type=" << Type << " (native handled)\n");
+      // IMPORTANT: ignore Addend to avoid double-encoding the immediate
+      if (Symbol){
+      LLVM_DEBUG(dbgs() << "[reloc][ppc-native] forcing zero addend (was "
+                  << Addend << ")\n");
+
+        return MCSymbolRefExpr::create(Symbol, Ctx);}
+      return MCConstantExpr::create(0, Ctx);
+    }
     default:
       break;
     }
   }
 
   if (isPCRelative(Type)) {
-      LLVM_DEBUG(dbgs() << "[reloc][isPCRelative] Arch=" << Arch
+    if(Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
+      LLVM_DEBUG(dbgs() << "[reloc][pcrel] Type=" << Type
+                  << "  REL24=" << ELF::R_PPC64_REL24
+                  << "  REL14=" << ELF::R_PPC64_REL14
+                  << "  REL16_HA=" << ELF::R_PPC64_REL16_HA
+                  << "  REL16_LO=" << ELF::R_PPC64_REL16_LO
+                  << "  ADDR16_HA=" << ELF::R_PPC64_ADDR16_HA
+                  << "  TOC16_LO=" << ELF::R_PPC64_TOC16_LO
+                  << " REL32=" << ELF::R_PPC64_REL32
+                  << "\n");
+
+      switch(Type){
+        case ELF::R_PPC64_REL14:
+        case ELF::R_PPC64_REL14_BRTAKEN:
+        case ELF::R_PPC64_REL14_BRNTAKEN:
+        case ELF::R_PPC64_REL24:
+        case ELF::R_PPC64_REL32:
+        case ELF::R_PPC64_REL16_HA:
+        case ELF::R_PPC64_REL16_LO:
+        case ELF::R_PPC64_ADDR16_HA:
+        case ELF::R_PPC64_ADDR16_LO:
+        case ELF::R_PPC64_ADDR16_DS:
+        case ELF::R_PPC64_ADDR16_LO_DS:
+        case ELF::R_PPC64_TOC16_HA:
+        case ELF::R_PPC64_TOC16_LO:
+        LLVM_DEBUG(dbgs() << "[reloc][skipPCRel] Arch=" << Arch
+                          << " Type=" << Type << " (native handled)\n");
+          // Let MC layer emit as-is; PPC backend handles PC-relative relocations.
+          break;
+        default:{
+                LLVM_DEBUG(dbgs() << "[reloc][isPCRelative] Arch=" << Arch
+                    << " Type=" << Type
+                    << " → rewriting as PC-relative expression\n");
+            MCSymbol *TempLabel = Ctx.createNamedTempSymbol();
+            Streamer->emitLabel(TempLabel);
+            Value = MCBinaryExpr::createSub(
+              Value, MCSymbolRefExpr::create(TempLabel, Ctx), Ctx);
+          break;
+            }
+      }
+    }
+    else {
+            LLVM_DEBUG(dbgs() << "[reloc][isPCRelative] Arch=" << Arch
                     << " Type=" << Type
                     << " → rewriting as PC-relative expression\n");
     MCSymbol *TempLabel = Ctx.createNamedTempSymbol();
@@ -1204,6 +1263,7 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer) const {
     Value = MCBinaryExpr::createSub(
         Value, MCSymbolRefExpr::create(TempLabel, Ctx), Ctx);
   }
+}
 
   return Value;
 }
