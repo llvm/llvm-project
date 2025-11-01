@@ -17,6 +17,7 @@
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticParse.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -4699,6 +4700,16 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
 
     SourceLocation ScopeLoc, AttrLoc;
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
+
+    // '=' token marks the beginning of an annotation
+    if (getLangOpts().CPlusPlus26 && Tok.is(tok::equal)) {
+      if (CommonScopeName) {
+        Diag(Tok.getLocation(), diag::err_annotation_with_using);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
+      continue;
+    }
 
     AttrName = TryParseCXX11AttributeIdentifier(
         AttrLoc, SemaCodeCompletion::AttributeCompletion::Attribute,
