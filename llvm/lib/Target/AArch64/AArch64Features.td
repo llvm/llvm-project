@@ -626,6 +626,19 @@ def FeatureF16F32MM : ExtensionWithMArch<"f16f32mm", "F16F32MM", "FEAT_F16F32MM"
   "Enable Armv9.7-A Advanced SIMD half-precision matrix multiply-accumulate to single-precision", [FeatureNEON, FeatureFullFP16]>;
 
 //===----------------------------------------------------------------------===//
+//  Future Architecture Technologies
+//===----------------------------------------------------------------------===//
+
+def FeatureBTIE: ExtensionWithMArch<"btie", "BTIE", "FEAT_BTIE",
+  "Enable Enhanced Branch Target Identification extension">;
+
+def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
+  "Enable Stage 1 Permission Overlays Extension 2 instructions", [FeatureBTIE]>;
+
+def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
+  "Enable TIndex Exception-like Vector instructions">;
+
+//===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
 
