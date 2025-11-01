@@ -8,9 +8,7 @@ def MyTarget : Target;
 // CHECK-NEXT:  #undef GET_SDNODE_ENUM
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm::MyTargetISD {
-// CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = ISD::BUILTIN_OP_END;
-// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 // CHECK-EMPTY:
 // CHECK-NEXT:  #endif // GET_SDNODE_ENUM
