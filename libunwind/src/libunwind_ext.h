@@ -30,6 +30,14 @@ extern int __unw_get_reg(unw_cursor_t *, unw_regnum_t, unw_word_t *);
 extern int __unw_get_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t *);
 extern int __unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t);
 extern int __unw_set_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t);
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+__attribute__((noinline, disable_tail_calls))
+#endif
+extern int __unw_resume_with_frames_walked(unw_cursor_t *, unsigned);
+// Legacy function. Do not use.
+#ifdef _LIBUNWIND_TRACE_RET_INJECT
+__attribute__((noinline, disable_tail_calls))
+#endif
 extern int __unw_resume(unw_cursor_t *);
 
 #ifdef __arm__
