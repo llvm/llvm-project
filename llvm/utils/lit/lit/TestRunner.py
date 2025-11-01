@@ -21,7 +21,6 @@ from lit.ShCommands import GlobItem, Command
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
-from lit.util import to_bytes
 from lit.BooleanExpression import BooleanExpression
 
 
@@ -1419,19 +1418,11 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
     (line_number, command_type, line).
     """
 
-    # This code is carefully written to be dual compatible with Python 2.5+ and
-    # Python 3 without requiring input files to always have valid codings. The
-    # trick we use is to open the file in binary mode and use the regular
-    # expression library to find the commands, with it scanning strings in
-    # Python2 and bytes in Python3.
-    #
-    # Once we find a match, we do require each script line to be decodable to
-    # UTF-8, so we convert the outputs to UTF-8 before returning. This way the
-    # remaining code can work with "strings" agnostic of the executing Python
-    # version.
+    # We use `bytes` for scanning input files to avoid requiring them to always
+    # have valid codings.
 
     keywords_re = re.compile(
-        to_bytes("(%s)(.*)\n" % ("|".join(re.escape(k) for k in keywords),))
+        b"(%s)(.*)\n" % (b"|".join(re.escape(k.encode("utf-8")) for k in keywords),)
     )
 
     f = open(source_path, "rb")
@@ -1440,8 +1431,8 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
         data = f.read()
 
         # Ensure the data ends with a newline.
-        if not data.endswith(to_bytes("\n")):
-            data = data + to_bytes("\n")
+        if not data.endswith(b"\n"):
+            data = data + b"\n"
 
         # Iterate over the matches.
         line_number = 1
@@ -1451,14 +1442,12 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # newlines.
             match_position = match.start()
             line_number += data.count(
-                to_bytes("\n"), last_match_position, match_position
+                b"\n", last_match_position, match_position
             )
             last_match_position = match_position
 
             # Convert the keyword and line to UTF-8 strings and yield the
-            # command. Note that we take care to return regular strings in
-            # Python 2, to avoid other code having to differentiate between the
-            # str and unicode types.
+            # command.
             #
             # Opening the file in binary mode prevented Windows \r newline
             # characters from being converted to Unix \n newlines, so manually

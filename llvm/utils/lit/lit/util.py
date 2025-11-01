@@ -33,23 +33,6 @@ def make_word_regex(word):
     return r"\b" + word + r"\b"
 
 
-def to_bytes(s):
-    """Return the parameter as type 'bytes', possibly encoding it.
-
-    In Python2, the 'bytes' type is the same as 'str'. In Python3, they
-    are distinct.
-
-    """
-    if isinstance(s, bytes):
-        # In Python2, this branch is taken for both 'str' and 'bytes'.
-        # In Python3, this branch is taken only for 'bytes'.
-        return s
-    # In Python2, 's' is a 'unicode' object.
-    # In Python3, 's' is a 'str' object.
-    # Encode to UTF-8 to get 'bytes' data.
-    return s.encode("utf-8")
-
-
 def usable_core_count():
     """Return the number of cores the current process can use, if supported.
     Otherwise, return the total number of cores (like `os.cpu_count()`).
