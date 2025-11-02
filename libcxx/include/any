@@ -203,10 +203,10 @@ public:
       __other.__call(_Action::_Move, this);
   }
 
-  template < class _ValueType,
-             class _Tp = decay_t<_ValueType>,
-             class     = enable_if_t< !is_same<_Tp, any>::value && !__is_inplace_type<_ValueType>::value &&
-                                      is_copy_constructible<_Tp>::value> >
+  template <
+      class _ValueType,
+      class _Tp = decay_t<_ValueType>,
+      class = enable_if_t<!is_same_v<_Tp, any> && !__is_in_place_type_v<_ValueType> && is_copy_constructible_v<_Tp>>>
   _LIBCPP_HIDE_FROM_ABI any(_ValueType&& __value);
 
   template <class _ValueType,

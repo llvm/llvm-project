@@ -265,14 +265,14 @@ public:
 #else
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(result_type __s = default_seed) { seed(__s); }
 #endif
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, linear_congruential_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(_Sseq& __q) {
     seed(__q);
   }
   _LIBCPP_HIDE_FROM_ABI void seed(result_type __s = default_seed) {
     seed(integral_constant<bool, __m == 0>(), integral_constant<bool, __c == 0>(), __s);
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, linear_congruential_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __seed(
         __q,
