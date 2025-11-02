@@ -454,3 +454,5 @@ void JobList::Print(raw_ostream &OS, const char *Terminator, bool Quote,
 }
 
 void JobList::clear() { Jobs.clear(); }
+
+JobList::list_type JobList::takeJobs() { return std::exchange(Jobs, {}); }
