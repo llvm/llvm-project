@@ -7061,8 +7061,17 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // anonymous unions in class templates).
   }
 
-  if (!ParentDependsOnArgs)
+  if (!ParentDependsOnArgs) {
+    if (CurrentInstantiationScope) {
+      if (llvm::PointerUnion<
+              Decl *, LocalInstantiationScope::DeclArgumentPack *> *Found =
+              CurrentInstantiationScope->getInstantiationOfIfExists(D)) {
+        if (Decl *FD = Found->dyn_cast<Decl *>())
+          return cast<NamedDecl>(FD);
+      }
+    }
     return D;
+  }
 
   ParentDC = FindInstantiatedContext(Loc, ParentDC, TemplateArgs);
   if (!ParentDC)
