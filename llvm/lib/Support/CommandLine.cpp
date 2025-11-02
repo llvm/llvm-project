@@ -382,7 +382,7 @@ public:
     RegisteredSubCommands.erase(sub);
   }
 
-  iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+  iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
   getRegisteredSubcommands() {
     return make_range(RegisteredSubCommands.begin(),
                       RegisteredSubCommands.end());
@@ -2830,7 +2830,7 @@ StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   return Sub.OptionsMap;
 }
 
-iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 cl::getRegisteredSubcommands() {
   return GlobalParser->getRegisteredSubcommands();
 }
