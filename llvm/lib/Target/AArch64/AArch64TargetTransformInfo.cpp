@@ -5679,6 +5679,18 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (CostKind != TTI::TCK_RecipThroughput)
     return Invalid;
 
+  unsigned Ratio =
+      AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
+
+  // A ratio of 1 would mean it's similar to a regular add, e.g.
+  // v4i64 partial.reduce(v4i64 %acc, v4i64 %vec)
+  // <=> add v4i64 %acc, %vec
+  if (Ratio == 1) {
+    auto *T = VectorType::get(AccumType, VF);
+    return getArithmeticInstrCost(Opcode, T, CostKind) +
+           (BinOp ? getArithmeticInstrCost(*BinOp, T, CostKind) : 0);
+  }
+
   if (VF.isFixed() && !ST->isSVEorStreamingSVEAvailable() &&
       (!ST->isNeonAvailable() || !ST->hasDotProd()))
     return Invalid;
@@ -5700,8 +5712,6 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   if (IsUSDot && !ST->hasMatMulInt8())
     return Invalid;
 
-  unsigned Ratio =
-      AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
   if (VF.getKnownMinValue() <= Ratio)
     return Invalid;
 
