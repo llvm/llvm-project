@@ -64,8 +64,9 @@ entry:
   %str.addr = alloca ptr, align 4
   store ptr %str, ptr %str.addr, align 4
   %0 = load ptr, ptr %str.addr, align 4
-  %call = call i32 @strlen(ptr noundef %0)
+  %call = call i32 @strlen(ptr noundef %0) #0
   ret i32 %call
 }
 
 declare i32 @strlen(ptr noundef) nounwind
+attributes #0 = { strictfp }
