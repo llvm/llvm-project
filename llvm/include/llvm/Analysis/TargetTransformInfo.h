@@ -1764,7 +1764,7 @@ public:
   /// \param Types List of types to check.
   LLVM_ABI bool areTypesABICompatible(const Function *Caller,
                                       const Function *Callee,
-                                      const ArrayRef<Type *> &Types) const;
+                                      ArrayRef<Type *> Types) const;
 
   /// The type of load/store indexing.
   enum MemIndexedMode {

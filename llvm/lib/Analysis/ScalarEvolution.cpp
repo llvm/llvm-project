@@ -2424,10 +2424,10 @@ ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
 // We're trying to construct a SCEV of type `Type' with `Ops' as operands and
 // `OldFlags' as can't-wrap behavior.  Infer a more aggressive set of
 // can't-overflow flags for the operation if possible.
-static SCEV::NoWrapFlags
-StrengthenNoWrapFlags(ScalarEvolution *SE, SCEVTypes Type,
-                      const ArrayRef<const SCEV *> Ops,
-                      SCEV::NoWrapFlags Flags) {
+static SCEV::NoWrapFlags StrengthenNoWrapFlags(ScalarEvolution *SE,
+                                               SCEVTypes Type,
+                                               ArrayRef<const SCEV *> Ops,
+                                               SCEV::NoWrapFlags Flags) {
   using namespace std::placeholders;
 
   using OBO = OverflowingBinaryOperator;
@@ -2540,7 +2540,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   unsigned Idx = isa<SCEVConstant>(Ops[0]) ? 1 : 0;
 
   // Delay expensive flag strengthening until necessary.
-  auto ComputeFlags = [this, OrigFlags](const ArrayRef<const SCEV *> Ops) {
+  auto ComputeFlags = [this, OrigFlags](ArrayRef<const SCEV *> Ops) {
     return StrengthenNoWrapFlags(this, scAddExpr, Ops, OrigFlags);
   };
 
@@ -3125,7 +3125,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
     return Folded;
 
   // Delay expensive flag strengthening until necessary.
-  auto ComputeFlags = [this, OrigFlags](const ArrayRef<const SCEV *> Ops) {
+  auto ComputeFlags = [this, OrigFlags](ArrayRef<const SCEV *> Ops) {
     return StrengthenNoWrapFlags(this, scMulExpr, Ops, OrigFlags);
   };
 

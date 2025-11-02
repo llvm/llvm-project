@@ -589,8 +589,8 @@ bool CombinerHelper::matchCombineShuffleVector(
   return true;
 }
 
-void CombinerHelper::applyCombineShuffleVector(
-    MachineInstr &MI, const ArrayRef<Register> Ops) const {
+void CombinerHelper::applyCombineShuffleVector(MachineInstr &MI,
+                                               ArrayRef<Register> Ops) const {
   Register DstReg = MI.getOperand(0).getReg();
   Builder.setInsertPt(*MI.getParent(), MI);
   Register NewDstReg = MRI.cloneVirtualRegister(DstReg);

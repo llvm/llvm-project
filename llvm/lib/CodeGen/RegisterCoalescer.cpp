@@ -378,7 +378,7 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
 
 public:
   // For legacy pass only.
-  RegisterCoalescer() {}
+  RegisterCoalescer() = default;
   RegisterCoalescer &operator=(RegisterCoalescer &&Other) = default;
 
   RegisterCoalescer(LiveIntervals *LIS, SlotIndexes *SI,

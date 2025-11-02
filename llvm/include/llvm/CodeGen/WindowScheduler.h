@@ -105,7 +105,7 @@ protected:
 
 public:
   WindowScheduler(MachineSchedContext *C, MachineLoop &ML);
-  virtual ~WindowScheduler() {}
+  virtual ~WindowScheduler() = default;
 
   bool run();
 

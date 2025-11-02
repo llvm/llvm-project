@@ -1028,7 +1028,7 @@ public:
 
   virtual bool areTypesABICompatible(const Function *Caller,
                                      const Function *Callee,
-                                     const ArrayRef<Type *> &Types) const {
+                                     ArrayRef<Type *> Types) const {
     return (Caller->getFnAttribute("target-cpu") ==
             Callee->getFnAttribute("target-cpu")) &&
            (Caller->getFnAttribute("target-features") ==

@@ -912,7 +912,7 @@ bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
 
 bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
-                                       const ArrayRef<Type *> &Types) const {
+                                       ArrayRef<Type *> Types) const {
 
   // We need to ensure that argument promotion does not
   // attempt to promote pointers to MMA types (__vector_pair

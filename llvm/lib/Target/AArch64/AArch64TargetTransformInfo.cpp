@@ -308,9 +308,9 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (EffectiveCallerBits & EffectiveCalleeBits) == EffectiveCalleeBits;
 }
 
-bool AArch64TTIImpl::areTypesABICompatible(
-    const Function *Caller, const Function *Callee,
-    const ArrayRef<Type *> &Types) const {
+bool AArch64TTIImpl::areTypesABICompatible(const Function *Caller,
+                                           const Function *Callee,
+                                           ArrayRef<Type *> Types) const {
   if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 
