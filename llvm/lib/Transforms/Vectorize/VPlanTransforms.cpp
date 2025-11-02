@@ -1281,6 +1281,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def, m_BuildVector()) && all_equal(R.operands())) {
+    Def->replaceAllUsesWith(
+        Builder.createNaryOp(VPInstruction::Broadcast, Def->getOperand(0)));
+    return;
+  }
+
   if (auto *Phi = dyn_cast<VPPhi>(Def)) {
     if (Phi->getNumOperands() == 1)
       Phi->replaceAllUsesWith(Phi->getOperand(0));
