@@ -77,7 +77,6 @@ llvm::convertRoundingModeToStr(RoundingMode UseRounding) {
 
 std::optional<StringRef>
 llvm::convertRoundingModeToBundle(RoundingMode UseRounding) {
-  std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
     return "dynamic";
@@ -133,7 +132,6 @@ llvm::convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
 
 std::optional<StringRef>
 llvm::convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
-  std::optional<StringRef> ExceptStr;
   switch (UseExcept) {
   case fp::ebStrict:
     return "strict";
@@ -141,9 +139,8 @@ llvm::convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
     return "ignore";
   case fp::ebMayTrap:
     return "maytrap";
-  default:
-    return std::nullopt;
   }
+  return std::nullopt;
 }
 
 Intrinsic::ID llvm::getConstrainedIntrinsicID(const Instruction &Instr) {
