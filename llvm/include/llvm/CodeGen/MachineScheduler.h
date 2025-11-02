@@ -829,7 +829,7 @@ private:
 
 public:
   // constructor for empty set
-  explicit ResourceSegments(){};
+  explicit ResourceSegments() = default;
   bool empty() const { return _Intervals.empty(); }
   explicit ResourceSegments(const std::list<IntervalTy> &Intervals)
       : _Intervals(Intervals) {

@@ -66,7 +66,7 @@ public:
   BasicBlockSectionsProfileReader(const MemoryBuffer *Buf)
       : MBuf(Buf), LineIt(*Buf, /*SkipBlanks=*/true, /*CommentMarker=*/'#'){};
 
-  BasicBlockSectionsProfileReader(){};
+  BasicBlockSectionsProfileReader() = default;
 
   // Returns true if basic block sections profile exist for function \p
   // FuncName.
