@@ -39,8 +39,8 @@ Options
 
 .. option:: ExcludeClasses
 
-    Semicolon-delimited list of class names for overwriting the default
-    exclusion list. The default is:
+    Semicolon-separated list of regular expressions matching class names that
+    overwrites the default exclusion list. The default is:
     `::std::map;::std::unordered_map;::std::flat_map`.
     
 .. option:: FixMode

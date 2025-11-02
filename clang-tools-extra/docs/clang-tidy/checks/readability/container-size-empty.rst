@@ -30,8 +30,8 @@ Options
 
 .. option:: ExcludedComparisonTypes
 
-    A semicolon-separated list of class names for which the check will ignore
-    comparisons of objects with default-constructed objects of the same type.
-    If a class is listed here, the check will not suggest using ``empty()``
-    instead of such comparisons for objects of that class.
-    Default value is: `::std::array`.
+    A semicolon-separated list of regular expressions matching class names for
+    which the check will ignore comparisons of objects with default-constructed
+    objects of the same type. If a class is listed here, the check will not
+    suggest using ``empty()`` instead of such comparisons for objects of that
+    class. Default value is: `::std::array`.
