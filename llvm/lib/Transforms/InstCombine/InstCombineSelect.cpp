@@ -1027,10 +1027,9 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
   return Result;
 }
 
-static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
-                                       InstCombiner::BuilderTy &Builder) {
-  if (!Cmp->hasOneUse())
-    return nullptr;
+static Value *
+canonicalizeSaturatedAddUnsigned(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                 InstCombiner::BuilderTy &Builder) {
 
   // Match unsigned saturated add with constant.
   Value *Cmp0 = Cmp->getOperand(0);
@@ -1052,8 +1051,7 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
   // uge -1 is canonicalized to eq -1 and requires special handling
   // (a == -1) ? -1 : a + 1 -> uadd.sat(a, 1)
   if (Pred == ICmpInst::ICMP_EQ) {
-    if (match(FVal, m_Add(m_Specific(Cmp0), m_One())) &&
-        match(Cmp1, m_AllOnes())) {
+    if (match(FVal, m_Add(m_Specific(Cmp0), m_One())) && Cmp1 == TVal) {
       return Builder.CreateBinaryIntrinsic(
           Intrinsic::uadd_sat, Cmp0, ConstantInt::get(Cmp0->getType(), 1));
     }
@@ -1126,6 +1124,107 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
     // ((X + Y) u< Y) ? -1 : (X + Y) --> uadd.sat(X, Y)
     return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp1, Y);
   }
+
+  return nullptr;
+}
+
+static Value *canonicalizeSaturatedAddSigned(ICmpInst *Cmp, Value *TVal,
+                                             Value *FVal,
+                                             InstCombiner::BuilderTy &Builder) {
+  // Match saturated add with constant.
+  Value *Cmp0 = Cmp->getOperand(0);
+  Value *Cmp1 = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  Value *X, *Y;
+  const APInt *C;
+
+  // Canonicalize INT_MAX to true value of the select.
+  if (match(FVal, m_MaxSignedValue())) {
+    std::swap(TVal, FVal);
+    Pred = CmpInst::getInversePredicate(Pred);
+  }
+  if (!match(TVal, m_MaxSignedValue()))
+    return nullptr;
+
+  // sge maximum signed value is canonicalized to eq minimum signed value and
+  // requires special handling (a == INT_MAX) ? INT_MAX : a + 1 -> sadd.sat(a,
+  // 1)
+  if (Pred == ICmpInst::ICMP_EQ) {
+    if (match(FVal, m_Add(m_Specific(Cmp0), m_One())) && Cmp1 == TVal) {
+      return Builder.CreateBinaryIntrinsic(
+          Intrinsic::sadd_sat, Cmp0, ConstantInt::get(Cmp0->getType(), 1));
+    }
+    return nullptr;
+  }
+
+  if ((Pred == ICmpInst::ICMP_SGE || Pred == ICmpInst::ICMP_SGT) &&
+      match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(
+                      APInt::getSignedMaxValue(
+                          Cmp1->getType()->getScalarSizeInBits()) -
+                      *C)) &&
+      !C->isNegative()) {
+    // (X > INT_MAX - C) ? INT_MAX : (X + C) --> sadd.sat(X, C)
+    // (X >= INT_MAX - C) ? INT_MAX : (X + C) --> sadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
+
+  if (Pred == ICmpInst::ICMP_SGT &&
+      match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(
+                      APInt::getSignedMaxValue(
+                          Cmp1->getType()->getScalarSizeInBits()) -
+                      *C - 1)) &&
+      !C->isNegative()) {
+    // (X > INT_MAX - C - 1) ? INT_MAX : (X + C) --> sadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
+
+  // This does not work with 0, or negative numbers as
+  // (X >= INT_MIN + 0 + 1) ? INT_MAX : (X + 0) is not a saturated add.
+  if (Pred == ICmpInst::ICMP_SGE &&
+      match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
+      match(Cmp1, m_SpecificIntAllowPoison(
+                      APInt::getSignedMinValue(
+                          Cmp1->getType()->getScalarSizeInBits()) -
+                      *C + 1)) &&
+      C->isStrictlyPositive()) {
+    // (X >= INT_MAX - C + 1) ? INT_MAX : (X + C) --> sadd.sat(X, C)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, Cmp0,
+                                         ConstantInt::get(Cmp0->getType(), *C));
+  }
+
+  // Canonicalize predicate to less-than or less-or-equal-than.
+  if (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SGE) {
+    std::swap(Cmp0, Cmp1);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  if (Pred != ICmpInst::ICMP_SLT && Pred != ICmpInst::ICMP_SLE)
+    return nullptr;
+
+  if (match(Cmp0, m_NSWSub(m_MaxSignedValue(), m_Value(X))) &&
+      match(FVal, m_c_Add(m_Specific(X), m_Value(Y))) && Y == Cmp1) {
+    // (INT_MAX - X s< Y) ? INT_MAX : (X + Y) --> sadd.sat(X, Y)
+    // (INT_MAX - X s< Y) ? INT_MAX : (Y + X) --> sadd.sat(X, Y)
+    return Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, X, Y);
+  }
+
+  return nullptr;
+}
+
+static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
+                                       InstCombiner::BuilderTy &Builder) {
+  if (!Cmp->hasOneUse())
+    return nullptr;
+
+  if (Value *V = canonicalizeSaturatedAddUnsigned(Cmp, TVal, FVal, Builder))
+    return V;
+
+  if (Value *V = canonicalizeSaturatedAddSigned(Cmp, TVal, FVal, Builder))
+    return V;
 
   return nullptr;
 }
