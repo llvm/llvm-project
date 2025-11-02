@@ -18,7 +18,7 @@ on:
 jobs:
   build-ci-container-windows:
     if: github.repository_owner == 'llvm'
-    runs-on: windows-2022
+    runs-on: windows-2025
     outputs:
       container-name: ${{ steps.vars.outputs.container-name }}
       container-name-tag: ${{ steps.vars.outputs.container-name-tag }}
@@ -56,7 +56,7 @@ jobs:
       - build-ci-container-windows
     permissions:
       packages: write
-    runs-on: windows-2022
+    runs-on: windows-2025
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
