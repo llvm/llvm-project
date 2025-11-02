@@ -139,6 +139,8 @@ public:
         "bugprone-compare-pointer-to-member-virtual-function");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
+    CheckFactories.registerCheck<CopyConstructorMutatesArgumentCheck>(
+        "bugprone-copy-constructor-mutates-argument");
     CheckFactories.registerCheck<DanglingHandleCheck>(
         "bugprone-dangling-handle");
     CheckFactories.registerCheck<DerivedMethodShadowingBaseMethodCheck>(
@@ -200,8 +202,6 @@ public:
         "bugprone-multiple-new-in-one-expression");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
-    CheckFactories.registerCheck<CopyConstructorMutatesArgumentCheck>(
-        "bugprone-copy-constructor-mutates-argument");
     CheckFactories.registerCheck<NondeterministicPointerIterationOrderCheck>(
         "bugprone-nondeterministic-pointer-iteration-order");
     CheckFactories.registerCheck<OptionalValueConversionCheck>(
