@@ -97,8 +97,8 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_uninitializedhandle'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_uninitializedhandle' '__hlsl_resource_t (__hlsl_resource_t) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
@@ -154,8 +154,8 @@ RESOURCE<float> Buffer;
 // CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-BINDING-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-BINDING-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' 'void (...) noexcept'
+// CHECK-BINDING-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept' <BuiltinFnToFnPtr>
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' '__hlsl_resource_t (__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept'
 // CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
@@ -182,8 +182,8 @@ RESOURCE<float> Buffer;
 // CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-BINDING-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-BINDING-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-BINDING-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept' <BuiltinFnToFnPtr>
+// CHECK-BINDING-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' '__hlsl_resource_t (__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept'
 // CHECK-BINDING-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-BINDING-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
@@ -209,8 +209,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding' '__hlsl_resource_t (__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept'
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
@@ -222,8 +222,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__counter_handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int, unsigned int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromimplicitbinding' '__hlsl_resource_t (__hlsl_resource_t, unsigned int, unsigned int) noexcept'
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'counterOrderId' 'unsigned int'
@@ -246,8 +246,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding' '__hlsl_resource_t (__hlsl_resource_t, unsigned int, unsigned int, int, unsigned int, const char *) noexcept'
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
@@ -259,8 +259,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__counter_handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: CallExpr {{.*}} '__hlsl_resource_t {{.*}}'
-// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromimplicitbinding' 'void (...) noexcept'
+// CHECK-COUNTER-HANDLE-NEXT: ImplicitCastExpr {{.*}} '__hlsl_resource_t (*)(__hlsl_resource_t, unsigned int, unsigned int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_counterhandlefromimplicitbinding' '__hlsl_resource_t (__hlsl_resource_t, unsigned int, unsigned int) noexcept'
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]<element_type>'
 // CHECK-COUNTER-HANDLE-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'counterOrderId' 'unsigned int'
@@ -332,8 +332,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: CompoundStmt
 // CHECK-COUNTER-NEXT: ReturnStmt
 // CHECK-COUNTER-NEXT: CallExpr {{.*}} 'unsigned int'
-// CHECK-COUNTER-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-COUNTER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
+// CHECK-COUNTER-NEXT: ImplicitCastExpr {{.*}} 'unsigned int (*)(__hlsl_resource_t, int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
@@ -348,8 +348,8 @@ RESOURCE<float> Buffer;
 // CHECK-COUNTER-NEXT: CompoundStmt
 // CHECK-COUNTER-NEXT: ReturnStmt
 // CHECK-COUNTER-NEXT: CallExpr {{.*}} 'unsigned int'
-// CHECK-COUNTER-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-COUNTER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
+// CHECK-COUNTER-NEXT: ImplicitCastExpr {{.*}} 'unsigned int (*)(__hlsl_resource_t, int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-COUNTER-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-COUNTER-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-COUNTER-SAME{LITERAL}: [[hlsl::raw_buffer]]
@@ -374,8 +374,8 @@ RESOURCE<float> Buffer;
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
 // CHECK-APPEND-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-APPEND-NEXT: CallExpr {{.*}} 'unsigned int'
-// CHECK-APPEND-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-APPEND-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
+// CHECK-APPEND-NEXT: ImplicitCastExpr {{.*}} 'unsigned int (*)(__hlsl_resource_t, int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-APPEND-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-APPEND-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-APPEND-SAME{LITERAL}: [[hlsl::raw_buffer]]
@@ -399,8 +399,8 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]' lvalue .__handle
 // CHECK-CONSUME-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-CONSUME-NEXT: CallExpr {{.*}} 'unsigned int'
-// CHECK-CONSUME-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-CONSUME-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (...) noexcept'
+// CHECK-CONSUME-NEXT: ImplicitCastExpr {{.*}} 'unsigned int (*)(__hlsl_resource_t, int) noexcept' <BuiltinFnToFnPtr>
+// CHECK-CONSUME-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_buffer_update_counter' 'unsigned int (__hlsl_resource_t, int) noexcept'
 // CHECK-CONSUME-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-CONSUME-SAME{LITERAL}: [[hlsl::raw_buffer]]
@@ -417,14 +417,14 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: CallExpr {{.*}} 'void'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_x' 'void (...) noexcept'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(__hlsl_resource_t, unsigned int &) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_x' 'void (__hlsl_resource_t, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'numStructs' 'unsigned int &__restrict'
 // CHECK-NEXT: CallExpr {{.*}} 'void'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getstride' 'void (...) noexcept'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(__hlsl_resource_t, unsigned int &) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getstride' 'void (__hlsl_resource_t, unsigned int &) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'stride' 'unsigned int &__restrict'
