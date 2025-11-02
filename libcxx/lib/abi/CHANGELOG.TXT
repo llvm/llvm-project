@@ -26,6 +26,13 @@ Version 22.0
   Symbol removed: _ZNSt3__118__time_get_storageIcE9__analyzeEcRKNS_5ctypeIcEE
   Symbol removed: _ZNSt3__118__time_get_storageIwE4initERKNS_5ctypeIwEE
   Symbol removed: _ZNSt3__118__time_get_storageIwE9__analyzeEcRKNS_5ctypeIwEE
+  Symbol added: _ZNSt3__123__atomic_monitor_globalEPVKv
+  Symbol added: _ZNSt3__126__atomic_wait_global_tableEPVKvi
+  Symbol added: _ZNSt3__126__atomic_notify_one_nativeILm4EEEvPVKv
+  Symbol added: _ZNSt3__132__atomic_notify_all_global_tableEPVKv
+  Symbol added: _ZNSt3__120__atomic_wait_nativeILm4EEEvPVKvPKv
+  Symbol added: _ZNSt3__126__atomic_notify_all_nativeILm4EEEvPVKv
+  Symbol added: _ZNSt3__132__atomic_notify_one_global_tableEPVKv
 
 ------------
 Version 21.0
