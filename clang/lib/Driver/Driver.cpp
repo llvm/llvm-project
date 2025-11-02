@@ -60,13 +60,13 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -123,7 +123,6 @@ template <typename F> static bool usesInput(const ArgList &Args, F &&Fn) {
   });
 }
 
-// static
 std::string Driver::GetResourcesPath(StringRef BinaryPath) {
   // Since the resource directory is embedded in the module hash, it's important
   // that all places that need it call this function, so that they get the
@@ -155,6 +154,13 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath) {
   }
 
   return std::string(P);
+}
+
+std::string Driver::GetResourcesPathForInvocation(const char *Argv0,
+                                                  void *MainAddr) {
+  std::string ClangExecutable =
+      llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
+  return GetResourcesPath(ClangExecutable);
 }
 
 CUIDOptions::CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D)

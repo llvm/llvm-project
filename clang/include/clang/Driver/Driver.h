@@ -15,11 +15,11 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -410,6 +410,16 @@ public:
   /// Takes the path to a binary that's either in bin/ or lib/ and returns
   /// the path to clang's resource directory.
   static std::string GetResourcesPath(StringRef BinaryPath);
+
+  /// Get the directory where the compiler headers reside, relative to the
+  /// compiler binary (found by the passed in arguments).
+  ///
+  /// \param Argv0 - The program path (from argv[0]), for finding the builtin
+  /// compiler path.
+  /// \param MainAddr - The address of main (or some other function in the main
+  /// executable), for finding the builtin compiler path.
+  static std::string GetResourcesPathForInvocation(const char *Argv0,
+                                                   void *MainAddr);
 
   Driver(StringRef ClangExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags, std::string Title = "clang LLVM compiler",
