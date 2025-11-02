@@ -2507,7 +2507,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
     }
     if (const auto *RA = TargetDecl->getAttr<RestrictAttr>();
-        RA && RA->getDeallocator() == nullptr)
+        RA && RA->getDeallocator() == nullptr &&
+        FI.getReturnType()->getAs<PointerType>())
       RetAttrs.addAttribute(llvm::Attribute::NoAlias);
     if (TargetDecl->hasAttr<ReturnsNonNullAttr>() &&
         !CodeGenOpts.NullPointerIsValid)
