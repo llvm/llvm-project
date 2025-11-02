@@ -13337,6 +13337,7 @@ MangleNumberingContext &
 ASTContext::getManglingNumberContext(const DeclContext *DC) {
   assert(LangOpts.CPlusPlus);  // We don't need mangling numbers for plain C.
   std::unique_ptr<MangleNumberingContext> &MCtx = MangleNumberingContexts[DC];
+  DC = DC->getPrimaryContext();
   if (!MCtx)
     MCtx = createMangleNumberingContext();
   return *MCtx;
