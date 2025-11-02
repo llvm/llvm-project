@@ -2632,11 +2632,13 @@ void OpEmitter::genInlineCreateBody(
     interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
     nonBuilderStateArgs = ", " + nonBuilderStateArgs;
   }
-  cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
-                                    nonBuilderStateArgs,
-                                    opClass.getClassName());
-  cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
-                                        nonBuilderStateArgs);
+  if (cWithLoc)
+    cWithLoc->body() << llvm::formatv(inlineCreateBody, locParamName,
+                                      nonBuilderStateArgs,
+                                      opClass.getClassName());
+  if (cImplicitLoc)
+    cImplicitLoc->body() << llvm::formatv(inlineCreateBodyImplicitLoc,
+                                          nonBuilderStateArgs);
 }
 
 void OpEmitter::genSeparateArgParamBuilder() {
