@@ -139,4 +139,38 @@ def ArithRoundingModeInterface : OpInterface<"ArithRoundingModeInterface"> {
   ];
 }
 
+def ArithExactFlagInterface : OpInterface<"ArithExactFlagInterface"> {
+  let description = [{
+    Access to op exact flag.
+  }];
+
+  let cppNamespace = "::mlir::arith";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns whether the operation has the exact flag",
+      /*returnType=*/  "bool",
+      /*methodName=*/  "hasExactFlag",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getIsExact();
+      }]
+      >,
+      StaticInterfaceMethod<
+      /*desc=*/        [{Returns the name of the 'exact' attribute
+                         for the operation}],
+      /*returnType=*/  "StringRef",
+      /*methodName=*/  "getExactAttrName",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        return "isExact";
+      }]
+      >
+
+  ];
+}
+
 #endif // ARITH_OPS_INTERFACES
