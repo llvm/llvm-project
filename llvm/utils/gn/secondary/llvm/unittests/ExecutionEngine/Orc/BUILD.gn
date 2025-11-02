@@ -24,6 +24,7 @@ unittest("OrcJITTests") {
     "JITLinkRedirectionManagerTest.cpp",
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
+    "LibraryResolverTest.cpp",
     "LookupAndRecordAddrsTest.cpp",
     "MachOPlatformTest.cpp",
     "MapperJITLinkMemoryManagerTest.cpp",
