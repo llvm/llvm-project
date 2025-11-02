@@ -477,58 +477,6 @@ class MapInfoFinalizationPass
     return false;
   }
 
-  mlir::omp::MapInfoOp genBoxcharMemberMap(mlir::omp::MapInfoOp op,
-                                           fir::FirOpBuilder &builder) {
-    if (!op.getMembers().empty())
-      return op;
-    mlir::Location loc = op.getVarPtr().getLoc();
-    mlir::Value boxChar = op.getVarPtr();
-
-    if (mlir::isa<fir::ReferenceType>(op.getVarPtr().getType()))
-      boxChar = fir::LoadOp::create(builder, loc, op.getVarPtr());
-
-    fir::BoxCharType boxCharType =
-        mlir::dyn_cast<fir::BoxCharType>(boxChar.getType());
-    mlir::Value boxAddr = fir::BoxOffsetOp::create(
-        builder, loc, op.getVarPtr(), fir::BoxFieldAttr::base_addr);
-
-    mlir::ArrayAttr newMembersAttr;
-    llvm::SmallVector<llvm::SmallVector<int64_t>> memberIdx = {{0}};
-    newMembersAttr = builder.create2DI64ArrayAttr(memberIdx);
-
-    mlir::Value varPtr = op.getVarPtr();
-    mlir::omp::MapInfoOp memberMapInfoOp = mlir::omp::MapInfoOp::create(
-        builder, op.getLoc(), varPtr.getType(), varPtr,
-        mlir::TypeAttr::get(boxCharType.getEleTy()),
-        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
-            mlir::omp::ClauseMapFlags::to |
-            mlir::omp::ClauseMapFlags::implicit),
-        builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
-            mlir::omp::VariableCaptureKind::ByRef),
-        /*varPtrPtr=*/boxAddr,
-        /*members=*/llvm::SmallVector<mlir::Value>{},
-        /*member_index=*/mlir::ArrayAttr{},
-        /*bounds=*/op.getBounds(),
-        /*mapperId=*/mlir::FlatSymbolRefAttr(), /*name=*/op.getNameAttr(),
-        builder.getBoolAttr(false));
-
-    mlir::omp::MapInfoOp newMapInfoOp = mlir::omp::MapInfoOp::create(
-        builder, op.getLoc(), op.getResult().getType(), varPtr,
-        mlir::TypeAttr::get(
-            llvm::cast<mlir::omp::PointerLikeType>(varPtr.getType())
-                .getElementType()),
-        op.getMapTypeAttr(), op.getMapCaptureTypeAttr(),
-        /*varPtrPtr=*/mlir::Value{},
-        /*members=*/llvm::SmallVector<mlir::Value>{memberMapInfoOp},
-        /*member_index=*/newMembersAttr,
-        /*bounds=*/llvm::SmallVector<mlir::Value>{},
-        /*mapperId=*/mlir::FlatSymbolRefAttr(), op.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
-    op.replaceAllUsesWith(newMapInfoOp.getResult());
-    op->erase();
-    return newMapInfoOp;
-  }
-
   // Expand mappings of type(C_PTR) to map their `__address` field explicitly
   // as a single pointer-sized member (USM-gated at callsite). This helps in
   // USM scenarios to ensure the pointer-sized mapping is used.
@@ -956,6 +904,14 @@ class MapInfoFinalizationPass
     baseAddr.erase();
   }
 
+  static bool hasADescriptor(mlir::Operation *varOp, mlir::Type varType) {
+    if (fir::isTypeWithDescriptor(varType) ||
+        mlir::isa<fir::BoxCharType>(varType) ||
+        mlir::isa_and_present<fir::BoxAddrOp>(varOp))
+      return true;
+    return false;
+  }
+
   // This pass executes on omp::MapInfoOp's containing descriptor based types
   // (allocatables, pointers, assumed shape etc.) and expanding them into
   // multiple omp::MapInfoOp's for each pointer member contained within the
@@ -1209,36 +1165,6 @@ class MapInfoFinalizationPass
         return mlir::WalkResult::advance();
       });
 
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        if (!op.getMembers().empty())
-          return;
-
-        if (!mlir::isa<fir::BoxCharType>(fir::unwrapRefType(op.getVarType())))
-          return;
-
-        // POSSIBLE_HACK_ALERT: If the boxchar has been implicitly mapped then
-        // it is likely that the underlying pointer to the data
-        // (!fir.ref<fir.char<k,?>>) has already been mapped. So, skip such
-        // boxchars. We are primarily interested in boxchars that were mapped
-        // by passes such as MapsForPrivatizedSymbols that map boxchars that
-        // are privatized. At present, such boxchar maps are not marked
-        // implicit. Should they be? I don't know. If they should be then
-        // we need to change this check for early return OR live with
-        // over-mapping.
-        bool hasImplicitMap =
-            (op.getMapType() & mlir::omp::ClauseMapFlags::implicit) ==
-            mlir::omp::ClauseMapFlags::implicit;
-        if (hasImplicitMap)
-          return;
-
-        assert(llvm::hasSingleElement(op->getUsers()) &&
-               "OMPMapInfoFinalization currently only supports single users "
-               "of a MapInfoOp");
-
-        builder.setInsertionPoint(op);
-        genBoxcharMemberMap(op, builder);
-      });
-
       // Expand type(C_PTR) only when unified_shared_memory is required,
       // to ensure device-visible pointer size/behavior in USM scenarios
       // without changing default expectations elsewhere.
@@ -1266,9 +1192,8 @@ class MapInfoFinalizationPass
                "OMPMapInfoFinalization currently only supports single users "
                "of a MapInfoOp");
 
-        if (fir::isTypeWithDescriptor(op.getVarType()) ||
-            mlir::isa_and_present<fir::BoxAddrOp>(
-                op.getVarPtr().getDefiningOp())) {
+        if (hasADescriptor(op.getVarPtr().getDefiningOp(),
+                           fir::unwrapRefType(op.getVarType()))) {
           builder.setInsertionPoint(op);
           mlir::Operation *targetUser = getFirstTargetUser(op);
           assert(targetUser && "expected user of map operation was not found");
