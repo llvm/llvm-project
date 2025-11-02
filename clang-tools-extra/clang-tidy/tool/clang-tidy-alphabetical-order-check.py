@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
+#
+# ===-----------------------------------------------------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===-----------------------------------------------------------------------===#
 
 """
+
+ClangTidy Alphabetical Order Checker
+====================================
+
 Normalize clang-tidy docs with deterministic sorting for linting/tests.
 
 Subcommands:
@@ -80,9 +92,7 @@ def normalize_list_rst(lines: List[str]) -> str:
     return "".join(out)
 
 
-def run_checks_list(
-    inp: Optional[str], out_path: Optional[str], fix: bool
-) -> int:
+def run_checks_list(inp: Optional[str], out_path: Optional[str], fix: bool) -> int:
     if not inp:
         inp = os.path.normpath(
             os.path.join(
@@ -116,11 +126,7 @@ def find_heading(lines: Sequence[str], title: str) -> Optional[int]:
     for i in range(len(lines) - 1):
         if lines[i].rstrip("\n") == title:
             underline = lines[i + 1].rstrip("\n")
-            if (
-                underline
-                and set(underline) == {"^"}
-                and len(underline) >= len(title)
-            ):
+            if underline and set(underline) == {"^"} and len(underline) >= len(title):
                 return i
     return None
 
@@ -206,18 +212,14 @@ def normalize_release_notes(lines: List[str]) -> str:
             if h_end is None:
                 h_end = sec_start
                 while h_end + 1 < len(out):
-                    if out[h_end].strip() and set(
-                        out[h_end + 1].rstrip("\n")
-                    ) == {"^"}:
+                    if out[h_end].strip() and set(out[h_end + 1].rstrip("\n")) == {"^"}:
                         break
                     h_end += 1
             sec_end = h_end
         else:
             h_end = sec_start
             while h_end + 1 < len(out):
-                if out[h_end].strip() and set(out[h_end + 1].rstrip("\n")) == {
-                    "^"
-                }:
+                if out[h_end].strip() and set(out[h_end + 1].rstrip("\n")) == {"^"}:
                     break
                 h_end += 1
             sec_end = h_end
@@ -229,8 +231,7 @@ def normalize_release_notes(lines: List[str]) -> str:
         new_section.extend(prefix)
         for i_b, b in enumerate(sorted_blocks):
             if i_b > 0 and (
-                not new_section
-                or (new_section and new_section[-1].strip() != "")
+                    not new_section or (new_section and new_section[-1].strip() != "")
             ):
                 new_section.append("\n")
             new_section.extend(b)
@@ -241,9 +242,7 @@ def normalize_release_notes(lines: List[str]) -> str:
     return "".join(out)
 
 
-def run_release_notes(
-    inp: Optional[str], out_path: Optional[str], fix: bool
-) -> int:
+def run_release_notes(inp: Optional[str], out_path: Optional[str], fix: bool) -> int:
     if not inp:
         inp = os.path.normpath(
             os.path.join(script_dir(), "..", "..", "docs", "ReleaseNotes.rst")
@@ -278,9 +277,7 @@ def main(argv: List[str]) -> int:
         "--fix", action="store_true", help="rewrite the input file in place"
     )
 
-    ap_rn = sub.add_parser(
-        "release-notes", help="normalize ReleaseNotes.rst sections"
-    )
+    ap_rn = sub.add_parser("release-notes", help="normalize ReleaseNotes.rst sections")
     ap_rn.add_argument("-i", "--input", dest="inp", default=None)
     ap_rn.add_argument("-o", "--output", dest="out", default=None)
     ap_rn.add_argument(
