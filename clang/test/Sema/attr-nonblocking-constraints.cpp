@@ -104,6 +104,15 @@ void nb8c()
 	};
 }
 
+void nb8d() [[clang::nonblocking]]
+{
+	// Blocking methods of a local CXXRecordDecl do not generate diagnostics
+	// for the outer function.
+	struct Functor1 {
+        void method() { void* ptr = new int; }
+	};
+}
+
 // Make sure template expansions are found and verified.
 	template <typename T>
 	struct Adder {
