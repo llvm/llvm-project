@@ -4443,6 +4443,12 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
+void Parser::ParseAnnotationSpecifier(ParsedAttributes &Attrs,
+                                      SourceLocation *EndLoc)
+{
+  // TODO
+}
+
 bool Parser::ParseCXXAssumeAttributeArg(
     ParsedAttributes &Attrs, IdentifierInfo *AttrName,
     SourceLocation AttrNameLoc, IdentifierInfo *ScopeName,
@@ -4682,16 +4688,21 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok.getLocation(), diag::err_expected) << tok::colon;
   }
 
-  bool AttrParsed = false;
+  bool hasAttribute = false;
+  bool hasAnnotation = false;
   while (!Tok.isOneOf(tok::r_square, tok::semi, tok::eof)) {
-    if (AttrParsed) {
-      // If we parsed an attribute, a comma is required before parsing any
-      // additional attributes.
+    // If we parsed an attribute/annotation, a comma is required before parsing
+    //  any additional ones.
+    if (hasAttribute || hasAnnotation) {
       if (ExpectAndConsume(tok::comma)) {
         SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
         continue;
       }
-      AttrParsed = false;
+      if (hasAttribute && hasAnnotation) {
+        Diag(Tok.getLocation(), diag::err_mixed_attributes_and_annotations);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
     }
 
     // Eat all remaining superfluous commas before parsing the next attribute.
@@ -4702,12 +4713,19 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     IdentifierInfo *ScopeName = nullptr, *AttrName = nullptr;
 
     // '=' token marks the beginning of an annotation
-    if (getLangOpts().CPlusPlus26 && Tok.is(tok::equal)) {
+    if (Tok.is(tok::equal)) {
+      if (!getLangOpts().CPlusPlus26) {
+        Diag(Tok.getLocation(), diag::warn_cxx26_compat_annotation);
+        SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
+        continue;
+      }
       if (CommonScopeName) {
         Diag(Tok.getLocation(), diag::err_annotation_with_using);
         SkipUntil(tok::r_square, tok::colon, StopBeforeMatch);
         continue;
       }
+      ParseAnnotationSpecifier(Attrs, EndLoc);
+      hasAnnotation = true;
       continue;
     }
 
@@ -4744,11 +4762,11 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     }
 
     // Parse attribute arguments
-    if (Tok.is(tok::l_paren))
-      AttrParsed = ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
-                                           ScopeName, ScopeLoc, OpenMPTokens);
+    hasAttribute = Tok.is(tok::l_paren)
+      && ParseCXX11AttributeArgs(AttrName, AttrLoc, Attrs, EndLoc,
+                                 ScopeName, ScopeLoc, OpenMPTokens);
 
-    if (!AttrParsed) {
+    if (!hasAttribute) {
       Attrs.addNew(AttrName,
                    SourceRange(ScopeLoc.isValid() && CommonScopeLoc.isInvalid()
                                    ? ScopeLoc
@@ -4758,7 +4776,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                    nullptr, 0,
                    getLangOpts().CPlusPlus ? ParsedAttr::Form::CXX11()
                                            : ParsedAttr::Form::C23());
-      AttrParsed = true;
+      hasAttribute = true;
     }
 
     if (TryConsumeToken(tok::ellipsis))

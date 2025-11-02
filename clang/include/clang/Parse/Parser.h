@@ -3046,6 +3046,10 @@ private:
                                SourceLocation ScopeLoc,
                                CachedTokens &OpenMPTokens);
 
+  /// TODO doc
+  void ParseAnnotationSpecifier(ParsedAttributes &Attrs,
+                                SourceLocation *EndLoc);
+
   /// Parse the argument to C++23's [[assume()]] attribute. Returns true on
   /// error.
   bool
