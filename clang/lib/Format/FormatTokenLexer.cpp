@@ -34,24 +34,6 @@ CommentKind classifyBlockComment(StringRef Text) {
   if (Content.empty())
     return CommentKind::Plain;
 
-  // Allow '$' in identifiers. This is required for languages like JavaScript
-  // which clang-format supports, to correctly classify parameter/sentinel
-  // comments such as /*$scope=*/ or /*$FALLTHROUGH*/.
-  const auto IsUppercaseWord = [](StringRef Value) {
-    if (Value.empty())
-      return false;
-    for (char C : Value) {
-      if (llvm::isUpper(C) || llvm::isDigit(C) || C == '_' || C == '$')
-        continue;
-      return false;
-    }
-    return true;
-  };
-  const bool HasWhitespace =
-      Content.find_first_of(" \t\n\v\f\r") != StringRef::npos;
-
-  if (!HasWhitespace && IsUppercaseWord(Content))
-    return CommentKind::Sentinel;
   if (Content.ends_with('='))
     return CommentKind::Parameter;
   return CommentKind::Plain;

@@ -324,8 +324,6 @@ enum class CommentKind {
   DocString,
   // A comment that looks like a parameter, e.g. /*param=*/.
   Parameter,
-  // A comment that is a sentinel, e.g. /*FALLTHROUGH*/.
-  Sentinel,
 };
 
 struct FormatToken {

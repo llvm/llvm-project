@@ -4204,13 +4204,6 @@ TEST_F(TokenAnnotatorTest, ClassifiesBlockCommentKinds) {
       {"int value; /* comment */\n", CommentKind::Plain},
       {"int value; /** doc */\n", CommentKind::DocString},
       {"call(/*Arg=*/value);", CommentKind::Parameter},
-      {"switch (x) {\n"
-       "case 0:\n"
-       "  /*FALLTHROUGH*/\n"
-       "default:\n"
-       "  break;\n"
-       "}\n",
-       CommentKind::Sentinel},
   };
 
   for (const auto &Test : Cases) {
