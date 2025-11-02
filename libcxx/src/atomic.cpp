@@ -60,7 +60,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #ifdef __linux__
 
 template <std::size_t _Size>
-static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
+static void __platform_wait_on_address(void const volatile* __ptr, void const* __val) {
   static_assert(_Size == 4, "Can only wait on 4 bytes value");
   char buffer[_Size];
   std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
@@ -69,7 +69,7 @@ static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void c
 }
 
 template <std::size_t _Size>
-static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
+static void __platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
   static_assert(_Size == 4, "Can only wake up on 4 bytes value");
   _LIBCPP_FUTEX(__ptr, FUTEX_WAKE_PRIVATE, __notify_one ? 1 : INT_MAX, 0, 0, 0);
 }
@@ -86,7 +86,7 @@ extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value)
 #  define ULF_WAKE_ALL 0x00000100
 
 template <std::size_t _Size>
-static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
+static void __platform_wait_on_address(void const volatile* __ptr, void const* __val) {
   static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
   char buffer[_Size];
   std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
@@ -97,7 +97,7 @@ static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void c
 }
 
 template <std::size_t _Size>
-static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
+static void __platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
   static_assert(_Size == 8 || _Size == 4, "Can only wake up on 8 bytes or 4 bytes value");
 
   if constexpr (_Size == 4)
@@ -114,7 +114,7 @@ static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool _
  */
 
 template <std::size_t _Size>
-static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
+static void __platform_wait_on_address(void const volatile* __ptr, void const* __val) {
   static_assert(_Size == 8, "Can only wait on 8 bytes value");
   char buffer[_Size];
   std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
@@ -122,7 +122,7 @@ static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void c
 }
 
 template <std::size_t _Size>
-static void __libcpp_platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
+static void __platform_wake_by_address(void const volatile* __ptr, bool __notify_one) {
   static_assert(_Size == 8, "Can only wake up on 8 bytes value");
   _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
 }
@@ -196,14 +196,14 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 // Baseline is just a timed backoff
 
 template <std::size_t _Size>
-static void __libcpp_platform_wait_on_address(void const volatile* __ptr, void const* __val) {
+static void __platform_wait_on_address(void const volatile* __ptr, void const* __val) {
   __libcpp_thread_poll_with_backoff(
       [=]() -> bool { return !std::memcmp(const_cast<const void*>(__ptr), __val, _Size); },
       __libcpp_timed_backoff_policy());
 }
 
 template <std::size_t _Size>
-static void __libcpp_platform_wake_by_address(void const volatile*, bool) {}
+static void __platform_wake_by_address(void const volatile*, bool) {}
 
 #endif // __linux__
 
@@ -219,7 +219,7 @@ static void __contention_notify(
     __cxx_atomic_contention_t volatile* __waiter_count, void const volatile* __address_to_notify, bool __notify_one) {
   if (0 != __cxx_atomic_load(__waiter_count, memory_order_seq_cst))
     // We only call 'wake' if we consumed a contention bit here.
-    __libcpp_platform_wake_by_address<_Size>(__address_to_notify, __notify_one);
+    __platform_wake_by_address<_Size>(__address_to_notify, __notify_one);
 }
 
 template <std::size_t _Size>
@@ -231,7 +231,7 @@ static void __contention_wait(__cxx_atomic_contention_t volatile* __waiter_count
   // There are no platform guarantees of a memory barrier in the platform wait implementation
   __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.
-  __libcpp_platform_wait_on_address<_Size>(__address_to_wait, __old_value);
+  __platform_wait_on_address<_Size>(__address_to_wait, __old_value);
   __cxx_atomic_fetch_sub(__waiter_count, __cxx_contention_t(1), memory_order_release);
 }
 
@@ -289,41 +289,40 @@ static void __atomic_notify_global_table(void const volatile* __location) {
 // =============================
 
 // global
-_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor_global(void const volatile* __location) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __atomic_monitor_global(void const volatile* __location) noexcept {
   auto const __entry = __get_global_contention_state(__location);
   return __cxx_atomic_load(&__entry->__platform_state, memory_order_acquire);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_global_table(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
+__atomic_wait_global_table(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
   auto const __entry = __get_global_contention_state(__location);
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
       &__entry->__waiter_count, &__entry->__platform_state, &__old_value);
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_global_table(void const volatile* __location) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_global_table(void const volatile* __location) noexcept {
   __atomic_notify_global_table(__location);
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_global_table(void const volatile* __location) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_global_table(void const volatile* __location) noexcept {
   __atomic_notify_global_table(__location);
 }
 
 // native
 
 template <std::size_t _Size>
-_LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native(void const volatile* __address, void const* __old_value) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_native(void const volatile* __address, void const* __old_value) noexcept {
   __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value);
 }
 
 template <std::size_t _Size>
-_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native(void const volatile* __location) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native(void const volatile* __location) noexcept {
   __contention_notify<_Size>(__get_native_waiter_count(__location), __location, true);
 }
 
 template <std::size_t _Size>
-_LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native(void const volatile* __location) noexcept {
+_LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(void const volatile* __location) noexcept {
   __contention_notify<_Size>(__get_native_waiter_count(__location), __location, false);
 }
 
@@ -334,25 +333,24 @@ _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native(void const vola
 #if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
 
 #  define _INSTANTIATE(_SIZE)                                                                                          \
-    template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait_native<_SIZE>(                                        \
-        void const volatile*, void const*) noexcept;                                                                   \
-    template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<_SIZE>(void const volatile*) noexcept;   \
-    template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<_SIZE>(void const volatile*) noexcept;
+    template _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_native<_SIZE>(void const volatile*, void const*) noexcept;   \
+    template _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native<_SIZE>(void const volatile*) noexcept;          \
+    template _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native<_SIZE>(void const volatile*) noexcept;
 
-_LIBCPP_ATOMIC_WAIT_SIZES_LIST(_INSTANTIATE)
+_LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_INSTANTIATE)
 
 #  undef _INSTANTIATE
 
 #else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait_native<sizeof(__cxx_contention_t)>(
-    void const volatile* __address, void const* __old_value) noexcept;
+template _LIBCPP_EXPORTED_FROM_ABI void
+__atomic_wait_native<sizeof(__cxx_contention_t)>(void const volatile* __address, void const* __old_value) noexcept;
 
 template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_notify_one_native<sizeof(__cxx_contention_t)>(void const volatile* __location) noexcept;
+__atomic_notify_one_native<sizeof(__cxx_contention_t)>(void const volatile* __location) noexcept;
 
 template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_notify_all_native<sizeof(__cxx_contention_t)>(void const volatile* __location) noexcept;
+__atomic_notify_all_native<sizeof(__cxx_contention_t)>(void const volatile* __location) noexcept;
 
 #endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
@@ -361,33 +359,36 @@ __libcpp_atomic_notify_all_native<sizeof(__cxx_contention_t)>(void const volatil
 // =============================================================
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile* __location) noexcept {
-  __libcpp_atomic_notify_one_global_table(__location);
+  __atomic_notify_global_table(__location);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile* __location) noexcept {
-  __libcpp_atomic_notify_all_global_table(__location);
+  __atomic_notify_global_table(__location);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI __cxx_contention_t __libcpp_atomic_monitor(void const volatile* __location) noexcept {
-  return __libcpp_atomic_monitor_global(__location);
+  auto const __entry = __get_global_contention_state(__location);
+  return __cxx_atomic_load(&__entry->__platform_state, memory_order_acquire);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
-  __libcpp_atomic_wait_global_table(__location, __old_value);
+  auto const __entry = __get_global_contention_state(__location);
+  __contention_wait<sizeof(__cxx_atomic_contention_t)>(
+      &__entry->__waiter_count, &__entry->__platform_state, &__old_value);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile* __location) noexcept {
-  __libcpp_atomic_notify_one_native<sizeof(__cxx_atomic_contention_t)>(__location);
+  __contention_notify<sizeof(__cxx_atomic_contention_t)>(__get_native_waiter_count(__location), __location, true);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(__cxx_atomic_contention_t const volatile* __location) noexcept {
-  __libcpp_atomic_notify_all_native<sizeof(__cxx_atomic_contention_t)>(__location);
+  __contention_notify<sizeof(__cxx_atomic_contention_t)>(__get_native_waiter_count(__location), __location, false);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx_contention_t __old_value) noexcept {
-  __libcpp_atomic_wait_native<sizeof(__cxx_atomic_contention_t)>(__location, &__old_value);
+  __contention_wait<sizeof(__cxx_atomic_contention_t)>(__get_native_waiter_count(__location), __location, &__old_value);
 }
 
 // this function is even unused in the old ABI
