@@ -1,4 +1,4 @@
-; RUN: opt -S -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-compute %s | FileCheck %s
+; RUN: opt -S -scalarizer -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-compute %s | FileCheck %s
 
 define noundef i32 @wave_bitor_simple(i32 noundef %p1) {
 entry:
