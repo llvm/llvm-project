@@ -575,3 +575,69 @@ define <4 x i32> @knownbits_sabd_and_mul_mask(<4 x i32> %a0, <4 x i32> %a1) {
   %6 = shufflevector <4 x i32> %5, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
   ret <4 x i32> %6
 }
+
+define <4 x i16> @trunc_abdu_foldable(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: trunc_abdu_foldable:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uabd v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: trunc_abdu_foldable:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    uabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    ret
+  %ext_a = zext <4 x i16> %a to <4 x i32>
+  %ext_b = zext <4 x i16> %b to <4 x i32>
+  %abd = call <4 x i32> @llvm.aarch64.neon.uabd.v4i32(<4 x i32> %ext_a, <4 x i32> %ext_b)
+  %trunc = trunc <4 x i32> %abd to <4 x i16>
+  ret <4 x i16> %trunc
+}
+
+define <4 x i16> @trunc_abds_foldable(<4 x i16> %a, <4 x i16> %b) {
+; CHECK-SD-LABEL: trunc_abds_foldable:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sabd v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: trunc_abds_foldable:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    ret
+  %a32 = sext <4 x i16> %a to <4 x i32>
+  %b32 = sext <4 x i16> %b to <4 x i32>
+  %abd32 = call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %a32, <4 x i32> %b32)
+  %res16 = trunc <4 x i32> %abd32 to <4 x i16>
+  ret <4 x i16> %res16
+}
+
+define <4 x i16> @trunc_abdu_not_foldable(<4 x i16> %a, <4 x i32> %b) {
+; CHECK-LABEL: trunc_abdu_not_foldable:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    uabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+  %ext_a = zext <4 x i16> %a to <4 x i32>
+  %abd = call <4 x i32> @llvm.aarch64.neon.uabd.v4i32(<4 x i32> %ext_a, <4 x i32> %b)
+  %trunc = trunc <4 x i32> %abd to <4 x i16>
+  ret <4 x i16> %trunc
+}
+
+define <4 x i16> @truncate_abds_testcase1(<4 x i16> %a, <4 x i32> %b) {
+; CHECK-LABEL: truncate_abds_testcase1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+  %a32 = sext <4 x i16> %a to <4 x i32>
+  %abd32 = call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %a32, <4 x i32> %b)
+  %res16 = trunc <4 x i32> %abd32 to <4 x i16>
+  ret <4 x i16> %res16
+}

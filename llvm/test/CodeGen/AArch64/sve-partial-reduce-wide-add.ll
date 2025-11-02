@@ -18,7 +18,7 @@ define <vscale x 2 x i64> @signed_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <vsc
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i32> %input to <vscale x 4 x i64>
-    %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> %acc, <vscale x 4 x i64> %input.wide)
+    %partial.reduce = tail call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> %acc, <vscale x 4 x i64> %input.wide)
     ret <vscale x 2 x i64> %partial.reduce
 }
 
@@ -38,7 +38,7 @@ define <vscale x 2 x i64> @unsigned_wide_add_nxv4i32(<vscale x 2 x i64> %acc, <v
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i32> %input to <vscale x 4 x i64>
-    %partial.reduce = tail call <vscale x 2 x i64> @llvm.experimental.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> %acc, <vscale x 4 x i64> %input.wide)
+    %partial.reduce = tail call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv4i64(<vscale x 2 x i64> %acc, <vscale x 4 x i64> %input.wide)
     ret <vscale x 2 x i64> %partial.reduce
 }
 
@@ -58,7 +58,7 @@ define <vscale x 4 x i32> @signed_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <vsc
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i16> %input to <vscale x 8 x i32>
-    %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %input.wide)
+    %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %input.wide)
     ret <vscale x 4 x i32> %partial.reduce
 }
 
@@ -78,7 +78,7 @@ define <vscale x 4 x i32> @unsigned_wide_add_nxv8i16(<vscale x 4 x i32> %acc, <v
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i16> %input to <vscale x 8 x i32>
-    %partial.reduce = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %input.wide)
+    %partial.reduce = tail call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv8i32(<vscale x 4 x i32> %acc, <vscale x 8 x i32> %input.wide)
     ret <vscale x 4 x i32> %partial.reduce
 }
 
@@ -98,7 +98,7 @@ define <vscale x 8 x i16> @signed_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <vsc
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 16 x i8> %input to <vscale x 16 x i16>
-    %partial.reduce = tail call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> %acc, <vscale x 16 x i16> %input.wide)
+    %partial.reduce = tail call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> %acc, <vscale x 16 x i16> %input.wide)
     ret <vscale x 8 x i16> %partial.reduce
 }
 
@@ -118,7 +118,7 @@ define <vscale x 8 x i16> @unsigned_wide_add_nxv16i8(<vscale x 8 x i16> %acc, <v
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 16 x i8> %input to <vscale x 16 x i16>
-    %partial.reduce = tail call <vscale x 8 x i16> @llvm.experimental.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> %acc, <vscale x 16 x i16> %input.wide)
+    %partial.reduce = tail call <vscale x 8 x i16> @llvm.vector.partial.reduce.add.nxv8i16.nxv16i16(<vscale x 8 x i16> %acc, <vscale x 16 x i16> %input.wide)
     ret <vscale x 8 x i16> %partial.reduce
 }
 
@@ -142,7 +142,7 @@ define <vscale x 2 x i32> @signed_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vsc
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 4 x i16> %input to <vscale x 4 x i32>
-    %partial.reduce = tail call <vscale x 2 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
+    %partial.reduce = tail call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
     ret <vscale x 2 x i32> %partial.reduce
 }
 
@@ -164,7 +164,7 @@ define <vscale x 2 x i32> @unsigned_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <v
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 4 x i16> %input to <vscale x 4 x i32>
-    %partial.reduce = tail call <vscale x 2 x i32> @llvm.experimental.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
+    %partial.reduce = tail call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv4i32(<vscale x 2 x i32> %acc, <vscale x 4 x i32> %input.wide)
     ret <vscale x 2 x i32> %partial.reduce
 }
 
@@ -190,7 +190,7 @@ define <vscale x 4 x i64> @signed_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <vsc
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = sext <vscale x 8 x i32> %input to <vscale x 8 x i64>
-    %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
+    %partial.reduce = tail call <vscale x 4 x i64> @llvm.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
     ret <vscale x 4 x i64> %partial.reduce
 }
 
@@ -216,6 +216,6 @@ define <vscale x 4 x i64> @unsigned_wide_add_nxv8i32(<vscale x 4 x i64> %acc, <v
 ; CHECK-SVE2-NEXT:    ret
 entry:
     %input.wide = zext <vscale x 8 x i32> %input to <vscale x 8 x i64>
-    %partial.reduce = tail call <vscale x 4 x i64> @llvm.experimental.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
+    %partial.reduce = tail call <vscale x 4 x i64> @llvm.vector.partial.reduce.add.nxv4i64.nxv8i64(<vscale x 4 x i64> %acc, <vscale x 8 x i64> %input.wide)
     ret <vscale x 4 x i64> %partial.reduce
 }

@@ -13,9 +13,9 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/Cuda.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/OpenACC.h"
@@ -445,7 +445,8 @@ private:
                                        /*mustBeHeap=*/true);
   }
 
-  void postAllocationAction(const Allocation &alloc) {
+  void postAllocationAction(const Allocation &alloc,
+                            const fir::MutableBoxValue &box) {
     if (alloc.getSymbol().test(Fortran::semantics::Symbol::Flag::AccDeclare))
       Fortran::lower::attachDeclarePostAllocAction(converter, builder,
                                                    alloc.getSymbol());
@@ -481,9 +482,19 @@ private:
       // Pointers must use PointerAllocate so that their deallocations
       // can be validated.
       genInlinedAllocation(alloc, box);
-      postAllocationAction(alloc);
+      postAllocationAction(alloc, box);
       setPinnedToFalse();
       return;
+    }
+
+    // Preserve characters' dynamic length.
+    if (lenParams.empty() && box.isCharacter() &&
+        !box.hasNonDeferredLenParams()) {
+      auto charTy = mlir::dyn_cast<fir::CharacterType>(box.getEleTy());
+      if (charTy && charTy.hasDynamicLen()) {
+        fir::ExtendedValue exv{box};
+        lenParams.push_back(fir::factory::readCharLen(builder, loc, exv));
+      }
     }
 
     // Generate a sequence of runtime calls.
@@ -504,7 +515,7 @@ private:
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-    postAllocationAction(alloc);
+    postAllocationAction(alloc, box);
     errorManager.assignStat(builder, loc, stat);
   }
 
@@ -618,6 +629,10 @@ private:
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+      if (Fortran::semantics::IsCUDADevice(*sym))
+        TODO(loc, "CUDA Fortran: allocate with device source");
+
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box, allocatorIdx);
@@ -647,7 +662,7 @@ private:
       setPinnedToFalse();
     }
     fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
-    postAllocationAction(alloc);
+    postAllocationAction(alloc, box);
     errorManager.assignStat(builder, loc, stat);
   }
 
@@ -756,6 +771,15 @@ private:
                               const fir::MutableBoxValue &box,
                               ErrorManager &errorManager,
                               const Fortran::semantics::Symbol &sym) {
+
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        if (derivedTypeSpec->HasDefaultInitialization(
+                /*ignoreAllocatable=*/true, /*ignorePointer=*/true))
+          TODO(loc,
+               "CUDA Fortran: allocate on device with default initialization");
+
     Fortran::lower::StatementContext stmtCtx;
     cuf::DataAttributeAttr cudaAttr =
         Fortran::lower::translateSymbolCUFDataAttribute(builder.getContext(),

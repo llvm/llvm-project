@@ -686,9 +686,6 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
         /* Outlined code is optimized code by definition. */
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
 
-    // Don't add any new variables to the subprogram.
-    DB.finalizeSubprogram(OutlinedSP);
-
     // Attach subprogram to the function.
     F->setSubprogram(OutlinedSP);
     // We're done with the DIBuilder.

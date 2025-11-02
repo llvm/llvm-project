@@ -99,7 +99,7 @@ namespace {
 ///   return %7, %8 : vector<2x3xi32>, vector<2xi32>
 /// ```
 struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ScanOp scanOp,
                                 PatternRewriter &rewriter) const override {

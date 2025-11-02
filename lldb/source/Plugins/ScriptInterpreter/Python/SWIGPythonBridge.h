@@ -107,6 +107,7 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ProcessAttachInfoSP attach_info_sp);
   static PythonObject ToSWIGWrapper(lldb::ProcessLaunchInfoSP launch_info_sp);
   static PythonObject ToSWIGWrapper(lldb::DataExtractorSP data_extractor_sp);
+  static PythonObject ToSWIGWrapper(lldb::DescriptionLevel level);
 
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb);
@@ -157,8 +158,9 @@ public:
   static PyObject *LLDBSwigPython_GetChildAtIndex(PyObject *implementor,
                                                   uint32_t idx);
 
-  static int LLDBSwigPython_GetIndexOfChildWithName(PyObject *implementor,
-                                                    const char *child_name);
+  static uint32_t
+  LLDBSwigPython_GetIndexOfChildWithName(PyObject *implementor,
+                                         const char *child_name);
 
   static lldb::ValueObjectSP
   LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);
@@ -256,11 +258,13 @@ public:
 
 void *LLDBSWIGPython_CastPyObjectToSBData(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBBreakpointLocation(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);

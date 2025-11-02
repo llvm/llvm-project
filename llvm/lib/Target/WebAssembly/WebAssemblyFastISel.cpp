@@ -912,6 +912,8 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (!IsVoid)
     updateValueMap(Call, ResultReg);
+
+  diagnoseDontCall(*Call);
   return true;
 }
 

@@ -360,3 +360,16 @@ void bad38() try {} catch(...) {}
 template<typename>
 [[clang::sycl_kernel_entry_point(BADKN<39>)]]
 void bad39() try {} catch(...) {}
+
+// expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute only applies to functions}}
+[[clang::sycl_kernel_entry_point(BADKN<40>)]];
+
+void bad41() {
+  // expected-error@+1 {{'clang::sycl_kernel_entry_point' attribute cannot be applied to a statement}}
+  [[clang::sycl_kernel_entry_point(BADKN<41>)]];
+}
+
+struct B42 {
+  // expected-warning@+1 {{declaration does not declare anything}}
+  [[clang::sycl_kernel_entry_point(BADKN<42>)]];
+};

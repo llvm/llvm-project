@@ -154,17 +154,17 @@ void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
-static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
-                                           const Function &F) {
+static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
+                                        const Function &F) {
   if (auto MA = F.getFnStackAlign())
     return *MA;
-  return STI->getFrameLowering()->getStackAlign();
+  return STI.getFrameLowering()->getStackAlign();
 }
 
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
-    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
+    : F(F), Target(Target), STI(STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -195,7 +195,7 @@ void MachineFunction::init() {
 
   // We can realign the stack if the target supports it and the user hasn't
   // explicitly asked us not to.
-  bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
+  bool CanRealignSP = STI.getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
   bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
                         F.hasFnAttribute("stackrealign");
@@ -209,11 +209,12 @@ void MachineFunction::init() {
     FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
-  Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
+  Alignment = STI.getTargetLowering()->getMinFunctionAlignment();
 
-  if (!F.getAlign() && !F.hasOptSize())
+  // FIXME: Shouldn't use pref alignment if explicit alignment is set on F.
+  if (!F.hasOptSize())
     Alignment = std::max(Alignment,
-                         STI->getTargetLowering()->getPrefFunctionAlignment());
+                         STI.getTargetLowering()->getPrefFunctionAlignment());
 
   // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
   // to load a type hash before the function label. Ensure functions are aligned
@@ -718,43 +719,41 @@ MachineFunction::CallSiteInfo::CallSiteInfo(const CallBase &CB) {
   }
 }
 
-namespace llvm {
+template <>
+struct llvm::DOTGraphTraits<const MachineFunction *>
+    : public DefaultDOTGraphTraits {
+  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
-  template<>
-  struct DOTGraphTraits<const MachineFunction*> : public DefaultDOTGraphTraits {
-    DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+  static std::string getGraphName(const MachineFunction *F) {
+    return ("CFG for '" + F->getName() + "' function").str();
+  }
 
-    static std::string getGraphName(const MachineFunction *F) {
-      return ("CFG for '" + F->getName() + "' function").str();
+  std::string getNodeLabel(const MachineBasicBlock *Node,
+                           const MachineFunction *Graph) {
+    std::string OutStr;
+    {
+      raw_string_ostream OSS(OutStr);
+
+      if (isSimple()) {
+        OSS << printMBBReference(*Node);
+        if (const BasicBlock *BB = Node->getBasicBlock())
+          OSS << ": " << BB->getName();
+      } else
+        Node->print(OSS);
     }
 
-    std::string getNodeLabel(const MachineBasicBlock *Node,
-                             const MachineFunction *Graph) {
-      std::string OutStr;
-      {
-        raw_string_ostream OSS(OutStr);
+    if (OutStr[0] == '\n')
+      OutStr.erase(OutStr.begin());
 
-        if (isSimple()) {
-          OSS << printMBBReference(*Node);
-          if (const BasicBlock *BB = Node->getBasicBlock())
-            OSS << ": " << BB->getName();
-        } else
-          Node->print(OSS);
+    // Process string output to make it nicer...
+    for (unsigned i = 0; i != OutStr.length(); ++i)
+      if (OutStr[i] == '\n') { // Left justify
+        OutStr[i] = '\\';
+        OutStr.insert(OutStr.begin() + i + 1, 'l');
       }
-
-      if (OutStr[0] == '\n') OutStr.erase(OutStr.begin());
-
-      // Process string output to make it nicer...
-      for (unsigned i = 0; i != OutStr.length(); ++i)
-        if (OutStr[i] == '\n') {                            // Left justify
-          OutStr[i] = '\\';
-          OutStr.insert(OutStr.begin()+i+1, 'l');
-        }
-      return OutStr;
-    }
-  };
-
-} // end namespace llvm
+    return OutStr;
+  }
+};
 
 void MachineFunction::viewCFG() const
 {

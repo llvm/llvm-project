@@ -561,7 +561,7 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
     return stack;
 
   fir::HeapType firHeapTy = mlir::cast<fir::HeapType>(heapTy);
-  LLVM_ATTRIBUTE_UNUSED fir::ReferenceType firRefTy =
+  [[maybe_unused]] fir::ReferenceType firRefTy =
       mlir::cast<fir::ReferenceType>(stackTy);
   assert(firHeapTy.getElementType() == firRefTy.getElementType() &&
          "Allocations must have the same type");
@@ -600,10 +600,7 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
   // replace references to heap allocation with references to stack allocation
   mlir::Value newValue = convertAllocationType(
       rewriter, allocmem.getLoc(), allocmem.getResult(), alloca->getResult());
-  rewriter.replaceAllUsesWith(allocmem.getResult(), newValue);
-
-  // remove allocmem operation
-  rewriter.eraseOp(allocmem.getOperation());
+  rewriter.replaceOp(allocmem, newValue);
 
   return mlir::success();
 }
@@ -813,10 +810,10 @@ void AllocMemConversion::insertLifetimeMarkers(
     mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPoint(oldAlloc);
     mlir::Value ptr = fir::factory::genLifetimeStart(
-        rewriter, newAlloc.getLoc(), newAlloc, *size, &*dl);
+        rewriter, newAlloc.getLoc(), newAlloc, &*dl);
     visitFreeMemOp(oldAlloc, [&](mlir::Operation *op) {
       rewriter.setInsertionPoint(op);
-      fir::factory::genLifetimeEnd(rewriter, op->getLoc(), ptr, *size);
+      fir::factory::genLifetimeEnd(rewriter, op->getLoc(), ptr);
     });
     newAlloc->setAttr(attrName, rewriter.getUnitAttr());
   }

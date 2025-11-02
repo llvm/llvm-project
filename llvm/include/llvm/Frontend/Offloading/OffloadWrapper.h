@@ -13,6 +13,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 
+#include <string>
+
 namespace llvm {
 namespace offloading {
 using EntryArrayTy = std::pair<GlobalVariable *, GlobalVariable *>;
@@ -52,6 +54,24 @@ LLVM_ABI llvm::Error wrapHIPBinary(llvm::Module &M, llvm::ArrayRef<char> Images,
                                    EntryArrayTy EntryArray,
                                    llvm::StringRef Suffix = "",
                                    bool EmitSurfacesAndTextures = true);
+
+struct SYCLJITOptions {
+  // Target/compiler specific options that are suggested to use to "compile"
+  // program at runtime.
+  std::string CompileOptions;
+  // Target/compiler specific options that are suggested to use to "link"
+  // program at runtime.
+  std::string LinkOptions;
+};
+
+/// Wraps OffloadBinaries in the given \p Buffers into the module \p M
+/// as global symbols and registers the images with the SYCL Runtime.
+/// \param Options Compiler and linker options to be encoded for the later
+///  use by a runtime for JIT compilation.
+LLVM_ABI llvm::Error
+wrapSYCLBinaries(llvm::Module &M, llvm::ArrayRef<char> Buffer,
+                 SYCLJITOptions Options = SYCLJITOptions());
+
 } // namespace offloading
 } // namespace llvm
 

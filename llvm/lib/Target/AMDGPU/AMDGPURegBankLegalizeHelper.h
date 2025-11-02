@@ -11,6 +11,7 @@
 
 #include "AMDGPURegBankLegalizeRules.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
@@ -71,6 +72,7 @@ class RegBankLegalizeHelper {
   static constexpr LLT P6 = LLT::pointer(6, 32);
 
   MachineRegisterInfo::VRegAttrs SgprRB_S32 = {SgprRB, S32};
+  MachineRegisterInfo::VRegAttrs SgprRB_S16 = {SgprRB, S16};
   MachineRegisterInfo::VRegAttrs VgprRB_S32 = {VgprRB, S32};
   MachineRegisterInfo::VRegAttrs VccRB_S1 = {VccRB, S1};
 
@@ -107,6 +109,7 @@ private:
   void splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
   void widenLoad(MachineInstr &MI, LLT WideTy, LLT MergeTy = LLT());
+  void widenMMOToS32(GAnyLoad &MI) const;
 
   void lower(MachineInstr &MI, const RegBankLLTMapping &Mapping,
              SmallSet<Register, 4> &SgprWaterfallOperandRegs);
@@ -119,8 +122,11 @@ private:
   void lowerV_BFE(MachineInstr &MI);
   void lowerS_BFE(MachineInstr &MI);
   void lowerSplitTo32(MachineInstr &MI);
+  void lowerSplitTo16(MachineInstr &MI);
   void lowerSplitTo32Select(MachineInstr &MI);
   void lowerSplitTo32SExtInReg(MachineInstr &MI);
+  void lowerUnpackMinMax(MachineInstr &MI);
+  void lowerUnpackAExt(MachineInstr &MI);
 };
 
 } // end namespace AMDGPU

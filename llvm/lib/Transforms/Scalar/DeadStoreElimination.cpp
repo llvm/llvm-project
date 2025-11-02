@@ -38,6 +38,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -69,12 +70,14 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -269,7 +272,7 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *KillingI,
     if (KillingII->getIntrinsicID() == Intrinsic::masked_store) {
       // Masks.
       // TODO: check that KillingII's mask is a superset of the DeadII's mask.
-      if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
+      if (KillingII->getArgOperand(2) != DeadII->getArgOperand(2))
         return OW_Unknown;
     } else if (KillingII->getIntrinsicID() == Intrinsic::vp_store) {
       // Masks.
@@ -543,15 +546,8 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   };
 
   // Insert an unlinked dbg.assign intrinsic for the dead fragment after each
-  // overlapping dbg.assign intrinsic. The loop invalidates the iterators
-  // returned by getAssignmentMarkers so save a copy of the markers to iterate
-  // over.
-  auto LinkedRange = at::getAssignmentMarkers(Inst);
-  SmallVector<DbgVariableRecord *> LinkedDVRAssigns =
-      at::getDVRAssignmentMarkers(Inst);
-  SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
-                                           LinkedRange.end());
-  auto InsertAssignForOverlap = [&](auto *Assign) {
+  // overlapping dbg.assign intrinsic.
+  for (DbgVariableRecord *Assign : at::getDVRAssignmentMarkers(Inst)) {
     std::optional<DIExpression::FragmentInfo> NewFragment;
     if (!at::calculateFragmentIntersect(DL, OriginalDest, DeadSliceOffsetInBits,
                                         DeadSliceSizeInBits, Assign,
@@ -561,11 +557,11 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
       // cautious and unlink the whole assignment from the store.
       Assign->setKillAddress();
       Assign->setAssignId(GetDeadLink());
-      return;
+      continue;
     }
     // No intersect.
     if (NewFragment->SizeInBits == 0)
-      return;
+      continue;
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
     auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
@@ -574,9 +570,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
     NewAssign->setKillAddress();
-  };
-  for_each(Linked, InsertAssignForOverlap);
-  for_each(LinkedDVRAssigns, InsertAssignForOverlap);
+  }
 }
 
 /// Update the attributes given that a memory access is updated (the
@@ -683,15 +677,13 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                     << "\n  KILLER [" << ToRemoveStart << ", "
                     << int64_t(ToRemoveStart + ToRemoveSize) << ")\n");
 
-  Value *DeadWriteLength = DeadIntrinsic->getLength();
-  Value *TrimmedLength = ConstantInt::get(DeadWriteLength->getType(), NewSize);
-  DeadIntrinsic->setLength(TrimmedLength);
+  DeadIntrinsic->setLength(NewSize);
   DeadIntrinsic->setDestAlignment(PrefAlign);
 
   Value *OrigDest = DeadIntrinsic->getRawDest();
   if (!IsOverwriteEnd) {
     Value *Indices[1] = {
-        ConstantInt::get(DeadWriteLength->getType(), ToRemoveSize)};
+        ConstantInt::get(DeadIntrinsic->getLength()->getType(), ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
         Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
         DeadI->getIterator());
@@ -814,9 +806,8 @@ tryToMergePartialOverlappingStores(StoreInst *KillingI, StoreInst *DeadI,
   return nullptr;
 }
 
-namespace {
 // Returns true if \p I is an intrinsic that does not read or write memory.
-bool isNoopIntrinsic(Instruction *I) {
+static bool isNoopIntrinsic(Instruction *I) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
@@ -837,7 +828,7 @@ bool isNoopIntrinsic(Instruction *I) {
 }
 
 // Check if we can ignore \p D for DSE.
-bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
+static bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
   Instruction *DI = D->getMemoryInst();
   // Calls that only access inaccessible memory cannot read or write any memory
   // locations we consider for elimination.
@@ -864,6 +855,8 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
 
   return false;
 }
+
+namespace {
 
 // A memory location wrapper that represents a MemoryLocation, `MemLoc`,
 // defined by `MemDef`.
@@ -898,23 +891,25 @@ struct MemoryDefWrapper {
   SmallVector<MemoryLocationWrapper, 1> DefinedLocations;
 };
 
-bool hasInitializesAttr(Instruction *I) {
-  CallBase *CB = dyn_cast<CallBase>(I);
-  return CB && CB->getArgOperandWithAttribute(Attribute::Initializes);
-}
-
 struct ArgumentInitInfo {
   unsigned Idx;
   bool IsDeadOrInvisibleOnUnwind;
   ConstantRangeList Inits;
 };
+} // namespace
+
+static bool hasInitializesAttr(Instruction *I) {
+  CallBase *CB = dyn_cast<CallBase>(I);
+  return CB && CB->getArgOperandWithAttribute(Attribute::Initializes);
+}
 
 // Return the intersected range list of the initializes attributes of "Args".
 // "Args" are call arguments that alias to each other.
 // If any argument in "Args" doesn't have dead_on_unwind attr and
 // "CallHasNoUnwindAttr" is false, return empty.
-ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
-                                              bool CallHasNoUnwindAttr) {
+static ConstantRangeList
+getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
+                            bool CallHasNoUnwindAttr) {
   if (Args.empty())
     return {};
 
@@ -933,6 +928,8 @@ ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
 
   return IntersectedIntervals;
 }
+
+namespace {
 
 struct DSEState {
   Function &F;
@@ -1363,7 +1360,7 @@ struct DSEState {
     if (auto *CB = dyn_cast<CallBase>(I)) {
       if (CB->getIntrinsicID() == Intrinsic::lifetime_end)
         return {
-            std::make_pair(MemoryLocation::getForArgument(CB, 1, &TLI), false)};
+            std::make_pair(MemoryLocation::getForArgument(CB, 0, &TLI), false)};
       if (Value *FreedOp = getFreedOperand(CB, &TLI))
         return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
     }
@@ -2337,10 +2334,11 @@ struct DSEState {
   // change state: whether make any change.
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
+} // namespace
 
 // Return true if "Arg" is function local and isn't captured before "CB".
-bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
-                               EarliestEscapeAnalysis &EA) {
+static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
+                                      EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
          capturesNothing(
@@ -2636,7 +2634,6 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   return MadeChange;
 }
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // DSE Pass
@@ -2665,4 +2662,78 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<MemorySSAAnalysis>();
   PA.preserve<LoopAnalysis>();
   return PA;
+}
+
+namespace {
+
+/// A legacy pass for the legacy pass manager that wraps \c DSEPass.
+class DSELegacyPass : public FunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  DSELegacyPass() : FunctionPass(ID) {
+    initializeDSELegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
+    AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+    DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    const TargetLibraryInfo &TLI =
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+    MemorySSA &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
+    PostDominatorTree &PDT =
+        getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+    bool Changed = eliminateDeadStores(F, AA, MSSA, DT, PDT, TLI, LI);
+
+#ifdef LLVM_ENABLE_STATS
+    if (AreStatisticsEnabled())
+      for (auto &I : instructions(F))
+        NumRemainingStores += isa<StoreInst>(&I);
+#endif
+
+    return Changed;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<PostDominatorTreeWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addPreserved<PostDominatorTreeWrapperPass>();
+    AU.addPreserved<MemorySSAWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<AssumptionCacheTracker>();
+  }
+};
+
+} // end anonymous namespace
+
+char DSELegacyPass::ID = 0;
+
+INITIALIZE_PASS_BEGIN(DSELegacyPass, "dse", "Dead Store Elimination", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_END(DSELegacyPass, "dse", "Dead Store Elimination", false,
+                    false)
+
+LLVM_ABI FunctionPass *llvm::createDeadStoreEliminationPass() {
+  return new DSELegacyPass();
 }

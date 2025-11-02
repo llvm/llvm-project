@@ -45,8 +45,8 @@ exit:
 
 define i32 @add_reduction_select_operand_constant_but_non_uniform() {
 ; CHECK-LABEL: define i32 @add_reduction_select_operand_constant_but_non_uniform() {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -62,20 +62,8 @@ define i32 @add_reduction_select_operand_constant_but_non_uniform() {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 42, %[[ENTRY]] ]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD2_REASS:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ADD2_REASS]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[RDX_NEXT]] = add i32 0, [[RDX]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD2_REASS]], 64
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi i32 [ [[RDX_NEXT]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[ADD_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 entry:
   br label %loop
@@ -97,5 +85,4 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ;.

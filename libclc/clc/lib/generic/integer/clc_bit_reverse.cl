@@ -8,8 +8,8 @@
 
 #include <clc/integer/clc_bit_reverse.h>
 
-#define FUNCTION __clc_bit_reverse
-#define __IMPL_FUNCTION(x) __builtin_elementwise_bitreverse
+#define __CLC_FUNCTION __clc_bit_reverse
+#define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_bitreverse
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/integer/gentype.inc>

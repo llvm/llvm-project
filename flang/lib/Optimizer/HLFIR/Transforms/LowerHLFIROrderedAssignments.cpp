@@ -96,7 +96,7 @@ struct MaskedArrayExpr {
   /// hlfir.elemental_addr that form the elemental tree producing
   /// the expression value. hlfir.elemental that produce values
   /// used inside transformational operations are not part of this set.
-  llvm::SmallSet<mlir::Operation *, 4> elementalParts{};
+  llvm::SmallPtrSet<mlir::Operation *, 4> elementalParts{};
   /// Was generateNoneElementalPart called?
   bool noneElementalPartWasGenerated = false;
   /// Is this expression the mask expression of the outer where statement?

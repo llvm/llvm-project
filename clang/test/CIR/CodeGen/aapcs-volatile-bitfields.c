@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -fclangir -emit-cir -fdump-record-layouts %s -o %t.cir 1> %t.cirlayout
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -fclangir -emit-cir -fdump-record-layouts %s -o %t.cir > %t.cirlayout
 // RUN: FileCheck --input-file=%t.cirlayout %s --check-prefix=CIR-LAYOUT
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 
-// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -fdump-record-layouts %s -o %t.ll 1> %t.ogcglayout
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -fdump-record-layouts %s -o %t.ll > %t.ogcglayout
 // RUN: FileCheck --input-file=%t.ogcglayout %s --check-prefix=OGCG-LAYOUT
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
@@ -86,7 +86,7 @@ int check_load(st1 *s1) {
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st1>>, !cir.ptr<!rec_st1>
 // CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][0] {name = "b"} : !cir.ptr<!rec_st1> -> !cir.ptr<!u16i>
 // CIR:    [[BITFI:%.*]] = cir.get_bitfield align(4) (#bfi_b, [[MEMBER]] {is_volatile} : !cir.ptr<!u16i>) -> !u32i
-// CIR:    [[CAST:%.*]] = cir.cast(integral, [[BITFI]] : !u32i), !s32i
+// CIR:    [[CAST:%.*]] = cir.cast integral [[BITFI]] : !u32i -> !s32i
 // CIR:    cir.store [[CAST]], [[RETVAL:%.*]] : !s32i, !cir.ptr<!s32i>
 // CIR:    [[RET:%.*]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:    cir.return [[RET]] : !s32i
@@ -118,7 +118,7 @@ int check_load_exception(st3 *s3) {
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st3>>, !cir.ptr<!rec_st3>
 // CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][2] {name = "b"} : !cir.ptr<!rec_st3> -> !cir.ptr<!u8i>
 // CIR:    [[BITFI:%.*]] = cir.get_bitfield align(4) (#bfi_b1, [[MEMBER]] {is_volatile} : !cir.ptr<!u8i>) -> !u32i
-// CIR:    [[CAST:%.*]] = cir.cast(integral, [[BITFI]] : !u32i), !s32i
+// CIR:    [[CAST:%.*]] = cir.cast integral [[BITFI]] : !u32i -> !s32i
 // CIR:    cir.store [[CAST]], [[RETVAL:%.*]] : !s32i, !cir.ptr<!s32i>
 // CIR:    [[RET:%.*]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:    cir.return [[RET]] : !s32i
@@ -180,7 +180,7 @@ void check_store(st2 *s2) {
 
 // CIR:  cir.func dso_local @check_store
 // CIR:    [[CONST:%.*]] = cir.const #cir.int<1> : !s32i
-// CIR:    [[CAST:%.*]] = cir.cast(integral, [[CONST]] : !s32i), !s16i
+// CIR:    [[CAST:%.*]] = cir.cast integral [[CONST]] : !s32i -> !s16i
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st2>>, !cir.ptr<!rec_st2>
 // CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][0] {name = "a"} : !cir.ptr<!rec_st2> -> !cir.ptr<!u32i>
 // CIR:    [[SETBF:%.*]] = cir.set_bitfield align(8) (#bfi_a, [[MEMBER]] : !cir.ptr<!u32i>, [[CAST]] : !s16i) {is_volatile} -> !s16i
@@ -211,7 +211,7 @@ void check_store_exception(st3 *s3) {
 
 // CIR:  cir.func dso_local @check_store_exception
 // CIR:    [[CONST:%.*]] = cir.const #cir.int<2> : !s32i
-// CIR:    [[CAST:%.*]] = cir.cast(integral, [[CONST]] : !s32i), !u32i
+// CIR:    [[CAST:%.*]] = cir.cast integral [[CONST]] : !s32i -> !u32i
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st3>>, !cir.ptr<!rec_st3>
 // CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][2] {name = "b"} : !cir.ptr<!rec_st3> -> !cir.ptr<!u8i>
 // CIR:    [[SETBF:%.*]] = cir.set_bitfield align(4) (#bfi_b1, [[MEMBER]] : !cir.ptr<!u8i>, [[CAST]] : !u32i) {is_volatile} -> !u32i
@@ -263,7 +263,7 @@ void check_store_second_member (st4 *s4) {
 
 // CIR:  cir.func dso_local @check_store_second_member
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
-// CIR:    [[CAST:%.*]] = cir.cast(integral, [[ONE]] : !s32i), !u64i
+// CIR:    [[CAST:%.*]] = cir.cast integral [[ONE]] : !s32i -> !u64i
 // CIR:    [[LOAD:%.*]] = cir.load align(8) {{.*}} : !cir.ptr<!cir.ptr<!rec_st4>>, !cir.ptr<!rec_st4>
 // CIR:    [[MEMBER:%.*]] = cir.get_member [[LOAD]][2] {name = "b"} : !cir.ptr<!rec_st4> -> !cir.ptr<!u16i>
 // CIR:    cir.set_bitfield align(8) (#bfi_b2, [[MEMBER]] : !cir.ptr<!u16i>, [[CAST]] : !u64i) {is_volatile} -> !u64i

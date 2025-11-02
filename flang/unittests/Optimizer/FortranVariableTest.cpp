@@ -19,10 +19,10 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = builder->create<mlir::ModuleOp>(loc);
+    moduleOp = mlir::ModuleOp::create(*builder, loc);
     builder->setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = builder->create<mlir::func::FuncOp>(
-        loc, "fortran_variable_tests", builder->getFunctionType({}, {}));
+    mlir::func::FuncOp func = mlir::func::FuncOp::create(*builder, loc,
+        "fortran_variable_tests", builder->getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder->setInsertionPointToStart(entryBlock);
   }
@@ -30,8 +30,8 @@ public:
   mlir::Location getLoc() { return builder->getUnknownLoc(); }
   mlir::Value createConstant(std::int64_t cst) {
     mlir::Type indexType = builder->getIndexType();
-    return builder->create<mlir::arith::ConstantOp>(
-        getLoc(), indexType, builder->getIntegerAttr(indexType, cst));
+    return mlir::arith::ConstantOp::create(
+        *builder, getLoc(), indexType, builder->getIntegerAttr(indexType, cst));
   }
 
   mlir::Value createShape(llvm::ArrayRef<mlir::Value> extents) {
@@ -49,7 +49,7 @@ TEST_F(FortranVariableTest, SimpleScalar) {
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
       /*shape=*/mlir::Value{}, /*typeParams=*/mlir::ValueRange{},
-      /*dummy_scope=*/nullptr, name,
+      /*dummy_scope=*/nullptr, /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 
@@ -75,7 +75,8 @@ TEST_F(FortranVariableTest, CharacterScalar) {
       *builder, loc, eleType, /*pinned=*/false, typeParams);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
-      /*shape=*/mlir::Value{}, typeParams, /*dummy_scope=*/nullptr, name,
+      /*shape=*/mlir::Value{}, typeParams, /*dummy_scope=*/nullptr,
+      /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 
@@ -106,7 +107,8 @@ TEST_F(FortranVariableTest, SimpleArray) {
   mlir::Value shape = createShape(extents);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
-      shape, /*typeParams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr, name,
+      shape, /*typeParams=*/mlir::ValueRange{}, /*dummy_scope=*/nullptr,
+      /*storage=*/nullptr, /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 
@@ -137,7 +139,8 @@ TEST_F(FortranVariableTest, CharacterArray) {
   mlir::Value shape = createShape(extents);
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = fir::DeclareOp::create(*builder, loc, addr.getType(), addr,
-      shape, typeParams, /*dummy_scope=*/nullptr, name,
+      shape, typeParams, /*dummy_scope=*/nullptr, /*storage=*/nullptr,
+      /*storage_offset=*/0, name,
       /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
       /*data_attr=*/cuf::DataAttributeAttr{});
 

@@ -24,8 +24,7 @@ using namespace llvm::dxil;
 namespace {
 class RegisterCostTests : public testing::Test {
 protected:
-  DirectXInstrInfo DXInstInfo;
-  DirectXRegisterInfo RI;
+  std::unique_ptr<DirectXInstrInfo> DXInstInfo;
   DirectXTargetLowering *DL;
 
   virtual void SetUp() {
@@ -37,11 +36,15 @@ protected:
     StringRef FS = "";
     DirectXTargetMachine TM(T, TT, CPU, FS, TargetOptions(), Reloc::Static,
                             CodeModel::Small, CodeGenOptLevel::Default, false);
+
     LLVMContext Context;
     Function *F =
         Function::Create(FunctionType::get(Type::getVoidTy(Context), false),
                          Function::ExternalLinkage, 0);
-    DL = new DirectXTargetLowering(TM, *TM.getSubtargetImpl(*F));
+    const DirectXSubtarget *DXSubtarget = TM.getSubtargetImpl(*F);
+    DL = new DirectXTargetLowering(TM, *DXSubtarget);
+    DXInstInfo = std::make_unique<DirectXInstrInfo>(*DXSubtarget);
+
     delete F;
   }
   virtual void TearDown() { delete DL; }
@@ -53,12 +56,12 @@ TEST_F(RegisterCostTests, TestRepRegClassForVTSet) {
 }
 
 TEST_F(RegisterCostTests, TestTrivialCopyCostGetter) {
-
-  const TargetRegisterClass *RC = DXInstInfo.getRegisterInfo().getRegClass(0);
+  const DirectXRegisterInfo &TRI = DXInstInfo->getRegisterInfo();
+  const TargetRegisterClass *RC = TRI.getRegClass(0);
   unsigned Cost = RC->getCopyCost();
   EXPECT_EQ(1u, Cost);
 
-  RC = RI.getRegClass(0);
+  RC = TRI.getRegClass(0);
   Cost = RC->getCopyCost();
   EXPECT_EQ(1u, Cost);
 }

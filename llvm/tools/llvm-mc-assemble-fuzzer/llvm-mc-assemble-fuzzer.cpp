@@ -31,6 +31,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -142,6 +143,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   static const std::vector<std::string> NoIncludeDirs;
   SrcMgr.setIncludeDirs(NoIncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   static std::string ArchName;
   std::string Error;
@@ -156,7 +158,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
   if (!MRI) {
-    errs() << "Unable to create target register info!";
+    errs() << "Unable to create target register info!\n";
     abort();
   }
 
@@ -164,12 +166,16 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   if (!MAI) {
-    errs() << "Unable to create target asm info!";
+    errs() << "Unable to create target asm info!\n";
     abort();
   }
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, FeaturesStr));
+  if (!STI) {
+    errs() << "Unable to create subtargettarget info!\n";
+    abort();
+  }
 
   MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(
@@ -178,8 +184,8 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
 
   const unsigned OutputAsmVariant = 0;
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
-  MCInstPrinter *IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
-      *MAI, *MCII, *MRI);
+  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
+      Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
   if (!IP) {
     errs()
       << "error: unable to create instruction printer for target triple '"
@@ -200,7 +206,7 @@ int AssembleOneInput(const uint8_t *Data, size_t Size) {
   std::unique_ptr<MCStreamer> Str;
 
   if (FileType == OFT_AssemblyFile) {
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
   } else {
     assert(FileType == OFT_ObjectFile && "Invalid file type!");

@@ -82,6 +82,7 @@ class PreprocessorLexer;
 class PreprocessorOptions;
 class ScratchBuffer;
 class TargetInfo;
+class NoTrivialPPDirectiveTracer;
 
 namespace Builtin {
 class Context;
@@ -353,6 +354,11 @@ private:
   /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
 
+  /// A preprocessor directive tracer to trace whether the preprocessing
+  /// state changed. These changes would mean most semantically observable
+  /// preprocessor state, particularly anything that is order dependent.
+  NoTrivialPPDirectiveTracer *DirTracer = nullptr;
+
   /// A position within a C++20 import-seq.
   class StdCXXImportSeq {
   public:
@@ -608,6 +614,8 @@ private:
     bool isImplementationUnit() const {
       return State == NamedModuleImplementation && !getName().contains(':');
     }
+
+    bool isNotAModuleDecl() const { return State == NotAModuleDecl; }
 
     StringRef getName() const {
       assert(isNamedModule() && "Can't get name from a non named module");
@@ -3090,6 +3098,10 @@ public:
   /// is same as itself before the call.
   bool setDeserializedSafeBufferOptOutMap(
       const SmallVectorImpl<SourceLocation> &SrcLocSeqs);
+
+  /// Whether we've seen pp-directives which may have changed the preprocessing
+  /// state.
+  bool hasSeenNoTrivialPPDirective() const;
 
 private:
   /// Helper functions to forward lexing to the actual lexer. They all share the

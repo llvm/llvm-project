@@ -17,7 +17,7 @@ define fastcc i32 @foo() {
   ; CHECK-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr17
   ; CHECK-NEXT:   $sgpr32 = frame-setup S_ADDK_I32 $sgpr32, 512, implicit-def dead $scc
   ; CHECK-NEXT:   $vgpr40 = V_WRITELANE_B32 killed $sgpr16, 2, undef $vgpr40
-  ; CHECK-NEXT:   BUNDLE implicit-def $sgpr16_sgpr17, implicit-def $sgpr16, implicit-def $sgpr16_lo16, implicit-def $sgpr16_hi16, implicit-def $sgpr17, implicit-def $sgpr17_lo16, implicit-def $sgpr17_hi16, implicit-def $scc {
+  ; CHECK-NEXT:   BUNDLE implicit-def $sgpr16_sgpr17, implicit-def $sgpr16, implicit-def $scc, implicit-def $sgpr17 {
   ; CHECK-NEXT:     $sgpr16_sgpr17 = S_GETPC_B64
   ; CHECK-NEXT:     $sgpr16 = S_ADD_U32 internal $sgpr16, target-flags(amdgpu-gotprel32-lo) @bar + 4, implicit-def $scc
   ; CHECK-NEXT:     $sgpr17 = S_ADDC_U32 internal $sgpr17, target-flags(amdgpu-gotprel32-hi) @bar + 12, implicit-def $scc, implicit internal $scc

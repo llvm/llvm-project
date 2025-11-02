@@ -630,7 +630,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
     const MCInstrDesc &MCID = TII->get(Opc);
     // Create a dummy virtual register for the SUBS def.
     Register DestReg =
-        MRI->createVirtualRegister(TII->getRegClass(MCID, 0, TRI, *MF));
+        MRI->createVirtualRegister(TII->getRegClass(MCID, 0, TRI));
     // Insert a SUBS Rn, #0 instruction instead of the cbz / cbnz.
     BuildMI(*Head, Head->end(), TermDL, MCID)
         .addReg(DestReg, RegState::Define | RegState::Dead)
@@ -639,7 +639,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
         .addImm(0);
     // SUBS uses the GPR*sp register classes.
     MRI->constrainRegClass(HeadCond[2].getReg(),
-                           TII->getRegClass(MCID, 1, TRI, *MF));
+                           TII->getRegClass(MCID, 1, TRI));
   }
 
   Head->splice(Head->end(), CmpBB, CmpBB->begin(), CmpBB->end());
@@ -686,10 +686,10 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CmpBBTailCC);
   const MCInstrDesc &MCID = TII->get(Opc);
   MRI->constrainRegClass(CmpMI->getOperand(FirstOp).getReg(),
-                         TII->getRegClass(MCID, 0, TRI, *MF));
+                         TII->getRegClass(MCID, 0, TRI));
   if (CmpMI->getOperand(FirstOp + 1).isReg())
     MRI->constrainRegClass(CmpMI->getOperand(FirstOp + 1).getReg(),
-                           TII->getRegClass(MCID, 1, TRI, *MF));
+                           TII->getRegClass(MCID, 1, TRI));
   MachineInstrBuilder MIB = BuildMI(*Head, CmpMI, CmpMI->getDebugLoc(), MCID)
                                 .add(CmpMI->getOperand(FirstOp)); // Register Rn
   if (isZBranch)

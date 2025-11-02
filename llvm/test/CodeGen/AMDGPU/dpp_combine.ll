@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
 
 ; GCN-LABEL: {{^}}dpp_add:
 ; GCN: global_load_{{dword|b32}} [[V:v[0-9]+]],
@@ -49,7 +51,9 @@ define amdgpu_kernel void @dpp_fadd(ptr addrspace(1) %arg) {
   ret void
 }
 
-; Fails to combine because v_mul_lo_u32 has no e32 or dpp form.
+; Fails to combine prior to gfx1251 because v_mul_lo_u32 has no e32 or dpp form.
+; Fails to combine on gfx1251 because DPP control value is invalid for DP DPP and v_mul_lo_u32 is
+; classified as DP DPP.
 ; GCN-LABEL: {{^}}dpp_mul:
 ; GCN: global_load_{{dword|b32}} [[V:v[0-9]+]],
 ; GCN: v_mov_b32_e32 [[V2:v[0-9]+]], [[V]]

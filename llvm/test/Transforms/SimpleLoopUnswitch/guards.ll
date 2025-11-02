@@ -38,25 +38,25 @@ exit:
 }
 
 define void @test_two_guards(i1 %cond1, i1 %cond2, i32 %N) {
-; CHECK-LABEL: define void @test_two_guards(i1 %cond1, i1 %cond2, i32 %N) {
+; CHECK-LABEL: @test_two_guards(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 %cond1, label %entry.split.us, label %entry.split
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
 ; CHECK:       entry.split.us:
-; CHECK-NEXT:    br label %loop.us
-; CHECK:       loop.us:
-; CHECK-NEXT:    %iv.us = phi i32 [ 0, %entry.split.us ], [ %iv.next.us, %guarded.us ]
-; CHECK-NEXT:    br label %guarded.us
-; CHECK:       guarded.us:
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 %cond2) [ "deopt"() ]
-; CHECK-NEXT:    %iv.next.us = add i32 %iv.us, 1
-; CHECK-NEXT:    %loop.cond.us = icmp slt i32 %iv.next.us, %N
-; CHECK-NEXT:    br i1 %loop.cond.us, label %loop.us, label %exit.split.us, !llvm.loop !2
-; CHECK:       exit.split.us:
-; CHECK-NEXT:    br label %exit
-; CHECK:       entry.split:
-; CHECK-NEXT:    br label %loop
-; CHECK:       loop:
-; CHECK-NEXT:    br label %deopt
+; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[ENTRY_SPLIT_US_SPLIT_US:%.*]], label [[ENTRY_SPLIT_US_SPLIT:%.*]]
+; CHECK:       entry.split.us.split.us:
+; CHECK-NEXT:    br label [[LOOP_US_US:%.*]]
+; CHECK:       loop.us.us:
+; CHECK-NEXT:    [[IV_US_US:%.*]] = phi i32 [ 0, [[ENTRY_SPLIT_US_SPLIT_US]] ], [ [[IV_NEXT_US_US:%.*]], [[GUARDED_US2:%.*]] ]
+; CHECK-NEXT:    br label [[GUARDED_US_US:%.*]]
+; CHECK:       guarded.us.us:
+; CHECK-NEXT:    br label [[GUARDED_US2]]
+; CHECK:       guarded.us2:
+; CHECK-NEXT:    [[IV_NEXT_US_US]] = add i32 [[IV_US_US]], 1
+; CHECK-NEXT:    [[LOOP_COND_US_US:%.*]] = icmp slt i32 [[IV_NEXT_US_US]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[LOOP_COND_US_US]], label [[LOOP_US_US]], label [[EXIT_SPLIT_US_SPLIT_US:%.*]]
+; CHECK:       deopt1:
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 false) [ "deopt"() ]
+; CHECK-NEXT:    unreachable
 ; CHECK:       deopt:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 false) [ "deopt"() ]
 ; CHECK-NEXT:    unreachable

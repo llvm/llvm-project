@@ -94,7 +94,9 @@ static void specializeForLoopForUnrolling(ForOp op) {
 
   OpBuilder b(op);
   IRMapping map;
-  Value constant = arith::ConstantIndexOp::create(b, op.getLoc(), minConstant);
+  Value constant = arith::ConstantOp::create(
+      b, op.getLoc(),
+      IntegerAttr::get(op.getUpperBound().getType(), minConstant));
   Value cond = arith::CmpIOp::create(b, op.getLoc(), arith::CmpIPredicate::eq,
                                      bound, constant);
   map.map(bound, constant);
@@ -150,6 +152,9 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                                              ValueRange{forOp.getLowerBound(),
                                                         forOp.getUpperBound(),
                                                         forOp.getStep()});
+  if (splitBound.getType() != forOp.getLowerBound().getType())
+    splitBound = b.createOrFold<arith::IndexCastOp>(
+        loc, forOp.getLowerBound().getType(), splitBound);
 
   // Create ForOp for partial iteration.
   b.setInsertionPointAfter(forOp);
@@ -230,12 +235,15 @@ LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
   auto loc = forOp.getLoc();
   Value splitBound = b.createOrFold<AffineApplyOp>(
       loc, ubMap, ValueRange{forOp.getLowerBound(), forOp.getStep()});
+  if (splitBound.getType() != forOp.getUpperBound().getType())
+    splitBound = b.createOrFold<arith::IndexCastOp>(
+        loc, forOp.getUpperBound().getType(), splitBound);
 
   // Peel the first iteration.
-  IRMapping map;
-  map.map(forOp.getUpperBound(), splitBound);
-  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation(), map));
-
+  firstIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
+  b.modifyOpInPlace(firstIteration, [&]() {
+    firstIteration.getUpperBoundMutable().assign(splitBound);
+  });
   // Update main loop with new lower bound.
   b.modifyOpInPlace(forOp, [&]() {
     forOp.getInitArgsMutable().assign(firstIteration->getResults());
@@ -256,6 +264,10 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const override {
+    if (forOp.getUnsignedCmp())
+      return rewriter.notifyMatchFailure(forOp,
+                                         "unsigned loops are not supported");
+
     // Do not peel already peeled loops.
     if (forOp->hasAttr(kPeeledLoopLabel))
       return failure();

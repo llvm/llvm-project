@@ -279,6 +279,9 @@ public:
   /// Res to the identifier contents.
   virtual bool parseIdentifier(StringRef &Res) = 0;
 
+  /// Parse identifier and get or create symbol for it.
+  bool parseSymbol(MCSymbol *&Res);
+
   /// Parse up to the end of statement and return the contents from the
   /// current token until the end of the statement; the current token on exit
   /// will be either the EndOfStatement or EOF.

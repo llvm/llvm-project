@@ -129,7 +129,8 @@ public:
       llvm::errs() << " {argno: " << Call.getNumArgs() << '}';
       llvm::errs() << " [" << Call.getKindAsString() << ']';
       llvm::errs() << '\n';
-      return true;
+      // We can't return `true` from this callback without binding the return
+      // value. Let's just fallthrough here and return `false`.
     }
     return false;
   }
@@ -183,7 +184,8 @@ public:
       llvm::errs() << "NewAllocator\n";
   }
 
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const {
     if (isCallbackEnabled(C, "Bind"))
       llvm::errs() << "Bind\n";
   }

@@ -53,9 +53,9 @@ builtins_sources = [
   "divsf3.c",
   "divsi3.c",
   "divti3.c",
+  "extendhfdf2.c",
   "extendhfsf2.c",
   "extendsfdf2.c",
-  "extendhfdf2.c",
   "ffsdi2.c",
   "ffssi2.c",
   "ffsti2.c",
@@ -523,6 +523,13 @@ if (current_cpu == "ve") {
   builtins_sources += [
     "ve/grow_stack.S",
     "ve/grow_stack_align.S",
+  ]
+}
+
+if (current_cpu == "wasm") {
+  builtins_sources += [
+    "wasm/__c_longjmp.S",
+    "wasm/__cpp_exception.S",
   ]
 }
 

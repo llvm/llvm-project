@@ -174,6 +174,11 @@ public:
 
   bool prefersVectorizedAddressing() const override;
 
+  /// Check whether Opcode1 has less throughput according to the scheduling
+  /// model than Opcode2.
+  bool hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
+                                                  unsigned Opcode2) const;
+
   InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
@@ -221,6 +226,11 @@ public:
                                      unsigned Index) const override;
 
   InstructionCost
+  getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                   TTI::TargetCostKind CostKind,
+                                   unsigned Index) const override;
+
+  InstructionCost
   getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
                          TTI::TargetCostKind CostKind) const override;
 
@@ -238,8 +248,9 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
-                                            const SCEV *Ptr) const override;
+  InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
@@ -418,7 +429,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const override;
+  bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const override;
 
   unsigned getEpilogueVectorizationMinVF() const override;
 
@@ -435,6 +446,14 @@ public:
 
   bool preferPredicatedReductionSelect() const override { return ST->hasSVE(); }
 
+  /// FP16 and BF16 operations are lowered to fptrunc(op(fpext, fpext) if the
+  /// architecture features are not present.
+  std::optional<InstructionCost>
+  getFP16BF16PromoteCost(Type *Ty, TTI::TargetCostKind CostKind,
+                         TTI::OperandValueInfo Op1Info,
+                         TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
+                         std::function<InstructionCost(Type *)> InstCost) const;
+
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                              std::optional<FastMathFlags> FMF,
@@ -446,7 +465,7 @@ public:
                            TTI::TargetCostKind CostKind) const override;
 
   InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      bool IsUnsigned, unsigned RedOpcode, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const override;
 
   InstructionCost

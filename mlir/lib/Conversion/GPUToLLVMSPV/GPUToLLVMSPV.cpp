@@ -259,7 +259,7 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
           }
           return std::nullopt;
         })
-        .Default([](auto) { return std::nullopt; });
+        .Default(std::nullopt);
   }
 
   static std::optional<std::string> getFuncName(gpu::ShuffleMode mode,
@@ -470,10 +470,13 @@ struct GPUToLLVMSPVConversionPass final
                         gpu::GPUFuncOp, gpu::GlobalIdOp, gpu::GridDimOp,
                         gpu::LaneIdOp, gpu::NumSubgroupsOp, gpu::ReturnOp,
                         gpu::ShuffleOp, gpu::SubgroupIdOp, gpu::SubgroupSizeOp,
-                        gpu::ThreadIdOp>();
+                        gpu::ThreadIdOp, gpu::PrintfOp>();
 
     populateGpuToLLVMSPVConversionPatterns(converter, patterns);
     populateGpuMemorySpaceAttributeConversions(converter);
+    patterns.add<GPUPrintfOpToLLVMCallLowering>(converter, /*addressSpace=*/2,
+                                                LLVM::cconv::CConv::SPIR_FUNC,
+                                                "_Z6printfPU3AS2Kcz");
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

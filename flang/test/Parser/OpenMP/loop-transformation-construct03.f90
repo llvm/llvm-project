@@ -21,10 +21,11 @@ end subroutine
 !CHECK-PARSE: | ExecutionPart -> Block
 !CHECK-PARSE-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | OmpBeginLoopDirective
-!CHECK-PARSE-NEXT: | | | | OmpLoopDirective -> llvm::omp::Directive = target teams distribute parallel do
+!CHECK-PARSE-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = target teams distribute parallel do
 !CHECK-PARSE-NEXT: | | | | OmpClauseList -> OmpClause -> Collapse -> Scalar -> Integer -> Constant -> Expr = '2_4'
 !CHECK-PARSE-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !CHECK-PARSE-NEXT: | | | | OmpClause -> Private -> OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'b'
+!CHECK-PARSE-NEXT: | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | DoConstruct
 !CHECK-PARSE-NEXT: | | | | NonLabelDoStmt
 !CHECK-PARSE-NEXT: | | | | | LoopControl -> LoopBounds

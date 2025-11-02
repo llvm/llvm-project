@@ -1,5 +1,4 @@
-//===--- TimeComparisonCheck.cpp - clang-tidy
-//--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +18,7 @@ namespace clang::tidy::abseil {
 void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
   auto Matcher =
       expr(comparisonOperatorWithCallee(functionDecl(
-               functionDecl(TimeConversionFunction()).bind("function_decl"))))
+               functionDecl(timeConversionFunction()).bind("function_decl"))))
           .bind("binop");
 
   Finder->addMatcher(Matcher, this);

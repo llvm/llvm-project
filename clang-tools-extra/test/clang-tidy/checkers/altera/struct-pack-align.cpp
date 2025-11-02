@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s altera-struct-pack-align %t -- -header-filter=.*
+// RUN: %check_clang_tidy %s altera-struct-pack-align %t -- -header-filter=.*
 
 // Struct needs both alignment and packing
 struct error {
@@ -10,8 +10,7 @@ struct error {
 // CHECK-MESSAGES: :[[@LINE-6]]:8: note: use "__attribute__((packed))" to reduce the amount of padding applied to struct 'error'
 // CHECK-MESSAGES: :[[@LINE-7]]:8: warning: accessing fields in struct 'error' is inefficient due to poor alignment; currently aligned to 8 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
 // CHECK-MESSAGES: :[[@LINE-8]]:8: note: use "__attribute__((aligned(16)))" to align struct 'error' to 16 bytes
-// CHECK-FIXES: __attribute__((packed))
-// CHECK-FIXES: __attribute__((aligned(16)));
+// CHECK-FIXES: } __attribute__((packed)) __attribute__((aligned(16)));
 
 // Struct is explicitly packed, but needs alignment
 struct error_packed {
@@ -21,7 +20,7 @@ struct error_packed {
 } __attribute__((packed));
 // CHECK-MESSAGES: :[[@LINE-5]]:8: warning: accessing fields in struct 'error_packed' is inefficient due to poor alignment; currently aligned to 1 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
 // CHECK-MESSAGES: :[[@LINE-6]]:8: note: use "__attribute__((aligned(16)))" to align struct 'error_packed' to 16 bytes
-// CHECK-FIXES: __attribute__((aligned(16)))
+// CHECK-FIXES: } __attribute__((aligned(16))) __attribute__((packed));
 
 // Struct is properly packed, but needs alignment
 struct align_only {
@@ -34,7 +33,7 @@ struct align_only {
 };
 // CHECK-MESSAGES: :[[@LINE-8]]:8: warning: accessing fields in struct 'align_only' is inefficient due to poor alignment; currently aligned to 8 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
 // CHECK-MESSAGES: :[[@LINE-9]]:8: note: use "__attribute__((aligned(16)))" to align struct 'align_only' to 16 bytes
-// CHECK-FIXES: __attribute__((aligned(16)));
+// CHECK-FIXES: } __attribute__((aligned(16)));
 
 // Struct is perfectly packed but wrongly aligned
 struct bad_align {
@@ -44,7 +43,7 @@ struct bad_align {
 } __attribute__((packed)) __attribute__((aligned(8)));
 // CHECK-MESSAGES: :[[@LINE-5]]:8: warning: accessing fields in struct 'bad_align' is inefficient due to poor alignment; currently aligned to 8 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
 // CHECK-MESSAGES: :[[@LINE-6]]:8: note: use "__attribute__((aligned(16)))" to align struct 'bad_align' to 16 bytes
-// CHECK-FIXES: __attribute__((aligned(16)));
+// CHECK-FIXES: } __attribute__((packed)) __attribute__((aligned(16)));
 
 struct bad_align2 {
   char a;
@@ -53,7 +52,7 @@ struct bad_align2 {
 } __attribute__((packed)) __attribute__((aligned(32)));
 // CHECK-MESSAGES: :[[@LINE-5]]:8: warning: accessing fields in struct 'bad_align2' is inefficient due to poor alignment; currently aligned to 32 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
 // CHECK-MESSAGES: :[[@LINE-6]]:8: note: use "__attribute__((aligned(16)))" to align struct 'bad_align2' to 16 bytes
-// CHECK-FIXES: __attribute__((aligned(16)));
+// CHECK-FIXES: } __attribute__((packed)) __attribute__((aligned(16)));
 
 struct bad_align3 {
   char a;
@@ -62,7 +61,7 @@ struct bad_align3 {
 } __attribute__((packed)) __attribute__((aligned(4)));
 // CHECK-MESSAGES: :[[@LINE-5]]:8: warning: accessing fields in struct 'bad_align3' is inefficient due to poor alignment; currently aligned to 4 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
 // CHECK-MESSAGES: :[[@LINE-6]]:8: note: use "__attribute__((aligned(16)))" to align struct 'bad_align3' to 16 bytes
-// CHECK-FIXES: __attribute__((aligned(16)));
+// CHECK-FIXES: } __attribute__((packed)) __attribute__((aligned(16)));
 
 // Struct is both perfectly packed and aligned
 struct success {
@@ -116,5 +115,4 @@ struct ContainsStructWithNoFields2 {
 // CHECK-MESSAGES: :[[@LINE-6]]:8: note: use "__attribute__((packed))" to reduce the amount of padding applied to struct 'ContainsStructWithNoFields2'
 // CHECK-MESSAGES: :[[@LINE-7]]:8: warning: accessing fields in struct 'ContainsStructWithNoFields2' is inefficient due to poor alignment; currently aligned to 8 bytes, but recommended alignment is 16 bytes [altera-struct-pack-align]
 // CHECK-MESSAGES: :[[@LINE-8]]:8: note: use "__attribute__((aligned(16)))" to align struct 'ContainsStructWithNoFields2' to 16 bytes
-// CHECK-FIXES: __attribute__((packed))
-// CHECK-FIXES: __attribute__((aligned(16)));
+// CHECK-FIXES: } __attribute__((packed)) __attribute__((aligned(16)));

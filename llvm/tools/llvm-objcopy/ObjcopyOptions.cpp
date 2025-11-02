@@ -1082,6 +1082,14 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "bad format for --dump-section, expected section=file");
     Config.DumpSection.push_back(Value);
   }
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_extract_section)) {
+    StringRef Value(Arg->getValue());
+    if (Value.split('=').second.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --extract-section, expected section=file");
+    Config.ExtractSection.push_back(Value);
+  }
   Config.StripAll = InputArgs.hasArg(OBJCOPY_strip_all);
   Config.StripAllGNU = InputArgs.hasArg(OBJCOPY_strip_all_gnu);
   Config.StripDebug = InputArgs.hasArg(OBJCOPY_strip_debug);

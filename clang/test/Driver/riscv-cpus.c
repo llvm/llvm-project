@@ -157,6 +157,7 @@
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svinval"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svnapot"
 // MCPU-SPACEMIT-X60-SAME: "-target-feature" "+svpbmt"
+// MCPU-SPACEMIT-X60-SAME: "-target-feature" "+xsmtvdot"
 // MCPU-SPACEMIT-X60-SAME: "-target-abi" "lp64d"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
@@ -400,8 +401,17 @@
 
 // -march overwrite -mcpu's default -march
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -march=rv32imc | FileCheck -check-prefix=MCPU-MARCH %s
-// MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+c"
+// MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31"
+// MCPU-MARCH: "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-MARCH: "-target-abi" "ilp32"
+
+// -march=unset erases previous march
+// RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=unset -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-UNSET %s
+// MARCH-UNSET: "-nostdsysteminc" "-target-cpu" "sifive-e31"
+// MARCH-UNSET: "-target-feature" "+m"
+// MARCH-UNSET: "-target-feature" "+a"
+// MARCH-UNSET: "-target-feature" "+c"
+// MARCH-UNSET-SAME: "-target-abi" "ilp32"
 
 // Check interaction between -mcpu and mtune, -mtune won't affect arch related
 // target feature, but -mcpu will.
@@ -452,7 +462,6 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+ziccrse"
-// MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zihintntl"
@@ -463,6 +472,7 @@
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P450-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P450-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P450-SAME: "-target-abi" "lp64d"
 
 // RUN: %clang -target riscv64 -### -c %s 2>&1 -mcpu=sifive-p470 | FileCheck -check-prefix=MCPU-SIFIVE-P470 %s
@@ -481,7 +491,6 @@
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+ziccrse"
-// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zihintntl"
@@ -493,6 +502,7 @@
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P470-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbb"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zvbc"
 // MCPU-SIFIVE-P470-SAME: "-target-feature" "+zve32f"
@@ -543,7 +553,6 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+ziccif"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicclsm"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+ziccrse"
-// MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicntr"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zicsr"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zifencei"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zihintntl"
@@ -554,6 +563,7 @@
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zba"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zbb"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zbs"
+// MCPU-SIFIVE-P670-SAME: "-target-feature" "+zkt"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvbb"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zvbc"
 // MCPU-SIFIVE-P670-SAME: "-target-feature" "+zve32f"

@@ -13,7 +13,7 @@ define i8 @test_negative_off(i16 %len, ptr %test_base) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [64638 x i8], align 1
 ; CHECK-NEXT:    call void @init(ptr [[ALLOCA]])
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -52,30 +52,9 @@ define i8 @test_negative_off(i16 %len, ptr %test_base) {
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP20:%.*]] = call i8 @llvm.vector.reduce.add.v2i8(<2 x i8> [[TMP18]])
-; CHECK-NEXT:    br label [[LOOP_EXIT:%.*]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ -1000, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i8 [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i8 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ACCUM_NEXT:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
-; CHECK-NEXT:    [[TEST_ADDR:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i16 [[IV]]
-; CHECK-NEXT:    [[EARLYCND:%.*]] = load i1, ptr [[TEST_ADDR]], align 1
-; CHECK-NEXT:    br i1 [[EARLYCND]], label [[PRED:%.*]], label [[LATCH]]
-; CHECK:       pred:
-; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i8, ptr [[ALLOCA]], i16 [[IV]]
-; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[ADDR]], align 1
-; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       latch:
-; CHECK-NEXT:    [[VAL_PHI:%.*]] = phi i8 [ 0, [[LOOP]] ], [ [[VAL]], [[PRED]] ]
-; CHECK-NEXT:    [[ACCUM_NEXT]] = add i8 [[ACCUM]], [[VAL_PHI]]
-; CHECK-NEXT:    [[EXIT:%.*]] = icmp ugt i16 [[IV]], -990
-; CHECK-NEXT:    br i1 [[EXIT]], label [[LOOP_EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       loop_exit:
-; CHECK-NEXT:    [[ACCUM_NEXT_LCSSA:%.*]] = phi i8 [ [[ACCUM_NEXT]], [[LATCH]] ], [ [[TMP20]], [[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i8 [[ACCUM_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i8 [[TMP20]]
 ;
 entry:
   %alloca = alloca [64638 x i8]

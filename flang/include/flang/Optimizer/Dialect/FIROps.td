@@ -1249,6 +1249,41 @@ def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [NoMemoryEffect]> {
+  let summary = "get the assumed-size last extent sentinel";
+
+  let description = [{
+    Returns the special extent value representing the last dimension of an
+    assumed-size array. This is used to model the semantics in FIR without
+    directly materializing the sentinel value. The concrete encoding is
+    introduced during FIR to LLVM lowering.
+
+    ```
+      %e = fir.assumed_size_extent : index
+    ```
+  }];
+
+  let results = (outs Index);
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+
+def fir_IsAssumedSizeExtentOp : fir_SimpleOp<"is_assumed_size_extent", [NoMemoryEffect]> {
+  let summary = "is value the assumed-size last extent sentinel";
+
+  let description = [{
+    Returns true iff the given integer equals the assumed-size extent sentinel.
+
+    ```
+      %t = fir.is_assumed_size_extent %v : (index) -> i1
+      %c = fir.is_assumed_size_extent %x : (i32) -> i1
+    ```
+  }];
+
+  let arguments = (ins AnyIntegerLike:$val);
+  let results = (outs BoolLike);
+  let hasCanonicalizer = 1;
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
@@ -2514,6 +2549,7 @@ def fir_CallOp : fir_Op<"call",
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<fir_FortranProcedureFlagsAttr>:$procedure_attrs,
+    OptionalAttr<fir_FortranInlineAttr>:$inline_attr,
     DefaultValuedAttr<Arith_FastMathAttr,
                       "::mlir::arith::FastMathFlags::none">:$fastmath
   );
@@ -3178,9 +3214,11 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 // operations if the values are unused. fir.declare may be used to generate
 // debug information so we would like to keep this around even if the value
 // is not used.
-def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc<DebuggingResource>]>,
-    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
+def fir_DeclareOp
+    : fir_Op<"declare", [AttrSizedOperandSegments,
+                         MemoryEffects<[MemAlloc<DebuggingResource>]>,
+                         DeclareOpInterfaceMethods<
+                             fir_FortranVariableStorageOpInterface>]> {
   let summary = "declare a variable";
 
   let description = [{
@@ -3203,6 +3241,11 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     It must always be provided for characters and parametrized derived types
     when memref is not a box value or address.
 
+    The storage and storage_offset operands are optional and are required
+    for FortranVariableStorageOpInterface, where they are documented.
+    If these operands are absent, then the storage of the declared variable
+    is only known to start where the memref operand points to.
+
     Example:
 
     CHARACTER(n), OPTIONAL, TARGET :: c(10:, 20:)
@@ -3220,21 +3263,22 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
    ```
   }];
 
-  let arguments = (ins
-    AnyRefOrBox:$memref,
-    Optional<AnyShapeOrShiftType>:$shape,
-    Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_DummyScopeType>:$dummy_scope,
-    Builtin_StringAttr:$uniq_name,
-    OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
-    OptionalAttr<cuf_DataAttributeAttr>:$data_attr
-  );
+  let arguments = (ins AnyRefOrBox:$memref,
+      Optional<AnyShapeOrShiftType>:$shape,
+      Variadic<AnyIntegerType>:$typeparams,
+      Optional<fir_DummyScopeType>:$dummy_scope,
+      Optional<AnyReferenceLike>:$storage,
+      DefaultValuedAttr<UI64Attr, "0">:$storage_offset,
+      Builtin_StringAttr:$uniq_name,
+      OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr);
 
   let results = (outs AnyRefOrBox);
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`typeparams` $typeparams^)?
     (`dummy_scope` $dummy_scope^)?
+    (`storage` `(` $storage^ `[` $storage_offset `]` `)`)?
     attr-dict `:` functional-type(operands, results)
   }];
 
@@ -3884,6 +3928,18 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
 
     unsigned getNumReduceOperands() {
       return getReduceVars().size();
+    }
+
+    unsigned getInductionVarsStart() {
+      return 0;
+    }
+
+    unsigned getLocalOperandsStart() {
+      return getNumInductionVars();
+    }
+
+    unsigned getReduceOperandsStart() {
+      return getLocalOperandsStart() + getNumLocalOperands();
     }
 
     mlir::Block::BlockArgListType getInductionVars() {

@@ -68,6 +68,7 @@ add_header_library(
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -77,6 +78,7 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.basic_operations

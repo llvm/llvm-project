@@ -255,7 +255,7 @@ manageTimeout(const std::chrono::milliseconds &Timeout,
   // has been canceled by another thread
   if (getActiveFD() == -1 || (CancelFD.has_value() && FD[1].revents & POLLIN))
     return std::make_error_code(std::errc::operation_canceled);
-#if _WIN32
+#ifdef _WIN32
   if (PollStatus == SOCKET_ERROR)
 #else
   if (PollStatus == -1)

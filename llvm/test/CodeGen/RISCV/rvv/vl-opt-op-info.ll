@@ -45,7 +45,7 @@ entry:
   %d = sext <vscale x 2 x i16> %b to <vscale x 2 x i32>
   %v1 = add <vscale x 2 x i32> %c, %d
   %x = call <vscale x 2 x i16> @llvm.riscv.vnsrl.nxv2i16.nxv2i32.nxv2i16(
-    <vscale x 2 x i16> undef,
+    <vscale x 2 x i16> poison,
     <vscale x 2 x i32> %v1,
     <vscale x 2 x i16> %z,
     iXLen %2)
@@ -72,7 +72,7 @@ entry:
   %d = sext <vscale x 2 x i16> %b to <vscale x 2 x i32>
   %v1 = add <vscale x 2 x i32> %c, %d
   %x = call <vscale x 2 x i16> @llvm.riscv.vnclip.nxv2i16.nxv2i32.nxv2i16(
-    <vscale x 2 x i16> undef,
+    <vscale x 2 x i16> poison,
     <vscale x 2 x i32> %v1,
     <vscale x 2 x i16> %z,
     iXLen 0, iXLen %2)

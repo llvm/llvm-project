@@ -12,7 +12,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -43,6 +42,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -104,9 +104,6 @@ static cl::opt<bool> HexagonVolatileMemcpy(
 
 static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
   cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));
-
-static const char *HexagonVolatileMemcpyName
-  = "hexagon_memcpy_forward_vp4cp4n2";
 
 namespace {
 
@@ -2247,6 +2244,11 @@ CleanupAndExit:
       Type *PtrTy = PointerType::get(Ctx, 0);
       Type *VoidTy = Type::getVoidTy(Ctx);
       Module *M = Func->getParent();
+
+      // FIXME: This should check if the call is supported
+      StringRef HexagonVolatileMemcpyName =
+          RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+              RTLIB::impl_hexagon_memcpy_forward_vp4cp4n2);
       FunctionCallee Fn = M->getOrInsertFunction(
           HexagonVolatileMemcpyName, VoidTy, PtrTy, PtrTy, Int32Ty);
 
@@ -2289,7 +2291,7 @@ CleanupAndExit:
 // the instructions in Insts are removed.
 bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
       SmallVectorImpl<Instruction*> &Insts) const {
-  SmallSet<BasicBlock*,8> LoopBlocks;
+  SmallPtrSet<BasicBlock *, 8> LoopBlocks;
   LoopBlocks.insert_range(L->blocks());
 
   SetVector<Instruction *> Worklist(llvm::from_range, Insts);

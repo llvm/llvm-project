@@ -195,7 +195,7 @@ protected:
   /// Helper function that generates a constant string and returns a pointer to
   /// the start of the string.  The result of this function can be used anywhere
   /// where the C code specifies const char*.
-  llvm::Constant *MakeConstantString(StringRef Str, const char *Name = "") {
+  llvm::Constant *MakeConstantString(StringRef Str, StringRef Name = "") {
     ConstantAddress Array =
         CGM.GetAddrOfConstantCString(std::string(Str), Name);
     return Array.getPointer();
@@ -1750,7 +1750,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
     // struct objc_method_list *methods
     // FIXME: Almost identical code is copied and pasted below for the
     // class, but refactoring it cleanly requires C++14 generic lambdas.
-    if (OID->classmeth_begin() == OID->classmeth_end())
+    if (OID->class_methods().empty())
       metaclassFields.addNullPointer(PtrTy);
     else {
       SmallVector<ObjCMethodDecl*, 16> ClassMethods;

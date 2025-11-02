@@ -146,6 +146,14 @@ void testValueInRangeOfEnumerationValues() {
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
 }
+struct EnumTest {
+  enum type {
+      Type1,
+      BOUND
+  };
+  static const type binding_completed = type(BOUND + 1); // both-error {{in-class initializer for static data member is not a constant expression}} \
+                                                         // both-note {{integer value 2 is outside the valid range of values}}
+};
 
 template<class T, unsigned size> struct Bitfield {
   static constexpr T max = static_cast<T>((1 << size) - 1);
@@ -287,6 +295,8 @@ namespace OverlappingStrings {
   constexpr bool may_overlap_4 = &"xfoo"[1] == &"xfoo"[1]; // both-error {{}} both-note {{addresses of potentially overlapping literals}}
 
 
+  /// Used to crash.
+  const bool x = &"ab"[0] == &"ba"[3];
 
 }
 
@@ -318,3 +328,54 @@ namespace PR19010 {
   };
   void test() { constexpr Test t; }
 }
+
+namespace ReadMutableInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    mutable U u; // both-note {{declared here}}
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{read of mutable member 'u'}} \
+                       // both-note {{in call to 'G(g1)'}}
+}
+
+namespace GH150709 {
+  struct C { };
+  struct D : C {
+    constexpr int f() const { return 1; };
+  };
+  struct E : C { };
+  struct F : D { };
+  struct G : E { };
+  
+  constexpr C c1, c2[2];
+  constexpr D d1, d2[2];
+  constexpr E e1, e2[2];
+  constexpr F f;
+  constexpr G g;
+
+  constexpr auto mp = static_cast<int (C::*)() const>(&D::f);
+
+  // sanity checks for fix of GH150709 (unchanged behavior)
+  static_assert((c1.*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((d1.*mp)() == 1, "");
+  static_assert((f.*mp)() == 1, "");
+  static_assert((c2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((d2[0].*mp)() == 1, "");
+
+  // incorrectly undiagnosed before fix of GH150709
+  static_assert((e1.*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
+}
+
+namespace DiscardedAddrLabel {
+  void foo(void) {
+  L:
+    *&&L; // both-error {{indirection not permitted}} \
+          // both-warning {{expression result unused}}
+  }
+}
+

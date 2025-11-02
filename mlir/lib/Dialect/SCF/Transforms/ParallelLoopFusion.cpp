@@ -269,10 +269,10 @@ namespace {
 struct ParallelLoopFusion
     : public impl::SCFParallelLoopFusionBase<ParallelLoopFusion> {
   void runOnOperation() override {
-    auto &AA = getAnalysis<AliasAnalysis>();
+    auto &aa = getAnalysis<AliasAnalysis>();
 
     auto mayAlias = [&](Value val1, Value val2) -> bool {
-      return !AA.alias(val1, val2).isNo();
+      return !aa.alias(val1, val2).isNo();
     };
 
     getOperation()->walk([&](Operation *child) {

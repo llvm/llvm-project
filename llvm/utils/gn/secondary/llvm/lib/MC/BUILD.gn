@@ -4,6 +4,7 @@ static_library("MC") {
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
@@ -54,6 +55,7 @@ static_library("MC") {
     "MCObjectWriter.cpp",
     "MCPseudoProbe.cpp",
     "MCRegisterInfo.cpp",
+    "MCSFrame.cpp",
     "MCSPIRVStreamer.cpp",
     "MCSchedule.cpp",
     "MCSection.cpp",

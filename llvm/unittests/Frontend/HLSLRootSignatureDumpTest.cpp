@@ -10,12 +10,13 @@
 #include "gtest/gtest.h"
 
 using namespace llvm::hlsl::rootsig;
+using llvm::dxil::ResourceClass;
 
 namespace {
 
 TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
   DescriptorTableClause Clause;
-  Clause.Type = ClauseType::CBuffer;
+  Clause.Type = ResourceClass::CBuffer;
   Clause.Reg = {RegisterType::BReg, 0};
   Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_1);
 
@@ -32,7 +33,7 @@ TEST(HLSLRootSignatureTest, DescriptorCBVClauseDump) {
 
 TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
   DescriptorTableClause Clause;
-  Clause.Type = ClauseType::SRV;
+  Clause.Type = ResourceClass::SRV;
   Clause.Reg = {RegisterType::TReg, 0};
   Clause.NumDescriptors = NumDescriptorsUnbounded;
   Clause.Space = 42;
@@ -52,7 +53,7 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
 TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
   using llvm::dxbc::DescriptorRangeFlags;
   DescriptorTableClause Clause;
-  Clause.Type = ClauseType::UAV;
+  Clause.Type = ResourceClass::UAV;
   Clause.Reg = {RegisterType::UReg, 92374};
   Clause.NumDescriptors = 3298;
   Clause.Space = 932847;
@@ -82,7 +83,7 @@ TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
 
 TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
   DescriptorTableClause Clause;
-  Clause.Type = ClauseType::Sampler;
+  Clause.Type = ResourceClass::Sampler;
   Clause.Reg = {RegisterType::SReg, 0};
   Clause.NumDescriptors = 2;
   Clause.Space = 42;
@@ -102,7 +103,7 @@ TEST(HLSLRootSignatureTest, DescriptorSamplerClauseDump) {
 
 TEST(HLSLRootSignatureTest, DescriptorCBVV10ClauseDump) {
   DescriptorTableClause Clause;
-  Clause.Type = ClauseType::CBuffer;
+  Clause.Type = ResourceClass::CBuffer;
   Clause.Reg = {RegisterType::BReg, 0};
   Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
@@ -119,7 +120,7 @@ TEST(HLSLRootSignatureTest, DescriptorCBVV10ClauseDump) {
 
 TEST(HLSLRootSignatureTest, DescriptorSamplerV10ClauseDump) {
   DescriptorTableClause Clause;
-  Clause.Type = ClauseType::Sampler;
+  Clause.Type = ResourceClass::Sampler;
   Clause.Reg = {RegisterType::SReg, 0};
   Clause.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
@@ -151,7 +152,7 @@ TEST(HLSLRootSignatureTest, DescriptorTableDump) {
 
 TEST(HLSLRootSignatureTest, RootCBVDump) {
   RootDescriptor Descriptor;
-  Descriptor.Type = DescriptorType::CBuffer;
+  Descriptor.Type = ResourceClass::CBuffer;
   Descriptor.Reg = {RegisterType::BReg, 0};
   Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_1);
 
@@ -168,7 +169,7 @@ TEST(HLSLRootSignatureTest, RootCBVDump) {
 
 TEST(HLSLRootSignatureTest, RootSRV10Dump) {
   RootDescriptor Descriptor;
-  Descriptor.Type = DescriptorType::SRV;
+  Descriptor.Type = ResourceClass::SRV;
   Descriptor.Reg = {RegisterType::TReg, 0};
   Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
@@ -185,7 +186,7 @@ TEST(HLSLRootSignatureTest, RootSRV10Dump) {
 
 TEST(HLSLRootSignatureTest, RootUAVV10Dump) {
   RootDescriptor Descriptor;
-  Descriptor.Type = DescriptorType::UAV;
+  Descriptor.Type = ResourceClass::UAV;
   Descriptor.Reg = {RegisterType::UReg, 0};
   Descriptor.setDefaultFlags(llvm::dxbc::RootSignatureVersion::V1_0);
 
@@ -202,7 +203,7 @@ TEST(HLSLRootSignatureTest, RootUAVV10Dump) {
 
 TEST(HLSLRootSignatureTest, RootSRVDump) {
   RootDescriptor Descriptor;
-  Descriptor.Type = DescriptorType::SRV;
+  Descriptor.Type = ResourceClass::SRV;
   Descriptor.Reg = {RegisterType::TReg, 0};
   Descriptor.Space = 42;
   Descriptor.Visibility = llvm::dxbc::ShaderVisibility::Geometry;
@@ -221,7 +222,7 @@ TEST(HLSLRootSignatureTest, RootSRVDump) {
 TEST(HLSLRootSignatureTest, RootUAVDump) {
   using llvm::dxbc::RootDescriptorFlags;
   RootDescriptor Descriptor;
-  Descriptor.Type = DescriptorType::UAV;
+  Descriptor.Type = ResourceClass::UAV;
   Descriptor.Reg = {RegisterType::UReg, 92374};
   Descriptor.Space = 932847;
   Descriptor.Visibility = llvm::dxbc::ShaderVisibility::Hull;
@@ -265,7 +266,8 @@ TEST(HLSLRootSignatureTest, DefaultStaticSamplerDump) {
                          "minLOD = 0.000000e+00, "
                          "maxLOD = 3.402823e+38, "
                          "space = 0, "
-                         "visibility = All"
+                         "visibility = All, "
+                         "flags = None"
                          ")";
   EXPECT_EQ(Out, Expected);
 }
@@ -286,6 +288,7 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
   Sampler.MaxLOD = 32.0f;
   Sampler.Space = 7;
   Sampler.Visibility = llvm::dxbc::ShaderVisibility::Domain;
+  Sampler.Flags = llvm::dxbc::StaticSamplerFlags::NonNormalizedCoordinates;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -304,7 +307,8 @@ TEST(HLSLRootSignatureTest, DefinedStaticSamplerDump) {
                          "minLOD = 1.000000e+00, "
                          "maxLOD = 3.200000e+01, "
                          "space = 7, "
-                         "visibility = Domain"
+                         "visibility = Domain, "
+                         "flags = NonNormalizedCoordinates"
                          ")";
   EXPECT_EQ(Out, Expected);
 }

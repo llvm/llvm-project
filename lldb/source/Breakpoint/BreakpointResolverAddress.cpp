@@ -133,6 +133,11 @@ Searcher::CallbackReturn BreakpointResolverAddress::SearchCallback(
           Address tmp_address;
           if (module_sp->ResolveFileAddress(m_addr.GetOffset(), tmp_address))
             m_addr = tmp_address;
+          else
+            return Searcher::eCallbackReturnStop;
+        } else {
+          // If we didn't find the module, then we can't resolve the address.
+          return Searcher::eCallbackReturnStop;
         }
       }
 

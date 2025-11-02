@@ -6,8 +6,7 @@
 // will be unable to resolve its $ORIGIN due to readlink() restriction and will
 // thus fail to start, causing the test to die with SIGPIPE when attempting to
 // talk to it.
-// RUN: not ls /usr/include/linux/seccomp.h || ( %clang_asan %s -o %t && ( not env ASAN_OPTIONS=symbolize=0 %run %t 2>&1 ) | FileCheck %s )
-// REQUIRES: shell
+// RUN: not ls /usr/include/linux/seccomp.h || %clang_asan %s -o %t || not env ASAN_OPTIONS=symbolize=0 %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: android
 
 #include <errno.h>

@@ -64,8 +64,8 @@ public:
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
 
-      FieldOp fieldop = rewriter.create<emitc::FieldOp>(
-          funcOp->getLoc(), fieldName, typeAttr, nullptr);
+      FieldOp fieldop = emitc::FieldOp::create(rewriter, funcOp->getLoc(),
+                                               fieldName, typeAttr, nullptr);
 
       if (argAttrs && idx < argAttrs->size()) {
         fieldop->setDiscardableAttrs(funcOp.getArgAttrDict(idx));

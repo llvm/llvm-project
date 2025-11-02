@@ -58,7 +58,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # Set breakpoints and verify that they got set correctly
         dap_breakpoint_ids = []
         response = self.dap_server.request_setBreakpoints(
-            Source(main_source_path), [main_bp_line]
+            Source.build(path=main_source_path), [main_bp_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
@@ -70,7 +70,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             )
 
         response = self.dap_server.request_setBreakpoints(
-            Source(foo_source_path), [foo_bp1_line]
+            Source.build(path=foo_source_path), [foo_bp1_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
@@ -81,24 +81,20 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
                 breakpoint["verified"], "expect foo breakpoint to not be verified"
             )
 
-        # Flush the breakpoint events.
-        self.dap_server.wait_for_breakpoint_events(timeout=5)
-
         # Continue to the breakpoint
-        self.continue_to_breakpoints(dap_breakpoint_ids)
+        self.continue_to_breakpoint(foo_bp_id)
+        self.continue_to_next_stop()  # foo_bp2
+        self.continue_to_breakpoint(main_bp_id)
+        self.continue_to_exit()
 
-        verified_breakpoint_ids = []
-        unverified_breakpoint_ids = []
-        for breakpoint_event in self.dap_server.wait_for_breakpoint_events(timeout=5):
-            breakpoint = breakpoint_event["body"]["breakpoint"]
-            id = breakpoint["id"]
-            if breakpoint["verified"]:
-                verified_breakpoint_ids.append(id)
-            else:
-                unverified_breakpoint_ids.append(id)
+        bp_events = [e for e in self.dap_server.events if e["event"] == "breakpoint"]
 
-        self.assertIn(main_bp_id, unverified_breakpoint_ids)
-        self.assertIn(foo_bp_id, unverified_breakpoint_ids)
+        main_bp_events = [
+            e for e in bp_events if e["body"]["breakpoint"]["id"] == main_bp_id
+        ]
+        foo_bp_events = [
+            e for e in bp_events if e["body"]["breakpoint"]["id"] == foo_bp_id
+        ]
 
-        self.assertIn(main_bp_id, verified_breakpoint_ids)
-        self.assertIn(foo_bp_id, verified_breakpoint_ids)
+        self.assertTrue(main_bp_events)
+        self.assertTrue(foo_bp_events)

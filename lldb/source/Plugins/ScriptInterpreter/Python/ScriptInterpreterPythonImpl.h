@@ -99,6 +99,8 @@ public:
 
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
+  lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;
+
   lldb::ScriptedThreadPlanInterfaceSP
   CreateScriptedThreadPlanInterface() override;
 
@@ -120,7 +122,7 @@ public:
   GetChildAtIndex(const StructuredData::ObjectSP &implementor,
                   uint32_t idx) override;
 
-  llvm::Expected<int>
+  llvm::Expected<uint32_t>
   GetIndexOfChildWithName(const StructuredData::ObjectSP &implementor,
                           const char *child_name) override;
 

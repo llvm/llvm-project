@@ -101,15 +101,13 @@ define <16 x i8> @shuffle_ext_byone_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @shuffle_ext_byone_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: shuffle_ext_byone_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    mov z0.b, z0.b[15]
-; CHECK-NEXT:    mov z2.b, z1.b[15]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    insr z1.b, w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    insr z3.b, w8
-; CHECK-NEXT:    stp q1, q3, [x0]
+; CHECK-NEXT:    ldp q0, q2, [x1]
+; CHECK-NEXT:    ldrb w8, [x0, #31]
+; CHECK-NEXT:    mov z1.b, z0.b[15]
+; CHECK-NEXT:    insr z0.b, w8
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    insr z2.b, w8
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v32i8:
@@ -238,15 +236,13 @@ define <8 x i16> @shuffle_ext_byone_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @shuffle_ext_byone_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: shuffle_ext_byone_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    mov z0.h, z0.h[7]
-; CHECK-NEXT:    mov z2.h, z1.h[7]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    insr z1.h, w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    insr z3.h, w8
-; CHECK-NEXT:    stp q1, q3, [x0]
+; CHECK-NEXT:    ldp q0, q2, [x1]
+; CHECK-NEXT:    ldrh w8, [x0, #30]
+; CHECK-NEXT:    mov z1.h, z0.h[7]
+; CHECK-NEXT:    insr z0.h, w8
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    insr z2.h, w8
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v16i16:
@@ -341,15 +337,13 @@ define <4 x i32> @shuffle_ext_byone_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @shuffle_ext_byone_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: shuffle_ext_byone_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    mov z0.s, z0.s[3]
-; CHECK-NEXT:    mov z2.s, z1.s[3]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    insr z1.s, w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    insr z3.s, w8
-; CHECK-NEXT:    stp q1, q3, [x0]
+; CHECK-NEXT:    ldp q0, q2, [x1]
+; CHECK-NEXT:    ldr w8, [x0, #28]
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    insr z0.s, w8
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    insr z2.s, w8
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v8i32:
@@ -409,15 +403,13 @@ define <2 x i64> @shuffle_ext_byone_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @shuffle_ext_byone_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: shuffle_ext_byone_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0, #16]
-; CHECK-NEXT:    ldp q1, q3, [x1]
-; CHECK-NEXT:    mov z0.d, z0.d[1]
-; CHECK-NEXT:    mov z2.d, z1.d[1]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    insr z1.d, x8
-; CHECK-NEXT:    fmov x8, d2
-; CHECK-NEXT:    insr z3.d, x8
-; CHECK-NEXT:    stp q1, q3, [x0]
+; CHECK-NEXT:    ldp q0, q2, [x1]
+; CHECK-NEXT:    ldr x8, [x0, #24]
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    insr z0.d, x8
+; CHECK-NEXT:    fmov x8, d1
+; CHECK-NEXT:    insr z2.d, x8
+; CHECK-NEXT:    stp q0, q2, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: shuffle_ext_byone_v4i64:

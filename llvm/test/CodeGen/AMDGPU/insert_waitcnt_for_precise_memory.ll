@@ -146,8 +146,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX9-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_mov_b32_e32 v3, v2
-; GFX9-NEXT:    v_not_b32_e32 v2, v3
-; GFX9-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX9-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX9-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_wbinvl1_vol
@@ -169,8 +168,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX90A-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, v2
-; GFX90A-NEXT:    v_not_b32_e32 v2, v3
-; GFX90A-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX90A-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX90A-NEXT:    buffer_wbl2
 ; GFX90A-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
@@ -194,8 +192,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX10-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    v_mov_b32_e32 v3, v2
-; GFX10-NEXT:    v_not_b32_e32 v2, v3
-; GFX10-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX10-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -219,8 +216,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX9-FLATSCR-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX9-FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v3, v2
-; GFX9-FLATSCR-NEXT:    v_not_b32_e32 v2, v3
-; GFX9-FLATSCR-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX9-FLATSCR-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX9-FLATSCR-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:    buffer_wbinvl1_vol
@@ -242,9 +238,8 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX11-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_not_b32_e32 v2, v3
-; GFX11-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -273,9 +268,8 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX12-NEXT:  .LBB1_1: ; %atomicrmw.start
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    v_mov_b32_e32 v3, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_not_b32_e32 v2, v3
-; GFX12-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS

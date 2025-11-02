@@ -82,7 +82,7 @@ void library_builtins() {
   __builtin_abort();
 }
 
-// CIR: cir.func{{.*}} @_Z16library_builtinsv() {
+// CIR: cir.func{{.*}} @_Z16library_builtinsv()
 // CIR: %[[NULL:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
 // CIR: cir.call @printf(%[[NULL]]) nothrow : (!cir.ptr<!s8i>) -> !s32i
 // CIR: cir.call @abort() nothrow : () -> ()
@@ -111,6 +111,38 @@ void assume(bool arg) {
 // OGCG:   call void @llvm.assume(i1 %{{.+}})
 // OGCG: }
 
+void *assume_aligned(void *ptr) {
+  return __builtin_assume_aligned(ptr, 16);
+}
+
+// CIR: @_Z14assume_alignedPv
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16 : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z14assume_alignedPv
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// LLVM: }
+
+// OGCG: @_Z14assume_alignedPv
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// OGCG: }
+
+void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
+  return __builtin_assume_aligned(ptr, 16, misalignment);
+}
+
+// CIR: @_Z27assume_aligned_misalignmentPvj
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16[offset %{{.+}} : !u64i] : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z27assume_aligned_misalignmentPvj
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: @_Z27assume_aligned_misalignmentPvj
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// OGCG: }
+
 void assume_separate_storage(void *p1, void *p2) {
   __builtin_assume_separate_storage(p1, p2);
 }
@@ -133,9 +165,9 @@ void expect(int x, int y) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z6expectii
 // CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast(integral, %[[X]] : !s32i), !s64i
+// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
 // CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast(integral, %[[Y]] : !s32i), !s64i
+// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
 // CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]]) : !s64i
 // CIR:       }
 
@@ -153,9 +185,9 @@ void expect_prob(int x, int y) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z11expect_probii
 // CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast(integral, %[[X]] : !s32i), !s64i
+// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast integral %[[X]] : !s32i -> !s64i
 // CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast(integral, %[[Y]] : !s32i), !s64i
+// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast integral %[[Y]] : !s32i -> !s64i
 // CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]], 2.500000e-01) : !s64i
 // CIR:       }
 
@@ -179,6 +211,10 @@ void unreachable() {
 // LLVM:         unreachable
 // LLVM:       }
 
+// OGCG-LABEL: @_Z11unreachablev
+// OGCG:         unreachable
+// OGCG:       }
+
 void f1();
 void unreachable2() {
   __builtin_unreachable();
@@ -197,6 +233,9 @@ void unreachable2() {
 // LLVM-NEXT:    call void @_Z2f1v()
 // LLVM:       }
 
+// OGCG-LABEL: @_Z12unreachable2v
+// OGCG:         unreachable
+
 void trap() {
   __builtin_trap();
 }
@@ -208,6 +247,10 @@ void trap() {
 // LLVM-LABEL: @_Z4trapv
 // LLVM:         call void @llvm.trap()
 // LLVM:       }
+
+// OGCG-LABEL: @_Z4trapv
+// OGCG:         call void @llvm.trap()
+// OGCG:       }
 
 void trap2() {
   __builtin_trap();
@@ -226,3 +269,40 @@ void trap2() {
 // LLVM:       {{.+}}:
 // LLVM-NEXT:    call void @_Z2f1v()
 // LLVM:       }
+
+// OGCG-LABEL: define{{.*}} void @_Z5trap2v
+// OGCG:         call void @llvm.trap()
+// OGCG-NEXT:    call void @_Z2f1v()
+// OGCG:         ret void
+// OGCG:       }
+
+void *test_alloca(unsigned long n) {
+  return __builtin_alloca(n);
+}
+
+// CIR-LABEL: @_Z11test_allocam(
+// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+
+// LLVM-LABEL: @_Z11test_allocam(
+// LLVM:         alloca i8, i64 %{{.+}}
+
+// OGCG-LABEL: @_Z11test_allocam(
+// OGCG:         alloca i8, i64 %{{.+}}
+
+bool test_multiple_allocas(unsigned long n) {
+  void *a = __builtin_alloca(n);
+  void *b = __builtin_alloca(n);
+  return a != b;
+}
+
+// CIR-LABEL: @_Z21test_multiple_allocasm(
+// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+
+// LLVM-LABEL: @_Z21test_multiple_allocasm(
+// LLVM:         alloca i8, i64 %{{.+}}
+// LLVM:         alloca i8, i64 %{{.+}}
+
+// OGCG-LABEL: @_Z21test_multiple_allocasm(
+// OGCG:         alloca i8, i64 %{{.+}}
+// OGCG:         alloca i8, i64 %{{.+}}

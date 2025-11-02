@@ -91,6 +91,15 @@ public:
     return messages_.Say(std::forward<A>(a)...);
   }
 
+  template <typename... A>
+  Message *Warn(common::UsageWarning warning, A &&...a) {
+    return messages_.Warn(false, features_, warning, std::forward<A>(a)...);
+  }
+  template <typename... A>
+  Message *Warn(common::LanguageFeature feature, A &&...a) {
+    return messages_.Warn(false, features_, feature, std::forward<A>(a)...);
+  }
+
 private:
   struct LineClassification {
     enum class Kind {
@@ -162,7 +171,17 @@ private:
   bool InOpenMPConditionalLine() const {
     return directiveSentinel_ && directiveSentinel_[0] == '$' &&
         !directiveSentinel_[1];
-    ;
+  }
+  bool InOpenACCOrCUDAConditionalLine() const {
+    return directiveSentinel_ && directiveSentinel_[0] == '@' &&
+        ((directiveSentinel_[1] == 'a' && directiveSentinel_[2] == 'c' &&
+             directiveSentinel_[3] == 'c') ||
+            (directiveSentinel_[1] == 'c' && directiveSentinel_[2] == 'u' &&
+                directiveSentinel_[3] == 'f')) &&
+        directiveSentinel_[4] == '\0';
+  }
+  bool InConditionalLine() const {
+    return InOpenMPConditionalLine() || InOpenACCOrCUDAConditionalLine();
   }
   bool InFixedFormSource() const {
     return inFixedForm_ && !inPreprocessorDirective_ && !InCompilerDirective();
@@ -216,7 +235,7 @@ private:
   LineClassification ClassifyLine(const char *) const;
   LineClassification ClassifyLine(
       TokenSequence &, Provenance newlineProvenance) const;
-  void SourceFormChange(std::string &&);
+  bool SourceFormChange(std::string &&);
   bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
   bool SourceLineContinuation(TokenSequence &);
 

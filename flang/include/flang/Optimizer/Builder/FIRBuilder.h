@@ -365,7 +365,14 @@ public:
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
 
-  mlir::StringAttr createCommonLinkage() { return getStringAttr("common"); }
+  static mlir::StringAttr createCommonLinkage(mlir::MLIRContext *context) {
+    return mlir::StringAttr::get(context, "common");
+  }
+  mlir::StringAttr createCommonLinkage() {
+    return createCommonLinkage(getContext());
+  }
+
+  mlir::StringAttr createExternalLinkage() { return getStringAttr("external"); }
 
   mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
 
@@ -549,8 +556,9 @@ public:
   }
 
   mlir::Value genNot(mlir::Location loc, mlir::Value boolean) {
-    return create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
-                                       boolean, createBool(loc, false));
+    return mlir::arith::CmpIOp::create(*this, loc,
+                                       mlir::arith::CmpIPredicate::eq, boolean,
+                                       createBool(loc, false));
   }
 
   /// Generate code testing \p addr is not a null address.
@@ -641,7 +649,7 @@ public:
   mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
                              mlir::Value left, mlir::Value right) {
     if (!resultType.isIntOrFloat())
-      return create<OpTy>(loc, resultType, left, right);
+      return OpTy::create(*this, loc, resultType, left, right);
     mlir::Type signlessType = mlir::IntegerType::get(
         getContext(), resultType.getIntOrFloatBitWidth(),
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -654,7 +662,7 @@ public:
       right = createConvert(loc, signlessType, right);
       opResType = signlessType;
     }
-    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    mlir::Value result = OpTy::create(*this, loc, opResType, left, right);
     if (resultType.isUnsignedInteger())
       result = createConvert(loc, resultType, result);
     return result;
@@ -666,7 +674,7 @@ public:
                             mlir::Value ptr1, mlir::Value ptr2) {
     ptr1 = createConvert(loc, getIndexType(), ptr1);
     ptr2 = createConvert(loc, getIndexType(), ptr2);
-    return create<mlir::arith::CmpIOp>(loc, predicate, ptr1, ptr2);
+    return mlir::arith::CmpIOp::create(*this, loc, predicate, ptr1, ptr2);
   }
 
 private:
@@ -943,16 +951,24 @@ void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
                        llvm::SmallVectorImpl<mlir::Value> *strides);
 
 /// Generate an LLVM dialect lifetime start marker at the current insertion
-/// point given an fir.alloca and its constant size in bytes. Returns the value
-/// to be passed to the lifetime end marker.
+/// point given an fir.alloca. Returns the value to be passed to the lifetime
+/// end marker.
 mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
-                             fir::AllocaOp alloc, int64_t size,
-                             const mlir::DataLayout *dl);
+                             fir::AllocaOp alloc, const mlir::DataLayout *dl);
 
 /// Generate an LLVM dialect lifetime end marker at the current insertion point
-/// given an llvm.ptr value and the constant size in bytes of its storage.
+/// given an llvm.ptr value.
 void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
-                    mlir::Value mem, int64_t size);
+                    mlir::Value mem);
+
+/// Given a fir.box or fir.class \p box describing an entity and a raw address
+/// \p newAddr for an entity with the same Fortran properties (rank, dynamic
+/// type, length parameters and bounds) and attributes (POINTER or ALLOCATABLE),
+/// create a box for \p newAddr with the same type as \p box. This assumes \p
+/// newAddr is for contiguous storage (\p box does not have to be contiguous).
+mlir::Value getDescriptorWithNewBaseAddress(fir::FirOpBuilder &builder,
+                                            mlir::Location loc, mlir::Value box,
+                                            mlir::Value newAddr);
 
 } // namespace fir::factory
 

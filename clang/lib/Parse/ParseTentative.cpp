@@ -1328,7 +1328,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
         Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
                                                      Tok.getAnnotationRange(),
                                                      SS);
-        if (SS.getScopeRep() && SS.getScopeRep()->isDependent()) {
+        if (SS.getScopeRep().isDependent()) {
           RevertingTentativeParsingAction PA(*this);
           ConsumeAnnotationToken();
           ConsumeToken();

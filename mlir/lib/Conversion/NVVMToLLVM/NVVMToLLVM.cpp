@@ -26,6 +26,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "nvvm-to-llvm"
@@ -57,12 +58,13 @@ struct PtxLowering
 
     SmallVector<std::pair<Value, PTXRegisterMod>> asmValues;
     LDBG() << op.getPtx();
-    PtxBuilder generator(op, rewriter);
 
-    op.getAsmValues(rewriter, asmValues);
+    bool needsManualMapping = op.getAsmValues(rewriter, asmValues);
+    PtxBuilder generator(op, rewriter, needsManualMapping);
     for (auto &[asmValue, modifier] : asmValues) {
-      LDBG() << asmValue << "\t Modifier : " << &modifier;
-      generator.insertValue(asmValue, modifier);
+      LDBG() << asmValue << "\t Modifier : " << modifier;
+      if (failed(generator.insertValue(asmValue, modifier)))
+        return failure();
     }
 
     generator.buildAndReplaceOp();

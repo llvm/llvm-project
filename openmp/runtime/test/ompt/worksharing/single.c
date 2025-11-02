@@ -1,17 +1,18 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // GCC generates code that does not call the runtime for the single construct
 // XFAIL: gcc
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
 
-int main()
-{
+int main() {
   int x = 0;
-  #pragma omp parallel num_threads(2)
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp single
+#pragma omp single
     {
       printf("%" PRIu64 ": in single\n", ompt_get_thread_data()->value);
       x++;
@@ -26,11 +27,11 @@ int main()
 
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
-  // CHECK-DAG: {{^}}[[THREAD_ID_1:[0-9]+]]: ompt_event_single_in_block_begin: parallel_id=[[PARALLEL_ID:[0-9]+]], task_id=[[TASK_ID:[0-9]+]], codeptr_ra={{(0x)?[0-f]+}}, count=1
+  // CHECK-DAG: {{^}}[[THREAD_ID_1:[0-9]+]]: ompt_event_single_in_block_begin: parallel_id=[[PARALLEL_ID:[0-f]+]], task_id=[[TASK_ID:[0-f]+]], codeptr_ra={{(0x)?[0-f]+}}, count=1
   // CHECK-DAG: {{^}}[[THREAD_ID_1]]: in single
   // CHECK-DAG: {{^}}[[THREAD_ID_1]]: ompt_event_single_in_block_end: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]], codeptr_ra={{(0x)?[0-f]+}}, count=1
 
-  // CHECK-DAG: {{^}}[[THREAD_ID_2:[0-9]+]]: ompt_event_single_others_begin: parallel_id=[[PARALLEL_ID:[0-9]+]], task_id=[[TASK_ID:[0-9]+]], codeptr_ra={{(0x)?[0-f]+}}, count=1
+  // CHECK-DAG: {{^}}[[THREAD_ID_2:[0-9]+]]: ompt_event_single_others_begin: parallel_id=[[PARALLEL_ID:[0-f]+]], task_id=[[TASK_ID:[0-f]+]], codeptr_ra={{(0x)?[0-f]+}}, count=1
   // CHECK-DAG: {{^}}[[THREAD_ID_2]]: ompt_event_single_others_end: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]], codeptr_ra={{(0x)?[0-f]+}}, count=1
   // clang-format on
 

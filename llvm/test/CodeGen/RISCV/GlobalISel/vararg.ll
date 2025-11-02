@@ -437,8 +437,8 @@ define void @va1_caller() nounwind {
 ; LP64:       # %bb.0:
 ; LP64-NEXT:    addi sp, sp, -16
 ; LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; LP64-NEXT:    lui a0, %hi(.LCPI3_0)
-; LP64-NEXT:    ld a1, %lo(.LCPI3_0)(a0)
+; LP64-NEXT:    li a1, 1023
+; LP64-NEXT:    slli a1, a1, 52
 ; LP64-NEXT:    li a2, 2
 ; LP64-NEXT:    call va1
 ; LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -494,15 +494,15 @@ define void @va1_caller() nounwind {
 ; RV64-WITHFP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-WITHFP-NEXT:    addi s0, sp, 16
-; RV64-WITHFP-NEXT:    lui a0, %hi(.LCPI3_0)
-; RV64-WITHFP-NEXT:    ld a1, %lo(.LCPI3_0)(a0)
+; RV64-WITHFP-NEXT:    li a1, 1023
+; RV64-WITHFP-NEXT:    slli a1, a1, 52
 ; RV64-WITHFP-NEXT:    li a2, 2
 ; RV64-WITHFP-NEXT:    call va1
 ; RV64-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    ret
-  %1 = call i32 (ptr, ...) @va1(ptr undef, double 1.0, i32 2)
+  %1 = call i32 (ptr, ...) @va1(ptr poison, double 1.0, i32 2)
   ret void
 }
 
@@ -843,7 +843,7 @@ define void @va2_caller() nounwind {
 ; RV64-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64-WITHFP-NEXT:    addi sp, sp, 16
 ; RV64-WITHFP-NEXT:    ret
- %1 = call i64 (ptr, ...) @va2(ptr undef, i32 1)
+ %1 = call i64 (ptr, ...) @va2(ptr poison, i32 1)
  ret void
 }
 
@@ -1155,8 +1155,8 @@ define void @va3_caller() nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    lui a0, 5
-; RV32-NEXT:    addi a3, a0, -480
+; RV32-NEXT:    lui a3, 5
+; RV32-NEXT:    addi a3, a3, -480
 ; RV32-NEXT:    li a0, 2
 ; RV32-NEXT:    li a1, 1111
 ; RV32-NEXT:    li a2, 0
@@ -1184,8 +1184,8 @@ define void @va3_caller() nounwind {
 ; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-NEXT:    lui a0, 5
-; RV32-WITHFP-NEXT:    addi a3, a0, -480
+; RV32-WITHFP-NEXT:    lui a3, 5
+; RV32-WITHFP-NEXT:    addi a3, a3, -480
 ; RV32-WITHFP-NEXT:    li a0, 2
 ; RV32-WITHFP-NEXT:    li a1, 1111
 ; RV32-WITHFP-NEXT:    li a2, 0

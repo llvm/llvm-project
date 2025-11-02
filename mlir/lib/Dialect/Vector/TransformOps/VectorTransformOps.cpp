@@ -88,6 +88,11 @@ void transform::ApplyDropUnitDimWithShapeCastPatternsOp::populatePatterns(
   vector::populateDropUnitDimWithShapeCastPatterns(patterns);
 }
 
+void transform::ApplyDropInnerMostUnitDimsFromXferOpsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  vector::populateDropInnerMostUnitDimsXferOpPatterns(patterns);
+}
+
 void transform::ApplyLowerBitCastPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorBitCastLoweringPatterns(patterns);
@@ -137,6 +142,16 @@ void transform::ApplyLowerOuterProductPatternsOp::populatePatterns(
 void transform::ApplyLowerGatherPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorGatherLoweringPatterns(patterns);
+}
+
+void transform::ApplyUnrollFromElementsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorFromElementsUnrollPatterns(patterns);
+}
+
+void transform::ApplyUnrollToElementsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorToElementsUnrollPatterns(patterns);
 }
 
 void transform::ApplyLowerScanPatternsOp::populatePatterns(

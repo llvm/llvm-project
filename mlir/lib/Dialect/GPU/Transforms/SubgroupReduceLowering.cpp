@@ -430,7 +430,7 @@ createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
       dpp = ROCDL::PermlaneX16Op::create(rewriter, loc, res.getType(), res, res,
                                          uint32Max, uint32Max,
                                          /*fi=*/true,
-                                         /*bound_ctrl=*/false);
+                                         /*boundControl=*/false);
       res = vector::makeArithReduction(
           rewriter, loc, gpu::convertReductionKind(mode), res, dpp);
     } else {

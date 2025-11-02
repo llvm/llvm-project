@@ -86,6 +86,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  localtime
+  SRCS
+    localtime.cpp
+  HDRS
+    localtime.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
+)
+
+add_entrypoint_object(
+  localtime_r
+  SRCS
+    localtime_r.cpp
+  HDRS
+    localtime_r.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
+)
+
+add_entrypoint_object(
   difftime
   SRCS
     difftime.cpp

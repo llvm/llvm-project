@@ -190,6 +190,9 @@ class BinaryContext {
   /// Unique build ID if available for the binary.
   std::optional<std::string> FileBuildID;
 
+  /// GNU property note indicating AArch64 BTI.
+  bool UsesBTI{false};
+
   /// Set of all sections.
   struct CompareSections {
     bool operator()(const BinarySection *A, const BinarySection *B) const {
@@ -288,6 +291,12 @@ public:
   /// overwritten, but it is okay to re-generate debug info for them.
   std::set<const DWARFUnit *> ProcessedCUs;
 
+  /// DWARF-related container to manage lifecycle of groups of rows from line
+  /// tables associated with instructions. Since binary functions can span
+  /// multiple compilation units, instructions may reference debug line
+  /// information from multiple CUs.
+  ClusteredRowsContainer ClusteredRows;
+
   // Setup MCPlus target builder
   void initializeTarget(std::unique_ptr<MCPlusBuilder> TargetBuilder) {
     MIB = std::move(TargetBuilder);
@@ -319,6 +328,9 @@ public:
 
   /// Returns true if DWARF4 or lower is used.
   bool isDWARFLegacyUsed() const { return ContainsDwarfLegacy; }
+
+  /// Returns true if DWARFUnit is valid.
+  bool isValidDwarfUnit(DWARFUnit &DU) const;
 
   std::map<unsigned, DwarfLineTable> &getDwarfLineTables() {
     return DwarfLineTablesCUMap;
@@ -374,6 +386,9 @@ public:
     return std::nullopt;
   }
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
+
+  bool usesBTI() const { return UsesBTI; }
+  void setUsesBTI(bool Value) { UsesBTI = Value; }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
   void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }
@@ -766,11 +781,6 @@ public:
     uint64_t PseudoProbeLooseMatchedSampleCount{0};
     ///   the count of call matched samples
     uint64_t CallMatchedSampleCount{0};
-    ///   the number of stale functions that have matching number of blocks in
-    ///   the profile
-    uint64_t NumStaleFuncsWithEqualBlockCount{0};
-    ///   the number of blocks that have matching size but a differing hash
-    uint64_t NumStaleBlocksWithEqualIcount{0};
   } Stats;
 
   // Original binary execution count stats.

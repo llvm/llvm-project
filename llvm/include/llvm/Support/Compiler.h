@@ -706,6 +706,15 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_PREFERRED_TYPE(T)
 #endif
 
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::ptrauth_vtable_pointer) &&                   \
+    (defined(__PTRAUTH__) || __has_feature(ptrauth_calls))
+#define LLVM_MOVABLE_POLYMORPHIC_TYPE                                          \
+  [[clang::ptrauth_vtable_pointer(default_key, no_address_discrimination,      \
+                                  default_extra_discrimination)]]
+#else
+#define LLVM_MOVABLE_POLYMORPHIC_TYPE
+#endif
+
 /// \macro LLVM_VIRTUAL_ANCHOR_FUNCTION
 /// This macro is used to adhere to LLVM's policy that each class with a vtable
 /// must have at least one out-of-line virtual function. This macro allows us

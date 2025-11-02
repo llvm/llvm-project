@@ -291,21 +291,7 @@ static MachineOperand *findSingleRegUse(const MachineOperand *Reg,
   if (!Reg->isReg() || !Reg->isDef())
     return nullptr;
 
-  MachineOperand *ResMO = nullptr;
-  for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg->getReg())) {
-    // If there exist use of subreg of Reg then return nullptr
-    if (!isSameReg(UseMO, *Reg))
-      return nullptr;
-
-    // Check that there is only one instruction that uses Reg
-    if (!ResMO) {
-      ResMO = &UseMO;
-    } else if (ResMO->getParent() != UseMO.getParent()) {
-      return nullptr;
-    }
-  }
-
-  return ResMO;
+  return MRI->getOneNonDBGUse(Reg->getReg());
 }
 
 static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
@@ -313,17 +299,7 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
   if (!Reg->isReg())
     return nullptr;
 
-  MachineInstr *DefInstr = MRI->getUniqueVRegDef(Reg->getReg());
-  if (!DefInstr)
-    return nullptr;
-
-  for (auto &DefMO : DefInstr->defs()) {
-    if (DefMO.isReg() && DefMO.getReg() == Reg->getReg())
-      return &DefMO;
-  }
-
-  // Ignore implicit defs.
-  return nullptr;
+  return MRI->getOneDef(Reg->getReg());
 }
 
 /// Combine an SDWA instruction's existing SDWA selection \p Sel with
@@ -1053,7 +1029,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
   MachineOperand *CarryOut = TII->getNamedOperand(MISucc, AMDGPU::OpName::sdst);
   if (!CarryOut)
     return;
-  if (!MRI->hasOneUse(CarryIn->getReg()) || !MRI->use_empty(CarryOut->getReg()))
+  if (!MRI->hasOneNonDBGUse(CarryIn->getReg()) ||
+      !MRI->use_nodbg_empty(CarryOut->getReg()))
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
@@ -1361,8 +1338,9 @@ void SIPeepholeSDWA::legalizeScalarOperands(MachineInstr &MI,
       continue;
 
     unsigned I = Op.getOperandNo();
-    if (Desc.operands()[I].RegClass == -1 ||
-        !TRI->isVSSuperClass(TRI->getRegClass(Desc.operands()[I].RegClass)))
+
+    int16_t RegClass = TII->getOpRegClassID(Desc.operands()[I]);
+    if (RegClass == -1 || !TRI->isVSSuperClass(TRI->getRegClass(RegClass)))
       continue;
 
     if (ST.hasSDWAScalar() && ConstantBusCount == 0 && Op.isReg() &&

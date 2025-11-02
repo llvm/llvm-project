@@ -16,10 +16,10 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/ToolUtilities.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Base64.h"
+#include "llvm/Support/LSP/Logging.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
 
@@ -39,9 +39,9 @@ static std::optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
   llvm::Expected<lsp::URIForFile> sourceURI =
       lsp::URIForFile::fromFile(loc.getFilename(), uriScheme);
   if (!sourceURI) {
-    lsp::Logger::error("Failed to create URI for file `{0}`: {1}",
-                       loc.getFilename(),
-                       llvm::toString(sourceURI.takeError()));
+    llvm::lsp::Logger::error("Failed to create URI for file `{0}`: {1}",
+                             loc.getFilename(),
+                             llvm::toString(sourceURI.takeError()));
     return std::nullopt;
   }
 
@@ -217,22 +217,22 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
 
   // Convert the severity for the diagnostic.
   switch (diag.getSeverity()) {
-  case DiagnosticSeverity::Note:
+  case mlir::DiagnosticSeverity::Note:
     llvm_unreachable("expected notes to be handled separately");
-  case DiagnosticSeverity::Warning:
-    lspDiag.severity = lsp::DiagnosticSeverity::Warning;
+  case mlir::DiagnosticSeverity::Warning:
+    lspDiag.severity = llvm::lsp::DiagnosticSeverity::Warning;
     break;
-  case DiagnosticSeverity::Error:
-    lspDiag.severity = lsp::DiagnosticSeverity::Error;
+  case mlir::DiagnosticSeverity::Error:
+    lspDiag.severity = llvm::lsp::DiagnosticSeverity::Error;
     break;
-  case DiagnosticSeverity::Remark:
-    lspDiag.severity = lsp::DiagnosticSeverity::Information;
+  case mlir::DiagnosticSeverity::Remark:
+    lspDiag.severity = llvm::lsp::DiagnosticSeverity::Information;
     break;
   }
   lspDiag.message = diag.str();
 
   // Attach any notes to the main diagnostic as related information.
-  std::vector<lsp::DiagnosticRelatedInformation> relatedDiags;
+  std::vector<llvm::lsp::DiagnosticRelatedInformation> relatedDiags;
   for (Diagnostic &note : diag.getNotes()) {
     lsp::Location noteLoc;
     if (std::optional<lsp::Location> loc =
@@ -317,7 +317,7 @@ struct MLIRDocument {
   void getCodeActionForDiagnostic(const lsp::URIForFile &uri,
                                   lsp::Position &pos, StringRef severity,
                                   StringRef message,
-                                  std::vector<lsp::TextEdit> &edits);
+                                  std::vector<llvm::lsp::TextEdit> &edits);
 
   //===--------------------------------------------------------------------===//
   // Bytecode
@@ -355,7 +355,8 @@ MLIRDocument::MLIRDocument(MLIRContext &context, const lsp::URIForFile &uri,
   // Try to parsed the given IR string.
   auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(contents, uri.file());
   if (!memBuffer) {
-    lsp::Logger::error("Failed to create memory buffer for file", uri.file());
+    llvm::lsp::Logger::error("Failed to create memory buffer for file",
+                             uri.file());
     return;
   }
 
@@ -695,8 +696,8 @@ void MLIRDocument::findDocumentSymbols(
     if (SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op)) {
       symbols.emplace_back(symbol.getName(),
                            isa<FunctionOpInterface>(op)
-                               ? lsp::SymbolKind::Function
-                               : lsp::SymbolKind::Class,
+                               ? llvm::lsp::SymbolKind::Function
+                               : llvm::lsp::SymbolKind::Class,
                            lsp::Range(sourceMgr, def->scopeLoc),
                            lsp::Range(sourceMgr, def->loc));
       childSymbols = &symbols.back().children;
@@ -704,9 +705,9 @@ void MLIRDocument::findDocumentSymbols(
     } else if (op->hasTrait<OpTrait::SymbolTable>()) {
       // Otherwise, if this is a symbol table push an anonymous document symbol.
       symbols.emplace_back("<" + op->getName().getStringRef() + ">",
-                           lsp::SymbolKind::Namespace,
-                           lsp::Range(sourceMgr, def->scopeLoc),
-                           lsp::Range(sourceMgr, def->loc));
+                           llvm::lsp::SymbolKind::Namespace,
+                           llvm::lsp::Range(sourceMgr, def->scopeLoc),
+                           llvm::lsp::Range(sourceMgr, def->loc));
       childSymbols = &symbols.back().children;
     }
   }
@@ -734,9 +735,9 @@ public:
   /// Signal code completion for a dialect name, with an optional prefix.
   void completeDialectName(StringRef prefix) final {
     for (StringRef dialect : ctx->getAvailableDialects()) {
-      lsp::CompletionItem item(prefix + dialect,
-                               lsp::CompletionItemKind::Module,
-                               /*sortText=*/"3");
+      llvm::lsp::CompletionItem item(prefix + dialect,
+                                     llvm::lsp::CompletionItemKind::Module,
+                                     /*sortText=*/"3");
       item.detail = "dialect";
       completionList.items.emplace_back(item);
     }
@@ -753,9 +754,9 @@ public:
       if (&op.getDialect() != dialect)
         continue;
 
-      lsp::CompletionItem item(
+      llvm::lsp::CompletionItem item(
           op.getStringRef().drop_front(dialectName.size() + 1),
-          lsp::CompletionItemKind::Field,
+          llvm::lsp::CompletionItemKind::Field,
           /*sortText=*/"1");
       item.detail = "operation";
       completionList.items.emplace_back(item);
@@ -768,7 +769,8 @@ public:
     // Check if we need to insert the `%` or not.
     bool stripPrefix = getCodeCompleteLoc().getPointer()[-1] == '%';
 
-    lsp::CompletionItem item(name, lsp::CompletionItemKind::Variable);
+    llvm::lsp::CompletionItem item(name,
+                                   llvm::lsp::CompletionItemKind::Variable);
     if (stripPrefix)
       item.insertText = name.drop_front(1).str();
     item.detail = std::move(typeData);
@@ -781,7 +783,7 @@ public:
     // Check if we need to insert the `^` or not.
     bool stripPrefix = getCodeCompleteLoc().getPointer()[-1] == '^';
 
-    lsp::CompletionItem item(name, lsp::CompletionItemKind::Field);
+    llvm::lsp::CompletionItem item(name, llvm::lsp::CompletionItemKind::Field);
     if (stripPrefix)
       item.insertText = name.drop_front(1).str();
     completionList.items.emplace_back(item);
@@ -790,8 +792,9 @@ public:
   /// Signal a completion for the given expected token.
   void completeExpectedTokens(ArrayRef<StringRef> tokens, bool optional) final {
     for (StringRef token : tokens) {
-      lsp::CompletionItem item(token, lsp::CompletionItemKind::Keyword,
-                               /*sortText=*/"0");
+      llvm::lsp::CompletionItem item(token,
+                                     llvm::lsp::CompletionItemKind::Keyword,
+                                     /*sortText=*/"0");
       item.detail = optional ? "optional" : "";
       completionList.items.emplace_back(item);
     }
@@ -802,7 +805,7 @@ public:
     appendSimpleCompletions({"affine_set", "affine_map", "dense",
                              "dense_resource", "false", "loc", "sparse", "true",
                              "unit"},
-                            lsp::CompletionItemKind::Field,
+                            llvm::lsp::CompletionItemKind::Field,
                             /*sortText=*/"1");
 
     completeDialectName("#");
@@ -820,13 +823,14 @@ public:
     appendSimpleCompletions({"memref", "tensor", "complex", "tuple", "vector",
                              "bf16", "f16", "f32", "f64", "f80", "f128",
                              "index", "none"},
-                            lsp::CompletionItemKind::Field,
+                            llvm::lsp::CompletionItemKind::Field,
                             /*sortText=*/"1");
 
     // Handle the builtin integer types.
     for (StringRef type : {"i", "si", "ui"}) {
-      lsp::CompletionItem item(type + "<N>", lsp::CompletionItemKind::Field,
-                               /*sortText=*/"1");
+      llvm::lsp::CompletionItem item(type + "<N>",
+                                     llvm::lsp::CompletionItemKind::Field,
+                                     /*sortText=*/"1");
       item.insertText = type.str();
       completionList.items.emplace_back(item);
     }
@@ -846,9 +850,9 @@ public:
   void completeAliases(const llvm::StringMap<T> &aliases,
                        StringRef prefix = "") {
     for (const auto &alias : aliases) {
-      lsp::CompletionItem item(prefix + alias.getKey(),
-                               lsp::CompletionItemKind::Field,
-                               /*sortText=*/"2");
+      llvm::lsp::CompletionItem item(prefix + alias.getKey(),
+                                     llvm::lsp::CompletionItemKind::Field,
+                                     /*sortText=*/"2");
       llvm::raw_string_ostream(item.detail) << "alias: " << alias.getValue();
       completionList.items.emplace_back(item);
     }
@@ -856,7 +860,7 @@ public:
 
   /// Add a set of simple completions that all have the same kind.
   void appendSimpleCompletions(ArrayRef<StringRef> completions,
-                               lsp::CompletionItemKind kind,
+                               llvm::lsp::CompletionItemKind kind,
                                StringRef sortText = "") {
     for (StringRef completion : completions)
       completionList.items.emplace_back(completion, kind, sortText);
@@ -897,7 +901,7 @@ MLIRDocument::getCodeCompletion(const lsp::URIForFile &uri,
 
 void MLIRDocument::getCodeActionForDiagnostic(
     const lsp::URIForFile &uri, lsp::Position &pos, StringRef severity,
-    StringRef message, std::vector<lsp::TextEdit> &edits) {
+    StringRef message, std::vector<llvm::lsp::TextEdit> &edits) {
   // Ignore diagnostics that print the current operation. These are always
   // enabled for the language server, but not generally during normal
   // parsing/verification.
@@ -913,7 +917,7 @@ void MLIRDocument::getCodeActionForDiagnostic(
 
   // Add a text edit for adding an expected-* diagnostic check for this
   // diagnostic.
-  lsp::TextEdit edit;
+  llvm::lsp::TextEdit edit;
   edit.range = lsp::Range(lsp::Position(pos.line, 0));
 
   // Use the indent of the current line for the expected-* diagnostic.
@@ -937,13 +941,14 @@ MLIRDocument::convertToBytecode() {
   // conceptually be relaxed.
   if (!llvm::hasSingleElement(parsedIR)) {
     if (parsedIR.empty()) {
-      return llvm::make_error<lsp::LSPError>(
+      return llvm::make_error<llvm::lsp::LSPError>(
           "expected a single and valid top-level operation, please ensure "
           "there are no errors",
-          lsp::ErrorCode::RequestFailed);
+          llvm::lsp::ErrorCode::RequestFailed);
     }
-    return llvm::make_error<lsp::LSPError>(
-        "expected a single top-level operation", lsp::ErrorCode::RequestFailed);
+    return llvm::make_error<llvm::lsp::LSPError>(
+        "expected a single top-level operation",
+        llvm::lsp::ErrorCode::RequestFailed);
   }
 
   lsp::MLIRConvertBytecodeResult result;
@@ -1134,7 +1139,7 @@ void MLIRTextFile::findDocumentSymbols(
     lsp::Position endPos((i == e - 1) ? totalNumLines - 1
                                       : chunks[i + 1]->lineOffset);
     lsp::DocumentSymbol symbol("<file-split-" + Twine(i) + ">",
-                               lsp::SymbolKind::Namespace,
+                               llvm::lsp::SymbolKind::Namespace,
                                /*range=*/lsp::Range(startPos, endPos),
                                /*selectionRange=*/lsp::Range(startPos));
     chunk.document.findDocumentSymbols(symbol.children);
@@ -1167,10 +1172,10 @@ lsp::CompletionList MLIRTextFile::getCodeCompletion(const lsp::URIForFile &uri,
       uri, completePos, context.getDialectRegistry());
 
   // Adjust any completion locations.
-  for (lsp::CompletionItem &item : completionList.items) {
+  for (llvm::lsp::CompletionItem &item : completionList.items) {
     if (item.textEdit)
       chunk.adjustLocForChunkOffset(item.textEdit->range);
-    for (lsp::TextEdit &edit : item.additionalTextEdits)
+    for (llvm::lsp::TextEdit &edit : item.additionalTextEdits)
       chunk.adjustLocForChunkOffset(edit.range);
   }
   return completionList;
@@ -1194,10 +1199,10 @@ void MLIRTextFile::getCodeActions(const lsp::URIForFile &uri,
 
     StringRef severity;
     switch (diag.severity) {
-    case lsp::DiagnosticSeverity::Error:
+    case llvm::lsp::DiagnosticSeverity::Error:
       severity = "error";
       break;
-    case lsp::DiagnosticSeverity::Warning:
+    case llvm::lsp::DiagnosticSeverity::Warning:
       severity = "warning";
       break;
     default:
@@ -1205,7 +1210,7 @@ void MLIRTextFile::getCodeActions(const lsp::URIForFile &uri,
     }
 
     // Get edits for the diagnostic.
-    std::vector<lsp::TextEdit> edits;
+    std::vector<llvm::lsp::TextEdit> edits;
     chunk.document.getCodeActionForDiagnostic(uri, diagPos, severity,
                                               diag.message, edits);
 
@@ -1221,7 +1226,7 @@ void MLIRTextFile::getCodeActions(const lsp::URIForFile &uri,
       }
     }
     // Fixup the locations for any edits.
-    for (lsp::TextEdit &edit : edits)
+    for (llvm::lsp::TextEdit &edit : edits)
       chunk.adjustLocForChunkOffset(edit.range);
 
     action.edit.emplace();
@@ -1236,9 +1241,9 @@ llvm::Expected<lsp::MLIRConvertBytecodeResult>
 MLIRTextFile::convertToBytecode() {
   // Bail out if there is more than one chunk, bytecode wants a single module.
   if (chunks.size() != 1) {
-    return llvm::make_error<lsp::LSPError>(
+    return llvm::make_error<llvm::lsp::LSPError>(
         "unexpected split file, please remove all `// -----`",
-        lsp::ErrorCode::RequestFailed);
+        llvm::lsp::ErrorCode::RequestFailed);
   }
   return chunks.front()->document.convertToBytecode();
 }
@@ -1283,7 +1288,7 @@ lsp::MLIRServer::~MLIRServer() = default;
 
 void lsp::MLIRServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
-    std::vector<Diagnostic> &diagnostics) {
+    std::vector<llvm::lsp::Diagnostic> &diagnostics) {
   impl->files[uri.file()] = std::make_unique<MLIRTextFile>(
       uri, contents, version, impl->registry_fn, diagnostics);
 }
@@ -1298,17 +1303,17 @@ std::optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
   return version;
 }
 
-void lsp::MLIRServer::getLocationsOf(const URIForFile &uri,
-                                     const Position &defPos,
-                                     std::vector<Location> &locations) {
+void lsp::MLIRServer::getLocationsOf(
+    const URIForFile &uri, const Position &defPos,
+    std::vector<llvm::lsp::Location> &locations) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->getLocationsOf(uri, defPos, locations);
 }
 
-void lsp::MLIRServer::findReferencesOf(const URIForFile &uri,
-                                       const Position &pos,
-                                       std::vector<Location> &references) {
+void lsp::MLIRServer::findReferencesOf(
+    const URIForFile &uri, const Position &pos,
+    std::vector<llvm::lsp::Location> &references) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->findReferencesOf(uri, pos, references);
@@ -1367,17 +1372,17 @@ lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
   // Try to parse the given source file.
   Block parsedBlock;
   if (failed(parseSourceFile(uri.file(), &parsedBlock, parserConfig))) {
-    return llvm::make_error<lsp::LSPError>(
+    return llvm::make_error<llvm::lsp::LSPError>(
         "failed to parse bytecode source file: " + errorMsg,
-        lsp::ErrorCode::RequestFailed);
+        llvm::lsp::ErrorCode::RequestFailed);
   }
 
   // TODO: We currently expect a single top-level operation, but this could
   // conceptually be relaxed.
   if (!llvm::hasSingleElement(parsedBlock)) {
-    return llvm::make_error<lsp::LSPError>(
+    return llvm::make_error<llvm::lsp::LSPError>(
         "expected bytecode to contain a single top-level operation",
-        lsp::ErrorCode::RequestFailed);
+        llvm::lsp::ErrorCode::RequestFailed);
   }
 
   // Print the module to a buffer.
@@ -1401,9 +1406,9 @@ llvm::Expected<lsp::MLIRConvertBytecodeResult>
 lsp::MLIRServer::convertToBytecode(const URIForFile &uri) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt == impl->files.end()) {
-    return llvm::make_error<lsp::LSPError>(
+    return llvm::make_error<llvm::lsp::LSPError>(
         "language server does not contain an entry for this source file",
-        lsp::ErrorCode::RequestFailed);
+        llvm::lsp::ErrorCode::RequestFailed);
   }
   return fileIt->second->convertToBytecode();
 }

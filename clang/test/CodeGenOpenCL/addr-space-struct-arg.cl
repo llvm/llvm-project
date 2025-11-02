@@ -647,6 +647,7 @@ kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
 // AMDGCN20-NEXT:    [[IN:%.*]] = alloca [[STRUCT_MAT3X3:%.*]], align 4, addrspace(5)
 // AMDGCN20-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGCN20-NEXT:    [[IN1:%.*]] = addrspacecast ptr addrspace(5) [[IN]] to ptr
+// AMDGCN20-NEXT:    [[RETVAL_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[RETVAL_ASCAST]] to ptr addrspace(5)
 // AMDGCN20-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_MAT3X3]], ptr [[IN1]], i32 0, i32 0
 // AMDGCN20-NEXT:    store [9 x i32] [[IN_COERCE]], ptr [[COERCE_DIVE]], align 4
 // AMDGCN20-NEXT:    [[TMP0:%.*]] = load [[STRUCT_MAT4X4]], ptr [[RETVAL_ASCAST]], align 4

@@ -3,14 +3,12 @@
 !CHECK: fir.global common @[[CB_C:.*]](dense<0> : vector<8xi8>) {alignment = 4 : i64} : !fir.array<8xi8>
 !CHECK-LABEL: func.func @_QPlastprivate_common
 !CHECK:      %[[CB_C_REF:.*]] = fir.address_of(@[[CB_C]]) : !fir.ref<!fir.array<8xi8>>
-!CHECK:      %[[CB_C_REF_CVT:.*]] = fir.convert %[[CB_C_REF]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
-!CHECK:      %[[CB_C_X_COOR:.*]] = fir.coordinate_of %[[CB_C_REF_CVT]], %{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:      %[[CB_C_X_COOR:.*]] = fir.coordinate_of %[[CB_C_REF]], %{{.*}} : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:      %[[CB_C_X_ADDR:.*]] = fir.convert %[[CB_C_X_COOR]] : (!fir.ref<i8>) -> !fir.ref<f32>
-!CHECK:      %[[X_DECL:.*]]:2 = hlfir.declare %[[CB_C_X_ADDR]] {uniq_name = "_QFlastprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-!CHECK:      %[[CB_C_REF_CVT:.*]] = fir.convert %[[CB_C_REF]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
-!CHECK:      %[[CB_C_Y_COOR:.*]] = fir.coordinate_of %[[CB_C_REF_CVT]], %{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+!CHECK:      %[[X_DECL:.*]]:2 = hlfir.declare %[[CB_C_X_ADDR]] storage(%[[CB_C_REF]][0]) {uniq_name = "_QFlastprivate_commonEx"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:      %[[CB_C_Y_COOR:.*]] = fir.coordinate_of %[[CB_C_REF]], %{{.*}} : (!fir.ref<!fir.array<8xi8>>, index) -> !fir.ref<i8>
 !CHECK:      %[[CB_C_Y_ADDR:.*]] = fir.convert %[[CB_C_Y_COOR]] : (!fir.ref<i8>) -> !fir.ref<f32>
-!CHECK:      %[[Y_DECL:.*]]:2 = hlfir.declare %[[CB_C_Y_ADDR]] {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+!CHECK:      %[[Y_DECL:.*]]:2 = hlfir.declare %[[CB_C_Y_ADDR]] storage(%[[CB_C_REF]][4]) {uniq_name = "_QFlastprivate_commonEy"} : (!fir.ref<f32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<f32>, !fir.ref<f32>)
 !CHECK:      omp.wsloop private(@{{.*}} %{{.*}} -> %[[PRIVATE_X_REF:.*]], @{{.*}} %{{.*}} -> %[[PRIVATE_Y_REF:.*]], @{{.*}} %{{.*}} -> %{{.*}} : !{{.*}}, !{{.*}}, !{{.*}}) {
 !CHECK-NEXT:   omp.loop_nest (%[[I:.*]]) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
 !CHECK:      %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X_REF]] {uniq_name = "_QFlastprivate_commonEx"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)

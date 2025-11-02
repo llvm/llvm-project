@@ -1,4 +1,4 @@
-# REQUIRES: shell, aarch64-registered-target
+# REQUIRES: aarch64-registered-target
 # UNSUPPORTED: system-windows
 
 # Merge a binary file (e.g., a linked executable) having concatenated cgdata (__llvm_outline)
@@ -8,11 +8,15 @@ RUN: split-file %s %t
 # Synthesize two sets of raw cgdata without the header (32 byte) from the indexed cgdata.
 # Concatenate them in merge-concat.ll
 RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
-RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-1-bytes.txt
-RUN: sed "s/<RAW_1_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-concat-template.ll > %t/merge-concat-template-2.ll
+RUN: echo -n "s/<RAW_1_BYTES>/" > %t/raw-1-sed.txt
+RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' >> %t/raw-1-sed.txt
+RUN: echo "/g" >> %t/raw-1-sed.txt
+RUN: sed -f %t/raw-1-sed.txt %t/merge-concat-template.ll > %t/merge-concat-template-2.ll
 RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
-RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' > %t/raw-2-bytes.txt
-RUN: sed "s/<RAW_2_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-concat-template-2.ll > %t/merge-concat.ll
+RUN: echo -n "s/<RAW_2_BYTES>/" > %t/raw-2-sed.txt
+RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ]*$//' | sed 's/[ ][ ]*/\\\\/g' >> %t/raw-2-sed.txt
+RUN: echo "/g" >> %t/raw-2-sed.txt
+RUN: sed -f %t/raw-2-sed.txt %t/merge-concat-template-2.ll > %t/merge-concat.ll
 
 RUN: llc -filetype=obj -mtriple arm64-apple-darwin %t/merge-concat.ll -o %t/merge-concat.o
 RUN: llvm-cgdata --merge %t/merge-concat.o -o %t/merge-concat.cgdata

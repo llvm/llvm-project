@@ -41,6 +41,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/LEB128.h"
 #include <optional>
+#include <unordered_set>
 
 using namespace llvm;
 using namespace lld;
@@ -296,13 +297,19 @@ namespace {
 // Parse a serialized trie and invoke a callback for each entry.
 class TrieParser {
 public:
-  TrieParser(const uint8_t *buf, size_t size, const TrieEntryCallback &callback)
-      : start(buf), end(start + size), callback(callback) {}
+  TrieParser(const std::string &fileName, const uint8_t *buf, size_t size,
+             const TrieEntryCallback &callback)
+      : fileName(fileName), start(buf), end(start + size), callback(callback) {}
 
-  void parse(const uint8_t *buf, const Twine &cumulativeString);
+  void parse(const uint8_t *buf, const Twine &cumulativeString,
+             std::unordered_set<size_t> &visited);
 
-  void parse() { parse(start, ""); }
+  void parse() {
+    std::unordered_set<size_t> visited;
+    parse(start, "", visited);
+  }
 
+  const std::string fileName;
   const uint8_t *start;
   const uint8_t *end;
   const TrieEntryCallback &callback;
@@ -310,9 +317,13 @@ public:
 
 } // namespace
 
-void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
+void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString,
+                       std::unordered_set<size_t> &visited) {
   if (buf >= end)
-    fatal("Node offset points outside export section");
+    fatal(fileName + ": export trie node offset points outside export section");
+
+  size_t currentOffset = buf - start;
+  visited.insert(currentOffset);
 
   unsigned ulebSize;
   uint64_t terminalSize = decodeULEB128(buf, &ulebSize);
@@ -331,14 +342,18 @@ void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
     buf += substring.size() + 1;
     offset = decodeULEB128(buf, &ulebSize);
     buf += ulebSize;
-    parse(start + offset, cumulativeString + substring);
+    if (visited.find(offset) != visited.end())
+      fatal(fileName + ": export trie child node infinite loop");
+    parse(start + offset, cumulativeString + substring, visited);
   }
+
+  visited.erase(currentOffset);
 }
 
-void macho::parseTrie(const uint8_t *buf, size_t size,
-                      const TrieEntryCallback &callback) {
+void macho::parseTrie(const std::string &fileName, const uint8_t *buf,
+                      size_t size, const TrieEntryCallback &callback) {
   if (size == 0)
     return;
 
-  TrieParser(buf, size, callback).parse();
+  TrieParser(fileName, buf, size, callback).parse();
 }

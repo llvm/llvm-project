@@ -1377,29 +1377,26 @@ public:
       return;
     }
 
-    DataExtractor register_data;
-
-    if (!reg_value.GetData(register_data)) {
-      err = Status::FromErrorStringWithFormat(
-          "couldn't get the data for register %s", m_register_info.name);
-      return;
-    }
-
-    if (register_data.GetByteSize() != m_register_info.byte_size) {
+    if (reg_value.GetByteSize() != m_register_info.byte_size) {
       err = Status::FromErrorStringWithFormat(
           "data for register %s had size %llu but we expected %llu",
-          m_register_info.name, (unsigned long long)register_data.GetByteSize(),
+          m_register_info.name, (unsigned long long)reg_value.GetByteSize(),
           (unsigned long long)m_register_info.byte_size);
       return;
     }
 
-    m_register_contents = std::make_shared<DataBufferHeap>(
-        register_data.GetDataStart(), register_data.GetByteSize());
+    lldb_private::DataBufferHeap buf(reg_value.GetByteSize(), 0);
+    reg_value.GetAsMemoryData(m_register_info, buf.GetBytes(),
+                              buf.GetByteSize(), map.GetByteOrder(), err);
+    if (!err.Success())
+      return;
+
+    m_register_contents = std::make_shared<DataBufferHeap>(buf);
 
     Status write_error;
 
-    map.WriteMemory(load_addr, register_data.GetDataStart(),
-                    register_data.GetByteSize(), write_error);
+    map.WriteMemory(load_addr, buf.GetBytes(), reg_value.GetByteSize(),
+                    write_error);
 
     if (!write_error.Success()) {
       err = Status::FromErrorStringWithFormat(

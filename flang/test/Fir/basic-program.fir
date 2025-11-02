@@ -69,6 +69,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:     InlineHLFIRAssign
 // PASSES-NEXT:   ConvertHLFIRtoFIR
 // PASSES-NEXT:   LowerWorkshare
+// PASSES-NEXT:   LowerWorkdistribute
 // PASSES-NEXT:   CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
@@ -107,7 +108,6 @@ func.func @_QQmain() {
 // PASSES-NEXT:   OptimizeArrayRepacking
 // PASSES-NEXT: LowerRepackArraysPass
 // PASSES-NEXT: SimplifyFIROperations
-// PASSES-NEXT: AddAliasTags
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT: 'fir.global' Pipeline
@@ -126,12 +126,15 @@ func.func @_QQmain() {
 // PASSES-NEXT: SCFToControlFlow
 // PASSES-NEXT: Canonicalizer
 // PASSES-NEXT: SimplifyRegionLite
+// PASSES-NEXT: ConvertComplexPow
 // PASSES-NEXT: CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   SetRuntimeCallAttributes
+// PASSES-NEXT: MIFOpConversion 
 // PASSES-NEXT: BoxedProcedurePass
+// PASSES-NEXT: AddAliasTags
 
 // PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'gpu.module', 'omp.declare_reduction', 'omp.private']
 // PASSES-NEXT:  'fir.global' Pipeline
@@ -158,4 +161,5 @@ func.func @_QQmain() {
 // PASSES-NEXT:  LowerNontemporalPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
+// PASSES-NEXT: PrepareForOMPOffloadPrivatizationPass
 // PASSES-NEXT: LLVMIRLoweringPass

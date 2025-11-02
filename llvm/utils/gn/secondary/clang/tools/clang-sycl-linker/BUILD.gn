@@ -16,8 +16,8 @@ executable("clang-sycl-linker") {
     "//llvm/lib/IRReader",
     "//llvm/lib/Linker",
     "//llvm/lib/MC",
-    "//llvm/lib/Option",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
   ]

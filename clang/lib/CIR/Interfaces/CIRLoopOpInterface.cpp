@@ -17,7 +17,7 @@ namespace cir {
 void LoopOpInterface::getLoopOpSuccessorRegions(
     LoopOpInterface op, mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
-  assert(point.isParent() || point.getRegionOrNull());
+  assert(point.isParent() || point.getTerminatorPredecessorOrNull());
 
   // Branching to first region: go to condition or body (do-while).
   if (point.isParent()) {
@@ -25,15 +25,18 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
     return;
   }
 
+  mlir::Region *parentRegion =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+
   // Branching from condition: go to body or exit.
-  if (&op.getCond() == point.getRegionOrNull()) {
-    regions.emplace_back(mlir::RegionSuccessor(op->getResults()));
+  if (&op.getCond() == parentRegion) {
+    regions.emplace_back(mlir::RegionSuccessor(op, op->getResults()));
     regions.emplace_back(&op.getBody(), op.getBody().getArguments());
     return;
   }
 
   // Branching from body: go to step (for) or condition.
-  if (&op.getBody() == point.getRegionOrNull()) {
+  if (&op.getBody() == parentRegion) {
     // FIXME(cir): Should we consider break/continue statements here?
     mlir::Region *afterBody =
         (op.maybeGetStep() ? op.maybeGetStep() : &op.getCond());
@@ -42,7 +45,7 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
   }
 
   // Branching from step: go to condition.
-  if (op.maybeGetStep() == point.getRegionOrNull()) {
+  if (op.maybeGetStep() == parentRegion) {
     regions.emplace_back(&op.getCond(), op.getCond().getArguments());
     return;
   }

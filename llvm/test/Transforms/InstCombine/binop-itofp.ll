@@ -1063,6 +1063,25 @@ define float @negzero_check_on_constant_for_si_fmul(i1 %c, i1 %.b, ptr %g_2345) 
   ret float %mul3.i.i
 }
 
+; Don't perform the fold on vector operations, as the integer op may be
+; much more expensive than the float op in that case.
+define <2 x half> @test_ui_ui_i8_mul_vec(<2 x i8> noundef %x_in, <2 x i8> noundef %y_in) {
+; CHECK-LABEL: @test_ui_ui_i8_mul_vec(
+; CHECK-NEXT:    [[X:%.*]] = and <2 x i8> [[X_IN:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[Y:%.*]] = and <2 x i8> [[Y_IN:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[XF:%.*]] = uitofp nneg <2 x i8> [[X]] to <2 x half>
+; CHECK-NEXT:    [[YF:%.*]] = uitofp nneg <2 x i8> [[Y]] to <2 x half>
+; CHECK-NEXT:    [[R:%.*]] = fmul <2 x half> [[XF]], [[YF]]
+; CHECK-NEXT:    ret <2 x half> [[R]]
+;
+  %x = and <2 x i8> %x_in, splat (i8 15)
+  %y = and <2 x i8> %y_in, splat (i8 15)
+  %xf = uitofp <2 x i8> %x to <2 x half>
+  %yf = uitofp <2 x i8> %y to <2 x half>
+  %r = fmul <2 x half> %xf, %yf
+  ret <2 x half> %r
+}
+
 define <2 x float> @nonzero_check_on_constant_for_si_fmul_vec_w_poison(i1 %c, i1 %.b, ptr %g_2345) {
 ; CHECK-LABEL: @nonzero_check_on_constant_for_si_fmul_vec_w_poison(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i32 65529, i32 53264
@@ -1091,8 +1110,9 @@ define <2 x float> @nonzero_check_on_constant_for_si_fmul_nz_vec_w_poison(i1 %c,
 ; CHECK-NEXT:    [[CONV_I_V:%.*]] = insertelement <2 x i16> poison, i16 [[CONV_I_S]], i64 0
 ; CHECK-NEXT:    [[CONV_I:%.*]] = shufflevector <2 x i16> [[CONV_I_V]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MUL3_I_I:%.*]] = sitofp <2 x i16> [[CONV_I]] to <2 x float>
+; CHECK-NEXT:    [[MUL3_I_I1:%.*]] = fmul <2 x float> [[MUL3_I_I]], <float poison, float 1.000000e+00>
 ; CHECK-NEXT:    store i32 [[SEL]], ptr [[G_2345:%.*]], align 4
-; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I]]
+; CHECK-NEXT:    ret <2 x float> [[MUL3_I_I1]]
 ;
   %sel = select i1 %c, i32 65529, i32 53264
   %conv.i.s = trunc i32 %sel to i16

@@ -223,7 +223,6 @@ define amdgpu_kernel void @non_entry_trap(ptr addrspace(1) nocapture readonly %a
 ; HSA-TRAP-GFX1100-O0-NEXT:    global_load_b32 v0, v0, s[0:1] glc dlc
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_mov_b32 s0, -1
-; HSA-TRAP-GFX1100-O0-NEXT:    ; implicit-def: $sgpr1
 ; HSA-TRAP-GFX1100-O0-NEXT:    v_cmp_eq_u32_e64 s0, v0, s0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; HSA-TRAP-GFX1100-O0-NEXT:    s_cbranch_vccnz .LBB1_2

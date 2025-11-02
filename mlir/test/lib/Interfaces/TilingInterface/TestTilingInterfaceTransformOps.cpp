@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -466,6 +467,159 @@ transform::TestTileAndFuseOuterParallelPartialReductionOp::apply(
 
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TestTileAndFuseOuterParallelPartialReduction
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
+    TransformRewriter &transformRewriter, TransformResults &transformResults,
+    TransformState &state) {
+  auto target =
+      dyn_cast<TilingInterface>(*state.getPayloadOps(getRootOp()).begin());
+  if (!target) {
+    emitOpError("expected root operation to implement `TilingInterface`");
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  OpFoldResult oneOfr = transformRewriter.getIndexAttr(1);
+
+  scf::SCFTilingOptions::GenerateLoopHeaderFn loopHeaderFn =
+      [&](RewriterBase &rewriter, Location loc, ArrayRef<Range> loopRanges,
+          ArrayRef<OpFoldResult> givenTileSizes,
+          ValueRange outerDestinationTensors)
+      -> FailureOr<scf::SCFTilingOptions::CustomLoopHeaderInfo> {
+    // Check that the strides are all 1 (to make it easier in the test).
+    if (llvm::any_of(loopRanges, [](Range r) {
+          return !isConstantIntValue(r.stride, 1);
+        })) {
+      return emitOpError("unable to handle loop ranges with strides != 1");
+    }
+    // Check number of tile sizes is equal to loop dimensions.
+    if (loopRanges.size() != givenTileSizes.size()) {
+      return emitOpError("expected number of tile sizes to be same as the "
+                         "number of loops in the operation");
+    }
+    // For testing disallow any of the tile sizes being 0.
+    if (llvm::any_of(givenTileSizes, isZeroInteger)) {
+      return emitOpError("unhandled case of zero tile size");
+    }
+    // For testing, only handle tensor tiling.
+    if (outerDestinationTensors.empty()) {
+      return emitOpError("expected destination tensors");
+    }
+
+    // Compute the number of iterations for each of the loops.
+    AffineExpr s0, s1, s2;
+    bindSymbols(rewriter.getContext(), s0, s1, s2);
+    AffineExpr numItersExpr = (s1 - s0).ceilDiv(s2); // (ub - lb) / tileSize
+
+    SmallVector<OpFoldResult> allNumIters;
+    allNumIters.reserve(loopRanges.size());
+    for (auto [loopRange, tileSize] :
+         llvm::zip_equal(loopRanges, givenTileSizes)) {
+      OpFoldResult numIters = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, numItersExpr,
+          {loopRange.offset, loopRange.size, tileSize});
+      allNumIters.push_back(numIters);
+    }
+    if (allNumIters.empty()) {
+      return emitOpError("invalid empty tile sizes and loop ranges");
+    }
+
+    AffineExpr mulExpr = s0 * s1;
+    OpFoldResult cumulative = oneOfr;
+    for (auto numIters : allNumIters) {
+      cumulative = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, mulExpr, {cumulative, numIters});
+    }
+
+    Value zeroVal = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    Value oneVal = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    Value ub = getValueOrCreateConstantIndexOp(rewriter, loc, cumulative);
+
+    SmallVector<OpFoldResult> offsets;
+    SmallVector<OpFoldResult> sizes;
+    SmallVector<Value> innerDestinationTensors;
+    offsets.reserve(loopRanges.size());
+    sizes.reserve(loopRanges.size());
+
+    AffineExpr d0;
+    bindDims(rewriter.getContext(), d0);
+    AffineExpr offsetExpr = s0 + d0 * s1; // lb + iv * tileSize
+    AffineMap minMap =
+        AffineMap::get(1, 2, {s0 - d0, s1},
+                       rewriter.getContext()); // min(ub - offset, tileSize)
+    auto forOp = scf::ForOp::create(
+        rewriter, loc, zeroVal, ub, oneVal, outerDestinationTensors,
+        [&](OpBuilder &b, Location bodyLoc, Value linearizedIv,
+            ValueRange destinations) {
+          auto delinearizeOp = affine::AffineDelinearizeIndexOp::create(
+              b, bodyLoc, linearizedIv, allNumIters);
+          for (auto [normalizedIv, range, tileSize] : llvm::zip_equal(
+                   delinearizeOp.getResults(), loopRanges, givenTileSizes)) {
+
+            OpFoldResult normalizedIvOfr = getAsOpFoldResult(normalizedIv);
+            OpFoldResult offset = affine::makeComposedFoldedAffineApply(
+                b, bodyLoc, offsetExpr,
+                {normalizedIvOfr, range.offset, tileSize});
+            offsets.push_back(offset);
+
+            OpFoldResult size = affine::makeComposedFoldedAffineMin(
+                b, bodyLoc, minMap, {offset, range.size, tileSize});
+            sizes.push_back(size);
+          }
+          innerDestinationTensors = llvm::to_vector(destinations);
+        });
+    rewriter.setInsertionPointToEnd(forOp.getBody());
+    return scf::SCFTilingOptions::CustomLoopHeaderInfo{
+        {cast<LoopLikeOpInterface>(forOp.getOperation())},
+        offsets,
+        sizes,
+        innerDestinationTensors};
+  };
+
+  scf::SCFTilingOptions::GenerateLoopTerminatorFn terminatorFn =
+      [&](RewriterBase &rewriter, Location loc,
+          ArrayRef<LoopLikeOpInterface> loops, ValueRange tiledResults,
+          ArrayRef<SmallVector<OpFoldResult>> resultOffsets,
+          ArrayRef<SmallVector<OpFoldResult>> resultSizes,
+          ValueRange destinationTensors) -> LogicalResult {
+    SmallVector<Value> yieldValues;
+    yieldValues.reserve(destinationTensors.size());
+    for (auto [tiledResult, offsets, sizes, destination] : llvm::zip_equal(
+             tiledResults, resultOffsets, resultSizes, destinationTensors)) {
+      SmallVector<OpFoldResult> strides(offsets.size(), oneOfr);
+      Value insertedVal = tensor::InsertSliceOp::create(
+          rewriter, loc, tiledResult, destination, offsets, sizes, strides);
+      yieldValues.push_back(insertedVal);
+    }
+    scf::YieldOp::create(rewriter, loc, yieldValues);
+    return success();
+  };
+
+  scf::SCFTilingOptions tilingOptions;
+  SmallVector<int64_t> staticTileSizes =
+      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
+  SmallVector<OpFoldResult> tileSizes =
+      getAsIndexOpFoldResult(transformRewriter.getContext(), staticTileSizes);
+  tilingOptions.setTileSizes(tileSizes)
+      .setLoopType(scf::SCFTilingOptions::LoopType::CustomOp)
+      .setCustomLoopGenerationFns(loopHeaderFn, terminatorFn);
+
+  OpBuilder::InsertionGuard g(transformRewriter);
+  transformRewriter.setInsertionPoint(target);
+  FailureOr<scf::SCFTilingResult> tiledResults =
+      scf::tileUsingSCF(transformRewriter, target, tilingOptions);
+  if (failed(tiledResults)) {
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+  transformRewriter.replaceOp(target, tiledResults->replacements);
+  transformResults.set(getOperation()->getResult(0), tiledResults->tiledOps);
+  transformResults.set(getOperation()->getResult(1), tiledResults->loops);
+
+  return DiagnosedSilenceableFailure::success();
 }
 
 #define GET_OP_CLASSES

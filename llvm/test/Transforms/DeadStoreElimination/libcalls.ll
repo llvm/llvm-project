@@ -56,14 +56,14 @@ define void @test3(ptr %src) {
 define void @test_strcat_with_lifetime(ptr %src) {
 ; CHECK-LABEL: @test_strcat_with_lifetime(
 ; CHECK-NEXT:    [[B:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[B]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[B]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
   %B = alloca [16 x i8]
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %B)
+  call void @llvm.lifetime.start.p0(ptr nonnull %B)
   %call = call ptr @strcat(ptr %B, ptr %src)
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %B)
+  call void @llvm.lifetime.end.p0(ptr nonnull %B)
   ret void
 }
 
@@ -344,61 +344,61 @@ entry:
 define void @dse_strcpy(ptr nocapture readonly %src) {
 ; CHECK-LABEL: @dse_strcpy(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [256 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 256, ptr nonnull [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 256, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [256 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
   call ptr @strcpy(ptr nonnull %a, ptr nonnull dereferenceable(1) %src)
-  call void @llvm.lifetime.end.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret void
 }
 
 define void @dse_strncpy(ptr nocapture readonly %src) {
 ; CHECK-LABEL: @dse_strncpy(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [256 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 256, ptr nonnull [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 256, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [256 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
   call ptr @strncpy(ptr nonnull %a, ptr nonnull dereferenceable(1) %src, i64 6)
-  call void @llvm.lifetime.end.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret void
 }
 
 define void @dse_strcat(ptr nocapture readonly %src) {
 ; CHECK-LABEL: @dse_strcat(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [256 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 256, ptr nonnull [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 256, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [256 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
   call ptr @strcat(ptr nonnull %a, ptr nonnull dereferenceable(1) %src)
-  call void @llvm.lifetime.end.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret void
 }
 
 define void @dse_strncat(ptr nocapture readonly %src) {
 ; CHECK-LABEL: @dse_strncat(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [256 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 256, ptr nonnull [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 256, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [256 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.start.p0(ptr nonnull %a)
   call ptr @strncat(ptr nonnull %a, ptr nonnull dereferenceable(1) %src, i64 6)
-  call void @llvm.lifetime.end.p0(i64 256, ptr nonnull %a)
+  call void @llvm.lifetime.end.p0(ptr nonnull %a)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 

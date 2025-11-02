@@ -1,4 +1,4 @@
-//===--- StaticallyConstructedObjectsCheck.h - clang-tidy--------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ namespace clang::tidy::fuchsia {
 /// constructor or has no explicit constructor.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/statically-constructed-objects.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/fuchsia/statically-constructed-objects.html
 class StaticallyConstructedObjectsCheck : public ClangTidyCheck {
 public:
   StaticallyConstructedObjectsCheck(StringRef Name, ClangTidyContext *Context)

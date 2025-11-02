@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "flang/Config/config.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/Diagnostic.h"
@@ -137,6 +138,7 @@ int main(int argc, const char **argv) {
                                   llvm::sys::getDefaultTargetTriple(), diags,
                                   "flang LLVM compiler");
   theDriver.setTargetAndMode(targetandMode);
+  theDriver.setPreferredLinker(FLANG_DEFAULT_LINKER);
 #ifdef FLANG_RUNTIME_F128_MATH_LIB
   theDriver.setFlangF128MathLibrary(FLANG_RUNTIME_F128_MATH_LIB);
 #endif

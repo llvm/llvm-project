@@ -99,15 +99,13 @@ define i32 @v_orn2_i32(i32 %src0, i32 %src1) {
 ; GCN-LABEL: v_orn2_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_not_b32_e32 v1, v1
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_bfi_b32 v0, v1, v0, -1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10PLUS-LABEL: v_orn2_i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_not_b32_e32 v1, v1
-; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX10PLUS-NEXT:    v_bfi_b32 v0, v1, v0, -1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %not.src1 = xor i32 %src1, -1
   %or = or i32 %src0, %not.src1
@@ -117,14 +115,12 @@ define i32 @v_orn2_i32(i32 %src0, i32 %src1) {
 define amdgpu_ps float @v_orn2_i32_sv(i32 inreg %src0, i32 %src1) {
 ; GCN-LABEL: v_orn2_i32_sv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_not_b32_e32 v0, v0
-; GCN-NEXT:    v_or_b32_e32 v0, s2, v0
+; GCN-NEXT:    v_bfi_b32 v0, v0, s2, -1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_orn2_i32_sv:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_not_b32_e32 v0, v0
-; GFX10PLUS-NEXT:    v_or_b32_e32 v0, s2, v0
+; GFX10PLUS-NEXT:    v_bfi_b32 v0, v0, s2, -1
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i32 %src1, -1
   %or = or i32 %src0, %not.src1
@@ -135,14 +131,12 @@ define amdgpu_ps float @v_orn2_i32_sv(i32 inreg %src0, i32 %src1) {
 define amdgpu_ps float @v_orn2_i32_vs(i32 %src0, i32 inreg %src1) {
 ; GCN-LABEL: v_orn2_i32_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_not_b32 s0, s2
-; GCN-NEXT:    v_or_b32_e32 v0, s0, v0
+; GCN-NEXT:    v_bfi_b32 v0, s2, v0, -1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_orn2_i32_vs:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    s_not_b32 s0, s2
-; GFX10PLUS-NEXT:    v_or_b32_e32 v0, s0, v0
+; GFX10PLUS-NEXT:    v_bfi_b32 v0, s2, v0, -1
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i32 %src1, -1
   %or = or i32 %src0, %not.src1
@@ -247,19 +241,15 @@ define i64 @v_orn2_i64(i64 %src0, i64 %src1) {
 ; GCN-LABEL: v_orn2_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_not_b32_e32 v2, v2
-; GCN-NEXT:    v_not_b32_e32 v3, v3
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v2
-; GCN-NEXT:    v_or_b32_e32 v1, v1, v3
+; GCN-NEXT:    v_bfi_b32 v0, v2, v0, -1
+; GCN-NEXT:    v_bfi_b32 v1, v3, v1, -1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10PLUS-LABEL: v_orn2_i64:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_not_b32_e32 v2, v2
-; GFX10PLUS-NEXT:    v_not_b32_e32 v3, v3
-; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX10PLUS-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX10PLUS-NEXT:    v_bfi_b32 v0, v2, v0, -1
+; GFX10PLUS-NEXT:    v_bfi_b32 v1, v3, v1, -1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %not.src1 = xor i64 %src1, -1
   %or = or i64 %src0, %not.src1
@@ -269,18 +259,14 @@ define i64 @v_orn2_i64(i64 %src0, i64 %src1) {
 define amdgpu_ps <2 x float> @v_orn2_i64_sv(i64 inreg %src0, i64 %src1) {
 ; GCN-LABEL: v_orn2_i64_sv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_not_b32_e32 v0, v0
-; GCN-NEXT:    v_not_b32_e32 v1, v1
-; GCN-NEXT:    v_or_b32_e32 v0, s2, v0
-; GCN-NEXT:    v_or_b32_e32 v1, s3, v1
+; GCN-NEXT:    v_bfi_b32 v0, v0, s2, -1
+; GCN-NEXT:    v_bfi_b32 v1, v1, s3, -1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_orn2_i64_sv:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_not_b32_e32 v0, v0
-; GFX10PLUS-NEXT:    v_not_b32_e32 v1, v1
-; GFX10PLUS-NEXT:    v_or_b32_e32 v0, s2, v0
-; GFX10PLUS-NEXT:    v_or_b32_e32 v1, s3, v1
+; GFX10PLUS-NEXT:    v_bfi_b32 v0, v0, s2, -1
+; GFX10PLUS-NEXT:    v_bfi_b32 v1, v1, s3, -1
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i64 %src1, -1
   %or = or i64 %src0, %not.src1
