@@ -3447,6 +3447,45 @@ static bool interp__builtin_ia32_shuffle_generic(
   return true;
 }
 
+
+static bool interp__builtin_x86_palignr(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned, unsigned)>
+        GetSourceIndex) {
+
+  assert(Call->getNumArgs() == 3);
+  unsigned Shift = popToAPSInt(S, Call->getArg(2)).getZExtValue() & 0xff;
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+  const auto *VecT = Arg0Type->castAs<VectorType>();
+  PrimType ElemT = *S.getContext().classify(VecT->getElementType());
+  unsigned NumElems = VecT->getNumElements();
+
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  for (unsigned DstIdx = 0; DstIdx != NumElems; ++DstIdx) {
+    auto [SrcVecIdx, SrcIdx] = GetSourceIndex(DstIdx, Shift, NumElems);
+
+    if (SrcIdx < 0) {
+      // Zero out this element
+      if (ElemT == PT_Float) {
+        Dst.elem<Floating>(DstIdx) = Floating(
+            S.getASTContext().getFloatTypeSemantics(VecT->getElementType()));
+      } else {
+        INT_TYPE_SWITCH_NO_BOOL(ElemT, { Dst.elem<T>(DstIdx) = T::from(0); });
+      }
+    } else {
+      const Pointer &Src = (SrcVecIdx == 0) ? A : B;
+      TYPE_SWITCH(ElemT, { Dst.elem<T>(DstIdx) = Src.elem<T>(SrcIdx); });
+    }
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -4635,6 +4674,25 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
           return APInt(8, 0);
         });
+
+  case X86::BI__builtin_ia32_palignr128:
+  case X86::BI__builtin_ia32_palignr256:
+  case X86::BI__builtin_ia32_palignr512:
+    return interp__builtin_x86_palignr(S, OpPC, Call, [](unsigned DstIdx, unsigned Shift, unsigned NumElems) {
+      // Default to -1 → zero-fill this destination element
+      unsigned VecIdx = 0;
+      int ElemIdx = -1;
+
+      // Elements come from VecB first, then VecA after the shift boundary
+      unsigned ShiftedIdx = DstIdx + Shift;
+      if(ShiftedIdx < NumElems) {   // from VecB
+        VecIdx = 1;                 
+        ElemIdx = DstIdx + Shift;
+      }else if(ShiftedIdx < 2 * NumElems) {  // from VecA
+        ElemIdx = DstIdx + Shift - NumElems;
+      }
+      return std::pair<unsigned, int>{VecIdx,ElemIdx};
+    });
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
