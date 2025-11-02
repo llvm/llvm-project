@@ -44,6 +44,8 @@ public:
     Use,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
+    OriginEscapes,
+    // An origin that stores a loan escapes the function.
   };
 
 private:
@@ -138,6 +140,23 @@ public:
 
   ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
   OriginID getReturnedOriginID() const { return OID; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+class OriginEscapesFact : public Fact {
+  OriginID OID;
+  const Stmt *EscapeSource;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes;
+  }
+
+  OriginEscapesFact(OriginID OID, const Stmt *Source)
+      : Fact(Kind::OriginEscapes), OID(OID), EscapeSource(Source) {}
+  OriginID getEscapedOriginID() const { return OID; }
+  const Stmt *getEscapeSource() const { return EscapeSource; }
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
