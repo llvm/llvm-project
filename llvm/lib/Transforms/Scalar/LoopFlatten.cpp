@@ -102,6 +102,10 @@ static cl::opt<bool>
     VersionLoops("loop-flatten-version-loops", cl::Hidden, cl::init(true),
                  cl::desc("Version loops if flattened loop could overflow"));
 
+static cl::opt<bool> VersionLoopsOverWiden(
+    "loop-flatten-version-over-widen", cl::Hidden, cl::init(false),
+    cl::desc("Version loops and generate runtime checks over widening the IV"));
+
 namespace {
 // We require all uses of both induction variables to match this pattern:
 //
@@ -835,13 +839,51 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   return true;
 }
 
+static bool VersionLoop(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                        ScalarEvolution *SE, const LoopAccessInfo &LAI) {
+
+  // Version the loop. The overflow check isn't a runtime pointer check, so we
+  // pass an empty list of runtime pointer checks, causing LoopVersioning to
+  // emit 'false' as the branch condition, and add our own check afterwards.
+  BasicBlock *CheckBlock = FI.OuterLoop->getLoopPreheader();
+  ArrayRef<RuntimePointerCheck> Checks(nullptr, nullptr);
+  LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE);
+  LVer.versionLoop();
+
+  // Check for overflow by calculating the new tripcount using
+  // umul_with_overflow and then checking if it overflowed.
+  BranchInst *Br = cast<BranchInst>(CheckBlock->getTerminator());
+  if (!Br->isConditional())
+    return false;
+  if (!match(Br->getCondition(), m_Zero()))
+    return false;
+  IRBuilder<> Builder(Br);
+  Value *Call = Builder.CreateIntrinsic(Intrinsic::umul_with_overflow,
+                                        FI.OuterTripCount->getType(),
+                                        {FI.OuterTripCount, FI.InnerTripCount},
+                                        /*FMFSource=*/nullptr, "flatten.mul");
+  FI.NewTripCount = Builder.CreateExtractValue(Call, 0, "flatten.tripcount");
+  Value *Overflow = Builder.CreateExtractValue(Call, 1, "flatten.overflow");
+  Br->setCondition(Overflow);
+  return true;
+}
+
 static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
                        ScalarEvolution *SE, AssumptionCache *AC,
-                       const TargetTransformInfo *TTI) {
+                       const TargetTransformInfo *TTI,
+                       const LoopAccessInfo &LAI) {
   if (!WidenIV) {
     LLVM_DEBUG(dbgs() << "Widening the IVs is disabled\n");
     return false;
   }
+
+  // TODO: don't bother widening IV's if know that they
+  // can't overflow. If they can overflow opt for versioning
+  // the loop and remove requirement to truncate when using
+  // IV in the loop
+  if (VersionLoopsOverWiden)
+    if (VersionLoop(FI, DT, LI, SE, LAI))
+      return true;
 
   LLVM_DEBUG(dbgs() << "Try widening the IVs\n");
   Module *M = FI.InnerLoop->getHeader()->getParent()->getParent();
@@ -916,7 +958,8 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
     return false;
 
   // Check if we can widen the induction variables to avoid overflow checks.
-  bool CanFlatten = CanWidenIV(FI, DT, LI, SE, AC, TTI);
+  // TODO: widening doesn't remove overflow checks in practice
+  bool CanFlatten = CanWidenIV(FI, DT, LI, SE, AC, TTI, LAI);
 
   // It can happen that after widening of the IV, flattening may not be
   // possible/happening, e.g. when it is deemed unprofitable. So bail here if
@@ -961,30 +1004,7 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
       return false;
     }
     LLVM_DEBUG(dbgs() << "Multiply might overflow, versioning loop\n");
-
-    // Version the loop. The overflow check isn't a runtime pointer check, so we
-    // pass an empty list of runtime pointer checks, causing LoopVersioning to
-    // emit 'false' as the branch condition, and add our own check afterwards.
-    BasicBlock *CheckBlock = FI.OuterLoop->getLoopPreheader();
-    ArrayRef<RuntimePointerCheck> Checks(nullptr, nullptr);
-    LoopVersioning LVer(LAI, Checks, FI.OuterLoop, LI, DT, SE);
-    LVer.versionLoop();
-
-    // Check for overflow by calculating the new tripcount using
-    // umul_with_overflow and then checking if it overflowed.
-    BranchInst *Br = cast<BranchInst>(CheckBlock->getTerminator());
-    assert(Br->isConditional() &&
-           "Expected LoopVersioning to generate a conditional branch");
-    assert(match(Br->getCondition(), m_Zero()) &&
-           "Expected branch condition to be false");
-    IRBuilder<> Builder(Br);
-    Value *Call = Builder.CreateIntrinsic(
-        Intrinsic::umul_with_overflow, FI.OuterTripCount->getType(),
-        {FI.OuterTripCount, FI.InnerTripCount},
-        /*FMFSource=*/nullptr, "flatten.mul");
-    FI.NewTripCount = Builder.CreateExtractValue(Call, 0, "flatten.tripcount");
-    Value *Overflow = Builder.CreateExtractValue(Call, 1, "flatten.overflow");
-    Br->setCondition(Overflow);
+    assert(VersionLoop(FI, DT, LI, SE, LAI) && "Failed to version loop");
   } else {
     LLVM_DEBUG(dbgs() << "Multiply cannot overflow, modifying loop in-place\n");
   }
