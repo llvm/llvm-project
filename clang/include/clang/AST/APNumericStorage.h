@@ -41,7 +41,7 @@ protected:
   llvm::APInt getIntValue() const {
     unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
     if (NumWords > 1)
-      return llvm::APInt(BitWidth, NumWords, pVal);
+      return llvm::APInt(BitWidth, llvm::ArrayRef(pVal, NumWords));
     else
       return llvm::APInt(BitWidth, VAL);
   }
