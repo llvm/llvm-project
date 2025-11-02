@@ -1218,12 +1218,12 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
     : ELFObjectFileBase(getELFType(ELFT::Endianness == llvm::endianness::little,
                                    ELFT::Is64Bits),
                         Object),
-      EF(EF), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
+      EF(std::move(EF)), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
       DotSymtabShndxSec(DotSymtabShndx) {}
 
 template <class ELFT>
 ELFObjectFile<ELFT>::ELFObjectFile(ELFObjectFile<ELFT> &&Other)
-    : ELFObjectFile(Other.Data, Other.EF, Other.DotDynSymSec,
+    : ELFObjectFile(Other.Data, std::move(Other.EF), Other.DotDynSymSec,
                     Other.DotSymtabSec, Other.DotSymtabShndxSec) {}
 
 template <class ELFT>
