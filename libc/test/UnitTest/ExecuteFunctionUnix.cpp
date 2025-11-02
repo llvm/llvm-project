@@ -13,6 +13,7 @@
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -58,7 +59,7 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   ::close(pipe_fds[1]);
 
   struct pollfd poll_fd {
-    pipe_fds[0], 0, 0
+    pipe_fds[0], POLLIN, 0
   };
   // No events requested so this call will only return after the timeout or if
   // the pipes peer was closed, signaling the process exited.
